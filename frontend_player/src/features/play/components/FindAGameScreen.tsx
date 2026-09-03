@@ -29,6 +29,47 @@
  * `seedIfAbsent` itself — so a refetch cannot reclaim a week a player has been editing or put
  * them back on the sport they arrived on.
  *
+ * The mode's effect has **one further moment**, and it is an edge rather than a second seed: a
+ * player who arrives on a rated but *undeclared* sport is seeded from no declaration, and the
+ * one they make on the interstitial *in place of* the form lands a moment later. So the same
+ * effect hands the pair to `seedModeOnFirstDeclaration`, which answers the transition
+ * `undefined -> declared` for the sport on screen and nothing else
+ * ([#292](https://github.com/Raketa02/Raketa/issues/292)) — a sport switch and a refetch are
+ * the same value read again, and both move nothing. The segment is not on screen while the
+ * question is open, so the seed is what the player finds when it arrives rather than a
+ * correction they might watch happen.
+ *
+ * ## The declaration is a precondition for the form, not a field on it
+ *
+ * On an `undeclared` sport the **only** thing under the sport chips is the question: no mode
+ * segment, no week grid, no radius and no court card
+ * ([#293](https://github.com/Raketa02/Raketa/issues/293)). It was drawn as a note *beneath*
+ * the mode section — two intent controls in one column, same width and same rhythm, under
+ * headings two words apart, with the segment already sitting on an answer to the question the
+ * note below was still asking. *"Looks like the user is selecting options for the same
+ * thing"* was the correct reading of that layout, and no body copy wins against it.
+ *
+ * `play_intent_not_declared` refuses the search either way, so nothing below the question can
+ * be acted on while it is open — which is what makes gating the whole page on
+ * `standing.kind === 'searchable'` a statement of the refusal rather than a hidden form.
+ * **Two controls that never co-occur cannot be mistaken for each other**, and that is the
+ * whole of the fix; the words and the surface are what keep them apart once the player meets
+ * them one after the other.
+ *
+ * The `409` backstop is untouched and is still not the designed path: the interstitial is
+ * opened knowingly, off the set difference the profile read already carries.
+ *
+ * ## And once it is answered, it stays on screen
+ *
+ * Under the segment, drawn whenever the sport is `searchable`: *your usual at Padel is
+ * Competitive*, and — when the player moves the switch away from it — the same slot saying
+ * that other people still find them as the declaration says
+ * ([#294](https://github.com/Raketa02/Raketa/issues/294)). `DeclarationStanding` is where that
+ * is argued; what belongs here is that it is **inside the mode section rather than beside it**,
+ * because the disagreement it draws is a fact about the segment above it, and that the intent
+ * comes off `standing` rather than out of `profile.playIntents`, which is what makes the line
+ * unreachable on a sport nobody has declared in.
+ *
  * ## The wait is a latch over this screen, and never a route
  *
  * `SearchingLatch` is drawn as a **sibling of the screen root** while the search is in flight
@@ -135,6 +176,7 @@ import { usePlaySession } from '../store/playSession.store';
 import { BUILDER_ROUTE } from './BuilderScreen';
 import { CourtEntryCard } from './CourtEntryCard';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
+import { DeclarationStanding } from './DeclarationStanding';
 import { searchWeekCellLabel } from './accessibilityPresentation';
 import { PromptSheet, type AfterThePrompt } from './PromptSheet';
 import { SportChips } from './SportChips';
@@ -147,6 +189,7 @@ import { searchingFloorMs } from './searchingWait';
 import {
   FIND_A_GAME_TITLE,
   LOADING_PROFILE_LABEL,
+  MODE_EYEBROW,
   MODE_HEADING,
   NO_RATED_SPORT_LINE,
   NOBODY_IS_CONTACTED_BY_SEARCHING,
@@ -169,6 +212,10 @@ export function FindAGameScreen() {
   const chooseSport = usePlayPreferences((state) => state.chooseSport);
   const chooseMode = usePlayPreferences((state) => state.chooseMode);
   const seedIfAbsent = usePlayPreferences((state) => state.seedIfAbsent);
+  const seedModeOnFirstDeclaration = usePlayPreferences(
+    (state) => state.seedModeOnFirstDeclaration,
+  );
+  const forgetAwaitedDeclaration = usePlayPreferences((state) => state.forgetAwaitedDeclaration);
 
   const week = usePlaySession((state) => state.week);
   // `addedCell` here rather than the store's own name: this screen asks *is this the cell* of
@@ -238,6 +285,19 @@ export function FindAGameScreen() {
     standing.kind === 'no-rated-sport' ? 0 : (interest.data?.[standing.sport] ?? 0);
 
   /**
+   * Forget what the *last* visit saw without a declaration — **on open, before anything is
+   * read.**
+   *
+   * It is declared above the declaration effect so it runs before it, which is the whole of
+   * the ordering: a player who left Play with an undeclared sport on screen and declared it
+   * elsewhere comes back to a declaration that already existed, and the segment they moved is
+   * theirs. The store cannot see the screen open, so this is where the visit is bounded.
+   */
+  useEffect(() => {
+    forgetAwaitedDeclaration();
+  }, [forgetAwaitedDeclaration]);
+
+  /**
    * Fill the grid in from the profile — **once, when the read lands.**
    *
    * `enter` is unconditional by design, so the guard is here: the reset has already emptied
@@ -250,18 +310,28 @@ export function FindAGameScreen() {
   }, [week, profile, enter]);
 
   /**
-   * Open the mode on the declaration — through `mode_for_intent`, and only the first time.
+   * Open the mode on the declaration — through `mode_for_intent`, and on two moments only.
    *
-   * `seedIfAbsent` is the guard rather than this call site, because *"a player who switched to
-   * tennis"* must not be put back on padel by arriving from ⚡ again. The mode is seeded from
-   * the sport the screen opens on and is **never re-seeded**: a toggle re-derived from the
-   * declaration would agree with it on every first search, and ADR-0094's drift backstop —
-   * written for the sticky-tab case — would have nothing left to catch.
+   * **The entry**, which `seedIfAbsent` guards rather than this call site, because *"a player
+   * who switched to tennis"* must not be put back on padel by arriving from ⚡ again. And
+   * **the first declaration for the sport on screen**, which is the moment the entry cannot
+   * cover: a player who lands here rated and *undeclared* is seeded from no declaration at
+   * all, and the interstitial below the segment is where they make one two taps later
+   * ([#292](https://github.com/Raketa02/Raketa/issues/292)). The declaration lands in the
+   * profile's cache, so this effect is where it arrives.
+   *
+   * The pair is handed to both, and each decides for itself: the mode is otherwise **never
+   * re-seeded** — a toggle re-derived from the declaration would agree with it on every first
+   * search, and ADR-0094's drift backstop, written for the sticky-tab case, would have nothing
+   * left to catch. Which is why the second action fires on the transition rather than on the
+   * value, and why a sport switch and a refetch move nothing.
    */
   useEffect(() => {
     if (profile === undefined || standing.kind === 'no-rated-sport') return;
-    seedIfAbsent(standing.sport, profile.playIntents[standing.sport]);
-  }, [profile, standing, seedIfAbsent]);
+    const declared = profile.playIntents[standing.sport];
+    seedIfAbsent(standing.sport, declared);
+    seedModeOnFirstDeclaration(standing.sport, declared);
+  }, [profile, standing, seedIfAbsent, seedModeOnFirstDeclaration]);
 
   const reads = [profileSurface, ratings, options];
   const readsPaused = reads.some((read) => read.fetchStatus === 'paused' && !read.isSuccess);
@@ -464,30 +534,15 @@ export function FindAGameScreen() {
             <SportChips rated={rated} selected={standing.sport} onChoose={chooseSport} />
           )}
 
-          {standing.kind === 'no-rated-sport' ? null : (
-            <View style={s.section}>
-              <Text style={s.heading}>{MODE_HEADING}</Text>
-              {/* Design-system 6.3, and the second `Segment` on this screen. The mode picks one
-                  of two *views of the same search* rather than firing an act, which is what
-                  two `Button`s side by side said it did — and the raised half against the
-                  inset track carries the choice as a surface step rather than as a fill. */}
-              <Segment
-                selected={mode}
-                options={SEARCH_MODES.map((offered) => ({
-                  key: offered,
-                  label: modeLabel(offered),
-                  accessibilityLabel: modeControlLabel(offered),
-                }))}
-                onSelect={chooseMode}
-              />
-            </View>
-          )}
-
           {/* ADR-0094's one-tap interstitial: *permanent, not a migration path*. It is what makes
               every searcher having declared true rather than intended, and it is opened here
               knowingly — before `play_intent_not_declared` refuses — because the profile read
               carries only what was declared and the difference is free. The deck is refused by
-              the same code and draws the same question, so the block is a component. */}
+              the same code and draws the same question, so the block is a component.
+
+              **It is the whole of the screen under the chips while it is up** — see the module
+              note. Everything below is gated on `searchable`, so the two intent controls never
+              co-occur ([#293](https://github.com/Raketa02/Raketa/issues/293)). */}
           {standing.kind === 'undeclared' && sportName !== undefined ? (
             <DeclarationInterstitial
               sport={standing.sport}
@@ -496,102 +551,155 @@ export function FindAGameScreen() {
             />
           ) : null}
 
-          {week === undefined || profile === undefined ? null : (
-            <View style={s.section} ref={weekSection}>
-              <Text style={s.heading}>{WEEK_HEADING}</Text>
-              <AvailabilityGrid
-                columnHeads={DAY_PARTS.map(dayPartHead)}
-                // Two facts, one sentence, decided in the copy deck: the marker is a comparison
-                // against the profile's own week made on every tap — not a flag a toggle sets,
-                // which is what makes a slot ticked and unticked stop reporting itself as
-                // changed — and the plus is the cell a rung added to the search that ran.
-                // Neither is `KEEP_THESE_TIMES`, which compares the post-rung grid a search
-                // actually ran on and only the backend can compute.
-                footnote={weekFootnote({ improvised, addedForThisSearch: addedCell !== undefined })}
-                rows={WEEKDAYS.map((day) => ({
-                  key: String(day),
-                  label: dayLabel(day),
-                  cells: DAY_PARTS.map((part) => {
-                    const cell = { day, part };
-                    // A cell the player never ticked, standing for this search alone. Pressing
-                    // it is an ordinary tick — and the store drops the mark on that press,
-                    // because from then on the cell is the player's own ask.
-                    const added = addedCell !== undefined && sameCell(addedCell, cell);
+          {/* **Everything a search is asked for**, and it is drawn only where a search could
+              run. The declaration above is a precondition for this form rather than a field on
+              it, and one gate over the four sections is that rule stated once
+              ([#293](https://github.com/Raketa02/Raketa/issues/293)). */}
+          {standing.kind !== 'searchable' ? null : (
+            <>
+              <View style={s.section}>
+                {/* Two lines, because one was two words away from the declaration's own heading.
+                    The eyebrow carries the lifetime — see `MODE_EYEBROW`. */}
+                <Text style={s.eyebrow}>{MODE_EYEBROW}</Text>
+                <Text style={s.heading}>{MODE_HEADING}</Text>
+                {/* Design-system 6.3, and the second `Segment` on this screen. The mode picks one
+                    of two *views of the same search* rather than firing an act, which is what
+                    two `Button`s side by side said it did — and the raised half against the
+                    inset track carries the choice as a surface step rather than as a fill. */}
+                <Segment
+                  selected={mode}
+                  options={SEARCH_MODES.map((offered) => ({
+                    key: offered,
+                    label: modeLabel(offered),
+                    accessibilityLabel: modeControlLabel(offered),
+                  }))}
+                  onSelect={chooseMode}
+                />
 
-                    return {
-                      key: `${day}-${part}`,
-                      selected: isTicked(week, cell),
-                      addedForThisSearch: added,
-                      onPress: () => toggleWeekCell(cell),
-                      accessibilityLabel: searchWeekCellLabel(cell, added),
-                    };
-                  }),
-                }))}
-              />
-            </View>
-          )}
+                {/* **The declaration, said out loud under the control it is not**
+                    ([#294](https://github.com/Raketa02/Raketa/issues/294)). It belongs to this
+                    section rather than standing beside it, which is why it is inside the same
+                    `View`: the segment is what it is drawn against, and the disagreement it
+                    draws when the two differ is a fact about the pair.
 
-          {bounds === undefined || radiusKm === undefined ? null : (
-            <View style={s.section}>
-              <Text style={s.heading}>{RADIUS_LABEL}</Text>
-              <Text style={s.body}>{RADIUS_IS_YOUR_PROFILE}</Text>
-              <RadiusSlider
-                value={radiusKm}
-                minimum={bounds.minimumKm}
-                maximum={topOfScale(bounds)}
-                fraction={radiusFraction(radiusKm, bounds)}
-                onSlideTo={(fraction) => setChosenRadiusKm(radiusAtFraction(fraction, bounds))}
-                onIncrement={() => setChosenRadiusKm(steppedRadius(radiusKm, bounds, 'increment'))}
-                onDecrement={() => setChosenRadiusKm(steppedRadius(radiusKm, bounds, 'decrement'))}
-                figure={radiusFigure(radiusKm)}
-                widestFigure={widestRadiusFigure(bounds)}
-                words={radiusWords(radiusKm)}
-                accessibilityLabel={RADIUS_LABEL}
-                accessibilityValueText={spokenRadius(radiusKm)}
-              />
-            </View>
-          )}
+                    The intent comes off the standing rather than out of the profile map, so
+                    the line is unreachable on a sport nobody has declared in — that branch is
+                    the interstitial's and draws none of this. */}
+                {sportName === undefined ? null : (
+                  <DeclarationStanding
+                    sport={standing.sport}
+                    sportName={sportName}
+                    intent={standing.intent}
+                    mode={mode}
+                    declaredOn="SEARCH_SWITCH"
+                  />
+                )}
+              </View>
 
-          {/* **The way onto the court**, and the whole of the act this screen offers.
-              It is in the page rather than in `ShellScreen`'s pinned slot: the control is a
-              picture of the court a search opens, and a court pinned above the tab bar would
-              be a CTA the height of a card standing over the week it is drawn from. */}
-          {standing.kind === 'no-rated-sport' ||
-          searchLabel === undefined ||
-          seats === undefined ||
-          sportName === undefined ? null : (
-            <View style={s.section}>
-              {/* The failed act's own control is the retry — `retryTarget`'s *the-search*, since
-                  nothing was minted and there is no record to re-read. So the sentence goes
-                  above the control that already exists rather than beside a second one. */}
-              {search.error !== null ? (
-                <Note variant="coral" accessibilityRole="alert">
-                  {playErrorMessage(search.error)}
-                </Note>
-              ) : null}
-              {writesPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+              {week === undefined || profile === undefined ? null : (
+                <View style={s.section} ref={weekSection}>
+                  <Text style={s.heading}>{WEEK_HEADING}</Text>
+                  <AvailabilityGrid
+                    columnHeads={DAY_PARTS.map(dayPartHead)}
+                    // Two facts, one sentence, decided in the copy deck: the marker is a comparison
+                    // against the profile's own week made on every tap — not a flag a toggle sets,
+                    // which is what makes a slot ticked and unticked stop reporting itself as
+                    // changed — and the plus is the cell a rung added to the search that ran.
+                    // Neither is `KEEP_THESE_TIMES`, which compares the post-rung grid a search
+                    // actually ran on and only the backend can compute.
+                    footnote={weekFootnote({
+                      improvised,
+                      addedForThisSearch: addedCell !== undefined,
+                    })}
+                    rows={WEEKDAYS.map((day) => ({
+                      key: String(day),
+                      label: dayLabel(day),
+                      cells: DAY_PARTS.map((part) => {
+                        const cell = { day, part };
+                        // A cell the player never ticked, standing for this search alone. Pressing
+                        // it is an ordinary tick — and the store drops the mark on that press,
+                        // because from then on the cell is the player's own ask.
+                        const added = addedCell !== undefined && sameCell(addedCell, cell);
 
-              <CourtEntryCard
-                sport={standing.sport}
-                sportName={sportName}
-                seats={seats}
-                label={searchLabel}
-                disabled={ask === undefined}
-                onPress={() => {
-                  if (ask === undefined) return;
-                  // This search cites no offer, so it runs on the week above and nothing
-                  // else: the cell a rung added belonged to the list it widened, and from
-                  // here on the mark would be about a search nobody is holding (#283).
-                  clearAddedForThisSearch();
-                  // The chosen radius has done its job: the profile now holds whatever the
-                  // server made of it, and the slider reads that from here on.
-                  search.mutate(ask, { onSuccess: () => setChosenRadiusKm(undefined) });
-                }}
-              />
+                        return {
+                          key: `${day}-${part}`,
+                          selected: isTicked(week, cell),
+                          addedForThisSearch: added,
+                          onPress: () => toggleWeekCell(cell),
+                          accessibilityLabel: searchWeekCellLabel(cell, added),
+                        };
+                      }),
+                    }))}
+                  />
+                </View>
+              )}
 
-              {/* True of both halves of Play, and the last word the screen says. */}
-              <Text style={s.footnote}>{NOBODY_IS_CONTACTED_BY_SEARCHING}</Text>
-            </View>
+              {bounds === undefined || radiusKm === undefined ? null : (
+                <View style={s.section}>
+                  <Text style={s.heading}>{RADIUS_LABEL}</Text>
+                  <Text style={s.body}>{RADIUS_IS_YOUR_PROFILE}</Text>
+                  <RadiusSlider
+                    value={radiusKm}
+                    minimum={bounds.minimumKm}
+                    maximum={topOfScale(bounds)}
+                    fraction={radiusFraction(radiusKm, bounds)}
+                    onSlideTo={(fraction) => setChosenRadiusKm(radiusAtFraction(fraction, bounds))}
+                    onIncrement={() =>
+                      setChosenRadiusKm(steppedRadius(radiusKm, bounds, 'increment'))
+                    }
+                    onDecrement={() =>
+                      setChosenRadiusKm(steppedRadius(radiusKm, bounds, 'decrement'))
+                    }
+                    figure={radiusFigure(radiusKm)}
+                    widestFigure={widestRadiusFigure(bounds)}
+                    words={radiusWords(radiusKm)}
+                    accessibilityLabel={RADIUS_LABEL}
+                    accessibilityValueText={spokenRadius(radiusKm)}
+                  />
+                </View>
+              )}
+
+              {/* **The way onto the court**, and the whole of the act this screen offers.
+                It is in the page rather than in `ShellScreen`'s pinned slot: the control is a
+                picture of the court a search opens, and a court pinned above the tab bar would
+                be a CTA the height of a card standing over the week it is drawn from. */}
+              {searchLabel === undefined ||
+              seats === undefined ||
+              sportName === undefined ? null : (
+                <View style={s.section}>
+                  {/* The failed act's own control is the retry — `retryTarget`'s *the-search*, since
+                    nothing was minted and there is no record to re-read. So the sentence goes
+                    above the control that already exists rather than beside a second one. */}
+                  {search.error !== null ? (
+                    <Note variant="coral" accessibilityRole="alert">
+                      {playErrorMessage(search.error)}
+                    </Note>
+                  ) : null}
+                  {writesPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+
+                  <CourtEntryCard
+                    sport={standing.sport}
+                    sportName={sportName}
+                    seats={seats}
+                    label={searchLabel}
+                    disabled={ask === undefined}
+                    onPress={() => {
+                      if (ask === undefined) return;
+                      // This search cites no offer, so it runs on the week above and nothing
+                      // else: the cell a rung added belonged to the list it widened, and from
+                      // here on the mark would be about a search nobody is holding (#283).
+                      clearAddedForThisSearch();
+                      // The chosen radius has done its job: the profile now holds whatever the
+                      // server made of it, and the slider reads that from here on.
+                      search.mutate(ask, { onSuccess: () => setChosenRadiusKm(undefined) });
+                    }}
+                  />
+
+                  {/* True of both halves of Play, and the last word the screen says. */}
+                  <Text style={s.footnote}>{NOBODY_IS_CONTACTED_BY_SEARCHING}</Text>
+                </View>
+              )}
+            </>
           )}
         </ShellScreen>
       </View>
@@ -635,6 +743,7 @@ const s = StyleSheet.create({
   failure: { gap: theme.space.sm },
   failureLine: { ...theme.type.tiny, color: theme.color.coralInk },
   section: { gap: theme.space.xs, paddingTop: theme.space.xs },
+  eyebrow: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
   heading: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
   body: { ...theme.type.tiny, color: theme.color.ink },
   footnote: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },

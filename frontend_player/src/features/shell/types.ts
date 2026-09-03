@@ -49,6 +49,22 @@ export { AroundScreen, ChatsScreen, NowScreen, YouScreen } from './components/ta
 export { enterPlay } from './components/shellNavigation';
 
 /**
+ * Open a flanking tab from a screen inside another one.
+ *
+ * One caller today and it is a **link to where a fact lives**: Find a game's standing
+ * declaration line offers *Change*, and what it changes is on the You tab beside the other
+ * durable facts strangers read ([#294](https://github.com/Raketa02/Raketa/issues/294),
+ * [#296](https://github.com/Raketa02/Raketa/issues/296)). It is the tab bar's own move rather
+ * than a second one — the shell has one navigation and every arrival replaces — so a player
+ * sent here lands where pressing the column would have put them, and **the Play session ends
+ * on the way**, which is what leaving Play has always meant.
+ *
+ * `enterPlay` stays separately exported rather than folding into this: it is the one door
+ * another feature opens *into* Play, and it is two screens deep.
+ */
+export { openTab } from './components/shellNavigation';
+
+/**
  * Where a sent challenge lands.
  *
  * Called by the court's send and by nothing else. It lays down `[Now]` and **ends the Play

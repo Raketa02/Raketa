@@ -50,7 +50,16 @@ export type Declarations = Readonly<Partial<Record<Sport, PlayIntent>>>;
  * would refuse, with no sentence to say why.
  */
 export type FindAGameStanding =
-  | { readonly kind: 'searchable'; readonly sport: Sport }
+  /**
+   * Rated **and** declared — and the declaration comes with it.
+   *
+   * It is carried rather than looked up again because the standing line under the mode segment
+   * is drawn from it ([#294](https://github.com/Raketa02/Raketa/issues/294)), and *a sport with
+   * no declaration never reaches that line* is a rule a type can keep: the screen reads the
+   * value off this branch, so there is no call site at which the map could be consulted a
+   * second time and answer `undefined`.
+   */
+  | { readonly kind: 'searchable'; readonly sport: Sport; readonly intent: PlayIntent }
   /** Rated in this sport and never asked what kind of game — the interstitial's state. */
   | { readonly kind: 'undeclared'; readonly sport: Sport }
   | { readonly kind: 'no-rated-sport' };
@@ -82,7 +91,8 @@ export function findAGameStanding(
 ): FindAGameStanding {
   const sport = sportOnScreen(rated, chosen);
   if (sport === undefined) return { kind: 'no-rated-sport' };
-  return declarations[sport] === undefined
+  const intent = declarations[sport];
+  return intent === undefined
     ? { kind: 'undeclared', sport }
-    : { kind: 'searchable', sport };
+    : { kind: 'searchable', sport, intent };
 }

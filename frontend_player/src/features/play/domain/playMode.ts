@@ -80,3 +80,54 @@ const DECLARED_FROM_MODE: Readonly<Record<SearchMode, PlayIntent>> = {
 export function intentForMode(mode: SearchMode): PlayIntent {
   return DECLARED_FROM_MODE[mode];
 }
+
+/**
+ * Whether the mode on the segment and the declaration are **saying the same thing** — the
+ * question the standing line under the segment is drawn from
+ * ([#294](https://github.com/Raketa02/Raketa/issues/294)).
+ *
+ * **It is not an equality, and `NO_PREFERENCE` is why.** A player who declared that either
+ * kind of evening suits them has said nothing a search can contradict, so no search of theirs
+ * ever disagrees with their profile — which is the rule the backend's own drift loop applies
+ * (`detect_intent_drift._AGREES_WITH`, *"``NO_PREFERENCE`` agrees with **both**"*), read here
+ * rather than invented a second time. A line offering to *update* an indifferent declaration
+ * to a mode would be proposing a narrowing off evidence of nothing.
+ *
+ * It is deliberately **not** `intentForMode(mode) === intent`, which says the same thing for
+ * the two mode-shaped intents and the wrong thing for the third. A table over `SearchMode`,
+ * for `SEEDED_MODE`'s reason: the two types are different by construction and a shared
+ * spelling is a coincidence the arithmetic must not lean on.
+ */
+const AGREES_WITH: Readonly<Record<SearchMode, readonly PlayIntent[]>> = {
+  COMPETITIVE: ['COMPETITIVE', 'NO_PREFERENCE'],
+  FOR_FUN: ['FOR_FUN', 'NO_PREFERENCE'],
+};
+
+export function declarationAgreesWithMode(intent: PlayIntent, mode: SearchMode): boolean {
+  return AGREES_WITH[mode].includes(intent);
+}
+
+/**
+ * Whether a declaration **names a kind of evening** — the question the deck's standing line is
+ * written against ([#295](https://github.com/Raketa02/Raketa/issues/295)).
+ *
+ * `POST /deck` carries no mode at all (`SearchEnvelope.mode` is null exactly there), so on that
+ * surface the declaration genuinely *is* what the deal runs on, and the line says so: *dealing
+ * competitive games at padel — your usual*. That sentence is only available for two of the three
+ * answers. ADR-0094's *"indifference about the kind of evening is not a third kind of evening"*
+ * is what makes the third one different in kind rather than merely different in wording: a
+ * `NO_PREFERENCE` player is dealt on `modeForIntent`'s **inherited** for-fun vector, and telling
+ * them the deck is dealing them for-fun games would report an inheritance as a choice they made.
+ *
+ * A table over the union rather than a comparison against one spelling, for `SEEDED_MODE`'s
+ * reason — and so a fourth answer could not silently take the sentence written for the two.
+ */
+const NAMES_A_KIND: Readonly<Record<PlayIntent, boolean>> = {
+  COMPETITIVE: true,
+  FOR_FUN: true,
+  NO_PREFERENCE: false,
+};
+
+export function declarationNamesAKind(intent: PlayIntent): boolean {
+  return NAMES_A_KIND[intent];
+}

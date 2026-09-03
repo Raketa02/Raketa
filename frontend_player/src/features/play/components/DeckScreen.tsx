@@ -57,7 +57,11 @@
  * already there.
  *
  * **A mode.** The deck has none — `SearchEnvelope.mode` is null exactly here — so it reads the
- * player's own declaration, and the interstitial is what makes that readable.
+ * player's own declaration, and the interstitial is what makes that readable. Once it *is*
+ * declared, `DeclarationStanding` says the same thing at rest: on this screen the durable answer
+ * genuinely **is** what the deal runs on, which no other surface in the product can state,
+ * because every other one has a mode standing between the two
+ * ([#295](https://github.com/Raketa02/Raketa/issues/295)).
  *
  * **Anywhere for the prompt sheet to send anybody.** A deal raises questions like a search
  * does and the sheet answers them here now
@@ -106,6 +110,7 @@ import type { DeckAsk } from '../use-cases/dealDeck';
 
 import { DeckStage } from './DeckStage';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
+import { DeclarationStanding } from './DeclarationStanding';
 import { PlaySegment } from './PlaySegment';
 import { PromptSheet } from './PromptSheet';
 import { SportChips } from './SportChips';
@@ -368,6 +373,24 @@ export function DeckScreen() {
           {standing.kind === 'no-rated-sport' ? null : (
             <SportChips rated={rated} selected={standing.sport} onChoose={chooseSport} />
           )}
+
+          {/* **The declaration, standing where the deck can carry it**
+              ([#295](https://github.com/Raketa02/Raketa/issues/295)). There is no segment here
+              for it to sit under, so it sits under the chips — the control it is about on this
+              screen, since choosing a sport is what chooses which declaration is being read.
+
+              `mode={undefined}` is not a gap: a deal carries none, which is why the line has
+              one state here and no drift variant. Everything else about it is Find a game's,
+              including where *Change* goes. */}
+          {standing.kind === 'searchable' && sportName !== undefined ? (
+            <DeclarationStanding
+              sport={standing.sport}
+              sportName={sportName}
+              intent={standing.intent}
+              mode={undefined}
+              declaredOn="DECK"
+            />
+          ) : null}
 
           {/* The same question Find a game asks, because the deck is refused by the same code:
               it has no mode, so it reads the declaration. */}

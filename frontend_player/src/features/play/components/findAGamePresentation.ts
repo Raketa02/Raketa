@@ -30,7 +30,18 @@
  * settled, *"a player facing a dead control deserves the sentence that explains it."*
  */
 
+import {
+  declarationOptionLabel,
+  intentGloss,
+  intentLabel,
+} from '@/shared/vocabulary/playIntentPresentation';
+
 import type { FindAGameStanding } from '../domain/findAGame';
+import {
+  declarationAgreesWithMode,
+  declarationNamesAKind,
+  intentForMode,
+} from '../domain/playMode';
 import type { PlayIntent, SearchMode } from '../domain/vocabulary';
 
 import { builderTitle, isDoubles } from './builderPresentation';
@@ -39,7 +50,31 @@ import { builderTitle, isDoubles } from './builderPresentation';
 export const FIND_A_GAME_TITLE = 'Find a game';
 
 export const SPORT_HEADING = 'Sport';
-export const MODE_HEADING = 'What kind of game';
+
+/**
+ * The mode section's two lines — **an eyebrow saying whose question it is, then the question.**
+ *
+ * They were one line reading *What kind of game*, two words away from the declaration's *What
+ * kind of game at Padel?*, and the pair was drawn in one column with the segment already
+ * sitting on an answer to the question the card below was still asking
+ * ([#293](https://github.com/Raketa02/Raketa/issues/293)). The render order is what fixed that
+ * — the two controls no longer co-occur — and these words are what keep them apart for a
+ * player who meets them one after the other instead of side by side.
+ *
+ * **The lifetime is in the words rather than only in the layout**, which is the rule
+ * `modeControlLabel` has been keeping for screen-reader users all along: *this search* against
+ * *your usual*. `tonight` is the shortest true reading of a search's own lifetime — the week
+ * grid below it is this visit's — and the eyebrow says the same thing without a metaphor for
+ * anybody the word does not land on.
+ *
+ * The two roles are not interchangeable and the split is why there are two lines: an
+ * **eyebrow labels a region you are reading** and a **`flab` labels a control you are about to
+ * operate** (design-system 3.3). The lifetime is a fact about the whole section; the question
+ * is what the segment underneath answers.
+ */
+export const MODE_EYEBROW = 'This search only';
+export const MODE_HEADING = 'What kind of game tonight';
+
 export const WEEK_HEADING = 'When you could play';
 
 /**
@@ -58,20 +93,175 @@ export function modeLabel(mode: SearchMode): string {
 }
 
 /**
- * The three declarations, as a player would say them.
+ * The three declarations, their glosses and one answer's spoken name — **`shared/vocabulary`'s
+ * now, and re-exported here because this is still where Play reads its words.**
  *
- * *Either suits me* is the whole of `NO_PREFERENCE` and states a preference rather than the
- * absence of one — *"indifference about the kind of evening is not a third kind of evening"*,
- * but it is still an answer somebody gave.
+ * They moved the day `player_profile` became the second feature to draw a declaration: the You
+ * tab lists what a player has declared per sport and offers the identical three answers about
+ * the identical fact ([#296](https://github.com/Raketa02/Raketa/issues/296)), and it cannot
+ * reach this file — `PlayerProfileSurface` is where that arrow is argued away. The promotion
+ * test is `shared/README.md`'s, *"whether a second feature would have written the identical
+ * table"*, and it would have written all three exactly.
+ *
+ * **Everything this screen says about the control stayed here**, which is the other half of the
+ * same rule: the card's title, its eyebrow and the sentence naming who reads the answer are
+ * about the question that gates a search, and no other screen asks it.
  */
-const INTENT_LABEL: Readonly<Record<PlayIntent, string>> = {
-  COMPETITIVE: 'Competitive',
-  FOR_FUN: 'For fun',
-  NO_PREFERENCE: 'Either suits me',
-};
+export { declarationOptionLabel, intentGloss, intentLabel };
 
-export function intentLabel(intent: PlayIntent): string {
-  return INTENT_LABEL[intent];
+/**
+ * **The standing line** — the declaration, said out loud on a screen the player is already on,
+ * in each of the states the pair of values can be in
+ * ([#294](https://github.com/Raketa02/Raketa/issues/294),
+ * [#295](https://github.com/Raketa02/Raketa/issues/295)).
+ *
+ * Answered once, the durable value used to have no representation anywhere after that moment:
+ * there was no *your usual at padel* on any screen, and no way to change it except by tripping
+ * a prompt five searches later. That is what taught players the question had been a hurdle
+ * rather than a setting they own, and it is the half of the reported confusion the render
+ * order could not reach.
+ *
+ * ## Two states, one slot, and the disagreement is one of them
+ *
+ * Moving the segment **never writes the declaration** — the two values must be able to
+ * disagree, which is `domain/playMode`'s whole argument and what ADR-0094's drift backstop
+ * exists to catch — so the line changes in place instead and says what the disagreement costs.
+ * The player watches the durable fact hold still while the switch moves, which is the clearest
+ * demonstration available that they are two different things, and it costs no dismissal.
+ *
+ * Agreement is `declarationAgreesWithMode`'s and not an equality: *either suits me* is
+ * contradicted by no search, which is the backend's own rule read on the client rather than a
+ * second one invented here.
+ *
+ * ## And the third state is a surface with nothing to disagree with
+ *
+ * The deck has no mode — `SearchEnvelope.mode` is null exactly there — so it deals on the
+ * declaration itself, and the line says so rather than offering to reconcile a pair that has
+ * only one member ([#295](https://github.com/Raketa02/Raketa/issues/295)). `dealtParts` is
+ * where the sentence and its one exception are written.
+ *
+ * ## Why the sentence arrives in pieces
+ *
+ * The value is drawn in `ink` inside a line that is otherwise `tiny` in `muted`, because the
+ * declaration is the fact and the rest is the frame around it. A component splitting the
+ * sentence itself would be a template inlined in a screen (`the-words.md` §20), so the split is
+ * made here — and `spoken` is the same sentence whole, because a listener gets one element with
+ * one name rather than three fragments read a beat apart.
+ *
+ * **Both names carry the lifetime**, which is this screen's recurring problem said once more:
+ * *Competitive* is on it twice, and only *your usual* against *just this search* tells the two
+ * apart. The action's name says what pressing it does rather than repeating the word on it —
+ * *Update* alone is a verb with no object, and the object is the whole of what is at stake.
+ */
+export interface DeclarationLine {
+  /**
+   * What this surface and the profile are saying to each other.
+   *
+   * `agrees` and `differs` are the pair a **mode** makes available; `deals` is the state of a
+   * surface that has none, and it is a third value rather than `agrees` because the sentence is
+   * a different sentence and the absence is the reason for it.
+   */
+  readonly kind: 'agrees' | 'differs' | 'deals';
+  /** The words before the declaration. */
+  readonly lead: string;
+  /** The declaration itself — drawn in `ink`, and the one word that does not move. */
+  readonly value: string;
+  /** The words after it, or `''` where the sentence ends on the value. */
+  readonly tail: string;
+  /** The whole of it, for a listener: one element, one name. */
+  readonly spoken: string;
+  /** The word on the control. */
+  readonly action: string;
+  /** What pressing it does, said in full. */
+  readonly actionLabel: string;
+  /**
+   * **What pressing the control writes, or `undefined` where it writes nothing.**
+   *
+   * The one state that writes is `differs`, and the value is the mode's own declaration —
+   * `intentForMode`, which is why this is decided here rather than re-derived by the row. A
+   * component branching on the kind and reaching for the mode again would be the same rule in
+   * two places, and the second one is the one that gets missed; it also has to carry a guard
+   * for a mode that cannot be absent in that state. This is the fact `actionLabel` already
+   * states in words — *make for fun your usual at padel* — in the shape the write takes.
+   */
+  readonly updatesTo: PlayIntent | undefined;
+}
+
+/**
+ * *Change* — **the control that is not a write**, on both of the states that do not have one.
+ *
+ * The word and the name it is announced by move together, which is why they are one function
+ * rather than a constant and a template repeated beside it: what the name has to carry is the
+ * lifetime, and a second copy is where the two would stop saying the same thing.
+ */
+function changeTheProfile(sportName: string) {
+  return { action: 'Change', actionLabel: `Change your usual at ${sportName}` };
+}
+
+export function declarationLine(facts: {
+  readonly intent: PlayIntent;
+  /**
+   * What the segment above is sitting on, or **`undefined` where the surface has no mode**.
+   *
+   * The key is required and the value is nullable, so a caller states which of the two it is
+   * rather than omitting a fact by accident. `undefined` is the deck: `SearchEnvelope.mode` is
+   * null exactly there, and it is what makes the third state reachable.
+   */
+  readonly mode: SearchMode | undefined;
+  readonly sportName: string;
+}): DeclarationLine {
+  const { intent, mode, sportName } = facts;
+  const value = intentLabel(intent);
+  const parts =
+    mode === undefined ? dealtParts(intent, sportName) : searchParts(intent, mode, sportName);
+
+  return { ...parts, value, spoken: `${parts.lead}${value}${parts.tail}` };
+}
+
+/** The two states a screen with a segment on it can be in. */
+function searchParts(intent: PlayIntent, mode: SearchMode, sportName: string) {
+  return declarationAgreesWithMode(intent, mode)
+    ? {
+        kind: 'agrees' as const,
+        lead: `Your usual at ${sportName} is `,
+        tail: '',
+        updatesTo: undefined,
+        ...changeTheProfile(sportName),
+      }
+    : {
+        kind: 'differs' as const,
+        lead: 'Just this search. Players still find you as ',
+        tail: ` at ${sportName}.`,
+        updatesTo: intentForMode(mode),
+        action: 'Update',
+        actionLabel: `Make ${modeLabel(mode)} your usual at ${sportName}`,
+      };
+}
+
+/**
+ * **The deck's one state** — and the sentence the whole line was worth writing for.
+ *
+ * A deal carries no mode, so there is nothing here for the declaration to disagree with and no
+ * drift variant at all ([#295](https://github.com/Raketa02/Raketa/issues/295)). What that
+ * absence buys is the plainest statement in the product of what the two values are: on this
+ * screen the durable answer genuinely **is** what the deal runs on, and the sentence says it
+ * rather than leaving the player to infer it from a control that is missing.
+ *
+ * *Either suits me* gets a different frame rather than a different word inside the same one.
+ * `declarationNamesAKind` is where that is argued: the deal inherits a for-fun vector from an
+ * answer that named no kind, and *dealing for fun games at padel — your usual* would report the
+ * inheritance back as the player's own answer. So the frame states what the deal is **read
+ * from** and claims no kind, which is all that answer ever claimed.
+ */
+function dealtParts(intent: PlayIntent, sportName: string) {
+  return {
+    kind: 'deals' as const,
+    ...(declarationNamesAKind(intent)
+      ? { lead: 'Dealing ', tail: ` games at ${sportName} — your usual` }
+      : { lead: `Dealing on your usual at ${sportName} — `, tail: '' }),
+    updatesTo: undefined,
+    ...changeTheProfile(sportName),
+  };
 }
 
 /**
@@ -137,21 +327,41 @@ export function weekFootnote(week: {
  */
 export const RADIUS_IS_YOUR_PROFILE = 'Kept on your profile — a search has no distance of its own.';
 
-/** The one-tap declaration, on the screen ADR-0094 makes the edit surface. */
+/**
+ * The one-tap declaration, on the screen ADR-0094 makes the edit surface.
+ *
+ * ***Your usual* is this app's own phrase for it**, and it has been saying it to screen-reader
+ * users since the interstitial shipped — `declarationOptionLabel` announces *Competitive, your
+ * usual at padel*. It was `What kind of game at ${sportName}?`, which differed from the mode
+ * section's heading by two words and by a question mark
+ * ([#293](https://github.com/Raketa02/Raketa/issues/293)); the visible words now say what the
+ * spoken ones already did.
+ */
 export function declarationTitle(sportName: string): string {
-  return `What kind of game at ${sportName}?`;
+  return `Your usual game at ${sportName}`;
 }
 
+/** The card's eyebrow: **the lifetime**, said before the question rather than after it. */
+export const DECLARATION_EYEBROW = 'Kept on your profile';
+
 /**
- * What answering buys, and what it does not touch.
+ * **Who reads the answer** — which is the one thing about a declaration a player cannot guess.
  *
- * Both halves are load-bearing. The first is why the question is being put at all — it is
- * asked once per sport and a search will not run before it. The second keeps the answer from
- * reading as the switch above it, which is the collapse ADR-0094 spent a type on preventing.
+ * It used to disambiguate the control above it — *the switch above still moves for a single
+ * search* — and there is no longer a control above it: the declaration is a precondition for
+ * the form existing and is now the only thing on screen while it is unanswered
+ * ([#293](https://github.com/Raketa02/Raketa/issues/293)). A sentence pointing at a control
+ * that is not drawn is worse than no sentence.
+ *
+ * So it says the two readers instead, and they are the two ADR-0094 names. **Somebody else's
+ * search** reads it — the intent alignment term's signature is `(my_mode, their_intent)`, so
+ * this is the half of a pairing the player contributes when a stranger finds them. And **Match
+ * me**, because `POST /deck` carries no mode and *"without one there is nothing at all to go
+ * on"*. The player's own search reads neither, which is §6.4's rule and is why the segment on
+ * the other side of the answer is not mentioned here.
  */
 export const DECLARATION_BODY =
-  'Asked once for this sport, and kept on your profile. The switch above still moves for a ' +
-  'single search.';
+  'Read when somebody else’s search finds you, and by Match me. Asked once for this sport.';
 
 /** Unreachable from the flow — the Play tab is behind a rating — and said rather than drawn. */
 export const NO_RATED_SPORT_LINE =
@@ -233,15 +443,16 @@ export function courtEntryLabel(seats: number): string {
 export const NOBODY_IS_CONTACTED_BY_SEARCHING =
   'Nobody is contacted by searching. You choose whom to challenge.';
 
-/** What stands in front of the card while the sport has no declaration. */
-export const SAY_WHAT_KIND_FIRST = 'Say what kind of game first';
-
 /**
- * The search control: the act, or what is standing in front of it.
+ * The search control: the act, or the absence of a control to name.
  *
- * `no-rated-sport` has no label because it has no control — a screen with nothing to search
- * for draws the sentence above instead, which is 6.1's rule that this app never draws a
- * pressable-looking control that refuses.
+ * **Two of the three standings have no label, because neither of them has a control.** That is
+ * 6.1's rule — this app never draws a pressable-looking control that refuses — and it now
+ * covers `undeclared` as well: the declaration is a precondition for the form existing, so a
+ * screen without one draws the question and nothing under it
+ * ([#293](https://github.com/Raketa02/Raketa/issues/293)). It used to draw the card greyed
+ * with *Say what kind of game first* written on it, which was the availability step's settled
+ * shape for a dead control — and a dead control is what stopped being drawn.
  *
  * The searchable case is the **card's** name rather than a verb, because the card *is* the
  * control: there is no *Search* button on this screen and there is nothing else the press
@@ -256,7 +467,6 @@ export function searchControlLabel(
     case 'searchable':
       return courtEntryLabel(court.seats);
     case 'undeclared':
-      return SAY_WHAT_KIND_FIRST;
     case 'no-rated-sport':
       return undefined;
   }
@@ -296,8 +506,4 @@ export const RETRY_READ_LABEL = 'Try again';
  */
 export function modeControlLabel(mode: SearchMode): string {
   return `${modeLabel(mode)}, this search`;
-}
-
-export function declarationOptionLabel(intent: PlayIntent, sportName: string): string {
-  return `${intentLabel(intent)}, your usual at ${sportName}`;
 }

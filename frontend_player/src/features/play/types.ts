@@ -373,13 +373,19 @@ export { PlaySegment, type PlaySegmentProps, type PlaySurface } from './componen
  * Exported for the suites that drive the screen through the real route tree: an assertion
  * spelling *Search* or *Find a game* as a string literal is a red build for the ticket that
  * rewords it, which is the concession `shellCopy`'s `PLACEHOLDER_COPY` already makes and for
- * the same reason. Nothing in `src/` reads either.
+ * the same reason. No screen outside this feature reads any of them.
+ *
+ * `modeControlLabel` joined them for the **shell's** suite, which is the one place a rule
+ * spanning two tabs can be checked: *a declaration changed on You does not move the mode Play
+ * opens in* ([#296](https://github.com/Raketa02/Raketa/issues/296)) is a fact about Play and
+ * `player_profile` together, and neither of those two features may import the other.
  */
 export {
   FIND_A_GAME_TITLE,
   WEEK_CHANGED_FROM_PROFILE,
   declarationTitle,
   intentLabel,
+  modeControlLabel,
   modeLabel,
   searchControlLabel,
 } from './components/findAGamePresentation';

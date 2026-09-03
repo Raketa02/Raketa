@@ -14,11 +14,13 @@ import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { onlineManager } from '@tanstack/react-query';
 
+import { RADIUS_LABEL } from '@/features/player_profile/types';
 import { offlineMessage } from '@/shared/errors';
 import { courtSeatCount } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  PROFILE_SURFACE_PATH,
   launchSignedIn,
   stubGate,
   stubProfileOptions,
@@ -47,6 +49,7 @@ import {
   courtEntrySeatLine,
   courtEntryTag,
   courtEntryTitle,
+  declarationLine,
   declarationTitle,
   searchControlLabel,
 } from './findAGamePresentation';
@@ -122,21 +125,37 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
-/** A signed-in player, standing on Find a game with the profile read landed. */
-async function openPlay(surface?: Wire['PlayerProfileReadResponse']) {
+async function reachPlay(surface?: Wire['PlayerProfileReadResponse']) {
   if (surface !== undefined) stubProfileSurface(transport, surface);
 
   await launchSignedIn();
   fireEvent.press(await screen.findByLabelText('Play'));
   await waitFor(() => expect(screen).toHavePathname('/play'));
+}
+
+/** A signed-in player, standing on Find a game with the profile read landed. */
+async function openPlay(surface?: Wire['PlayerProfileReadResponse']) {
+  await reachPlay(surface);
   // The grid is the last thing the three reads produce, so its arrival is the screen's.
   await screen.findByLabelText('Tuesday evening');
+}
+
+/**
+ * The same walk onto a sport nobody has declared in — where **the form is not drawn at all**.
+ *
+ * The grid cannot be what says the read has landed here, because the declaration gates it
+ * along with everything else under the chips ([#293](https://github.com/Raketa02/Raketa/issues/293)).
+ * The question is the whole of the screen, so the question is the marker.
+ */
+async function openPlayUndeclared(surface: Wire['PlayerProfileReadResponse']) {
+  await reachPlay(surface);
+  await screen.findByText(declarationTitle('Padel'));
 }
 
 /** Padel seats four, read off `Court`'s own coordinates rather than typed here. */
 const PADEL_SEATS = courtSeatCount('padel');
 const COURT_CARD = searchControlLabel(
-  { kind: 'searchable', sport: 'padel' },
+  { kind: 'searchable', sport: 'padel', intent: 'FOR_FUN' },
   {
     seats: PADEL_SEATS,
   },
@@ -148,7 +167,10 @@ const isSelected = (label: string) =>
   screen.getByLabelText(label).props.accessibilityState?.selected === true;
 const searchButton = () =>
   screen.getByLabelText(
-    searchControlLabel({ kind: 'searchable', sport: 'padel' }, { seats: PADEL_SEATS }) ?? '',
+    searchControlLabel(
+      { kind: 'searchable', sport: 'padel', intent: 'FOR_FUN' },
+      { seats: PADEL_SEATS },
+    ) ?? '',
   );
 
 const SEARCHING = poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' }).headline;
@@ -220,8 +242,14 @@ describe('what the screen opens on', () => {
 });
 
 describe('what the screen never writes', () => {
+  /** Both declared, so the chip stays on a searchable sport: the fact under test is that
+   *  neither control writes, and an undeclared tennis would draw no mode control at all. */
   it('changes the sport and the mode without touching the profile', async () => {
-    await openPlay();
+    await openPlay({
+      availability: [{ day: 2, part: 'EVENING' }],
+      search_radius_km: 12,
+      play_intents: { PADEL: 'FOR_FUN', TENNIS: 'FOR_FUN' },
+    });
 
     fireEvent.press(screen.getByLabelText('Tennis'));
     fireEvent.press(screen.getByLabelText('Competitive, this search'));
@@ -623,17 +651,239 @@ describe('a sport nobody has declared in', () => {
    * knowingly, before `play_intent_not_declared` refuses, off a set difference the screen
    * already holds: rated, and absent from the declaration map.
    */
-  it('asks before the search would be refused, and says what answering buys', async () => {
-    await openPlay(UNDECLARED);
+  it('asks before the search would be refused, and says who reads the answer', async () => {
+    await openPlayUndeclared(UNDECLARED);
 
     expect(screen.getByText(declarationTitle('Padel'))).toBeTruthy();
     expect(screen.getByText(DECLARATION_BODY)).toBeTruthy();
+    expect(screen.getByLabelText('Competitive, your usual at Padel')).toBeTruthy();
+  });
+
+  /**
+   * **The two intent controls are never both on screen** — which is the whole of
+   * [#293](https://github.com/Raketa02/Raketa/issues/293).
+   *
+   * They used to be siblings in one column, same width and same rhythm, under headings two
+   * words apart, with the segment already sitting on an answer to the question the card below
+   * it was still asking. *"Looks like the user is selecting options for the same thing"* was
+   * the correct reading of that, and no body copy wins against a layout. The declaration is a
+   * **precondition for the form existing** — `play_intent_not_declared` refuses the search
+   * either way — so nothing below it is drawn while it is open.
+   */
+  it('draws the declaration instead of the form, and never the two together', async () => {
+    await openPlayUndeclared(UNDECLARED);
+
+    for (const mode of ['Competitive, this search', 'For fun, this search']) {
+      expect(screen.queryByLabelText(mode)).toBeNull();
+    }
+    expect(screen.queryByLabelText('Tuesday evening')).toBeNull();
+    expect(screen.queryByLabelText(RADIUS_LABEL)).toBeNull();
     expect(screen.queryByLabelText(COURT_CARD ?? '')).toBeNull();
+    // Nor the greyed card that used to stand in for it: a control that refuses is not drawn.
+    expect(screen.queryByText(NOBODY_IS_CONTACTED_BY_SEARCHING)).toBeNull();
+    // The chips stay: which sport this is about is the one thing still worth changing.
+    expect(isSelected('Padel')).toBe(true);
+  });
+
+  /** The other half of the same rule, read from the other side. */
+  it('takes the question away once the sport is declared', async () => {
+    await openPlay();
+
+    expect(screen.queryByText(declarationTitle('Padel'))).toBeNull();
+    expect(isSelected('For fun, this search')).toBe(true);
+  });
+
+  /**
+   * The seed that ran on entry knew of no declaration, so the segment the player finds when
+   * the form arrives would otherwise contradict the answer they gave two taps ago
+   * ([#292](https://github.com/Raketa02/Raketa/issues/292)).
+   */
+  it('opens the segment on the declaration the player has just made', async () => {
+    transport.on('PUT', PADEL_INTENT, () =>
+      json<Wire['PlayIntentDeclarationResponse']>({
+        sport: 'PADEL',
+        intent: 'COMPETITIVE',
+      }),
+    );
+    await openPlayUndeclared(UNDECLARED);
+
+    fireEvent.press(screen.getByLabelText('Competitive, your usual at Padel'));
+
+    await waitFor(() => expect(isSelected('Competitive, this search')).toBe(true));
+  });
+
+  /**
+   * `mode_for_intent`'s arity gap, on the answer rather than on the entry: indifference is not
+   * a third kind of evening, and the mapping takes *for fun* — from the mapping.
+   *
+   * The mode has to have been somewhere else first, and since #293 there is no segment to move
+   * while the question is open — so it is moved on the sport that *is* declared, and the walk
+   * back to padel is what puts the answer in front of a mode that disagrees with it.
+   */
+  it('leaves the segment on for fun when the answer is either suits me', async () => {
+    transport.on('PUT', PADEL_INTENT, () =>
+      json<Wire['PlayIntentDeclarationResponse']>({
+        sport: 'PADEL',
+        intent: 'NO_PREFERENCE',
+      }),
+    );
+    await openPlayUndeclared({ ...UNDECLARED, play_intents: { TENNIS: 'COMPETITIVE' } });
+
+    fireEvent.press(screen.getByLabelText('Tennis'));
+    await waitFor(() => expect(isSelected('Tennis')).toBe(true));
+    fireEvent.press(screen.getByLabelText('Competitive, this search'));
+    expect(isSelected('Competitive, this search')).toBe(true);
+
+    fireEvent.press(screen.getByLabelText('Padel'));
+    await screen.findByText(declarationTitle('Padel'));
+    fireEvent.press(screen.getByLabelText('Either suits me, your usual at Padel'));
+
+    await waitFor(() => expect(isSelected('For fun, this search')).toBe(true));
+  });
+
+  /**
+   * The other half of the edge, and the reason it is an edge: ADR-0094's drift backstop is
+   * written for the sticky-tab case, so the segment and the declaration have to stay able to
+   * disagree — which they cannot if a chip moving to a sport declared in already re-seeds.
+   *
+   * This is the spec's own walk: *a player who moved the segment, switched to a second sport
+   * and came back is **not** re-seeded*.
+   */
+  it('leaves a moved segment alone across a switch to an undeclared sport and back', async () => {
+    // Tennis is declared *for fun*, so a segment re-derived from the declaration would move
+    // off the competitive one the player chose and the assertion would see it.
+    await openPlayUndeclared({ ...UNDECLARED, play_intents: { TENNIS: 'FOR_FUN' } });
+
+    fireEvent.press(screen.getByLabelText('Tennis'));
+    await waitFor(() => expect(isSelected('Tennis')).toBe(true));
+    fireEvent.press(screen.getByLabelText('Competitive, this search'));
+    expect(isSelected('Competitive, this search')).toBe(true);
+
+    fireEvent.press(screen.getByLabelText('Padel'));
+    await screen.findByText(declarationTitle('Padel'));
+    // Undeclared, so the segment is not on screen at all — and nothing moved it while it was
+    // away, which is what the walk back is for.
+    expect(screen.queryByLabelText('Competitive, this search')).toBeNull();
+
+    fireEvent.press(screen.getByLabelText('Tennis'));
+
+    await waitFor(() => expect(isSelected('Tennis')).toBe(true));
+    expect(isSelected('Competitive, this search')).toBe(true);
+  });
+
+  /**
+   * The declaration answered once and never again: the player has second thoughts about *this
+   * search*, and the profile — which now carries what they declared — is read a second time.
+   * A mode re-derived from that read would take the search back off them.
+   */
+  it('leaves a moved segment alone when the profile is read again', async () => {
+    transport.on('PUT', PADEL_INTENT, () =>
+      json<Wire['PlayIntentDeclarationResponse']>({
+        sport: 'PADEL',
+        intent: 'COMPETITIVE',
+      }),
+    );
+    await openPlayUndeclared(UNDECLARED);
+
+    fireEvent.press(screen.getByLabelText('Competitive, your usual at Padel'));
+    await waitFor(() => expect(isSelected('Competitive, this search')).toBe(true));
+
+    fireEvent.press(screen.getByLabelText('For fun, this search'));
+    stubProfileSurface(transport, { ...UNDECLARED, play_intents: { PADEL: 'COMPETITIVE' } });
+    const readsBefore = transport.requestsTo('GET', PROFILE_SURFACE_PATH).length;
+
+    // Everything, because that is what coming back to the app does — the profile is the one
+    // of the three reads this assertion is about.
+    act(() => {
+      void queryClient.invalidateQueries();
+    });
+
+    await waitFor(() =>
+      expect(transport.requestsTo('GET', PROFILE_SURFACE_PATH).length).toBeGreaterThan(readsBefore),
+    );
+    expect(isSelected('For fun, this search')).toBe(true);
+  });
+
+  /**
+   * The visit's own end. The store outlives this screen, so *first* has to be bounded by the
+   * screen rather than by the process: a player who leaves Play and declares that sport
+   * somewhere else comes back to a declaration that **already existed when the screen
+   * opened**, and the segment they moved is theirs to keep.
+   */
+  it('leaves a moved segment alone on a declaration made while the player was away', async () => {
+    await openPlayUndeclared({ ...UNDECLARED, play_intents: { TENNIS: 'COMPETITIVE' } });
+
+    // The mode is moved where there is a control to move it with, and the chip goes back to
+    // the sport the declaration is about.
+    fireEvent.press(screen.getByLabelText('Tennis'));
+    await waitFor(() => expect(isSelected('Tennis')).toBe(true));
+    fireEvent.press(screen.getByLabelText('Competitive, this search'));
+    fireEvent.press(screen.getByLabelText('Padel'));
+    await screen.findByText(declarationTitle('Padel'));
+
+    // Out of Play, and the declaration arrives from somewhere that is not this screen — as
+    // *for fun*, so a segment re-derived from it would be seen moving off the player's own.
+    fireEvent.press(screen.getByLabelText('Now'));
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    stubProfileSurface(transport, {
+      ...UNDECLARED,
+      play_intents: { PADEL: 'FOR_FUN', TENNIS: 'COMPETITIVE' },
+    });
+    act(() => {
+      void queryClient.invalidateQueries();
+    });
+
+    fireEvent.press(screen.getByLabelText('Play'));
+
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    // The read landing is what takes the interstitial away, so its absence is the moment the
+    // declaration made elsewhere is on screen — which is the moment the segment must not move.
+    await waitFor(() => expect(screen.queryByText(declarationTitle('Padel'))).toBeNull());
+    expect(isSelected('Competitive, this search')).toBe(true);
+  });
+
+  /**
+   * The declaration's own refusal, drawn the way every other one on this screen is: a coral
+   * note **above** the control that failed. It is on paper rather than inside the dark card
+   * because 5.2's repaint has no on-dark coral, and a white line would be a failure carried by
+   * wording alone ([#293](https://github.com/Raketa02/Raketa/issues/293)).
+   */
+  it('says what a refused declaration means, and keeps all three answers', async () => {
+    transport.on('PUT', PADEL_INTENT, () => errorResponse(503, 'matchmaking_unavailable'));
+    await openPlayUndeclared(UNDECLARED);
+
+    fireEvent.press(screen.getByLabelText('Competitive, your usual at Padel'));
+
     expect(
-      screen.getByLabelText(
-        searchControlLabel({ kind: 'undeclared', sport: 'padel' }, { seats: PADEL_SEATS }) ?? '',
+      await screen.findByText(
+        playErrorMessage({ code: 'matchmaking_unavailable' } as never) as string,
       ),
     ).toBeTruthy();
+    // The retry is the answer that failed — the question is still on screen, still answerable.
+    expect(screen.getByLabelText('Competitive, your usual at Padel')).toBeTruthy();
+    expect(screen.getByLabelText('Either suits me, your usual at Padel')).toBeTruthy();
+  });
+
+  /**
+   * `Button`'s own distinction, on a card with three of them: **a busy button is not a
+   * disabled button.** All three were `disabled` while any one of them was writing, which
+   * announced *unavailable* for the answer the player had just pressed.
+   */
+  it('announces the answer being written as busy, and the other two as shut', async () => {
+    // Never resolves: the assertion is about the beat the write is in flight.
+    transport.on('PUT', PADEL_INTENT, () => new Promise<Response>(() => {}));
+    await openPlayUndeclared(UNDECLARED);
+
+    fireEvent.press(screen.getByLabelText('Competitive, your usual at Padel'));
+
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText('Competitive, your usual at Padel').props.accessibilityState,
+      ).toMatchObject({ busy: true }),
+    );
+    expect(
+      screen.getByLabelText('Either suits me, your usual at Padel').props.accessibilityState,
+    ).toMatchObject({ busy: false, disabled: true });
   });
 
   it('opens the search once the question is answered', async () => {
@@ -643,7 +893,7 @@ describe('a sport nobody has declared in', () => {
         intent: 'NO_PREFERENCE',
       }),
     );
-    await openPlay(UNDECLARED);
+    await openPlayUndeclared(UNDECLARED);
 
     fireEvent.press(screen.getByLabelText('Either suits me, your usual at Padel'));
 
@@ -653,5 +903,102 @@ describe('a sport nobody has declared in', () => {
       surface: 'SEARCH_SWITCH',
     });
     expect(await screen.findByLabelText(COURT_CARD ?? '')).toBeTruthy();
+  });
+});
+
+/**
+ * **The declaration is on screen at rest, and a disagreement is a state**
+ * ([#294](https://github.com/Raketa02/Raketa/issues/294)).
+ *
+ * Every assertion here is about the pair of values staying two values: the durable one is
+ * named where the player can see it, the switch above it moves without writing anything, and
+ * the one control that does write says what it is going to write before it does.
+ */
+describe('the declaration, standing under the switch', () => {
+  const DECLARED: Wire['PlayerProfileReadResponse'] = {
+    availability: [{ day: 2, part: 'EVENING' }],
+    search_radius_km: 12,
+    play_intents: { PADEL: 'COMPETITIVE', TENNIS: 'FOR_FUN' },
+  };
+
+  /** The line as the copy deck writes it, so an assertion is never a spelling of one. */
+  const line = (intent: Wire['PlayIntent'], mode: 'COMPETITIVE' | 'FOR_FUN') =>
+    declarationLine({ intent, mode, sportName: 'Padel' });
+
+  const AGREEING = line('COMPETITIVE', 'COMPETITIVE');
+  const DRIFTING = line('COMPETITIVE', 'FOR_FUN');
+
+  it('names what the profile holds, under the control it is not', async () => {
+    await openPlay(DECLARED);
+
+    expect(screen.getByLabelText(AGREEING.spoken)).toBeTruthy();
+    expect(screen.getByLabelText(AGREEING.actionLabel)).toBeTruthy();
+  });
+
+  /**
+   * The whole of the move: the durable fact **holds still while the switch moves**, and the
+   * slot under it changes in place rather than a sheet coming up over the screen.
+   */
+  it('changes in place when the switch moves away from it, and writes nothing', async () => {
+    await openPlay(DECLARED);
+
+    fireEvent.press(screen.getByLabelText('For fun, this search'));
+
+    expect(await screen.findByLabelText(DRIFTING.spoken)).toBeTruthy();
+    expect(screen.queryByLabelText(AGREEING.spoken)).toBeNull();
+    // ADR-0094's drift backstop is written for the sticky-tab case, so the two have to be able
+    // to disagree — which they cannot if moving the switch writes.
+    expect(profileWrites()).toEqual([]);
+  });
+
+  /**
+   * A second entry to a write that already exists — `intentForMode(mode)` on the interstitial's
+   * own surface — and the line returns to its resting state off the profile the route answers
+   * with, rather than off the request being echoed back.
+   */
+  it('writes the declaration on Update, and settles back into agreement', async () => {
+    transport.on('PUT', PADEL_INTENT, () =>
+      json<Wire['PlayIntentDeclarationResponse']>({ sport: 'PADEL', intent: 'FOR_FUN' }),
+    );
+    await openPlay(DECLARED);
+
+    fireEvent.press(screen.getByLabelText('For fun, this search'));
+    fireEvent.press(await screen.findByLabelText(DRIFTING.actionLabel));
+
+    await waitFor(() => expect(transport.requestsTo('PUT', PADEL_INTENT)).toHaveLength(1));
+    expect(transport.requestsTo('PUT', PADEL_INTENT)[0]?.body).toEqual({
+      intent: 'FOR_FUN',
+      surface: 'SEARCH_SWITCH',
+    });
+    expect(await screen.findByLabelText(line('FOR_FUN', 'FOR_FUN').spoken)).toBeTruthy();
+  });
+
+  /**
+   * *Change* is not a second copy of the question. The declaration's home is the You tab
+   * ([#296](https://github.com/Raketa02/Raketa/issues/296)), and drawing the three answers here
+   * would put the two intent controls back on one screen — which is what #293 took apart.
+   */
+  it('sends Change to where the declaration lives', async () => {
+    await openPlay(DECLARED);
+
+    fireEvent.press(screen.getByLabelText(AGREEING.actionLabel));
+
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+    expect(profileWrites()).toEqual([]);
+  });
+
+  /** A sport with no declaration is `undeclared`, and none of this is drawn on it (#293). */
+  it('is not on screen at all where there is nothing declared', async () => {
+    await openPlayUndeclared({
+      availability: [{ day: 2, part: 'EVENING' }],
+      search_radius_km: 12,
+      play_intents: {},
+    });
+
+    for (const intent of ['COMPETITIVE', 'FOR_FUN', 'NO_PREFERENCE'] as const) {
+      for (const mode of ['COMPETITIVE', 'FOR_FUN'] as const) {
+        expect(screen.queryByLabelText(line(intent, mode).spoken)).toBeNull();
+      }
+    }
   });
 });

@@ -43,7 +43,12 @@ import {
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession } from '../store/playSession.store';
 
-import { declarationOptionLabel, declarationTitle } from './findAGamePresentation';
+import {
+  declarationLine,
+  declarationOptionLabel,
+  declarationTitle,
+  modeControlLabel,
+} from './findAGamePresentation';
 import {
   DECK_FOOTER,
   NOBODY_IN_RANGE_TITLE,
@@ -61,6 +66,7 @@ import { poolDescription } from './searchPresentation';
 
 const DECK = '/api/v1/deck';
 const TENNIS_INTENT = '/api/v1/play-intents/TENNIS';
+const PADEL_INTENT = '/api/v1/play-intents/PADEL';
 const INTEREST = '/api/v1/interest';
 const PASSES = '/api/v1/passes';
 const DECLINES = '/api/v1/prompt-declines';
@@ -827,5 +833,98 @@ describe('the question a deal raised', () => {
     // No sheet at all — the card the deal dealt is reachable, which it would not be behind one.
     expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
     expect(screen.queryByText(REFRESH_YOUR_TIMES)).toBeNull();
+  });
+});
+
+/**
+ * **The declaration at rest on the second Play surface**
+ * ([#295](https://github.com/Raketa02/Raketa/issues/295)).
+ *
+ * The deck is the one screen in the product where the durable answer *is* what the search runs
+ * on — `SearchEnvelope.mode` is null exactly here — so the line has one state and no drift
+ * variant. What is asserted is mostly that absence, which is only observable from outside.
+ */
+describe('the declaration, standing where there is no mode', () => {
+  /** The line as the copy deck writes it, so an assertion is never a spelling of one. */
+  const dealing = (intent: Wire['PlayIntent'], sportName: string) =>
+    declarationLine({ intent, mode: undefined, sportName });
+
+  const DEALT = dealing('FOR_FUN', 'Padel');
+
+  it('says the deal runs on what the profile holds, under the chips it is chosen by', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    expect(screen.getByLabelText(DEALT.spoken)).toBeTruthy();
+    expect(screen.getByLabelText(DEALT.actionLabel)).toBeTruthy();
+  });
+
+  /**
+   * There is nothing on this screen for the declaration to disagree with — no segment, and
+   * therefore no `differs` state and no *Update*. The absence of the control is the reason the
+   * sentence can be written the way it is.
+   */
+  it('has no drift variant, because there is no switch to drift from', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    for (const mode of ['COMPETITIVE', 'FOR_FUN'] as const) {
+      expect(screen.queryByLabelText(modeControlLabel(mode))).toBeNull();
+      expect(
+        screen.queryByLabelText(
+          declarationLine({ intent: 'FOR_FUN', mode, sportName: 'Padel' }).spoken,
+        ),
+      ).toBeNull();
+    }
+    expect(DEALT.action).toBe('Change');
+  });
+
+  /**
+   * The chip is what chooses which declaration is being read, and *either suits me* gets a frame
+   * of its own — `declarationNamesAKind` is where that is argued, and
+   * `findAGamePresentation.test` is where the two frames are compared. What this adds is that
+   * the right one reaches the screen.
+   */
+  it('follows the chip, and claims no kind for an answer that named none', async () => {
+    stubProfileSurface(transport, {
+      availability: [{ day: 2, part: 'EVENING' }],
+      search_radius_km: 12,
+      play_intents: { PADEL: 'COMPETITIVE', TENNIS: 'NO_PREFERENCE' },
+    });
+    await openDeck();
+    await screen.findByLabelText(dealing('COMPETITIVE', 'Padel').spoken);
+
+    fireEvent.press(screen.getByLabelText('Tennis'));
+
+    expect(await screen.findByLabelText(dealing('NO_PREFERENCE', 'Tennis').spoken)).toBeTruthy();
+    expect(screen.queryByLabelText(dealing('FOR_FUN', 'Tennis').spoken)).toBeNull();
+  });
+
+  /**
+   * *Change* means one thing across the tab: the declaration's home is the You tab (#296), and
+   * the deck does not grow a second editor for it any more than it grows one for the radius.
+   */
+  it('sends Change to where the declaration lives, and writes nothing on the way', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    fireEvent.press(screen.getByLabelText(DEALT.actionLabel));
+
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+    expect(transport.requestsTo('PUT', PADEL_INTENT)).toEqual([]);
+    expect(transport.requestsTo('PUT', TENNIS_INTENT)).toEqual([]);
+  });
+
+  /** An undeclared sport is the interstitial's state, and there is nothing yet to stand for. */
+  it('is not drawn at all on a sport nobody has declared in', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    fireEvent.press(screen.getByLabelText('Tennis'));
+    await screen.findByText(declarationTitle('Tennis'));
+
+    for (const intent of ['COMPETITIVE', 'FOR_FUN', 'NO_PREFERENCE'] as const) {
+      expect(screen.queryByLabelText(dealing(intent, 'Tennis').spoken)).toBeNull();
+    }
   });
 });

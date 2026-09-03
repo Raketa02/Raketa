@@ -21,10 +21,15 @@ describe('the sport the screen is on', () => {
 });
 
 describe('what stands between the player and a search', () => {
-  it('is nothing, once the sport is rated and declared in', () => {
+  /**
+   * The declaration comes with the branch, so the standing line under the mode segment cannot
+   * be drawn without one ([#294](https://github.com/Raketa02/Raketa/issues/294)).
+   */
+  it('is nothing, once the sport is rated and declared in — and carries what was declared', () => {
     expect(findAGameStanding(['padel'], 'padel', { padel: 'FOR_FUN' })).toEqual({
       kind: 'searchable',
       sport: 'padel',
+      intent: 'FOR_FUN',
     });
   });
 
@@ -41,6 +46,7 @@ describe('what stands between the player and a search', () => {
     expect(findAGameStanding(['padel'], 'padel', { padel: 'NO_PREFERENCE' })).toEqual({
       kind: 'searchable',
       sport: 'padel',
+      intent: 'NO_PREFERENCE',
     });
   });
 

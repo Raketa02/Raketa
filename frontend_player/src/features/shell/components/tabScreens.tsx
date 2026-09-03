@@ -12,6 +12,7 @@
  */
 
 import { AccountPanel } from '@/features/auth/types';
+import { PlayIntentsSection } from '@/features/player_profile/types';
 
 import { PlaceholderScreen } from './PlaceholderScreen';
 import { PLACEHOLDER_COPY } from './shellCopy';
@@ -33,13 +34,22 @@ export function ChatsScreen() {
  * The one tab that is not only a placeholder.
  *
  * Signing out is the account's own surface and has existed since the walking skeleton; the
- * shell arriving is what gives it a home rather than a reason to disappear. The line above it
- * is still the citation — the profile, the radius and the week are what this tab becomes, and
- * none of the three is editable here yet.
+ * shell arriving is what gives it a home rather than a reason to disappear.
+ *
+ * **The per-sport declaration is the first of the three citations to arrive**
+ * ([#296](https://github.com/Raketa02/Raketa/issues/296)): `PlayIntentsSection` lists what a
+ * player has declared in each sport they are rated in, and writes on the `PROFILE_SCREEN`
+ * surface the contract has been holding open for it. The radius and the week are still
+ * unbuilt, so the line above stays exactly as it is — it names what this tab becomes, and two
+ * thirds of that is still owed.
+ *
+ * Both children are other features' sections composed by the shell, which is what this tab has
+ * always been: it owns the citation and nothing that is drawn under it.
  */
 export function YouScreen() {
   return (
     <PlaceholderScreen copy={PLACEHOLDER_COPY.you}>
+      <PlayIntentsSection />
       <AccountPanel />
     </PlaceholderScreen>
   );

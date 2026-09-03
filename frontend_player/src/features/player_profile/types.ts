@@ -85,6 +85,17 @@ export {
 } from './hooks/useProfileSurface';
 
 /**
+ * **The You tab's first real section** — one row per rated sport, and what each one has
+ * declared ([#296](https://github.com/Raketa02/Raketa/issues/296)).
+ *
+ * Named by `shell`'s `YouScreen` and by nothing else. It is here rather than in `play/` for the
+ * reason `PlayerProfileSurface` gives about the read it is drawn from: the three writes are
+ * this feature's, and *You* was always going to draw the same three facts. It writes with
+ * `PROFILE_SCREEN`, the one value of `PlayIntentSurface` that had no client behind it.
+ */
+export { PlayIntentsSection } from './components/PlayIntentsSection';
+
+/**
  * The bounds a Search radius is held inside, and the words the figure is read with.
  *
  * Exported because **Play edits the same number against the same rules**, which is this

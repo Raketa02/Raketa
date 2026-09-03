@@ -12,7 +12,7 @@
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
-import { FIND_A_GAME_TITLE, usePlaySession } from '@/features/play/types';
+import { FIND_A_GAME_TITLE, modeControlLabel, usePlaySession } from '@/features/play/types';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -25,6 +25,7 @@ import {
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
+import { declarationOptionLabel } from '@/shared/vocabulary/playIntentPresentation';
 
 import { enterPlay } from './shellNavigation';
 import { PLACEHOLDER_COPY } from './shellCopy';
@@ -296,5 +297,58 @@ describe('the shell keeps no per-tab history', () => {
     await waitFor(() => expect(screen).toHavePathname('/play'));
     act(() => router.back());
     await waitFor(() => expect(screen).toHavePathname('/'));
+  });
+});
+
+/**
+ * **Two tabs, and the one rule that spans them** — asserted here because the shell is the one
+ * feature allowed to read across that boundary, and neither of the two features it names may
+ * import the other.
+ *
+ * *You* now lists what a player has declared per sport and writes it
+ * ([#296](https://github.com/Raketa02/Raketa/issues/296)). It must not move the mode Play
+ * opens in: the two values have to be able to disagree, which is what ADR-0094's drift
+ * backstop is written for, and a declaration edited on another tab quietly re-seeding the
+ * segment would leave it nothing to catch.
+ */
+describe('what a declaration changed on You does to Play', () => {
+  const PADEL_INTENT = '/api/v1/play-intents/PADEL';
+
+  /**
+   * Which half of the mode segment is on, whichever it is.
+   *
+   * The assertion is *unchanged* rather than *competitive*, and it has to be: `playPreferences`
+   * is scoped to the **process**, so the mode a suite finds is whatever an earlier test in the
+   * same file seeded — and the rule under test is about the value not moving, not about which
+   * value it is.
+   */
+  const selectedMode = () =>
+    (['COMPETITIVE', 'FOR_FUN'] as const).find(
+      (mode) =>
+        screen.getByLabelText(modeControlLabel(mode)).props.accessibilityState?.selected === true,
+    );
+
+  it('leaves the mode the segment is on exactly where it was', async () => {
+    await launchIntoTheApp();
+
+    pressTab('Play');
+    await screen.findByLabelText(modeControlLabel('COMPETITIVE'));
+    const before = selectedMode();
+    expect(before).toBeDefined();
+
+    // Declare the **other** answer, so a segment re-seeded from the declaration would move.
+    const other = before === 'COMPETITIVE' ? 'FOR_FUN' : 'COMPETITIVE';
+    transport.on('PUT', PADEL_INTENT, () =>
+      json<Wire['PlayIntentDeclarationResponse']>({ sport: 'PADEL', intent: other }),
+    );
+
+    pressTab('You');
+    fireEvent.press(await screen.findByText('Padel'));
+    fireEvent.press(await screen.findByLabelText(declarationOptionLabel(other, 'Padel')));
+    await waitFor(() => expect(transport.requestsTo('PUT', PADEL_INTENT)).toHaveLength(1));
+
+    pressTab('Play');
+    await screen.findByLabelText(modeControlLabel('COMPETITIVE'));
+    expect(selectedMode()).toBe(before);
   });
 });

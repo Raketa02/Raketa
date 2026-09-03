@@ -1,5 +1,8 @@
 import {
   DECLARATION_BODY,
+  DECLARATION_EYEBROW,
+  MODE_EYEBROW,
+  MODE_HEADING,
   NOBODY_IS_CONTACTED_BY_SEARCHING,
   WEEK_ADDED_FOR_THIS_SEARCH,
   WEEK_CHANGED_AND_ADDED,
@@ -9,7 +12,9 @@ import {
   courtEntryTag,
   courtEntryTitle,
   declarationOptionLabel,
+  declarationLine,
   declarationTitle,
+  intentGloss,
   intentLabel,
   modeControlLabel,
   modeLabel,
@@ -35,29 +40,57 @@ describe('telling the two rows of answers apart', () => {
     expect(modeControlLabel('COMPETITIVE')).toBe('Competitive, this search');
     expect(declarationOptionLabel('COMPETITIVE', 'Padel')).toBe('Competitive, your usual at Padel');
   });
+
+  /**
+   * The two never appear together any more (#293), so the visible words carry what the spoken
+   * ones already did: a player meets them one after the other and has nothing to compare
+   * against. *This search* against *your usual* is the pair, drawn as well as announced.
+   */
+  it('says the lifetime on the visible headings too, and not only to a listener', () => {
+    expect(MODE_EYEBROW).toBe('This search only');
+    expect(MODE_HEADING).toContain('tonight');
+
+    expect(DECLARATION_EYEBROW).toBe('Kept on your profile');
+    expect(declarationTitle('Padel')).toContain('usual');
+
+    // And the two headings no longer differ by two words and a question mark.
+    expect(declarationTitle('Padel')).not.toContain(MODE_HEADING);
+  });
+
+  /**
+   * Three near-synonyms in a column need saying what each one means to whoever reads it, and
+   * *Either suits me* needs it most: indifference is an answer somebody gave.
+   */
+  it('glosses every answer, in one line each about the player', () => {
+    for (const intent of ['COMPETITIVE', 'FOR_FUN', 'NO_PREFERENCE'] as const) {
+      expect(intentGloss(intent)).not.toBe('');
+      expect(intentGloss(intent)).not.toContain('\n');
+      expect(intentGloss(intent)).not.toBe(intentLabel(intent));
+    }
+  });
 });
 
 describe('the closed control', () => {
   // The control is the card, so the name it carries is the court it opens rather than the
   // verb for the machinery underneath it — and the seat count is what decides which court.
   it('names the court it opens when there is one', () => {
-    expect(searchControlLabel({ kind: 'searchable', sport: 'padel' }, { seats: 4 })).toBe(
-      'Build the four. Four seats, two a side. Nobody is contacted until you send it.',
-    );
-    expect(searchControlLabel({ kind: 'searchable', sport: 'tennis' }, { seats: 2 })).toBe(
-      'Set up the match. Two seats, one a side. Nobody is contacted until you send it.',
-    );
+    expect(
+      searchControlLabel({ kind: 'searchable', sport: 'padel', intent: 'FOR_FUN' }, { seats: 4 }),
+    ).toBe('Build the four. Four seats, two a side. Nobody is contacted until you send it.');
+    expect(
+      searchControlLabel({ kind: 'searchable', sport: 'tennis', intent: 'FOR_FUN' }, { seats: 2 }),
+    ).toBe('Set up the match. Two seats, one a side. Nobody is contacted until you send it.');
   });
 
-  // The availability step's settled shape: a dead control carries the sentence that explains it.
-  it('says what is missing rather than going merely grey', () => {
-    expect(searchControlLabel({ kind: 'undeclared', sport: 'padel' }, { seats: 4 })).toBe(
-      'Say what kind of game first',
-    );
-  });
-
-  // 6.1: this app never draws a pressable-looking control that refuses.
+  /**
+   * 6.1: this app never draws a pressable-looking control that refuses — and since #293 an
+   * undeclared sport draws no court card at all rather than a greyed one saying *Say what kind
+   * of game first*. The declaration is a precondition for the form, not a field on it.
+   */
   it('is not drawn at all where there is nothing to search for', () => {
+    expect(
+      searchControlLabel({ kind: 'undeclared', sport: 'padel' }, { seats: 4 }),
+    ).toBeUndefined();
     expect(searchControlLabel({ kind: 'no-rated-sport' }, { seats: 4 })).toBeUndefined();
   });
 });
@@ -133,8 +166,136 @@ describe('what the screen says about a temporary week and a permanent answer', (
     }
   });
 
-  it('names the sport in the question and keeps the switch out of the answer', () => {
-    expect(declarationTitle('Padel')).toBe('What kind of game at Padel?');
-    expect(DECLARATION_BODY).toContain('single search');
+  /**
+   * *Your usual* is the app's own phrase — `declarationOptionLabel` has been announcing it
+   * since the interstitial shipped — and the body says **who reads the answer** rather than
+   * disambiguating a control that is no longer above it (#293).
+   */
+  it('names the sport in the question and says who reads the answer', () => {
+    expect(declarationTitle('Padel')).toBe('Your usual game at Padel');
+    expect(declarationOptionLabel('COMPETITIVE', 'Padel')).toContain('your usual at Padel');
+
+    expect(DECLARATION_BODY).toContain('Match me');
+    expect(DECLARATION_BODY).toContain('somebody else’s search');
+    // The sentence it replaced pointed at the segment, which is not drawn beside it any more.
+    expect(DECLARATION_BODY).not.toContain('above');
+  });
+});
+
+describe('the declaration, standing under the segment', () => {
+  const at = (
+    intent: 'COMPETITIVE' | 'FOR_FUN' | 'NO_PREFERENCE',
+    mode: 'COMPETITIVE' | 'FOR_FUN',
+  ) => declarationLine({ intent, mode, sportName: 'Padel' });
+
+  /**
+   * At rest the line is a **statement**: the durable value, named, on a screen it had no
+   * representation on at all before ([#294](https://github.com/Raketa02/Raketa/issues/294)).
+   */
+  it('says what the profile holds, and offers to change it', () => {
+    const standing = at('COMPETITIVE', 'COMPETITIVE');
+
+    expect(standing.kind).toBe('agrees');
+    expect(standing.spoken).toBe('Your usual at Padel is Competitive');
+    expect(standing.value).toBe('Competitive');
+    expect(standing.action).toBe('Change');
+  });
+
+  /**
+   * Moved off the declaration, the **same slot** says what the disagreement costs — and what it
+   * does not: other people still find this player as the profile says.
+   */
+  it('says the durable fact still holds when the switch has moved off it', () => {
+    const standing = at('COMPETITIVE', 'FOR_FUN');
+
+    expect(standing.kind).toBe('differs');
+    expect(standing.spoken).toBe(
+      'Just this search. Players still find you as Competitive at Padel.',
+    );
+    // The value that does not move is the declaration, never the mode the segment is on.
+    expect(standing.value).toBe('Competitive');
+    expect(standing.action).toBe('Update');
+  });
+
+  /** `declarationAgreesWithMode`'s rule, read on the copy: indifference is contradicted by neither. */
+  it('never offers to narrow an answer that said either would do', () => {
+    for (const mode of ['COMPETITIVE', 'FOR_FUN'] as const) {
+      expect(at('NO_PREFERENCE', mode).kind).toBe('agrees');
+      expect(at('NO_PREFERENCE', mode).value).toBe('Either suits me');
+    }
+  });
+
+  /**
+   * Both names carry the **lifetime**, which is this screen's recurring problem: *Competitive*
+   * is on it twice, and only *your usual* against *just this search* tells the two apart. The
+   * control's name says what pressing it does rather than repeating the word drawn on it.
+   */
+  it('names both states and both controls by what they commit to', () => {
+    expect(at('COMPETITIVE', 'COMPETITIVE').spoken).toContain('Your usual');
+    expect(at('COMPETITIVE', 'FOR_FUN').spoken).toContain('Just this search');
+
+    expect(at('COMPETITIVE', 'COMPETITIVE').actionLabel).toBe('Change your usual at Padel');
+    expect(at('COMPETITIVE', 'FOR_FUN').actionLabel).toBe('Make For fun your usual at Padel');
+  });
+
+  /** The sentence is drawn in pieces and spoken whole — one element, one name. */
+  it('hands the screen the same sentence it hands a listener', () => {
+    for (const [intent, mode] of [
+      ['COMPETITIVE', 'COMPETITIVE'],
+      ['COMPETITIVE', 'FOR_FUN'],
+    ] as const) {
+      const standing = at(intent, mode);
+      expect(`${standing.lead}${standing.value}${standing.tail}`).toBe(standing.spoken);
+    }
+  });
+});
+
+describe('the declaration, standing on a surface with no mode', () => {
+  const dealing = (intent: 'COMPETITIVE' | 'FOR_FUN' | 'NO_PREFERENCE') =>
+    declarationLine({ intent, mode: undefined, sportName: 'Padel' });
+
+  /**
+   * `POST /deck` carries no mode — `SearchEnvelope.mode` is null exactly there — so the deal
+   * runs on the declaration itself, and the line states that rather than leaving it to be
+   * inferred from a control that is missing
+   * ([#295](https://github.com/Raketa02/Raketa/issues/295)).
+   */
+  it('says the deal is dealt on the declaration, and names the kind it deals in', () => {
+    expect(dealing('COMPETITIVE').spoken).toBe('Dealing Competitive games at Padel — your usual');
+    expect(dealing('FOR_FUN').spoken).toBe('Dealing For fun games at Padel — your usual');
+  });
+
+  /**
+   * The deck's whole distinction: there is no switch here, so there is nothing for the
+   * declaration to disagree with and no state that offers to reconcile the two.
+   */
+  it('has no drift variant at all, whatever was declared', () => {
+    for (const intent of ['COMPETITIVE', 'FOR_FUN', 'NO_PREFERENCE'] as const) {
+      expect(dealing(intent).kind).toBe('deals');
+      expect(dealing(intent).action).toBe('Change');
+      expect(dealing(intent).actionLabel).toBe('Change your usual at Padel');
+    }
+  });
+
+  /**
+   * `declarationNamesAKind`'s rule, read on the copy. A `NO_PREFERENCE` player is dealt on the
+   * for-fun vector `modeForIntent` **inherits** for them, and printing *dealing for fun games
+   * — your usual* would report that inheritance back as the answer they gave. ADR-0094:
+   * *"indifference about the kind of evening is not a third kind of evening."*
+   */
+  it('claims no kind for an answer that named none', () => {
+    expect(dealing('NO_PREFERENCE').spoken).toBe(
+      'Dealing on your usual at Padel — Either suits me',
+    );
+    expect(dealing('NO_PREFERENCE').spoken).not.toContain('For fun');
+  });
+
+  /** The same contract the other states keep: drawn in pieces, spoken whole. */
+  it('hands the screen the same sentence it hands a listener', () => {
+    for (const intent of ['COMPETITIVE', 'FOR_FUN', 'NO_PREFERENCE'] as const) {
+      const line = dealing(intent);
+      expect(`${line.lead}${line.value}${line.tail}`).toBe(line.spoken);
+      expect(line.value).toBe(intentLabel(intent));
+    }
   });
 });

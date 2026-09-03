@@ -124,7 +124,10 @@ const PADEL_SEATS = courtSeatCount('padel');
 
 const searchControl = () =>
   screen.getByLabelText(
-    searchControlLabel({ kind: 'searchable', sport: 'padel' }, { seats: PADEL_SEATS }) ?? '',
+    searchControlLabel(
+      { kind: 'searchable', sport: 'padel', intent: 'FOR_FUN' },
+      { seats: PADEL_SEATS },
+    ) ?? '',
   );
 
 /** Press *Search* and spend the floor, so the latch lifts onto whatever comes next. */
