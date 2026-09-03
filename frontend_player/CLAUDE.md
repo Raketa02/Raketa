@@ -316,8 +316,8 @@ a phone is a gate evaluated on a lie_. So the slider's only way to mean anything
 profile to hold what it shows, which makes running the search **one act over two requests** —
 the `PUT` first, and only where the number moved, so a failure there is a search that has not
 happened and the retry is the control the player already pressed. **That control is not a
-button saying _Search_.** It is `CourtEntryCard` — _Build the four_ on a doubles Sport and _Set
-up the match_ on a singles one, with the court drawn beside the sentence at
+button saying _Search_.** It is `CourtEntryCard` — _Build a doubles_ or _Build a singles_,
+named for the game the Sport plays, over a centred column ending in the court itself at
 `size.court.thumb` — because where a completed search goes is the **builder**, and a verb
 naming the machinery left the shape of the court a surprise one screen later. Every word on it
 branches on the seat count read off `Court`'s own coordinates, so a squash court is never told

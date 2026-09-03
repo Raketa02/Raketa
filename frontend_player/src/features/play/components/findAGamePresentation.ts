@@ -44,7 +44,7 @@ import {
 } from '../domain/playMode';
 import type { PlayIntent, SearchMode } from '../domain/vocabulary';
 
-import { builderTitle, isDoubles } from './builderPresentation';
+import { isDoubles } from './builderPresentation';
 
 /** The screen's own title, and the one ⚡ opens on. */
 export const FIND_A_GAME_TITLE = 'Find a game';
@@ -52,28 +52,20 @@ export const FIND_A_GAME_TITLE = 'Find a game';
 export const SPORT_HEADING = 'Sport';
 
 /**
- * The mode section's two lines — **an eyebrow saying whose question it is, then the question.**
+ * The mode section's heading — **one line, and it is the question the segment answers.**
  *
- * They were one line reading *What kind of game*, two words away from the declaration's *What
- * kind of game at Padel?*, and the pair was drawn in one column with the segment already
- * sitting on an answer to the question the card below was still asking
- * ([#293](https://github.com/Raketa02/Raketa/issues/293)). The render order is what fixed that
- * — the two controls no longer co-occur — and these words are what keep them apart for a
- * player who meets them one after the other instead of side by side.
+ * It was two: an eyebrow reading *This search only* over *What kind of game tonight*, written
+ * when the segment and the declaration card still stood in one column and the pair had to be
+ * told apart by their words ([#293](https://github.com/Raketa02/Raketa/issues/293)). **The
+ * render order is what keeps them apart now** — the declaration is a precondition for this
+ * form, so the two controls never co-occur — and the lifetime is still said in the two places
+ * a player can act on it: `modeControlLabel` announces *Competitive, this search*, and the
+ * standing line under the segment prints the durable answer the moment the two differ.
  *
- * **The lifetime is in the words rather than only in the layout**, which is the rule
- * `modeControlLabel` has been keeping for screen-reader users all along: *this search* against
- * *your usual*. `tonight` is the shortest true reading of a search's own lifetime — the week
- * grid below it is this visit's — and the eyebrow says the same thing without a metaphor for
- * anybody the word does not land on.
- *
- * The two roles are not interchangeable and the split is why there are two lines: an
- * **eyebrow labels a region you are reading** and a **`flab` labels a control you are about to
- * operate** (design-system 3.3). The lifetime is a fact about the whole section; the question
- * is what the segment underneath answers.
+ * *Tonight* went with the eyebrow. It was the shortest metaphor for a lifetime this section no
+ * longer states, and the week grid below is where a search says which evenings it is about.
  */
-export const MODE_EYEBROW = 'This search only';
-export const MODE_HEADING = 'What kind of game tonight';
+export const MODE_HEADING = 'What kind of game';
 
 export const WEEK_HEADING = 'When you could play';
 
@@ -316,18 +308,6 @@ export function weekFootnote(week: {
 }
 
 /**
- * What the slider does, said out loud — because it is the one control here that **writes**.
- *
- * A sport, a mode and a week edited on this screen reach the server as an ask on one search
- * and never as a change to the player. The radius cannot: `RunSearchRequest` carries none, so
- * the searcher's ask *is* their profile radius and moving the slider is moving the profile.
- * That asymmetry is the wire's rather than a choice, and a control that quietly changed a
- * durable value while three beside it changed nothing would be the surprise this line exists
- * to remove.
- */
-export const RADIUS_IS_YOUR_PROFILE = 'Kept on your profile — a search has no distance of its own.';
-
-/**
  * The one-tap declaration, on the screen ADR-0094 makes the edit surface.
  *
  * ***Your usual* is this app's own phrase for it**, and it has been saying it to screen-reader
@@ -379,31 +359,18 @@ export const NO_RATED_SPORT_LINE =
  *
  * Every sentence below branches on the **seat count** and none of them counts for itself:
  * `isDoubles` is `builderPresentation`'s, for the reason recorded there — *four* is a word
- * about a Sport, and a squash court must never be told to build one. The title is
- * `builderTitle`'s outright, at the one filling the card draws: **you, and nobody else.**
- */
-const COURT_ENTRY_SEATED = 1;
-
-export function courtEntryTitle(seats: number): string {
-  return builderTitle({ seats, filled: COURT_ENTRY_SEATED });
-}
-
-/**
- * The pill beside the title, and the two different jobs it does.
+ * about a Sport, and a squash court must never be told to build one.
  *
- * On a doubles court it names the **fact a player did not choose** — *padel is doubles* — so
- * four seats where two were expected are explained before they are counted. On a singles court
- * there is nothing to explain, so it says what the screen is handing over instead: the sides
- * are yours to pick. The sport is lower-cased because it is read inside a sentence rather than
- * on a control (§2's split, the same one `modeWord` is on).
+ * **The title names the game rather than the furniture.** It was `builderTitle`'s outright —
+ * *Build the four* against *Set up the match* — and those two are one sentence in two
+ * registers: one counts seats and the other names an occasion, so the pair only reads as a
+ * pair to somebody who has seen both. *Doubles* and *singles* are the sport's own words, they
+ * are already what `builderEyebrow` prints one screen on, and they differ by one word rather
+ * than by all of them. `builderTitle` keeps its own: it titles a screen that fills seats, and
+ * it has a third thing to say the moment somebody is sitting in one.
  */
-export function courtEntryTag(court: {
-  readonly seats: number;
-  readonly sportName: string;
-}): string {
-  return isDoubles(court.seats)
-    ? `${court.sportName.toLowerCase()} is doubles`
-    : 'you pick the sides';
+export function courtEntryTitle(seats: number): string {
+  return isDoubles(seats) ? 'Build a doubles' : 'Build a singles';
 }
 
 /** What the court is for, in the order the builder offers it: the engine first, then the pool. */
@@ -415,33 +382,17 @@ export function courtEntryBody(seats: number): string {
 }
 
 /**
- * The line beside the picture: **what the court is, and what pressing it does not do.**
- *
- * The second half is the whole reason a court can be drawn here at all. Nothing about this
- * screen reaches another player — `NOBODY_IS_CONTACTED_BY_SEARCHING` says it of the search and
- * this says it of the court — and a picture of four seats with no such sentence beside it
- * would read as four people about to be messaged.
- */
-export function courtEntrySeatLine(seats: number): string {
-  const shape = isDoubles(seats) ? 'Four seats · two a side' : 'Two seats · one a side';
-  return `${shape} · nobody is contacted until you send it`;
-}
-
-/**
  * The card's **spoken name**, and one element for one action (`the-words.md` §20.1).
  *
- * The interpuncts and the picture are the sighted half; a listener gets the same three facts
- * as sentences. The sport is not in it — the chip row above has already said which sport this
- * screen is on, and the court inside the card is hidden from the tree for exactly that reason.
+ * The picture is the sighted half and it is hidden from the tree — the card is one button, and
+ * a listener navigating a control has no use for a second name inside it — so **the shape the
+ * court draws is said here instead**, and this is the only place it is said at all. The sport
+ * is not in it: the chip row above has already named which sport this screen is on.
  */
 export function courtEntryLabel(seats: number): string {
   const shape = isDoubles(seats) ? 'Four seats, two a side.' : 'Two seats, one a side.';
-  return `${courtEntryTitle(seats)}. ${shape} Nobody is contacted until you send it.`;
+  return `${courtEntryTitle(seats)}. ${shape}`;
 }
-
-/** Under the card, and true of both halves of Play. The last word the screen says. */
-export const NOBODY_IS_CONTACTED_BY_SEARCHING =
-  'Nobody is contacted by searching. You choose whom to challenge.';
 
 /**
  * The search control: the act, or the absence of a control to name.

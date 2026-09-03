@@ -43,11 +43,8 @@ import { poolRankingStatus } from './searchingPresentation';
 import { searchingFloorMs } from './searchingWait';
 import {
   DECLARATION_BODY,
-  NOBODY_IS_CONTACTED_BY_SEARCHING,
-  RADIUS_IS_YOUR_PROFILE,
   WEEK_CHANGED_FROM_PROFILE,
-  courtEntrySeatLine,
-  courtEntryTag,
+  courtEntryBody,
   courtEntryTitle,
   declarationLine,
   declarationTitle,
@@ -324,26 +321,25 @@ describe('the way onto the court', () => {
     await openPlay(BOTH_DECLARED);
 
     expect(screen.getByText(courtEntryTitle(4))).toBeTruthy();
-    expect(screen.getByText(courtEntryTag({ seats: 4, sportName: 'Padel' }))).toBeTruthy();
-    expect(screen.getByText(courtEntrySeatLine(4))).toBeTruthy();
+    expect(screen.getByText(courtEntryBody(4))).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Tennis'));
 
     expect(await screen.findByText(courtEntryTitle(2))).toBeTruthy();
-    expect(screen.getByText(courtEntryTag({ seats: 2, sportName: 'Tennis' }))).toBeTruthy();
+    expect(screen.getByText(courtEntryBody(2))).toBeTruthy();
     expect(screen.queryByText(courtEntryTitle(4))).toBeNull();
   });
 
   /**
-   * One way through, and the sentence that makes a picture of four seats safe to draw.
+   * One way through, and it is the card.
    *
-   * A card and a *Search* button beside it would be two controls for one act; the card is
-   * the control, so the verb is nowhere on the screen.
+   * A card and a *Search* button beside it would be two controls for one act, so the verb is
+   * nowhere on the screen — the name the card carries is the court it opens.
    */
-  it('is the only control, and says nobody is contacted by pressing it', async () => {
+  it('is the only control, and never a verb beside itself', async () => {
     await openPlay();
 
-    expect(screen.getByText(NOBODY_IS_CONTACTED_BY_SEARCHING)).toBeTruthy();
+    expect(searchButton()).toBeTruthy();
     expect(screen.queryByLabelText('Search')).toBeNull();
   });
 });
@@ -445,13 +441,6 @@ describe('the search', () => {
     expect(transport.requestsTo('PUT', RADIUS)).toHaveLength(1);
   });
 
-  /** The slider writes, and the screen says so rather than moving a durable value quietly. */
-  it('says the radius is kept on the profile', async () => {
-    await openPlay();
-
-    expect(screen.getByText(RADIUS_IS_YOUR_PROFILE)).toBeTruthy();
-  });
-
   /** The scale ends at a value the write path accepts, so the top cannot be over-driven. */
   it('holds the slider inside the bounds the server serves', async () => {
     await openPlay();
@@ -508,7 +497,7 @@ describe('the searching latch', () => {
     expect(await screen.findByText(SEARCHING)).toBeTruthy();
     // The screen is behind an overlay that hides its descendants, which is the half of
     // *modal* a `Modal` cannot do for the tree it left behind.
-    expect(screen.queryByText(RADIUS_IS_YOUR_PROFILE)).toBeNull();
+    expect(screen.queryByText(courtEntryTitle(4))).toBeNull();
   });
 
   /**
@@ -678,9 +667,9 @@ describe('a sport nobody has declared in', () => {
     }
     expect(screen.queryByLabelText('Tuesday evening')).toBeNull();
     expect(screen.queryByLabelText(RADIUS_LABEL)).toBeNull();
-    expect(screen.queryByLabelText(COURT_CARD ?? '')).toBeNull();
     // Nor the greyed card that used to stand in for it: a control that refuses is not drawn.
-    expect(screen.queryByText(NOBODY_IS_CONTACTED_BY_SEARCHING)).toBeNull();
+    expect(screen.queryByLabelText(COURT_CARD ?? '')).toBeNull();
+    expect(screen.queryByText(courtEntryTitle(4))).toBeNull();
     // The chips stay: which sport this is about is the one thing still worth changing.
     expect(isSelected('Padel')).toBe(true);
   });

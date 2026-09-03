@@ -189,11 +189,8 @@ import { searchingFloorMs } from './searchingWait';
 import {
   FIND_A_GAME_TITLE,
   LOADING_PROFILE_LABEL,
-  MODE_EYEBROW,
   MODE_HEADING,
   NO_RATED_SPORT_LINE,
-  NOBODY_IS_CONTACTED_BY_SEARCHING,
-  RADIUS_IS_YOUR_PROFILE,
   RETRY_READ_LABEL,
   WEEK_HEADING,
   modeControlLabel,
@@ -558,9 +555,9 @@ export function FindAGameScreen() {
           {standing.kind !== 'searchable' ? null : (
             <>
               <View style={s.section}>
-                {/* Two lines, because one was two words away from the declaration's own heading.
-                    The eyebrow carries the lifetime — see `MODE_EYEBROW`. */}
-                <Text style={s.eyebrow}>{MODE_EYEBROW}</Text>
+                {/* One line. The lifetime is not a heading — it is `modeControlLabel`'s
+                    *this search* and the standing line below, both of which a player can act
+                    on. */}
                 <Text style={s.heading}>{MODE_HEADING}</Text>
                 {/* Design-system 6.3, and the second `Segment` on this screen. The mode picks one
                     of two *views of the same search* rather than firing an act, which is what
@@ -637,7 +634,6 @@ export function FindAGameScreen() {
               {bounds === undefined || radiusKm === undefined ? null : (
                 <View style={s.section}>
                   <Text style={s.heading}>{RADIUS_LABEL}</Text>
-                  <Text style={s.body}>{RADIUS_IS_YOUR_PROFILE}</Text>
                   <RadiusSlider
                     value={radiusKm}
                     minimum={bounds.minimumKm}
@@ -694,9 +690,6 @@ export function FindAGameScreen() {
                       search.mutate(ask, { onSuccess: () => setChosenRadiusKm(undefined) });
                     }}
                   />
-
-                  {/* True of both halves of Play, and the last word the screen says. */}
-                  <Text style={s.footnote}>{NOBODY_IS_CONTACTED_BY_SEARCHING}</Text>
                 </View>
               )}
             </>
@@ -743,8 +736,5 @@ const s = StyleSheet.create({
   failure: { gap: theme.space.sm },
   failureLine: { ...theme.type.tiny, color: theme.color.coralInk },
   section: { gap: theme.space.xs, paddingTop: theme.space.xs },
-  eyebrow: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
   heading: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
-  body: { ...theme.type.tiny, color: theme.color.ink },
-  footnote: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
 });

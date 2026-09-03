@@ -1,15 +1,12 @@
 import {
   DECLARATION_BODY,
   DECLARATION_EYEBROW,
-  MODE_EYEBROW,
   MODE_HEADING,
-  NOBODY_IS_CONTACTED_BY_SEARCHING,
   WEEK_ADDED_FOR_THIS_SEARCH,
   WEEK_CHANGED_AND_ADDED,
   WEEK_CHANGED_FROM_PROFILE,
   courtEntryBody,
-  courtEntrySeatLine,
-  courtEntryTag,
+  courtEntryLabel,
   courtEntryTitle,
   declarationOptionLabel,
   declarationLine,
@@ -42,13 +39,12 @@ describe('telling the two rows of answers apart', () => {
   });
 
   /**
-   * The two never appear together any more (#293), so the visible words carry what the spoken
-   * ones already did: a player meets them one after the other and has nothing to compare
-   * against. *This search* against *your usual* is the pair, drawn as well as announced.
+   * The two never appear together any more (#293), and the lifetime is said where it can be
+   * acted on rather than in a heading over a region: `modeControlLabel` announces it on the
+   * control, and the declaration's own eyebrow and title carry *your usual*.
    */
-  it('says the lifetime on the visible headings too, and not only to a listener', () => {
-    expect(MODE_EYEBROW).toBe('This search only');
-    expect(MODE_HEADING).toContain('tonight');
+  it('keeps the durable answer named on the surfaces that own it', () => {
+    expect(MODE_HEADING).toBe('What kind of game');
 
     expect(DECLARATION_EYEBROW).toBe('Kept on your profile');
     expect(declarationTitle('Padel')).toContain('usual');
@@ -76,10 +72,10 @@ describe('the closed control', () => {
   it('names the court it opens when there is one', () => {
     expect(
       searchControlLabel({ kind: 'searchable', sport: 'padel', intent: 'FOR_FUN' }, { seats: 4 }),
-    ).toBe('Build the four. Four seats, two a side. Nobody is contacted until you send it.');
+    ).toBe('Build a doubles. Four seats, two a side.');
     expect(
       searchControlLabel({ kind: 'searchable', sport: 'tennis', intent: 'FOR_FUN' }, { seats: 2 }),
-    ).toBe('Set up the match. Two seats, one a side. Nobody is contacted until you send it.');
+    ).toBe('Build a singles. Two seats, one a side.');
   });
 
   /**
@@ -97,34 +93,27 @@ describe('the closed control', () => {
 
 describe('the way onto the court', () => {
   /**
-   * *The four* is a word about a Sport. Every sentence on the card branches on the seat
-   * count, so a squash court is never told to build one — the same rule `builderTitle` is
-   * written against, read here off the same helper rather than off a second `seats > 2`.
+   * Every sentence on the card branches on the seat count, so a squash court is never told to
+   * build a four — the same rule `builderTitle` is written against, read off the same helper
+   * rather than off a second `seats > 2`. The title names the **game**, which is one word
+   * apart across the two shapes where *Build the four* against *Set up the match* was all of
+   * them.
    */
-  it('says four things about a doubles court and two about a singles one', () => {
-    expect(courtEntryTitle(4)).toBe('Build the four');
-    expect(courtEntryTitle(2)).toBe('Set up the match');
+  it('names the game the sport plays, and says two different things about the two shapes', () => {
+    expect(courtEntryTitle(4)).toBe('Build a doubles');
+    expect(courtEntryTitle(2)).toBe('Build a singles');
 
     expect(courtEntryBody(4)).toContain('the evenest four');
     expect(courtEntryBody(2)).toContain('the evenest opponent');
-
-    expect(courtEntrySeatLine(4)).toContain('Four seats · two a side');
-    expect(courtEntrySeatLine(2)).toContain('Two seats · one a side');
   });
 
   /**
-   * The pill does two different jobs. On four seats it explains a fact the player did not
-   * choose; on two there is nothing to explain, so it says what is being handed over.
+   * The picture is hidden from the tree — the card is one button — so the shape it draws is
+   * the card's spoken name's to say, and it is said nowhere else.
    */
-  it('explains the seat count only where the count is a surprise', () => {
-    expect(courtEntryTag({ seats: 4, sportName: 'Padel' })).toBe('padel is doubles');
-    expect(courtEntryTag({ seats: 2, sportName: 'Tennis' })).toBe('you pick the sides');
-  });
-
-  /** The half a picture of four seats cannot say for itself, on the card and under it. */
-  it('says nobody is contacted, beside the court and beneath it', () => {
-    expect(courtEntrySeatLine(4)).toContain('nobody is contacted until you send it');
-    expect(NOBODY_IS_CONTACTED_BY_SEARCHING).toContain('You choose whom to challenge');
+  it('says the shape to a listener, since the court is drawn only for a reader', () => {
+    expect(courtEntryLabel(4)).toContain('Four seats, two a side');
+    expect(courtEntryLabel(2)).toContain('Two seats, one a side');
   });
 });
 
