@@ -65,3 +65,4 @@ ios/
 # --- test & build output ---
 playwright-report/
 test-results/
+.claude/worktrees/
