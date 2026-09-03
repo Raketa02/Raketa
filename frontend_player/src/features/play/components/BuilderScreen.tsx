@@ -210,7 +210,7 @@ import {
   type SeatOccupancy,
   type Seating,
 } from '../domain/forecast';
-import { seatPlaces, withheldSeats, type SeatPlace } from '../domain/lineup';
+import { seatPlaces, withheldSeats, type CourtHalf } from '../domain/lineup';
 import { alreadyAsked } from '../domain/raisedPrompt';
 import type { UnfilledReason } from '../domain/vocabulary';
 import { sentWeekForOrigin } from '../domain/workingWeek';
@@ -256,6 +256,7 @@ import { CandidatePhoto } from './candidate/CandidatePhoto';
 import { CourtBuild } from './court/CourtBuild';
 import { PromptSheet } from './PromptSheet';
 import type { CourtSeatOccupant } from './court/CourtSeat';
+import { handlesOn, type SeatedHandle } from './court/seatedHandles';
 import {
   WITHHELD_SEAT_LINE,
   groupReasonLine,
@@ -519,7 +520,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
    * Two readings of one seating would be two chances for the row saying *You + Marek is worth
    * 2,82* and the row offering *why is Marek here* to disagree about who is standing where.
    */
-  const halfOf = (side: 'yours' | 'theirs') => {
+  const halfOf = (side: CourtHalf) => {
     const handles = handlesOn(side, seated, places, { rows, self });
     return {
       handles,
@@ -1358,79 +1359,6 @@ function toOccupant(
           ...(row.card.photoUrl === undefined ? {} : { photoUrl: row.card.photoUrl }),
         }),
   };
-}
-
-/**
- * One printed handle, with **the two things that decide whether it is a control**.
- *
- * The place, because the button opens with the same two words the seat's own spoken name does
- * and `seatedNameLabel` composes from the code rather than from the heading the row draws. And
- * the row behind it, because that is both the test — *is there a breakdown to open* — and the
- * whole of what `SH.whyfit` is handed.
- */
-interface SeatedHandle {
-  readonly place: SeatPlace;
-  /** §15's whole handle, or the unknown's question mark. Never cut short here. */
-  readonly name: string;
-  /**
-   * Whose face to draw beside the handle — **the same photo-or-poster switch the seat takes**.
-   *
-   * `undefined` for exactly one seat: yours, for the frame the launch read is still in flight
-   * (`self` is the account's id and arrives with it). A withheld player keeps a face, because a
-   * poster is a fact about an **id** and the id is the one field a withheld row still carries.
-   */
-  readonly face?: { readonly playerId: string; readonly photoUrl?: string };
-  /**
-   * The row the record still holds for them. **Absent is plain text**: you have no candidate
-   * row because no route serves a searcher their own, and a withheld player has one field and
-   * no card — so there is nothing behind the name and it is not a button. A name is a control
-   * where there is something behind it and plain text where there is not, never a button that
-   * opens an apology.
-   */
-  readonly candidate?: Candidate;
-}
-
-/**
- * The handles on one half of the court, **whole**.
- *
- * §15's `playerName()` is the one formatter, and this returns a **list**: *"a formatter that
- * returns one string has decided the layout, and this one must not"* — at 64 characters a join
- * produces a phrase no row can hold. A seat the record can no longer describe answers the
- * unknown's question mark, which is the same word the seat itself draws.
- */
-function handlesOn(
-  half: 'yours' | 'theirs',
-  seated: Seating,
-  places: readonly SeatPlace[],
-  court: { readonly rows: ReadonlyMap<string, Candidate>; readonly self: string | undefined },
-): readonly SeatedHandle[] {
-  const mine = half === 'yours';
-
-  return seated.flatMap<SeatedHandle>((seat, at) => {
-    const place = places[at];
-    if (place === undefined || mine !== (place !== 'THEIR_SIDE')) return [];
-    if (seat.kind === 'you') {
-      // No `photoUrl`: no route serves a searcher their own card, so your own face here is the
-      // poster your seat already draws — one id, one poster, on both surfaces.
-      const face = court.self === undefined ? {} : { face: { playerId: court.self } };
-      return [{ place, name: playerName({ kind: 'you' }), ...face }];
-    }
-    if (seat.kind === 'empty') return [];
-
-    const row = court.rows.get(seat.playerId);
-    const who: NamedPlayer =
-      row === undefined ? { kind: 'unknown' } : { kind: 'player', nickname: row.card.nickname };
-    const photo = row?.card.photoUrl;
-
-    return [
-      {
-        place,
-        name: playerName(who),
-        face: { playerId: seat.playerId, ...(photo === undefined ? {} : { photoUrl: photo }) },
-        ...(row === undefined ? {} : { candidate: row }),
-      },
-    ];
-  });
 }
 
 /**

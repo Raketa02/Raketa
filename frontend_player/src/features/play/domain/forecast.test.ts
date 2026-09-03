@@ -8,6 +8,8 @@
  * move.
  */
 
+import { theme } from '@/shared/ui/theme';
+
 import { seatPlaces } from './lineup';
 
 import {
@@ -24,6 +26,7 @@ import {
   seatsFilled,
   shortfallBySeat,
   swapSeats,
+  theirSideSeated,
   toBuildSeat,
   type Arrangement,
   type SeatedCourt,
@@ -344,3 +347,96 @@ describe('the rules view of a seat', () => {
     ]);
   });
 });
+
+/**
+ * **Is there anybody across the net** — the one fact the pool header's reading is gated on.
+ *
+ * The engine serves a forecast the moment one person is added, and reaches it by assuming an
+ * empty seat matches the player opposite (`EMPTY_SEAT_MATCHES_ITS_PARTNER`). With nobody on
+ * the far half that assumption mirrors your own side, so the figure is the assumption talking
+ * rather than a reading — which is why the header says what would make one appear instead
+ * ([#297](https://github.com/Raketa02/Raketa/issues/297)).
+ */
+describe('whether their side has anybody on it', () => {
+  it('is false while everybody added is standing beside you', () => {
+    const yoursOnly: Seating = [
+      { kind: 'you' },
+      { kind: 'player', playerId: B },
+      { kind: 'empty' },
+      { kind: 'empty' },
+    ];
+
+    expect(theirSideSeated(yoursOnly)).toBe(false);
+  });
+
+  it('is true from the first player across the net, before the court is full', () => {
+    const three: Seating = [
+      { kind: 'you' },
+      { kind: 'player', playerId: B },
+      { kind: 'player', playerId: C },
+      { kind: 'empty' },
+    ];
+
+    expect(theirSideSeated(three)).toBe(true);
+    expect(theirSideSeated(seatingOf(WITH_B))).toBe(true);
+  });
+
+  it('is false on a court nobody has been added to', () => {
+    expect(theirSideSeated([{ kind: 'you' }, { kind: 'empty' }])).toBe(false);
+  });
+
+  it('answers a singles court, where the second seat is the opponent', () => {
+    expect(theirSideSeated([{ kind: 'you' }, { kind: 'player', playerId: B }])).toBe(true);
+  });
+
+  /**
+   * A side **follows you**, so *their* half is whichever one you are not standing in at the
+   * moment you are asked — never the back half of the list.
+   */
+  it('follows you across the net rather than trusting seat order', () => {
+    // [C, B, you, D]: with you at index 2, seats 0 and 1 are theirs and D at 3 is your partner.
+    const crossed = swapSeats(seatingOf(WITH_B), 0, 2);
+
+    expect(seatPlaces(crossed.map(toBuildSeat))).toEqual([
+      'THEIR_SIDE',
+      'THEIR_SIDE',
+      'YOUR_SIDE',
+      'YOUR_PARTNER',
+    ]);
+    expect(theirSideSeated(crossed)).toBe(true);
+  });
+
+  /**
+   * The two seatings that actually falsify an index rule. *Seats 2 and 3 are theirs* answers
+   * both of these wrongly, and the case above right — which is why that one is not the
+   * evidence, whatever its shape suggests.
+   */
+  it('is not the back half of the list, which is what an index rule would read', () => {
+    // You crossed and nobody followed: the only occupied seats are yours, in the far half.
+    expect(
+      theirSideSeated([{ kind: 'empty' }, { kind: 'empty' }, { kind: 'you' }, seatedAt(D)]),
+    ).toBe(false);
+
+    // Singles, crossed: the back seat is you, and the front one is the opponent.
+    expect(theirSideSeated([seatedAt(B), { kind: 'you' }])).toBe(true);
+  });
+
+  /**
+   * H-25 at this seam. Squash has no net and draws **both** seats on the near half of the
+   * picture, so a rule that read the far side off a `y` coordinate would answer *nobody
+   * opposite* on a court that has an opponent standing on it.
+   */
+  it('answers squash, whose two seats are drawn on the same half (H-25)', () => {
+    const [near, far] = theme.size.court.seats.squash;
+    const half = theme.size.court.space.height / 2;
+
+    expect(near?.[1]).toBeGreaterThan(half);
+    expect(far?.[1]).toBeGreaterThanOrEqual(half);
+    expect(theirSideSeated([{ kind: 'you' }, seatedAt(B)])).toBe(true);
+  });
+});
+
+/** A seated player, as a `Seating` holds one. */
+function seatedAt(playerId: string): Seating[number] {
+  return { kind: 'player', playerId };
+}

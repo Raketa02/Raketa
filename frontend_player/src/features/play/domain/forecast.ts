@@ -40,8 +40,8 @@
  * reading intent."* There is one number in this file and it is a seat count.
  */
 
-import type { BuildSeat } from './lineup';
-import { seatPlaces } from './lineup';
+import type { BuildSeat, SeatPlace } from './lineup';
+import { courtHalfOf, seatPlaces } from './lineup';
 import type { ForecastAssumption, GroupReason, Relationship, UnfilledReason } from './vocabulary';
 
 /**
@@ -222,8 +222,7 @@ export function seatsFilled(seating: Seating): number {
  * construction, so the two courts need no branch between them.
  */
 export function partnerOf(seating: Seating): SeatOccupancy | undefined {
-  const places = seatPlaces(seating.map(toBuildSeat));
-  const at = places.indexOf('YOUR_PARTNER');
+  const at = placesOf(seating).indexOf('YOUR_PARTNER');
   return at === -1 ? undefined : seating[at];
 }
 
@@ -302,6 +301,40 @@ function localSeating(seats: number, members: readonly string[]): Seating {
       ? ({ kind: 'empty' } as const)
       : ({ kind: 'player', playerId: member } as const);
   });
+}
+
+/**
+ * The places of a seating — **the one narrowing both rules below read them through.**
+ *
+ * A line rather than a function would normally be right, but the line is `toBuildSeat` in the
+ * middle of it, and that narrowing is where a second copy quietly acquires a different
+ * `accepted`. Two callers, one reading.
+ */
+function placesOf(seating: Seating): readonly SeatPlace[] {
+  return seatPlaces(seating.map(toBuildSeat));
+}
+
+/**
+ * **Is there anybody across the net** — the one fact a running balance is worth drawing on.
+ *
+ * The engine serves a forecast from the first person added, and reaches it by assuming an empty
+ * seat matches the player opposite (`EMPTY_SEAT_MATCHES_ITS_PARTNER`). With nobody on the far
+ * half that assumption mirrors your own side and the figure approaches even by construction —
+ * so it is the assumption talking rather than a reading of a game. The pool header draws the
+ * sentence that says what would make one appear instead, and this is what it asks
+ * ([#297](https://github.com/Raketa02/Raketa/issues/297)).
+ *
+ * **A place and never an index**, for two reasons that belong to two different functions. A
+ * side **follows you** across the net, which is `partnerOf`'s own reason one block up: after a
+ * swap the far half is whichever one you are not standing in. And the far half cannot be read
+ * off the drawing at all, which is `seatPlaces`' reason — squash seats both players on the
+ * same half of the picture (H-25), so a coordinate rule would answer *nobody opposite* on a
+ * court that has an opponent on it.
+ */
+export function theirSideSeated(seating: Seating): boolean {
+  return placesOf(seating).some(
+    (place, at) => courtHalfOf(place) === 'theirs' && seating[at]?.kind === 'player',
+  );
 }
 
 /**

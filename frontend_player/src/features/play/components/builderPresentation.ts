@@ -37,6 +37,7 @@
 import { counted } from '@/shared/formatting/counted';
 
 import { modeWord } from './searchPresentation';
+import type { CourtHalf } from '../domain/lineup';
 import type { SearchMode } from '../domain/vocabulary';
 
 /**
@@ -134,8 +135,20 @@ export const SWAP_TOGGLE_DESCRIPTION: Readonly<Record<'on' | 'off', string>> = {
  * swap mode is *change sides, never seats*, so the half you are standing in is yours whichever
  * half of the picture it is. The same two words a seat's spoken name opens with, in the one
  * place they are read rather than heard.
+ *
+ * Keyed by `CourtHalf` rather than by its own inline shape, on §1's mechanism: a table over a
+ * closed vocabulary is what makes *a half with no words* fail to compile instead of rendering
+ * blank. The union itself is spelled once, in `domain/lineup.ts`, which is where the rule that
+ * folds three seat places onto two halves lives
+ * ([#300](https://github.com/Raketa02/Raketa/issues/300)).
+ *
+ * `as const` stays: the key check is what `Record` buys, and the literal values are what the
+ * tests and every caller read.
  */
-export const SIDE_HEADINGS = { yours: 'Your side', theirs: 'Their side' } as const;
+export const SIDE_HEADINGS = {
+  yours: 'Your side',
+  theirs: 'Their side',
+} as const satisfies Record<CourtHalf, string>;
 
 /** The forecast card's region label. One per court shape — see the module note. */
 export function forecastHeading(seats: number): string {

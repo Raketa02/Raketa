@@ -72,7 +72,7 @@ import { orOutOfDate } from '@/shared/vocabulary/outOfDate';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
 import type { Split } from '../domain/forecast';
-import type { SeatPlace } from '../domain/lineup';
+import { courtHalfOf, type CourtHalf, type SeatPlace } from '../domain/lineup';
 import type { ForecastAssumption, UnfilledReason } from '../domain/vocabulary';
 
 import { balanceLabel } from './balancePresentation';
@@ -246,11 +246,22 @@ const PLACE: Readonly<Record<SeatPlace, string>> = {
  * never the role, because *"from your side, your partner"* is a phrase nobody says. The name
  * is what disambiguates two seats on one side, exactly as 6.9's remove control names its
  * photo.
+ *
+ * **Keyed by `CourtHalf`, and the fold is `courtHalfOf`'s.** This was a `Record<SeatPlace, …>`
+ * writing *your side* twice, which is the three-onto-two collapse `domain/lineup.ts` owns,
+ * spelled as a table instead of as a comparison — the same defect
+ * [#300](https://github.com/Raketa02/Raketa/issues/300) took out of `handlesOn`, and one a
+ * grep for the literal does not find. Two tables disagreeing about which half `YOUR_PARTNER`
+ * is on is a sentence naming the wrong side of a court.
+ *
+ * **Exported, because a drawn sentence needs it too.** `awaitingBalanceLine` says *add somebody
+ * to their side* on the pool header; that is the same half in the same register — mid-sentence
+ * and lower case — and a literal there would be the second spelling this table exists to
+ * prevent ([#297](https://github.com/Raketa02/Raketa/issues/297)).
  */
-const SIDE: Readonly<Record<SeatPlace, string>> = {
-  YOUR_SIDE: 'your side',
-  YOUR_PARTNER: 'your side',
-  THEIR_SIDE: 'their side',
+export const SIDE: Readonly<Record<CourtHalf, string>> = {
+  yours: 'your side',
+  theirs: 'their side',
 };
 
 /**
@@ -326,7 +337,7 @@ export function clearSeatLabel(seat: {
   readonly name?: string;
   readonly place: SeatPlace;
 }): string {
-  return `Remove ${seat.name ?? 'this player'} from ${SIDE[seat.place]}`;
+  return `Remove ${seat.name ?? 'this player'} from ${SIDE[courtHalfOf(seat.place)]}`;
 }
 
 /**
@@ -384,13 +395,23 @@ export function seatedNameLabel(
  * two names are the screen's, because who is standing where is a seating rather than a fact
  * about a split.
  */
-export function splitRowLabel(
-  sides: { readonly yours: string; readonly theirs: string },
-  split: Split,
-): string {
+export function splitRowLabel(sides: Readonly<Record<CourtHalf, string>>, split: Split): string {
   const yours = `${sides.yours} ${formatLevel(split.yourSide)}`;
   const theirs = `${sides.theirs} ${formatLevel(split.theirSide)}`;
   return `${yours}, ${theirs}, ${GAP_WORD} ${formatLevel(split.gap)}`;
+}
+
+/**
+ * A court as a sentence needs it: which Sport, and how full it is.
+ *
+ * One type because the three never travel apart — a count with no Sport places nothing, and a
+ * Sport with no count says nothing — and because `poolHeaderLabel` builds on exactly this
+ * sentence rather than on a second wording of it.
+ */
+export interface CourtSummary {
+  readonly sportName: string;
+  readonly filled: number;
+  readonly seats: number;
 }
 
 /**
@@ -400,12 +421,45 @@ export function splitRowLabel(
  * the served name, as `poolRankingStatus` takes it; the count routes through `counted()` for
  * §19's reason, which is that no string in this app hardcodes an `s`.
  */
-export function courtSummaryLabel(court: {
-  readonly sportName: string;
-  readonly filled: number;
-  readonly seats: number;
-}): string {
+export function courtSummaryLabel(court: CourtSummary): string {
   return `${court.sportName}, ${court.filled} of ${counted(court.seats, 'seat filled', 'seats filled')}.`;
+}
+
+/**
+ * The pool header — **one element over a court, a count and a list of names**
+ * ([#297](https://github.com/Raketa02/Raketa/issues/297)).
+ *
+ * §20.1's merge rule, applied to a block with no action anywhere in it: a listener navigating a
+ * drawn court, then a seat count, then four names stops three times to assemble a single claim
+ * — *this is the court you are filling, and this is who is on it*. So the `Court` inside is
+ * hidden and its own summary is carried here instead, which is why this opens with
+ * `courtSummaryLabel`'s sentence rather than a second wording of it.
+ *
+ * **The names are spoken with commas and drawn with a middot.** `seatedNamesLine` is the
+ * drawing; a middot is a visual join a screen reader reads as a word or not at all, and a comma
+ * is the pause a spoken clause needs. That is the same split `balanceReading` and `balanceLabel`
+ * already keep one file over, and this takes the **spoken** one of that pair.
+ *
+ * **It takes the percentage rather than a composed reading**, on §20's *code → message, never
+ * message → message*: handed a string, a caller could pass the drawn form and put a middot into
+ * a spoken name. The word leads the figure inside `balanceLabel`, because a listener who hears
+ * *84%* has heard the number the sighted player reads in the tint and nothing of what the tint
+ * meant.
+ *
+ * @param court.pct absent until there is a reading to state — which is
+ *   `theirSideSeated`'s answer, not a missing value.
+ */
+export function poolHeaderLabel(
+  court: CourtSummary & {
+    readonly names: readonly string[];
+    readonly pct?: number;
+  },
+): string {
+  const summary = courtSummaryLabel(court);
+  const who = `${court.names.join(', ')}.`;
+  return court.pct === undefined
+    ? `${summary} ${who}`
+    : `${summary} ${who} ${balanceLabel(court.pct)}.`;
 }
 
 /**

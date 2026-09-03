@@ -110,23 +110,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
+import { useCurrentUser } from '@/features/auth/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { useProfileSurface } from '@/features/player_profile/types';
 import { ShellScreen } from '@/features/shell/types';
 import { offlineMessage } from '@/shared/errors';
-import { formatPercent } from '@/shared/formatting/ratingFormat';
 import { playerName } from '@/shared/formatting/playerName';
-import {
-  BALANCE_INK,
-  Button,
-  Card,
-  Chip,
-  Note,
-  behindOverlay,
-  courtSeatCount,
-  theme,
-} from '@/shared/ui';
+import { Button, Chip, Note, behindOverlay, courtSeatCount, theme } from '@/shared/ui';
 
 import type { Candidate, RelaxedAsk, RungOffer } from '../domain/candidate';
 import { arrangementFor, seatOccupant, seatingToDraw } from '../domain/forecast';
@@ -140,14 +132,12 @@ import { useReadSearchBack, useTakeRung } from '../hooks/usePool';
 import { usePlaySession } from '../store/playSession.store';
 
 import { rungOfferLabel } from './accessibilityPresentation';
-import { balanceTone, balanceWord } from './balancePresentation';
 import { builderEyebrow } from './builderPresentation';
 import { CandidateCard } from './candidate/CandidateCard';
 import { CandidateCardSocial } from './candidate/CandidateCardSocial';
 import { useHeldWait } from './heldWait';
 import { playErrorMessage } from './playErrorMessage';
 import {
-  POOL_FORECAST_HEADING,
   POOL_LADDER_BODY,
   POOL_LINEUP_COST,
   POOL_NO_RECORD_BODY,
@@ -162,14 +152,10 @@ import {
   terminalReachLine,
   zeroRungLine,
 } from './poolPresentation';
+import { PoolHeader } from './PoolHeader';
 import { PromptSheet } from './PromptSheet';
 import { SearchingLatch } from './SearchingLatch';
-import {
-  forecastAssumption,
-  poolDescription,
-  relaxationOffer,
-  sortLabel,
-} from './searchPresentation';
+import { poolDescription, relaxationOffer, sortLabel } from './searchPresentation';
 import { poolRankingStatus } from './searchingPresentation';
 import { searchingFloorMs } from './searchingWait';
 import { WhyFitSheet } from './whyfit/WhyFitSheet';
@@ -270,6 +256,15 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
   const replacing = seatOccupant(seated, pending);
 
   const drawn = orderPool(pickable(record?.candidates ?? [], members), sort);
+
+  /**
+   * The rows the header reads its names and faces off, and your own id for your own poster.
+   *
+   * `self` is the account's, off `GET /users/me`: no route serves a searcher their own card, so
+   * a seat that waited for an answer to name you would sit faceless until one landed.
+   */
+  const rows = new Map((record?.candidates ?? []).map((row) => [row.playerId, row]));
+  const self = useCurrentUser().data?.id;
 
   const ladder = poolLadder({
     rows: record?.candidates.length ?? 0,
@@ -447,22 +442,24 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
                 </View>
               )}
 
-              {/* The running forecast — **the one surface `provisional` is about**. The tinted
-                  figure, §B9's balance word beneath it because Part 13 forbids colour alone,
-                  and the assumption as the sentence under both. */}
-              {chosen === undefined ? null : (
-                <Card>
-                  <Text style={s.eyebrow}>{POOL_FORECAST_HEADING}</Text>
-                  <Text
-                    style={[s.figure, { color: BALANCE_INK[balanceTone(chosen.forecast.pct)] }]}
-                  >
-                    {formatPercent(chosen.forecast.pct)}
-                  </Text>
-                  <Text style={s.word}>{balanceWord(chosen.forecast.pct)}</Text>
-                  {chosen.forecast.assumption === null ? null : (
-                    <Text style={s.body}>{forecastAssumption(chosen.forecast.assumption)}</Text>
-                  )}
-                </Card>
+              {/* The court being filled, and what it is worth so far — #299. It replaces the
+                  forecast card rather than standing above it: every fact that card drew is in
+                  here, and a second one restating them is the screen saying one thing twice. */}
+              {sport === undefined ? null : (
+                /* Unreachable: `sportName` is `sportLabel(sport)`, so the branch above has
+                   already established both. It is here because that implication is not one
+                   the compiler can follow, and a non-null assertion would be the same claim
+                   made where nothing checks it. */
+                <PoolHeader
+                  sport={sport}
+                  sportName={sportName}
+                  seats={seats}
+                  seated={seated}
+                  rows={rows}
+                  self={self}
+                  {...(chosen === undefined ? {} : { arrangement: chosen })}
+                  onCourt={() => router.back()}
+                />
               )}
 
               <Text style={s.body}>{poolDescription({ ...record.envelope.pool, sportName })}</Text>
@@ -680,7 +677,4 @@ const s = StyleSheet.create({
   rung: { gap: theme.space.xxs },
   body: { ...theme.type.tiny, color: theme.color.ink },
   centred: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
-  eyebrow: { ...theme.type.eyebrow, color: theme.color.muted },
-  figure: { ...theme.num.xl, ...theme.tabular },
-  word: { ...theme.type.cardTitle, color: theme.color.ink },
 });

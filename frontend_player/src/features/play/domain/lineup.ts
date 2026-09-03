@@ -392,6 +392,40 @@ export function seatPlaces(seats: readonly BuildSeat[]): readonly SeatPlace[] {
 }
 
 /**
+ * The two **halves** of a court, as everything that speaks about one of them names it.
+ *
+ * `SeatPlace` is three values because a listener placing a seat needs the role as well as the
+ * side; a half is two, because a court has two of them. The fold is not a formatting detail —
+ * *your partner is on your half* is exactly the kind of thing somebody can be wrong about, and
+ * it is the reason a predicate over one place would be the wrong shape here.
+ */
+export type CourtHalf = 'yours' | 'theirs';
+
+/**
+ * Which half a place is on — **read off the place, never off the index or the drawing.**
+ *
+ * `seatPlaces` has already done the hard half of this: it is what knows squash seats both
+ * players on the same half of the picture (H-25), and that a side **follows you** across the
+ * net when swap mode moves you. This is the fold from its three values onto the two a caller
+ * asking *is this seat on the half I want* can compare against.
+ *
+ * **Total, and that is the whole argument for the shape.** It was
+ * `mine !== (place !== 'THEIR_SIDE')` inside `handlesOn`, which is two inversions to hold in
+ * your head and, worse, a rule keyed on one value: a fourth `SeatPlace` would join *your* half
+ * silently, by falling through the negation, and nothing would fail. A function over the
+ * vocabulary answers every member explicitly ([#300](https://github.com/Raketa02/Raketa/issues/300)).
+ */
+export function courtHalfOf(place: SeatPlace): CourtHalf {
+  switch (place) {
+    case 'YOUR_SIDE':
+    case 'YOUR_PARTNER':
+      return 'yours';
+    case 'THEIR_SIDE':
+      return 'theirs';
+  }
+}
+
+/**
  * Why a seat is locked. A code, so the sentence is `components/`' and stays one spelling.
  *
  * It is *why*, and not *whether*, because the two are the same fact: a seat is locked for

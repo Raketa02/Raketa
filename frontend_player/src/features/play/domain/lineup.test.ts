@@ -1,8 +1,10 @@
 import { theme } from '@/shared/ui/theme';
 
 import {
+  SEAT_PLACES,
   changingMode,
   changingSport,
+  courtHalfOf,
   leavingFindAGame,
   lineupStanding,
   sameOrigin,
@@ -228,6 +230,27 @@ describe("a seat's place", () => {
     expect(near?.[1]).toBeGreaterThan(half);
     expect(far?.[1]).toBeGreaterThanOrEqual(half);
     expect(seatPlaces([{ kind: 'you' }, seated()])).toEqual(['YOUR_SIDE', 'THEIR_SIDE']);
+  });
+});
+
+describe('which half a place is on', () => {
+  it('answers every place in the vocabulary, and your partner is on your half', () => {
+    // Per member rather than by counting them: an implementation that inverted the mapping
+    // would still produce two of one half and one of the other. Totality itself is the
+    // compiler's — the switch has no `default` and declares its return — so what is pinned
+    // here is *which* half each place is on.
+    expect(SEAT_PLACES.map(courtHalfOf)).toEqual(['yours', 'yours', 'theirs']);
+  });
+
+  it('follows you across the net, because it reads a place and never an index', () => {
+    // The composition every caller makes, on the one seating where an index would disagree:
+    // swap mode is *change sides, never seats*, so the half you are standing in is yours.
+    expect(seatPlaces([seated(), seated(), { kind: 'you' }, seated()]).map(courtHalfOf)).toEqual([
+      'theirs',
+      'theirs',
+      'yours',
+      'yours',
+    ]);
   });
 });
 

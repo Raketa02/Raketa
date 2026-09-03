@@ -20,6 +20,7 @@ import {
   courtSummaryLabel,
   deckAnswerLabels,
   fitSentence,
+  poolHeaderLabel,
   provisionalForecastAnnouncement,
   searchWeekCellLabel,
   seatLabel,
@@ -274,5 +275,51 @@ describe('the live regions', () => {
 
     expect(announcement).toBe('Very even, 91%.');
     expect(announcement).not.toContain(OUT_OF_DATE_GAP);
+  });
+});
+
+/**
+ * The pool header — **one element over a court, a count and a list of names**
+ * ([#297](https://github.com/Raketa02/Raketa/issues/297)).
+ *
+ * §20.1's merge rule: none of the three has an action of its own, and a listener navigating a
+ * drawn court, then a count, then four names stops three times to assemble one claim. The
+ * `Court` inside it is hidden for the same reason its summary is carried here instead.
+ */
+describe('the pool header', () => {
+  const COURT = { sportName: 'Padel', filled: 4, seats: 4 };
+
+  it('says the court, then who is in it, as one sentence', () => {
+    expect(poolHeaderLabel({ ...COURT, names: ['You', 'Karol', 'Magda', 'Ania'] })).toBe(
+      'Padel, 4 of 4 seats filled. You, Karol, Magda, Ania.',
+    );
+  });
+
+  it('opens with the court summary the drawing would otherwise have announced', () => {
+    const said = poolHeaderLabel({ ...COURT, filled: 1, names: ['You'] });
+
+    expect(said.startsWith(courtSummaryLabel({ ...COURT, filled: 1 }))).toBe(true);
+  });
+
+  /**
+   * The **word before the figure** (§20.4): a listener who hears *84%* has heard the number the
+   * sighted player reads in the tint and nothing of what the tint meant.
+   */
+  it('adds the balance word and its figure once there is a reading', () => {
+    expect(poolHeaderLabel({ ...COURT, names: ['You', 'Karol'], pct: 84 })).toBe(
+      'Padel, 4 of 4 seats filled. You, Karol. Fairly even, 84%.',
+    );
+  });
+
+  /**
+   * The two registers. A middot is a visual join a screen reader reads as a word or not at all;
+   * a comma is the pause a spoken clause needs — which is the whole difference between the line
+   * this card draws and the name it announces.
+   */
+  it('speaks the names with pauses rather than the middot the card draws', () => {
+    const said = poolHeaderLabel({ ...COURT, names: ['You', 'Karol', 'Magda', 'Ania'] });
+
+    expect(said).not.toContain('·');
+    expect(said).toContain('You, Karol');
   });
 });

@@ -39,6 +39,8 @@ import { counted } from '@/shared/formatting/counted';
 import type { RelaxedAsk } from '../domain/candidate';
 import type { Window } from '../domain/vocabulary';
 
+import { SIDE } from './accessibilityPresentation';
+import { isDoubles } from './builderPresentation';
 import { windowLabel } from './searchPresentation';
 
 /** The screen's title. It says what the player is here to do, and the court says the rest. */
@@ -201,16 +203,74 @@ export function replacingLine(name: string): string {
 }
 
 /**
- * The running forecast's heading — **the surface `provisional` is actually about.**
+ * The header's count — **how many of the court's seats have somebody in them**.
  *
- * The forecast card never says it: §B9 renders on a full line-up, and a four-seat arrangement
- * is *"never provisional"*. What is left is here, where a half-empty side genuinely is read as
- * if the missing player matched the one already there
- * ([#231](https://github.com/Raketa02/Raketa/issues/231) §5). The word beneath the number is
- * the **balance** word — the reading the tint carries, which Part 13 requires beside it — and
- * the caveat is the sentence under both, which is `forecastAssumption`'s and the engine's.
+ * `counted` is not reached for because there is **no noun here to inflect**: *seated* is a
+ * participle describing the seats, and the sentence names them nowhere. That is a fact about
+ * this line rather than a licence — the same court spoken aloud does carry the noun, and
+ * `courtSummaryLabel` counts it (*"3 of 4 seats filled"*). The two registers differ, and the
+ * drawn one is the terse one ([#297](https://github.com/Raketa02/Raketa/issues/297)).
  */
-export const POOL_FORECAST_HEADING = 'How it sits so far';
+export function poolSeatedLine(court: { readonly filled: number; readonly seats: number }): string {
+  return `${court.filled} of ${court.seats} seated`;
+}
+
+/**
+ * Who is in them, **in seat order and whole** — your side first.
+ *
+ * This is the pool's half of
+ * [`the-play-components.md`](../../../../../docs/specs/matchmaking/the-play-components.md) §5,
+ * and the line has been owed since that section was written: the 46pt seat label is allowed to
+ * cut a 64-character handle to about four characters *because* *"both screens the court appears
+ * on already print the names in full and unavoidably"*. This is the one that does it here, so
+ * it **wraps rather than truncating** — a truncation would take away the thing that makes the
+ * seat's own truncation legal.
+ *
+ * The names are `playerName()`'s and are joined, never shortened. A seat whose row the record
+ * no longer holds arrives as the unknown's question mark, which is the same character the seat
+ * draws — nothing is invented for somebody the product has agreed not to describe.
+ *
+ * **A visual join, and deliberately not the comma the spoken name takes.** A middot is read as
+ * a word or not at all; `poolHeaderLabel` announces the same list with pauses in it.
+ */
+const NAME_JOIN = ' · ';
+
+export function seatedNamesLine(names: readonly string[]): string {
+  return names.join(NAME_JOIN);
+}
+
+/**
+ * What stands where the reading will be, **until there is a game to read**.
+ *
+ * The engine serves a forecast from the first person added and gets there by assuming an empty
+ * seat matches the player opposite, so a figure drawn over a one-sided court is the assumption
+ * talking. What the card says instead is the act that would make it a reading — and the sentence
+ * is written for the **shape of the court on screen** (`theirSideSeated` is the rule it
+ * promises against).
+ *
+ * **It is *their side*, not the prototype's *far side*, and the words are `SIDE`'s.** This app
+ * has one spelling of that half — the one `clearSeatLabel` puts mid-sentence — and writing a
+ * second one here is how the two drift apart with nothing to catch it. *Far* would have been
+ * true of both Sports this branch can reach, since only padel and badminton have four seats;
+ * it is refused for the vocabulary rather than for the geometry.
+ *
+ * A singles court takes its own sentence rather than bending that one: there is no side to
+ * fill, because the second seat **is** the opponent. That branch is also the whole of squash,
+ * which has two seats — so nothing this function says is ever read against a court with no net.
+ */
+export function awaitingBalanceLine(seats: number): string {
+  const act = isDoubles(seats) ? `Add somebody to ${SIDE.theirs}` : 'Add your opponent';
+  return `${act} and a running balance appears here.`;
+}
+
+/**
+ * The control back to the court — **the pool's only way back**.
+ *
+ * `ShellScreen` draws no chevron and passes none through, so this is not a convenience beside
+ * the platform's own gesture: it is the affordance. A noun rather than *Back*, because what it
+ * returns to is the thing the header is a picture of.
+ */
+export const POOL_COURT_LABEL = 'Court';
 
 /** What the pool says when the search it was opened on is no longer held. */
 export const POOL_NO_RECORD_TITLE = 'This list is no longer here';

@@ -27,6 +27,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import { courtSeatCount } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
+  PROFILE_SURFACE_SERVED,
   launchSignedIn,
   stubGate,
   stubInterest,
@@ -44,13 +45,22 @@ import {
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession, usePlaySession } from '../store/playSession.store';
 
-import { rungOfferLabel, searchWeekCellLabel, seatLabel } from './accessibilityPresentation';
-import { balanceWord } from './balancePresentation';
+import {
+  rungOfferLabel,
+  searchWeekCellLabel,
+  seatLabel,
+  splitRowLabel,
+} from './accessibilityPresentation';
+import { balanceLabel, balanceWord } from './balancePresentation';
 import { PICK_PLAYERS_LABEL, PROVISIONAL_WORD } from './builderPresentation';
 import { levelRow } from './playerCardPresentation';
 import {
+  POOL_COURT_LABEL,
   POOL_TITLE,
+  awaitingBalanceLine,
   poolLadderTitle,
+  poolSeatedLine,
+  seatedNamesLine,
   replacingLine,
   rungCount,
   takenRungLine,
@@ -242,6 +252,50 @@ async function openThePool() {
   await screen.findByText(POOL_TITLE);
 }
 
+/**
+ * The same walk on a Sport with **two** seats — the one shape the singles copy is read on.
+ *
+ * The Sport is swapped at the gate rather than by pressing a chip: *Find a game* draws its
+ * chips from `GET /ratings`, so a player rated in one Sport arrives with it already chosen.
+ */
+async function openTheSinglesPool() {
+  stubGate(transport, { id: ME, ratings: [rating('TENNIS')], hasPlayerProfile: true });
+  // Declared as well as rated: a rated-but-undeclared Sport opens ADR-0094's interstitial
+  // before the grid, which is a different screen from the one this walk is about.
+  stubProfileSurface(transport, { ...PROFILE_SURFACE_SERVED, play_intents: { TENNIS: 'FOR_FUN' } });
+  const singles = () => ({
+    search: envelope(SEARCH_ID, {
+      pool: {
+        sport: 'TENNIS' as const,
+        radius_km_used: 15,
+        players_in_range: 6,
+        window: 'THIS_WEEK' as const,
+        post_gate: true,
+      },
+    }),
+    candidates: [card(B), card(C)],
+  });
+  transport.on('POST', SEARCHES, () => json(singles() as Wire['ShortlistResponse']));
+  transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () =>
+    json(singles() as Wire['ShortlistResponse']),
+  );
+
+  await launchSignedIn();
+  fireEvent.press(await screen.findByLabelText('Play'));
+  await screen.findByLabelText('Tuesday evening');
+
+  fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('tennis'))));
+  await screen.findByText(
+    poolRankingStatus({ playersInRange: undefined, sportName: 'Tennis' }).headline,
+  );
+  act(() => jest.advanceTimersByTime(2000));
+
+  await waitFor(() => expect(screen).toHavePathname('/play/builder'));
+  fireEvent.press(await screen.findByLabelText(PICK_PLAYERS_LABEL));
+  await waitFor(() => expect(screen).toHavePathname('/play/pool'));
+  await screen.findByText(POOL_TITLE);
+}
+
 const addLabel = (playerId: string) => `Add ${NAMES[playerId]} to the court`;
 
 /** A rung control's whole spoken name: the offer, and the price printed on it. */
@@ -300,23 +354,195 @@ describe('arriving', () => {
   });
 });
 
-describe('the running forecast', () => {
+/**
+ * A forecast for a court with somebody **across the net** — B beside you, C opposite, one seat
+ * still open. The split is the engine's own working and nothing here derives it.
+ */
+const crossedForecast = (): Wire['ForecastResponse'] => ({
+  arrangements: [
+    {
+      pairing_id: 1,
+      is_current: true,
+      is_evenest: true,
+      sides: {
+        A: [
+          { seat_index: 0, relationship: 'SELF', player_id: ME },
+          { seat_index: 1, relationship: 'PARTNER', player_id: B },
+        ],
+        B: [
+          { seat_index: 2, relationship: 'OPPONENT', player_id: C },
+          { seat_index: 3, relationship: 'OPPONENT' },
+        ],
+      },
+      forecast: {
+        pct: 84,
+        sigma_group: 0.4,
+        provisional: true,
+        assumption: 'EMPTY_SEAT_MATCHES_ITS_PARTNER',
+      },
+      split: { your_side: 2.73, their_side: 2.67, gap: 0.06 },
+    },
+  ],
+  engine_version: 'matchfit-v1',
+  ruleset_version: 'ruleset-v1',
+});
+
+describe('the header', () => {
+  it('draws the court it is filling, and gains a seat on every add', async () => {
+    await openThePool();
+
+    // You, and nobody else — the honest picture before anything has been added. The count is
+    // what is asserted rather than the name: `You` is also a tab and a head-to-head row.
+    expect(await screen.findByText(poolSeatedLine({ filled: 1, seats: 4 }))).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText(addLabel(B)));
+
+    expect(await screen.findByText(poolSeatedLine({ filled: 2, seats: 4 }))).toBeTruthy();
+    expect(screen.getByText(seatedNamesLine(['You', NAMES[B] ?? '']))).toBeTruthy();
+  });
+
   /**
-   * §B13 drew the percentage tinted with *provisional* beneath it and no reading beside it,
-   * which is Part 13's colour-only failure. The word under the number is the **balance** word;
-   * `provisional` is the sentence, and it is the whole of the caveat.
+   * The engine answers from the first add, and gets there by assuming the empty seat matches
+   * the player opposite — so over a one-sided court the figure is the assumption talking. What
+   * the card offers instead is the act that would make it a reading.
    */
-  it('prints the balance word beneath the number, with provisional as the sentence', async () => {
+  it('withholds the reading while everybody added is beside you', async () => {
     await openThePool();
     fireEvent.press(await screen.findByLabelText(addLabel(B)));
 
-    expect(await screen.findByText(formatPercent(67))).toBeTruthy();
-    expect(screen.getByText(balanceWord(67))).toBeTruthy();
+    expect(await screen.findByText(awaitingBalanceLine(4))).toBeTruthy();
+    expect(screen.queryByText(formatPercent(67))).toBeNull();
+    expect(screen.queryByText(balanceWord(67))).toBeNull();
+  });
+
+  /**
+   * And from the first player across the net it is a reading of a real game — drawn with the
+   * engine's own caveat, because a seat is still open and ADR-0108 makes the figure and its
+   * caveat one thing.
+   */
+  it('reads the game from the first player across the net, caveat and all', async () => {
+    transport.on('POST', FORECASTS, () => json(crossedForecast()));
+
+    await openThePool();
+    fireEvent.press(await screen.findByLabelText(addLabel(B)));
+    fireEvent.press(await screen.findByLabelText(addLabel(C)));
+
+    expect(await screen.findByText(formatPercent(84))).toBeTruthy();
+    expect(screen.getByText(balanceWord(84))).toBeTruthy();
+    // The caveat is the assumption's own sentence and never a second badge beside it: one word
+    // slot under the figure, and the balance reading is what it spends it on.
     expect(screen.getByText(forecastAssumption('EMPTY_SEAT_MATCHES_ITS_PARTNER'))).toBeTruthy();
-    // One word slot, and the balance reading is what it spends it on.
     expect(screen.queryByText(PROVISIONAL_WORD)).toBeNull();
+
+    // Every figure in the split row is the engine's; §11.3's check is looking for arithmetic.
+    expect(screen.getByLabelText(splitRowLabel(SIDES, SPLIT))).toBeTruthy();
+    // And the sentence it replaces is gone: the card says one of the two, never both.
+    expect(screen.queryByText(awaitingBalanceLine(4))).toBeNull();
+  });
+
+  /**
+   * Every seat filled, and every handle printed **whole** on the way.
+   *
+   * This is the pool's half of `the-play-components.md` §5: the 46pt seat label may cut a
+   * 64-character handle to four characters *because* this line prints it in full, so a header
+   * that truncated would take the licence away from the court behind it.
+   */
+  it('names everybody as the court fills, and cuts nobody short', async () => {
+    transport.on('POST', FORECASTS, () => json(crossedForecast()));
+
+    await openThePool();
+    fireEvent.press(await screen.findByLabelText(addLabel(B)));
+    fireEvent.press(await screen.findByLabelText(addLabel(C)));
+
+    expect(await screen.findByText(poolSeatedLine({ filled: 3, seats: 4 }))).toBeTruthy();
+
+    fireEvent.press(await screen.findByLabelText(addLabel(D)));
+
+    expect(await screen.findByText(poolSeatedLine({ filled: 4, seats: 4 }))).toBeTruthy();
+    expect(
+      screen.getByText(seatedNamesLine(['You', NAMES[B] ?? '', NAMES[C] ?? '', NAMES[D] ?? ''])),
+    ).toBeTruthy();
+  });
+
+  /**
+   * The bar is drawn and **hidden**, because the split row above it prints all three of its
+   * numbers — so it is found by its segment labels rather than by an accessible name.
+   */
+  it('draws the balance bar, labelled by side, and keeps it out of the tree', async () => {
+    transport.on('POST', FORECASTS, () => json(crossedForecast()));
+
+    await openThePool();
+    fireEvent.press(await screen.findByLabelText(addLabel(B)));
+    fireEvent.press(await screen.findByLabelText(addLabel(C)));
+
+    await screen.findByText(formatPercent(84));
+
+    // In the tree and **never** to a listener. The fixtures' handles carry no word break, so
+    // the drawn form and the whole one are the same string here.
+    expect(
+      screen.getAllByText(SIDES.yours, { includeHiddenElements: true }).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(balanceLabel(84))).toBeNull();
+  });
+
+  /**
+   * A withheld row carries one field and no card, so there is no handle to print — and the
+   * header answers the unknown's own character rather than inventing one. The re-read is what
+   * produces it: the record is immutable and the gates are live.
+   */
+  it('says the unknown for a seated player the re-read no longer describes', async () => {
+    await openThePool();
+    fireEvent.press(await screen.findByLabelText(addLabel(B)));
+    await screen.findByText(seatedNamesLine(['You', NAMES[B] ?? '']));
+
+    // The gates drop B between the mint and the read-back, so the seat stays and the name goes.
+    transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () =>
+      json({
+        search: envelope(SEARCH_ID),
+        candidates: [{ withheld: true }, card(C), card(D)],
+      } as Wire['ShortlistResponse']),
+    );
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/play/builder'));
+    fireEvent.press(await screen.findByLabelText(PICK_PLAYERS_LABEL));
+
+    expect(await screen.findByText(seatedNamesLine(['You', '?']))).toBeTruthy();
+  });
+
+  /**
+   * A singles court has no partner and no side to fill, so the sentence is written for the
+   * shape of the court on screen rather than bent to fit one wording.
+   */
+  it('asks for an opponent rather than a side on a singles court', async () => {
+    await openTheSinglesPool();
+
+    expect(await screen.findByText(poolSeatedLine({ filled: 1, seats: 2 }))).toBeTruthy();
+    expect(screen.getByText(awaitingBalanceLine(2))).toBeTruthy();
+    expect(screen.queryByText(awaitingBalanceLine(4))).toBeNull();
+  });
+
+  /**
+   * The pool was pushed over the court and `ShellScreen` draws no chevron of its own, so this
+   * is the way back rather than a convenience beside one.
+   *
+   * **The pathname is what is asserted, never the title going away.** A `push` onto the builder
+   * also takes the pool's title off screen, so a test written that way passes over a control
+   * that grows the stack every time it is pressed.
+   */
+  it('pops back to the court it is a picture of', async () => {
+    await openThePool();
+    fireEvent.press(await screen.findByText(POOL_COURT_LABEL));
+
+    await waitFor(() => expect(screen).toHavePathname('/play/builder'));
+    // And it is a pop: going back again leaves Play rather than landing on the pool.
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/play'));
   });
 });
+
+/** The two halves as the split row names them, and the figures it prints. */
+const SIDES = { yours: `You + ${NAMES[B] ?? ''}`, theirs: NAMES[C] ?? '' };
+const SPLIT = { yourSide: 2.73, theirSide: 2.67, gap: 0.06 };
 
 describe('the sort row', () => {
   it('draws the server’s own list and nothing it did not offer', async () => {

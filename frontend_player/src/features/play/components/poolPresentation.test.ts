@@ -8,7 +8,10 @@
  */
 
 import {
+  awaitingBalanceLine,
   poolLadderTitle,
+  poolSeatedLine,
+  seatedNamesLine,
   rungCount,
   takenRungLine,
   terminalReachLine,
@@ -123,5 +126,59 @@ describe('the standing statement a taken rung leaves', () => {
     ];
 
     for (const line of said) expect(line).not.toMatch(/\brung\b|\b[ABC]\b/);
+  });
+});
+
+/**
+ * The header — **what the card at the top of *Pick players* says about the court being filled**
+ * ([#297](https://github.com/Raketa02/Raketa/issues/297)).
+ *
+ * Two things are asserted that are easy to get wrong on the way past. The handles are printed
+ * **whole**, which is the pool's half of `the-play-components.md` §5 — the 46pt seat label is
+ * allowed to cut a 64-character handle to four characters *because* this line exists. And the
+ * sentence promising a balance is written for the **shape of the court on screen**: a singles
+ * court has no far side to fill, and squash draws both players on the same half of the picture.
+ */
+describe('the header', () => {
+  it('counts the seats that are filled, through every state the card has', () => {
+    // The four the header goes through as somebody fills a doubles court, and the two a
+    // singles court has. *Seated* is a participle, so nothing here inflects with the count.
+    expect(poolSeatedLine({ filled: 1, seats: 4 })).toBe('1 of 4 seated');
+    expect(poolSeatedLine({ filled: 2, seats: 4 })).toBe('2 of 4 seated');
+    expect(poolSeatedLine({ filled: 3, seats: 4 })).toBe('3 of 4 seated');
+    expect(poolSeatedLine({ filled: 4, seats: 4 })).toBe('4 of 4 seated');
+    expect(poolSeatedLine({ filled: 1, seats: 2 })).toBe('1 of 2 seated');
+    expect(poolSeatedLine({ filled: 2, seats: 2 })).toBe('2 of 2 seated');
+  });
+
+  it('prints every handle whole, in seat order, and never cuts one', () => {
+    const long = 'marekwiśniewski-plays-every-tuesday-and-most-saturdays-in-warsaw';
+
+    expect(seatedNamesLine(['You', 'Karol', 'Magda', 'Ania'])).toBe('You · Karol · Magda · Ania');
+    expect(seatedNamesLine(['You', long])).toContain(long);
+  });
+
+  it('passes the unknown through rather than tidying it away', () => {
+    // The screen hands in whatever `playerName()` answered, and a withheld row answers `?` —
+    // the same character the seat itself draws. What is asserted here is only that this line
+    // does not drop or replace it; deriving it is the screen's, and is tested there.
+    expect(seatedNamesLine(['You', '?'])).toBe('You · ?');
+  });
+
+  it('promises the balance against the half that is actually empty', () => {
+    expect(awaitingBalanceLine(4)).toBe(
+      'Add somebody to their side and a running balance appears here.',
+    );
+    expect(awaitingBalanceLine(2)).toBe('Add your opponent and a running balance appears here.');
+  });
+
+  /**
+   * *Their side* rather than the prototype's *far side*, and the words are `SIDE`'s: this app
+   * has one spelling of that half, and a second one written out here is how the two drift with
+   * nothing to catch it. Both Sports this branch can reach do have a far side — only padel and
+   * badminton have four seats — so the refusal is about the vocabulary, not the geometry.
+   */
+  it('never says far side, in either court shape', () => {
+    for (const seats of [2, 4]) expect(awaitingBalanceLine(seats)).not.toMatch(/far side/i);
   });
 });
