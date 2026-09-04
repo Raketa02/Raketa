@@ -66,7 +66,18 @@ OMITTED_FIELDS = {
         "question does not arise"
     ),
     (PlayerCardSchema, "photo_id"): "they have no photo; the client draws the poster",
-    (PlayerCardSchema, "counted_games"): "the card is not assembled with it yet",
+    (PlayerCardSchema, "player_score"): (
+        "the platform has watched them do nothing, and a nought would say it had "
+        "watched them fail"
+    ),
+    (PlayerCardSchema, "counted_games"): (
+        "they have played no counted game — an absence, and never the measured "
+        "zero games answers its own callers"
+    ),
+    (PlayerCardSchema, "last_five"): (
+        "nothing of theirs has been counted and agreed; an empty list would be "
+        "the same absence in a second spelling"
+    ),
 }
 
 

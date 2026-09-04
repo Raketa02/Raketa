@@ -11,7 +11,7 @@ import type { Candidate } from './candidate';
 
 import { orderPool, poolSortRow } from './poolOrder';
 
-function row(playerId: string, fit: number, distanceKm?: number): Candidate {
+function row(playerId: string, fit: number, distanceKm?: number, playerScore?: number): Candidate {
   return {
     playerId,
     fit,
@@ -23,6 +23,7 @@ function row(playerId: string, fit: number, distanceKm?: number): Candidate {
       level: 2.7,
       band: 'Established',
       range: { low: 2.5, high: 2.9 },
+      ...(playerScore === undefined ? {} : { playerScore }),
     },
     terms: [],
     concerns: [],
@@ -42,11 +43,39 @@ describe('the order the rows arrived in', () => {
   });
 
   it('is what a sort this build cannot perform falls back to', () => {
-    // `EVENEST` reads `would_be_forecast`, which nothing in the backend has ever written, and
-    // `MOST_RELIABLE` reads a published Player Score that does not cross. Neither is offered
-    // today; both keep a word so the table is exhaustive by type.
+    // `EVENEST` reads `would_be_forecast`, which nothing in the backend has ever written, so it
+    // keeps a word and no ordering — the table stays exhaustive by type.
     expect(ids(orderPool(rows, 'EVENEST'))).toEqual(['a', 'b', 'c']);
+  });
+
+  it('is what a sort whose reading nobody carries leaves untouched', () => {
+    // Not the same statement as the one above. `MOST_RELIABLE` *has* an ordering now; what
+    // these rows have is no reading for it, and every row reading the same is what the server
+    // withholds the chip for. Tapping it anyway is a no-op rather than a reshuffle.
     expect(ids(orderPool(rows, 'MOST_RELIABLE'))).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('most reliable', () => {
+  it('sorts by the published Player Score, highest first', () => {
+    const rows = [row('a', 61, 9, 40), row('b', 88, 2, 91), row('c', 74, 5, 63)];
+
+    expect(ids(orderPool(rows, 'MOST_RELIABLE'))).toEqual(['b', 'c', 'a']);
+  });
+
+  it('puts a player the platform has watched nothing of last, never first', () => {
+    // `CLOSEST`'s rule for `CLOSEST`'s reason: the omission is *no record*, and a `0` read out
+    // of it would sort them as the least reliable person here rather than the one there is
+    // nothing to say about.
+    const rows = [row('a', 61, 9), row('b', 88, 2, 12), row('c', 74, 5, 63)];
+
+    expect(ids(orderPool(rows, 'MOST_RELIABLE'))).toEqual(['c', 'b', 'a']);
+  });
+
+  it('leaves two equal scores in the order they were served', () => {
+    const rows = [row('a', 61, 9, 70), row('b', 88, 2, 70), row('c', 74, 5, 91)];
+
+    expect(ids(orderPool(rows, 'MOST_RELIABLE'))).toEqual(['c', 'a', 'b']);
   });
 });
 
@@ -93,7 +122,15 @@ describe('the sort row', () => {
 
   /** A chip this build has no ordering for would be a control that does nothing. */
   it('drops a sort nothing here can perform', () => {
-    expect(poolSortRow(['CLOSEST', 'EVENEST', 'MOST_RELIABLE'], undefined)).toEqual(['CLOSEST']);
+    expect(poolSortRow(['CLOSEST', 'EVENEST'], undefined)).toEqual(['CLOSEST']);
+  });
+
+  it('draws the reliability chip the server offers, now that it can order by it', () => {
+    expect(poolSortRow(['BEST_FIT', 'CLOSEST', 'MOST_RELIABLE'], undefined)).toEqual([
+      'BEST_FIT',
+      'CLOSEST',
+      'MOST_RELIABLE',
+    ]);
   });
 
   /**

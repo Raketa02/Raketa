@@ -32,6 +32,7 @@ from app.modules.matchmaking.domain.search_store import SearchModeReading
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
     CombinationBand,
+    GameResult,
     InclusionReason,
     LineupRecord,
     RecordedCombination,
@@ -504,6 +505,11 @@ def _card_blob(card: RecordedCard | None) -> dict[str, Any] | None:
     the prompt-set fingerprint, the confidence and the similarity vector stay on
     the object, where a threshold derivation reads them (``docs/adr/0138``). It
     is ``None`` for *nobody looked*, which is not ``allowed``.
+
+    The record block goes down the same way: ``player_score`` and
+    ``counted_games`` as ``None`` where the player had none, which is the
+    **omission** the wire draws and never a nought, and ``last_five`` as its
+    codes, oldest first, **unpadded**.
     """
 
     if card is None:
@@ -518,6 +524,9 @@ def _card_blob(card: RecordedCard | None) -> dict[str, Any] | None:
         "band": card.band,
         "range_low": card.range_low,
         "range_high": card.range_high,
+        "player_score": card.player_score,
+        "counted_games": card.counted_games,
+        "last_five": [result.value for result in card.last_five],
     }
 
 
@@ -589,6 +598,14 @@ def _recorded_card(blob: Mapping[str, Any] | None) -> RecordedCard | None:
         # saying how sure anybody was.
         range_low=blob["range_low"],
         range_high=blob["range_high"],
+        # **Soft keys, for ``review``'s reason and not for a range's.** A blob
+        # written before the record block existed carries none of the three, and
+        # *this search showed no record* is exactly what each absence already
+        # means — so nothing is invented by reading an older card as one that
+        # printed no record, which is what it did.
+        player_score=blob.get("player_score"),
+        counted_games=blob.get("counted_games"),
+        last_five=tuple(GameResult(one) for one in blob.get("last_five", ())),
     )
 
 

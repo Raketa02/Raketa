@@ -812,12 +812,29 @@ appears here.
   append is assigned its position before it commits
   ([ADR-0110](docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md)).
 - **Player card** — who a candidate *is*, as against how well the game would go. A **closed
-  list** — nickname, photo, area, Social tags, level and band, counted games — and it is assembled
+  list** — nickname, photo, area, Social tags, level and band, and the **record block** below —
+  and it is assembled
   by the backend **after** the engine returns, on the seam **at stake** already rides, because the
   scorer is forbidden every field on it. There is no name in this platform, only a **Nickname**.
   **The distance is not on it**: a card says only what its subject published, and a distance is a
   fact about a *pair*, so it is the one field that would change depending on who was looking
   ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
+- **Record block** — the three fields of a Player card that say what the platform **watched this
+  person do**, as against what they told it about themselves: their published **Player Score**,
+  their count of **counted games**, and their **Run of form**. They come from contexts of their
+  own rather than off the candidate index, which holds only what a player changes about
+  themselves ([ADR-0111](docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md)).
+  **Every one of them is absent rather than nought** where the platform has watched nothing:
+  *nought games* and *no record* would be one absence in two spellings, and a card spells absence
+  once. A count includes a game nobody agreed a score for and a Run of form does not — *an
+  unscored game is an evening, not evidence*
+  ([ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)).
+- **Run of form** — a player's **last five counted results, oldest to newest**, each a win or a
+  loss. **Outcomes in order and no dates, at any granularity**: a moment beside one of them would
+  be activity recency, which no card carries in any shape
+  ([ADR-0106](docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §5).
+  Fewer than five is a real answer and it is **never padded** — three results are drawn as three,
+  and the gap is the client's to draw.
 - **Forecast** — how the game would go, for a set of people. Three readings of one type and the
   words are not interchangeable: the **best-of-three** forecast answers *are these the right
   people*, the **arranged** forecast answers *is this the right way round*, and a

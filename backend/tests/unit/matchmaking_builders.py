@@ -13,11 +13,11 @@ golden file that fails on Tuesdays.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Mapping
 from uuid import UUID
 
-from app.engines.matchfit.core import SearchMode, Term
+from app.engines.matchfit.core import ReliabilityStrand, SearchMode, Term
 from app.engines.racketskill.core import likely_range
 from app.engines.matchfit.ruleset import Ruleset
 from app.modules.matchmaking.domain.candidate_index import (
@@ -27,7 +27,11 @@ from app.modules.matchmaking.domain.candidate_index import (
 )
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
 from app.modules.matchmaking.domain.geography import Point
-from app.modules.matchmaking.domain.ports import PairwiseCounterpart, PlayerScoreReading
+from app.modules.matchmaking.domain.ports import (
+    PairwiseCounterpart,
+    PlayerScoreReading,
+    RatioStrand,
+)
 from app.modules.matchmaking.domain.search_context import (
     LiveGateFacts,
     LiveTermFacts,
@@ -36,7 +40,7 @@ from app.modules.matchmaking.domain.search_context import (
 )
 from app.modules.matchmaking.domain.searches import SearchInitiation, SearchSurface
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
-from app.kernel import Sport
+from app.kernel import Instant, Sport
 from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import PlayIntent
@@ -59,6 +63,32 @@ SEARCHER_SIGMA = 0.34
 SEARCHER_SLOTS = ("1:EVENING", "3:EVENING", "5:EVENING", "6:MORNING")
 
 TAGS = ("PLAYS_TO_WIN", "HERE_TO_IMPROVE")
+
+
+def published_score(score: int, *, days_ago: int = 3) -> PlayerScoreReading:
+    """One published Player Score, with the one live strand behind it.
+
+    The strand is here because **an empty reading is not a reading** — absence is
+    spelled by not being in the answer at all — and it is otherwise not what any
+    caller of this is about. ``days_ago`` is the horizon's only input, and its
+    default is recent enough that nothing decays.
+
+    It is here rather than in either test that wants one, because two spellings
+    of *somebody with a record* would be two answers to what the reliability term
+    is being handed.
+    """
+
+    return PlayerScoreReading(
+        strands={
+            ReliabilityStrand.SHOWS_UP: RatioStrand(
+                value=score,
+                numerator=4,
+                denominator=5,
+                observed_at=Instant(NOW - timedelta(days=days_ago)),
+            )
+        },
+        published_score=score,
+    )
 
 
 def player(number: int) -> UUID:

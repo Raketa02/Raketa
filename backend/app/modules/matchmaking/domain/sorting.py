@@ -20,8 +20,9 @@ The first is the one that is easy to miss. Every sort ends on the player id, so 
 sort whose readings are all equal — three candidates at one address, or a term
 that stood down for everybody — resorts the list into **id order** and looks like
 a reorder while carrying no information at all. That is exactly how *Most
-reliable* would be drawn today, and the spec is explicit that it must not be: the
-reliability term stands down for everybody, so the control **is not drawn**.
+reliable* is drawn wrongly, and the spec is explicit that it must not be: on a
+search where nobody has a record the reliability term stands down for all twenty,
+so the control **is not drawn**.
 
 The second keeps the rest honest: a shortlist of one row offers nothing, and a
 shortlist already in Fit order does not offer *Best fit*.
@@ -111,21 +112,25 @@ def of_record(row: SearchCandidateRecord) -> Sortable:
     one decision — *what a sort is allowed to see* — and a mapping written in
     another layer is a second answer to it.
 
-    ``reliability`` is ``None`` for every recorded row, and that is a **stated
-    limit rather than an oversight**: the published Player Score is not on the
-    record, so *Most reliable* cannot be offered honestly on a read-back and is
-    therefore not drawn. ``player_score`` ships now (``docs/adr/0140``), so the
-    live search can draw the control for a searcher whose candidates have a
-    record — but a read-back still cannot, and the fix stays what it always was:
-    a recorded reading, never a control this route guesses at. It is #306 that
-    records it.
+    ``reliability`` is **the score the card recorded**, and never one this route
+    goes and asks for. That is the same rule the distance keeps one line up: a
+    read-back reproduces the answer that was given, so a control it draws has to
+    be orderable by a reading the row itself holds. A row written before the
+    card carried one has ``None`` there and sorts last, which is the honest
+    reading of a search nothing recorded a Player Score for — and a whole
+    shortlist of them draws no control at all, because a reading that tells no
+    two rows apart is not offerable.
     """
 
     return Sortable(
         player_id=str(row.player_id),
         fit=row.fit,
         distance_km=row.distance_km,
-        reliability=None,
+        reliability=(
+            None
+            if row.card is None or row.card.player_score is None
+            else float(row.card.player_score)
+        ),
     )
 
 

@@ -133,9 +133,12 @@ class SortOption(str, Enum):
     sort-to-term mapping, which is the objection that promoted ``distance_km``
     out of the distance evidence in the first place.
 
-    ``MOST_RELIABLE`` is in the vocabulary and is never offered today: the
-    reliability term stands down for everybody, so the control **is not drawn**
-    rather than drawn and inert.
+    ``MOST_RELIABLE`` reads the **published** Player Score, and it is offered on
+    a search whose candidates have one and withheld on a search whose candidates
+    do not — a fact about *that* search, re-derived per search rather than
+    hardcoded. Most people have no record yet, so most searches still do not draw
+    it, and that is the derivation working rather than a gap. ``EVENEST`` reads
+    ``would_be_forecast``, which no shortlist carries.
     """
 
     BEST_FIT = "BEST_FIT"
@@ -205,6 +208,34 @@ class StagedCounts:
 
 
 @final
+class GameResult(str, Enum):
+    """How one counted game went for one of the people who played it.
+
+    **The matcher's own word for it**, as ``PairwiseOutcome`` is for the
+    familiarity term's tallies, and mapped from ``games``' own ``Outcome`` at the
+    adapter that reads it. Two values and never a third: a game with no agreed
+    result produces no result for anybody, and absence is spelled by not being in
+    the run at all (``docs/adr/0137``).
+
+    It is here rather than beside the port that answers it because a run of form
+    is **recorded**, and every other word a row is written in is declared in this
+    file.
+    """
+
+    WIN = "WIN"
+    LOSS = "LOSS"
+
+
+#: How long the run of form on a card is — the matcher's own spelling of what
+#: ``games``' ``RECENT_RESULTS`` answers. Two contexts, two spellings, because
+#: ``games`` may not import the matcher; the adapter between them refuses to load
+#: if they ever disagree, which is the only thing that keeps a second number from
+#: being silent. It sits beside :class:`GameResult` because the run is a
+#: **recorded** thing and this file declares every word a row is written in.
+LAST_FIVE = 5
+
+
+@final
 @dataclass(frozen=True, slots=True)
 class RecordedCard:
     """The player card **as it was shown**, kept on the row that showed it.
@@ -222,12 +253,17 @@ class RecordedCard:
     nowhere — the one difference the round-trip assertion allows itself
     (``docs/adr/0107``, ``docs/adr/0109``).
 
-    There is no ``counted_games``. The games ledger has a provider now
-    (``docs/adr/0137``) and its zero is measured — but nothing assembles the
-    figure onto a card yet, and a column recording a field nobody passes would
-    store an absence indistinguishable from a nought. The record grows the field
-    with the ticket that draws it (#306), which is also the ticket that can
-    write the search-time value it must never re-derive.
+    **And the record block, recorded for the reason the rest of the card is.** A
+    Player Score moves, a run of form gains a game and a counted-game count only
+    ever grows, so a read-back that went and asked would answer a *different*
+    search — the shape ``docs/adr/0109`` refuses. What was shown is what is
+    stored.
+
+    **Its three fields are required like every other one here, and that is the
+    point of them.** Two of the three are absent on almost every card, which is
+    exactly why a default would be wrong: an absence nobody stated and an absence
+    the assembler decided on would be one value, and this is the type whose whole
+    job is that a card cannot be stored half-assembled.
     """
 
     nickname: str
@@ -255,6 +291,25 @@ class RecordedCard:
     #: have shown.
     range_low: float
     range_high: float
+    #: The **published** Player Score they were shown with, out of a hundred —
+    #: the figure their own profile prints, read through ``PlayerScoreQuery``
+    #: and never re-derived (``docs/adr/0140``).
+    #:
+    #: ``None`` where the player has no record at all, which is **omitted** on
+    #: the wire and is not a nought: somebody nothing has ever been arranged for
+    #: has not failed to turn up. It is also what lets *Most reliable* sort them
+    #: last on a read-back rather than first — ``distance_km``'s rule, for
+    #: ``distance_km``'s reason.
+    player_score: int | None
+    #: How many counted games they had played, friendlies excluded. ``None``
+    #: where they had none — the same absence, and never a measured ``0``, which
+    #: is the one place this card disagrees with what ``games`` answers its own
+    #: callers.
+    counted_games: int | None
+    #: The last five counted results, **oldest to newest**. Empty where nothing
+    #: of theirs had been counted and agreed, and **never padded** — fewer than
+    #: five is a real answer and the card draws the gap.
+    last_five: tuple[GameResult, ...]
 
 
 @final

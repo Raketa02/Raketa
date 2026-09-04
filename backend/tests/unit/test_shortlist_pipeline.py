@@ -229,6 +229,54 @@ def test_closest_is_offered_when_it_would_actually_reorder():
     assert SortOption.EVENEST not in offered
 
 
+def test_most_reliable_is_offered_on_a_search_whose_candidates_have_a_record():
+    """The other half of the same derivation, and the one that had never fired.
+
+    ``MOST_RELIABLE``'s condition is a fact about **this search** rather than
+    about the platform: the moment two candidates carry published scores that
+    tell them apart, the control is honest and is drawn. Most searches still do
+    not draw it, because most people have no record — which is the derivation
+    working rather than a gap.
+    """
+
+    rows = (
+        build.row(1, mu=build.SEARCHER_MU),
+        build.row(2, mu=build.SEARCHER_MU - 0.2),
+        build.row(3, mu=build.SEARCHER_MU - 0.4),
+    )
+    # Deliberately not in Fit order, so *Most reliable* is a genuine reorder
+    # rather than the returned order under another name.
+    scores = {
+        build.player(1): build.published_score(41),
+        build.player(2): build.published_score(88),
+        build.player(3): build.published_score(63),
+    }
+
+    offered = _offered(_run(build.context(rows, player_scores=scores)).returned)
+
+    assert SortOption.MOST_RELIABLE in offered
+
+
+def test_one_published_score_among_three_still_tells_the_rows_apart():
+    """Two readings — a number and an absence — is two readings.
+
+    The absent one sorts **last** rather than at zero, which is ``CLOSEST``'s
+    rule for ``CLOSEST``'s reason, and the control is offered because the order
+    it produces is genuinely different.
+    """
+
+    rows = (
+        build.row(1, mu=build.SEARCHER_MU),
+        build.row(2, mu=build.SEARCHER_MU - 0.2),
+        build.row(3, mu=build.SEARCHER_MU - 0.4),
+    )
+    scores = {build.player(3): build.published_score(88)}
+
+    offered = _offered(_run(build.context(rows, player_scores=scores)).returned)
+
+    assert SortOption.MOST_RELIABLE in offered
+
+
 def test_the_evidence_gate_excludes_nobody_on_todays_inputs():
     """**Live and inert, on purpose.** It is standing insurance, in place before
     the day *we know nothing about this person* could quietly become a passing

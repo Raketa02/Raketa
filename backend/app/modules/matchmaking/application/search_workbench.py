@@ -42,7 +42,12 @@ from app.modules.matchmaking.application.outward_reads import (
     live_block_set,
     read_demand,
 )
-from app.modules.matchmaking.domain.cards import CardIdentity, PlayerCardSource
+from app.modules.matchmaking.domain.cards import (
+    CardIdentity,
+    CardRecord,
+    PlayerCardSource,
+    PlayerRecordSource,
+)
 from app.modules.matchmaking.domain.candidate_index import Partition
 from app.modules.matchmaking.domain.candidate_snapshot import (
     CandidateSnapshot,
@@ -135,18 +140,30 @@ class AskedFor:
 class AnsweredCandidate:
     """One returned row, with the two field families the backend attaches.
 
-    ``card`` and ``at_stake`` have a **different author** from everything else on
-    the row — they are read after ``matchfit`` returns, over the twenty rows that
-    survived rather than over the pool — and they ride the same seam for the same
-    reason: neither is a fact the scorer is allowed to see, and neither may be
-    computed by the client.
+    ``card``, ``record`` and ``at_stake`` have a **different author** from
+    everything else on the row — they are read after ``matchfit`` returns, over
+    the twenty rows that survived rather than over the pool — and they ride the
+    same seam for the same reason: none of them is a fact the scorer is allowed
+    to see, and none may be computed by the client.
     """
 
     scored: Scored
     card: CardIdentity
+    #: What the platform watched them do on court, or ``None`` where it has
+    #: watched nothing. **An absence and never a nought**: somebody with no
+    #: counted game has not lost five.
+    record: CardRecord | None
+    #: Their **published** Player Score, or ``None`` where the platform has
+    #: watched nothing — read at assembly time and **not** off the fence, which
+    #: is ``docs/adr/0140`` §6: the engine's own reading is a separate read for a
+    #: separate purpose, bounded by the box where this one is bounded by the
+    #: shortlist. Reaching into ``Scored`` for it would make the card's figure a
+    #: consequence of whatever the reliability term happens to carry.
+    player_score: int | None
     #: ``None`` in for-fun, where a counted result is **meaningless** rather than
-    #: unavailable, and ``None`` today in competitive, because the result-update
-    #: rule does not exist. The card draws no block either way.
+    #: unavailable. In competitive it is the rating engine's own update rule read
+    #: forward (``docs/adr/0139``), and ``None`` only where one of the two holds
+    #: no rating in this sport.
     at_stake: AtStake | None
 
     def recorded_card(self) -> RecordedCard:
@@ -164,6 +181,19 @@ class AnsweredCandidate:
         the way back out** (``docs/adr/0138``): it costs a store round trip, and
         a read-back that paid it would answer with the shield the backfill has
         since earned rather than the one the searcher saw.
+
+        **The record block comes from two more providers and neither is the
+        index** (``docs/adr/0111``: the index holds only what a player changes
+        about themselves, and none of these is that). The counted games and the
+        run of form are ``games``' through :class:`PlayerRecordSource`; the
+        Player Score is ``player_score``'s through ``PlayerScoreQuery``. Both
+        arrive **already read**, on :class:`AnsweredCandidate`, because assembly
+        is a mapping and the reads are the workbench's.
+
+        **Nought counted games is not a figure, it is an absence.** ``games``
+        answers a measured zero and the card does not print one: on this surface
+        *no games* and *no record* would be two spellings of one thing, and the
+        whole discipline of the card is that absence has one.
         """
 
         indexed = self.scored.generated.row
@@ -179,6 +209,9 @@ class AnsweredCandidate:
             # `CandidateRow.range_low` for why assembly may not derive it.
             range_low=indexed.range_low,
             range_high=indexed.range_high,
+            player_score=self.player_score,
+            counted_games=None if self.record is None else self.record.counted_games,
+            last_five=() if self.record is None else self.record.last_five,
         )
 
 
@@ -212,6 +245,7 @@ class SearchWorkbench:
         exposure: ExposureLedger,
         interest: InterestLedger,
         cards: PlayerCardSource,
+        records: PlayerRecordSource,
         absent_terms: frozenset[Term],
         meter: ScoringInstrument | None = None,
     ) -> None:
@@ -232,6 +266,7 @@ class SearchWorkbench:
         self._exposure = exposure
         self._interest = interest
         self._cards = cards
+        self._records = records
         self._absent_terms = absent_terms
         self._meter = meter
 
@@ -598,20 +633,53 @@ class SearchWorkbench:
         record is built, so that ``n_returned`` and the number of ``RETURNED``
         rows written agree — which is the whole of what makes ``n_returned`` a
         redaction detector later.
+
+        **Three batched reads over the surviving rows, and never one per row** —
+        the shape every set read in this module has. All three run after the
+        floor, so each is bounded by twenty players even when the pool was five
+        hundred.
+
+        **The Player Score is read again here, and the second read is the
+        decision rather than an oversight** (``docs/adr/0140`` §6). The engine
+        already read it through the same port when the context was bound, but
+        *that* read is a separate read for a separate purpose and is **bounded by
+        the box**: it prices a term over everybody who might be scored. This one
+        is bounded by the shortlist and prints a number. Taking the card's figure
+        off ``Scored.fenced`` instead would make what a player is shown a
+        consequence of whatever the reliability term happens to carry, and the
+        day that record is narrowed the card would quietly stop saying anything.
         """
 
-        identities = await self._cards.identities_for(
-            [UUID(row.player_id) for row in returned]
-        )
+        wanted = [UUID(row.player_id) for row in returned]
+        identities = await self._cards.identities_for(wanted)
+        records = await self._records.records_for(wanted)
+        # **Not through ``read_demand``**, like the two reads above it and unlike
+        # every read the *context* binds. A stood-down term is a search with one
+        # fewer term in it; a stood-down card block would publish *the platform
+        # has watched nothing of these twenty people*, which is a claim. An
+        # outage refuses here, exactly as an unreadable nickname does.
+        scores = await self._player_scores.readings_for(wanted)
         rows: list[AnsweredCandidate] = []
         for row in returned:
-            card = identities.get(UUID(row.player_id))
+            player_id = UUID(row.player_id)
+            card = identities.get(player_id)
             if card is None:
                 continue
             rows.append(
                 AnsweredCandidate(
                     scored=row,
                     card=card,
+                    # Absent for everybody the platform has watched play
+                    # nothing, which is most people — and an absence rather than
+                    # a nought all the way to the wire.
+                    record=records.get(player_id),
+                    # Absent for everybody the platform has watched nothing of,
+                    # which is the same absence and never a nought.
+                    player_score=(
+                        reading.published_score
+                        if (reading := scores.get(player_id)) is not None
+                        else None
+                    ),
                     at_stake=await self.at_stake_for(row, context),
                 )
             )

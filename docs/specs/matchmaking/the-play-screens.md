@@ -56,8 +56,9 @@ backend after `matchfit` returns — the same seam `at_stake` already rides
 
 ```
 candidate:   { player_id, fit, distance_km, player_card, ... }
-player_card: { nickname, photo_id?, photo_url?, area_code,
-               social_tags[], level, band, range, counted_games }
+player_card: { nickname, photo_id?, photo_url?, review?, area_code,
+               social_tags[], level, band, range,
+               player_score?, counted_games?, last_five? }
 ```
 
 Closed list. `photo_id` and `photo_url` are **omitted together** (not null) when the player has
@@ -105,16 +106,49 @@ sign one for another player's photo and `GET /photos/{id}` refuses to
 | a block, a pass or a decline | §21, and [ADR-0109](../../adr/0109-a-read-back-names-what-it-withholds.md) |
 | an unsettled case | the matcher never reads `cases`; the hold does its work at the gate |
 
-**Absent from the card today, and no longer for want of a provider.** Player Score, Last-5
-form and `at_stake` in competitive have all since acquired one
-([ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md),
-[ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md),
-[ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
-What is missing is the **assembly**, which is [#306](https://github.com/Raketa02/Raketa/issues/306).
-A gap, not a refusal — and the Player Score reaches the card **through a port at assembly
-time**, never off the candidate index, which
+### The record block, and the one spelling absence has
+
+**Three fields say what the platform has watched this person do**, and every one of them is
+**omitted rather than nought** where it has watched nothing
+([#306](https://github.com/Raketa02/Raketa/issues/306)).
+
+| Field | Shape | Omitted when |
+| --- | --- | --- |
+| `player_score` | `int` 0–100, the **published** number — the same figure this player's own profile prints, at the same player-facing weights ([ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)) | nothing has ever been arranged for them. **Never `0`** — somebody nobody arranged anything for has not failed to turn up |
+| `counted_games` | `int` ≥ 1, friendlies excluded, unscored games **included** ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)) | none of the counted games was theirs. `games` measures that zero for its own callers and the card does not print one: here *nought games* and *no record* would be one absence in two spellings |
+| `last_five` | up to five `WIN` / `LOSS`, **oldest to newest** | nothing of theirs was counted **and agreed**. Fewer than five is a real answer and is **never padded** — the card draws the gap |
+
+**`counted_games` present with no `last_five` is not an inconsistency.** An unscored game is
+*an evening, not evidence*: it says these people were on a court and it moved nobody's Level,
+so it is in the count and out of the run.
+
+**No dates, at any granularity** — `last_five` is outcomes in order and nothing else. A moment
+beside one of them is row three of §9.5's Liveness table, which
+[ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §5
+refuses. It is asserted centrally over the emitted contract, not per route.
+
+**None of the three comes off the candidate index**, which
 [ADR-0111](../../adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md)
-reserves for what a player changes about themselves.
+reserves for what a player changes about themselves — and a Player Score, a game count and a
+run of form are all the platform's observations *of* them. They arrive **through ports at
+assembly time**, on the seam `at_stake` and the nickname already ride: the two `games` facts
+through a source of their own, and the Player Score through `PlayerScoreQuery`, **read again
+there** ([ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md) §6).
+
+**The second read is the decision and not an oversight.** The engine reads the same port when
+the search binds, and that read prices a *term* over everybody who might be scored — it is
+bounded by the box. This one prints a *number* and is bounded by the shortlist. Taking the
+card's figure off the engine's record instead would make what a player is shown a consequence
+of whatever the reliability term happens to carry, and the day that record is narrowed the card
+would quietly stop saying anything.
+
+**`at_stake` rides the same seam and sits on the candidate rather than on the card** — it is
+a fact about a *pair*, which is `distance_km`'s placement for `distance_km`'s reason. It is the
+rating engine's own update rule read forward
+([ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)),
+present in competitive and omitted in for fun — where a counted result is *meaningless* rather
+than unavailable — and omitted in competitive only where one of the two holds no rating in
+this sport.
 
 **A nickname is not shortenable.** There is no name in this platform. Every sentence naming
 somebody uses the whole handle or names nobody.
@@ -201,12 +235,19 @@ the objection that promoted `distance_km` in the first place.
 | **Best fit** | `fit` | offered |
 | **Closest** | `distance_km` | offered; a stood-down distance sorts last, never as a zero |
 | **Evenest** | `would_be_forecast` | offered whenever any seat is filled on both sides, provisional until the last seat |
-| **Most reliable** | published Player Score | **not offered while the reliability term stands down** — which it does for anybody with no record, and most people have none |
+| **Most reliable** | published Player Score | offered on a search whose candidates have one; **a player with no record sorts last, never as a zero** |
 
-*Most reliable* is not a sort that does nothing. It is a control that **is not drawn**: a
-visible control that reorders nothing is the product lying quietly. Its condition is a fact
-about **the search**, re-derived per search rather than hardcoded, so it appears by itself on a
-search whose candidates have a record — the wiring is [#306](https://github.com/Raketa02/Raketa/issues/306)'s.
+*Most reliable* is not a sort that does nothing. Where nobody on the list has a record it is a
+control that **is not drawn**: a visible control that reorders nothing is the product lying
+quietly, and a sort whose readings are all equal reshuffles the list into player-id order while
+carrying nothing. Its condition is a fact about **the search**, re-derived per search rather
+than hardcoded, so it appears by itself the moment two candidates carry scores that tell them
+apart — and most searches still do not draw it, because most people have no record.
+
+**A read-back draws it from the score the row recorded**, never from one that route goes and
+asks for: the record reproduces the answer that was given, so a control it offers has to be
+orderable by a reading the row itself holds. A row written before the card carried one reads as
+absent and sorts last — which is `distance_km`'s rule, for `distance_km`'s reason.
 
 **The card says what the candidate would leave on court** — `would_be_forecast`, labelled
 provisional while seats remain open.

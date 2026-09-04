@@ -22,11 +22,14 @@
  *
  * `degraded_terms` and `modifiers` arrived with `SH.whyfit`, which is the surface that draws
  * them ([#273](https://github.com/Raketa02/Raketa/issues/273)). What is still absent is
- * `at_stake` — the sheet's five zones do not draw it — and `counted_games`, which is
- * `OMITTED` on the wire and whose block Decision 3 deleted. **`would_be_forecast` is out of
- * scope entirely**: nothing in the backend writes it, and its three consumers went with it. A
- * field is added here when a surface draws it, because a DTO with fields nobody reads is a
- * contract nobody is checking.
+ * `at_stake` — the sheet's five zones do not draw it — and the two record-block fields
+ * `counted_games` and `last_five`, whose block Decision 3 deleted. `player_score` **is** here,
+ * and it is the exception that proves the rule rather than a break with it: the chip row draws
+ * it, because *Most reliable* is an ordering over that number and a comparator cannot order by
+ * a field the DTO does not carry ([#306](https://github.com/Raketa02/Raketa/issues/306)).
+ * **`would_be_forecast` is out of scope entirely**: nothing in the backend writes it, and its
+ * three consumers went with it. A field is added here when a surface draws it, because a DTO
+ * with fields nobody reads is a contract nobody is checking.
  */
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
@@ -81,6 +84,18 @@ export interface PlayerCard {
   /** The band's **published name**. Its numeric edges are not on the card. */
   readonly band: string;
   readonly range: LikelyRange;
+  /**
+   * Their **Player Score** out of a hundred — reliability, as the platform watched it.
+   *
+   * **Omitted where it has watched nothing**, which is most people today, and never `0`:
+   * somebody nothing was ever arranged for has not failed to turn up. That absence is what
+   * lets *Most reliable* sort them last instead of first — `distanceKm`'s rule one field up,
+   * for `distanceKm`'s reason.
+   *
+   * It is here because a chip reads it. `countedGames` and `last_five` cross beside it on the
+   * wire and are **not** here, per the module note: a field is added when a surface draws it.
+   */
+  readonly playerScore?: number;
 }
 
 /**

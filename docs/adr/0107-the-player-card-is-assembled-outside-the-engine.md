@@ -80,9 +80,11 @@ player_card: { nickname, photo_id?, area_code, distance_km,
                social_tags[], level, band, counted_games }
 ```
 
+*(as it stood; the amendments below are what it is now)*
+
 **Nothing else.**
 
-> **Amended four times since, all under this ADR's own rule** — *a card says only what its
+> **Amended five times since, all under this ADR's own rule** — *a card says only what its
 > subject published, and every field on it is a fact about that person alone.*
 >
 > - **`range` was added** — the likely range, μ ± σ as `rating` published it, travelling as
@@ -118,6 +120,26 @@ player_card: { nickname, photo_id?, area_code, distance_km,
 >   and the two paragraphs below are what decide that: a link is dead within the hour so it
 >   cannot be stored, and a verdict is a store round trip so it must not be re-read per
 >   response.
+>
+> - **The record block was added — `player_score`, `counted_games` and `last_five`**
+>   ([#306](https://github.com/Raketa02/Raketa/issues/306)). `counted_games` was on the list
+>   from the beginning and had never been assembled; the other two joined it when their
+>   providers shipped
+>   ([ADR-0140](0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md),
+>   [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)). All three pass this
+>   ADR's test the way `review` does rather than the way `range` does: they are not something
+>   their subject *published* — they are what the platform **watched them do** — but each is a
+>   fact about that person alone and does not change with who is looking, which is the half of
+>   the rule `distance_km` failed.
+>
+>   Two things about them are decided elsewhere and named here so the list stays readable.
+>   **Every one is omitted rather than nought** where the platform has watched nothing, which
+>   is `distance_km`'s two-spellings rule
+>   ([ADR-0106](0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §4) applied
+>   to three more fields — and, for `counted_games`, the one place this card deliberately
+>   disagrees with its provider, which measures a real zero for its own callers. And
+>   **`last_five` carries outcomes in order and no dates**: a moment beside one of them would
+>   be the activity recency this ADR refuses outright.
 >
 > The list is still closed; it is the two paragraphs below that say what closed means.
 

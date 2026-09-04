@@ -1208,7 +1208,11 @@ export interface components {
             liveness_reasons: components["schemas"]["LivenessReason"][];
             /** @description Why this person is in the list at all, when the reason is one the searcher is owed. **A union of one**: only an interest lift *admits* anybody, and the two reasons that merely reorder stay in the store — one reaches you as a liveness reason instead, and the other is a third party's unpopularity you are owed no version of. Omitted otherwise. */
             inclusion_reason?: components["schemas"]["WireInclusionReason"];
-            /** @description What a counted game against this person would do to your Level. Omitted in for fun, where a counted result is meaningless rather than unavailable, and omitted in competitive when either of you holds no rating in this sport — never drawn as a pair of zeros. */
+            /**
+             * @description What a counted game against this person would do to your Level — the rating engine's own update rule read forward, so the pair printed here is the pair the game will deliver if it is played.
+             *
+             *     **Omitted in for fun**, where a counted result is meaningless rather than unavailable, and **omitted in competitive when either of you holds no rating in this sport** — never drawn as a pair of zeros.
+             */
             at_stake?: components["schemas"]["AtStakeSchema"];
             /** @description What this candidate would leave on court. Precomputed only when a line-up has exactly one seat open, so **omitted on every shortlist**. */
             would_be_forecast?: components["schemas"]["ForecastSchema"];
@@ -1750,6 +1754,22 @@ export interface components {
             /** Games */
             games: components["schemas"]["GameSchema"][];
         };
+        /**
+         * GameResult
+         * @description How one counted game went for one of the people who played it.
+         *
+         *     **The matcher's own word for it**, as ``PairwiseOutcome`` is for the
+         *     familiarity term's tallies, and mapped from ``games``' own ``Outcome`` at the
+         *     adapter that reads it. Two values and never a third: a game with no agreed
+         *     result produces no result for anybody, and absence is spelled by not being in
+         *     the run at all (``docs/adr/0137``).
+         *
+         *     It is here rather than beside the port that answers it because a run of form
+         *     is **recorded**, and every other word a row is written in is declared in this
+         *     file.
+         * @enum {string}
+         */
+        GameResult: "WIN" | "LOSS";
         /**
          * GameSchema
          * @description One game, its court, and what it is right now.
@@ -2374,6 +2394,15 @@ export interface components {
          *     No bio and no free text of any kind, ever; and **no activity recency at any
          *     granularity** — not a timestamp, not *active today*, not a green dot.
          *     Liveness reaches a screen the one way it is sanctioned to: as a reason code.
+         *
+         *     **The last three fields are the record block, and every one of them is
+         *     omitted rather than nought.** They are what the platform has watched this
+         *     person do — a Player Score, a count of counted games and a run of form — and
+         *     a nought printed for somebody it has watched do nothing would be a claim
+         *     where there is a gap. ``last_five`` is the one that has to keep the recency
+         *     rule while carrying five events: it is **outcomes in order and no dates**,
+         *     which is a run of form rather than a statement about when anybody was last
+         *     here.
          */
         PlayerCardSchema: {
             /**
@@ -2429,10 +2458,32 @@ export interface components {
             /** @description The **likely range** their Level sits in, μ ± σ as RacketSkill published it. Always present: a card that stated a Level without it would show two players at the same Level with no way to tell that one of them is a guess. **The band's numeric edges are not here** — they are not a second range to compare this one against. */
             range: components["schemas"]["LikelyRangeSchema"];
             /**
+             * Player Score
+             * @description Their **Player Score** out of a hundred — reliability, as the platform watched it: whether games arranged for them were played, and whether challenges sent to them were answered inside their window.
+             *
+             *     **The published figure and never a re-derivation of it.** It is the same number this player's own profile prints, at the same player-facing weights, because a card explaining a match with a figure their own screen disagrees with is worse than a card that says nothing.
+             *
+             *     **Omitted where the platform has watched nothing**, which is most people today. Never `0`: somebody nothing was ever arranged for has not failed to turn up, and the absence is what lets *Most reliable* sort them last instead of first.
+             */
+            player_score?: number;
+            /**
              * Counted Games
-             * @description How many counted games they have played. **Omitted today** — but no longer for want of a provider: the games ledger ships and its zero is measured. What is missing is the assembly, and the card grows the block with the ticket that draws it. Until then the field does not apply, which is not the same as being nought.
+             * @description How many **counted** games they have played. A friendly is not one — it was never evidence about anybody, by the choice of the people who arranged it — and a game nobody agreed a score for **is**: an unscored game is an evening rather than evidence, so it says these people were on a court and it moves nobody's Level.
+             *
+             *     **Omitted where they have played none**, and never `0`. Absence has one spelling on this card.
              */
             counted_games?: number;
+            /**
+             * Last Five
+             * @description Their last five counted results, **oldest to newest** — the run of form a card draws left to right. Only games whose result was agreed are here; an unscored one moved nobody's Level and is in `counted_games` instead.
+             *
+             *     **Fewer than five is a real answer and it is never padded.** Three entries means three counted results, and the client draws the gap rather than filling it.
+             *
+             *     **There are no dates here, at any granularity.** This is a run of outcomes in order, and a moment beside one of them would be activity recency, which no card carries in any shape.
+             *
+             *     **Omitted where nothing of theirs has been counted and agreed.**
+             */
+            last_five?: components["schemas"]["GameResult"][];
         };
         /**
          * PlayerProfileOptionsResponse
@@ -3574,9 +3625,12 @@ export interface components {
          *     sort-to-term mapping, which is the objection that promoted ``distance_km``
          *     out of the distance evidence in the first place.
          *
-         *     ``MOST_RELIABLE`` is in the vocabulary and is never offered today: the
-         *     reliability term stands down for everybody, so the control **is not drawn**
-         *     rather than drawn and inert.
+         *     ``MOST_RELIABLE`` reads the **published** Player Score, and it is offered on
+         *     a search whose candidates have one and withheld on a search whose candidates
+         *     do not — a fact about *that* search, re-derived per search rather than
+         *     hardcoded. Most people have no record yet, so most searches still do not draw
+         *     it, and that is the derivation working rather than a gap. ``EVENEST`` reads
+         *     ``would_be_forecast``, which no shortlist carries.
          * @enum {string}
          */
         SortOption: "BEST_FIT" | "CLOSEST" | "EVENEST" | "MOST_RELIABLE";

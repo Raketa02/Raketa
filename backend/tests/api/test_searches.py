@@ -537,7 +537,11 @@ async def test_a_player_with_no_photo_carries_neither_field(
     ]
 
     assert "photo_id" not in card and "photo_url" not in card
-    assert "counted_games" not in card, "the card is not assembled with it yet"
+    # The record block, absent for the reason it is absent for most people:
+    # nothing was ever arranged for them, so there is no record to print — and a
+    # nought here would say they had turned up to none of it.
+    for absent in ("player_score", "counted_games", "last_five"):
+        assert absent not in card, f"{absent} was drawn as a nought"
     assert "bio" not in card and "last_active_at" not in card
     assert "gender" not in card
 
@@ -777,7 +781,8 @@ async def test_the_envelope_carries_the_facts_about_the_search(
         "a shortlist has no seats, so *Evenest* would reorder nothing"
     )
     assert "MOST_RELIABLE" not in envelope["sorts_available"], (
-        "the reliability term stands down for everybody, so the control is not drawn"
+        "nobody in this city has a record, so the reliability term stands down "
+        "for all of them and the control is not drawn"
     )
     for staged in ("n_generated", "n_scored", "n_cleared_floor", "excluded_by_gate"):
         assert staged not in envelope and staged not in envelope["pool"]

@@ -54,6 +54,7 @@ from app.bootstrap.composition import (
     build_play_intent_declaration_repository,
     build_photo_storage,
     build_player_card_source,
+    build_player_record_source,
     build_player_profile_repository,
     build_player_score_query,
     build_prompt_decline_ledger,
@@ -247,6 +248,7 @@ async def read_paths(
             events=events,
             storage=build_photo_storage(settings),
         ),
+        records=build_player_record_source(session),
         absent_terms=build_absent_terms(),
         meter=None,
     )

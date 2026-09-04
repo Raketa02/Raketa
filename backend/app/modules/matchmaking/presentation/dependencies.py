@@ -56,6 +56,7 @@ from app.bootstrap.composition import (
     build_mutual_challenge_minting,
     build_pass_ledger,
     build_player_card_source,
+    build_player_record_source,
     build_player_score_query,
     build_ruleset,
     build_search_store,
@@ -276,6 +277,7 @@ def get_search_workbench(
         cards=build_player_card_source(
             session=db, event_store=event_store, events=events, storage=storage
         ),
+        records=build_player_record_source(db),
         absent_terms=build_absent_terms(),
         meter=meter,
     )

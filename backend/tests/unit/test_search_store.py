@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy import select
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport
@@ -25,6 +26,7 @@ from app.modules.matchmaking.domain.relaxation import (
 )
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
+    GameResult,
     InclusionReason,
     PoolDescription,
     RecordedCard,
@@ -34,6 +36,9 @@ from app.modules.matchmaking.domain.searches import (
     SearchSurface,
     StagedCounts,
     WithheldReason,
+)
+from app.modules.matchmaking.infrastructure.search_model import (
+    SearchCandidateORM,
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
     SqlAlchemySearchStore,
@@ -98,6 +103,12 @@ def _candidate(band: CandidateBand, position: int) -> SearchCandidateRecord:
                 band="Improver",
                 range_low=2.36,
                 range_high=3.04,
+                # The record block, whole, because the round trip below is an
+                # equality: a field the fixture leaves at its default is a field
+                # the store could drop and nothing would say so.
+                player_score=71,
+                counted_games=6,
+                last_five=(GameResult.LOSS, GameResult.WIN, GameResult.WIN),
             )
             if band is CandidateBand.RETURNED
             else None
@@ -228,6 +239,51 @@ async def test_the_whole_row_that_was_shown_comes_back(store):
     assert row.concerns == ("SOCIAL_VIBE",)
     assert row.distance_km == 4
     assert row.at_stake == AtStake(win_delta=0.07, loss_delta=-0.05)
+    # The record block, which is on the row for the same reason: a Player Score
+    # moves, a run of form gains a game, and a counted-game count only grows.
+    assert row.card.player_score == 71
+    assert row.card.counted_games == 6
+    assert row.card.last_five == (GameResult.LOSS, GameResult.WIN, GameResult.WIN)
+
+
+async def test_a_card_written_before_the_record_block_reads_back_without_one(store):
+    """**Soft keys, for ``review``'s reason and not for a range's.**
+
+    A card blob written before the block existed carries none of the three, and
+    *this search showed no record* is exactly what each absence already means —
+    so nothing is invented by reading an older card as one that printed none,
+    which is what it did. A range read this way would be different: a card that
+    stated a Level always stated how sure of it the platform was.
+    """
+
+    adapter, session = store
+    record = _record()
+    await adapter.record(record)
+    await session.commit()
+
+    stored = (
+        await session.execute(
+            select(SearchCandidateORM).where(
+                SearchCandidateORM.search_id == record.id,
+                SearchCandidateORM.band == CandidateBand.RETURNED.value,
+            )
+        )
+    ).scalars()
+    for candidate in stored:
+        candidate.player_card = {
+            key: value
+            for key, value in candidate.player_card.items()
+            if key not in {"player_score", "counted_games", "last_five"}
+        }
+    await session.commit()
+
+    row = (await adapter.find(search_id=record.id, searcher_id=SEARCHER)).returned[0]
+
+    assert row.card is not None
+    assert row.card.nickname == "ada", "an older card stopped reading at all"
+    assert row.card.player_score is None
+    assert row.card.counted_games is None
+    assert row.card.last_five == ()
 
 
 async def test_the_search_row_comes_back_whole_beside_its_candidates(store):
@@ -410,6 +466,9 @@ def test_a_basis_and_the_reasons_beside_it_may_not_be_different_lengths():
                 band="Improver",
                 range_low=2.36,
                 range_high=3.04,
+                player_score=None,
+                counted_games=None,
+                last_five=(),
             ),
             at_stake=None,
         )
@@ -454,6 +513,9 @@ def test_a_near_miss_may_not_carry_a_card():
                 band="Improver",
                 range_low=2.36,
                 range_high=3.04,
+                player_score=None,
+                counted_games=None,
+                last_five=(),
             ),
             at_stake=None,
         )

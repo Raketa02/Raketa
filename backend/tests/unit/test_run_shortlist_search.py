@@ -37,7 +37,8 @@ from app.modules.blocks.domain.errors import BlockStateUnavailable
 from app.modules.matchmaking.application.commands import RunShortlistSearchCommand
 from app.modules.matchmaking.application.run_shortlist_search import RunShortlistSearch
 from app.modules.matchmaking.application.search_workbench import SearchWorkbench
-from app.modules.matchmaking.domain.cards import CardIdentity
+from app.modules.matchmaking.domain.cards import CardIdentity, CardRecord
+from app.modules.matchmaking.domain.ports import PlayerScoreReading
 from app.modules.matchmaking.domain.candidate_index import Partition
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
 from app.modules.matchmaking.domain.declines import DECLINE_SUPPRESS
@@ -57,7 +58,11 @@ from app.modules.matchmaking.domain.index_staleness import (
 )
 from app.modules.matchmaking.domain.prompts import Prompt
 from app.modules.matchmaking.domain.relaxation import Rung
-from app.modules.matchmaking.domain.searches import InclusionReason, SearchRecord
+from app.modules.matchmaking.domain.searches import (
+    GameResult,
+    InclusionReason,
+    SearchRecord,
+)
 from app.modules.matchmaking.infrastructure.absent_providers import NoHoldsExist
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.player_profile.domain.consent import ConsentSurface
@@ -193,6 +198,33 @@ class NobodyHereHasARecord:
 
     async def readings_for(self, player_ids: Collection[UUID]) -> Mapping[UUID, object]:
         return {}
+
+
+@dataclass
+class SomebodyHasARecord:
+    """``PlayerScoreQuery`` where a named few have one.
+
+    Beside :class:`NobodyHereHasARecord` rather than replacing it, because the
+    empty answer is what almost every test in this file wants and *a search where
+    somebody has a record* is the exception being asserted.
+    """
+
+    readings: Mapping[UUID, PlayerScoreReading] = field(default_factory=dict)
+    #: Every set this port was asked about, in order. The engine asks over the
+    #: box and the card asks over the shortlist, and *which* is a decision
+    #: (``docs/adr/0140`` §6) rather than a detail.
+    asked: list[tuple[UUID, ...]] = field(default_factory=list)
+
+    async def readings_for(
+        self, player_ids: Collection[UUID]
+    ) -> Mapping[UUID, PlayerScoreReading]:
+        wanted = set(player_ids)
+        self.asked.append(tuple(player_ids))
+        return {
+            player_id: reading
+            for player_id, reading in self.readings.items()
+            if player_id in wanted
+        }
 
 
 class NothingHasHappenedBetweenAnybody:
@@ -364,6 +396,34 @@ class Cards:
         }
 
 
+@dataclass
+class Records:
+    """``PlayerRecordSource``. **Nobody has played anything**, unless told.
+
+    The default is the platform's ordinary state and the one every other test in
+    this file assumes: no counted games anywhere, so no card carries a record
+    block and every absence on the wire is the one the schema documents.
+
+    ``asked`` is kept because *one batched read per shortlist, never a query per
+    row* is a promise about this seam, and a promise nothing observes is a
+    comment.
+    """
+
+    known: Mapping[UUID, CardRecord] = field(default_factory=dict)
+    asked: list[tuple[UUID, ...]] = field(default_factory=list)
+
+    async def records_for(
+        self, player_ids: Collection[UUID]
+    ) -> Mapping[UUID, CardRecord]:
+        wanted = set(player_ids)
+        self.asked.append(tuple(player_ids))
+        return {
+            player_id: record
+            for player_id, record in self.known.items()
+            if player_id in wanted
+        }
+
+
 class ARefusingEngine:
     """A scorer that raises. **There is nothing to catch it with**, deliberately:
     a hand-rolled fallback ranker arriving as a hotfix is how a second, worse,
@@ -441,6 +501,8 @@ def use_case(
     store: Store | None = None,
     work: Work | None = None,
     cards: Cards | None = None,
+    records: Records | None = None,
+    player_scores: "SomebodyHasARecord | None" = None,
     engine=None,
     caught_up_at: datetime = NOW,
     exposure: InMemoryExposureLedger | None = None,
@@ -468,11 +530,12 @@ def use_case(
             holds=holds or NoHoldsExist(),
             account_status=NobodyIsHidden(),
             history=NothingHasHappenedBetweenAnybody(),
-            player_scores=NobodyHereHasARecord(),
+            player_scores=player_scores or NobodyHereHasARecord(),
             at_stake=NobodyHereIsRated(),
             exposure=exposure or InMemoryExposureLedger(FixedClock()),
             interest=interest or Yeses(),
             cards=cards or Cards(),
+            records=records or Records(),
             absent_terms=frozenset(),
             meter=meter,
         ),
@@ -780,6 +843,102 @@ async def test_a_row_whose_card_cannot_be_assembled_is_dropped_before_the_record
         known.player_id
     ]
     assert store.written[0].counts.n_returned == 1
+
+
+async def test_the_record_block_reaches_the_card_from_the_source_that_owns_it():
+    """``games``' two facts, recorded on the row that showed them.
+
+    Recorded rather than re-read for the reason every other fact on this card is:
+    a counted-game count only grows and a run of form gains a game, so a
+    read-back that went and asked would answer a different search.
+    """
+
+    row = build.row(1)
+    player_id = UUID(row.player_id)
+    records = Records(
+        known={
+            player_id: CardRecord(
+                counted_games=7,
+                last_five=(GameResult.LOSS, GameResult.WIN),
+            )
+        }
+    )
+
+    answer = await use_case(rows=(row,), records=records).execute(a_command())
+
+    card = answer.record.returned[0].card
+    assert card is not None
+    assert card.counted_games == 7
+    assert card.last_five == (GameResult.LOSS, GameResult.WIN)
+
+
+async def test_a_player_the_platform_has_watched_nothing_of_records_no_block():
+    """**An absence, and never a nought.** The default in this file and the
+    ordinary state of the platform: nobody has a counted game, so no card carries
+    a count, a run of form or a Player Score."""
+
+    answer = await use_case(rows=(build.row(1),)).execute(a_command())
+
+    card = answer.record.returned[0].card
+    assert card is not None
+    assert card.counted_games is None
+    assert card.last_five == ()
+    assert card.player_score is None
+
+
+async def test_the_card_prints_the_published_player_score():
+    """The figure this player's own profile prints, on the card beside their Fit.
+
+    Read **at assembly time** and not off the engine's own record
+    (``docs/adr/0140`` §6): the reliability term's reading is a separate read for
+    a separate purpose, bounded by the box where this one is bounded by the
+    shortlist.
+    """
+
+    row = build.row(1)
+    player_id = UUID(row.player_id)
+
+    answer = await use_case(
+        rows=(row,),
+        player_scores=SomebodyHasARecord({player_id: build.published_score(64)}),
+    ).execute(a_command())
+
+    card = answer.record.returned[0].card
+    assert card is not None
+    assert card.player_score == 64
+
+
+async def test_the_card_reads_the_score_over_the_rows_that_survived_the_floor():
+    """**The second read is bounded by the shortlist, and asked once.**
+
+    That is the whole difference between it and the engine's, which is bounded by
+    the box — so a read per row here, or a read over the pool, would be the cost
+    ``docs/adr/0140`` §6 says this one does not pay.
+    """
+
+    rows = (build.row(1), build.row(2), build.row(3))
+    scores = SomebodyHasARecord(
+        {UUID(row.player_id): build.published_score(50) for row in rows}
+    )
+
+    await use_case(rows=rows, player_scores=scores).execute(a_command())
+
+    assert scores.asked, "the card never asked for a Player Score at all"
+    assert set(scores.asked[-1]) == {UUID(row.player_id) for row in rows}
+
+
+async def test_the_record_block_is_one_read_for_the_shortlist():
+    """*One batched read per shortlist, never a query per row* — and it runs
+    after the floor, so the price is bounded by the rows that survived rather
+    than by the pool."""
+
+    rows = (build.row(1), build.row(2), build.row(3))
+    records = Records()
+
+    await use_case(rows=rows, records=records).execute(a_command())
+
+    assert len(records.asked) == 1
+    assert set(records.asked[0]) == {UUID(row.player_id) for row in rows}
 
 
 async def test_at_stake_is_omitted_in_for_fun_by_the_methods_own_name():

@@ -126,7 +126,11 @@ from app.modules.matchmaking.domain.ports import (
     PlayerScoreQuery,
 )
 from app.modules.matchmaking.application.roll_exposure import RollExposure
-from app.modules.matchmaking.domain.cards import CardPhotoLinks, PlayerCardSource
+from app.modules.matchmaking.domain.cards import (
+    CardPhotoLinks,
+    PlayerCardSource,
+    PlayerRecordSource,
+)
 from app.modules.matchmaking.domain.declines import PromptDeclineLedger
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
 from app.modules.matchmaking.domain.prompts import PromptLedger
@@ -174,6 +178,9 @@ from app.modules.matchmaking.infrastructure.scale_instruments import (
 )
 from app.modules.matchmaking.infrastructure.card_photo_links import (
     PresignedCardPhotos,
+)
+from app.modules.matchmaking.infrastructure.games_card_records import (
+    GamesPlayedAndAgreed,
 )
 from app.modules.matchmaking.infrastructure.player_card_source import (
     PlayerCardIdentities,
@@ -976,6 +983,25 @@ def build_player_card_source(
             event_store=event_store, events=events
         ),
         photos=storage,
+    )
+
+
+def build_player_record_source(session: AsyncSession) -> PlayerRecordSource:
+    """The card's record block — what the platform watched this person do.
+
+    Over ``games``' **own published port** rather than its streams, exactly as
+    ``build_match_history_query`` above is: the fold that decides whether a game
+    counted and whether its result settled belongs to the context that owns the
+    log, and a second one written for a card would part company with it on the
+    first window that moved.
+
+    The clock is built here rather than taken, for the reason that builder gives:
+    both of those are folds against the instant the read happens, and a caller
+    holding one could hold a stale one.
+    """
+
+    return GamesPlayedAndAgreed(
+        games=build_game_history_query(session), clock=build_clock()
     )
 
 

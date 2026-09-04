@@ -65,7 +65,11 @@ from app.modules.matchmaking.domain.lineups import (
 )
 from app.modules.matchmaking.domain.prompts import Prompt
 from app.modules.matchmaking.domain.relaxation import RelaxationAsk, Rung
-from app.modules.matchmaking.domain.searches import SearchSurface, SortOption
+from app.modules.matchmaking.domain.searches import (
+    GameResult,
+    SearchSurface,
+    SortOption,
+)
 from app.modules.matchmaking.presentation.evidence import Evidence
 # **The same cell shape the profile route takes**, deliberately reused rather
 # than restated: asking for a week in two shapes is how availability data goes
@@ -576,6 +580,15 @@ class PlayerCardSchema(BaseModel):
     No bio and no free text of any kind, ever; and **no activity recency at any
     granularity** — not a timestamp, not *active today*, not a green dot.
     Liveness reaches a screen the one way it is sanctioned to: as a reason code.
+
+    **The last three fields are the record block, and every one of them is
+    omitted rather than nought.** They are what the platform has watched this
+    person do — a Player Score, a count of counted games and a run of form — and
+    a nought printed for somebody it has watched do nothing would be a claim
+    where there is a gap. ``last_five`` is the one that has to keep the recency
+    rule while carrying five events: it is **outcomes in order and no dates**,
+    which is a run of form rather than a statement about when anybody was last
+    here.
     """
 
     nickname: str = Field(
@@ -648,14 +661,54 @@ class PlayerCardSchema(BaseModel):
             "here** — they are not a second range to compare this one against."
         ),
     )
+    player_score: int = Field(
+        default=OMITTED,
+        ge=0,
+        le=100,
+        description=(
+            "Their **Player Score** out of a hundred — reliability, as the "
+            "platform watched it: whether games arranged for them were played, "
+            "and whether challenges sent to them were answered inside their "
+            "window.\n\n"
+            "**The published figure and never a re-derivation of it.** It is the "
+            "same number this player's own profile prints, at the same "
+            "player-facing weights, because a card explaining a match with a "
+            "figure their own screen disagrees with is worse than a card that "
+            "says nothing.\n\n"
+            "**Omitted where the platform has watched nothing**, which is most "
+            "people today. Never `0`: somebody nothing was ever arranged for has "
+            "not failed to turn up, and the absence is what lets *Most reliable* "
+            "sort them last instead of first."
+        ),
+    )
     counted_games: int = Field(
         default=OMITTED,
+        ge=1,
         description=(
-            "How many counted games they have played. **Omitted today** — but "
-            "no longer for want of a provider: the games ledger ships and its "
-            "zero is measured. What is missing is the assembly, and the card "
-            "grows the block with the ticket that draws it. Until then the "
-            "field does not apply, which is not the same as being nought."
+            "How many **counted** games they have played. A friendly is not one "
+            "— it was never evidence about anybody, by the choice of the people "
+            "who arranged it — and a game nobody agreed a score for **is**: an "
+            "unscored game is an evening rather than evidence, so it says these "
+            "people were on a court and it moves nobody's Level.\n\n"
+            "**Omitted where they have played none**, and never `0`. Absence has "
+            "one spelling on this card."
+        ),
+    )
+    last_five: list[GameResult] = Field(
+        default=OMITTED,
+        max_length=5,
+        description=(
+            "Their last five counted results, **oldest to newest** — the run of "
+            "form a card draws left to right. Only games whose result was "
+            "agreed are here; an unscored one moved nobody's Level and is in "
+            "`counted_games` instead.\n\n"
+            "**Fewer than five is a real answer and it is never padded.** Three "
+            "entries means three counted results, and the client draws the gap "
+            "rather than filling it.\n\n"
+            "**There are no dates here, at any granularity.** This is a run of "
+            "outcomes in order, and a moment beside one of them would be "
+            "activity recency, which no card carries in any shape.\n\n"
+            "**Omitted where nothing of theirs has been counted and agreed.**"
         ),
     )
 
@@ -866,10 +919,13 @@ class CandidateSchema(BaseModel):
     at_stake: AtStakeSchema = Field(
         default=OMITTED,
         description=(
-            "What a counted game against this person would do to your Level. "
-            "Omitted in for fun, where a counted result is meaningless rather "
-            "than unavailable, and omitted in competitive when either of you "
-            "holds no rating in this sport — never drawn as a pair of zeros."
+            "What a counted game against this person would do to your Level — "
+            "the rating engine's own update rule read forward, so the pair "
+            "printed here is the pair the game will deliver if it is played.\n\n"
+            "**Omitted in for fun**, where a counted result is meaningless "
+            "rather than unavailable, and **omitted in competitive when either "
+            "of you holds no rating in this sport** — never drawn as a pair of "
+            "zeros."
         ),
     )
     would_be_forecast: ForecastSchema = Field(

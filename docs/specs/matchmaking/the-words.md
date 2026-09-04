@@ -738,9 +738,25 @@ engine-internal ordering.
 | `MOST_RELIABLE` | Most reliable |
 | `EVENEST` | *out of scope — #231* |
 
-`MOST_RELIABLE` is in the vocabulary and never offered today; `EVENEST` reads
-`would_be_forecast`, which nothing has ever written. Both keep words so that the table is
-exhaustive by type; neither is reachable.
+`MOST_RELIABLE` is reachable since [#306](https://github.com/Raketa02/Raketa/issues/306): it
+reads the published Player Score the card now carries, and is offered on a search whose
+candidates have one. `EVENEST` reads `would_be_forecast`, which nothing has ever written, so it
+keeps a word and no ordering — the table stays exhaustive by type.
+
+**`GameResult`** — the run of form on a card, and **the words are not written yet**, because
+no surface draws it ([#306](https://github.com/Raketa02/Raketa/issues/306)). The field crosses
+so that the day a card grows the block, the block is already there to draw; the two codes are
+listed here so that this file stays the exhaustive account of what crosses.
+
+| | |
+| --- | --- |
+| `WIN` | *no words yet — no surface draws the run* |
+| `LOSS` | *no words yet — no surface draws the run* |
+
+**It is drawn as a row of five marks rather than as five sentences**, whenever it is drawn: it
+is outcomes in order, oldest to newest, and **fewer than five is a real answer** the client
+draws a gap for. **There is no date beside any of them** — a moment here would be activity
+recency, which no card carries in any shape (ADR-0106 §5).
 
 **`ForecastAssumption`** — one value, and ADR-0108 makes the figure and its caveat one thing.
 

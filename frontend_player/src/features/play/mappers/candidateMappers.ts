@@ -236,6 +236,12 @@ export function toCandidate(row: CandidateSchema): Candidate {
       level: row.player_card.level,
       band: row.player_card.band,
       range: { low: row.player_card.range.low, high: row.player_card.range.high },
+      // Omitted rather than zero where the platform has watched nothing — the same two
+      // spellings of absence as `distance_km`, and what lets *Most reliable* sort a player
+      // with no record last instead of first.
+      ...(row.player_card.player_score === undefined
+        ? {}
+        : { playerScore: row.player_card.player_score }),
     },
     terms: row.terms.map(toScoredTerm),
     // A concern is joined back to a row by its term, so one this build cannot name could not

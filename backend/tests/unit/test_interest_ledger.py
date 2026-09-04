@@ -158,6 +158,12 @@ async def _a_search(
                         band="Improver",
                         range_low=2.36,
                         range_high=3.04,
+                        # Nobody in this world has played anything: the block is
+                        # stated absent rather than defaulted, because a card is
+                        # never stored half-assembled.
+                        player_score=None,
+                        counted_games=None,
+                        last_five=(),
                     ),
                     at_stake=None,
                 )

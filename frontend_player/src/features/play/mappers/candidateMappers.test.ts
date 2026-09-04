@@ -250,6 +250,22 @@ describe('the candidate', () => {
     expect(toCandidate(row({ distance_km: undefined }))).not.toHaveProperty('distanceKm');
   });
 
+  /**
+   * The record block's one field this build reads. The other two — `counted_games` and
+   * `last_five` — cross on the wire and are deliberately not mapped: a field is added to the
+   * DTO when a surface draws it, and no surface draws those.
+   */
+  it('carries the published Player Score, which is what *Most reliable* orders by', () => {
+    const card = { ...row().player_card, player_score: 74 };
+
+    expect(toCandidate(row({ player_card: card })).card.playerScore).toBe(74);
+  });
+
+  /** Omitted rather than zero — what lets *Most reliable* sort a player with no record last. */
+  it('omits the Player Score where the platform has watched nothing', () => {
+    expect(toCandidate(row()).card).not.toHaveProperty('playerScore');
+  });
+
   it('omits the photo URL where there is no photograph, so the poster is drawn', () => {
     const card = { ...row().player_card, photo_url: undefined };
 

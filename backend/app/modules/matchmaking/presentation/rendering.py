@@ -566,10 +566,16 @@ def _card(card: RecordedCard, photo_url: str | None) -> PlayerCardSchema:
     already what this card falls back to, and a search that failed over a
     signature would be the whole feature going down for the least of its facts.
 
-    ``counted_games`` is never passed. The games ledger has a provider now
-    (``docs/adr/0137``), so the zero would at last be a measured one — but the
-    card is not assembled with it yet, and a field the assembler does not carry
-    is an absence rather than a figure. The block arrives with #306.
+    **The record block crosses only where there is one**, and each of its three
+    fields is omitted on its own terms: a Player Score where the platform has
+    watched nothing, a counted-game count where none of the games was theirs, and
+    a run of form where nothing of theirs was ever agreed. A player with counted
+    games and no agreed score has the second and not the third, which is not an
+    inconsistency — an unscored game is an evening, not evidence
+    (``docs/adr/0137``).
+
+    **Nothing here is nulled and nothing is padded.** The three absences are
+    omissions, and a run of three results is sent as three.
 
     It takes a card and never an absence, so *a row with no person on it* is not
     a state this function has to have an opinion about.
@@ -593,4 +599,12 @@ def _card(card: RecordedCard, photo_url: str | None) -> PlayerCardSchema:
         # it, and the poster is not somebody's photo to have passed a check.
         if card.review is not None:
             fields["review"] = card.review
+    if card.player_score is not None:
+        fields["player_score"] = card.player_score
+    if card.counted_games is not None:
+        fields["counted_games"] = card.counted_games
+    if card.last_five:
+        # An empty run is **omitted and never sent as `[]`**: the two would be
+        # the same absence in two spellings, and this card has one.
+        fields["last_five"] = list(card.last_five)
     return PlayerCardSchema.model_validate(fields)

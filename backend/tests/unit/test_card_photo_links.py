@@ -64,6 +64,12 @@ def _row(
                 band="Improver",
                 range_low=2.36,
                 range_high=3.04,
+                # No record block: this file is about the photograph, and the
+                # three are stated rather than defaulted because a card is never
+                # stored half-assembled.
+                player_score=None,
+                counted_games=None,
+                last_five=(),
             )
             if returned
             else None

@@ -2583,7 +2583,7 @@
           },
           "at_stake": {
             "$ref": "#/components/schemas/AtStakeSchema",
-            "description": "What a counted game against this person would do to your Level. Omitted in for fun, where a counted result is meaningless rather than unavailable, and omitted in competitive when either of you holds no rating in this sport \u2014 never drawn as a pair of zeros."
+            "description": "What a counted game against this person would do to your Level \u2014 the rating engine's own update rule read forward, so the pair printed here is the pair the game will deliver if it is played.\n\n**Omitted in for fun**, where a counted result is meaningless rather than unavailable, and **omitted in competitive when either of you holds no rating in this sport** \u2014 never drawn as a pair of zeros."
           },
           "would_be_forecast": {
             "$ref": "#/components/schemas/ForecastSchema",
@@ -3210,6 +3210,15 @@
         ],
         "title": "GameListResponse",
         "description": "Your games, newest arrangement first.\n\n**One list and not several.** A game awaiting an entry, one awaiting an\nanswer and one that never happened are one thing at three moments of its\nlife, and splitting them would make the client's shelves the platform's\nopinion about which of them matters.\n\n``read_at`` is the instant every standing and deadline here was folded\nagainst. It travels so a client's countdowns and the standings beside them\ncannot come from two different readings of the clock."
+      },
+      "GameResult": {
+        "type": "string",
+        "enum": [
+          "WIN",
+          "LOSS"
+        ],
+        "title": "GameResult",
+        "description": "How one counted game went for one of the people who played it.\n\n**The matcher's own word for it**, as ``PairwiseOutcome`` is for the\nfamiliarity term's tallies, and mapped from ``games``' own ``Outcome`` at the\nadapter that reads it. Two values and never a third: a game with no agreed\nresult produces no result for anybody, and absence is spelled by not being in\nthe run at all (``docs/adr/0137``).\n\nIt is here rather than beside the port that answers it because a run of form\nis **recorded**, and every other word a row is written in is declared in this\nfile."
       },
       "GameSchema": {
         "properties": {
@@ -4000,10 +4009,27 @@
             "$ref": "#/components/schemas/LikelyRangeSchema",
             "description": "The **likely range** their Level sits in, \u03bc \u00b1 \u03c3 as RacketSkill published it. Always present: a card that stated a Level without it would show two players at the same Level with no way to tell that one of them is a guess. **The band's numeric edges are not here** \u2014 they are not a second range to compare this one against."
           },
+          "player_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Player Score",
+            "description": "Their **Player Score** out of a hundred \u2014 reliability, as the platform watched it: whether games arranged for them were played, and whether challenges sent to them were answered inside their window.\n\n**The published figure and never a re-derivation of it.** It is the same number this player's own profile prints, at the same player-facing weights, because a card explaining a match with a figure their own screen disagrees with is worse than a card that says nothing.\n\n**Omitted where the platform has watched nothing**, which is most people today. Never `0`: somebody nothing was ever arranged for has not failed to turn up, and the absence is what lets *Most reliable* sort them last instead of first."
+          },
           "counted_games": {
             "type": "integer",
+            "minimum": 1.0,
             "title": "Counted Games",
-            "description": "How many counted games they have played. **Omitted today** \u2014 but no longer for want of a provider: the games ledger ships and its zero is measured. What is missing is the assembly, and the card grows the block with the ticket that draws it. Until then the field does not apply, which is not the same as being nought."
+            "description": "How many **counted** games they have played. A friendly is not one \u2014 it was never evidence about anybody, by the choice of the people who arranged it \u2014 and a game nobody agreed a score for **is**: an unscored game is an evening rather than evidence, so it says these people were on a court and it moves nobody's Level.\n\n**Omitted where they have played none**, and never `0`. Absence has one spelling on this card."
+          },
+          "last_five": {
+            "items": {
+              "$ref": "#/components/schemas/GameResult"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Last Five",
+            "description": "Their last five counted results, **oldest to newest** \u2014 the run of form a card draws left to right. Only games whose result was agreed are here; an unscored one moved nobody's Level and is in `counted_games` instead.\n\n**Fewer than five is a real answer and it is never padded.** Three entries means three counted results, and the client draws the gap rather than filling it.\n\n**There are no dates here, at any granularity.** This is a run of outcomes in order, and a moment beside one of them would be activity recency, which no card carries in any shape.\n\n**Omitted where nothing of theirs has been counted and agreed.**"
           }
         },
         "type": "object",
@@ -4016,7 +4042,7 @@
           "range"
         ],
         "title": "PlayerCardSchema",
-        "description": "Who this person is, on a card. **A closed list with two permanent gaps.**\n\nNo bio and no free text of any kind, ever; and **no activity recency at any\ngranularity** \u2014 not a timestamp, not *active today*, not a green dot.\nLiveness reaches a screen the one way it is sanctioned to: as a reason code."
+        "description": "Who this person is, on a card. **A closed list with two permanent gaps.**\n\nNo bio and no free text of any kind, ever; and **no activity recency at any\ngranularity** \u2014 not a timestamp, not *active today*, not a green dot.\nLiveness reaches a screen the one way it is sanctioned to: as a reason code.\n\n**The last three fields are the record block, and every one of them is\nomitted rather than nought.** They are what the platform has watched this\nperson do \u2014 a Player Score, a count of counted games and a run of form \u2014 and\na nought printed for somebody it has watched do nothing would be a claim\nwhere there is a gap. ``last_five`` is the one that has to keep the recency\nrule while carrying five events: it is **outcomes in order and no dates**,\nwhich is a run of form rather than a statement about when anybody was last\nhere."
       },
       "PlayerProfileOptionsResponse": {
         "properties": {
@@ -5537,7 +5563,7 @@
           "MOST_RELIABLE"
         ],
         "title": "SortOption",
-        "description": "The re-sorts a client may offer over rows it already holds.\n\n**Server-driven, and a sort that would reorder nothing is not drawn.** A\nclient deriving offerability from ``degraded_terms`` would be encoding a\nsort-to-term mapping, which is the objection that promoted ``distance_km``\nout of the distance evidence in the first place.\n\n``MOST_RELIABLE`` is in the vocabulary and is never offered today: the\nreliability term stands down for everybody, so the control **is not drawn**\nrather than drawn and inert."
+        "description": "The re-sorts a client may offer over rows it already holds.\n\n**Server-driven, and a sort that would reorder nothing is not drawn.** A\nclient deriving offerability from ``degraded_terms`` would be encoding a\nsort-to-term mapping, which is the objection that promoted ``distance_km``\nout of the distance evidence in the first place.\n\n``MOST_RELIABLE`` reads the **published** Player Score, and it is offered on\na search whose candidates have one and withheld on a search whose candidates\ndo not \u2014 a fact about *that* search, re-derived per search rather than\nhardcoded. Most people have no record yet, so most searches still do not draw\nit, and that is the derivation working rather than a gap. ``EVENEST`` reads\n``would_be_forecast``, which no shortlist carries."
       },
       "SplitSchema": {
         "properties": {

@@ -183,6 +183,58 @@ async def test_the_other_side_agrees_and_the_game_has_a_winner(
     )
 
 
+async def test_a_played_game_reaches_a_bystanders_card_as_a_counted_game(
+    client, session_factory, candidate_source, searcher
+):
+    """**The whole wiring, end to end**: a game happened, and a card says so.
+
+    It lives here rather than beside the other card assertions in
+    ``test_searches.py`` because arranging a game is what this file can do — a
+    court is built, sent, accepted by four people and then played, and there is
+    no shorter path to a counted game because there is no route that creates one.
+
+    **The four who played are read by somebody who did not**, and that is not a
+    convenience: an open challenge gates its own participants out of each other's
+    lists, so the four cannot see each other and only a fifth player can see the
+    record they left. The searcher here is that fifth player.
+
+    What it proves is the seam ``games`` and the matcher meet on: the count comes
+    off ``GameHistoryQuery`` through the card's own source, at assembly time and
+    never off the candidate index (``docs/adr/0111``).
+
+    **An unscored game is in the count.** The result is stated and not yet
+    agreed, so the game is *an evening, not evidence*: it says these people were
+    on a court, it moves nobody's Level, and it is a counted game
+    (``docs/adr/0137``). ``last_five`` stays absent, which is the same rule read
+    the other way — a run of form is agreed results only.
+    """
+
+    host = await world.a_searcher(client, "host")
+    people = await _a_city(client, session_factory, candidate_source, host["mu"])
+    challenge_id = await _a_sent_challenge(client, host)
+    await _everybody_accepts(client, challenge_id, people)
+    (game,) = await _games(client, host["token"])
+    stated = await client.post(
+        f"/api/v1/games/{game['game_id']}/result",
+        json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
+        headers=world.auth(host["token"]),
+    )
+    assert stated.status_code == 200, stated.text
+    await world.fold_the_log(session_factory, candidate_source)
+
+    answer = (await world.search(client, searcher["token"])).json()
+    played = {str(one["id"]) for one in people.values()}
+    rows = [row for row in answer["candidates"] if row["player_id"] in played]
+
+    assert rows, "nobody who played is on the bystander's list"
+    for row in rows:
+        card = row["player_card"]
+        assert card["counted_games"] == 1
+        assert "last_five" not in card, (
+            "nobody has agreed a score, so there is no run of form to draw"
+        )
+
+
 async def test_there_is_no_rejection_and_a_disagreement_carries_a_score(
     client, session_factory, candidate_source, searcher
 ):

@@ -8,8 +8,9 @@
  *
  * ## The vocabulary is the server's, and the row vanishes when it is empty
  *
- * §C5 specified a fixed row of four chips. Today the server offers **at most two**: `EVENEST`
- * never, `MOST_RELIABLE` not until the Player Score ships, and `sorts_available == []` is a
+ * §C5 specified a fixed row of four chips. Today the server offers **at most three**:
+ * `EVENEST` never, `MOST_RELIABLE` only on a search whose candidates have a record — most
+ * people have none, so most searches still do not carry it — and `sorts_available == []` is a
  * real state with a test asserting it. So the row is rendered from the list and omitted
  * entirely when it is empty ([#231](https://github.com/Raketa02/Raketa/issues/231) §6) — a
  * hardcoded four would be three-quarters a lie.
@@ -30,11 +31,12 @@
  * ## A chip this build cannot order by is not drawn
  *
  * `EVENEST` reads `would_be_forecast` — **out of scope entirely**, since nothing in the
- * backend writes it and its three consumers went with it (#231 §4) — and `MOST_RELIABLE`
- * reads a published Player Score that does not cross the wire. Neither is offered today.
- * Both keep a word so the table is exhaustive by type, and the comparator table is exhaustive
- * the same way: a sort added to the vocabulary and not to this table does not compile, and one
- * that has no ordering here says so as `undefined` rather than as a chip that does nothing.
+ * backend writes it and its three consumers went with it (#231 §4) — so it keeps a word and no
+ * ordering. `MOST_RELIABLE` had the same shape until the published Player Score reached the
+ * card ([#306](https://github.com/Raketa02/Raketa/issues/306)), and it is now an ordering like
+ * any other. The comparator table stays exhaustive by type: a sort added to the vocabulary and
+ * not to this table does not compile, and one this build cannot perform says so as `undefined`
+ * rather than as a chip that does nothing.
  *
  * That is **not** deriving offerability from the rows, which is the move that promoted
  * `sorts_available` to the server in the first place. It is this build declaring which
@@ -64,10 +66,27 @@ const COMPARATOR: Readonly<Record<SortOption, Comparator | undefined>> = {
    */
   CLOSEST: (one, other) => farthest(one) - farthest(other),
   EVENEST: undefined,
-  MOST_RELIABLE: undefined,
+  /**
+   * The published Player Score, descending, with **an absent score last rather than first**.
+   *
+   * `CLOSEST`'s rule for `CLOSEST`'s reason: the omission is *the platform has watched this
+   * person do nothing*, and a `0` read out of it would sort them as the least reliable people
+   * on the list rather than as the ones there is nothing to say about.
+   */
+  MOST_RELIABLE: (one, other) => reliability(other) - reliability(one),
 };
 
 const farthest = (row: Candidate) => row.distanceKm ?? Number.POSITIVE_INFINITY;
+
+/**
+ * The score, with **no record as the lowest reading there is** — so subtracting the other way
+ * round, which is what descending order is, puts them last.
+ *
+ * The sentinel goes the opposite way from `farthest`'s and the sense of the comparator does
+ * too, because *closest* is ascending and *most reliable* is descending. Both say the same
+ * thing about the same absence: it sorts last, never first.
+ */
+const reliability = (row: Candidate) => row.card.playerScore ?? Number.NEGATIVE_INFINITY;
 
 const ORDERABLE: readonly SortOption[] = SORT_OPTIONS.filter(
   (sort) => COMPARATOR[sort] !== undefined,

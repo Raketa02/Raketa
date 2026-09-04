@@ -33,6 +33,20 @@ are facts about the *photograph* rather than about the player, and neither may b
 derived by a client — a shield says *checked and passed*, and only a decision the
 stored note proves earns one.
 
+**And what the platform watched them do — the record block, from two more
+providers, neither of them the index.** The counted-game count and the run of the
+last five are ``games``' facts and arrive through :class:`PlayerRecordSource`
+(``docs/adr/0137``); the Player Score is ``player_score``'s and arrives through
+``PlayerScoreQuery``, **read again at assembly time** (``docs/adr/0140`` §6) —
+the engine's own reading of the same port is a separate read for a separate
+purpose, bounded by the box where this one is bounded by the shortlist. Three
+fields, three providers, and none of them folded into the identity:
+``docs/adr/0098`` splits by *who supplies the fact*.
+
+**Every one of the three is omitted rather than printed as a nought** where the
+player has none, which is most people. A card is the surface where *nought games*
+and *no record* would be one absence in two spellings, and absence here has one.
+
 **A nickname, and nothing may shorten it.** ``users`` holds no real name and no
 given name. Every sentence naming somebody uses the whole handle or names
 nobody — the prototype's ``split(' ')[0]`` has nothing behind it here, and
@@ -46,7 +60,12 @@ from dataclasses import dataclass
 from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
-from app.modules.matchmaking.domain.searches import SearchCandidateRecord
+from app.kernel import invariant
+from app.modules.matchmaking.domain.searches import (
+    LAST_FIVE,
+    GameResult,
+    SearchCandidateRecord,
+)
 from app.modules.player_profile.domain.photos import PhotoReviewDecision
 
 
@@ -143,5 +162,92 @@ class CardPhotoLinks(Protocol):
 
         One call for the whole list, never one per row — the shape every set
         read in this module has.
+        """
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class CardRecord:
+    """What the platform watched this person do on court. **The card's record block.**
+
+    The second half of a card, beside :class:`CardIdentity`, and it comes from a
+    second provider — ``games`` rather than ``users`` — which is why it is a
+    second port rather than three more fields on the first. The split is
+    ``docs/adr/0098``'s: by *who supplies the fact*, never by how fresh it has to
+    be.
+
+    **A player with nothing to show is absent from the answer**, so this type is
+    never the empty one. ``games`` measures a zero for ``counted_games_for`` — the
+    games were counted and none of them was theirs — and the card does not print
+    it: *nought games* and *no record* would be two spellings of one absence on a
+    surface whose whole discipline is that absence has one.
+
+    ``last_five`` may still be empty inside a record that exists, and that is not
+    the same absence. Somebody with three counted games and no agreed score has a
+    count to print and no run of form: an unscored game is an evening, not
+    evidence (``docs/adr/0137``).
+    """
+
+    #: How many counted games they have played, **friendlies excluded**. One or
+    #: more, because a record of nought is an absence and is spelled by not
+    #: being in the answer.
+    counted_games: int
+    #: The last five counted results, **oldest to newest**. Fewer than five is a
+    #: real answer and is **never padded** — the card draws the gap.
+    last_five: tuple[GameResult, ...]
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.counted_games >= 1,
+            "a record of no games is an absence, and an absence is spelled by "
+            f"not being in the answer at all: counted games {self.counted_games}",
+        )
+        invariant(
+            len(self.last_five) <= LAST_FIVE,
+            f"{len(self.last_five)} results in a run of {LAST_FIVE}",
+        )
+        invariant(
+            len(self.last_five) <= self.counted_games,
+            f"{len(self.last_five)} results out of {self.counted_games} counted "
+            "games — a result nobody played",
+        )
+
+
+@runtime_checkable
+class PlayerRecordSource(Protocol):
+    """Where the card's record block comes from. **One read for the shortlist.**
+
+    Beside :class:`PlayerCardSource` rather than in ``ports.py`` for the reason
+    that file gives about itself: it holds what the **scorer** demands, and a
+    record block is read after ``matchfit`` returns, over the twenty rows that
+    survived. It is the card's second author, on the seam ``at_stake`` and the
+    identity already ride (``docs/adr/0107``).
+
+    **The Player Score is deliberately not here**, and it is not because the card
+    goes without one. It has its own provider — ``player_score`` rather than
+    ``games`` — so it arrives on its own port, ``PlayerScoreQuery``, read a
+    second time at assembly (``docs/adr/0140`` §6). Folding somebody else's fact
+    into this answer would be the one thing ``docs/adr/0098``'s split exists to
+    prevent: a provider signing half of two contracts has signed all of neither.
+    """
+
+    async def records_for(
+        self, player_ids: Collection[UUID]
+    ) -> Mapping[UUID, CardRecord]:
+        """Each of these players' counted-game count and run of form.
+
+        **A player with no counted game is absent from the answer**, never a
+        ``0`` and never an empty run. That is the opposite of what ``games``
+        answers its own callers — there a zero is measured, because the games
+        were counted and none of them was theirs — and the translation happens at
+        the adapter, on the way to a surface where a printed nought would read as
+        *this person turns up and loses*.
+
+        **A failure here is not a soft one, and that is why nothing catches it.**
+        The absence on this card means *they have none*; an outage answered as an
+        empty mapping would publish that about everybody on the shortlist. A
+        refusal is the honest answer, exactly as it is when a nickname cannot be
+        read.
         """
         ...

@@ -85,11 +85,13 @@ export function relaxationOffer(offer: RelaxedAsk): string {
 /**
  * The sorts a row may offer.
  *
- * The row draws `sorts_available` and vanishes when it is empty (#231), so two of these have
- * words and no reachable surface: `MOST_RELIABLE` is in the vocabulary and never offered
- * today, and `EVENEST` reads `would_be_forecast`, which nothing has ever written. **Both keep
- * words so the table is exhaustive by type** — that is what makes the day one becomes
- * offerable a change to nothing at all.
+ * The row draws `sorts_available` and vanishes when it is empty (#231). One of these has words
+ * and no reachable surface: `EVENEST` reads `would_be_forecast`, which nothing has ever
+ * written. `MOST_RELIABLE` was the second until the published Player Score reached the card
+ * ([#306](https://github.com/Raketa02/Raketa/issues/306)), and it is now offered on a search
+ * whose candidates have one — most people have no record, so most searches still do not draw
+ * it. **A code with no reachable surface keeps its words so the table is exhaustive by type**,
+ * which is what made that day a change to nothing at all.
  */
 const SORT: Readonly<Record<SortOption, string>> = {
   BEST_FIT: 'Best fit',
