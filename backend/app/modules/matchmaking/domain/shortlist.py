@@ -507,10 +507,10 @@ def _searcher_as_candidate(
     them a second time from the other end is two chances to disagree about one
     number.
 
-    The searcher's own reliability is ``None`` and would be even if
-    ``player_score`` shipped: the reverse Fit exists to price how good a bet the
-    *searcher* looks from the other side, and the module reads a Player Score for
-    candidates rather than for the person searching.
+    The searcher's own reliability is ``None`` and stays ``None`` now that
+    ``player_score`` has shipped: the reverse Fit exists to price how good a bet
+    the *searcher* looks from the other side, and the module reads a Player Score
+    for candidates rather than for the person searching.
     """
 
     facts = context.searcher

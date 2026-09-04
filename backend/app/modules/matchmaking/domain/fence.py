@@ -230,14 +230,21 @@ def liveness_facts_of(
     taper — so the age is carried rather than priced: it crosses as evidence, is
     recorded as the signal's raw input, and moves nobody by being large or small.
 
-    ``answer_rate`` stays ``None``, and **the reason has changed owner rather
-    than gone away.** Challenges are sent and answered now, so *nothing in this
-    repository has ever sent one* is no longer why. *Answers challenges* is a
-    Player Score **Strand**, published by ``player_score``, which does not exist
-    — so this reads ``PlayerScoreQuery`` and not the challenge history beside it.
+    ``answer_rate`` stays ``None``, and **the reason has changed owner twice.**
+    Challenges are sent and answered, and ``player_score`` publishes the *answers
+    challenges* strand now (``docs/adr/0140``) — so neither *nothing has ever sent
+    one* nor *the provider does not exist* is why any more. What is left is the
+    signal's own name: ``ANSWER_RATE_AND_SPEED`` is a ramp over a rate **and a
+    speed**, and this platform publishes a rate. Feeding a ramp half its
+    definition would be a second definition of the signal, written where nobody
+    would look for it — so the signal stays absent until somebody decides what it
+    means without the half that is missing.
+
     Deriving a rate here from the pairwise tallies would be the matcher computing
     somebody else's published number, which is the one thing this module refuses
-    everywhere.
+    everywhere — and it would be the *wrong* number besides:
+    ``answered_counterparts`` is about answers given to challenges the reader was
+    in, not about this candidate's own record.
     """
 
     counterpart = context.terms.counterparts.get(player_uuid)

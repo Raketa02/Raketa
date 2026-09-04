@@ -158,16 +158,30 @@ class LevelDirection(str, Enum):
 
 
 class ReliabilityStrand(str, Enum):
-    """The six strands a reliability reading is built from, read separately.
+    """The five strands a reliability reading is built from, read separately.
 
     They are weighted **per mode** and the two vectors order people oppositely —
-    a candidate strong on *confirms results* and weak on *sportsmanship* wins in
+    a candidate strong on *keeps plans* and weak on *sportsmanship* wins in
     competitive and loses in for fun. A single blended score cannot express that,
     which is the whole argument for the decomposition, and it is justified for
     exactly as long as such a pair exists (``ranking-weights.md`` §6).
 
-    **Three different blends of these six exist in this system and confusing them
-    is a live risk:** the published Player Score at 35/20/15/12/10/8, and these
+    **The inversion narrowed when the sixth strand was struck, and it is watched
+    rather than assumed.** *Confirms results* carried it at 24/4 against
+    sportsmanship's 5/16; what is left is 18/7 against 15/17, which still flips
+    and is asserted in ``tests/unit/test_matchfit_terms.py``. The day no pair
+    inverts, the decomposition has stopped paying for itself and the argument for
+    it is due again.
+
+    **There were six, and *confirms results* was struck rather than deferred**
+    (``docs/adr/0137``, carried out by ``docs/adr/0140``). An unconfirmed result
+    is a fact about a **pair** and a strand is a verdict about a **person**, and
+    every denominator tried on it docked somebody ADR-0049 protects. A withdrawn
+    strand costs the term nothing by construction: a strand nobody publishes
+    stands down and the survivors renormalise inside the reading.
+
+    **Three different blends of these five exist in this system and confusing
+    them is a live risk:** the published Player Score at 35/20/12/10/8, and these
     two. The reliability *floor* reads the published one — the one deliberate
     exception, because a penalty justified by a figure that exists nowhere a
     human can look is unexplainable.
@@ -175,7 +189,6 @@ class ReliabilityStrand(str, Enum):
 
     SHOWS_UP = "SHOWS_UP"
     ANSWERS_CHALLENGES = "ANSWERS_CHALLENGES"
-    CONFIRMS_RESULTS = "CONFIRMS_RESULTS"
     KEEPS_PLANS = "KEEPS_PLANS"
     SETTLES_UP = "SETTLES_UP"
     SPORTSMANSHIP = "SPORTSMANSHIP"

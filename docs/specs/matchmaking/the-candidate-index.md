@@ -100,11 +100,21 @@ buying), the *Active now* end is unreachable, and ADR-0106 §5 had already refus
 
 ### 2.4 What is deliberately absent
 
-`player_score`, the six strands and `opponent_variety` are **not columns**. ADR-0098 made them
-ports; today's registered implementation is `NoPlayerScoresExist`. A column that is `null` for
-every row for a year is an invitation to read it as a measured zero, which ADR-0098 forbids.
-When the provider lands they arrive as **denormalised columns fed by this same tail reader** —
-never as a per-row port call, which the scale research priced at **+0.58 ms**.
+`player_score` and the strands are **not columns**, and since
+[ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)
+that is a **permanent rule rather than a wait**. ADR-0098 made them ports and the provider has
+now landed as `PublishedPlayerScores`; what decides the question is ADR-0111, which this document
+is otherwise about: **the index holds only what a player changes about themselves**, and a Player
+Score is the platform's observation *of* them. It reaches a card through a port at assembly time,
+on the seam `CardIdentity` already rides, and it reaches the engine through `PlayerScoreQuery`
+bounded by the box.
+
+So the sentence this section used to carry — *when the provider lands they arrive as
+denormalised columns fed by this same tail reader* — is **withdrawn**. The scale research's
+**+0.58 ms** for a per-row port call still stands as the cost of the alternative that was
+rejected on other grounds; the read is a **set read over the box**, once per search, which is
+neither of the two shapes that paragraph was choosing between. `opponent_variety` is not a
+column either, and no longer a demand at all: it was withdrawn with its consumers (#164, #175).
 
 Blocks, holds, history and the open-challenge set are not columns either, and never will be —
 they are the facts ADR-0111 forbids the index to hold. §7.5's advisory-copy sentence is

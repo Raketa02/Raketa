@@ -29,7 +29,7 @@
       ],
       "degraded_terms": [
         {
-          "reason": "NOT_YET_ON_THIS_PLATFORM",
+          "reason": "NOTHING_FROM_THEM",
           "term": "RELIABILITY"
         }
       ],
@@ -47,7 +47,9 @@
           "signal": "OVERLAP_PROXIMITY"
         }
       ],
-      "missing_terms": [],
+      "missing_terms": [
+        "RELIABILITY"
+      ],
       "modifiers": [],
       "player_id": "00000008-0000-0000-0000-000000000000",
       "rank_key": 92.350426,
@@ -159,7 +161,7 @@
       ],
       "degraded_terms": [
         {
-          "reason": "NOT_YET_ON_THIS_PLATFORM",
+          "reason": "NOTHING_FROM_THEM",
           "term": "RELIABILITY"
         }
       ],
@@ -172,7 +174,9 @@
           "signal": "OVERLAP_PROXIMITY"
         }
       ],
-      "missing_terms": [],
+      "missing_terms": [
+        "RELIABILITY"
+      ],
       "modifiers": [],
       "player_id": "00000007-0000-0000-0000-000000000000",
       "rank_key": 83.566783,

@@ -297,6 +297,34 @@ forbidden_modules =
     app.modules.matchmaking
 allow_indirect_imports = true
 
+# The third of the same rule, and the one most likely to be broken, because
+# `player_score` is the context whose whole output is a number the matcher reads
+# (docs/adr/0140). It publishes `PublishedScoreQuery` in its own vocabulary and
+# an adapter in the matcher's own infrastructure translates it into
+# `PlayerScoreReading` — so the shapes on the two sides are near-identical and
+# sitting one directory apart, which is the exact configuration somebody in a
+# hurry collapses. Importing `RatioStrand` here instead of declaring
+# `StrandRatio` would make this context depend on the consumer it exists to
+# serve, and would put the matcher's rounding inside the number on a player's own
+# profile.
+#
+# It reads two *other* contexts on purpose and that is not what this fences: the
+# arrow runs `player_score -> games` and `player_score -> challenges`, the same
+# direction the matcher's own composing adapters take, and neither provider knows
+# this context exists.
+#
+# `allow_indirect_imports = true`, for the reason its two neighbours set it: it
+# legitimately imports the Match Fit engine for `ReliabilityStrand`, which is the
+# closed vocabulary a second spelling here would fork.
+[importlinter:contract:player-score-does-not-know-the-matcher]
+name = The Player Score context does not import the matcher
+type = forbidden
+source_modules =
+    app.modules.player_score
+forbidden_modules =
+    app.modules.matchmaking
+allow_indirect_imports = true
+
 # `scripts/` holds the offline machines — the ones that read a document, run the
 # engine over it and write the answer back. `scripts/__init__.py` says nothing
 # under `app/` may import from here, and this is what makes that true: the

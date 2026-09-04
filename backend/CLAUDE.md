@@ -435,6 +435,24 @@ Rules to preserve:
   rating context walks confirmed counted results forward, oldest first, ordered on the derived
   moment each became final
   ([ADR-0139](../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
+- **A Player Score is what the platform watched, and two strands is what it can see**
+  ([ADR-0140](../docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
+  `app/modules/player_score/` is the seventh context and the first that **keeps no record at
+  all** — no aggregate, no repository, no table, no migration. It folds `games`' and
+  `challenges`' published ports and does arithmetic over them, because a stored score would be a
+  second place for *did that game happen* to be true and the copy is what gets believed. Four
+  things about it are load-bearing. **Its port is `PublishedScoreQuery` and not
+  `PlayerScoreQuery`** — the matcher's port of that name is the *demand* and this is the
+  *publication*, and ADR-0137's rule applies: the cost of a shared word is paid by whoever
+  arrives second. **Two of five strands are live and three are absent, never nought** — *keeps
+  plans*, *settles up* and *sportsmanship* have no provider, and a player with no record at all
+  is absent from the answer, which is the one rule the demand suite is written around.
+  **The published weights live in the context and never in a ruleset**, because a weight release
+  must not change what somebody's own profile says about them; they sum to 85 on purpose, since
+  the blend renormalises over the strands present. And **reliability stopped being absent
+  platform-wide**: `NoPlayerScoresExist` retired, `build_absent_terms` answers empty and lost its
+  argument, a stood-down reliability is now `NOTHING_FROM_THEM`, and the evidence gate counts
+  eight live terms rather than seven — excluding nobody, at a margin of zero rather than one.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one
@@ -488,11 +506,14 @@ tests.
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Two registers, and they are two on purpose**: `app/bootstrap/matcher_demands.py` holds
-  the ports the *matcher* declares of contexts it does not write, and
-  `app/bootstrap/games_demands.py` holds the ports a *provider* publishes for consumers
-  that have not arrived yet. `MATCHER_DEMANDS` asserts exhaustiveness over the first kind
-  of claim and would stop meaning anything with the second kind in it.
+  **Four registers, and they are four on purpose — one per kind of claim.**
+  `app/bootstrap/matcher_demands.py` holds the ports the *matcher* declares of contexts it
+  does not write; `games_demands.py`, `rating_demands.py` and `player_score_demands.py`
+  each hold the ports one *provider* publishes outward. Each register's exhaustiveness
+  assertion is about its own kind of claim and would stop meaning anything with another
+  kind in it — which is also the rule for the next one: **a new provider gets a new
+  register, not a row in somebody else's**, and the first person to add a row should not
+  have to guess which list it belongs in.
 - Async by default (`asyncio_mode = "auto"`) — no `@pytest.mark.asyncio`.
 
 ## Environment gotchas

@@ -146,9 +146,13 @@ from app.modules.matchmaking.infrastructure.redis_ledgers import (
 from app.modules.matchmaking.infrastructure.rebuild_candidate_index import (
     RebuildCandidateIndex,
 )
-from app.modules.matchmaking.infrastructure.absent_providers import (
-    NoHoldsExist,
-    NoPlayerScoresExist,
+from app.modules.matchmaking.infrastructure.absent_providers import NoHoldsExist
+from app.modules.matchmaking.infrastructure.published_player_scores import (
+    PublishedPlayerScores,
+)
+from app.modules.player_score.domain.ports import PublishedScoreQuery
+from app.modules.player_score.infrastructure.two_strands_from_the_record import (
+    TwoStrandsFromTheRecord,
 )
 from app.modules.matchmaking.infrastructure.candidate_index_tail import (
     CandidateIndexTail,
@@ -644,9 +648,34 @@ def build_account_status_query(session: AsyncSession) -> AccountStatusQuery:
     return UsersAccountStatus(build_user_repository(session))
 
 
+def build_published_score_query(session: AsyncSession) -> PublishedScoreQuery:
+    """``player_score``, over the two contexts that keep a record of anything.
+
+    It is built from the two providers' own published ports rather than from the
+    session, so this line stays a choice of implementation and the folds behind
+    it stay with the contexts that own them.
+    """
+    return TwoStrandsFromTheRecord(
+        games=build_game_history_query(session),
+        challenges=build_challenge_history_query(session),
+    )
+
+
 def build_player_score_query(session: AsyncSession) -> PlayerScoreQuery:
-    """``player_score`` does not exist, so nobody has a Player Score."""
-    return NoPlayerScoresExist()
+    """``player_score`` ships, so a Player Score is a real answer.
+
+    **The third null object to retire by its own stated fact becoming false**
+    (``docs/adr/0095``, ``docs/adr/0140``). ``NoPlayerScoresExist`` said *nobody
+    has a Player Score, because nobody has ever been due to play*, and that was
+    true until ``games`` recorded a plan that produced a game or did not. Swapping
+    it is one row in the register and this line, exactly as ADR-0095 promised.
+
+    **It is also why ``build_absent_terms`` below now takes no argument.** That
+    function used to read the adapter this line chose, because *reliability has no
+    provider* was a fact about this wiring; there is no longer anything to read,
+    so the set is empty and the parameter went with the null object.
+    """
+    return PublishedPlayerScores(build_published_score_query(session), build_clock())
 
 
 def build_challenge_history_query(
@@ -970,25 +999,27 @@ def build_card_photo_links(
     )
 
 
-def build_absent_terms(player_scores: PlayerScoreQuery) -> frozenset[Term]:
+def build_absent_terms() -> frozenset[Term]:
     """Which terms have no provider **on this platform**, as opposed to for a
-    person.
+    person. **Today: none of them.**
 
     The evidence gate counts person-specific gaps and never platform-wide
     absence — a fact nobody has about anybody cannot be evidence this person
     failed to produce — so somebody has to say which is which. It is decided
-    here because *no provider exists* is a fact about this wiring: it is read off
-    the adapter this root just chose, so the day ``player_score`` ships and the
-    line above changes, this one changes with it and nothing else does.
+    here because *no provider exists* is a fact about this wiring rather than
+    about any ruleset: a ruleset that could declare it would be a weight release
+    deciding which contexts are built.
 
-    A ruleset that could declare it would be a weight release deciding which
-    contexts are built, which is why it is not ruleset data.
+    **It used to be read off the adapter chosen above, and there is nothing left
+    to read.** Reliability was the last absent term and ``player_score`` ships
+    (``docs/adr/0140``), so the set is empty and the argument that used to decide
+    it has gone with the null object it was inspecting. The function stays,
+    because *a term the engine weighs before its provider exists* is a live
+    situation with a live rule — this is where the next one is declared, and
+    ``live_terms`` refuses a name no mode weights, so a stale entry here is a red
+    build rather than a quietly narrower gate.
     """
-    return (
-        frozenset({Term.RELIABILITY})
-        if isinstance(player_scores, NoPlayerScoresExist)
-        else frozenset()
-    )
+    return frozenset()
 
 
 def build_match_fit_engine() -> MatchFit:

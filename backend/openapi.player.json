@@ -4638,13 +4638,12 @@
         "enum": [
           "SHOWS_UP",
           "ANSWERS_CHALLENGES",
-          "CONFIRMS_RESULTS",
           "KEEPS_PLANS",
           "SETTLES_UP",
           "SPORTSMANSHIP"
         ],
         "title": "ReliabilityStrand",
-        "description": "The six strands a reliability reading is built from, read separately.\n\nThey are weighted **per mode** and the two vectors order people oppositely \u2014\na candidate strong on *confirms results* and weak on *sportsmanship* wins in\ncompetitive and loses in for fun. A single blended score cannot express that,\nwhich is the whole argument for the decomposition, and it is justified for\nexactly as long as such a pair exists (``ranking-weights.md`` \u00a76).\n\n**Three different blends of these six exist in this system and confusing them\nis a live risk:** the published Player Score at 35/20/15/12/10/8, and these\ntwo. The reliability *floor* reads the published one \u2014 the one deliberate\nexception, because a penalty justified by a figure that exists nowhere a\nhuman can look is unexplainable."
+        "description": "The five strands a reliability reading is built from, read separately.\n\nThey are weighted **per mode** and the two vectors order people oppositely \u2014\na candidate strong on *keeps plans* and weak on *sportsmanship* wins in\ncompetitive and loses in for fun. A single blended score cannot express that,\nwhich is the whole argument for the decomposition, and it is justified for\nexactly as long as such a pair exists (``ranking-weights.md`` \u00a76).\n\n**The inversion narrowed when the sixth strand was struck, and it is watched\nrather than assumed.** *Confirms results* carried it at 24/4 against\nsportsmanship's 5/16; what is left is 18/7 against 15/17, which still flips\nand is asserted in ``tests/unit/test_matchfit_terms.py``. The day no pair\ninverts, the decomposition has stopped paying for itself and the argument for\nit is due again.\n\n**There were six, and *confirms results* was struck rather than deferred**\n(``docs/adr/0137``, carried out by ``docs/adr/0140``). An unconfirmed result\nis a fact about a **pair** and a strand is a verdict about a **person**, and\nevery denominator tried on it docked somebody ADR-0049 protects. A withdrawn\nstrand costs the term nothing by construction: a strand nobody publishes\nstands down and the survivors renormalise inside the reading.\n\n**Three different blends of these five exist in this system and confusing\nthem is a live risk:** the published Player Score at 35/20/12/10/8, and these\ntwo. The reliability *floor* reads the published one \u2014 the one deliberate\nexception, because a penalty justified by a figure that exists nowhere a\nhuman can look is unexplainable."
       },
       "ResultResponse": {
         "properties": {

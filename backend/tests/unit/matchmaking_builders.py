@@ -172,14 +172,17 @@ def context(
     initiation: SearchInitiation = SearchInitiation.HUMAN,
     surface: SearchSurface = SearchSurface.SHORTLIST,
     ruleset: Ruleset = LIVE_RULESET,
-    absent_terms: frozenset[Term] = frozenset({Term.RELIABILITY}),
+    absent_terms: frozenset[Term] = frozenset(),
     snapshot_version: int = 42,
 ) -> SearchContext:
     """One whole search, bound. ``absent_terms`` defaults to the live platform's.
 
-    Reliability is the one term with no provider today, and the evidence gate
-    counts person-specific gaps rather than platform-wide absence — so a test
-    that left it out of this set would be testing a platform that does not exist.
+    **Empty since ``docs/adr/0140``**, when ``player_score`` shipped and
+    reliability stopped being the one term with no provider. The evidence gate
+    counts person-specific gaps rather than platform-wide absence, so a test
+    carrying the old default would be testing a platform that no longer exists —
+    and would read a candidate with no record as nobody's gap rather than as
+    theirs.
     """
 
     return SearchContext(

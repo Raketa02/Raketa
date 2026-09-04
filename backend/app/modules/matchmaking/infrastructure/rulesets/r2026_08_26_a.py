@@ -13,6 +13,27 @@ the pull request carries the offline diff plus one line per changed constant: th
 hypothesis, and what would falsify it. Editing a released ruleset would make every
 recorded search's ``ruleset_version`` a lie about the numbers it ran under.
 
+**The strand weights were restated in place, and that is not a retune**
+(``docs/adr/0140``). ``ReliabilityStrand.CONFIRMS_RESULTS`` was struck from the
+vocabulary by ``docs/adr/0137``, so its two keys had nowhere left to point — and
+because a weight vector here must **sum to a hundred** so that every number reads
+as a share of its term, dropping one key forced the survivors to be re-expressed
+over the smaller vocabulary. They were rescaled by largest remainder and nothing
+else: competitive 25/22/14/10/5 of 76 became 33/29/18/13/7 of 100, for fun
+32/22/14/12/16 of 96 became 33/23/15/12/17 of 100. **The scaling itself is
+inert** — the reliability term already renormalises over the strands that arrive
+— so what is left is the integer rounding, and it is small and measured rather
+than assumed: the three walkthrough golden files move by **0.016 and 0.009 Fit
+points** on two readings, no order changes and nobody crosses the floor.
+
+No recorded search read either of the two struck weights, or any of the others:
+reliability has stood down platform-wide for every search this version has run,
+because ``NoPlayerScoresExist`` answered its provider. The precedent for editing
+a released dataset rather than cutting a new one is ``AtStakeQuery``'s — a
+provider arriving is not a weight release — and the reason a **new** dataset is
+still not warranted is that no hypothesis in this file has changed. Nobody
+learned anything about how much *shows up* is worth; a word left the language.
+
 **The owner who signs a release is the owner of the quality floor** — one number
 decides when the product says nothing rather than something, and the numbers
 around it decide what it says instead; splitting the accountability makes each
@@ -340,12 +361,11 @@ RULESET = Ruleset(
                 ),
                 strand_weights=MappingProxyType(
                     {
-                        ReliabilityStrand.SHOWS_UP: 25,
-                        ReliabilityStrand.ANSWERS_CHALLENGES: 22,
-                        ReliabilityStrand.CONFIRMS_RESULTS: 24,
-                        ReliabilityStrand.KEEPS_PLANS: 14,
-                        ReliabilityStrand.SETTLES_UP: 10,
-                        ReliabilityStrand.SPORTSMANSHIP: 5,
+                        ReliabilityStrand.SHOWS_UP: 33,
+                        ReliabilityStrand.ANSWERS_CHALLENGES: 29,
+                        ReliabilityStrand.KEEPS_PLANS: 18,
+                        ReliabilityStrand.SETTLES_UP: 13,
+                        ReliabilityStrand.SPORTSMANSHIP: 7,
                     }
                 ),
                 level_tolerance=0.55,
@@ -371,12 +391,11 @@ RULESET = Ruleset(
                 ),
                 strand_weights=MappingProxyType(
                     {
-                        ReliabilityStrand.SHOWS_UP: 32,
-                        ReliabilityStrand.ANSWERS_CHALLENGES: 22,
-                        ReliabilityStrand.CONFIRMS_RESULTS: 4,
-                        ReliabilityStrand.KEEPS_PLANS: 14,
+                        ReliabilityStrand.SHOWS_UP: 33,
+                        ReliabilityStrand.ANSWERS_CHALLENGES: 23,
+                        ReliabilityStrand.KEEPS_PLANS: 15,
                         ReliabilityStrand.SETTLES_UP: 12,
-                        ReliabilityStrand.SPORTSMANSHIP: 16,
+                        ReliabilityStrand.SPORTSMANSHIP: 17,
                     }
                 ),
                 level_tolerance=0.90,

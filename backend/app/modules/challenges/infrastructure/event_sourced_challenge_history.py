@@ -1,4 +1,8 @@
-"""``ChallengeHistoryQuery`` over the event log — the matcher's three facts.
+"""``ChallengeHistoryQuery`` over the event log — its four facts.
+
+**Three of them are the matcher's and the fourth is ``player_score``'s**
+(``docs/adr/0140``): *did you answer inside your day* is the same walk over the
+same stream, tallied per person instead of per pair.
 
 **The third read this context has over the log, and the first with a reader
 outside it.** It shares ``challenge_streams.py`` with the other two, so the
@@ -12,14 +16,14 @@ tries.** *Open* is folded from the seats and the caller's clock
 the sweep has been past. A projection storing the standing would be right until a
 deadline passed, wrong until something swept it, and believed throughout.
 
-**Two of the three reads fold the aggregate; the history read walks the stream,
-and the split is the design.** *Open* and *awaiting* are questions about the
-court **as it now stands**, which is what a fold answers. An answer is a thing
-that happened *to the court as it stood then* — and a declined seat can be
+**Two of the four reads fold the aggregate; the two history reads walk the
+stream, and the split is the design.** *Open* and *awaiting* are questions about
+the court **as it now stands**, which is what a fold answers. An answer is a
+thing that happened *to the court as it stood then* — and a declined seat can be
 re-offered, taking its former occupant off today's arrangement entirely. Asking
 today's court who answered would erase a recorded refusal the day the organiser
-refilled the seat, so that read walks the events instead and carries the court
-along with it.
+refilled the seat, so those two read the events instead: one carries the court
+along with it, the other carries each invitation's own deadline.
 
 **Cost.** The same as the other two and for the same reason: bounded by how many
 challenges the platform has ever recorded, because a substring match cannot use a
@@ -52,6 +56,7 @@ from app.modules.challenges.domain.origins import (
 )
 from app.modules.challenges.domain.ports import (
     ANSWERED_COUNTERPART_BOUND,
+    AnsweringRecord,
     AnswerTally,
     ChallengeCounterpart,
     SharedChallenge,
@@ -196,6 +201,107 @@ class EventSourcedChallengeHistory:
                 if seat.player_id in wanted and seat.is_awaiting_at(now):
                     counts[seat.player_id] += 1
         return counts
+
+    async def answering_for(
+        self, player_ids: Collection[UUID], *, now: Instant
+    ) -> Mapping[UUID, AnsweringRecord]:
+        """What each of these people did about the seats they were asked to take.
+
+        **An invitation whose day is still running is in neither half.** It has
+        not lapsed and it has not been answered, and filing it either way would
+        price a person for an answer that is still wanted — the same rule the
+        seats themselves keep, read here over the whole history instead of over
+        one court.
+
+        **Absent rather than a measured zero.** Somebody nobody has ever invited
+        has not failed to answer anybody, and the record they get is no record at
+        all.
+        """
+
+        wanted = set(player_ids)
+        if not wanted:
+            return {}
+
+        answered: dict[UUID, int] = defaultdict(int)
+        lapsed: dict[UUID, int] = defaultdict(int)
+        latest: dict[UUID, Instant] = {}
+        streams = await streams_seating(self._session, self._codec, wanted)
+        for events in streams.values():
+            for (player_id, answer_by), answered_at in _invitations_in(
+                events, wanted
+            ).items():
+                if answered_at is not None:
+                    answered[player_id] += 1
+                    closed_at = answered_at
+                elif now >= answer_by:
+                    lapsed[player_id] += 1
+                    closed_at = answer_by
+                else:
+                    continue
+                latest[player_id] = max(closed_at, latest.get(player_id, closed_at))
+
+        return {
+            player_id: AnsweringRecord(
+                answered=answered[player_id],
+                lapsed=lapsed[player_id],
+                last_at=at,
+            )
+            for player_id, at in latest.items()
+        }
+
+
+def _invitations_in(
+    events: Iterable[DomainEvent], wanted: Collection[UUID]
+) -> Mapping[tuple[UUID, Instant], Instant | None]:
+    """Every invitation in one stream, and the moment it was answered — or not.
+
+    **An invitation is keyed by who was asked and when their day runs out**,
+    because that pair is what one invitation *is*: a seat's ``answer_by`` is
+    dated when that seat was invited (``answer_window.py``), so somebody invited
+    twice into the same challenge has two deadlines and somebody invited once has
+    one however many times the court is re-stated around them. Keying on the seat
+    position instead would merge an invitation with the one that replaced it, and
+    keying on the person alone would lose the second.
+
+    **A seat with no deadline is not an invitation and is not here.** The
+    organiser's own seat and both seats of a mutual-born challenge are accepted
+    from birth by somebody who was never asked, and ``answer_by is None`` is
+    exactly what says so — which is why nothing here needs a special case for
+    either.
+
+    The value is the instant the answer arrived, or ``None`` for an invitation
+    still holding one. **Only the answer *events* set it**: a later seating event
+    restates the whole court, including seats that have already answered, and
+    reading the answer off the restatement would date it from the wrong moment.
+    """
+
+    invitations: dict[tuple[UUID, Instant], Instant | None] = {}
+    for event in events:
+        if isinstance(event, _SEATINGS):
+            for code in event.seats:
+                seat = Seat.from_code(code)
+                if seat.player_id is None or seat.answer_by is None:
+                    continue
+                if seat.player_id in wanted:
+                    invitations.setdefault((seat.player_id, seat.answer_by), None)
+        elif isinstance(event, (SeatAccepted, SeatDeclined)):
+            if event.player_id not in wanted:
+                continue
+            open_ones = [
+                key
+                for key, answered_at in invitations.items()
+                if key[0] == event.player_id and answered_at is None
+            ]
+            if open_ones:
+                # The latest deadline, because a person holds at most one open
+                # invitation per challenge at a time and a re-invitation always
+                # carries a later one. A `max` rather than a lone unpacking so
+                # that a stream somehow carrying two answers nothing consumed
+                # picks the one being answered rather than raising inside a read.
+                invitations[max(open_ones, key=lambda key: key[1])] = Instant(
+                    event.occurred_at
+                )
+    return invitations
 
 
 def _answers_in(

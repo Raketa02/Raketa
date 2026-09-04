@@ -9,12 +9,21 @@ Decided by [ADR-0098](../../adr/0098-matcher-demands-as-executable-contracts.md)
 [What the matcher demands of player_score, matches and cases](https://github.com/Raketa02/Raketa/issues/163)
 on the map [The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155).
 
-**Why this is written down at all.** The engine reads the Player Score's six strands
-*separately* (§9.3.4), because *confirms results* is close to worthless for a friendly and
-close to essential for a counted game. The Player Score is one number in the UI. Left
-unwritten, the obvious thing to ship is that number — and the strand-decomposition argument
-dies without anybody noticing until the term is wired up. **An unwritten demand is satisfiable
-by accident.**
+**Why this is written down at all.** The engine reads the Player Score's strands *separately*
+(§9.3.4), because they are weighed oppositely in the two modes — *keeps plans* is close to
+worthless for a friendly beside sportsmanship and worth two and a half times it for a counted
+game. The Player Score is one number in the UI. Left unwritten, the obvious thing to ship is
+that number — and the strand-decomposition argument dies without anybody noticing until the
+term is wired up. **An unwritten demand is satisfiable by accident.**
+
+> **Amended twice, and the provider has landed.**
+> [ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md) **struck *confirms
+> results*** — the pair this paragraph originally used as its example — because an unconfirmed
+> result is a fact about a pair and a strand is a verdict about a person.
+> [ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)
+> then built `player_score` over **two** of the five survivors, so the demand below is no longer
+> a promise: it is executed. Where this document says *`player_score` does not exist*, read
+> ADR-0140.
 
 ---
 
@@ -32,14 +41,15 @@ half, and two bounded reads merged by a caller is not a bounded read.
 
 | Port | Provider | Supplies |
 | --- | --- | --- |
-| `PlayerScoreQuery` | `player_score` | The six strands with their evidence, and opponent variety |
+| `PlayerScoreQuery` | `player_score` | The five strands with their evidence, and the published score |
 | `MatchHistoryQuery` | `challenges` **and** `matches` | The searcher's pairwise history, the per-player open-challenge count, and the origin key. `challenges` answers all of it except `PLAYED`, `PLANNED_NEVER_PLAYED` and the late-change threshold |
 | `AccountHoldQuery` | `cases` | One live boolean per player. Already standing from [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) |
 | `AtStakeQuery` | `rating` | What a counted win and a counted loss against one opponent would do to the searcher's Level |
 | `AccountStatusQuery` | `users` | The set of accounts that may not be shown. Gate 8, from [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) |
 
 **The last two are different, and the difference is stated rather than left to be noticed.**
-`player_score` and `cases` **do not exist**; `challenges` and `games` do, and between them they
+`cases` **does not exist**; `player_score`, `challenges` and `games` do — the first over the
+other two (ADR-0140) — and between them the latter
 answer the whole of `MatchHistoryQuery` ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)).
 `rating` exists too — at `backend/app/modules/rating/`, with its engines at
 `app/engines/racketskill/` — and what was missing there was not a context but a **rule**. That
@@ -65,7 +75,12 @@ Delivery of the indexed half is the backend's existing transactional outbox
 
 ## `PlayerScoreQuery`
 
-### The six strands, and what each one counts
+### The five strands, and what each one counts
+
+> **Two of them are live** (ADR-0140): *shows up*, out of plans that settled either way, and
+> *answers challenges*, out of invitations whose day is over. The other three have no provider
+> and are **absent from a reading** rather than published at nought. *Confirms results* is not
+> in the table below at all: it was **withdrawn**, and a withdrawn demand leaves no row.
 
 Every strand crosses as **the published value, its numerator and denominator, and the moment of
 the most recent observation**. The matcher reads the value the player is shown and never
@@ -74,9 +89,8 @@ is worse than a card that says nothing.
 
 | Strand | Denominator — the opportunity | Numerator — the good outcome |
 | --- | --- | --- |
-| **Shows up** | Games that reached their scheduled moment with this player seated | Games attended |
-| **Answers challenges** | Challenges received that fell due | Challenges answered inside the window |
-| **Confirms results** | Counted games played | Results confirmed inside the window |
+| **Shows up** | Plans that settled: a game somebody said had happened, or a **ghost** whose entry window closed on silence | The ones that were played. **A ghost is charged to every seat**, because nobody proposed and nobody countered |
+| **Answers challenges** | **Invitations** whose day is over — a seat somebody was actually *asked* to take, which is a seat with a deadline | Answered inside the day. **A decline counts**: what this prices is silence, not judgement |
 | **Keeps plans** | Plans agreed | Plans that reached their scheduled moment without a **late** change by this player |
 | **Settles up** | Court shares that fell due | Shares settled **without a case being opened** |
 | **Sportsmanship** | Ratings received | *(a mean of 1–5, not a ratio — crosses as mean plus rating count)* |
@@ -94,12 +108,16 @@ is worse than a card that says nothing.
 
 Two more are worth stating because they will surprise a reader:
 
-- ***Settles up* depends on court money, which this map rules out of scope.** It will stand
-  down long after the other five are live. Expected, not a defect.
+- ***Settles up* depends on court money, which this map rules out of scope.** It stands down,
+  and so do *keeps plans* and *sportsmanship* — two of the five are live (ADR-0140). Expected,
+  not a defect.
 - **The player-facing weights are not the matcher's weights.** The Player Score screen blends
-  the strands at 35/20/15/12/10/8 (`:3374-3380`); §9.3.4 weighs them per mode at 25/32, 22/22,
-  24/4, 14/14, 10/12, 5/16. Both are right. This is precisely why the matcher must read strands
-  and not the blend.
+  the strands at **35/20/12/10/8** (`:3374-3380`, less the struck strand's 15); the ruleset
+  weighs them per mode at **33/33, 29/23, 18/15, 13/12, 7/17**. Both are right. This is
+  precisely why the matcher must read strands and not the blend. **The two vectors total
+  differently on purpose**: a ruleset weight map is validated as summing to a hundred so each
+  number reads as a share of a term's budget, where the published blend's basis is the strands a
+  player actually has.
 
 ### Opponent variety — **withdrawn**
 
@@ -118,15 +136,22 @@ for it — which also means it arrives with a consumer who can say what shape it
 
 ### The published score, demanded once and read by one consumer
 
-Beside the six strands, and **not instead of them**: the **published Player Score** the player
-sees on their own profile, the 35/20/15/12/10/8 blend, out of a hundred.
+Beside the strands, and **not instead of them**: the **published Player Score** the player sees
+on their own profile, the 35/20/12/10/8 blend renormalised over whatever is there, out of a
+hundred.
 
-It has exactly one consumer — the **reliability floor**, whose `published_score_bar` is already
-ruleset data (`app/engines/matchfit/ruleset.py`, `ReliabilityRules`). It is **the one deliberate
-place the matcher reads the blend instead of the strands**, and it is written down here so it
-does not later read as an oversight or as this contract being quietly relaxed: a penalty
-justified by a figure that exists nowhere a human can look is unexplainable, and a player working
-their visible score back up must be able to watch the penalty lift.
+It has exactly one consumer **in the matcher** — the **reliability floor**, whose
+`published_score_bar` is ruleset data (`app/engines/matchfit/ruleset.py`, `ReliabilityRules`).
+It is **the one deliberate place the matcher reads the blend instead of the strands**, and it is
+written down here so it does not later read as an oversight or as this contract being quietly
+relaxed: a penalty justified by a figure that exists nowhere a human can look is unexplainable,
+and a player working their visible score back up must be able to watch the penalty lift.
+
+**The player card is a second reader, and it is not a second computation** (ADR-0140). It prints
+the same figure, reached through a port at assembly time — never off the candidate index, which
+[ADR-0111](../../adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md) reserves
+for what a player changes about themselves. The weights themselves belong to `player_score` and
+not to a ruleset: a weight release must not change what somebody's own profile says about them.
 
 **It may never be weighed as a term, and it may never stand in for the strands.** A reading with
 no strand in it is not a reading — which is what stops *shipped as one blended number* passing
@@ -199,7 +224,7 @@ tell them apart.
 | Disabled set (`AccountStatusQuery`, ADR-0124) | **The search refuses** | Same. Read **once per search as a set**, beside the block set — never a per-row query |
 | Pairwise history | **Fails soft** — familiarity and the previous-decline signal stand down, the search proceeds | Losing a game because we could not remember who you played in March is a worse outcome than a slightly duller list |
 | Open challenge between the pair | **Fails soft** | §7.5's *the matcher proposes, the backend disposes* re-verifies on the shortlist. It is embarrassment with a backstop, not a safety failure |
-| The six strands (`PlayerScoreQuery`) | **Fails soft** — the reliability term stands down | Which is what it already does for every player today, so a failure costs a term and never the search |
+| The strands (`PlayerScoreQuery`) | **Fails soft** — the reliability term stands down | Which is what it does for anybody with no record anyway, so a failure costs a term and never the search |
 | At stake (`AtStakeQuery`) | **Fails soft** — the block is not drawn | Derived rather than quoted: it is what the card already does for a pair with no Level between them |
 
 These are separate reads carried in one context object. Bundling them into one read would make
@@ -328,7 +353,7 @@ The test is whether a zero would be **measured** or **invented**.
 | Hold flag | **True-over-empty** | Nobody can be held because nothing can hold anybody. A real, measured absence |
 | Open challenge count | **True-over-empty**, and **live** since [#253](https://github.com/Raketa02/Raketa/issues/253) | Seats awaiting that player's answer, across every sport, counted from the seats and the clock. Everybody asked gets a count, and a zero is measured — the shape did not change when the provider arrived, which is the property this rule was chosen for |
 | Pending challenge between a pair | **True-over-empty**, and **live** | Every counterpart in every challenge that has not ended. Still **soft**, and still out of the read-back: this is embarrassment, and the send's re-check is the backstop |
-| The six strands, opponent variety | **`NoEvidence`** | Nobody has failed to turn up because nobody has ever been due to. A zero here would be *invented*, and no record is not a bad record |
+| The strands | **Two live, three `NoEvidence`** since ADR-0140 | *Shows up* and *answers challenges* are folded from `games` and `challenges`; the other three have no provider. A player with no record is **absent from the answer**, never a zero — that zero would be *invented*, and no record is not a bad record |
 | Pairwise history → previous accept · previous decline | **Live** since [#253](https://github.com/Raketa02/Raketa/issues/253) | `SeatAccepted → ACCEPTED` and `SeatDeclined → DECLINED`, and nothing else does. A **lapse tallies nowhere** — silence is not a judgement — and a challenge born of a mutual yes tallies nothing, because nobody answered anything |
 | Pairwise history → familiarity | **`NoEvidence`** | *You have never played this person* is still true of everyone: a challenge accepted is not a game played, so `games_played_together` is `0` and the modifier is absent rather than firing identically on every candidate |
 | Origin key | Demanded from day one | The search half of §19.2's chain ships now; the outcome half joins it when `matches` lands |
@@ -339,14 +364,16 @@ The test is whether a zero would be **measured** or **invented**.
 ## How the demand is made binding
 
 **The contract suite is parameterised over every registered implementation of each port,
-including the null one.** `NoPlayerScoresExist` proves the degradation table above, green,
-today — named for the fact it asserts rather than for being empty, in `NoHoldsExist`'s style.
+including the null one.** `NoHoldsExist` proves the degradation table above, green, today —
+named for the fact it asserts rather than for being empty. `NoPlayerScoresExist`,
 `NoResultUpdateRuleExists` and `ChallengesButNobodyHasPlayed` were the same convention over the
-same table, and **both are gone**, each on the day its own stated fact stopped being true
+same table, and **all three are gone**, each on the day its own stated fact stopped being true
 ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md),
-[ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
-That is the intended end of a null object named for a fact, and in both cases the swap was one
-row in the register.
+[ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md),
+[ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
+That is the intended end of a null object named for a fact, and in every case the swap was one
+row in the register. **The one left is a gate**, which is this section's own rule showing
+through rather than a coincidence: every *term* now has a provider.
 
 **The arrangement belongs to the port and never to one implementation**, and where a provider
 ships, the suite arranges a real world through that context's aggregate rather than an `INSERT`

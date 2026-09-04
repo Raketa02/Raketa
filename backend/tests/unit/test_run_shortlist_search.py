@@ -58,10 +58,7 @@ from app.modules.matchmaking.domain.index_staleness import (
 from app.modules.matchmaking.domain.prompts import Prompt
 from app.modules.matchmaking.domain.relaxation import Rung
 from app.modules.matchmaking.domain.searches import InclusionReason, SearchRecord
-from app.modules.matchmaking.infrastructure.absent_providers import (
-    NoHoldsExist,
-    NoPlayerScoresExist,
-)
+from app.modules.matchmaking.infrastructure.absent_providers import NoHoldsExist
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.availability import AvailabilityGrid
@@ -176,6 +173,26 @@ class NobodyHereIsRated:
 
     async def counted_game_deltas(self, **_: object) -> None:
         return None
+
+
+class NobodyHereHasARecord:
+    """``PlayerScoreQuery`` over a world where nothing has been arranged.
+
+    A hand-written stub rather than the retired ``NoPlayerScoresExist``: the
+    provider exists now (``docs/adr/0140``) and answers over two event logs,
+    which this file has neither of and does not want — these searches are about
+    the workbench's **order**, not about anybody's record.
+
+    **Absent, and never a zero**, which is the provider's own rule: an empty
+    mapping here is *nobody in this world has a record*, and every candidate's
+    reliability term stands down as their own gap rather than the platform's.
+    That is why ``absent_terms`` below is empty — reliability has a provider now,
+    and a search where nobody has a record is not the same claim as a platform
+    where nobody could.
+    """
+
+    async def readings_for(self, player_ids: Collection[UUID]) -> Mapping[UUID, object]:
+        return {}
 
 
 class NothingHasHappenedBetweenAnybody:
@@ -451,12 +468,12 @@ def use_case(
             holds=holds or NoHoldsExist(),
             account_status=NobodyIsHidden(),
             history=NothingHasHappenedBetweenAnybody(),
-            player_scores=NoPlayerScoresExist(),
+            player_scores=NobodyHereHasARecord(),
             at_stake=NobodyHereIsRated(),
             exposure=exposure or InMemoryExposureLedger(FixedClock()),
             interest=interest or Yeses(),
             cards=cards or Cards(),
-            absent_terms=frozenset({Term.RELIABILITY}),
+            absent_terms=frozenset(),
             meter=meter,
         ),
         ruleset=LIVE_RULESET,
@@ -810,9 +827,8 @@ async def test_the_two_columns_answering_whose_gap_this_is_cannot_drift():
     """
 
     store = Store()
-    # One candidate who declared and one who did not, so both halves of the
-    # relationship are exercised: reliability has no provider on this platform
-    # and is nobody's gap, and a silent intent is theirs.
+    # One candidate who declared and one who did not, so the person-specific
+    # half is exercised on one row and absent on the other.
     await use_case(
         rows=(build.row(1), build.row(2, declared_intent=None)), store=store
     ).execute(a_command())
@@ -828,12 +844,19 @@ async def test_the_two_columns_answering_whose_gap_this_is_cannot_drift():
             if reason != DegradedReason.NOT_YET_ON_THIS_PLATFORM.value
         )
 
-    # And neither half is vacuous: the platform's own gap is on every row, and
-    # the silent candidate carries one of their own that the gate counted.
-    assert all(
+    # **And the platform's own gap is on no row at all, which is new.** Every
+    # term the engine weighs has a provider since ``player_score`` shipped
+    # (``docs/adr/0140``), so `absent_terms` is empty and nothing degrades as
+    # `NOT_YET_ON_THIS_PLATFORM`. The assertion is kept pointing the other way
+    # rather than deleted: it goes red the day a term is weighed ahead of its
+    # provider without `build_absent_terms` being told, which is the one way the
+    # two columns could silently start meaning different things again.
+    assert not any(
         DegradedReason.NOT_YET_ON_THIS_PLATFORM.value in row.degraded_reasons
         for row in rows
     )
+    # The person-specific half is not vacuous: the silent candidate carries a gap
+    # of their own, and the gate counted it.
     silent = next(
         row for row in rows if Term.INTENT_ALIGNMENT.value in row.missing_terms
     )

@@ -105,10 +105,16 @@ sign one for another player's photo and `GET /photos/{id}` refuses to
 | a block, a pass or a decline | §21, and [ADR-0109](../../adr/0109-a-read-back-names-what-it-withholds.md) |
 | an unsettled case | the matcher never reads `cases`; the hold does its work at the gate |
 
-**Absent today, arriving through ports that exist:** Player Score (`PlayerScoreQuery`).
-A gap, not a refusal. Last-5 form and `at_stake` in competitive have both since acquired
-providers ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md),
+**Absent from the card today, and no longer for want of a provider.** Player Score, Last-5
+form and `at_stake` in competitive have all since acquired one
+([ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md),
+[ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md),
 [ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
+What is missing is the **assembly**, which is [#306](https://github.com/Raketa02/Raketa/issues/306).
+A gap, not a refusal — and the Player Score reaches the card **through a port at assembly
+time**, never off the candidate index, which
+[ADR-0111](../../adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md)
+reserves for what a player changes about themselves.
 
 **A nickname is not shortenable.** There is no name in this platform. Every sentence naming
 somebody uses the whole handle or names nobody.
@@ -195,10 +201,12 @@ the objection that promoted `distance_km` in the first place.
 | **Best fit** | `fit` | offered |
 | **Closest** | `distance_km` | offered; a stood-down distance sorts last, never as a zero |
 | **Evenest** | `would_be_forecast` | offered whenever any seat is filled on both sides, provisional until the last seat |
-| **Most reliable** | published Player Score | **not offered** — the reliability term stands down for everybody |
+| **Most reliable** | published Player Score | **not offered while the reliability term stands down** — which it does for anybody with no record, and most people have none |
 
 *Most reliable* is not a sort that does nothing. It is a control that **is not drawn**: a
-visible control that reorders nothing is the product lying quietly.
+visible control that reorders nothing is the product lying quietly. Its condition is a fact
+about **the search**, re-derived per search rather than hardcoded, so it appears by itself on a
+search whose candidates have a record — the wiring is [#306](https://github.com/Raketa02/Raketa/issues/306)'s.
 
 **The card says what the candidate would leave on court** — `would_be_forecast`, labelled
 provisional while seats remain open.

@@ -68,10 +68,21 @@ from scripts.ruleset_diff.population import (
     Population,
 )
 
-#: The one term with no provider on this platform. The evidence gate counts
-#: person-specific gaps and never platform-wide absence, so a corpus that left
-#: this out would be scoring a platform that does not exist.
-ABSENT_TERMS: Final = frozenset({Term.RELIABILITY})
+#: The terms with no provider on this platform. **Empty since ``docs/adr/0140``**,
+#: when ``player_score`` shipped and reliability stopped being the last one.
+#:
+#: The evidence gate counts person-specific gaps and never platform-wide absence,
+#: so this has to be what the composition root says rather than what the corpus
+#: finds convenient — and it moved the gate's basis from seven live terms to
+#: eight, which is a real change to the artefact below rather than a comment.
+#:
+#: **Nobody in this population has a Player Score**, which is a different fact and
+#: is spelled the way the provider spells it: ``player_scores`` is empty, so every
+#: member's reliability stands down as **their own** gap. Arranging a synthetic
+#: record would mean inventing games and challenges that never happened, and a
+#: corpus that scored an invented history would be answering about a platform
+#: that does not exist — which is exactly what this constant exists to prevent.
+ABSENT_TERMS: Final[frozenset[Term]] = frozenset()
 
 #: The snapshot version every container claims. A constant, because the corpus
 #: has no log to be a prefix of — and a moving number would put a value in the

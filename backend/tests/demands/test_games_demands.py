@@ -110,6 +110,17 @@ def _singles(a: UUID, b: UUID) -> LineUp:
     )
 
 
+def _four(a: UUID, b: UUID, c: UUID, d: UUID) -> LineUp:
+    return LineUp.of(
+        (
+            Seating(side=GameSide.A, player_id=a),
+            Seating(side=GameSide.A, player_id=b),
+            Seating(side=GameSide.B, player_id=c),
+            Seating(side=GameSide.B, player_id=d),
+        )
+    )
+
+
 def _planned(
     *,
     line_up: LineUp,
@@ -563,6 +574,137 @@ async def test_a_plan_still_inside_its_entry_window_says_nothing_about_the_pair(
     assert await port.played_counterparts(one, now=now) == ()
 
 
+# ---------------------------------------------------------------------------
+# attendance_for — the *shows up* strand's input, per person and never per pair
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_attendance_counts_a_game_played_and_a_plan_that_ghosted(
+    implementation, session
+):
+    """The two halves of *shows up*, on the same two people.
+
+    One plan produced a game and one closed its entry window on silence, so both
+    are opportunities and one of them is a good outcome. The moment is the moment
+    each **settled** — the game's own, and the ghost's window closing — which is
+    not the moment either was planned.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    one, other = new_uuid(), new_uuid()
+
+    played = _planned(line_up=_singles(one, other), at=_ago(days=3))
+    played.state_result(by=one, score=_score((6, 4),), occurred_at=_ago(days=2))
+    await _saved(session, played)
+    ghost = _planned(
+        line_up=_singles(one, other),
+        at=_ago(days=PLAN_HORIZON.days + ENTRY_GRACE.days + 5),
+    )
+    await _saved(session, ghost)
+
+    attendance = await port.attendance_for([one, other], now=now)
+
+    assert (attendance[one].played, attendance[one].ghosts) == (1, 1)
+    assert attendance[one] == attendance[other]
+    assert attendance[one].last_at == played.played_at
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_player_nobody_arranged_anything_for_is_absent_from_attendance(
+    implementation, session
+):
+    """The one read here whose zero would be **invented**.
+
+    ``counted_games_for`` answers ``0`` for a stranger, because the games were
+    counted and none of them was theirs. A ``0/0`` here would say somebody was
+    due on a court and did not come, about a person nothing ever arranged
+    anything for.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    stranger = new_uuid()
+
+    assert await port.counted_games_for([stranger], now=now) == {stranger: 0}
+    assert await port.attendance_for([stranger], now=now) == {}
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_plan_still_inside_its_entry_window_is_not_yet_an_opportunity(
+    implementation, session
+):
+    """Three answers here too, and for the same reason.
+
+    A game nobody has claimed yet is not a ghost, so charging it against
+    somebody's *shows up* would publish a conclusion the clock has not reached —
+    and the player is absent rather than sitting at ``0/0``.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    one, other = new_uuid(), new_uuid()
+
+    await _saved(session, _planned(line_up=_singles(one, other), at=_ago(hours=1)))
+
+    assert await port.attendance_for([one, other], now=now) == {}
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_four_that_played_once_is_one_opportunity_for_each_of_them(
+    implementation, session
+):
+    """**Per person, never a sum of the pairwise read.**
+
+    A doubles evening is one game and three counterparts, so a strand folded out
+    of ``played_counterparts`` would charge each of these four for turning up
+    three times — and would make *shows up* a statement about how many people
+    somebody plays with.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    a, b, c, d = new_uuid(), new_uuid(), new_uuid(), new_uuid()
+
+    game = _planned(line_up=_four(a, b, c, d), at=_ago(days=3))
+    game.state_result(by=a, score=_score((6, 4),), occurred_at=_ago(days=2))
+    await _saved(session, game)
+
+    attendance = await port.attendance_for([a, b, c, d], now=now)
+
+    assert len(await port.played_counterparts(a, now=now)) == 3
+    assert all(
+        (attendance[one].played, attendance[one].ghosts) == (1, 0)
+        for one in (a, b, c, d)
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_friendly_counts_towards_turning_up_like_any_other_game(
+    implementation, session
+):
+    """Turning up is not evidence about a Level, so the kind has nothing to say.
+
+    A friendly is out of ``counted_games`` by the choice of the people who
+    arranged it, and that choice was about their ratings — not about whether they
+    came.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    one, other = new_uuid(), new_uuid()
+
+    game = _planned(
+        line_up=_singles(one, other), at=_ago(days=3), kind=GameKind.FRIENDLY
+    )
+    game.state_result(by=one, score=_score((6, 4),), occurred_at=_ago(days=2))
+    await _saved(session, game)
+
+    assert await port.counted_games_for([one], now=now) == {one: 0}
+    assert (await port.attendance_for([one], now=now))[one].played == 1
+
+
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
 async def test_late_is_a_fact_about_a_plan_and_this_context_has_no_number(
     implementation, session
@@ -681,17 +823,6 @@ async def test_the_directory_answers_about_the_reader_and_nobody_else(
 # ---------------------------------------------------------------------------
 # ConfirmedResultLedger — the read with nothing to subscribe to
 # ---------------------------------------------------------------------------
-
-
-def _four(a: UUID, b: UUID, c: UUID, d: UUID) -> LineUp:
-    return LineUp.of(
-        (
-            Seating(side=GameSide.A, player_id=a),
-            Seating(side=GameSide.A, player_id=b),
-            Seating(side=GameSide.B, player_id=c),
-            Seating(side=GameSide.B, player_id=d),
-        )
-    )
 
 
 @pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))

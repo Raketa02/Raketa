@@ -194,7 +194,7 @@ async def test_an_account_status_read_invents_nobody(implementation, session):
 
 
 # ---------------------------------------------------------------------------
-# PlayerScoreQuery — the six strands, separately, with their evidence
+# PlayerScoreQuery — the five strands, separately, with their evidence
 # ---------------------------------------------------------------------------
 
 
@@ -206,8 +206,10 @@ async def test_a_player_with_no_record_is_absent_and_never_a_zero(
 
     A player without a score is not ``0.5`` and not ``0``: they are **absent**
     from the answer, the term returns ``NoEvidence`` and the surviving weights
-    renormalise. Today that is every player, because nobody has failed to turn up
-    — nobody has ever been *due* to.
+    renormalise. It used to be every player and no longer is (``docs/adr/0140``),
+    which is what makes this the assertion it was written to be: two ids nothing
+    has ever arranged anything for, put to a provider that can now answer about
+    somebody.
     """
 
     port = implementation.build(session)
@@ -236,12 +238,17 @@ async def test_a_score_read_answers_only_about_players_it_was_asked_about(
 async def test_every_strand_that_crosses_carries_its_own_evidence(
     implementation, session
 ):
-    """The six are read separately, and each brings what it was measured from.
+    """The five are read separately, and each brings what it was measured from.
 
-    Vacuous while ``player_score`` is unwritten and binding the day it is not:
-    a strand arrives as its own published value with the numerator and
-    denominator behind it and the moment it was last observed — or, for
-    sportsmanship, as a mean and a rating count, because it is not a ratio.
+    **No longer vacuous**: ``player_score`` ships and answers two of the five for
+    anybody with a record (``docs/adr/0140``). It stays written over whatever
+    arrives rather than over the two, because the shape is the demand — a strand
+    is its own published value with the numerator and denominator behind it and
+    the moment it was last observed, or, for sportsmanship, a mean and a rating
+    count, because it is not a ratio.
+
+    Asked about a stranger, so what it proves here is that a provider with a real
+    database behind it still answers about nobody rather than inventing a row.
     """
 
     port = implementation.build(session)
@@ -1246,8 +1253,8 @@ def test_a_player_score_cannot_be_supplied_as_one_number():
     builds ``player_score`` to ship is that number — at which point the
     strand-decomposition argument dies quietly and nobody finds out until
     somebody wires the term up. A reading has to carry strands; the published
-    figure alone is not a reading, and there is nowhere to put a blend of the six
-    in place of them.
+    figure alone is not a reading, and there is nowhere to put a blend of the
+    five in place of them.
     """
 
     with pytest.raises(InvariantViolated):
@@ -1382,22 +1389,26 @@ async def test_late_is_one_published_threshold_and_never_a_per_case_judgement(
     assert await port.late_change_threshold() is None
 
 
-def test_all_six_strands_cross_separately_and_keep_their_own_evidence():
-    """Six readings in, six readings out, none of them averaged on the way.
+def test_all_five_strands_cross_separately_and_keep_their_own_evidence():
+    """Five readings in, five readings out, none of them averaged on the way.
 
-    The subset check above says a reading may not invent a seventh strand; this
-    says it can carry all six *at once* without them collapsing into each other —
-    which is the half that would go wrong if somebody satisfied the shape by
+    The subset check above says a reading may not invent a sixth strand; this
+    says it can carry all five *at once* without them collapsing into each other
+    — which is the half that would go wrong if somebody satisfied the shape by
     writing the same figure into every key. Each strand keeps the numerator and
     denominator it was measured from, and sportsmanship keeps a mean and a rating
     count because it is not a ratio.
+
+    **Only two of the five have a provider**, and this reading is hand-built to
+    carry all of them: the shape has to keep working the day the other three
+    land, and a contract exercised only over what happens to be wired is a
+    contract that goes stale quietly (``docs/adr/0140``).
     """
 
     observed = instant(datetime(2026, 8, 1, tzinfo=timezone.utc))
     ratios = {
         ReliabilityStrand.SHOWS_UP: (95, 38, 40),
         ReliabilityStrand.ANSWERS_CHALLENGES: (70, 14, 20),
-        ReliabilityStrand.CONFIRMS_RESULTS: (100, 12, 12),
         ReliabilityStrand.KEEPS_PLANS: (83, 25, 30),
         ReliabilityStrand.SETTLES_UP: (50, 1, 2),
     }
@@ -1431,23 +1442,30 @@ def test_all_six_strands_cross_separately_and_keep_their_own_evidence():
         )
     assert reading.strands[ReliabilityStrand.SPORTSMANSHIP].mean == 4.6
     assert reading.strands[ReliabilityStrand.SPORTSMANSHIP].rating_count == 9
-    # The horizon reads one moment over the whole score, not six.
+    # The horizon reads one moment over the whole score, not one per strand.
     assert reading.most_recent_observation == observed
 
 
-def test_the_six_strands_are_the_platform_s_six():
+def test_the_five_strands_are_the_platform_s_five():
     """The keys are the engine's closed vocabulary, not a second spelling of it.
 
     A reading keyed by a locally-declared enum would satisfy every other
     assertion here and still be a second copy of a closed vocabulary, free to
     drift — the failure ``tests/unit/test_social_tag_vocabulary.py`` refuses for
-    the Social tags.
+    the Social tags. It binds twice over now: ``player_score`` publishes these
+    names too, and it imports the same enum rather than declaring its own
+    (``docs/adr/0140``).
+
+    **There were six.** *Confirms results* was struck rather than deferred
+    (``docs/adr/0137``): an unconfirmed result is a fact about a pair and a strand
+    is a verdict about a person, and every denominator tried on it docked
+    somebody ADR-0049 protects. It is listed nowhere because a withdrawn demand
+    is withdrawn, not carried.
     """
 
     assert [strand.value for strand in ReliabilityStrand] == [
         "SHOWS_UP",
         "ANSWERS_CHALLENGES",
-        "CONFIRMS_RESULTS",
         "KEEPS_PLANS",
         "SETTLES_UP",
         "SPORTSMANSHIP",

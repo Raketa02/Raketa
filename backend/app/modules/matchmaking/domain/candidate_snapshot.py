@@ -16,9 +16,12 @@ split costs nothing to make now.
 **At container granularity, and never per row.** ``snapshot(partition)`` costs
 54 ns; a port answering per-row questions costs **+0.58 ms** and doubles the walk
 ([the scale posture](../../../../docs/specs/matchmaking/scale-posture.md)). That
-is why this returns the container rather than answering questions about it, and
-it is why the eventual ``player_score`` strands land as **denormalised columns fed
-by the same tail reader** rather than as a port call inside the walk.
+is why this returns the container rather than answering questions about it. It is
+**not** why ``player_score`` is absent from the row: that is
+``docs/adr/0111``'s rule — the index holds only what a player changes about
+themselves, and a Player Score is the platform's observation of them — so the
+strands are a set read over the box once per search rather than either a column
+or a per-row call (``docs/adr/0140``).
 
 **There is no derived spatial structure to rebuild.** The bounding box rejects at
 18.5 ns a row against 1.00 µs per surviving candidate, which is what killed the

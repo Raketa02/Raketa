@@ -269,10 +269,9 @@ def test_a_declaration_this_ruleset_cannot_price_is_a_refusal_and_not_a_guess() 
 # Reliability
 # ---------------------------------------------------------------------------
 
-FIVE_RATIOS = {
+FOUR_RATIOS = {
     ReliabilityStrand.SHOWS_UP: (90, 12),
     ReliabilityStrand.ANSWERS_CHALLENGES: (80, 9),
-    ReliabilityStrand.CONFIRMS_RESULTS: (70, 8),
     ReliabilityStrand.KEEPS_PLANS: (60, 7),
     ReliabilityStrand.SETTLES_UP: (50, 6),
 }
@@ -294,23 +293,23 @@ def test_a_strand_below_the_observation_bar_stands_down_alone() -> None:
     are bad at this* are different facts.
     """
 
-    thin = {**FIVE_RATIOS, ReliabilityStrand.CONFIRMS_RESULTS: (0, 1)}
+    thin = {**FOUR_RATIOS, ReliabilityStrand.SETTLES_UP: (0, 1)}
     reading = reliability(
         candidate(reliability=record(ratios=thin)), COMP, LIVE_RULESET.reliability
     )
     assert isinstance(reading, TermReading)
     assert isinstance(reading.evidence, ReliabilityEvidence)
     named = {strand.strand for strand in reading.evidence.strands}
-    assert ReliabilityStrand.CONFIRMS_RESULTS not in named
-    assert named == set(FIVE_RATIOS) - {ReliabilityStrand.CONFIRMS_RESULTS}
+    assert ReliabilityStrand.SETTLES_UP not in named
+    assert named == set(FOUR_RATIOS) - {ReliabilityStrand.SETTLES_UP}
 
 
 def test_a_record_past_the_horizon_stands_the_whole_term_down() -> None:
     """The strands share one cause — *this player stopped playing*."""
 
     horizon = LIVE_RULESET.reliability.horizon_days
-    fresh = record(ratios=FIVE_RATIOS, days_since_last_observation=horizon)
-    stale = record(ratios=FIVE_RATIOS, days_since_last_observation=horizon + 1)
+    fresh = record(ratios=FOUR_RATIOS, days_since_last_observation=horizon)
+    stale = record(ratios=FOUR_RATIOS, days_since_last_observation=horizon + 1)
     assert reliability(candidate(reliability=fresh), COMP, LIVE_RULESET.reliability)
     assert reliability(
         candidate(reliability=stale), COMP, LIVE_RULESET.reliability
@@ -320,19 +319,24 @@ def test_a_record_past_the_horizon_stands_the_whole_term_down() -> None:
 def test_the_two_mode_vectors_order_the_same_two_candidates_oppositely() -> None:
     """The proof the decomposition earns its complexity, rather than the assertion.
 
-    Two candidates identical on four strands, differing only on *confirms
-    results* and *sportsmanship*. Competitive prefers one and for fun prefers the
-    other — a single blended score cannot express that, and the decomposition is
+    Two candidates identical on three strands, differing only on *keeps plans*
+    and *sportsmanship*. Competitive prefers one and for fun prefers the other —
+    a single blended score cannot express that, and the decomposition is
     justified for exactly as long as such a pair exists.
+
+    **The pair used to be *confirms results* and *sportsmanship*, at 24/4 against
+    5/16, and that strand was struck** (``docs/adr/0137``). What is left is a
+    narrower inversion — 18/7 against 15/17 — and it is asserted here rather than
+    assumed, because the day the last inverting pair leaves this vector is the day
+    the whole decomposition stops paying for itself and should be argued again.
     """
 
-    def reader(confirms: int, sportsmanship: float) -> float:
+    def reader(keeps_plans: int, sportsmanship: float) -> float:
         strands = {
             ReliabilityStrand.SHOWS_UP: (75, 20),
             ReliabilityStrand.ANSWERS_CHALLENGES: (75, 20),
-            ReliabilityStrand.KEEPS_PLANS: (75, 20),
             ReliabilityStrand.SETTLES_UP: (75, 20),
-            ReliabilityStrand.CONFIRMS_RESULTS: (confirms, 20),
+            ReliabilityStrand.KEEPS_PLANS: (keeps_plans, 20),
         }
         readings = [
             reliability(
@@ -386,7 +390,7 @@ def test_the_evidence_carries_the_published_score_and_not_the_blend() -> None:
 
     bar = LIVE_RULESET.reliability.published_score_bar
     reading = reliability(
-        candidate(reliability=record(ratios=FIVE_RATIOS, published_score=bar - 1)),
+        candidate(reliability=record(ratios=FOUR_RATIOS, published_score=bar - 1)),
         COMP,
         LIVE_RULESET.reliability,
     )
@@ -826,7 +830,7 @@ def test_every_term_of_fit_is_read_and_each_answers_under_its_own_kind() -> None
         candidate(
             tags=(SocialTag.PLAYS_TO_WIN.value, SocialTag.HERE_TO_COMPETE.value),
             declared_intent=PlayIntent.COMPETITIVE.value,
-            reliability=record(ratios=FIVE_RATIOS),
+            reliability=record(ratios=FOUR_RATIOS),
         ),
         LIVE_RULESET,
         Seat.OPPONENT,

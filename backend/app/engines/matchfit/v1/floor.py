@@ -29,11 +29,14 @@ candidate on whom four terms stood down renormalises the survivors up to a
 hundred and can clear a bar a fully-read candidate misses. The gate refuses that
 without touching anybody's number.
 
-**Today it excludes nobody, and that is the point.** Reliability is the one term
-absent platform-wide, so the live set is seven and four of them must fire — and
-every candidate the index can produce reads level, balance and distance from
-facts it holds for everybody, plus at least one of intent, availability and the
-two tag columns. It is standing insurance, in place before the day *we know
+**Today it excludes nobody, and that is the point.** Nothing is absent
+platform-wide any more (``docs/adr/0140``), so the live set is **eight** and four
+of them must fire — and every candidate the index can produce reads level,
+balance and distance from facts it holds for everybody, plus at least one of
+intent, availability and the two tag columns. Four of eight clears a bar of a
+half exactly as four of seven did, **and the margin is now zero rather than one
+term**: the day a ninth term is weighed, or the fraction rises, this starts
+biting somebody. It is standing insurance, in place before the day *we know
 nothing about this person* could quietly become a passing score.
 
 **The platform-versus-person line is drawn twice here, and that is one line.**
@@ -44,11 +47,11 @@ something this person failed to produce, and keeping them in one file is what
 stops the second from being argued again from scratch.
 
 **Its one exemption is the newcomer window, and the window bends nothing else.**
-Not the floor, not a gate, not a block. That exemption is why the window exists:
-the moment ``player_score`` and ``matches`` land, the person with a
-person-specific gap is exactly the newcomer, and minimum evidence would become a
-newcomer exclusion on the day it started working. It is written now, while the
-gate is inert, because the day it starts biting is the day it bites *them*.
+Not the floor, not a gate, not a block. That exemption is why the window exists,
+and it stopped being hypothetical with ``docs/adr/0140``: reliability is a
+person-specific gap now rather than the platform's, and the person who has it is
+exactly the newcomer. The gate still excludes nobody — four of eight clears the
+bar — so what the window is guarding is the next term rather than this one.
 """
 
 from __future__ import annotations
@@ -84,9 +87,10 @@ class Admission:
     """Whether this candidate is shown, and what the evidence gate saw.
 
     ``live`` and ``fired`` travel because the fraction alone is unreadable a year
-    later: *four of seven* means one thing while reliability is absent
-    platform-wide and another the day it lands, and the gate is deliberately
-    expressed as a fraction so that turning a term on moves the bar with it.
+    later: *four of seven* meant one thing while reliability was absent
+    platform-wide and *four of eight* means another now that it is not, and the
+    gate is deliberately expressed as a fraction so that turning a term on moves
+    the bar with it.
     """
 
     refusal: Refusal | None
@@ -146,11 +150,18 @@ def attributed(fit: Fit, absent: frozenset[Term]) -> Fit:
     ``live_terms`` already draws the same line for the same reason and with the
     same argument.
 
-    **It overwrites rather than fills in**, whatever the term said. Reliability
-    stands down today because ``NoPlayerScoresExist`` returns no reading, which a
-    term honestly reports as *nothing from them* — and that would be a sentence
-    about a person, written from an accident of a null object's shape. A fact
-    nobody has about anybody is nobody's gap.
+    **It overwrites rather than fills in**, whatever the term said. A fact nobody
+    has about anybody is nobody's gap, and a term function knows only that one
+    side of the pairing was empty — which it honestly reports as *nothing from
+    them*, a sentence about a person written from an accident of a null object's
+    shape.
+
+    **``absent`` is empty today and this function is a no-op** (``docs/adr/0140``):
+    reliability was the last term without a provider, and ``player_score`` ships.
+    It stays because the situation it exists for is live — a term is weighed in a
+    ruleset before its provider is built, which is how reliability itself arrived
+    — and because being a no-op is not the same as being wrong. ``live_terms``
+    beside it refuses a name no mode weights, so a stale entry is a red build.
 
     Absence is platform-wide by construction, so this is the *only* place the
     code can be authored and the only place it need be: it is one line, and the

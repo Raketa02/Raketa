@@ -36,12 +36,23 @@ from app.kernel import InvariantViolated
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from tests.unit.matchfit_builders import candidate, searcher
 
-#: Reliability is the one term weighted here whose provider does not exist, so it
-#: is the whole of *absent platform-wide* on day one. It is named rather than
-#: derived, because *no provider exists* is a fact about the composition root and
-#: a ruleset that could declare it would be a weight release deciding which
-#: contexts are built.
-DAY_ONE_ABSENT = frozenset({Term.RELIABILITY})
+#: One weighted term with no provider — **a situation this file constructs, and
+#: no longer the live platform's** (``docs/adr/0140``). Reliability was the last
+#: term absent platform-wide and ``player_score`` ships, so the composition root
+#: now answers ``frozenset()``.
+#:
+#: It is kept, and kept as reliability, because the thing under test is the
+#: *mechanism*: ``live_terms``, ``attributed`` and ``admits`` all take ``absent``
+#: as an argument precisely so that *no provider exists* stays a fact about the
+#: composition root rather than about a ruleset — and a term weighed before its
+#: provider is built is a live situation with a live rule, which is how
+#: reliability itself arrived. Pinning it to a term some mode actually weights is
+#: not decoration: ``live_terms`` refuses a name no mode weights.
+#:
+#: **What the platform answers today is the empty set**, and
+#: ``test_the_empty_set_is_the_live_platform_and_reliability_is_in_the_live_terms``
+#: below asserts the other side of every arithmetic here on that basis.
+A_TERM_WITHOUT_A_PROVIDER = frozenset({Term.RELIABILITY})
 
 FLOORS = LIVE_RULESET.floors
 
@@ -122,10 +133,12 @@ def test_both_modes_are_judged_against_the_same_integer(mode: SearchMode) -> Non
     """The ruleset holds one ``quality_floor`` and it is not keyed by anything."""
 
     at_the_bar = score(searcher(mode=mode), candidate(), LIVE_RULESET)
-    assert admits(modified(at_the_bar), LIVE_RULESET, DAY_ONE_ABSENT).admitted
+    assert admits(
+        modified(at_the_bar), LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER
+    ).admitted
     docked = modified(at_the_bar, applied=FLOORS.quality_floor - at_the_bar.points - 1)
     assert (
-        admits(docked, LIVE_RULESET, DAY_ONE_ABSENT).refusal
+        admits(docked, LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER).refusal
         is Refusal.BELOW_QUALITY_FLOOR
     )
 
@@ -141,7 +154,7 @@ def test_the_bar_reads_the_modified_number_and_not_the_bare_fit() -> None:
     fit = score(searcher(), candidate(), LIVE_RULESET)
     assert fit.points > FLOORS.quality_floor
     docked = modified(fit, applied=FLOORS.quality_floor - fit.points - 0.5)
-    assert not admits(docked, LIVE_RULESET, DAY_ONE_ABSENT).admitted
+    assert not admits(docked, LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER).admitted
 
 
 def test_the_bar_is_inclusive_at_the_bar() -> None:
@@ -150,7 +163,7 @@ def test_the_bar_is_inclusive_at_the_bar() -> None:
     fit = score(searcher(), candidate(), LIVE_RULESET)
     exactly = modified(fit, applied=FLOORS.quality_floor - fit.points)
     assert exactly.points == pytest.approx(FLOORS.quality_floor)
-    assert admits(exactly, LIVE_RULESET, DAY_ONE_ABSENT).admitted
+    assert admits(exactly, LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER).admitted
 
 
 # ---------------------------------------------------------------------------
@@ -158,22 +171,37 @@ def test_the_bar_is_inclusive_at_the_bar() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_the_live_set_is_the_platforms_and_reliability_is_not_in_it() -> None:
-    """Seven terms, in ``Term``'s own order, on the day-one basis."""
+def test_a_term_without_a_provider_leaves_the_live_set() -> None:
+    """Seven terms, in ``Term``'s own order, when one of the eight has no provider."""
 
-    live = live_terms(LIVE_RULESET, DAY_ONE_ABSENT)
+    live = live_terms(LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER)
     assert live == tuple(term for term in Term if term is not Term.RELIABILITY)
     assert len(live) == 7
 
 
+def test_the_empty_set_is_the_live_platform_and_every_term_is_in_it() -> None:
+    """**Eight terms, which is what the composition root answers today.**
+
+    Every term the engine weighs has a provider since ``docs/adr/0140``, so the
+    live set is the whole vocabulary and nothing degrades as the platform's own
+    gap. Asserted here rather than left implied, because it is the basis every
+    fraction below is really read against.
+    """
+
+    assert live_terms(LIVE_RULESET, frozenset()) == tuple(Term)
+
+
 def test_the_gate_is_at_least_half_of_the_live_set() -> None:
     """A fraction and not a count, so it keeps meaning the same thing when a term
-    turns on. Today that is four of seven."""
+    turns on — four of seven then, **four of eight now**, and the bar is the
+    same half. That is the whole reason it is a fraction: turning reliability on
+    moved the basis and moved nobody."""
 
     assert FLOORS.minimum_evidence_fraction == 0.5
-    live = live_terms(LIVE_RULESET, DAY_ONE_ABSENT)
-    fires = [count for count in range(len(live) + 1) if count / len(live) >= 0.5]
-    assert min(fires) == 4
+    for absent in (A_TERM_WITHOUT_A_PROVIDER, frozenset()):
+        live = live_terms(LIVE_RULESET, absent)
+        fires = [count for count in range(len(live) + 1) if count / len(live) >= 0.5]
+        assert min(fires) == 4
 
 
 def test_the_gate_moves_nobodys_number() -> None:
@@ -188,13 +216,17 @@ def test_the_gate_moves_nobodys_number() -> None:
             Term.SOCIAL_VIBE,
         )
     )
-    refused = admits(thin, LIVE_RULESET, DAY_ONE_ABSENT)
+    refused = admits(thin, LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER)
     assert refused.refusal is Refusal.TOO_LITTLE_EVIDENCE
     assert thin.points == pytest.approx(thin.fit.points)
 
 
 def test_a_person_specific_gap_is_counted_against_them() -> None:
     """Three of seven is under half: an empty grid, no declaration and no tags.
+
+    Read on the constructed seven-term basis, because what this asserts is the
+    *gate*: three of eight is under half too, and the smaller basis is the
+    harder case.
 
     This is the failure the gate exists for. Renormalisation lifts the survivors
     to a hundred, so a candidate nobody knows anything about can out-score one who
@@ -207,7 +239,7 @@ def test_a_person_specific_gap_is_counted_against_them() -> None:
         Term.PLAYING_STYLE,
         Term.SOCIAL_VIBE,
     )
-    outcome = admits(modified(thin), LIVE_RULESET, DAY_ONE_ABSENT)
+    outcome = admits(modified(thin), LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER)
     assert outcome.fired == (Term.LEVEL_FIT, Term.PREDICTED_BALANCE, Term.DISTANCE)
     assert outcome.evidence_fraction == pytest.approx(3 / 7)
     assert outcome.refusal is Refusal.TOO_LITTLE_EVIDENCE
@@ -218,26 +250,33 @@ def test_one_more_term_clears_it() -> None:
     a fraction and the fraction is the thing that moved."""
 
     thin = scored_but_for(Term.INTENT_ALIGNMENT, Term.PLAYING_STYLE, Term.SOCIAL_VIBE)
-    outcome = admits(modified(thin), LIVE_RULESET, DAY_ONE_ABSENT)
+    outcome = admits(modified(thin), LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER)
     assert outcome.evidence_fraction == pytest.approx(4 / 7)
     assert outcome.admitted
 
 
 def test_platform_wide_absence_is_never_counted_against_anybody() -> None:
-    """Reliability stands down for everybody, so it is nobody's gap.
+    """A term with no provider is nobody's gap, and it is not counted.
 
-    Counted the other way, every candidate alive today would carry one automatic
-    shortfall — and the gate would be a bar on *how much of the platform is
-    built* rather than on how much is known about this person.
+    Counted the other way, every candidate would carry one automatic shortfall —
+    and the gate would be a bar on *how much of the platform is built* rather
+    than on how much is known about this person.
+
+    **Both bases are asserted, and the second is the live one.** With reliability
+    live (``docs/adr/0140``) the same candidate carries the gap themselves at
+    four of eight — which still clears a bar of a half, so nobody was excluded by
+    the provider landing. The margin is now zero terms rather than one.
     """
 
     thin = scored_but_for(Term.INTENT_ALIGNMENT, Term.PLAYING_STYLE, Term.SOCIAL_VIBE)
     assert Term.RELIABILITY in {stood.term for stood in thin.degraded_terms}
-    counted = admits(modified(thin), LIVE_RULESET, DAY_ONE_ABSENT)
-    uncounted = admits(modified(thin), LIVE_RULESET, frozenset())
-    assert counted.admitted
-    assert uncounted.evidence_fraction == pytest.approx(4 / 8)
-    assert uncounted.refusal is None
+    not_counted = admits(modified(thin), LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER)
+    counted = admits(modified(thin), LIVE_RULESET, frozenset())
+    assert not_counted.evidence_fraction == pytest.approx(4 / 7)
+    assert not_counted.admitted
+    # The live basis: the gap is theirs, it is counted, and it still clears.
+    assert counted.evidence_fraction == pytest.approx(4 / 8)
+    assert counted.refusal is None
     # Two more gaps and the two readings part company: 3/7 refuses where 3/8 —
     # the same person, with the platform's own hole counted as theirs — refuses
     # for a reason that is not about them at all.
@@ -264,7 +303,7 @@ def test_the_gate_runs_before_the_bar() -> None:
     both = modified(thin, applied=-thin.points)
     assert both.points == 0.0
     assert (
-        admits(both, LIVE_RULESET, DAY_ONE_ABSENT).refusal
+        admits(both, LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER).refusal
         is Refusal.TOO_LITTLE_EVIDENCE
     )
 
@@ -317,10 +356,12 @@ def test_the_newcomer_window_excuses_a_gap_and_bends_nothing_else() -> None:
         Term.SOCIAL_VIBE,
     )
     assert (
-        admits(modified(thin), LIVE_RULESET, DAY_ONE_ABSENT).refusal
+        admits(modified(thin), LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER).refusal
         is Refusal.TOO_LITTLE_EVIDENCE
     )
-    assert admits(modified(thin), LIVE_RULESET, DAY_ONE_ABSENT, newcomer=True).admitted
+    assert admits(
+        modified(thin), LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER, newcomer=True
+    ).admitted
 
 
 def test_the_newcomer_window_does_not_reach_the_floor() -> None:
@@ -336,7 +377,7 @@ def test_the_newcomer_window_does_not_reach_the_floor() -> None:
     )
     sunk = modified(thin, applied=FLOORS.quality_floor - thin.points - 1)
     assert (
-        admits(sunk, LIVE_RULESET, DAY_ONE_ABSENT, newcomer=True).refusal
+        admits(sunk, LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER, newcomer=True).refusal
         is Refusal.BELOW_QUALITY_FLOOR
     )
 
@@ -358,12 +399,12 @@ def test_an_interest_lift_admits_below_the_bar() -> None:
     fit = score(searcher(), candidate(), LIVE_RULESET)
     sunk = modified(fit, applied=FLOORS.quality_floor - fit.points - 5)
     assert (
-        admits(sunk, LIVE_RULESET, DAY_ONE_ABSENT).refusal
+        admits(sunk, LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER).refusal
         is Refusal.BELOW_QUALITY_FLOOR
     )
 
     assert admits(
-        sunk, LIVE_RULESET, DAY_ONE_ABSENT, interest_received=True
+        sunk, LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER, interest_received=True
     ).admitted
 
 
@@ -384,7 +425,10 @@ def test_an_interest_lift_does_not_reach_the_evidence_gate() -> None:
     )
     assert (
         admits(
-            modified(thin), LIVE_RULESET, DAY_ONE_ABSENT, interest_received=True
+            modified(thin),
+            LIVE_RULESET,
+            A_TERM_WITHOUT_A_PROVIDER,
+            interest_received=True,
         ).refusal
         is Refusal.TOO_LITTLE_EVIDENCE
     )
@@ -402,11 +446,13 @@ def test_an_interest_lift_moves_nobodys_number() -> None:
     fit = score(searcher(), candidate(), LIVE_RULESET)
     sunk = modified(fit, applied=FLOORS.quality_floor - fit.points - 5)
 
-    lifted = admits(sunk, LIVE_RULESET, DAY_ONE_ABSENT, interest_received=True)
+    lifted = admits(
+        sunk, LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER, interest_received=True
+    )
 
     assert lifted.admitted
     assert sunk.points < FLOORS.quality_floor
-    assert lifted.fired == admits(sunk, LIVE_RULESET, DAY_ONE_ABSENT).fired
+    assert lifted.fired == admits(sunk, LIVE_RULESET, A_TERM_WITHOUT_A_PROVIDER).fired
 
 
 # ---------------------------------------------------------------------------
@@ -417,29 +463,29 @@ def test_an_interest_lift_moves_nobodys_number() -> None:
 def test_a_term_with_no_provider_reports_the_platform_whatever_the_term_said() -> None:
     """**A fact nobody has about anybody is nobody's gap.**
 
-    ``NoPlayerScoresExist`` returns no reading, so the reliability term honestly
-    reports *nothing from them* — a sentence about a person written from an
-    accident of a null object's shape. The overwrite is unconditional rather than
-    a fill-in for that reason: the term is not wrong about what it saw, it is
-    answering a question it cannot be asked.
+    A term with no provider returns no reading, so it honestly reports *nothing
+    from them* — a sentence about a person written from an accident of an empty
+    answer's shape. The overwrite is unconditional rather than a fill-in for that
+    reason: the term is not wrong about what it saw, it is answering a question
+    it cannot be asked.
+
+    **No term is in that position today** (``docs/adr/0140``), so this drives the
+    mechanism with a constructed set. The rule outlives the situation: the next
+    term weighed ahead of its provider meets exactly this code.
     """
 
     fit = score(searcher(), candidate(), LIVE_RULESET)
     before = {stood.term: stood.reason for stood in fit.degraded_terms}
     assert before[Term.RELIABILITY] is DegradedReason.NOTHING_FROM_THEM
 
-    after = attributed(fit, DAY_ONE_ABSENT)
+    after = attributed(fit, A_TERM_WITHOUT_A_PROVIDER)
     reasons = {stood.term: stood.reason for stood in after.degraded_terms}
     assert reasons[Term.RELIABILITY] is DegradedReason.NOT_YET_ON_THIS_PLATFORM
     # And nothing else moves: the person-specific gaps are the term's to name.
     assert {
-        term: reason
-        for term, reason in reasons.items()
-        if term is not Term.RELIABILITY
+        term: reason for term, reason in reasons.items() if term is not Term.RELIABILITY
     } == {
-        term: reason
-        for term, reason in before.items()
-        if term is not Term.RELIABILITY
+        term: reason for term, reason in before.items() if term is not Term.RELIABILITY
     }
 
 
@@ -452,7 +498,7 @@ def test_the_basis_itself_is_untouched_and_so_is_every_other_field() -> None:
     """
 
     fit = score(searcher(), candidate(), LIVE_RULESET)
-    after = attributed(fit, DAY_ONE_ABSENT)
+    after = attributed(fit, A_TERM_WITHOUT_A_PROVIDER)
 
     assert after.points == fit.points
     assert after.terms == fit.terms

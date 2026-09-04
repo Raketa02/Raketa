@@ -12,7 +12,7 @@ clock, so a game past a deadline has moved in this answer whether or not anythin
 swept it. A projection storing the standing would be right until a deadline
 passed, wrong until something rebuilt it, and believed throughout.
 
-**One clock per read, taken from the caller.** All three reads take ``now``
+**One clock per read, taken from the caller.** All four reads take ``now``
 rather than reading one, because a search that asked about counted games and
 about familiarity in one request must get one instant's answer to both.
 
@@ -36,12 +36,14 @@ from app.modules.games.domain.lineup import GameKind
 from app.modules.games.domain.ports import (
     PLAYED_COUNTERPART_BOUND,
     RECENT_RESULTS,
+    Attendance,
     CountedResult,
     GameCounterpart,
     PlayedOutcome,
     PlayedTally,
 )
 from app.modules.games.domain.standing import GameStanding
+from app.modules.games.domain.windows import entry_closes_at
 from app.modules.games.infrastructure.game_streams import streams_seating
 
 
@@ -174,6 +176,50 @@ class EventSourcedGameHistory:
             results[player_id] = tuple(rows[-RECENT_RESULTS:])
         return results
 
+    async def attendance_for(
+        self, player_ids: Collection[UUID], *, now: Instant
+    ) -> Mapping[UUID, Attendance]:
+        """What became of each of these people's arrangements — played, or ghosted.
+
+        **The same fold as the pairwise read, counted per person instead of per
+        pair**, and that is the whole difference between them: a four played once
+        is one evening and three counterparts, so a *shows up* strand summed off
+        ``played_counterparts`` would charge a doubles player three times for
+        turning up once.
+
+        **Absent rather than a measured zero**, unlike ``counted_games_for``
+        above. A person nothing was ever arranged for has not failed to come, and
+        a ``0/0`` published here would say they had.
+        """
+
+        wanted = set(player_ids)
+        if not wanted:
+            return {}
+
+        played: dict[UUID, int] = defaultdict(int)
+        ghosts: dict[UUID, int] = defaultdict(int)
+        latest: dict[UUID, Instant] = {}
+        for game in await self._games_among(wanted):
+            settled = _settled_arrangement(game, now)
+            if settled is None:
+                continue
+            outcome, at = settled
+            for player_id in game.line_up.players & wanted:
+                if outcome is PlayedOutcome.PLAYED:
+                    played[player_id] += 1
+                else:
+                    ghosts[player_id] += 1
+                latest[player_id] = max(at, latest.get(player_id, at))
+
+        return {
+            player_id: Attendance(
+                played=played[player_id],
+                ghosts=ghosts[player_id],
+                last_at=at,
+            )
+            for player_id, at in latest.items()
+        }
+
     async def late_change_threshold(self) -> Minutes | None:
         """``None``, and the reason is this context's own.
 
@@ -208,6 +254,34 @@ def _pairwise_outcome(game: Game, now: Instant) -> PlayedOutcome | None:
     if game.was_played_at(now):
         return PlayedOutcome.PLAYED
     return None
+
+
+def _settled_arrangement(
+    game: Game, now: Instant
+) -> tuple[PlayedOutcome, Instant] | None:
+    """The same three answers, **with the moment the arrangement settled.**
+
+    The pairwise read needs the outcome and dates it from the game; the strand
+    needs the moment the *opportunity closed*, and for a ghost those are not the
+    same instant — the plan was made a week before the entry window shut on it.
+    Dating a ghost from its plan would age a record faster than the record aged,
+    which the matcher's horizon reads directly.
+
+    It is written beside ``_pairwise_outcome`` rather than replacing it because
+    the two callers want different halves and a shape carrying both would leave
+    every pairwise row holding a moment nothing reads.
+    """
+
+    outcome = _pairwise_outcome(game, now)
+    if outcome is None:
+        return None
+    if outcome is PlayedOutcome.PLAYED:
+        # ``played_at`` is set for every standing in ``PLAYED`` — the entry that
+        # records *we played* is the only thing that can set it — so the fallback
+        # is unreachable and is stated rather than asserted, because a read is a
+        # bad place to raise about a stream somebody else wrote.
+        return outcome, game.played_at or game.planned_at
+    return outcome, entry_closes_at(game.planned_at)
 
 
 __all__ = ["EventSourcedGameHistory"]

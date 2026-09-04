@@ -82,15 +82,21 @@ async def test_a_search_returns_a_ranked_shortlist_carrying_its_whole_working(
 async def test_a_stood_down_term_crosses_the_wire_saying_whose_gap_it_is(
     client, session_factory, candidate_source, searcher
 ):
-    """**Reliability is nobody's gap, and it says so through the whole stack.**
+    """**Whose gap a stood-down term is, said through the whole stack.**
 
-    `NoPlayerScoresExist` is what this build wires, so `absent_terms` is
-    reliability alone and the term stands down for everybody. What the term
-    function saw is *nothing from them* — a sentence about a person, written from
-    an accident of a null object's shape — and the composition root's own fact
-    overwrites it one layer out. This is the assertion that the overwrite reaches
-    the client rather than only the engine: the card, the record and the
-    read-back all read the same code.
+    Reliability used to be *nobody's* — `NoPlayerScoresExist` was what this build
+    wired, so `absent_terms` was reliability alone and the composition root's own
+    fact overwrote what the term function saw. `player_score` ships now
+    (`docs/adr/0140`), `absent_terms` is empty, and the same candidate's gap is
+    **theirs**: nothing has ever been arranged for this person, so they have no
+    record and the term stands down about *them*.
+
+    **The assertion is the same one and it is now stronger.** It was previously
+    checking that an overwrite reached the client; it now checks that no
+    overwrite happens where there is nothing to overwrite — and a build that
+    quietly re-declared a term absent platform-wide would turn a person's gap
+    back into nobody's, on every card at once, which is the failure the two
+    codes exist to keep apart.
     """
 
     await world.a_candidate(client, session_factory, "one", mu=searcher["mu"])
@@ -101,7 +107,7 @@ async def test_a_stood_down_term_crosses_the_wire_saying_whose_gap_it_is(
     stood_down = {
         entry["term"]: entry["reason"] for entry in candidate["degraded_terms"]
     }
-    assert stood_down["RELIABILITY"] == "NOT_YET_ON_THIS_PLATFORM"
+    assert stood_down["RELIABILITY"] == "NOTHING_FROM_THEM"
     # And it is the basis, not a diagnostic: every term is either a row with a
     # reading or a line with a reason, and no term is both or neither.
     fired = {term["term"] for term in candidate["terms"]}

@@ -247,7 +247,7 @@ async def read_paths(
             events=events,
             storage=build_photo_storage(settings),
         ),
-        absent_terms=build_absent_terms(player_scores),
+        absent_terms=build_absent_terms(),
         meter=None,
     )
     return ReadPaths(

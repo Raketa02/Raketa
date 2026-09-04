@@ -368,8 +368,10 @@ def _complaint(surface: str, record: SearchRecord, wanted: int, got: int) -> str
 #: quietly widening what *every reason line* means.
 CANNOT_BE_DRAWN: Mapping[str, str] = {
     "ANSWER_RATE_AND_SPEED": (
-        "*answers challenges* is a Player Score Strand, `player_score` does not "
-        "exist, and `fence.py` reads `None` for it by name"
+        "*answers challenges* is a Player Score Strand and `player_score` "
+        "publishes it now, but this signal is a ramp over a rate **and a "
+        "speed** — nothing publishes the speed, so `fence.py` still reads "
+        "`None` for it by name (`docs/adr/0140`)"
     ),
     "RECENT_ACTIVITY": (
         "`last_active_at` is projected from refresh-token events, and no seeded "

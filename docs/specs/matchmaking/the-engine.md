@@ -316,9 +316,11 @@ than level — because that is what *for fun* means.
               Play intent. Six cells, ADR-0094. NO_PREFERENCE reads 0.85 in both modes;
               a directly opposite declaration reads 0.00 and takes no further modifier.
 
-4  reliability  six strands read SEPARATELY, weighted per mode (ranking-weights §6), each
+4  reliability  five strands read SEPARATELY, weighted per mode (ranking-weights §6), each
               strand standing down below RELIABILITY_MIN_OBSERVATIONS = 3, the whole term
-              standing down past RELIABILITY_HORIZON_DAYS = 365.
+              standing down past RELIABILITY_HORIZON_DAYS = 365. Two of the five have a
+              provider (ADR-0140); the other three stand down for everybody and the
+              survivors renormalise inside the term.
 
 5  availability  |shared| / |mine|        ← the glossary verbatim. NO CONSTANTS AT ALL.
    |mine| is the SEARCHER's ticked cells. Either grid empty → NoEvidence, on both sides —
@@ -350,7 +352,7 @@ Every term's evidence crosses keyed by `kind`, and the union is enumerated in
 | Level fit | `{level_fit, their_mu, my_mu, delta, direction}` |
 | Predicted balance | `{predicted_balance, pct, my_sigma, their_sigma, confidence}` |
 | Intent alignment | `{intent_alignment, their_intent, my_mode, aligned}` |
-| Reliability | `{reliability, score, strands, floor_breached}` — `strands` is the **six named** strands, closed |
+| Reliability | `{reliability, score, strands, floor_breached}` — `strands` is the **five named** strands, closed (*confirms results* struck by ADR-0137, removed by ADR-0140) |
 | Availability overlap | `{availability_overlap, shared_count, next_slot: {day, part}}` — `grid_stale` gone with staleness; `days_away` is **stored and never crossed** |
 | Playing style | `{playing_style, matched, complementary, clashing}` |
 | Social vibe | same shape, `{social_vibe, …}` |

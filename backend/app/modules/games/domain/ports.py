@@ -19,6 +19,13 @@ absent from the answer instead.
 
 **Fewer than five results is a real answer and is never padded.** The card draws
 a gap; a fifth invented row would be the same mistake in a smaller place.
+
+**``attendance_for`` is the one read here that answers about fewer people than it
+was asked about**, and the exception proves the rule above rather than bending it
+(``docs/adr/0140``). It is ``player_score``'s input for *shows up*, where a
+``0/0`` would say *this person was due somewhere and did not come* about somebody
+nothing was ever arranged for. The two rules live in one class deliberately, so
+that a reader meets the difference instead of rediscovering it.
 """
 
 from __future__ import annotations
@@ -111,6 +118,50 @@ class GameCounterpart:
 
         played = self.outcomes.get(PlayedOutcome.PLAYED)
         return played.count if played else 0
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Attendance:
+    """What became of the games one player was arranged into. **Per person.**
+
+    The *shows up* strand's whole input (``docs/adr/0140``). ``played`` is games
+    somebody on that court said had happened; ``ghosts`` is plans whose entry
+    window closed with nobody ever saying so. A game still inside its entry
+    window is in **neither**, for the reason the pairwise fold gives: it is not a
+    ghost until the clock says so, and claiming it either way would publish a
+    conclusion nothing has reached.
+
+    **Counted and friendly games are both here.** Turning up is not evidence
+    about anybody's Level, so the choice that makes a game a friendly has nothing
+    to say about whether the people who arranged it came.
+
+    **This is a per-player read and never a sum of the pairwise one.** A four
+    played once is one game and three counterparts, so adding up
+    ``played_counterparts`` would charge a doubles player three times for one
+    evening and make *shows up* a statement about how many people they play with.
+
+    ``last_at`` is when the most recent of those opportunities **closed** — the
+    moment a game was played, or the moment a plan's entry window shut on
+    silence. It is the strand's observation moment, and dating a ghost from the
+    plan instead would age a record faster than the record aged.
+    """
+
+    played: int
+    ghosts: int
+    last_at: Instant
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.played >= 0 and self.ghosts >= 0,
+            f"a negative arrangement count: {self.played} played, "
+            f"{self.ghosts} ghosts",
+        )
+        invariant(
+            self.played + self.ghosts >= 1,
+            "an attendance record with no settled arrangement behind it is an "
+            "absence, not a zero — absence is spelled by not being in the answer",
+        )
 
 
 @final
@@ -248,7 +299,7 @@ class GameDirectory(Protocol):
 
 @runtime_checkable
 class GameHistoryQuery(Protocol):
-    """The three facts this context owes the rest of the platform, and the fourth
+    """The four facts this context owes the rest of the platform, and the fifth
     it owes an honest ``None``."""
 
     async def played_counterparts(
@@ -299,6 +350,26 @@ class GameHistoryQuery(Protocol):
         """
         ...
 
+    async def attendance_for(
+        self, player_ids: Collection[UUID], *, now: Instant
+    ) -> Mapping[UUID, Attendance]:
+        """What became of each of these people's arrangements — played, or ghosted.
+
+        **A player with none is absent from the answer, and this is the one read
+        here whose zero would be invented.** ``counted_games_for`` beside it
+        answers ``0`` for everybody it was asked about, because the games were
+        counted and none of them was theirs; here a ``0/0`` would say *this
+        person was due somewhere and did not come*, which is a claim about a
+        record nobody keeps. The two rules sit in one class deliberately, so the
+        difference is read rather than rediscovered (``docs/adr/0098``).
+
+        Its reader is ``player_score``, which turns it into the *shows up*
+        strand. The strand's arithmetic is not here: this context knows what
+        happened to its own games and has no opinion about what that says about a
+        person.
+        """
+        ...
+
     async def late_change_threshold(self) -> Minutes | None:
         """How close to its moment a change has to be to count as **late**.
 
@@ -320,6 +391,7 @@ class GameHistoryQuery(Protocol):
 __all__ = [
     "PLAYED_COUNTERPART_BOUND",
     "RECENT_RESULTS",
+    "Attendance",
     "ConfirmedGame",
     "ConfirmedResultLedger",
     "CountedResult",

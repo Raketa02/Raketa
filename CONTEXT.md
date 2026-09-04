@@ -31,12 +31,11 @@ context that does not appear below has no vocabulary yet — resolve its terms i
 before writing it, which is what the last three sections below are: **Player profile** is
 settled in an accepted ADR and is being built, **Blocks** is settled in an accepted ADR and
 is now built, **Matchmaking** is settled and not built at all, **Challenges** is settled
-and built as far as its aggregate, and **Games** is settled in an accepted ADR and built.
+and built as far as its aggregate, **Games** is settled in an accepted ADR and built, and
+**Player Score** is settled in an accepted ADR and built over two of its five strands.
 Their terms are here because that is the order this file
-asks for, not because the code landed first. **Player Score** is a further step out again:
-nothing about it is decided, and it appears only because the matcher has contracted the
-words it will read, and the words are the player's, not the matcher's. Every other section
-describes code that exists in `backend/app/` today.
+asks for, not because the code landed first. Every section describes code that exists in
+`backend/app/` today.
 
 ### Skill rating (`backend/app/modules/rating/`)
 
@@ -1143,24 +1142,44 @@ anything about how good anybody is — that is the rating context reading this o
   no `GameUnscored` and no `GameNeverPlayed` — the same rule `challenges` states about `GameOn`,
   and for the same reason: a derived standing has exactly one place to be true.
 
-### Player Score — demanded, not designed
+### Player Score (`backend/app/modules/player_score/`)
 
 What the platform has watched a player *do*, as distinct from how well they play. **One number
 in the UI, five strands underneath it**, and the matcher reads the strands separately because
 they are weighed oppositely in the two modes
-([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). Nothing about this
-context is decided and nothing is built; the words are here because the player reads them all
-on their own screen, so they are the product's language before they are the matcher's.
+([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). The words are the
+player's before they are the matcher's: they are read on the player's own screen.
 
-- **Player Score** — the blended number a player sees. Computed from what happened, never from
-  opinions and never from results: **losing costs nothing here.**
-- **Strand** — one of the six things the score is made of. Each is a record of opportunities and
-  what came of them, and each is published in its own right.
-  - **Shows up** — whether the game gets played at all.
-  - **Answers challenges** — whether a challenge gets an answer inside its window.
-  - **Keeps plans** — whether an agreed plan survives to its day without a late change.
-  - **Settles up** — whether a court share that fell due was settled without a case.
-  - **Sportsmanship** — what opponents said afterwards. A mean, not a ratio.
+**Two of the five have a source and three do not** — decided by
+[ADR-0140](docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md),
+which also settles the clause ADR-0137 opened about whether *shows up* survives at all.
+
+- **Player Score** — the blended number a player sees, out of a hundred. Computed from what
+  happened, never from opinions and never from results: **losing costs nothing here.** The
+  blend is over **the strands that are there**, renormalised, so a player the platform can see
+  two things about is comparable to one it can see five about, and neither is credited for a
+  record nobody keeps.
+- **Strand** — one of the five things the score is made of. Each is a record of **opportunities**
+  and what came of them, and each is published in its own right. An opportunity is something
+  that **fell due**: a strand never counts a question still waiting for its answer.
+  - **Shows up** — whether the game gets played at all. **Live.** The opportunity is a plan that
+    settled — a game somebody said had happened, or a **Ghost game** whose entry window closed
+    on silence — and the good outcome is the game. **A ghost is charged to everybody who was on
+    that court**, because nobody proposed anything and nobody countered anything: what is priced
+    is an arrangement that dissolved, and there is nobody in it to blame.
+  - **Answers challenges** — whether a challenge gets an answer inside its window. **Live.** The
+    opportunity is an **invitation** — a Seat somebody was actually asked to take, which is a
+    seat with a deadline, so the organiser's own seat and both seats of a mutual-born challenge
+    are not opportunities. **A decline is a good outcome**: this is the only strand where a no
+    scores, because what it prices is silence and not judgement.
+  - **Keeps plans** — whether an agreed plan survives to its day without a late change. **Stands
+    down:** no plan on this platform has a moment to be late for, which is why `games` publishes
+    its late-change threshold as an honest absence.
+  - **Settles up** — whether a court share that fell due was settled without a case. **Stands
+    down:** court money is out of scope. It is the **historical record**, never the live case —
+    the open case is the Hold.
+  - **Sportsmanship** — what opponents said afterwards. A mean, not a ratio. **Stands down:**
+    no surface exists on which anybody rates anybody.
 - **Confirms results** — **struck, and not deferred**
   ([ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). It read *whether a
   counted game gets confirmed, so it counts*, and it cannot be published honestly: **an
@@ -1170,8 +1189,7 @@ on their own screen, so they are the product's language before they are the matc
   ADR-0098's own rule about a demand nobody can satisfy; the matcher absorbs the loss by
   construction, because a strand nobody publishes stands down and the survivors renormalise
   inside the reliability term. `ReliabilityStrand.CONFIRMS_RESULTS` and its two ruleset weights
-  come out with the provider, in
-  [#305](https://github.com/Raketa02/Raketa/issues/305).
+  came out with the provider, in ADR-0140.
 - **Opponent variety** — how widely a player spreads their games. **Not demanded of
   `player_score` any more:** it was contracted on behalf of two consumers and
   [#164](https://github.com/Raketa02/Raketa/issues/164) and
@@ -1181,12 +1199,28 @@ on their own screen, so they are the product's language before they are the matc
   it returns as that term's demand and signs for it.
 
 **Invariants**
-- **No record is not a bad record.** A player without a score is not bad and not average — the
-  reliability term stands down and the other terms carry the match. The same principle the
-  rating engine already applies to skill.
+- **No record is not a bad record.** A player without a score is not bad and not average — they
+  are **absent from the answer**, the reliability term stands down and the other terms carry the
+  match. The same principle the rating engine already applies to skill. A strand nobody can
+  publish is absent the same way, and neither is ever a `0` or a `0.5`.
+- **This context keeps no record of its own.** It has no aggregate, no table and no migration:
+  every strand is folded out of `games`' and `challenges`' streams when somebody asks. A stored
+  score would be a second place for *did that game happen* to be true, and the copy would be the
+  one that got believed.
 - **The score is a memory, and it fades with new evidence.** Decay belongs here, on the side
   that owns the record; a consumer that applies its own would be counting the same forgetting
-  twice.
+  twice. **The ratio is the fading** — one no-show among forty games weighs almost nothing —
+  and there is no second window, because a window would be a number that must not disagree with
+  the matcher's horizon.
+- **The published number is the player's, not the matcher's.** Its weights live in this context
+  and never in a ruleset: a weight release must not change what somebody's own profile says
+  about them. It has two readers — the reliability floor, which prices it, and the player card,
+  which prints it — and **a card explaining a match with a figure the player's own profile
+  disagrees with is worse than a card that says nothing.**
+- **It is the platform's observation of a player, so it may not go on the candidate index**
+  ([ADR-0111](docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md)).
+  It reaches a card through a port at assembly time, on the seam the nickname and the photo
+  already ride.
 
 ## Cross-cutting concepts
 

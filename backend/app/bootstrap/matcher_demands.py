@@ -17,12 +17,14 @@ the real adapters genuinely need one, and a suite that could only construct the
 implementations needing no I/O would be a suite that quietly excused the only
 implementations with a database behind it.
 
-**Four of the five rows named a null object once and two still do.**
-``NoPlayerScoresExist`` and ``NoHoldsExist`` remain, because nobody has ever been
-due to turn up and nothing can open a case; ``NoMatchHistoryExists`` and
-``NoResultUpdateRuleExists`` are gone, each on the day the fact its own name
-asserted stopped being true (``docs/adr/0137``, ``docs/adr/0139``). Swapping a row
-is the whole integration, which is what the register was for.
+**Four of the five rows named a null object once and one still does.**
+``NoHoldsExist`` remains, because nothing on this platform can open a case;
+``NoMatchHistoryExists``, ``NoResultUpdateRuleExists`` and ``NoPlayerScoresExist``
+are gone, each on the day the fact its own name asserted stopped being true
+(``docs/adr/0137``, ``docs/adr/0139``, ``docs/adr/0140``). Swapping a row is the
+whole integration, which is what the register was for — and the one row left is a
+**gate** rather than a term, which is ``docs/adr/0098``'s rule showing through:
+a gate may be honestly empty, and a term may never be honestly neutral.
 
 **A row names one implementation and not one provider**, which is what lets
 ``GamesPlayedAndChallengesAnswered`` sit here as ``MatchHistoryQuery``'s single
@@ -85,7 +87,7 @@ class RegisteredImplementation(Generic[P]):
 REGISTERED_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     RegisteredImplementation(
         port=PlayerScoreQuery,
-        name="NoPlayerScoresExist",
+        name="PublishedPlayerScores",
         build=build_player_score_query,
     ),
     RegisteredImplementation(

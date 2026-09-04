@@ -298,42 +298,59 @@ half-the-live-terms bar. It stays true that the evidence gate excludes nobody to
 
 ## 6. Reliability, decomposed by mode
 
-§9.3.4's table transfers unchanged.
+> **Amended by [ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md) and
+> [ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md).**
+> *Confirms results* is **struck from the vocabulary**, not merely unbuilt: an unconfirmed
+> result is a fact about a pair, a strand is a verdict about a person, and every denominator
+> tried on it docks somebody ADR-0049 protects. §9.3.4's six-name table no longer transfers.
+> The five survivors are the **same vector rescaled to sum to a hundred** by largest remainder,
+> because dropping a key from a weight map that must total a hundred forces the rest to be
+> re-expressed. The **scaling** is inert — the term already renormalises over the strands that
+> arrive — so what moves is the integer rounding: 0.016 and 0.009 Fit points on the two
+> reliability readings in the walkthrough goldens, no reordering and no floor crossing.
 
-| Strand | Comp | Fun |
-|---|--:|--:|
-| Shows up | 25 | **32** |
-| Answers challenges | 22 | 22 |
-| Confirms results | **24** | 4 |
-| Keeps plans | 14 | 14 |
-| Settles up | 10 | 12 |
-| Sportsmanship | 5 | **16** |
+| Strand | Comp | Fun | Was (comp/fun, of six) |
+|---|--:|--:|---|
+| Shows up | 33 | 33 | 25 / 32 |
+| Answers challenges | **29** | 23 | 22 / 22 |
+| Keeps plans | 18 | 15 | 14 / 14 |
+| Settles up | 13 | 12 | 10 / 12 |
+| Sportsmanship | 7 | **17** | 5 / 16 |
 
 **The decomposition earns its complexity, and here is the proof rather than the assertion.**
-Take two candidates identical on four strands at 0.75:
+Take two candidates identical on three strands at 0.75:
 
-| | confirms | sportsmanship | **comp** | **fun** |
+| | keeps plans | sportsmanship | **comp** | **fun** |
 |---|--:|--:|--:|--:|
-| P | 0.95 | 0.55 | **0.788** | 0.726 |
-| Q | 0.55 | 0.95 | 0.712 | **0.774** |
+| P | 0.95 | 0.55 | **0.772** | 0.746 |
+| Q | 0.55 | 0.95 | 0.728 | **0.754** |
 
 The two modes order them **oppositely**. A single blended score cannot express that, which is
 §9.3.4's argument, now checkable: **the decomposition is justified for exactly as long as such a
 pair exists.** If a later ruleset flattens the two vectors until none does, the decomposition
 has stopped paying and should collapse to the published number.
 
-There are **three** blends of the same six strands in this system, and confusing them is a live
-risk: the published Player Score at `35/20/15/12/10/8`
+**The inversion narrowed when the sixth strand was struck, and it is now asserted rather than
+assumed.** The widest pair was *confirms results* against *sportsmanship*, at 24/4 versus 5/16;
+what is left is 18/7 versus 15/17, and `tests/unit/test_matchfit_terms.py` holds the pair above
+so the day none inverts is a red build rather than a quiet one.
+
+There are **three** blends of the same five strands in this system, and confusing them is a live
+risk: the published Player Score at `35/20/12/10/8`
 ([`the-five-numbers.md`](the-five-numbers.md) §4), and these two. The reliability *floor* reads
 the published one — the one deliberate exception, recorded there.
 
-**Settles up will stand down past the other five.** Court money is out of scope
-([ADR-0098](../../adr/0098-matcher-demands-as-executable-contracts.md)), so when
-`player_score` lands the strand vector renormalises within itself exactly as §10 renormalises
-the terms.
+**Three strands stand down and two are live** (ADR-0140). *Shows up* and *answers challenges*
+have a provider; *keeps plans* needs a plan with a moment, *settles up* needs court money and
+*sportsmanship* needs a rating surface, and none of the three exists. The strand vector
+renormalises within itself over whatever arrives, exactly as §10 renormalises the terms — which
+is why a strand with no provider costs the reading nothing.
 
 - **Falsified by:** ghost rate and answer rate regressed on each strand **separately**. A strand
-  that predicts nothing on its own is a strand whose weight belongs to its neighbours.
+  that predicts nothing on its own is a strand whose weight belongs to its neighbours. **The
+  first strand this can now be run against is *shows up***, and it is also ADR-0140's own
+  falsifier: if a ghost predicts nothing about who somebody is, the strand is measuring weather
+  and should be withdrawn the way *confirms results* was.
 
 ---
 

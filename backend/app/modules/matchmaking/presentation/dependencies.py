@@ -276,7 +276,7 @@ def get_search_workbench(
         cards=build_player_card_source(
             session=db, event_store=event_store, events=events, storage=storage
         ),
-        absent_terms=build_absent_terms(player_scores),
+        absent_terms=build_absent_terms(),
         meter=meter,
     )
 

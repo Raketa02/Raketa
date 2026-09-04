@@ -114,10 +114,11 @@ def of_record(row: SearchCandidateRecord) -> Sortable:
     ``reliability`` is ``None`` for every recorded row, and that is a **stated
     limit rather than an oversight**: the published Player Score is not on the
     record, so *Most reliable* cannot be offered honestly on a read-back and is
-    therefore not drawn. It is inert today — the reliability term stands down for
-    everybody, so the live search does not draw it either — and the day
-    ``player_score`` ships, the fix is a recorded reading, never a control this
-    route guesses at.
+    therefore not drawn. ``player_score`` ships now (``docs/adr/0140``), so the
+    live search can draw the control for a searcher whose candidates have a
+    record — but a read-back still cannot, and the fix stays what it always was:
+    a recorded reading, never a control this route guesses at. It is #306 that
+    records it.
     """
 
     return Sortable(
@@ -139,9 +140,11 @@ def sorts_available(
     so there is nothing for it to reorder and the control is not drawn.
 
     ``MOST_RELIABLE`` is absent for as long as the reliability term stands down
-    for everybody — which is a fact about the platform, re-derived per search
-    rather than hardcoded, so the control appears by itself on the day
-    ``player_score`` ships.
+    for everybody — which is a fact about **this search**, re-derived per search
+    rather than hardcoded, so the control appears by itself on a search whose
+    candidates have a record. ``player_score`` ships (``docs/adr/0140``); most
+    people have no record yet, so on most searches it is still absent, and that
+    is the derivation working rather than a gap.
 
     **Neither the deck nor a line-up draws any of them**, and that is the same
     rule rather than an exception to it. A line-up returns **seats** and not a

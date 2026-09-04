@@ -211,8 +211,19 @@ radius rung.
 ## 4. The reliability bar — 70, on the number the player can see
 
 **Which number.** The **published Player Score** — the one on the player's own profile — and
-not the matcher's private per-mode blend of the six strands. The two are different numbers: the
-screen blends at 35/20/15/12/10/8, §9.3.4 weighs per mode at 25/32, 24/4 and so on.
+not the matcher's private per-mode blend of the five strands. The two are different numbers: the
+screen blends at 35/20/12/10/8, and the ruleset weighs per mode at 33/33, 29/23 and so on
+([`ranking-weights.md`](ranking-weights.md) §6).
+
+> **Amended by [ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md).**
+> There were six strands and *confirms results* was struck
+> ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)), taking its `15`
+> out of the published blend and its two ruleset weights with it. The published vector **sums to
+> 85 and is not renormalised to a hundred**, because its basis is the strands a player actually
+> has rather than a budget — the blend renormalises over what is present, which is what lets a
+> player the platform can see two things about be compared with one it can see five about. The
+> per-mode vectors *were* rescaled, because a ruleset weight map is validated as totalling a
+> hundred. **The bar itself did not move.**
 
 [ADR-0098](../../adr/0098-matcher-demands-as-executable-contracts.md) already rules that the
 matcher reads what the player is shown and never re-derives it. A penalty justified by a figure

@@ -22,7 +22,7 @@ would make a reader check two places to be sure they had them all.
 
 | Port | Provider | Day one |
 | --- | --- | --- |
-| ``PlayerScoreQuery`` | ``player_score`` | ``NoPlayerScoresExist`` |
+| ``PlayerScoreQuery`` | ``player_score`` | a **real adapter** — the provider ships |
 | ``MatchHistoryQuery`` | ``challenges`` + ``games`` | a **real** composition of two |
 | ``AccountHoldQuery`` | ``cases`` | ``NoHoldsExist`` |
 | ``AtStakeQuery`` | ``rating``'s update rule | a **real adapter** — the rule ships |
@@ -31,9 +31,11 @@ would make a reader check two places to be sure they had them all.
 **The rule that decides every shape below:** *a gate may be honestly empty; a
 term may never be honestly neutral*, and the test is whether a zero would be
 **measured** or **invented**. Nobody can be held because nothing can hold
-anybody, so the hold gate ships true-over-empty and its zero is real. Nobody has
-failed to turn up because nobody has ever been *due* to, so every ``player_score``
-fact is an absence and never a `0.5`.
+anybody, so the hold gate ships true-over-empty and its zero is real. A player
+nothing has ever been arranged for has not failed to turn up, so they are
+**absent from the ``player_score`` answer** and never a `0` or a `0.5` — which is
+now a rule a real provider keeps rather than one a null object could not break
+(``docs/adr/0140``).
 
 **The matcher reads what the player is shown and never re-derives it.** A card
 explaining a match with a number the player's own profile disagrees with is worse
@@ -59,7 +61,7 @@ from app.kernel import Instant, Minutes, Sport, invariant
 @final
 @dataclass(frozen=True)
 class RatioStrand:
-    """One of the five ratio strands: what was published, and out of what.
+    """One of the four ratio strands: what was published, and out of what.
 
     ``value`` is **the number the player is shown on their own Player Score
     screen**, out of a hundred, and the matcher never re-derives it from the
@@ -102,10 +104,15 @@ class RatioStrand:
 class SportsmanshipStrand:
     """Sportsmanship — **a mean of 1–5, not a ratio.**
 
-    It is the sixth strand and the one with no good outcome to count, so it
+    It is the fifth strand and the one with no good outcome to count, so it
     crosses as its mean and the number of ratings behind it. A separate type
     rather than a ratio with a convention, because a mean smuggled through a
     numerator would be a strand nobody could interpret and nothing could refuse.
+
+    **Nothing constructs one yet**, and that is not a gap in this file: the one
+    strand shaped differently from the rest is also the one with no surface on
+    which anybody could rate anybody (``docs/adr/0140``). Inventing a mean to
+    exercise the shape would put a number on a card that nobody said.
     """
 
     mean: float
@@ -124,8 +131,8 @@ class SportsmanshipStrand:
         )
 
 
-#: What a strand crosses as. Two shapes, because five of the six are ratios and
-#: the sixth is a mean, and one shape covering both would be a shape that
+#: What a strand crosses as. Two shapes, because four of the five are ratios and
+#: the fifth is a mean, and one shape covering both would be a shape that
 #: describes neither.
 StrandObservation = RatioStrand | SportsmanshipStrand
 
@@ -133,25 +140,27 @@ StrandObservation = RatioStrand | SportsmanshipStrand
 @final
 @dataclass(frozen=True)
 class PlayerScoreReading:
-    """One player's Player Score, **as six strands and never as one number.**
+    """One player's Player Score, **as strands and never as one number.**
 
-    §9.3.4 weighs the strands **per mode** — 25/32, 22/22, 24/4, 14/14, 10/12,
-    5/16 — and the two vectors order people oppositely: *confirms results* is
-    close to worthless for a friendly and close to essential for a counted game.
-    One blended number cannot express that. The Player Score is nonetheless *one
-    number in the UI*, so the obvious thing to ship is that number — which is
-    exactly the failure ``docs/adr/0098`` is written against, and why there is
-    **nowhere here to put a blend of the six**.
+    The ruleset weighs the strands **per mode** — 33/33, 29/23, 18/15, 13/12,
+    7/17 — and the two vectors order people oppositely: *keeps plans* is worth
+    two and a half times sportsmanship for a counted game and less than it for a
+    friendly. One blended number cannot express that. The Player Score is
+    nonetheless *one number in the UI*, so the obvious thing to ship is that
+    number — which is exactly the failure ``docs/adr/0098`` is written against,
+    and why there is **nowhere here to put a blend of the five**.
 
     ``published_score`` is not that blend and is the one deliberate exception,
     recorded so it does not later read as an oversight. It is the figure on the
-    player's own profile at the player-facing weights (35/20/15/12/10/8), read by
-    **one** consumer — the reliability floor, whose ``published_score_bar`` lives
-    in the ruleset beside it. A penalty justified by a figure that exists nowhere
-    a human can look is unexplainable, and a player working their visible score
-    back up must be able to watch the penalty lift. It may never be weighed as a
-    term, and it cannot stand in for the strands: a reading with no strand in it
-    is refused below.
+    player's own profile at the player-facing weights (35/20/12/10/8, renormalised
+    over the strands present), computed by ``player_score`` and read here rather
+    than derived. Its consumer **in the matcher** is the reliability floor, whose
+    ``published_score_bar`` lives in the ruleset beside it; the player card is a
+    second reader one layer out and prints the same figure (``docs/adr/0140``). A
+    penalty justified by a figure that exists nowhere a human can look is
+    unexplainable, and a player working their visible score back up must be able
+    to watch the penalty lift. It may never be weighed as a term, and it cannot
+    stand in for the strands: a reading with no strand in it is refused below.
 
     **An empty reading is not a reading.** Absence has one spelling — the player
     is simply not in the answer — because two spellings of *we have nothing* is
@@ -198,7 +207,12 @@ class PlayerScoreReading:
 
 @runtime_checkable
 class PlayerScoreQuery(Protocol):
-    """The six reliability strands, each with the evidence behind it.
+    """The five reliability strands, each with the evidence behind it.
+
+    **Two of them have a provider** — *shows up*, out of plans that settled either
+    way, and *answers challenges*, out of invitations whose day is over. The other
+    three are absent from every reading rather than published at nought, and the
+    term renormalises over what arrives (``docs/adr/0140``).
 
     **The matcher applies no decay of its own.** The score is a memory and fades
     with new evidence on the provider's side; a second decay here would
@@ -213,7 +227,7 @@ class PlayerScoreQuery(Protocol):
     demand nobody reads is a demand nobody notices going wrong, and a contract
     suite is exactly where an unread row goes quietly stale.
 
-    ***Settles up* will stand down long after the other five are live.** It
+    ***Settles up* will stand down long after the other four are live.** It
     depends on court money, which is out of scope. Expected, not a defect — and
     it is the **historical record**, never the live case: the open case is the
     Hold and does its work at ``AccountHoldQuery``.
@@ -227,8 +241,9 @@ class PlayerScoreQuery(Protocol):
         """Each of these players' Player Score, for those that have one.
 
         A player with no record is **absent from the answer** — not a zero and
-        not a neutral half. Read once per search for the surviving candidates,
-        never a query per row.
+        not a neutral half. Read once per search over the box, never a query per
+        row: the provider folds two event logs behind this, and a per-row call
+        would be a thousand walks of them inside one request.
         """
         ...
 

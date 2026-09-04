@@ -537,7 +537,7 @@
         "RELIABILITY"
       ],
       "degraded_terms": [],
-      "fit": 60.522002,
+      "fit": 60.513002,
       "inclusion_reason": "ZERO_EXPOSURE",
       "liveness_reasons": [
         {
@@ -554,7 +554,7 @@
         }
       ],
       "player_id": "00000002-0000-0000-0000-000000000000",
-      "rank_key": 70.522002,
+      "rank_key": 70.513002,
       "terms": [
         {
           "contribution": 16.0,
@@ -654,7 +654,7 @@
           "weight": 6.0
         },
         {
-          "contribution": 3.15,
+          "contribution": 3.141,
           "evidence": {
             "floor_breached": true,
             "kind": "reliability",
@@ -671,7 +671,7 @@
             ]
           },
           "term": "RELIABILITY",
-          "value": 0.35,
+          "value": 0.349,
           "weight": 9.0
         }
       ],
