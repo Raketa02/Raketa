@@ -1835,6 +1835,8 @@ radius   radius.court 9
 seats    POSITIONS. The caller supplies what stands in each one.
 build    196 — the width at which a seat is 46. The interactive court, always.
 thumb    54 — the court as a picture BESIDE a sentence, never as a surface
+header   84 — the court INSIDE a card about it. Above 72, so the seat is the ratio
+         rather than the floor, and the faces sit in the ground instead of on it
 ```
 
 > **`Court` takes a Sport and a box, renders the ground, the chrome and the seat _positions_,

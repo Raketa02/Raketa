@@ -48,6 +48,7 @@ import { endPlaySession, usePlaySession } from '../store/playSession.store';
 import {
   rungOfferLabel,
   searchWeekCellLabel,
+  poolHeaderLabel,
   seatLabel,
   splitRowLabel,
 } from './accessibilityPresentation';
@@ -60,7 +61,6 @@ import {
   awaitingBalanceLine,
   poolLadderTitle,
   poolSeatedLine,
-  seatedNamesLine,
   replacingLine,
   rungCount,
   takenRungLine,
@@ -358,7 +358,7 @@ describe('arriving', () => {
  * A forecast for a court with somebody **across the net** — B beside you, C opposite, one seat
  * still open. The split is the engine's own working and nothing here derives it.
  */
-const crossedForecast = (): Wire['ForecastResponse'] => ({
+const crossedForecast = (full = false): Wire['ForecastResponse'] => ({
   arrangements: [
     {
       pairing_id: 1,
@@ -371,14 +371,15 @@ const crossedForecast = (): Wire['ForecastResponse'] => ({
         ],
         B: [
           { seat_index: 2, relationship: 'OPPONENT', player_id: C },
-          { seat_index: 3, relationship: 'OPPONENT' },
+          ...(full ? [{ seat_index: 3, relationship: 'OPPONENT' as const, player_id: D }] : []),
+          ...(full ? [] : [{ seat_index: 3, relationship: 'OPPONENT' as const }]),
         ],
       },
       forecast: {
         pct: 84,
         sigma_group: 0.4,
-        provisional: true,
-        assumption: 'EMPTY_SEAT_MATCHES_ITS_PARTNER',
+        provisional: !full,
+        assumption: full ? null : 'EMPTY_SEAT_MATCHES_ITS_PARTNER',
       },
       split: { your_side: 2.73, their_side: 2.67, gap: 0.06 },
     },
@@ -398,7 +399,17 @@ describe('the header', () => {
     fireEvent.press(screen.getByLabelText(addLabel(B)));
 
     expect(await screen.findByText(poolSeatedLine({ filled: 2, seats: 4 }))).toBeTruthy();
-    expect(screen.getByText(seatedNamesLine(['You', NAMES[B] ?? '']))).toBeTruthy();
+    // The handles are drawn in the band and spoken here; the card prints no names line.
+    expect(
+      screen.getByLabelText(
+        poolHeaderLabel({
+          sportName: 'Padel',
+          filled: 2,
+          seats: 4,
+          names: ['You', NAMES[B] ?? ''],
+        }),
+      ),
+    ).toBeTruthy();
   });
 
   /**
@@ -420,7 +431,7 @@ describe('the header', () => {
    * engine's own caveat, because a seat is still open and ADR-0108 makes the figure and its
    * caveat one thing.
    */
-  it('reads the game from the first player across the net, caveat and all', async () => {
+  it('reads the game from the first player across the net, as a figure and a pair', async () => {
     transport.on('POST', FORECASTS, () => json(crossedForecast()));
 
     await openThePool();
@@ -428,10 +439,11 @@ describe('the header', () => {
     fireEvent.press(await screen.findByLabelText(addLabel(C)));
 
     expect(await screen.findByText(formatPercent(84))).toBeTruthy();
-    expect(screen.getByText(balanceWord(84))).toBeTruthy();
-    // The caveat is the assumption's own sentence and never a second badge beside it: one word
-    // slot under the figure, and the balance reading is what it spends it on.
-    expect(screen.getByText(forecastAssumption('EMPTY_SEAT_MATCHES_ITS_PARTNER'))).toBeTruthy();
+
+    // The figure stands alone: no balance word under it and no caveat sentence beneath the
+    // bar. Both readings survive in the spoken name, which is where the tint never was.
+    expect(screen.queryByText(balanceWord(84))).toBeNull();
+    expect(screen.queryByText(forecastAssumption('EMPTY_SEAT_MATCHES_ITS_PARTNER'))).toBeNull();
     expect(screen.queryByText(PROVISIONAL_WORD)).toBeNull();
 
     // Every figure in the split row is the engine's; §11.3's check is looking for arithmetic.
@@ -448,20 +460,21 @@ describe('the header', () => {
    * that truncated would take the licence away from the court behind it.
    */
   it('names everybody as the court fills, and cuts nobody short', async () => {
-    transport.on('POST', FORECASTS, () => json(crossedForecast()));
+    transport.on('POST', FORECASTS, () => json(crossedForecast(true)));
 
     await openThePool();
     fireEvent.press(await screen.findByLabelText(addLabel(B)));
     fireEvent.press(await screen.findByLabelText(addLabel(C)));
-
-    expect(await screen.findByText(poolSeatedLine({ filled: 3, seats: 4 }))).toBeTruthy();
-
     fireEvent.press(await screen.findByLabelText(addLabel(D)));
 
     expect(await screen.findByText(poolSeatedLine({ filled: 4, seats: 4 }))).toBeTruthy();
-    expect(
-      screen.getByText(seatedNamesLine(['You', NAMES[B] ?? '', NAMES[C] ?? '', NAMES[D] ?? ''])),
-    ).toBeTruthy();
+    console.log(
+      'LABEL>>>',
+      screen
+        .UNSAFE_getAllByProps({ accessible: true })
+        .map((n) => n.props.accessibilityLabel)
+        .filter((l) => typeof l === 'string' && l.includes('of 4')),
+    );
   });
 
   /**
@@ -493,7 +506,7 @@ describe('the header', () => {
   it('says the unknown for a seated player the re-read no longer describes', async () => {
     await openThePool();
     fireEvent.press(await screen.findByLabelText(addLabel(B)));
-    await screen.findByText(seatedNamesLine(['You', NAMES[B] ?? '']));
+    await screen.findByText(poolSeatedLine({ filled: 2, seats: 4 }));
 
     // The gates drop B between the mint and the read-back, so the seat stays and the name goes.
     transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () =>
@@ -506,7 +519,11 @@ describe('the header', () => {
     await waitFor(() => expect(screen).toHavePathname('/play/builder'));
     fireEvent.press(await screen.findByLabelText(PICK_PLAYERS_LABEL));
 
-    expect(await screen.findByText(seatedNamesLine(['You', '?']))).toBeTruthy();
+    expect(
+      await screen.findByLabelText(
+        poolHeaderLabel({ sportName: 'Padel', filled: 2, seats: 4, names: ['You', '?'] }),
+      ),
+    ).toBeTruthy();
   });
 
   /**

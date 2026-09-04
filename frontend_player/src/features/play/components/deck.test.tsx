@@ -541,7 +541,6 @@ describe('the empty deck', () => {
         poolDescription({
           playersInRange: 7,
           radiusKmUsed: 12,
-          window: 'THIS_WEEK',
           sportName: 'Padel',
         }),
       ),

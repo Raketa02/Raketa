@@ -216,30 +216,6 @@ export function poolSeatedLine(court: { readonly filled: number; readonly seats:
 }
 
 /**
- * Who is in them, **in seat order and whole** — your side first.
- *
- * This is the pool's half of
- * [`the-play-components.md`](../../../../../docs/specs/matchmaking/the-play-components.md) §5,
- * and the line has been owed since that section was written: the 46pt seat label is allowed to
- * cut a 64-character handle to about four characters *because* *"both screens the court appears
- * on already print the names in full and unavoidably"*. This is the one that does it here, so
- * it **wraps rather than truncating** — a truncation would take away the thing that makes the
- * seat's own truncation legal.
- *
- * The names are `playerName()`'s and are joined, never shortened. A seat whose row the record
- * no longer holds arrives as the unknown's question mark, which is the same character the seat
- * draws — nothing is invented for somebody the product has agreed not to describe.
- *
- * **A visual join, and deliberately not the comma the spoken name takes.** A middot is read as
- * a word or not at all; `poolHeaderLabel` announces the same list with pauses in it.
- */
-const NAME_JOIN = ' · ';
-
-export function seatedNamesLine(names: readonly string[]): string {
-  return names.join(NAME_JOIN);
-}
-
-/**
  * What stands where the reading will be, **until there is a game to read**.
  *
  * The engine serves a forecast from the first person added and gets there by assuming an empty

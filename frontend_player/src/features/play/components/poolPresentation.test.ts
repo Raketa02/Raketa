@@ -11,7 +11,6 @@ import {
   awaitingBalanceLine,
   poolLadderTitle,
   poolSeatedLine,
-  seatedNamesLine,
   rungCount,
   takenRungLine,
   terminalReachLine,
@@ -149,20 +148,6 @@ describe('the header', () => {
     expect(poolSeatedLine({ filled: 4, seats: 4 })).toBe('4 of 4 seated');
     expect(poolSeatedLine({ filled: 1, seats: 2 })).toBe('1 of 2 seated');
     expect(poolSeatedLine({ filled: 2, seats: 2 })).toBe('2 of 2 seated');
-  });
-
-  it('prints every handle whole, in seat order, and never cuts one', () => {
-    const long = 'marekwiśniewski-plays-every-tuesday-and-most-saturdays-in-warsaw';
-
-    expect(seatedNamesLine(['You', 'Karol', 'Magda', 'Ania'])).toBe('You · Karol · Magda · Ania');
-    expect(seatedNamesLine(['You', long])).toContain(long);
-  });
-
-  it('passes the unknown through rather than tidying it away', () => {
-    // The screen hands in whatever `playerName()` answered, and a withheld row answers `?` —
-    // the same character the seat itself draws. What is asserted here is only that this line
-    // does not drop or replace it; deriving it is the screen's, and is tested there.
-    expect(seatedNamesLine(['You', '?'])).toBe('You · ?');
   });
 
   it('promises the balance against the half that is actually empty', () => {

@@ -49,19 +49,19 @@ export function windowLabel(window: Window): string {
  * narrowing the served code a second time would be a second place it could be narrowed
  * differently.
  *
- * **The window clause is dropped where the code is one this build cannot read** — §3's drop
- * rather than a gap, because the sentence around it still states the count and the radius,
- * which are the two facts a player acts on.
+ * **The window is not printed here at all.** It was appended as a middot clause — *… within 15
+ * km · Whenever suits* — and it is the one fact in the sentence a player cannot act on from
+ * where they are reading it: on the pool the ladder below states the window per rung and names
+ * it when a rung would move it, and on the deck there is no window to move. What is left is
+ * the count and the radius, which §3 already called *the two facts a player acts on*.
  */
 export function poolDescription(pool: {
   readonly playersInRange: number;
   readonly radiusKmUsed: number;
-  readonly window: Window | null;
   readonly sportName: string;
 }): string {
   const players = counted(pool.playersInRange, 'player', 'players');
-  const range = `${players} in range for ${pool.sportName}, within ${pool.radiusKmUsed} km`;
-  return pool.window === null ? `${range}.` : `${range} · ${windowLabel(pool.window)}`;
+  return `${players} in range for ${pool.sportName}, within ${pool.radiusKmUsed} km.`;
 }
 
 /**

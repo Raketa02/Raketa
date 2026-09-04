@@ -94,18 +94,12 @@ import { seatsFilled, theirSideSeated, toBuildSeat } from '../domain/forecast';
 import { seatPlaces } from '../domain/lineup';
 
 import { courtSummaryLabel, poolHeaderLabel, splitRowLabel } from './accessibilityPresentation';
-import { balanceLabel, balanceTone, balanceWord } from './balancePresentation';
+import { balanceLabel, balanceTone } from './balancePresentation';
 import { GAP_WORD, SIDE_HEADINGS, sideName } from './builderPresentation';
 import { CourtMini } from './court/CourtMini';
 import type { CourtFaceOccupant } from './court/seatFace';
 import { handlesOn } from './court/seatedHandles';
-import {
-  POOL_COURT_LABEL,
-  awaitingBalanceLine,
-  poolSeatedLine,
-  seatedNamesLine,
-} from './poolPresentation';
-import { forecastAssumption } from './searchPresentation';
+import { POOL_COURT_LABEL, awaitingBalanceLine, poolSeatedLine } from './poolPresentation';
 
 export interface PoolHeaderProps {
   readonly sport: SportKey;
@@ -176,27 +170,29 @@ export function PoolHeader({
           <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             <CourtMini
               sport={sport}
-              width={theme.size.court.thumb}
+              width={theme.size.court.header}
               summary={courtSummaryLabel({ sportName, filled, seats })}
               caption={sportName}
               seats={seated.map((seat) => faceOf(seat, { rows, self }))}
             />
           </View>
 
+          {/* The count alone. **The handles are in the band**, on the two segment labels, and
+              printing them here as well would be the same four names twice in one card — which
+              is why the line that used to sit under this one is gone. They are still whole in
+              the spoken name, where nothing else carries them. */}
           <View style={s.who}>
             <Text style={s.count}>{poolSeatedLine({ filled, seats })}</Text>
-            {/* **Wraps rather than truncating** — §5's licence for the seat label depends on
-                this line printing the names whole. */}
-            <Text style={s.names}>{seatedNamesLine(names)}</Text>
           </View>
 
+          {/* The figure and nothing under it. §B9's balance word stood here while the figure
+              was **tinted** — Part 13's *never colour alone*, where the word said what the
+              colour meant. The figure is white now (see the module note), so there is no
+              colour to read and no word owed: what is left is a number, on the axis the
+              control beside it sits on. The word is still the whole of the bar's own spoken
+              name, and of this block's. */}
           {read === undefined ? null : (
-            <View style={s.reading}>
-              <Text style={s.figure}>{formatPercent(read.forecast.pct)}</Text>
-              {/* Part 13's *never colour alone*: the tint is the claim, and this is what it
-                  says. */}
-              <Text style={s.word}>{balanceWord(read.forecast.pct)}</Text>
-            </View>
+            <Text style={s.figure}>{formatPercent(read.forecast.pct)}</Text>
           )}
         </View>
 
@@ -259,10 +255,12 @@ function Reading({
 
   return (
     <>
+      {/* **The three figures, and no names over them.** The bar directly beneath labels both
+          of its segments, so a name here would sit two lines above the same name — and the
+          figures line up over the fold they describe. The spoken name still carries whose
+          each strength is (`splitRowLabel`), because a listener has no band to read. */}
       <View style={s.split} accessible accessibilityLabel={splitRowLabel(spoken, split)}>
-        <Text style={[s.side, s.sideYours]} numberOfLines={1}>
-          {drawn.yours} <Text style={s.level}>{formatLevel(split.yourSide)}</Text>
-        </Text>
+        <Text style={[s.sideLevel, s.sideYours]}>{formatLevel(split.yourSide)}</Text>
 
         {/* **Signed, as it was served.** Taking the sign off would be this card doing
             arithmetic over a number it was handed. */}
@@ -270,9 +268,7 @@ function Reading({
           {GAP_WORD} {formatLevel(split.gap)}
         </Text>
 
-        <Text style={[s.side, s.sideTheirs]} numberOfLines={1}>
-          <Text style={s.level}>{formatLevel(split.theirSide)}</Text> {drawn.theirs}
-        </Text>
+        <Text style={[s.sideLevel, s.sideTheirs]}>{formatLevel(split.theirSide)}</Text>
       </View>
 
       {/* Drawn and hidden: the row above prints all three of the bar's numbers, so its own name
@@ -287,15 +283,6 @@ function Reading({
           accessibilityLabel={balanceLabel(forecast.pct)}
         />
       </View>
-
-      {/* ADR-0108: the figure and its caveat are one thing — and the caveat is the
-          **assumption's own sentence**, never a second badge beside it. `PROVISIONAL_WORD` is
-          deliberately not drawn here, which is the rule the card this replaces already held:
-          one word slot under the figure, and the balance reading is what it spends it on. A
-          caveat this build has no words for draws nothing at all. */}
-      {forecast.assumption === null ? null : (
-        <Text style={s.body}>{forecastAssumption(forecast.assumption)}</Text>
-      )}
     </>
   );
 }
@@ -335,15 +322,11 @@ const s = StyleSheet.create({
   claim: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   who: { flex: 1, gap: theme.space.xxs },
   count: { ...theme.type.cardTitle, color: theme.color.surface },
-  names: { ...theme.type.tiny, color: theme.color.onDarkTiny },
-  reading: { alignItems: 'flex-end' },
   figure: { ...theme.num.l, ...theme.tabular, color: theme.color.surface },
-  word: { ...theme.type.tiny, color: theme.color.onDarkTiny },
   split: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
-  side: { ...theme.type.tiny, color: theme.color.onDarkTiny, flex: 1 },
   sideYours: { textAlign: 'left' },
   sideTheirs: { textAlign: 'right' },
-  level: { ...theme.num.xs, ...theme.tabular, color: theme.color.surface },
+  sideLevel: { ...theme.num.xs, ...theme.tabular, color: theme.color.surface, flex: 1 },
   gap: { ...theme.type.tiny, color: theme.color.onDarkTiny },
   body: { ...theme.type.tiny, color: theme.color.onDarkTiny },
 });

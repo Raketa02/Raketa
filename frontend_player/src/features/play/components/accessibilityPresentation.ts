@@ -435,10 +435,12 @@ export function courtSummaryLabel(court: CourtSummary): string {
  * hidden and its own summary is carried here instead, which is why this opens with
  * `courtSummaryLabel`'s sentence rather than a second wording of it.
  *
- * **The names are spoken with commas and drawn with a middot.** `seatedNamesLine` is the
- * drawing; a middot is a visual join a screen reader reads as a word or not at all, and a comma
- * is the pause a spoken clause needs. That is the same split `balanceReading` and `balanceLabel`
- * already keep one file over, and this takes the **spoken** one of that pair.
+ * **This is the only place the handles are said at all.** The card draws them once, on the
+ * balance bar's two segment labels, and that bar is hidden — so a listener who did not hear
+ * them here would not hear them. They were also printed as a middot-joined line under the seat
+ * count until the same four names appeared twice in one card; the commas are what a spoken
+ * clause needs, which is the split `balanceReading` and `balanceLabel` already keep one file
+ * over.
  *
  * **It takes the percentage rather than a composed reading**, on §20's *code → message, never
  * message → message*: handed a string, a caller could pass the drawn form and put a middot into

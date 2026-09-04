@@ -69,31 +69,27 @@ describe('the empty states', () => {
    * codes — the count post-gate, the radius the search ran on, and the window.
    */
   it('states the pool the deal came out of', () => {
-    expect(
-      poolDescription({
-        playersInRange: 7,
-        radiusKmUsed: 12,
-        window: 'THIS_WEEK',
-        sportName: 'Padel',
-      }),
-    ).toBe('7 players in range for Padel, within 12 km · This week');
+    expect(poolDescription({ playersInRange: 7, radiusKmUsed: 12, sportName: 'Padel' })).toBe(
+      '7 players in range for Padel, within 12 km.',
+    );
   });
 
   it('counts one player without an s', () => {
-    expect(
-      poolDescription({ playersInRange: 1, radiusKmUsed: 8, window: 'ANY', sportName: 'Tennis' }),
-    ).toBe('1 player in range for Tennis, within 8 km · Whenever suits');
+    expect(poolDescription({ playersInRange: 1, radiusKmUsed: 8, sportName: 'Tennis' })).toBe(
+      '1 player in range for Tennis, within 8 km.',
+    );
   });
 
-  it('drops the window clause where the code is one this build cannot read', () => {
-    const line = poolDescription({
-      playersInRange: 0,
-      radiusKmUsed: 8,
-      window: null,
-      sportName: 'Tennis',
-    });
+  /**
+   * The window is **not** a clause here any more. It was appended as *· Whenever suits*, and it
+   * is the one fact in the sentence a player cannot act on from where they read it: the pool's
+   * ladder states the window per rung, and a deal has no window to move.
+   */
+  it('states the count and the radius, and never the window', () => {
+    const line = poolDescription({ playersInRange: 0, radiusKmUsed: 8, sportName: 'Tennis' });
 
     expect(line).toBe('0 players in range for Tennis, within 8 km.');
+    expect(line).not.toMatch(/week|Whenever/i);
   });
 
   it('points the widening at You and never at a control on this screen', () => {

@@ -541,6 +541,20 @@ const size = {
      *  than a dot is asked of it. Not derived from the content width — a court that grew
      *  with the phone would stop being a thumbnail on a large one. */
     thumb: 54,
+    /**
+     * The court **inside a card that is about the court** — the pool header's.
+     *
+     * The number is chosen against `seatMin` rather than by eye. Below 72 the ratio loses to
+     * the floor, so a `thumb`'s seat is 17pt against a 54pt court: **31 % of the width where
+     * the ratio asks for 23,5 %**, which is why faces on a thumbnail crowd the ground they
+     * stand on. That is right for a picture beside a sentence, where the seat is a dot saying
+     * a seat exists. It is wrong here, where the faces are the point and the player watches
+     * them arrive.
+     *
+     * At 84 the seat is 20pt and the ratio governs again, so the court is a court with people
+     * standing in it rather than a badge with four squares over it.
+     */
+    header: 84,
     sideLabelOpacity: 0.6,
     line: {
       bound: 0.3,
