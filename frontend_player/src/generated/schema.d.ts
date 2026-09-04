@@ -840,6 +840,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your games
+         * @description **Arranged, played and finished in one list.** A game awaiting an entry, one awaiting an answer and one that never happened are one thing at three moments of its life.
+         *
+         *     **The standing is derived, never stored.** It is folded from the record and the clock at the moment you asked, so a game whose entry window ran out reads as never played whether or not anything has swept it — nothing sweeps it, because there is nothing for a sweep to correct.
+         *
+         *     **`read_at` is the instant every standing and deadline here was folded against.** Render your countdowns from it, so they cannot disagree with the standing beside them.
+         */
+        get: operations["read_games_api_v1_games_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * State the result
+         * @description **One act, and the record decides what it means.** Send the score you believe was played:
+         *
+         *     - nothing on the table yet → you are saying *we played, here is the score*, and **that entry is what records that the game happened**. There is no date to send: the moment of the entry is the moment.
+         *     - your own side's score on the table, unanswered → a **correction**, free, and not a second turn. Any of your side may make it, not only whoever typed first.
+         *     - the other side's score on the table → your side's **one** disagreement, and it carries a score because there is no bare rejection.
+         *
+         *     **A lone score is confirmed by silence** when its 24 hours run out, and the game counts. **Two scores nobody accepts leave the game unscored** — which still counts as an evening you played and moves nobody's Level.
+         *
+         *     **Nobody is penalised for any of this.** Not for saying nothing, not for disagreeing, not for a disagreement the other side ignored.
+         */
+        post: operations["state_result_api_v1_games__game_id__result_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/result/acceptance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Agree with the result
+         * @description **One opponent suffices.** The person across the net is the whole of the evidence that a score was real.
+         *
+         *     **It does not settle the result immediately.** The grace runs from the *score*, not from your tap, and inside it a disagreement still wins — so a partner who is quick to their phone cannot close the door on an opponent who has not read it yet. `standing_proposal.settles_at` is when it becomes final.
+         *
+         *     **Saying nothing does the same thing**, a day later. Accepting is how you make it true sooner, and it is never how you avoid a penalty — there is none.
+         */
+        post: operations["accept_result_api_v1_games__game_id__result_acceptance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1634,6 +1710,103 @@ export interface components {
             assumption: string | null;
         };
         /**
+         * GameKind
+         * @description Whether this game is evidence about how well anybody plays.
+         *
+         *     **Stamped at the plan and never derived at the end.** ADR-0049's fourth
+         *     rejected option is the reason: *a friendly is a thing people choose*, and
+         *     reclassifying a counted game because nobody typed a score hands a player the
+         *     exact evening they said they did not want, and gives one word two meanings —
+         *     what you chose, and what you failed to record.
+         * @enum {string}
+         */
+        GameKind: "COUNTED" | "FRIENDLY";
+        /**
+         * GameListResponse
+         * @description Your games, newest arrangement first.
+         *
+         *     **One list and not several.** A game awaiting an entry, one awaiting an
+         *     answer and one that never happened are one thing at three moments of its
+         *     life, and splitting them would make the client's shelves the platform's
+         *     opinion about which of them matters.
+         *
+         *     ``read_at`` is the instant every standing and deadline here was folded
+         *     against. It travels so a client's countdowns and the standings beside them
+         *     cannot come from two different readings of the clock.
+         */
+        GameListResponse: {
+            /**
+             * Read At
+             * Format: date-time
+             */
+            read_at: string;
+            /** Games */
+            games: components["schemas"]["GameSchema"][];
+        };
+        /**
+         * GameSchema
+         * @description One game, its court, and what it is right now.
+         */
+        GameSchema: {
+            /**
+             * Game Id
+             * Format: uuid
+             */
+            game_id: string;
+            /**
+             * Challenge Id
+             * Format: uuid
+             * @description The ask whose line-up completed into this game
+             */
+            challenge_id: string;
+            sport: components["schemas"]["Sport"];
+            /** @description Whether this evening is evidence. **Chosen when the game was arranged and never derived at the end** — a game nobody scored stays counted, because a friendly is a thing people choose. */
+            kind: components["schemas"]["GameKind"];
+            /** @description How soon the week this was arranged for came round. ``null`` on a game born of a mutual yes: no grid was proposed from. */
+            window?: components["schemas"]["Window"] | null;
+            /** @description What this game is at the instant it was read. **Derived from the record and the clock, never stored**, so it is right for the whole gap between a deadline and anything noticing. */
+            standing: components["schemas"]["GameStanding"];
+            /**
+             * Planned At
+             * Format: date-time
+             * @description When the last seat accepted and this became a game
+             */
+            planned_at: string;
+            /**
+             * Played At
+             * @description When somebody said it happened. **The entry carries the moment** — there is no booking and no calendar, so this is the moment of the entry itself. ``null`` while nobody has said so.
+             */
+            played_at?: string | null;
+            /**
+             * Entry Closes At
+             * @description When *we played* stops being sayable and the game becomes a game that never happened. ``null`` once somebody has said it happened.
+             */
+            entry_closes_at?: string | null;
+            /**
+             * Seats
+             * @description The court, in the order the challenge handed it over
+             */
+            seats: components["schemas"]["SeatingSchema"][];
+            /** @description The agreed score. ``null`` until something settles on one — including while a lone score is still waiting, because a score nobody has answered yet is not the result. */
+            score?: components["schemas"]["ScoreSchema"] | null;
+            /** @description Win or loss **for you**. ``null`` for every standing but a confirmed one: a game nobody scored moves nobody's Level and has no outcome to give anybody. */
+            outcome?: components["schemas"]["Outcome"] | null;
+            /** @description The score waiting on an answer, when exactly one is. */
+            standing_proposal?: components["schemas"]["StandingProposalSchema"] | null;
+        };
+        /**
+         * GameSide
+         * @description Which side of the net. **Two, and the game names one of them.**
+         * @enum {string}
+         */
+        GameSide: "A" | "B";
+        /**
+         * GameStanding
+         * @description The five standings, as codes. A client's words are the client's own.
+         * @enum {string}
+         */
+        GameStanding: "AWAITING_ENTRY" | "NEVER_PLAYED" | "AWAITING_ANSWER" | "CONFIRMED" | "UNSCORED";
+        /**
          * Gender
          * @description What a player says about themselves — self-declared, freely changed.
          *
@@ -1989,6 +2162,17 @@ export interface components {
          */
         OptimisedFor: "SEARCHER" | "GROUP";
         /**
+         * Outcome
+         * @description What a confirmed result says about one of the people who played.
+         *
+         *     Two values. *Unscored* is not a third: a game with no agreed result produces
+         *     **no outcome for anybody**, which is ADR-0049's *an evening, not evidence*
+         *     stated as a type — the absence has one spelling, and it is not being in the
+         *     answer.
+         * @enum {string}
+         */
+        Outcome: "WIN" | "LOSS";
+        /**
          * OutgoingInterestSchema
          * @description One yes you sent, and when it lapses.
          *
@@ -2214,7 +2398,7 @@ export interface components {
             range: components["schemas"]["LikelyRangeSchema"];
             /**
              * Counted Games
-             * @description How many counted games they have played. **Omitted today**: the games ledger has no provider in this build, and a zero would be an invented one rather than a measured nothing.
+             * @description How many counted games they have played. **Omitted today** — but no longer for want of a provider: the games ledger ships and its zero is measured. What is missing is the assembly, and the card grows the block with the ticket that draws it. Until then the field does not apply, which is not the same as being nought.
              */
             counted_games?: number;
         };
@@ -2871,6 +3055,19 @@ export interface components {
             slot?: components["schemas"]["AvailabilitySlotResource"];
         };
         /**
+         * ScoreSchema
+         * @description The sets, in the order they were played.
+         *
+         *     **A score names a winner**, and a level score is refused: none of the four
+         *     sports produces a draw, and *Last 5* is win or loss with no third column to
+         *     put one in. A *set* here is whatever the sport calls its unit — a set in
+         *     tennis and padel, a game in squash and badminton.
+         */
+        ScoreSchema: {
+            /** Sets */
+            sets: components["schemas"]["SetScoreSchema"][];
+        };
+        /**
          * ScoredTermSchema
          * @description One term that produced a reading, and what it was worth here.
          */
@@ -3096,6 +3293,18 @@ export interface components {
             answer_by?: string | null;
         };
         /**
+         * SeatingSchema
+         * @description One person, on one side. The court is frozen at the plan.
+         */
+        SeatingSchema: {
+            side: components["schemas"]["GameSide"];
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+        };
+        /**
          * SendChallengeRequest
          * @description One press. **The court, and the search it was built on.**
          *
@@ -3135,6 +3344,26 @@ export interface components {
              * @description The challenge that now stands
              */
             challenge_id: string;
+        };
+        /**
+         * SetScoreSchema
+         * @description One set, **absolute**: what side A took, and what side B took.
+         *
+         *     Never relative to the reader. A score stored from one point of view has to be
+         *     flipped by whoever reads it next, and the first reader to forget publishes a
+         *     loss as a win.
+         */
+        SetScoreSchema: {
+            /**
+             * A
+             * @description GameSide A's games in this set
+             */
+            a: number;
+            /**
+             * B
+             * @description GameSide B's games in this set
+             */
+            b: number;
         };
         /**
          * SharedSlot
@@ -3380,6 +3609,59 @@ export interface components {
          * @enum {string}
          */
         Standing: "AWAITING_ANSWERS" | "ON" | "LINE_UP_INCOMPLETE" | "DECLINED" | "LAPSED";
+        /**
+         * StandingProposalSchema
+         * @description The score waiting on an answer, when exactly one is.
+         *
+         *     ``null`` in every other case, and the two are different: nothing has been
+         *     entered, or **both sides have spoken** and neither score is *the* one. The
+         *     second is the disagreement this platform does not resolve, and the client
+         *     reads it off `standing` rather than off an absence here.
+         */
+        StandingProposalSchema: {
+            /** @description Which side put this score on the table */
+            side: components["schemas"]["GameSide"];
+            /**
+             * Proposed By
+             * Format: uuid
+             */
+            proposed_by: string;
+            score: components["schemas"]["ScoreSchema"];
+            /**
+             * Proposed At
+             * Format: date-time
+             */
+            proposed_at: string;
+            /**
+             * Answer By
+             * Format: date-time
+             * @description When the other side's silence becomes agreement. **Nothing happens at this moment** — no job runs and nothing is written; the game simply reads as confirmed from here on.
+             */
+            answer_by: string;
+            /**
+             * Settles At
+             * Format: date-time
+             * @description When an acceptance of this score would become final. Earlier than `answer_by`, and it is the grace an opponent who has not read the score yet is given: inside it a disagreement still wins.
+             */
+            settles_at: string;
+        };
+        /**
+         * StateResultRequest
+         * @description *This is the score.*
+         *
+         *     **One request for three acts**, and the record decides which: the first score
+         *     entered, a correction of your own side's while nobody has answered it, or
+         *     your side's disagreement with the other's. A client that named which would be
+         *     a client that could name it wrongly, and a mislabelled correction is a
+         *     proposal nobody may make.
+         *
+         *     **There is no rejection here and there is no body without a score.** An
+         *     objection carrying nothing would be free and always optimal for the loser.
+         */
+        StateResultRequest: {
+            /** @description The score you say was played */
+            score: components["schemas"]["ScoreSchema"];
+        };
         /**
          * StrandReading
          * @description One reliability strand that produced a reading.
@@ -5217,6 +5499,157 @@ export interface operations {
              * @description `seat_already_answered` — you have answered this one. **Not idempotent, deliberately**: *yes* after *no* is a different answer and not a repeat of one.
              *
              *     `answer_window_has_passed` — your day ran out. The seat already reads as lapsed and may have been offered to somebody else, so an answer that resurrected it would contradict a card the platform has already drawn.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_games_api_v1_games_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every game you were on the court of, newest arrangement first, each with what it is right now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameListResponse"];
+                };
+            };
+        };
+    };
+    state_result_api_v1_games__game_id__result_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StateResultRequest"];
+            };
+        };
+        responses: {
+            /** @description The game as it stands with your score on the table. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameSchema"];
+                };
+            };
+            /**
+             * @description `a_result_must_carry_a_score` — an objection with nothing in it. There is no bare rejection here: a rejection carrying no score is free and always optimal for the loser.
+             *
+             *     `a_score_must_name_a_winner` — a level set, or a match level in sets. None of the four sports produces a draw, and *Last 5* has no third column to put one in.
+             *
+             *     `a_score_is_not_this_shape` — more sets than any of these sports has, or a number no set reaches.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `you_were_not_on_this_court` — no game of **yours** has that id. One code for two cases — it does not exist, or you did not play in it — because separating them would answer *is this id real* about four strangers' evening. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description Everything above, plus:
+             *
+             *     `your_side_has_already_answered` — one score per side. The cap is what bounds an argument to two rounds, and what makes silence safe to read as agreement.
+             *
+             *     `the_other_side_has_answered` — correcting is free until they respond and not afterwards.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_result_api_v1_games__game_id__result_acceptance_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The game as it stands with your agreement recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameSchema"];
+                };
+            };
+            /** @description `you_were_not_on_this_court` — no game of **yours** has that id. One code for two cases — it does not exist, or you did not play in it — because separating them would answer *is this id real* about four strangers' evening. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description Everything above, plus:
+             *
+             *     `nobody_has_proposed_a_result` — there is nothing from the other side to accept.
+             *
+             *     `accepting_your_own_sides_result` — **only the other side can accept**, because a teammate agreeing with a teammate proves nothing.
+             *
+             *     `the_result_is_already_accepted` — your side has already agreed to this one.
              */
             409: {
                 headers: {

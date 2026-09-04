@@ -34,6 +34,7 @@ from app.bootstrap.composition import (
     build_court_safety,
     build_open_challenge_query,
     build_origin_search_query,
+    build_planned_game_opening,
 )
 from app.modules.challenges.application.answer_seat import AcceptSeat, DeclineSeat
 from app.modules.challenges.application.read_challenges import ReadChallenges
@@ -81,9 +82,24 @@ ReadChallengesDep = Annotated[ReadChallenges, Depends(get_read_challenges)]
 
 
 def get_accept_seat(
-    clock: ClockDep, uow: UnitOfWorkDep, challenges: ChallengeRepositoryDep
+    db: DbSession,
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    challenges: ChallengeRepositoryDep,
 ) -> AcceptSeat:
-    return AcceptSeat(challenges=challenges, uow=uow, clock=clock)
+    """The accept, and the one thing it asks somebody else to do.
+
+    The game opening is declared here rather than inside the use case because
+    *what opens a game* is a choice about wiring — and it is on **this** answer
+    alone, because a decline empties a seat and can never fill the last one.
+    """
+
+    return AcceptSeat(
+        challenges=challenges,
+        uow=uow,
+        clock=clock,
+        planned_games=build_planned_game_opening(db),
+    )
 
 
 AcceptSeatDep = Annotated[AcceptSeat, Depends(get_accept_seat)]

@@ -515,7 +515,7 @@ async def test_a_player_with_no_photo_carries_neither_field(
     ]
 
     assert "photo_id" not in card and "photo_url" not in card
-    assert "counted_games" not in card, "the games ledger has no provider today"
+    assert "counted_games" not in card, "the card is not assembled with it yet"
     assert "bio" not in card and "last_active_at" not in card
     assert "gender" not in card
 

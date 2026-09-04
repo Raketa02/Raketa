@@ -38,6 +38,7 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_open_challenge_query,
+    build_planned_game_opening,
 )
 from app.kernel import Instant, Sport, instant
 from app.modules.challenges.application.commands import (
@@ -434,6 +435,7 @@ def _mint(session, *, safety=None) -> OpenChallengeFromMutualInterest:
         open_challenges=build_open_challenge_query(session),
         safety=safety or a_safe_court([ALICE, BOB]),
         clock=FrozenClock(SENT_AT),
+        planned_games=build_planned_game_opening(session),
     )
 
 

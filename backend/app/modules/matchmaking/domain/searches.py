@@ -221,9 +221,12 @@ class RecordedCard:
     nowhere — the one difference the round-trip assertion allows itself
     (``docs/adr/0107``, ``docs/adr/0109``).
 
-    There is no ``counted_games``: the games ledger has no provider in this
-    build, and a stored zero would be an invented measurement rather than an
-    absent one.
+    There is no ``counted_games``. The games ledger has a provider now
+    (``docs/adr/0137``) and its zero is measured — but nothing assembles the
+    figure onto a card yet, and a column recording a field nobody passes would
+    store an absence indistinguishable from a nought. The record grows the field
+    with the ticket that draws it (#306), which is also the ticket that can
+    write the search-time value it must never re-derive.
     """
 
     nickname: str

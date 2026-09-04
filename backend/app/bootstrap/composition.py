@@ -68,6 +68,25 @@ from app.modules.challenges.application.court_safety import CourtSafety
 from app.modules.challenges.application.open_from_mutual_interest import (
     OpenChallengeFromMutualInterest,
 )
+from app.modules.challenges.domain.planned_game import PlannedGameOpening
+from app.modules.challenges.infrastructure.games_planned_game import (
+    GamesPlannedGame,
+)
+from app.modules.games.application.open_planned_game import OpenPlannedGame
+from app.modules.games.domain.ports import (
+    GameDirectory,
+    GameHistoryQuery,
+    GameRepository,
+)
+from app.modules.games.infrastructure.event_sourced_game_history import (
+    EventSourcedGameHistory,
+)
+from app.modules.games.infrastructure.event_sourced_game_repository import (
+    EventSourcedGameRepository,
+)
+from app.modules.matchmaking.infrastructure.games_match_history import (
+    GamesPlayedAndChallengesAnswered,
+)
 from app.modules.challenges.domain.ports import (
     AccountHoldQuery as ChallengeAccountHoldQuery,
     ChallengeDirectory,
@@ -450,6 +469,7 @@ def build_mutual_challenge_minting(
             open_challenges=build_open_challenge_query(session, runtime=runtime),
             safety=build_court_safety(session),
             clock=build_clock(),
+            planned_games=build_planned_game_opening(session, runtime=runtime),
         )
     )
 
@@ -632,21 +652,104 @@ def build_challenge_history_query(
     )
 
 
+# --------------------------------------------------------------------------
+# Games
+# --------------------------------------------------------------------------
+
+
+def build_game_repository(
+    *,
+    session: AsyncSession,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> GameRepository:
+    """Per unit of work, for the same reason every aggregate repository is.
+
+    It takes the session as well as the store, because one of its reads is a
+    lookup by payload: *has this challenge already opened a game*, which is what
+    makes the opening idempotent inside the accept's own transaction.
+    """
+    return EventSourcedGameRepository(
+        event_store=event_store, events=events, session=session
+    )
+
+
+def build_planned_game_opening(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> PlannedGameOpening:
+    """The game a completed line-up opens, recorded inline.
+
+    It wraps a ``games`` use case rather than an aggregate: what a game born of a
+    completed line-up *is* belongs to that context, and the adapter is a
+    translation of one sentence into another.
+
+    **No unit of work here.** The opening joins the transaction of the acceptance
+    that caused it, so the use case appends and publishes and the caller commits —
+    the boundary stays a decision about the command.
+    """
+    return GamesPlannedGame(
+        OpenPlannedGame(
+            games=build_game_repository(
+                session=session,
+                event_store=build_domain_event_store(session, runtime=runtime),
+                events=build_event_publisher(session, runtime=runtime),
+            )
+        )
+    )
+
+
+def build_game_history_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> GameHistoryQuery:
+    """What ``games`` owes the rest of the platform — over the log.
+
+    Over the log rather than a projection for the reason every read in
+    ``challenges`` is: the standing is a fold of the record against a clock, and
+    a stored one would be wrong for the whole gap between a deadline passing and
+    anything noticing — with nothing to notice it, because this context has no
+    sweep.
+    """
+    return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
+
+
+def build_game_directory(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> GameDirectory:
+    """*Which games was I on the court of* — the same read, folded whole.
+
+    One class answers both ports so a screen wanting the aggregates and a search
+    wanting the counts do not run the same substring match twice. They stay two
+    ports: a caller that wants counts has no business holding the aggregates.
+    """
+    return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
+
+
 def build_match_history_query(session: AsyncSession) -> MatchHistoryQuery:
-    """``challenges`` ships and signs half of it; ``matches`` does not exist.
+    """``challenges`` and ``games``, composed into one bounded read.
 
     **The one outward port with two providers, and the split is by fact rather
-    than by contract** (``docs/adr/0098`` as amended). ``ACCEPTED`` and
-    ``DECLINED`` are challenge facts and ``PLAYED`` is ``matches``', and the seam
-    runs *through* ``pairwise_counterparts`` — so the port stays whole, this line
-    wires the half that exists, and the day ``matches`` lands it composes the two
-    rather than signing a second contract.
+    than by contract** (``docs/adr/0098`` as amended, ``docs/adr/0137``).
+    ``ACCEPTED`` and ``DECLINED`` are challenge facts and ``PLAYED`` and
+    ``PLANNED_NEVER_PLAYED`` are ``games``', and the seam runs *through*
+    ``pairwise_counterparts`` — so the port stays whole and the second provider
+    arrives here as a **composition** rather than as a second contract.
 
-    The clock is built here rather than taken, because *open* is a fact about the
-    instant the read happens and a caller holding one could hold a stale one.
+    The clock is built here rather than taken, because *open* and *a plan whose
+    window has closed* are both facts about the instant the read happens, and a
+    caller holding one could hold a stale one.
     """
-    return ChallengesButNobodyHasPlayed(
-        build_challenge_history_query(session), build_clock()
+    return GamesPlayedAndChallengesAnswered(
+        challenges=ChallengesButNobodyHasPlayed(
+            build_challenge_history_query(session), build_clock()
+        ),
+        games=build_game_history_query(session),
+        clock=build_clock(),
     )
 
 

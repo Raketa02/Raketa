@@ -628,9 +628,11 @@ class PlayerCardSchema(BaseModel):
     counted_games: int = Field(
         default=OMITTED,
         description=(
-            "How many counted games they have played. **Omitted today**: the "
-            "games ledger has no provider in this build, and a zero would be an "
-            "invented one rather than a measured nothing."
+            "How many counted games they have played. **Omitted today** — but "
+            "no longer for want of a provider: the games ledger ships and its "
+            "zero is measured. What is missing is the assembly, and the card "
+            "grows the block with the ticket that draws it. Until then the "
+            "field does not apply, which is not the same as being nought."
         ),
     )
 

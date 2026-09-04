@@ -383,6 +383,28 @@ Rules to preserve:
   `tests/unit/test_dev_console_surface.py`. Its contract is checked for **freshness**
   (`make contract-freshness`), not by the client drift check, which has no purchase on a
   document with no client.
+- **A game is opened by a completed line-up, and a result is the record that it
+  happened** ([ADR-0137](../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)).
+  `app/modules/games/` is the sixth context and the second event-sourced racket-sport one;
+  it adds **no table and no migration**, because the streams live in `event_store` beside
+  everybody else's. Four things about it are load-bearing and none of them is obvious from
+  the code alone. **Nothing creates a game over HTTP** — `challenges` calls
+  `PlannedGameOpening` **inline, in the transaction of the acceptance that filled the last
+  seat**, on `MutualChallengeMinting`'s argument: a subscriber would have to re-derive
+  *did this accept complete the line-up* by reading somebody else's aggregate, and the
+  player who taps the last accept would be told the game is on by a screen that cannot yet
+  show it. **The three ends are folded and never stored, and nothing announces one** —
+  there is no `ResultConfirmed`, no sweep and no job, because a derived standing has
+  exactly one place to be true; *silence confirms* is a clock passing, so the test for it
+  advances a clock and there is deliberately no method called `confirm`. **One route
+  resolves three acts** — `POST /games/{id}/result` is a proposal, a correction or a
+  counter depending on what already stands, so a client cannot mislabel one, and there is
+  no rejection endpoint because *a counter must carry a score*. And **a bad score is a
+  refusal, never an `invariant`**: a score arrives from a person typing it, so a level set
+  answers with `a_score_must_name_a_winner` rather than a 500 — the split
+  `CONTEXT.md`'s *Invariant vs Unavailability* names, applied at the one value object in
+  this repository a player composes by hand. Its three clocks are in
+  `games/domain/windows.py` and **none of them is configuration**.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one
@@ -431,11 +453,16 @@ tests.
   classes implementing the `Protocol` (see `tests/unit/test_resolve_current_user.py`).
 - `tests/api/` — full HTTP flows via the `client` fixture (HTTPX ASGI + in-memory SQLite).
   Reuse fixtures from `tests/conftest.py` rather than standing up new app/db instances.
-- `tests/demands/` — the matcher's **outward demands**, parameterised over every
-  implementation registered in `app/bootstrap/matcher_demands.py`
+- `tests/demands/` — the **outward demands**, parameterised over every implementation
+  registered in a register beside the wiring
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
-  to the register enrols an adapter; a port with no row fails the suite. Not named
+  to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
+  **Two registers, and they are two on purpose**: `app/bootstrap/matcher_demands.py` holds
+  the ports the *matcher* declares of contexts it does not write, and
+  `app/bootstrap/games_demands.py` holds the ports a *provider* publishes for consumers
+  that have not arrived yet. `MATCHER_DEMANDS` asserts exhaustiveness over the first kind
+  of claim and would stop meaning anything with the second kind in it.
 - Async by default (`asyncio_mode = "auto"`) — no `@pytest.mark.asyncio`.
 
 ## Environment gotchas

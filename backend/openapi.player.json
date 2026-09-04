@@ -2032,6 +2032,191 @@
           }
         }
       }
+    },
+    "/api/v1/games": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Your games",
+        "description": "**Arranged, played and finished in one list.** A game awaiting an entry, one awaiting an answer and one that never happened are one thing at three moments of its life.\n\n**The standing is derived, never stored.** It is folded from the record and the clock at the moment you asked, so a game whose entry window ran out reads as never played whether or not anything has swept it \u2014 nothing sweeps it, because there is nothing for a sweep to correct.\n\n**`read_at` is the instant every standing and deadline here was folded against.** Render your countdowns from it, so they cannot disagree with the standing beside them.",
+        "operationId": "read_games_api_v1_games_get",
+        "responses": {
+          "200": {
+            "description": "Every game you were on the court of, newest arrangement first, each with what it is right now.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/games/{game_id}/result": {
+      "post": {
+        "tags": [
+          "games"
+        ],
+        "summary": "State the result",
+        "description": "**One act, and the record decides what it means.** Send the score you believe was played:\n\n- nothing on the table yet \u2192 you are saying *we played, here is the score*, and **that entry is what records that the game happened**. There is no date to send: the moment of the entry is the moment.\n- your own side's score on the table, unanswered \u2192 a **correction**, free, and not a second turn. Any of your side may make it, not only whoever typed first.\n- the other side's score on the table \u2192 your side's **one** disagreement, and it carries a score because there is no bare rejection.\n\n**A lone score is confirmed by silence** when its 24 hours run out, and the game counts. **Two scores nobody accepts leave the game unscored** \u2014 which still counts as an evening you played and moves nobody's Level.\n\n**Nobody is penalised for any of this.** Not for saying nothing, not for disagreeing, not for a disagreement the other side ignored.",
+        "operationId": "state_result_api_v1_games__game_id__result_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StateResultRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The game as it stands with your score on the table.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameSchema"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`you_were_not_on_this_court` \u2014 no game of **yours** has that id. One code for two cases \u2014 it does not exist, or you did not play in it \u2014 because separating them would answer *is this id real* about four strangers' evening.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Everything above, plus:\n\n`your_side_has_already_answered` \u2014 one score per side. The cap is what bounds an argument to two rounds, and what makes silence safe to read as agreement.\n\n`the_other_side_has_answered` \u2014 correcting is free until they respond and not afterwards.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`a_result_must_carry_a_score` \u2014 an objection with nothing in it. There is no bare rejection here: a rejection carrying no score is free and always optimal for the loser.\n\n`a_score_must_name_a_winner` \u2014 a level set, or a match level in sets. None of the four sports produces a draw, and *Last 5* has no third column to put one in.\n\n`a_score_is_not_this_shape` \u2014 more sets than any of these sports has, or a number no set reaches.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/result/acceptance": {
+      "post": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Agree with the result",
+        "description": "**One opponent suffices.** The person across the net is the whole of the evidence that a score was real.\n\n**It does not settle the result immediately.** The grace runs from the *score*, not from your tap, and inside it a disagreement still wins \u2014 so a partner who is quick to their phone cannot close the door on an opponent who has not read it yet. `standing_proposal.settles_at` is when it becomes final.\n\n**Saying nothing does the same thing**, a day later. Accepting is how you make it true sooner, and it is never how you avoid a penalty \u2014 there is none.",
+        "operationId": "accept_result_api_v1_games__game_id__result_acceptance_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The game as it stands with your agreement recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameSchema"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`you_were_not_on_this_court` \u2014 no game of **yours** has that id. One code for two cases \u2014 it does not exist, or you did not play in it \u2014 because separating them would answer *is this id real* about four strangers' evening.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Everything above, plus:\n\n`nobody_has_proposed_a_result` \u2014 there is nothing from the other side to accept.\n\n`accepting_your_own_sides_result` \u2014 **only the other side can accept**, because a teammate agreeing with a teammate proves nothing.\n\n`the_result_is_already_accepted` \u2014 your side has already agreed to this one.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2994,6 +3179,181 @@
         "title": "ForecastSchema",
         "description": "How even a game is forecast to be. One type, everywhere it appears.\n\n``provisional`` travels **inside** the forecast rather than beside it: the\nfailure being guarded against is a screen showing the number without its\ncaveat, and a sibling boolean is exactly how the two get separated in a\nrefactor."
       },
+      "GameKind": {
+        "type": "string",
+        "enum": [
+          "COUNTED",
+          "FRIENDLY"
+        ],
+        "title": "GameKind",
+        "description": "Whether this game is evidence about how well anybody plays.\n\n**Stamped at the plan and never derived at the end.** ADR-0049's fourth\nrejected option is the reason: *a friendly is a thing people choose*, and\nreclassifying a counted game because nobody typed a score hands a player the\nexact evening they said they did not want, and gives one word two meanings \u2014\nwhat you chose, and what you failed to record."
+      },
+      "GameListResponse": {
+        "properties": {
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At"
+          },
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/GameSchema"
+            },
+            "type": "array",
+            "title": "Games"
+          }
+        },
+        "type": "object",
+        "required": [
+          "read_at",
+          "games"
+        ],
+        "title": "GameListResponse",
+        "description": "Your games, newest arrangement first.\n\n**One list and not several.** A game awaiting an entry, one awaiting an\nanswer and one that never happened are one thing at three moments of its\nlife, and splitting them would make the client's shelves the platform's\nopinion about which of them matters.\n\n``read_at`` is the instant every standing and deadline here was folded\nagainst. It travels so a client's countdowns and the standings beside them\ncannot come from two different readings of the clock."
+      },
+      "GameSchema": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "challenge_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Challenge Id",
+            "description": "The ask whose line-up completed into this game"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GameKind",
+            "description": "Whether this evening is evidence. **Chosen when the game was arranged and never derived at the end** \u2014 a game nobody scored stays counted, because a friendly is a thing people choose."
+          },
+          "window": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Window"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How soon the week this was arranged for came round. ``null`` on a game born of a mutual yes: no grid was proposed from."
+          },
+          "standing": {
+            "$ref": "#/components/schemas/GameStanding",
+            "description": "What this game is at the instant it was read. **Derived from the record and the clock, never stored**, so it is right for the whole gap between a deadline and anything noticing."
+          },
+          "planned_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Planned At",
+            "description": "When the last seat accepted and this became a game"
+          },
+          "played_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Played At",
+            "description": "When somebody said it happened. **The entry carries the moment** \u2014 there is no booking and no calendar, so this is the moment of the entry itself. ``null`` while nobody has said so."
+          },
+          "entry_closes_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Closes At",
+            "description": "When *we played* stops being sayable and the game becomes a game that never happened. ``null`` once somebody has said it happened."
+          },
+          "seats": {
+            "items": {
+              "$ref": "#/components/schemas/SeatingSchema"
+            },
+            "type": "array",
+            "title": "Seats",
+            "description": "The court, in the order the challenge handed it over"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScoreSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agreed score. ``null`` until something settles on one \u2014 including while a lone score is still waiting, because a score nobody has answered yet is not the result."
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Outcome"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Win or loss **for you**. ``null`` for every standing but a confirmed one: a game nobody scored moves nobody's Level and has no outcome to give anybody."
+          },
+          "standing_proposal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StandingProposalSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The score waiting on an answer, when exactly one is."
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "challenge_id",
+          "sport",
+          "kind",
+          "standing",
+          "planned_at",
+          "seats"
+        ],
+        "title": "GameSchema",
+        "description": "One game, its court, and what it is right now."
+      },
+      "GameSide": {
+        "type": "string",
+        "enum": [
+          "A",
+          "B"
+        ],
+        "title": "GameSide",
+        "description": "Which side of the net. **Two, and the game names one of them.**"
+      },
+      "GameStanding": {
+        "type": "string",
+        "enum": [
+          "AWAITING_ENTRY",
+          "NEVER_PLAYED",
+          "AWAITING_ANSWER",
+          "CONFIRMED",
+          "UNSCORED"
+        ],
+        "title": "GameStanding",
+        "description": "The five standings, as codes. A client's words are the client's own."
+      },
       "Gender": {
         "type": "string",
         "enum": [
@@ -3434,6 +3794,15 @@
         "title": "OptimisedFor",
         "description": "Whom this search was run for.\n\n``GROUP`` exists because a line-up with seats locked is no longer optimising\nfor the searcher, who may end up with a worse individual match than an empty\nbuilder would have given them \u2014 and the screen has to say so. A shortlist is\nalways ``SEARCHER``, and the field is on the envelope rather than implied by\nthe surface so that one renderer reads one fact."
       },
+      "Outcome": {
+        "type": "string",
+        "enum": [
+          "WIN",
+          "LOSS"
+        ],
+        "title": "Outcome",
+        "description": "What a confirmed result says about one of the people who played.\n\nTwo values. *Unscored* is not a third: a game with no agreed result produces\n**no outcome for anybody**, which is ADR-0049's *an evening, not evidence*\nstated as a type \u2014 the absence has one spelling, and it is not being in the\nanswer."
+      },
       "OutgoingInterestSchema": {
         "properties": {
           "player_id": {
@@ -3630,7 +3999,7 @@
           "counted_games": {
             "type": "integer",
             "title": "Counted Games",
-            "description": "How many counted games they have played. **Omitted today**: the games ledger has no provider in this build, and a zero would be an invented one rather than a measured nothing."
+            "description": "How many counted games they have played. **Omitted today** \u2014 but no longer for want of a provider: the games ledger ships and its zero is measured. What is missing is the assembly, and the card grows the block with the ticket that draws it. Until then the field does not apply, which is not the same as being nought."
           }
         },
         "type": "object",
@@ -4494,6 +4863,25 @@
         "title": "RungOfferSchema",
         "description": "One rung of the relaxation ladder, priced. **Offered, never applied.**\n\nThe engine computes what relaxing one of *your own* asks would be worth and\nhands you the number; it never takes the offer for you, because only you can\nsay truthfully that you are free on a Saturday.\n\n**The count is real.** It comes from re-running the whole search at this\nrung \u2014 not from an estimate, and not from the strict count plus something."
       },
+      "ScoreSchema": {
+        "properties": {
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/SetScoreSchema"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Sets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sets"
+        ],
+        "title": "ScoreSchema",
+        "description": "The sets, in the order they were played.\n\n**A score names a winner**, and a level score is refused: none of the four\nsports produces a draw, and *Last 5* is win or loss with no third column to\nput one in. A *set* here is whatever the sport calls its unit \u2014 a set in\ntennis and padel, a game in squash and badminton."
+      },
       "ScoredTermSchema": {
         "properties": {
           "term": {
@@ -4831,6 +5219,25 @@
         "title": "SeatSchema",
         "description": "One seat: a side, its occupant, their answer and their own deadline.\n\n``answer_by`` is **this seat's own**, dated when this seat was invited \u2014 a\nseat filled later starts its own day and cannot inherit a deadline from a send\nit was not part of. It is absent exactly when nobody was asked: an empty seat,\nthe organiser's, and both seats of a challenge born from a mutual yes."
       },
+      "SeatingSchema": {
+        "properties": {
+          "side": {
+            "$ref": "#/components/schemas/GameSide"
+          },
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "side",
+          "player_id"
+        ],
+        "title": "SeatingSchema",
+        "description": "One person, on one side. The court is frozen at the plan."
+      },
       "SendChallengeRequest": {
         "properties": {
           "search_id": {
@@ -4871,6 +5278,31 @@
         ],
         "title": "SentChallengeResponse",
         "description": "What a send answers with. **An id, and deliberately nothing else.**\n\nNot the challenge: nobody has answered it yet, so every seat says exactly\nwhat the organiser just sent, and a body repeating their own arrangement back\nat them is a round trip that says nothing. The id is what the client keeps."
+      },
+      "SetScoreSchema": {
+        "properties": {
+          "a": {
+            "type": "integer",
+            "maximum": 99.0,
+            "minimum": 0.0,
+            "title": "A",
+            "description": "GameSide A's games in this set"
+          },
+          "b": {
+            "type": "integer",
+            "maximum": 99.0,
+            "minimum": 0.0,
+            "title": "B",
+            "description": "GameSide B's games in this set"
+          }
+        },
+        "type": "object",
+        "required": [
+          "a",
+          "b"
+        ],
+        "title": "SetScoreSchema",
+        "description": "One set, **absolute**: what side A took, and what side B took.\n\nNever relative to the reader. A score stored from one point of view has to be\nflipped by whoever reads it next, and the first reader to forget publishes a\nloss as a win."
       },
       "SharedSlot": {
         "properties": {
@@ -5197,6 +5629,64 @@
         ],
         "title": "Standing",
         "description": "The five standings, as codes. A client's words are the client's own."
+      },
+      "StandingProposalSchema": {
+        "properties": {
+          "side": {
+            "$ref": "#/components/schemas/GameSide",
+            "description": "Which side put this score on the table"
+          },
+          "proposed_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Proposed By"
+          },
+          "score": {
+            "$ref": "#/components/schemas/ScoreSchema"
+          },
+          "proposed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Proposed At"
+          },
+          "answer_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Answer By",
+            "description": "When the other side's silence becomes agreement. **Nothing happens at this moment** \u2014 no job runs and nothing is written; the game simply reads as confirmed from here on."
+          },
+          "settles_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Settles At",
+            "description": "When an acceptance of this score would become final. Earlier than `answer_by`, and it is the grace an opponent who has not read the score yet is given: inside it a disagreement still wins."
+          }
+        },
+        "type": "object",
+        "required": [
+          "side",
+          "proposed_by",
+          "score",
+          "proposed_at",
+          "answer_by",
+          "settles_at"
+        ],
+        "title": "StandingProposalSchema",
+        "description": "The score waiting on an answer, when exactly one is.\n\n``null`` in every other case, and the two are different: nothing has been\nentered, or **both sides have spoken** and neither score is *the* one. The\nsecond is the disagreement this platform does not resolve, and the client\nreads it off `standing` rather than off an absence here."
+      },
+      "StateResultRequest": {
+        "properties": {
+          "score": {
+            "$ref": "#/components/schemas/ScoreSchema",
+            "description": "The score you say was played"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score"
+        ],
+        "title": "StateResultRequest",
+        "description": "*This is the score.*\n\n**One request for three acts**, and the record decides which: the first score\nentered, a correction of your own side's while nobody has answered it, or\nyour side's disagreement with the other's. A client that named which would be\na client that could name it wrongly, and a mislabelled correction is a\nproposal nobody may make.\n\n**There is no rejection here and there is no body without a score.** An\nobjection carrying nothing would be free and always optimal for the loser."
       },
       "StrandReading": {
         "properties": {

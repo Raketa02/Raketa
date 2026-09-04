@@ -37,6 +37,16 @@ over the challenge log belongs to ``challenges``, whose
 ``EventSourcedChallengeHistory`` owns it; a ``select`` over the event store
 written here would make the matcher a second reader of somebody else's log — and
 a second author of what *open* means.
+
+**Amended by ``docs/adr/0137``: it is no longer handed out on its own.** ``games``
+ships, so ``GamesPlayedAndChallengesAnswered`` composes this class with the
+provider that brings ``PLAYED`` and ``PLANNED_NEVER_PLAYED``, and the composition
+root wires that. Everything below is unchanged and every sentence in it stays
+true **of this class**: it answers the challenge half, and its ``PLAYED`` is
+still empty by construction. What changed is that a caller now gets the whole
+port rather than this half of it — which is exactly the *composing adapter*
+ADR-0098's amendment banner said would arrive, and the reason the port was kept
+whole while it did not exist.
 """
 
 from __future__ import annotations

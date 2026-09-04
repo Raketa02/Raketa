@@ -18,10 +18,16 @@ implementations needing no I/O would be a suite that quietly excused the only
 implementations with a database behind it.
 
 **A row names one implementation and not one provider**, which is what lets
-``ChallengesButNobodyHasPlayed`` sit here as ``MatchHistoryQuery``'s single
-registered implementation while answering for one shipped context and one
-unwritten one. ADR-0098's *one provider signs one contract* is bent there and the
-bend is recorded in the ADR's amendment banner, not smuggled in as a second row.
+``GamesPlayedAndChallengesAnswered`` sit here as ``MatchHistoryQuery``'s single
+registered implementation while composing two shipped contexts. ADR-0098's *one
+provider signs one contract* is bent there and the bend is recorded in the ADR's
+amendment banner, not smuggled in as a second row — and the composition is what
+kept the bend to one row when the second provider arrived (``docs/adr/0137``).
+
+**It is not the only register.** ``games_demands.py`` holds the ports a
+*provider* publishes outward, in the same shape and for the same reason; they are
+separate files because ``MATCHER_DEMANDS`` asserts exhaustiveness over one kind
+of claim and would stop meaning anything with the other kind in it.
 
 **A port with nothing registered is a red build**, asserted in the suite against
 ``MATCHER_DEMANDS`` — otherwise a port added in a hurry would look contracted
@@ -77,7 +83,7 @@ REGISTERED_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     ),
     RegisteredImplementation(
         port=MatchHistoryQuery,
-        name="ChallengesButNobodyHasPlayed",
+        name="GamesPlayedAndChallengesAnswered",
         build=build_match_history_query,
     ),
     RegisteredImplementation(

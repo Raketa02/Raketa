@@ -8,10 +8,13 @@ that signed half of two contracts would have signed all of neither.
 **One of the five has two providers, and the ADR's amendment banner records the
 bend.** ``MatchHistoryQuery``'s seam runs *through* ``pairwise_counterparts``:
 ``ACCEPTED`` and ``DECLINED`` are ``challenges``' facts and ``PLAYED`` is
-``matches``'. Splitting the port to match would cut
+``games``'. Splitting the port to match would cut
 ``PAIRWISE_COUNTERPART_BOUND`` in half, and two bounded reads merged by a caller
-is not a bounded read — so the port stays whole and ``matches`` arrives as a
-composing adapter rather than as a second signature.
+is not a bounded read — so the port stays whole and ``games`` arrived as a
+**composing** adapter rather than as a second signature
+(``docs/adr/0137``). The context is called ``games`` and not ``matches``: the
+placeholder was retired when it was built, because the wire, the card and the
+newcomer path all say *game*.
 
 They live in one file on purpose: it is **the one place a build agent finds every
 demand the matcher makes outward**, and splitting them by does-the-provider-exist
@@ -20,7 +23,7 @@ would make a reader check two places to be sure they had them all.
 | Port | Provider | Day one |
 | --- | --- | --- |
 | ``PlayerScoreQuery`` | ``player_score`` | ``NoPlayerScoresExist`` |
-| ``MatchHistoryQuery`` | ``challenges`` + ``matches`` | **half real**, see below |
+| ``MatchHistoryQuery`` | ``challenges`` + ``games`` | a **real** composition of two |
 | ``AccountHoldQuery`` | ``cases`` | ``NoHoldsExist`` |
 | ``AtStakeQuery`` | ``rating``'s result-update rule | ``NoResultUpdateRuleExists`` |
 | ``AccountStatusQuery`` | ``users`` | a **real adapter** — the provider ships |
@@ -231,7 +234,7 @@ class PlayerScoreQuery(Protocol):
 
 
 # ---------------------------------------------------------------------------
-# MatchHistoryQuery — ``challenges`` today, ``matches`` when it lands
+# MatchHistoryQuery — ``challenges`` and ``games``, composed
 # ---------------------------------------------------------------------------
 
 #: How many pairwise counterparts travel with a search, most recent first.
@@ -351,7 +354,7 @@ class SentOutsideASearch:
 
     Carries nothing: it is a **claim**, not a description. What *somewhere else*
     turns out to contain — a profile visit, a club page, a rematch — is
-    ``matches``' vocabulary to name when it lands, and inventing a taxonomy for
+    ``games``' vocabulary to name if it ever needs one, and inventing a taxonomy for
     it here would be this context taking an opinion about somebody else's states.
 
     What matters is that it exists at all. The alternative is a nullable field,
@@ -402,11 +405,11 @@ class MatchHistoryQuery(Protocol):
     ``challenges`` answers the challenge half of ``pairwise_counterparts`` —
     ``ACCEPTED`` and ``DECLINED``, mapped from the answers people actually gave
     — plus the whole of ``open_challenges`` and ``open_challenge_counts``.
-    ``matches`` will bring ``PLAYED``, ``PLANNED_NEVER_PLAYED`` and the
-    threshold, and it arrives as an adapter that **composes** with this one
-    rather than replacing it. The alternative was splitting the port, which
-    would cut the 500 bound in half and leave a caller merging two bounded reads
-    into an unbounded one.
+    ``games`` brings ``PLAYED``, ``PLANNED_NEVER_PLAYED`` and the threshold, and
+    it arrived as an adapter that **composes** with that one rather than
+    replacing it (``docs/adr/0137``). The alternative was splitting the port,
+    which would cut the 500 bound in half and leave a caller merging two bounded
+    reads into an unbounded one.
     """
 
     async def pairwise_counterparts(
@@ -454,15 +457,18 @@ class MatchHistoryQuery(Protocol):
         method takes **no pair, no plan and no case**. One published number, or
         none.
 
-        ``None`` today, because nothing in this repository schedules a plan. It is
-        absent rather than a default, on the same rule as everything else here: a
-        number nobody measured is a number somebody picked.
+        ``None``, and now for a reason its provider owns rather than for the
+        absence of one. A plan in ``games`` is a line-up with a window and no
+        time in it: an accepted seat cannot be withdrawn and there is nothing to
+        move, so *late* has no referent. Absent rather than a default, on the
+        same rule as everything else here: a number nobody measured is a number
+        somebody picked.
 
-        Demanded of ``matches`` even though ``player_score`` computes the strand:
+        Demanded of ``games`` even though ``player_score`` computes the strand:
         *late* is a fact about a plan, and the context that owns plans owns what
-        the word means. If whoever builds ``matches`` arrives with a better
-        definition, that is a conversation and it amends ``docs/adr/0098`` — it is
-        not a licence to publish a different number under the same name.
+        the word means. If a later product grows a plan with a time in it, that
+        is a conversation and it amends ``docs/adr/0098`` — it is not a licence
+        to publish a different number under the same name.
         """
         ...
 
@@ -575,14 +581,15 @@ class AtStakeQuery(Protocol):
     own standing rule that it reads what the player is shown and never re-derives
     it, and because a K-factor is the rating engine's opinion about the rating
     engine; and the **contract** cannot specify the maths, for the same reason it
-    has no opinion on how ``matches`` works internally. It demands the fact and
+    has no opinion on how ``games`` works internally. It demands the fact and
     stops.
 
     **The provider exists and the rule does not.** ``rating`` ships, at
     ``app/modules/rating/`` with its engine at ``app/engines/racketskill/``, and
     the matcher already reads μ and σ from it. What is missing is the
-    result-update rule and its K-factor, which arrive with ``matches``. So this
-    port is **deliberately not built** against ``rating``: its only registered
+    result-update rule and its K-factor, which arrive with that context's own
+    ticket. So this port is **deliberately not built** against ``rating``: its
+    only registered
     implementation is ``NoResultUpdateRuleExists``, and the field is **absent,
     never zero**.
 

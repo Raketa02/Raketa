@@ -66,7 +66,7 @@ OMITTED_FIELDS = {
         "question does not arise"
     ),
     (PlayerCardSchema, "photo_id"): "they have no photo; the client draws the poster",
-    (PlayerCardSchema, "counted_games"): "the games ledger has no provider",
+    (PlayerCardSchema, "counted_games"): "the card is not assembled with it yet",
 }
 
 

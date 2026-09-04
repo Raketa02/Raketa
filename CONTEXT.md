@@ -30,10 +30,11 @@ committed ahead of *a decision*, and a speculative list of context names is not 
 context that does not appear below has no vocabulary yet — resolve its terms into this file
 before writing it, which is what the last three sections below are: **Player profile** is
 settled in an accepted ADR and is being built, **Blocks** is settled in an accepted ADR and
-is now built, **Matchmaking** is settled and not built at all, and **Challenges** is settled
-and built as far as its aggregate. Their terms are here because that is the order this file
+is now built, **Matchmaking** is settled and not built at all, **Challenges** is settled
+and built as far as its aggregate, and **Games** is settled in an accepted ADR and built.
+Their terms are here because that is the order this file
 asks for, not because the code landed first. **Player Score** is a further step out again:
-nothing about it is decided, and it appears only because the matcher has contracted six
+nothing about it is decided, and it appears only because the matcher has contracted the
 words it will read, and the words are the player's, not the matcher's. Every other section
 describes code that exists in `backend/app/` today.
 
@@ -593,7 +594,7 @@ appears here.
   a stack of small positives can never erase a recent no-show. It is a **dock and not an
   exclusion**: an otherwise excellent match still appears, low, with the reason shown — where a
   player wants somebody gone entirely, that is a Block. The one place the matcher reads the
-  blended score instead of the six strands, because it is the number the player can see.
+  blended score instead of the strands, because it is the number the player can see.
 - **Minimum evidence** — the least the engine must know about *one specific candidate* before
   showing them to anybody. A **gate**, never an adjustment to their score, and a fraction of the
   terms live for the platform rather than a count. It reads gaps particular to that person and
@@ -965,7 +966,10 @@ ADR-0098 without being able to name: `matchmaking`
 ends at a ranked list, and *asking somebody* begins here. It is deliberately **not** called
 `matches` — that word promises results, history and a played game, none of which is in scope —
 and it deliberately does not live inside `matchmaking`, because the matcher reads challenges
-through a **port** precisely so it does not own them.
+through a **port** precisely so it does not own them. Those three things now have a context of
+their own, **Games** below, and this one hands over to it at exactly one instant: when a
+line-up completes, through a port declared here and signed there
+([ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)).
 
 Its whole subject is the span between *send* and *everybody has answered*. Nothing about when,
 where, money, results or the conversation itself belongs here.
@@ -1040,14 +1044,93 @@ where, money, results or the conversation itself belongs here.
   `ChallengeExpired`, no `ChallengeDeclined` — a **Standing** that is derived has exactly one place
   to be true, and an event saying otherwise would become the second.
 
+### Games (`backend/app/modules/games/`)
+
+Settled by [ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md) on
+[#303](https://github.com/Raketa02/Raketa/issues/303). **The context that knows a game was
+played**, and before it nothing on this platform did: a Challenge carries a Window and never a
+date, a time or a court, so four acceptances left no fact behind. Every empty block on the
+redrawn competitive card traced back to that.
+
+It is **event-sourced**, and that revises the deleted ADR-0034, which argued a record about a
+product — courts, money, departures, four cancellation flags — that the 2026-08-25 reset
+removed. What is left of a game is a plan, a moment, a score and a two-sided disagreement, and
+the disagreement is the whole of it.
+
+Its subject is the span between *everybody accepted* and *there is nothing more to say about
+this evening*. Nothing about where, money, or the conversation belongs here, and neither does
+anything about how good anybody is — that is the rating context reading this one.
+
+- **Game** — one arranged game and its result. **Opened by a completed line-up**, in the
+  transaction of the acceptance that filled the last seat, and never by a request: nothing a
+  client sends can produce one, which is what makes *these people arranged this* a fact rather
+  than a claim. One game per arrangement, for ever.
+- **Line-up** — who played and on which side, **frozen at the plan**. An acceptance is to the
+  game and not to the side, so the membership is settled the moment the last seat accepts;
+  nothing in this context can move anybody afterwards.
+- **Kind** — **counted** or a **friendly**, stamped when the game is arranged and never derived
+  at the end. A friendly is a thing people *choose*: reclassifying a counted game because nobody
+  typed a score would hand a player the exact evening they said they did not want, and would
+  give one word two meanings. A game arranged from a surface that asks for no kind — the deck,
+  a mutual yes — is **counted**, because counted is what the platform is for and a friendly is
+  the opt-out.
+- **Result** — *we played, here is the score*. **The entry is the record that the game
+  happened**, and it carries the moment: there is no booking, no calendar and no date field
+  anywhere, so the moment a player says it is the moment it was.
+- **Score** — the sets, absolute rather than from anybody's point of view. **A score names a
+  winner**: a level set has not finished and none of the four sports produces a draw, so a level
+  score is refused. *Set* is used for whatever the sport calls its unit.
+- **Proposal** — a score on the table, **one per side**. The cap is what bounds an argument to
+  two rounds, and it is what makes silence safe to read as agreement.
+- **Correction** — the proposing side revising its own score while the other side has not
+  answered. **Not a second proposal**, and **any member of that side may make it** — the rule
+  that makes a teammate's agreement worthless is the same rule that makes a teammate's objection
+  credible.
+- **Counter** — the other side's one turn, and **it carries a score**. There is no bare
+  rejection: a rejection carrying nothing would be free and always optimal for the loser.
+- **Acceptance** — agreement, **from the opposing side only**, because a teammate agreeing with
+  a teammate proves nothing. **One opponent suffices.**
+- **Acceptance grace** — how long an acceptance waits before it settles anything, measured from
+  the *score* and not from the tap. Inside it a counter still wins, so a partner who is quick to
+  their phone cannot close the door on an opponent who has not read the score yet.
+- **Standing** — what a game *is* right now: `AWAITING_ENTRY`, `NEVER_PLAYED`,
+  `AWAITING_ANSWER`, `CONFIRMED`, `UNSCORED`. **Derived from the record and the clock, never
+  stored and never announced.** Spelled `GameStanding` in code and on the wire, because
+  Challenges already publishes a `Standing` component and a second class of that name would
+  *rename* it rather than shadow it — **the contract is one namespace, and the cost of a
+  shared word is paid by whoever arrives second.** The same is true of `GameSide`.
+- **Counted game** — a counted-kind game somebody said was played, **scored or not**. What
+  `player_card.counted_games` prints and what §9.10's newcomer predicate reads.
+- **Ghost game** — a plan whose entry window closed with nobody ever saying it happened. Kept
+  distinguishable from a played game, because familiarity is about people who actually played.
+
+**Invariants**
+
+- **Silence confirms.** A lone score nobody answers stands when its window closes, and the game
+  counts. There is nothing anywhere in this context called *confirm*: a result is agreed when a
+  clock passes, and a clock is nobody's request.
+- **Two standing scores nobody accepts leave the game unscored — and an unscored game is an
+  evening, not evidence.** It is in history, it is in `counted_games`, it establishes that these
+  people have played together, and **it moves nobody's Level.**
+- **No player is penalised for not entering or not agreeing a result.** Not the silent loser,
+  not the four who all went home, not the side whose counter went unaccepted. **This is why
+  Player Score has five strands and not six** — see below.
+- **We will not arbitrate.** Two people who were both on court and cannot agree what happened is
+  not a result, and Raketa will not invent one. A settled result is final: no support correction
+  path and no reversal.
+- **The people who may act are the people who were on the court**, and nobody else, ever.
+- **Nothing announces a conclusion the record already implies.** There is no `ResultConfirmed`,
+  no `GameUnscored` and no `GameNeverPlayed` — the same rule `challenges` states about `GameOn`,
+  and for the same reason: a derived standing has exactly one place to be true.
+
 ### Player Score — demanded, not designed
 
 What the platform has watched a player *do*, as distinct from how well they play. **One number
-in the UI, six strands underneath it**, and the matcher reads the strands separately because
-*confirms results* is close to worthless for a friendly and close to essential for a counted
-game ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). Nothing about this
-context is decided and nothing is built; the six words are here because the player reads all
-six on their own screen, so they are the product's language before they are the matcher's.
+in the UI, five strands underneath it**, and the matcher reads the strands separately because
+they are weighed oppositely in the two modes
+([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). Nothing about this
+context is decided and nothing is built; the words are here because the player reads them all
+on their own screen, so they are the product's language before they are the matcher's.
 
 - **Player Score** — the blended number a player sees. Computed from what happened, never from
   opinions and never from results: **losing costs nothing here.**
@@ -1055,10 +1138,20 @@ six on their own screen, so they are the product's language before they are the 
   what came of them, and each is published in its own right.
   - **Shows up** — whether the game gets played at all.
   - **Answers challenges** — whether a challenge gets an answer inside its window.
-  - **Confirms results** — whether a counted game gets confirmed, so it *counts*.
   - **Keeps plans** — whether an agreed plan survives to its day without a late change.
   - **Settles up** — whether a court share that fell due was settled without a case.
   - **Sportsmanship** — what opponents said afterwards. A mean, not a ratio.
+- **Confirms results** — **struck, and not deferred**
+  ([ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). It read *whether a
+  counted game gets confirmed, so it counts*, and it cannot be published honestly: **an
+  unconfirmed result is a fact about a pair and a strand is a verdict about a person**, and
+  every denominator tried on it docks somebody the Games context refuses to penalise — both
+  sides of an honest disagreement included. Withdrawing it rather than leaving it unbuilt is
+  ADR-0098's own rule about a demand nobody can satisfy; the matcher absorbs the loss by
+  construction, because a strand nobody publishes stands down and the survivors renormalise
+  inside the reliability term. `ReliabilityStrand.CONFIRMS_RESULTS` and its two ruleset weights
+  come out with the provider, in
+  [#305](https://github.com/Raketa02/Raketa/issues/305).
 - **Opponent variety** — how widely a player spreads their games. **Not demanded of
   `player_score` any more:** it was contracted on behalf of two consumers and
   [#164](https://github.com/Raketa02/Raketa/issues/164) and

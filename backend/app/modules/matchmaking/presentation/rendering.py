@@ -566,8 +566,10 @@ def _card(card: RecordedCard, photo_url: str | None) -> PlayerCardSchema:
     already what this card falls back to, and a search that failed over a
     signature would be the whole feature going down for the least of its facts.
 
-    ``counted_games`` is never passed: the games ledger has no provider in this
-    build, so the field does not apply and a zero would be an invented one.
+    ``counted_games`` is never passed. The games ledger has a provider now
+    (``docs/adr/0137``), so the zero would at last be a measured one — but the
+    card is not assembled with it yet, and a field the assembler does not carry
+    is an absence rather than a figure. The block arrives with #306.
 
     It takes a card and never an absence, so *a row with no person on it* is not
     a state this function has to have an opinion about.

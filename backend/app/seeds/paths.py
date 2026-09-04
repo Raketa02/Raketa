@@ -49,6 +49,7 @@ from app.bootstrap.composition import (
     build_mutual_challenge_minting,
     build_open_challenge_query,
     build_origin_search_query,
+    build_planned_game_opening,
     build_pass_ledger,
     build_play_intent_declaration_repository,
     build_player_card_source,
@@ -311,7 +312,12 @@ async def read_paths(
             uow=uow,
             clock=clock,
         ),
-        accept=AcceptSeat(challenges=challenges, uow=uow, clock=clock),
+        accept=AcceptSeat(
+            challenges=challenges,
+            uow=uow,
+            clock=clock,
+            planned_games=build_planned_game_opening(session),
+        ),
         decline=DeclineSeat(challenges=challenges, uow=uow, clock=clock),
         read_challenges=ReadChallenges(
             directory=build_challenge_directory(session), clock=clock
