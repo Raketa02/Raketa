@@ -61,14 +61,30 @@ A rating is **never only a number**.
   plain-language meaning: **New** 1,0–1,5 · **Developing** 1,6–2,6 · **Established**
   2,7–3,8 · **Advanced** 3,9–5,0.
 - **Rating status** — **Initial Estimate** (onboarding output, no counted matches) →
-  **Calibrating** (real matches started, still moving) → **Stable**.
+  **Calibrating** (real matches started, still moving) → **Stable**. **A count opens the
+  door and certainty closes it** ([ADR-0139](docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)):
+  the *first* confirmed counted result leaves Initial Estimate, and Stable is reached when
+  the uncertainty does — not when a game count does, because twenty games against people
+  nobody has watched is not certainty.
 - **At stake** — what a counted win and a counted loss against one specific opponent would do
   to a player's Level, shown before they commit to the game. A **pair** of signed deltas, and a
   fact **this context owns**: it reads the rating engine's own update rule, so nobody else may
   compute it — not the client ([ADR-0021](docs/adr/0021-kernel-in-backend-clients-derive-by-comparison.md):
   a rule, not a comparison), and not the matcher, which reads what a player is shown and never
-  re-derives it. It exists only for games that would be counted. **The rule it needs is not
-  written yet**, so today the value is *absent* rather than zero.
+  re-derives it. It exists only for games that would be counted. **It is not a preview of the
+  rule; it is the rule**, read forward — the same function that moves the Level if the game is
+  played, so the card cannot promise a figure the result then contradicts. *Absent* rather than
+  zero when either party holds no rating in that sport.
+- **Result update** — what a **confirmed counted result** does to the two or four Levels that
+  played it. A result is **evidence about the gap between two people**, fused by inverse
+  variance like every other kind, so *how surprising it was* moves the Level and the certainty
+  tightens out of the same arithmetic rather than out of a second rule. Each side is one player
+  at the average of its Levels, so **everybody on a side moves by the same amount** — a partner
+  is not somebody you are rated against — while each of them keeps the certainty they had. And
+  **a four is half the evidence about any one of the four**.
+  **No single evening moves a Level further than the ceiling** — a brake, because onboarding's
+  uncertainty is a floor rather than a measurement and silence confirms a score nobody read.
+  Decided by [ADR-0139](docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md).
 - **Volatility** — how fast the estimate currently appears to be moving.
 - **Assessment** — an **event-sourced aggregate**: one adaptive questionnaire run, for one
   player and one sport.
@@ -116,6 +132,10 @@ A rating is **never only a number**.
   Manual editing is refused by the domain itself, not guarded by a permission check.
 - **Only the rating context writes μ, σ, volatility and status.** Every other engine
   contributes evidence, an information weight, or an anomaly signal — never a rating point.
+- **A result moves a Level or it moves nothing, and there is no third outcome.** An unscored
+  game is *an evening, not evidence*; a friendly was never evidence about anybody by the choice
+  of the people who arranged it. Both are absent from what the rating context reads, so neither
+  is a branch anybody could forget.
 - **Absence widens, it never lowers.** Layoff and inactivity add to σ and never touch μ. A
   player who was 3,20 two years ago has no obligation to still be 3,20 — and no obligation
   to have got worse. The honest position is *we are less sure*, not *we assume decline*.

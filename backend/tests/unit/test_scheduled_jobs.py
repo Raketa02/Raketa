@@ -25,6 +25,7 @@ from app.bootstrap.jobs import (
     CANDIDATE_INDEX_REFRESH_JOB,
     CANDIDATE_INDEX_TAIL_JOB,
     CHALLENGE_LAPSE_JOB,
+    RATING_CATCH_UP_JOB,
     EXPOSURE_ROLL_JOB,
     GRID_STALENESS_JOB,
     INTEREST_EXPIRY_JOB,
@@ -172,6 +173,7 @@ def _nothing_but(**overrides):
             "GRID_STALENESS_ENABLED": False,
             "INTEREST_EXPIRY_ENABLED": False,
             "CHALLENGE_LAPSE_ENABLED": False,
+            "RATING_CATCH_UP_ENABLED": False,
             "SCALE_PRESSURE_ENABLED": False,
             **overrides,
         }
@@ -782,3 +784,70 @@ def test_a_host_with_no_container_limit_reports_unknown_rather_than_roomy() -> N
     footprint = footprint_of(rows=10_000_000, workers=4, limit_bytes=None)
     assert footprint.fraction_of_budget is None
     assert not footprint.fires
+
+
+# ---------------------------------------------------------------------------
+# The rating catch-up — the only loop here that correctness depends on
+# ---------------------------------------------------------------------------
+
+
+def test_the_catch_up_is_registered_and_carries_the_configured_cadence():
+    """The cadence is a setting; **the update rule is emphatically not.**
+
+    How often a confirmed result reaches a Level is a fact about the deployment.
+    What it does to that Level is `engines/racketskill/results.py`, and an
+    environment that could pick a K-factor is an environment that decides how a
+    marketplace rates people (``docs/adr/0139``).
+    """
+
+    settings = _nothing_but(
+        RATING_CATCH_UP_ENABLED=True, RATING_CATCH_UP_INTERVAL_SECONDS=900.0
+    )
+
+    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [job.name for job in jobs] == [RATING_CATCH_UP_JOB]
+    assert jobs[0].interval_seconds == 900.0
+
+
+def test_the_catch_up_without_a_session_factory_refuses_to_be_registered():
+    """It reads the log and writes streams, so it joins the loud branch.
+
+    And its symptom is worse than the others': a loop that silently did not
+    register looks exactly like one that is off, and what stops is **every Level
+    on the platform being tested** — which nothing complains about, because a
+    rating that has not moved looks exactly like a rating nobody has played.
+    """
+
+    settings = _nothing_but(RATING_CATCH_UP_ENABLED=True)
+
+    with pytest.raises(ValueError, match="session factory"):
+        build_scheduled_jobs(session_factory=None, settings=settings)
+
+
+async def test_the_catch_up_runs_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """A quiet run is logged as a quiet run, with the four figures it exists for.
+
+    ``unrated_seats`` is on that line rather than swallowed because *nobody
+    played* and *everybody who played was unrated in that sport* both show up as
+    nothing moving, and only one of them is a defect.
+    """
+
+    settings = _nothing_but(RATING_CATCH_UP_ENABLED=True)
+    (catch_up,) = build_scheduled_jobs(
+        session_factory=session_factory, settings=settings
+    )
+
+    with caplog.at_level(logging.INFO):
+        await catch_up.run_once()
+
+    assert any(
+        record.message == "rating catch-up finished"
+        and record.games == 0
+        and record.ratings == 0
+        and record.unrated_seats == 0
+        and record.conflicts == 0
+        for record in caplog.records
+    )

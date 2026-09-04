@@ -901,3 +901,58 @@ async def test_the_route_is_on_the_emitted_player_surface():
 
     assert "/api/v1/searches" in spec["paths"]
     assert set(spec["paths"]["/api/v1/searches"]) == {"post"}
+
+
+# ---------------------------------------------------------------------------
+# At stake — the last empty block on the competitive card
+# ---------------------------------------------------------------------------
+
+
+async def test_a_competitive_row_says_what_a_counted_game_would_be_worth(
+    client, session_factory, candidate_source, searcher
+):
+    """#304's acceptance, over HTTP. **The block is drawn, and it is signed.**
+
+    It was omitted on every competitive card ever returned, because the rule that
+    moves a Level on a result did not exist
+    (``docs/adr/0139``). Asserted here rather than only at the port, because
+    *populated in competitive* is a promise about the response and the seam it
+    rides — attached by the backend after the scorer returns — has three field
+    families on it and no client branch to catch a fourth going missing.
+    """
+
+    await world.a_candidate(
+        client, session_factory, "worth-playing", mu=searcher["mu"] + 0.2
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    answer = (await world.search(client, searcher["token"], "COMPETITIVE")).json()
+
+    at_stake = answer["candidates"][0]["at_stake"]
+    assert at_stake["win_delta"] > 0 > at_stake["loss_delta"]
+
+
+async def test_a_for_fun_row_never_says_what_a_counted_game_would_be_worth(
+    client, session_factory, candidate_source, searcher
+):
+    """Omitted, and by the method's own name rather than by a flag.
+
+    A for-fun game is never counted, so the figure is not
+    absent-because-unavailable — it is **meaningless**, and asking about one is a
+    category error rather than a mode branch.
+    """
+
+    await world.a_candidate(
+        client, session_factory, "just-a-hit", mu=searcher["mu"] + 0.2
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    answer = (await world.search(client, searcher["token"], "FOR_FUN")).json()
+
+    assert "at_stake" not in answer["candidates"][0]
+
+
+# The **third** state — omitted in competitive because the pairing has no Level
+# between it — is proved in ``tests/demands/`` against every registered
+# implementation, and is not reachable from here: every candidate this world
+# builds is rated in the sport it searches.

@@ -52,6 +52,7 @@ from app.bootstrap.composition import (
     build_roll_exposure,
     build_scale_pressure_probe,
     build_search_store,
+    build_settle_ratings_on_results,
     build_unit_of_work,
 )
 from app.core.config import Settings
@@ -130,11 +131,20 @@ SCALE_PRESSURE_JOB = "scale-pressure"
 #: only one whose log line carries a falsifier rather than a throughput figure.
 INTEREST_EXPIRY_JOB = "interest-expiry"
 
-#: The challenges lapse loop. The one job here that **writes a domain event**,
+#: The challenges lapse loop. The **first** job here that writes a domain event,
 #: and the only one whose whole product is a record: a seat past its answer
 #: window already reads as lapsed, so what this appends is the fact somebody can
 #: count rather than a change anybody can see.
 CHALLENGE_LAPSE_JOB = "challenge-lapse"
+
+#: The rating catch-up. The **second** job that writes a domain event, and the
+#: only one on this list whose output a player would miss: a confirmation is a
+#: clock passing and announces nothing (``docs/adr/0137``), so without this a
+#: result never reaches a Level. It holds no cursor — the rating streams are the
+#: cursor (``docs/adr/0139``) — so *N processes, N runs* costs a repeated read
+#: and a counted collision, and a run that dies half way is re-derived in full by
+#: the next tick.
+RATING_CATCH_UP_JOB = "rating-catch-up"
 
 
 def build_scheduled_jobs(
@@ -179,6 +189,7 @@ def build_scheduled_jobs(
         or settings.CANDIDATE_INDEX_ENABLED
         or settings.INTEREST_EXPIRY_ENABLED
         or settings.CHALLENGE_LAPSE_ENABLED
+        or settings.RATING_CATCH_UP_ENABLED
     ):
         if session_factory is None:
             # Loudly, rather than by registering nothing. *The sweep is off* and
@@ -218,6 +229,12 @@ def build_scheduled_jobs(
         if settings.CHALLENGE_LAPSE_ENABLED:
             jobs.append(
                 build_challenge_lapse_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.RATING_CATCH_UP_ENABLED:
+            jobs.append(
+                build_rating_catch_up_job(
                     session_factory=session_factory, settings=settings
                 )
             )
@@ -453,6 +470,56 @@ def build_challenge_lapse_job(
     return PeriodicJob(
         name=CHALLENGE_LAPSE_JOB,
         interval_seconds=settings.CHALLENGE_LAPSE_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_rating_catch_up_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Move every Level a confirmed result has tested and nothing has applied.
+
+    **The one loop here that correctness depends on.** Every other job buys a
+    record, or a table the size of what is live; this one is the only path a
+    result has to a rating, because ``docs/adr/0137`` refused a
+    ``ResultConfirmed`` event and recorded that cost by name. A player whose game
+    confirmed on Tuesday keeps Monday's Level until this runs.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): every
+    move records the game that caused it, so a rating that has already folded a
+    result skips it inside the aggregate and a second pass appends nothing. A
+    genuine race is caught by the stream version, and the loser **steps over that
+    one game and keeps going** — every process walks the same clock-derived list
+    in the same order, so a run that ended on its first conflict would be a loop
+    that made no progress in any process.
+
+    **It holds no cursor**, which is what makes a half-finished run a non-event:
+    the next tick re-derives the whole walk from the clock and finds exactly the
+    results nobody has folded.
+    """
+
+    async def run() -> None:
+        async with session_factory() as session:
+            settled = await build_settle_ratings_on_results(session).execute()
+        logger.info(
+            "rating catch-up finished",
+            extra={
+                "job": RATING_CATCH_UP_JOB,
+                "games": settled.games,
+                "ratings": settled.ratings,
+                # *Nobody played* and *everybody who played was unrated in that
+                # sport* both show up as nothing moving, and only one of them is
+                # a defect.
+                "unrated_seats": settled.unrated,
+                "conflicts": settled.conflicts,
+            },
+        )
+
+    return PeriodicJob(
+        name=RATING_CATCH_UP_JOB,
+        interval_seconds=settings.RATING_CATCH_UP_INTERVAL_SECONDS,
         run=run,
     )
 

@@ -17,6 +17,13 @@ the real adapters genuinely need one, and a suite that could only construct the
 implementations needing no I/O would be a suite that quietly excused the only
 implementations with a database behind it.
 
+**Four of the five rows named a null object once and two still do.**
+``NoPlayerScoresExist`` and ``NoHoldsExist`` remain, because nobody has ever been
+due to turn up and nothing can open a case; ``NoMatchHistoryExists`` and
+``NoResultUpdateRuleExists`` are gone, each on the day the fact its own name
+asserted stopped being true (``docs/adr/0137``, ``docs/adr/0139``). Swapping a row
+is the whole integration, which is what the register was for.
+
 **A row names one implementation and not one provider**, which is what lets
 ``GamesPlayedAndChallengesAnswered`` sit here as ``MatchHistoryQuery``'s single
 registered implementation while composing two shipped contexts. ADR-0098's *one
@@ -88,7 +95,7 @@ REGISTERED_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     ),
     RegisteredImplementation(
         port=AtStakeQuery,
-        name="NoResultUpdateRuleExists",
+        name="RatingResultUpdateRule",
         build=build_at_stake_query,
     ),
     RegisteredImplementation(

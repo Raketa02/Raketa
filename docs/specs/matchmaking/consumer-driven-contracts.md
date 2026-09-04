@@ -39,15 +39,15 @@ half, and two bounded reads merged by a caller is not a bounded read.
 | `AccountStatusQuery` | `users` | The set of accounts that may not be shown. Gate 8, from [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) |
 
 **The last two are different, and the difference is stated rather than left to be noticed.**
-`player_score`, `matches` and `cases` **do not exist** (`challenges` does, and answers the half
-of `MatchHistoryQuery` above that is about being asked rather than about playing). `rating` does — it is at
-`backend/app/modules/rating/`, with its engine at `app/engines/racketskill/`, and the matcher
-already reads μ and σ from it. What is missing is not a context but a **rule**: the
-result-update rule and its K-factor, which arrive with `matches` and are out of scope on this
-map. The port is here anyway, in this document rather than a second one, because the value of
-this file is being *the one place* a build agent finds every demand the matcher makes outward.
-Splitting it by does-the-provider-exist would make a reader check two places to be sure they
-had them all.
+`player_score` and `cases` **do not exist**; `challenges` and `games` do, and between them they
+answer the whole of `MatchHistoryQuery` ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)).
+`rating` exists too — at `backend/app/modules/rating/`, with its engines at
+`app/engines/racketskill/` — and what was missing there was not a context but a **rule**. That
+rule has since been written ([ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)),
+so `AtStakeQuery` has a real adapter and the last of the three null objects it was wired to is
+gone. The port is here rather than in a second document because the value of this file is being
+*the one place* a build agent finds every demand the matcher makes outward. Splitting it by
+does-the-provider-exist would make a reader check two places to be sure they had them all.
 
 `users` exists outright, with **nothing missing at all** — `is_active` ships, `UserDisabled`
 ships, and `auth` already refuses a disabled account four ways. `AccountStatusQuery` is therefore
@@ -200,7 +200,7 @@ tell them apart.
 | Pairwise history | **Fails soft** — familiarity and the previous-decline signal stand down, the search proceeds | Losing a game because we could not remember who you played in March is a worse outcome than a slightly duller list |
 | Open challenge between the pair | **Fails soft** | §7.5's *the matcher proposes, the backend disposes* re-verifies on the shortlist. It is embarrassment with a backstop, not a safety failure |
 | The six strands (`PlayerScoreQuery`) | **Fails soft** — the reliability term stands down | Which is what it already does for every player today, so a failure costs a term and never the search |
-| At stake (`AtStakeQuery`) | **Fails soft** — the block is not drawn | Derived rather than quoted: it is what the card already does while the rule does not exist |
+| At stake (`AtStakeQuery`) | **Fails soft** — the block is not drawn | Derived rather than quoted: it is what the card already does for a pair with no Level between them |
 
 These are separate reads carried in one context object. Bundling them into one read would make
 the strictest fact's failure mode everybody's.
@@ -289,16 +289,29 @@ of them may:
   shown and never re-derives it. A K-factor is the rating engine's opinion about the rating
   engine, and a second implementation of it is exactly the failure ADR-0021 exists to prevent.
 - **This document** cannot specify the maths, for the same reason it has no opinion on how
-  `matches` works internally. It demands the fact and stops.
+  `games` works internally. It demands the fact and stops — and ADR-0139 is where the maths was
+  decided, in the context that owns it.
 
 **For-fun games are never counted** (§23 Q11), so the field is competitive-only — which the
 prototype already enforces at `:2460`. In for-fun it is not absent-because-unavailable; it is
 **meaningless**, and the card renders nothing.
 
-**Today the rule does not exist**, so the only adapter is `NoResultUpdateRuleExists` and the
-field is **absent, never zero**. A zero here would be invented — it would claim a counted game
-against this opponent moves the searcher's Level by nothing, which is false about every
-opponent. The card simply omits the block.
+**The rule exists now** ([ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)),
+and the adapter is `RatingResultUpdateRule` — which calls the *same function* that moves a Level
+when the game is played, so a card promising `+0,07` and an update delivering something else is
+not a state two callers of one function can reach. `NoResultUpdateRuleExists` is deleted, on the
+rule a null object is written under: the fact its name asserted stopped being true.
+
+**The field is still absent rather than zero** whenever either party holds no rating in that
+sport, and that absence is measured: there is nothing to price the pairing against. A zero would
+be invented — it would claim a counted game against this opponent moves the searcher's Level by
+nothing, which is false about every opponent. The card simply omits the block.
+
+**It is priced head-to-head, and in a four that is a decision rather than an oversight.** The
+figure carries the sport's own weighting — a doubles result is half the evidence about any one
+of the four — but the *pairing* it prices is you against the person on the card, because the
+other two seats are unknown when the card is drawn and averaging against an imaginary partner
+would invent the one thing the read has no basis for.
 
 ---
 
@@ -326,11 +339,14 @@ The test is whether a zero would be **measured** or **invented**.
 ## How the demand is made binding
 
 **The contract suite is parameterised over every registered implementation of each port,
-including the null one.** `NoPlayerScoresExist` and `NoResultUpdateRuleExists` prove the
-degradation table above, green, today — named for the facts they assert rather than for being
-empty, in `NoHoldsExist`'s style. `ChallengesButNobodyHasPlayed` follows the same convention over
-half a real provider, and its name is what tells the next reader that `PLAYED` is empty **by
-construction and not by luck**.
+including the null one.** `NoPlayerScoresExist` proves the degradation table above, green,
+today — named for the fact it asserts rather than for being empty, in `NoHoldsExist`'s style.
+`NoResultUpdateRuleExists` and `ChallengesButNobodyHasPlayed` were the same convention over the
+same table, and **both are gone**, each on the day its own stated fact stopped being true
+([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md),
+[ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
+That is the intended end of a null object named for a fact, and in both cases the swap was one
+row in the register.
 
 **The arrangement belongs to the port and never to one implementation**, and where a provider
 ships, the suite arranges a real world through that context's aggregate rather than an `INSERT`

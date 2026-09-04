@@ -214,7 +214,7 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Ten jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Eleven jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
@@ -263,6 +263,19 @@ Rules to preserve:
   wrong people. Its read names **candidates rather than conclusions** and that is
   deliberate: a store that could filter on *has this seat lapsed* would be the derived
   standing, stored. `ANSWER_WINDOW` is domain; only the cadence is a setting.
+  The eleventh is the **rating catch-up**
+  ([ADR-0139](../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)),
+  the second that appends a domain event and **the only one on this list that correctness
+  depends on**. Every other job buys a record or a table's size; this is the only path a
+  confirmed result has to a Level, because ADR-0137 refused a `ResultConfirmed` event — a
+  confirmation is a clock passing and announces nothing — and recorded that cost by name. A
+  player whose game confirmed on Tuesday keeps Monday's Level until it runs. It **holds no
+  cursor**: every move records the game that caused it, so *have I applied this* is answered
+  by replaying the aggregate that would change, and a half-finished run is re-derived in full
+  by the next tick rather than being a lost result. Its walk is over every game the platform
+  has recorded — the same cost profile as every other read in `games`. The **rule** it applies
+  is `engines/racketskill/results.py` and is emphatically not configuration: an environment
+  that could pick a K-factor is an environment that decides how a marketplace rates people.
 - **The candidate index tails the log; the outbox delivers side effects**
   ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
   [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
@@ -417,7 +430,11 @@ Rules to preserve:
   answers with `a_score_must_name_a_winner` rather than a 500 — the split
   `CONTEXT.md`'s *Invariant vs Unavailability* names, applied at the one value object in
   this repository a player composes by hand. Its three clocks are in
-  `games/domain/windows.py` and **none of them is configuration**.
+  `games/domain/windows.py` and **none of them is configuration**. Its fourth published read
+  is `ConfirmedResultLedger`, which exists **because nothing announces a confirmation**: the
+  rating context walks confirmed counted results forward, oldest first, ordered on the derived
+  moment each became final
+  ([ADR-0139](../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one
@@ -498,7 +515,8 @@ tests.
   `EVENT_DELIVERY_WORKER_ENABLED`. Scheduled jobs are toggled one at a time —
   `PHOTO_SWEEP_ENABLED`, `PHOTO_REVIEW_BACKFILL_ENABLED`, `CANDIDATE_INDEX_ENABLED`,
   `EXPOSURE_ROLL_ENABLED`, `INTENT_DRIFT_ENABLED`, `GRID_STALENESS_ENABLED`,
-  `INTEREST_EXPIRY_ENABLED`, `SCALE_PRESSURE_ENABLED`, `CHALLENGE_LAPSE_ENABLED` — and **every
+  `INTEREST_EXPIRY_ENABLED`, `SCALE_PRESSURE_ENABLED`, `CHALLENGE_LAPSE_ENABLED`,
+  `RATING_CATCH_UP_ENABLED` — and **every
   job's first run is at startup**, not after its first interval, so a six-hourly job is
   observable on a laptop.
 

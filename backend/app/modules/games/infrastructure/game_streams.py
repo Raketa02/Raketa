@@ -1,11 +1,15 @@
-"""Finding the game streams a player is on the court of. **One read, three callers.**
+"""Finding the game streams to fold. **Two reads, and only one starts from a player.**
 
-Every read this context has over the log starts the same way — *which streams
-seat this person* — and they differ only in what they fold the answer into: the
-pairs, a count, the last five results, or the whole aggregate for a screen.
-Written once, because the interesting half is a **coupling to a serialized field
-name**, and a coupling like that written twice is one that gets fixed in one
-place.
+Every read this context had until ``docs/adr/0139`` started the same way — *which
+streams seat this person* — and they differ only in what they fold the answer
+into: the pairs, a count, the last five results, or the whole aggregate for a
+screen. Written once, because the interesting half is a **coupling to a
+serialized field name**, and a coupling like that written twice is one that gets
+fixed in one place.
+
+The second read starts from **nobody**, and is at the bottom of this file. The
+rating context walks confirmed results forward and has no player to ask about
+until it has folded the game.
 
 **The match is a substring, and it is the same decision ``challenges`` made.**
 The court crosses the wire as one code per seating (``lineup.py``), so a player is
@@ -105,6 +109,37 @@ async def streams_seating(
             EventStoreORM.aggregate_id.in_(game_ids),
         )
         .order_by(EventStoreORM.version)
+    )
+    streams: dict[UUID, list[DomainEvent]] = defaultdict(list)
+    for row in rows.scalars().all():
+        streams[row.aggregate_id].append(_decode(codec, row))
+    return dict(streams)
+
+
+async def every_stream(
+    session: AsyncSession, codec: EventCodec
+) -> dict[UUID, list[DomainEvent]]:
+    """Every game stream there is, each ordered by ``version``.
+
+    **The one read here that does not start from a player**, because the caller
+    it exists for does not have one: the rating context walks confirmed results
+    forward and has no idea whose they are until it has folded them
+    (``docs/adr/0139``). It is a plain scan of the aggregate type rather than the
+    substring match above, so it is the *cheaper* of the two reads per row — and
+    the more expensive one per run, because it reads every game rather than one
+    person's.
+
+    **Cost.** Bounded by how many games the platform has ever recorded, like
+    everything else in this context. The pagination that fixes it belongs with
+    the first run that measures it, and it will need the ordering key the caller
+    already derives — the moment a result became final — to be somewhere a
+    ``WHERE`` can reach.
+    """
+
+    rows = await session.execute(
+        select(EventStoreORM)
+        .where(EventStoreORM.aggregate_type == GAME_AGGREGATE)
+        .order_by(EventStoreORM.aggregate_id, EventStoreORM.version)
     )
     streams: dict[UUID, list[DomainEvent]] = defaultdict(list)
     for row in rows.scalars().all():

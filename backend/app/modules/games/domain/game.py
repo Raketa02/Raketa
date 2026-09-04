@@ -60,6 +60,7 @@ from app.modules.games.domain.standing import (
     GameStanding,
     agreed_score,
     live_acceptance,
+    settled_at,
     standing_of,
 )
 from app.modules.games.domain.windows import entry_closes_at
@@ -285,6 +286,21 @@ class Game:
         if self.standing_at(now) is not GameStanding.CONFIRMED:
             return None
         return agreed_score(proposals=self.proposals, acceptance=self.acceptance)
+
+    def confirmed_at(self, now: Instant) -> Instant | None:
+        """When this game's result became final, or ``None`` while none has.
+
+        The pair ``settled_at`` deliberately leaves apart, written once here so
+        nobody publishes a moment for a game the standing has not reached — the
+        same shape as ``confirmed_score_at`` and for the same reason.
+
+        It is what lets the rating context walk confirmed results **in the order
+        they became final** without anything announcing one (``docs/adr/0139``).
+        """
+
+        if self.standing_at(now) is not GameStanding.CONFIRMED:
+            return None
+        return settled_at(proposals=self.proposals, acceptance=self.acceptance)
 
     def outcome_for(self, player_id: UUID, *, now: Instant) -> Outcome | None:
         """Win or loss for one of the people who played. **Never a draw.**

@@ -3,8 +3,9 @@
 **The same shape as ``matcher_demands.py``, and a second file rather than more
 rows in that one.** That register holds the ports the *matcher* declares of
 contexts it does not write; these are the ports a **provider** publishes for
-three consumers arriving in three different tickets — the card's counted-games
-block, *Last 5*, and the rating context's result-update rule. Rows of both kinds
+four consumers — the card's counted-games block, *Last 5*, the two facts the
+Player Score ticket reads per player, and the confirmed results the rating
+context walks forward (``docs/adr/0139``). Rows of both kinds
 in one list would make ``MATCHER_DEMANDS``'s exhaustiveness assertion a claim
 about two different things, and the first person to add a row would have to guess
 which.
@@ -24,10 +25,15 @@ from typing import TypeVar
 
 from app.bootstrap.matcher_demands import RegisteredImplementation
 from app.bootstrap.composition import (
+    build_confirmed_result_ledger,
     build_game_directory,
     build_game_history_query,
 )
-from app.modules.games.domain.ports import GameDirectory, GameHistoryQuery
+from app.modules.games.domain.ports import (
+    ConfirmedResultLedger,
+    GameDirectory,
+    GameHistoryQuery,
+)
 
 #: What this context owes the rest of the platform, declared as data for the
 #: same reason the matcher's list is: *a port with no registered implementation*
@@ -40,7 +46,11 @@ from app.modules.games.domain.ports import GameDirectory, GameHistoryQuery
 #: about one player — the two facts the rating and Player Score tickets were
 #: promised — so it is a demand somebody else will execute, and a demand nobody
 #: executes is a demand satisfied by accident.
-GAMES_DEMANDS: tuple[type, ...] = (GameHistoryQuery, GameDirectory)
+GAMES_DEMANDS: tuple[type, ...] = (
+    GameHistoryQuery,
+    GameDirectory,
+    ConfirmedResultLedger,
+)
 
 
 GAME_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
@@ -53,6 +63,11 @@ GAME_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=GameDirectory,
         name="EventSourcedGameDirectory",
         build=build_game_directory,
+    ),
+    RegisteredImplementation(
+        port=ConfirmedResultLedger,
+        name="EventSourcedConfirmedResults",
+        build=build_confirmed_result_ledger,
     ),
 )
 

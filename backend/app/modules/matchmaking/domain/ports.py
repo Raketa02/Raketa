@@ -25,7 +25,7 @@ would make a reader check two places to be sure they had them all.
 | ``PlayerScoreQuery`` | ``player_score`` | ``NoPlayerScoresExist`` |
 | ``MatchHistoryQuery`` | ``challenges`` + ``games`` | a **real** composition of two |
 | ``AccountHoldQuery`` | ``cases`` | ``NoHoldsExist`` |
-| ``AtStakeQuery`` | ``rating``'s result-update rule | ``NoResultUpdateRuleExists`` |
+| ``AtStakeQuery`` | ``rating``'s update rule | a **real adapter** — the rule ships |
 | ``AccountStatusQuery`` | ``users`` | a **real adapter** — the provider ships |
 
 **The rule that decides every shape below:** *a gate may be honestly empty; a
@@ -584,14 +584,17 @@ class AtStakeQuery(Protocol):
     has no opinion on how ``games`` works internally. It demands the fact and
     stops.
 
-    **The provider exists and the rule does not.** ``rating`` ships, at
-    ``app/modules/rating/`` with its engine at ``app/engines/racketskill/``, and
-    the matcher already reads μ and σ from it. What is missing is the
-    result-update rule and its K-factor, which arrive with that context's own
-    ticket. So this port is **deliberately not built** against ``rating``: its
-    only registered
-    implementation is ``NoResultUpdateRuleExists``, and the field is **absent,
-    never zero**.
+    **The provider ships and so does the rule** (``docs/adr/0139``). ``rating``
+    lives at ``app/modules/rating/`` with its engines at
+    ``app/engines/racketskill/``, and the result-update rule is ``results.py``
+    there — the same function that moves a Level when the game is actually
+    played, which is what makes this block a promise rather than an estimate of
+    one. ``NoResultUpdateRuleExists`` is gone; the registered implementation is
+    ``RatingResultUpdateRule``.
+
+    **The answer is still absent rather than zero** whenever either party holds
+    no rating in this sport, and that absence is measured: there is nothing to
+    price the pairing against.
 
     Fails **soft** — the block is simply not drawn.
     """
@@ -607,8 +610,8 @@ class AtStakeQuery(Protocol):
         nothing. Asking about a for-fun evening is therefore a category error the
         method's own name refuses, not a mode flag it would have to branch on.
 
-        ``None`` when there is no answer — an unrated pair, or, today, a rule
-        that does not exist.
+        ``None`` when there is no answer, which now means one thing: one of the
+        two holds no rating in this sport.
         """
         ...
 

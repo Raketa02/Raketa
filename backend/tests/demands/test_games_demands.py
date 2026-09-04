@@ -49,6 +49,7 @@ from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, LineUp, Seating, GameSide
 from app.modules.games.domain.ports import (
     RECENT_RESULTS,
+    ConfirmedResultLedger,
     GameDirectory,
     GameHistoryQuery,
     PlayedOutcome,
@@ -675,3 +676,195 @@ async def test_the_directory_answers_about_the_reader_and_nobody_else(
     await _saved(session, _planned(line_up=_singles(one, other), at=_ago(hours=1)))
 
     assert await port.playing(stranger) == ()
+
+
+# ---------------------------------------------------------------------------
+# ConfirmedResultLedger — the read with nothing to subscribe to
+# ---------------------------------------------------------------------------
+
+
+def _four(a: UUID, b: UUID, c: UUID, d: UUID) -> LineUp:
+    return LineUp.of(
+        (
+            Seating(side=GameSide.A, player_id=a),
+            Seating(side=GameSide.A, player_id=b),
+            Seating(side=GameSide.B, player_id=c),
+            Seating(side=GameSide.B, player_id=d),
+        )
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))
+async def test_a_confirmed_counted_result_is_published_with_both_sides(
+    implementation, session
+):
+    """The read the rating context walks forward, and the shape it needs.
+
+    Two sides rather than an outcome per player, because a result is a fact about
+    a game and which side you were on — and the winner is the side the score
+    names, never one recorded beside it.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    winner, loser = new_uuid(), new_uuid()
+
+    game = _planned(line_up=_singles(winner, loser), at=_ago(days=3))
+    game.state_result(by=winner, score=_score((6, 4), (6, 3)), occurred_at=_ago(days=2))
+    await _saved(session, game)
+
+    published = await port.confirmed_counted_results(now=now)
+
+    assert [one.game_id for one in published] == [game.id]
+    assert published[0].winners == (winner,)
+    assert published[0].losers == (loser,)
+    assert published[0].sport is Sport.TENNIS
+
+
+@pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))
+async def test_a_four_publishes_two_people_on_each_side_in_the_line_ups_order(
+    implementation, session
+):
+    """**Tuples and never sets**, because a Level moved depends on the walk.
+
+    The score is **absolute** — side A's points against side B's — so a member of
+    side B entering ``4-6, 3-6`` is entering their own defeat, and the winner is
+    the side the score names rather than the side that typed it.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    one, two, three, four = (new_uuid() for _ in range(4))
+
+    game = _planned(
+        line_up=_four(one, two, three, four), at=_ago(days=3), sport=Sport.PADEL
+    )
+    game.state_result(by=three, score=_score((4, 6), (3, 6)), occurred_at=_ago(days=2))
+    await _saved(session, game)
+
+    published = await port.confirmed_counted_results(now=now)
+
+    assert published[0].winners == (three, four)
+    assert published[0].losers == (one, two)
+
+
+@pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))
+async def test_an_unscored_game_is_an_evening_and_never_reaches_the_ledger(
+    implementation, session
+):
+    """Two scores, nobody accepted either, both windows gone. **It moves nobody.**"""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    home, away = new_uuid(), new_uuid()
+
+    game = _planned(line_up=_singles(home, away), at=_ago(days=4))
+    game.state_result(by=home, score=_score((6, 4),), occurred_at=_ago(days=3))
+    game.state_result(by=away, score=_score((4, 6),), occurred_at=_ago(days=3))
+    await _saved(session, game)
+
+    assert game.standing_at(now) is GameStanding.UNSCORED
+    assert await port.confirmed_counted_results(now=now) == ()
+
+
+@pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))
+async def test_a_friendly_never_reaches_the_ledger_however_it_ended(
+    implementation, session
+):
+    """*A friendly is a thing people choose*, and it was never evidence."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    winner, loser = new_uuid(), new_uuid()
+
+    game = _planned(
+        line_up=_singles(winner, loser), at=_ago(days=3), kind=GameKind.FRIENDLY
+    )
+    game.state_result(by=winner, score=_score((6, 4), (6, 3)), occurred_at=_ago(days=2))
+    await _saved(session, game)
+
+    assert game.standing_at(now) is GameStanding.CONFIRMED
+    assert await port.confirmed_counted_results(now=now) == ()
+
+
+@pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))
+async def test_a_result_still_inside_its_window_has_not_settled_on_anything(
+    implementation, session
+):
+    """Proved by asking the same record at two instants, never by a method.
+
+    There is nothing here called ``confirm``: a lone score is agreed when its
+    window closes, so the demand advances a clock — and until it has, the ledger
+    has nothing to publish and the Level it would move has not moved.
+    """
+
+    port = implementation.build(session)
+    winner, loser = new_uuid(), new_uuid()
+
+    entered = _ago(hours=1)
+    game = _planned(line_up=_singles(winner, loser), at=_ago(days=1))
+    game.state_result(by=winner, score=_score((6, 4), (6, 3)), occurred_at=entered)
+    await _saved(session, game)
+
+    still_open = instant(datetime.now(timezone.utc))
+    assert await port.confirmed_counted_results(now=still_open) == ()
+
+    settled = instant(entered + PROPOSAL_WINDOW)
+    published = await port.confirmed_counted_results(now=settled)
+    assert [one.game_id for one in published] == [game.id]
+    assert published[0].confirmed_at == settled
+
+
+@pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))
+async def test_results_are_published_in_the_order_they_became_final(
+    implementation, session
+):
+    """**Oldest first is the contract**, and it is not the order they were entered.
+
+    A Level is moved against the Levels as they stood, so an out-of-order walk
+    produces a different rating for the same history and nothing says so. The
+    order is settlement, which for a score nobody answered is its window closing
+    — so a game entered *later* can settle *earlier* than one whose proposal was
+    corrected, and that is exactly what this arranges.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    home, away = new_uuid(), new_uuid()
+
+    earlier = _planned(line_up=_singles(home, away), at=_ago(days=5))
+    earlier.state_result(by=home, score=_score((6, 1),), occurred_at=_ago(days=4))
+    await _saved(session, earlier)
+
+    later = _planned(line_up=_singles(home, away), at=_ago(days=3))
+    later.state_result(by=away, score=_score((6, 2),), occurred_at=_ago(days=2))
+    await _saved(session, later)
+
+    published = await port.confirmed_counted_results(now=now)
+
+    assert [one.game_id for one in published] == [earlier.id, later.id]
+    assert published[0].confirmed_at < published[1].confirmed_at
+
+
+@pytest.mark.parametrize("implementation", registered(ConfirmedResultLedger))
+async def test_the_ledger_reads_the_same_answer_twice(implementation, session):
+    """It holds no cursor and consumes nothing, which is why a catch-up may die.
+
+    The idempotency lives on the rating stream instead, so the read has to be
+    repeatable — a ledger that drained would make a half-finished run a lost
+    result rather than a repeated one.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    winner, loser = new_uuid(), new_uuid()
+
+    game = _planned(line_up=_singles(winner, loser), at=_ago(days=3))
+    game.state_result(by=winner, score=_score((6, 4), (6, 3)), occurred_at=_ago(days=2))
+    await _saved(session, game)
+
+    once = await port.confirmed_counted_results(now=now)
+    twice = await port.confirmed_counted_results(now=now)
+
+    assert once == twice
+    assert len(once) == 1

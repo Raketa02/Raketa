@@ -61,7 +61,6 @@ from app.modules.matchmaking.domain.searches import InclusionReason, SearchRecor
 from app.modules.matchmaking.infrastructure.absent_providers import (
     NoHoldsExist,
     NoPlayerScoresExist,
-    NoResultUpdateRuleExists,
 )
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.player_profile.domain.consent import ConsentSurface
@@ -163,6 +162,20 @@ class NobodyIsHidden:
         self, candidate_ids: Collection[UUID]
     ) -> frozenset[UUID]:
         return frozenset()
+
+
+class NobodyHereIsRated:
+    """``AtStakeQuery`` over a world where nobody holds a rating.
+
+    A hand-written stub rather than the retired ``NoResultUpdateRuleExists``: the
+    rule exists now (``docs/adr/0139``) and its adapter answers ``None`` only when
+    a party is unrated, which is what these searches are about — none of them is
+    about the at-stake block, and every one of them would otherwise have to seed
+    two rating streams to say so.
+    """
+
+    async def counted_game_deltas(self, **_: object) -> None:
+        return None
 
 
 class NothingHasHappenedBetweenAnybody:
@@ -439,7 +452,7 @@ def use_case(
             account_status=NobodyIsHidden(),
             history=NothingHasHappenedBetweenAnybody(),
             player_scores=NoPlayerScoresExist(),
-            at_stake=NoResultUpdateRuleExists(),
+            at_stake=NobodyHereIsRated(),
             exposure=exposure or InMemoryExposureLedger(FixedClock()),
             interest=interest or Yeses(),
             cards=cards or Cards(),

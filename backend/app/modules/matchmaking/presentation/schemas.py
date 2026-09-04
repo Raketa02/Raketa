@@ -743,8 +743,15 @@ class ModifierSchema(BaseModel):
 class AtStakeSchema(BaseModel):
     """What a **counted** game against this opponent would do to your Level.
 
-    Filled by the backend, never by the matcher and never by the client. Omitted
+    Filled by the backend, never by the matcher and never by the client — it is
+    the rating engine's own update rule read forward (``docs/adr/0139``), so the
+    pair printed here is the pair the game will deliver if it is played. Omitted
     in for-fun, where a counted result is meaningless rather than unavailable.
+
+    **Neither figure is ever zero**, and it is priced head-to-head: in a doubles
+    sport the game will be a four and the other two seats are unknown when the
+    card is drawn, so the magnitude carries that sport's weighting while the
+    pairing is the one you are looking at.
     """
 
     win_delta: float
@@ -859,9 +866,10 @@ class CandidateSchema(BaseModel):
     at_stake: AtStakeSchema = Field(
         default=OMITTED,
         description=(
+            "What a counted game against this person would do to your Level. "
             "Omitted in for fun, where a counted result is meaningless rather "
-            "than unavailable, and omitted today in competitive because the "
-            "result-update rule does not exist."
+            "than unavailable, and omitted in competitive when either of you "
+            "holds no rating in this sport — never drawn as a pair of zeros."
         ),
     )
     would_be_forecast: ForecastSchema = Field(

@@ -30,12 +30,20 @@ from app.bootstrap.composition import (
     build_challenge_repository,
     build_domain_event_store,
     build_event_publisher,
+    build_skill_rating_repository,
 )
 from app.bootstrap.matcher_demands import (
     REGISTERED_IMPLEMENTATIONS,
     implementations_of,
 )
+from app.engines.assessment import AssessmentResult, BandView
 from app.engines.matchfit.core import ReliabilityStrand
+from app.engines.racketskill.core import (
+    STATUS_INITIAL_ESTIMATE,
+    band_for,
+    confidence_percent,
+    likely_range,
+)
 from app.kernel import Instant, InvariantViolated, Sport, instant
 from app.modules.challenges.application.send_challenge import SendChallenge
 from app.modules.challenges.domain.challenge import Challenge
@@ -67,6 +75,8 @@ from app.modules.matchmaking.domain.ports import (
     SportsmanshipStrand,
 )
 from app.modules.matchmaking.application.outward_reads import read_demand
+from app.modules.rating.domain.ids import skill_rating_id
+from app.modules.rating.domain.skill_rating import SkillRating
 from app.modules.users.domain.events import UserRegistered
 from app.modules.users.infrastructure.sqlalchemy_user_repository import (
     SqlAlchemyUserRepository,
@@ -931,17 +941,67 @@ def test_the_send_is_where_the_pair_rule_is_verified_for_real():
 # ---------------------------------------------------------------------------
 
 
+# **The provider ships and the rule exists** (``docs/adr/0139``), so these
+# arrange a real world and assert a real answer — through ``rating``'s own
+# aggregate, never through the adapter's insides. What is being held to the
+# contract is the *pair*: signed, never zero, and the same pair the game will
+# deliver if it is played.
+
+
+async def _rated(session, *, mu: float, sigma: float, sport: Sport = Sport.PADEL):
+    """One player carrying a Level, written through the aggregate that owns it.
+
+    Built from the initialised rating and then moved by nothing, because what
+    these demands need is *a Level exists* rather than a plausible history — and
+    a hand-built stream would be the adapter's own storage detail asserted back
+    at it.
+    """
+
+    player_id = new_uuid()
+    ratings = build_skill_rating_repository(
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    )
+    await ratings.save(
+        SkillRating.initialise(
+            rating_id=skill_rating_id(player_id, sport),
+            player_id=player_id,
+            sport=sport,
+            result=_an_assessment_result(mu=mu, sigma=sigma),
+            source_assessment_id=new_uuid(),
+            occurred_at=datetime.now(timezone.utc),
+        )
+    )
+    await session.commit()
+    return player_id
+
+
+def _an_assessment_result(*, mu: float, sigma: float) -> AssessmentResult:
+    band = band_for(mu)
+    low, high = likely_range(mu, sigma)
+    return AssessmentResult(
+        mu=mu,
+        sigma=sigma,
+        confidence=confidence_percent(sigma),
+        range_low=round(low, 2),
+        range_high=round(high, 2),
+        band=BandView(name=band.label, lower=band.lower, upper=band.upper),
+        status=STATUS_INITIAL_ESTIMATE,
+        questions_asked=7,
+        engine_version="racketskill-fusion-v3",
+        confidence_ceiling=confidence_percent(sigma),
+    )
+
+
 @pytest.mark.parametrize("implementation", registered(AtStakeQuery))
 async def test_at_stake_against_an_unrated_pair_is_absent_and_never_zero(
     implementation, session
 ):
     """The card omits the block; it never prints a pair of zeros.
 
-    Today that is every pair, because the rule that moves a Level on a result is
-    not written. A zero would claim a counted game against this opponent moves
-    the searcher's Level by nothing, which is false about every opponent — and
-    that is the difference between an absence that was measured and one that was
-    invented.
+    A pair with no Level between them is *we have nothing to price this
+    against*, and that is the difference between an absence that was measured
+    and one that was invented.
     """
 
     port = implementation.build(session)
@@ -951,6 +1011,97 @@ async def test_at_stake_against_an_unrated_pair_is_absent_and_never_zero(
     )
 
     assert at_stake is None
+
+
+@pytest.mark.parametrize("implementation", registered(AtStakeQuery))
+async def test_one_side_rated_is_still_no_answer(implementation, session):
+    """Half a pairing prices nothing, and the absence has one spelling."""
+
+    port = implementation.build(session)
+    rated = await _rated(session, mu=3.00, sigma=0.30)
+
+    assert (
+        await port.counted_game_deltas(
+            searcher_id=rated, opponent_id=new_uuid(), sport=Sport.PADEL
+        )
+        is None
+    )
+    assert (
+        await port.counted_game_deltas(
+            searcher_id=new_uuid(), opponent_id=rated, sport=Sport.PADEL
+        )
+        is None
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(AtStakeQuery))
+async def test_two_rated_players_are_priced_and_the_pair_is_signed(
+    implementation, session
+):
+    """The demand this port was written for: a real answer, both ways signed."""
+
+    port = implementation.build(session)
+    searcher = await _rated(session, mu=3.00, sigma=0.30)
+    opponent = await _rated(session, mu=3.00, sigma=0.30)
+
+    at_stake = await port.counted_game_deltas(
+        searcher_id=searcher, opponent_id=opponent, sport=Sport.PADEL
+    )
+
+    assert at_stake is not None
+    assert at_stake.win_delta > 0 > at_stake.loss_delta
+
+
+@pytest.mark.parametrize("implementation", registered(AtStakeQuery))
+async def test_beating_somebody_above_you_is_worth_more_than_beating_an_equal(
+    implementation, session
+):
+    """A shape demand and not a value one.
+
+    The numbers are the rule's and are held to ``tests/unit/`` against hand-worked
+    pairings; what the *contract* owes is that the block a player reads is about
+    the person beside it. A port answering one figure for everybody would satisfy
+    every other demand here.
+    """
+
+    port = implementation.build(session)
+    searcher = await _rated(session, mu=3.00, sigma=0.30)
+    equal = await _rated(session, mu=3.00, sigma=0.30)
+    stronger = await _rated(session, mu=4.00, sigma=0.30)
+
+    against_equal = await port.counted_game_deltas(
+        searcher_id=searcher, opponent_id=equal, sport=Sport.PADEL
+    )
+    against_stronger = await port.counted_game_deltas(
+        searcher_id=searcher, opponent_id=stronger, sport=Sport.PADEL
+    )
+
+    assert against_stronger.win_delta > against_equal.win_delta
+    assert against_stronger.loss_delta > against_equal.loss_delta
+
+
+@pytest.mark.parametrize("implementation", registered(AtStakeQuery))
+async def test_at_stake_is_asked_about_a_sport_and_answers_about_that_one(
+    implementation, session
+):
+    """A Level is per ``(player, sport)``, and a padel pair prices no tennis."""
+
+    port = implementation.build(session)
+    searcher = await _rated(session, mu=3.00, sigma=0.30, sport=Sport.PADEL)
+    opponent = await _rated(session, mu=3.20, sigma=0.30, sport=Sport.PADEL)
+
+    assert (
+        await port.counted_game_deltas(
+            searcher_id=searcher, opponent_id=opponent, sport=Sport.PADEL
+        )
+        is not None
+    )
+    assert (
+        await port.counted_game_deltas(
+            searcher_id=searcher, opponent_id=opponent, sport=Sport.TENNIS
+        )
+        is None
+    )
 
 
 @pytest.mark.parametrize("implementation", registered(AtStakeQuery))

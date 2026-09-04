@@ -345,9 +345,12 @@ to the person it protects most.
 
 **Everything ships wired.** The map has settled this shape three times —
 [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md)'s hold
-gate ships *wired and true-over-empty*, and ADR-0098's ports ship as `NoPlayerScoresExist` and
-`NoResultUpdateRuleExists`. Welcoming ships as a null-object read returning `NoEvidence`; the cap
-ships as code that never binds.
+gate ships *wired and true-over-empty*, and ADR-0098's ports shipped as `NoPlayerScoresExist`
+and `NoResultUpdateRuleExists` — the second of which has since retired into a real adapter,
+which is what a null object named for a fact is *for*
+([ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
+Welcoming ships as a null-object read returning `NoEvidence`; the cap ships as code that never
+binds.
 
 **The welcoming record is untouched by `challenges` signing `MatchHistoryQuery`**
 ([#253](https://github.com/Raketa02/Raketa/issues/253)), and this was checked rather than

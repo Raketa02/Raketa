@@ -204,6 +204,41 @@ def standing_of(
     )
 
 
+def settled_at(
+    *,
+    proposals: Mapping[GameSide, Proposal],
+    acceptance: Acceptance | None,
+) -> Instant | None:
+    """**When** a result became final, for a game whose standing says one has.
+
+    The third question beside *which score* and *has it settled*, and it is asked
+    separately for the same reason those two are: it is answerable off the record
+    alone, where *has it settled* needs the clock. A caller checks the standing
+    first — ``Game.confirmed_at`` is that pair written once.
+
+    It exists because a confirmation **announces nothing** (``docs/adr/0137``),
+    so anybody catching up on results has to walk them in an order, and the only
+    honest order is the one they became final in. The instant is derived — an
+    acceptance's grace, or the proposal window closing on silence — so it is the
+    same answer at every instant and on every reader's clock, which is exactly
+    what a cursor needs and what a stored ``confirmed_at`` column could not
+    promise (``docs/adr/0139``).
+
+    ``None`` when nothing has settled on a score, which is the disagreement this
+    platform refuses to arbitrate.
+    """
+
+    standing = live_acceptance(proposals=proposals, acceptance=acceptance)
+    if standing is not None:
+        accepted = proposals.get(standing.of_side)
+        if accepted is not None:
+            return acceptance_settles_at(accepted.at)
+    if len(proposals) == 1:
+        (only,) = proposals.values()
+        return proposal_closes_at(only.at)
+    return None
+
+
 def agreed_score(
     *,
     proposals: Mapping[GameSide, Proposal],

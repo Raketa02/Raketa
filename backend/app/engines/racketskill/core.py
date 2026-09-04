@@ -1,8 +1,8 @@
 """The RacketSkill core — everything that must outlive an engine version.
 
-The 1,0–5,0 scale, the four bands, the confidence transform and the
-σ-combination rule live here, extracted now so that onboarding and the later
-match-update engine cannot develop two definitions of uncertainty. A version
+The 1,0–5,0 scale, the four bands, the confidence transform, the three status
+words and the σ-combination rule live here, extracted so that onboarding and the
+result-update rule cannot develop two definitions of uncertainty. A version
 directory (``v3``) owns the *questions and constants*; this module owns the
 arithmetic those constants feed.
 
@@ -60,6 +60,17 @@ class Band(Enum):
         self.label = label
         self.lower = lower
         self.upper = upper
+
+
+#: The three words a rating's status may be, and the order it moves through
+#: them. They live here rather than in a version because a status is a **domain
+#: term** out of the root ``CONTEXT.md`` and outlives every engine that drives
+#: one: onboarding authors the first, and the result-update rule authors the
+#: other two (``docs/adr/0139``). Spelled once, so a screen and a stream can
+#: never be told two different words for one state.
+STATUS_INITIAL_ESTIMATE = "Initial Estimate"
+STATUS_CALIBRATING = "Calibrating"
+STATUS_STABLE = "Stable"
 
 
 def clamp_to_scale(value: float) -> float:

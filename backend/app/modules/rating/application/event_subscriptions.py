@@ -10,6 +10,7 @@ from app.modules.rating.domain.events import (
     AssessmentStarted,
     QuestionAsked,
     RatingInitialised,
+    RatingMovedOnResult,
 )
 
 
@@ -25,6 +26,9 @@ def register_rating_events(catalog: EventCatalog) -> None:
         AssessmentAbandoned, name="rating.assessment_abandoned", version=1
     )
     catalog.register(RatingInitialised, name="rating.rating_initialised", version=1)
+    catalog.register(
+        RatingMovedOnResult, name="rating.moved_on_result", version=1
+    )
 
 
 def subscribe_rating_handlers(dispatcher: EventDispatcher) -> None:
@@ -40,4 +44,7 @@ def subscribe_rating_handlers(dispatcher: EventDispatcher) -> None:
     )
     dispatcher.subscribe(
         RatingInitialised, LogRatingEvent("rating.rating_initialised")
+    )
+    dispatcher.subscribe(
+        RatingMovedOnResult, LogRatingEvent("rating.moved_on_result")
     )

@@ -406,6 +406,27 @@ class Settings(BaseSettings):
     CHALLENGE_LAPSE_ENABLED: bool = True
     CHALLENGE_LAPSE_INTERVAL_SECONDS: float = 60 * 60
 
+    # --- the rating catch-up (docs/adr/0139)
+    #
+    # **The second job that appends a domain event, and the first whose absence a
+    # player would notice.** A confirmation is a clock passing and nothing
+    # announces one, so this is what turns a result into a Level that moved. Turn
+    # it off and every rating on the platform quietly stops being tested — which
+    # is why it is the one loop here whose default is on for a reason about the
+    # product rather than about a record.
+    #
+    # Hourly, and the number is chosen against the clock the result settled on: a
+    # move is stamped with the moment the result became final rather than with
+    # the moment the run noticed, so the interval is how late the *stream* is and
+    # never what it says. Finer would buy a fresher card and pay for it in a walk
+    # of every game the platform has recorded.
+    #
+    # The **rule** it applies is not here and could not be: an environment that
+    # could pick a K-factor is an environment that decides how a marketplace
+    # rates people.
+    RATING_CATCH_UP_ENABLED: bool = True
+    RATING_CATCH_UP_INTERVAL_SECONDS: float = 60 * 60
+
     # --- the two scale triggers (docs/adr/0092, scale-posture.md §4)
     #
     # **The instruments are configuration; the thresholds are not.** How often

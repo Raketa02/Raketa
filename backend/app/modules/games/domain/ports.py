@@ -1,7 +1,7 @@
 """What this context stores behind, and what it publishes outward.
 
 **Two of these are the module's own** — the repository and the directory — and
-one is the platform's. ``GameHistoryQuery`` is the read every other context in
+two are the platform's. ``GameHistoryQuery`` is the read every other context in
 [#302](https://github.com/Raketa02/Raketa/issues/302) was blocked on: the
 pairwise history the matcher's familiarity term has been standing down for want
 of, the count under `player_card.counted_games`, and the five results *Last 5*
@@ -133,6 +133,83 @@ class CountedResult:
     played_at: Instant
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class ConfirmedGame:
+    """One **counted** game whose result is final, from nobody's point of view.
+
+    The shape the rating context reads forward (``docs/adr/0139``). It carries the
+    two sides rather than an outcome per player, because a result is a fact about
+    a game and which side you were on — four per-player rows would be four copies
+    of one score, and the day two of them disagreed there would be nothing to say
+    which lied.
+
+    ``confirmed_at`` is **when the result became final**, not when it was entered:
+    an acceptance's grace, or a proposal window closing on silence. Derived, so it
+    is the same instant on every reader's clock — which is what makes it safe to
+    order a catch-up on.
+
+    **Tuples and not sets.** The order is the line-up's own, so a walk over this
+    is the same walk on every process and under every ``PYTHONHASHSEED``
+    (``docs/adr/0105``).
+    """
+
+    game_id: UUID
+    sport: Sport
+    winners: tuple[UUID, ...]
+    losers: tuple[UUID, ...]
+    played_at: Instant
+    confirmed_at: Instant
+
+    def __post_init__(self) -> None:
+        invariant(
+            bool(self.winners) and bool(self.losers),
+            "a confirmed result with an empty side: a score names a winner and "
+            f"somebody it was won against ({len(self.winners)}/{len(self.losers)})",
+        )
+
+
+@runtime_checkable
+class ConfirmedResultLedger(Protocol):
+    """Every counted game that has reached an agreed score, **oldest first.**
+
+    **The read that exists because nothing announces a confirmation.** ADR-0137
+    refused a ``ResultConfirmed`` event on the grounds that a derived standing has
+    exactly one place to be true, and recorded the cost: the rating context has
+    nothing to subscribe to and must read results forward instead. This is that
+    read.
+
+    **Oldest first is the contract, not a convenience.** A Level is moved against
+    the Levels as they stood, so applying Tuesday's result after Thursday's would
+    produce a different rating for the same history — and nothing would ever say
+    so.
+
+    **It takes no cursor, and the rating's own stream is the cursor.** Each move a
+    rating records carries the game that caused it, so *have I applied this* is
+    answerable by replaying the aggregate that would be changed — which is one
+    fewer thing to be stale, one fewer table, and immune to a catch-up that dies
+    half way. A cursor column would be a second record of progress, and the first
+    one to be wrong would be the one nothing could check.
+
+    **Cost.** Bounded by how many games the platform has ever recorded, like every
+    other read in this context and for the same reason: the fold *is* the answer.
+    The index that fixes it belongs with the first query that measures it.
+    """
+
+    async def confirmed_counted_results(
+        self, *, now: Instant
+    ) -> tuple[ConfirmedGame, ...]:
+        """Every counted game confirmed by this instant, in settlement order.
+
+        **Counted only, and confirmed only.** A friendly is absent because it was
+        never evidence about anybody by the choice of the people who arranged it;
+        an unscored game is absent because *an evening is not evidence*. Both
+        absences are the same absence a caller needs — everything returned here
+        may move a Level, and nothing else may.
+        """
+        ...
+
+
 @runtime_checkable
 class GameRepository(Protocol):
     """One game's stream, loaded and appended to."""
@@ -243,6 +320,8 @@ class GameHistoryQuery(Protocol):
 __all__ = [
     "PLAYED_COUNTERPART_BOUND",
     "RECENT_RESULTS",
+    "ConfirmedGame",
+    "ConfirmedResultLedger",
     "CountedResult",
     "GameCounterpart",
     "GameDirectory",

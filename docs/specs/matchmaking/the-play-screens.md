@@ -105,9 +105,10 @@ sign one for another player's photo and `GET /photos/{id}` refuses to
 | a block, a pass or a decline | §21, and [ADR-0109](../../adr/0109-a-read-back-names-what-it-withholds.md) |
 | an unsettled case | the matcher never reads `cases`; the hold does its work at the gate |
 
-**Absent today, arriving through ports that exist:** last-5 form (`MatchHistoryQuery`),
-Player Score (`PlayerScoreQuery`), `at_stake` in competitive (`NoResultUpdateRuleExists`).
-Gaps, not refusals.
+**Absent today, arriving through ports that exist:** Player Score (`PlayerScoreQuery`).
+A gap, not a refusal. Last-5 form and `at_stake` in competitive have both since acquired
+providers ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md),
+[ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
 
 **A nickname is not shortenable.** There is no name in this platform. Every sentence naming
 somebody uses the whole handle or names nobody.

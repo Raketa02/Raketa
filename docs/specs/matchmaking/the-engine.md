@@ -1000,8 +1000,9 @@ it makes a Liveness-bounds change undiffable.
 | Distance | ✅ live | area centroid resolution |
 | **Intent alignment** | ✅ live | [#182](https://github.com/Raketa02/Raketa/issues/182) — one aggregate, one event |
 | Reliability | **stands down** | `player_score` |
-| At stake | **omitted** | the result-update rule (`rating` exists; the rule does not) |
-| Familiarity · welcoming record | `NoEvidence` | `matches` |
+| At stake | ✅ **live** | — the rule ships ([ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)); omitted only for an unrated pair |
+| Familiarity | ✅ **live** | — `games` ships ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)) |
+| Welcoming record | `NoEvidence` | the welcoming modifier |
 | Blocks · holds | **wired, true-over-empty** | `blocks`, `cases` |
 | **Gate 8 — account active** | ✅ **live** | — the only outward port whose provider ships ([ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md)) |
 | **Challenge load, all three rungs** | **wired, never binds** | `matches` — and it now *sinks* at `−12` rather than withholding ([ADR-0125](../../adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md)) |
@@ -1047,7 +1048,8 @@ changes visible instead of quiet.
   runs the ordinary vectors with the gate at `LEVEL_TOL_COMP`.
 - **B's opposed-intent candidate takes no `intent_opposed` modifier**; it was deleted. Asserting
   the old total is asserting a deleted modifier.
-- **A's expected `at_stake` block is omitted, not zero** — `NoResultUpdateRuleExists`.
+- **A's expected `at_stake` block is omitted, not zero** — the walkthrough's players hold no
+  ratings for the rule to price, and an unrated pair is an absence rather than a pair of zeros.
 
 ### 17.2 The six judged pairings
 

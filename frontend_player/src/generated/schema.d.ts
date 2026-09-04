@@ -1029,8 +1029,15 @@ export interface components {
          * AtStakeSchema
          * @description What a **counted** game against this opponent would do to your Level.
          *
-         *     Filled by the backend, never by the matcher and never by the client. Omitted
+         *     Filled by the backend, never by the matcher and never by the client — it is
+         *     the rating engine's own update rule read forward (``docs/adr/0139``), so the
+         *     pair printed here is the pair the game will deliver if it is played. Omitted
          *     in for-fun, where a counted result is meaningless rather than unavailable.
+         *
+         *     **Neither figure is ever zero**, and it is priced head-to-head: in a doubles
+         *     sport the game will be a four and the other two seats are unknown when the
+         *     card is drawn, so the magnitude carries that sport's weighting while the
+         *     pairing is the one you are looking at.
          */
         AtStakeSchema: {
             /** Win Delta */
@@ -1201,7 +1208,7 @@ export interface components {
             liveness_reasons: components["schemas"]["LivenessReason"][];
             /** @description Why this person is in the list at all, when the reason is one the searcher is owed. **A union of one**: only an interest lift *admits* anybody, and the two reasons that merely reorder stay in the store — one reaches you as a liveness reason instead, and the other is a third party's unpopularity you are owed no version of. Omitted otherwise. */
             inclusion_reason?: components["schemas"]["WireInclusionReason"];
-            /** @description Omitted in for fun, where a counted result is meaningless rather than unavailable, and omitted today in competitive because the result-update rule does not exist. */
+            /** @description What a counted game against this person would do to your Level. Omitted in for fun, where a counted result is meaningless rather than unavailable, and omitted in competitive when either of you holds no rating in this sport — never drawn as a pair of zeros. */
             at_stake?: components["schemas"]["AtStakeSchema"];
             /** @description What this candidate would leave on court. Precomputed only when a line-up has exactly one seat open, so **omitted on every shortlist**. */
             would_be_forecast?: components["schemas"]["ForecastSchema"];

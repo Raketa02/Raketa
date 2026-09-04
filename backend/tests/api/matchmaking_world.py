@@ -48,6 +48,10 @@ from app.modules.player_profile.infrastructure.event_sourced_player_profile_repo
     PLAYER_PROFILE_AGGREGATE,
 )
 from app.modules.rating.domain.events import RatingInitialised
+from app.modules.rating.domain.ids import skill_rating_id
+from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
+    RATING_AGGREGATE,
+)
 from tests.unit.candidate_index_fixtures import TickingClock, append, build_tail
 
 #: London, at the platform's own coarse precision. Every distance in these tests
@@ -248,7 +252,18 @@ async def a_signed_in_candidate(
         session_factory,
         ProposalsOptInAnswered(player_id, True, "v1", "ONBOARDING", at),
     )
-    await append(session_factory, _rating(player_id, mu=mu, at=at))
+    await append(
+        session_factory,
+        _rating(player_id, mu=mu, at=at),
+        # **A rating's stream id is derived from ``(player, sport)``**, and until
+        # ``docs/adr/0139`` nothing read one back by that address — the candidate
+        # index tails the log by sequence, so a rating filed under a random
+        # profile-shaped id was indistinguishable from a real one. ``at_stake``
+        # reads the stream, so a candidate filed anywhere else is a candidate the
+        # block is silently never drawn for.
+        aggregate_type=RATING_AGGREGATE,
+        aggregate_id=skill_rating_id(player_id, SPORT),
+    )
     if intent is not None:
         await append(
             session_factory,
@@ -268,8 +283,16 @@ async def block_between(client, token: str, player_id: UUID):
 
 
 def _rating(player_id: UUID, *, mu: float, at: datetime) -> RatingInitialised:
+    """One candidate's Level, filed where the rating context files one.
+
+    The two ids were ``hash()`` of a tuple, which is **seeded per interpreter**
+    and so produced a different stream on every run — harmless while nothing read
+    one back, and exactly the failure ``docs/adr/0105`` is written about the
+    moment something did.
+    """
+
     return RatingInitialised(
-        rating_id=UUID(int=abs(hash((player_id, mu))) % (1 << 128)),
+        rating_id=skill_rating_id(player_id, SPORT),
         player_id=player_id,
         sport=SPORT.value,
         mu=mu,
@@ -282,7 +305,7 @@ def _rating(player_id: UUID, *, mu: float, at: datetime) -> RatingInitialised:
         band_upper=3.0,
         status="INITIAL_ESTIMATE",
         engine_version="v3",
-        source_assessment_id=UUID(int=abs(hash((mu, player_id))) % (1 << 128)),
+        source_assessment_id=UUID(int=player_id.int ^ 1),
         occurred_at=at,
     )
 

@@ -287,9 +287,10 @@ union of one so the next reason that genuinely admits somebody has somewhere to 
 different author. It is `AtStakeQuery` over `rating`
 ([`consumer-driven-contracts.md`](consumer-driven-contracts.md)), attached after `matchfit`
 returns, because ADR-0021 forbids the client computing it and ADR-0098 forbids the matcher
-re-deriving it. **Omitted in for-fun** (meaningless — §23 Q11) and **omitted today in
-competitive** (`NoResultUpdateRuleExists`). The card shows no block either way and the client
-needs no branch.
+re-deriving it. **Omitted in for-fun** (meaningless — §23 Q11) and, in competitive, **omitted
+only for a pair with no Level between them** — the rule ships
+([ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
+The card shows no block when it is absent, and the client needs no branch either way.
 
 **`player_card`, `distance_km` and `concerns` are [#171](https://github.com/Raketa02/Raketa/issues/171)'s
 additions.** The card is attached by the **backend** after `matchfit` returns — the second field

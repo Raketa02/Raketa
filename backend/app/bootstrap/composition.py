@@ -74,9 +74,13 @@ from app.modules.challenges.infrastructure.games_planned_game import (
 )
 from app.modules.games.application.open_planned_game import OpenPlannedGame
 from app.modules.games.domain.ports import (
+    ConfirmedResultLedger,
     GameDirectory,
     GameHistoryQuery,
     GameRepository,
+)
+from app.modules.games.infrastructure.event_sourced_confirmed_results import (
+    EventSourcedConfirmedResults,
 )
 from app.modules.games.infrastructure.event_sourced_game_history import (
     EventSourcedGameHistory,
@@ -145,7 +149,6 @@ from app.modules.matchmaking.infrastructure.rebuild_candidate_index import (
 from app.modules.matchmaking.infrastructure.absent_providers import (
     NoHoldsExist,
     NoPlayerScoresExist,
-    NoResultUpdateRuleExists,
 )
 from app.modules.matchmaking.infrastructure.candidate_index_tail import (
     CandidateIndexTail,
@@ -195,6 +198,9 @@ from app.modules.matchmaking.infrastructure.challenges_mutual_challenge import (
 from app.modules.matchmaking.infrastructure.search_court_origin import (
     SearchCourtOrigin,
 )
+from app.modules.matchmaking.infrastructure.rating_at_stake import (
+    RatingResultUpdateRule,
+)
 from app.modules.matchmaking.infrastructure.users_account_status import (
     UsersAccountStatus,
 )
@@ -218,7 +224,15 @@ from app.modules.player_profile.infrastructure.pillow_image_transcoder import (
     PillowImageTranscoder,
 )
 from app.modules.player_profile.infrastructure.s3_photo_storage import S3PhotoStorage
-from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
+from app.modules.rating.application.settle_results import SettleRatingsOnResults
+from app.modules.rating.domain.ports import (
+    AssessmentRepository,
+    RatedPlayerQuery,
+    SkillRatingRepository,
+)
+from app.modules.rating.infrastructure.event_sourced_rated_players import (
+    EventSourcedRatedPlayers,
+)
 from app.modules.rating.infrastructure.event_sourced_assessment_repository import (
     EventSourcedAssessmentRepository,
 )
@@ -753,9 +767,81 @@ def build_match_history_query(session: AsyncSession) -> MatchHistoryQuery:
     )
 
 
-def build_at_stake_query(session: AsyncSession) -> AtStakeQuery:
-    """``rating`` ships; the rule that moves a Level on a result does not."""
-    return NoResultUpdateRuleExists()
+def build_rated_player_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> RatedPlayerQuery:
+    """Levels read and never held, over the rating streams.
+
+    Narrower than ``build_skill_rating_repository`` on purpose: that one
+    remembers stream versions so a rating it found can be saved, and a reader
+    that only wants two floats has no business with the path that could move
+    them.
+    """
+    return EventSourcedRatedPlayers(
+        event_store=build_domain_event_store(session, runtime=runtime)
+    )
+
+
+def build_at_stake_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> AtStakeQuery:
+    """``rating``'s own result-update rule, read forward (``docs/adr/0139``).
+
+    **The second of the three null objects to retire.** ``NoResultUpdateRuleExists``
+    said something true — *nobody's Level has ever moved on a result, because
+    nothing moves it* — and stopped being true the day the rule landed, which is
+    exactly when a null object is swapped rather than narrowed.
+
+    Built per request, because the adapter memoises the Levels it reads for the
+    life of one search and a longer-lived one would be a cache of numbers that
+    move.
+    """
+    return RatingResultUpdateRule(build_rated_player_query(session, runtime=runtime))
+
+
+def build_confirmed_result_ledger(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> ConfirmedResultLedger:
+    """Confirmed counted results, oldest first — the read with no subscriber.
+
+    A second adapter beside ``EventSourcedGameHistory`` rather than a method on
+    it, because it starts from nobody: every read there begins *which streams
+    seat this person*, and this one has no player to ask about until it has
+    folded the game.
+    """
+    return EventSourcedConfirmedResults(
+        session, (runtime or get_event_runtime()).codec
+    )
+
+
+def build_settle_ratings_on_results(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> SettleRatingsOnResults:
+    """The catch-up, wired the way a request is.
+
+    The clock is built here rather than taken, because *has this result settled*
+    is a fact about the instant the run happens and a caller holding one could
+    hold a stale one — the same argument the composed match-history read makes.
+    """
+    resolved = runtime or get_event_runtime()
+    event_store = build_domain_event_store(session, runtime=resolved)
+    return SettleRatingsOnResults(
+        results=build_confirmed_result_ledger(session, runtime=resolved),
+        ratings=build_skill_rating_repository(
+            event_store=event_store,
+            events=build_event_publisher(session, runtime=resolved),
+        ),
+        uow=build_unit_of_work(session),
+        clock=build_clock(),
+    )
 
 
 def build_ruleset() -> Ruleset:
