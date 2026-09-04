@@ -125,9 +125,15 @@ class PhotoReviewDecision(StrEnum):
     the other side of the trade has got heavier. Adding a blocking value later is
     an addition; shipping one now would be a behaviour nothing has earned.
 
-    There is also no value for *the reviewer could not be asked*. This enum says
-    what the reviewer **concluded** about an image, and an outage is not a
-    conclusion about an image — see `verdict_when_unreviewable`.
+    There is also no value for *the reviewer could not be asked*, and there is
+    now a third state rather than two. This enum says what the reviewer
+    **concluded** about an image; *nobody looked* is not a conclusion about an
+    image, so it is spelled as the **absence** of one of these — ``None`` on a
+    verdict, no key on the object, no field on the wire (``docs/adr/0138``).
+    ADR-0133 already spelled the uploader's third state that way rather than
+    folding it into ``allowed`` at the boundary that knows least; the stored
+    verdict is the boundary that was folded, and this is where it is unfolded.
+    See `verdict_when_unreviewable` and `decision_on_record`.
     """
 
     ALLOWED = "allowed"
@@ -146,11 +152,20 @@ class PhotoReviewVerdict:
     `review_note`.
     """
 
-    decision: PhotoReviewDecision
+    #: What the reviewer concluded, or ``None`` for **nobody looked**. Three
+    #: answers rather than two, and only the first two were ever a conclusion:
+    #: an unreachable reviewer used to record ``ALLOWED``, which was the right
+    #: trade while the verdict was a warning nobody else saw and the wrong one
+    #: the day it became a badge on a stranger's card (``docs/adr/0138``).
+    decision: PhotoReviewDecision | None
     note: str | None = None
 
     @property
     def is_flagged(self) -> bool:
+        """Whether this photo should be warned about. **A verdict with no
+        decision is not one** — silence is what an outage costs, on both sides
+        of it."""
+
         return self.decision is PhotoReviewDecision.FLAGGED
 
 
@@ -334,9 +349,19 @@ PHOTO_REVIEW_LOGIT_SCALE: Final = 100.0
 #: **Provisional, and it is written down as provisional.** The value that belongs
 #: here is the one that puts the flag rate where the product wants it, and that
 #: is a fact about a corpus of real photos which does not exist yet. Half is the
-#: honest placeholder — *the on-court captions won* — and it costs nothing today
-#: because nothing reads the decision: no route returns it and no copy shows it.
-#: What makes the placeholder safe to replace later is that every verdict records
+#: honest placeholder — *the on-court captions won*.
+#:
+#: **It no longer costs nothing, and this comment used to say it did.** ADR-0129
+#: wrote *"nothing reads the decision: no route returns it and no copy shows
+#: it"*, which stopped being true twice: ``docs/adr/0133`` made this line a
+#: sentence shown to the photograph's owner, and ``docs/adr/0138`` made it a
+#: shield shown to twenty people who are not. A genuine on-court photo scoring
+#: 0.49 now leaves its owner silently unbadged on other people's screens, with no
+#: copy to soften it. That is the sharpest cost this number has, and it is
+#: **#316** — the one place a reader meets the value should not also be the one
+#: place claiming it is inconsequential.
+#:
+#: What makes the placeholder safe to replace at all is that every verdict records
 #: the similarities it was computed from, so the threshold is re-derivable over
 #: the stored corpus without re-running inference on a single image.
 ON_COURT_CONFIDENCE_THRESHOLD: Final = 0.5
@@ -436,20 +461,26 @@ def verdict_from_similarities(
 def verdict_when_unreviewable(why: PhotoReviewUnavailability) -> PhotoReviewVerdict:
     """The verdict for a photo the reviewer could not be asked about.
 
-    **``ALLOWED``, and the note is what says it was never really looked at.** The
-    check soft-warns rather than hard-blocks (``docs/adr/0091``); a reviewer that
-    turned its own outage into a failed upload would refuse a real player's photo
-    for a reason that has nothing to do with the photo, which is worse than the
-    false reject the soft-warn rule already refuses to pay.
+    **No decision, and the note says which outage produced none.** Fail-open is
+    unchanged and is now spelled honestly: the check soft-warns rather than
+    hard-blocks (``docs/adr/0091``), so a reviewer that turned its own outage
+    into a failed upload would refuse a real player's photo for a reason that has
+    nothing to do with the photo — worse than the false reject the soft-warn rule
+    already refuses to pay. What has changed is the other side of it. Until
+    ``docs/adr/0138`` this returned ``ALLOWED``, which said *nothing to warn
+    about* in the only vocabulary it had; a card reading the same word would say
+    *this photograph was checked and passed*, about an image nothing looked at,
+    to twenty people who are not its owner.
 
-    There is deliberately no third decision for it. ``PhotoReviewDecision`` says
-    what the reviewer *concluded*, and *the reviewer was unreachable* is not a
-    conclusion about an image — it belongs in the evidence, where a re-review
-    pass can find every one of them by prefix.
+    So an outage costs **silence in both directions** — no warning to the
+    uploader, no shield to a stranger — and there is still no third value on
+    ``PhotoReviewDecision``. That enum says what the reviewer *concluded*, and
+    *the reviewer was unreachable* is not a conclusion about an image: it is an
+    absence of one, beside evidence a re-review pass can find by prefix.
     """
 
     return PhotoReviewVerdict(
-        decision=PhotoReviewDecision.ALLOWED,
+        decision=None,
         note=f"clip;p={PROMPT_SET_FINGERPRINT};unavailable={why.value}",
     )
 
@@ -535,9 +566,19 @@ def review_metadata(verdict: PhotoReviewVerdict) -> dict[str, str]:
 
     The note key is **omitted** rather than written empty when there is none.
     That is not tidiness: it is the signal, and `review_standing` reads it.
+
+    **The decision key is omitted the same way, and for a sharper reason.** A
+    photo nobody could look at gets no verdict written beside it at all
+    (``docs/adr/0138``), so ``review: allowed`` stops being a word this
+    application writes about an unexamined image. Every object still carrying
+    one is from before that record — the pass-through era, or an outage under
+    ADR-0133 — and `decision_on_record` is what refuses to believe them until
+    ADR-0132's job has been round.
     """
 
-    metadata = {REVIEW_METADATA_KEY: verdict.decision.value}
+    metadata: dict[str, str] = {}
+    if verdict.decision is not None:
+        metadata[REVIEW_METADATA_KEY] = verdict.decision.value
     if verdict.note is not None:
         metadata[REVIEW_NOTE_METADATA_KEY] = verdict.note
     return metadata
@@ -551,6 +592,56 @@ def review_note_in(metadata: Mapping[str, str]) -> str | None:
     """
 
     return metadata.get(REVIEW_NOTE_METADATA_KEY)
+
+
+def decision_on_record(metadata: Mapping[str, str]) -> PhotoReviewDecision | None:
+    """What was concluded about this photo, **believing nothing the note cannot
+    prove**. ``None`` for *nobody looked*.
+
+    The mirror of `review_metadata`, and the one thing on the read side that is
+    allowed to cross to somebody who is not the photograph's owner
+    (``docs/adr/0138``). ``review_note_in`` beside it answers *what does the
+    store say*; this answers *what may be drawn*, and the difference between the
+    two questions is the whole of this function.
+
+    **A stored decision counts only where the note proves an image was really
+    scored** — model, prompt set, confidence and raw vector, all four
+    (`review_standing`). Two populations say ``allowed`` and mean nothing of the
+    kind: the pass-through era, which allowed everything by construction, and
+    every upload that arrived while the sidecar was unreachable before
+    ADR-0138. ADR-0132's job drains both, on a clock measured in hours over a
+    listing that is one ``HEAD`` per object — and *a tick on a photo nobody
+    checked* is not a thing to be wrong about for as long as that takes. So the
+    proof is required at the point of reading rather than assumed to have been
+    written, and the backfill makes the metadata honest at its own pace instead
+    of being the thing a shield waits on.
+
+    **An unrecognised code is nothing, not a guess.** The backend publishes
+    codes (``docs/adr/0022``) and a value outside the enum is one this
+    application never wrote; naming it would be inventing the third decision
+    `PhotoReviewDecision` deliberately does not have.
+
+    **A score under a prompt set that has since moved still counts**, and that is
+    a decision rather than an oversight. `judged_against_a_superseded_set` is
+    population 3, which ``docs/adr/0132`` **counts and deliberately leaves
+    alone** — whether captions moved far enough to be worth re-running is a
+    judgement nobody has made. Refusing those photos here would take that
+    judgement by the back door and would silently unbadge everybody scored before
+    the last comma changed in a caption; showing them says only *somebody looked
+    at this image*, which is what a shield claims. The day population 3 is
+    re-run, or judged not worth re-running, is the day to re-open this line — and
+    the count is already in the backfill's log.
+    """
+
+    if review_standing(review_note_in(metadata)) is not PhotoReviewStanding.REVIEWED:
+        return None
+    recorded = metadata.get(REVIEW_METADATA_KEY)
+    if recorded is None:
+        return None
+    try:
+        return PhotoReviewDecision(recorded)
+    except ValueError:
+        return None
 
 
 def _note_fields(note: str) -> dict[str, str]:

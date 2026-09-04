@@ -178,10 +178,10 @@ Rules to preserve:
   `player_profile/domain/photos.py` beside the size caps — behaviour a domain test can
   observe, never configuration — and `PHOTO_REVIEW_ENDPOINT_URL` /
   `PHOTO_REVIEW_TIMEOUT_SECONDS` cannot change a verdict. It **soft-warns and fails
-  open**: a flagged photo is stored, and an unreachable sidecar yields `allowed` with a
-  note saying so, because an outage is not a conclusion about an image. Every verdict
-  records the similarity vector it was taken from, which is what makes today's
-  placeholder threshold safe. **No test needs the container** — `tests/conftest.py`
+  open**: a flagged photo is stored, and an unreachable sidecar yields **no decision at
+  all** with a note saying which outage, because an outage is not a conclusion about an
+  image. Every verdict records the similarity vector it was taken from, which is what makes
+  today's placeholder threshold safe. **No test needs the container** — `tests/conftest.py`
   overrides the port, as it does the store.
   **The verdict now crosses the wire, and only on the upload**
   ([ADR-0133](../docs/adr/0133-the-verdict-crosses-on-the-upload-and-the-warning-may-be-wrong.md)).
@@ -194,6 +194,19 @@ Rules to preserve:
   the tree rather than a flag — so there is nothing to toggle and the fail-open trade was
   re-examined rather than inherited: an outage now costs the player *silence*, not a
   sentence about our infrastructure dressed up as one about their photo.
+  **And the verdict now reaches a stranger, on the player card, where *never checked* is a
+  third answer**
+  ([ADR-0138](../docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)).
+  A shield saying *checked and passed* cannot be drawn on a photo nothing looked at, so
+  `verdict_when_unreviewable` records **no decision** and `review_metadata` writes no key
+  — and, because three legacy populations already say `allowed` about unexamined images,
+  `decision_on_record` believes a stored decision **only where the note proves a score**
+  (model, prompt set, confidence, vector — all four). ADR-0132's backfill is therefore the
+  cleanup and never the gate. The card **records** the verdict rather than minting it:
+  `PlayerCardSource` pays one `HEAD` per shortlisted row that has a photograph and
+  `RecordedCard` stores the code, so the read-back draws the shield that *was* drawn
+  (ADR-0109) — the mirror of `photo_url`, which cannot be stored because it dies within the
+  hour. `GET /photos/{id}` is untouched, and the note still crosses on no route at all.
 - **Background work is an `asyncio` loop in the API process, and a job must be safe to
   run beside itself** ([ADR-0092](../docs/adr/0092-periodic-jobs-as-embedded-loops.md)).
   `PeriodicJob` (`app/infrastructure/jobs/`) is the whole mechanism — the outbox worker

@@ -150,20 +150,27 @@ class AnsweredCandidate:
     at_stake: AtStake | None
 
     def recorded_card(self) -> RecordedCard:
-        """The card as it was shown, from the two sources that assembled it.
+        """The card as it was shown, from the sources that assembled it.
 
-        The nickname and the photo id come from ``users`` through
+        The nickname, the photo id and that photo's on-court verdict come from
+        ``users``, the Player profile and the photo store through
         :class:`PlayerCardSource`; the area, the tags, the Level and its band are
         already on the index row, because those are facts a player changes about
         themselves. Assembled once, here, and **both the response and the
         read-back render this one** — so the card on the wire and the card in the
         record cannot disagree about what was shown.
+
+        The verdict is copied down like every other fact and **never re-read on
+        the way back out** (``docs/adr/0138``): it costs a store round trip, and
+        a read-back that paid it would answer with the shield the backfill has
+        since earned rather than the one the searcher saw.
         """
 
         indexed = self.scored.generated.row
         return RecordedCard(
             nickname=self.card.nickname,
             photo_id=self.card.photo_id,
+            review=self.card.review,
             area_code=self.scored.fenced.area_code,
             social_tags=tuple(indexed.social_tags),
             level=indexed.mu,

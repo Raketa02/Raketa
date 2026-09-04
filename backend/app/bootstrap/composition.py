@@ -839,20 +839,28 @@ def build_player_card_source(
     session: AsyncSession,
     event_store: DomainEventStore,
     events: DomainEventPublisher,
+    storage: PhotoStorage,
 ) -> PlayerCardSource:
-    """The two card fields the index deliberately does not hold.
+    """The three card fields the index deliberately does not hold.
 
-    Built over the **two providers' own ports** rather than over the session,
+    Built over the **three providers' own ports** rather than over the session,
     which is the whole of what keeps the matcher from becoming a second reader of
     somebody else's schema — and it is why this builder takes an event store
     rather than only a connection: a Player profile is a stream, and folding one
     is that context's business.
+
+    The third provider is the photo store, and it arrives here for the same
+    reason its neighbour ``build_card_photo_links`` does: what the on-court check
+    concluded rides on the object beside the bytes (``docs/adr/0138``), and where
+    a photograph lives is the Player profile's business rather than the
+    matcher's.
     """
     return PlayerCardIdentities(
         users=build_user_repository(session),
         profiles=build_player_profile_repository(
             event_store=event_store, events=events
         ),
+        photos=storage,
     )
 
 

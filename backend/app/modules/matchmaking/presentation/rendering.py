@@ -588,4 +588,9 @@ def _card(card: RecordedCard, photo_url: str | None) -> PlayerCardSchema:
     if card.photo_id is not None and photo_url is not None:
         fields["photo_id"] = card.photo_id
         fields["photo_url"] = photo_url
+        # **Only beside the photograph it is about.** A verdict on a card whose
+        # picture could not be addressed would be a shield with nothing under
+        # it, and the poster is not somebody's photo to have passed a check.
+        if card.review is not None:
+            fields["review"] = card.review
     return PlayerCardSchema.model_validate(fields)

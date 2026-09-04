@@ -425,7 +425,7 @@ export interface paths {
          *
          *     The returned id is what a profile commit carries; a photo becomes part of a profile only when a commit names it. Uploaded photos that are never committed are intended to be swept, and that sweep is not running yet.
          *
-         *     **Every upload is checked against the on-court rule, and `review` says what the check concluded.** It never refuses: a `flagged` photo is stored, answers `201` and is committed like any other, and the warning is the client's to word. A photo the check could not be run on answers `allowed` — the reviewer's own outage is not a reason to tell a player anything about their photograph.
+         *     **Every upload is checked against the on-court rule, and `review` says what the check concluded.** It never refuses: a `flagged` photo is stored, answers `201` and is committed like any other, and the warning is the client's to word. A photo the check could not be run on answers **nothing at all** — the field is `null`, because the reviewer's own outage is neither a reason to tell a player something about their photograph nor a reason to say it passed. Warn on `flagged` and on nothing else.
          */
         post: operations["upload_photo_api_v1_photos_post"];
         delete?: never;
@@ -2249,6 +2249,15 @@ export interface components {
          *     request per object. So the shape stays one shape and the tile stays one code
          *     path, exactly as the paragraph above promises; what differs is whether this
          *     response has anything to say about the check.
+         *
+         *     **The upload can also carry nothing, and that is not the read's ``null``**
+         *     (``docs/adr/0138``). A reviewer that could not be asked concludes nothing, so
+         *     an outage answers ``null`` here rather than ``allowed``: fail-open used to
+         *     spell *nothing to warn about* with the only word it had, and that word now
+         *     means *checked and passed* somewhere else — on a player card, to somebody who
+         *     is not this photograph's owner. Both absences reach a client as *say
+         *     nothing*, which is what makes the collapse safe on this route and the
+         *     distinction load-bearing on the other one.
          */
         PhotoResponse: {
             /**
@@ -2271,7 +2280,7 @@ export interface components {
             /**
              * @description What the on-court check concluded about this photo, or `null` where this response carries no verdict.
              *
-             *     **`null` is not `allowed`.** The upload always answers with one of the two values; the read never carries one. A client that has not been told anything must warn about nothing.
+             *     **`null` is not `allowed`, and it means two different things on the two routes.** On the upload it is *the reviewer could not be asked* — our outage, and never a statement about the photograph. On the read it is *this route does not carry one*, which it never does. A client that has not been told anything must warn about nothing, and both readings collapse to that.
              *
              *     **A warning and nothing else.** `flagged` does not refuse, delete or hold back a photo: it is stored, it keeps its id, and a profile commit takes it like any other. The check is wrong sometimes, and the cost of being wrong is a sentence rather than a signup.
              *
@@ -2289,9 +2298,15 @@ export interface components {
          *     the other side of the trade has got heavier. Adding a blocking value later is
          *     an addition; shipping one now would be a behaviour nothing has earned.
          *
-         *     There is also no value for *the reviewer could not be asked*. This enum says
-         *     what the reviewer **concluded** about an image, and an outage is not a
-         *     conclusion about an image — see `verdict_when_unreviewable`.
+         *     There is also no value for *the reviewer could not be asked*, and there is
+         *     now a third state rather than two. This enum says what the reviewer
+         *     **concluded** about an image; *nobody looked* is not a conclusion about an
+         *     image, so it is spelled as the **absence** of one of these — ``None`` on a
+         *     verdict, no key on the object, no field on the wire (``docs/adr/0138``).
+         *     ADR-0133 already spelled the uploader's third state that way rather than
+         *     folding it into ``allowed`` at the boundary that knows least; the stored
+         *     verdict is the boundary that was folded, and this is where it is unfolded.
+         *     See `verdict_when_unreviewable` and `decision_on_record`.
          * @enum {string}
          */
         PhotoReviewDecision: "allowed" | "flagged";
@@ -2374,6 +2389,16 @@ export interface components {
              *     **Present exactly when `photo_id` is.** A link that has expired is not an error to report: draw the generated court poster, which is what a player with no photo gets in any case.
              */
             photo_url?: string;
+            /**
+             * @description What the on-court check concluded about `photo_id`, or **omitted** where this photograph has not been checked.
+             *
+             *     **Omitted is not `allowed`, and only `allowed` earns a shield.** Three answers, not two: checked and passed, checked and flagged, and *nobody looked* — a photo that arrived while the reviewer could not be reached, or before the check existed at all. A client that drew a tick on the absence would be claiming a check happened on every photograph on the platform.
+             *
+             *     **A fact about this photograph and not about the player.** It is present only beside `photo_id`, it is search-time like every other fact on this card, and `flagged` blocks nothing — the photo is stored, it is shown, and the check is wrong sometimes.
+             *
+             *     **The evidence never crosses.** No confidence, no similarity vector, no model, no prompt-set fingerprint: those are collected so the threshold can be re-derived, and they are not a number a player can do anything with. A code, not copy — the words belong to the client.
+             */
+            review?: components["schemas"]["PhotoReviewDecision"];
             /**
              * Area Code
              * @description Their coarse area, as a machine code

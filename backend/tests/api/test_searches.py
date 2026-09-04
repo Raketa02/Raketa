@@ -20,7 +20,23 @@ import pytest
 
 from app.engines.matchfit.core import Term
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
+from app.modules.player_profile.domain.photos import (
+    PROMPT_SET_FINGERPRINT,
+    PhotoRef,
+    PhotoReviewDecision,
+    PhotoReviewUnavailability,
+    PhotoReviewVerdict,
+    review_metadata,
+    verdict_from_similarities,
+    verdict_when_unreviewable,
+)
 from tests.api import matchmaking_world as world
+
+MODEL = "openai/clip-vit-base-patch32"
+
+#: Confidently on-court, and confidently not. Both are verdicts somebody took.
+ON_COURT = [0.9] * 5 + [0.1] * 8
+OFF_COURT = [0.1] * 5 + [0.9] * 8
 
 
 @pytest.fixture
@@ -546,6 +562,181 @@ async def test_the_record_keeps_the_photo_id_and_never_the_link(
     for card in stored:
         assert card["photo_id"] == str(photo)
         assert "photo_url" not in card and "url" not in card
+
+
+# ---------------------------------------------------------------------------
+# The on-court verdict, on somebody else's card
+# ---------------------------------------------------------------------------
+#
+# ``docs/adr/0138``. Three answers and not two: checked and passed, checked and
+# flagged, and *nobody looked* — which is an omitted field rather than a value,
+# because a shield drawn on the absence would claim a check happened on every
+# photograph the platform has ever held.
+
+
+async def a_photographed_candidate(
+    client, session_factory, storage, searcher, *, metadata: dict[str, str]
+) -> tuple[UUID, UUID]:
+    """A candidate with one photograph, and that object really in the store.
+
+    The other photo tests here hand over an id nothing was ever stored under,
+    which is the right shape for a link (signing is arithmetic and never a
+    lookup) and the wrong one for a verdict — that is metadata on an object, so
+    an absent object answers nothing.
+    """
+
+    photo = uuid4()
+    player = await world.a_candidate(
+        client, session_factory, "photographed", mu=searcher["mu"], photo_ids=(photo,)
+    )
+    storage.already_holding(PhotoRef(owner_id=player, photo_id=photo), metadata)
+    return player, photo
+
+
+@pytest.mark.parametrize(
+    ("similarities", "expected"),
+    [(ON_COURT, "allowed"), (OFF_COURT, "flagged")],
+)
+async def test_the_card_carries_what_the_check_concluded_about_that_photo(
+    client,
+    session_factory,
+    candidate_source,
+    photo_storage,
+    searcher,
+    similarities,
+    expected,
+):
+    """The shield's whole input, as a **code** the client draws the words for."""
+
+    await a_photographed_candidate(
+        client,
+        session_factory,
+        photo_storage,
+        searcher,
+        metadata=review_metadata(
+            verdict_from_similarities(model=MODEL, similarities=similarities)
+        ),
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    card = (await world.search(client, searcher["token"])).json()["candidates"][0][
+        "player_card"
+    ]
+
+    assert card["review"] == expected
+
+
+async def test_a_photo_the_reviewer_could_not_be_asked_about_carries_no_verdict(
+    client, session_factory, candidate_source, photo_storage, searcher
+):
+    """**Omitted, not `allowed`** — the change ``docs/adr/0138`` exists for.
+
+    The photograph is still shown: an outage of ours is not a reason to hide
+    somebody's face. What is withheld is the claim that anybody looked at it.
+    """
+
+    _, photo = await a_photographed_candidate(
+        client,
+        session_factory,
+        photo_storage,
+        searcher,
+        metadata=review_metadata(
+            verdict_when_unreviewable(PhotoReviewUnavailability.TIMEOUT)
+        ),
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    card = (await world.search(client, searcher["token"])).json()["candidates"][0][
+        "player_card"
+    ]
+
+    assert card["photo_id"] == str(photo)
+    assert card["photo_url"]
+    assert "review" not in card
+
+
+async def test_the_pass_through_eras_allowed_reaches_no_card(
+    client, session_factory, candidate_source, photo_storage, searcher
+):
+    """Every photo stored before the checker existed says ``review: allowed`` and
+    nothing looked at it. ADR-0132's backfill drains that population on a clock
+    measured in hours; the shield does not wait for it, because the note is what
+    proves a score and there is none."""
+
+    await a_photographed_candidate(
+        client,
+        session_factory,
+        photo_storage,
+        searcher,
+        metadata=review_metadata(
+            PhotoReviewVerdict(decision=PhotoReviewDecision.ALLOWED)
+        ),
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    card = (await world.search(client, searcher["token"])).json()["candidates"][0][
+        "player_card"
+    ]
+
+    assert "review" not in card
+
+
+async def test_a_player_with_no_photo_has_nothing_to_have_been_checked(
+    client, session_factory, candidate_source, photo_storage, searcher
+):
+    """No photograph, no verdict, and **no round trip to ask for one** — the one
+    place this could quietly become a store read per row of the shortlist rather
+    than per row that has a picture."""
+
+    await world.a_candidate(client, session_factory, "no-photo", mu=searcher["mu"])
+    await world.fold_the_log(session_factory, candidate_source)
+
+    card = (await world.search(client, searcher["token"])).json()["candidates"][0][
+        "player_card"
+    ]
+
+    assert "review" not in card
+    assert photo_storage.decision_reads == []
+
+
+async def test_the_note_crosses_on_no_route_in_any_shape(
+    client, session_factory, candidate_source, photo_storage, searcher
+):
+    """**The clause ADR-0133 wrote and ADR-0138 opened a second route under.**
+
+    The model, the prompt-set fingerprint, the confidence and the raw similarity
+    vector are evidence collected so a placeholder threshold can be re-derived
+    over stored objects. None of it is a fact about the player, and *"we are 38%
+    sure this is a court"* is a number nobody can act on — least of all about
+    somebody else. Asserted over the **whole body** rather than over the card,
+    because a leak would arrive on whichever field somebody added next.
+
+    **`confidence` is deliberately not one of the words checked.** The balance
+    term publishes one, it is a fact about two ratings rather than about a
+    photograph, and a rule that caught it would be loosened within the month —
+    which is the argument ``test_no_response_carries_a_forbidden_fact`` makes
+    about ``threshold`` and ``page``. What is checked instead is the note's own
+    shape and the numbers it was written from.
+    """
+
+    await a_photographed_candidate(
+        client,
+        session_factory,
+        photo_storage,
+        searcher,
+        metadata=review_metadata(
+            verdict_from_similarities(model=MODEL, similarities=ON_COURT)
+        ),
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    body = (await world.search(client, searcher["token"])).text
+
+    assert "clip;" not in body
+    assert MODEL not in body
+    assert PROMPT_SET_FINGERPRINT not in body
+    for evidence in ("review_note", "reviewNote", "similarit", "0.9000"):
+        assert evidence not in body, f"{evidence} reached a search response"
 
 
 async def test_the_envelope_carries_the_facts_about_the_search(

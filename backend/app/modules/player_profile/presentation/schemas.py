@@ -201,6 +201,15 @@ class PhotoResponse(BaseModel):
     request per object. So the shape stays one shape and the tile stays one code
     path, exactly as the paragraph above promises; what differs is whether this
     response has anything to say about the check.
+
+    **The upload can also carry nothing, and that is not the read's ``null``**
+    (``docs/adr/0138``). A reviewer that could not be asked concludes nothing, so
+    an outage answers ``null`` here rather than ``allowed``: fail-open used to
+    spell *nothing to warn about* with the only word it had, and that word now
+    means *checked and passed* somewhere else — on a player card, to somebody who
+    is not this photograph's owner. Both absences reach a client as *say
+    nothing*, which is what makes the collapse safe on this route and the
+    distinction load-bearing on the other one.
     """
 
     photo_id: UUID = Field(
@@ -227,9 +236,12 @@ class PhotoResponse(BaseModel):
         description=(
             "What the on-court check concluded about this photo, or `null` "
             "where this response carries no verdict.\n\n"
-            "**`null` is not `allowed`.** The upload always answers with one of "
-            "the two values; the read never carries one. A client that has not "
-            "been told anything must warn about nothing.\n\n"
+            "**`null` is not `allowed`, and it means two different things on "
+            "the two routes.** On the upload it is *the reviewer could not be "
+            "asked* — our outage, and never a statement about the photograph. "
+            "On the read it is *this route does not carry one*, which it never "
+            "does. A client that has not been told anything must warn about "
+            "nothing, and both readings collapse to that.\n\n"
             "**A warning and nothing else.** `flagged` does not refuse, delete "
             "or hold back a photo: it is stored, it keeps its id, and a profile "
             "commit takes it like any other. The check is wrong sometimes, and "

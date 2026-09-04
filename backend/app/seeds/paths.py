@@ -52,6 +52,7 @@ from app.bootstrap.composition import (
     build_planned_game_opening,
     build_pass_ledger,
     build_play_intent_declaration_repository,
+    build_photo_storage,
     build_player_card_source,
     build_player_profile_repository,
     build_player_score_query,
@@ -241,7 +242,10 @@ async def read_paths(
         exposure=exposure,
         interest=interest,
         cards=build_player_card_source(
-            session=session, event_store=event_store, events=events
+            session=session,
+            event_store=event_store,
+            events=events,
+            storage=build_photo_storage(settings),
         ),
         absent_terms=build_absent_terms(player_scores),
         meter=None,

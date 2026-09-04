@@ -235,6 +235,7 @@ def get_search_workbench(
     account_status: AccountStatusQueryDep,
     exposure: ExposureLedgerDep,
     interest: InterestLedgerDep,
+    storage: PhotoStorageDep,
     meter: ScoringMeterDep,
 ) -> SearchWorkbench:
     """Everything every Play surface reads and writes, assembled per request.
@@ -273,7 +274,7 @@ def get_search_workbench(
         exposure=exposure,
         interest=interest,
         cards=build_player_card_source(
-            session=db, event_store=event_store, events=events
+            session=db, event_store=event_store, events=events, storage=storage
         ),
         absent_terms=build_absent_terms(player_scores),
         meter=meter,

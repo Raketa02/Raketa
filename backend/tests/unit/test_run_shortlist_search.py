@@ -328,7 +328,7 @@ class Cards:
         self, player_ids: Collection[UUID]
     ) -> Mapping[UUID, CardIdentity]:
         return {
-            player_id: CardIdentity(nickname=f"p{index}", photo_id=None)
+            player_id: CardIdentity(nickname=f"p{index}", photo_id=None, review=None)
             for index, player_id in enumerate(player_ids)
             if self.known is None or player_id in self.known
         }

@@ -22,6 +22,7 @@ from app.modules.matchmaking.domain.searches import (
 from app.modules.matchmaking.infrastructure.card_photo_links import (
     PresignedCardPhotos,
 )
+from app.modules.player_profile.domain.photos import PhotoReviewDecision
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
 VALID_FOR_MINUTES = 5
@@ -56,6 +57,7 @@ def _row(
             RecordedCard(
                 nickname="ada",
                 photo_id=photo_id,
+                review=PhotoReviewDecision.ALLOWED,
                 area_code="LDN-CENTRAL",
                 social_tags=("PLAYS_TO_WIN",),
                 level=2.7,

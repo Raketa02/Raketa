@@ -82,7 +82,7 @@ player_card: { nickname, photo_id?, area_code, distance_km,
 
 **Nothing else.**
 
-> **Amended three times since, all under this ADR's own rule** — *a card says only what its
+> **Amended four times since, all under this ADR's own rule** — *a card says only what its
 > subject published, and every field on it is a fact about that person alone.*
 >
 > - **`range` was added** — the likely range, μ ± σ as `rating` published it, travelling as
@@ -107,6 +107,17 @@ player_card: { nickname, photo_id?, area_code, distance_km,
 >   is looking. It sits on the *candidate*, beside the card
 >   ([`the-play-screens.md`](../specs/matchmaking/the-play-screens.md) §1, which carries the
 >   argument).
+>
+> - **`review` was added beside `photo_id`** — what the on-court check concluded about that
+>   photograph, as a code, or **omitted** for *nobody looked*
+>   ([ADR-0138](0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)).
+>   It is the awkward one for this ADR's rule and it passes: a verdict is not something its
+>   subject *published*, but it is a fact about **their photograph** rather than about the
+>   pair, so it does not change with who is looking — which is the half of the rule
+>   `distance_km` failed. It is **recorded** like `photo_id` and not minted like `photo_url`,
+>   and the two paragraphs below are what decide that: a link is dead within the hour so it
+>   cannot be stored, and a verdict is a store round trip so it must not be re-read per
+>   response.
 >
 > The list is still closed; it is the two paragraphs below that say what closed means.
 

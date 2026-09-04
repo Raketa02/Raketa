@@ -72,6 +72,7 @@ from app.modules.matchmaking.presentation.evidence import Evidence
 # stale, and one client grid editor should be able to post to either route.
 from app.modules.player_profile.presentation.schemas import AvailabilitySlotResource
 from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.photos import PhotoReviewDecision
 
 
 #: The default that spells **omitted** — *this field does not apply here*.
@@ -609,6 +610,28 @@ class PlayerCardSchema(BaseModel):
             "**Present exactly when `photo_id` is.** A link that has expired is "
             "not an error to report: draw the generated court poster, which is "
             "what a player with no photo gets in any case."
+        ),
+    )
+    review: PhotoReviewDecision = Field(
+        default=OMITTED,
+        description=(
+            "What the on-court check concluded about `photo_id`, or **omitted** "
+            "where this photograph has not been checked.\n\n"
+            "**Omitted is not `allowed`, and only `allowed` earns a shield.** "
+            "Three answers, not two: checked and passed, checked and flagged, "
+            "and *nobody looked* — a photo that arrived while the reviewer could "
+            "not be reached, or before the check existed at all. A client that "
+            "drew a tick on the absence would be claiming a check happened on "
+            "every photograph on the platform.\n\n"
+            "**A fact about this photograph and not about the player.** It is "
+            "present only beside `photo_id`, it is search-time like every other "
+            "fact on this card, and `flagged` blocks nothing — the photo is "
+            "stored, it is shown, and the check is wrong sometimes.\n\n"
+            "**The evidence never crosses.** No confidence, no similarity "
+            "vector, no model, no prompt-set fingerprint: those are collected so "
+            "the threshold can be re-derived, and they are not a number a player "
+            "can do anything with. A code, not copy — the words belong to the "
+            "client."
         ),
     )
     area_code: str = Field(..., description="Their coarse area, as a machine code")

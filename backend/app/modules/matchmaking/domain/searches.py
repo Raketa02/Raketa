@@ -47,6 +47,7 @@ from app.kernel import Sport, invariant
 from app.modules.matchmaking.domain.ports import AtStake
 from app.modules.matchmaking.domain.relaxation import Rung, RungOffer
 from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.photos import PhotoReviewDecision
 from app.modules.player_profile.domain.play_intent import PlayIntent
 
 
@@ -233,6 +234,15 @@ class RecordedCard:
     #: ``None`` when they had no photo, and the client drew the generated court
     #: poster. **Not a measured zero** — there is no photo to point at.
     photo_id: UUID | None
+    #: What the on-court check had concluded about that photograph when this
+    #: search ran, or ``None`` for *nobody looked* (``docs/adr/0138``).
+    #:
+    #: **Recorded rather than re-read**, for the reason every other fact on this
+    #: card is: the verdict is user metadata on an object, so a read-back that
+    #: went and asked would pay a store round trip per row to answer a *different*
+    #: search — one where the re-review backfill has since been round. The
+    #: shield the read-back draws is the shield that was drawn.
+    review: PhotoReviewDecision | None
     area_code: str
     social_tags: tuple[str, ...]
     #: Their Level as RacketSkill published it *then*.

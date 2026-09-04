@@ -39,6 +39,7 @@ from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
     SqlAlchemySearchStore,
 )
 from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.photos import PhotoReviewDecision
 
 AT = datetime(2026, 8, 26, 18, 0, tzinfo=timezone.utc)
 #: The week the search ran on. Four cells across four days, which ``window_of``
@@ -90,6 +91,7 @@ def _candidate(band: CandidateBand, position: int) -> SearchCandidateRecord:
             RecordedCard(
                 nickname="ada",
                 photo_id=PHOTO,
+                review=PhotoReviewDecision.FLAGGED,
                 area_code="LDN-CENTRAL",
                 social_tags=("PLAYS_TO_WIN",),
                 level=2.7,
@@ -401,6 +403,7 @@ def test_a_basis_and_the_reasons_beside_it_may_not_be_different_lengths():
             card=RecordedCard(
                 nickname="ada",
                 photo_id=None,
+                review=None,
                 area_code="LDN-CENTRAL",
                 social_tags=(),
                 level=2.7,
@@ -444,6 +447,7 @@ def test_a_near_miss_may_not_carry_a_card():
             card=RecordedCard(
                 nickname="ada",
                 photo_id=None,
+                review=None,
                 area_code="LDN-CENTRAL",
                 social_tags=(),
                 level=2.7,

@@ -49,6 +49,7 @@ from app.modules.player_profile.domain.availability import (
     Window,
     window_of,
 )
+from app.modules.player_profile.domain.photos import PhotoReviewDecision
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
@@ -498,6 +499,11 @@ def _card_blob(card: RecordedCard | None) -> dict[str, Any] | None:
     The ``photo_id`` goes down as text because a blob has no UUID type; it is a
     photo **id and never a URL**, which is the whole of what makes it storable in
     a row kept for ever.
+
+    ``review`` goes down as its **code** and never the note beside it: the model,
+    the prompt-set fingerprint, the confidence and the similarity vector stay on
+    the object, where a threshold derivation reads them (``docs/adr/0138``). It
+    is ``None`` for *nobody looked*, which is not ``allowed``.
     """
 
     if card is None:
@@ -505,6 +511,7 @@ def _card_blob(card: RecordedCard | None) -> dict[str, Any] | None:
     return {
         "nickname": card.nickname,
         "photo_id": None if card.photo_id is None else str(card.photo_id),
+        "review": None if card.review is None else card.review.value,
         "area_code": card.area_code,
         "social_tags": list(card.social_tags),
         "level": card.level,
@@ -559,9 +566,18 @@ def _recorded_card(blob: Mapping[str, Any] | None) -> RecordedCard | None:
     if blob is None:
         return None
     photo_id = blob["photo_id"]
+    # **A soft key, unlike every other fact on this card**, and the exception is
+    # argued rather than convenient. A blob written before ``docs/adr/0138``
+    # carries no verdict, and *nobody looked* is the honest reading of one —
+    # exactly what the field itself means, so nothing is invented by defaulting
+    # it. A range read this way would be different: a card that stated a Level
+    # always stated how sure of it the platform was, so an absence there is a
+    # card this build cannot have shown.
+    review = blob.get("review")
     return RecordedCard(
         nickname=blob["nickname"],
         photo_id=None if photo_id is None else UUID(photo_id),
+        review=None if review is None else PhotoReviewDecision(review),
         area_code=blob["area_code"],
         social_tags=tuple(blob["social_tags"]),
         level=blob["level"],

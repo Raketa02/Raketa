@@ -27,6 +27,7 @@ from app.modules.player_profile.domain.photos import (
     PhotoReviewUnavailability,
     PhotoReviewVerdict,
     awaits_review,
+    decision_on_record,
     judged_against_a_superseded_set,
     prompt_set_in,
     review_metadata,
@@ -81,6 +82,92 @@ def test_what_the_upload_path_writes_is_what_this_reads_back() -> None:
 
 def test_a_photo_with_no_metadata_at_all_reads_as_no_note() -> None:
     assert review_note_in({}) is None
+
+
+# ---------------------------------------------------------------------------
+# What may be shown about a photo, and what may only be believed
+# ---------------------------------------------------------------------------
+#
+# `review_standing` answers *has anybody looked*, for a backfill that is going
+# to look. `decision_on_record` answers *what was concluded*, for a card that is
+# going to draw a shield on twenty strangers' screens — and the two are asked of
+# the same string for opposite purposes, which is why the second believes
+# nothing the first calls unreviewed (``docs/adr/0138``).
+
+
+@pytest.mark.parametrize(
+    ("similarities", "expected"),
+    [(ON_COURT, PhotoReviewDecision.ALLOWED), (OFF_COURT, PhotoReviewDecision.FLAGGED)],
+)
+def test_a_scored_photo_puts_its_decision_on_record(
+    similarities: list[float], expected: PhotoReviewDecision
+) -> None:
+    metadata = review_metadata(
+        verdict_from_similarities(model=MODEL, similarities=similarities)
+    )
+
+    assert decision_on_record(metadata) is expected
+
+
+@pytest.mark.parametrize("why", list(PhotoReviewUnavailability))
+def test_an_outage_writes_no_decision_and_reads_back_as_none(
+    why: PhotoReviewUnavailability,
+) -> None:
+    # The whole of #307's second half: what the store holds must not say
+    # `allowed` about an image nothing looked at, because a card would draw it.
+    metadata = review_metadata(verdict_when_unreviewable(why))
+
+    assert REVIEW_METADATA_KEY not in metadata
+    assert decision_on_record(metadata) is None
+
+
+def test_the_pass_through_eras_allowed_is_not_a_decision_anybody_took() -> None:
+    """The population ``docs/adr/0132`` was written for, read the way #307 needs.
+
+    `PassThroughPhotoReview` wrote ``review: allowed`` and no note. The backfill
+    fixes those objects on a clock measured in hours; **this** is what makes the
+    shield safe on the first commit rather than on the last object of the last
+    run.
+    """
+
+    metadata = review_metadata(PhotoReviewVerdict(decision=PhotoReviewDecision.ALLOWED))
+
+    assert metadata[REVIEW_METADATA_KEY] == "allowed"
+    assert decision_on_record(metadata) is None
+
+
+def test_an_allowed_stamped_over_an_outage_is_not_believed_either() -> None:
+    # What every photo that arrived during a sidecar outage before #307 carries:
+    # the old fail-open decision, beside a note saying nothing looked.
+    note = verdict_when_unreviewable(PhotoReviewUnavailability.TIMEOUT).note
+    assert note is not None
+    legacy = {REVIEW_METADATA_KEY: "allowed", REVIEW_NOTE_METADATA_KEY: note}
+
+    assert decision_on_record(legacy) is None
+
+
+def test_a_note_that_proves_a_score_without_a_decision_reports_none() -> None:
+    # Half a write, or an object somebody edited. There is a scored note and no
+    # verdict beside it, and inventing one from the note would be a second
+    # threshold in a second place.
+    metadata = {REVIEW_NOTE_METADATA_KEY: reviewed_note(ON_COURT)}
+
+    assert decision_on_record(metadata) is None
+
+
+def test_a_decision_outside_the_enum_is_not_invented() -> None:
+    # A value this application never wrote. Codes cross, so an unknown code is
+    # nothing rather than a guess.
+    metadata = {
+        REVIEW_METADATA_KEY: "rejected",
+        REVIEW_NOTE_METADATA_KEY: reviewed_note(ON_COURT),
+    }
+
+    assert decision_on_record(metadata) is None
+
+
+def test_a_photo_with_no_metadata_at_all_has_no_decision_on_record() -> None:
+    assert decision_on_record({}) is None
 
 
 # ---------------------------------------------------------------------------

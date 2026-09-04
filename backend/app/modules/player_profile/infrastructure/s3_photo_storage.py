@@ -41,8 +41,10 @@ from app.modules.player_profile.domain.photos import (
     STORED_MEDIA_TYPE,
     NotedPhoto,
     PhotoRef,
+    PhotoReviewDecision,
     StoredPhoto,
     TranscodedImage,
+    decision_on_record,
     review_note_in,
 )
 
@@ -302,6 +304,28 @@ class S3PhotoStorage:
                     yield NotedPhoto(
                         ref=ref, note=review_note_in(user_metadata_in(head))
                     )
+
+    async def review_decision(self, ref: PhotoRef) -> PhotoReviewDecision | None:
+        # One `head_object`, and **no `get_object`**: the verdict is metadata and
+        # the bytes are megabytes. What may be drawn from that metadata is the
+        # domain's judgement rather than this adapter's — `decision_on_record`
+        # refuses a decision the note cannot prove, and an adapter that read the
+        # key straight would be the second opinion `review_metadata` and
+        # `review_standing` are kept side by side to prevent.
+        async with self._client(endpoint_url=self._endpoint_url) as s3:
+            try:
+                head = await s3.head_object(
+                    Bucket=self._bucket,
+                    Key=object_key_for(ref.owner_id, ref.photo_id),
+                )
+            except ClientError as exc:
+                if reports_an_absent_object(exc):
+                    # The sweep got here first, or the id names nothing. Either
+                    # way there is no photograph to say anything about, and the
+                    # caller draws the generated court poster.
+                    return None
+                raise
+            return decision_on_record(user_metadata_in(head))
 
     async def read(self, ref: PhotoRef) -> bytes | None:
         async with self._client(endpoint_url=self._endpoint_url) as s3:

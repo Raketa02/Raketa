@@ -22,7 +22,14 @@ import pytest
 from botocore.exceptions import ClientError
 
 from app.kernel import InvariantViolated
-from app.modules.player_profile.domain.photos import PhotoRef
+from app.modules.player_profile.domain.photos import (
+    PhotoRef,
+    PhotoReviewDecision,
+    decision_on_record,
+    review_metadata,
+    verdict_from_similarities,
+)
+
 from app.modules.player_profile.infrastructure.s3_photo_storage import (
     KEY_PREFIX,
     S3PhotoStorage,
@@ -33,6 +40,9 @@ from app.modules.player_profile.infrastructure.s3_photo_storage import (
     stored_photos_in,
     user_metadata_in,
 )
+
+#: Confidently on-court, so the verdict below is one somebody really took.
+ON_COURT = [0.9] * 5 + [0.1] * 8
 
 ALICE = UUID("11111111-1111-1111-1111-111111111111")
 BOB = UUID("22222222-2222-2222-2222-222222222222")
@@ -310,6 +320,27 @@ def test_an_object_carrying_no_metadata_reads_as_none_rather_than_raising() -> N
     # population the backfill is for — so it must be an answer, not an error.
     assert user_metadata_in({"ContentType": "image/jpeg"}) == {}
     assert user_metadata_in({"Metadata": None}) == {}
+
+
+def test_a_heads_metadata_becomes_a_decision_a_card_may_draw() -> None:
+    """The two pure halves of ``review_decision``, composed exactly as it
+    composes them. The round trip itself is one ``head_object`` and is not
+    faked here; what could go wrong silently is this pair.
+    """
+
+    verdict = verdict_from_similarities(model="clip-test", similarities=ON_COURT)
+    head = {"ContentType": "image/jpeg", "Metadata": review_metadata(verdict)}
+
+    assert decision_on_record(user_metadata_in(head)) is PhotoReviewDecision.ALLOWED
+
+
+def test_a_head_from_the_pass_through_era_yields_no_decision() -> None:
+    # `review: allowed` and nothing that proves anybody looked. It is the shape
+    # every object stored before the checker landed still has, and a shield
+    # drawn on it would be a claim about an image nothing scored.
+    head = {"ContentType": "image/jpeg", "Metadata": {"review": "allowed"}}
+
+    assert decision_on_record(user_metadata_in(head)) is None
 
 
 def test_the_backfills_walk_reads_keys_and_never_a_stamp() -> None:

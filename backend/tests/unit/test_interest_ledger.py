@@ -151,6 +151,7 @@ async def _a_search(
                     card=RecordedCard(
                         nickname="someone",
                         photo_id=None,
+                        review=None,
                         area_code="LDN-CENTRAL",
                         social_tags=(),
                         level=2.7,

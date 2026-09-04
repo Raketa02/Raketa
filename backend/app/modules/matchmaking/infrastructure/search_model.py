@@ -303,6 +303,12 @@ class SearchCandidateORM(Base):
     #: the link: a presigned URL is dead within the hour and this row is kept
     #: for ever, so the link is signed over this id per response and never
     #: written here (``docs/adr/0107``).
+    #:
+    #: It holds the photograph's **on-court verdict** for the mirror reason
+    #: (``docs/adr/0138``): that one is a store round trip per row rather than a
+    #: signature, so it is written down once instead of asked for on every read.
+    #: The verdict's **note** — the model, the prompt set, the confidence and the
+    #: raw similarity vector — is on the object and reaches no route and no row.
     player_card: Mapped[dict[str, Any] | None] = mapped_column(BLOB, nullable=True)
     #: What a counted game would have been worth then. Null in for fun, where a
     #: counted result is meaningless rather than unavailable.

@@ -23,11 +23,14 @@ from datetime import datetime, timezone
 from typing import AsyncGenerator, Mapping
 
 from app.kernel import Instant, instant
+from tests.unit import image_fixtures
 from app.modules.player_profile.domain.photos import (
     NotedPhoto,
     PhotoRef,
+    PhotoReviewDecision,
     StoredPhoto,
     TranscodedImage,
+    decision_on_record,
     review_note_in,
 )
 
@@ -79,6 +82,11 @@ class InMemoryPhotoStorage:
         #: must not read a photo it has no intention of re-reviewing, and a
         #: read that did not happen leaves no other trace.
         self.reads: list[PhotoRef] = []
+        #: Every ref `review_decision` was asked about, in order. A card
+        #: assembly pays one store round trip per row that has a photograph
+        #: (``docs/adr/0138``), so *how many were asked* is a cost a test has to
+        #: be able to assert — and a row with no photo must ask nothing.
+        self.decision_reads: list[PhotoRef] = []
         #: Every ref `replace_metadata` was called on, in order. A metadata
         #: write is a copy of the object onto itself, so *did not rewrite what
         #: was already right* is a property about calls rather than about the
@@ -123,6 +131,15 @@ class InMemoryPhotoStorage:
         for ref, stored in self._ordered():
             yield NotedPhoto(ref=ref, note=review_note_in(stored.metadata))
 
+    async def review_decision(self, ref: PhotoRef) -> PhotoReviewDecision | None:
+        # Reads the same metadata `put` was handed, through the same domain
+        # function the real adapter uses — so a test that stores a verdict and a
+        # test that stores a pass-through-era object get the answers production
+        # gives, rather than the answers this file has an opinion about.
+        self.decision_reads.append(ref)
+        stored = self.objects.get(ref)
+        return None if stored is None else decision_on_record(stored.metadata)
+
     async def read(self, ref: PhotoRef) -> bytes | None:
         self.reads.append(ref)
         stored = self.objects.get(ref)
@@ -157,6 +174,29 @@ class InMemoryPhotoStorage:
         return sorted(
             self.objects.items(),
             key=lambda item: (str(item[0].owner_id), str(item[0].photo_id)),
+        )
+
+    def already_holding(self, ref: PhotoRef, metadata: Mapping[str, str]) -> None:
+        """One object already in the store, carrying the metadata a verdict
+        writes. **Not an upload** — no clock, no reviewer, no use case.
+
+        Every test of what a *reader* makes of a stored verdict wants this and
+        not `put`: the metadata is the fixture, and the bytes are a formality the
+        reader never looks at. Three call sites had built the same
+        `StoredObject(TranscodedImage(...), metadata, now)` by hand, which is a
+        shape that drifts — and a test that seeded a photo the fake would not
+        have written is a test asserting against itself.
+        """
+
+        self.objects[ref] = StoredObject(
+            TranscodedImage(
+                data=image_fixtures.plain_jpeg(),
+                media_type="image/jpeg",
+                width=60,
+                height=40,
+            ),
+            metadata,
+            self.now,
         )
 
     def only_stored(self) -> StoredObject:

@@ -23,7 +23,19 @@ from uuid import uuid4
 import pytest
 
 from app.modules.player_profile.domain.events import GenderPreferenceChanged
+from app.modules.player_profile.domain.photos import (
+    PhotoRef,
+    review_metadata,
+    verdict_from_similarities,
+)
 from tests.api import matchmaking_world as world
+
+MODEL = "openai/clip-vit-base-patch32"
+
+#: Confidently *not* on court, so the recorded verdict is the one a card would
+#: never draw a shield for — and a read-back that quietly re-read the store
+#: would be visible as a value rather than only as a call count.
+OFF_COURT = [0.1] * 5 + [0.9] * 8
 
 #: The moment a preference is changed in these tests: after every profile was
 #: committed, so the projection applies it as the later answer it is.
@@ -560,6 +572,43 @@ async def test_the_link_is_minted_again_rather_than_read_off_the_row(
     assert card["photo_url"], "a read-back handed back an id with no address"
     assert len(photo_storage.signed_windows) == signed_on_the_post + 1, (
         "the read-back served a link it had not signed"
+    )
+
+
+async def test_the_verdict_is_replayed_off_the_row_and_never_re_read(
+    client, session_factory, candidate_source, photo_storage, searcher
+):
+    """**The mirror of the link, and the reason it goes the other way.**
+
+    A presigned URL is dead within the hour, so it cannot be stored and is signed
+    again here. A verdict is a store round trip per photograph, so it is written
+    into the record and **not** asked for again — which is also what makes the
+    read-back reproduce the card that was shown rather than the card the
+    re-review backfill has since earned (``docs/adr/0109``, ``docs/adr/0138``).
+    """
+
+    photo = uuid4()
+    player = await world.a_candidate(
+        client, session_factory, "photographed", mu=searcher["mu"], photo_ids=(photo,)
+    )
+    photo_storage.already_holding(
+        PhotoRef(owner_id=player, photo_id=photo),
+        review_metadata(verdict_from_similarities(model=MODEL, similarities=OFF_COURT)),
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+    posted = (await world.search(client, searcher["token"])).json()
+    assert posted["candidates"][0]["player_card"]["review"] == "flagged"
+    asked_on_the_post = len(photo_storage.decision_reads)
+
+    body = (
+        await world.read_back(
+            client, searcher["token"], posted["search"]["search_id"]
+        )
+    ).json()
+
+    assert body["candidates"][0]["player_card"]["review"] == "flagged"
+    assert len(photo_storage.decision_reads) == asked_on_the_post, (
+        "the read-back went back to the object store for a recorded fact"
     )
 
 

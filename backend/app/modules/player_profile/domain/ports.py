@@ -30,6 +30,7 @@ from app.kernel import Instant, Sport
 from app.modules.player_profile.domain.photos import (
     NotedPhoto,
     PhotoRef,
+    PhotoReviewDecision,
     PhotoReviewVerdict,
     StoredPhoto,
     TranscodedImage,
@@ -128,6 +129,31 @@ class PhotoStorage(Protocol):
         Every photo, with **no cutoff.** An unreviewed photo does not become
         less unreviewed with age, and the population that needs the work is the
         old one.
+        """
+        ...
+
+    async def review_decision(self, ref: PhotoRef) -> PhotoReviewDecision | None:
+        """What was concluded about this photo, or ``None`` for *nobody looked*.
+
+        **One object, by reference, rather than the whole listing.** Its
+        neighbour ``with_review_notes`` walks the bucket for a job that is going
+        to re-review it; this answers about a photo somebody already named — the
+        first one on a player card — and the two are different calls in every
+        S3-compatible store, a listing plus a ``HEAD`` against one ``HEAD``.
+
+        **It costs a request per photo, and that is the price this port cannot
+        hide** (``docs/adr/0138``). The verdict is user metadata, which no
+        listing carries and no presign reads, so a caller pays one round trip per
+        photograph it wants a verdict for. What makes that affordable is where it
+        is called from: a card is assembled after the floor, over the twenty rows
+        that survived rather than over the pool, and the answer is written into
+        the search record so the read-back pays nothing at all.
+
+        ``None`` covers three different things on purpose — the object is gone,
+        nothing ever looked at it, or it carries a decision the note cannot prove
+        (`decision_on_record`). A caller draws no shield for any of them, which
+        is the same act, so telling them apart here would be a distinction
+        nothing downstream is allowed to use.
         """
         ...
 

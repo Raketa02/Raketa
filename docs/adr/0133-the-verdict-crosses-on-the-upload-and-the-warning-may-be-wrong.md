@@ -3,6 +3,17 @@
 - **Status:** Accepted
 - **Date:** 2026-08-29
 
+> **Amended 2026-09-04 by [ADR-0138](0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)
+> on two clauses, and only two.** *The upload carries it; the read does not* still holds for
+> `GET /photos/{id}` — the owner's own restored tile — and **`player_card` now carries the
+> decision** to a reader who is not the subject, which is a new disclosure this record did not
+> weigh. And *fail-open is re-examined and kept* is kept in substance and changed in spelling:
+> an unreachable reviewer records **no decision** rather than `ALLOWED`, because the word that
+> meant *nothing to warn about* would mean *checked and passed* on somebody else's card. The
+> third state this record spelled `null` on the wire is now spelled the same way on the stored
+> verdict. **Everything else stands, above all *the note never crosses, in any shape, on any
+> route*.**
+
 ## Context
 
 [ADR-0129](0129-the-photo-check-is-a-sidecar-the-backend-asks.md) built the on-court check and

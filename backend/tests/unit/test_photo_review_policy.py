@@ -213,16 +213,32 @@ def test_the_note_is_ascii_and_fits_beside_the_object() -> None:
 
 
 @pytest.mark.parametrize("why", list(PhotoReviewUnavailability))
-def test_an_unreviewable_photo_is_allowed_and_says_so(
+def test_an_unreviewable_photo_concludes_nothing_and_says_why(
     why: PhotoReviewUnavailability,
 ) -> None:
-    """Fail open — an outage must not refuse a real player's first photo — and
-    say which outage, so a re-review pass can find them."""
+    """**No decision at all**, and the note says which outage produced none.
+
+    Fail-open survives and is now spelled as an absence rather than as
+    ``ALLOWED`` (``docs/adr/0138``). An outage must not refuse a real player's
+    first photo, and it must not put a tick on one either — *nothing to warn
+    about* and *nothing to badge* are the same answer, and this is that answer.
+    """
 
     verdict = verdict_when_unreviewable(why)
 
-    assert verdict.decision is PhotoReviewDecision.ALLOWED
+    assert verdict.decision is None
     assert verdict.note == f"clip;p={PROMPT_SET_FINGERPRINT};unavailable={why.value}"
+
+
+@pytest.mark.parametrize("why", list(PhotoReviewUnavailability))
+def test_an_unreviewable_photo_is_still_never_flagged(
+    why: PhotoReviewUnavailability,
+) -> None:
+    """The half of fail-open that did not change, asserted separately from the
+    half that did: our own outage is never turned into a sentence about
+    somebody's photograph."""
+
+    assert not verdict_when_unreviewable(why).is_flagged
 
 
 def test_an_unreviewable_note_is_distinguishable_from_a_reviewed_one() -> None:

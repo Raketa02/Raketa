@@ -103,8 +103,10 @@ async def _read_body_within_the_cap(request: Request) -> bytes:
         "says what the check concluded.** It never refuses: a `flagged` photo "
         "is stored, answers `201` and is committed like any other, and the "
         "warning is the client's to word. A photo the check could not be run "
-        "on answers `allowed` — the reviewer's own outage is not a reason to "
-        "tell a player anything about their photograph."
+        "on answers **nothing at all** — the field is `null`, because the "
+        "reviewer's own outage is neither a reason to tell a player something "
+        "about their photograph nor a reason to say it passed. Warn on "
+        "`flagged` and on nothing else."
     ),
 )
 async def upload_photo(
