@@ -356,8 +356,8 @@ listed here because it is a Play surface rather than a profile one.
 - **Parts kit** — the shared parts the three candidate cards are assembled from:
   `CandidatePhoto` (photo-or-poster in a box, one component at three sizes), `CardHead`,
   `FactRow` and `ReasonLine`, plus the competitive card's own `PhotoPanel`, `IdentityRow`,
-  `HeadToHeadBand`, `SocialTagRow`, `RecordBlocks` and `StakeBoxes` — those last two over one
-  `StatBox`. **Three components over one kit, never one component with a `surface`
+  `HeadToHeadBand`, `SocialTagRow`, `OnCourtMark`, `RecordBlocks` and `StakeBoxes` — those last
+  two over one `StatBox`. **Three components over one kit, never one component with a `surface`
   prop** — `CandidateCard` is photo-left with a head-to-head row, `CandidateCardSocial` and
   `DeckCard` are media-top with fact rows, and only the deck card floats. The two courts,
   `CourtMini` and `CourtBuild`, are the same pairing over the design system's `Court`: the
@@ -376,6 +376,18 @@ listed here because it is a Play surface rather than a profile one.
   so the drop is conditional on what the row actually drew and lives beside the set in
   `candidateFacts` rather than in it. A set entry would take four registers away to stop one
   repeating, and the exported set stays what it says it is — terms this card renders a value for.
+- **On-court mark** — the two words the photo panel prints at its top, on a photograph the
+  on-court check **passed**: `ON COURT`, `OnCourtMark`, over `domain/onCourtMark`'s one rule.
+  **Only a pass is marked.** _Checked and flagged_ and _nobody looked_ draw and announce
+  **identically**, because a card must not publish a moderation outcome about a third party, and
+  the generated poster draws none because it is not a photograph. It carries **no number in
+  either register**: the confidence never crosses on any route. The designs' **✓ ON COURT
+  shield** is not what shipped, and the reason is measured rather than judged — Archivo draws no
+  U+2713, the app's own tick leaves the words too little room, and the panel's corner leaves a
+  chip less still (7.15, `onCourtMarkFit.test.ts`). _Avoid_: "verified", "badge" and "shield" —
+  it verifies nothing about a person and it is a label with no ground; "photo review", which is
+  the uploader's surface and a different fold of the same code (`player_profile` warns where a
+  card marks); a **tick** anywhere in this app that is not `shared/ui/Tick`'s drawn geometry.
 - **Social tag row** — the competitive card's row of up to six of the candidate's Social tags,
   and the **overlap** drawn over it. The ones the searcher also chose are tinted and carry
   `· you too` in words; the intersection is `matched[]`'s, off the wire, and is never recomputed

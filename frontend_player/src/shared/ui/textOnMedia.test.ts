@@ -171,6 +171,57 @@ describe('the photo panel scrim (2.5)', () => {
   });
 });
 
+/**
+ * **The ON COURT mark is the panel's third label, and its tightest pair**
+ * ([#313](https://github.com/Raketa02/Raketa/issues/313)).
+ *
+ * The Level and the Sport are white, which is the best a foreground can do over this ground.
+ * The mark is green because green is what the verdict is worth reading as, and green over a
+ * dark scrim is where a palette runs out: this block is the arithmetic that picks which green,
+ * rather than the eye picking the one that looks right.
+ */
+describe('the ON COURT mark over that scrim (2.5)', () => {
+  /** The one row 2.5 gains. Copied from here, never the other way round. */
+  const PUBLISHED = 4.55;
+
+  it('clears AA in `mintSoft` over the worst photograph there can be', () => {
+    expect(contrast(parse(theme.color.mintSoft).rgb, worstPhotograph())).toBeGreaterThanOrEqual(AA);
+  });
+
+  it('is the ratio 2.5 publishes', () => {
+    expect(contrast(parse(theme.color.mintSoft).rgb, worstPhotograph())).toBe(PUBLISHED);
+  });
+
+  /**
+   * **`mint` itself is not a foreground here, and that is measured rather than assumed.**
+   *
+   * It is Rule C's problem in the other direction: `mint` is a *mark* colour, and over a
+   * ground this dark it is barely separated from it at all. The panel's scrim is what makes
+   * the soft legible and the base illegible at the same time, which is why the mark takes the
+   * one colour in the pair that is otherwise a background.
+   */
+  it('would be a line nobody sees in `mint`, which is why the soft is the foreground', () => {
+    const asMint = contrast(parse(theme.color.mint).rgb, worstPhotograph());
+
+    expect(asMint).toBeLessThan(AA);
+    expect(asMint).toBe(1.29);
+  });
+
+  /**
+   * The mark is drawn identically over the generated poster, exactly as the two white labels
+   * are — so the poster's thirty-two stops clear the same bound by construction rather than
+   * adding thirty-two rows to 2.5.
+   */
+  it('is better over every poster stop than over that worst case', () => {
+    const mintSoft = parse(theme.color.mintSoft).rgb;
+    for (const hue of POSTER_HUES) {
+      for (const stop of [hue.light, hue.dark]) {
+        expect(contrast(mintSoft, panelGround(parse(stop).rgb))).toBeGreaterThanOrEqual(PUBLISHED);
+      }
+    }
+  });
+});
+
 describe('the textOnMedia shadow', () => {
   it('is drawn in a black that is dark enough to separate white from any ground', () => {
     expect(parse(theme.shadow.textOnMedia.textShadowColor).alpha).toBeGreaterThanOrEqual(0.6);

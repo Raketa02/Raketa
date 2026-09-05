@@ -23,6 +23,7 @@ import { playerName } from '@/shared/formatting/playerName';
 
 import type { AtStake, Candidate, SearchEnvelope } from '../../domain/candidate';
 import { isTagEvidence, type Evidence } from '../../domain/evidence';
+import { wearsOnCourtMark, type MarkablePhoto } from '../../domain/onCourtMark';
 import { selectConcern, selectReasons, type ReasonSelection } from '../../domain/reasonSelection';
 import type { SocialTagOverlap } from '../../domain/socialTagOverlap';
 import type { Term } from '../../domain/vocabulary';
@@ -31,6 +32,7 @@ import { balanceReading } from '../balancePresentation';
 import { concernLine } from '../concernPresentation';
 import { livenessLine } from '../livenessPresentation';
 import {
+  ON_COURT_CLAUSE,
   recordClauses,
   socialTagClauses,
   stakeClauses,
@@ -50,6 +52,14 @@ export interface CandidateFacts {
   /** §15's `playerName()` — the whole handle, and a type that will not take a shortened one. */
   readonly name: string;
   readonly level: LevelRowFacts;
+  /**
+   * Whether the photo panel wears the ON COURT mark — **one answer, drawn and spoken**.
+   *
+   * `wearsOnCourtMark`'s, taken here so the panel and the label cannot disagree about a
+   * photograph: the mark is the one thing on this card whose absence has two causes, and two
+   * reads of it are two chances to fold them differently.
+   */
+  readonly onCourt: boolean;
   /** The forecast reading, on the card that **draws** it rather than saying it. */
   readonly balance: string | undefined;
   /** Omitted where the card draws no meta line, or the distance term stood down. */
@@ -119,12 +129,33 @@ export interface CandidateFactsInput {
    * the drawing and the clauses read the one result.
    */
   readonly stake?: AtStake;
+  /**
+   * The **photo panel's** two fields, passed in by the one card that draws a panel and
+   * omitted by the two that do not ([#313](https://github.com/Raketa02/Raketa/issues/313)).
+   *
+   * `record`'s shape and `record`'s argument: `undefined` is *this surface has no photo
+   * panel*, and an object whose verdict is absent is *it has one, over a photograph nobody
+   * looked at*. Two different answers, and only the second is a card that could have worn a
+   * mark.
+   *
+   * **The panel is the competitive card's alone.** The social and deck cards draw the same
+   * photograph full-bleed as media rather than as a panel with facts printed on it, and a
+   * mark floated over media has nowhere it belongs: the panel's top was left clear for this
+   * ([#309](https://github.com/Raketa02/Raketa/issues/309)) and no other card has a clear
+   * top. So this is a fact about the **surface**, exactly as `drawn` is, and the two cards
+   * without a panel decline it rather than being told not to draw one.
+   */
+  readonly photo?: MarkablePhoto;
 }
 
 export function candidateFacts(input: CandidateFactsInput): CandidateFacts {
-  const { candidate, envelope, drawn, socialTags, record, stake } = input;
+  const { candidate, envelope, drawn, socialTags, record, stake, photo } = input;
   const name = playerName({ kind: 'player', nickname: candidate.card.nickname });
   const level = levelFactsOf(candidate);
+  // Read once for both registers, exactly as the tag row and the record block are: the panel
+  // draws the mark from this answer and the label speaks it from the same one, so a
+  // photograph cannot be marked to a reader and unmarked to a listener.
+  const onCourt = photo !== undefined && wearsOnCourtMark(photo);
   // A clause per row the card DRAWS — which is the drawn set read the other way round. A
   // card that says a term as a reason line must not also state it as a fact, and a card that
   // draws it as a row must state it here, because the row itself announces nothing (§20.1).
@@ -137,6 +168,7 @@ export function candidateFacts(input: CandidateFactsInput): CandidateFacts {
   return {
     name,
     level,
+    onCourt,
     balance,
     meta,
     reasons,
@@ -149,6 +181,7 @@ export function candidateFacts(input: CandidateFactsInput): CandidateFacts {
       name,
       fit: candidate.fit,
       level,
+      ...(onCourt ? { onCourt: ON_COURT_CLAUSE } : {}),
       balance,
       meta,
       record: record === undefined ? undefined : recordClauses(record),

@@ -7,9 +7,12 @@
  * > **In this product your rating is your face; the photograph is scenery.**
  *
  * So the **Level** is the biggest text on the panel, the **Sport** sits small and capitalised
- * under it, and the top of the panel is deliberately clear — that is where the ✓ ON COURT
- * shield lands ([#313](https://github.com/Raketa02/Raketa/issues/313)), which is why the
- * content column is anchored to the bottom rather than centred. Nothing is drawn there today.
+ * under it, and the top of the panel carries the **ON COURT** mark
+ * ([#313](https://github.com/Raketa02/Raketa/issues/313)) — which is why the content column is
+ * anchored to the bottom rather than centred. The mark is what the space was left clear for,
+ * and it arrived as a label rather than as the designs' shield: `OnCourtMark` holds that
+ * arithmetic, and the short version is that the panel is 74pt wide and the words are 51,19 of
+ * them.
  *
  * ## Text over an arbitrary photograph, and the pin that makes it computable
  *
@@ -31,21 +34,29 @@
  * and not thirty-three: the poster's thirty-two stops are all darker than white, so they clear
  * the same bound by construction, and the test proves it rather than sampling it.
  *
- * Both labels carry `textOnMedia`, on 2.5's rule for every label over a ground nobody chose:
- * the ratio is the ground's brightest case and a label can sit anywhere on a photograph.
+ * All three labels carry `textOnMedia`, on 2.5's rule for every label over a ground nobody
+ * chose: the ratio is the ground's brightest case and a label can sit anywhere on a
+ * photograph. The mark is the tightest of the three at **4,55:1** — it is the one that is
+ * green rather than white, and green is where a palette runs out over a dark ground.
  *
  * ## It announces nothing, and the sport in particular
  *
  * §20.1 merges an actionless element into the nearest action above it, which here is the card
- * body — so the two labels are plain `Text` and **not** a hidden subtree, exactly as `CardHead`
- * and `FactRow` are. `CandidatePhoto` hides *itself* because it carries a name of its own; two
- * labels that carry none merge by having nothing to merge.
+ * body — so the three labels are plain `Text` and **not** a hidden subtree, exactly as
+ * `CardHead` and `FactRow` are. `CandidatePhoto` hides *itself* because it carries a name of
+ * its own; labels that carry none merge by having nothing to merge.
  *
  * The **Level reaches the spoken name already**, as the first figure of `levelRow` — it is
  * printed twice and said once, which is the whole of §10 holding while the drawing repeats. The
  * **Sport does not reach it at all, and that is deliberate**: it is the search's own sport,
  * identical on every row, and the screen's eyebrow has already said it. Twenty rows each
  * opening with *Tennis* is the noise §20.3's fixed order exists to prevent.
+ *
+ * The **mark reaches it, and it is the exception that proves the Sport's rule**: it is true of
+ * one player and not of the next, so it is a fact rather than a constant, and §20.3 gives it a
+ * clause. `candidateFacts` composes both from one answer, which is why this component is handed
+ * a boolean rather than a verdict — the rule is `domain/onCourtMark`'s and reading it twice is
+ * two chances to fold *flagged* and *never checked* apart.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -54,6 +65,7 @@ import { formatLevel } from '@/shared/formatting/ratingFormat';
 import { theme } from '@/shared/ui';
 
 import { CANDIDATE_PANEL, CandidatePhoto, candidatePhotoRadius } from './CandidatePhoto';
+import { OnCourtMark } from './OnCourtMark';
 
 export interface PhotoPanelProps {
   /** Whose face this is. The poster's whole input, and the reason it survives a reinstall. */
@@ -71,9 +83,19 @@ export interface PhotoPanelProps {
   readonly level: number;
   /** `sportLabel(origin.sport)`. **The screen's, never the card's** — see the module note. */
   readonly sportName: string;
+  /**
+   * Whether the photograph wears the ON COURT mark — `wearsOnCourtMark`'s answer, taken by
+   * `candidateFacts` so that the drawing and the spoken name read one value.
+   *
+   * A boolean and **not** the verdict, which is the whole of what keeps *checked and flagged*
+   * and *nobody looked* indistinguishable: a component handed the code could branch on it a
+   * second way, and the second way is the one that publishes a moderation outcome about
+   * somebody who is not looking at this screen.
+   */
+  readonly onCourt: boolean;
 }
 
-export function PhotoPanel({ playerId, photoUrl, level, sportName }: PhotoPanelProps) {
+export function PhotoPanel({ playerId, photoUrl, level, sportName, onCourt }: PhotoPanelProps) {
   return (
     <View style={s.panel}>
       <CandidatePhoto playerId={playerId} photoUrl={photoUrl} box={{ kind: 'thumb' }} />
@@ -84,10 +106,16 @@ export function PhotoPanel({ playerId, photoUrl, level, sportName }: PhotoPanelP
       <View style={[StyleSheet.absoluteFill, s.scrim]} />
 
       <View style={[StyleSheet.absoluteFill, s.content]}>
-        <Text style={s.level}>{formatLevel(level)}</Text>
-        <Text style={s.sport} numberOfLines={1}>
-          {sportName}
-        </Text>
+        {onCourt ? <OnCourtMark /> : null}
+
+        {/* Its own block, so the two facts stay at the bottom whether or not the mark is
+            above them: `space-between` over an absent first child would carry them up. */}
+        <View style={s.labels}>
+          <Text style={s.level}>{formatLevel(level)}</Text>
+          <Text style={s.sport} numberOfLines={1}>
+            {sportName}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -104,8 +132,12 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   scrim: { backgroundColor: theme.color.photoScrim },
-  // Anchored to the bottom, which is what leaves the top right clear for #313's shield.
-  content: { padding: theme.space.xs, justifyContent: 'flex-end' },
+  // The mark at the top and the two facts at the bottom, which is the layout #309 left room
+  // for. One padding for all three: the mark's own top edge is what its cap is derived
+  // against, so the step is read out of the theme in `onCourtMarkFit.test.ts` rather than
+  // guessed at.
+  content: { padding: theme.space.xs },
+  labels: { flex: 1, justifyContent: 'flex-end' },
   level: {
     ...theme.num.xl,
     ...theme.tabular,

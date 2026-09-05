@@ -56,6 +56,21 @@ describe('the candidate card', () => {
     expect(order).not.toContain(-1);
   });
 
+  it('speaks the panel’s mark straight after the level, and nothing where there is none', () => {
+    // The panel is one object holding two facts — a Level printed hugely and a mark above
+    // it — so a listener meets both before the argument over them. The absence is silence and
+    // not a second sentence: two answers (flagged, and never checked) reach this one way, and
+    // a clause for either would be the difference leaking in the register nobody can see.
+    const marked = candidateCardLabel({ ...MAREK, onCourt: 'Photo checked: on court' });
+
+    expect(marked.indexOf('Photo checked: on court')).toBeGreaterThan(
+      marked.indexOf('Established'),
+    );
+    expect(marked.indexOf('Photo checked: on court')).toBeLessThan(marked.indexOf('4 km'));
+    expect(candidateCardLabel(MAREK)).not.toContain('Photo checked');
+    expect(candidateCardLabel(MAREK)).not.toMatch(/\.\s*\./);
+  });
+
   it('merges the fit pill rather than announcing it separately', () => {
     expect(candidateCardLabel(MAREK)).toContain('Fit 78 out of 100');
   });

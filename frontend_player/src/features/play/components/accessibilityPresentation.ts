@@ -112,6 +112,24 @@ export interface CandidateCardFacts {
   readonly fit: number;
   readonly level: LevelRowFacts;
   /**
+   * `ON_COURT_CLAUSE`, on a card whose photograph passed the on-court check — and **nothing
+   * at all** on the two answers that did not ([#313](https://github.com/Raketa02/Raketa/issues/313)).
+   *
+   * The panel announces nothing of its own — §20.1 merges an actionless element into the
+   * nearest action above it, and the photograph inside it is hidden outright — so this is the
+   * mark's one route to a listener, and it has to have one. **A mark is a fact**, and the rule
+   * §20.1 is applying is *decoration merges*: a fact drawn on one card and not the next is
+   * exactly what cannot be left to the pixels. `CANDIDATE_POSTER_LABEL` makes the same
+   * argument one register up and stops short of this one — a poster's sentence is carried so
+   * that it is never silently a photograph, and it goes unspoken inside a card because every
+   * card already says whose face it stands in for. Nothing else says this.
+   *
+   * **Its absence carries no clause**, which is what keeps *flagged* and *never checked*
+   * indistinguishable in the register where a difference would be easiest to leak: two
+   * absences, one silence, and `wearsOnCourtMark` is the single place either is decided.
+   */
+  readonly onCourt?: string;
+  /**
    * The forecast, **where the card draws it rather than saying it as a reason line**.
    *
    * §20.3's row is written against §B10's card and reaches every surface, so it does not name
@@ -204,6 +222,11 @@ export function candidateCardLabel(facts: CandidateCardFacts): string {
     facts.name,
     fitSentence(facts.fit),
     levelRow(facts.level),
+    // Straight after the level, because the two are the **panel's** pair: it prints a Level
+    // hugely and a mark above it, and a listener meets that object before the argument over
+    // it. It is also as early as the clause can go without displacing the two figures the
+    // card is actually for.
+    facts.onCourt ?? '',
     facts.balance ?? '',
     facts.meta === undefined ? '' : metaLine(facts.meta),
     // The record, then the stake, then the tags — the three blocks the card draws between the

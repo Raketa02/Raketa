@@ -37,6 +37,7 @@ import type {
   LivenessReason,
   ModifierCode,
   OptimisedFor,
+  PhotoReview,
   PlayIntent,
   Prompt,
   Relationship,
@@ -75,6 +76,7 @@ export const WIRE_VOCABULARY_AGREES: {
   readonly optimisedFor: Exact<OptimisedFor, components['schemas']['OptimisedFor']>;
   readonly relationship: Exact<Relationship, components['schemas']['Relationship']>;
   readonly gameResult: Exact<GameResult, components['schemas']['GameResult']>;
+  readonly photoReview: Exact<PhotoReview, components['schemas']['PhotoReviewDecision']>;
 } = {
   term: true,
   levelDirection: true,
@@ -94,6 +96,7 @@ export const WIRE_VOCABULARY_AGREES: {
   optimisedFor: true,
   relationship: true,
   gameResult: true,
+  photoReview: true,
 };
 
 /**

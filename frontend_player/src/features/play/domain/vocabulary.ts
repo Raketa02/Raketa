@@ -73,6 +73,31 @@ export const GAME_RESULTS = ['WIN', 'LOSS'] as const;
 
 export type GameResult = (typeof GAME_RESULTS)[number];
 
+/**
+ * What the on-court check **concluded** about a card's photograph.
+ *
+ * Two values, and *nobody looked* is deliberately not one of them: this vocabulary says what
+ * a reviewer concluded, and a photo nobody could reach a reviewer about has no conclusion
+ * attached to it. That third state is spelled as the **absence** of one of these — no field
+ * on the wire, no value here
+ * ([ADR-0138](../../../../../docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)),
+ * which is what stops a card putting a mark on every photograph on the platform.
+ *
+ * **The two lower-case spellings are the wire's own**, unlike every other vocabulary in this
+ * file, and they are kept rather than re-cased. `player_profile` writes a `Record` over the
+ * same two words so that a third value fails to compile there; this feature already has that
+ * guarantee in `wireVocabulary`'s `Exact` row, so a table whose only job is to change a case
+ * would be a second spelling buying nothing.
+ *
+ * `flagged` is carried and never drawn. It is not the card's business to say that somebody
+ * else's photograph was doubted — a moderation outcome about a third party — so the two
+ * answers that are not `allowed` draw identically, and `domain/onCourtMark` is where that is
+ * a rule rather than a coincidence of two `if`s.
+ */
+export const PHOTO_REVIEWS = ['allowed', 'flagged'] as const;
+
+export type PhotoReview = (typeof PHOTO_REVIEWS)[number];
+
 /** Which side of the searcher a candidate's level sits. */
 export const LEVEL_DIRECTIONS = ['ABOVE', 'LEVEL', 'BELOW'] as const;
 

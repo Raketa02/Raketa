@@ -22,8 +22,18 @@
  *   selection out of a longer list, and no screen states a total one belongs to |
  * | a **scored term** and its **evidence** | **kept**, with `null` where the code is unknown |
  * | a **stood-down term** and its **reason** | **kept**, the same way |
+ * | a **photo verdict** | dropped — and the drop is the point, not a cost |
  *
- * The bottom two rows are the ones that matter, and neither is a drop. The why-fit sheet
+ * **The verdict's row is the one where a drop is the safe answer rather than the lossy one.**
+ * Every other narrowing here trades a fact for silence and the placement decides what that
+ * costs; this one trades an unreadable code for *nobody looked*, which is a state the contract
+ * already has and the card already draws — as nothing. A verdict minted after this build
+ * shipped could be anything, including a refusal, so reading it as a pass is the one reading
+ * that could put a mark on a photograph the platform had doubts about. It is
+ * `player_profile`'s fold turned round: an upload with no readable verdict warns about
+ * nothing, and a card with no readable verdict **marks** nothing.
+ *
+ * The two term rows are the ones that matter, and neither is a drop. The why-fit sheet
  * prints **totals these rows belong to** — a sub-total the column must sum to, a derived
  * `applied`, and a count of live terms in its own header — so a row dropped here does not go
  * missing quietly: its contribution reappears as an adjustment nobody made, which is #233 §4's
@@ -95,6 +105,7 @@ import {
   LIVENESS_REASONS,
   MODIFIER_CODES,
   OPTIMISED_FOR,
+  PHOTO_REVIEWS,
   PLAY_INTENTS,
   RELAXATION_ASKS,
   RUNGS,
@@ -109,6 +120,7 @@ import {
   type LivenessReason,
   type ModifierCode,
   type OptimisedFor,
+  type PhotoReview,
   type PlayIntent,
   type RelaxationAsk,
   type Rung,
@@ -257,6 +269,10 @@ export function toCandidate(row: CandidateSchema): Candidate {
     card: {
       nickname: row.player_card.nickname,
       ...(row.player_card.photo_url === undefined ? {} : { photoUrl: row.player_card.photo_url }),
+      // Omitted where nobody looked, and omitted again where the verdict is a word this
+      // build has never seen — the two collapse, because both are *this card cannot say a
+      // check passed* and only a pass draws anything.
+      ...photoReview(row.player_card.review),
       areaCode: row.player_card.area_code,
       socialTags: row.player_card.social_tags.flatMap((tag) => toSocialTagId(tag) ?? []),
       level: row.player_card.level,
@@ -308,6 +324,25 @@ function lastFive(served: readonly string[] | undefined): {
   if (served === undefined || served.length === 0) return {};
   const read = served.flatMap((result) => toGameResult(result) ?? []);
   return read.length === served.length ? { lastFive: read } : {};
+}
+
+/**
+ * The verdict, **kept omitted** — the second field on this card that is absent rather than
+ * null, and the one whose absence is a design rather than a spelling.
+ *
+ * `inclusion`'s shape one function down, and a different argument under it. An inclusion
+ * reason this build cannot read is dropped because no screen states a total it belongs to; a
+ * verdict this build cannot read is dropped because **the absence is already a state**, and
+ * it is the state that draws nothing. There is no gap to keep in place here: the mark is not a
+ * row in any total, and *nobody looked* and *nobody here can read what they concluded* are the
+ * same sentence for a card that will say nothing either way.
+ */
+function photoReview(served: CandidateSchema['player_card']['review']): {
+  readonly photoReview?: PhotoReview;
+} {
+  if (served === undefined) return {};
+  const known = KNOWN_PHOTO_REVIEWS.has(served) ? (served as PhotoReview) : undefined;
+  return known === undefined ? {} : { photoReview: known };
 }
 
 /** The one field that is omitted rather than nulled, kept omitted. */
@@ -480,6 +515,7 @@ const KNOWN_SORTS = new Set<string>(SORT_OPTIONS);
 const KNOWN_RUNGS = new Set<string>(RUNGS);
 const KNOWN_ASKS = new Set<string>(RELAXATION_ASKS);
 const KNOWN_RESULTS = new Set<string>(GAME_RESULTS);
+const KNOWN_PHOTO_REVIEWS = new Set<string>(PHOTO_REVIEWS);
 
 function toTerm(term: string): Term | undefined {
   return KNOWN_TERMS.has(term) ? (term as Term) : undefined;

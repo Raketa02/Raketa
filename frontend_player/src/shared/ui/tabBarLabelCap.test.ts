@@ -21,12 +21,14 @@
  * the letters. Every one of those is a real change to the answer, and none of them announces
  * itself at 9,5pt.
  *
- * Font metrics are read straight from the `.ttf` — `head` for the em square, `cmap` format 4
- * for character → glyph, `hmtx` for the advance. Roughly sixty lines, and the alternative is
- * a hard-coded *"about 0,6em per character"*, which is the guess this file exists to replace.
+ * Font metrics are read straight from the `.ttf`, by `test-support/fontMetrics.ts` — the
+ * alternative is a hard-coded *"about 0,6em per character"*, which is the guess that file
+ * exists to replace. It moved there when the photo panel's ON COURT mark needed the same
+ * measurement ([#313](https://github.com/Raketa02/Raketa/issues/313)): two derived caps and
+ * one `cmap` walk, on `contrast.ts`'s argument for the luminance formula.
  */
 
-import { readFileSync } from 'node:fs';
+import { largestStepThatFits, readFace, widthOf } from '@/test-support/fontMetrics';
 
 import { TAB_BAR_TABS } from './TabBar';
 import { theme } from './theme';
@@ -62,97 +64,14 @@ const AVAILABLE = COLUMN - 2 * theme.space.xxs;
  */
 const FONT_FILE = `@expo-google-fonts/archivo/${theme.type.tag.fontFamily}.ttf`;
 
-// ---------------------------------------------------------------------------
-// Just enough of a TrueType file to measure a word
-// ---------------------------------------------------------------------------
-
-interface Face {
-  readonly unitsPerEm: number;
-  /** Advance width of one character, in font units. */
-  advance: (codePoint: number) => number;
-}
-
-function readFace(path: string): Face {
-  const ttf = readFileSync(require.resolve(path));
-
-  // Offset table: sfntVersion, then a directory of tag / checksum / offset / length.
-  const tables = new Map<string, number>();
-  const count = ttf.readUInt16BE(4);
-  for (let i = 0; i < count; i++) {
-    const record = 12 + i * 16;
-    tables.set(ttf.toString('ascii', record, record + 4), ttf.readUInt32BE(record + 8));
-  }
-  const table = (tag: string): number => {
-    const offset = tables.get(tag);
-    if (offset === undefined) throw new Error(`${path} has no ${tag} table`);
-    return offset;
-  };
-
-  const unitsPerEm = ttf.readUInt16BE(table('head') + 18);
-  // `hmtx` stores one advance per glyph up to this many, then repeats the last for the
-  // monospaced tail. Every glyph here is well inside the array.
-  const metrics = ttf.readUInt16BE(table('hhea') + 34);
-  const hmtx = table('hmtx');
-
-  // cmap: take the Unicode BMP subtable, which is format 4 in every font this app loads.
-  const cmap = table('cmap');
-  let segments = 0;
-  for (let i = 0; i < ttf.readUInt16BE(cmap + 2); i++) {
-    const record = cmap + 4 + i * 8;
-    const platform = ttf.readUInt16BE(record);
-    const encoding = ttf.readUInt16BE(record + 2);
-    const subtable = cmap + ttf.readUInt32BE(record + 4);
-    const unicodeBmp = (platform === 3 && encoding === 1) || platform === 0;
-    if (unicodeBmp && ttf.readUInt16BE(subtable) === 4) segments = subtable;
-  }
-  if (segments === 0) throw new Error(`${path} has no format 4 Unicode cmap`);
-
-  const segX2 = ttf.readUInt16BE(segments + 6);
-  const ends = segments + 14;
-  const starts = ends + segX2 + 2;
-  const deltas = starts + segX2;
-  const ranges = deltas + segX2;
-
-  const glyphOf = (codePoint: number): number => {
-    for (let i = 0; i < segX2 / 2; i++) {
-      if (codePoint > ttf.readUInt16BE(ends + i * 2)) continue;
-      const start = ttf.readUInt16BE(starts + i * 2);
-      if (codePoint < start) return 0;
-      const delta = ttf.readInt16BE(deltas + i * 2);
-      const rangeOffset = ttf.readUInt16BE(ranges + i * 2);
-      if (rangeOffset === 0) return (codePoint + delta) & 0xffff;
-      const glyph = ttf.readUInt16BE(ranges + i * 2 + rangeOffset + (codePoint - start) * 2);
-      return glyph === 0 ? 0 : (glyph + delta) & 0xffff;
-    }
-    return 0;
-  };
-
-  return {
-    unitsPerEm,
-    advance: (codePoint) => {
-      const glyph = glyphOf(codePoint);
-      if (glyph === 0) throw new Error(`${path} does not draw U+${codePoint.toString(16)}`);
-      return ttf.readUInt16BE(hmtx + Math.min(glyph, metrics - 1) * 4);
-    },
-  };
-}
-
 const archivoBold = readFace(FONT_FILE);
 
-/** A word's width at a size, in points, plus whatever tracking the role adds per character. */
-function widthOf(word: string, size: number, tracking = 0): number {
-  const characters = [...word];
-  const advances = characters.reduce((sum, c) => sum + archivoBold.advance(c.codePointAt(0)!), 0);
-  return (advances / archivoBold.unitsPerEm) * size + characters.length * tracking;
-}
-
-/** The largest 0,1 step that still fits. RN takes the multiplier as given; nothing rounds it. */
-function largestStepThatFits(width: number, available: number): number {
-  return Math.floor((available / width) * 10) / 10;
-}
+/** This file's five labels, at this file's face — the two the shared helper takes every time. */
+const width = (word: string, size: number, tracking = 0): number =>
+  widthOf(archivoBold, word, size, tracking);
 
 const LONGEST = TAB_BAR_TABS.map((t) => t.label).reduce((a, b) =>
-  widthOf(b, theme.type.tag.fontSize) > widthOf(a, theme.type.tag.fontSize) ? b : a,
+  width(b, theme.type.tag.fontSize) > width(a, theme.type.tag.fontSize) ? b : a,
 );
 
 // ---------------------------------------------------------------------------
@@ -186,20 +105,20 @@ describe('the cap', () => {
   it('is derived from the longest shipped label', () => {
     expect(LONGEST).toBe('Around');
     expect(theme.size.tabBar.labelMaxScale).toBe(
-      largestStepThatFits(widthOf(LONGEST, theme.type.tag.fontSize), AVAILABLE),
+      largestStepThatFits(width(LONGEST, theme.type.tag.fontSize), AVAILABLE),
     );
   });
 
   it('keeps every one of the five inside its column at the cap', () => {
     for (const { label } of TAB_BAR_TABS) {
-      const scaled = widthOf(label, theme.type.tag.fontSize) * theme.size.tabBar.labelMaxScale;
+      const scaled = width(label, theme.type.tag.fontSize) * theme.size.tabBar.labelMaxScale;
       expect(scaled).toBeLessThanOrEqual(AVAILABLE);
     }
   });
 
   it('is the largest step that does: one more overflows the column', () => {
     const overflowing =
-      widthOf(LONGEST, theme.type.tag.fontSize) * (theme.size.tabBar.labelMaxScale + 0.1);
+      width(LONGEST, theme.type.tag.fontSize) * (theme.size.tabBar.labelMaxScale + 0.1);
     expect(overflowing).toBeGreaterThan(AVAILABLE);
   });
 
@@ -217,8 +136,8 @@ describe('why the label is `tag` and not `eyebrow`', () => {
   it('would lose 8,6pt of a 64pt column to eyebrow tracking, and cap lower for it', () => {
     // The other member of the 9.5 pair, drawn the way an eyebrow is drawn: uppercase, tracked.
     const tracking = theme.type.eyebrow.letterSpacing;
-    const eyebrowWidth = widthOf(LONGEST.toUpperCase(), theme.type.eyebrow.fontSize, tracking);
-    const flat = widthOf(LONGEST.toUpperCase(), theme.type.eyebrow.fontSize);
+    const eyebrowWidth = width(LONGEST.toUpperCase(), theme.type.eyebrow.fontSize, tracking);
+    const flat = width(LONGEST.toUpperCase(), theme.type.eyebrow.fontSize);
 
     expect(eyebrowWidth - flat).toBeCloseTo(8.6, 1);
     expect(largestStepThatFits(eyebrowWidth, AVAILABLE)).toBeLessThan(

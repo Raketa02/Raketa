@@ -329,6 +329,39 @@ describe('the candidate', () => {
     expect(toCandidate(row({ player_card: card })).card).not.toHaveProperty('photoUrl');
   });
 
+  it('carries the verdict where the check reached one', () => {
+    const card = { ...row().player_card, review: 'allowed' as const };
+
+    expect(toCandidate(row({ player_card: card })).card.photoReview).toBe('allowed');
+  });
+
+  it('carries a flagged verdict too — it is the card that declines to draw it', () => {
+    // The narrowing is a wire concern and the drawing is `domain/onCourtMark`'s. Folding
+    // `flagged` to absent here would put a product rule in a mapper and take the code away
+    // from the one place a future surface could legitimately read it.
+    const card = { ...row().player_card, review: 'flagged' as const };
+
+    expect(toCandidate(row({ player_card: card })).card.photoReview).toBe('flagged');
+  });
+
+  it('omits it where nobody looked, which is the state that draws no mark', () => {
+    expect(toCandidate(row()).card).not.toHaveProperty('photoReview');
+  });
+
+  it('omits it on a verdict this build has never seen, and that is the safe fold', () => {
+    // Through `unknown`, because the generated union is exactly the set of verdicts this
+    // build knows and the case being tested is the one it does not. A code minted after this
+    // build shipped could be anything, including a refusal — reading it as a pass is the one
+    // reading that could put a mark on a photograph the platform had doubts about, so the
+    // unreadable verdict and *nobody looked* collapse to one answer.
+    const card = {
+      ...row().player_card,
+      review: 'quarantined',
+    } as unknown as Wire['PlayerCardSchema'];
+
+    expect(toCandidate(row({ player_card: card })).card).not.toHaveProperty('photoReview');
+  });
+
   it('drops a social tag this build has no words for', () => {
     const card = { ...row().player_card, social_tags: ['PLAYS_TO_WIN', 'DOES_THE_CROSSWORD'] };
 

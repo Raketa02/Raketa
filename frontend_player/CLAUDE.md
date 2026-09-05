@@ -272,7 +272,21 @@ takes its liveness twin's two words because the two codes are one tag. **The pan
 Level twice on purpose** — hugely over the photograph and again on the right of the band — and
 what makes that legible is the system's second pinned scrim: a photograph is a ground nobody
 chose, so `photoScrim` collapses it to its worst case, pure white, at a ratio `textOnMedia.test.ts`
-derives. **Up to six of their Social tags draw on the competitive card, and the amber line is the
+derives. **The panel's third label is the ON COURT mark, and it is a label rather than the
+designs' shield because the panel was measured**
+([#313](https://github.com/Raketa02/Raketa/issues/313)). It draws on _checked and passed_ and on
+nothing else: _flagged_ and _nobody looked_ draw **identically**, because a card must not tell
+one player that another's photograph was doubted, and the poster draws none because it is not a
+photograph. There is **no number in either register** — ADR-0133's clause survives ADR-0138
+untouched. The ✓ went because **Archivo ships no U+2713** and the app's own drawn tick leaves
+51,19pt of words 45,2pt of room; the chip went because the panel's corner is a third of its own
+width, leaving 39,2. What is left is centred — flush left the first letter is inside the curve —
+in `mintSoft` at 4,55:1, the tightest pair on the panel and the only one that is not white, under
+a `maxFontSizeMultiplier` **derived** from the real Archivo metrics as the tab bar's is
+(`onCourtMarkFit.test.ts`, over `test-support/fontMetrics.ts`, which is where the tab bar's
+`cmap` walk moved when a second surface needed it). The mark is spoken as `Photo checked: on
+court`, straight after the level row, and it **leads with the noun** because _on court_ in a run
+of clauses is one comma away from activity recency. **Up to six of their Social tags draw on the competitive card, and the amber line is the
 one claim on it** ([#311](https://github.com/Raketa02/Raketa/issues/311)). The ones the searcher
 also chose are tinted and carry `· you too` in words, off `matched[]` — the intersection is the
 engine's and is never recomputed from a profile read, and only `matched` tints, because

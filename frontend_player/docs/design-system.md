@@ -281,46 +281,47 @@ for text**, and the audit did not catch it.
 
 ## 2.5 Contrast — computed
 
-| Pair                                                        | Ratio     | WCAG                                |
-| ----------------------------------------------------------- | --------- | ----------------------------------- |
-| ink on paper                                                | 15.65     | AAA                                 |
-| ink on surface                                              | 17.50     | AAA                                 |
-| white on night                                              | 13.29     | AAA                                 |
-| ink on volt                                                 | 13.96     | AAA                                 |
-| white + `textOnMedia` on the squash court ground            | 13.03     | AAA                                 |
-| white + `textOnMedia` on the padel court ground             | 12.87     | AAA                                 |
-| white + `textOnMedia` on the badminton court ground         | 12.80     | AAA                                 |
-| white + `textOnMedia` on the tennis court ground            | 12.29     | AAA                                 |
-| volt on night                                               | 10.60     | AAA                                 |
-| white on night2 / info                                      | 9.86      | AAA                                 |
-| info on infoSoft                                            | 8.63      | AAA                                 |
-| white on dark-card `tiny` (white @ .68)                     | 6.97      | AAA                                 |
-| white on red                                                | 5.90      | AA                                  |
-| white on coralInk                                           | 5.89      | AA                                  |
-| white on mintInk                                            | 5.84      | AA                                  |
-| white on amber                                              | 5.70      | AA                                  |
-| muted on surface                                            | 5.40      | AA                                  |
-| white + `textOnMedia` on a photograph, under `photoScrim`   | 5.24      | AA                                  |
-| coralInk on coralSoft                                       | 5.11      | AA                                  |
-| mintInk on mintSoft                                         | 5.08      | AA                                  |
-| red on redSoft                                              | 5.06      | AA                                  |
-| amber on amberSoft                                          | 5.04      | AA                                  |
-| white on band ink (all four)                                | 5.05–5.13 | AA                                  |
-| muted on paper                                              | 4.83      | AA                                  |
-| white on dark-card `eyebrow` (white @ .52)                  | 4.74      | AA                                  |
-| white + `textOnMedia` on a poster hue's light stop          | 4.60–4.65 | AA                                  |
-| band ink on paper (all four)                                | 4.51–4.59 | AA                                  |
-| muted on line2                                              | 4.62      | AA                                  |
-| muted on paper2                                             | 4.49      | AA — used at 11pt+ only             |
-| ink on paper2 (the record block's figure, and a won square) | 14.57     | AAA                                 |
-| a won square on a lost one (`ink` on `muted`)               | 3.24      | ≥3:1, meets **1.4.11**              |
-| **ink on coral**                                            | **4.50**  | AA — the only dark-on-coral pairing |
-| coral on paper (marks: level mark, progress fill)           | 3.48      | ≥3:1, meets **1.4.11**              |
-| mint on surface (mint-bordered fills)                       | 4.07      | ≥3:1, meets **1.4.11**              |
-| voltStroke on surface (the marked card's border)            | 4.01      | ≥3:1, meets **1.4.11**              |
-| voltStroke on paper                                         | 3.58      | ≥3:1, meets **1.4.11**              |
-| voltStroke on `line` (the border it replaces)               | 3.07      | ≥3:1, meets **1.4.11**              |
-| `ink` on a poster hue's dark stop                           | 3.09–3.12 | ≥3:1, meets **1.4.11**              |
+| Pair                                                         | Ratio     | WCAG                                |
+| ------------------------------------------------------------ | --------- | ----------------------------------- |
+| ink on paper                                                 | 15.65     | AAA                                 |
+| ink on surface                                               | 17.50     | AAA                                 |
+| white on night                                               | 13.29     | AAA                                 |
+| ink on volt                                                  | 13.96     | AAA                                 |
+| white + `textOnMedia` on the squash court ground             | 13.03     | AAA                                 |
+| white + `textOnMedia` on the padel court ground              | 12.87     | AAA                                 |
+| white + `textOnMedia` on the badminton court ground          | 12.80     | AAA                                 |
+| white + `textOnMedia` on the tennis court ground             | 12.29     | AAA                                 |
+| volt on night                                                | 10.60     | AAA                                 |
+| white on night2 / info                                       | 9.86      | AAA                                 |
+| info on infoSoft                                             | 8.63      | AAA                                 |
+| white on dark-card `tiny` (white @ .68)                      | 6.97      | AAA                                 |
+| white on red                                                 | 5.90      | AA                                  |
+| white on coralInk                                            | 5.89      | AA                                  |
+| white on mintInk                                             | 5.84      | AA                                  |
+| white on amber                                               | 5.70      | AA                                  |
+| muted on surface                                             | 5.40      | AA                                  |
+| white + `textOnMedia` on a photograph, under `photoScrim`    | 5.24      | AA                                  |
+| coralInk on coralSoft                                        | 5.11      | AA                                  |
+| mintInk on mintSoft                                          | 5.08      | AA                                  |
+| red on redSoft                                               | 5.06      | AA                                  |
+| amber on amberSoft                                           | 5.04      | AA                                  |
+| white on band ink (all four)                                 | 5.05–5.13 | AA                                  |
+| muted on paper                                               | 4.83      | AA                                  |
+| white on dark-card `eyebrow` (white @ .52)                   | 4.74      | AA                                  |
+| white + `textOnMedia` on a poster hue's light stop           | 4.60–4.65 | AA                                  |
+| band ink on paper (all four)                                 | 4.51–4.59 | AA                                  |
+| mintSoft + `textOnMedia` on a photograph, under `photoScrim` | 4.55      | AA — the ON COURT mark              |
+| muted on line2                                               | 4.62      | AA                                  |
+| muted on paper2                                              | 4.49      | AA — used at 11pt+ only             |
+| ink on paper2 (the record block's figure, and a won square)  | 14.57     | AAA                                 |
+| a won square on a lost one (`ink` on `muted`)                | 3.24      | ≥3:1, meets **1.4.11**              |
+| **ink on coral**                                             | **4.50**  | AA — the only dark-on-coral pairing |
+| coral on paper (marks: level mark, progress fill)            | 3.48      | ≥3:1, meets **1.4.11**              |
+| mint on surface (mint-bordered fills)                        | 4.07      | ≥3:1, meets **1.4.11**              |
+| voltStroke on surface (the marked card's border)             | 4.01      | ≥3:1, meets **1.4.11**              |
+| voltStroke on paper                                          | 3.58      | ≥3:1, meets **1.4.11**              |
+| voltStroke on `line` (the border it replaces)                | 3.07      | ≥3:1, meets **1.4.11**              |
+| `ink` on a poster hue's dark stop                            | 3.09–3.12 | ≥3:1, meets **1.4.11**              |
 
 Deliberately absent: _white on coral_ (3.89) and _white on mint_ (4.07) — see Rule C.
 
@@ -397,9 +398,15 @@ darker somewhere and never lighter anywhere.
   they clear the same bound by construction, and
   [`textOnMedia.test.ts`](../src/shared/ui/textOnMedia.test.ts) proves it over every one of
   them rather than sampling.
-- **Both labels carry `textOnMedia`**, for the court's reason: the ratio is the ground's
+- **All three labels carry `textOnMedia`**, for the court's reason: the ratio is the ground's
   brightest case, and a label can sit anywhere on a photograph.
-- The ratio is **derived, never typed** — same file, same formula as the court's four and the
+- **The third label is green, and green is where the palette runs out over a dark ground.**
+  The [ON COURT mark](#715-the-on-court-mark) is `mintSoft` at **4.55**, which is the tightest
+  pair on this panel and the only one that is not white. `mint` itself is **1.29** here — a
+  foreground nobody sees, which is volt's own problem in the other hue — so the mark takes the
+  colour that is otherwise a background, and the pin is what makes one legible and the other
+  not.
+- The ratios are **derived, never typed** — same file, same formula as the court's four and the
   poster's two.
 
 **The scrim is lighter than the court's `.93` on purpose.** The court's ground carries no
@@ -2116,6 +2123,71 @@ _a win against one named person isn't a thing that exists until the other three 
 known_. That is a rule rather than a drawing decision and it lives in `domain/atStake.ts`; the
 box is handed a pair or it is handed nothing.
 
+## 7.15 The on-court mark
+
+Two words across the top of the competitive card's [photo panel](#a-players-photograph--the-third-generated-fill-and-the-one-nobody-generated)
+— **what the on-court check concluded about that photograph**, and the only thing this app
+ever says about another player's verdict.
+
+```
+words     ON COURT — type.tag 9,5 / 700, uppercased by the panel
+colour    mintSoft + textOnMedia          4,55:1 over the worst photograph
+placement centred, at the panel's own space.xs padding
+cap       maxFontSizeMultiplier 1,1, derived — onCourtMarkFit.test.ts
+```
+
+**Drawn on _checked and passed_ and on nothing else.** _Checked and flagged_ and _nobody
+looked_ draw **identically**, because a card must not tell one player that another player's
+photograph was doubted — that is a moderation outcome about a third party, and only the
+positive crosses ([ADR-0138](../../docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)).
+Nothing is drawn over the **generated poster** either: a poster is not a photograph and has
+nothing to have passed.
+
+**No number, ever.** Every verdict is computed from a confidence the platform keeps and which
+never crosses on any route — _we are 38% sure this is a court_ is a figure a player can do
+nothing with — so there is nothing here to derive one from and nothing here that prints one.
+
+**It is a label and not the shield the designs draw, and the arithmetic is the reason.** #302
+and #313 both put a **✓ ON COURT** shield top right. Neither survives a 74 × 92 panel whose
+corner radius is a third of its own width:
+
+- **The tick.** Archivo Bold **does not draw U+2713**, so a text tick renders in a
+  per-platform fallback whose face, weight and advance this app neither controls nor can
+  measure — [ADR-0135](../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)'s
+  finding about `U+26A1`, one surface over. The app's own drawn tick ([6.8](#68-the-availability-grid)'s
+  mark family) is a fixed 12 × 12 geometry, and it does not cost the words their headroom —
+  it costs them the drawing: **45,2pt left for a 51,19pt word**, before any scaling is asked
+  for.
+- **The shield.** At the mark's own top edge the corner has narrowed the panel to **57,2pt**,
+  and a chip's inset and two paddings leave **39,2** of that. _Top right_ is not a placement
+  this panel has; centred and unbounded, the same word fits with the grid's smallest step
+  clear on each side.
+
+**Centred is geometry, not composition.** Flush left at the panel's own padding, the first
+letter sits inside the corner's curve — and the panel clips rather than overhanging. The Level
+and the Sport beneath are left-aligned because they sit well below the corner's influence.
+
+**The words carry the mark and the mint reinforces it**, which is
+[Part 13](#part-13--accessibility)'s _never colour alone_ answered by the copy rather than by
+a second cue. A green tick alone would have been colour plus a shape that says _checked_ and
+never says of what — and the meaning it would be assumed to have is _verified account_, which
+this platform does not do. That is [6.9](#69-the-photo-tile-and-picker)'s poster rule read the
+other way round: _nobody should have to see a poster to know they are not looking at the
+player._
+
+**The cap is derived and it is a bound, not a freeze.** The panel is a fixed box, so the label
+may neither be frozen nor grow without bound; `maxFontSizeMultiplier` is what
+[Part 13](#part-13--accessibility) leaves, and the number comes from the real Archivo Bold
+advance widths against the width the corner allows — the tab bar's mechanism
+([10.2](#102-the-tab-bar)), second instance. The **Sport** beneath it is deliberately left
+uncapped: its cap would come out at 1,0, which is `allowFontScaling={false}` under another
+name, and _BADMINTO…_ still reads where _ON COU…_ has stopped saying anything.
+
+The mark **announces nothing of its own** — §20.1 merges it into the card body, whose spoken
+name carries `Photo checked: on court` straight after the level row. `the-words.md` §20.3 owns
+that sentence, and it leads with the noun because _on court_ alone, in a run of clauses, is one
+comma away from activity recency.
+
 ---
 
 # Part 8 — Scrolling patterns
@@ -2832,6 +2904,8 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-09-05 | [6.4](#64-tag--the-status-pill)                                                                       | `warn` was _watch this — reversible, not yet wrong_, and the six variants had no reading for a **stated absence**                                                                                                        | `warn` covers both, and 6.4 gains the one cost of `numberOfLines={1}` it had never had to state                                                                                                                                                                                                                                                                                                                                                   | [#311](https://github.com/Raketa02/Raketa/issues/311) draws _No tags in common_ in amber, and the tempting justification — _the mildest thing the palette says_ — is picking by appearance, which [15.2](#152-adding-a-colour) forbids. Picked by meaning it is the same amber: sharing no tags is not a failure (`red` is _ended badly_) and not a settled good (`mint` is _covered_), it is a fact about a pairing the reader may act on and the next search may not repeat. The truncation note is the other half: a shared tag carries `· you too` in words so the tint is never the only cue, but at roughly double the system size the ellipsis takes the marker before the label — the spoken name still carries the whole clause, so what is lost is the second cue and not the fact. Fixing it means a **wrapping** tag, which is a change to this section as much as to the primitive                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-09-05 | [Part 7](#part-7--data-display) · [`theme.ts`](../src/shared/ui/theme.ts)                             | Part 7 ended at [7.12](#712-the-court), and the competitive card's _Player Score · Last 5 · Counted_ and _Win, counted / Lose, counted_ had no drawn shape at all — the facts behind them had no producer in the backend | **[7.13](#713-the-record-block) the record block** and **[7.14](#714-the-stake-box) the stake box** — one `paper2` box at `radius.note`, `rlLabel` over `num.s`, three of them across and then two; plus `size.recordSquare` **8** and `radius.recordSquare` **2** for the run of form                                                                                                                                                            | [#312](https://github.com/Raketa02/Raketa/issues/312) put five figures on the card that are neither a fact the card _states_ in a [5.5](#55-row--the-key-value-line) row nor an argument it makes in a reason line: they are numbers a reader **compares**, and five more rows would have buried them. The recess is load-bearing rather than decorative — a _Player Score_ drawn as ordinary card text beside a Level printed twice reads as a second rating, and the block is explicitly not about skill. A block whose fact is absent is **hidden**, never zeroed, which is the wire's own spelling                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-09-05 | [2.5](#25-contrast--computed)                                                                         | Two neutral-on-neutral pairs the palette had never been asked for: nothing had drawn an `ink` mark on `paper2`, and no two fills had had to be told apart from each other                                                | **`ink` on `paper2` 14,57** and **a won square against a lost one 3,24**, derived in `recordSquares.test.ts`                                                                                                                                                                                                                                                                                                                                      | _Last 5_ is five squares distinguished by **fill**, which is a graphical object conveying information and therefore [1.4.11](#25-contrast--computed)'s 3:1 rather than text's 4,5. Three ratios have to hold at once — each state against the ground, and the two against each other — and the pair chosen is a **lightness** step in two near-neutrals, so the run is readable with no hue perception at all. Derived rather than asserted, so repainting either fill goes red                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-09-05 | [Part 7](#part-7--data-display)                                                                       | Part 7 ended at [7.14](#714-the-stake-box), and the photo panel's top was left clear for a **✓ ON COURT** shield that #302 and #313 both drew and neither specified                                                      | **[7.15](#715-the-on-court-mark) the on-court mark** — two words in `mintSoft`, centred at the panel's own padding, under a derived `maxFontSizeMultiplier` of **1,1**. No tick, no chip, no ground                                                                                                                                                                                                                                               | The shield does not fit a 74 × 92 panel whose corner is a third of its own width, and that was **measured rather than judged** ([#313](https://github.com/Raketa02/Raketa/issues/313)): `ON COURT` is 51,19pt at `tag`, the corner leaves 57,2 at the mark's own top edge, the app's drawn tick would leave the words 45,2, and a chip's inset and paddings would leave 39,2. What survives is the half a reader can act on — a green tick alone says _checked_ and never says of what, and the meaning it would be assumed to have is _verified account_, which this platform does not do. [Part 13](#part-13--accessibility)'s _never colour alone_ is discharged by the words, which is [6.9](#69-the-photo-tile-and-picker)'s poster rule read the other way round                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-09-05 | [2.5](#25-contrast--computed)                                                                         | The panel had two labels and both were white, so the one photograph row covered them                                                                                                                                     | **`mintSoft` on a photograph under `photoScrim` 4,55**, derived in `textOnMedia.test.ts` beside the white one                                                                                                                                                                                                                                                                                                                                     | The mark is green because that is what the verdict is worth reading as, and green over a dark scrim is where this palette runs out: `mint` itself is **1,29** against the same ground — a foreground nobody sees, volt's own problem in the other hue — so the mark takes the colour that is otherwise a **background**. It is the tightest pair on the panel and it is the pin that makes it computable at all, exactly as the white Level beside it is                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 # Part 17 — What the reset removed
 

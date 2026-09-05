@@ -26,6 +26,8 @@ import type { Term } from '../../domain/vocabulary';
 import { toCandidate } from '../../mappers/candidateMappers';
 import type { Wire } from '@/test-support/transport';
 
+import { ON_COURT_CLAUSE, ON_COURT_MARK } from '../playerCardPresentation';
+
 import { COMPETITIVE_CARD_DRAWS, CandidateCard } from './CandidateCard';
 import { CandidateCardSocial, SOCIAL_CARD_DRAWS } from './CandidateCardSocial';
 import { CandidatePhoto } from './CandidatePhoto';
@@ -903,6 +905,62 @@ describe('the photo panel', () => {
   });
 });
 
+describe('the ON COURT mark', () => {
+  /** A card whose photograph the check answered one way or the other. */
+  function withVerdict(over: Partial<Candidate['card']>): Partial<Candidate> {
+    return { card: { ...candidate().card, ...over } };
+  }
+
+  it('draws on a photograph the check passed, and says so in the card’s own name', () => {
+    drawCompetitive(withVerdict({ photoReview: 'allowed' }));
+
+    expect(screen.getByText(ON_COURT_MARK)).toBeTruthy();
+    // The panel announces nothing of its own (§20.1), so the card body's label is the mark's
+    // one route to a listener — and it is a fact rather than decoration, so it has to have one.
+    expect(spokenBody()).toContain(ON_COURT_CLAUSE);
+  });
+
+  it('draws nothing on a flagged photograph, and nothing on an unchecked one', () => {
+    // The two absences are one absence, in both registers. A card that drew them apart would
+    // be telling this searcher that somebody else's photograph had been doubted, which is a
+    // moderation outcome about a third party (ADR-0138).
+    for (const over of [{ photoReview: 'flagged' as const }, {}]) {
+      drawCompetitive(withVerdict(over));
+
+      expect(screen.queryByText(ON_COURT_MARK)).toBeNull();
+      expect(spokenBody()).not.toContain(ON_COURT_CLAUSE);
+      // And nothing else leaks in its place: no word for the verdict anywhere on the card.
+      expect(screen.queryByText(/flagged/i)).toBeNull();
+      screen.unmount();
+    }
+  });
+
+  it('draws nothing over the generated poster, whatever the verdict says', () => {
+    // A poster is not a photograph and has nothing to have passed. The wire omits the two
+    // together, and the card refuses the pair anyway rather than trusting that it cannot come.
+    drawCompetitive(withVerdict({ photoUrl: undefined, photoReview: 'allowed' }));
+
+    expect(screen.UNSAFE_queryByType(Image)).toBeNull();
+    expect(screen.queryByText(ON_COURT_MARK)).toBeNull();
+    expect(spokenBody()).not.toContain(ON_COURT_CLAUSE);
+  });
+
+  it('is the panel’s, so the two cards without one draw and say nothing', () => {
+    // `photo` is declined by the social and deck cards exactly as `record` and the tag row
+    // are: a mark floated over full-bleed media has nowhere it belongs, and the rule that
+    // ships with it is that a card which draws no mark announces none either.
+    for (const draw of [drawSocial, drawDeck]) {
+      draw(withVerdict({ photoReview: 'allowed' }));
+
+      expect(screen.queryByText(ON_COURT_MARK)).toBeNull();
+      // Read off the label rather than off the outermost box: on these two the card body is
+      // not the first drawn View, which is the shape difference the three components are.
+      expect(screen.queryByLabelText(new RegExp(ON_COURT_CLAUSE))).toBeNull();
+      screen.unmount();
+    }
+  });
+});
+
 describe('the head-to-head band', () => {
   it('draws one bar with its segment labels, at the size that carries them', () => {
     drawCompetitive();
@@ -1048,6 +1106,26 @@ describe('what each control announces', () => {
           'Fairly even · 74%. ' +
           // The tag row's clauses, between the identifying facts and the argument — and
           // grouped, because a listener hearing *you too* once per tag is being read a table.
+          'Tags you share: Plays to win. Their other tags: Stays for a drink. ' +
+          '3 slots you both ticked · next Tue evening. 4 km away. ' +
+          "They're here to compete too.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it('puts the panel’s mark straight after the level row, where the panel draws it', () => {
+    // The panel's own pair, spoken in the order the panel holds them: it prints a Level
+    // hugely and a mark above it, and a listener meets that object before the argument over
+    // it. Asserted whole, because the slot is the decision — §20.3 fixes one order for every
+    // card in the feature and a clause that drifted would drift silently.
+    drawCompetitive(withRecord({ photoReview: 'allowed' }));
+
+    expect(
+      screen.getByLabelText(
+        'Marek. Fit 78 out of 100. 2,83 · Established · likely 2,55 – 2,87. ' +
+          'Photo checked: on court. ' +
+          'Fairly even · 74%. ' +
+          'Player Score 74 out of 100. 3 of the last 5 won. 29 counted games. ' +
           'Tags you share: Plays to win. Their other tags: Stays for a drink. ' +
           '3 slots you both ticked · next Tue evening. 4 km away. ' +
           "They're here to compete too.",

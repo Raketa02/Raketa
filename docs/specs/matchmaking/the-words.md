@@ -979,7 +979,7 @@ to satisfy a word count would delete what the card is for.
 
 | | |
 | --- | --- |
-| **Card body** | `button`. `{name}. Fit {n} out of 100. {level} · {band} · likely {low}–{high}. {In your area · }{km} km. {record}. {stake}. {tags}. {reason}. {reason}. {reason}. {reason}. {concern}.` |
+| **Card body** | `button`. `{name}. Fit {n} out of 100. {level} · {band} · likely {low}–{high}. {mark}. {In your area · }{km} km. {record}. {stake}. {tags}. {reason}. {reason}. {reason}. {reason}. {concern}.` |
 | **_Why 78?_** | `button`. `Why {name} fits {n}` — the visible label is `Why {n}?`, and two cards on one screen can carry the same Fit, so this one names its subject for the reason the primary does. **Not** the sheet's own name (§20.6): that string is the answer's, and this is the question. |
 | **Primary button** | `button`. `Add {name} to the court` · `Challenge {name}` — the visible label is *Add to the court* / *Challenge*, which announces identically on twenty cards. Naming the subject is [6.9](../../../frontend_player/docs/design-system.md#69-the-photo-tile-and-picker)'s remove control, whose label *"names which photo it removes"*. |
 
@@ -1054,14 +1054,44 @@ a hidden decoration is allowed and a fact is not. The content **can** be announc
 the rule that ships with the row is **do not draw a tag the label does not speak**. The social and
 deck cards still draw none, for a reason about those cards rather than about tags: see §5.
 
+**`{mark}` is the photo panel's ON COURT mark, and it is one clause or none**
+([#313](https://github.com/Raketa02/Raketa/issues/313)). It sits straight after the level row
+because the two are the **panel's** pair — it prints a Level hugely and the mark above it, and a
+listener meets that object before the argument over it.
+
+| Verdict | Says |
+| --- | --- |
+| Checked and passed | `Photo checked: on court` |
+| Checked and flagged | — |
+| Never checked | — |
+| No photograph — the generated poster | — |
+
+**The last three are one answer and that is the point.** A card must not tell one player that
+another player's photograph was doubted: that is a moderation outcome about a third party, and
+[ADR-0138](../../adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)
+publishes **only the positive**. The absence is where every other answer meets, and the spoken
+register is where a difference would be easiest to leak — so there is no *not checked* sentence
+and no *we could not see a court*, which is the uploader's copy and belongs to the person who
+chose the photograph.
+
+**It leads with the noun, and the drawing does not.** Two words over somebody's picture are
+plainly about the picture; a clause in a run of sentences is not, and *on court* arriving
+between a Level and a forecast is one comma away from **activity recency** — the thing
+`player_card` refuses at every granularity, *"not a timestamp, not active today, not a green
+dot"*. So what is drawn is `ON COURT` and what is said is `Photo checked: on court`.
+
+**There is no number in either register, and there never will be.** ADR-0133's clause survives
+ADR-0138 untouched: the confidence never crosses on any route, so there is nothing to print and
+nothing to derive one from — *we are 38% sure this is a court* is a figure a player can do
+nothing with.
+
 **Two things the competitive card draws and does not say.** The photo panel prints a **Level**,
 which reaches the name already as the first figure of `{level}` — printed twice and said once
 (§10). It also prints the **Sport**, which does not reach the name at all: it is the *search's*
 sport, identical on every row, and the screen's own eyebrow has said it once already. Twenty
-rows each opening with *Tennis* is the noise this fixed order exists to prevent. The panel's
-✓ ON COURT shield is the exception and arrives with it
-([#313](https://github.com/Raketa02/Raketa/issues/313)) — a mark that is true of one player and
-not of the next is a fact, and it takes a clause.
+rows each opening with *Tennis* is the noise this fixed order exists to prevent. The mark is
+what separates them: it is true of one player and not of the next, so it is a fact rather than a
+constant and it takes a clause.
 
 `{name}` is §15's `playerName()` — **the handle, whole.** A seat label may truncate; a spoken
 name never does.

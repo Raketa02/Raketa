@@ -193,6 +193,9 @@ export function CandidateCard({
     socialTags: tags,
     record: candidate.card,
     stake,
+    // The panel is this card's alone, so the two fields behind the ON COURT mark are handed
+    // over here and declined by the other two cards — `record`'s shape, for `record`'s reason.
+    photo: candidate.card,
   });
   const levelFit = evidenceOf(candidate, 'level_fit');
   const balance = evidenceOf(candidate, 'predicted_balance');
@@ -216,6 +219,7 @@ export function CandidateCard({
           photoUrl={candidate.card.photoUrl}
           level={candidate.card.level}
           sportName={sportName}
+          onCourt={facts.onCourt}
         />
 
         <View style={s.column}>

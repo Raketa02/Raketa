@@ -27,7 +27,9 @@
  * `counted_games`, `last_five` and `at_stake` arrive with the blocks that print them
  * ([#312](https://github.com/Raketa02/Raketa/issues/312)) — three record boxes and a pair of
  * stake boxes on the competitive card, which is the first surface in this app to draw any of
- * the three.
+ * the three. `review` arrives with the ON COURT mark on the photo panel
+ * ([#313](https://github.com/Raketa02/Raketa/issues/313)), which is the only surface anywhere
+ * in this app that reads another player's verdict.
  *
  * **`would_be_forecast` is out of scope entirely**: nothing in the backend writes it, and its
  * three consumers went with it. A field is added here when a surface draws it, because a DTO
@@ -45,6 +47,7 @@ import type {
   LivenessReason,
   ModifierCode,
   OptimisedFor,
+  PhotoReview,
   RelaxationAsk,
   Rung,
   SearchMode,
@@ -79,6 +82,27 @@ export interface PlayerCard {
    * ([`the-play-components.md`](../../../../../docs/specs/matchmaking/the-play-components.md) §9).
    */
   readonly photoUrl?: string;
+  /**
+   * What the on-court check concluded about that photograph — **omitted where nobody
+   * looked**, which is not the same answer as `flagged` and is drawn identically to it.
+   *
+   * Three states and not two ([ADR-0138](../../../../../docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)):
+   * checked and passed, checked and flagged, and a photograph that arrived while the reviewer
+   * could not be reached or before the check existed at all. **Only the first earns a mark**,
+   * and the absence is where the other two meet — a card that marked the gap would be claiming
+   * a check happened on every photograph on the platform.
+   *
+   * It is `player_profile`'s `PhotoReview` read the **opposite** way round, and the difference
+   * is the difference between a warning and a badge: an upload that says nothing folds to
+   * `allowed`, because *an unreachable reviewer means the player is not warned rather than
+   * wrongly warned*; a card that says nothing folds to **no mark**, because a tick on a
+   * photograph nobody looked at is a lie told to twenty strangers.
+   *
+   * **The evidence never crosses, on any route** — no confidence, no similarity vector, no
+   * model, no prompt-set fingerprint. There is no number here and none may be invented from
+   * the code (ADR-0133's clause, untouched by ADR-0138).
+   */
+  readonly photoReview?: PhotoReview;
   /** Their coarse area, as a machine code. **Never printed** — §6.3, and `areas.py`. */
   readonly areaCode: string;
   /** Narrowed at the mapper: a tag id this build has no words for is dropped, per §3. */
