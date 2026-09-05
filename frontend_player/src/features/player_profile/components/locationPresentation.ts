@@ -8,10 +8,12 @@
  *
  * The copy is honest in both directions, which is the harder half:
  *
- * - **What is kept is said plainly.** *About a kilometre* is the whole promise, and it is
- *   stated before the prompt rather than after it. A screen that said "we respect your
- *   privacy" and left the reader to guess what that meant would be a screen nobody should
- *   believe.
+ * - **What is kept is said plainly.** *Rounded to about 1 km, and only that approximate
+ *   area* is the whole promise, and it is stated before the prompt rather than after it. A
+ *   screen that said "we respect your privacy" and left the reader to guess what that meant
+ *   would be a screen nobody should believe. The title asks the player's own question back at
+ *   them — *why we ask your location* — because that is what somebody looking at a permission
+ *   control wants answered, rather than a heading about Raketa.
  * - **What a refusal costs is named, not implied.** Location is what discovery is built
  *   on: a player without an area cannot search and cannot be matched. Saying so is not a
  *   dark pattern — hiding it until the app is empty would be.
@@ -53,12 +55,12 @@ export const LOCATION_SAVED = 'Location saved';
 /** What pressing the settled control would do — it is not the same act as the first press. */
 export const READ_AGAIN_HINT = 'Reads your area again';
 
-export const WHY_TITLE = 'Why Raketa asks';
+export const WHY_TITLE = 'Why we ask your location';
 
 export const WHY_BODY =
-  'We show you players near you, and show you to them — so we need a rough idea of where ' +
-  'you play. One reading, rounded to about a kilometre, and that rounded area is all we ' +
-  'keep. Not your exact position, and nothing at all while you are off doing something else.';
+  'To show you nearby players and show you to them, Raketa needs a rough idea of where you ' +
+  'play. We take one location reading, round it to about 1 km, and only keep that ' +
+  'approximate area. We never store your exact location or track you in the background.';
 
 export const ACCESS_TITLE: Readonly<
   Record<Exclude<LocationAccess, 'unasked' | 'granted'>, string>

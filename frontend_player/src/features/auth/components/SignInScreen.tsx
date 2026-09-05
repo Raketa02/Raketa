@@ -5,6 +5,13 @@
  * like is `schemas/`, what signing in does is `use-cases/`, and what a failure means is
  * the error model. A `disabled={…}` expression encoding a rule would be a rule nobody
  * can test.
+ *
+ * **The password box can be read back**, exactly as both of the sign-up form's can. The
+ * argument there was a typo nobody can see costing a player the whole form; here it is a
+ * typo nobody can see costing them a refusal they cannot distinguish from a wrong password
+ * — and a keychain that filled the box with the wrong entry looks identical either way. One
+ * box, so the control's accessible name still says which field it is about and there is
+ * nothing for it to be confused with.
  */
 
 import { Link } from 'expo-router';
@@ -88,6 +95,7 @@ export function SignInScreen() {
               onChangeText={setPassword}
               error={fieldErrors.password}
               secureTextEntry
+              reveal
               autoCapitalize="none"
               autoComplete="current-password"
               textContentType="password"

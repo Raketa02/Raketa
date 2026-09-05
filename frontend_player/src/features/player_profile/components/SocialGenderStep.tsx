@@ -41,8 +41,10 @@
  *
  * No response shape in this app carries a gender value out (ADR-0096 §6), so this screen is
  * the only place in the app either value is ever seen. It is not rendered on a card, a
- * profile or a shortlist, and the scope note says so before the question is answered rather
- * than after.
+ * profile or a shortlist, and **the scope note that says so is the first thing on the
+ * screen** — above both questions rather than between them. It is one claim covering both
+ * answers, and a player weighing whether to answer at all is weighing it before the first
+ * press, not after it.
  */
 
 import { useRouter } from 'expo-router';
@@ -104,6 +106,16 @@ export function SocialGenderStep() {
         )
       }
     >
+      {/* At the top, above the first question rather than between the two.
+
+          `info`, because it explains what the product does with the answers rather than
+          reporting a status about something the player just did (1.3). It moved up here
+          because a player deciding whether to answer at all decides that **before** they
+          press anything — a reassurance underneath the control they have already used
+          arrives after the moment it was for — and because it is true of the preference
+          below as much as of the answer above, which it could not claim from between them. */}
+      <Note variant="info">{GENDER_SCOPE}</Note>
+
       <Text style={s.label}>{GENDER_HEADING}</Text>
 
       {/* Stacked full-width buttons, not chips: a chip is a filter over content a player can
@@ -124,12 +136,6 @@ export function SocialGenderStep() {
           />
         ))}
       </View>
-
-      {/* `info`, because it explains what the product does with the answer rather than
-          reporting a status about something the player just did (1.3). It sits under the
-          controls and above the second question, which is where a player who has just
-          answered is looking. */}
-      <Note variant="info">{GENDER_SCOPE}</Note>
 
       {/* The one answer that costs its holder reach, said only when it is the one given.
           `amber`: nothing has gone wrong and nothing is lost — it is a consequence of a

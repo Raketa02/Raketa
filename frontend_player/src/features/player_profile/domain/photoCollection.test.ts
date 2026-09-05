@@ -4,16 +4,19 @@
  */
 
 import { AppError } from '@/shared/errors';
+import { theme } from '@/shared/ui';
 
 import {
   ASSUMED_MEDIA_TYPE,
   PHOTO_CEILING,
+  PROFILE_PHOTO_ASPECT,
   addPhotos,
   mediaTypeOf,
   promoteToProfile,
   flaggedPositions,
   recordUpload,
   removePhoto,
+  replacePhoto,
   slotsLeft,
   uploadedPhotoIds,
   type ProfilePhoto,
@@ -96,6 +99,78 @@ describe('adding what the picker handed back', () => {
     ]);
     // Not a refusal: the ceiling had room, and nothing the player asked for is missing.
     expect(addition.refused).toBe(0);
+  });
+});
+
+describe('the shape a photo is cropped to', () => {
+  /**
+   * The whole reason the constant exists rather than being written at the picker: the crop
+   * frame and the tile have to be the same rectangle, or a player frames a photograph and
+   * the row crops it again on the way in.
+   */
+  it('is the shape of the tile it will be drawn in', () => {
+    const [width, height] = PROFILE_PHOTO_ASPECT;
+
+    expect(width / height).toBe(theme.size.photoTile.aspectRatio);
+  });
+
+  /** Whole numbers, because that is what a native crop frame takes. */
+  it('is a pair of whole numbers', () => {
+    for (const side of PROFILE_PHOTO_ASPECT) {
+      expect(Number.isInteger(side)).toBe(true);
+      expect(side).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('swapping one photo for another', () => {
+  /**
+   * The whole point of `replacePhoto` being a rule rather than a remove and an add: the
+   * player put that picture in that slot, and swapping which photograph it is does not
+   * un-put it. Remove-then-add would send a replaced profile photo to the back of a queue
+   * it was at the front of.
+   */
+  it('keeps the position the replaced photo held', () => {
+    const held = [uploaded('one'), uploaded('two'), uploaded('three')];
+
+    const after = replacePhoto(held, held[1]!.uri, arrival('new'));
+
+    expect(after.map((photo) => photo.uri)).toEqual([
+      held[0]!.uri,
+      'file:///photos/new.jpg',
+      held[2]!.uri,
+    ]);
+    // Replacing the one that leads leaves the replacement leading, which is the same
+    // sentence read from position one.
+    expect(replacePhoto(held, held[0]!.uri, arrival('new'))[0]!.uri).toBe('file:///photos/new.jpg');
+  });
+
+  /** A replacement is a new picture, so it starts where every new picture starts. */
+  it('begins uploading at zero, and carries the media type it arrived with', () => {
+    const held = [uploaded('one')];
+
+    const [replaced] = replacePhoto(held, held[0]!.uri, arrival('new', 'image/heic'));
+
+    expect(replaced?.upload).toEqual({ kind: 'uploading', progress: 0 });
+    expect(replaced?.mimeType).toBe('image/heic');
+  });
+
+  it('leaves the collection alone when the photo it would replace is not held', () => {
+    const held = [uploaded('one')];
+
+    expect(replacePhoto(held, 'file:///photos/gone.jpg', arrival('new'))).toBe(held);
+  });
+
+  /**
+   * The same dedupe `addPhotos` applies, for the same reason: one photograph in two slots is
+   * a collection the row cannot draw honestly. Replacing something with itself is therefore
+   * a no-op rather than a re-upload of a picture that is already there.
+   */
+  it('leaves the collection alone when the arrival is already in it', () => {
+    const held = [uploaded('one'), uploaded('two')];
+
+    expect(replacePhoto(held, held[0]!.uri, arrival('two'))).toBe(held);
+    expect(replacePhoto(held, held[0]!.uri, arrival('one'))).toBe(held);
   });
 });
 

@@ -121,7 +121,7 @@ describe('where a launch lands', () => {
     await launchSignedIn();
 
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    expect(screen.getByText("Let's find your level")).toBeTruthy();
+    expect(screen.getByText("Let's set you up")).toBeTruthy();
   });
 
   it('sends a player with a rating and a Player profile into the app', async () => {
@@ -232,7 +232,7 @@ describe('where a launch lands', () => {
     // only honest thing to do with a question it cannot yet answer.
     await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/ratings')).toHaveLength(2));
     expect(screen).not.toHavePathname('/welcome');
-    expect(screen.queryByText("Let's find your level")).toBeNull();
+    expect(screen.queryByText("Let's set you up")).toBeNull();
 
     answerRatings();
 
@@ -279,7 +279,7 @@ describe('where a launch lands', () => {
     // `signal`, and the stale copy stands — so the next attempt reads it again, and the
     // one after that.
     expect(screen).not.toHavePathname('/welcome');
-    expect(screen.queryByText("Let's find your level")).toBeNull();
+    expect(screen.queryByText("Let's set you up")).toBeNull();
 
     answerRatings();
 
@@ -486,13 +486,32 @@ describe('walking into the questionnaire', () => {
     await waitFor(() => expect(screen).toHavePathname('/sports'));
   }
 
-  it('sets expectations before the first question, in two cards and no more', async () => {
+  it('says what both parts of the walk are, and what Raketa is for', async () => {
     stubGate();
     await launchSignedIn();
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
 
-    expect(screen.getByText('You get a starting level for each sport')).toBeTruthy();
-    expect(screen.getByText('It takes about a minute per sport')).toBeTruthy();
+    // The title names the whole walk rather than the questionnaire that opens it: the
+    // second part is six more screens, and a player told they were finding their level
+    // would think they had finished after the last rating.
+    expect(screen.getByText("Let's set you up")).toBeTruthy();
+    expect(
+      screen.getByText(/Answer a few sport questions to estimate your starting skill level/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/then tell us a bit about yourself and how you like to play/),
+    ).toBeTruthy();
+
+    // And what they are joining, which is the honest exchange for answering questions
+    // about yourself before you have seen anything.
+    expect(screen.getByText('Value')).toBeTruthy();
+    expect(screen.getByText('Find the right people to play with.')).toBeTruthy();
+    expect(screen.getByText('Mission')).toBeTruthy();
+    expect(
+      screen.getByText('Make playing racket sports more social, accessible and engaging.'),
+    ).toBeTruthy();
+    expect(screen.getByText('Vision')).toBeTruthy();
+    expect(screen.getByText('Build the social network for racket sports.')).toBeTruthy();
 
     // *Nothing here is permanent* and the note about answering for a normal match were both
     // true and both cut: this screen's job is to get a player into the questionnaire, and

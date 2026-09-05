@@ -146,6 +146,27 @@ describe('signing in', () => {
     expect(await screen.findByText('Enter your email address.')).toBeTruthy();
     expect(transport.requests).toHaveLength(0);
   });
+
+  /**
+   * The same control the sign-up form's two boxes carry, for the same kind of reason.
+   *
+   * A typo here does not cost a whole form — it costs a refusal the player cannot tell apart
+   * from a wrong password, and a keychain that filled the box with the wrong entry looks
+   * identical either way. It starts masked, as every password box does.
+   */
+  it('lets the password be read back', async () => {
+    setSessionStatus('unauthenticated');
+
+    renderScreen(<SignInScreen />);
+
+    expect(screen.getByLabelText('Password').props.secureTextEntry).toBe(true);
+
+    fireEvent.press(screen.getByLabelText('Show password'));
+    expect(screen.getByLabelText('Password').props.secureTextEntry).toBe(false);
+
+    fireEvent.press(screen.getByLabelText('Hide password'));
+    expect(screen.getByLabelText('Password').props.secureTextEntry).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -16,8 +16,9 @@
  * *not a choice* are different things to be told.
  *
  * **No wording changed with the control**, which is why that alone did not bump the copy
- * version. What did is the line that used to sit under the title, now gone: see
- * `optInPresentation`, where `v1` is retired and retained.
+ * version. Two rewordings have: `v2` dropped the line under the title, and `v3` rewrote two
+ * of the three promises and the scope note. See `optInPresentation`, where both are retired
+ * and retained.
  *
  * ## Never pre-answered, and no way past it that is not an answer
  *
@@ -41,6 +42,12 @@
  * not the player existing** — search and matchmaking are unaffected either way — and the
  * scope note is the sentence that says so. It is not decoration: without it the card reads
  * as *disappear or be suggested to*, which is a choice nobody is being offered.
+ *
+ * **That note is now the first thing on the screen**, above the card rather than under it.
+ * The card is titled *If you say yes* and every line in it is conditional on that answer, so
+ * a player leaning towards no used to read three promises addressed to somebody else before
+ * reaching the one sentence addressed to them. It is `v3` copy in `v3`'s position, and the
+ * two changed together.
  *
  * ## This is where the part is written, and it is the only place that is
  *
@@ -275,6 +282,17 @@ export function SocialOptInStep() {
         </>
       }
     >
+      {/* First on the screen, above the card rather than below it.
+
+          `info`, because it explains what the product does rather than reporting a status
+          about the player's own answer (design-system 1.3). It moved to the top because the
+          card under it is titled *If you say yes* and is conditional on one of the two
+          answers — so a player who is not going to give that answer read three promises that
+          were not addressed to them before reaching the one sentence that was. This is what
+          makes *no* a decision about proposals rather than a decision about being seen at
+          all, and it belongs before the question, not after it. */}
+      <Note variant="info">{OPT_IN_SCOPE}</Note>
+
       <Card>
         <Text style={s.heading}>{OPT_IN_PROMISE_HEADING}</Text>
 
@@ -308,12 +326,6 @@ export function SocialOptInStep() {
           })}
         </View>
       </Card>
-
-      {/* The correction, and it is `info` because it explains what the product does rather
-          than reporting a status about the player's own answer (design-system 1.3). It sits
-          between the promises and the controls because it is what makes *no* a decision
-          about proposals rather than a decision about being seen at all. */}
-      <Note variant="info">{OPT_IN_SCOPE}</Note>
 
       {/* Immediately above the two controls, because it is a claim about them: neither is
           selected, and nothing else the player has done was read as answering this. */}

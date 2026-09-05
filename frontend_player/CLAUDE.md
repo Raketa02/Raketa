@@ -171,9 +171,10 @@ sentence the Proposals opt-in card shows, together with the `copy_version` stamp
 the answer in the draft — consent gathered against one sentence is not consent to a
 different one, so re-wording that card is a **new version with the old one retained**,
 never an edit. It is the only file in this app whose strings are evidence. It stands at
-**`proposals-opt-in.v2`**, which dropped the line under the title; `v1` is retired and kept
-in the same file, because a version identifier with no record of what it named evidences
-nothing.
+**`proposals-opt-in.v3`**, which rewrote two of the three promises and the scope note and
+moved that note above the card; `v2` dropped the line under the title, and both it and `v1`
+are retired and kept in the same file, because a version identifier with no record of what it
+named evidences nothing.
 
 **The ratings summary ends the first part, and it is the door into the second.** The order
 is result → **done** → the seven steps → the commit → data → the app. The _pass_ routes as far

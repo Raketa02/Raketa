@@ -40,6 +40,7 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
+import { PROFILE_PHOTO_ASPECT } from '../domain/photoCollection';
 import { useProfileDraft } from '../store/profileDraft.store';
 
 const PHOTOS_PATH = '/api/v1/photos';
@@ -105,14 +106,23 @@ async function reachThePhotosStep() {
   await screen.findByText('Your court photos');
 }
 
-/** Press the add control and let the picker, the permission and the uploads settle. */
-async function addPhotos() {
-  fireEvent.press(screen.getByLabelText(/^Add a photo/));
-  // The picker, the permission read and the uploads are all promises; the row is redrawn
-  // as each lands, so the presses are flushed before anything is asserted.
-  await act(async () => {
-    await Promise.resolve();
-  });
+/**
+ * Press the add control `times` over, letting the picker, the permission and the uploads
+ * settle between presses.
+ *
+ * **One press is one photo.** Every pick goes through the platform's crop frame and a
+ * cropping pick is single-select on both platforms, so a player who wants three presses
+ * three times and the fake walks its library one picture per press — which is what the real
+ * picker does. The picker, the permission read and the uploads are all promises and the row
+ * is redrawn as each lands, so each press is flushed before the next.
+ */
+async function addPhotos(times = 1) {
+  for (let press = 0; press < times; press += 1) {
+    fireEvent.press(screen.getByLabelText(/^Add a photo/));
+    await act(async () => {
+      await Promise.resolve();
+    });
+  }
 }
 
 /**
@@ -182,8 +192,8 @@ describe('the words on the step', () => {
     await reachThePhotosStep();
 
     expect(screen.getByText('Rackets mandatory, faces optional')).toBeTruthy();
-    expect(screen.getByText(/Show yourself on a court/)).toBeTruthy();
-    expect(screen.getByText(/Not a selfie, not the beach, not the gym mirror/)).toBeTruthy();
+    expect(screen.getByText(/keep it about the racket sports/)).toBeTruthy();
+    expect(screen.getByText(/no casual selfies, party photos, or gym mirrors/)).toBeTruthy();
   });
 
   it('does not announce the check to a player it has nothing to say to', async () => {
@@ -277,20 +287,44 @@ describe('a player who adds none', () => {
 // ---------------------------------------------------------------------------
 
 describe('adding photos from the device', () => {
-  it('opens the picker for as many as the row still has room for', async () => {
+  it('opens the picker for as many as the row still has room for, with the crop frame', async () => {
     stubUploads();
     await reachThePhotosStep();
 
     await addPhotos();
 
+    // The room is what the picker is *opened with*, whatever a crop frame then does to it:
+    // the ceiling is one rule, and a caller shrinking the number to match the platform
+    // would be the ceiling stated in two places that could disagree.
     expect(library.limits).toEqual([3]);
+    // And the frame itself, which is otherwise invisible — a cropped picture and an
+    // uncropped one arrive looking the same, so nothing the row draws could prove it.
+    expect(library.crops).toEqual([PROFILE_PHOTO_ASPECT]);
+  });
+
+  it('takes one photo per press, because a cropping pick answers with one', async () => {
+    // The platform constraint, visible on the screen: `allowsEditing` is single-select on
+    // both, so three photos is three presses rather than one multi-select. The row keeps
+    // count in words as it fills.
+    stubUploads();
+    await reachThePhotosStep();
+
+    await addPhotos();
+    await settled(1);
+    expect(screen.getByLabelText('Add a photo, 2 slots left')).toBeTruthy();
+
+    await addPhotos();
+    await settled(2);
+    expect(screen.getByLabelText('Add a photo, 1 slot left')).toBeTruthy();
+
+    expect(library.limits).toEqual([3, 2]);
   });
 
   it('shows a tile for each one and uploads them, one request per photo', async () => {
     stubUploads();
     await reachThePhotosStep();
 
-    await addPhotos();
+    await addPhotos(3);
 
     await waitFor(() => expect(transport.requestsTo('POST', PHOTOS_PATH)).toHaveLength(3));
     expect(tileLabels()).toHaveLength(3);
@@ -300,7 +334,7 @@ describe('adding photos from the device', () => {
     stubUploads();
     await reachThePhotosStep();
 
-    await addPhotos();
+    await addPhotos(3);
 
     await waitFor(() =>
       expect(useProfileDraft.getState().draft?.photoIds).toEqual(['photo-1', 'photo-2', 'photo-3']),
@@ -363,7 +397,7 @@ describe('the ceiling', () => {
     stubUploads();
     await reachThePhotosStep();
 
-    await addPhotos();
+    await addPhotos(3);
 
     await waitFor(() => expect(tileLabels()).toHaveLength(3));
     // Not a greyed-out plus and not a control that refuses when pressed — there is nothing
@@ -375,11 +409,13 @@ describe('the ceiling', () => {
     stubUploads();
     library.library = [LIBRARY[0]!, LIBRARY[1]!];
     await reachThePhotosStep();
-    await addPhotos();
+    await addPhotos(2);
     await waitFor(() => expect(tileLabels()).toHaveLength(2));
 
-    // The picker was opened for one slot and answers with two — the case the row of three
-    // cannot say anything about on its own.
+    // The picker was opened for one slot, with a crop frame that is single-select on both
+    // platforms, and answers with two anyway — the case the row of three cannot say
+    // anything about on its own. Both limits are honoured on the far side of a boundary
+    // this app does not own, so neither may be assumed.
     library.honoursLimit = false;
     library.library = [LIBRARY[2]!, pickedImage({ uri: 'file:///photos/four.jpg' })];
     await addPhotos();
@@ -387,6 +423,197 @@ describe('the ceiling', () => {
     expect(await screen.findByText('Three is the ceiling')).toBeTruthy();
     // And it changed nothing beyond what fitted: three tiles, never four.
     await waitFor(() => expect(tileLabels()).toHaveLength(3));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The sheet a held tile opens
+// ---------------------------------------------------------------------------
+
+/**
+ * Hold a tile the way a player does, and let the sheet arrive.
+ *
+ * `fireEvent` is given the real gesture rather than the accessibility action, because the
+ * gesture is what almost everybody uses. That the action reaches the same place is its own
+ * test below.
+ */
+async function holdPhoto(label: string) {
+  fireEvent(screen.getByLabelText(label), 'longPress');
+  await screen.findByLabelText('Close photo options');
+}
+
+/** Press one of the sheet's three acts and let the picker and the upload settle. */
+async function pressAction(label: string) {
+  fireEvent.press(screen.getByLabelText(label));
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
+describe('holding a photo', () => {
+  it('offers three acts on that photo, and says which photo it is about', async () => {
+    stubUploads();
+    await reachThePhotosStep();
+    await addPhotos(2);
+    await settled(2);
+
+    await holdPhoto('Photo 2 of 2');
+
+    // The sheet names the photo rather than repeating its own name: the three acts all say
+    // *this*, so a player who held the second tile has to be able to check they held the
+    // one they meant.
+    expect(screen.getByText('Photo 2 of 2')).toBeTruthy();
+    expect(screen.getByLabelText('Replace this photo')).toBeTruthy();
+    expect(screen.getByLabelText('Add new photo')).toBeTruthy();
+    expect(screen.getByLabelText('Edit')).toBeTruthy();
+  });
+
+  /**
+   * The one thing the sheet has to be honest about. *Replace* and *Edit* reach the same
+   * picker because there is no way to re-crop a file the app already holds without a second
+   * native module — so a player who taps *Edit* expecting their photograph in a crop frame
+   * will be looking at their library, and the hint is the only place they can be told that
+   * before it happens.
+   */
+  it('says of Edit that it opens the library, because that is what re-cropping costs', async () => {
+    stubUploads();
+    await reachThePhotosStep();
+    await addPhotos();
+    await settled(1);
+
+    await holdPhoto('Photo 1 of 1, profile photo');
+
+    expect(screen.getByLabelText('Edit').props.accessibilityHint).toBe(
+      'Opens your photos so you can choose this one again and re-crop it',
+    );
+    expect(screen.getByLabelText('Replace this photo').props.accessibilityHint).toBe(
+      'Choose a different photo for this spot, and crop it',
+    );
+  });
+
+  /**
+   * The whole reason the tile carries an accessibility action beside the gesture: a screen
+   * reader cannot hold a control down, and nothing on the tile advertises that holding it
+   * does anything.
+   */
+  it('is reachable without the gesture, by an action that names which photo', async () => {
+    stubUploads();
+    await reachThePhotosStep();
+    await addPhotos(2);
+    await settled(2);
+
+    const tile = screen.getByLabelText('Photo 2 of 2');
+    expect(tile.props.accessibilityActions).toEqual([
+      { name: 'longpress', label: 'Options for photo 2 of 2' },
+    ]);
+
+    fireEvent(tile, 'accessibilityAction', { nativeEvent: { actionName: 'longpress' } });
+
+    expect(await screen.findByLabelText('Close photo options')).toBeTruthy();
+  });
+
+  it('says under the row that the hold is there at all, once there is a photo to hold', async () => {
+    stubUploads();
+    await reachThePhotosStep();
+
+    // Nothing to hold, so nothing is offered — the same shape the promote line has.
+    expect(screen.queryByText('Press and hold a photo to replace, add or edit.')).toBeNull();
+
+    await addPhotos();
+    await settled(1);
+
+    expect(screen.getByText('Press and hold a photo to replace, add or edit.')).toBeTruthy();
+  });
+
+  it('closes without doing anything when the sheet is dismissed', async () => {
+    stubUploads();
+    await reachThePhotosStep();
+    await addPhotos();
+    await settled(1);
+
+    await holdPhoto('Photo 1 of 1, profile photo');
+    fireEvent.press(screen.getByLabelText('Close photo options'));
+
+    await waitFor(() => expect(screen.queryByLabelText('Close photo options')).toBeNull());
+    expect(tileLabels()).toEqual(['Photo 1 of 1, profile photo']);
+    expect(library.limits).toEqual([3]);
+  });
+});
+
+describe('replacing a photo from the sheet', () => {
+  it('puts the new picture in the slot the old one held, and sends it', async () => {
+    stubUploads();
+    await reachThePhotosStep();
+    await addPhotos(2);
+    await settled(2);
+    await waitFor(() =>
+      expect(useProfileDraft.getState().draft?.photoIds).toEqual(['photo-1', 'photo-2']),
+    );
+
+    // The player picks the third picture as the replacement for the first.
+    library.library = [LIBRARY[2]!];
+    await holdPhoto('Photo 1 of 2, profile photo');
+    await pressAction('Replace this photo');
+
+    // Still two photos, and the replacement is leading — a remove and an add would have
+    // sent it to the back.
+    await waitFor(() => expect(useProfileDraft.getState().photos).toHaveLength(2));
+    expect(useProfileDraft.getState().photos[0]?.uri).toBe(LIBRARY[2]!.uri);
+    await waitFor(() =>
+      expect(useProfileDraft.getState().draft?.photoIds).toEqual(['photo-3', 'photo-2']),
+    );
+  });
+
+  it('opens the picker for one slot, with the crop frame, even at the ceiling', async () => {
+    // A replacement takes a position that is already occupied, so the room the row has left
+    // is not the number it asks for — and a full row can still take one.
+    stubUploads();
+    await reachThePhotosStep();
+    await addPhotos(3);
+    await settled(3);
+
+    library.library = [pickedImage({ uri: 'file:///photos/four.jpg' })];
+    await holdPhoto('Photo 1 of 3, profile photo');
+    await pressAction('Replace this photo');
+
+    expect(library.limits).toEqual([3, 2, 1, 1]);
+    expect(library.crops[3]).toEqual(PROFILE_PHOTO_ASPECT);
+    // The ceiling is untouched: three in, three out, and no refusal.
+    await waitFor(() => expect(tileLabels()).toHaveLength(3));
+    expect(screen.queryByText('Three is the ceiling')).toBeNull();
+  });
+
+  it('changes nothing when the player backs out of the picker', async () => {
+    stubUploads();
+    await reachThePhotosStep();
+    await addPhotos();
+    await settled(1);
+
+    library.library = [];
+    await holdPhoto('Photo 1 of 1, profile photo');
+    await pressAction('Replace this photo');
+
+    await waitFor(() => expect(screen.queryByLabelText('Close photo options')).toBeNull());
+    expect(tileLabels()).toEqual(['Photo 1 of 1, profile photo']);
+    expect(useProfileDraft.getState().draft?.photoIds).toEqual(['photo-1']);
+  });
+
+  it('adds beside it instead when that is the act chosen', async () => {
+    stubUploads();
+    await reachThePhotosStep();
+    await addPhotos();
+    await settled(1);
+
+    await holdPhoto('Photo 1 of 1, profile photo');
+    await pressAction('Add new photo');
+
+    // Two photos now, and the one that was held still leads — adding beside something is
+    // not replacing it.
+    await settled(2);
+    expect(useProfileDraft.getState().photos[0]?.uri).toBe(LIBRARY[0]!.uri);
+    await waitFor(() =>
+      expect(useProfileDraft.getState().draft?.photoIds).toEqual(['photo-1', 'photo-2']),
+    );
   });
 });
 
@@ -399,7 +626,7 @@ describe('which photo leads', () => {
     stubUploads();
     await reachThePhotosStep();
 
-    await addPhotos();
+    await addPhotos(3);
 
     await waitFor(() => expect(tileLabels()[0]).toBe('Photo 1 of 3, profile photo'));
   });
@@ -407,7 +634,7 @@ describe('which photo leads', () => {
   it('changes to whichever photo is pressed', async () => {
     stubUploads();
     await reachThePhotosStep();
-    await addPhotos();
+    await addPhotos(3);
     await settled(3);
 
     fireEvent.press(screen.getByLabelText('Photo 3 of 3'));
@@ -419,7 +646,7 @@ describe('which photo leads', () => {
   it('carries the promotion as a sentence rather than a mark on every tile', async () => {
     stubUploads();
     await reachThePhotosStep();
-    await addPhotos();
+    await addPhotos(3);
     await waitFor(() => expect(tileLabels()).toHaveLength(3));
 
     expect(screen.getByText('Tap a photo to make it the profile photo.')).toBeTruthy();
@@ -431,7 +658,7 @@ describe('which photo leads', () => {
   it('passes to the next photo when the one leading is removed', async () => {
     stubUploads();
     await reachThePhotosStep();
-    await addPhotos();
+    await addPhotos(3);
     await settled(3);
 
     fireEvent.press(screen.getByLabelText('Remove photo 1 of 3'));
@@ -456,7 +683,7 @@ describe('an upload that fails', () => {
     });
     await reachThePhotosStep();
 
-    await addPhotos();
+    await addPhotos(3);
 
     await waitFor(() => expect(screen.getByLabelText('Photo 2 of 3, upload failed')).toBeTruthy());
     // Nothing about the other two changed.
@@ -509,7 +736,7 @@ describe('an upload that fails', () => {
     library.library = [LIBRARY[0]!, LIBRARY[1]!];
     await reachThePhotosStep();
 
-    await addPhotos();
+    await addPhotos(2);
 
     expect(await screen.findByText(/That format is not one we can take/)).toBeTruthy();
     expect(await screen.findByText(/That photo is too large/)).toBeTruthy();
@@ -588,7 +815,7 @@ describe('the photos a player walks away from', () => {
   it('are still there when they walk back', async () => {
     stubUploads();
     await reachThePhotosStep();
-    await addPhotos();
+    await addPhotos(3);
     await settled(3);
 
     fireEvent.press(screen.getByLabelText('Continue'));
@@ -627,7 +854,7 @@ describe('a flagged photo', () => {
     library.library = [LIBRARY[0]!, LIBRARY[1]!];
     await reachThePhotosStep();
 
-    await addPhotos();
+    await addPhotos(2);
     await settled(2);
 
     const warnings = await screen.findAllByText(/we could not see a court/);

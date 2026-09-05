@@ -49,8 +49,70 @@ export function photosEyebrow(): string {
 export const PHOTO_RULE_TITLE = 'Rackets mandatory, faces optional';
 
 export const PHOTO_RULE_BODY =
-  'Show yourself on a court — mid-rally, or catching your breath afterwards. Not a selfie, ' +
-  'not the beach, not the gym mirror. Your face is up to you; the sport is not.';
+  'Photos on Raketa follow one simple rule: keep it about the racket sports. Show yourself ' +
+  'on court or in a racket-sport setting — no casual selfies, party photos, or gym mirrors. ' +
+  "Showing your face is optional. The sport context isn't.";
+
+/**
+ * The words on the sheet a held tile opens, and the one sentence that says the sheet exists.
+ *
+ * **Three acts, and the order is what they do to the row**: swap this picture, add another
+ * beside it, re-frame this one. Remove is deliberately not among them — it is the square on
+ * the tile and has been since the row was drawn, and moving it into a menu would put the one
+ * destructive act behind a gesture nobody can see.
+ *
+ * ## Two of the three open the same picker, and the copy is what keeps them apart
+ *
+ * *Replace* and *Edit* are the same request to the platform, because there is only one crop
+ * frame and it is attached to choosing a picture: nothing in this app can re-crop a file it
+ * already holds (`ImagePickingPort`). So the two are told apart by what a player means by
+ * them, and each hint says the whole truth about what will happen — *choose a different
+ * photo* against *choose this one again and re-frame it*. **The second sentence is the one
+ * that must not be softened.** A player who taps *Edit* expecting their photograph to appear
+ * in a crop frame will instead be looking at their library, and the hint is the only place
+ * they can be told that before it happens.
+ */
+export const PHOTO_SHEET_TITLE = 'This photo';
+
+export const PHOTO_SHEET_CLOSE = 'Close photo options';
+
+/** One act on the sheet: what it is called, and what it will actually do. */
+export interface PhotoAction {
+  readonly label: string;
+  readonly hint: string;
+}
+
+export const REPLACE_ACTION: PhotoAction = {
+  label: 'Replace this photo',
+  hint: 'Choose a different photo for this spot, and crop it',
+};
+
+export const ADD_ANOTHER_ACTION: PhotoAction = {
+  label: 'Add new photo',
+  hint: 'Keeps this one and adds another beside it',
+};
+
+export const EDIT_ACTION: PhotoAction = {
+  label: 'Edit',
+  // The whole truth, and the sentence the sheet exists to be honest about: the crop frame
+  // only ever comes attached to choosing a picture, so re-framing means picking again.
+  hint: 'Opens your photos so you can choose this one again and re-crop it',
+};
+
+/** Names the hold on one tile, and says which photo it is about — `removeControlLabel`'s rule. */
+export function optionsControlLabel(at: number, held: number): string {
+  return `Options for photo ${at + 1} of ${held}`;
+}
+
+/**
+ * That the tile has a third act at all, said once under the row.
+ *
+ * It is one line beside the promote line rather than a mark on every tile, for exactly the
+ * reason `PROMOTE_LINE` is: a per-tile affordance would be this sentence printed three times
+ * over the photographs it describes, and a glyph small enough to fit would be the third 44pt
+ * square the tile has no room for (6.9).
+ */
+export const PHOTO_OPTIONS_LINE = 'Press and hold a photo to replace, add or edit.';
 
 /**
  * The promote affordance, as a sentence under the row.

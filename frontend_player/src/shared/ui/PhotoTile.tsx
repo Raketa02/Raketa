@@ -21,12 +21,20 @@
  * for the same kind of reason: [1.2] names the five places coral appears and an upload is
  * not one of them.
  *
- * ## Two acts, two targets, no menu
+ * ## Two acts, two targets, and a menu behind a hold
  *
  * The remove square is anchored **inside** the tile and RN gives the overlap to the child,
  * so the tile's own press area is the tile minus its top-right 44pt square — still more
  * than four times the minimum on the narrowest phone. Pressing that remainder promotes the
  * photo; pressing the square removes it.
+ *
+ * **Anything past those two is reached by holding the tile**, never by a third square. A
+ * 3:4 tile a third of the row wide has room for two 44pt targets and the second is spoken
+ * for, so a third would either overlap the remove control or shrink one of them below the
+ * floor — which is the same arithmetic that put the remove square's slop *inside* the tile.
+ * What the hold opens is the caller's (`options`), and because a long press is invisible and
+ * unperformable by a screen reader, the prop carries the standard `longpress` accessibility
+ * action in the same object: there is no way to wire the gesture and forget the name.
  *
  * **The promote affordance is a sentence, not a glyph.** Nothing is drawn on a non-profile
  * tile to advertise what pressing it does — the step carries one line of copy under the row
@@ -68,6 +76,23 @@ export type PhotoTileFoot =
   | { readonly kind: 'uploading'; readonly progress: number }
   | { readonly kind: 'failed'; readonly word: string };
 
+/**
+ * A second act on the tile, reachable by holding it — and by an assistive technology.
+ *
+ * **One prop carrying both halves**, because a long press is invisible: nothing on the tile
+ * advertises it and a screen reader cannot perform one. The gesture and the action that
+ * stands in for it are therefore not separable, and a caller who supplies the handler cannot
+ * forget the name — which is the shape [6.9] already applies to the remove square.
+ */
+export interface PhotoTileOptions {
+  readonly onLongPress: () => void;
+  /**
+   * Names the action in the rotor, and it says *which photo* — the remove control's rule.
+   * "More options" alone is three identical entries on a row of three.
+   */
+  readonly accessibilityLabel: string;
+}
+
 export interface PhotoTileProps {
   /** What the tile draws — the device's own copy, not a URL fetched back from the store. */
   readonly uri: string;
@@ -81,6 +106,15 @@ export interface PhotoTileProps {
   readonly foot: PhotoTileFoot;
   /** The tile minus the remove square. Promotion, or a retry on a failed tile. */
   readonly onPress: () => void;
+  /**
+   * What holding the tile opens, if anything. Absent leaves the tile with its two acts.
+   *
+   * It is deliberately not a third target: the tile has room for two 44pt squares and the
+   * second is spoken for (see the module note), so the way to reach anything beyond promote
+   * and remove is the gesture — and, for whoever cannot make one, the accessibility action
+   * this carries.
+   */
+  readonly options?: PhotoTileOptions;
   readonly onRemove: () => void;
   /** Names the position and whatever the strip is carrying — neither is legible otherwise. */
   readonly accessibilityLabel: string;
@@ -94,6 +128,7 @@ export function PhotoTile({
   profile,
   foot,
   onPress,
+  options,
   onRemove,
   accessibilityLabel,
   accessibilityHint,
@@ -105,6 +140,21 @@ export function PhotoTile({
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       onPress={onPress}
+      onLongPress={options?.onLongPress}
+      // The standard `longpress` action, so the gesture is not the only way in: VoiceOver
+      // and TalkBack both surface it, and neither can hold a control down.
+      accessibilityActions={
+        options === undefined
+          ? undefined
+          : [{ name: 'longpress', label: options.accessibilityLabel }]
+      }
+      onAccessibilityAction={
+        options === undefined
+          ? undefined
+          : (event) => {
+              if (event.nativeEvent.actionName === 'longpress') options.onLongPress();
+            }
+      }
       style={({ pressed }) => [
         s.tile,
         profile ? s.profileTile : s.photoTile,

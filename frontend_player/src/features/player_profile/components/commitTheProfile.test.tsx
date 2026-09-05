@@ -234,7 +234,7 @@ describe('finishing the part', () => {
       // The served default, written into the draft when the step opened — so a screen the
       // player walked straight past is still a screen they answered.
       search_radius_km: 10,
-      proposals_opt_in: { accepted: true, copy_version: 'proposals-opt-in.v2' },
+      proposals_opt_in: { accepted: true, copy_version: 'proposals-opt-in.v3' },
       gender: 'WOMAN',
       // The widest preference, sent as itself for the reason the empty photo list is: the
       // field has a default on the wire, and an omission would land the same value by a
@@ -251,7 +251,7 @@ describe('finishing the part', () => {
     fireEvent.press(finish());
     await waitFor(() => expect(commits()).toHaveLength(1));
 
-    expect(bodyOf(commits()[0])?.proposals_opt_in.copy_version).toBe('proposals-opt-in.v2');
+    expect(bodyOf(commits()[0])?.proposals_opt_in.copy_version).toBe('proposals-opt-in.v3');
   });
 
   it('sends a declined opt-in as a recorded no, and finishes just the same', async () => {
@@ -267,7 +267,7 @@ describe('finishing the part', () => {
 
     expect(bodyOf(commits()[0])?.proposals_opt_in).toEqual({
       accepted: false,
-      copy_version: 'proposals-opt-in.v2',
+      copy_version: 'proposals-opt-in.v3',
     });
     // The data screen, not the summary: a player reaches the second part *from* the
     // summary now, so landing back on it would show the same account of the same walk

@@ -258,10 +258,11 @@ describe('the card the answer is given against', () => {
    * to*, which is a choice nobody is being offered — **opting out stops the engine pushing,
    * not the player existing.**
    */
-  it('says what saying no leaves untouched', async () => {
+  it('says what saying no leaves untouched, before the promises a yes would buy', async () => {
     await reachTheOptInStep();
 
-    expect(screen.getByText(/You stay findable in search either way/)).toBeTruthy();
+    expect(screen.getByText(/doesn't affect how other players find you/)).toBeTruthy();
+    expect(screen.getByText(/You just won't receive game suggestions/)).toBeTruthy();
   });
 
   it('says beside the controls that neither was ticked for the player', async () => {

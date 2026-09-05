@@ -18,7 +18,9 @@
  *
  * Photos stay in the order they were added, minus whatever promotion moved. The order is
  * an answer — it is what `photo_ids` carries to the commit — so nothing here sorts by
- * upload state, by whether an id has arrived, or by anything else.
+ * upload state, by whether an id has arrived, or by anything else. **A replacement inherits
+ * the position it replaced**, which is the same rule read from the other end: the player put
+ * that picture there, and swapping which photograph it is does not un-put it.
  *
  * ## Uploading is per photo, and a failure costs one photo
  *
@@ -47,6 +49,24 @@ import type { AppError } from '@/shared/errors';
  * one.
  */
 export type PhotoReview = 'allowed' | 'flagged';
+
+/**
+ * The shape every profile photo is cropped to, as a `[width, height]` ratio.
+ *
+ * **A rule about the picture rather than about the tile it happens to be drawn in.** It is
+ * `3:4` because that is what the row of three is, and the two must agree or a player crops a
+ * photograph to a frame the app then crops again — `photoCollection.test.ts` holds them
+ * equal so the pair cannot drift.
+ *
+ * It is here rather than in the step because the profile editor will crop to the same shape
+ * from a screen that looks nothing like the step, and because the picking port is deliberately
+ * given the ratio rather than holding one: what a profile photo looks like is not something a
+ * photo library has an opinion about.
+ *
+ * **It is what is asked for, never what is guaranteed.** Only Android's crop frame honours a
+ * ratio; iOS offers its own square. Nothing downstream may assume a held photo has this shape.
+ */
+export const PROFILE_PHOTO_ASPECT: readonly [number, number] = [3, 4];
 
 /**
  * The most a Player profile may hold.
@@ -203,6 +223,41 @@ export function promoteToProfile(
   if (promoted === undefined) return photos;
 
   return [promoted, ...photos.filter((photo) => photo !== promoted)];
+}
+
+/**
+ * Swap one photo for another, **in place**.
+ *
+ * The whole of what it is for is the position: a player replacing the picture that leads
+ * expects the replacement to lead, and remove-then-add would send it to the back of a queue
+ * it was already at the front of. Everything else about the collection is untouched — the
+ * other photos keep their order, and the arrival begins `uploading` at zero exactly as one
+ * that arrived through `addPhotos` does, because a replacement is a new picture and has to
+ * be sent.
+ *
+ * Two arrivals leave the collection alone. **A photo that is not held** has no position to
+ * take, and **a picture already in the collection** would put one photograph in two slots —
+ * the same dedupe `addPhotos` applies, for the same reason. Replacing something with itself
+ * is therefore a no-op rather than a re-upload of a picture that is already there.
+ */
+export function replacePhoto(
+  photos: readonly ProfilePhoto[],
+  uri: string,
+  arrival: PhotoArrival,
+): readonly ProfilePhoto[] {
+  const at = photos.findIndex((photo) => photo.uri === uri);
+  if (at === -1) return photos;
+  if (photos.some((photo) => photo.uri === arrival.uri)) return photos;
+
+  return photos.map((photo, index) =>
+    index === at
+      ? {
+          uri: arrival.uri,
+          mimeType: arrival.mimeType,
+          upload: { kind: 'uploading', progress: 0 } as const,
+        }
+      : photo,
+  );
 }
 
 /**

@@ -37,9 +37,12 @@ const uploaded = photo({ kind: 'uploaded', photoId: 'photo-1', review: 'allowed'
 describe('the rule the step states', () => {
   it('says what a photo must show, and what it must not', () => {
     expect(PHOTO_RULE_TITLE).toBe('Rackets mandatory, faces optional');
-    expect(PHOTO_RULE_BODY).toContain('Show yourself on a court');
-    expect(PHOTO_RULE_BODY).toContain('Not a selfie, not the beach, not the gym mirror');
-    expect(PHOTO_RULE_BODY).toContain('Your face is up to you; the sport is not');
+    expect(PHOTO_RULE_BODY).toContain('Show yourself on court or in a racket-sport setting');
+    expect(PHOTO_RULE_BODY).toContain('no casual selfies, party photos, or gym mirrors');
+    // The half the title makes a promise about, and the half the flagged warning is
+    // measured against: the sport is the rule and the face is not.
+    expect(PHOTO_RULE_BODY).toContain('Showing your face is optional');
+    expect(PHOTO_RULE_BODY).toContain("The sport context isn't");
   });
 
   it('claims no check, because none is running', () => {

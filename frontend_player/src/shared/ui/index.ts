@@ -64,6 +64,7 @@ export {
   type PhotoPosterTileProps,
   type PhotoRowProps,
   type PhotoTileFoot,
+  type PhotoTileOptions,
   type PhotoTileProps,
 } from './PhotoTile';
 export { InfoMark, Popover, type InfoMarkProps, type PopoverProps } from './Popover';

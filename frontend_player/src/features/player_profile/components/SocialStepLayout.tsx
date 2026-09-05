@@ -25,7 +25,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ScreenHeader, theme } from '@/shared/ui';
+import { ScreenHeader, behindOverlay, theme } from '@/shared/ui';
 
 import { stepBefore, type SocialStep } from '../domain/socialSteps';
 
@@ -40,14 +40,31 @@ export interface SocialStepLayoutProps {
   readonly children: ReactNode;
   /** Pinned below the scroll: whatever this step continues with. */
   readonly action: ReactNode;
+  /**
+   * Whether an overlay is open over this step.
+   *
+   * A `Modal` presents in its own native window, which hides the tree behind it from *that*
+   * window and nothing more — the screen underneath still has to say it is unreachable, and
+   * the element that says so has to be the root, which is this one. An overlay rendered
+   * inside the element carrying `behindOverlay` would hide itself along with everything else,
+   * so a step with a sheet renders it as a **sibling** of this layout and sets this while it
+   * is up.
+   */
+  readonly overlaid?: boolean;
 }
 
-export function SocialStepLayout({ step, eyebrow, children, action }: SocialStepLayoutProps) {
+export function SocialStepLayout({
+  step,
+  eyebrow,
+  children,
+  action,
+  overlaid = false,
+}: SocialStepLayoutProps) {
   const router = useRouter();
   const previous = stepBefore(step);
 
   return (
-    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
+    <SafeAreaView style={s.screen} edges={['top', 'bottom']} {...behindOverlay(overlaid)}>
       <ScreenHeader
         eyebrow={eyebrow ?? stepEyebrow(step)}
         title={stepCopy(step).title}
