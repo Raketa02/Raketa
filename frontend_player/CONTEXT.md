@@ -355,7 +355,8 @@ listed here because it is a Play surface rather than a profile one.
   need exactly that cache, and it is refused. _Avoid_: "hold flag", "blocked user state".
 - **Parts kit** — the shared parts the three candidate cards are assembled from:
   `CandidatePhoto` (photo-or-poster in a box, one component at three sizes), `CardHead`,
-  `FactRow` and `ReasonLine`. **Three components over one kit, never one component with a `surface`
+  `FactRow` and `ReasonLine`, plus the competitive card's own `PhotoPanel`, `IdentityRow`,
+  `HeadToHeadBand` and `SocialTagRow`. **Three components over one kit, never one component with a `surface`
   prop** — `CandidateCard` is photo-left with a head-to-head row, `CandidateCardSocial` and
   `DeckCard` are media-top with fact rows, and only the deck card floats. The two courts,
   `CourtMini` and `CourtBuild`, are the same pairing over the design system's `Court`: the
@@ -369,6 +370,27 @@ listed here because it is a Play surface rather than a profile one.
   removed. The filter over it runs **first and the cap after**, which is what makes a card that
   promised three reasons draw three. _Avoid_: "the filter", which is the rule rather than the
   set; "hidden terms" — a term outside the set is not hidden, it is said in the other register.
+  **One term is drawn in half and is deliberately not in any set**: the competitive card draws
+  the two tag terms' `matched` ids as chips and leaves their other three registers as sentences,
+  so the drop is conditional on what the row actually drew and lives beside the set in
+  `candidateFacts` rather than in it. A set entry would take four registers away to stop one
+  repeating, and the exported set stays what it says it is — terms this card renders a value for.
+- **Social tag row** — the competitive card's row of up to six of the candidate's Social tags,
+  and the **overlap** drawn over it. The ones the searcher also chose are tinted and carry
+  `· you too` in words; the intersection is `matched[]`'s, off the wire, and is never recomputed
+  from a profile read. `domain/socialTagOverlap` is the rule and `SocialTagRow` draws it, which
+  is why the type and the component do not share a name. _Avoid_: "chips" — nothing here is
+  pressable, so they are tags (6.4); tinting a `complementary` or `clashing` pair, which is a
+  different relationship and reaches the card as prose.
+- **The three spellings of absence on that row** — the distinction it exists to keep. **Compared
+  and nothing matched** is the amber _No tags in common_, which stands **in the row's place** and
+  is the one claim the row makes; the claim needs **both** tag terms, because a positive match
+  needs only one and a claim about everything has to have asked everything. **Not compared** —
+  both terms stood down — is the platform not knowing, so the tags draw untinted and nothing is
+  said. **Matched beyond this build's vocabulary** is `matchedInFull`: `matched[]` is narrowed at
+  the mapper like every other tag list, and that drop is the one place §3's silence would become
+  a claim, so it draws as the second and withholds the term's measured zero with it. _Avoid_:
+  collapsing the second and third into "no overlap" — one is a gap and the other is a claim.
 - **Fact row vs reason line** — the two registers a card states something in. A **fact row** is
   a fact the card states unconditionally — the level row, the meta line, _You overlap_,
   _Predicted balance_ — and a **reason line** answers _why this person_, is selected, ranked

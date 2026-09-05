@@ -272,7 +272,26 @@ takes its liveness twin's two words because the two codes are one tag. **The pan
 Level twice on purpose** — hugely over the photograph and again on the right of the band — and
 what makes that legible is the system's second pinned scrim: a photograph is a ground nobody
 chose, so `photoScrim` collapses it to its worst case, pure white, at a ratio `textOnMedia.test.ts`
-derives. **The card's border is coral never and green once**: a coral outline on every card is
+derives. **Up to six of their Social tags draw on the competitive card, and the amber line is the
+one claim on it** ([#311](https://github.com/Raketa02/Raketa/issues/311)). The ones the searcher
+also chose are tinted and carry `· you too` in words, off `matched[]` — the intersection is the
+engine's and is never recomputed from a profile read, and only `matched` tints, because
+complementary and clashing are a different relationship and stay sentences. **The absence has
+three spellings.** Compared and nothing matched is _No tags in common_, in amber, **in the row's
+place**. Both terms stood down is the platform not knowing, so the tags draw untinted and nothing
+is said. And compared, matched, and this build has no words for what matched — `matchedInFull`,
+the one place §3's silent drop would have turned into a claim — draws as the second, and
+withholds the term's **measured zero** with it, because _Different on court_ is the same claim
+one register over. **The claim needs both tag terms and a match needs only one**: a `matched`
+list is a positive fact, where _No tags in common_ is a claim about everything and a
+half-compared candidate has not earned it. This
+**reverses `CandidateCardSocial`'s refusal on its own terms**: tags were kept off a card because
+_the label cannot announce them_, so the label announces them, and the rule that ships with the
+row is **never draw a tag the label does not speak**. The social and deck cards still draw none,
+now for a reason about those cards. **The card that draws the row loses the `Both of you`
+sentence** — §10's _said once_, filtered on **the tags the row actually drew** rather than on the
+term's own list, so a match beyond the six-tag cap keeps the one sentence naming it and the two
+cards without a row keep theirs. **The card's border is coral never and green once**: a coral outline on every card is
 5.1's pressed state made permanent and stays refused, while the lifted card takes 5.1's new
 **marked** state in `voltStroke` — volt's meaning at a stroke's ratio, because volt itself is
 1,25:1 on `surface` and would be no border at all. It is bound to **the tag being drawn** rather

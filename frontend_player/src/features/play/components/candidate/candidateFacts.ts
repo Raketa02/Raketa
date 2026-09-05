@@ -22,14 +22,19 @@
 import { playerName } from '@/shared/formatting/playerName';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
-import type { Evidence } from '../../domain/evidence';
+import { isTagEvidence, type Evidence } from '../../domain/evidence';
 import { selectConcern, selectReasons, type ReasonSelection } from '../../domain/reasonSelection';
+import type { SocialTagOverlap } from '../../domain/socialTagOverlap';
 import type { Term } from '../../domain/vocabulary';
 import { candidateCardLabel } from '../accessibilityPresentation';
 import { balanceReading } from '../balancePresentation';
 import { concernLine } from '../concernPresentation';
 import { livenessLine } from '../livenessPresentation';
-import type { LevelRowFacts, MetaLineFacts } from '../playerCardPresentation';
+import {
+  socialTagClauses,
+  type LevelRowFacts,
+  type MetaLineFacts,
+} from '../playerCardPresentation';
 import { reasonLine } from '../reasonPresentation';
 
 /**
@@ -49,14 +54,34 @@ export interface CandidateFacts {
   readonly reasons: readonly string[];
   /** At most one. The rest are the why-fit sheet's. */
   readonly concerns: readonly string[];
+  /** The row's spoken clauses, on the card that draws it. Empty on the other two. */
+  readonly socialTags: readonly string[];
   /** The card body's spoken name, in §20.3's order. */
   readonly label: string;
 }
 
+/**
+ * The **Social tag row**, passed in by the card that draws it — and `undefined` by the two
+ * that do not ([#311](https://github.com/Raketa02/Raketa/issues/311)).
+ *
+ * It is the row itself rather than a flag saying *this card has one*, because both things this
+ * function does with it need the **value**: the label's clauses are composed from it, and the
+ * reason list is filtered against the tags it actually drew. Handed a boolean, the second would
+ * have to re-derive what the first was given — which is the *read twice and they could disagree*
+ * the module note opens with, in a smaller spelling — and it would re-derive it from the wrong
+ * list, since the term's `matched` and the row's drawn chips are not guaranteed to be the same
+ * set. It travels down to `reasonLinesOf` whole for that reason.
+ *
+ * **It is not in `drawn`.** That set is *terms the card draws as rows*, and the card draws
+ * half of these two: `matched` becomes chips, while `complementary`, `clashing` and each term's
+ * measured zero stay reason sentences and stay this card's. Adding them to `drawn` would take
+ * all four registers away to stop one of them repeating.
+ */
 export function candidateFacts(
   candidate: Candidate,
   envelope: SearchEnvelope,
   drawn: readonly Term[],
+  socialTags?: SocialTagOverlap,
 ): CandidateFacts {
   const name = playerName({ kind: 'player', nickname: candidate.card.nickname });
   const level = levelFactsOf(candidate);
@@ -65,8 +90,9 @@ export function candidateFacts(
   // draws it as a row must state it here, because the row itself announces nothing (§20.1).
   const balance = drawn.includes('PREDICTED_BALANCE') ? balanceOf(candidate) : undefined;
   const meta = drawn.includes('DISTANCE') ? metaFactsOf(candidate, envelope) : undefined;
-  const reasons = reasonLinesOf(candidate, drawn);
+  const reasons = reasonLinesOf(candidate, drawn, socialTags);
   const concerns = concernLinesOf(candidate);
+  const tagClauses = socialTags === undefined ? [] : socialTagClauses(socialTags);
 
   return {
     name,
@@ -75,6 +101,7 @@ export function candidateFacts(
     meta,
     reasons,
     concerns,
+    socialTags: tagClauses,
     // §20.3 fixes ONE order for every card in the feature, and it is not the order they are
     // drawn in: identifying facts lead, the argument follows. A card composing its own could
     // drift from the other two, which is what §20.3 exists to stop.
@@ -84,6 +111,7 @@ export function candidateFacts(
       level,
       balance,
       meta,
+      socialTags: tagClauses,
       reasons,
       concerns,
     }),
@@ -153,7 +181,11 @@ function metaFactsOf(candidate: Candidate, envelope: SearchEnvelope): MetaLineFa
  * label from these same lines, so a card drawing fewer than it announces is a card that says
  * one thing to a listener and another to a reader.
  */
-function reasonLinesOf(candidate: Candidate, drawn: readonly Term[]): readonly string[] {
+function reasonLinesOf(
+  candidate: Candidate,
+  drawn: readonly Term[],
+  socialTags: SocialTagOverlap | undefined,
+): readonly string[] {
   return spoken(
     selectReasons({
       drawn,
@@ -163,9 +195,39 @@ function reasonLinesOf(candidate: Candidate, drawn: readonly Term[]): readonly s
       // A row this build cannot read says nothing on a **card**: §3 drops a code wherever the
       // screen states no total it belongs to, and a card shows three reasons out of eight and
       // always did. The named gap is the why-fit sheet's, which prints the column.
-      saysSomething: (term) => term.evidence !== null && reasonLine(term.evidence) !== undefined,
+      saysSomething: (term) =>
+        term.evidence !== null &&
+        reasonLine(term.evidence) !== undefined &&
+        !restatesTheTagRow(term.evidence, socialTags),
     }),
   );
+}
+
+/**
+ * Whether this evidence's reason line would say what the tag row **has already drawn**.
+ *
+ * `tagTermReason`'s precedence is *matched, then complementary, then the measured zero*, so a
+ * tag term with anything in `matched` writes **`Both of you: …`** — the same ids the row is
+ * drawing as tinted chips two lines up. §10's *the fact is said once* is about the two
+ * registers rather than the pixel count, so the sentence goes and the chips stay: the chips are
+ * the richer form, and they are what the ticket asked for.
+ *
+ * **It asks about the tags the row drew, not about the term's own list**, and the difference is
+ * the one edge where the two lists part company: the row is capped at `SOCIAL_TAG_ROW_CAP`, so
+ * a match beyond the cap is a chip nobody drew — and a filter keyed on `matched.length > 0`
+ * would delete the only sentence saying it, leaving the fact stated **nought** times. Asking the
+ * row itself means the sentence goes exactly when something took its place.
+ *
+ * Nothing else about these terms changes. A term whose `matched` is empty still says its
+ * complementary pair or its measured zero, which is exactly what the ticket protects when it
+ * says complementary and clashing *"already reach this card as reason sentences"* — and a card
+ * that draws no row (`undefined`) filters nothing at all, which is what keeps this a rule about
+ * one surface rather than about the two terms.
+ */
+function restatesTheTagRow(evidence: Evidence, row: SocialTagOverlap | undefined): boolean {
+  if (row?.kind !== 'shared' || !isTagEvidence(evidence)) return false;
+  const drawn = new Set(row.tags.filter((tag) => tag.shared).map((tag) => tag.id));
+  return evidence.matched.some((id) => drawn.has(id));
 }
 
 /** The selection, as the sentences it names. `hidden` is no line rather than an empty one. */

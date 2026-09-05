@@ -36,6 +36,7 @@ const OVERLAP = (over: Partial<AvailabilityOverlapEvidence>): AvailabilityOverla
 const TAGS = (over: Partial<PlayingStyleEvidence>): PlayingStyleEvidence => ({
   kind: 'playing_style',
   matched: [],
+  matchedInFull: true,
   complementary: [],
   clashing: [],
   ...over,
@@ -44,6 +45,7 @@ const TAGS = (over: Partial<PlayingStyleEvidence>): PlayingStyleEvidence => ({
 const VIBE = (over: Partial<SocialVibeEvidence>): SocialVibeEvidence => ({
   kind: 'social_vibe',
   matched: [],
+  matchedInFull: true,
   complementary: [],
   clashing: [],
   ...over,

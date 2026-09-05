@@ -10,9 +10,22 @@
  * The assertions are the two refusals: **the code is never printed**, because it is a
  * coordinate string and `areas.py` refuses in writing to make it a name; and **nothing is
  * said about activity**, which is the slot #218 refused.
+ *
+ * The **Social tag row**'s words join them, and the assertion there is the split between the
+ * two registers: the chip carries a glyph and a per-tag marker, the spoken clause carries
+ * neither and groups instead ([#311](https://github.com/Raketa02/Raketa/issues/311)).
  */
 
-import { CANDIDATE_ACTION_WORD, candidateTag, levelRow, metaLine } from './playerCardPresentation';
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
+
+import {
+  CANDIDATE_ACTION_WORD,
+  candidateTag,
+  levelRow,
+  metaLine,
+  socialTagChip,
+  socialTagClauses,
+} from './playerCardPresentation';
 
 import { livenessLine } from './livenessPresentation';
 
@@ -114,5 +127,54 @@ describe('what a card’s primary button says', () => {
     // the card is not making. The destination is true at every seat count and in both modes.
     expect(CANDIDATE_ACTION_WORD.ADD_TO_COURT).toBe('Add to the court');
     expect(CANDIDATE_ACTION_WORD.CHALLENGE).toBe('Challenge');
+  });
+});
+
+describe('the social tag row’s words', () => {
+  const shared = (id: SocialTagId) => ({ id, shared: true });
+  const theirs = (id: SocialTagId) => ({ id, shared: false });
+
+  it('draws the tag with its glyph, and the marker only where it is shared', () => {
+    expect(socialTagChip(shared('PLAYS_TO_WIN'))).toBe('🏆 Plays to win · you too');
+    expect(socialTagChip(theirs('PLAYS_TO_WIN'))).toBe('🏆 Plays to win');
+  });
+
+  it('speaks the shared ones under one clause rather than marking each of them', () => {
+    // A listener hearing *you too* six times is being read a table, not a card.
+    expect(
+      socialTagClauses({
+        kind: 'shared',
+        tags: [shared('PLAYS_TO_WIN'), theirs('STAYS_FOR_A_DRINK'), shared('QUIET_AND_FOCUSED')],
+      }),
+    ).toEqual([
+      'Tags you share: Plays to win, Quiet and focused',
+      'Their other tags: Stays for a drink',
+    ]);
+  });
+
+  it('omits a clause with nobody in it rather than emptying it', () => {
+    expect(socialTagClauses({ kind: 'shared', tags: [shared('PLAYS_TO_WIN')] })).toEqual([
+      'Tags you share: Plays to win',
+    ]);
+    // The narrowed-match case: something matched, and none of it survived into their tags.
+    expect(socialTagClauses({ kind: 'shared', tags: [theirs('PLAYS_TO_WIN')] })).toEqual([
+      'Their other tags: Plays to win',
+    ]);
+  });
+
+  it('says whose fact it is when nothing compared them', () => {
+    expect(
+      socialTagClauses({ kind: 'unknown', tags: ['PLAYS_TO_WIN', 'WARMS_UP_PROPERLY'] }),
+    ).toEqual(['Their tags: Plays to win, Warms up properly']);
+  });
+
+  it('carries the one claim the row makes, and nothing at all where there is none', () => {
+    expect(socialTagClauses({ kind: 'none-in-common' })).toEqual(['No tags in common']);
+    expect(socialTagClauses({ kind: 'hidden' })).toEqual([]);
+  });
+
+  /** Prose does not carry glyphs — `socialTagPresentation`'s own split, read from this side. */
+  it('speaks the words alone, where the chip is drawn with its emoji', () => {
+    expect(socialTagClauses({ kind: 'unknown', tags: ['PLAYS_TO_WIN'] })[0]).not.toContain('🏆');
   });
 });

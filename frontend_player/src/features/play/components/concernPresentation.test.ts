@@ -32,6 +32,7 @@ describe('a concern about the tags', () => {
       concernLine({
         kind: 'playing_style',
         matched: [],
+        matchedInFull: true,
         complementary: [],
         clashing: [{ a: 'PLAYS_TO_WIN', b: 'LAUGHS_OFF_MISTAKES' }],
       }),
@@ -41,6 +42,7 @@ describe('a concern about the tags', () => {
       concernLine({
         kind: 'social_vibe',
         matched: [],
+        matchedInFull: true,
         complementary: [],
         clashing: [{ a: 'STAYS_FOR_A_DRINK', b: 'STRAIGHT_HOME_AFTER' }],
       }),
@@ -52,7 +54,13 @@ describe('a concern about the tags', () => {
     // the game" with no pair behind it would be the client making the graded claim §7
     // reserves for the engine.
     expect(
-      concernLine({ kind: 'social_vibe', matched: [], complementary: [], clashing: [] }),
+      concernLine({
+        kind: 'social_vibe',
+        matched: [],
+        matchedInFull: true,
+        complementary: [],
+        clashing: [],
+      }),
     ).toBeUndefined();
   });
 });

@@ -135,6 +135,21 @@ export interface CandidateCardFacts {
    * as the reason: §10's rule broken in the one register nobody can see it in.
    */
   readonly meta?: MetaLineFacts;
+  /**
+   * What the **Social tag row** contributes, or nothing where the card draws no row.
+   *
+   * §20.3's row is written against §B10's card and names no tag clause, because no card drew
+   * tags when it was written and `CandidateCardSocial` said so in writing. The competitive card
+   * draws them now ([#311](https://github.com/Raketa02/Raketa/issues/311)), and the objection
+   * that kept them off — *"content on the card that the label cannot announce"* — is answered
+   * by this field rather than argued with: the content **can** be announced, so it is, and a
+   * tag the label does not speak is a tag the card does not draw.
+   *
+   * `socialTagClauses`' nought, one or two sentences, given rather than composed here: the row
+   * is the same value the chips are drawn from, which is what keeps §20.3's claim — that the
+   * card is spoken in a different order than it is drawn — a statement about **one** card.
+   */
+  readonly socialTags?: readonly string[];
   /** The lines `selectReasons` returned, in the order the card draws them. */
   readonly reasons: readonly string[];
   /** What the card draws of `concerns[]` — one on a card, all of them in *Why 78?*. */
@@ -167,6 +182,12 @@ export function candidateCardLabel(facts: CandidateCardFacts): string {
     levelRow(facts.level),
     facts.balance ?? '',
     facts.meta === undefined ? '' : metaLine(facts.meta),
+    // After the identifying facts and before the argument, which is where the row itself sits
+    // in meaning rather than where it sits on the card: what somebody published about
+    // themselves is the same register as their level, and *why this person* is the reasons'.
+    // The amber sentence rides in the same slot — it is the row's own content and not a
+    // concern, which is the engine's word for a graded claim it made.
+    ...(facts.socialTags ?? []),
     ...facts.reasons,
     ...facts.concerns,
   ]);

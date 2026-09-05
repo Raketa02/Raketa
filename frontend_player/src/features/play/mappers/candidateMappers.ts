@@ -361,18 +361,26 @@ function toEvidence(evidence: WireEvidence): Evidence | undefined {
 }
 
 /**
- * The three sets a tag term carries, narrowed together.
+ * The three sets a tag term carries, narrowed together — **and one bit saying whether the
+ * narrowing took anything.**
  *
  * A pair is dropped when **either** id is one this build has no words for: a sentence naming
  * one half of a relationship is a claim about a pairing the reader cannot check.
+ *
+ * `matchedInFull` is the one place that drop is not free, and `TagRelationships` carries the
+ * argument: the competitive card says *No tags in common* off an empty `matched`, so a build
+ * that narrowed a real match to nothing would turn §3's silent drop into a false claim. The
+ * two pair lists need no such bit — nothing counts them and nothing states their absence.
  */
 function tagRelationships(evidence: {
   readonly matched: readonly string[];
   readonly complementary: readonly WireTagPair[];
   readonly clashing: readonly WireTagPair[];
 }) {
+  const matched = evidence.matched.flatMap((tag) => toSocialTagId(tag) ?? []);
   return {
-    matched: evidence.matched.flatMap((tag) => toSocialTagId(tag) ?? []),
+    matched,
+    matchedInFull: matched.length === evidence.matched.length,
     complementary: evidence.complementary.flatMap((pair) => toTagPair(pair) ?? []),
     clashing: evidence.clashing.flatMap((pair) => toTagPair(pair) ?? []),
   };

@@ -163,6 +163,15 @@ export function socialVibeReason(evidence: TagRelationships): string | undefined
  * the term's **measured zero**, and the words are the code's own: *"a pair with nothing
  * firing is different, not incompatible — the term's zero is a real clash, never an absence
  * of relationship."* It is **not** the same state as the term standing down, which is §8's.
+ *
+ * **And it is not the same state as a match this build cannot name**, which is the one branch
+ * `matchedInFull` closes here ([#311](https://github.com/Raketa02/Raketa/issues/311)). `matched`
+ * is narrowed at the mapper against the nineteen ids this build has words for, so an old build
+ * meeting a twentieth reads an empty list off a term that matched something — and falls straight
+ * through to a sentence saying the two of them have nothing in common. A term that matched
+ * something did not score zero, so the zero is withheld and the term says nothing. The
+ * **complementary** pair is not withheld with it: that sentence is true whatever was narrowed
+ * away, and a lesser true thing is not the problem the bit exists for.
  */
 function tagTermReason(evidence: TagRelationships, measuredZero: string): string | undefined {
   const [firstMatched] = evidence.matched;
@@ -171,7 +180,8 @@ function tagTermReason(evidence: TagRelationships, measuredZero: string): string
   const [firstComplementary] = evidence.complementary;
   if (firstComplementary !== undefined) return complementaryPair(firstComplementary);
 
-  return evidence.clashing.length > 0 ? undefined : measuredZero;
+  if (evidence.clashing.length > 0) return undefined;
+  return evidence.matchedInFull ? measuredZero : undefined;
 }
 
 /** `{a} meets {b}` — the pair the product claims fit together, in the order it claims it. */

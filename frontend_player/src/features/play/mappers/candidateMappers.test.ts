@@ -278,6 +278,46 @@ describe('the candidate', () => {
     expect(toCandidate(row({ player_card: card })).card.socialTags).toEqual(['PLAYS_TO_WIN']);
   });
 
+  /**
+   * The one narrowing that is not free, and the bit that keeps it honest.
+   *
+   * Every tag list is narrowed against the nineteen ids this build has words for. Everywhere
+   * else that is a sentence going unwritten; on the competitive card's tag row it would be an
+   * empty `matched` licensing the amber *No tags in common*, which is a claim
+   * ([#311](https://github.com/Raketa02/Raketa/issues/311)).
+   */
+  describe('a match this build has no words for', () => {
+    const tagTerm = (matched: string[]): Wire['ScoredTermSchema'] =>
+      ({
+        term: 'PLAYING_STYLE',
+        weight: 12,
+        value: 0.5,
+        contribution: 6,
+        evidence: { kind: 'playing_style', matched, complementary: [], clashing: [] },
+      }) as Wire['ScoredTermSchema'];
+
+    const relationships = (matched: string[]) =>
+      toCandidate(row({ terms: [tagTerm(matched)] })).terms[0]?.evidence;
+
+    it('is dropped from the list, exactly as every other tag id is', () => {
+      expect(relationships(['PLAYS_TO_WIN', 'DOES_THE_CROSSWORD'])).toMatchObject({
+        matched: ['PLAYS_TO_WIN'],
+      });
+    });
+
+    it('says so, so the card never reports an overlap it narrowed away as none', () => {
+      expect(relationships(['DOES_THE_CROSSWORD'])).toMatchObject({
+        matched: [],
+        matchedInFull: false,
+      });
+    });
+
+    it('leaves the bit true where nothing was narrowed, including an empty answer', () => {
+      expect(relationships(['PLAYS_TO_WIN'])).toMatchObject({ matchedInFull: true });
+      expect(relationships([])).toMatchObject({ matchedInFull: true });
+    });
+  });
+
   it('drops a liveness reason it cannot read — a card shows a few of many', () => {
     const candidate = toCandidate(
       row({ liveness_reasons: ['RECENT_ACTIVITY', 'PLAYS_ON_TUESDAYS' as never] }),

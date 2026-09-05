@@ -45,8 +45,11 @@
 import { counted } from '@/shared/formatting/counted';
 import { formatLevel, formatPercent, formatRange } from '@/shared/formatting/ratingFormat';
 import { slotName } from '@/shared/vocabulary/availabilityPresentation';
+import { socialTagLabel, socialTagName } from '@/shared/vocabulary/socialTagPresentation';
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
+import type { SharedTag, SocialTagOverlap } from '../domain/socialTagOverlap';
 import type { InclusionReason } from '../domain/vocabulary';
 
 import type { CandidateAction } from './accessibilityPresentation';
@@ -215,6 +218,91 @@ export const DECK_ANSWER_WORDS = { pass: 'Not today', accept: "🎾 Let's play" 
  * cannot arrive silently claiming to be a photograph.
  */
 export const CANDIDATE_POSTER_LABEL = 'A generated court poster, not a photograph';
+
+/**
+ * **The Social tag row's words** — the chip, its *you too* marker, and the amber sentence.
+ *
+ * The row is `domain/socialTagOverlap`'s four answers; these are the four things they say
+ * ([#311](https://github.com/Raketa02/Raketa/issues/311)). Nothing here decides which tags are
+ * shared, and nothing here re-words a tag: `socialTagLabel` and `socialTagName` are the
+ * promoted table's, and a second spelling of nineteen labels is what the promotion existed to
+ * prevent ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §1).
+ *
+ * ## The chip is drawn with a glyph and a marker, and spoken as neither
+ *
+ * `socialTagLabel` carries the emoji because a wall of same-length chips is found by shape;
+ * `socialTagName` is what a listener gets, because *"beer mug, stays for a drink"* is the app
+ * reading its own layout aloud. The **marker** goes the other way and is the more interesting
+ * half: `· you too` is drawn on the chip because the tint alone would be colour as the only
+ * cue ([Part 13](../../../../docs/design-system.md#part-13--accessibility)), and it is *not*
+ * repeated per tag in the spoken name — the label groups the shared ones under one clause
+ * instead, because a listener hearing *you too* six times is being read a table.
+ *
+ * **A shared chip can truncate its marker at the largest text sizes.** `Tag` is
+ * `numberOfLines={1}` by design ([6.4](../../../../docs/design-system.md#64-tag--the-status-pill)
+ * — *a long state tag truncates rather than breaking the row*), and the longest label plus the
+ * marker exceeds the card at roughly double the system size. The tint survives it and the
+ * spoken name always carries the whole clause, so the fact is never lost; what is lost is the
+ * second cue, for the reader who has asked for the largest type. Recorded rather than papered
+ * over — fixing it means a wrapping tag, which is a change to the primitive and to 6.4.
+ *
+ * What a chip in the row is **drawn** with: the tag, and the marker where it is shared.
+ */
+export function socialTagChip(tag: SharedTag): string {
+  const label = socialTagLabel(tag.id);
+  return tag.shared ? `${label} · ${YOU_TOO_MARKER}` : label;
+}
+
+/** The two words, once. Re-worded here and nowhere else — the clause has its own phrasing. */
+const YOU_TOO_MARKER = 'you too';
+
+/**
+ * The amber sentence, which **stands in the row's place** rather than beside it.
+ *
+ * The one claim this row makes, and the only state in which the candidate's own tags are not
+ * drawn: six untinted chips under a line saying none of them matched would be the card
+ * answering a question nobody asked twice over, and the ticket puts the sentence *in the row's
+ * place* in as many words. The tags are still a fact about them alone — they are read in full
+ * on the surface that draws tags as tags, and the card's job here is the comparison.
+ */
+export const NO_TAGS_IN_COMMON = 'No tags in common';
+
+/**
+ * What the row contributes to the card's **spoken** name — nought, one or two clauses.
+ *
+ * Grouped rather than marked per tag, for the reason above, and worded so each clause says
+ * whose fact it is: *tags you share* is about the pair, *their other tags* and *their tags* are
+ * about the candidate alone. That distinction is the whole of the row, so it is the one thing
+ * the wording must not blur.
+ *
+ * The `shared` case can still produce **no** shared clause: this build may have matched a tag
+ * the mapper narrowed out of `social_tags` while keeping another in `matched`. The clause is
+ * omitted rather than emptied, and the amber sentence is never reached — which is
+ * `socialTagOverlap`'s third spelling arriving here intact.
+ */
+export function socialTagClauses(row: SocialTagOverlap): readonly string[] {
+  switch (row.kind) {
+    case 'shared': {
+      const shared = row.tags.filter((tag) => tag.shared);
+      const rest = row.tags.filter((tag) => !tag.shared);
+      return [
+        ...(shared.length === 0 ? [] : [`Tags you share: ${tagNames(shared.map((t) => t.id))}`]),
+        ...(rest.length === 0 ? [] : [`Their other tags: ${tagNames(rest.map((t) => t.id))}`]),
+      ];
+    }
+    case 'unknown':
+      return [`Their tags: ${tagNames(row.tags)}`];
+    case 'none-in-common':
+      return [NO_TAGS_IN_COMMON];
+    case 'hidden':
+      return [];
+  }
+}
+
+/** The words alone. Prose does not carry glyphs — `socialTagPresentation`'s own split. */
+function tagNames(tagIds: readonly SocialTagId[]): string {
+  return tagIds.map(socialTagName).join(', ');
+}
 
 /**
  * The tag beside the handle — **at most one, and the strong fact wins**.

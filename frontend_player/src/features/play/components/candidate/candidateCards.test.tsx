@@ -14,7 +14,7 @@
  */
 
 import { render, screen } from '@testing-library/react-native';
-import { Image, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { courtPosterFor } from '@/features/player_profile/types';
 import { formatLevel, formatRange } from '@/shared/formatting/ratingFormat';
@@ -23,6 +23,8 @@ import { balanceShare, theme } from '@/shared/ui';
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Evidence, ScoredTerm } from '../../domain/evidence';
 import type { Term } from '../../domain/vocabulary';
+import { toCandidate } from '../../mappers/candidateMappers';
+import type { Wire } from '@/test-support/transport';
 
 import { COMPETITIVE_CARD_DRAWS, CandidateCard } from './CandidateCard';
 import { CandidateCardSocial, SOCIAL_CARD_DRAWS } from './CandidateCardSocial';
@@ -93,12 +95,14 @@ const TERMS: readonly ScoredTerm[] = [
   scored('PLAYING_STYLE', {
     kind: 'playing_style',
     matched: ['PLAYS_TO_WIN'],
+    matchedInFull: true,
     complementary: [],
     clashing: [],
   }),
   scored('SOCIAL_VIBE', {
     kind: 'social_vibe',
     matched: [],
+    matchedInFull: true,
     complementary: [],
     clashing: [],
   }),
@@ -130,6 +134,35 @@ function candidate(over: Partial<Candidate> = {}): Candidate {
 }
 
 const noop = () => undefined;
+
+/**
+ * A **wire** candidate, for the one assertion that has to cross the mapper.
+ *
+ * Everything else here builds a `Candidate` directly, because a card takes one — but §3's drop
+ * happens at the mapper and an unknown tag id is unrepresentable on the domain side, so the only
+ * honest way to assert it is to send one in.
+ */
+function wireRow(over: Partial<Wire['CandidateSchema']> = {}): Wire['CandidateSchema'] {
+  return {
+    player_id: PLAYER,
+    fit: 78,
+    distance_km: 4,
+    player_card: {
+      nickname: 'Marek',
+      area_code: THEIR_AREA,
+      social_tags: ['PLAYS_TO_WIN'],
+      level: 2.83,
+      band: 'Established',
+      range: { low: 2.55, high: 2.87 },
+    },
+    concerns: [],
+    terms: [],
+    degraded_terms: [],
+    modifiers: [],
+    liveness_reasons: [],
+    ...over,
+  } as Wire['CandidateSchema'];
+}
 
 /** The Sport is the screen's, so the card is handed one — it is never on `player_card`. */
 const SPORT_NAME = 'Tennis';
@@ -175,6 +208,17 @@ function drawDeck(over: Partial<Candidate> = {}) {
       onWhyFit={noop}
     />,
   );
+}
+
+/**
+ * The card body's own spoken name — the label §20.3 fixes the order of.
+ *
+ * Read off the outermost element rather than matched whole, so an assertion about one clause
+ * says only that: the full-string assertions live in *what each control announces*, and a test
+ * about the tag row should not need editing when a reason line is re-worded.
+ */
+function spokenBody(): string {
+  return screen.UNSAFE_getAllByType(View)[0]?.props.accessibilityLabel as string;
 }
 
 /** The outermost drawn box, which is the card's own surface on all three. */
@@ -413,6 +457,170 @@ describe('the border on a lifted card', () => {
   });
 });
 
+/**
+ * **The Social tag row** — the four answers, and the three spellings of absence between them.
+ *
+ * The rule is `domain/socialTagOverlap`'s and is unit-tested there; what these assert is the half
+ * that only a rendered card can show — that what is drawn is what is spoken, and that the one
+ * sentence which is a **claim** is drawn in the one state that earned it.
+ */
+describe('the social tag row', () => {
+  const tagTerm = (kind: 'playing_style' | 'social_vibe', over: object = {}) =>
+    scored(kind === 'playing_style' ? 'PLAYING_STYLE' : 'SOCIAL_VIBE', {
+      kind,
+      matched: [],
+      matchedInFull: true,
+      complementary: [],
+      clashing: [],
+      ...over,
+    } as Evidence);
+
+  it('draws every tag they published and marks the shared ones in words', () => {
+    drawCompetitive({ terms: [tagTerm('playing_style', { matched: ['PLAYS_TO_WIN'] })] });
+
+    // The tint is the second cue. The marker is the first, and it is on the chip itself.
+    expect(screen.getByText('🏆 Plays to win · you too')).toBeTruthy();
+    expect(screen.getByText('🍻 Stays for a drink')).toBeTruthy();
+  });
+
+  /**
+   * §10 — *the fact is said once*, across the two registers. `tagTermReason`'s precedence is
+   * matched first, so a term with anything matched writes `Both of you: …` — the same ids the
+   * row has just drawn as chips. The chips are the richer form and the sentence goes.
+   */
+  it('takes the Both of you sentence off the card the chips are on', () => {
+    drawCompetitive({ terms: [tagTerm('playing_style', { matched: ['PLAYS_TO_WIN'] })] });
+    expect(screen.queryByText(/Both of you/)).toBeNull();
+    screen.unmount();
+
+    // And leaves it on the card that draws no row, which is what keeps it a per-card rule.
+    drawSocial({ terms: [tagTerm('playing_style', { matched: ['PLAYS_TO_WIN'] })] });
+    expect(screen.getByText('Both of you: Plays to win')).toBeTruthy();
+  });
+
+  /** Complementary and clashing are a different relationship and stay prose — the ticket's own. */
+  it('keeps a complementary pair as a sentence and tints nothing off it', () => {
+    drawCompetitive({
+      terms: [
+        tagTerm('playing_style', {
+          complementary: [{ a: 'PLAYS_TO_WIN', b: 'QUIET_AND_FOCUSED' }],
+        }),
+      ],
+    });
+
+    expect(screen.getByText('Plays to win meets Quiet and focused')).toBeTruthy();
+    expect(screen.queryByText(/· you too/)).toBeNull();
+  });
+
+  it('stands the amber line in the row’s place when they fired and shared nothing', () => {
+    // Both columns, because the claim needs both — one alone is a half-comparison and draws
+    // the tags untinted instead.
+    drawCompetitive({ terms: [tagTerm('playing_style'), tagTerm('social_vibe')] });
+
+    expect(screen.getByText('No tags in common')).toBeTruthy();
+    // In its place: the tags themselves are not drawn under a line saying none of them matched.
+    expect(screen.queryByText('🏆 Plays to win')).toBeNull();
+  });
+
+  it('draws untinted tags and no amber line when the terms stood down', () => {
+    // Nothing compared them, so *No tags in common* would be a claim rather than an answer.
+    drawCompetitive({ terms: [] });
+
+    expect(screen.getByText('🏆 Plays to win')).toBeTruthy();
+    expect(screen.getByText('🍻 Stays for a drink')).toBeTruthy();
+    expect(screen.queryByText('No tags in common')).toBeNull();
+    expect(screen.queryByText(/· you too/)).toBeNull();
+  });
+
+  /**
+   * The third spelling. `matched` is narrowed at the mapper against the same nineteen the
+   * labels come from, so an old build sees an empty list where the platform found an overlap —
+   * and `matchedInFull` is what stops that becoming the amber claim.
+   */
+  it('says nothing about the overlap when the match is a tag it cannot name', () => {
+    drawCompetitive({
+      terms: [tagTerm('playing_style', { matchedInFull: false }), tagTerm('social_vibe')],
+    });
+
+    expect(screen.queryByText('No tags in common')).toBeNull();
+    expect(screen.getByText('🏆 Plays to win')).toBeTruthy();
+  });
+
+  /**
+   * The same claim, one register over. `tagTermReason` falls through to the term's **measured
+   * zero** when nothing matched — *"Different on court, not incompatible"* — which is *No tags
+   * in common* in prose, on every card rather than one. A term that matched something did not
+   * score zero, so the bit closes that branch too.
+   */
+  it('withholds the measured zero as well, which is the same claim as a sentence', () => {
+    drawCompetitive({ terms: [tagTerm('playing_style', { matchedInFull: false })] });
+    expect(screen.queryByText(/Different on court/)).toBeNull();
+    screen.unmount();
+
+    // And says it where nothing was narrowed away, which is what makes it a real zero.
+    drawSocial({ terms: [tagTerm('playing_style')] });
+    expect(screen.getByText(/Different on court/)).toBeTruthy();
+  });
+
+  /**
+   * §3, end to end — and it is walked through the **mapper** on purpose.
+   *
+   * `Candidate.card.socialTags` is `SocialTagId[]`, so an unknown id cannot be handed to a card
+   * at all: the type is the guarantee and the narrowing is the mapper's. A card-level fixture
+   * that simply left a known tag out would assert nothing about an unknown one, so the wire row
+   * goes through `toCandidate` and the card draws what comes back.
+   */
+  it('drops an id this build has no words for rather than drawing it blank', () => {
+    const drawn = toCandidate(
+      wireRow({
+        player_card: {
+          ...wireRow().player_card,
+          social_tags: ['PLAYS_TO_WIN', 'DOES_A_CROSSWORD'],
+        },
+      }),
+    );
+
+    render(
+      <CandidateCard
+        candidate={drawn}
+        envelope={ENVELOPE}
+        sportName={SPORT_NAME}
+        action="ADD_TO_COURT"
+        onAction={noop}
+        onWhyFit={noop}
+      />,
+    );
+
+    expect(screen.getByText('🏆 Plays to win')).toBeTruthy();
+    // No blank chip, no placeholder, and no `undefined undefined` where the glyph would go.
+    expect(screen.queryByText(/undefined/)).toBeNull();
+    expect(screen.UNSAFE_getAllByType(Text).filter((t) => t.props.children === '')).toEqual([]);
+  });
+
+  it('is drawn on the competitive card alone, which is where the label can carry it', () => {
+    for (const draw of [drawSocial, drawDeck]) {
+      draw({ terms: [tagTerm('playing_style', { matched: ['PLAYS_TO_WIN'] })] });
+      expect(screen.queryByText(/· you too/)).toBeNull();
+      expect(screen.queryByText('No tags in common')).toBeNull();
+      screen.unmount();
+    }
+  });
+
+  it('speaks what it draws, in each of the three states that draw anything', () => {
+    drawCompetitive({ terms: [tagTerm('playing_style', { matched: ['PLAYS_TO_WIN'] })] });
+    expect(spokenBody()).toContain('Tags you share: Plays to win');
+    expect(spokenBody()).toContain('Their other tags: Stays for a drink');
+    screen.unmount();
+
+    drawCompetitive({ terms: [] });
+    expect(spokenBody()).toContain('Their tags: Plays to win, Stays for a drink');
+    screen.unmount();
+
+    drawCompetitive({ terms: [tagTerm('playing_style'), tagTerm('social_vibe')] });
+    expect(spokenBody()).toContain('No tags in common');
+  });
+});
+
 describe('the photo panel', () => {
   it('prints the level they published, over a pinned scrim', () => {
     // The panel is the card's identity: what this person published, drawn whatever fired. The
@@ -597,6 +805,9 @@ describe('what each control announces', () => {
       screen.getByLabelText(
         'Marek. Fit 78 out of 100. 2,83 · Established · likely 2,55 – 2,87. ' +
           'Fairly even · 74%. ' +
+          // The tag row's clauses, between the identifying facts and the argument — and
+          // grouped, because a listener hearing *you too* once per tag is being read a table.
+          'Tags you share: Plays to win. Their other tags: Stays for a drink. ' +
           '3 slots you both ticked · next Tue evening. 4 km away. ' +
           "They're here to compete too.",
       ),

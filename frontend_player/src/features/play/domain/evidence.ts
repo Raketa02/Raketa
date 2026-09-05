@@ -92,6 +92,30 @@ export interface TagRelationships {
   readonly matched: readonly SocialTagId[];
   readonly complementary: readonly TagPair[];
   readonly clashing: readonly TagPair[];
+  /**
+   * Whether **every id the platform matched is one this build can name** — §3's gap kept in
+   * place, on the one list where dropping silently would turn into a claim.
+   *
+   * `matched` is narrowed at the mapper like every other tag list, and for the same reason: a
+   * sentence naming a tag with no words is a chip with no words on it. Everywhere else that
+   * drop is free, because a reason line that cannot be written simply is not written. It stops
+   * being free on the competitive card's **tag row**, which draws the amber *No tags in common*
+   * when the terms fired and matched nothing ([#311](https://github.com/Raketa02/Raketa/issues/311)):
+   * a build too old to read a twentieth tag id would narrow a real match down to an empty list
+   * and then **say out loud** that there is no overlap, which is the one thing a gap must never
+   * become.
+   *
+   * So the count survives the narrowing as a bit. `false` means *they share something this
+   * build cannot name*, which is neither of the ticket's two spellings of absence and is drawn
+   * as the third: the tags, untinted, and **no** amber line.
+   *
+   * **`reasonPresentation` reads it too, and for the same reason.** A tag term's precedence is
+   * *matched, then complementary, then the measured zero*, so a narrowed-away match falls
+   * through to *"Different on court, not incompatible"* — which is the amber claim again, in
+   * prose, on every card rather than one. The measured zero is the one branch the bit closes:
+   * a term that matched something did not score zero, whatever this build can read of it.
+   */
+  readonly matchedInFull: boolean;
 }
 
 /** What the two of them are like during the hour on court. */
@@ -122,6 +146,24 @@ export interface DistanceEvidence {
   readonly km: number;
   readonly areaCode: string;
   readonly outsideTheirRadius: boolean;
+}
+
+/**
+ * Whether this evidence is one of the two **tag comparisons** — the narrowing every reader of
+ * them starts with.
+ *
+ * One predicate rather than two `kind === … || kind === …` cascades, because both callers ask
+ * the same question and one of them was reaching for a cast to answer it: the domain rule needs
+ * `TagRelationships` out of an `Evidence`, and a type guard is what makes that a narrowing
+ * instead of an assertion. `null` is a variant this build has never seen and is not a tag
+ * comparison — §3, and the reason an unreadable row cannot license a claim.
+ */
+export function isTagEvidence(
+  evidence: Evidence | null,
+): evidence is PlayingStyleEvidence | SocialVibeEvidence {
+  return (
+    evidence !== null && (evidence.kind === 'playing_style' || evidence.kind === 'social_vibe')
+  );
 }
 
 export type Evidence =

@@ -28,18 +28,31 @@
  * this card draws no forecast, and a for-fun evening is not the surface a balance bar belongs
  * on, so the forecast reaches it as a reason line instead.
  *
- * ## The kit's tag row is not built here, and that is a decision
+ * ## This card draws no Social tag row, and the competitive one does
  *
  * §B10 laid out the head row as a name with **inline tags** beside it — `.tag.hot`,
  * `.tag.volt`, `.tag.bad` — and the only one of the three with a vocabulary behind it was the
- * volt one, which this ticket turns into a **sentence** (`CardHead`). What is left has no
- * surface asking for it: [`the-words.md`](../../../../../../docs/specs/matchmaking/the-words.md)
- * §5's *Draws* column for this card is the level row, the *You overlap* row and the meta
- * line's kilometres, and §20.3 fixes the body's spoken name with no tags in it. Drawing the
- * candidate's own Social tags anyway would put content on the card that the label cannot
- * announce, which is the half of Part 13 a hidden decoration is allowed and a fact is not —
- * and their pairing already reaches this card **as sentences**, through the two tag terms.
- * The surface that draws tags as tags is `SH.playersocial`, and it is out of scope here.
+ * volt one, which this card turns into a **sentence** (`CardHead`). The candidate's own Social
+ * tags were refused here on an argument that has since been answered rather than overturned:
+ * drawing them *"would put content on the card that the label cannot announce"*, which is the
+ * half of Part 13 a hidden decoration is allowed and a fact is not.
+ * [#311](https://github.com/Raketa02/Raketa/issues/311) answers it by **announcing them** —
+ * `candidateCardLabel` carries the row's clauses, and the rule that comes with it is *do not
+ * draw a tag the label does not speak*.
+ *
+ * **So the reason this card still has none is a different one, and it is about this card.**
+ * A tag row wants the card's full width, and this one is media-top: its content column is the
+ * whole card and its rows are already a level row, a *You overlap* row and a meta line, which
+ * is [`the-words.md`](../../../../../../docs/specs/matchmaking/the-words.md) §5's *Draws*
+ * column for it. The competitive card earns the row because it is the surface where **who
+ * somebody is** is the question — a game for fun asks *are these two free at the same time*,
+ * and the pairing already reaches this card as sentences through the two tag terms. Those
+ * sentences are also why adding a row here would cost something: on the card that draws the
+ * row, the `Both of you: …` line is filtered as §10's *said once*, and this card would lose a
+ * sentence to gain chips it has no width for.
+ *
+ * The surface that draws tags as tags **in full** is still `SH.playersocial`, and it is still
+ * out of scope here.
  */
 
 import { StyleSheet, View } from 'react-native';

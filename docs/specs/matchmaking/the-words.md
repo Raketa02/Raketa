@@ -142,9 +142,9 @@ render different things.
 
 | Surface | Draws | So it drops |
 | --- | --- | --- |
-| `CandidateCard` (competitive) | the photo panel's Level, one head-to-head band — both levels, the bar and the forecast — (later) Player Score block | `LEVEL_FIT`, `PREDICTED_BALANCE`, and `RELIABILITY` only once the score block prints |
-| `CandidateCardSocial` (for fun) | Level row, You overlap row, meta line's km | `LEVEL_FIT`, `AVAILABILITY_OVERLAP`, `DISTANCE` |
-| `DeckCard` | Level row, Predicted balance row, You overlap row, meta line's km | `LEVEL_FIT`, `PREDICTED_BALANCE`, `AVAILABILITY_OVERLAP`, `DISTANCE` |
+| `CandidateCard` (competitive) | the photo panel's Level, one head-to-head band — both levels, the bar and the forecast — the Social tag row's **matched** tags, (later) Player Score block | `LEVEL_FIT`, `PREDICTED_BALANCE`, `PLAYING_STYLE` and `SOCIAL_VIBE` **only where they matched something**, and `RELIABILITY` only once the score block prints |
+| `CandidateCardSocial` (for fun) | Level row, You overlap row, meta line's km — **no tag row** | `LEVEL_FIT`, `AVAILABILITY_OVERLAP`, `DISTANCE` |
+| `DeckCard` | Level row, Predicted balance row, You overlap row, meta line's km — **no tag row** | `LEVEL_FIT`, `PREDICTED_BALANCE`, `AVAILABILITY_OVERLAP`, `DISTANCE` |
 | `SH.whyfit` | everything, on purpose | **nothing** — #233 §7: a summary block would break §10 *"on the one screen whose job is showing values"* |
 
 **The filter is declared beside each card as the set of terms that surface draws**, so the
@@ -165,6 +165,31 @@ band prints one side of a **comparison** (`level_fit.theirMu`, computed against 
 forbids a *reason line* restating a value the card renders, which is a rule about the two
 registers — a fact **stated** and a fact **argued** — rather than a rule about pixels. The fact
 is said once, in `levelRow`, and `LEVEL_FIT`'s sentence is filtered off exactly as before.
+
+**The two tag terms are the one entry in that table that is drawn in half**
+([#311](https://github.com/Raketa02/Raketa/issues/311)), and the drop is conditional because the
+term is. `tagTermReason`'s precedence is *matched, then complementary, then the measured zero*, so
+a term with anything in `matched` writes `Both of you: {tags}` — the very ids the row has just
+drawn as tinted chips. That is §10 at its own root, and the chips are the richer form, so the
+sentence goes. A term with **nothing** matched writes its complementary pair or its measured zero,
+neither of which the row draws, and both survive — which is what the ticket protects when it says
+complementary and clashing *"already reach this card as reason sentences"*.
+
+So the terms are **not** in the card's declared drawn set: that set is *terms the card renders a
+value for*, and adding these two would take all four registers away to stop one of them repeating.
+The condition lives beside the set instead, in `candidateFacts`, and it is stated over **the tags
+the row actually drew** rather than over the term's own `matched` list — the row is capped at six,
+so a match beyond the cap is a chip nobody drew, and a filter keyed on the term would delete the
+only sentence saying it and leave the fact stated nought times. A card that draws no row filters
+nothing, which is how the social and deck cards keep their `Both of you` line.
+
+**The other two cards draw no tag row, and the reason is about those cards.** A tag row wants the
+card's full width; both of them are **media-top**, so their content column *is* the card and their
+rows are already the three in the table above. The competitive card earns the row because it is
+the surface where *who somebody is* is the question — a game for fun asks whether two people are
+free at the same time — and it can afford the trade the row costs, which is the `Both of you`
+sentence. Adding a row to either of the others would spend that sentence on chips they have no
+width for.
 
 **Two rules on top of it:**
 
@@ -932,7 +957,7 @@ to satisfy a word count would delete what the card is for.
 
 | | |
 | --- | --- |
-| **Card body** | `button`. `{name}. Fit {n} out of 100. {level} · {band} · likely {low}–{high}. {In your area · }{km} km. {reason}. {reason}. {reason}. {reason}. {concern}.` |
+| **Card body** | `button`. `{name}. Fit {n} out of 100. {level} · {band} · likely {low}–{high}. {In your area · }{km} km. {tags}. {reason}. {reason}. {reason}. {reason}. {concern}.` |
 | **_Why 78?_** | `button`. `Why {name} fits {n}` — the visible label is `Why {n}?`, and two cards on one screen can carry the same Fit, so this one names its subject for the reason the primary does. **Not** the sheet's own name (§20.6): that string is the answer's, and this is the question. |
 | **Primary button** | `button`. `Add {name} to the court` · `Challenge {name}` — the visible label is *Add to the court* / *Challenge*, which announces identically on twenty cards. Naming the subject is [6.9](../../../frontend_player/docs/design-system.md#69-the-photo-tile-and-picker)'s remove control, whose label *"names which photo it removes"*. |
 
@@ -945,6 +970,33 @@ count and in both modes, so the visible word and the spoken name now differ by t
 which is the whole of what naming the subject was for. The bare `Add` stood while the button
 stood alone at the foot of the card, and stopped when *Why 78?* joined it: a bare verb beside a
 second control is the one place the missing object is felt.
+
+**`{tags}` is the Social tag row, and it is nought, one or two clauses**
+([#311](https://github.com/Raketa02/Raketa/issues/311)). It sits after the identifying facts and
+before the argument because that is where the row sits *in meaning* rather than where it sits on
+the card: what somebody published about themselves is the same register as their level, and *why
+this person* is the reasons'. Four rows produce four shapes:
+
+| Row | Says |
+| --- | --- |
+| Compared, something matched | `Tags you share: {a}, {b}` · `Their other tags: {c}` — either clause omitted when empty |
+| Compared, nothing matched | `No tags in common` |
+| Not compared | `Their tags: {a}, {b}` |
+| Nothing to draw | — |
+
+**The shared ones are grouped rather than marked one by one.** The chip carries `· you too` on
+its own words, because on the drawing the tint would otherwise be colour as the only cue; the
+spoken name gathers them under one clause instead, because a listener hearing *you too* six times
+is being read a table. And the clause takes `socialTagName` and never `socialTagLabel`: prose does
+not carry glyphs (§6.2), so what is drawn as `🏆 Plays to win · you too` is heard as *Plays to
+win* inside *Tags you share*.
+
+**This is the answer to the objection that kept tags off a card at all, not an exception to it.**
+`CandidateCardSocial` refused them because drawing them *"would put content on the card that the
+label cannot announce"* — the half of [Part 13](../../../frontend_player/docs/design-system.md#part-13--accessibility)
+a hidden decoration is allowed and a fact is not. The content **can** be announced, so it is, and
+the rule that ships with the row is **do not draw a tag the label does not speak**. The social and
+deck cards still draw none, for a reason about those cards rather than about tags: see §5.
 
 **Two things the competitive card draws and does not say.** The photo panel prints a **Level**,
 which reaches the name already as the first figure of `{level}` — printed twice and said once

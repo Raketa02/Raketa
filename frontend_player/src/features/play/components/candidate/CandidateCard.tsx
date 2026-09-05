@@ -97,6 +97,7 @@ import {
   whyFitControlLabel,
   type CandidateAction,
 } from '../accessibilityPresentation';
+import { socialTagOverlap } from '../../domain/socialTagOverlap';
 import { CANDIDATE_ACTION_WORD, candidateTag } from '../playerCardPresentation';
 import { whyFitControlWord } from '../whyFitPresentation';
 
@@ -104,6 +105,7 @@ import { HeadToHeadBand } from './HeadToHeadBand';
 import { IdentityRow } from './IdentityRow';
 import { PhotoPanel } from './PhotoPanel';
 import { ReasonLine } from './ReasonLine';
+import { SocialTagRow } from './SocialTagRow';
 import { candidateFacts, evidenceOf } from './candidateFacts';
 
 /**
@@ -145,7 +147,8 @@ export function CandidateCard({
   onWhyFit,
   bestMatch = false,
 }: CandidateCardProps) {
-  const facts = candidateFacts(candidate, envelope, COMPETITIVE_CARD_DRAWS);
+  const tags = socialTagOverlap(candidate);
+  const facts = candidateFacts(candidate, envelope, COMPETITIVE_CARD_DRAWS, tags);
   const levelFit = evidenceOf(candidate, 'level_fit');
   const balance = evidenceOf(candidate, 'predicted_balance');
   const tag = candidateTag({ inclusionReason: candidate.inclusionReason, bestMatch });
@@ -192,6 +195,11 @@ export function CandidateCard({
           fact about the one in the panel, and at the column's width the bar's own segment
           labels would not fit — which is the size floor #219 B4 put on `sm`. */}
       <HeadToHeadBand levelFit={levelFit} balance={balance} />
+
+      {/* Full width, under the band, for the band's own reason: six tags do not fit in the
+          column beside the photo panel, and a row that wrapped four times there would push the
+          card past the height a list of them can be read at. */}
+      <SocialTagRow row={tags} />
 
       <View style={s.actions}>
         <Button
