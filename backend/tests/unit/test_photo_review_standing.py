@@ -29,7 +29,9 @@ from app.modules.player_profile.domain.photos import (
     awaits_review,
     decision_on_record,
     judged_against_a_superseded_set,
+    on_court_confidence,
     prompt_set_in,
+    recorded_score_in,
     review_metadata,
     review_note_in,
     review_standing,
@@ -296,3 +298,102 @@ def test_two_of_the_four_reasons_are_about_the_reviewer_and_two_are_not() -> Non
     }
     assert not PhotoReviewUnavailability.STATUS.is_about_the_reviewer
     assert not PhotoReviewUnavailability.MALFORMED.is_about_the_reviewer
+
+
+# ---------------------------------------------------------------------------
+# The evidence a reviewed note carries
+# ---------------------------------------------------------------------------
+
+
+def test_the_vector_a_note_was_scored_from_reads_back() -> None:
+    """The whole of #316 rests on this: the corpus is already on the objects.
+
+    A threshold is re-derivable without re-running inference only if the numbers
+    the last one was applied to can be read back off the metadata. This is that
+    read, and it is here beside the writer for the reason the module's foot
+    argues: two modules spelling one format is the pair that drifts.
+    """
+
+    score = recorded_score_in(reviewed_note(ON_COURT))
+    assert score is not None
+    assert score.similarities == pytest.approx(tuple(ON_COURT))
+    assert score.model == MODEL
+
+
+def test_the_vector_re_derives_the_confidence_rather_than_trusting_the_note() -> None:
+    """Why the vector is read and the recorded ``c=`` is not.
+
+    The fingerprint pins the *captions*, and nothing else: the scale and the
+    softmax are today's arithmetic, and a note written before either moved would
+    carry a confidence today's rule would not produce. Re-deriving from the raw
+    vector is what makes a rate a fact about the line being tried rather than
+    about the line that was.
+    """
+
+    score = recorded_score_in(reviewed_note(OFF_COURT))
+    assert score is not None
+
+    assert on_court_confidence(score.similarities) == pytest.approx(
+        on_court_confidence(OFF_COURT)
+    )
+
+
+def test_a_note_nobody_scored_carries_no_vector() -> None:
+    # Populations 1 and 2. Neither was applied to an image, so there is nothing
+    # to re-derive and `None` is the honest answer rather than an empty vector —
+    # which would read as *scored against nothing*.
+    assert recorded_score_in(None) is None
+    assert (
+        recorded_score_in(
+            verdict_when_unreviewable(PhotoReviewUnavailability.TIMEOUT).note
+        )
+        is None
+    )
+    assert recorded_score_in("clip;garbage") is None
+
+
+def test_a_vector_that_will_not_parse_is_no_vector_rather_than_a_guess() -> None:
+    # The direction of the doubt here is the *sweep's*, not the backfill's: a
+    # number this cannot read must not become a number in a distribution, because
+    # nothing downstream would ever find out. Dropping the photo costs one row of
+    # a corpus; guessing costs the rate.
+    note = reviewed_note(ON_COURT)
+    corrupt = note[: note.index(";s=")] + ";s=0.31,,0.29"
+
+    assert review_standing(corrupt) is PhotoReviewStanding.REVIEWED
+    assert recorded_score_in(corrupt) is None
+
+
+def test_a_superseded_note_still_yields_its_vector() -> None:
+    """Comparability is the caller's judgement, not this reader's.
+
+    Population 3 was really scored and its numbers really are on the object;
+    what is no longer true is that they were measured against today's captions.
+    `judged_against_a_superseded_set` is the question that decides whether they
+    belong in a corpus, and folding that decision in here would leave a caller
+    unable to count what it dropped.
+    """
+
+    stale = reviewed_note(ON_COURT).replace(f"p={PROMPT_SET_FINGERPRINT}", "p=deadbeef")
+
+    score = recorded_score_in(stale)
+    assert score is not None
+    assert score.similarities == pytest.approx(tuple(ON_COURT))
+    assert judged_against_a_superseded_set(stale)
+
+
+def test_a_similarity_that_is_not_a_number_poisons_nothing() -> None:
+    """``nan`` and ``inf`` parse, and are the two that would never raise.
+
+    A cosine similarity is a number in ``[-1, 1]``. These two survive `float`,
+    reach the softmax and come back out as a confidence that compares false
+    against every threshold — so the photograph would count as allowed at all of
+    them, in an aggregate nothing downstream can audit.
+    """
+
+    note = reviewed_note(ON_COURT)
+    for poison in ("nan", "inf", "-inf"):
+        corrupt = note[: note.index(";s=")] + f";s=0.31,{poison}" + ",0.2" * 11
+
+        assert review_standing(corrupt) is PhotoReviewStanding.REVIEWED
+        assert recorded_score_in(corrupt) is None

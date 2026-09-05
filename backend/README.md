@@ -669,18 +669,43 @@ verdict.
 **Every verdict records its evidence** — the model, the prompt-set fingerprint,
 the confidence and the raw similarity vector, in the `review-note` metadata key,
 on allowed photos as much as flagged ones. The threshold shipping today is an
-explicit placeholder; this is what lets a real one be derived later by reading
-stored objects instead of re-running inference over the corpus.
+explicit placeholder, and this is what makes replacing it cheap: the corpus is
+already on the objects.
 
-**It fails open.** An unreachable, slow, refusing or unusably-answering sidecar
-yields `allowed` with a note naming which of those it was, from a closed set. A
-reviewer that turned its own outage into a failed upload would refuse a real
-player's first photo for a reason that is not about the photo.
+**`make photo-flag-rate` reads that corpus** (#316). It walks the stored notes
+and prints the flag rate the check would have produced at each candidate line,
+plus how many stored verdicts each move would make wrong. **Read-only in the
+strongest sense**: no image is re-scored, nothing is written, and the sidecar is
+not asked anything — the whole exercise is a softmax per row over numbers already
+held. `make photo-flag-rate THRESHOLDS="0.55 0.6"` asks about particular lines
+instead of the default sweep, and `-host` runs it outside the stack.
 
-**Nothing a player sees has changed yet.** No route returns a verdict and the
-screen's copy states the product rule without claiming enforcement — the soft
-warning is a `frontend_player/` change and its own ticket. What runs today is the
-measurement that a threshold can eventually be chosen from.
+**It prints the population before the curve**, because a rate is a number over a
+denominator. Four exclusions: the photos nobody looked at, the ones that arrived
+while the sidecar was down and the ones scored against captions that have since
+moved — ADR-0132's three populations — plus a fourth for a note this application
+did not write. And it names **who scored what remained**: a corpus of
+`seed-declared` fixtures (`app/seeds/photos.py`) carries perfectly well-formed
+notes and is a well-formed rate about nothing. Where the rate should sit, and
+whether the corpus is yet big enough for one to mean anything, are the two
+judgements the command deliberately does not make.
+
+**It fails open, and an outage now costs silence rather than a word.** An
+unreachable, slow, refusing or unusably-answering sidecar yields **no decision**,
+with a note naming which of those it was, from a closed set
+([ADR-0138](../docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)).
+A reviewer that turned its own outage into a failed upload would refuse a real
+player's first photo for a reason that is not about the photo; one that recorded
+`allowed` would tell twenty strangers an unexamined image had been checked.
+
+**The verdict reaches two audiences, which is why the placeholder is now a cost.**
+It crosses on the upload as a warning to the photograph's owner
+([ADR-0133](../docs/adr/0133-the-verdict-crosses-on-the-upload-and-the-warning-may-be-wrong.md))
+and on a player card as a **✓ ON COURT** shield shown to people who are not
+(ADR-0138). A genuine on-court photo scoring 0.49 therefore leaves its owner
+silently unbadged on other people's screens, with nothing they can do about it —
+the sharper of the two costs, and the one no signal we can read would tell us
+about.
 
 ## Background Jobs
 

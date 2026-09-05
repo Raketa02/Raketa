@@ -25,7 +25,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from hashlib import sha256
-from math import exp
+from math import exp, isfinite
 from typing import Final, Mapping, Sequence
 from uuid import UUID
 
@@ -363,7 +363,19 @@ PHOTO_REVIEW_LOGIT_SCALE: Final = 100.0
 #:
 #: What makes the placeholder safe to replace at all is that every verdict records
 #: the similarities it was computed from, so the threshold is re-derivable over
-#: the stored corpus without re-running inference on a single image.
+#: the stored corpus without re-running inference on a single image. That is now
+#: a command rather than a promise — ``make photo-flag-rate`` prints the flag rate
+#: each candidate line would have produced, over the photographs the platform
+#: already holds. **What it cannot do is choose**: where the rate should sit, and
+#: whether the corpus is yet large enough for one to mean anything, are product
+#: judgements, which is why #316 is `ready-for-human` and why the number a run
+#: argues for is typed here by hand.
+#:
+#: **Moving it changes what stored verdicts mean without changing them.** A photo
+#: stamped under this value keeps that stamp until something re-reviews it, and
+#: the fingerprint does not move, so ``docs/adr/0132``'s backfill will not pick it
+#: up either. Whether to re-stamp the corpus under a new line is a second decision
+#: — *a new record, not a configuration change* — and the run prints its size.
 ON_COURT_CONFIDENCE_THRESHOLD: Final = 0.5
 
 
@@ -435,6 +447,43 @@ def review_note(*, model: str, similarities: Sequence[float]) -> str:
     )
 
 
+def flagged_at(*, confidence: float, threshold: float) -> bool:
+    """Whether a photo scoring `confidence` is warned about at `threshold`.
+
+    **One comparison, spelled once, for both the threshold in force and any
+    threshold somebody is thinking about.** ADR-0132 makes the argument in its
+    own setting — a batch with its own copy of the rule is a second reviewer,
+    able to disagree with the upload path about one image — and it is sharper
+    here, because the caller with the other copy would be the derivation that
+    chooses the next value (#316). A rate computed with `<=` where the verdict
+    uses `<` differs by exactly the photos sitting on the line, reads as
+    measured, and nothing downstream could tell.
+
+    **Exactly on the line is allowed**, at a candidate threshold as much as at
+    the shipping one: the check soft-warns and the tie belongs to the player.
+
+    **Spelled ``not (>=)`` rather than ``<``, and the difference is one value.**
+    A ``nan`` confidence compares false against both, so ``<`` would call it
+    *allowed* — which under ``docs/adr/0138`` is a shield shown to strangers
+    about a photograph whose score is nonsense — while this calls it flagged.
+    It is reachable: a cosine similarity of ``nan`` passes the sidecar adapter's
+    number check and ``json`` decodes a bare ``NaN`` by default, so the
+    arithmetic below yields one. The tie belongs to the player; a number that is
+    not a number is not a tie, and the soft warning is the cheap side to be
+    wrong on. (The derivation never meets one — `recorded_score_in`
+    refuses a non-finite vector before it can enter a distribution.)
+
+    Both arguments are keyword-only, because they are two floats in the same
+    unit interval and a swapped pair would be silent at every call site.
+
+    Monotone in `threshold` over the finite values, which is not a detail: it is
+    what lets a table of rates be read as one distribution rather than as
+    unrelated numbers.
+    """
+
+    return not confidence >= threshold
+
+
 def verdict_from_similarities(
     *, model: str, similarities: Sequence[float]
 ) -> PhotoReviewVerdict:
@@ -448,9 +497,11 @@ def verdict_from_similarities(
 
     confidence = on_court_confidence(similarities)
     decision = (
-        PhotoReviewDecision.ALLOWED
-        if confidence >= ON_COURT_CONFIDENCE_THRESHOLD
-        else PhotoReviewDecision.FLAGGED
+        PhotoReviewDecision.FLAGGED
+        if flagged_at(
+            confidence=confidence, threshold=ON_COURT_CONFIDENCE_THRESHOLD
+        )
+        else PhotoReviewDecision.ALLOWED
     )
     return PhotoReviewVerdict(
         decision=decision,
@@ -524,10 +575,26 @@ _PROMPT_SET_FIELD: Final = "p"
 #: The field that says the reviewer was never asked, and why.
 _UNAVAILABLE_FIELD: Final = "unavailable"
 
+#: The field naming the reviewer that produced the vector. Two corpora scored by
+#: different models are two corpora, and a note that could not say which is a
+#: vector nobody can place.
+_MODEL_FIELD: Final = "m"
+
+#: The field the raw similarity vector rides in — one value per prompt, in the
+#: order they were asked. **The only field on a note that is evidence rather
+#: than a conclusion**, and the reason a threshold can be re-derived over the
+#: stored corpus without paying for inference twice (#316).
+_SIMILARITIES_FIELD: Final = "s"
+
+#: What separates one similarity from the next inside that field.
+_NOTE_LIST_SEPARATOR: Final = ","
+
 #: What a note must carry to count as *this image was actually scored*: the
 #: model, the prompt set, the confidence and the raw vector. All four, because
 #: any three of them is a note this application never wrote.
-_REVIEWED_FIELDS: Final = frozenset({"m", _PROMPT_SET_FIELD, "c", "s"})
+_REVIEWED_FIELDS: Final = frozenset(
+    {_MODEL_FIELD, _PROMPT_SET_FIELD, "c", _SIMILARITIES_FIELD}
+)
 
 
 class PhotoReviewStanding(StrEnum):
@@ -728,6 +795,80 @@ def prompt_set_in(note: str | None) -> str | None:
     if note is None:
         return None
     return _note_fields(note).get(_PROMPT_SET_FIELD)
+
+
+@dataclass(frozen=True, slots=True)
+class RecordedScore:
+    """What a note says about an image that was really looked at.
+
+    The two facts travel together because a similarity vector is only readable
+    beside the things that say what produced it: `prompt_set_in` names the
+    captions, and this names the reviewer. **A corpus scored by one model and a
+    corpus scored by another are two corpora**, and a rate derived across both
+    without noticing is the failure mode a threshold derivation has (#316) — the
+    sharpest instance being a workbench's declared fixtures, which carry a
+    perfectly well-formed note and are not evidence about anything.
+    """
+
+    model: str
+    similarities: tuple[float, ...]
+
+
+def recorded_score_in(note: str | None) -> RecordedScore | None:
+    """What this photo was scored as, and by what. ``None`` if it was not.
+
+    **The read #316 is built on.** Every verdict records the numbers it was
+    computed from (`review_note`), so choosing a better threshold is a walk over
+    stored metadata and arithmetic — not a second pass of inference over every
+    photograph the platform holds. This is the decoder for that, and it lives
+    beside the encoder for the reason the section above gives: two modules
+    spelling one format is the pair that drifts silently.
+
+    **The vector rather than the recorded ``c=``, deliberately.** The
+    fingerprint pins the *captions* and nothing else — the scale and the softmax
+    are today's arithmetic — so a stored confidence is what some version of this
+    module concluded, while the vector is what the model actually said. A rate
+    has to be a fact about the line being tried, which means re-deriving through
+    `on_court_confidence` rather than believing a number that may predate it.
+
+    ``None`` for populations 1 and 2: neither was applied to an image, so there
+    is nothing to re-derive, and an empty vector would read as *scored against
+    nothing*. ``None`` too for a field that will not parse — **the sweep's
+    direction of doubt rather than the backfill's**, because the action here is
+    to put a number into a distribution nothing downstream can audit. Dropping
+    one photo costs a row of the corpus; guessing costs the rate.
+
+    **``nan`` and ``inf`` parse, and are refused with the rest.** A cosine
+    similarity is a number in ``[-1, 1]``; the two that are not are the two that
+    survive `float` and then poison every aggregate computed from them without
+    raising anywhere — a ``nan`` confidence compares false against every
+    threshold, so the photo would silently count as allowed at all of them.
+
+    A note judged against a prompt set that has since moved **does** yield its
+    vector. Whether those numbers belong in a corpus is
+    `judged_against_a_superseded_set`'s question, and a caller that could not
+    read them could not count what it dropped either.
+    """
+
+    if note is None or review_standing(note) is not PhotoReviewStanding.REVIEWED:
+        return None
+    fields = _note_fields(note)
+    # Both are guaranteed present by `review_standing` — they are two of the
+    # four fields that make a note *reviewed* — and are read as if they were
+    # not, because the guarantee lives in a frozenset one edit away.
+    model = fields.get(_MODEL_FIELD)
+    recorded = fields.get(_SIMILARITIES_FIELD)
+    if model is None or recorded is None:
+        return None
+    try:
+        vector = tuple(
+            float(value) for value in recorded.split(_NOTE_LIST_SEPARATOR)
+        )
+    except ValueError:
+        return None
+    if not all(isfinite(value) for value in vector):
+        return None
+    return RecordedScore(model=model, similarities=vector)
 
 
 def judged_against_a_superseded_set(note: str | None) -> bool:

@@ -31,6 +31,9 @@ make seed        # the named accounts, the cohort and the games they have played
                  # back, since no Play flow can be exercised with one phone
 make gen-cohort  # rewrite the cohort's committed population (a diff is a fixture change)
 make rebuild-candidate-index  # fold the log back into the index (…-host on the host)
+make photo-flag-rate  # the on-court flag rate at each candidate threshold, read off the
+                 # similarity vectors already stored beside the photographs — no image
+                 # re-scored, nothing written (…-host on the host)
 ```
 
 One test: `poetry run pytest tests/unit/test_user_domain.py::test_name`.
@@ -201,8 +204,16 @@ Rules to preserve:
   open**: a flagged photo is stored, and an unreachable sidecar yields **no decision at
   all** with a note saying which outage, because an outage is not a conclusion about an
   image. Every verdict records the similarity vector it was taken from, which is what makes
-  today's placeholder threshold safe. **No test needs the container** — `tests/conftest.py`
-  overrides the port, as it does the store.
+  today's placeholder threshold safe **and replaceable without paying for inference
+  twice**: `make photo-flag-rate` (#316) walks the stored notes and prints the flag rate
+  each candidate line would have produced, how many stored verdicts each move would make
+  wrong, and — before the curve, because a rate is a number over a denominator — the four
+  exclusions and **who scored what remained**. That last one is the way this reading can
+  mislead: the seed's declared verdicts carry well-formed, current-fingerprint notes, so a
+  laptop run prints a plausible rate over fixtures unless the report names them. Where the
+  rate should sit is a product judgement the command deliberately does not make; the chosen
+  number goes in `photos.py` beside the caps and never in configuration. **No test needs the container**
+  — `tests/conftest.py` overrides the port, as it does the store.
   **The verdict now crosses the wire, and only on the upload**
   ([ADR-0133](../docs/adr/0133-the-verdict-crosses-on-the-upload-and-the-warning-may-be-wrong.md)).
   `PhotoResponse.review` is an optional code — `allowed` / `flagged`, never a sentence and

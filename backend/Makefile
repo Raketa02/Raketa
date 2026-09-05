@@ -19,6 +19,7 @@ ECS_SERVICE      ?= raketa-service
         gen-walkthroughs gen-cohort \
         build-dev up down logs ps shell migrate seed seed-host \
         rebuild-candidate-index rebuild-candidate-index-host \
+        photo-flag-rate photo-flag-rate-host \
         build-prod ecr-login ecr-push ecs-deploy
 
 help:
@@ -119,6 +120,18 @@ rebuild-candidate-index:  ## rebuild the candidate index from the event log, in 
 
 rebuild-candidate-index-host: ## the same rebuild from the host — needs .env, like seed-host
 	poetry run python -m app.modules.matchmaking.infrastructure.rebuild_cli
+
+## ----- the on-court threshold (#316)
+## Read-only. Every verdict recorded the similarity vector it was taken from, so
+## the flag rate at a candidate line is arithmetic over stored object metadata —
+## no image is re-scored, nothing is written and the sidecar is not asked. The
+## default is a twentieth-interval sweep; `make photo-flag-rate THRESHOLDS="0.55
+## 0.6"` asks about particular lines instead.
+photo-flag-rate:   ## the on-court flag rate at each candidate threshold, from stored notes
+	$(COMPOSE_LOCAL) exec api python -m app.modules.player_profile.infrastructure.flag_rate_cli $(THRESHOLDS)
+
+photo-flag-rate-host: ## the same reading from the host — needs .env, like seed-host
+	poetry run python -m app.modules.player_profile.infrastructure.flag_rate_cli $(THRESHOLDS)
 
 ## ----- production / ECR / ECS
 ## DORMANT — AWS deployment is not in use; development is entirely local
