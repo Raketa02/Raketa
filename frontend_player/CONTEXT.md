@@ -416,6 +416,22 @@ listed here because it is a Play surface rather than a profile one.
   _Best fit_ is withheld precisely when the returned order already is best-fit order, so a row
   drawn from the server's list alone would make _Closest_ a one-way door. _Avoid_: a hardcoded
   row of four, which is three-quarters a lie today; deriving offerability from the rows.
+- **The pin** — the pool's one reordering that is **not** a comparator: somebody with a live yes
+  towards the searcher (`inclusion_reason == INTEREST_LIFT`) sits first **in the served order
+  only**, whatever they scored, and drops into their honest place the moment any chip is tapped.
+  It is **not** the `+12` #231 struck, and the falsifier is the printed number — a bonus is
+  arithmetic on a published figure, changes what _best_ means silently and survives every
+  re-sort, where a pin changes a **position**, prints the number the wire served, names itself
+  on the card it moved, and releases. _Avoid_: calling it a boost or a bonus; adding anything to
+  `fit` on this side.
+- **Best match tag** — the coral tag on the row with the **highest ✦ on screen** — one card or
+  none, the server-first row on a tie. It is keyed to **the ordering in force** rather than to a
+  tapped chip, because _Best fit_ is withheld exactly when the served order already is fit
+  order; it is hidden under _Closest_, _Evenest_ and _Most reliable_; and where it and the
+  **[interest tag](#glossary--design-system-terms)** fall on one card the interest tag replaces
+  it. It is the competitive card's alone, because that is the card with a tag slot beside the
+  handle. _Avoid_: handing it to the runner-up when the top row is taken; reading _Best fit_ as
+  a threshold — it is a **sort**, and it hides nobody.
 - **Pending seat replacement** — **the seat the pool was opened against**, held route-locally
   and discharged by the first add: where that seat is occupied the add is a **replacement**, and
   the screen names whom it replaces before it happens. It **needs no clearing rule**, because
@@ -579,6 +595,12 @@ comment and a commit message all use the same word.
   applied from the second row onward.
 - **Tag vs chip** — a **tag** is a 9.5pt state pill and is **never pressable**; a **chip**
   is a pressable filter pill and the only true pill in the app. A pressable tag is a chip.
+- **Marked card** — the pressable card's third border, and the one that is **not about the
+  control**: pressed (`coral`) and selected (`ink`) are things the reader has done to the card,
+  where **marked** (`voltStroke`, 1pt) is a standing fact about whoever is drawn on it. The
+  press still wins over it, it announces nothing, and it is **never the only cue** — a caller
+  that draws it also draws the word. Today its one caller is the competitive candidate card,
+  bound to the tag being drawn rather than to the code beneath it.
 - **Eyebrow vs form label** — an **eyebrow** labels a region you are _reading_; a **form
   label** labels a control you are about to _operate_. Not interchangeable.
 - **Slot square** — the day / time / hour / range selectors, sharing a four-state

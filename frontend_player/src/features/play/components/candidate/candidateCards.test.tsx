@@ -382,6 +382,37 @@ describe('the volt tag', () => {
   });
 });
 
+/**
+ * The green border, which is the tag's second copy and never its replacement.
+ *
+ * It is bound to **the tag that is drawn** rather than to `inclusionReason` beneath it, so the
+ * one card whose handle says *Wants to play you* is the one card outlined — the two cannot come
+ * apart on a card wearing the coral tag, and Part 13's *never colour alone* is discharged by the
+ * word rather than by the outline ([#310](https://github.com/Raketa02/Raketa/issues/310)).
+ */
+describe('the border on a lifted card', () => {
+  it('is voltStroke where the volt tag is, and volt is nowhere near it', () => {
+    drawCompetitive({ inclusionReason: 'INTEREST_LIFT' });
+
+    expect(surface().borderColor).toBe(theme.color.voltStroke);
+    // The refusal that survived #309: volt itself is 1,25 on surface and would be no border.
+    expect(surface().borderColor).not.toBe(theme.color.volt);
+  });
+
+  it('is the ordinary card border where nobody said yes, coral tag or not', () => {
+    drawCompetitive({}, true);
+
+    expect(surface().borderColor).toBe(theme.color.line);
+  });
+
+  it('is not drawn on the social card, which #309 left alone and says it in a sentence', () => {
+    drawSocial({ inclusionReason: 'INTEREST_LIFT' });
+
+    expect(surface().borderColor).toBe(theme.color.line);
+    expect(screen.getByText('They already said yes to you')).toBeTruthy();
+  });
+});
+
 describe('the photo panel', () => {
   it('prints the level they published, over a pinned scrim', () => {
     // The panel is the card's identity: what this person published, drawn whatever fired. The
@@ -467,15 +498,22 @@ describe('the head-to-head band', () => {
 });
 
 describe('the card’s border', () => {
-  it('is the workhorse line and never an accent, on either kind of row', () => {
-    // The designs draw coral on every competitive card and green on a lifted one. Coral on a
-    // card is 5.1's PRESSED state, and volt as a stroke on paper is 1,25:1 — the 2026-08-31
-    // amendment refused that border in writing and made the signal a tag instead.
+  it('is never coral, which stays 5.1’s pressed state and not a permanent one', () => {
+    // The designs draw coral on every competitive card. That refusal is untouched by #310: a
+    // permanent coral outline is every row under an imaginary finger, and 1.2 is *when
+    // everything is accented, nothing is*. The green one is a different colour and a different
+    // claim — it marks one row, and only where somebody has actually said yes.
     for (const lifted of [{}, { inclusionReason: 'INTEREST_LIFT' as const }]) {
       drawCompetitive(lifted);
-      expect(surface().borderColor).toBe(theme.color.line);
+      expect(surface().borderColor).not.toBe(theme.color.coral);
       screen.unmount();
     }
+  });
+
+  it('is the workhorse line on an ordinary row', () => {
+    drawCompetitive();
+
+    expect(surface().borderColor).toBe(theme.color.line);
   });
 });
 

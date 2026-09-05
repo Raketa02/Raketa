@@ -41,25 +41,33 @@
  * that rule is about the two registers rather than about the pixel count: the fact is **said
  * once**, in `levelRow`, and the reason line for it is filtered off exactly as before.
  *
- * ## The border the designs draw is refused, and this is where the answer is recorded
+ * ## Two borders were asked for. One is drawn, and the other is still refused
  *
  * The designs put a **coral** border on every competitive card and a **green** one on *wants
- * to play you*. Neither is drawn, and neither refusal is new:
+ * to play you*. They are not one question, and they did not get the same answer:
  *
- * - **Coral, on every card.** [5.1](../../../../../docs/design-system.md#51-card--the-workhorse)
- *   already spends a coral border on a card: it is the **pressed** state. A permanent one is
- *   every row in a scrolling list drawn as though a finger were on it, and
+ * - **Coral, on every card — still refused.**
+ *   [5.1](../../../../../docs/design-system.md#51-card--the-workhorse) already spends a coral
+ *   border on a card: it is the **pressed** state. A permanent one is every row in a scrolling
+ *   list drawn as though a finger were on it, and
  *   [1.2](../../../../../docs/design-system.md#12-one-accent-used-sparingly) is *when everything
  *   is accented, nothing is*. `CourtEntryCard` refused the same 2pt coral outline for the same
  *   reason one screen earlier.
- * - **Green, on the lifted card.** Volt is *a fill anywhere and a stroke only on dark* — it is
- *   **1,25:1** on `surface` and **1,12:1** on `paper`, so a volt card border is a line nobody
- *   sees. The 2026-08-31 amendment settled this exact question in writing, naming *"a 2pt
- *   border on the interest card"* among the strokes it refused, refusing a darker `voltLine`
- *   companion (*"that is no longer volt"*), and refusing to move the signal to coral (*"coral
- *   is the action colour, and they want you is a fact about somebody else"*). Its conclusion is
- *   this card's: *"the card's emphasis becoming a tag is what Part 13 prefers anyway — a border
- *   carries no word and this signal has one."* The tag is the word.
+ * - **Green, on the lifted card — drawn**, in `voltStroke`
+ *   ([#310](https://github.com/Raketa02/Raketa/issues/310)). #309 refused it and asked for a
+ *   ratify or an overrule; the ordering ticket restates it twice — *"the yellow-green tag and
+ *   the green border travel with the card wherever it lands"* — and that is the overrule. What
+ *   survives from the refusal is its arithmetic, which was never about whether the border was
+ *   wanted: **volt** is 1,25:1 on `surface` and 1,12:1 on `paper`, so a border drawn in it is a
+ *   line nobody sees, and the 2026-08-31 amendment refused *"a 2pt border on the interest
+ *   card"* on exactly that. So the stroke is volt's **second value** rather than volt — the
+ *   relationship `coralInk` has to `coral` — at 4,01 on `surface`, 3,58 on `paper` and 3,07
+ *   against the `line` border it replaces, all derived in `Tag.test.tsx`.
+ *
+ * **Part 13 is discharged by the tag and never by the border.** *"A border carries no word and
+ * this signal has one"* was the 2026-08-31 conclusion and it is still true — which is why the
+ * outline is bound to `tag?.variant === 'volt'` rather than to `inclusionReason`: the border is
+ * the second copy of a cue that is already a word, and it cannot appear where the word does not.
  *
  * ## Three accessibility elements, and the third is the one that became visible
  *
@@ -143,7 +151,17 @@ export function CandidateCard({
   const tag = candidateTag({ inclusionReason: candidate.inclusionReason, bestMatch });
 
   return (
-    <PressableCard style={s.card} onPress={onWhyFit} accessibilityLabel={facts.label}>
+    /* The border is bound to the **tag it accompanies** rather than to the code beneath it, so
+       the two cannot drift: the green outline appears on exactly the card whose handle says
+       *Wants to play you*, and it travels with that tag through every re-sort because both are
+       read off this one candidate. Part 13 is satisfied by the tag, not by the border — the
+       colour is never the cue, it is the second copy of a cue that is already a word. */
+    <PressableCard
+      style={s.card}
+      marked={tag?.variant === 'volt'}
+      onPress={onWhyFit}
+      accessibilityLabel={facts.label}
+    >
       <View style={s.body}>
         <PhotoPanel
           playerId={candidate.playerId}

@@ -13,6 +13,10 @@
  *   back to the returned order survives leaving it.
  * - **The Best-fit comparator adds no `+12`.** The lift is an admission the engine already
  *   made, and re-applying it would score the wire's own ranking twice.
+ * - **The pin is not that `+12`**: somebody who already said yes sits first in the served order
+ *   with the number they were served, and drops into their honest place on any re-sort.
+ * - **One coral *best match* tag, on the highest number, and only where the order is about the
+ *   number at all.**
  * - **The header prints the balance word beneath the tinted number**, with the assumption as
  *   the sentence and no second badge.
  * - **The re-read happens here**, writes the whole record back, and is what makes a withheld
@@ -626,6 +630,117 @@ describe('the sort row', () => {
       .map((control) => control.props.accessibilityLabel as string);
 
     expect(order).toEqual([addLabel(B), addLabel(D), addLabel(C)]);
+  });
+});
+
+/**
+ * **The pin and the tag** — [#310](https://github.com/Raketa02/Raketa/issues/310)'s three rules,
+ * walked on a competitive pool because that is the card the two tags are drawn on.
+ *
+ * The fixture is the one that separates a pin from the `+12` above it: the lifted row is
+ * **eight points behind** the top of the list, so the served order draws it first with a 71
+ * printed beside it, and every chip drops it back to where 71 belongs.
+ */
+describe('the pin and the best match', () => {
+  /** C already said yes and scores least; B has the highest number and D sits between them. */
+  function servedWithALift(over: Partial<Wire['SearchEnvelope']> = {}) {
+    const rows: Wire['ShortlistResponse'] = {
+      search: envelope(SEARCH_ID, { mode: 'COMPETITIVE', ...over }),
+      candidates: [
+        card(B, { fit: 79, distance_km: 9 }),
+        card(D, { fit: 74, distance_km: 5 }),
+        card(C, { fit: 71, distance_km: 2, inclusion_reason: 'INTEREST_LIFT' }),
+      ],
+    };
+    transport.on('POST', SEARCHES, () => json(rows));
+    transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () => json(rows));
+  }
+
+  const drawnOrder = () =>
+    screen
+      .getAllByLabelText(/^Add .* to the court$/)
+      .map((control) => control.props.accessibilityLabel as string);
+
+  it('lifts somebody who already said yes above two higher numbers, and prints their own', async () => {
+    servedWithALift();
+    await openThePool();
+    await screen.findByLabelText(addLabel(B));
+
+    expect(drawnOrder()).toEqual([addLabel(C), addLabel(B), addLabel(D)]);
+    // The whole of *a pin is not a bonus*: the row moved and the figure did not — 71 is what
+    // the wire served and 71 is what the pill prints, on the row now sitting first.
+    expect(screen.getByText('71')).toBeTruthy();
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
+  });
+
+  it('drops them into their honest place on a re-sort, with the tag still on them', async () => {
+    servedWithALift();
+    await openThePool();
+    fireEvent.press(await screen.findByLabelText(sortLabel('CLOSEST')));
+
+    expect(drawnOrder()).toEqual([addLabel(C), addLabel(D), addLabel(B)]);
+
+    fireEvent.press(screen.getByLabelText(sortLabel('BEST_FIT')));
+
+    expect(drawnOrder()).toEqual([addLabel(B), addLabel(D), addLabel(C)]);
+    // The tag travels with the card wherever it lands — it is a fact about the person.
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
+  });
+
+  it('puts one coral tag on the highest number in the order the rows arrived in', async () => {
+    servedWithALift();
+    await openThePool();
+    await screen.findByLabelText(addLabel(B));
+
+    // Exactly one, and on B — who is second on screen, because the pin moved a lower row above
+    // them and the tag is about the number rather than about the position.
+    expect(screen.getAllByText('Best match')).toHaveLength(1);
+  });
+
+  it('hides it under the orderings that are not about the number', async () => {
+    servedWithALift();
+    await openThePool();
+    fireEvent.press(await screen.findByLabelText(sortLabel('CLOSEST')));
+
+    expect(screen.queryByText('Best match')).toBeNull();
+
+    fireEvent.press(screen.getByLabelText(sortLabel('BEST_FIT')));
+
+    expect(screen.getAllByText('Best match')).toHaveLength(1);
+  });
+
+  /**
+   * The wrinkle: `BEST_FIT` is withheld exactly when the returned order already **is** fit
+   * order, so a tag keyed to a tapped chip would never show on most searches. Here the server
+   * offers nothing at all and the tag is still drawn.
+   */
+  it('is drawn on a search whose sort row could never offer best fit', async () => {
+    servedWithALift({ sorts_available: [] });
+    await openThePool();
+    await screen.findByLabelText(addLabel(B));
+
+    expect(screen.queryByLabelText(sortLabel('BEST_FIT'))).toBeNull();
+    expect(screen.getAllByText('Best match')).toHaveLength(1);
+  });
+
+  it('gives a row that would carry both tags only the green one', async () => {
+    const rows: Wire['ShortlistResponse'] = {
+      search: envelope(SEARCH_ID, { mode: 'COMPETITIVE' }),
+      candidates: [
+        card(B, { fit: 88, inclusion_reason: 'INTEREST_LIFT' }),
+        card(D, { fit: 74 }),
+        card(C, { fit: 71 }),
+      ],
+    };
+    transport.on('POST', SEARCHES, () => json(rows));
+    transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () => json(rows));
+
+    await openThePool();
+    await screen.findByLabelText(addLabel(B));
+
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
+    // Not moved to the runner-up: the coral tag names the best match or nobody.
+    expect(screen.queryByText('Best match')).toBeNull();
   });
 });
 

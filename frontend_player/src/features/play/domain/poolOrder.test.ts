@@ -9,7 +9,7 @@
 
 import type { Candidate } from './candidate';
 
-import { orderPool, poolSortRow } from './poolOrder';
+import { bestMatchId, orderPool, poolSortRow } from './poolOrder';
 
 function row(playerId: string, fit: number, distanceKm?: number, playerScore?: number): Candidate {
   return {
@@ -148,5 +148,124 @@ describe('the sort row', () => {
 
   it('adds nothing where the server offered the way back itself', () => {
     expect(poolSortRow(['BEST_FIT', 'CLOSEST'], 'CLOSEST')).toEqual(['BEST_FIT', 'CLOSEST']);
+  });
+});
+
+/**
+ * **The pin** — the one reordering this client does that is not a comparator.
+ *
+ * It is bound to the served order, so every assertion here is paired: what the default draws,
+ * and what the same rows draw the moment a chip is tapped.
+ */
+describe('the pin', () => {
+  const lifted = (playerId: string, fit: number, distanceKm?: number): Candidate => ({
+    ...row(playerId, fit, distanceKm),
+    inclusionReason: 'INTEREST_LIFT',
+  });
+
+  it('leaves the served order exactly as it is when nobody was lifted', () => {
+    const rows = [row('a', 61, 9), row('b', 88, 2), row('c', 74, 5)];
+
+    expect(ids(orderPool(rows, undefined))).toEqual(['a', 'b', 'c']);
+  });
+
+  it('lifts somebody who already said yes to the top, whatever they scored', () => {
+    const rows = [row('a', 88, 9), lifted('b', 41, 2), row('c', 74, 5)];
+
+    expect(ids(orderPool(rows, undefined))).toEqual(['b', 'a', 'c']);
+  });
+
+  it('keeps two pinned rows in the order the engine served them', () => {
+    const rows = [row('a', 88), lifted('b', 41), row('c', 74), lifted('d', 55)];
+
+    expect(ids(orderPool(rows, undefined))).toEqual(['b', 'd', 'a', 'c']);
+  });
+
+  it('releases the moment the player asks for a different order', () => {
+    const rows = [row('a', 88, 9), lifted('b', 41, 2), row('c', 74, 5)];
+
+    // Their honest place under each of the three: the number, the kilometres, and the record.
+    expect(ids(orderPool(rows, 'BEST_FIT'))).toEqual(['a', 'c', 'b']);
+    expect(ids(orderPool(rows, 'CLOSEST'))).toEqual(['b', 'c', 'a']);
+    expect(ids(orderPool(rows, 'MOST_RELIABLE'))).toEqual(['a', 'b', 'c']);
+  });
+
+  it('releases even where the sort this build performs reorders nothing', () => {
+    // `EVENEST` has a word and no ordering, and a `MOST_RELIABLE` over rows with no readings
+    // separates nobody. Either way the player has **left** the served order, and the pin is a
+    // property of that order rather than of whether the comparator moved anything.
+    const rows = [row('a', 88, 9), lifted('b', 41, 2), row('c', 74, 5)];
+
+    expect(ids(orderPool(rows, 'EVENEST'))).toEqual(['a', 'b', 'c']);
+  });
+
+  it('does not touch the printed number, which is the whole of why it is not a bonus', () => {
+    const rows = [row('a', 88), lifted('b', 41)];
+
+    expect(orderPool(rows, undefined).map((one) => one.fit)).toEqual([41, 88]);
+  });
+});
+
+/**
+ * **The coral tag** — which row wears it, and on which orderings it exists at all.
+ *
+ * The input is the rows in the order the **server** served them, which is what makes *the row
+ * the server served first* a tie-break this function can state rather than a property of
+ * whatever array a screen happened to draw.
+ */
+describe('the best match', () => {
+  it('is the highest number in the order the rows arrived in', () => {
+    const rows = [row('a', 61), row('b', 88), row('c', 74)];
+
+    expect(bestMatchId(rows, undefined)).toBe('b');
+  });
+
+  it('is the first row under best fit, which is the same row', () => {
+    const rows = [row('a', 61), row('b', 88), row('c', 74)];
+
+    expect(bestMatchId(rows, 'BEST_FIT')).toBe('b');
+  });
+
+  it('goes to the row the server served first when two share the highest number', () => {
+    const rows = [row('a', 74), row('b', 88), row('c', 88)];
+
+    expect(bestMatchId(rows, undefined)).toBe('b');
+  });
+
+  it('exists on nobody under the three orderings that are not about the number', () => {
+    const rows = [row('a', 61), row('b', 88), row('c', 74)];
+
+    for (const sort of ['CLOSEST', 'EVENEST', 'MOST_RELIABLE'] as const) {
+      expect(bestMatchId(rows, sort)).toBeUndefined();
+    }
+  });
+
+  it('is nobody on an empty list', () => {
+    expect(bestMatchId([], undefined)).toBeUndefined();
+  });
+
+  /**
+   * The tag keys off **the ordering in force**, never off whether a chip was tapped — and this
+   * is the state that would catch the other reading: `BEST_FIT` is withheld from
+   * `sorts_available` precisely when the served order already is fit order, so on most searches
+   * there is no chip to have tapped.
+   */
+  it('is drawn on a search whose sort row could never offer best fit', () => {
+    const rows = [row('a', 88), row('b', 74), row('c', 61)];
+
+    expect(poolSortRow([], undefined)).toEqual([]);
+    expect(bestMatchId(rows, undefined)).toBe('a');
+  });
+
+  /**
+   * `candidateTag` resolves the collision — the volt tag replaces the coral one on the card
+   * they share, *"because it's the stronger fact"*. What this rule must not do is hand the
+   * coral tag to the **second** best row, which would be the card saying *best match* about a
+   * row that is not one.
+   */
+  it('still names the highest row when that row is the pinned one', () => {
+    const rows = [row('a', 61), { ...row('b', 88), inclusionReason: 'INTEREST_LIFT' as const }];
+
+    expect(bestMatchId(rows, undefined)).toBe('b');
   });
 });

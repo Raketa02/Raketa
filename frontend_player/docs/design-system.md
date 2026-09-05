@@ -169,25 +169,26 @@ There is no frame, no stage, no scenario rail — see [Part 0](#part-0--reading-
 Each semantic colour ships as a **triplet**: the colour, a soft background, and an ink
 variant for text on that soft — plus a `line` companion for the soft's border.
 
-| Token       | Value     | Used for                                                                                                   |
-| ----------- | --------- | ---------------------------------------------------------------------------------------------------------- |
-| `coral`     | `#E8482B` | The single accent. A **mark**, not a text bed                                                              |
-| `coralSoft` | `#FDEBE6` | Backgrounds behind coral messaging                                                                         |
-| `coralInk`  | `#B8351C` | Text on `coralSoft`; **and the fill wherever white text sits on coral**                                    |
-| `coralLine` | `#F3CFC5` | Border of a coral note                                                                                     |
-| `mint`      | `#0C8F6B` | Good, settled, covered. A **mark**                                                                         |
-| `mintSoft`  | `#E2F3EC` | Free time slots, ok tags                                                                                   |
-| `mintInk`   | `#0A7355` | Text on `mintSoft`; the fill wherever white text sits on mint                                              |
-| `mintLine`  | `#CFE7DD` | Border of a mint note                                                                                      |
-| `amber`     | `#8A5E09` | Caution, reversible                                                                                        |
-| `amberSoft` | `#FBF0DA` | Caution backgrounds                                                                                        |
-| `amberLine` | `#EFDCB8` | Border of an amber note                                                                                    |
-| `red`       | `#B4392C` | Failure                                                                                                    |
-| `redSoft`   | `#FBEAE7` | Failure backgrounds                                                                                        |
-| `volt`      | `#D9F24B` | **A fill anywhere, a stroke only on dark.** Confidence ring, active info mark, the interest tag and button |
-| `info`      | `#12495B` | Explanatory notes                                                                                          |
-| `infoSoft`  | `#EAF1F4` | Explanatory backgrounds                                                                                    |
-| `infoLine`  | `#C7DBE3` | Explanatory borders                                                                                        |
+| Token        | Value     | Used for                                                                                                    |
+| ------------ | --------- | ----------------------------------------------------------------------------------------------------------- |
+| `coral`      | `#E8482B` | The single accent. A **mark**, not a text bed                                                               |
+| `coralSoft`  | `#FDEBE6` | Backgrounds behind coral messaging                                                                          |
+| `coralInk`   | `#B8351C` | Text on `coralSoft`; **and the fill wherever white text sits on coral**                                     |
+| `coralLine`  | `#F3CFC5` | Border of a coral note                                                                                      |
+| `mint`       | `#0C8F6B` | Good, settled, covered. A **mark**                                                                          |
+| `mintSoft`   | `#E2F3EC` | Free time slots, ok tags                                                                                    |
+| `mintInk`    | `#0A7355` | Text on `mintSoft`; the fill wherever white text sits on mint                                               |
+| `mintLine`   | `#CFE7DD` | Border of a mint note                                                                                       |
+| `amber`      | `#8A5E09` | Caution, reversible                                                                                         |
+| `amberSoft`  | `#FBF0DA` | Caution backgrounds                                                                                         |
+| `amberLine`  | `#EFDCB8` | Border of an amber note                                                                                     |
+| `red`        | `#B4392C` | Failure                                                                                                     |
+| `redSoft`    | `#FBEAE7` | Failure backgrounds                                                                                         |
+| `volt`       | `#D9F24B` | **A fill anywhere, a stroke only on dark.** Confidence ring, active info mark, the interest tag and button  |
+| `voltStroke` | `#698A0F` | **Volt's meaning at a stroke's ratio.** The border of a card somebody has said yes to, and never a text bed |
+| `info`       | `#12495B` | Explanatory notes                                                                                           |
+| `infoSoft`   | `#EAF1F4` | Explanatory backgrounds                                                                                     |
+| `infoLine`   | `#C7DBE3` | Explanatory borders                                                                                         |
 
 **Volt is a fill anywhere and a stroke only on dark.** The two uses are not the same
 problem. As a **foreground** on paper volt is ~1.3:1 — a volt hairline, ring or border on
@@ -201,6 +202,21 @@ so a volt tag or button reads on any surface in the app. On `night`, volt as a f
 paper becomes a volt **tag** instead: a border carries no word, and a signal that has one
 should say it ([Part 13](#part-13--accessibility) — never colour alone). An in-progress
 state on paper is `coral`, like every other one, and not a volt ring.
+
+**Where volt's _meaning_ genuinely needs a stroke on paper, that is `voltStroke` — never volt
+with a border width on it.** The relationship is `coralInk`'s to `coral`: one meaning, a second
+value, because the base colour cannot carry the role. It is **not** `voltLine`, which is what
+the 2026-08-31 amendment called the companion it refused: in this palette a `*Line` is _the
+soft's border_, and volt is the one semantic with no soft at all
+([6.4](#64-tag--the-status-pill)) — so the `Line` suffix would have promised a token this
+colour is not. `#698A0F` is 7° off volt, so it reads as
+the same green, and 37° off `amber`, which is the only other dark warm value it could be taken
+for; as a stroke it is **4.01** on `surface`, **3.58** on `paper` and **3.07** against the
+`line` border it replaces — the third being what makes a marked card look marked rather than
+merely legible. It is **never a text bed** (white on it is 4.01, `ink` on it 4.37), which is
+what keeps the word on the volt fill beside it: the border is always the _second_ copy of a cue
+that is already a tag. The one place it is drawn is [5.1](#51-card--the-workhorse)'s marked
+card. Derived in [`Tag.test.tsx`](../src/shared/ui/Tag.test.tsx).
 
 ### Rule C — text on a saturated fill
 
@@ -299,6 +315,9 @@ for text**, and the audit did not catch it.
 | **ink on coral**                                          | **4.50**  | AA — the only dark-on-coral pairing |
 | coral on paper (marks: level mark, progress fill)         | 3.48      | ≥3:1, meets **1.4.11**              |
 | mint on surface (mint-bordered fills)                     | 4.07      | ≥3:1, meets **1.4.11**              |
+| voltStroke on surface (the marked card's border)          | 4.01      | ≥3:1, meets **1.4.11**              |
+| voltStroke on paper                                       | 3.58      | ≥3:1, meets **1.4.11**              |
+| voltStroke on `line` (the border it replaces)             | 3.07      | ≥3:1, meets **1.4.11**              |
 | `ink` on a poster hue's dark stop                         | 3.09–3.12 | ≥3:1, meets **1.4.11**              |
 
 Deliberately absent: _white on coral_ (3.89) and _white on mint_ (4.07) — see Rule C.
@@ -649,6 +668,25 @@ marginBottom 9
 ```
 
 **Pressable variant:** pressed → `borderColor: coral`. No lift, no shadow, no scale.
+Selected → `borderColor: ink`.
+
+**Marked → `borderColor: voltStroke`, and it is the one border of the three that is not about the
+control.** Pressed and selected are things the reader has done to the card; a **marked** card
+carries a standing fact about whoever is drawn on it — today, the one row on the pool whose
+handle says _Wants to play you_ ([#310](https://github.com/Raketa02/Raketa/issues/310)). Three
+rules come with it:
+
+- **It stays 1pt.** The designs draw 2. A border is drawn _inside_ the box in React Native, so
+  a second point moves every child of the card by one — a re-layout that only the marked rows in
+  a list would take. At **3.07** against the `line` it replaces, one point is legible.
+- **The press still wins.** A finger on a marked card must read as a press, or the one border
+  the reader can act on is the one they cannot see.
+- **It announces nothing, and it is never the only cue.** `accessibilityState` says what a
+  _control_ is and this is not one of those; the fact is carried by the tag beside the handle,
+  and the border is its second copy ([Part 13](#part-13--accessibility) — never colour alone).
+
+**A card's border is never an accent.** Coral on every card is refused —
+[1.2](#12-one-accent-used-sparingly), and coral on a card already means _pressed_.
 
 ## 5.2 Dark card
 
@@ -843,6 +881,13 @@ It carries Play's _they want you_ signal, and it is **why that signal is a tag a
 interest card, and concluded that _"the card's emphasis becoming a tag is what
 [Part 13](#part-13--accessibility) prefers anyway — a border carries no word and this signal
 has one."_
+
+The card **also** takes a border now ([5.1](#51-card--the-workhorse)'s marked state,
+[#310](https://github.com/Raketa02/Raketa/issues/310)), and that sentence is what fixes the
+order of the two: the tag carries the word, the border is its second copy, and the border is
+bound to _the tag being drawn_ rather than to the code beneath it. So the outline can never
+appear on a card whose handle says something else — including the card wearing the coral **best
+match** tag, which the volt one replaces.
 
 Optional 6pt square dot for a sport colour. A long state tag **truncates with an ellipsis
 rather than breaking the row** (`numberOfLines={1}`).
@@ -2692,6 +2737,8 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-09-05 | [2.5](#25-contrast--computed)                                                                         | Two grounds nobody picked a colour for — the court's four composites and the poster's two stops — each closed by a bound of its own                                                                             | A **third**, and the one that cannot be enumerated at all: the competitive card's photo panel prints a Level and a Sport over a player's own photograph. `photoScrim` is pinned at `.70` and the unknowable set collapses to its **worst case** — pure white — at **5.24:1**                                                                                                                                                                      | [#309](https://github.com/Raketa02/Raketa/issues/309) put text over a photograph, which is a contrast problem this system had never had: every other pair in 2.5 is a fixed pair, and even the court's ground is at least _generated_. Pinning is the instrument that already worked twice, and it works harder here — a worst case is one row rather than four. The floor is derived as well as the pin (`.65` gives 4.51, a figure with nothing left in it), so lightening the scrim goes red instead of going unnoticed. A gradient was refused for the reason the unpinned court ground was: it would put the label somewhere on a ramp and hand back the unbounded set                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-09-05 | [6.4](#64-tag--the-status-pill)                                                                       | Six variants, all of them a `Soft` background under an `Ink` label                                                                                                                                              | A seventh, `volt` — background `volt`, label `ink`, the one variant whose background is a base colour                                                                                                                                                                                                                                                                                                                                             | The 2026-08-31 amendment ended with _the card's emphasis becoming a tag_, and named no tag. This is it. Volt has no soft and needs none: `ink` on volt is 13.96:1 and 2.5 has listed it as AAA since the document was locked, so the pair is computed rather than eyeballed — and a `voltSoft` invented to give this tag the shape of the other six is what [15.2](#152-adding-a-colour) forbids                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-09-05 | [5.1](#51-card--the-workhorse) · [1.2](#12-one-accent-used-sparingly)                                 | —                                                                                                                                                                                                               | **A card's border is never an accent.** The designs' coral border on every competitive card and green border on a lifted one are both refused, and the refusals are recorded rather than re-argued                                                                                                                                                                                                                                                | Coral on a card is 5.1's **pressed** state, so a permanent one is every row in a scrolling list drawn as though a finger were on it — and 1.2 is _when everything is accented, nothing is_. The green one is volt, which is **1,25:1** on `surface` and **1,12:1** on `paper`: the 2026-08-31 amendment already refused a 2pt border on the interest card by name, refused a darker `voltLine` companion (_that is no longer volt_), and refused moving the signal to coral. `CourtEntryCard` had refused the same coral outline one screen earlier. What carries the fact is the tag, which carries a word                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-09-05 | [2.2](#22-accent-and-semantics) · [2.5](#25-contrast--computed)                                       | _"A `voltLine` companion dark enough to read on paper was refused — that is no longer volt"_ (2026-08-31)                                                                                                       | **`voltStroke` `#698A0F`** — volt's meaning at a stroke's ratio, with three computed rows in 2.5: 4.01 on `surface`, 3.58 on `paper`, 3.07 on the `line` it replaces                                                                                                                                                                                                                                                                              | [#310](https://github.com/Raketa02/Raketa/issues/310)'s designs ask twice for the green border on the lifted card — _"the yellow-green tag and the green border travel with the card wherever it lands"_ — and [#309](https://github.com/Raketa02/Raketa/issues/309) shipped the refusal while explicitly asking for a ratify or an overrule. This is the overrule, and it takes only the half the arithmetic did not settle. **Volt itself still cannot be a stroke on paper** (1.25 and 1.12), so what is drawn is a second value rather than volt with a width on it — exactly the relationship `coralInk` has to `coral`, which [15.2](#152-adding-a-colour) already licenses for a role the base colour cannot carry. It is **not** named `voltLine`, which is what that amendment called the thing it refused and what a reader of `coralLine` / `mintLine` / `amberLine` / `infoLine` would take it for — a `*Line` here is the **soft's** border, and volt is the one semantic with no soft. _That is no longer volt_ is answered by the hue: **7°** off volt is the same green, and **37°** off `amber` is the only confusion available in this palette. The figure that decides whether the mark reads is the one nobody had computed — **3.07 against `line`**, the border it replaces, which is why 1pt is enough and the designs' 2pt is not taken                                                                                                                                                                                                                                                                          |
+| 2026-09-05 | [5.1](#51-card--the-workhorse) · [6.4](#64-tag--the-status-pill)                                      | _"A card's border is never an accent"_, refusing both the coral border and the green one (2026-09-05, the row above)                                                                                            | **A third card state: `marked`**, `borderColor: voltStroke` at 1pt, ordered under the press state and announcing nothing. The coral refusal is untouched                                                                                                                                                                                                                                                                                          | The two borders were refused in one row and they are not one question. **Coral stands refused**: it is 5.1's own pressed state, so a permanent one is every row in a list under an imaginary finger. **Green is drawn**, because the objection to it was contrast and a second value answers contrast. What the amendment keeps from the refusal is its ordering: _a border carries no word and this signal has one_, so the tag carries the fact and the border is bound to **the tag being drawn** rather than to `inclusion_reason` — it cannot appear on a card whose handle says something else, and [Part 13](#part-13--accessibility)'s _never colour alone_ is discharged by the word in both directions. It stays **1pt** because a border is drawn inside the box in React Native: a second point re-lays-out only the marked rows in a list                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 # Part 17 — What the reset removed
 

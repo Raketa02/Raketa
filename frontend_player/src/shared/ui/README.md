@@ -52,7 +52,10 @@ design-system doc, in the same commit.
 - **Rule C:** white text never sits on `coral` or `mint` — it needs `coralInk` or
   `mintInk`. `ink` is the only dark permitted on `coral`.
 - `volt` is a fill anywhere and a stroke only on dark — on paper it is ~1.3:1 as a
-  foreground and 13.96:1 as a bed for `ink`.
+  foreground and 13.96:1 as a bed for `ink`. A stroke on paper that **means** volt is
+  `voltStroke`, which is `coralInk`'s relationship to `coral`: one meaning, a second value,
+  because the base colour cannot carry the role. It is not a `*Line`, which in this palette is
+  a soft's border, and volt has no soft.
 - **Cards never cast a shadow.** Five shadows exist; all are for things that float, and
   the deck card is one of them because it is not a card. The fifth, the ⚡Play disc's, is
   the only one that is a colour rather than a dimming — and only on iOS.

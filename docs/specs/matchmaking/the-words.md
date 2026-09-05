@@ -472,6 +472,22 @@ play you` as a volt tag beside the handle**, bound to `INTEREST_LIFT` and worded
 new field, and the twin's own sentence can still only reach a card as the reason fallback —
 which the competitive card never takes (§5).
 
+**The tag has a coral sibling, and the volt one replaces it**
+([#310](https://github.com/Raketa02/Raketa/issues/310)). *Best match* is the client's own two
+words for *the highest ✦ on this screen* — no code, because it is a fact about a **list** rather
+than about a person, and which row wears it is
+[`the-play-screens.md`](the-play-screens.md) §4.1's rule. It is *Best match* and not *Best fit*:
+the sort chip beside it reads *Best fit*, and one screen saying the same two words for an
+ordering and for a row would have a reader hunting for the connection. Where both would fall on
+one card, the volt one wins, *because it's the stronger fact* — so a card that draws the coral
+tag is one no admitting code fired on.
+
+**The volt tag also carries a border, and the order of the two is the rule.** The lifted card
+takes a green outline in `voltStroke`, bound to *the tag being drawn* rather than to
+`inclusion_reason`: the tag is the word, the border is its second copy, and colour is never the
+cue. That is `design-system.md` 5.1's **marked** card state, and it is the client's drawing —
+nothing about it crosses the wire.
+
 | `LivenessReason` | |
 | --- | --- |
 | `INTEREST_RECEIVED` | `Wants to play you` |

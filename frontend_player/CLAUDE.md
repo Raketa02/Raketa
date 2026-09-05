@@ -272,9 +272,12 @@ takes its liveness twin's two words because the two codes are one tag. **The pan
 Level twice on purpose** — hugely over the photograph and again on the right of the band — and
 what makes that legible is the system's second pinned scrim: a photograph is a ground nobody
 chose, so `photoScrim` collapses it to its worst case, pure white, at a ratio `textOnMedia.test.ts`
-derives. **The card draws no accent border**: coral on a card is 5.1's pressed state and volt as
-a stroke on paper is 1,25:1, so the tag carries the fact and the arithmetic for both refusals is
-in `Tag.test.tsx`.
+derives. **The card's border is coral never and green once**: a coral outline on every card is
+5.1's pressed state made permanent and stays refused, while the lifted card takes 5.1's new
+**marked** state in `voltStroke` — volt's meaning at a stroke's ratio, because volt itself is
+1,25:1 on `surface` and would be no border at all. It is bound to **the tag being drawn** rather
+than to `inclusion_reason`, so the outline can never appear on a handle saying something else,
+and Part 13 is discharged by the word either way. Every ratio is derived in `Tag.test.tsx`.
 
 **The court is one drawn object and two feature components.** `Court` (7.12) takes a Sport and
 a box, draws the ground, the chrome and the seat **positions**, and **takes children in seat
@@ -522,7 +525,27 @@ order already _is_ best-fit order, so a row drawn from `sorts_available` alone w
 _Closest_ a one-way door. **The comparator adds no `+12`** — the interest lift is an admission
 the engine already made, and re-applying it client-side would score the wire's own ranking a
 second time. The seat-impact line and the _Evenest_ chip are out of scope with it: both read
-`would_be_forecast`, which nothing in the backend has ever written.
+`would_be_forecast`, which nothing in the backend has ever written. **_Best fit_ is a sort and
+never a filter**: it hides nobody below 90, and that is written down because a coral pill at ✦ ≥
+90 is a threshold somebody eventually applies to the list.
+
+**Two things reorder or mark the list without touching a number, and a pin is not the `+12`.**
+Somebody with a live yes towards the searcher is **pinned to the top of the served order**,
+whatever they scored — and drops into their honest place the moment any chip is tapped, tag and
+green border travelling with them. That is the distinction `poolOrder`'s module note exists to
+keep: a bonus is arithmetic on a published figure, changes what _best_ means silently and
+survives every re-sort; a pin changes a **position**, prints the number it was served, says why
+on the card it moved, and releases. Beside it, the coral **best match** tag goes on the highest
+✦ on screen — one card or none — and it is keyed to **the ordering in force** rather than to a
+tapped chip, because `BEST_FIT` is withheld exactly when the served order already is fit order
+and most searches therefore have no chip to have tapped. It is hidden under the three orderings
+that are about something other than the number, and where both tags fall on one card the green
+one wins, which is `candidateTag`'s rule and not the ordering's. **A for-fun pool draws no _best
+match_** — the tag sits in the competitive card's identity row and the social card has no slot
+beside the handle for one — and those rows are still pinned and still explained. The pin releases
+under _Best fit_ as well as the other three, which is the ticket's _default order **only**_
+followed to its cost: the chip the row adds back as **the way back** returns fit order without
+the pin, and the alternative is a pin that survives a sort, which is what makes a bonus a bonus.
 
 **The pool is where the running forecast is read, and where `provisional` is a sentence.** The
 word under the tinted number is §B9's **balance** word, because Part 13 forbids colour alone

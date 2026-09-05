@@ -91,6 +91,10 @@
  * an **admission** rather than a bonus — so re-applying it here would score the wire's own
  * ranking a second time. `poolOrder` sorts on the printed number and nothing else.
  *
+ * **The pin is not that.** `poolOrder`'s module note is where the difference is argued and this
+ * is the pointer to it, because a reader arriving on the trail of #231 arrives here first
+ * ([#310](https://github.com/Raketa02/Raketa/issues/310)).
+ *
  * **The cell a times rung adds — which is recorded here and drawn nowhere near here.** #223 §8
  * requires that the offered slot **visibly ticks**, marked as this-search-only, because
  * otherwise the week the player just filled in disagrees with the search that ran. There is no
@@ -123,7 +127,7 @@ import { Button, Chip, Note, behindOverlay, courtSeatCount, theme } from '@/shar
 import type { Candidate, RelaxedAsk, RungOffer } from '../domain/candidate';
 import { arrangementFor, seatOccupant, seatingToDraw } from '../domain/forecast';
 import { poolLadder } from '../domain/poolLadder';
-import { orderPool, pickable, poolSortRow } from '../domain/poolOrder';
+import { bestMatchId, orderPool, pickable, poolSortRow } from '../domain/poolOrder';
 import { alreadyAsked } from '../domain/raisedPrompt';
 import type { SortOption } from '../domain/vocabulary';
 import { sentWeekForOrigin } from '../domain/workingWeek';
@@ -255,7 +259,15 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
    */
   const replacing = seatOccupant(seated, pending);
 
-  const drawn = orderPool(pickable(record?.candidates ?? [], members), sort);
+  // Two readings of the same rows, and the **served** order is the input to both: `orderPool`
+  // pins off it, and `bestMatchId`'s tie-break is *the row the server served first*, which is
+  // a statement about that order rather than about whichever array ends up drawn.
+  const offered = pickable(record?.candidates ?? [], members);
+  const drawn = orderPool(offered, sort);
+  // Answered for every pool and drawn on the competitive one, because the coral tag lives in the
+  // competitive card's identity row and the social card has no slot beside the handle for one
+  // (#309). A for-fun pool is pinned and explained and simply carries no *best match*.
+  const bestMatch = bestMatchId(offered, sort);
 
   /**
    * The rows the header reads its names and faces off, and your own id for your own poster.
@@ -524,6 +536,9 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
                        rather than the card's — one value for the whole list, and #309 refuses
                        to put twenty copies of it on `player_card`. */
                     sportName={sportName}
+                    /* Which row wears the coral tag is the ordering rule's answer and never a
+                       card's: a component handed one candidate cannot know it is the highest. */
+                    bestMatch={candidate.playerId === bestMatch}
                     action="ADD_TO_COURT"
                     onAction={() => add(candidate)}
                     onWhyFit={() => setExplaining(candidate)}

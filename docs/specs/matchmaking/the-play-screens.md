@@ -252,6 +252,51 @@ absent and sorts last — which is `distance_km`'s rule, for `distance_km`'s rea
 **The card says what the candidate would leave on court** — `would_be_forecast`, labelled
 provisional while seats remain open.
 
+### 4.1 The pin, and the tag that marks the best row
+
+Three rules over the same list, all of them client-side over facts already on the wire
+([#310](https://github.com/Raketa02/Raketa/issues/310)).
+
+**A live yes towards the searcher is pinned to the top of the served order, and the pin releases
+on any re-sort.** `inclusion_reason == INTEREST_LIFT` is the fact; the row sits first whatever it
+scored, in *"the default (as-served) order **only**"*, and a pinned row *"moves under **every**
+re-sort"* — its tag and its border travelling down with it.
+
+**Every** includes *Best fit*, and that is worth stating because it has a cost. Where the engine
+withheld `BEST_FIT` — which it does precisely when the returned order already is fit order — the
+client adds the chip back as **the way back** from *Closest*, and tapping it now returns fit
+order without the pin, which is not quite the list the player left. The alternative is a pin that
+survives a sort, and surviving a sort is the property that makes a bonus a bonus; the way back is
+a way back to an **ordering**, never to a decoration on top of one.
+
+**A pin is not the `+12` that was struck.** §C5 asked for *the fit score plus 12 for anyone who
+said yes to you*, and [#231](https://github.com/Raketa02/Raketa/issues/231) removed it: the
+engine has already lifted those people, as an **admission** rather than a bonus, so adding twelve
+client-side would score the wire's own ranking a second time. That refusal is untouched, and the
+distinction is the falsifier — a bonus is arithmetic on a **published figure**, changes what
+*best* means silently, and survives every re-sort; a pin changes a **position**, prints the
+number the wire served, names itself on the card it moved, and releases. A pinned 41 above an 88
+prints 41 and says *Wants to play you*.
+
+**The tag is bound to the ordering in force, never to a tapped chip, and it is the competitive
+card's alone.** The coral *best match* tag goes on the row with the highest `fit` on screen —
+**one card or none**, the server-first row on a tie — and it exists under the **default** order
+and under `BEST_FIT`, and under no other. Keying it to a tap would hide it on most searches,
+because `BEST_FIT` is withheld from `sorts_available` *precisely when the returned order already
+is fit order*. Where the same card
+would carry both tags it carries only the volt one, *because it's the stronger fact* — and the
+coral tag is **not** handed down to the runner-up, which would be the card claiming *best match*
+about a row that is not one.
+
+A **for-fun** pool draws no *best match*: the tag sits in the competitive card's identity row and
+the social card has no slot beside the handle for one, which is
+[#309](https://github.com/Raketa02/Raketa/issues/309)'s scope rather than this rule's. Those rows
+are still pinned, and the interest sentence under the name still says why.
+
+**`BEST_FIT` is a sort and never a filter.** It hides nobody below any number; it puts the
+highest first and leaves every lower row on the list, in order. Written down because a screen
+that already turns the fit pill coral at ✦ ≥ 90 invites the other reading.
+
 ---
 
 ## 5. The court, once full

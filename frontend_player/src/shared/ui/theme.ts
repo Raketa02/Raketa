@@ -8,7 +8,9 @@
  * Rules — see docs/design-system.md for the reasoning behind each:
  *   line   BOUNDS a thing        line2  is a FOLD inside one thing
  *   volt   a FILL anywhere, carrying `ink` (13.96:1); a STROKE only on dark, because as a
- *          foreground on paper it is ~1.3:1 and simply not there
+ *          foreground on paper it is ~1.3:1 and simply not there. Where volt's MEANING needs
+ *          a stroke on paper, that is `voltStroke` — the same relationship `coralInk` has to
+ *          `coral`, and never volt with a border width on it
  *   Rule C white text never sits on `coral` or `mint`; it needs `coralInk` or
  *          `mintInk`. `ink` is the only dark that may sit on `coral` (4.50:1).
  *   Colour is picked by MEANING, never by appearance.
@@ -72,8 +74,32 @@ const color = {
 
   /** A FILL ANYWHERE, a STROKE ONLY ON DARK. `ink` on it is 13.96 wherever it is drawn, so
    *  a volt tag or button reads on paper; volt AS A FOREGROUND on paper is ~1.3:1, so a
-   *  volt hairline, ring or border there is a line nobody sees. On night it is 10.60. */
+   *  volt hairline, ring or border there is a line nobody sees. On night it is 10.60.
+   *  A stroke on paper that MEANS volt is `voltStroke`, below — never this value. */
   volt: '#D9F24B',
+
+  /** VOLT'S STROKE — the same meaning at the ratio a border needs, and never a soft.
+   *
+   *  `coralInk` is to `coral` what this is to `volt`: one meaning, a second value, because the
+   *  base colour cannot carry the role. Volt as a foreground on paper is 1.25 on `surface` and
+   *  1.12 on `paper` — a line nobody sees — so the 2026-08-31 amendment refused a volt stroke
+   *  on paper, and refused a darker companion with it on the grounds that *that is no longer
+   *  volt*. #310's designs overrule the second half and keep the first: the card that says
+   *  *Wants to play you* takes a green border, and volt itself still cannot draw one.
+   *
+   *  NOT `voltLine`, which is what that amendment called the refused companion and what every
+   *  reader of `coralLine` / `mintLine` / `amberLine` / `infoLine` would take it for: in this
+   *  palette a `*Line` is THE SOFT'S BORDER, and volt has no soft and needs none (`Tag.tsx`).
+   *  Named for the role it fills instead, which is the half of `coralInk`'s analogy the suffix
+   *  would otherwise have contradicted.
+   *
+   *  #698A0F is 76.1 deg — 7 deg off volt, so it reads as volt's own family, and 37 deg off
+   *  `amber`, which is the only other dark warm hue it could be mistaken for. As a STROKE it is
+   *  4.01 on surface, 3.58 on paper and 3.07 against the `line` border it replaces: all three
+   *  clear 1.4.11's 3:1, the third being what makes the marked card differ VISIBLY from an
+   *  ordinary one. NEVER A TEXT BED — white on it is 4.01 and `ink` on it 4.37, so a label
+   *  belongs on the volt fill beside it. Derived in Tag.test.tsx. */
+  voltStroke: '#698A0F',
 
   // --- On-dark-card child colours (the dark card repaints its children) ---
   onDarkTiny: 'rgba(255,255,255,0.68)', // 6.97 on night
