@@ -173,6 +173,27 @@ export function candidateCardLabel(facts: CandidateCardFacts): string {
 }
 
 /**
+ * `Why Marek fits 78` — the card's **second** control, and the one whose visible word is the
+ * same eight characters on twenty rows.
+ *
+ * The primary button's rule read on the button beside it:
+ * [6.9](../../../../docs/design-system.md#69-the-photo-tile-and-picker) says a control acting
+ * on one of twenty identical rows names which one, and *Why 78?* is more identical than *Add*
+ * — two cards on one screen can carry the same Fit.
+ *
+ * **Not `whyFitSheetLabel` with a name pushed into it.** That string is the sheet's own name,
+ * and a control and the surface it opens announcing identically is what §20.6 keeps apart on
+ * the one sheet where the visible and spoken names already differ. This one is a **question
+ * about somebody**; that one is the **answer's** name.
+ *
+ * The figure is rounded for `whyFitControlWord`'s reason — the button names the sheet it
+ * opens, and the sheet's number is the column's.
+ */
+export function whyFitControlLabel(name: string, fit: number): string {
+  return `Why ${name} fits ${Math.round(fit)}`;
+}
+
+/**
  * What the card's primary button does — the two the feature has.
  *
  * A code and not a boolean, so the day a third surface grows a third action it gains a word

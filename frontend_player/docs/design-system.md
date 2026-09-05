@@ -265,40 +265,41 @@ for text**, and the audit did not catch it.
 
 ## 2.5 Contrast — computed
 
-| Pair                                                | Ratio     | WCAG                                |
-| --------------------------------------------------- | --------- | ----------------------------------- |
-| ink on paper                                        | 15.65     | AAA                                 |
-| ink on surface                                      | 17.50     | AAA                                 |
-| white on night                                      | 13.29     | AAA                                 |
-| ink on volt                                         | 13.96     | AAA                                 |
-| white + `textOnMedia` on the squash court ground    | 13.03     | AAA                                 |
-| white + `textOnMedia` on the padel court ground     | 12.87     | AAA                                 |
-| white + `textOnMedia` on the badminton court ground | 12.80     | AAA                                 |
-| white + `textOnMedia` on the tennis court ground    | 12.29     | AAA                                 |
-| volt on night                                       | 10.60     | AAA                                 |
-| white on night2 / info                              | 9.86      | AAA                                 |
-| info on infoSoft                                    | 8.63      | AAA                                 |
-| white on dark-card `tiny` (white @ .68)             | 6.97      | AAA                                 |
-| white on red                                        | 5.90      | AA                                  |
-| white on coralInk                                   | 5.89      | AA                                  |
-| white on mintInk                                    | 5.84      | AA                                  |
-| white on amber                                      | 5.70      | AA                                  |
-| muted on surface                                    | 5.40      | AA                                  |
-| coralInk on coralSoft                               | 5.11      | AA                                  |
-| mintInk on mintSoft                                 | 5.08      | AA                                  |
-| red on redSoft                                      | 5.06      | AA                                  |
-| amber on amberSoft                                  | 5.04      | AA                                  |
-| white on band ink (all four)                        | 5.05–5.13 | AA                                  |
-| muted on paper                                      | 4.83      | AA                                  |
-| white on dark-card `eyebrow` (white @ .52)          | 4.74      | AA                                  |
-| white + `textOnMedia` on a poster hue's light stop  | 4.60–4.65 | AA                                  |
-| band ink on paper (all four)                        | 4.51–4.59 | AA                                  |
-| muted on line2                                      | 4.62      | AA                                  |
-| muted on paper2                                     | 4.49      | AA — used at 11pt+ only             |
-| **ink on coral**                                    | **4.50**  | AA — the only dark-on-coral pairing |
-| coral on paper (marks: level mark, progress fill)   | 3.48      | ≥3:1, meets **1.4.11**              |
-| mint on surface (mint-bordered fills)               | 4.07      | ≥3:1, meets **1.4.11**              |
-| `ink` on a poster hue's dark stop                   | 3.09–3.12 | ≥3:1, meets **1.4.11**              |
+| Pair                                                      | Ratio     | WCAG                                |
+| --------------------------------------------------------- | --------- | ----------------------------------- |
+| ink on paper                                              | 15.65     | AAA                                 |
+| ink on surface                                            | 17.50     | AAA                                 |
+| white on night                                            | 13.29     | AAA                                 |
+| ink on volt                                               | 13.96     | AAA                                 |
+| white + `textOnMedia` on the squash court ground          | 13.03     | AAA                                 |
+| white + `textOnMedia` on the padel court ground           | 12.87     | AAA                                 |
+| white + `textOnMedia` on the badminton court ground       | 12.80     | AAA                                 |
+| white + `textOnMedia` on the tennis court ground          | 12.29     | AAA                                 |
+| volt on night                                             | 10.60     | AAA                                 |
+| white on night2 / info                                    | 9.86      | AAA                                 |
+| info on infoSoft                                          | 8.63      | AAA                                 |
+| white on dark-card `tiny` (white @ .68)                   | 6.97      | AAA                                 |
+| white on red                                              | 5.90      | AA                                  |
+| white on coralInk                                         | 5.89      | AA                                  |
+| white on mintInk                                          | 5.84      | AA                                  |
+| white on amber                                            | 5.70      | AA                                  |
+| muted on surface                                          | 5.40      | AA                                  |
+| white + `textOnMedia` on a photograph, under `photoScrim` | 5.24      | AA                                  |
+| coralInk on coralSoft                                     | 5.11      | AA                                  |
+| mintInk on mintSoft                                       | 5.08      | AA                                  |
+| red on redSoft                                            | 5.06      | AA                                  |
+| amber on amberSoft                                        | 5.04      | AA                                  |
+| white on band ink (all four)                              | 5.05–5.13 | AA                                  |
+| muted on paper                                            | 4.83      | AA                                  |
+| white on dark-card `eyebrow` (white @ .52)                | 4.74      | AA                                  |
+| white + `textOnMedia` on a poster hue's light stop        | 4.60–4.65 | AA                                  |
+| band ink on paper (all four)                              | 4.51–4.59 | AA                                  |
+| muted on line2                                            | 4.62      | AA                                  |
+| muted on paper2                                           | 4.49      | AA — used at 11pt+ only             |
+| **ink on coral**                                          | **4.50**  | AA — the only dark-on-coral pairing |
+| coral on paper (marks: level mark, progress fill)         | 3.48      | ≥3:1, meets **1.4.11**              |
+| mint on surface (mint-bordered fills)                     | 4.07      | ≥3:1, meets **1.4.11**              |
+| `ink` on a poster hue's dark stop                         | 3.09–3.12 | ≥3:1, meets **1.4.11**              |
 
 Deliberately absent: _white on coral_ (3.89) and _white on mint_ (4.07) — see Rule C.
 
@@ -349,6 +350,41 @@ collapse to the two rows above.
 - **The ramp is narrow, and that is the price of the two bounds.** They confine the whole
   ground to one band of luminance, so the light stop is at most 1,23× the dark one. A deeper
   gradient is not a tuning; it is one of the two ratios.
+
+### A player's photograph — the third generated fill, and the one nobody generated
+
+The competitive candidate card's **photo panel** prints a Level and a Sport over the player's
+own photograph ([#309](https://github.com/Raketa02/Raketa/issues/309)). The court's ground is
+at least drawn by this app; a photograph is drawn by nobody, and the set of grounds behind a
+white label on one is not merely large but **unknowable** — a white wall, a floodlit court at
+noon, a silhouette.
+
+The same instrument closes it, and closes it harder. **`photoScrim` is pinned at `.70`** (the
+`night` colour at 70%, exactly as the other two scrims are the `night` colour), and an
+unknowable set collapses to its **worst case**: for white text that is the brightest ground
+there can be, which is pure white. One composite, one ratio, and every real photograph is
+darker somewhere and never lighter anywhere.
+
+- **The floor is `.65` and the pin is above it.** At `.65` a white photograph gives **4.51** —
+  a published figure with nothing left in it, and the next tuning of anything takes it under.
+  Both halves are computed: the floor is derived and the pin is asserted to clear it.
+- **A flat pass, never a gradient.** A gradient would put the label somewhere on a ramp and
+  hand back the unbounded set the pin exists to close — the worst case would depend on where
+  the text happened to sit, which is not a thing a test can hold.
+- **The panel is drawn identically over the generated poster**, which is why the table above
+  gains **one** row and not thirty-three: all thirty-two poster stops are darker than white, so
+  they clear the same bound by construction, and
+  [`textOnMedia.test.ts`](../src/shared/ui/textOnMedia.test.ts) proves it over every one of
+  them rather than sampling.
+- **Both labels carry `textOnMedia`**, for the court's reason: the ratio is the ground's
+  brightest case, and a label can sit anywhere on a photograph.
+- The ratio is **derived, never typed** — same file, same formula as the court's four and the
+  poster's two.
+
+**The scrim is lighter than the court's `.93` on purpose.** The court's ground carries no
+information; a photograph is a person. `.70` is the least dim that clears AA with a margin, and
+the panel's whole premise is that it can afford to be: _in this product your rating is your
+face, and the photograph is scenery._
 
 ---
 
@@ -593,9 +629,10 @@ it.
 
 `textOnMedia` — `textShadowColor rgba(0,0,0,.6)`, offset `{0,1}`, radius `3` — is a
 different RN mechanism and the only one in the app. It belongs to **every label drawn over
-a generated fill**: both of the court's label sets ([2.5](#25-contrast--computed)) and the
-generated poster. It is listed here because a reader looking for a shadow looks here; it is
-not a fifth floating thing.
+a ground nobody picked a colour for**: both of the court's label sets
+([2.5](#25-contrast--computed)), the generated poster, and the photo panel's Level and Sport.
+It is listed here because a reader looking for a shadow looks here; it is not a fifth floating
+thing.
 
 The phone-frame shadow from the prototype does not exist — see [Part 0](#part-0--reading-a-web-prototype-as-a-native-app).
 
@@ -791,7 +828,21 @@ background line2    label muted
 | hot         | `coralSoft`             | `coralInk` |
 | warn        | `amberSoft`             | `amber`    |
 | bad         | `redSoft`               | `red`      |
+| volt        | `volt`                  | `ink`      |
 | on-dark     | `rgba(255,255,255,.14)` | `#fff`     |
+
+**`volt` is the one variant whose background is a base colour rather than a soft.** Volt has
+no soft and needs none: it is _a fill anywhere and a stroke only on dark_
+([2.2](#22-accent-and-semantics)), and `ink` on it is **13.96:1** — already in
+[2.5](#25-contrast--computed), so its Rule C pair is computed rather than eyeballed. A
+`voltSoft` invented to give this tag the shape of the other six is exactly what
+[15.2](#152-adding-a-colour) forbids.
+
+It carries Play's _they want you_ signal, and it is **why that signal is a tag at all**: the
+2026-08-31 amendment refused the volt strokes it had been drawn with, including a border on the
+interest card, and concluded that _"the card's emphasis becoming a tag is what
+[Part 13](#part-13--accessibility) prefers anyway — a border carries no word and this signal
+has one."_
 
 Optional 6pt square dot for a sport colour. A long state tag **truncates with an ellipsis
 rather than breaking the row** (`numberOfLines={1}`).
@@ -2638,6 +2689,9 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-09-03 | [12](#part-12--screens) You                                                                           | The tab was one citation line plus the account panel, and nothing on it was editable                                                                                                                            | The first of the three facts it cites arrives: **what other players see** — a [5.1](#51-card) card of [5.5](#55-row--the-key-value-line) rows, one per rated sport, each opening into the three answers as full-width `secondary` [6.1](#61-button) buttons with their glosses                                                                                                                                                                    | A per-sport declaration whose only home was the search form will keep reading as a search setting however it is worded there. The rows are 5.5's shape rather than a list of controls because each is a **key and a value** — the sport and what was answered for it — and the answers open in place rather than in [5.2](#52-dark-card)'s card, which is the shape reserved for the question that **gates** a search rather than one that edits an answer already given. A rated sport with no answer reads _Not set_ and never a blank: it is the first place a player can discover that a search there would be refused. The citation line stays, because the radius and the week are still owed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-09-03 | [12](#part-12--screens) Match me                                                                      | The deck drew the sport chips and then the deck, with nothing on it saying what the deal was ranked against                                                                                                     | The **standing line** joins it, under the chips rather than under a segment, and in **one state**: _Dealing Competitive games at Padel — your usual_ · _Change_                                                                                                                                                                                                                                                                                   | Same object, different anchor, and the anchor is the argument. `SearchEnvelope.mode` is null on a deal, so this is the one surface in the product where the durable answer **is** what the search runs on — there is nothing here for it to disagree with, so the drift state is unreachable and the sentence can say the thing plainly that Find a game has to say in two states. It sits under the chips because on this screen the chip is the control it is about: choosing a sport is what chooses which declaration is being read. _Either suits me_ takes a frame of its own — _Dealing on your usual at Padel_ — because the deal inherits a for-fun vector from an answer that named no kind, and printing _dealing for fun games — your usual_ would report the inheritance back as the player's own answer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-09-03 | [12](#part-12--screens) Find a game · [5.1](#51-card--the-workhorse) the court card                   | An **eyebrow** — _This search only_ — over _What kind of game tonight_; a line under the radius heading; a court card of two rows — title beside a hot tag, picture beside a sentence — and a footnote under it | The heading alone, _What kind of game_; the radius section is its heading and the slider; and the card is a **centred column** of three things about one court — _Build a doubles_ / _Build a singles_, what the court is for, and the court                                                                                                                                                                                                      | The lifetime the eyebrow labelled the region with is already on the control that has it — `modeControlLabel` says _this search_, and the standing line under the segment says the durable answer — so the region label was the one copy of it a player could not act on, and _tonight_ was a metaphor for a lifetime the section no longer states. The tag said what the picture beside it already draws — _padel is doubles_ next to four drawn seats — or, on a singles court, nothing about the sport at all. The sentence beside the picture said the shape a second time, and the fact worth keeping in it is said where sending is offered rather than three screens early: [9.1](#91-bottom-sheet)'s pre-send sheet draws _nobody is contacted until you send it_ over the control that contacts somebody. What is left is a title, a sentence and a picture, so nothing is drawn beside anything and the column is centred on the axis the court is drawn on. The title names the **game** rather than the furniture: _Build the four_ against _Set up the match_ was one sentence in two registers, where _doubles_ against _singles_ is the sport's own pair and one word apart                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-09-05 | [2.5](#25-contrast--computed)                                                                         | Two grounds nobody picked a colour for — the court's four composites and the poster's two stops — each closed by a bound of its own                                                                             | A **third**, and the one that cannot be enumerated at all: the competitive card's photo panel prints a Level and a Sport over a player's own photograph. `photoScrim` is pinned at `.70` and the unknowable set collapses to its **worst case** — pure white — at **5.24:1**                                                                                                                                                                      | [#309](https://github.com/Raketa02/Raketa/issues/309) put text over a photograph, which is a contrast problem this system had never had: every other pair in 2.5 is a fixed pair, and even the court's ground is at least _generated_. Pinning is the instrument that already worked twice, and it works harder here — a worst case is one row rather than four. The floor is derived as well as the pin (`.65` gives 4.51, a figure with nothing left in it), so lightening the scrim goes red instead of going unnoticed. A gradient was refused for the reason the unpinned court ground was: it would put the label somewhere on a ramp and hand back the unbounded set                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-09-05 | [6.4](#64-tag--the-status-pill)                                                                       | Six variants, all of them a `Soft` background under an `Ink` label                                                                                                                                              | A seventh, `volt` — background `volt`, label `ink`, the one variant whose background is a base colour                                                                                                                                                                                                                                                                                                                                             | The 2026-08-31 amendment ended with _the card's emphasis becoming a tag_, and named no tag. This is it. Volt has no soft and needs none: `ink` on volt is 13.96:1 and 2.5 has listed it as AAA since the document was locked, so the pair is computed rather than eyeballed — and a `voltSoft` invented to give this tag the shape of the other six is what [15.2](#152-adding-a-colour) forbids                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-09-05 | [5.1](#51-card--the-workhorse) · [1.2](#12-one-accent-used-sparingly)                                 | —                                                                                                                                                                                                               | **A card's border is never an accent.** The designs' coral border on every competitive card and green border on a lifted one are both refused, and the refusals are recorded rather than re-argued                                                                                                                                                                                                                                                | Coral on a card is 5.1's **pressed** state, so a permanent one is every row in a scrolling list drawn as though a finger were on it — and 1.2 is _when everything is accented, nothing is_. The green one is volt, which is **1,25:1** on `surface` and **1,12:1** on `paper`: the 2026-08-31 amendment already refused a 2pt border on the interest card by name, refused a darker `voltLine` companion (_that is no longer volt_), and refused moving the signal to coral. `CourtEntryCard` had refused the same coral outline one screen earlier. What carries the fact is the tag, which carries a word                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 # Part 17 — What the reset removed
 

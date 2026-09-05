@@ -237,12 +237,18 @@ sheet's own copy named as a colour, and the pool header's tinted percentage, whi
 `balancePresentation.ts`.
 
 **The same person is drawn three ways, from one contract and one parts kit.** `CandidateCard`
-is photo-left with a head-to-head row, `CandidateCardSocial` and `DeckCard` are media-top with
-fact rows, and they are **three components rather than one with a `surface` prop** — a single
-card would carry `surface === …` at nine sites, which is the sixty-line conditional the split
-exists to prevent. Under them sit `CandidatePhoto` (the photo-or-poster switch, one component
-at three sizes, its radius 33 % of its own box), `CardHead`, `FactRow` and `ReasonLine`. **Each
-takes `(candidate, envelope)` and reads no global state**, and the envelope travels whole
+is a **photo panel** with an identity row beside it and **one head-to-head band** under both,
+`CandidateCardSocial` and `DeckCard` are media-top with fact rows, and they are **three
+components rather than one with a `surface` prop** — a single card would carry `surface === …`
+at nine sites, which is the sixty-line conditional the split exists to prevent. Under them sit
+`CandidatePhoto` (the photo-or-poster switch, one component at three sizes, its radius 33 % of
+its own box), `FactRow` and `ReasonLine`; `CardHead` is the social and deck cards' alone, and
+the competitive card's `PhotoPanel`, `IdentityRow` and `HeadToHeadBand` are the three parts
+[#309](https://github.com/Raketa02/Raketa/issues/309) split off it rather than adding two flags
+to say which head to draw. **Each reads no global state**, taking `(candidate, envelope)` plus
+whatever the _screen_ rather than the person owns — the competitive card's `sportName` is the
+search's Sport, and putting it on `player_card` would be twenty copies of one fact per
+response. The envelope travels whole
 rather than as a `mode` string precisely because `SearchEnvelope.mode` is null on the deck and
 the mode the engine priced a row under is not — the two are supposed to disagree there. **Each
 card exports the set of terms it draws**, because that set is a statement about that component
@@ -259,8 +265,16 @@ _never colour alone_ binds the sighted half too. `CandidatePhoto` draws the mint
 `courtPosterFor` through `player_profile`'s public surface rather than copying the hash: one
 player id, one poster, forever. **Only the deck card floats** — #219 B3's argument is about a
 card that translates and rotates out under a thumb, and a row in a scrolling list does neither,
-so the pool draws one shape twice — and the volt tag that used to read _wants to play you_ is
-now a **sentence**, bound to `INTEREST_LIFT`.
+so the pool draws one shape twice. **The volt tag is a tag again on the competitive card and a
+sentence on the other two**, which is #231's open decision #14 reversed where the identity row
+has a slot beside the handle for one: it is bound to `INTEREST_LIFT` either way, and the tag
+takes its liveness twin's two words because the two codes are one tag. **The panel prints the
+Level twice on purpose** — hugely over the photograph and again on the right of the band — and
+what makes that legible is the system's second pinned scrim: a photograph is a ground nobody
+chose, so `photoScrim` collapses it to its worst case, pure white, at a ratio `textOnMedia.test.ts`
+derives. **The card draws no accent border**: coral on a card is 5.1's pressed state and volt as
+a stroke on paper is 1,25:1, so the tag carries the fact and the arithmetic for both refusals is
+in `Tag.test.tsx`.
 
 **The court is one drawn object and two feature components.** `Court` (7.12) takes a Sport and
 a box, draws the ground, the chrome and the seat **positions**, and **takes children in seat

@@ -4,12 +4,16 @@
  *
  * One component at three sizes, per
  * [`the-play-components.md`](../../../../../../docs/specs/matchmaking/the-play-components.md)
- * §4: the thumbnail on the competitive card, the full-bleed media on the social and deck
- * cards, and the face in a court seat. It exists so that the photo-or-poster switch is written
- * once, and its radius rule has **one owner** — which is how §G2's *34 % against 33 %* split
- * was settled without picking a winner, and what deletes §G1's *"rewriting the photo's
+ * §4: the ground of the competitive card's photo panel, the full-bleed media on the social and
+ * deck cards, and the face in a court seat. It exists so that the photo-or-poster switch is
+ * written once, and its radius rule has **one owner** — which is how §G2's *34 % against 33 %*
+ * split was settled without picking a winner, and what deletes §G1's *"rewriting the photo's
  * declared width to a percentage by string substitution"* by making the substitution
  * unnecessary.
+ *
+ * **It is still that switch and nothing more.** The scrim, the Level and the Sport that turned
+ * the first of the three boxes from a thumbnail into a panel are `PhotoPanel`'s: they are facts
+ * about a candidate, and this component knows only about a picture.
  *
  * ## The URL, and why the id is not here
  *
@@ -66,13 +70,20 @@ export function candidatePhotoRadius(size: number): number {
 }
 
 /**
- * The competitive card's thumbnail, in points — the one box whose dimensions are the card's
+ * The competitive card's **panel**, in points — the one box whose dimensions are the card's
  * own rather than the caller's.
  *
  * It is here rather than in `theme.ts` for §1's reason: the design system holds drawn objects
  * and control vocabulary, and a candidate card is a composition that names a domain noun.
+ *
+ * **Exported, because it stopped being a thumbnail.**
+ * [#309](https://github.com/Raketa02/Raketa/issues/309) turned the box into a panel with a
+ * scrim, a Level and a Sport over it, and those overlays have to be clipped to exactly the
+ * corner the photograph takes. `PhotoPanel` reads the two numbers from here rather than
+ * restating them, which is the same *one owner* argument `candidatePhotoRadius` already makes
+ * for the ratio: a second copy of `74` is two boxes the day either one moves.
  */
-const THUMB = { width: 74, height: 92 } as const;
+export const CANDIDATE_PANEL = { width: 74, height: 92 } as const;
 
 /**
  * Which box this face is drawn in.
@@ -82,7 +93,7 @@ const THUMB = { width: 74, height: 92 } as const;
  * nothing back — and the other two carry no number at all.
  */
 export type CandidatePhotoBox =
-  /** 74 × 92, beside the head-to-head row. */
+  /** {@link CANDIDATE_PANEL} — the ground of the competitive card's photo panel. */
   | { readonly kind: 'thumb' }
   /**
    * Full-bleed, filling whatever slot the card gives it.
@@ -125,7 +136,7 @@ export function CandidatePhoto({ playerId, photoUrl, box }: CandidatePhotoProps)
 function geometry(box: CandidatePhotoBox) {
   switch (box.kind) {
     case 'thumb':
-      return { ...THUMB, borderRadius: candidatePhotoRadius(THUMB.width) };
+      return { ...CANDIDATE_PANEL, borderRadius: candidatePhotoRadius(CANDIDATE_PANEL.width) };
     case 'media':
       return { flex: 1 };
     case 'face':

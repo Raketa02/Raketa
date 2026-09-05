@@ -22,6 +22,7 @@
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { router } from 'expo-router';
 
+import { sportLabel } from '@/features/onboarding/types';
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
 import { queryClient } from '@/shared/lib/query-client';
 import { courtSeatCount } from '@/shared/ui';
@@ -970,9 +971,15 @@ describe('the two cards', () => {
 
     await openThePool();
 
-    // The head-to-head row, which is the one place the searcher's **own** level is drawn.
+    // The head-to-head band, which is the one place the searcher's **own** level is drawn.
     expect(await screen.findByText(formatLevel(2.71))).toBeTruthy();
-    expect(screen.getByText(formatLevel(2.8))).toBeTruthy();
+    // Theirs, twice: the photo panel prints what they published and the band prints the side
+    // of the comparison the advantage was computed from (#309).
+    expect(screen.getAllByText(formatLevel(2.8))).toHaveLength(2);
+
+    // The panel's third fact is the search's own Sport, which the screen holds and the wire
+    // never sends on a candidate.
+    expect(screen.getByText(sportLabel('padel'))).toBeTruthy();
   });
 });
 

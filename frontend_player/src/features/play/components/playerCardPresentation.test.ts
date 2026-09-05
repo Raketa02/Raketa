@@ -12,7 +12,9 @@
  * said about activity**, which is the slot #218 refused.
  */
 
-import { levelRow, metaLine } from './playerCardPresentation';
+import { CANDIDATE_ACTION_WORD, candidateTag, levelRow, metaLine } from './playerCardPresentation';
+
+import { livenessLine } from './livenessPresentation';
 
 const HERE = 'A+050612+0019938';
 const ELSEWHERE = 'A+050614+0019902';
@@ -67,5 +69,50 @@ describe('the meta line', () => {
     const line = metaLine({ km: 7, theirAreaCode: ELSEWHERE, myAreaCode: HERE });
 
     expect(line).not.toMatch(/active|today|online|ago/i);
+  });
+});
+
+describe('the tag beside the handle', () => {
+  it('says nothing at all where neither fact is true', () => {
+    // The row is the identity row and not a tag rail: most people on a list are neither the
+    // best match nor somebody who already said yes, and a tag drawn for them would be a word
+    // that means *nothing in particular*.
+    expect(candidateTag({ bestMatch: false })).toBeUndefined();
+  });
+
+  it('marks the best match in coral', () => {
+    expect(candidateTag({ bestMatch: true })).toEqual({ label: 'Best match', variant: 'hot' });
+  });
+
+  it('says the interest lift in volt, and it replaces best match where both apply', () => {
+    // *"because it's the stronger fact"* — the coral one is about where somebody sits in a
+    // list this player is reading, and the volt one is about a decision somebody else made.
+    expect(candidateTag({ inclusionReason: 'INTEREST_LIFT', bestMatch: false })).toEqual({
+      label: 'Wants to play you',
+      variant: 'volt',
+    });
+    expect(candidateTag({ inclusionReason: 'INTEREST_LIFT', bestMatch: true })).toEqual({
+      label: 'Wants to play you',
+      variant: 'volt',
+    });
+  });
+
+  it('takes the admitting code’s words from its liveness twin, which is one tag and not two', () => {
+    // §10: `INTEREST_LIFT` and `INTEREST_RECEIVED` fire for the same person and are two facts
+    // with ONE tag. The tag is bound to the admitting code; the words are the twin's, and the
+    // twin's own sentence can only reach a card as the reason fallback, which the competitive
+    // card never takes.
+    expect(candidateTag({ inclusionReason: 'INTEREST_LIFT', bestMatch: false })?.label).toBe(
+      livenessLine('INTEREST_RECEIVED'),
+    );
+  });
+});
+
+describe('what a card’s primary button says', () => {
+  it('names where the add goes, which is the one wording of the three that is always true', () => {
+    // *Add to the four* is wrong on a squash court, and *Add — this is the match* is a claim
+    // the card is not making. The destination is true at every seat count and in both modes.
+    expect(CANDIDATE_ACTION_WORD.ADD_TO_COURT).toBe('Add to the court');
+    expect(CANDIDATE_ACTION_WORD.CHALLENGE).toBe('Challenge');
   });
 });

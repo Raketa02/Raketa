@@ -37,6 +37,28 @@ export function whyFitTitle(fit: number): string {
   return `Why ✦ ${fit}`;
 }
 
+/**
+ * The **control** that opens it — `Why 78?`.
+ *
+ * It is the one thing on the competitive card that used to be invisible: *Why 78?* was the
+ * card body's press and nothing said so, and the designs draw it as a secondary button beside
+ * the primary action ([#309](https://github.com/Raketa02/Raketa/issues/309)).
+ *
+ * **It is not `whyFitTitle`, and the ✦ is why.** The sheet's title carries the glyph because
+ * the sheet has no fit pill on it; the card has one two rows above this button, and a second
+ * ✦ beside the same number is [6.8](../../../../docs/design-system.md#68-the-availability-grid)'s
+ * double announcement drawn in ink. The question mark is the other half of the split: the sheet
+ * **states** what the number is made of, and the button is the reader **asking**.
+ *
+ * **The figure is rounded, because this button names the sheet it opens** — `seatedNameLabel`'s
+ * own rule, for its own reason: `whyFitColumn` writes the whole column against `Math.round(fit)`
+ * and the sheet's title is that number, so a served `78,4` printed whole here would promise
+ * *Why 78,4* and open *Why 78*.
+ */
+export function whyFitControlWord(fit: number): string {
+  return `Why ${Math.round(fit)}?`;
+}
+
 /** What the sheet's own close control closes. Never *Close* — `CloseControl`'s rule. */
 export function whyFitCloseLabel(name: string): string {
   return `Close why ${name} fits`;

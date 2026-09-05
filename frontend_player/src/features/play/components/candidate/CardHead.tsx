@@ -1,23 +1,34 @@
 /**
- * The top of every candidate card: **who, how good the game would be, and why they are on
- * the list at all**.
+ * The top of the **social and deck** cards: **who, how good the game would be, and why they
+ * are on the list at all**.
  *
- * The three cards differ below this line and not at it — a name beside a fit pill is the same
- * object on a pool row, a for-fun row and a card under a thumb — so it is a part of the kit
- * rather than ten lines written three times. Three copies of a head row is where one of them
- * eventually keeps a `numberOfLines` the other two lost.
+ * It was the top of all three, and two of them still differ below this line and not at it — a
+ * name beside a fit pill is the same object on a for-fun row and on a card under a thumb — so
+ * it stays a part of the kit rather than ten lines written twice. Two copies of a head row is
+ * still where one of them eventually keeps a `numberOfLines` the other lost.
  *
- * ## The volt tag is a sentence now
+ * ## The competitive card left, and it took the volt sentence with it
  *
  * §B10's head row laid out a name with **inline tags** beside it — `.tag.hot`, `.tag.volt`,
  * `.tag.bad` — and UI Open decision #14 replaced the volt one's two words with a whole
- * sentence bound to `INTEREST_LIFT`. **A full sentence does not go where a two-word tag went**,
- * so it lands under the name rather than beside it, at the top of the card, which is where the
- * decision put it: the lift is why this person is on the list at all, and it is read before
- * anything explaining where in it they are.
+ * sentence bound to `INTEREST_LIFT`. The reasoning was *a full sentence does not go where a
+ * two-word tag went*, which is true of the sentence and not of the fact: the two-word form was
+ * never gone. `INTEREST_RECEIVED` and `INTEREST_LIFT` are *two facts with one tag*
+ * ([`the-words.md`](../../../../../../docs/specs/matchmaking/the-words.md) §10), so the tag is
+ * bound to the admitting code and worded by its twin, which is what
+ * [#309](https://github.com/Raketa02/Raketa/issues/309) reverses on the competitive card —
+ * `IdentityRow`, a name with the **tag** beside it and the fit pill on a row of its own.
  *
- * It is drawn at the body size and not the tag one, because it is prose: `tag` is 9,5pt and
- * flat, for a word, and this is a sentence about the reader.
+ * **This component was not made to do both.** Configuring one head to put either a pill or a
+ * tag on the name line and either a sentence or nothing beneath it takes two flags to say
+ * which, which is
+ * [`the-play-components.md`](../../../../../../docs/specs/matchmaking/the-play-components.md)
+ * §3's `surface === …` arriving in a smaller spelling. The three cards are three components for
+ * exactly this reason, and their heads are now two.
+ *
+ * So what stays here is the sentence, on the two cards that still draw it. It is drawn at the
+ * body size and not the tag one, because it **is** prose: `tag` is 9,5pt and flat, for a word,
+ * and this is a sentence about the reader.
  *
  * **It announces nothing of its own.** §20.3 fixes the card body's spoken name and the body is
  * the action above it, so the whole head merges — the ✦ included, which is how the glyph comes

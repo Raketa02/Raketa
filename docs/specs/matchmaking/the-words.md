@@ -142,13 +142,29 @@ render different things.
 
 | Surface | Draws | So it drops |
 | --- | --- | --- |
-| `CandidateCard` (competitive) | head-to-head row, balance bar, (later) Player Score block | `LEVEL_FIT`, `PREDICTED_BALANCE`, and `RELIABILITY` only once the score block prints |
+| `CandidateCard` (competitive) | the photo panel's Level, one head-to-head band — both levels, the bar and the forecast — (later) Player Score block | `LEVEL_FIT`, `PREDICTED_BALANCE`, and `RELIABILITY` only once the score block prints |
 | `CandidateCardSocial` (for fun) | Level row, You overlap row, meta line's km | `LEVEL_FIT`, `AVAILABILITY_OVERLAP`, `DISTANCE` |
 | `DeckCard` | Level row, Predicted balance row, You overlap row, meta line's km | `LEVEL_FIT`, `PREDICTED_BALANCE`, `AVAILABILITY_OVERLAP`, `DISTANCE` |
 | `SH.whyfit` | everything, on purpose | **nothing** — #233 §7: a summary block would break §10 *"on the one screen whose job is showing values"* |
 
 **The filter is declared beside each card as the set of terms that surface draws**, so the
 rule is checked against the component rather than remembered.
+
+**The competitive card's set survived its own redraw unchanged**
+([#309](https://github.com/Raketa02/Raketa/issues/309)). A two-`Side` row, a bare bar and a
+*Predicted balance* row collapsed into **one band**, and the drawn set is still
+`['LEVEL_FIT', 'PREDICTED_BALANCE']` — because the band replaced the three **elements** that
+drew those two terms and not the two **facts**. That is the row above read the way it is meant
+to be read: *Draws* is a claim about which values a surface renders, never about how many boxes
+it renders them in.
+
+**And the Level is now printed twice on that card** — hugely on the photo panel, and again on
+the right of the band. §10's rule is not broken by it and the distinction is worth keeping: the
+panel prints what the player **published** (`player_card.level`, drawn whatever fired) and the
+band prints one side of a **comparison** (`level_fit.theirMu`, computed against the other). §10
+forbids a *reason line* restating a value the card renders, which is a rule about the two
+registers — a fact **stated** and a fact **argued** — rather than a rule about pixels. The fact
+is said once, in `levelRow`, and `LEVEL_FIT`'s sentence is filtered off exactly as before.
 
 **Two rules on top of it:**
 
@@ -166,7 +182,9 @@ string]`. **Filter first, then take three.**
 ### When nothing survives
 
 On the **competitive** card it cannot happen: `DISTANCE` never stands down and the card draws
-no distance row, so a survivor always exists. On the **deck** card the line rests on exactly
+no distance row, so a survivor always exists. **The redraw does not touch that claim** — it
+rests on the drawn set and on the card having no distance row, and #309 changed neither: the
+panel states a Level and a Sport, and a Sport is not a `Term`. On the **deck** card the line rests on exactly
 three terms — `INTENT_ALIGNMENT`, `PLAYING_STYLE`, `SOCIAL_VIBE`, since `RELIABILITY` stands
 down for everybody day one — and all three are optional.
 
@@ -441,8 +459,18 @@ prints a running total.
 > `INTEREST_LIFT` → `They already said yes to you`
 
 **`LivenessReason`** — ten codes. `INTEREST_RECEIVED` and `INTEREST_LIFT` fire for the same
-person and are two facts with **one tag** (#231, Open #14): the tag is bound to the admitting
-code, and the sentence replaces it.
+person and are two facts with **one tag**: the tag is bound to the admitting code.
+
+**Which of the two forms that tag takes is per card, and #231's open decision #14 is reversed
+on the competitive one** ([#309](https://github.com/Raketa02/Raketa/issues/309)). #14 replaced
+the two-word tag with `INTEREST_LIFT`'s sentence — *a full sentence does not go where a
+two-word tag went* — which was the right reading of the sentence it had been handed and the
+wrong conclusion, because the two-word form was never gone: it is the twin's, and *two facts
+with one tag* is exactly what licenses taking it. So the competitive card draws **`Wants to
+play you` as a volt tag beside the handle**, bound to `INTEREST_LIFT` and worded by
+`INTEREST_RECEIVED`; the social and deck cards keep the sentence under the name. Neither is a
+new field, and the twin's own sentence can still only reach a card as the reason fallback —
+which the competitive card never takes (§5).
 
 | `LivenessReason` | |
 | --- | --- |
@@ -856,8 +884,30 @@ React Native actually ships.
 ### 20.3 The candidate card
 
 The card body's action is *Why 78?* — [#231](https://github.com/Raketa02/Raketa/issues/231)
-repointed the long-press there when K-7 ruled the record sheets out. So the card is **two
-elements**: the body, and its primary button. The fit pill is not a third; it merges.
+repointed the long-press there when K-7 ruled the record sheets out. The competitive card is
+**three elements**: the body, the *Why 78?* button, and the primary button. The other two cards
+are **two**, because *Why 78?* is the body's press alone on them. The fit pill is never one of
+them; it merges.
+
+**The third element is #309's, and the body keeps its press rather than losing it.** The
+designs draw *Why 78?* as a secondary button beside the primary action, which is the one control
+on the card that used to be invisible. §20.1's rule is *one element per action*, and a body with
+no action of its own would be an element that rule cannot account for — where a big target and a
+small named one for the same act cost a listener one swipe. So the count changes and the rule
+does not.
+
+> **This section counts the elements the components declare, and on iOS the platform may hand a
+> listener fewer.** A card body is a `Pressable`, `Pressable` is `accessible` by default, and an
+> accessible view on iOS **groups its descendants** — so a button drawn *inside* the body is not
+> separately focusable there however it is named. That is **older than #309**: the primary button
+> has been drawn inside the card body on all three cards since they were built, and §20.3 has
+> counted it as an element for as long as it has existed. #309 does not introduce it and does not
+> fix it; what #309 changes is that the count is now three, so the discrepancy is worth stating
+> rather than inheriting. Resolving it means deciding **where the body's press lives** — a body
+> that keeps its action cannot contain the buttons, and a body that gives it up needs a press
+> state [6.6](../../../frontend_player/docs/design-system.md#66-press-states) has not specified
+> for a region inside a card. That is a design-system decision and a whole-feature change, so it
+> is **booked here** the way §20.12 books its own gap, rather than settled in a card ticket.
 
 **The card is spoken in a different order than it is drawn.** Identifying facts lead, the
 argument follows. This is the one recorded divergence from visual order in the feature, and
@@ -867,7 +917,27 @@ to satisfy a word count would delete what the card is for.
 | | |
 | --- | --- |
 | **Card body** | `button`. `{name}. Fit {n} out of 100. {level} · {band} · likely {low}–{high}. {In your area · }{km} km. {reason}. {reason}. {reason}. {reason}. {concern}.` |
-| **Primary button** | `button`. `Add {name} to the court` · `Challenge {name}` — the visible label is *Add* / *Let's play*, which announces identically on twenty cards. Naming the subject is [6.9](../../../frontend_player/docs/design-system.md#69-the-photo-tile-and-picker)'s remove control, whose label *"names which photo it removes"*. |
+| **_Why 78?_** | `button`. `Why {name} fits {n}` — the visible label is `Why {n}?`, and two cards on one screen can carry the same Fit, so this one names its subject for the reason the primary does. **Not** the sheet's own name (§20.6): that string is the answer's, and this is the question. |
+| **Primary button** | `button`. `Add {name} to the court` · `Challenge {name}` — the visible label is *Add to the court* / *Challenge*, which announces identically on twenty cards. Naming the subject is [6.9](../../../frontend_player/docs/design-system.md#69-the-photo-tile-and-picker)'s remove control, whose label *"names which photo it removes"*. |
+
+**The add's visible word is *Add to the court*, and choosing it was a copy decision.** #309's
+designs offer three wordings of one action — *Add to the court*, *Add to the four*, *Add — this
+is the match*. *Add to the four* is **wrong on a squash court**, where the drawing's own
+coordinates give two seats; *Add — this is the match* is a **claim** the card is not making, and
+the one sentence on the surface with no evidence under it. The destination is true at every seat
+count and in both modes, so the visible word and the spoken name now differ by the name alone —
+which is the whole of what naming the subject was for. The bare `Add` stood while the button
+stood alone at the foot of the card, and stopped when *Why 78?* joined it: a bare verb beside a
+second control is the one place the missing object is felt.
+
+**Two things the competitive card draws and does not say.** The photo panel prints a **Level**,
+which reaches the name already as the first figure of `{level}` — printed twice and said once
+(§10). It also prints the **Sport**, which does not reach the name at all: it is the *search's*
+sport, identical on every row, and the screen's own eyebrow has said it once already. Twenty
+rows each opening with *Tennis* is the noise this fixed order exists to prevent. The panel's
+✓ ON COURT shield is the exception and arrives with it
+([#313](https://github.com/Raketa02/Raketa/issues/313)) — a mark that is true of one player and
+not of the next is a fact, and it takes a clause.
 
 `{name}` is §15's `playerName()` — **the handle, whole.** A seat label may truncate; a spoken
 name never does.

@@ -7,13 +7,30 @@
  *
  * A long tag truncates rather than breaking the row it sits in, because a row that reflows
  * because of a status is a row whose layout depends on server copy.
+ *
+ * ## `volt` is the seventh, and it is a **fill** rather than a soft
+ *
+ * The other six are the palette's soft/ink pairs, computed against each other. Volt has no
+ * soft and needs none: it is *a fill anywhere and a stroke only on dark*
+ * ([2.2](../../../docs/design-system.md#22-accent-and-semantics)), and `ink` on it is
+ * **13.96:1** — AAA, and already published in
+ * [2.5](../../../docs/design-system.md#25-contrast--computed). So its Rule C pair is
+ * computed rather than eyeballed, and it is the one variant whose background is a base
+ * colour: a `voltSoft` would be a colour invented to give this tag the shape of the other
+ * six, which [15.2](../../../docs/design-system.md#152-adding-a-colour) forbids.
+ *
+ * **It carries Play's *they want you* signal, and it is why that signal is a tag at all.**
+ * The 2026-08-31 amendment narrowed *volt never appears on paper* to the fills, and refused
+ * the strokes it had been used for — *"the card's emphasis becoming a tag is what
+ * [Part 13](../../../docs/design-system.md#part-13--accessibility) prefers anyway: a border
+ * carries no word and this signal has one."* This is that tag.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
 
 import { theme } from './theme';
 
-export type TagVariant = 'base' | 'ok' | 'hot' | 'warn' | 'bad' | 'onDark';
+export type TagVariant = 'base' | 'ok' | 'hot' | 'warn' | 'bad' | 'volt' | 'onDark';
 
 export interface TagProps {
   readonly label: string;
@@ -70,6 +87,8 @@ const SURFACE = StyleSheet.create({
   hot: { backgroundColor: theme.color.coralSoft },
   warn: { backgroundColor: theme.color.amberSoft },
   bad: { backgroundColor: theme.color.redSoft },
+  // The one background that is a base rather than a soft — see the module note.
+  volt: { backgroundColor: theme.color.volt },
   onDark: { backgroundColor: theme.color.onDarkTag },
 });
 
@@ -79,5 +98,7 @@ const LABEL = StyleSheet.create({
   hot: { color: theme.color.coralInk },
   warn: { color: theme.color.amber },
   bad: { color: theme.color.red },
+  // `ink` and never white: Rule C's arithmetic on volt runs the other way round (13.96:1).
+  volt: { color: theme.color.ink },
   onDark: { color: theme.color.surface },
 });

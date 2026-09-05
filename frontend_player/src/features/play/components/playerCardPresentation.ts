@@ -47,7 +47,10 @@ import { formatLevel, formatPercent, formatRange } from '@/shared/formatting/rat
 import { slotName } from '@/shared/vocabulary/availabilityPresentation';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
+import type { InclusionReason } from '../domain/vocabulary';
+
 import type { CandidateAction } from './accessibilityPresentation';
+import { livenessLine } from './livenessPresentation';
 
 /** Everything the level row states, exactly as `player_card` published it. */
 export interface LevelRowFacts {
@@ -162,14 +165,29 @@ export function overlapRowValue(evidence: {
 /**
  * What a card's primary button **says**, against what it announces.
  *
- * The visible word is short because it sits on a card in a list of them; the spoken name is
- * `candidateActionLabel`'s and names the subject, on
+ * The spoken name is `candidateActionLabel`'s and names the subject, on
  * [6.9](../../../../docs/design-system.md#69-the-photo-tile-and-picker)'s rule that a control
  * acting on one of twenty identical rows says which one. A `Record` over the closed set, so a
  * third action arrives with its word or does not build.
+ *
+ * **The add names its destination, and the choice between three wordings is made here.** The
+ * designs offer *Add to the court*, *Add to the four* and *Add — this is the match*, which
+ * are three wordings of one action ([#309](https://github.com/Raketa02/Raketa/issues/309)).
+ * *Add to the four* is **wrong on a squash court**, where `Court`'s own coordinates give two
+ * seats — the same trap `courtEntryCard`'s copy already branches on — and *Add — this is the
+ * match* is a **claim** the card is not making: what the card states is a Fit out of a
+ * hundred and the sheet behind it explains that number, and a button asserting the answer
+ * would be the one sentence on the surface with no evidence under it. The destination is true
+ * at every seat count, in both modes, and it is the clause the spoken name already carries —
+ * so the visible word and `Add {name} to the court` differ by the name alone, which is the
+ * whole of what naming the subject was for.
+ *
+ * The word was `Add` while the button stood alone at the foot of the card. It stopped standing
+ * alone when *Why 78?* joined it, and a bare verb beside a second control is the one place the
+ * missing object is felt.
  */
 export const CANDIDATE_ACTION_WORD: Readonly<Record<CandidateAction, string>> = {
-  ADD_TO_COURT: 'Add',
+  ADD_TO_COURT: 'Add to the court',
   CHALLENGE: 'Challenge',
 };
 
@@ -197,3 +215,82 @@ export const DECK_ANSWER_WORDS = { pass: 'Not today', accept: "🎾 Let's play" 
  * cannot arrive silently claiming to be a photograph.
  */
 export const CANDIDATE_POSTER_LABEL = 'A generated court poster, not a photograph';
+
+/**
+ * The tag beside the handle — **at most one, and the strong fact wins**.
+ *
+ * The competitive card's identity row is a name with a tag beside it, which **reverses
+ * [#231](https://github.com/Raketa02/Raketa/issues/231)'s open decision #14**
+ * ([#309](https://github.com/Raketa02/Raketa/issues/309)). That decision turned the volt tag
+ * into a sentence under the name because *"a full sentence does not go where a two-word tag
+ * went"* — which was the right reading of the sentence it had been given, and the wrong
+ * conclusion: the two-word form was always available, and it is `INTEREST_RECEIVED`'s.
+ *
+ * ## Two facts, two colours, and only one of them is drawn
+ *
+ * - **Best match** — coral, the app's one accent, on the row with the highest Fit. It is a
+ *   statement about **where somebody sits in the list this player is reading**.
+ * - **Wants to play you** — volt, on somebody the engine admitted because they had already
+ *   said yes. It is a statement about **a decision somebody else made**, and that is why it
+ *   **replaces** the coral one where both would fall on the same card rather than sitting
+ *   beside it: the designs' *"because it's the stronger fact"*, and two tags on one handle is
+ *   a row whose width depends on how lucky the reader got.
+ *
+ * **Neither is a new field.** The volt one is `inclusionReason === 'INTEREST_LIFT'` — the
+ * admitting code, per [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md)
+ * §10's *"the tag is bound to the admitting code"* — and its **words are its liveness twin's**,
+ * reached through `livenessLine` rather than re-typed, because §10's claim is that the two
+ * codes are *two facts with one tag*. The coral one is `bestMatch`, which this file does not
+ * decide: **which row wears it is the ordering rule's**
+ * ([#310](https://github.com/Raketa02/Raketa/issues/310)), and a card that worked it out for
+ * itself would be a component reading a list it cannot see.
+ *
+ * **There is no third tag and no default.** Most people on a list are neither, and a tag
+ * drawn for them would be a word meaning *nothing in particular* — which is
+ * [1.2](../../../../docs/design-system.md#12-one-accent-used-sparingly) read on the one row
+ * that repeats twenty times.
+ */
+export interface CandidateTag {
+  readonly label: string;
+  /** `hot` is the coral tag and `volt` is the fill — 6.4's own variant names. */
+  readonly variant: 'hot' | 'volt';
+}
+
+export function candidateTag(facts: {
+  /** A union of one, and it **admits**. Omitted where nothing lifted them. */
+  readonly inclusionReason?: InclusionReason;
+  /** The ordering rule's answer, never this card's. */
+  readonly bestMatch: boolean;
+}): CandidateTag | undefined {
+  const admitted = facts.inclusionReason;
+  if (admitted !== undefined) return { label: INCLUSION_TAG_WORD[admitted], variant: 'volt' };
+  return facts.bestMatch ? { label: BEST_MATCH_WORD, variant: 'hot' } : undefined;
+}
+
+/**
+ * The volt tag's words, **per admitting code**.
+ *
+ * A `Record` and not `if (inclusionReason !== undefined)`, for `CANDIDATE_ACTION_WORD`'s reason
+ * one register over: `WireInclusionReason` is a union of one *today*, and a presence check
+ * would silently label a second admitting code *Wants to play you* — a sentence about interest
+ * put on a code that might admit somebody for something else entirely. Keyed by the union, a
+ * second code arrives with its own two words or does not compile, which is the discipline every
+ * other table in this folder already has.
+ *
+ * The value is `INTEREST_RECEIVED`'s line rather than a second copy of those four words: §10's
+ * claim is that the two codes are **two facts with one tag**, and reaching the twin through
+ * `livenessLine` is what keeps that one string when either is re-worded.
+ */
+const INCLUSION_TAG_WORD: Readonly<Record<InclusionReason, string>> = {
+  INTEREST_LIFT: livenessLine('INTEREST_RECEIVED'),
+};
+
+/**
+ * The coral tag's two words.
+ *
+ * *Best match* and not *Best fit*: [#310](https://github.com/Raketa02/Raketa/issues/310) makes
+ * *Best fit* a **sort**, and a tag and a sort chip reading the same two words on one screen
+ * would have a reader looking for the connection between them. `CONTEXT.md`'s Fit is the
+ * number in the pill; this is the row that has the most of it.
+ */
+const BEST_MATCH_WORD = 'Best match';

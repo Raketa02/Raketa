@@ -520,6 +520,10 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
                     key={candidate.playerId}
                     candidate={candidate}
                     envelope={record.envelope}
+                    /* The search's Sport, drawn on the photo panel. It is the screen's fact
+                       rather than the card's — one value for the whole list, and #309 refuses
+                       to put twenty copies of it on `player_card`. */
+                    sportName={sportName}
                     action="ADD_TO_COURT"
                     onAction={() => add(candidate)}
                     onWhyFit={() => setExplaining(candidate)}

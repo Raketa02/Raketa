@@ -1,13 +1,15 @@
 /**
- * The **competitive** candidate card — photo-left, with a head-to-head row.
+ * The **competitive** candidate card — a photo panel, an identity row, and one head-to-head
+ * band ([#309](https://github.com/Raketa02/Raketa/issues/309)).
  *
  * One of three components over one parts kit, and deliberately **not one component with a
  * `surface` prop**: a single card would carry `surface === …` at nine sites, which is §G3
  * #1's complaint (*"sixty lines of interpolation with eight conditional blocks"*) arriving in
  * a new spelling
  * ([`the-play-components.md`](../../../../../../docs/specs/matchmaking/the-play-components.md)
- * §3). After Decision 3 the shapes genuinely differ: this one is photo-left with a
- * head-to-head row, and the social and deck cards are media-top with fact rows.
+ * §3). After #309 the shapes differ further still: this one has a panel with the Level printed
+ * on it, its own identity row, and a band; the social and deck cards are media-top with fact
+ * rows, and neither is touched.
  *
  * ## It takes `(candidate, envelope)` and reads no global state
  *
@@ -18,39 +20,81 @@
  * intact: `SearchEnvelope.mode` is null on the deck and `IntentAlignmentEvidence.myMode` is
  * not, and they are supposed to disagree there.
  *
+ * **`sportName` is the one thing it takes from the screen**, and it is a prop rather than a
+ * field for a reason worth keeping: the Sport is a property of the **search**, not of the
+ * person, and putting it on `player_card` would be twenty copies of one fact crossing the wire
+ * on every response. `origin.sport` is already held one component up.
+ *
  * ## What it draws, and therefore what it will not say twice
  *
- * The head-to-head row prints **both levels** and the balance bar draws the **forecast**, so
- * `LEVEL_FIT` and `PREDICTED_BALANCE` are this card's drawn set and neither appears as a
- * reason line. `RELIABILITY` joins them the day the Player Score block prints and not before.
+ * The band prints **both levels** and draws the **forecast**, so `LEVEL_FIT` and
+ * `PREDICTED_BALANCE` are this card's drawn set and neither appears as a reason line — the set
+ * is unchanged by the redraw, because the band replaced the three elements that drew them and
+ * not the facts. `RELIABILITY` joins them the day the Player Score block prints and not before.
  * `DISTANCE` is not in the set — this card draws no distance row, which is why a reason line
  * on it can never come up empty.
  *
- * ## The button knows nothing about sending
+ * **The Level is printed twice**, hugely on the panel and again on the right of the band. That
+ * is the designs' choice and it is accepted: the panel's is the card's **identity** — what this
+ * person published, drawn whatever fired — and the band's is one side of a **comparison**
+ * computed against the other. §10 forbids a reason line restating a value the card renders, and
+ * that rule is about the two registers rather than about the pixel count: the fact is **said
+ * once**, in `levelRow`, and the reason line for it is filtered off exactly as before.
  *
- * It takes `onAction` and a code, which is what lets one shape serve *Add* and *Challenge*.
- * `SH.propose` and the send itself are `features/challenges/`'
+ * ## The border the designs draw is refused, and this is where the answer is recorded
+ *
+ * The designs put a **coral** border on every competitive card and a **green** one on *wants
+ * to play you*. Neither is drawn, and neither refusal is new:
+ *
+ * - **Coral, on every card.** [5.1](../../../../../docs/design-system.md#51-card--the-workhorse)
+ *   already spends a coral border on a card: it is the **pressed** state. A permanent one is
+ *   every row in a scrolling list drawn as though a finger were on it, and
+ *   [1.2](../../../../../docs/design-system.md#12-one-accent-used-sparingly) is *when everything
+ *   is accented, nothing is*. `CourtEntryCard` refused the same 2pt coral outline for the same
+ *   reason one screen earlier.
+ * - **Green, on the lifted card.** Volt is *a fill anywhere and a stroke only on dark* — it is
+ *   **1,25:1** on `surface` and **1,12:1** on `paper`, so a volt card border is a line nobody
+ *   sees. The 2026-08-31 amendment settled this exact question in writing, naming *"a 2pt
+ *   border on the interest card"* among the strokes it refused, refusing a darker `voltLine`
+ *   companion (*"that is no longer volt"*), and refusing to move the signal to coral (*"coral
+ *   is the action colour, and they want you is a fact about somebody else"*). Its conclusion is
+ *   this card's: *"the card's emphasis becoming a tag is what Part 13 prefers anyway — a border
+ *   carries no word and this signal has one."* The tag is the word.
+ *
+ * ## Three accessibility elements, and the third is the one that became visible
+ *
+ * §20.3 fixed the card at **two**: the body, whose action is *Why 78?*, and its primary button.
+ * The designs draw *Why 78?* as a secondary button beside the primary, so there are three. The
+ * body **keeps** its press rather than becoming a labelled group: §20.1's rule is *one element
+ * per action*, and a body with no action would be an element that rule cannot account for —
+ * where a big target and a small named one for the same act cost nothing but a swipe. What
+ * changes is the count, and §20.3 is updated rather than left wrong.
+ *
+ * ## The buttons know nothing about sending
+ *
+ * The primary takes `onAction` and a code, which is what lets one shape serve *Add* and
+ * *Challenge*. `SH.propose` and the send itself are `features/challenges/`'
  * ([`the-play-components.md`](../../../../../../docs/specs/matchmaking/the-play-components.md)
- * §8). The **body's** own action is *Why 78?*, which is where
- * [#231](https://github.com/Raketa02/Raketa/issues/231) repointed the long press when K-7
- * ruled the record sheets out — so the card is two accessibility elements and not one.
+ * §8).
  */
 
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { playerName } from '@/shared/formatting/playerName';
-import { formatLevel } from '@/shared/formatting/ratingFormat';
-import { BalanceBar, Button, PressableCard, theme } from '@/shared/ui';
+import { Button, FitPill, PressableCard, theme } from '@/shared/ui';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Term } from '../../domain/vocabulary';
-import { candidateActionLabel, type CandidateAction } from '../accessibilityPresentation';
-import { balanceLabel, balanceReading, balanceTone } from '../balancePresentation';
-import { BALANCE_ROW_LABEL, CANDIDATE_ACTION_WORD } from '../playerCardPresentation';
+import {
+  candidateActionLabel,
+  whyFitControlLabel,
+  type CandidateAction,
+} from '../accessibilityPresentation';
+import { CANDIDATE_ACTION_WORD, candidateTag } from '../playerCardPresentation';
+import { whyFitControlWord } from '../whyFitPresentation';
 
-import { CandidatePhoto } from './CandidatePhoto';
-import { CardHead } from './CardHead';
-import { FactRow } from './FactRow';
+import { HeadToHeadBand } from './HeadToHeadBand';
+import { IdentityRow } from './IdentityRow';
+import { PhotoPanel } from './PhotoPanel';
 import { ReasonLine } from './ReasonLine';
 import { candidateFacts, evidenceOf } from './candidateFacts';
 
@@ -66,80 +110,55 @@ export const COMPETITIVE_CARD_DRAWS: readonly Term[] = ['LEVEL_FIT', 'PREDICTED_
 export interface CandidateCardProps {
   readonly candidate: Candidate;
   readonly envelope: SearchEnvelope;
+  /** `sportLabel(origin.sport)` — the search's Sport, drawn on the panel. See the module note. */
+  readonly sportName: string;
   /** What the primary button does. A code, so a third surface gains a word or does not build. */
   readonly action: CandidateAction;
   readonly onAction: () => void;
-  /** The body's own action — *Why 78?*. */
+  /** The body's own action, and now a button as well — *Why 78?*. */
   readonly onWhyFit: () => void;
+  /**
+   * Whether this row wears the coral tag.
+   *
+   * **The ordering rule's answer** ([#310](https://github.com/Raketa02/Raketa/issues/310)),
+   * never this card's: exactly one row on screen has the highest Fit, and a component handed
+   * one candidate cannot know which. Defaulted to `false` so the card is honest until the rule
+   * that decides it is wired — a tag drawn on every card is worse than no tag at all.
+   */
+  readonly bestMatch?: boolean;
 }
 
 export function CandidateCard({
   candidate,
   envelope,
+  sportName,
   action,
   onAction,
   onWhyFit,
+  bestMatch = false,
 }: CandidateCardProps) {
   const facts = candidateFacts(candidate, envelope, COMPETITIVE_CARD_DRAWS);
   const levelFit = evidenceOf(candidate, 'level_fit');
   const balance = evidenceOf(candidate, 'predicted_balance');
+  const tag = candidateTag({ inclusionReason: candidate.inclusionReason, bestMatch });
 
   return (
     <PressableCard style={s.card} onPress={onWhyFit} accessibilityLabel={facts.label}>
       <View style={s.body}>
-        <CandidatePhoto
+        <PhotoPanel
           playerId={candidate.playerId}
           photoUrl={candidate.card.photoUrl}
-          box={{ kind: 'thumb' }}
+          level={candidate.card.level}
+          sportName={sportName}
         />
 
         <View style={s.column}>
-          <CardHead
-            name={facts.name}
-            fit={candidate.fit}
-            inclusionReason={candidate.inclusionReason}
-          />
+          <IdentityRow name={facts.name} tag={tag} />
 
-          {/* Both levels, side by side — the row this card draws instead of a level row, and
-              the reason `LEVEL_FIT` is in its drawn set. Absent where the term stood down:
-              there is no second source for the searcher's own μ, and inventing one would be
-              the client computing a level. */}
-          {levelFit === undefined ? null : (
-            <View style={s.headToHead}>
-              <Side name={playerName({ kind: 'you' })} level={levelFit.myMu} />
-              <Side name={facts.name} level={levelFit.theirMu} />
-            </View>
-          )}
-
-          {/* The bar says WHICH side, the printed percentage says HOW even, and they are two
-              different facts — so the bar takes the level advantage and never the forecast.
-              At `sm` there are no segment labels, and the head-to-head row above has already
-              named both sides. */}
-          {/* The bar is hidden and the row below carries it. §20.1 merges an actionless
-              element into the nearest action above it, and §20.3 counts the card as two
-              elements — the body and its button — so a bar announcing itself inside the body
-              would be a third. Its own `image` role and name are §20.4's, and §20.4 is about
-              the court, where the bar sits on a screen rather than inside a button. */}
-          {levelFit === undefined || balance === undefined ? null : (
-            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              <BalanceBar
-                advantage={levelFit.myMu - levelFit.theirMu}
-                tone={balanceTone(balance.pct)}
-                size="sm"
-                accessibilityLabel={balanceLabel(balance.pct)}
-              />
-            </View>
-          )}
-
-          {/* The word and the figure the bar's tint stands for. Part 13's *never colour
-              alone*, and what makes `PREDICTED_BALANCE` a term this card renders a VALUE for
-              rather than one it tints — which is what its presence in the drawn set claims.
-              It is drawn whenever the term fired, because the bar needs a level advantage as
-              well and the forecast is a fact on its own; `candidateFacts` speaks the same
-              reading, so the listener and the reader get it exactly once each. */}
-          {balance === undefined ? null : (
-            <FactRow label={BALANCE_ROW_LABEL} value={balanceReading(balance.pct)} />
-          )}
+          {/* On its own row, under the name. The designs' *"2,95 · 0,24 above you"* beside it
+              is struck: the band below prints the gap as two figures over a bar, and the sheet
+              behind *Why 78?* is what explains the number the pill carries. */}
+          <FitPill fit={candidate.fit} />
 
           {facts.reasons.map((line, at) => (
             <ReasonLine key={`reason-${at}`} line={line} />
@@ -148,46 +167,47 @@ export function CandidateCard({
           {facts.concerns.map((line, at) => (
             <ReasonLine key={`concern-${at}`} line={line} variant="concern" />
           ))}
-
-          <Button
-            label={CANDIDATE_ACTION_WORD[action]}
-            accessibilityLabel={candidateActionLabel(action, facts.name)}
-            onPress={onAction}
-            size="sm"
-            style={s.action}
-          />
         </View>
+      </View>
+
+      {/* Full width, under both columns: it is a comparison between two people rather than a
+          fact about the one in the panel, and at the column's width the bar's own segment
+          labels would not fit — which is the size floor #219 B4 put on `sm`. */}
+      <HeadToHeadBand levelFit={levelFit} balance={balance} />
+
+      <View style={s.actions}>
+        <Button
+          label={whyFitControlWord(candidate.fit)}
+          accessibilityLabel={whyFitControlLabel(facts.name, candidate.fit)}
+          onPress={onWhyFit}
+          variant="secondary"
+          size="sm"
+        />
+
+        <Button
+          label={CANDIDATE_ACTION_WORD[action]}
+          accessibilityLabel={candidateActionLabel(action, facts.name)}
+          onPress={onAction}
+          size="sm"
+        />
       </View>
     </PressableCard>
   );
 }
 
-/**
- * One half of the head-to-head row: who, and what they are rated.
- *
- * Two elements rather than one interpolated string, because the level is a **figure** — mono
- * and tabular, so twenty cards scrolling past one another keep their columns — and a figure
- * inside a sentence is a figure in the sentence's font.
- */
-function Side({ name, level }: { readonly name: string; readonly level: number }) {
-  return (
-    <View style={s.side}>
-      <Text style={s.sideName} numberOfLines={1}>
-        {name}
-      </Text>
-      <Text style={s.sideLevel}>{formatLevel(level)}</Text>
-    </View>
-  );
-}
-
 const s = StyleSheet.create({
-  // 12 / 12 / 9 — the 3pt grid's reading of the prototype's 11 / 11 / 9 (§G1).
-  card: { paddingBottom: theme.space.sm },
+  // 12 / 12 / 9 — the 3pt grid's reading of the prototype's 11 / 11 / 9 (§G1). The card is a
+  // column of three blocks now, so the gap between them is the card's rather than each one's.
+  card: { paddingBottom: theme.space.sm, gap: theme.space.sm },
   body: { flexDirection: 'row', gap: theme.space.md },
   column: { flex: 1, gap: theme.space.xs },
-  headToHead: { flexDirection: 'row', justifyContent: 'space-between', gap: theme.space.sm },
-  side: { flexDirection: 'row', alignItems: 'baseline', gap: theme.space.xxs, flexShrink: 1 },
-  sideName: { ...theme.type.rlLabel, color: theme.color.muted, flexShrink: 1 },
-  sideLevel: { ...theme.num.xs, ...theme.tabular, color: theme.color.ink },
-  action: { alignSelf: 'flex-start' },
+  // It wraps, because both labels grow with the OS font setting: *Why 78?* beside *Add to the
+  // court* fits the narrowest phone at the system size and not at every size above it, and a
+  // row that overflows puts the primary action off the edge of the card.
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: theme.space.xs,
+  },
 });

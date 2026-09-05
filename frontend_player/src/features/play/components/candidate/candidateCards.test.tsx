@@ -18,7 +18,7 @@ import { Image, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { courtPosterFor } from '@/features/player_profile/types';
 import { formatLevel, formatRange } from '@/shared/formatting/ratingFormat';
-import { theme } from '@/shared/ui';
+import { balanceShare, theme } from '@/shared/ui';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Evidence, ScoredTerm } from '../../domain/evidence';
@@ -131,16 +131,26 @@ function candidate(over: Partial<Candidate> = {}): Candidate {
 
 const noop = () => undefined;
 
-function drawCompetitive(over: Partial<Candidate> = {}) {
+/** The Sport is the screen's, so the card is handed one — it is never on `player_card`. */
+const SPORT_NAME = 'Tennis';
+
+function drawCompetitive(over: Partial<Candidate> = {}, bestMatch = false) {
   render(
     <CandidateCard
       candidate={candidate(over)}
       envelope={ENVELOPE}
+      sportName={SPORT_NAME}
       action="ADD_TO_COURT"
       onAction={noop}
       onWhyFit={noop}
+      bestMatch={bestMatch}
     />,
   );
+}
+
+/** Every term except the one named — the shape a stood-down term arrives in (§8). */
+function without(term: Term): readonly ScoredTerm[] {
+  return TERMS.filter((row) => row.term !== term);
 }
 
 function drawSocial(over: Partial<Candidate> = {}) {
@@ -172,13 +182,52 @@ function surface(): ViewStyle {
   return StyleSheet.flatten(screen.UNSAFE_getAllByType(View)[0]?.props.style as ViewStyle);
 }
 
+/** Every drawn box on screen, flattened — the two helpers below both read the band off it. */
+function boxes(): readonly ViewStyle[] {
+  return screen
+    .UNSAFE_getAllByType(View)
+    .map((box) => StyleSheet.flatten(box.props.style as ViewStyle))
+    .filter((style): style is ViewStyle => style !== undefined);
+}
+
+/** The bar's track if it is drawn at all, found by the one radius only it draws. */
+function drawnTrack(): ViewStyle | undefined {
+  return boxes().find((style) => style.borderRadius === theme.radius.balanceBar);
+}
+
+function track(): ViewStyle {
+  const found = drawnTrack();
+  if (found === undefined) throw new Error('no balance bar on screen');
+  return found;
+}
+
+/**
+ * The fold, as the drawn width of your own segment.
+ *
+ * Read from **inside** the track rather than from anywhere on screen: a percentage width is
+ * not unique to the bar, and a helper that found the first one anywhere would keep passing
+ * while measuring something else entirely.
+ */
+function yoursWidth(): string {
+  const all = boxes();
+  const at = all.findIndex((style) => style.borderRadius === theme.radius.balanceBar);
+  if (at < 0) throw new Error('no balance bar on screen');
+
+  const found = all.slice(at + 1).find((style) => typeof style.width === 'string');
+  if (found === undefined) throw new Error('no balance segment inside the bar');
+  return String(found.width);
+}
+
 describe('one contract, three shapes', () => {
   it('draws both levels on the competitive card and a level row on the other two', () => {
     // The head-to-head row is what makes `LEVEL_FIT` this card's own, and it is why the
     // three are three components rather than one carrying `surface === …`.
     drawCompetitive();
     expect(screen.getByText(formatLevel(2.71))).toBeTruthy();
-    expect(screen.getByText(formatLevel(2.83))).toBeTruthy();
+    // Twice: hugely on the photo panel, and again on the right of the band. The panel states
+    // what they published and the band states one side of a comparison — one fact drawn twice
+    // and said once, which is what §10 is about.
+    expect(screen.getAllByText(formatLevel(2.83))).toHaveLength(2);
     expect(screen.queryByText(/Established/)).toBeNull();
     screen.unmount();
 
@@ -213,7 +262,7 @@ describe('one contract, three shapes', () => {
     expect(screen.getByText('In your area · 4 km')).toBeTruthy();
   });
 
-  it('draws the forecast as a bar with its word on the competitive card, and as a row on the deck', () => {
+  it('draws the forecast as a band with its word on the competitive card, and as a row on the deck', () => {
     drawCompetitive();
     // The bar is a tint, so the word beside it is what Part 13's *never colour alone* means
     // — and the bar itself merges into the card body rather than announcing a third time.
@@ -293,13 +342,140 @@ describe('each card’s drawn set', () => {
 });
 
 describe('the volt tag', () => {
-  it('is a sentence on an interest lift, and nothing at all without one', () => {
+  it('is a sentence on the social card, which #309 did not touch', () => {
     drawSocial();
     expect(screen.queryByText('They already said yes to you')).toBeNull();
     screen.unmount();
 
     drawSocial({ inclusionReason: 'INTEREST_LIFT' });
     expect(screen.getByText('They already said yes to you')).toBeTruthy();
+  });
+
+  it('is two words beside the handle on the competitive card, which #309 reversed', () => {
+    // #231's open decision #14 turned it into a sentence because *"a full sentence does not go
+    // where a two-word tag went"*. The two-word form was never gone — it is the liveness
+    // twin's, and §10 says the two codes are two facts with ONE tag.
+    drawCompetitive({ inclusionReason: 'INTEREST_LIFT' });
+
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
+    expect(screen.queryByText('They already said yes to you')).toBeNull();
+  });
+
+  it('replaces the coral tag where both would fall on the same card', () => {
+    drawCompetitive({ inclusionReason: 'INTEREST_LIFT' }, true);
+
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
+    expect(screen.queryByText('Best match')).toBeNull();
+  });
+
+  it('leaves the handle bare where neither fact is true', () => {
+    drawCompetitive();
+
+    expect(screen.queryByText('Wants to play you')).toBeNull();
+    expect(screen.queryByText('Best match')).toBeNull();
+  });
+
+  it('draws the coral tag only where the ordering rule says so', () => {
+    drawCompetitive({}, true);
+
+    expect(screen.getByText('Best match')).toBeTruthy();
+  });
+});
+
+describe('the photo panel', () => {
+  it('prints the level they published, over a pinned scrim', () => {
+    // The panel is the card's identity: what this person published, drawn whatever fired. The
+    // scrim is what makes a white label over an unknowable ground computable at all — the
+    // ratio itself is `textOnMedia.test.ts`'s.
+    drawCompetitive();
+
+    const scrims = screen
+      .UNSAFE_getAllByType(View)
+      .map((box) => StyleSheet.flatten(box.props.style as ViewStyle))
+      .filter((style) => style?.backgroundColor === theme.color.photoScrim);
+
+    expect(scrims).toHaveLength(1);
+  });
+
+  it('keeps the level when the term behind the band stands down', () => {
+    // `player_card.level` and `level_fit.theirMu` are two fields, and the panel takes the
+    // published one precisely so a stood-down term cannot blank the card's identity.
+    drawCompetitive({ terms: without('LEVEL_FIT') });
+
+    expect(screen.getByText(formatLevel(2.83))).toBeTruthy();
+  });
+
+  it('draws the search’s sport, capitalised, and never one off the candidate', () => {
+    drawCompetitive();
+
+    expect(screen.getByText(SPORT_NAME)).toBeTruthy();
+  });
+
+  it('draws the same panel over the generated poster', () => {
+    // Nothing about the panel branches on whether there is a photograph: the scrim clears AA
+    // over every poster stop by construction, so the level and the sport are drawn identically.
+    drawCompetitive({ card: { ...candidate().card, photoUrl: undefined } });
+
+    expect(screen.UNSAFE_queryByType(Image)).toBeNull();
+    // Both of them still: the panel's and the band's, exactly as over a photograph.
+    expect(screen.getAllByText(formatLevel(2.83))).toHaveLength(2);
+    expect(screen.getByText(SPORT_NAME)).toBeTruthy();
+  });
+});
+
+describe('the head-to-head band', () => {
+  it('draws one bar with its segment labels, at the size that carries them', () => {
+    drawCompetitive();
+
+    // `sm` drops labels because there is no room beside the fold for a 9,5pt line, and it is
+    // 16 tall. The band is taller, so the caller picks the size that carries them rather than
+    // changing the floor — read off the drawn track, which is where the choice shows.
+    expect(track().height).toBe(theme.size.balanceBar.md);
+    // Drawn and hidden with the bar they sit inside: the bar's whole spoken name is
+    // `balanceLabel`, and two segment captions announced beside it would be it said twice.
+    expect(screen.getByText('you', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByText('them', { includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it('folds at the level advantage and never at the forecast', () => {
+    // The bar says WHICH side and the figure says HOW even. They are two facts, and a bar fed
+    // the forecast would be the client deriving one from the other. Asserted on the drawn
+    // fold, so it is the picture that is checked rather than the argument passed.
+    drawCompetitive();
+
+    expect(yoursWidth()).toBe(`${balanceShare(2.71 - 2.83)}%`);
+    expect(yoursWidth()).not.toBe(`${balanceShare(74)}%`);
+  });
+
+  it('collapses to the row the card drew before it, when only the forecast fired', () => {
+    // `PREDICTED_BALANCE` is in the drawn set whether or not the band can draw it, so its
+    // reason line is filtered off either way — a band that simply vanished would take the fact
+    // off the card in both registers at once.
+    drawCompetitive({ terms: without('LEVEL_FIT') });
+
+    expect(drawnTrack()).toBeUndefined();
+    expect(screen.getByText('Predicted balance')).toBeTruthy();
+    expect(screen.getByText('Fairly even · 74%')).toBeTruthy();
+  });
+
+  it('draws neither the bar nor a tint when the forecast stood down', () => {
+    drawCompetitive({ terms: without('PREDICTED_BALANCE') });
+
+    expect(drawnTrack()).toBeUndefined();
+    expect(screen.getByText(formatLevel(2.71))).toBeTruthy();
+  });
+});
+
+describe('the card’s border', () => {
+  it('is the workhorse line and never an accent, on either kind of row', () => {
+    // The designs draw coral on every competitive card and green on a lifted one. Coral on a
+    // card is 5.1's PRESSED state, and volt as a stroke on paper is 1,25:1 — the 2026-08-31
+    // amendment refused that border in writing and made the signal a tag instead.
+    for (const lifted of [{}, { inclusionReason: 'INTEREST_LIFT' as const }]) {
+      drawCompetitive(lifted);
+      expect(surface().borderColor).toBe(theme.color.line);
+      screen.unmount();
+    }
   });
 });
 

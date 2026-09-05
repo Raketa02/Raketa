@@ -129,16 +129,33 @@ genuinely differ in shape: after Decision 3 the competitive card is **photo-left
 head-to-head row**, and the social and deck cards are **media-top with fact rows**.
 [`the-words.md`](the-words.md) §5 already names them as three with three different filters.
 
+**[#309](https://github.com/Raketa02/Raketa/issues/309) widened that gap rather than closing
+it.** The competitive card's photo became a **panel** with the Level printed on it, its head
+row became an **identity row** with a tag where the fit pill was, and its three head-to-head
+elements collapsed into **one band**. So it no longer shares a head with the other two:
+`CardHead` stayed theirs, and `PhotoPanel`, `IdentityRow` and `HeadToHeadBand` are the
+competitive card's. Configuring one head to draw either a pill or a tag on the name line, and
+either a sentence or nothing beneath it, takes **two flags to say which** — which is this
+section's own `surface === …` arriving one component down. The kit is what the three still
+share, not what they are made to share.
+
 ```
 features/play/components/candidate/
-  CandidateCard.tsx          competitive · pool     photo-left
+  CandidateCard.tsx          competitive · pool     panel-left, one band
   CandidateCardSocial.tsx    for fun · pool         media-top
   DeckCard.tsx               the deck               media-top, floats
   CandidatePhoto.tsx         photo-or-poster in a box            ← §4, §9
+  PhotoPanel.tsx  IdentityRow.tsx  HeadToHeadBand.tsx   competitive only
+  CardHead.tsx               social · deck
   FactRow.tsx  TagRow.tsx  ReasonLine.tsx
 ```
 
-**Every card takes `(candidate, envelope)` and no global state.**
+**Every card takes `(candidate, envelope)` and no global state.** It may also take what the
+**screen** owns rather than the person: the competitive card's `sportName` is the *search's*
+Sport, and it is a prop precisely because putting it on `player_card` would be twenty copies of
+one fact crossing the wire per response. That is the same rule, not an exception to it — what
+the sentence refuses is a component reaching for a store, never a screen handing down a fact it
+already holds.
 [#233](https://github.com/Raketa02/Raketa/issues/233) already fixed the why-fit sheet that
 way, and it is the same fix §G6 #8 asks for on the card — *"the Why-fit sheet reads the global
 sport and mode rather than the card's own."* Passing the envelope rather than a `mode` string
