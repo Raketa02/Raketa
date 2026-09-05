@@ -43,14 +43,20 @@
  */
 
 import { counted } from '@/shared/formatting/counted';
-import { formatLevel, formatPercent, formatRange } from '@/shared/formatting/ratingFormat';
+import {
+  formatLevel,
+  formatPercent,
+  formatRange,
+  formatSignedLevel,
+} from '@/shared/formatting/ratingFormat';
 import { slotName } from '@/shared/vocabulary/availabilityPresentation';
 import { socialTagLabel, socialTagName } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
+import type { AtStake } from '../domain/candidate';
 import type { SharedTag, SocialTagOverlap } from '../domain/socialTagOverlap';
-import type { InclusionReason } from '../domain/vocabulary';
+import type { GameResult, InclusionReason } from '../domain/vocabulary';
 
 import type { CandidateAction } from './accessibilityPresentation';
 import { livenessLine } from './livenessPresentation';
@@ -302,6 +308,121 @@ export function socialTagClauses(row: SocialTagOverlap): readonly string[] {
 /** The words alone. Prose does not carry glyphs — `socialTagPresentation`'s own split. */
 function tagNames(tagIds: readonly SocialTagId[]): string {
   return tagIds.map(socialTagName).join(', ');
+}
+
+/**
+ * **The three record blocks' words** — what the platform has watched this person do
+ * ([#312](https://github.com/Raketa02/Raketa/issues/312)).
+ *
+ * Three names and two readings. The names are the product's own and are not re-worded here;
+ * what this file writes is the pair of sentences a listener gets, because the run of form is
+ * **five squares** and the count is a figure with no unit on it.
+ *
+ * ## *Player Score* is not a second rating, and the block must not read as one
+ *
+ * It is reliability — turning up, answering challenges, confirming results
+ * ([ADR-0140](../../../../../docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md))
+ * — and the card already prints a Level twice. So the figure keeps the block's own name in
+ * front of it and states the scale behind it, exactly as `fitSentence` does and for
+ * [7.10](../../../../docs/design-system.md#710-the-fit-pill)'s reason: *a number on this
+ * platform says what it is out of*. Two out-of-a-hundred figures on one card is why the
+ * denominator is spoken rather than assumed.
+ *
+ * ## The run of form is read as a count, never as a picture
+ *
+ * The squares are distinguished by **fill**, which is exactly the half of
+ * [Part 13](../../../../docs/design-system.md#part-13--accessibility) a listener gets nothing
+ * of. Announcing five elements would read the row as a table — *won, won, lost, won, won* — so
+ * the whole row is one clause and it is a count: *3 of the last 5 won*.
+ *
+ * **And the denominator is the real one.** A run of three says *of the last 3*, because fewer
+ * than five is a real answer and *the gap is the honest statement*: a clause that said *of the
+ * last 5* over three squares would pad in words what the drawing refuses to pad in squares.
+ */
+export const PLAYER_SCORE_BLOCK = 'Player Score';
+export const LAST_FIVE_BLOCK = 'Last 5';
+export const COUNTED_BLOCK = 'Counted';
+
+/** What a Player Score is out of, spelled rather than assumed. See the note above. */
+const PLAYER_SCORE_DENOMINATOR = 100;
+
+/** The three facts the record block states, each **omitted** where the platform watched none. */
+export interface RecordBlockFacts {
+  readonly playerScore?: number;
+  readonly lastFive?: readonly GameResult[];
+  readonly countedGames?: number;
+}
+
+/**
+ * What the record block contributes to the card's **spoken** name — nought to three clauses.
+ *
+ * One clause per block that is drawn, in the order the blocks are drawn, because there is no
+ * argument for a different one: the three are the same register and the row reads left to
+ * right. A block that is hidden says nothing, which is the whole of *hidden, never blank* read
+ * in the register a reader cannot see.
+ */
+export function recordClauses(record: RecordBlockFacts): readonly string[] {
+  const { playerScore, lastFive, countedGames } = record;
+  return [
+    ...(playerScore === undefined
+      ? []
+      : [`${PLAYER_SCORE_BLOCK} ${playerScore} out of ${PLAYER_SCORE_DENOMINATOR}`]),
+    ...(lastFive === undefined ? [] : [lastFiveReading(lastFive)]),
+    ...(countedGames === undefined ? [] : [countedGamesReading(countedGames)]),
+  ];
+}
+
+/** `3 of the last 5 won` — the squares as a count, against the run's own length. */
+export function lastFiveReading(results: readonly GameResult[]): string {
+  const won = results.filter((result) => result === 'WIN').length;
+  return `${won} of the last ${results.length} won`;
+}
+
+/**
+ * `29 counted games` — the figure with the noun it is a count of.
+ *
+ * Through the one pluralisation helper, so no sentence here hardcodes an `s`
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §4, §19), and *counted*
+ * is in the noun rather than left to the block's name: a listener hears the clause on its own.
+ */
+export function countedGamesReading(count: number): string {
+  return counted(count, 'counted game', 'counted games');
+}
+
+/**
+ * **The stake boxes' words** — what a counted game would move, either way.
+ *
+ * `Win, counted` and `Lose, counted`, which are the designs' own two labels and are worth
+ * keeping as written: the comma is doing the work. *Win* alone would read as a claim about
+ * this game, and *If you win* is a sentence where the row has two boxes; what the label says
+ * is **which of the two counted outcomes** the figure under it belongs to.
+ *
+ * **The figures are drawn as served and signed by `formatSignedLevel`.** Nothing here rounds,
+ * rescales, negates or derives one from the other — `win_delta > 0 > loss_delta` is the
+ * server's invariant and the minus on the loss is the number's own.
+ *
+ * **No tone.** The palette is not spent here: `mint` is *settled, safe, covered* and `red` is
+ * *ended badly*, and neither is true of an outcome that has not happened
+ * ([1.3](../../../../docs/design-system.md#13-semantic-colour-is-never-decorative) — semantic
+ * colour is never decorative). The sign carries the direction and the label carries the word,
+ * which is also [Part 13](../../../../docs/design-system.md#part-13--accessibility) satisfied
+ * without a colour being asked to mean anything.
+ */
+export const WIN_STAKE_BLOCK = 'Win, counted';
+export const LOSS_STAKE_BLOCK = 'Lose, counted';
+
+/**
+ * What the stake boxes contribute to the spoken name — **two clauses or none**.
+ *
+ * Never one. The pair is the fact: a listener told what a win is worth and not what a loss
+ * costs has been read half of a symmetrical thing, and the contract sends the two together or
+ * neither.
+ */
+export function stakeClauses(stake: AtStake): readonly string[] {
+  return [
+    `${WIN_STAKE_BLOCK} ${formatSignedLevel(stake.winDelta)}`,
+    `${LOSS_STAKE_BLOCK} ${formatSignedLevel(stake.lossDelta)}`,
+  ];
 }
 
 /**

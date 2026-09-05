@@ -536,6 +536,10 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
                        rather than the card's — one value for the whole list, and #309 refuses
                        to put twenty copies of it on `player_card`. */
                     sportName={sportName}
+                    /* The same Sport, counted rather than named: the stake boxes are drawn on a
+                       singles court and hidden on a doubles one, and the seat count is the
+                       answer this screen already holds (#312). */
+                    seats={seats}
                     /* Which row wears the coral tag is the ordering rule's answer and never a
                        card's: a component handed one candidate cannot know it is the highest. */
                     bestMatch={candidate.playerId === bestMatch}

@@ -6,7 +6,7 @@
  * ([#270](https://github.com/Raketa02/Raketa/issues/270)) because the deck is the first
  * surface that draws a person.
  *
- * ## Four narrowings, and §3 decides each one separately
+ * ## Every narrowing, and §3 decides each one separately
  *
  * The generated unions say a served code is always one this build knows. That is true of the
  * document these types were generated from and false of a phone that has not been updated in
@@ -39,8 +39,32 @@
  * `GET /photos/{id}` refuses somebody else's on purpose — so an id here would be a field with
  * no reader and an invitation to store one.
  *
- * **`at_stake`, `would_be_forecast`, `counted_games`, `strands`.** No surface draws any of
- * them; a DTO with fields nobody reads is a contract nobody is checking.
+ * **`would_be_forecast` and `strands`.** No surface draws either; a DTO with fields nobody
+ * reads is a contract nobody is checking. `at_stake`, `counted_games` and `last_five` were on
+ * that list until the blocks that print them were built
+ * ([#312](https://github.com/Raketa02/Raketa/issues/312)), and they cross now for the same
+ * reason `player_score` started to.
+ *
+ * ## `last_five` is the one narrowing that takes the whole field with it
+ *
+ * A fifth row for the table above, and it is neither of the two answers in it. Every other
+ * closed vocabulary here is narrowed **per value** — a tag is dropped, a term keeps its row
+ * with a `null` in it — because the surface either states no total the value belongs to or
+ * states one the gap can stand in.
+ *
+ * The run of form is neither. **Its length is itself a statement**: five squares means five
+ * counted results and three means three, *"and the client draws the gap rather than filling
+ * it"*. So an outcome this build cannot read has nowhere to go. Dropping it would shorten the
+ * run and claim a game fewer than the platform counted; keeping it as a `null` would ask the
+ * card to draw a third kind of square, which is a design nobody has taken and a state the
+ * spoken reading (*three of the last five won*) cannot count either way.
+ *
+ * So the **field** is omitted, and the block is hidden rather than drawn wrong — which is what
+ * every absence on this card already does. Nothing about the record disappears with it:
+ * `counted_games` is a separate figure and goes on printing, so *the honesty figure* survives a
+ * run this build can only half read. It is `toRelaxedAsk`'s answer one register over — *a
+ * `RADIUS` rung with no radius has no sentence left at all* — rather than `matchedInFull`'s,
+ * because there is no second thing here for a bit to switch between.
  *
  * **`withheld` rows carry no person**, so they cannot become a candidate. They are dropped
  * here and are **not** counted as unreadable: a withheld row is a row this build read
@@ -65,6 +89,7 @@ import type {
 import type { Evidence, ScoredTerm, TagPair } from '../domain/evidence';
 import {
   DEGRADED_REASONS,
+  GAME_RESULTS,
   INCLUSION_REASONS,
   LEVEL_DIRECTIONS,
   LIVENESS_REASONS,
@@ -78,6 +103,7 @@ import {
   TERMS,
   WINDOWS,
   type DegradedReason,
+  type GameResult,
   type InclusionReason,
   type LevelDirection,
   type LivenessReason,
@@ -242,6 +268,12 @@ export function toCandidate(row: CandidateSchema): Candidate {
       ...(row.player_card.player_score === undefined
         ? {}
         : { playerScore: row.player_card.player_score }),
+      // The other two thirds of the record block, on the same spelling: omitted where the
+      // platform watched nothing, and never a nought it would have to be told not to print.
+      ...(row.player_card.counted_games === undefined
+        ? {}
+        : { countedGames: row.player_card.counted_games }),
+      ...lastFive(row.player_card.last_five),
     },
     terms: row.terms.map(toScoredTerm),
     // A concern is joined back to a row by its term, so one this build cannot name could not
@@ -253,7 +285,29 @@ export function toCandidate(row: CandidateSchema): Candidate {
     // A modifier row prints a sentence and a figure, and **nothing sums the list** — so an
     // unknown code has no total to distort, and a row with no words is nothing to draw.
     modifiers: row.modifiers.flatMap((modifier) => toModifier(modifier) ?? []),
+    // Two figures, carried as served. The client never derives one from the other and never
+    // supplies the loss's minus — `win_delta > 0 > loss_delta` is the server's invariant.
+    ...(row.at_stake === undefined
+      ? {}
+      : { atStake: { winDelta: row.at_stake.win_delta, lossDelta: row.at_stake.loss_delta } }),
   };
+}
+
+/**
+ * The run of form, **whole or not at all** — see the module note.
+ *
+ * **Absence gets one spelling here and nowhere after it.** The contract omits the field for
+ * *nothing of theirs has been counted and agreed* and never sends an empty list, but an empty
+ * one would otherwise arrive downstream as a run with no squares in it — a second absence for
+ * every reader to remember. So it is collapsed at the boundary, and the block and the spoken
+ * clause both ask the one question the rest of this card asks: is the field there.
+ */
+function lastFive(served: readonly string[] | undefined): {
+  readonly lastFive?: readonly GameResult[];
+} {
+  if (served === undefined || served.length === 0) return {};
+  const read = served.flatMap((result) => toGameResult(result) ?? []);
+  return read.length === served.length ? { lastFive: read } : {};
 }
 
 /** The one field that is omitted rather than nulled, kept omitted. */
@@ -425,6 +479,7 @@ const KNOWN_OPTIMISED_FOR = new Set<string>(OPTIMISED_FOR);
 const KNOWN_SORTS = new Set<string>(SORT_OPTIONS);
 const KNOWN_RUNGS = new Set<string>(RUNGS);
 const KNOWN_ASKS = new Set<string>(RELAXATION_ASKS);
+const KNOWN_RESULTS = new Set<string>(GAME_RESULTS);
 
 function toTerm(term: string): Term | undefined {
   return KNOWN_TERMS.has(term) ? (term as Term) : undefined;
@@ -456,4 +511,8 @@ function toSocialTagId(tag: string): SocialTagId | undefined {
 
 function toLevelDirection(direction: string): LevelDirection | undefined {
   return KNOWN_DIRECTIONS.has(direction) ? (direction as LevelDirection) : undefined;
+}
+
+function toGameResult(result: string): GameResult | undefined {
+  return KNOWN_RESULTS.has(result) ? (result as GameResult) : undefined;
 }

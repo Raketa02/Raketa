@@ -4,7 +4,7 @@
  * reflowing when a level goes from 2,71 to 2,80.
  */
 
-import { formatLevel, formatPercent, formatRange } from './ratingFormat';
+import { formatLevel, formatPercent, formatRange, formatSignedLevel } from './ratingFormat';
 
 describe('levels', () => {
   it('writes two decimals with a comma, whatever the value arrived as', () => {
@@ -30,6 +30,27 @@ describe('levels', () => {
   it('writes a negative one with the typographic minus', () => {
     expect(formatLevel(-0.09)).toBe('\u22120,09');
     expect(formatLevel(-1.5)).toBe('\u22121,50');
+  });
+});
+
+describe('a movement on that scale', () => {
+  /**
+   * The competitive card's stake boxes print two figures whose **signs are the fact**
+   * ([#312](https://github.com/Raketa02/Raketa/issues/312)), so the gain carries a plus that a
+   * Level never needs.
+   */
+  it('signs a gain, which is the whole of what it adds', () => {
+    expect(formatSignedLevel(0.08)).toBe('+0,08');
+    expect(formatSignedLevel(1)).toBe('+1,00');
+  });
+
+  it('leaves a loss the typographic minus it already had', () => {
+    expect(formatSignedLevel(-0.05)).toBe('\u22120,05');
+    expect(formatSignedLevel(-0.05)).toBe(formatLevel(-0.05));
+  });
+
+  it('signs a nought neither way, because nothing moved', () => {
+    expect(formatSignedLevel(0)).toBe('0,00');
   });
 });
 

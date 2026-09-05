@@ -55,6 +55,24 @@ export const TERMS = [
 
 export type Term = (typeof TERMS)[number];
 
+/**
+ * How a **counted** game ended, for the one person the card is about.
+ *
+ * Two values and no third. There is no draw in a racket sport, and a game nobody agreed a
+ * score for is not here at all — it is *an evening rather than evidence*, so it is counted in
+ * `countedGames` and absent from the run of form
+ * ([ADR-0137](../../../../../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)).
+ *
+ * **No moment travels beside one of these.** `lastFive` is outcomes in order, which is a run
+ * of form rather than a statement about when anybody was last here — activity recency at any
+ * granularity is row three of the Liveness table and
+ * [ADR-0106](../../../../../docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)
+ * §5 refuses it.
+ */
+export const GAME_RESULTS = ['WIN', 'LOSS'] as const;
+
+export type GameResult = (typeof GAME_RESULTS)[number];
+
 /** Which side of the searcher a candidate's level sits. */
 export const LEVEL_DIRECTIONS = ['ABOVE', 'LEVEL', 'BELOW'] as const;
 

@@ -263,7 +263,10 @@ async function openThePool() {
  * The Sport is swapped at the gate rather than by pressing a chip: *Find a game* draws its
  * chips from `GET /ratings`, so a player rated in one Sport arrives with it already chosen.
  */
-async function openTheSinglesPool() {
+async function openTheSinglesPool(
+  over: Partial<Wire['SearchEnvelope']> = {},
+  rows: readonly Wire['CandidateSchema'][] = [card(B), card(C)],
+) {
   stubGate(transport, { id: ME, ratings: [rating('TENNIS')], hasPlayerProfile: true });
   // Declared as well as rated: a rated-but-undeclared Sport opens ADR-0094's interstitial
   // before the grid, which is a different screen from the one this walk is about.
@@ -277,8 +280,9 @@ async function openTheSinglesPool() {
         window: 'THIS_WEEK' as const,
         post_gate: true,
       },
+      ...over,
     }),
-    candidates: [card(B), card(C)],
+    candidates: [...rows],
   });
   transport.on('POST', SEARCHES, () => json(singles() as Wire['ShortlistResponse']));
   transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () =>
@@ -630,6 +634,110 @@ describe('the sort row', () => {
       .map((control) => control.props.accessibilityLabel as string);
 
     expect(order).toEqual([addLabel(B), addLabel(D), addLabel(C)]);
+  });
+});
+
+/** A competitive pool on the four-seat Sport `openThePool()` walks. */
+function servedCompetitive(candidates: readonly Wire['CandidateSchema'][]) {
+  const rows: Wire['ShortlistResponse'] = {
+    search: envelope(SEARCH_ID, { mode: 'COMPETITIVE' }),
+    candidates: [...candidates],
+  };
+  transport.on('POST', SEARCHES, () => json(rows));
+  transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () => json(rows));
+}
+
+/**
+ * **What's at stake, on the two courts** — the plumbing half of
+ * [#312](https://github.com/Raketa02/Raketa/issues/312).
+ *
+ * The rule itself is `domain/atStake`'s and is unit-tested there. What only a walk can show is
+ * that the seat count the card is handed is the **search's own Sport** counted, rather than a
+ * constant or the wrong screen's: the same served row draws the boxes on tennis and does not
+ * on padel, and nothing about the row changed between the two.
+ */
+describe('what is at stake, on the two courts', () => {
+  const AT_STAKE = { win_delta: 0.08, loss_delta: -0.05 };
+
+  it('draws the pair on a singles court, as served', async () => {
+    await openTheSinglesPool({ mode: 'COMPETITIVE' }, [card(B, { at_stake: AT_STAKE })]);
+    await screen.findByLabelText(addLabel(B));
+
+    expect(screen.getByText('Win, counted')).toBeTruthy();
+    expect(screen.getByText('+0,08')).toBeTruthy();
+    expect(screen.getByText('Lose, counted')).toBeTruthy();
+    expect(screen.getByText('\u22120,05')).toBeTruthy();
+  });
+
+  it('hides it on a doubles court, where three seats are still unknown', async () => {
+    servedCompetitive([card(B, { at_stake: AT_STAKE })]);
+
+    await openThePool();
+    await screen.findByLabelText(addLabel(B));
+
+    expect(screen.queryByText('Win, counted')).toBeNull();
+    expect(screen.queryByText('Lose, counted')).toBeNull();
+  });
+
+  it('is not on a for-fun pool at all, which draws the other card', async () => {
+    // The field never crosses in for fun — *a counted result is meaningless rather than
+    // unavailable* — and the surface a for-fun pool draws has no box for it either. Served
+    // anyway here, so the absence on screen is the pool's own rather than the fixture's.
+    const rows: Wire['ShortlistResponse'] = {
+      search: envelope(SEARCH_ID),
+      candidates: [card(B, { at_stake: AT_STAKE })],
+    };
+    transport.on('POST', SEARCHES, () => json(rows));
+    transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () => json(rows));
+
+    await openThePool();
+    await screen.findByLabelText(addLabel(B));
+
+    expect(screen.queryByText('Win, counted')).toBeNull();
+  });
+});
+
+/**
+ * **The record block, walked from the wire** — three fields the pool had never carried before
+ * [#312](https://github.com/Raketa02/Raketa/issues/312).
+ *
+ * The drawing and the two spellings of absence are asserted on the card; what only a walk shows
+ * is that the fields survive the mapper and reach the block with nothing lost on the way.
+ */
+describe('the record block on a pool row', () => {
+  it('draws what the platform watched, straight off the served card', async () => {
+    servedCompetitive([
+      card(B, {
+        player_card: {
+          ...card(B).player_card,
+          player_score: 74,
+          counted_games: 29,
+          last_five: ['WIN', 'LOSS', 'WIN'],
+        },
+      }),
+    ]);
+
+    await openThePool();
+    await screen.findByLabelText(addLabel(B));
+
+    expect(screen.getByText('Player Score')).toBeTruthy();
+    expect(screen.getByText('74')).toBeTruthy();
+    expect(screen.getByText('Counted')).toBeTruthy();
+    expect(screen.getByText('29')).toBeTruthy();
+    // Three counted results, so *Last 5* draws three squares and a gap — the run's length is
+    // the statement, and it is `candidateCards.test.tsx` that counts them.
+    expect(screen.getByText('Last 5')).toBeTruthy();
+  });
+
+  it('draws none of the three for a row the platform has watched do nothing', async () => {
+    servedCompetitive([card(B)]);
+
+    await openThePool();
+    await screen.findByLabelText(addLabel(B));
+
+    expect(screen.queryByText('Player Score')).toBeNull();
+    expect(screen.queryByText('Last 5')).toBeNull();
+    expect(screen.queryByText('Counted')).toBeNull();
   });
 });
 

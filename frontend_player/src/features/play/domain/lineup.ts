@@ -162,6 +162,24 @@ export interface Lineup {
   readonly seats: readonly SeatedPlayerId[];
 }
 
+/**
+ * Whether the sport puts four people on the court, or two — **the one branch behind every
+ * sentence and every rule in this feature that could otherwise have said *four* out loud.**
+ *
+ * The count itself is `courtSeatCount`'s: `Court`'s own coordinates, counted rather than
+ * listed, so a fifth sport arrives with a drawing and not with an entry anywhere. What is here
+ * is the **boundary** over it, and there is exactly one of it — a second `seats > 2` written
+ * one screen away is a squash court told to build a four.
+ *
+ * **It is in `domain/` because it is a rule and not copy**
+ * ([`the-play-components.md`](../../../../../docs/specs/matchmaking/the-play-components.md)
+ * §7). It lived in `builderPresentation` while every reader was a sentence; it moved when
+ * `atStake` needed it ([#312](https://github.com/Raketa02/Raketa/issues/312)) and a `domain/`
+ * file reaching into the copy deck would have been the wrong direction for the same
+ * dependency. The copy modules import it from here and read the same way.
+ */
+export const isDoubles = (seats: number) => seats > 2;
+
 /** Whether two searches were run for the same thing. The week compares as a set. */
 export function sameOrigin(one: PlayOrigin, other: PlayOrigin): boolean {
   return one.sport === other.sport && one.mode === other.mode && sameWeek(one.week, other.week);

@@ -46,6 +46,22 @@ export function formatLevel(value: number): string {
   return decimal(value);
 }
 
+/**
+ * A **movement** on that scale — `+0,08`, `−0,05`.
+ *
+ * The plus is the whole of what this adds, and it is not decoration: the competitive card's
+ * stake boxes print two figures whose signs are the fact
+ * ([#312](https://github.com/Raketa02/Raketa/issues/312)), and a bare `0,08` beside a
+ * `−0,05` reads as a magnitude somebody forgot to sign rather than as a gain. The minus is
+ * `decimal`'s own U+2212, so the pair lines up in a tabular column.
+ *
+ * A zero takes neither sign, which is inert on the one caller today — the server's invariant is
+ * `win_delta > 0 > loss_delta` — and is the honest reading anywhere else: nothing moved.
+ */
+export function formatSignedLevel(value: number): string {
+  return value > 0 ? `+${decimal(value)}` : decimal(value);
+}
+
 export function formatRange(range: { readonly low: number; readonly high: number }): string {
   return `${decimal(range.low)}${RANGE_DASH}${decimal(range.high)}`;
 }

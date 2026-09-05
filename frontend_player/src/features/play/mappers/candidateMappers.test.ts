@@ -250,11 +250,7 @@ describe('the candidate', () => {
     expect(toCandidate(row({ distance_km: undefined }))).not.toHaveProperty('distanceKm');
   });
 
-  /**
-   * The record block's one field this build reads. The other two — `counted_games` and
-   * `last_five` — cross on the wire and are deliberately not mapped: a field is added to the
-   * DTO when a surface draws it, and no surface draws those.
-   */
+  /** The record block's three fields, all of which a card draws since #312. */
   it('carries the published Player Score, which is what *Most reliable* orders by', () => {
     const card = { ...row().player_card, player_score: 74 };
 
@@ -264,6 +260,67 @@ describe('the candidate', () => {
   /** Omitted rather than zero — what lets *Most reliable* sort a player with no record last. */
   it('omits the Player Score where the platform has watched nothing', () => {
     expect(toCandidate(row()).card).not.toHaveProperty('playerScore');
+  });
+
+  it('carries the counted games and the run of form, oldest to newest', () => {
+    const card: Wire['PlayerCardSchema'] = {
+      ...row().player_card,
+      counted_games: 29,
+      last_five: ['WIN', 'LOSS', 'WIN'],
+    };
+    const drawn = toCandidate(row({ player_card: card })).card;
+
+    expect(drawn.countedGames).toBe(29);
+    // In the order served. Nothing on this side sorts, reverses or pads to five: the length
+    // is the statement, and the card draws the gap.
+    expect(drawn.lastFive).toEqual(['WIN', 'LOSS', 'WIN']);
+  });
+
+  it('omits both of them rather than sending a nought and an empty run', () => {
+    // Absence has one spelling on this card. *Nought games* and *no record* would be one
+    // absence in two, and the block is hidden rather than drawn with a zero in it.
+    const drawn = toCandidate(row()).card;
+
+    expect(drawn).not.toHaveProperty('countedGames');
+    expect(drawn).not.toHaveProperty('lastFive');
+  });
+
+  /**
+   * The one narrowing that takes the **whole field** with it, and the reason it is not §3's
+   * ordinary drop.
+   *
+   * The run's length is itself a statement — five squares means five counted results — so an
+   * outcome this build cannot read has nowhere to go: dropped it shortens the run and claims a
+   * game fewer than the platform counted, and kept as a gap it asks the card to draw a third
+   * kind of square nobody has designed. So the block is hidden, and `counted_games` beside it
+   * goes on printing: the honesty figure survives a run this build can only half read.
+   */
+  it('omits the whole run where one outcome is a code this build cannot read', () => {
+    const card: Wire['PlayerCardSchema'] = {
+      ...row().player_card,
+      counted_games: 29,
+      // The eight-month-old phone, in one value: a third outcome the platform added and this
+      // build has never seen.
+      last_five: ['WIN', 'RETIRED' as Wire['GameResult'], 'LOSS'],
+    };
+    const drawn = toCandidate(row({ player_card: card })).card;
+
+    expect(drawn).not.toHaveProperty('lastFive');
+    expect(drawn.countedGames).toBe(29);
+  });
+
+  /**
+   * `at_stake` sits on the candidate rather than on the card, which is `distance_km`'s
+   * placement for `distance_km`'s reason: it is a fact about a **pair**.
+   */
+  it('carries what a counted game would move, both figures as served', () => {
+    const drawn = toCandidate(row({ at_stake: { win_delta: 0.08, loss_delta: -0.05 } }));
+
+    expect(drawn.atStake).toEqual({ winDelta: 0.08, lossDelta: -0.05 });
+  });
+
+  it('omits it in for fun, where a counted result is meaningless rather than unavailable', () => {
+    expect(toCandidate(row())).not.toHaveProperty('atStake');
   });
 
   it('omits the photo URL where there is no photograph, so the poster is drawn', () => {

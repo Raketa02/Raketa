@@ -150,6 +150,30 @@ export interface CandidateCardFacts {
    * card is spoken in a different order than it is drawn — a statement about **one** card.
    */
   readonly socialTags?: readonly string[];
+  /**
+   * What the **three record blocks** contribute — nought to three clauses, or nothing at all
+   * where the card draws no record ([#312](https://github.com/Raketa02/Raketa/issues/312)).
+   *
+   * They sit with the identifying facts, after the level and before the argument, because
+   * that is the register they are in: what the platform has watched somebody do is a fact
+   * about that person, where *why this person* is the reasons'. The same slot the Social tag
+   * row took, and for the same reason — the tags follow because what somebody published about
+   * themselves comes after what the platform recorded of them.
+   *
+   * **The run of form is one clause and not five.** `Last 5` is five squares distinguished by
+   * fill, which a listener gets nothing of, and announcing them one by one would read the row
+   * as a table. `lastFiveReading` counts them instead.
+   */
+  readonly record?: readonly string[];
+  /**
+   * What's at stake — **two clauses or none**, and never one.
+   *
+   * After the record and before the tags: it is the last fact about *this pairing* the card
+   * states, and everything after it is either what the candidate published or the engine's
+   * argument. Absent on a doubles seat and in for fun, both of which are decided before the
+   * label is composed (`domain/atStake`), so there is no seat count in this file.
+   */
+  readonly stake?: readonly string[];
   /** The lines `selectReasons` returned, in the order the card draws them. */
   readonly reasons: readonly string[];
   /** What the card draws of `concerns[]` — one on a card, all of them in *Why 78?*. */
@@ -182,6 +206,12 @@ export function candidateCardLabel(facts: CandidateCardFacts): string {
     levelRow(facts.level),
     facts.balance ?? '',
     facts.meta === undefined ? '' : metaLine(facts.meta),
+    // The record, then the stake, then the tags — the three blocks the card draws between the
+    // band and the buttons, in the order it draws them. They are all identifying facts, so
+    // §20.3's one divergence from visual order does not reach them: what it moves is the
+    // argument, and none of these three is one.
+    ...(facts.record ?? []),
+    ...(facts.stake ?? []),
     // After the identifying facts and before the argument, which is where the row itself sits
     // in meaning rather than where it sits on the card: what somebody published about
     // themselves is the same register as their level, and *why this person* is the reasons'.

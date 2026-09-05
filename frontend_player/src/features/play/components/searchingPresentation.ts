@@ -29,7 +29,7 @@ import { counted } from '@/shared/formatting/counted';
 
 import type { SearchMode } from '../domain/vocabulary';
 
-import { isDoubles } from './builderPresentation';
+import { isDoubles } from '../domain/lineup';
 
 /**
  * A searching screen's two lines: what is happening, and how many people it is happening to.

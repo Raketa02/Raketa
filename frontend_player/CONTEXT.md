@@ -356,7 +356,8 @@ listed here because it is a Play surface rather than a profile one.
 - **Parts kit** — the shared parts the three candidate cards are assembled from:
   `CandidatePhoto` (photo-or-poster in a box, one component at three sizes), `CardHead`,
   `FactRow` and `ReasonLine`, plus the competitive card's own `PhotoPanel`, `IdentityRow`,
-  `HeadToHeadBand` and `SocialTagRow`. **Three components over one kit, never one component with a `surface`
+  `HeadToHeadBand`, `SocialTagRow`, `RecordBlocks` and `StakeBoxes` — those last two over one
+  `StatBox`. **Three components over one kit, never one component with a `surface`
   prop** — `CandidateCard` is photo-left with a head-to-head row, `CandidateCardSocial` and
   `DeckCard` are media-top with fact rows, and only the deck card floats. The two courts,
   `CourtMini` and `CourtBuild`, are the same pairing over the design system's `Court`: the
@@ -382,6 +383,32 @@ listed here because it is a Play surface rather than a profile one.
   is why the type and the component do not share a name. _Avoid_: "chips" — nothing here is
   pressable, so they are tags (6.4); tinting a `complementary` or `clashing` pair, which is a
   different relationship and reaches the card as prose.
+- **Stat box** — the drawn shape the competitive card states a **record block** and an **at
+  stake** pair in (both are the root [`CONTEXT.md`](../CONTEXT.md)'s terms, not this file's):
+  `StatBox`, a recessed `paper2` box with a name over a figure, three across and then two.
+  Recessed rather than plain card text because the card prints a Level twice and a Player Score
+  is **not a rating** — 7.13 and 7.14. A box whose fact is absent is **not drawn**, so the ones
+  that remain fill the width and no hole marks the gap. _Avoid_: `FactRow` for these — a fact row
+  is a fact the card **states**, where these are figures a reader **compares**; a "stat card",
+  which is a surface and this is a box inside one.
+- **Run of form, drawn** — five squares, one per result, oldest to newest and **never padded**: a
+  run of three is three squares and the space after them, because the length is the statement.
+  Won is `ink` and lost is `muted` — a **lightness** step at 3,24:1, derived in
+  `recordSquares.test.ts`, so it reads with no hue perception at all — and because a square
+  carries no word, the whole row reaches a listener as **one counted clause** against the run's
+  own length (_3 of the last 5 won_) rather than as five elements. An outcome this build cannot
+  read takes the **whole field** with it at the mapper, for the same reason: half a run cannot be
+  drawn honestly, and _Counted_ beside it goes on printing. _Avoid_: a fifth square in a neutral
+  fill, which claims a game nobody played; five spoken states, which reads the row as a table.
+- **Singles-only stake** — the rule that hides _Win, counted_ / _Lose, counted_ on a doubles seat.
+  It is `domain/atStake` rather than the component's, because it is a thing somebody could be
+  **wrong** about; the component is handed a pair or nothing. A **refusal to draw** and not an
+  absence — the server prices the pairing anyway — where for fun is a genuine absence and never
+  reaches the rule. It reads **`isDoubles`**, the feature's one seat-count boundary, which moved
+  from `builderPresentation` to `domain/lineup` when this became its second reader: a rule about a
+  court's shape is not copy, and a `domain/` file reaching into the copy deck is the wrong
+  direction. _Avoid_: a `singles` boolean, and a local `seats === 2` — both are a second answer to
+  a settled question.
 - **The three spellings of absence on that row** — the distinction it exists to keep. **Compared
   and nothing matched** is the amber _No tags in common_, which stands **in the row's place** and
   is the one claim the row makes; the claim needs **both** tag terms, because a positive match

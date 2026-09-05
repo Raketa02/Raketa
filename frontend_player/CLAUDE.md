@@ -291,7 +291,33 @@ row is **never draw a tag the label does not speak**. The social and deck cards 
 now for a reason about those cards. **The card that draws the row loses the `Both of you`
 sentence** — §10's _said once_, filtered on **the tags the row actually drew** rather than on the
 term's own list, so a match beyond the six-tag cap keeps the one sentence naming it and the two
-cards without a row keep theirs. **The card's border is coral never and green once**: a coral outline on every card is
+cards without a row keep theirs. **Three record blocks and two stake boxes are what the card grew when the record-keeping
+landed** ([#312](https://github.com/Raketa02/Raketa/issues/312)). _Player Score · Last 5 ·
+Counted_ is what the platform **watched** — reliability, a run of form and the honesty figure
+behind a rating — and _Win, counted / Lose, counted_ is what a counted game would move. Both
+rows are `StatBox`: a recessed `paper2` box with a name over a figure, and the recess is
+load-bearing rather than pretty — a Player Score drawn as ordinary card text beside a Level
+printed twice reads as a second rating, and it is **nothing to do with skill**. **Each block is
+hidden when its fact is absent and never zeroed**, because the wire omits the field rather than
+sending `0`, so a card for a brand-new player draws neither row and is a correct card. **The run
+of form is never padded**: three squares means three counted results and the gap is the honest
+statement, which is also why an outcome this build cannot read takes the **whole field** with it
+at the mapper — its length is a claim, so a run half-read is a run that cannot be drawn, and
+_Counted_ beside it goes on printing. A win is `ink` and a loss `muted`, 3,24:1 apart and both
+clear of the ground, derived in `recordSquares.test.ts` — a **lightness** step, so the row reads
+with no hue perception; and because a square carries no word, the whole run reaches a listener as
+one counted clause — _3 of the last 5 won_, against the run's own length — rather than as five
+elements read like a table. **The stake pair is singles only**, keyed off the feature's one seat-count boundary —
+`isDoubles`, which moved from `builderPresentation` to `domain/lineup` when a rule rather than a
+sentence became its second reader — and never a new flag, because _a win against one named person
+isn't a thing that exists until the other three seats are known_ — a refusal to draw rather than an absence, since the server prices
+the pairing anyway; in for fun the field never crosses at all. That rule is `domain/atStake.ts`'s
+and the component is handed a pair or nothing. **`COMPETITIVE_CARD_DRAWS` gained `RELIABILITY`**
+the day the block printed, so `Player Score {score}` stops being a reason line on that card and
+stays one on the other two — and §5's _the competitive card can never run out of reasons_ is
+re-checked in the test rather than re-read, because the surviving set is one term smaller.
+
+**The card's border is coral never and green once**: a coral outline on every card is
 5.1's pressed state made permanent and stays refused, while the lifted card takes 5.1's new
 **marked** state in `voltStroke` — volt's meaning at a stroke's ratio, because volt itself is
 1,25:1 on `surface` and would be no border at all. It is bound to **the tag being drawn** rather

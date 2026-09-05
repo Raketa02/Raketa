@@ -21,10 +21,14 @@ import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import {
   CANDIDATE_ACTION_WORD,
   candidateTag,
+  countedGamesReading,
+  lastFiveReading,
   levelRow,
   metaLine,
+  recordClauses,
   socialTagChip,
   socialTagClauses,
+  stakeClauses,
 } from './playerCardPresentation';
 
 import { livenessLine } from './livenessPresentation';
@@ -176,5 +180,55 @@ describe('the social tag row’s words', () => {
   /** Prose does not carry glyphs — `socialTagPresentation`'s own split, read from this side. */
   it('speaks the words alone, where the chip is drawn with its emoji', () => {
     expect(socialTagClauses({ kind: 'unknown', tags: ['PLAYS_TO_WIN'] })[0]).not.toContain('🏆');
+  });
+});
+
+/**
+ * **The three record blocks' words**, and the two readings a drawing cannot carry.
+ *
+ * What is asserted here is what a *listener* gets: the squares are fill and the count has no
+ * unit on it, so both need a sentence, and the Player Score needs the scale beside it because
+ * it is the second out-of-a-hundred figure on the card
+ * ([#312](https://github.com/Raketa02/Raketa/issues/312)).
+ */
+describe('the record block’s words', () => {
+  it('states what a Player Score is out of, because Fit is already the other hundred', () => {
+    expect(recordClauses({ playerScore: 74 })).toEqual(['Player Score 74 out of 100']);
+  });
+
+  it('counts the run rather than reading it out square by square', () => {
+    expect(lastFiveReading(['WIN', 'LOSS', 'WIN', 'WIN', 'LOSS'])).toBe('3 of the last 5 won');
+  });
+
+  it('counts it against its own length, so the words do not pad what the drawing will not', () => {
+    // Fewer than five is a real answer and the gap is the honest statement — *of the last 5*
+    // over three results would be the padding, one register over.
+    expect(lastFiveReading(['WIN', 'WIN', 'LOSS'])).toBe('2 of the last 3 won');
+    expect(lastFiveReading(['LOSS'])).toBe('0 of the last 1 won');
+  });
+
+  it('names what the count is a count of, through the one pluralisation helper', () => {
+    expect(countedGamesReading(29)).toBe('29 counted games');
+    expect(countedGamesReading(1)).toBe('1 counted game');
+  });
+
+  it('says one clause per block drawn, in the order the blocks are drawn', () => {
+    expect(recordClauses({ playerScore: 74, lastFive: ['WIN', 'LOSS'], countedGames: 29 })).toEqual(
+      ['Player Score 74 out of 100', '1 of the last 2 won', '29 counted games'],
+    );
+  });
+
+  it('says nothing for a block that is hidden, which is every block for a new player', () => {
+    expect(recordClauses({})).toEqual([]);
+    expect(recordClauses({ countedGames: 3 })).toEqual(['3 counted games']);
+  });
+});
+
+describe('the stake boxes’ words', () => {
+  it('says both or neither, because one figure is half a symmetrical fact', () => {
+    expect(stakeClauses({ winDelta: 0.08, lossDelta: -0.05 })).toEqual([
+      'Win, counted +0,08',
+      'Lose, counted \u22120,05',
+    ]);
   });
 });

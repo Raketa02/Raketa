@@ -17,8 +17,8 @@ import { render, screen } from '@testing-library/react-native';
 import { Image, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { courtPosterFor } from '@/features/player_profile/types';
-import { formatLevel, formatRange } from '@/shared/formatting/ratingFormat';
-import { balanceShare, theme } from '@/shared/ui';
+import { formatLevel, formatRange, formatSignedLevel } from '@/shared/formatting/ratingFormat';
+import { balanceShare, courtSeatCount, theme } from '@/shared/ui';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Evidence, ScoredTerm } from '../../domain/evidence';
@@ -106,6 +106,10 @@ const TERMS: readonly ScoredTerm[] = [
     complementary: [],
     clashing: [],
   }),
+  // Last, so it is the lowest-ranked survivor everywhere: what it is here for is the drop on
+  // the competitive card, and a term that displaced somebody's third reason line would be
+  // testing the cap instead (#312).
+  scored('RELIABILITY', { kind: 'reliability', score: 74, floorBreached: false }),
 ];
 
 function candidate(over: Partial<Candidate> = {}): Candidate {
@@ -167,12 +171,23 @@ function wireRow(over: Partial<Wire['CandidateSchema']> = {}): Wire['CandidateSc
 /** The Sport is the screen's, so the card is handed one — it is never on `player_card`. */
 const SPORT_NAME = 'Tennis';
 
-function drawCompetitive(over: Partial<Candidate> = {}, bestMatch = false) {
+/**
+ * The same Sport counted, and one that is not.
+ *
+ * Read off `Court`'s own coordinates rather than written as 2 and 4, because that is what the
+ * card is handed: a fixture that hardcoded the numbers would keep passing on the day a sport
+ * changed how many people stand on it.
+ */
+const SINGLES = courtSeatCount('tennis');
+const DOUBLES = courtSeatCount('padel');
+
+function drawCompetitive(over: Partial<Candidate> = {}, bestMatch = false, seats = SINGLES) {
   render(
     <CandidateCard
       candidate={candidate(over)}
       envelope={ENVELOPE}
       sportName={SPORT_NAME}
+      seats={seats}
       action="ADD_TO_COURT"
       onAction={noop}
       onWhyFit={noop}
@@ -180,6 +195,22 @@ function drawCompetitive(over: Partial<Candidate> = {}, bestMatch = false) {
     />,
   );
 }
+
+/** A candidate the platform has actually watched — the card #312 drew for the first time. */
+function withRecord(over: Partial<Candidate['card']> = {}): Partial<Candidate> {
+  return {
+    card: {
+      ...candidate().card,
+      playerScore: 74,
+      countedGames: 29,
+      lastFive: ['WIN', 'LOSS', 'WIN', 'WIN', 'LOSS'],
+      ...over,
+    },
+  };
+}
+
+/** What a counted game would move, as the server sends it: `winDelta > 0 > lossDelta`. */
+const AT_STAKE = { winDelta: 0.08, lossDelta: -0.05 } as const;
 
 /** Every term except the one named — the shape a stood-down term arrives in (§8). */
 function without(term: Term): readonly ScoredTerm[] {
@@ -347,7 +378,10 @@ describe('each card’s drawn set', () => {
     INTENT_ALIGNMENT: /here to compete too/,
     PLAYING_STYLE: /Both of you/,
     SOCIAL_VIBE: /Different around the game/,
-    RELIABILITY: /Player Score/,
+    // The reason line and never the block, which is the same two words with nothing after
+    // them: the card draws *Player Score* over a figure now, and what §5 drops is the
+    // sentence `Player Score {score}`.
+    RELIABILITY: /^Player Score \d/,
   };
 
   it.each([
@@ -382,6 +416,48 @@ describe('each card’s drawn set', () => {
     ]) {
       expect(screen.getByText(line)).toBeTruthy();
     }
+  });
+
+  /**
+   * §5 booked this the day the block was specified — *"`RELIABILITY` joins them the day the
+   * Player Score block prints and not before"* — and #312 is that day.
+   */
+  it('stops saying Player Score as a sentence now the competitive card prints it', () => {
+    expect(COMPETITIVE_CARD_DRAWS).toContain('RELIABILITY');
+
+    drawCompetitive(withRecord());
+    expect(screen.queryByText(/^Player Score \d/)).toBeNull();
+    screen.unmount();
+
+    // And leaves it on the cards that draw no block, which is what keeps it a per-card rule.
+    // It is the lowest-ranked term on the fixture, so it is asserted where the cap cannot
+    // reach it: a card whose only firing term is this one.
+    drawSocial({
+      terms: [scored('RELIABILITY', { kind: 'reliability', score: 74, floorBreached: false })],
+    });
+    expect(screen.getByText('Player Score 74')).toBeTruthy();
+  });
+
+  /**
+   * §5's *When nothing survives* claim, **re-checked rather than re-read**.
+   *
+   * The surviving set is one term smaller than it was, so the claim is worth confirming rather
+   * than inheriting. It rests on two things and #312 touched neither: `DISTANCE` never stands
+   * down, and this card draws no distance row — so the sentence for it is never filtered and a
+   * survivor always exists, even on a candidate with nothing else firing and no liveness
+   * reason to fall back to.
+   */
+  it('cannot run out of reasons, with the surviving set one term smaller', () => {
+    expect(COMPETITIVE_CARD_DRAWS).not.toContain('DISTANCE');
+
+    drawCompetitive({
+      terms: TERMS.filter((row) => COMPETITIVE_CARD_DRAWS.includes(row.term as Term)).concat(
+        TERMS.filter((row) => row.term === 'DISTANCE'),
+      ),
+      livenessReasons: [],
+    });
+
+    expect(screen.getByText('4 km away')).toBeTruthy();
   });
 });
 
@@ -585,6 +661,7 @@ describe('the social tag row', () => {
         candidate={drawn}
         envelope={ENVELOPE}
         sportName={SPORT_NAME}
+        seats={SINGLES}
         action="ADD_TO_COURT"
         onAction={noop}
         onWhyFit={noop}
@@ -618,6 +695,170 @@ describe('the social tag row', () => {
 
     drawCompetitive({ terms: [tagTerm('playing_style'), tagTerm('social_vibe')] });
     expect(spokenBody()).toContain('No tags in common');
+  });
+});
+
+/**
+ * **The three record blocks** — what the platform watched, and the one spelling absence has.
+ *
+ * The fields are omitted rather than sent as `0`, and the whole of what these assert is that
+ * the drawing keeps that distinction: a block whose fact is absent is **hidden**, a run of
+ * three is drawn as three, and a card for somebody nothing has ever been arranged for draws
+ * none of the three and is a correct card ([#312](https://github.com/Raketa02/Raketa/issues/312)).
+ */
+describe('the record block', () => {
+  /** Every square drawn on screen, found by the one size only the run of form draws. */
+  function squares(): readonly ViewStyle[] {
+    return boxes().filter((style) => style.width === theme.size.recordSquare);
+  }
+
+  it('draws the three facts the platform watched, each under its own name', () => {
+    drawCompetitive(withRecord());
+
+    expect(screen.getByText('Player Score')).toBeTruthy();
+    expect(screen.getByText('74')).toBeTruthy();
+    expect(screen.getByText('Counted')).toBeTruthy();
+    expect(screen.getByText('29')).toBeTruthy();
+    expect(screen.getByText('Last 5')).toBeTruthy();
+    expect(squares()).toHaveLength(5);
+  });
+
+  it('draws none of the three for a brand-new player, and that is a correct card', () => {
+    // Never zeroed: somebody nothing was ever arranged for has not failed to turn up, and
+    // *Player Score 0 · Counted 0* would be two invented numbers.
+    drawCompetitive();
+
+    expect(screen.queryByText('Player Score')).toBeNull();
+    expect(screen.queryByText('Last 5')).toBeNull();
+    expect(screen.queryByText('Counted')).toBeNull();
+    expect(squares()).toHaveLength(0);
+  });
+
+  it('hides one block without hiding the two beside it', () => {
+    // Three independent absences, not one. A player whose games were all unscored has a count
+    // and no run, and the contract calls that pair consistent rather than broken.
+    drawCompetitive(withRecord({ lastFive: undefined }));
+
+    expect(screen.getByText('Player Score')).toBeTruthy();
+    expect(screen.getByText('Counted')).toBeTruthy();
+    expect(screen.queryByText('Last 5')).toBeNull();
+  });
+
+  it('draws the gap rather than padding the run to five', () => {
+    // The gap IS the statement: three squares means three counted results, and a fourth drawn
+    // in some neutral fill would claim a game nobody played.
+    drawCompetitive(withRecord({ lastFive: ['WIN', 'WIN', 'LOSS'] }));
+
+    expect(squares()).toHaveLength(3);
+  });
+
+  it('tells a win from a loss by fill, in two neutrals rather than two hues', () => {
+    // The ratios are `recordSquares.test.ts`'s; what is asserted here is that the drawing uses
+    // the pair that file derives, so a repaint cannot happen in one place only.
+    drawCompetitive(withRecord({ lastFive: ['WIN', 'LOSS'] }));
+
+    expect(squares().map((style) => style.backgroundColor)).toEqual([
+      theme.color.ink,
+      theme.color.muted,
+    ]);
+  });
+
+  it('speaks the run as a count against its own length, never as five elements', () => {
+    // Colour is never the only signal, and a listener handed five squares has nothing at all.
+    // Five clauses would read the row as a table, so the row is one clause and it counts.
+    drawCompetitive(withRecord());
+    expect(spokenBody()).toContain('3 of the last 5 won');
+    screen.unmount();
+
+    // And the denominator is the real one — a run of three says *of the last 3*, because
+    // padding in words is the same lie as padding in squares.
+    drawCompetitive(withRecord({ lastFive: ['WIN', 'WIN', 'LOSS'] }));
+    expect(spokenBody()).toContain('2 of the last 3 won');
+  });
+
+  it('speaks the other two blocks with the scale and the noun the drawing leaves off', () => {
+    drawCompetitive(withRecord());
+
+    // Two out-of-a-hundred figures on one card, so this one says what it is out of — and the
+    // count says what it is a count of, which the box's own name does for a reader.
+    expect(spokenBody()).toContain('Player Score 74 out of 100');
+    expect(spokenBody()).toContain('29 counted games');
+  });
+
+  it('says nothing about a record on the two cards that draw none', () => {
+    for (const draw of [drawSocial, drawDeck]) {
+      draw(withRecord());
+      expect(screen.queryByText('Player Score')).toBeNull();
+      // Nor in the register nobody can see: `candidateFacts` is not asked for a record, so
+      // there are no clauses to compose rather than clauses that were left out.
+      expect(screen.queryByLabelText(/counted games/)).toBeNull();
+      screen.unmount();
+    }
+  });
+});
+
+/**
+ * **What's at stake** — two figures, and the three reasons a card may not print them.
+ *
+ * The absence in for fun and the absence for an unrated pair are the contract's and arrive as
+ * no field. The doubles one is the client's, and it is the interesting one: the figures are
+ * real, the server sent them, and the card still must not draw them.
+ */
+describe('what is at stake', () => {
+  it('draws both figures as served on a singles court, signed', () => {
+    drawCompetitive({ ...withRecord(), atStake: AT_STAKE });
+
+    expect(screen.getByText('Win, counted')).toBeTruthy();
+    expect(screen.getByText(formatSignedLevel(0.08))).toBeTruthy();
+    expect(screen.getByText('Lose, counted')).toBeTruthy();
+    expect(screen.getByText(formatSignedLevel(-0.05))).toBeTruthy();
+  });
+
+  it('signs the gain and never invents the loss’s minus', () => {
+    drawCompetitive({ atStake: AT_STAKE });
+
+    expect(screen.getByText('+0,08')).toBeTruthy();
+    // U+2212, and the server's own sign — nothing here negates a figure to draw it.
+    expect(screen.getByText('\u22120,05')).toBeTruthy();
+  });
+
+  it('hides them on a doubles seat, where the other three seats are unknown', () => {
+    // A win against one named person isn't a thing that exists until the four are known. The
+    // server prices the pairing anyway, so this is a refusal to draw rather than an absence.
+    drawCompetitive({ atStake: AT_STAKE }, false, DOUBLES);
+
+    expect(screen.queryByText('Win, counted')).toBeNull();
+    expect(screen.queryByText('Lose, counted')).toBeNull();
+    expect(spokenBody()).not.toContain('Win, counted');
+  });
+
+  it('draws nothing where the field never crossed, which is an unrated pair', () => {
+    // `at_stake` is omitted in competitive too, where either of them holds no rating in this
+    // sport — the card has nothing to hide rather than something to refuse.
+    drawCompetitive();
+
+    expect(screen.queryByText('Win, counted')).toBeNull();
+    expect(screen.queryByText('Lose, counted')).toBeNull();
+  });
+
+  it('is absent in for fun, where the card that draws it is not the card on screen', () => {
+    // *A counted result is meaningless rather than unavailable.* The field never crosses, and
+    // the surface a for-fun pool draws has no box for it — asserted on the card rather than
+    // taken on trust, and with the figures present so the absence is the surface's own.
+    for (const draw of [drawSocial, drawDeck]) {
+      draw({ atStake: AT_STAKE });
+      expect(screen.queryByText('Win, counted')).toBeNull();
+      expect(screen.queryByText('Lose, counted')).toBeNull();
+      expect(screen.queryByLabelText(/counted \+0,08/)).toBeNull();
+      screen.unmount();
+    }
+  });
+
+  it('speaks both or neither, because one of them is half a symmetrical fact', () => {
+    drawCompetitive({ atStake: AT_STAKE });
+
+    expect(spokenBody()).toContain('Win, counted +0,08');
+    expect(spokenBody()).toContain('Lose, counted \u22120,05');
   });
 });
 
@@ -807,6 +1048,25 @@ describe('what each control announces', () => {
           'Fairly even · 74%. ' +
           // The tag row's clauses, between the identifying facts and the argument — and
           // grouped, because a listener hearing *you too* once per tag is being read a table.
+          'Tags you share: Plays to win. Their other tags: Stays for a drink. ' +
+          '3 slots you both ticked · next Tue evening. 4 km away. ' +
+          "They're here to compete too.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it('carries the record and the stake in §20.3’s order, between the band and the tags', () => {
+    // Five more clauses, all of them identifying facts: what the platform watched, then what
+    // this pairing would move, then what the candidate published, then the argument. §20.3's
+    // one divergence from visual order is about the reasons and does not reach any of them.
+    drawCompetitive({ ...withRecord(), atStake: AT_STAKE });
+
+    expect(
+      screen.getByLabelText(
+        'Marek. Fit 78 out of 100. 2,83 · Established · likely 2,55 – 2,87. ' +
+          'Fairly even · 74%. ' +
+          'Player Score 74 out of 100. 3 of the last 5 won. 29 counted games. ' +
+          'Win, counted +0,08. Lose, counted \u22120,05. ' +
           'Tags you share: Plays to win. Their other tags: Stays for a drink. ' +
           '3 slots you both ticked · next Tue evening. 4 km away. ' +
           "They're here to compete too.",

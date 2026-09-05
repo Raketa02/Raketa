@@ -125,7 +125,7 @@ export function DeckCard({
   bodyRef,
   answering = false,
 }: DeckCardProps) {
-  const facts = candidateFacts(candidate, envelope, DECK_CARD_DRAWS);
+  const facts = candidateFacts({ candidate, envelope, drawn: DECK_CARD_DRAWS });
   const balance = evidenceOf(candidate, 'predicted_balance');
   const overlap = evidenceOf(candidate, 'availability_overlap');
   const answers = deckAnswerLabels(facts.name);

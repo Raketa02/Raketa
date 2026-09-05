@@ -37,19 +37,8 @@
 import { counted } from '@/shared/formatting/counted';
 
 import { modeWord } from './searchPresentation';
-import type { CourtHalf } from '../domain/lineup';
+import { isDoubles, type CourtHalf } from '../domain/lineup';
 import type { SearchMode } from '../domain/vocabulary';
-
-/**
- * Whether the sport puts four people on the court, or two — **the one branch behind every
- * sentence in this feature that could otherwise have said *four* out loud.**
- *
- * Exported because *Find a game*'s way onto the court says the same two things about the same
- * two shapes (`findAGamePresentation`'s court-entry words), and a second `seats > 2` written
- * one screen away is the drift this file's own note warns about: a squash court told to build
- * a four.
- */
-export const isDoubles = (seats: number) => seats > 2;
 
 /**
  * The screen's title.

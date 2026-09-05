@@ -27,12 +27,26 @@
  *
  * ## What it draws, and therefore what it will not say twice
  *
- * The band prints **both levels** and draws the **forecast**, so `LEVEL_FIT` and
- * `PREDICTED_BALANCE` are this card's drawn set and neither appears as a reason line — the set
- * is unchanged by the redraw, because the band replaced the three elements that drew them and
- * not the facts. `RELIABILITY` joins them the day the Player Score block prints and not before.
+ * The band prints **both levels** and draws the **forecast**, and the record block prints a
+ * **Player Score** — so `LEVEL_FIT`, `PREDICTED_BALANCE` and `RELIABILITY` are this card's
+ * drawn set and none of the three appears as a reason line. The third arrived with the block
+ * ([#312](https://github.com/Raketa02/Raketa/issues/312)), which is exactly what
+ * [`the-words.md`](../../../../../../docs/specs/matchmaking/the-words.md) §5 booked when it
+ * wrote *"`RELIABILITY` joins them the day the Player Score block prints and not before"*.
+ *
+ * **The set is unconditional and the block is not**, and the two read off different fields: the
+ * block prints `player_card.player_score`, the **published** figure, where the filtered sentence
+ * is written over `ReliabilityEvidence.score`, the engine's. They are the same number by
+ * ADR-0140 and they are two reads, deliberately — *"taking the card's figure off the engine's
+ * record would make what a player is shown a consequence of whatever the reliability term
+ * happens to carry"*. In one request they answer together, so a fired term without a published
+ * score is not a state the contract produces; if it ever were, the card would state the fact
+ * nought times, and the fix would be the second read rather than a fallback that borrows the
+ * engine's number.
+ *
  * `DISTANCE` is not in the set — this card draws no distance row, which is why a reason line
- * on it can never come up empty.
+ * on it can never come up empty, and the block did not touch that: the surviving set is one
+ * term smaller and `DISTANCE` never stands down.
  *
  * **The Level is printed twice**, hugely on the panel and again on the right of the band. That
  * is the designs' choice and it is accepted: the panel's is the card's **identity** — what this
@@ -90,6 +104,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Button, FitPill, PressableCard, theme } from '@/shared/ui';
 
+import { stakeOnACard } from '../../domain/atStake';
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Term } from '../../domain/vocabulary';
 import {
@@ -105,7 +120,9 @@ import { HeadToHeadBand } from './HeadToHeadBand';
 import { IdentityRow } from './IdentityRow';
 import { PhotoPanel } from './PhotoPanel';
 import { ReasonLine } from './ReasonLine';
+import { RecordBlocks } from './RecordBlocks';
 import { SocialTagRow } from './SocialTagRow';
+import { StakeBoxes } from './StakeBoxes';
 import { candidateFacts, evidenceOf } from './candidateFacts';
 
 /**
@@ -115,13 +132,29 @@ import { candidateFacts, evidenceOf } from './candidateFacts';
  * draws and moving it into the selector is the one place it could go stale silently
  * ([`the-words.md`](../../../../../../docs/specs/matchmaking/the-words.md) §5).
  */
-export const COMPETITIVE_CARD_DRAWS: readonly Term[] = ['LEVEL_FIT', 'PREDICTED_BALANCE'];
+export const COMPETITIVE_CARD_DRAWS: readonly Term[] = [
+  'LEVEL_FIT',
+  'PREDICTED_BALANCE',
+  'RELIABILITY',
+];
 
 export interface CandidateCardProps {
   readonly candidate: Candidate;
   readonly envelope: SearchEnvelope;
   /** `sportLabel(origin.sport)` — the search's Sport, drawn on the panel. See the module note. */
   readonly sportName: string;
+  /**
+   * `courtSeatCount(origin.sport)` — **how many people stand on this court**, and the whole of
+   * what decides whether the stake boxes are drawn
+   * ([#312](https://github.com/Raketa02/Raketa/issues/312)).
+   *
+   * The screen's fact rather than the card's, exactly as `sportName` is and off the same Sport:
+   * one value for the whole list. It is a seat count and never a `singles` flag, because the
+   * count already exists — `Court`'s own coordinates, read by every other singles-or-doubles
+   * decision in this feature — and a second answer to a settled question is a second answer
+   * that can disagree. The rule over it is `domain/atStake`'s.
+   */
+  readonly seats: number;
   /** What the primary button does. A code, so a third surface gains a word or does not build. */
   readonly action: CandidateAction;
   readonly onAction: () => void;
@@ -142,13 +175,25 @@ export function CandidateCard({
   candidate,
   envelope,
   sportName,
+  seats,
   action,
   onAction,
   onWhyFit,
   bestMatch = false,
 }: CandidateCardProps) {
   const tags = socialTagOverlap(candidate);
-  const facts = candidateFacts(candidate, envelope, COMPETITIVE_CARD_DRAWS, tags);
+  // Both taken here and handed down twice — once to be drawn and once to be spoken — which is
+  // what keeps the two registers reading one value. `player_card` already carries the three
+  // record fields, so the card's subject *is* the record block's facts.
+  const stake = stakeOnACard({ atStake: candidate.atStake, seats });
+  const facts = candidateFacts({
+    candidate,
+    envelope,
+    drawn: COMPETITIVE_CARD_DRAWS,
+    socialTags: tags,
+    record: candidate.card,
+    stake,
+  });
   const levelFit = evidenceOf(candidate, 'level_fit');
   const balance = evidenceOf(candidate, 'predicted_balance');
   const tag = candidateTag({ inclusionReason: candidate.inclusionReason, bestMatch });
@@ -195,6 +240,12 @@ export function CandidateCard({
           fact about the one in the panel, and at the column's width the bar's own segment
           labels would not fit — which is the size floor #219 B4 put on `sm`. */}
       <HeadToHeadBand levelFit={levelFit} balance={balance} />
+
+      {/* Three boxes across, then two — what the platform watched this person do, and what a
+          counted game against them would move. Each hides itself where its fact is absent, so a
+          card for a brand-new player draws neither row and is a correct card. */}
+      <RecordBlocks record={candidate.card} />
+      <StakeBoxes stake={stake} />
 
       {/* Full width, under the band, for the band's own reason: six tags do not fit in the
           column beside the photo panel, and a row that wrapped four times there would push the

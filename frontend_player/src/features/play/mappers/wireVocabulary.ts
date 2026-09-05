@@ -30,6 +30,7 @@ import type { Exact } from '@/shared/vocabulary/wireAgreement';
 import type { Evidence } from '../domain/evidence';
 import type {
   DegradedReason,
+  GameResult,
   GroupReason,
   InclusionReason,
   LevelDirection,
@@ -73,6 +74,7 @@ export const WIRE_VOCABULARY_AGREES: {
   readonly rung: Exact<Rung, components['schemas']['Rung']>;
   readonly optimisedFor: Exact<OptimisedFor, components['schemas']['OptimisedFor']>;
   readonly relationship: Exact<Relationship, components['schemas']['Relationship']>;
+  readonly gameResult: Exact<GameResult, components['schemas']['GameResult']>;
 } = {
   term: true,
   levelDirection: true,
@@ -91,6 +93,7 @@ export const WIRE_VOCABULARY_AGREES: {
   rung: true,
   optimisedFor: true,
   relationship: true,
+  gameResult: true,
 };
 
 /**

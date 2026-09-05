@@ -105,7 +105,7 @@ export function CandidateCardSocial({
   onAction,
   onWhyFit,
 }: CandidateCardSocialProps) {
-  const facts = candidateFacts(candidate, envelope, SOCIAL_CARD_DRAWS);
+  const facts = candidateFacts({ candidate, envelope, drawn: SOCIAL_CARD_DRAWS });
   const overlap = evidenceOf(candidate, 'availability_overlap');
 
   return (

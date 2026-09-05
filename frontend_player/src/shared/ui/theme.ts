@@ -376,6 +376,11 @@ const radius = {
   timeSquare: 8,
   balanceBar: 8,
   fit: 7,
+  /** The record block's run-of-form square — 7.13. Eight points wants a soft corner, not a
+   *  rounded one: five of these in a row are a *run*, and at `tag`'s 6 they read as five
+   *  separate pills. A fresh token rather than `bar`'s 2 borrowed, because a square that
+   *  states an outcome is not a track. */
+  recordSquare: 2,
   tag: 6,
   dot: 6,
   meter: 3,
@@ -407,6 +412,11 @@ const size = {
   timeSquare: 32,
   meter: 5,
   bar: 4,
+  /** The run-of-form square — 7.13. Five of them plus four `space.xxs` gaps is 52pt, which
+   *  fits the narrowest phone's third of a card with the block's label above it. It is a mark
+   *  rather than a target: nothing in the record block is pressable, so 6.5's 44pt does not
+   *  apply and there is no `hit` entry beside it. */
+  recordSquare: 8,
   /** The confidence ring — a drawn object, dark card only. Stroke matches the level
    *  bar's band segments; the tick crosses the stroke and overshoots it outward.
    *  Geometry and reasoning: docs/design-system.md 7.8. The 30% ceiling the tick marks

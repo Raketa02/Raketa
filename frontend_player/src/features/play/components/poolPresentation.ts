@@ -40,7 +40,7 @@ import type { RelaxedAsk } from '../domain/candidate';
 import type { Window } from '../domain/vocabulary';
 
 import { SIDE } from './accessibilityPresentation';
-import { isDoubles } from './builderPresentation';
+import { isDoubles } from '../domain/lineup';
 import { windowLabel } from './searchPresentation';
 
 /** The screen's title. It says what the player is here to do, and the court says the rest. */

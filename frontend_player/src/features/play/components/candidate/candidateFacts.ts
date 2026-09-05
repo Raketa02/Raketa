@@ -21,7 +21,7 @@
 
 import { playerName } from '@/shared/formatting/playerName';
 
-import type { Candidate, SearchEnvelope } from '../../domain/candidate';
+import type { AtStake, Candidate, SearchEnvelope } from '../../domain/candidate';
 import { isTagEvidence, type Evidence } from '../../domain/evidence';
 import { selectConcern, selectReasons, type ReasonSelection } from '../../domain/reasonSelection';
 import type { SocialTagOverlap } from '../../domain/socialTagOverlap';
@@ -31,9 +31,12 @@ import { balanceReading } from '../balancePresentation';
 import { concernLine } from '../concernPresentation';
 import { livenessLine } from '../livenessPresentation';
 import {
+  recordClauses,
   socialTagClauses,
+  stakeClauses,
   type LevelRowFacts,
   type MetaLineFacts,
+  type RecordBlockFacts,
 } from '../playerCardPresentation';
 import { reasonLine } from '../reasonPresentation';
 
@@ -61,28 +64,65 @@ export interface CandidateFacts {
 }
 
 /**
- * The **Social tag row**, passed in by the card that draws it — and `undefined` by the two
- * that do not ([#311](https://github.com/Raketa02/Raketa/issues/311)).
+ * What a card hands over — **an object, because three of the five are optional and each of
+ * them means *this surface does not draw that part*.**
  *
- * It is the row itself rather than a flag saying *this card has one*, because both things this
- * function does with it need the **value**: the label's clauses are composed from it, and the
- * reason list is filtered against the tags it actually drew. Handed a boolean, the second would
- * have to re-derive what the first was given — which is the *read twice and they could disagree*
- * the module note opens with, in a smaller spelling — and it would re-derive it from the wrong
- * list, since the term's `matched` and the row's drawn chips are not guaranteed to be the same
- * set. It travels down to `reasonLinesOf` whole for that reason.
- *
- * **It is not in `drawn`.** That set is *terms the card draws as rows*, and the card draws
- * half of these two: `matched` becomes chips, while `complementary`, `clashing` and each term's
- * measured zero stay reason sentences and stay this card's. Adding them to `drawn` would take
- * all four registers away to stop one of them repeating.
+ * Positionally, `(candidate, envelope, drawn, socialTags?, seats?)` is a call site whose
+ * fourth and fifth arguments are two `undefined`s in a row on two cards of three, and the
+ * reader has to count commas to find out which part is being declined. Named, each absence
+ * says which.
  */
-export function candidateFacts(
-  candidate: Candidate,
-  envelope: SearchEnvelope,
-  drawn: readonly Term[],
-  socialTags?: SocialTagOverlap,
-): CandidateFacts {
+export interface CandidateFactsInput {
+  readonly candidate: Candidate;
+  readonly envelope: SearchEnvelope;
+  /** The terms this surface renders a value for — the card's **own** exported set. */
+  readonly drawn: readonly Term[];
+  /**
+   * The **Social tag row**, passed in by the card that draws it — and omitted by the two that
+   * do not ([#311](https://github.com/Raketa02/Raketa/issues/311)).
+   *
+   * It is the row itself rather than a flag saying *this card has one*, because both things
+   * this function does with it need the **value**: the label's clauses are composed from it,
+   * and the reason list is filtered against the tags it actually drew. Handed a boolean, the
+   * second would have to re-derive what the first was given — which is the *read twice and they
+   * could disagree* the module note opens with, in a smaller spelling — and it would re-derive
+   * it from the wrong list, since the term's `matched` and the row's drawn chips are not
+   * guaranteed to be the same set. It travels down to `reasonLinesOf` whole for that reason.
+   *
+   * **It is not in `drawn`.** That set is *terms the card draws as rows*, and the card draws
+   * half of these two: `matched` becomes chips, while `complementary`, `clashing` and each
+   * term's measured zero stay reason sentences and stay this card's. Adding them to `drawn`
+   * would take all four registers away to stop one of them repeating.
+   */
+  readonly socialTags?: SocialTagOverlap;
+  /**
+   * The **three record blocks**, passed in by the card that draws them and omitted by the two
+   * that do not ([#312](https://github.com/Raketa02/Raketa/issues/312)).
+   *
+   * `socialTags`' pattern one field down, and for its reason: the clauses are composed from
+   * this value and the boxes are drawn from it, so there is one value and no second read. It is
+   * the facts rather than a flag because `PlayerCard` already carries all three — the card hands
+   * over its own subject, and a `drawsTheRecord: true` beside it would be a second thing to keep
+   * true.
+   *
+   * **`undefined` and an object whose three fields are all absent are different answers.**
+   * `undefined` is *this surface has no record block*; the empty object is *this surface has one
+   * and the platform has watched nothing*. Only the second is a card for a brand-new player.
+   */
+  readonly record?: RecordBlockFacts;
+  /**
+   * What a counted game would move — **`stakeOnACard`'s answer**, taken by the card off the
+   * sport's seat count before this is called.
+   *
+   * The decision is not here for the reason it is not in the component either: it is a rule
+   * about doubles that somebody could be wrong about, so it lives in `domain/atStake`, and both
+   * the drawing and the clauses read the one result.
+   */
+  readonly stake?: AtStake;
+}
+
+export function candidateFacts(input: CandidateFactsInput): CandidateFacts {
+  const { candidate, envelope, drawn, socialTags, record, stake } = input;
   const name = playerName({ kind: 'player', nickname: candidate.card.nickname });
   const level = levelFactsOf(candidate);
   // A clause per row the card DRAWS — which is the drawn set read the other way round. A
@@ -111,6 +151,8 @@ export function candidateFacts(
       level,
       balance,
       meta,
+      record: record === undefined ? undefined : recordClauses(record),
+      stake: stake === undefined ? undefined : stakeClauses(stake),
       socialTags: tagClauses,
       reasons,
       concerns,

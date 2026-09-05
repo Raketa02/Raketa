@@ -18,15 +18,17 @@
  * objects it cannot conflate them, and a card that wants the priced mode reads it off the
  * evidence where it always was.
  *
- * ## What is not here yet
+ * ## A field arrives when a surface draws it
  *
  * `degraded_terms` and `modifiers` arrived with `SH.whyfit`, which is the surface that draws
- * them ([#273](https://github.com/Raketa02/Raketa/issues/273)). What is still absent is
- * `at_stake` — the sheet's five zones do not draw it — and the two record-block fields
- * `counted_games` and `last_five`, whose block Decision 3 deleted. `player_score` **is** here,
- * and it is the exception that proves the rule rather than a break with it: the chip row draws
- * it, because *Most reliable* is an ordering over that number and a comparator cannot order by
- * a field the DTO does not carry ([#306](https://github.com/Raketa02/Raketa/issues/306)).
+ * them ([#273](https://github.com/Raketa02/Raketa/issues/273)). `player_score` arrived with the
+ * chip row, because *Most reliable* is an ordering over that number and a comparator cannot
+ * order by a field the DTO does not carry ([#306](https://github.com/Raketa02/Raketa/issues/306)).
+ * `counted_games`, `last_five` and `at_stake` arrive with the blocks that print them
+ * ([#312](https://github.com/Raketa02/Raketa/issues/312)) — three record boxes and a pair of
+ * stake boxes on the competitive card, which is the first surface in this app to draw any of
+ * the three.
+ *
  * **`would_be_forecast` is out of scope entirely**: nothing in the backend writes it, and its
  * three consumers went with it. A field is added here when a surface draws it, because a DTO
  * with fields nobody reads is a contract nobody is checking.
@@ -38,6 +40,7 @@ import type { WeekCell } from '@/shared/vocabulary/week';
 import type { ScoredTerm } from './evidence';
 import type {
   DegradedReason,
+  GameResult,
   InclusionReason,
   LivenessReason,
   ModifierCode,
@@ -92,10 +95,60 @@ export interface PlayerCard {
    * lets *Most reliable* sort them last instead of first — `distanceKm`'s rule one field up,
    * for `distanceKm`'s reason.
    *
-   * It is here because a chip reads it. `countedGames` and `last_five` cross beside it on the
-   * wire and are **not** here, per the module note: a field is added when a surface draws it.
+   * **It has nothing to do with skill**, and the block that prints it must not imply
+   * otherwise: it is turning up, answering challenges and confirming results
+   * ([ADR-0140](../../../../../docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)),
+   * where the Level two fields up is the only thing on this card that is about playing.
    */
   readonly playerScore?: number;
+  /**
+   * How many **counted** games are behind their rating — the honesty figure.
+   *
+   * *A 2,95 built on 29 games means much more than one built on three.* A friendly is not
+   * one, and a game nobody agreed a score for **is**: an unscored game moved nobody's Level
+   * and still says these people were on a court
+   * ([ADR-0137](../../../../../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)).
+   *
+   * **Omitted where they have played none**, never `0` — absence has one spelling on this
+   * card, and it is the one `distanceKm` and `playerScore` already take.
+   */
+  readonly countedGames?: number;
+  /**
+   * Their last five counted results, **oldest to newest** — the run of form, drawn left to
+   * right.
+   *
+   * **Fewer than five is a real answer and is never padded.** Three entries means three
+   * counted-and-agreed results and the card draws the gap, because the gap is the honest
+   * statement: padding it to five would claim two games nobody played.
+   *
+   * **Outcomes in order and no dates**, at any granularity — see `GameResult`. A moment
+   * beside one of these is activity recency, which no card carries in any shape.
+   *
+   * **Omitted where nothing of theirs has been counted and agreed**, which is not the same
+   * absence as `countedGames`': a player whose games were all unscored has a count and no
+   * run, and that pair is consistent rather than broken.
+   */
+  readonly lastFive?: readonly GameResult[];
+}
+
+/**
+ * What a **counted** game against this person would do to your Level, either way.
+ *
+ * It sits on the candidate rather than on the card for `distanceKm`'s reason and by ADR-0107's
+ * test: it is a fact about a **pair**, and it is the one figure here whose value changes
+ * depending on who is looking.
+ *
+ * **Read forward off the rating engine's own update rule**
+ * ([ADR-0139](../../../../../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)),
+ * so the pair printed is the pair the game will deliver if it is played — and nothing on this
+ * side derives, rounds or negates either half. `winDelta > 0 > lossDelta` is the server's
+ * invariant and neither figure is ever zero.
+ */
+export interface AtStake {
+  /** Signed, and in Level points. Positive, always. */
+  readonly winDelta: number;
+  /** Signed, and in Level points. Negative, always — the minus is the figure's, not the copy's. */
+  readonly lossDelta: number;
 }
 
 /**
@@ -138,6 +191,16 @@ export interface Candidate {
   readonly degradedTerms: readonly DegradedTerm[];
   /** What the engine adjusted after the eight terms were summed. **Never summed** — see below. */
   readonly modifiers: readonly Modifier[];
+  /**
+   * What a counted game against them would move — **omitted in for fun**, where a counted
+   * result is *meaningless* rather than unavailable, and omitted in competitive where either
+   * of the two holds no rating in this sport.
+   *
+   * Present here is not the same as drawn: a card on a **doubles** seat hides it, because a
+   * win against one named person is not a thing that exists until the other three seats are
+   * known. That rule is `domain/atStake`'s and never a component's.
+   */
+  readonly atStake?: AtStake;
 }
 
 /**

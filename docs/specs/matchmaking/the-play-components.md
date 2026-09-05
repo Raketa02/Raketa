@@ -146,9 +146,30 @@ features/play/components/candidate/
   DeckCard.tsx               the deck               media-top, floats
   CandidatePhoto.tsx         photo-or-poster in a box            ← §4, §9
   PhotoPanel.tsx  IdentityRow.tsx  HeadToHeadBand.tsx   competitive only
+  SocialTagRow.tsx  RecordBlocks.tsx  StakeBoxes.tsx    competitive only
+  StatBox.tsx                the box those last two are made of  ← 7.13, 7.14
   CardHead.tsx               social · deck
   FactRow.tsx  TagRow.tsx  ReasonLine.tsx
 ```
+
+**[#312](https://github.com/Raketa02/Raketa/issues/312) added two more parts to that column,
+and one shared box under them.** `RecordBlocks` is three boxes across — Player Score, Last 5,
+Counted — and `StakeBoxes` is two, and they are one shape twice rather than two components with
+a `variant`: a `paper2` box with a name over a figure, where the record's figures are counts and
+the stake's are signed movements. `StatBox` is that shape, and it is in the kit for the reason
+`FactRow` is — the alternative is the padding matching in one file and not the other.
+
+**Neither is a `FactRow`, and the difference is what a reader does with the number.** A fact row
+is a label opposite a value: a fact the card **states**, read once. These are five figures the
+reader **compares** — against each other, and against the last card they looked at — and five
+more rows on a card that is already a panel, a name, a pill, a band and a tag row would have
+buried them.
+
+**A block hides itself where its fact is absent**, which is the whole of why the row cannot be
+one component taking three optional numbers and drawing three columns: the boxes that remain
+fill the width, so a hidden block leaves no hole. And **the stake pair's own hiding is not the
+component's**: `domain/atStake` decides it off the sport's seat count, and the component is
+handed a pair or nothing (§7).
 
 **Every card takes `(candidate, envelope)` and no global state.** It may also take what the
 **screen** owns rather than the person: the competitive card's `sportName` is the *search's*

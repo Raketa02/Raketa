@@ -44,7 +44,7 @@ import {
 } from '../domain/playMode';
 import type { PlayIntent, SearchMode } from '../domain/vocabulary';
 
-import { isDoubles } from './builderPresentation';
+import { isDoubles } from '../domain/lineup';
 
 /** The screen's own title, and the one ⚡ opens on. */
 export const FIND_A_GAME_TITLE = 'Find a game';
@@ -358,7 +358,7 @@ export const NO_RATED_SPORT_LINE =
  * copy of this one.
  *
  * Every sentence below branches on the **seat count** and none of them counts for itself:
- * `isDoubles` is `builderPresentation`'s, for the reason recorded there — *four* is a word
+ * `isDoubles` is `domain/lineup`'s, for the reason recorded there — *four* is a word
  * about a Sport, and a squash court must never be told to build one.
  *
  * **The title names the game rather than the furniture.** It was `builderTitle`'s outright —

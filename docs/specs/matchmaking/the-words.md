@@ -142,7 +142,7 @@ render different things.
 
 | Surface | Draws | So it drops |
 | --- | --- | --- |
-| `CandidateCard` (competitive) | the photo panel's Level, one head-to-head band — both levels, the bar and the forecast — the Social tag row's **matched** tags, (later) Player Score block | `LEVEL_FIT`, `PREDICTED_BALANCE`, `PLAYING_STYLE` and `SOCIAL_VIBE` **only where they matched something**, and `RELIABILITY` only once the score block prints |
+| `CandidateCard` (competitive) | the photo panel's Level, one head-to-head band — both levels, the bar and the forecast — the Social tag row's **matched** tags, and the record block's **Player Score** | `LEVEL_FIT`, `PREDICTED_BALANCE`, `RELIABILITY`, and `PLAYING_STYLE` / `SOCIAL_VIBE` **only where they matched something** |
 | `CandidateCardSocial` (for fun) | Level row, You overlap row, meta line's km — **no tag row** | `LEVEL_FIT`, `AVAILABILITY_OVERLAP`, `DISTANCE` |
 | `DeckCard` | Level row, Predicted balance row, You overlap row, meta line's km — **no tag row** | `LEVEL_FIT`, `PREDICTED_BALANCE`, `AVAILABILITY_OVERLAP`, `DISTANCE` |
 | `SH.whyfit` | everything, on purpose | **nothing** — #233 §7: a summary block would break §10 *"on the one screen whose job is showing values"* |
@@ -157,6 +157,21 @@ rule is checked against the component rather than remembered.
 drew those two terms and not the two **facts**. That is the row above read the way it is meant
 to be read: *Draws* is a claim about which values a surface renders, never about how many boxes
 it renders them in.
+
+**`RELIABILITY` joined that set the day the Player Score block printed, which is
+[#312](https://github.com/Raketa02/Raketa/issues/312).** The row above said *"only once the score
+block prints"* and the block prints now, so the sentence `Player Score {score}` stops appearing
+as a reason line on this card and goes on appearing on the other two, which draw no block.
+
+The set is **unconditional** where the block is not, and the two read different fields: the block
+prints `player_card.player_score` — the **published** figure — where the filtered sentence is
+written over `ReliabilityEvidence.score`, the engine's. ADR-0140 §6 makes those two reads
+deliberate, and §1 above says why the card must not borrow the engine's: *"taking the card's
+figure off the engine's record would make what a player is shown a consequence of whatever the
+reliability term happens to carry"*. Both reads hit the same port in the same request, so a term
+that fired without a published score is not a state the contract produces; the day it were, the
+card would state the fact nought times, and the answer would be the second read rather than a
+fallback that prints the engine's number under the block's name.
 
 **And the Level is now printed twice on that card** — hugely on the photo panel, and again on
 the right of the band. §10's rule is not broken by it and the distinction is worth keeping: the
@@ -209,7 +224,14 @@ string]`. **Filter first, then take three.**
 On the **competitive** card it cannot happen: `DISTANCE` never stands down and the card draws
 no distance row, so a survivor always exists. **The redraw does not touch that claim** — it
 rests on the drawn set and on the card having no distance row, and #309 changed neither: the
-panel states a Level and a Sport, and a Sport is not a `Term`. On the **deck** card the line rests on exactly
+panel states a Level and a Sport, and a Sport is not a `Term`.
+
+**Nor does the record block, and the surviving set is genuinely one smaller now.** #312 put
+`RELIABILITY` in the drawn set, so five terms survive the filter where six did — and the claim
+still holds for its own two reasons, neither of which the block reaches: `DISTANCE` never stands
+down, and this card has nowhere to render a distance. That is **confirmed in
+`candidateCards.test.tsx` rather than by reading**, on a candidate whose only firing terms are the
+drawn set plus `DISTANCE` and who carries no liveness reason to fall back to. On the **deck** card the line rests on exactly
 three terms — `INTENT_ALIGNMENT`, `PLAYING_STYLE`, `SOCIAL_VIBE`, since `RELIABILITY` stands
 down for everybody day one — and all three are optional.
 
@@ -957,7 +979,7 @@ to satisfy a word count would delete what the card is for.
 
 | | |
 | --- | --- |
-| **Card body** | `button`. `{name}. Fit {n} out of 100. {level} · {band} · likely {low}–{high}. {In your area · }{km} km. {tags}. {reason}. {reason}. {reason}. {reason}. {concern}.` |
+| **Card body** | `button`. `{name}. Fit {n} out of 100. {level} · {band} · likely {low}–{high}. {In your area · }{km} km. {record}. {stake}. {tags}. {reason}. {reason}. {reason}. {reason}. {concern}.` |
 | **_Why 78?_** | `button`. `Why {name} fits {n}` — the visible label is `Why {n}?`, and two cards on one screen can carry the same Fit, so this one names its subject for the reason the primary does. **Not** the sheet's own name (§20.6): that string is the answer's, and this is the question. |
 | **Primary button** | `button`. `Add {name} to the court` · `Challenge {name}` — the visible label is *Add to the court* / *Challenge*, which announces identically on twenty cards. Naming the subject is [6.9](../../../frontend_player/docs/design-system.md#69-the-photo-tile-and-picker)'s remove control, whose label *"names which photo it removes"*. |
 
@@ -970,6 +992,40 @@ count and in both modes, so the visible word and the spoken name now differ by t
 which is the whole of what naming the subject was for. The bare `Add` stood while the button
 stood alone at the foot of the card, and stopped when *Why 78?* joined it: a bare verb beside a
 second control is the one place the missing object is felt.
+
+**`{record}` is the three record blocks, and `{stake}` is the two stake boxes**
+([#312](https://github.com/Raketa02/Raketa/issues/312)). Both are the competitive card's alone,
+and both sit with the identifying facts for the reason `{tags}` does: what the platform has
+watched somebody do, and what a game against them would move, are the same register as their
+Level, where *why this person* is the reasons'. They are drawn in that order and spoken in it —
+§20.3's one divergence from visual order is about the **argument**, and none of these five
+clauses is one.
+
+| Block | Says |
+| --- | --- |
+| Player Score | `Player Score {n} out of 100` — the scale stated, because this is the **second** out-of-a-hundred figure on the card and the first is Fit |
+| Last 5 | `{won} of the last {n} won` — **one clause, and `{n}` is the run's own length** |
+| Counted | `{n} counted games` — through `counted()`, so no sentence hardcodes an `s` (§4, §19) |
+| Win, counted | `Win, counted {±d}` |
+| Lose, counted | `Lose, counted {±d}` |
+
+**A hidden block says nothing**, which is nought to three record clauses and **two or none** for
+the stake: the pair is symmetrical and the contract sends both or neither, where the three record
+fields are three independent absences.
+
+**The run of form is counted rather than read out**, and this is the one place a listener gets
+something a reader does not. *Last 5* is five squares distinguished by **fill**, so five clauses
+would read the row as a table — *won, won, lost, won, won* — and no clause at all would leave the
+listener with nothing, which is Part 13's *never colour alone* failing in the register it was
+written for. And the denominator is the **real** one: a run of three says *of the last 3*, because
+fewer than five is a real answer and the gap is the honest statement — *of the last 5* over three
+squares would pad in words exactly what the drawing refuses to pad in squares.
+
+**The at-stake pair is absent in two ways that are not this file's**, and neither reaches the
+label: the field is omitted in for fun, where a counted result is *meaningless* rather than
+unavailable, and it is **refused on a doubles seat**, where *a win against one named person isn't
+a thing that exists until the other three seats are known*. The second is a rule keyed off the
+sport's seat count, and it is taken before the label is composed.
 
 **`{tags}` is the Social tag row, and it is nought, one or two clauses**
 ([#311](https://github.com/Raketa02/Raketa/issues/311)). It sits after the identifying facts and
