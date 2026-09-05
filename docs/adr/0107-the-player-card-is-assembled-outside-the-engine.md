@@ -196,11 +196,31 @@ themselves"*, which is true and is a different product decision. Recency will co
 *"we already compute it"*, which is exactly the argument ADR-0106 §5 exists to refuse. Both
 are written down here so the next proposal starts from the reason rather than from the field.
 
-**Form and Player Score arrive on their own, through ports that already exist.** They are
-gaps, not refusals: when `matches` and `player_score` land they attach to the card through
-`MatchHistoryQuery` and `PlayerScoreQuery`, and until then the card is shorter and says
-nothing false. This is [ADR-0098](0098-matcher-demands-as-executable-contracts.md)'s shape,
-applied to presentation instead of to scoring.
+**Form and Player Score arrived on their own, through ports that already existed.** They were
+**gaps, not refusals**, and both are closed
+([#306](https://github.com/Raketa02/Raketa/issues/306)). The prediction was right about the
+shape and wrong about one port name, which is worth recording because the correction is the
+rule doing its work:
+
+- **The Player Score reaches the card through `PlayerScoreQuery`**, exactly as written — the
+  same port the reliability term reads, **read again** at assembly
+  ([ADR-0140](0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md) §6).
+  Two reads rather than one because they are bounded by different things: the engine's prices a
+  *term* over everybody who might be scored, and this one prints a *number* over the shortlist.
+  Taking the card's figure off the engine's record would make what a player is shown a
+  consequence of whatever that term happens to carry.
+- **The form does not come from `MatchHistoryQuery`, and could not have.** That port answers
+  *what have these two done together* — a bounded pairwise read, and a fact about a **pair**,
+  which is the one thing this ADR keeps off a card. `counted_games` and `last_five` are facts
+  about one person, so they arrive on a source of their own, `PlayerRecordSource`, beside
+  `PlayerCardSource` at the assembly seam. `matches` never landed either: **`games` is the
+  context that shipped** ([ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)), and
+  it composes into `MatchHistoryQuery` for the pairwise half while answering the card's two
+  fields through the other port.
+
+This is still [ADR-0098](0098-matcher-demands-as-executable-contracts.md)'s shape, applied to
+presentation instead of to scoring — including its rule that **a provider signing half of two
+contracts has signed all of neither**, which is why the split above is two ports and not one.
 
 **Every photo becomes visible to strangers, and [ADR-0091](0091-photo-storage-behind-a-port.md)
 deferred its content check on the argument that they could not be.** That ADR's words were

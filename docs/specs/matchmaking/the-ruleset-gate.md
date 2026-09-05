@@ -96,8 +96,15 @@ not, which is §2.1's own argument applied to the one thing it decides.
   against candidate over one population; the report makes no absolute claim about anything.
 - **σ is near-constant**, so predicted balance is effectively a function of Δμ and the ×32 σ
   coefficient is never exercised. §2.1's fourth named approximation.
-- **Reliability has no provider on this platform**, so the term stands down for everybody and
-  its digest is the empty one.
+- **Reliability has a provider now**
+  ([ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)),
+  **and nobody in this synthetic population has a record** — so the term still stands down for
+  everybody and its digest is still the empty one, but as **their own** gap rather than the
+  platform's. The two are spelled differently on purpose: the set of terms with no provider is
+  now empty, which moved the evidence gate's basis from seven live terms to eight, and that is a
+  real change to the committed artifact rather than a change of wording. Arranging a synthetic
+  record would mean inventing games and challenges that never happened, and a corpus that scored
+  an invented history would be answering about a platform that does not exist.
 - **The recorded corpus is not run and cannot be** — no database in CI, and ADR-0118 §7
   restricts it to a restore.
 - **The near-miss band's saturation is counted every run.** If a diff's promotions ever

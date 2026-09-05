@@ -28,14 +28,16 @@ ports & adapters), DDD, and event sourcing.
 These are the authority for their terms. There is no Part 2: after the reset, no term is
 committed ahead of *a decision*, and a speculative list of context names is not one. A
 context that does not appear below has no vocabulary yet — resolve its terms into this file
-before writing it, which is what the last three sections below are: **Player profile** is
-settled in an accepted ADR and is being built, **Blocks** is settled in an accepted ADR and
-is now built, **Matchmaking** is settled and not built at all, **Challenges** is settled
-and built as far as its aggregate, **Games** is settled in an accepted ADR and built, and
-**Player Score** is settled in an accepted ADR and built over two of its five strands.
-Their terms are here because that is the order this file
-asks for, not because the code landed first. Every section describes code that exists in
-`backend/app/` today.
+before writing it, which is what every section from **Player profile** down was: settled in an
+accepted ADR and written here first, then built. **All of them are built.** Their terms are here
+because that is the order this file asks for, not because the code landed first. Every section
+describes code that exists in `backend/app/` today.
+
+> **A verdict narrower than that belongs to the section it is about.** This paragraph carried a
+> clause per context and went stale twice, because a per-context verdict at the top is a second
+> place for *is this built* to be true. What a context can and cannot see — a strand that stands
+> down, a modifier wired and never binding, a term settled and unbuilt — is stated in its own
+> section, where the reason for it is.
 
 ### Skill rating (`backend/app/modules/rating/`)
 
@@ -367,6 +369,17 @@ of the code because this file asks for them in that order.
 - **Profile photo** — the first of a player's photos, and the one a player card shows. A
   player may hold up to three or none; none is not an absence but a **generated court
   poster**, derived from their identity so it is stable across devices.
+- **On-court check** — what the platform concluded about whether a photograph shows a racket
+  sport, decided at the upload and stored with it
+  ([ADR-0129](docs/adr/0129-the-photo-check-is-a-sidecar-the-backend-asks.md)). **It soft-warns
+  and never blocks**: a flagged photo is stored, keeps its position and keeps the lead if it had
+  it. Its outcome has **three** values, not two — **passed**, **flagged**, and **nobody looked**,
+  which is its own answer and never a spelling of *flagged*
+  ([ADR-0138](docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)).
+  Two readers see it differently and that is deliberate: the **uploader** is warned about their
+  own photograph, and a **player card** marks only the pass — a card must not tell one player
+  that another player's photograph was doubted. **The confidence behind it never crosses on any
+  route**, to either of them.
 - **Profile commit** — the single idempotent request that ends onboarding's second part,
   carrying all seven answers at once. Nothing is written before it, so leaving mid-part
   restarts at step 1 ([ADR-0090](docs/adr/0090-onboarding-per-player-checkpoint.md)). Keyed
@@ -517,9 +530,11 @@ that will consult the port do not exist yet, which is why it is wired and has no
 
 Decided by [ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md).
 **The shortlist runs end to end**: `POST /api/v1/searches` gates, generates, scores, modifies,
-floors, reorders and records. The **line-up**, the **deck**, the **relaxation ladder**, the
-**interest ledger** and the **read-back** are designed and not yet built — every term below that
-names one is settled and unimplemented, and says so where it matters. Thirty-three ADRs
+floors, reorders and records. So do the rest — the **line-up**, the **deck**, the **relaxation
+ladder**, the **interest ledger** and the **read-back** were designed here ahead of their code
+and are now served by `POST /api/v1/lineups`, `POST /api/v1/deck`, `POST /api/v1/forecasts`,
+`POST`/`GET /api/v1/interest`, `POST /api/v1/passes` and
+`GET /api/v1/searches/{search_id}`. Thirty-three ADRs
 (0093–0125) and the spec set at [`docs/specs/matchmaking/`](docs/specs/matchmaking/) settle it;
 the pipeline is assembled in one place, with the precedence rule for reading them, in
 [`the-engine.md`](docs/specs/matchmaking/the-engine.md). Only what a decision has actually settled
@@ -686,15 +701,18 @@ appears here.
   and the position is what the telemetry join reads. Required, never optional: a search not
   joined to its outcome is evidence that no longer exists, and there is no backfill.
 - **PlayerScoreQuery** / **MatchHistoryQuery** — the two ports naming what the matcher demands of
-  `player_score` and `matches`, beside **AccountHoldQuery** for `cases` and **AtStakeQuery** for
-  `rating`. One provider signs one contract — with **one recorded exception**: `challenges` ships
-  and signs `MatchHistoryQuery` beside the unwritten `matches`, because the seam runs *through*
-  the pairwise read and splitting the port would halve its 500-counterpart bound. Its adapter is
-  **`ChallengesButNobodyHasPlayed`**, named for the fact that **played** is empty by construction
-  rather than by luck; the two that remain empty are **`NoPlayerScoresExist`** and
-  **`NoResultUpdateRuleExists`**, named the same way
-  ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). `AtStakeQuery` is the
-  odd one out: its provider **exists** and the rule it needs does not.
+  `player_score` and the record of who has played whom, beside **AccountHoldQuery** for `cases`
+  and **AtStakeQuery** for `rating`. One provider signs one contract — with **one recorded
+  exception**: `challenges` signs `MatchHistoryQuery` beside `games`, because the seam runs
+  *through* the pairwise read and splitting the port would halve its 500-counterpart bound. Its
+  adapter is **`ChallengesButNobodyHasPlayed`**, named for the fact that **played** was empty by
+  construction rather than by luck, and `games` arrives as a **composing** adapter over it rather
+  than as a second signature. **Every one of these ports has a real provider now**: the three null
+  objects that stood in for them — `NoMatchHistoryExists`, `NoResultUpdateRuleExists` and
+  `NoPlayerScoresExist` — each retired on the day its own stated fact stopped being true, which
+  is what a null object **named for a fact** is for
+  ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md) as amended). The one that
+  remains is **`NoHoldsExist`**, and it is a *gate* rather than a term.
 
 - **Tag relationship matrix** — product's claims about how two **Social tags** relate: **matching**,
   **complementary** or **clashing**, each entry naming which term it belongs to, which modes it
@@ -812,13 +830,18 @@ appears here.
   append is assigned its position before it commits
   ([ADR-0110](docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md)).
 - **Player card** — who a candidate *is*, as against how well the game would go. A **closed
-  list** — nickname, photo, area, Social tags, level and band, and the **record block** below —
-  and it is assembled
+  list** — nickname, photo, area, Social tags, level, band, **likely range**, the photograph's
+  **on-court check** outcome, and the **record block** below — and it is assembled
   by the backend **after** the engine returns, on the seam **at stake** already rides, because the
   scorer is forbidden every field on it. There is no name in this platform, only a **Nickname**.
   **The distance is not on it**: a card says only what its subject published, and a distance is a
   fact about a *pair*, so it is the one field that would change depending on who was looking
   ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
+  **Two entries in that list are not things their subject published** — the check's outcome, and
+  every field of the record block — and they pass the same rule by its other half: each is a
+  fact about **that person alone** and does not change with who is looking, which is where the
+  distance failed. *A card says only what its subject published* is the shorthand; *nothing on a
+  card is a fact about the pair looking at it* is the rule.
 - **Record block** — the three fields of a Player card that say what the platform **watched this
   person do**, as against what they told it about themselves: their published **Player Score**,
   their count of **counted games**, and their **Run of form**. They come from contexts of their
@@ -963,12 +986,18 @@ appears here.
   generation and gating and is **absent from the type handed to the scorer**, so no term can
   weigh it — the guarantee is a type boundary the build asserts, not a review checklist
   ([ADR-0096](docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
-- **A card says only what its subject published.** Everything on a **Player card** is something
-  the player themselves put there — a photo, an area, their tags, a level they proved. Nothing
-  the platform merely *observed* about them reaches a stranger's screen. That is what rules out
-  activity recency, which the engine does compute and may not show, and it is the line that
-  separates a fact a player offered from a fact a system noticed
-  ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
+- **Nothing on a card is a fact about the pair looking at it.** Every field of a **Player card**
+  is a fact about **that person alone**, so no field changes value depending on who is looking —
+  which is why the distance between two people sits on the *candidate* beside the card and never
+  on it ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
+  Most of them are things the player themselves put there — a photo, an area, their tags, a
+  level they proved — and **four are the platform's own observation of them**: the photograph's
+  **on-court check**, and the **record block**'s Player Score, counted games and Run of form. *A card says only what its subject published* was the original spelling of this
+  rule and it was narrower than the rule: each of those observations is still a fact about one
+  person, and each arrives through a port at assembly time rather than off the candidate index.
+  **What stays refused is refused for its own reason, not by that shorthand** — activity
+  recency at any granularity, which the engine computes and may never show; a Liveness number;
+  gender; free text; and any block, pass or decline.
 - **A silent signal never becomes an inbox.** *Let's play* was collected on the promise that
   nobody is notified and it becomes visible only when one of you goes looking for a game. So a
   one-sided yes reaches its recipient exactly one way — as an **interest lift** on a card, in a
@@ -994,10 +1023,13 @@ appears here.
 
 ### Challenges (`backend/app/modules/challenges/`)
 
-Settled by [#221](https://github.com/Raketa02/Raketa/issues/221) and built as far as the
-**aggregate** ([#250](https://github.com/Raketa02/Raketa/issues/250)): the model, its six
-events, the derived Standing and the one-open-challenge-per-pair rule exist; no route serves
-them and nothing sweeps a lapse yet. It is the context the matcher has been citing since
+Settled by [#221](https://github.com/Raketa02/Raketa/issues/221), built first as an
+**aggregate** ([#250](https://github.com/Raketa02/Raketa/issues/250)) — the model, its six
+events, the derived Standing and the one-open-challenge-per-pair rule — and **served since**:
+`GET`/`POST /api/v1/challenges` with its accept and decline. Beside the routes, a background job
+lapses a seat past its answer window — not to change what a standing *is*, which is folded from
+the seats and the clock either way, but so that *answers challenges* has a denominator. It is the
+context the matcher has been citing since
 ADR-0098 without being able to name: `matchmaking`
 ends at a ranked list, and *asking somebody* begins here. It is deliberately **not** called
 `matches` — that word promises results, history and a played game, none of which is in scope —

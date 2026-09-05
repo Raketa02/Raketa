@@ -232,8 +232,13 @@ still holds for its own two reasons, neither of which the block reaches: `DISTAN
 down, and this card has nowhere to render a distance. That is **confirmed in
 `candidateCards.test.tsx` rather than by reading**, on a candidate whose only firing terms are the
 drawn set plus `DISTANCE` and who carries no liveness reason to fall back to. On the **deck** card the line rests on exactly
-three terms — `INTENT_ALIGNMENT`, `PLAYING_STYLE`, `SOCIAL_VIBE`, since `RELIABILITY` stands
-down for everybody day one — and all three are optional.
+four terms — `INTENT_ALIGNMENT`, `RELIABILITY`, `PLAYING_STYLE`, `SOCIAL_VIBE` — and **all four
+are optional**, which is the property the claim rests on rather than the count. `RELIABILITY`
+was in this sentence as a term that stood down *for everybody*, and it no longer does: it has a
+provider ([ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md))
+and it fires for anybody the platform has watched. What that changes is one word — a fourth term
+can now survive the filter, so *nothing survives* is rarer on this card and is not impossible,
+because a candidate with no record still stands it down as **their own** gap.
 
 > **The fallback is the top `LivenessReason`, not the fourth-ranked term.**
 
@@ -300,10 +305,15 @@ evidence, never off the envelope (§2).
 | `COMPETITIVE` | `FOR_FUN` | *not a reason — see §7* |
 | `FOR_FUN` | `COMPETITIVE` | *not a reason — see §7* |
 
-**`ReliabilityEvidence` `{score, strands[], floor_breached}`** — written, and **unreachable
-day one** (`NoPlayerScoresExist`, map Decision 3). It is written anyway because the
-vocabulary is closed and a code with no words is how a term arrives blank the day its
-provider lands.
+**`ReliabilityEvidence` `{score, strands[], floor_breached}`** — written **unreachable** and
+**reached since**. It was `NoPlayerScoresExist` on day one (map Decision 3) and it is written
+anyway *because* the vocabulary is closed, so that a code with no words is not how a term
+arrives blank the day its provider lands. That day came
+([ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)),
+and the sentence below was already here to draw — **which is the whole of what writing it early
+bought**. It stands down **per person** now rather than platform-wide: absent from a card is
+a fact about that candidate, and the platform's own gap is the one thing that is stated once in
+the sheet's footer.
 
 > `Player Score {score}`
 
@@ -834,20 +844,28 @@ reads the published Player Score the card now carries, and is offered on a searc
 candidates have one. `EVENEST` reads `would_be_forecast`, which nothing has ever written, so it
 keeps a word and no ordering — the table stays exhaustive by type.
 
-**`GameResult`** — the run of form on a card, and **the words are not written yet**, because
-no surface draws it ([#306](https://github.com/Raketa02/Raketa/issues/306)). The field crosses
-so that the day a card grows the block, the block is already there to draw; the two codes are
-listed here so that this file stays the exhaustive account of what crosses.
+**`GameResult`** — the run of form on a card. The field crossed with
+[#306](https://github.com/Raketa02/Raketa/issues/306) and nothing drew it;
+[#312](https://github.com/Raketa02/Raketa/issues/312) drew it, and **neither code has a sentence
+of its own — on purpose.**
 
 | | |
 | --- | --- |
-| `WIN` | *no words yet — no surface draws the run* |
-| `LOSS` | *no words yet — no surface draws the run* |
+| `WIN` | *no sentence: a square in `ink`, and one share of §20.3's count* |
+| `LOSS` | *no sentence: a square in `muted`, and one share of the same count* |
 
-**It is drawn as a row of five marks rather than as five sentences**, whenever it is drawn: it
-is outcomes in order, oldest to newest, and **fewer than five is a real answer** the client
-draws a gap for. **There is no date beside any of them** — a moment here would be activity
-recency, which no card carries in any shape (ADR-0106 §5).
+**The row is drawn as five marks and spoken as one clause**, and both halves refuse the same
+thing. On the drawing it is outcomes in order, oldest to newest, distinguished by a **lightness
+step** and never by a word — a square carries no label, and both squares are drawn. To a listener the whole row is `{won} of the last
+{n} won` (§20.3), because five clauses would read the row as a table and no clause at all would
+leave Part 13's *never colour alone* failing in the register it was written for. **A per-code
+sentence would be the thing both registers avoid**, so this table stays what it is: the codes
+are exhaustive, and their words are the count they are counted into.
+
+**Fewer than five is a real answer** and is never padded — three results are three squares, the
+gap is the statement, and `{n}` is the run's **own** length rather than 5. **There is no date
+beside any of them** — a moment here would be activity recency, which no card carries in any
+shape (ADR-0106 §5).
 
 **`ForecastAssumption`** — one value, and ADR-0108 makes the figure and its caveat one thing.
 

@@ -376,6 +376,20 @@ listed here because it is a Play surface rather than a profile one.
   so the drop is conditional on what the row actually drew and lives beside the set in
   `candidateFacts` rather than in it. A set entry would take four registers away to stop one
   repeating, and the exported set stays what it says it is — terms this card renders a value for.
+- **Head-to-head band** — the competitive card's one block for _how this game would go_: your
+  Level on the left, theirs on the right, and the served forecast with its balance word between
+  them, over 7.11's bar at `md`. `HeadToHeadBand`, replacing a two-`Side` row, a bare bar and a
+  _Predicted balance_ row that said one thing stacked. **The bar takes the level advantage and
+  the figure is the forecast** — two facts, and neither is derived from the other. Each half
+  hides on its own stood-down term, and the band never vanishes whole while either can be drawn.
+  _Avoid_: "balance bar" for the band — that is the design-system primitive inside it; deriving
+  the percentage from the two levels, which is forecast arithmetic on the client.
+- **Photo panel** — the competitive card's identity: the 74 × 92 box that draws the player's
+  photograph (or their generated poster) with the **Level** hugely over it, the **Sport** small
+  and capitalised beneath, and the **on-court mark** above. `PhotoPanel`, over 7.16. The Level is
+  `player_card.level` — **what they published**, not the level term's μ — so the panel is drawn
+  whatever fired; the Sport is the _search's_ and reaches no spoken name. _Avoid_: "avatar" and
+  "thumbnail" — the photograph is the ground and the rating is the subject.
 - **On-court mark** — the two words the photo panel prints at its top, on a photograph the
   on-court check **passed**: `ON COURT`, `OnCourtMark`, over `domain/onCourtMark`'s one rule.
   **Only a pass is marked.** _Checked and flagged_ and _nobody looked_ draw and announce

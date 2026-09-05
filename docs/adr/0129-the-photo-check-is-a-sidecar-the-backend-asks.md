@@ -11,6 +11,16 @@
 > provisional; what this record left as a note about a corpus that did not exist is now
 > [#316](https://github.com/Raketa02/Raketa/issues/316). The mechanism that makes it fixable
 > is the one this record built: every verdict stores the similarities it was taken from.
+>
+> **Two Consequences below have been overtaken and neither is wrong about its own day.** *Fail-open
+> means an outage is silent to the player* names the trade *"correct while nothing reads the
+> decision"* and asks for it to be re-examined *"on the day something does"* — **that day came
+> twice, and the re-examination is on the record**: ADR-0133 kept fail-open in substance, and
+> ADR-0138 changed its spelling, because an unreachable reviewer now records **no decision**
+> rather than `ALLOWED` — the word that meant *nothing to warn about* would mean *checked and
+> passed* on somebody else's card. And *the API contract does not change* was true of **this**
+> change and of no later one: the verdict crosses on the upload (ADR-0133) and on
+> `player_card.review` (ADR-0138), and a card marks **only the pass**.
 
 ## Context
 

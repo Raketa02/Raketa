@@ -67,6 +67,29 @@ URL is what is drawn** — minted per response and recorded nowhere, because the
 sign one for another player's photo and `GET /photos/{id}` refuses to
 ([`the-play-components.md`](the-play-components.md) §9).
 
+**`review` is the on-court decision, and it is the third field beside those two**
+([ADR-0138](../../adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)).
+It carries what the on-court check concluded about *that photograph* — `allowed` or `flagged`,
+and **omitted** where nobody looked, which is a third answer and not a spelling of `flagged`. It
+is **recorded** like `photo_id` rather than minted like `photo_url`: a link is dead within the
+hour so it cannot be stored, and a verdict is a store round trip so it must not be re-read per
+response.
+
+**Only the positive is drawable, and that is the whole reason the field is a code and not a
+boolean.** The client draws a mark on `allowed` and draws **nothing** on the other two,
+identically — a card must not tell one player that another player's photograph was doubted,
+which is a moderation outcome about a third party
+([`the-words.md`](the-words.md) §20.3). The engine sees none of it: it is a card field, so it
+crosses on ADR-0107's seam like the nickname, and it passes that ADR's own test the way the
+record block does — a verdict is not something its subject *published*, but it is a fact about
+their photograph alone and does not change with who is looking.
+
+**No confidence, on any route.** The number every verdict is computed from stays inside the
+platform ([ADR-0133](../../adr/0133-the-verdict-crosses-on-the-upload-and-the-warning-may-be-wrong.md)),
+so there is nothing here to print and nothing to derive one from — *we are 38% sure this is a
+court* is a figure a player can do nothing with. And the **generated poster carries no verdict
+at all**: it is not a photograph and has nothing to have passed.
+
 > **`distance_km` sits on the candidate and not inside the card**, matching
 > [`the-two-contracts.md`](the-two-contracts.md) §4. An earlier draft of this section had it
 > inside the card, which is the one placement ADR-0107 rules out: **a card says only what its
@@ -552,11 +575,12 @@ the photo URL is re-minted per response by design
 ## 10. The cross-cutting rule, narrowed
 
 §12 rule 3 — *the card never says in words what it has already drawn* — arrives claiming a test
-already asserts it in this codebase's client. **It does not.** There is no matchmaking code in
-`frontend_player/`, and the nearest shipped test asserts the **opposite** discipline on
-purpose: `radiusPresentation.test.ts` renders 12 km as a figure *and* as *"Across your town"*,
-because *"a number in kilometres means nothing to a player who does not think in kilometres"*
-and *"the words are the assertion worth having."*
+already asserts it in this codebase's client. **It did not.** When this was audited there was
+no matchmaking code in `frontend_player/` at all, and the nearest shipped test asserted the
+**opposite** discipline on purpose: `radiusPresentation.test.ts` renders 12 km as a figure *and*
+as *"Across your town"*, because *"a number in kilometres means nothing to a player who does not
+think in kilometres"* and *"the words are the assertion worth having."* That test is still
+shipped and still says so.
 
 **The rule as written would delete that pattern.** So it is narrowed to what it was protecting
 — and the prototype's own implementation says which that is: it filters the **reason list**,
@@ -569,12 +593,30 @@ second, and this client already decided that deliberately. Stating the rule narr
 makes it testable; stating it broadly is what gets it deleted the first time it fights the
 radius pattern.
 
+**The card is built now, and it prints the candidate's Level twice on purpose — recorded here
+so nobody tidies it away** ([#309](https://github.com/Raketa02/Raketa/issues/309)). The
+competitive card's photo panel prints the Level hugely, and the head-to-head band prints it
+again on the right. The narrowed rule is not broken by that and the distinction is what makes it
+narrow: the panel prints what the player **published** (`player_card.level`, drawn whatever
+fired) and the band prints one side of a **comparison** (`level_fit.theirMu`, computed against
+the searcher's). What the rule forbids is a *reason line* restating a value the card renders —
+two **registers**, a fact **stated** against a fact **argued** — and it holds exactly as before:
+`LEVEL_FIT`'s sentence is filtered off, the fact reaches a listener once, and it is the drawing
+that repeats. A reader who deletes one of the two figures on the strength of *the card never
+says twice what it has already drawn* has applied the broad rule this section refused.
+
+The bookkeeping lives in [`the-words.md`](the-words.md) §5, beside the per-surface filter that
+enforces the rule; this is the rule's own home, so the exception is stated here too.
+
 ---
 
-## 11. What the player app owes, when it is built
+## 11. What the player app owes, now that it is built
 
-Recorded here rather than filed, because there is nothing to correct — there is no card yet,
-and the UI build is its own effort. The effort that builds these screens inherits a list:
+Written before the screens existed, and recorded here rather than filed because there was
+nothing yet to correct. **The screens are built** — `frontend_player/src/features/play/`, over
+[#217](https://github.com/Raketa02/Raketa/issues/217) and the tickets under it — so this stops
+being a list handed forward and becomes the list a change to those screens is checked against.
+Each item is a standing obligation and none of them expires on being satisfied once:
 
 1. **A reason line never restates a value the card already renders** (§10).
 2. **`optimised_for: GROUP` is rendered**, in the same voice the app uses to say a forecast is

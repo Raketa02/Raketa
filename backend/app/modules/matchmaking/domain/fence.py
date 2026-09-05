@@ -195,16 +195,25 @@ def candidate_of(
 def modifier_facts_of(
     row: CandidateRow, context: SearchContext, player_uuid: UUID
 ) -> ModifierFacts:
-    """What stage 4 reads. **Two of the three cannot fire today.**
+    """What stage 4 reads. **One of the three still cannot fire.**
 
-    Familiarity and the welcoming record both need ``matches``, which is
-    unwritten, and they say so by being absent rather than by arriving as a
-    ``False`` or a zero. ``welcomed_settling_opponents`` is ``None`` meaning *no
-    answer* and emphatically not *no*.
+    Both familiarity and the welcoming record were waiting on a record of who
+    had actually played whom, and ``games`` is it (``docs/adr/0137``).
+    **Familiarity fires now**: ``MatchHistoryQuery`` answers ``PLAYED``
+    counterparts, so ``_shared_history`` returns a reading for a pair who have
+    been on a court together and nothing for a pair who have only exchanged
+    challenges — *a challenge accepted is not a game played*, which is the same
+    sentence it always was, now separating two populations that both exist.
 
-    The absorption tally crosses even so, and is not waiting on ``matches`` with
-    the modifier it bounds: it is counted from searches, which this build runs.
-    **Wired, and never binding** while the cap refuses its integer.
+    **The welcoming record still cannot.** It needs whether this player's past
+    opponents *settled in*, and nothing publishes that — so
+    ``welcomed_settling_opponents`` stays ``None``, meaning *no answer* and
+    emphatically not *no*. Absent rather than ``False``, because a ``False``
+    here is a claim about somebody's record rather than a gap in ours.
+
+    The absorption tally crosses even so, and never was waiting on the modifier
+    it bounds: it is counted from searches, which this build runs. **Wired, and
+    never binding** while the cap refuses its integer.
     """
 
     counterpart = context.terms.counterparts.get(player_uuid)

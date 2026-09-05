@@ -365,12 +365,17 @@ The test is whether a zero would be **measured** or **invented**.
 
 **The contract suite is parameterised over every registered implementation of each port,
 including the null one.** `NoHoldsExist` proves the degradation table above, green, today —
-named for the fact it asserts rather than for being empty. `NoPlayerScoresExist`,
-`NoResultUpdateRuleExists` and `ChallengesButNobodyHasPlayed` were the same convention over the
+named for the fact it asserts rather than for being empty. `NoMatchHistoryExists`,
+`NoResultUpdateRuleExists` and `NoPlayerScoresExist` were the same convention over the
 same table, and **all three are gone**, each on the day its own stated fact stopped being true
-([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md),
+([#253](https://github.com/Raketa02/Raketa/issues/253),
 [ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md),
 [ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
+**`ChallengesButNobodyHasPlayed` is not one of the three and has not gone anywhere**: it is a
+*real* provider named the same way, answering the half of `MatchHistoryQuery` that `challenges`
+owns, and `games` composes it rather than replacing it
+([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)) — its name still says
+which half was measured absence.
 That is the intended end of a null object named for a fact, and in every case the swap was one
 row in the register. **The one left is a gate**, which is this section's own rule showing
 through rather than a coincidence: every *term* now has a provider.

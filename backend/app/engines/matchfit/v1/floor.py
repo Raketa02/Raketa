@@ -115,8 +115,11 @@ def live_terms(ruleset: Ruleset, absent: frozenset[Term]) -> tuple[Term, ...]:
 
     A term carrying weight in neither mode is live nowhere and is not counted
     against anybody; ``absent`` is the second half of the same idea — a term
-    weighted here whose provider does not exist yet, which today is reliability
-    alone. The gate counts **person-specific gaps and never platform-wide
+    weighted here whose provider does not exist yet, and **today that set is
+    empty**: reliability was the last one and ``player_score`` ships
+    (``docs/adr/0140``), so the basis is all eight terms rather than seven. The
+    parameter stays because the situation recurs, and it is the composition root
+    that answers it. The gate counts **person-specific gaps and never platform-wide
     absence**, and this is the line where the difference is drawn: a fact nobody
     has about anybody cannot be evidence this person failed to produce.
 
