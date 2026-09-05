@@ -14,7 +14,8 @@ Every write is a use case assembled in ``app/seeds/paths.py`` from the
 composition root, exactly as ``runner.py``'s registrations and questionnaires
 are. What this module adds to the seed path is two contexts — ``challenges`` and
 ``blocks`` — and it adds them as *writes through their own use cases*, which is
-the distinction ``test_the_seed_path_writes_and_only_reads_the_rest`` draws.
+the distinction ``test_the_seed_path_writes_six_contexts_and_only_reads_the_rest``
+draws.
 
 **Re-running writes nothing twice, and each probe is the cheapest question that
 tells the two states apart.** A yes is idempotent in its own use case, and a
@@ -45,18 +46,13 @@ from app.bootstrap.composition import build_candidate_source
 from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.ruleset import ChallengeLoadRung
-from app.infrastructure.redis_client import create_redis_client
 from app.kernel import Instant, Sport, exhaustive
 from app.modules.blocks.application.commands import BlockPlayerCommand
 from app.modules.blocks.domain.surface import BlockSurface
-from app.modules.challenges.application.commands import (
-    AnswerSeatCommand,
-    SeatChoice,
-    SendChallengeCommand,
-)
+from app.modules.challenges.application.commands import AnswerSeatCommand
 from app.modules.challenges.application.read_challenges import ReadChallengesCommand
 from app.modules.challenges.domain.challenge import Challenge
-from app.modules.challenges.domain.seats import SeatAnswer, court_sides
+from app.modules.challenges.domain.seats import SeatAnswer
 from app.modules.challenges.domain.standing import ENDED
 from app.modules.matchmaking.application.commands import (
     ExpressInterestCommand,
@@ -67,6 +63,7 @@ from app.modules.matchmaking.domain.deck import mode_for_intent
 from app.modules.matchmaking.domain.ports import PairwiseOutcome
 from app.modules.matchmaking.domain.searches import SearchRecord
 from app.modules.player_profile.domain.play_intent import PlayIntent
+from app.modules.player_profile.domain.ports import PhotoStorage
 from app.seeds.cohort import COHORT, Cohort, CohortMember
 from app.seeds.paths import (
     ReadPaths,
@@ -74,6 +71,8 @@ from app.seeds.paths import (
     read_paths,
     returned_ids,
     run_a_shortlist,
+    send_a_court,
+    the_ephemeral_store,
     tick_the_tail_to_catch_up,
 )
 from app.seeds.relationships import (
@@ -219,6 +218,7 @@ async def write_the_relationships(
     settings: Settings,
     now: Instant,
     cohort: Cohort = COHORT,
+    photos: PhotoStorage | None = None,
 ) -> SeededPairs:
     """Write every edge, in declaration order, and report what each one cost.
 
@@ -232,11 +232,7 @@ async def write_the_relationships(
     candidates = build_candidate_source(session_factory=session_factory)
     await candidates.refresh()
 
-    # This run opens the ephemeral store and this run closes it, for the reason
-    # `screens.py` states: under the API the pool belongs to the process and the
-    # lifespan owns both ends, and a command has no lifespan.
-    redis = create_redis_client(settings)
-    try:
+    async with the_ephemeral_store(settings) as redis:
         async with session_factory() as session:
             paths = await read_paths(
                 session,
@@ -245,13 +241,9 @@ async def write_the_relationships(
                 cohort=cohort,
                 now=now,
                 redis=redis,
+                photos=photos,
             )
             return await _write(paths, cohort=cohort)
-    finally:
-        # `type: ignore` for the reason `screens.py` gives: the obsolete
-        # `types-redis` stubs shadow redis-py's own inline types and predate
-        # `aclose`, which is the spelling `close` was deprecated in favour of.
-        await redis.aclose()  # type: ignore[attr-defined]
 
 
 async def _write(paths: ReadPaths, *, cohort: Cohort) -> SeededPairs:
@@ -450,7 +442,7 @@ async def _you_challenged_them(
         sport=edge.sport,
         wanted={relationship.account.slug: them},
     )
-    challenge_id = await _send(
+    challenge_id = await send_a_court(
         paths,
         organiser=PROTAGONIST.email,
         sport=edge.sport,
@@ -497,7 +489,7 @@ async def _they_challenged_you(
         sport=edge.sport,
         wanted={address: paths.player(address) for address in seated},
     )
-    challenge_id = await _send(
+    challenge_id = await send_a_court(
         paths,
         organiser=organiser,
         sport=edge.sport,
@@ -604,7 +596,7 @@ async def _they_turned_you_down(
         sport=edge.sport,
         wanted={relationship.account.slug: them},
     )
-    challenge_id = await _send(
+    challenge_id = await send_a_court(
         paths,
         organiser=PROTAGONIST.email,
         sport=edge.sport,
@@ -630,44 +622,6 @@ def _co_invitee_addresses(edge: TheyChallengedYou) -> tuple[str, ...]:
         relationship.account.email
         for relationship in RELATIONSHIPS
         if relationship.account.slug in edge.co_invitees
-    )
-
-
-async def _send(
-    paths: ReadPaths,
-    *,
-    organiser: str,
-    sport: Sport,
-    record: SearchRecord,
-    invitees: Sequence[str],
-) -> UUID:
-    """One send: the organiser first, then the invitees, on the sport's own sides.
-
-    The court is the sport's fixed list of sides and every position is passed,
-    empty ones included — *an empty seat is a seat*, and a padel court with one
-    invitee is half a game rather than a shorter court.
-    """
-
-    sides = court_sides(sport)
-    occupants: list[UUID | None] = [
-        paths.player(organiser),
-        *[paths.player(address) for address in invitees],
-    ]
-    if len(occupants) > len(sides):
-        raise EdgeRefused(
-            f"a {sport.value} court seats {len(sides)} and this send names "
-            f"{len(occupants)}."
-        )
-    occupants.extend([None] * (len(sides) - len(occupants)))
-    return await paths.send.execute(
-        SendChallengeCommand(
-            organiser_id=paths.player(organiser),
-            search_id=record.id,
-            court=tuple(
-                SeatChoice(side=side, player_id=occupant)
-                for side, occupant in zip(sides, occupants, strict=True)
-            ),
-        )
     )
 
 
@@ -902,7 +856,7 @@ async def _fill_the_inboxes(paths: ReadPaths, *, cohort: Cohort) -> tuple[str, .
     lines = []
     for handle, organisers in sorted(plan.items()):
         for organiser in organisers:
-            await _send(
+            await send_a_court(
                 paths,
                 organiser=organiser,
                 sport=Sport.PADEL,

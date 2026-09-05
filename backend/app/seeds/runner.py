@@ -99,6 +99,7 @@ from app.bootstrap.composition import (
     build_clock,
     build_domain_event_store,
     build_event_publisher,
+    build_image_transcoder,
     build_password_hasher,
     build_photo_storage,
     build_play_intent_declaration_repository,
@@ -122,10 +123,13 @@ from app.modules.player_profile.application.commit_player_profile import (
     CommitPlayerProfile,
 )
 from app.modules.player_profile.application.declare_play_intent import DeclarePlayIntent
+from app.modules.player_profile.application.commands import UploadPhotoCommand
+from app.modules.player_profile.application.upload_photo import UploadPhoto
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.ports import (
+    PhotoStorage,
     PlayIntentDeclarationRepository,
     PlayerProfileRepository,
 )
@@ -172,8 +176,15 @@ from app.seeds.cohort import (
     Cohort,
     CohortMember,
 )
+from app.seeds.games import SeededGames, write_the_played_history
 from app.seeds.guard import refuse_unless_seedable
 from app.seeds.pairs import SeededPairs, write_the_relationships
+from app.seeds.photos import (
+    SEED_IMAGE_MEDIA_TYPE,
+    DeclaredPhotoReview,
+    an_image,
+    the_store_answers,
+)
 from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
 from app.seeds.screens import assert_the_screens
 
@@ -183,6 +194,13 @@ from app.seeds.screens import assert_the_screens
 #: means the engine no longer stops for an answer policy that used to satisfy it,
 #: which is a thing to be told rather than to wait through.
 MAX_ANSWERS = 24
+
+#: How long a seeded photograph's URL would be good for. **Never read**: the run
+#: keeps no URL and hands one to nobody, and a card's link is minted per response
+#: by the boundary rather than by an upload. It is here because the use case a
+#: request runs takes the window, and it is a constant rather than the setting so
+#: that a fixture cannot be the reason somebody changes a production number.
+SEED_PHOTO_URL_MINUTES = 15
 
 
 class SeedFailed(RuntimeError):
@@ -247,6 +265,10 @@ class _UseCases:
     """
 
     clock: Clock
+    #: The object store the upload writes to and the commit re-validates
+    #: against. **One per run**, because two would be two answers to *does this
+    #: player really have this photo*.
+    photos: PhotoStorage
     users: UserRepository
     assessments: AssessmentRepository
     ratings: SkillRatingRepository
@@ -262,7 +284,13 @@ class _UseCases:
     declare_intent: DeclarePlayIntent
 
 
-def _build(session: AsyncSession, *, clock: Clock, settings: Settings) -> _UseCases:
+def _build(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    photos: PhotoStorage,
+) -> _UseCases:
     # The store and the publisher are built once and handed to every repository,
     # which is what a caller outside a request has to do deliberately — under
     # FastAPI the sharing comes free from per-request dependency caching.
@@ -283,6 +311,7 @@ def _build(session: AsyncSession, *, clock: Clock, settings: Settings) -> _UseCa
 
     return _UseCases(
         clock=clock,
+        photos=photos,
         users=users,
         assessments=assessments,
         ratings=ratings,
@@ -316,11 +345,12 @@ def _build(session: AsyncSession, *, clock: Clock, settings: Settings) -> _UseCa
         abandon=AbandonAssessment(assessments=assessments, uow=uow, clock=clock),
         commit_profile=CommitPlayerProfile(
             profiles=profiles,
-            # Never asked: a seeded profile carries no photograph, and the port
-            # is only consulted for ids the command names. It is wired rather
-            # than stubbed because a use case assembled with a hole in it is a
-            # use case that is not the one a request runs.
-            photos=build_photo_storage(settings),
+            # **The same store the upload wrote to**, which is what makes the
+            # commit's own re-validation of every photo id mean anything: it
+            # asks the port whether this player really holds this photograph,
+            # and two stores would be two answers. Most seeded profiles still
+            # name none at all and the port is never asked about them.
+            photos=photos,
             uow=uow,
             clock=clock,
         ),
@@ -338,6 +368,7 @@ async def seed(
     *,
     clock: Clock | None = None,
     settings: Settings | None = None,
+    photos: PhotoStorage | None = None,
 ) -> tuple[SeededAccount, ...]:
     """Bring every account in the catalog into the state it names.
 
@@ -353,9 +384,12 @@ async def seed(
 
     settings = settings or get_settings()
     now = (clock or build_clock()).now()
+    photos = photos or build_photo_storage(settings)
     return tuple(
         [
-            await _seed_account(session, account, now=now, settings=settings)
+            await _seed_account(
+                session, account, now=now, settings=settings, photos=photos
+            )
             for account in ACCOUNTS + RELATIONSHIP_ACCOUNTS
         ]
     )
@@ -367,6 +401,7 @@ async def _seed_account(
     *,
     now: Instant,
     settings: Settings,
+    photos: PhotoStorage,
 ) -> SeededAccount:
     """One account, written on the clock its own profile names.
 
@@ -377,7 +412,12 @@ async def _seed_account(
     the index's own liveness reads one too.
     """
 
-    use_cases = _build(session, clock=_clock_for(account, now), settings=settings)
+    use_cases = _build(
+        session,
+        clock=_clock_for(account, now),
+        settings=settings,
+        photos=photos,
+    )
     player_id, registered = await _ensure_registered(
         use_cases, email=account.email, nickname=account.nickname
     )
@@ -725,6 +765,12 @@ class SeededMember:
     #: profile was there and whose rating was not is a half-written member, and
     #: reading only the profile would report them as untouched.
     rated: tuple[Sport, ...]
+    #: Which of ``docs/adr/0138``'s three answers this member's photograph is
+    #: declared to carry, or ``None`` for the great majority who hold none. A
+    #: statement about the **declaration**, printed on the report so a developer
+    #: reads which card to look at — what the card actually draws is asserted in
+    #: ``app/seeds/screens.py`` off a real read.
+    photograph: str | None = None
 
     @property
     def already_present(self) -> bool:
@@ -737,6 +783,8 @@ async def seed_the_cohort(
     cohort: Cohort = COHORT,
     clock: Clock | None = None,
     settings: Settings | None = None,
+    photos: PhotoStorage | None = None,
+    photographs: bool = True,
 ) -> tuple[SeededMember, ...]:
     """Write the whole population, each member on the clock their row names.
 
@@ -750,9 +798,17 @@ async def seed_the_cohort(
 
     settings = settings or get_settings()
     now = (clock or build_clock()).now()
+    photos = photos or build_photo_storage(settings)
     return tuple(
         [
-            await _seed_member(session, member, now=now, settings=settings)
+            await _seed_member(
+                session,
+                member,
+                now=now,
+                settings=settings,
+                photos=photos,
+                photographs=photographs,
+            )
             for member in cohort.members
         ]
     )
@@ -764,11 +820,14 @@ async def _seed_member(
     *,
     now: Instant,
     settings: Settings,
+    photos: PhotoStorage,
+    photographs: bool,
 ) -> SeededMember:
     use_cases = _build(
         session,
         clock=days_before(now, member.committed_days_ago),
         settings=settings,
+        photos=photos,
     )
     player_id, registered = await _ensure_registered(
         use_cases, email=member.email, nickname=member.nickname
@@ -780,26 +839,92 @@ async def _seed_member(
             if await _ensure_member_rated(use_cases, player_id, member, sport)
         ]
     )
-    committed = await _ensure_profile(use_cases, player_id, _profile_of(member))
+    uploaded = (
+        await _ensure_photograph(use_cases, player_id, member)
+        if photographs
+        else ()
+    )
+    committed = await _ensure_profile(
+        use_cases, player_id, _profile_of(member, uploaded)
+    )
     return SeededMember(
         member=member,
         player_id=player_id,
         registered=registered,
         committed_profile=committed,
         rated=rated,
+        photograph=member.photograph,
     )
 
 
-def _profile_of(member: CohortMember) -> SeedProfile:
+async def _ensure_photograph(
+    use_cases: _UseCases, player_id: UUID, member: CohortMember
+) -> tuple[UUID, ...]:
+    """Upload the photograph this member is declared to hold, or none.
+
+    **Idempotent through a probe and not through a key, which is the one place
+    this run departs from ``_ensure_profile`` beside it.** A commit is a request
+    that happens once and says so with an idempotency key; an upload has none —
+    it mints an id and stores bytes, and a second one is a second object nobody
+    references. So the question asked is *has this member a profile yet*, and a
+    member who has one keeps whatever photograph that commit carried: the photo
+    list is settled at the commit and there is no use case in this repository
+    that adds one afterwards.
+
+    **The reviewer is the one the fixture declares**, on ``FixedClock``'s
+    argument: ``PhotoReview`` is a port, the upload is the same use case a
+    request runs, and what a check concluded about a synthetic image is a thing
+    this fixture has to *choose* rather than discover — a workbench that asked
+    the real sidecar would exhibit whichever verdicts that model happened to
+    reach on a flat square.
+    """
+
+    declared = member.declared_verdict
+    if declared is None:
+        return ()
+    if await use_cases.profiles.load(player_id) is not None:
+        return ()
+
+    upload = UploadPhoto(
+        storage=use_cases.photos,
+        # Real, and deliberately: re-encoding is what strips EXIF, and a faked
+        # transcoder would fake away the one thing the upload path is for.
+        transcoder=build_image_transcoder(),
+        review=DeclaredPhotoReview(declared),
+        clock=use_cases.clock,
+        # Never read: the run keeps no URL and writes none anywhere. It is
+        # passed because the use case a request runs takes it, and one
+        # assembled with a hole in it is not the one a request runs.
+        url_valid_for_minutes=SEED_PHOTO_URL_MINUTES,
+    )
+    uploaded = await upload.execute(
+        UploadPhotoCommand(
+            owner_id=player_id,
+            data=an_image(),
+            declared_media_type=SEED_IMAGE_MEDIA_TYPE,
+        )
+    )
+    return (uploaded.ref.photo_id,)
+
+
+def _profile_of(
+    member: CohortMember, photographs: tuple[UUID, ...] = ()
+) -> SeedProfile:
     """A member's row, as the profile axis the catalog already spells.
 
     One shape for both layers rather than two commit paths: the named accounts
     and the population answer onboarding's second part identically, because a
     developer signing in as either sees a profile the same code wrote.
+
+    ``photographs`` is the one field a member's row cannot state, and the reason
+    is that a photo id is **minted by the upload**: the catalog spells *which
+    photographs*, this run spells *which ids they came back as*, and a committed
+    id would be an id the write path does not own.
     """
 
     return SeedProfile(
         availability=member.availability,
+        photo_ids=photographs,
         social_tag_ids=member.tags,
         search_radius_km=member.radius_km,
         gender=Gender(member.gender),
@@ -973,6 +1098,13 @@ class SeedReport:
     #: costs. ``None`` only where a caller drove the two populations without the
     #: layer above them — the API suite does, and it asserts no screen.
     pairs: SeededPairs | None = None
+    #: The played history, and the pairs it spent. ``None`` on the same callers
+    #: and for the same reason.
+    played: SeededGames | None = None
+    #: Whether the object store answered at all. A photograph is the one thing
+    #: the seed writes that lives outside the database, so it is the one thing a
+    #: run can be missing for a reason that is nobody's fixture.
+    photographs: bool = True
 
 
 async def run(settings: Settings | None = None) -> SeedReport:
@@ -999,24 +1131,50 @@ async def run(settings: Settings | None = None) -> SeedReport:
 
     clock = build_clock()
     now = clock.now()
+    # **One store for the whole run**, so the upload that mints a photo id and
+    # the commit that re-validates it are asking one object the same question.
+    photos = build_photo_storage(settings)
+    photographs = await the_store_answers(photos)
     engine = create_engine(settings)
     try:
         session_factory = build_background_session_factory(engine)
         async with session_factory() as session:
-            accounts = await seed(session, clock=FixedClock(at=now), settings=settings)
+            accounts = await seed(
+                session,
+                clock=FixedClock(at=now),
+                settings=settings,
+                photos=photos,
+            )
             members = await seed_the_cohort(
-                session, clock=FixedClock(at=now), settings=settings
+                session,
+                clock=FixedClock(at=now),
+                settings=settings,
+                photos=photos,
+                photographs=photographs,
             )
             await refuse_a_cohort_that_has_aged_out(session, members, now=now)
             await refuse_a_histogram_that_has_moved(session, members)
+        # **The played history first, and the order is load-bearing.** A game is
+        # a challenge every seat accepted, so each one spends a pair for good;
+        # the relationship layer then plans its inboxes against a world those
+        # games are already in, rather than discovering half way through that an
+        # organiser it counted on can no longer see anybody.
+        played = await write_the_played_history(
+            session_factory, settings=settings, now=now, photos=photos
+        )
         # **After both populations and before every claim.** An edge is a real
         # search or deal run as the sender, so it needs everybody in the index —
         # and the claims are read off what the edges made true.
         pairs = await write_the_relationships(
-            session_factory, settings=settings, now=now
+            session_factory, settings=settings, now=now, photos=photos
         )
         screens = await assert_the_screens(
-            session_factory, settings=settings, now=now, pairs=pairs
+            session_factory,
+            settings=settings,
+            now=now,
+            pairs=pairs,
+            photographs=photographs,
+            photos=photos,
         )
         return SeedReport(
             accounts=accounts,
@@ -1024,6 +1182,8 @@ async def run(settings: Settings | None = None) -> SeedReport:
             now=now,
             screens=screens,
             pairs=pairs,
+            played=played,
+            photographs=photographs,
         )
     finally:
         await engine.dispose()
@@ -1083,16 +1243,63 @@ def report(run_report: SeedReport) -> list[str]:
                 f"assessment {seeded_scenario.assessment_id}"
             )
     lines.extend(["", *_cohort_lines(run_report.members)])
+    if run_report.played is not None:
+        lines.extend(["", *_played_lines(run_report.played)])
+    lines.extend(["", *_photograph_lines(run_report.members)])
     if run_report.pairs is not None:
         lines.extend(["", *_relationship_lines(run_report.pairs)])
     if run_report.screens:
         lines.extend(["", "The screens, read as the protagonist:"])
         lines.extend(f"  {line}" for line in run_report.screens)
     lines.extend(["", COHORT_DISCLAIMER])
-    if run_report.pairs is not None and run_report.pairs.costs:
+    costs = list(run_report.pairs.costs if run_report.pairs else ())
+    costs.extend(run_report.played.costs if run_report.played else ())
+    if not run_report.photographs:
+        costs.append(
+            "the object store did not answer, so this run seeded no "
+            "photograph at all and the three verdicts a card can draw are "
+            "unreachable in this database. That is the store and not the "
+            "fixture — bring MinIO up and seed a fresh database, because a "
+            "photo list is settled at the profile commit and nothing adds one "
+            "afterwards."
+        )
+    if costs:
         lines.append("")
-        lines.extend(f"Cost: {cost}" for cost in run_report.pairs.costs)
+        lines.extend(f"Cost: {cost}" for cost in costs)
     return lines
+
+
+def _played_lines(played: SeededGames) -> list[str]:
+    """What the platform has watched this cohort do, one line per game.
+
+    Not a claim — the claims are read off a real card in
+    ``app/seeds/screens.py`` — and it names the members so the card is findable,
+    which is the question a developer opens the report with.
+    """
+
+    return [
+        "The played history:",
+        *(f"  {one.line}" for one in played.games),
+    ]
+
+
+def _photograph_lines(members: Sequence[SeededMember]) -> list[str]:
+    """Who holds a photograph, and which of the three answers it carries.
+
+    A section of its own rather than a tail on the games, because they are two
+    fixtures: one is what the platform watched these people do and the other is
+    what a check concluded about an image. What each one is **declared** to
+    carry is here; what a card actually draws is asserted off a real read.
+    """
+
+    return [
+        "The photographs, and the verdict each is declared to carry:",
+        *(
+            f"  photo · {entry.member.handle} · {entry.photograph}"
+            for entry in members
+            if entry.photograph is not None
+        ),
+    ]
 
 
 def _relationship_lines(pairs: SeededPairs) -> list[str]:

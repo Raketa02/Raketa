@@ -14,16 +14,25 @@ the stream versions it has seen and re-remembers them on every save, so a send
 and the answer to its seat agree about where the stream is — which is the same
 promise a request-scoped one makes, over a longer transaction.
 
-**The clock is the run's own injected instant**, not the wall clock. Every edge
-is written at it and nothing is backdated: a yes born partly spent would be a
-fixture for an age no surface draws, and a seat's twenty-four hours have to start
-when the run starts or the court is over before it is read.
+**The clock is the run's own injected instant**, not the wall clock, and it is a
+constructor argument rather than a call — which is what lets one run assemble
+these more than once, at more than one instant.
+
+**An edge is written at the run's own now and a played game is not**, and the two
+halves of that are one rule rather than an exception to it: a seat's
+twenty-four hours have to start when the run starts or the court is over before
+it is read, and a *result* is confirmed by silence when its window closes — so a
+game seeded an hour ago is a game still awaiting an answer, which is a different
+card from the one the fixture is for. A relationship is a thing happening now; a
+played game is a thing that happened. ``app/seeds/games.py`` builds one of these
+per game, at the instant that game declares.
 """
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Mapping, final
+from typing import AsyncIterator, Mapping, Sequence, final
 from uuid import UUID
 
 from redis.asyncio import Redis
@@ -43,6 +52,9 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_exposure_ledger,
+    build_game_directory,
+    build_game_history_query,
+    build_game_repository,
     build_interest_ledger,
     build_match_fit_engine,
     build_match_history_query,
@@ -67,14 +79,23 @@ from app.bootstrap.composition import (
     build_user_repository,
 )
 from app.core.config import Settings
+from app.infrastructure.redis_client import create_redis_client
 from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scoring import MatchFit
 from app.kernel import Instant, Sport
 from app.modules.blocks.application.block_player import BlockPlayer
 from app.modules.challenges.application.answer_seat import AcceptSeat, DeclineSeat
+from app.modules.challenges.application.commands import (
+    SeatChoice,
+    SendChallengeCommand,
+)
 from app.modules.challenges.application.read_challenges import ReadChallenges
 from app.modules.challenges.application.send_challenge import SendChallenge
+from app.modules.challenges.domain.seats import court_sides
+from app.modules.games.application.answer_result import AcceptResult, StateResult
+from app.modules.games.application.read_games import ReadGames
+from app.modules.games.domain.ports import GameHistoryQuery
 from app.modules.matchmaking.application.commands import (
     RunDeckDealCommand,
     RunShortlistSearchCommand,
@@ -94,6 +115,7 @@ from app.modules.matchmaking.domain.passes import PassLedger
 from app.modules.matchmaking.domain.ports import MatchHistoryQuery
 from app.modules.matchmaking.domain.relaxation import Rung
 from app.modules.matchmaking.domain.searches import SearchRecord
+from app.modules.player_profile.domain.ports import PhotoStorage
 from app.seeds.catalog import PROTAGONISTS
 from app.seeds.clock import FixedClock
 from app.seeds.cohort import Cohort
@@ -102,6 +124,16 @@ from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
 #: What one ``make seed`` calls its searches, so the rows it leaves behind are
 #: separable from a developer's own in the one table that keeps them for ever.
 TRACE_ID = "seed-assertions"
+
+
+class SeedCourtRefused(RuntimeError):
+    """A court this run could not shape, before the platform was ever asked.
+
+    Raised by :func:`send_a_court` alone, and only for the one thing that
+    function decides: a send naming more people than the sport seats. Kept apart
+    from each caller's own refusal because it is a fact about the *sport*, and
+    two callers discovering it separately would be two spellings of one rule.
+    """
 
 
 class SeedPathMissing(RuntimeError):
@@ -138,7 +170,20 @@ class ReadPaths:
     accept: AcceptSeat
     decline: DeclineSeat
     read_challenges: ReadChallenges
+    #: The three acts a played game costs after the seats are answered, and the
+    #: screen that reads one back. ``games`` opens the game itself — inline, in
+    #: the transaction of the accept that filled the last seat — so there is no
+    #: *open a game* use case here and deliberately none: a game nobody was
+    #: invited to is a game no line-up completed.
+    state_result: StateResult
+    accept_result: AcceptResult
+    read_games: ReadGames
     history: MatchHistoryQuery
+    #: What ``games`` publishes outward — the pairwise history familiarity reads,
+    #: the counted-game count and the run of form. Held beside ``history``
+    #: because the composed port above answers about a *pair* and this answers
+    #: about a person, and a claim about a card is the second question.
+    games: GameHistoryQuery
     engine: MatchFit
     ruleset: Ruleset
     #: Player id per seeded address, so an assertion names an account and never
@@ -160,6 +205,29 @@ class ReadPaths:
                 f"assertions read the same database the run just wrote."
             )
         return found
+
+
+@asynccontextmanager
+async def the_ephemeral_store(settings: Settings) -> AsyncIterator[Redis]:
+    """The run's Redis client, opened and closed by whoever asked for it.
+
+    **A command has no lifespan, so the ownership has to be written down.** Under
+    the API the pool belongs to the process and FastAPI's lifespan owns both
+    ends; a client left open here is a developer command that does not exit. Each
+    of the three layers that runs a search needs one, so it is spelled once —
+    three copies were three chances for the closing half to be dropped from one
+    of them.
+
+    ``type: ignore`` because the obsolete ``types-redis`` stubs shadow redis-py's
+    own inline types and predate ``aclose``, which exists and is the spelling
+    ``close`` was deprecated in favour of.
+    """
+
+    redis = create_redis_client(settings)
+    try:
+        yield redis
+    finally:
+        await redis.aclose()  # type: ignore[attr-defined]
 
 
 async def tick_the_tail_to_catch_up(
@@ -194,6 +262,8 @@ async def read_paths(
     cohort: Cohort,
     now: Instant,
     redis: Redis,
+    players: Mapping[str, UUID] | None = None,
+    photos: PhotoStorage | None = None,
 ) -> ReadPaths:
     """The surfaces and the gestures, wired from the composition root and nowhere else.
 
@@ -203,6 +273,11 @@ async def read_paths(
     """
 
     clock = FixedClock(at=now)
+    # **The run's own store, or this process's.** A card with a photograph costs
+    # one object-store ``HEAD`` for its verdict, so the read that draws a card
+    # and the upload that put the photograph there have to be looking at one
+    # place — which is a caller's decision, exactly as the clock is.
+    photos = photos or build_photo_storage(settings)
     event_store = build_domain_event_store(session)
     events = build_event_publisher(session)
     profiles = build_player_profile_repository(event_store=event_store, events=events)
@@ -220,6 +295,9 @@ async def read_paths(
     blocks = build_block_query(session)
     suppression = build_suppression_ledger(redis)
     challenges = build_challenge_repository(event_store=event_store, events=events)
+    games = build_game_repository(
+        session=session, event_store=event_store, events=events
+    )
     history = build_match_history_query(session)
     ruleset = build_ruleset()
     engine = build_match_fit_engine()
@@ -246,7 +324,7 @@ async def read_paths(
             session=session,
             event_store=event_store,
             events=events,
-            storage=build_photo_storage(settings),
+            storage=photos,
         ),
         records=build_player_record_source(session),
         absent_terms=build_absent_terms(),
@@ -325,13 +403,17 @@ async def read_paths(
             planned_games=build_planned_game_opening(session),
         ),
         decline=DeclineSeat(challenges=challenges, uow=uow, clock=clock),
+        state_result=StateResult(games=games, uow=uow, clock=clock),
+        accept_result=AcceptResult(games=games, uow=uow, clock=clock),
+        read_games=ReadGames(games=build_game_directory(session), clock=clock),
         read_challenges=ReadChallenges(
             directory=build_challenge_directory(session), clock=clock
         ),
         history=history,
+        games=build_game_history_query(session),
         engine=engine,
         ruleset=ruleset,
-        players=await _players(session, cohort),
+        players=players or await _players(session, cohort),
     )
 
 
@@ -384,6 +466,50 @@ async def run_a_shortlist(
         )
     )
     return answer.record
+
+
+async def send_a_court(
+    paths: ReadPaths,
+    *,
+    organiser: str,
+    sport: Sport,
+    record: SearchRecord,
+    invitees: Sequence[str],
+) -> UUID:
+    """One send: the organiser first, then the invitees, on the sport's own sides.
+
+    The court is the sport's fixed list of sides and every position is passed,
+    empty ones included — *an empty seat is a seat*, and a padel court with one
+    invitee is half a game rather than a shorter court.
+
+    **Here rather than in either caller**, because both of them send: the
+    relationship layer sends the two courts the eleven are named for, and the
+    played history sends one per game. Two copies would be two opinions about
+    where the organiser sits, and the second is the one nobody would think to
+    change.
+    """
+
+    sides = court_sides(sport)
+    occupants: list[UUID | None] = [
+        paths.player(organiser),
+        *[paths.player(address) for address in invitees],
+    ]
+    if len(occupants) > len(sides):
+        raise SeedCourtRefused(
+            f"a {sport.value} court seats {len(sides)} and this send names "
+            f"{len(occupants)}."
+        )
+    occupants.extend([None] * (len(sides) - len(occupants)))
+    return await paths.send.execute(
+        SendChallengeCommand(
+            organiser_id=paths.player(organiser),
+            search_id=record.id,
+            court=tuple(
+                SeatChoice(side=side, player_id=occupant)
+                for side, occupant in zip(sides, occupants, strict=True)
+            ),
+        )
+    )
 
 
 async def deal_a_deck(paths: ReadPaths, email: str, sport: Sport) -> DeckAnswer:

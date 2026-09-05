@@ -31,6 +31,7 @@ import subprocess
 import sys
 from dataclasses import replace
 from pathlib import Path
+from uuid import UUID
 
 import pytest
 from sqlalchemy import select
@@ -40,6 +41,8 @@ from app.core.config import get_settings
 from app.engines.assessment import AnswerOption, Question
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import Sport
+from app.modules.challenges.domain.seats import seats_per_side
+from app.modules.matchmaking.domain.searches import LAST_FIVE
 from app.seeds import catalog
 from app.seeds.catalog import (
     PROTAGONISTS,
@@ -54,12 +57,17 @@ from app.seeds.cohort import (
     ARTIFACT,
     BAND_HISTOGRAM,
     COHORT,
+    PLAYED_GAMES,
     RINGS,
     Cohort,
+    _distance_between,
+    _ring_in,
     as_document,
     generate,
 )
+from app.seeds.games import write_the_played_history
 from app.seeds.pairs import write_the_relationships
+from app.seeds.photos import DeclaredVerdict
 from app.seeds.runner import (
     COHORT_DISCLAIMER,
     SeedFailed,
@@ -70,6 +78,7 @@ from app.seeds.runner import (
     seed_the_cohort,
 )
 from app.seeds.screens import CANNOT_BE_DRAWN, assert_the_screens
+from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -130,6 +139,132 @@ def test_the_population_records_no_answer_the_engine_gave():
     # and the artifact's own header says so.
     assert "aims_at_band" in text, "an archetype no longer says which band it is for"
     assert "newcomer" in json.loads(text)["members"][0], "the newcomer flag is gone"
+
+
+def test_the_played_history_records_no_answer_the_platform_gave():
+    """**Who played whom and who won**, and nothing the platform makes of it.
+
+    The same rule the members are held to, one section along: a Player Score, a
+    counted-game count or a run of form written here would be a committed copy of
+    a fold over the events this file's own rows produce — and the copy is what
+    would get believed, because it is the one a reader can see.
+    """
+
+    played = as_document(generate())["played_games"]
+    assert played, "the artifact records no played game at all"
+
+    for game in played:
+        assert set(game) == {
+            "sport",
+            "played_days_ago",
+            "side_a",
+            "side_b",
+            "won_by",
+        }, game
+
+
+def test_no_declared_pair_plays_twice():
+    """**One open challenge per pair, and nothing ends one every seat accepted.**
+
+    So a pair that has played can never be sent a second court — the platform
+    refuses the send, half way through a run that has already written games. The
+    generator's own refusal catches it at import; this is the claim stated where
+    somebody adding a row will read it.
+    """
+
+    pairs = [pair for game in PLAYED_GAMES for pair in game.pairs]
+
+    assert len(pairs) == len(set(pairs)), "a pair shares two courts"
+
+
+def test_the_protagonist_plays_in_none_of_them():
+    """A game with her in it would take that person out of the pool every other
+    assertion in `screens.py` is read from — permanently, because nothing closes
+    a challenge every seat accepted."""
+
+    played = {handle for game in PLAYED_GAMES for handle in game.players}
+
+    assert all(handle.startswith("cohort-") for handle in played), played
+
+
+def test_a_court_seats_what_its_sport_seats():
+    """A line-up completes only when **every** seat is accepted, so a padel court
+    one short of four opens no game at all."""
+
+    for game in PLAYED_GAMES:
+        per_side = seats_per_side(Sport(game.sport))
+        assert len(game.side_a) == per_side, game
+        assert len(game.side_b) == per_side, game
+
+
+def test_one_declared_game_is_left_with_no_agreed_score():
+    """*An evening, not evidence.* It counts toward how much these people have
+    played and produces an outcome for nobody, which is the one card state a
+    fixture of tidy games could not reach."""
+
+    unscored = [game for game in PLAYED_GAMES if not game.was_scored]
+
+    assert len(unscored) == 1, [game.won_by for game in PLAYED_GAMES]
+
+
+def test_the_declared_winners_are_not_all_one_side():
+    """*Last 5* is win or loss, and five identical squares is a row nobody can
+    read a mistake off."""
+
+    won = {game.won_by for game in PLAYED_GAMES if game.was_scored}
+
+    assert won == {"A", "B"}, won
+
+
+def test_somebody_plays_enough_games_to_fill_the_run_of_form():
+    """**Five distinct opponents**, because that is what five counted games costs
+    when a pair can only ever share one court."""
+
+    counted: dict[str, int] = {}
+    for game in PLAYED_GAMES:
+        for handle in game.players:
+            counted[handle] = counted.get(handle, 0) + 1
+
+    assert max(counted.values()) >= LAST_FIVE, counted
+    assert any(1 <= played < LAST_FIVE for played in counted.values()), counted
+    assert len(counted) < len(COHORT.members), "every member has played"
+
+
+def test_everybody_who_played_a_sport_holds_a_rating_in_it():
+    """The questionnaire is the only door to a Level, so the declaration has to
+    reach the draw — otherwise the game would be written against a member the
+    level gate removes from their own opponent's search."""
+
+    for game in PLAYED_GAMES:
+        for handle in game.players:
+            member = COHORT.by_handle(handle)
+            assert Sport(game.sport) in member.sports, (handle, game.sport)
+
+
+def test_an_organiser_sees_no_further_than_the_people_they_play():
+    """A search hands back at most `shortlist_max` rows, so an organiser
+    searching wide fills that list with people this fixture never declared — and
+    the declared opponent falls off the end of it."""
+
+    organisers = {game.organiser for game in PLAYED_GAMES}
+
+    for member in COHORT.members:
+        if member.handle not in organisers:
+            continue
+        rings = {
+            _ring_in(handle)
+            for game in PLAYED_GAMES
+            if game.organiser == member.handle
+            for handle in game.players[1:]
+        }
+        furthest = max(
+            _distance_between(_ring_in(member.handle), ring) for ring in rings
+        )
+        assert member.radius_km >= furthest, member.handle
+        assert member.radius_km - 1 < furthest or furthest == 0, (
+            f"'{member.handle}' searches {member.radius_km} km to reach "
+            f"{furthest:.2f} km — wider than the opponents it was given"
+        )
 
 
 def test_every_committed_member_is_a_function_of_their_handle():
@@ -221,17 +356,52 @@ def test_one_archetype_per_band_and_a_histogram_that_names_them_all():
     assert set(bands) == set(BAND_HISTOGRAM)
 
 
-def test_no_cohort_member_carries_a_photo():
-    """A seeded photo would need bytes in this repository and a store to put them
-    in, and the card renders the generated court poster without one — which is
-    the state most cards are in and the one worth developing against."""
+def test_three_members_carry_a_photograph_and_it_is_one_of_each_verdict():
+    """**Three carriers and three answers**, and the third is an absence.
+
+    A shield says *checked and passed*; its absence has two causes — the check
+    flagged the photograph, and nothing ever looked at it — and they are
+    indistinguishable on the wire (`docs/adr/0138`). So a fixture holding one of
+    them proves nothing about the other, and a rate that happened to draw two of
+    three would say nothing about which two.
+    """
+
+    carried = {
+        member.handle: member.declared_verdict
+        for member in COHORT.members
+        if member.photograph is not None
+    }
+
+    assert len(carried) == len(DeclaredVerdict), carried
+    assert set(carried.values()) == set(DeclaredVerdict), carried
+
+
+def test_no_named_account_carries_a_photograph():
+    """The catalog's own answer is unchanged, and it is still a declaration.
+
+    A card renders the generated court poster without a photograph, which is the
+    state most cards are in and the one worth developing against — so the
+    photographs are the cohort's, where a card can be compared against the ones
+    beside it, and never a protagonist's.
+    """
+
+    for account in PROTAGONISTS:
+        assert account.profile is not None and account.profile.photo_ids == ()
+
+
+def test_a_member_with_no_photograph_commits_none():
+    """`photo_ids` is what the **upload** minted, and most members have no upload.
+
+    The id cannot be a field on the member's row — it is minted by the write path
+    — so the profile the run commits carries whatever this run uploaded, which
+    for the great majority is nothing at all.
+    """
 
     from app.seeds.runner import _profile_of
 
     for member in COHORT.members:
         assert _profile_of(member).photo_ids == ()
-    for account in PROTAGONISTS:
-        assert account.profile is not None and account.profile.photo_ids == ()
+    assert _profile_of(COHORT.members[0], (UUID(int=1),)).photo_ids == (UUID(int=1),)
 
 
 def test_the_protagonists_straddle_the_newcomer_window_with_both_edges_clear():
@@ -390,23 +560,40 @@ async def a_seeded_world(session_factory):
 
     settings = get_settings()
     now = build_clock().now()
+    # **One store for the whole world**, because the commit re-validates every
+    # photo id through the same port the upload wrote it to — two stores would be
+    # two answers to *does this player really have this photograph*. In memory,
+    # so **no test in this suite needs MinIO running**, which is the acceptance
+    # criterion `tests/conftest.py` states for the whole HTTP suite and not a
+    # convenience.
+    photos = InMemoryPhotoStorage()
     async with session_factory() as session:
-        accounts = await seed(session, clock=FixedClock(at=now), settings=settings)
-        members = await seed_the_cohort(
-            session, clock=FixedClock(at=now), settings=settings
+        accounts = await seed(
+            session, clock=FixedClock(at=now), settings=settings, photos=photos
         )
+        members = await seed_the_cohort(
+            session, clock=FixedClock(at=now), settings=settings, photos=photos
+        )
+    # **The played history is part of the world too**, and it comes before the
+    # relationships for the reason `runner.run` puts it there: a game spends a
+    # pair for good, and the inbox layer plans around the ones already gone.
+    played = await write_the_played_history(
+        session_factory, settings=settings, now=now, photos=photos
+    )
     # **The relationships are part of the world and not a layer above it.** Five
     # of the ten `LivenessSignal` codes are facts about a pair, so a world seeded
     # without them is one where the assertions below would be reading a fixture
     # nobody could have produced.
     pairs = await write_the_relationships(
-        session_factory, settings=settings, now=now
+        session_factory, settings=settings, now=now, photos=photos
     )
     return {
         "accounts": accounts,
         "members": members,
         "now": now,
         "pairs": pairs,
+        "played": played,
+        "photos": photos,
     }
 
 
@@ -427,6 +614,7 @@ async def test_the_cohort_reaches_every_screen_it_promises(
         settings=get_settings(),
         now=a_seeded_world["now"],
         pairs=a_seeded_world["pairs"],
+        photos=a_seeded_world["photos"],
     )
     text = "\n".join(lines)
 
@@ -446,6 +634,12 @@ async def test_the_cohort_reaches_every_screen_it_promises(
         "absences ·",
         "block ·",
         "pass ·",
+        "record block ·",
+        "run of form ·",
+        "player score ·",
+        "unscored ·",
+        "familiarity ·",
+        "photo verdict ·",
         "newcomer gate ·",
         "one sport ·",
         "blank week ·",
@@ -508,6 +702,7 @@ async def test_an_aged_out_cohort_fails_by_name_with_its_age_in_days(session_fac
             cohort=cohort,
             clock=days_before(now, NEWCOMER_WINDOW_DAYS + 6),
             settings=get_settings(),
+            photos=InMemoryPhotoStorage(),
         )
         with pytest.raises(SeedFailed) as refused:
             await refuse_a_cohort_that_has_aged_out(session, members, now=now)
@@ -532,6 +727,7 @@ async def test_a_cohort_with_no_newcomer_declared_is_refused(session_factory):
             cohort=Cohort(seed=0, members=(settled,)),
             clock=FixedClock(at=now),
             settings=get_settings(),
+            photos=InMemoryPhotoStorage(),
         )
         with pytest.raises(SeedFailed, match="declares no newcomer"):
             await refuse_a_cohort_that_has_aged_out(session, members, now=now)

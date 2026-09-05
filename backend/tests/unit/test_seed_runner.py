@@ -98,7 +98,7 @@ RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"
 #: one, and a court and a block are the only shapes two of them come in. Both are
 #: modeled — which is the whole of what this rule asks.
 WRITTEN_CONTEXTS = frozenset(
-    {"users", "rating", "player_profile", "challenges", "blocks"}
+    {"users", "rating", "player_profile", "challenges", "blocks", "games"}
 )
 
 #: The contexts the seed path only **exercises**, through their own use cases.
@@ -121,6 +121,12 @@ AGGREGATE_WRITERS = {
     "build_play_intent_declaration_repository": "player_profile",
     "build_challenge_repository": "challenges",
     "build_block_repository": "blocks",
+    # The played history states and answers a result, which is `games`' own
+    # aggregate written through `games`' own two use cases — the same shape the
+    # challenge send has one line up. The **game** itself is opened by the
+    # acceptance that filled the last seat, inline and inside `challenges`, so
+    # nothing here opens one.
+    "build_game_repository": "games",
 }
 
 #: The two infrastructure modules the seed path may import, and neither is an
@@ -210,9 +216,11 @@ def test_the_walk_has_something_to_walk():
         "catalog.py",
         "clock.py",
         "cohort.py",
+        "games.py",
         "guard.py",
         "pairs.py",
         "paths.py",
+        "photos.py",
         "relationships.py",
         "runner.py",
         "screens.py",
@@ -245,7 +253,7 @@ def test_no_seed_module_writes_through_a_session(path):
     assert not offending, f"{path.name} calls {sorted(offending)}"
 
 
-def test_the_seed_path_writes_five_contexts_and_only_reads_the_rest():
+def test_the_seed_path_writes_six_contexts_and_only_reads_the_rest():
     """*No aggregate is invented for a context that is not yet modeled*, stated
     as **writes against reads** rather than as imports.
 

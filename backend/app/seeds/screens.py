@@ -39,6 +39,15 @@ fit the other.
 the seed in it. That is the same half-a-gate the ruleset diff ships with, and it
 is stated here rather than discovered.
 
+**A third list arrived with the played history, and it is the same list.** The
+record block — the Player Score, the counted-game count, the run of form — and
+the photograph's verdict are asserted here like everything else: off the cards
+the protagonist's own pool handed back, never off the declaration that produced
+them. What a fixture may claim about them is that the **states** are reachable —
+a full run, a gap, an absence, a shield and both of its silences — and never that
+a particular member's count is a particular number, which would be the population
+checking its own arithmetic.
+
 **These reads leave records behind, and there are two kinds.** A search run
 through its real use case writes to ``matchmaking``'s own store, and a search
 record never expires (``docs/adr/0104``), so every ``make seed`` grows that
@@ -66,11 +75,13 @@ from app.bootstrap.composition import build_candidate_source
 from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
-from app.infrastructure.redis_client import create_redis_client
 from app.kernel import Instant, Sport
 from app.modules.challenges.application.read_challenges import ReadChallengesCommand
 from app.modules.challenges.domain.seats import SeatAnswer
 from app.modules.challenges.domain.standing import ENDED
+from app.modules.games.domain.standing import GameStanding
+from app.modules.player_profile.domain.photos import PhotoReviewDecision
+from app.modules.player_profile.domain.ports import PhotoStorage
 from app.modules.matchmaking.application.commands import (
     ExpressInterestCommand,
     ReadInterestCommand,
@@ -79,6 +90,9 @@ from app.modules.matchmaking.application.commands import (
 from app.modules.matchmaking.domain.errors import SportNotRated
 from app.modules.matchmaking.domain.gates import GateCode
 from app.modules.matchmaking.domain.searches import (
+    LAST_FIVE,
+    GameResult,
+    RecordedCard,
     SearchCandidateRecord,
     SearchInitiation,
     SearchRecord,
@@ -92,7 +106,7 @@ from app.seeds.catalog import (
     THE_POPULATED_PLAYER,
     SeedAccount,
 )
-from app.seeds.cohort import COHORT, Cohort
+from app.seeds.cohort import COHORT, PLAYED_GAMES, Cohort, PlayedGame
 from app.seeds.pairs import SeededPairs
 from app.seeds.paths import (
     TRACE_ID,
@@ -101,6 +115,7 @@ from app.seeds.paths import (
     read_paths,
     returned_ids,
     run_a_shortlist,
+    the_ephemeral_store,
     tick_the_tail_to_catch_up,
 )
 from app.seeds.relationships import (
@@ -147,6 +162,8 @@ async def assert_the_screens(
     now: Instant,
     pairs: SeededPairs,
     cohort: Cohort = COHORT,
+    photographs: bool = True,
+    photos: PhotoStorage | None = None,
 ) -> tuple[str, ...]:
     """Read every screen the fixture promises, and refuse a database that cannot.
 
@@ -166,13 +183,8 @@ async def assert_the_screens(
     candidates = build_candidate_source(session_factory=session_factory)
     await candidates.refresh()
 
-    # **This run opens the ephemeral store and this run closes it.** Under the
-    # API the pool belongs to the process and the lifespan owns both ends; a
-    # command has no lifespan, so the ownership has to be written down somewhere
-    # — and a client left open is a developer command that does not exit.
-    redis = create_redis_client(settings)
-    try:
-        lines: list[str] = []
+    lines: list[str] = []
+    async with the_ephemeral_store(settings) as redis:
         async with session_factory() as session:
             paths = await read_paths(
                 session,
@@ -181,6 +193,7 @@ async def assert_the_screens(
                 cohort=cohort,
                 now=now,
                 redis=redis,
+                photos=photos,
             )
             pool = await run_a_shortlist(
                 paths,
@@ -201,13 +214,17 @@ async def assert_the_screens(
             lines.extend(
                 await _the_eleven(paths, pool, line_up, pairs=pairs)
             )
+            lines.extend(
+                await _the_record_block(
+                    paths,
+                    pool,
+                    cohort=cohort,
+                    now=now,
+                    photographs=photographs,
+                )
+            )
             lines.extend(await _the_three_named_states(paths))
-        return tuple(lines)
-    finally:
-        # `type: ignore` for `close_redis`'s reason: the obsolete `types-redis`
-        # stubs shadow redis-py's own inline types and predate `aclose`, which
-        # exists and is the spelling `close` was deprecated in favour of.
-        await redis.aclose()  # type: ignore[attr-defined]
+    return tuple(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -379,13 +396,15 @@ CANNOT_BE_DRAWN: Mapping[str, str] = {
         "fabricate one"
     ),
     "PREVIOUS_ACCEPT": (
-        "unreachable until `matches` closes a challenge. `SeatAccepted` makes a "
-        "seat `ACCEPTED` and *open* is `AWAITING_ANSWERS | ON | "
-        "LINE_UP_INCOMPLETE`, so a pair with an accepted seat is permanently "
-        "`OPEN_CHALLENGE`-gated and the signal is unreachable on every surface. "
-        "Inventing a challenge-ending path **is** results, which is out of "
-        "scope — so this is narrowed out by name and contracted by a demand in "
-        "`tests/demands/` instead of by a fixture"
+        "unreachable while nothing closes a challenge every seat accepted. "
+        "`SeatAccepted` makes a seat `ACCEPTED` and *open* is `AWAITING_ANSWERS "
+        "| ON | LINE_UP_INCOMPLETE`, so a pair with an accepted seat is "
+        "permanently `OPEN_CHALLENGE`-gated and the signal is unreachable on "
+        "every surface. **Results shipped and did not change this** "
+        "(`docs/adr/0137`): a played, confirmed, settled game leaves its "
+        "challenge exactly as open as it was, which is what the played history's "
+        "own cost line says out loud. So the code stays narrowed out by name and "
+        "contracted by a demand in `tests/demands/` instead of by a fixture"
     ),
 }
 
@@ -832,6 +851,344 @@ async def _refuse_a_blank_week_that_scored_a_nought(paths: ReadPaths) -> str:
         f"blank week · {THE_BLANK_WEEK_PLAYER.slug}: {term} stood down on all "
         f"{len(record.candidates)} scored row(s), reasons {reasons}"
     )
+
+
+# ---------------------------------------------------------------------------
+# The record block — what the platform watched, read off the cards it drew
+# ---------------------------------------------------------------------------
+
+
+async def _the_record_block(
+    paths: ReadPaths,
+    pool: SearchRecord,
+    *,
+    cohort: Cohort,
+    now: Instant,
+    photographs: bool,
+) -> list[str]:
+    """Everything the played history and the photographs promise, off real cards.
+
+    **The pool is the one the battery already ran**, for the reason every claim
+    here reads it: a card is what a search handed somebody, and a second search
+    would be a second answer about a card nobody was shown.
+
+    Every claim below is about a **state** and none is about a number this
+    fixture chose. *Some card draws a full run of five* is a claim about a
+    screen; *this member's card says six* would be the population checking its
+    own arithmetic, which is the one thing the asymmetry between ``cohort.py``
+    and this file exists to refuse — and it would pass on a database where the
+    counting was wrong in exactly the way the generator was.
+    """
+
+    return [
+        _refuse_a_card_the_platform_watched_nothing_of(pool),
+        _refuse_a_run_of_form_that_is_five_of_one_thing(pool),
+        _refuse_a_player_score_with_only_one_answer(pool),
+        await _refuse_an_unscored_game_that_reads_as_evidence(paths, cohort),
+        await _refuse_a_pair_with_nothing_between_them(paths, cohort, now=now),
+        _refuse_a_shield_whose_absence_has_only_one_cause(
+            pool, photographs=photographs
+        ),
+    ]
+
+
+def _records(pool: SearchRecord) -> tuple[RecordedCard, ...]:
+    """The cards this search handed over. **Returned rows and never near misses.**
+
+    A near-miss row carries no card at all — it was shown to nobody — so a claim
+    about a record block proved off one would be a claim about something no
+    screen can draw.
+    """
+
+    return tuple(row.card for row in pool.returned if row.card is not None)
+
+
+def _refuse_a_card_the_platform_watched_nothing_of(pool: SearchRecord) -> str:
+    """*The three states of the record block are all on this one screen.*
+
+    **Full, gapped and absent**, and the three are one assertion because they are
+    one design: a count of nought is not printed as a nought, a run shorter than
+    five is not padded, and a card the platform has watched nothing of carries
+    neither. A fixture reaching two of them proves nothing about the third —
+    *no record* and *a short record* are the two a renderer is most likely to
+    draw the same way.
+    """
+
+    cards = _records(pool)
+    full = [card for card in cards if len(card.last_five) == LAST_FIVE]
+    gapped = [
+        card
+        for card in cards
+        if card.counted_games is not None
+        and 0 < len(card.last_five) < LAST_FIVE
+    ]
+    absent = [
+        card
+        for card in cards
+        if card.counted_games is None and not card.last_five
+    ]
+    unscored = [
+        card
+        for card in cards
+        if card.counted_games is not None
+        and len(card.last_five) < card.counted_games
+        and card.counted_games <= LAST_FIVE
+    ]
+    drawn = [
+        (card.nickname, card.counted_games, len(card.last_five)) for card in cards
+    ]
+    for wanted, found, why in (
+        (
+            "a full run of five",
+            full,
+            "*Last 5* is five squares and a fixture that never fills it has "
+            "never drawn the row it is named for",
+        ),
+        (
+            "a run shorter than five beside a count",
+            gapped,
+            "fewer than five results is a real answer and is never padded — the "
+            "card draws the **gap**, and a fixture with only full runs cannot "
+            "tell a gap from a bug",
+        ),
+        (
+            "a card with no record at all",
+            absent,
+            "*nought games* and *no record* would be one absence in two "
+            "spellings, and the whole discipline of this surface is that "
+            "absence has one — so the empty card has to be **proved** correct "
+            "rather than assumed",
+        ),
+        (
+            "a count with fewer results behind it than games",
+            unscored,
+            "a counted game can leave no result — an unscored one is *an "
+            "evening, not evidence* (``docs/adr/0137``), and one still awaiting "
+            "an answer has produced none yet — so a card can print a count its "
+            "own run of form falls short of. **Which of the two causes it is, "
+            "is not a question a card can answer**, and it is not asked here: "
+            "the standing is checked on the games screen instead. The count is "
+            "held at or under the run's own length so that a player past five "
+            "games, whose gap is the cap rather than a missing result, is not "
+            "mistaken for a witness",
+        ),
+    ):
+        if not found:
+            raise ScreenIsEmpty(
+                f"no card in {THE_POPULATED_PLAYER.slug}'s padel pool draws "
+                f"{wanted}, across {len(cards)} card(s) — {drawn}. "
+                f"{why}. The population that reaches these states is "
+                f"`PLAYED_GAMES` in `app/seeds/cohort.py`, and a database "
+                f"seeded before it existed has none of them: drop it and seed "
+                f"again."
+            )
+    return (
+        f"record block · {len(full)} card(s) draw a full five, {len(gapped)} "
+        f"draw the gap, {len(unscored)} count a game nobody scored, and "
+        f"{len(absent)} of {len(cards)} carry no record at all"
+    )
+
+
+def _refuse_a_run_of_form_that_is_five_of_one_thing(pool: SearchRecord) -> str:
+    """*The runs of form drawn on this screen are not all one square.*
+
+    A row of five identical squares renders correctly and proves nothing: the
+    reader cannot tell a win from a loss, and neither can the developer who is
+    looking at the colours. Read across the whole screen rather than one card,
+    because what has to be developed against is a **pool** with both in it.
+    """
+
+    drawn = {result for card in _records(pool) for result in card.last_five}
+    missing = sorted(one.value for one in GameResult if one not in drawn)
+    if missing:
+        raise ScreenIsEmpty(
+            f"every run of form in {THE_POPULATED_PLAYER.slug}'s padel pool "
+            f"draws {sorted(one.value for one in drawn)} and never {missing}. "
+            f"*Last 5* is win or loss and a row of five identical squares is a "
+            f"row nobody can read a mistake off. Who won is declared per game "
+            f"in `PLAYED_GAMES`."
+        )
+    return f"run of form · both {sorted(one.value for one in drawn)} are drawn"
+
+
+def _refuse_a_player_score_with_only_one_answer(pool: SearchRecord) -> str:
+    """*Both answers a Player Score has are on this screen.*
+
+    A number, and an **absence** — and the absence is the claim worth checking,
+    because it is the one a renderer reaches for a nought with. Somebody nothing
+    was ever arranged for has not failed to turn up, so their card carries no
+    figure at all rather than a zero (``docs/adr/0140``).
+    """
+
+    cards = _records(pool)
+    scored = [card for card in cards if card.player_score is not None]
+    silent = [card for card in cards if card.player_score is None]
+    if not scored or not silent:
+        raise ScreenIsEmpty(
+            f"{len(scored)} of {len(cards)} card(s) in "
+            f"{THE_POPULATED_PLAYER.slug}'s padel pool carry a Player Score. "
+            f"Both answers have to be on one screen: a figure is what the "
+            f"platform watched, and an absence is what it never had — and a "
+            f"nought would say the two are the same thing."
+        )
+    return (
+        f"player score · {len(scored)} card(s) print one "
+        f"({sorted({card.player_score for card in scored if card.player_score})}) "
+        f"and {len(silent)} carry none"
+    )
+
+
+async def _refuse_an_unscored_game_that_reads_as_evidence(
+    paths: ReadPaths, cohort: Cohort
+) -> str:
+    """*The game nobody agreed a score for reads as unscored, on its own screen.*
+
+    Read as **somebody who played it**, which is the only side it can be read
+    from: a game is not a public record, and the screen that draws a standing is
+    the games list of one of the four people who were there. The same departure
+    ``they-blocked-you`` makes, and for the same reason — this state is
+    unobservable from the protagonist's side by construction.
+
+    **The claim is the standing and not the absence of a score.** ``UNSCORED``
+    is what *an evening, not evidence* is called when a clock has passed over
+    two people who never agreed, and a fixture that only checked the empty run
+    of form on a card could not tell it from a game still awaiting an answer.
+    """
+
+    declared = _the_game_nobody_scored()
+    reader = cohort.by_handle(declared.organiser)
+    _, standing = await paths.read_games.execute(paths.player(reader.email))
+    unscored = [row for row in standing if row.standing is GameStanding.UNSCORED]
+    if not unscored:
+        raise ScreenIsEmpty(
+            f"'{reader.handle}' played a game this fixture declares nobody "
+            f"agreed a score for, and their own games list reads "
+            f"{sorted(row.standing.value for row in standing)}. Two scores and "
+            f"no acceptance leave a game **unscored** once both windows close — "
+            f"a game still awaiting an answer is a database seeded too "
+            f"recently, and `PLAYED_AT_LEAST_DAYS_AGO` in `app/seeds/cohort.py` "
+            f"is what keeps it clear of that."
+        )
+    return (
+        f"unscored · '{reader.handle}' reads {len(unscored)} game(s) as "
+        f"{GameStanding.UNSCORED.value} across {len(standing)} they played"
+    )
+
+
+async def _refuse_a_pair_with_nothing_between_them(
+    paths: ReadPaths, cohort: Cohort, *, now: Instant
+) -> str:
+    """*Familiarity has something to read about at least one pair.*
+
+    ``SharedHistory`` refuses a record of no games, so a pair who arranged and
+    never played carries none at all — which means the modifier stands down for
+    everybody until two people on this platform have actually played. What is
+    asserted is the **input**, read through the port the matcher reads, because
+    the modifier itself is unreachable on a card by construction: nothing ends a
+    challenge every seat accepted, so a pair that has played can never be shown
+    each other again. That is a fact about the platform rather than about this
+    fixture, and it is stated here rather than discovered in a ranking.
+    """
+
+    handle = PLAYED_GAMES[0].organiser
+    reader = cohort.by_handle(handle)
+    counterparts = await paths.games.played_counterparts(
+        paths.player(reader.email), now=now
+    )
+    played = [one for one in counterparts if one.games_played_together >= 1]
+    if not played:
+        raise ScreenIsEmpty(
+            f"'{handle}' has played every game this fixture declares for them "
+            f"and `played_counterparts` answers {len(counterparts)} row(s) with "
+            f"nothing played in any of them. Familiarity decays on *days since "
+            f"last* and deepens on *games played together*, and a platform "
+            f"where nobody has played is a platform where the modifier is dead "
+            f"code."
+        )
+    return (
+        f"familiarity · '{handle}' has played {len(played)} counterpart(s), "
+        f"deepest {max(one.games_played_together for one in played)} game(s) "
+        f"together"
+    )
+
+
+def _refuse_a_shield_whose_absence_has_only_one_cause(
+    pool: SearchRecord, *, photographs: bool
+) -> str:
+    """*All three of ``docs/adr/0138``'s answers are on this screen.*
+
+    Two of them are the **same silence**: a photograph the check flagged draws no
+    shield, and so does one nothing ever looked at. They differ only in the
+    store, so a fixture holding one of them proves nothing whatever about the
+    other — and the state a shield must never be drawn on is the second.
+    """
+
+    if not photographs:
+        # **The store and never the fixture**, and the run already knows which:
+        # it asked the object store one question before it wrote anything. A
+        # claim that could not tell *nobody uploaded* from *nothing answered*
+        # would report a rotted fixture to somebody whose container is down —
+        # the failure the pass's own suppression probe exists to avoid.
+        return (
+            "photo verdict · **not read** — the object store did not answer, so "
+            "this database holds no photograph and the three states a card can "
+            "draw are unreachable. Bring MinIO up and seed a fresh database."
+        )
+    with_photo = [card for card in _records(pool) if card.photo_id is not None]
+    by_verdict = {
+        "a shield": [
+            card
+            for card in with_photo
+            if card.review is PhotoReviewDecision.ALLOWED
+        ],
+        "a photograph the check flagged": [
+            card
+            for card in with_photo
+            if card.review is PhotoReviewDecision.FLAGGED
+        ],
+        "a photograph nobody looked at": [
+            card for card in with_photo if card.review is None
+        ],
+    }
+    missing = sorted(name for name, found in by_verdict.items() if not found)
+    if missing:
+        raise ScreenIsEmpty(
+            f"{THE_POPULATED_PLAYER.slug}'s padel pool draws "
+            f"{len(with_photo)} card(s) with a photograph and none of them is "
+            f"{missing}. A shield says *checked and passed*, and its absence "
+            f"has two causes that are indistinguishable on the wire — so a "
+            f"fixture that reaches one of them has proved nothing about the "
+            f"other. The three carriers are `PHOTOGRAPH_VERDICTS` in "
+            f"`app/seeds/cohort.py`; a database seeded before they existed has "
+            f"no photograph at all, because a photo list is settled at the "
+            f"commit and nothing adds one afterwards. Drop it and seed again."
+        )
+    return (
+        "photo verdict · "
+        + ", ".join(
+            f"{len(found)} card(s) draw {name}"
+            for name, found in by_verdict.items()
+        )
+    )
+
+
+def _the_game_nobody_scored() -> PlayedGame:
+    """The one declared game the two sides never agreed about.
+
+    Read off the declaration rather than written here, and refused by name when
+    there is none: a fixture that quietly lost its unscored game would leave
+    this assertion checking that a database has *some* unscored game, which is
+    a question about a population rather than about a screen.
+    """
+
+    unscored = [game for game in PLAYED_GAMES if not game.was_scored]
+    if not unscored:
+        raise ScreenIsEmpty(
+            "no declared game is left unscored, so *an evening, not evidence* "
+            "is unreachable. `PLAYED_GAMES` in `app/seeds/cohort.py` owes this "
+            "fixture one game with no agreed score."
+        )
+    return unscored[0]
 
 
 # ---------------------------------------------------------------------------

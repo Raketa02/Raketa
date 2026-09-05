@@ -45,11 +45,11 @@
     },
     {
       "code": "d",
-      "reason": "past the ladder's furthest rung and inside the slider's ceiling",
+      "reason": "past the ladder's furthest rung and inside the slider's ceiling \u2014 which is why the played history's opponents live here",
       "latitude": 51.8,
       "kilometres": 32.25,
       "members": {
-        "club-player": 3,
+        "club-player": 8,
         "improver": 1
       }
     },
@@ -109,13 +109,96 @@
     ],
     "Established": [
       26,
-      40
+      52
     ],
     "Advanced": [
       2,
       8
     ]
   },
+  "played_games": [
+    {
+      "sport": "TENNIS",
+      "played_days_ago": 7,
+      "side_a": [
+        "cohort-a-12"
+      ],
+      "side_b": [
+        "cohort-d-01"
+      ],
+      "won_by": "A"
+    },
+    {
+      "sport": "TENNIS",
+      "played_days_ago": 6,
+      "side_a": [
+        "cohort-a-12"
+      ],
+      "side_b": [
+        "cohort-d-02"
+      ],
+      "won_by": "B"
+    },
+    {
+      "sport": "TENNIS",
+      "played_days_ago": 5,
+      "side_a": [
+        "cohort-a-12"
+      ],
+      "side_b": [
+        "cohort-d-04"
+      ],
+      "won_by": "A"
+    },
+    {
+      "sport": "TENNIS",
+      "played_days_ago": 4,
+      "side_a": [
+        "cohort-a-12"
+      ],
+      "side_b": [
+        "cohort-d-08"
+      ],
+      "won_by": "A"
+    },
+    {
+      "sport": "TENNIS",
+      "played_days_ago": 3,
+      "side_a": [
+        "cohort-a-12"
+      ],
+      "side_b": [
+        "cohort-d-07"
+      ],
+      "won_by": "B"
+    },
+    {
+      "sport": "PADEL",
+      "played_days_ago": 4,
+      "side_a": [
+        "cohort-a-16",
+        "cohort-a-08"
+      ],
+      "side_b": [
+        "cohort-a-10",
+        "cohort-a-11"
+      ],
+      "won_by": "A"
+    },
+    {
+      "sport": "PADEL",
+      "played_days_ago": 2,
+      "side_a": [
+        "cohort-a-16",
+        "cohort-a-12"
+      ],
+      "side_b": [
+        "cohort-a-13",
+        "cohort-a-14"
+      ],
+      "won_by": null
+    }
+  ],
   "members": [
     {
       "handle": "cohort-a-00",
@@ -157,6 +240,7 @@
       "demonstrations": 0,
       "claim_spread": 0,
       "demonstration_spread": 0,
+      "photograph": null,
       "name": "Nerea.Iglesias",
       "stable_id": "4d1cc07b-ecd2-5080-88c4-d676a9da82b7",
       "newcomer": false
@@ -198,6 +282,7 @@
       "demonstrations": 0,
       "claim_spread": 0,
       "demonstration_spread": 0,
+      "photograph": null,
       "name": "Guillem.Duarte",
       "stable_id": "098baec8-737e-550c-a5d8-3b8a7e2fdc52",
       "newcomer": false
@@ -237,6 +322,7 @@
       "demonstrations": 1,
       "claim_spread": 0,
       "demonstration_spread": 1,
+      "photograph": null,
       "name": "Oscar.Duarte",
       "stable_id": "0420b3e0-5b40-5fee-939d-796169d49fc7",
       "newcomer": true
@@ -284,6 +370,7 @@
       "demonstrations": 1,
       "claim_spread": 0,
       "demonstration_spread": 1,
+      "photograph": null,
       "name": "Julia.Esteve",
       "stable_id": "e271a3f6-08b4-50db-b8fd-a28a6641b24c",
       "newcomer": false
@@ -323,6 +410,7 @@
       "demonstrations": 1,
       "claim_spread": 0,
       "demonstration_spread": 1,
+      "photograph": null,
       "name": "Arnau.Esteve",
       "stable_id": "9ed945d3-ce75-5945-b7bf-8a3c56543364",
       "newcomer": false
@@ -375,6 +463,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": "ON_A_COURT",
       "name": "Ivan.Gallego",
       "stable_id": "b2cefb59-43b7-5790-9641-eaf06433681c",
       "newcomer": false
@@ -419,6 +508,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Rocio.Casals",
       "stable_id": "2a233708-7e90-5ddd-88ba-44223968580b",
       "newcomer": true
@@ -459,6 +549,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": "NOT_A_COURT",
       "name": "Rafa.Iglesias",
       "stable_id": "d6308551-f991-579f-a4bf-42a504d5b9b8",
       "newcomer": false
@@ -494,6 +585,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Oscar.Bertran",
       "stable_id": "c14df19e-f631-547e-974d-18a744d695bc",
       "newcomer": false
@@ -539,6 +631,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Nerea.Gallego",
       "stable_id": "270c29b0-0b48-5f77-9779-21afa64b000b",
       "newcomer": false
@@ -579,6 +672,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Ivan.Iglesias",
       "stable_id": "50c72974-8021-5a52-ab4b-53750148143e",
       "newcomer": true
@@ -619,6 +713,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Diego.Bertran",
       "stable_id": "01b5d738-4e39-54a3-ad2f-3b82c2de08ca",
       "newcomer": false
@@ -629,7 +724,7 @@
       "archetype": "club-player",
       "latitude": 51.55,
       "longitude": -0.13,
-      "radius_km": 22,
+      "radius_km": 28,
       "slots": [
         "4:MORNING",
         "5:AFTERNOON",
@@ -662,6 +757,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Paula.Gallego",
       "stable_id": "d14a243c-b3ae-5ca7-ba72-7a17e7ed7399",
       "newcomer": false
@@ -704,6 +800,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": "NOBODY_LOOKED",
       "name": "Paula.Casals",
       "stable_id": "ff200223-38c5-5f3f-a9f2-2fec1dd82338",
       "newcomer": false
@@ -757,6 +854,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Marta.Iglesias",
       "stable_id": "1bd0d141-e47e-504f-b8ed-bf66daa33854",
       "newcomer": true
@@ -802,6 +900,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Irene.Herrero",
       "stable_id": "1a4d53d0-34f8-5000-bb7e-a7d8d18aeb0a",
       "newcomer": false
@@ -812,7 +911,7 @@
       "archetype": "club-player",
       "latitude": 51.55,
       "longitude": -0.13,
-      "radius_km": 48,
+      "radius_km": 1,
       "slots": [
         "1:AFTERNOON",
         "2:EVENING",
@@ -842,6 +941,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Arnau.Gallego",
       "stable_id": "59599975-225d-5dd9-a214-554ac376f13f",
       "newcomer": false
@@ -886,6 +986,7 @@
       "demonstrations": 4,
       "claim_spread": 0,
       "demonstration_spread": 0,
+      "photograph": null,
       "name": "Ruben.Herrero",
       "stable_id": "abb57ad8-7024-5f42-9660-d9e812d58800",
       "newcomer": false
@@ -929,6 +1030,7 @@
       "demonstrations": 4,
       "claim_spread": 0,
       "demonstration_spread": 0,
+      "photograph": null,
       "name": "Alba.Esteve",
       "stable_id": "43407b50-5066-5c73-9828-e5532082269e",
       "newcomer": true
@@ -973,6 +1075,7 @@
       "demonstrations": 1,
       "claim_spread": 0,
       "demonstration_spread": 1,
+      "photograph": null,
       "name": "Rocio.Iglesias",
       "stable_id": "36cb2c6c-9783-58a0-a48c-c2b17f2f5d93",
       "newcomer": false
@@ -1016,6 +1119,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Javier.Iglesias",
       "stable_id": "6cdede9a-2437-5a51-a28b-1785314699da",
       "newcomer": false
@@ -1052,6 +1156,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Nuria.Esteve",
       "stable_id": "081224e7-2390-55d5-8a8c-c36550e41386",
       "newcomer": true
@@ -1097,6 +1202,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Bruno.Herrero",
       "stable_id": "701d3972-059f-52b8-bed3-9c73824eb14e",
       "newcomer": false
@@ -1135,6 +1241,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Javier.Gallego",
       "stable_id": "80136f39-6641-5a74-bfbc-594cdc24bdd2",
       "newcomer": false
@@ -1178,6 +1285,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Diego.Fabregat",
       "stable_id": "f1b410f1-0571-592b-a696-031d2befd63f",
       "newcomer": false
@@ -1221,6 +1329,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Javier.Fabregat",
       "stable_id": "c8ed3f80-a410-5481-96b2-d1c96f20f59f",
       "newcomer": false
@@ -1257,6 +1366,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Nerea.Fabregat",
       "stable_id": "eddb41a1-7c1b-5d46-b4e5-046ce9263551",
       "newcomer": true
@@ -1305,6 +1415,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Adrian.Bertran",
       "stable_id": "7eea49ac-3865-582f-b94e-34bcbb42216d",
       "newcomer": false
@@ -1343,6 +1454,7 @@
       "demonstrations": 4,
       "claim_spread": 0,
       "demonstration_spread": 0,
+      "photograph": null,
       "name": "Alba.Iglesias",
       "stable_id": "dc63438a-25c6-5869-ab72-eff084ab1428",
       "newcomer": false
@@ -1384,6 +1496,7 @@
       "demonstrations": 1,
       "claim_spread": 0,
       "demonstration_spread": 1,
+      "photograph": null,
       "name": "Irene.Bertran",
       "stable_id": "fae405d2-61ce-51f8-baf9-c60a823f0d64",
       "newcomer": false
@@ -1418,6 +1531,10 @@
         [
           "PADEL",
           "COMPETITIVE"
+        ],
+        [
+          "TENNIS",
+          "FOR_FUN"
         ]
       ],
       "gender": "MAN",
@@ -1428,6 +1545,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Sergio.Duarte",
       "stable_id": "a5008b2b-1f8f-5603-a06c-5c82045da6c0",
       "newcomer": false
@@ -1454,6 +1572,10 @@
         [
           "PADEL",
           "FOR_FUN"
+        ],
+        [
+          "TENNIS",
+          "NO_PREFERENCE"
         ]
       ],
       "gender": "WOMAN",
@@ -1464,6 +1586,7 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Arnau.Casals",
       "stable_id": "93084dc4-b3a5-58a3-9d13-1d0e99be4bcf",
       "newcomer": true
@@ -1511,8 +1634,236 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
+      "photograph": null,
       "name": "Lucia.Fabregat",
       "stable_id": "e2759cc7-cc7a-5597-ac0c-4acc0966ca23",
+      "newcomer": false
+    },
+    {
+      "handle": "cohort-d-04",
+      "ring": "d",
+      "archetype": "club-player",
+      "latitude": 51.8,
+      "longitude": -0.13,
+      "radius_km": 14,
+      "slots": [
+        "1:EVENING",
+        "1:MORNING",
+        "7:EVENING"
+      ],
+      "tags": [
+        "BOOKS_THE_NEXT_ONE",
+        "PLAYS_TO_WIN",
+        "QUIET_AND_FOCUSED",
+        "TALKS_THROUGH_THE_MATCH"
+      ],
+      "intents": [
+        [
+          "PADEL",
+          "COMPETITIVE"
+        ],
+        [
+          "TENNIS",
+          "COMPETITIVE"
+        ]
+      ],
+      "gender": "WOMAN",
+      "gender_preference": "ANY",
+      "proposals_opt_in": true,
+      "committed_days_ago": 99,
+      "claims": 2,
+      "demonstrations": 2,
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "photograph": null,
+      "name": "Javier.Bertran",
+      "stable_id": "01f7aa39-e54f-5cac-9c38-8649ef59029e",
+      "newcomer": false
+    },
+    {
+      "handle": "cohort-d-05",
+      "ring": "d",
+      "archetype": "club-player",
+      "latitude": 51.8,
+      "longitude": -0.13,
+      "radius_km": 1,
+      "slots": [
+        "1:MORNING",
+        "1:AFTERNOON",
+        "1:EVENING",
+        "2:MORNING",
+        "2:AFTERNOON",
+        "2:EVENING",
+        "3:MORNING",
+        "3:AFTERNOON",
+        "3:EVENING",
+        "4:MORNING",
+        "4:AFTERNOON",
+        "4:EVENING",
+        "5:MORNING",
+        "5:AFTERNOON",
+        "5:EVENING",
+        "6:MORNING",
+        "6:AFTERNOON",
+        "6:EVENING",
+        "7:MORNING",
+        "7:AFTERNOON",
+        "7:EVENING"
+      ],
+      "tags": [
+        "ENCOURAGES_A_PARTNER",
+        "PLAYS_TO_WIN",
+        "SHARES_A_LIFT",
+        "STRAIGHT_HOME_AFTER",
+        "TALKS_THROUGH_THE_MATCH"
+      ],
+      "intents": [
+        [
+          "PADEL",
+          "COMPETITIVE"
+        ]
+      ],
+      "gender": "MAN",
+      "gender_preference": "ANY",
+      "proposals_opt_in": true,
+      "committed_days_ago": 87,
+      "claims": 2,
+      "demonstrations": 2,
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "photograph": null,
+      "name": "Pau.Gallego",
+      "stable_id": "922e81ea-a14b-5f64-a1c4-b90851876a9e",
+      "newcomer": false
+    },
+    {
+      "handle": "cohort-d-06",
+      "ring": "d",
+      "archetype": "club-player",
+      "latitude": 51.8,
+      "longitude": -0.13,
+      "radius_km": 32,
+      "slots": [
+        "4:EVENING",
+        "5:EVENING",
+        "6:EVENING"
+      ],
+      "tags": [
+        "HERE_TO_IMPROVE",
+        "QUIET_AND_FOCUSED",
+        "SETTLES_UP_ON_THE_SPOT",
+        "SHARES_A_LIFT",
+        "TALKS_THROUGH_THE_MATCH",
+        "WARMS_UP_PROPERLY"
+      ],
+      "intents": [
+        [
+          "PADEL",
+          "FOR_FUN"
+        ],
+        [
+          "TENNIS",
+          "NO_PREFERENCE"
+        ]
+      ],
+      "gender": "WOMAN",
+      "gender_preference": "ANY",
+      "proposals_opt_in": false,
+      "committed_days_ago": 2,
+      "claims": 2,
+      "demonstrations": 2,
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "photograph": null,
+      "name": "Ruben.Fabregat",
+      "stable_id": "db3f2bb6-8633-534d-9d61-1418b66dc226",
+      "newcomer": true
+    },
+    {
+      "handle": "cohort-d-07",
+      "ring": "d",
+      "archetype": "club-player",
+      "latitude": 51.8,
+      "longitude": -0.13,
+      "radius_km": 50,
+      "slots": [
+        "2:AFTERNOON",
+        "2:EVENING",
+        "3:EVENING",
+        "3:MORNING",
+        "4:EVENING",
+        "6:AFTERNOON",
+        "6:MORNING"
+      ],
+      "tags": [
+        "HERE_TO_GET_BACK_INTO_IT",
+        "HERE_TO_IMPROVE",
+        "OPEN_TO_MEET_SOMEONE",
+        "PLAYS_TO_WIN",
+        "WARMS_UP_PROPERLY"
+      ],
+      "intents": [
+        [
+          "PADEL",
+          "NO_PREFERENCE"
+        ],
+        [
+          "TENNIS",
+          "COMPETITIVE"
+        ]
+      ],
+      "gender": "PREFER_NOT_TO_SAY",
+      "gender_preference": "ANY",
+      "proposals_opt_in": true,
+      "committed_days_ago": 85,
+      "claims": 2,
+      "demonstrations": 2,
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "photograph": null,
+      "name": "Dani.Gallego",
+      "stable_id": "038d0246-363d-5164-aaf5-137531022b3c",
+      "newcomer": false
+    },
+    {
+      "handle": "cohort-d-08",
+      "ring": "d",
+      "archetype": "club-player",
+      "latitude": 51.8,
+      "longitude": -0.13,
+      "radius_km": 33,
+      "slots": [
+        "2:MORNING",
+        "3:EVENING",
+        "6:MORNING"
+      ],
+      "tags": [
+        "BOOKS_THE_NEXT_ONE",
+        "HERE_TO_IMPROVE",
+        "OPEN_TO_MEET_SOMEONE",
+        "WARMS_UP_PROPERLY"
+      ],
+      "intents": [
+        [
+          "PADEL",
+          "COMPETITIVE"
+        ],
+        [
+          "TENNIS",
+          "COMPETITIVE"
+        ]
+      ],
+      "gender": "WOMAN",
+      "gender_preference": "ANY",
+      "proposals_opt_in": true,
+      "committed_days_ago": 79,
+      "claims": 2,
+      "demonstrations": 2,
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "photograph": null,
+      "name": "Laia.Fabregat",
+      "stable_id": "a50fd90f-3594-5806-9814-3ad780fd1c2b",
       "newcomer": false
     },
     {
@@ -1553,7 +1904,8 @@
       "demonstrations": 0,
       "claim_spread": 0,
       "demonstration_spread": 0,
-      "name": "Javier.Bertran",
+      "photograph": null,
+      "name": "Laia.Duarte",
       "stable_id": "3d5eb721-703f-599a-9fd4-09a871581f66",
       "newcomer": false
     },
@@ -1594,7 +1946,8 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
-      "name": "Pau.Gallego",
+      "photograph": null,
+      "name": "Javier.Esteve",
       "stable_id": "abcf31e4-1e5d-557f-a849-cde5a6d63298",
       "newcomer": false
     },
@@ -1630,7 +1983,8 @@
       "demonstrations": 2,
       "claim_spread": 0,
       "demonstration_spread": 2,
-      "name": "Ruben.Fabregat",
+      "photograph": null,
+      "name": "Nacho.Iglesias",
       "stable_id": "eb7ec1be-ac9f-5db5-bad8-93b56e0ab1cb",
       "newcomer": true
     }

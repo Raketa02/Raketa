@@ -32,11 +32,19 @@ about a number this file chose: a tightened ``QUALITY_FLOOR`` moves no
 distribution at all and still empties every screen, so a check computed from the
 population could only ever pass.
 
-**The population is committed as inputs only** — never μ, never σ, never a band.
-Those are the engine's answers, and a committed copy of an answer is a second
-number nothing keeps honest. What makes the file worth committing is the keying:
+**The population is committed as inputs only** — never μ, never σ, never a band,
+and, since the played history arrived, never a Player Score, a counted-game count
+or a run of form either. Those are the engine's and the platform's answers, and a
+committed copy of an answer is a second number nothing keeps honest. What *is*
+committed about a game is who played whom and who won, which is what a player
+did. What makes the file worth committing is the keying:
 every draw is a function of the member's **handle** alone, so adding or removing
-one member changes that row and nobody else's and the diff is readable. Under one
+one member changes that row and nobody else's and the diff is readable. The
+played history is the one thing that is *also* an input to a row rather than only
+a row of its own — a member's second sport and an organiser's radius follow from
+the games they are declared to play — and the keying survives it, because a game
+names its players by handle: adding one moves the rows of the people in it and
+nobody else's. Under one
 global stream, inserting a member rewrites every row after it, the diff is noise,
 and committing buys nothing. Accepted knowingly: because draws are keyed off the
 handle, **moving a member between rings shows in the diff as a delete plus an
@@ -51,11 +59,13 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import asdict, dataclass, replace
+from math import ceil
 from pathlib import Path
 from typing import Final, Mapping, Sequence, final
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from app.kernel import Sport
+from app.modules.challenges.domain.seats import seats_per_side
 from app.modules.matchmaking.domain.geography import Point, distance_km
 from app.modules.player_profile.domain.availability import DAYS_IN_THE_GRID, DayPart
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
@@ -81,6 +91,7 @@ from app.seeds.catalog import (
     SEED_EMAIL_DOMAIN,
     AnswerPolicy,
 )
+from app.seeds.photos import DeclaredVerdict
 
 #: Beside the generator, because the image copies ``app/`` and a fixture a
 #: container cannot read is a fixture a container cannot check.
@@ -269,10 +280,25 @@ RINGS: Final = (
     ),
     Ring(
         code="d",
-        reason="past the ladder's furthest rung and inside the slider's ceiling",
+        reason=(
+            "past the ladder's furthest rung and inside the slider's ceiling — "
+            "which is why the played history's opponents live here"
+        ),
         latitude=51.80,
         bounds_km=(PROTAGONIST_RADIUS_KM * 2.0, float(SEARCH_RADIUS_BOUNDS.maximum_km)),
-        members={CLUB_PLAYER.name: 3, IMPROVER.name: 1},
+        # **Eight club players and not three, and the five extra are the played
+        # history's.** A member the cohort plays a *second sport* against holds a
+        # rating in it, and a second-sport rating inside the protagonist's
+        # furthest rung thickens the very list the ladder is priced on — five
+        # rows and the rungs stop being computed at all. This ring is the one
+        # place a member can hold a tennis rating without being reachable by any
+        # widening she is offered, which is what its own reason line already
+        # says. Eight, because the opponents have to be **distinct** and this
+        # ring already spends one on the improver, one on the member whose
+        # preference excludes the searcher, one on the lopsided witness and one
+        # on a newcomer too recent to have played: one open challenge per pair,
+        # and nothing ends a challenge every seat accepted.
+        members={CLUB_PLAYER.name: 8, IMPROVER.name: 1},
     ),
     Ring(
         code="e",
@@ -411,6 +437,223 @@ MEMBER_CELLS_ELSEWHERE: Final = (2, 5)
 
 
 # ---------------------------------------------------------------------------
+# What the platform has watched them do — the played history
+# ---------------------------------------------------------------------------
+#
+# **A declaration and never a discovery, and it is committed as inputs only.**
+# What is written down here is *who played whom and who won*, which is what a
+# player did; the Player Score, the counted-game count and the run of form are
+# what the platform makes of it, and a committed copy of one of those would be
+# the second number this file exists to refuse.
+#
+# **A game is a real challenge, really accepted, with a result really entered**
+# (``docs/adr/0029``). Nothing here opens a table, so the shape of this
+# declaration is the shape the write path forces: a court is the sport's own
+# fixed list of sides, a line-up completes only when **every** seat is accepted,
+# and the game that follows is counted unless the search behind it was a
+# *for fun* one. That is why a padel row seats four and a tennis row seats two —
+# a padel court with one invitee is half a game and opens nothing.
+#
+# **One open challenge per pair, and it never ends.** Nothing on this platform
+# closes a challenge whose seats were all accepted, so a pair that has played is
+# a pair that can never see each other again. Every consequence below follows
+# from that one sentence: a member with five counted games needs **five distinct
+# opponents**, the opponents are chosen where the fixture can afford to spend a
+# pair, and no game names the protagonist — a game with her in it would take that
+# person out of the pool every other assertion in ``screens.py`` is read from.
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class PlayedGame:
+    """One game that really happened, as this fixture declares it.
+
+    **Handles and never ids**, like every other row here: an id is minted by the
+    write path and a fresh database mints a different one, so a game keyed on
+    handles is a game that means the same thing in every database.
+
+    ``side_a`` and ``side_b`` are the court as it was seated, and **``side_a[0]``
+    organised it** — the send is one person's act, and the organiser's own seat
+    is accepted from birth, which is why they are named by position rather than
+    in a field of their own.
+
+    ``won_by`` is ``None`` for the one game these people never agreed a score
+    for. That is not a missing input: it is *an evening, not evidence*
+    (``docs/adr/0137``) — the game counts toward how much they have played and
+    produces an outcome for nobody, which is a card state a fixture with only
+    tidy games could not reach.
+    """
+
+    sport: str
+    #: How long before this run's own *now* it was played. **An input, and the
+    #: only one here a redraw can invalidate**: a game cannot predate the profile
+    #: of somebody who played it, and the members' commit dates are drawn. The
+    #: refusal below reads both and names the member.
+    played_days_ago: int
+    side_a: tuple[str, ...]
+    side_b: tuple[str, ...]
+    #: ``"A"``, ``"B"``, or ``None`` where the two sides never agreed.
+    won_by: str | None
+
+    @property
+    def organiser(self) -> str:
+        return self.side_a[0]
+
+    @property
+    def players(self) -> tuple[str, ...]:
+        return self.side_a + self.side_b
+
+    @property
+    def was_scored(self) -> bool:
+        return self.won_by is not None
+
+    @property
+    def pairs(self) -> tuple[frozenset[str], ...]:
+        """Everybody this court makes a pair of. **Sharing a line-up makes one.**
+
+        Every occupied seat but your own is somebody you now have an open game
+        with — co-invitees and organiser alike — so a doubles court spends six
+        pairs and a singles one spends one. It is a property rather than three
+        loops in three files because *what a court costs* is a fact about the
+        court, and the three readers are the refusal that will not let two games
+        share a pair, the report that prints the price, and the test that says
+        so.
+        """
+
+        return tuple(
+            frozenset({one, other})
+            for index, one in enumerate(self.players)
+            for other in self.players[index + 1 :]
+        )
+
+
+#: How far apart the played games sit, and why they are not all on one day.
+#:
+#: *Last 5* is read **oldest to newest**, and the provider orders it on the
+#: instant each game was played — so two games on one day would leave the run of
+#: form to a tie-break on a uuid, and a fixture whose row of squares reshuffles
+#: between databases is a fixture nobody can develop a screen against.
+#:
+#: The floor is two days rather than one: a result confirmed by **silence** needs
+#: its window to have closed, and the game left unscored needs both sides' to
+#: have. A game seeded an hour ago would be a game still awaiting an answer,
+#: which is a different card.
+PLAYED_AT_LEAST_DAYS_AGO: Final = 2
+
+#: **The played history, and the states each row is for.** Every one of them is
+#: a row on the card of somebody in the protagonist's own padel pool, because a
+#: record nobody can be shown is a record no screen renders.
+#:
+#: - ``cohort-a-12`` plays **five tennis singles**, so *Last 5* is full and the
+#:   run of form is a mix rather than five identical squares. Tennis, because a
+#:   singles court is two people and five counted games in padel would cost
+#:   fifteen distinct partners — every spare pair the nearest ring has, and the
+#:   full four ``screens.py`` composes with them.
+#: - ``cohort-a-16`` plays **two padel doubles**, so the card draws a count of
+#:   two with a run of one and the **gap** rather than a padded row.
+#: - The second of those two is the one nobody agreed a score for, which is what
+#:   puts ``cohort-a-13`` and ``cohort-a-14`` on a card with a **count and no
+#:   run** — the state an unscored evening leaves behind.
+#: - ``cohort-a-05``, ``cohort-a-06`` and ``cohort-a-07`` are named nowhere here,
+#:   so the blocks are **absent** on their cards and the empty card is proved
+#:   correct on a real read rather than assumed.
+#:
+#: The opponents of the five are **past the ladder's furthest rung**, in ring d,
+#: and that is forced rather than chosen. A member who has played tennis holds a
+#: tennis rating; the protagonist's tennis list is short *by construction* and
+#: the ladder is priced only while it stays under ``MIN_SHORTLIST``; and every
+#: rung she is offered widens her radius to at most twice it. So a second-sport
+#: opponent anywhere inside that reach would silently take the ladder away —
+#: which is the ring's own stated reason for existing, read the other way round.
+PLAYED_GAMES: Final[tuple[PlayedGame, ...]] = (
+    PlayedGame(
+        sport=Sport.TENNIS.value,
+        played_days_ago=7,
+        side_a=("cohort-a-12",),
+        side_b=("cohort-d-01",),
+        won_by="A",
+    ),
+    PlayedGame(
+        sport=Sport.TENNIS.value,
+        played_days_ago=6,
+        side_a=("cohort-a-12",),
+        side_b=("cohort-d-02",),
+        won_by="B",
+    ),
+    PlayedGame(
+        sport=Sport.TENNIS.value,
+        played_days_ago=5,
+        side_a=("cohort-a-12",),
+        side_b=("cohort-d-04",),
+        won_by="A",
+    ),
+    PlayedGame(
+        sport=Sport.TENNIS.value,
+        played_days_ago=4,
+        side_a=("cohort-a-12",),
+        side_b=("cohort-d-08",),
+        won_by="A",
+    ),
+    PlayedGame(
+        sport=Sport.TENNIS.value,
+        played_days_ago=3,
+        side_a=("cohort-a-12",),
+        side_b=("cohort-d-07",),
+        won_by="B",
+    ),
+    PlayedGame(
+        sport=Sport.PADEL.value,
+        played_days_ago=4,
+        side_a=("cohort-a-16", "cohort-a-08"),
+        side_b=("cohort-a-10", "cohort-a-11"),
+        won_by="A",
+    ),
+    # **The one nobody scored.** Both sides put a score on the table, neither
+    # side accepted the other's, and both windows have since closed.
+    PlayedGame(
+        sport=Sport.PADEL.value,
+        played_days_ago=2,
+        side_a=("cohort-a-16", "cohort-a-12"),
+        side_b=("cohort-a-13", "cohort-a-14"),
+        won_by=None,
+    ),
+)
+
+#: Every member the played history names in a sport their draw did not already
+#: give them. **You cannot play a sport nobody assessed you in**, so the
+#: declaration feeds the draw rather than sitting beside it and being true by
+#: luck: a member here sits the questionnaire for that sport like everybody else.
+SECOND_SPORT_BECAUSE_THEY_PLAYED: Final[frozenset[str]] = frozenset(
+    handle
+    for game in PLAYED_GAMES
+    if game.sport != SPORTS[0].value
+    for handle in game.players
+)
+
+#: The three photographs, and the three answers ``docs/adr/0138`` lets a card
+#: draw about one. **Three rows and not a rate**, for the reason every coverage
+#: rule here is a rule: the third state is an *absence*, and a draw that happened
+#: to produce two of the three would leave the shield unprovable on the one
+#: reading that matters.
+#:
+#: The bytes are the seed's own and the verdict is **declared**, which is the
+#: same move the run already makes with the clock: the reviewer is a port, a
+#: seeded photo is not a photograph of a real court, and a fixture that asked a
+#: model what it thought would exhibit whichever states that model happened to
+#: reach. What is *not* declared is the metadata: the note is written by the
+#: domain's own constructors, so a shield here is a shield ``decision_on_record``
+#: agrees to believe rather than a string this file spelled.
+#:
+#: All three are members of the nearest ring, because a verdict is drawn on a
+#: **card** and a card is a row of the protagonist's own pool.
+PHOTOGRAPH_VERDICTS: Final[Mapping[str, DeclaredVerdict]] = {
+    "cohort-a-05": DeclaredVerdict.ON_A_COURT,
+    "cohort-a-07": DeclaredVerdict.NOT_A_COURT,
+    "cohort-a-13": DeclaredVerdict.NOBODY_LOOKED,
+}
+
+
+# ---------------------------------------------------------------------------
 # The population
 # ---------------------------------------------------------------------------
 
@@ -448,6 +691,12 @@ class CohortMember:
     demonstrations: int
     claim_spread: int
     demonstration_spread: int
+    #: Which of ``docs/adr/0138``'s three answers this member's photograph
+    #: carries, or ``None`` for the great majority who hold none. An **input**
+    #: like every field beside it: what a check concluded about a photograph is
+    #: a thing this fixture chooses, and the card the conclusion reaches is what
+    #: ``app/seeds/screens.py`` reads back.
+    photograph: str | None = None
     #: What every screen draws for this member. ``handle`` stays the identifier
     #: — the address, the answer key and the ring's own numbering are all it —
     #: and this is the only thing a person ever sees. Committed with the rest of
@@ -457,6 +706,17 @@ class CohortMember:
     @property
     def sports(self) -> tuple[Sport, ...]:
         return tuple(Sport(sport) for sport, _ in self.intents)
+
+    @property
+    def declared_verdict(self) -> DeclaredVerdict | None:
+        """``photograph`` as the type the run declares in.
+
+        The artifact spells it as a string because it is committed JSON; every
+        reader here wants the enum, which is the same trade ``intents`` makes one
+        field along.
+        """
+
+        return None if self.photograph is None else DeclaredVerdict(self.photograph)
 
     @property
     def email(self) -> str:
@@ -565,7 +825,15 @@ def _draw(
     ring: Ring, archetype: Archetype, position: int, *, seed: int
 ) -> CohortMember:
     handle = f"cohort-{ring.code}-{position:02d}"
-    plays_both = position % EVERY_NTH_PLAYS_BOTH_SPORTS == PLAYS_BOTH_SPORTS_AT
+    plays_both = (
+        position % EVERY_NTH_PLAYS_BOTH_SPORTS == PLAYS_BOTH_SPORTS_AT
+        # **A member who has played a sport holds a rating in it.** The played
+        # history is a declaration and the questionnaire is the only door to a
+        # Level, so the declaration has to reach the draw — otherwise the game
+        # would be written against a member the level gate removes from their own
+        # opponent's search, and the seed would fail naming a pool.
+        or handle in SECOND_SPORT_BECAUSE_THEY_PLAYED
+    )
     sports = SPORTS if plays_both else SPORTS[:1]
     newcomer = position % EVERY_NTH_IS_A_NEWCOMER == IS_A_NEWCOMER_AT
     low, high = (
@@ -577,11 +845,7 @@ def _draw(
         archetype=archetype.name,
         latitude=ring.latitude,
         longitude=CENTRE_LONGITUDE,
-        radius_km=(
-            SEARCH_RADIUS_BOUNDS.minimum_km
-            if _is_lopsided(position)
-            else _rng(handle, "radius", seed).randint(*MEMBER_RADIUS_KM)
-        ),
+        radius_km=_radius(handle, position, seed),
         slots=_slots(handle, position, seed),
         tags=_tags(handle, position, seed),
         intents=tuple(
@@ -596,7 +860,86 @@ def _draw(
         demonstrations=archetype.answers.demonstrations,
         claim_spread=archetype.answers.claim_spread,
         demonstration_spread=archetype.answers.demonstration_spread,
+        photograph=_photograph(handle),
     )
+
+
+def _photograph(handle: str) -> str | None:
+    """Which verdict this member's photograph carries, if they hold one.
+
+    A lookup rather than a draw, and it is the same argument every coverage rule
+    on this page makes: the third state is an **absence** on the wire, so a rate
+    that happened to produce two of the three would leave *flagged* and *never
+    checked* indistinguishable and nothing would say so.
+    """
+
+    declared = PHOTOGRAPH_VERDICTS.get(handle)
+    return None if declared is None else declared.value
+
+
+def _radius(handle: str, position: int, seed: int) -> int:
+    """The radius this member sets for themselves, and who does not get a draw.
+
+    **An organiser's radius is a rule, and the rule is *your own opponents and
+    nobody else*.** A court is built from a search and a search hands back at
+    most ``shortlist_max`` rows, so an organiser searching wide fills that list
+    with people this fixture never declared — the relationship accounts sit at
+    the centre and are clones of the protagonist, and they outscore a member's
+    own ring on every term a clone can win. The declared opponent then falls off
+    the end of the list, and the send has no origin to cite. So an organiser is
+    given the **tightest radius the slider offers that still reaches everybody
+    they play**: within a ring every member sits at one coordinate, so a
+    same-ring court is searched at the slider's floor and nobody from anywhere
+    else is in the way.
+
+    Everybody else keeps what they had: the floor if they are the lopsided one,
+    and a keyed draw otherwise.
+    """
+
+    reach = _how_far_they_have_to_see(handle)
+    if reach is not None:
+        return min(
+            SEARCH_RADIUS_BOUNDS.maximum_km,
+            max(SEARCH_RADIUS_BOUNDS.minimum_km, ceil(reach)),
+        )
+    if _is_lopsided(position):
+        return SEARCH_RADIUS_BOUNDS.minimum_km
+    return _rng(handle, "radius", seed).randint(*MEMBER_RADIUS_KM)
+
+
+def _how_far_they_have_to_see(handle: str) -> float | None:
+    """The furthest opponent this member is declared to organise against.
+
+    ``None`` for the great majority, who organise nothing. The ring is read off
+    the **handle** rather than looked up, because the handle carries it — that is
+    why it is spelled ``cohort-{ring}-{position}`` and why a member's own line is
+    readable off any card they appear on.
+    """
+
+    organised = [game for game in PLAYED_GAMES if game.organiser == handle]
+    if not organised:
+        return None
+    return max(
+        _distance_between(_ring_in(handle), _ring_in(other))
+        for game in organised
+        for other in game.players[1:]
+    )
+
+
+def _ring_in(handle: str) -> str:
+    """Which ring this handle names. ``cohort-a-07`` lives in ring ``a``."""
+
+    return handle.split("-")[1]
+
+
+def _position_in(handle: str) -> int:
+    """Which position in its ring this handle names. ``cohort-a-07`` is 7.
+
+    Read off the handle rather than looked up for :func:`_ring_in`'s reason: the
+    handle carries both, which is why it is spelled the way it is.
+    """
+
+    return int(handle.split("-")[2])
 
 
 def _rng(handle: str, axis: str, seed: int) -> random.Random:
@@ -746,7 +1089,14 @@ def _preference(position: int) -> str:
 BAND_HISTOGRAM: Final[Mapping[str, tuple[int, int]]] = {
     BAND_NEW: (3, 8),
     BAND_DEVELOPING: (5, 12),
-    BAND_ESTABLISHED: (26, 40),
+    # **The upper bound moved when the played history arrived, and the lower one
+    # did not.** Ring d grew by five club players — five more padel ratings — and
+    # six of that ring took tennis, which is eleven more Established ratings for
+    # reasons that have nothing to do with the engine: the observation went from
+    # thirty-three to forty-four. The bound keeps the headroom it had, and what a
+    # band claim is *for* is the **lower** one — a band that has emptied is a
+    # state nobody can reach any more — which is untouched.
+    BAND_ESTABLISHED: (26, 52),
     BAND_ADVANCED: (2, 8),
 }
 
@@ -808,6 +1158,16 @@ def as_document(cohort: Cohort) -> dict[str, object]:
         "band_histogram": {
             band: list(bounds) for band, bounds in BAND_HISTOGRAM.items()
         },
+        "played_games": [
+            {
+                "sport": game.sport,
+                "played_days_ago": game.played_days_ago,
+                "side_a": list(game.side_a),
+                "side_b": list(game.side_b),
+                "won_by": game.won_by,
+            }
+            for game in PLAYED_GAMES
+        ],
         "members": [_member_document(member) for member in cohort.members],
     }
 
@@ -903,6 +1263,9 @@ def _refuse_an_impossible_cohort(cohort: "Cohort") -> None:
     handles = [member.handle for member in cohort.members]
     if len(handles) != len(set(handles)):
         raise RuntimeError("two cohort members share a handle")
+
+    _refuse_a_played_history_nobody_could_play(cohort)
+    _refuse_a_photograph_set_with_a_state_missing(cohort)
     for member in cohort.members:
         if not SHARED_CELLS_FLOOR <= len(member.slots) <= len(CELLS):
             raise RuntimeError(f"'{member.handle}' has a week of {len(member.slots)}")
@@ -911,6 +1274,153 @@ def _refuse_an_impossible_cohort(cohort: "Cohort") -> None:
                 f"'{member.handle}' set a radius of {member.radius_km} km, "
                 f"which the slider does not offer."
             )
+
+
+def _refuse_a_played_history_nobody_could_play(cohort: "Cohort") -> None:
+    """Every declared game, checked against the population that has to play it.
+
+    **All of it is about the declarations and none of it about a database.** A
+    game is written by sending a real challenge and accepting every seat, so each
+    of these is a way the run would otherwise fail half way through with a
+    message about a pool rather than about a row in this file.
+    """
+
+    known = {member.handle: member for member in cohort.members}
+    pairs: dict[frozenset[str], int] = {}
+    days: dict[str, set[int]] = {}
+    for index, game in enumerate(PLAYED_GAMES):
+        sport = Sport(game.sport)
+        per_side = seats_per_side(sport)
+        if len(game.side_a) != per_side or len(game.side_b) != per_side:
+            raise RuntimeError(
+                f"played game {index} seats {len(game.side_a)} against "
+                f"{len(game.side_b)} on a {sport.value} court, which has "
+                f"{per_side} a side. A line-up completes only when **every** "
+                f"seat is accepted, so a court short of one opens no game at all."
+            )
+        if game.won_by not in ("A", "B", None):
+            raise RuntimeError(
+                f"played game {index} is won by {game.won_by!r}, and a court has "
+                f"two sides. `None` is the game nobody agreed a score for."
+            )
+        if game.played_days_ago < PLAYED_AT_LEAST_DAYS_AGO:
+            raise RuntimeError(
+                f"played game {index} was played {game.played_days_ago} day(s) "
+                f"ago and a seeded result needs {PLAYED_AT_LEAST_DAYS_AGO}: a "
+                f"score is confirmed by silence when its window closes, and a "
+                f"game younger than that is still awaiting an answer."
+            )
+
+        seen = set(game.players)
+        if len(seen) != len(game.players):
+            raise RuntimeError(f"played game {index} seats somebody twice")
+        for handle in game.players:
+            member = known.get(handle)
+            if member is None:
+                raise RuntimeError(
+                    f"played game {index} seats '{handle}', who is not in the "
+                    f"cohort. A row here names its players by handle, so a "
+                    f"member who leaves takes this refusal with them: the game "
+                    f"has to go too, and saying so here is what stops it "
+                    f"becoming a run that fails naming a pool."
+                )
+            if sport not in member.sports:
+                raise RuntimeError(
+                    f"'{handle}' plays {sport.value} in played game {index} and "
+                    f"holds no {sport.value} rating. "
+                    f"`SECOND_SPORT_BECAUSE_THEY_PLAYED` is what feeds the "
+                    f"declaration back into the draw."
+                )
+            if member.committed_days_ago <= game.played_days_ago:
+                raise RuntimeError(
+                    f"played game {index} was played "
+                    f"{game.played_days_ago} day(s) ago and '{handle}' committed "
+                    f"their profile {member.committed_days_ago} day(s) ago — a "
+                    f"game before the player existed. The commit dates are "
+                    f"drawn and `played_days_ago` is declared, so this is the "
+                    f"number to move."
+                )
+            if game.played_days_ago in days.setdefault(handle, set()):
+                raise RuntimeError(
+                    f"'{handle}' plays twice on the same day, and *Last 5* is "
+                    f"ordered on the instant each game was played — two games "
+                    f"at one instant leave the run of form to a tie-break on a "
+                    f"uuid, which is a row of squares that reshuffles between "
+                    f"databases."
+                )
+            days[handle].add(game.played_days_ago)
+
+        for pair in game.pairs:
+            if pair in pairs:
+                raise RuntimeError(
+                    f"{sorted(pair)} share a court in played games "
+                    f"{pairs[pair]} and {index}. **One open challenge per pair, "
+                    f"across sports**, and nothing on this platform ends a "
+                    f"challenge every seat accepted — so a pair that has played "
+                    f"can never be sent a second court, and the second send "
+                    f"would be refused."
+                )
+            pairs[pair] = index
+
+        organiser = known[game.organiser]
+        if _is_lopsided(_position_in(game.organiser)):
+            raise RuntimeError(
+                f"'{game.organiser}' organises played game {index} and is the "
+                f"ring's lopsided member. The two rules disagree about one "
+                f"number: lopsidedness *is* the slider's floor — a week wide "
+                f"open and a radius that reaches nobody — and an organiser's "
+                f"radius has to reach everybody they play. Whichever wins, one "
+                f"of the two witnesses is silently gone."
+            )
+        for handle in game.players[1:]:
+            reach = _distance_between(organiser.ring, known[handle].ring)
+            if reach > organiser.radius_km:
+                raise RuntimeError(
+                    f"'{game.organiser}' organises played game {index} and "
+                    f"'{handle}' is {reach:.2f} km away, outside the "
+                    f"{organiser.radius_km} km they set. A send cites the "
+                    f"search that showed the person, so an invitee the "
+                    f"organiser's own radius excludes is a court that cannot be "
+                    f"built at all. The radius is drawn off the handle."
+                )
+
+
+def _refuse_a_photograph_set_with_a_state_missing(cohort: "Cohort") -> None:
+    """All three of ``docs/adr/0138``'s answers, and every carrier a real member.
+
+    Two of the three are the **same silence** on a card — flagged, and never
+    looked at — so a set missing one of them is a set where the two cannot be
+    told apart at all, which is the whole reason this fixture holds photographs.
+    """
+
+    handles = {member.handle for member in cohort.members}
+    unknown = sorted(set(PHOTOGRAPH_VERDICTS) - handles)
+    if unknown:
+        raise RuntimeError(
+            f"{unknown} are declared to hold a photograph and are not in the "
+            f"cohort."
+        )
+    declared = set(PHOTOGRAPH_VERDICTS.values())
+    missing = sorted(one.value for one in DeclaredVerdict if one not in declared)
+    if missing:
+        raise RuntimeError(
+            f"no seeded photograph reaches {missing}. A shield's absence has two "
+            f"causes and they are indistinguishable on the wire, so a fixture "
+            f"holding one of them proves nothing about the other."
+        )
+
+
+def _distance_between(one: str, other: str) -> float:
+    """How far apart two rings are. **Both sit on the centre's own meridian**,
+    so this is the whole of it — and it is measured with the module's own
+    distance function rather than subtracted, because two radii from a centre
+    are not a distance between two points in general."""
+
+    rings = {ring.code: ring for ring in RINGS}
+    return distance_km(
+        Point(latitude=rings[one].latitude, longitude=CENTRE_LONGITUDE),
+        Point(latitude=rings[other].latitude, longitude=CENTRE_LONGITUDE),
+    )
 
 
 #: The one cohort this system seeds, drawn at import so that the generator, the
