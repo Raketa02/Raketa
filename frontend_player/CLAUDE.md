@@ -44,8 +44,56 @@ answers either way, and the **profile commit**: every answer in one idempotent
 `POST /players/me/profile` — plus the **Profile surface**, the one read of the week, the
 radius and the per-sport declaration that Play's search screen is drawn from, with an unkeyed
 `PUT` behind each of the three). `play` has its four screens and the sheet over them, below;
-and `challenges` is the send: `POST /challenges`, `SH.propose`, and the two re-reads a refusal
-is followed by, below.
+`challenges` is the send: `POST /challenges`, `SH.propose`, and the two re-reads a refusal
+is followed by, below; and `games` is the result conversation — the list on Now, the screen a
+row pushes, and the entering, correcting, agreeing and disagreeing that close the loop, below.
+
+**The result conversation is one screen and seven states, and the state is derived**
+([#314](https://github.com/Raketa02/Raketa/issues/314),
+[ADR-0137](../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). **A result is the
+record that a game happened** — no booking, no calendar, no date field anywhere — so the entry
+_is_ the fact, and everything after it is an argument bounded to two rounds. `domain/conversation.ts`
+folds the standing, the standing proposal and **which seat is yours** into what to draw, and
+nothing outside that file reads a `GameStanding`: a **correction** and a **counter** are the same
+`POST` and completely different news, and #314's own worry is that _"a player will spend an
+attempt fixing a typo."_ Two of the seven are worth knowing. **Silence confirming is drawn before
+it happens**: the standing line says it **on the row as well as on the screen**, so a deadline is
+never something a player reaches by tapping, and the screen adds
+`prototype/result-confirmation`'s clock block over it — a figure at arm's length above one
+sentence. And **`both-stand` offers nothing**: the aggregate lets either side accept the other's
+score there, and the wire returns **neither** score — `standing_proposal` is _"when exactly one
+is"_ — so the only way to draw the control is to ask somebody to agree with a score the screen
+cannot show them. It states the ending instead and promises no control, and the missing half is a
+**contract gap** rather than a rule this client invented. `both-stand` is read off the standing
+and never off the absent proposal, which is the schema's own instruction.
+
+**The instrument is the prototype's, and so is most of the copy.** #314 says the score-entry
+interaction is solved work, and it is: a **pad** over a grid of the sport's own legs, both sides
+named above the columns they own, because _"`6-4 3-6 6-2` is not a score until you know whose 6 it
+is"_ and a stepper is six taps to reach 6. The **`+` key** beside it is what keeps the range
+honest — a padel third set is often a ten-point tie-break and a badminton game goes to thirty — so
+_we know the shape, not the rulebook_ is built into the instrument and not only into the
+validator. Variant C's layout comes with it: the score being answered stays on screen **beside**
+the one being typed, and an unscored evening ends on a fact list rather than an apology. Two
+things are rewritten because the model moved. **There is no absolute time anywhere** — the
+prototype quoted one beside every duration, and this platform has no calendar to print one
+against — so every span is measured from `read_at`, the instant the standing beside it was folded.
+And **nobody is named**: `SeatingSchema` is a side and a player id, so the words are about _your
+side_ and _the other side_, and inventing a handle is what
+[ADR-0107](../docs/adr/0107-a-handle-is-the-whole-handle.md) forbids in one sentence. The
+prototype's `✓` went the way the on-court mark's did — **Archivo ships no U+2713** — and the
+winner's row carries the word instead.
+
+**The list is a section on Now, composed the way You composes the play intents.** The tab keeps
+its own line and owns nothing drawn under it; the section renders **nothing at all** when there
+are no games, because _Now never says nothing is happening_ and a challenge whose line-up has not
+completed is not a game yet. A game is genuinely **pushed** over that list, which made it the
+first screen outside Play to take the shell's push transition and the first to need `shellTabs`
+to say which tab a segment is _inside_ — Now's root is `/`, so a screen over it cannot share its
+segment the way the builder shares Play's. Neither write is optimistic and neither overrides
+`networkMode`: a standing is folded from the record and the clock, so the only client that can be
+right about what a game becomes is one that asks, and the app's own test — _does this act carry a
+deadline the player chose?_ — answers no for both, where the challenge send answers yes.
 
 **The shell is five tabs over one stack, and it remembers nothing.** `TabShell` mounts the
 `TabBar` once, below the navigator, and reads the active column off the current path —

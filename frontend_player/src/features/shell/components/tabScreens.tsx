@@ -12,14 +12,28 @@
  */
 
 import { AccountPanel } from '@/features/auth/types';
+import { GamesSection } from '@/features/games/types';
 import { PlayIntentsSection } from '@/features/player_profile/types';
 
 import { PlaceholderScreen } from './PlaceholderScreen';
 import { PLACEHOLDER_COPY } from './shellCopy';
 
-/** The landing, after onboarding and after a send. Never says nothing is happening. */
+/**
+ * The landing, after onboarding and after a send. Never says nothing is happening.
+ *
+ * **The games list is the first thing built on it** ([#314](https://github.com/Raketa02/Raketa/issues/314)),
+ * composed under the tab's own line the way `PlayIntentsSection` is on You: a game is *what is
+ * happening today and next*, and the result conversation had no door without one. The line above
+ * it stays exactly as it is — what Now becomes is still mostly owed — and the section draws
+ * nothing at all when there are no games, because asserting emptiness is the one thing this tab
+ * has refused to do since it was built.
+ */
 export function NowScreen() {
-  return <PlaceholderScreen copy={PLACEHOLDER_COPY.now} />;
+  return (
+    <PlaceholderScreen copy={PLACEHOLDER_COPY.now}>
+      <GamesSection />
+    </PlaceholderScreen>
+  );
 }
 
 export function AroundScreen() {

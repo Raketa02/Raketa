@@ -139,7 +139,8 @@ const fontWeightProperty = {
 const SYNTAX_BANS = [literalHexColour, literalFunctionalColour, fontWeightProperty];
 
 /**
- * Every `Pressable` under `features/play/` names itself, or says it is hidden.
+ * Every `Pressable` under `features/play/` and `features/games/` names itself, or says it is
+ * hidden.
  *
  * `the-words.md` §20.12 books **two** gates over this contract, and this is the half a type
  * cannot give. Label coverage is already a compile error — §1's copy tables are `Record`s
@@ -182,7 +183,7 @@ const pressableNeedsAName = {
     `${unnamedPressable}:not(:has(> JSXAttribute[name.name='importantForAccessibility']))`,
   ].join(', '),
   message:
-    'Every Pressable in features/play/ carries an accessibilityLabel, or hides itself explicitly with accessibilityElementsHidden AND importantForAccessibility — one of the two hides it on one platform only. The sentence is never written here: compose it from the-words.md §20 through features/play/components/accessibilityPresentation.ts. See the-words.md §20.12.',
+    "Every Pressable in features/play/ and features/games/ carries an accessibilityLabel, or hides itself explicitly with accessibilityElementsHidden AND importantForAccessibility — one of the two hides it on one platform only. The sentence is never written here: compose it from the-words.md §20 through that feature's own accessibility presentation. See the-words.md §20.12.",
 };
 
 /** Every ban that applies to a file under `src/shared/`, which is the strictest set. */
@@ -356,18 +357,24 @@ export default [
     languageOptions: { globals: { jest: 'readonly' } },
   },
 
-  // --- the Play tab: nothing tappable ships without a name --------------------
+  // --- Play and games: nothing tappable ships without a name ------------------
   {
-    // Scoped to this feature, exactly as §20.12 scopes it. It is a rule about a contract
-    // this feature has and the rest of the app does not yet: ninety sentences, five screens
-    // and four sheets, all of them assembled from codes. Widening it to `src/**` would make
-    // it a design-system rule, which is Part 13's job and a different amendment.
+    // Scoped to the features that hold the contract, exactly as §20.12 scopes it, rather than
+    // to `src/**` — which would make it a design-system rule, which is Part 13's job and a
+    // different amendment. `features/games/` joins Play because it is the second feature built
+    // words-first: every sentence it says comes off a copy deck, its labels are composed the
+    // same way, and its score grid is the app's second surface made of raw `Pressable`s — the
+    // one shape the compiler cannot see a missing name on.
+    //
+    // **Widening this list is not the answer to a new tappable primitive**; a required
+    // `accessibilityLabel` prop on that primitive is. What belongs here is a feature that draws
+    // raw `Pressable`s and owns a copy deck to name them from.
     //
     // `no-restricted-syntax` is re-declared rather than added to — flat config REPLACES a
     // rule when a later block names it — so the three baseline bans are spread back in. A
     // block that listed only the new one would switch off the colour and fontWeight rules
-    // for the whole of Play, silently.
-    files: ['src/features/play/**'],
+    // for both features, silently.
+    files: ['src/features/play/**', 'src/features/games/**'],
     rules: { 'no-restricted-syntax': ['error', ...SYNTAX_BANS, pressableNeedsAName] },
   },
 

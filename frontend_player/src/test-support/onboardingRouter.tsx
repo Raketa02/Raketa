@@ -20,6 +20,7 @@ import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import AroundRoute from '@/app/(app)/(tabs)/around';
 import ChatsRoute from '@/app/(app)/(tabs)/chats';
+import GameRoute from '@/app/(app)/(tabs)/games/[gameId]';
 import NowRoute from '@/app/(app)/(tabs)/index';
 import BuilderRoute from '@/app/(app)/(tabs)/play/builder';
 import DeckRoute from '@/app/(app)/(tabs)/play/deck';
@@ -78,6 +79,9 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/play/deck': DeckRoute,
   '(app)/(tabs)/play/builder': BuilderRoute,
   '(app)/(tabs)/play/pool': PoolRoute,
+  // A game is pushed over the Now tab and is a `games/` route rather than a `now/` one,
+  // because the Now tab's root is the shell's own root and has no segment to nest under.
+  '(app)/(tabs)/games/[gameId]': GameRoute,
   '(app)/(tabs)/chats': ChatsRoute,
   '(app)/(tabs)/you': YouRoute,
   '(auth)/_layout': AuthLayout,
@@ -309,6 +313,28 @@ export function stubInterest(
   transport.on('GET', '/api/v1/interest', () => json(served));
 }
 
+export const GAMES_PATH = '/api/v1/games';
+
+/**
+ * Your games, as `GET /games` answers — **arranged, played and finished in one list.**
+ *
+ * `read_at` is the instant every standing and deadline in it was folded against, so a suite that
+ * wants a countdown to say a particular thing sets it here rather than mocking a clock: the
+ * screens measure from this field and never from the device.
+ *
+ * Defaulted to nothing, because every launch now draws the Now tab and almost no suite is about
+ * what is on it — an empty list renders no section at all, which is what the tab shipped with.
+ */
+export function stubGames(
+  transport: Transport,
+  games: readonly Wire['GameSchema'][] = [],
+  readAt = '2026-09-05T09:00:00Z',
+) {
+  transport.on('GET', GAMES_PATH, () =>
+    json<Wire['GameListResponse']>({ read_at: readAt, games: [...games] }),
+  );
+}
+
 export interface GateStub {
   readonly ratings?: readonly Wire['RatingResponse'][];
   /**
@@ -354,6 +380,12 @@ export const GATE_USER: Wire['UserResponse'] = {
  *
  * The unfinished-run read is **one** request covering every sport. An empty list is the
  * answer for a player with nothing outstanding — a 200, not a 204 and not a failure.
+ *
+ * **`stubGames` is in here and it is not a gate read.** The gate's fourth destination is the
+ * shell's root, the shell's root is the Now tab, and the Now tab draws a games list
+ * ([#314](https://github.com/Raketa02/Raketa/issues/314)) — so every suite that lands in the app
+ * makes that request whether or not it is about one. Defaulted to nothing, which draws no
+ * section at all; a suite with games calls `stubGames` after this to replace it.
  */
 export function stubGate(
   transport: Transport,
@@ -368,6 +400,7 @@ export function stubGate(
   );
 
   stubRunsInProgress(transport, runs);
+  stubGames(transport);
 }
 
 /** Replace the gate's unfinished-run answer — what the server says *now*. */

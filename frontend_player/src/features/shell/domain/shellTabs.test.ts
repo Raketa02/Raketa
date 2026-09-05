@@ -37,6 +37,16 @@ describe('which tab a route is inside', () => {
     expect(tabForPathname('/play/pickpool')).toBe('play');
   });
 
+  /**
+   * The Now tab's root is `/`, so a screen pushed over it cannot share its segment the way the
+   * builder shares Play's — it is a sibling at the top level. Falling through to the default
+   * would give the right answer for the wrong reason, and the day a second tab grows depth the
+   * two would be indistinguishable.
+   */
+  it('keeps Now lit on a game, which is inside it without being under it', () => {
+    expect(tabForPathname('/games/8f14e45f-ceea-467a-9dd1-4bd9c39d4a58')).toBe('now');
+  });
+
   it('answers the root for a path the shell does not own', () => {
     // Nothing outside `(tabs)` draws a bar at all, so this is the answer to a question
     // that is never asked rather than a claim that /sign-in is the Now tab.

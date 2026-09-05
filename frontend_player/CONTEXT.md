@@ -516,6 +516,44 @@ listed here because it is a Play surface rather than a profile one.
   _Avoid_: "unread", "inbox" and "badge" — there is no inbox and the bar carries no badge;
   counting the outgoing list, which is this app answering a question the response answers.
 
+### The result conversation
+
+Five client-only concepts, all of them in `features/games/`. The domain terms — Game, Result,
+Score, Proposal, Correction, Counter, Acceptance, Standing — are the **root glossary's** and are
+not restated here; what follows is only what this client had to invent to draw them.
+
+- **Result conversation** — **the seven screen states** a game can be in for the player reading
+  it, folded in `domain/conversation.ts` from the standing, the standing proposal and which seat
+  is theirs: awaiting an entry · never played · our score stands · their score stands · both
+  stand · confirmed · unscored, plus _not yours_ for a link that has gone stale. It is what
+  decides whether a screen offers a **correction** or a **counter** — the same request and
+  completely different news — so nothing outside that file reads a `GameStanding` directly.
+  _Avoid_: "the result state" (there are two clocks and neither is a state machine), and naming
+  a screen after the act, since one route takes three.
+- **The score draft** — the grid as it is being typed: one entry per row it draws, each cell
+  holding what somebody put there as characters. Characters rather than numbers because `''` and
+  `'0'` are different facts — losing a set to love is a result and an unfilled cell is not — and
+  **absolute**, `a` and `b`, exactly as the wire is. _Avoid_: holding it from the reader's point
+  of view, which is one flip away from publishing a loss as a win.
+- **The pad** — the entry instrument, brought across from `prototype/result-confirmation`
+  unchanged: **the sport's own values**, `0…padTo`, plus a **`+` key** and a rub-out. A pad and
+  not a stepper and not the system keyboard, because a score is typed standing on a court,
+  one-handed. The `+` key is what makes the range a statement about the common format rather
+  than a ruling — a padel third set is often a ten-point tie-break and a badminton game goes to
+  thirty — so it is the sentence _we know the shape, not the rulebook_ built into the instrument
+  and not only into the validator. _Avoid_: "the keyboard" (the system one is what this exists
+  instead of) and treating `padTo` as a maximum.
+- **Side labels** — _You / Them_ in singles, _Your side / Their side_ in doubles. **The games
+  contract carries a side and a player id per seat and no handle at all**, so every sentence in
+  the feature is about sides and none of them names anybody. _Avoid_: inventing a name, which
+  [ADR-0107](../docs/adr/0107-a-handle-is-the-whole-handle.md) forbids in one sentence.
+- **The read instant** — `read_at`, the moment every standing and deadline in the list was
+  folded against. **Every duration on these screens is measured from it and never from the
+  device clock**, so a countdown cannot drift out of agreement with the word printed beside it.
+  There is no date and no clock time anywhere in the feature: this platform has no calendar to
+  print one against. _Avoid_: "now" — the phone's now is exactly the value that must not be
+  used.
+
 ### Data and errors
 
 - **Query key factory** — the per-feature object in `hooks/` defining every key, with

@@ -7,8 +7,8 @@
 # `the-words.md` §20.12 books two gates over the accessibility contract, and this
 # is the one a type cannot give:
 #
-#   every Pressable under src/features/play/ carries an accessibilityLabel,
-#   or hides itself explicitly
+#   every Pressable under src/features/play/ and src/features/games/ carries an
+#   accessibilityLabel, or hides itself explicitly
 #
 # Label *coverage* is already a compile error — the copy tables are Records keyed
 # by the generated unions, so a code with no words does not build. But the
@@ -88,6 +88,7 @@ expect_allowed() { # <name> <path> <source>
 }
 
 PLAY='src/features/play/components/Seat.tsx'
+GAMES='src/features/games/components/ScoreEntry.tsx'
 PLAY_SCREEN='src/features/play/hooks/useSeat.tsx'
 ELSEWHERE='src/features/onboarding/components/Step.tsx'
 PRIMITIVE='src/shared/ui/Thing.tsx'
@@ -153,6 +154,12 @@ expect_blocked "a Pressable hidden on iOS alone is blocked in $PLAY" "$PLAY" \
   "$HALF_HIDDEN_IOS" 'one platform only'
 expect_blocked "a Pressable hidden on Android alone is blocked in $PLAY" "$PLAY" \
   "$HALF_HIDDEN_ANDROID" 'one platform only'
+
+# The games feature joined the rule with the result screens: its score grid is the app's
+# second surface made of raw Pressables, and a widened selector that fired nowhere new
+# would be indistinguishable from one that had not been widened at all.
+expect_blocked "an unnamed Pressable is blocked in $GAMES" "$GAMES" "$BARE" 'accessibilityLabel'
+expect_allowed "a named Pressable is allowed in $GAMES" "$GAMES" "$NAMED"
 
 echo
 echo "and it is scoped to Play, because Part 13 owns the general rule"

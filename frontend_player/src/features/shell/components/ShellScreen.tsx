@@ -40,19 +40,31 @@ export interface ShellScreenProps {
   readonly eyebrow?: string;
   /** Pinned below the scroller and above the tab bar. Absent when there is nothing to press. */
   readonly action?: ReactNode;
+  /**
+   * The way back, for a screen that has one — **forwarded, not designed.**
+   *
+   * The module note below has said since this component was written that *"the day a Play
+   * screen has a way back of its own it is a prop forwarded, not a control designed"*, and the
+   * first screen to have one is not a Play screen: a game pushed over the Now tab is genuinely
+   * pushed, so what is behind it is a place the player came from rather than whatever the
+   * router happened to be holding. Absent everywhere else, which is what keeps 10.3's chevron
+   * opt-in.
+   */
+  readonly onBack?: () => void;
   readonly children: ReactNode;
 }
 
 /**
- * No back control here, and none passed through: every screen the shell holds today is one a
- * tab press arrives at, and 10.3 makes the chevron opt-in precisely so a screen with nothing
- * behind it does not draw one. `ScreenHeader` already takes `onBack`, so the day a Play screen
- * has a way back of its own it is a prop forwarded, not a control designed.
+ * The back control is **opt-in and forwarded**, never drawn by default: every tab root is a
+ * screen a tab press arrives at, and 10.3 makes the chevron opt-in precisely so a screen with
+ * nothing behind it does not draw one. `ScreenHeader` already took `onBack`, so the first screen
+ * with a way back of its own — a game pushed over the Now tab — is a prop passed through rather
+ * than a control designed.
  */
-export function ShellScreen({ title, eyebrow, action, children }: ShellScreenProps) {
+export function ShellScreen({ title, eyebrow, action, onBack, children }: ShellScreenProps) {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <ScreenHeader title={title} eyebrow={eyebrow} />
+      <ScreenHeader title={title} eyebrow={eyebrow} onBack={onBack} />
 
       <ScrollView contentContainerStyle={s.content}>{children}</ScrollView>
 

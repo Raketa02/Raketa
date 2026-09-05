@@ -1,0 +1,457 @@
+/**
+ * **Every sentence these screens say.** Nothing the games contract sends is prose.
+ *
+ * A `GameStanding`, a `GameKind` and an `Outcome` are codes and the words for them are the
+ * client's ([ADR-0022](../../../../../docs/adr/0022-wire-codes-never-sentences.md)), so this
+ * file is the feature's copy deck and the components are assembled from it — the same shape
+ * `features/play/components/*Presentation.ts` takes, and for the same reason:
+ * *code → message, never message → message*, and **a sentence is never a template inlined in a
+ * component**.
+ *
+ * ## Four sentences carry unusual weight, and the ticket names all four
+ *
+ * - **Silence confirming has to be visible before it happens**, or silence is a trap rather
+ *   than a default. So the standing line of a game with a score on the table *always* names the
+ *   duration and what happens at the end of it, on the row as well as on the screen — it is not
+ *   a footnote a player reaches by tapping.
+ * - **An unscored game reads as an evening, not an error.** Nothing about it is a failure and
+ *   nobody is at fault: it says these people played, it is in the count of how much somebody has
+ *   played, and it moves nobody's Level. There is no red, no *could not*, and no *unfortunately*.
+ * - **A correction is not a second proposal**, and the screen says which one it is offering
+ *   before the tap. *"A player will spend an attempt fixing a typo"* is the failure this whole
+ *   deck exists to prevent.
+ * - **Nobody is penalised for any of it** — ADR-0049, carried whole by
+ *   [ADR-0137](../../../../../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md) §5.
+ *   Not the silent loser, not the four who all went home, not the
+ *   side whose counter went unaccepted. Every sentence here that could be read as a reproach
+ *   says so out loud.
+ *
+ * ## Nobody on this court is named, and no sentence here pretends otherwise
+ *
+ * The games contract carries a side and a player id per seat and no handle at all, so the words
+ * are about **sides**. That is a stated gap rather than a style: inventing a name is what
+ * [ADR-0107](../../../../../docs/adr/0107-a-handle-is-the-whole-handle.md) forbids in one
+ * sentence, and there is nothing here to shorten because there is nothing here at all.
+ *
+ * ## The words are the prototype's where the prototype had them
+ *
+ * `prototype/result-confirmation`'s variant C is this screen, and its copy is prior art rather
+ * than a first draft: **propose a modification** is the product's word for a counter and *dispute*
+ * is not, the entry's send is *send this score*, and a correction is *change what I entered* —
+ * which says, in the control's own name, the thing the ticket says a player must not have to
+ * learn the hard way. What is rewritten is only what the model moved: there are no absolute
+ * times here because this platform has no calendar, and nobody is named because the games
+ * contract carries no handle.
+ *
+ * ## A score is never printed as a string
+ *
+ * `6-4 3-6 6-2` is not a score until you know whose 6 it is, and in a doubles game with four
+ * people and two sides an unlabelled one is unusable. So every score on these screens is drawn
+ * as a **table with both sides named**, and what this file writes is the spoken form of it —
+ * which is the same fact in the register a listener gets.
+ */
+
+import { counted } from '@/shared/formatting/counted';
+import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
+import type { Sport } from '@/shared/vocabulary/sport';
+
+import type { ResultConversation } from '../domain/conversation';
+import type { Game } from '../domain/game';
+import type { ScoreKey, ScoreProblem } from '../domain/score';
+import { scoreColumn, type GameKind, type Outcome } from '../domain/vocabulary';
+
+import type { ScoreView } from './gameAccessibility';
+
+import { durationLeft, durationSince } from './durations';
+
+// ---------------------------------------------------------------------------
+// The list
+// ---------------------------------------------------------------------------
+
+/** The heading over the games on the Now tab. */
+export const GAMES_HEADING = 'Your games';
+
+/**
+ * The eyebrow on a row and at the head of the screen: the sport, and how long ago it was
+ * arranged.
+ *
+ * **A duration and never a date**, because this platform has no calendar to print one against —
+ * the grid is *an ordinary week*, a `Window` is a label on a search rather than a proposed time,
+ * and there is no date picker anywhere in this app. It is also the only thing that tells two
+ * padel games apart in a list where nobody is named.
+ */
+export function gameEyebrow(sportName: string, game: Game): string {
+  return `${sportName} · arranged ${durationSince(game.plannedAt, game.readAt)} ago`;
+}
+
+// ---------------------------------------------------------------------------
+// What a game is, in one line
+// ---------------------------------------------------------------------------
+
+/**
+ * The one sentence that says what this game is asking of you — **on the row and on the screen,
+ * and it is the same sentence in both places.**
+ *
+ * A row that summarised and a screen that explained would be two claims about one standing, and
+ * the first person to notice would be somebody who read the row, tapped it, and found a
+ * different deadline.
+ */
+export const NOT_YOURS_LINE = 'No game of yours has this address.';
+
+export function standingLine(conversation: ResultConversation, readAt: string): string {
+  switch (conversation.kind) {
+    case 'not-yours':
+      return NOT_YOURS_LINE;
+    case 'unreadable':
+      return OUT_OF_DATE_GAP;
+    case 'awaiting-entry':
+      return conversation.entryClosesAt === undefined
+        ? 'Nobody has said this one happened yet.'
+        : `Nobody has said this one happened yet — ${durationLeft(conversation.entryClosesAt, readAt)} left to say you played.`;
+    case 'never-played':
+      return 'Nobody said this one happened before the window closed, so nothing was recorded.';
+    case 'ours-stands':
+      return `Your side's score is on the table. If nobody answers within ${durationLeft(conversation.proposal.answerBy, readAt)}, it stands.`;
+    case 'theirs-stands':
+      return `The other side put a score up. If you say nothing for ${durationLeft(conversation.proposal.answerBy, readAt)}, it stands.`;
+    case 'both-stand':
+      return "Both sides wrote a score down and they don't match.";
+    case 'confirmed':
+      return 'Agreed.';
+    case 'unscored':
+      return 'Nobody agreed a score.';
+  }
+}
+
+/**
+ * The screen's own title — **variant C's, unchanged**, plus the three states the prototype's
+ * five screens did not have to name.
+ */
+export function resultTitle(conversation: ResultConversation): string {
+  switch (conversation.kind) {
+    case 'not-yours':
+      return 'Not your game';
+    case 'unreadable':
+      return 'This game';
+    case 'awaiting-entry':
+      return 'The score';
+    case 'never-played':
+      return 'It never happened';
+    case 'ours-stands':
+      return 'Sent — waiting';
+    case 'theirs-stands':
+      return 'Is that right?';
+    case 'both-stand':
+      return 'Two scores';
+    case 'confirmed':
+      return 'The result';
+    case 'unscored':
+      return 'No result';
+  }
+}
+
+/**
+ * **The clock, as the prototype drew it**: a figure big enough to read at arm's length, and one
+ * sentence saying what happens when it runs out.
+ *
+ * Variant C's own arrangement, and the whole of *silence confirming has to be visible before it
+ * happens* — the two sides read the same fact differently on purpose, which is what the
+ * prototype recorded as the main thing to react to: *"this stands unless you act"* to one side,
+ * *"this stands unless they act"* to the other.
+ *
+ * The prototype quoted an absolute time beside the duration — *"a countdown alone never says
+ * WHEN"* — and that clause is **deleted rather than translated**: there is no calendar anywhere
+ * in this product and no date picker in this app, so an absolute time would be the first one and
+ * it would be this screen inventing it.
+ */
+export function clockLine(
+  conversation: ResultConversation,
+  readAt: string,
+): ClockBlock | undefined {
+  if (conversation.kind === 'ours-stands') {
+    return {
+      figure: durationLeft(conversation.proposal.answerBy, readAt),
+      line: 'left for the other side to answer. If they say nothing, this becomes the result.',
+    };
+  }
+  if (conversation.kind === 'theirs-stands') {
+    return {
+      figure: durationLeft(conversation.proposal.answerBy, readAt),
+      line: 'until this becomes the result. Nobody has to do anything — silence confirms it.',
+    };
+  }
+  if (conversation.kind === 'awaiting-entry' && conversation.entryClosesAt !== undefined) {
+    return {
+      figure: durationLeft(conversation.entryClosesAt, readAt),
+      line: 'left to say this game happened. After that it is recorded as one that never did.',
+    };
+  }
+  return undefined;
+}
+
+/** A figure to read at arm's length, and the sentence under it. */
+export interface ClockBlock {
+  readonly figure: string;
+  readonly line: string;
+}
+
+/**
+ * What an unscored game **still is** — variant C's fact list, with the two lines the model
+ * changed.
+ *
+ * The prototype named the other side (*"You have now played with Kuba & Ada"*) and stated the
+ * kind as a fact (*"It was a counted match, not a friendly"*); this app names nobody, and the
+ * kind is `worthLine`'s and may be absent. What is left is the three that are true of every
+ * unscored game and read as an account rather than as an apology.
+ */
+export const UNSCORED_FACTS: readonly string[] = [
+  'It is in your history, and in how much you have played',
+  'You have now played with the people who were on this court',
+  'It moved nobody’s Level, and nobody lost anything',
+];
+
+/**
+ * The paragraph under the title — the part of the rule a player has to know **before** they act.
+ *
+ * `undefined` where the standing line has already said the whole of it: a second sentence
+ * restating the first is what teaches somebody to stop reading the first.
+ */
+export function resultBody(conversation: ResultConversation): string | undefined {
+  switch (conversation.kind) {
+    case 'awaiting-entry':
+      // ADR-0137 §2 for a player: there is no booking behind any of this, so the entry is not
+      // paperwork about a game the platform already knows about — it *is* the record.
+      return 'Putting a score in is what records that this game happened. There is nothing else behind it — no booking, no calendar.';
+    case 'never-played':
+      return 'Nobody is marked for that. Not you, not any of the others.';
+    case 'ours-stands':
+      return 'You can change what you entered until they answer, and it does not use your side’s one turn up. If they put something else up instead, only an acceptance settles it.';
+    case 'theirs-stands':
+      return 'One tap from either of you settles it now. A modification always carries a score of its own — there is no way to just say no — and agreeing is never how you avoid a penalty, because there is none.';
+    case 'both-stand':
+      // The offer that is deliberately not here. The wire returns neither score in this state,
+      // so the sentence states the ending rather than promising a control the screen cannot draw
+      // — see `domain/conversation.ts`.
+      return "Raketa doesn't decide between them. Nobody is marked for a disagreement, on either side.";
+    case 'unscored':
+      // Variant C's own lead, and the register the ticket asks for: *an evening, not evidence*
+      // — an account of what it still is, never an apology for what it is not.
+      return 'Nobody wrote a score down, so this one counted as an evening. Nobody is marked for it.';
+    case 'not-yours':
+    case 'unreadable':
+    case 'confirmed':
+      return undefined;
+  }
+}
+
+/**
+ * What this evening is worth — **stamped when it was arranged and never derived at the end.**
+ *
+ * **It says what is counted and not what that will one day move.** *An agreed score moves both
+ * sides' Levels* is the thing everybody assumes this sentence says, and it is a promise this
+ * build cannot keep: ADR-0137's own Consequences record that *"the rating context has nothing to
+ * subscribe to"*, and reading confirmed results forward is [#304](https://github.com/Raketa02/Raketa/issues/304)'s
+ * unbuilt work. So the counted line states the fact — it is evidence and it is on your record —
+ * and the friendly line keeps its **negative**, which is true whether or not anything reads it.
+ *
+ * `undefined` when the kind is a code this build cannot read: the clause is dropped and every
+ * other sentence on the screen still stands, which is `the-words.md` §3's split applied to a
+ * fact that keys no total.
+ */
+export function worthLine(kind: GameKind | undefined): string | undefined {
+  if (kind === undefined) return undefined;
+  return kind === 'COUNTED'
+    ? 'This one counts, so an agreed score becomes part of your record.'
+    : 'This one is a friendly. The score is for the record, and it is not evidence about how anybody plays.';
+}
+
+/** What a confirmed result said about you. `undefined` where the wire gave no outcome. */
+export function outcomeLine(outcome: Outcome | undefined): string | undefined {
+  if (outcome === undefined) return undefined;
+  return outcome === 'WIN' ? 'You won.' : 'You lost.';
+}
+
+/**
+ * What an acceptance has bought, before the grace has run out.
+ *
+ * The grace is measured from **the score** and not from the tap, so this is a fact about the
+ * proposal rather than about how quickly somebody answered — which is the whole reason a fast
+ * partner cannot close the door on an opponent still reading it.
+ */
+export function acceptedLine(settlesAt: string, readAt: string): string {
+  return `You have agreed. It is final in ${durationLeft(settlesAt, readAt)} — until then anybody who played can still put a different score up.`;
+}
+
+// ---------------------------------------------------------------------------
+// The court, with nobody on it
+// ---------------------------------------------------------------------------
+
+/** Who was on court, as a shape. Nobody is named, because the games contract names nobody. */
+export function courtLine(ours: number, theirs: number): string {
+  return ours + theirs > 2
+    ? 'Doubles — you and your partner against two others.'
+    : 'Singles — you against one other player.';
+}
+
+/** What the two columns of every score on these screens are called. */
+export function sideLabels(ours: number): { readonly ours: string; readonly theirs: string } {
+  return ours > 1 ? { ours: 'Your side', theirs: 'Their side' } : { ours: 'You', theirs: 'Them' };
+}
+
+// ---------------------------------------------------------------------------
+// The score: its shape, and the words for one
+// ---------------------------------------------------------------------------
+
+/**
+ * What one row of the grid is called, and what the sport is played in. **The prototype's own
+ * table** — a set in tennis and padel, a game in squash and badminton — because a squash player
+ * reading *set 3* is reading about a different sport.
+ */
+const SET_NOUN: Readonly<
+  Record<Sport, { readonly one: string; readonly many: string; readonly note: string }>
+> = {
+  padel: { one: 'Set', many: 'sets', note: 'Sets and games' },
+  tennis: { one: 'Set', many: 'sets', note: 'Sets and games' },
+  squash: { one: 'Game', many: 'games', note: 'Games and points' },
+  badminton: { one: 'Game', many: 'games', note: 'Games and points' },
+};
+
+/** `Set 2`, `Game 4` — the label down the side of the grid, and the head of a refusal. */
+export function setLabel(sport: Sport, index: number): string {
+  return `${SET_NOUN[sport].one} ${index}`;
+}
+
+/**
+ * What the app is and is not checking, said once, under the grid — **the prototype's own line**:
+ * *"{what the sport is played in} · the app knows the shape, not the rulebook."*
+ *
+ * The reason is worth stating to the player: local variation runs from golden points to timed
+ * formats, and an app that ruled on those would eventually call a real evening illegal.
+ */
+export function shapeNote(sport: Sport): string {
+  return `${SET_NOUN[sport].note} · we know the shape, not the rulebook`;
+}
+
+/** What a key of the pad draws: a value, the ceiling with a `+`, or the rub-out's own word. */
+export function keyFace(key: ScoreKey, padTo: number): string {
+  switch (key.kind) {
+    case 'value':
+      return String(key.value);
+    case 'higher':
+      return `${padTo}+`;
+    case 'rub':
+      return RUB_OUT_LABEL;
+  }
+}
+
+/** The winner's row on a printed score, as a **word** — because Part 13 forbids a mark alone. */
+export const WON_MARK = 'won';
+
+/** Why the grid will not take this draft yet. One function per variant, because they differ. */
+export function scoreProblemLine(problem: ScoreProblem, sport: Sport): string {
+  const noun = SET_NOUN[sport];
+  switch (problem.code) {
+    case 'no-sets':
+      return `Put the first ${noun.one.toLowerCase()} in to continue.`;
+    case 'a-gap':
+      return `${setLabel(sport, problem.set)} is empty — the ${noun.many} go in the order they were played.`;
+    case 'half-a-set':
+      return `${setLabel(sport, problem.set)} has one side missing.`;
+    case 'level-set':
+      return `${setLabel(sport, problem.set)} cannot end level — a ${noun.one.toLowerCase()} that is level has not finished.`;
+    case 'no-winner':
+      return `This score names no winner. Add the deciding ${noun.one.toLowerCase()}.`;
+  }
+}
+
+/**
+ * The one refusal that is about the **other** side's score rather than about this draft.
+ *
+ * A counter is pre-loaded with the score it is answering, because a real disagreement is
+ * usually one digit — and an unchanged one sent back would be a second proposal that agrees
+ * with the first, which leaves the game unscored between two people who agreed. So it is
+ * refused here rather than paid for a day later.
+ */
+export const COUNTER_IS_THEIR_SCORE =
+  'That is the score they put up. Agree with it rather than sending it back — two matching scores nobody accepts still leave the game unscored.';
+
+/** A score in the reader's own order, as words. The drawing names both sides; so does this. */
+export function spokenScore({ score, sport, mine, sides }: ScoreView): string {
+  const column = scoreColumn(mine);
+  return score.sets
+    .map((set, index) => {
+      const ours = column === 'a' ? set.a : set.b;
+      const theirs = column === 'a' ? set.b : set.a;
+      return `${setLabel(sport, index + 1)}, ${sides.ours} ${ours}, ${sides.theirs} ${theirs}`;
+    })
+    .join('. ');
+}
+
+/** `3 sets`, `1 game` — through the app's one pluralisation seam, so no sentence hardcodes an s. */
+export function setsCounted(sport: Sport, sets: number): string {
+  const noun = SET_NOUN[sport];
+  return counted(sets, noun.one.toLowerCase(), noun.many);
+}
+
+// ---------------------------------------------------------------------------
+// The controls
+// ---------------------------------------------------------------------------
+
+/** The entry's send — variant C's *Send this score*, and the only act on an unclaimed game. */
+export const ENTER_LABEL = 'Send this score';
+
+/**
+ * *Change what I entered* — free, and **not** your side's one turn.
+ *
+ * Variant C's own word, and the control's name is where the ticket's *"a player will spend an
+ * attempt fixing a typo"* is actually answered: *change what I entered* cannot be read as a
+ * second turn, where *propose* could.
+ */
+export const CORRECT_LABEL = 'Change what I entered';
+
+/** Agreeing, from across the net. One opponent is the whole of the evidence a score was real. */
+export const ACCEPT_LABEL = 'That’s right';
+
+/**
+ * Disagreeing — which **opens the grid** rather than sending anything.
+ *
+ * **The product's word is *propose a modification*, never *dispute***, which the spec delta this
+ * flow was written in states outright and the prototype drew. There is no bare rejection in this
+ * flow, so this control is the door to a score and the send is the one under it.
+ */
+export const COUNTER_LABEL = 'Propose a modification';
+
+/** Backing out of a grid that was opened over something already on screen. */
+export const CANCEL_LABEL = 'Leave it as it is';
+
+/** The heading over the score a counter is answering, still on the table beside the new one. */
+export const STILL_ON_THE_TABLE = 'THEIRS — STILL ON THE TABLE';
+
+/** The heading over the grid a counter types into, so the two tables are never confused. */
+export const YOURS = 'YOURS';
+
+/** The send under the grid, named for the act the record will read it as. */
+export function submitLabel(act: 'enter' | 'correct' | 'counter'): string {
+  switch (act) {
+    // Variant C sends an entry and a correction under the same word, and the reason survives:
+    // the grid is the same instrument doing the same thing, and only the counter is a different
+    // act. Repeating `CORRECT_LABEL` here would put the button that OPENED the grid and the
+    // button that sends it under one name, which is how a screen starts referring to something
+    // that is not on it.
+    case 'enter':
+    case 'correct':
+      return ENTER_LABEL;
+    case 'counter':
+      return 'Propose this instead';
+  }
+}
+
+/** The busy label under every one of them — the same act, still happening. */
+export const SENDING_LABEL = 'Sending…';
+
+/**
+ * The rub-out key. **A word rather than ⌫**, for the reason the on-court mark is a word rather
+ * than a tick: Archivo ships no U+2713 and no U+232B either, and a glyph a family does not carry
+ * is a box on somebody's phone.
+ */
+export const RUB_OUT_LABEL = 'Rub out';

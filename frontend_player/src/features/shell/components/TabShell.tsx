@@ -59,6 +59,11 @@ export function TabShell() {
             — there is not one yet — must take the shell's own `none` back. */}
         <Stack.Screen name="play/builder" options={{ animation: 'default' }} />
         <Stack.Screen name="play/pool" options={{ animation: 'default' }} />
+        {/* And so is a game: it is pushed over the Now tab's list, the list stays underneath,
+            and backing out returns to the row it was tapped from
+            ([#314](https://github.com/Raketa02/Raketa/issues/314)). It is the first exception
+            outside Play, which is why `shellTabs` had to say which tab it is inside. */}
+        <Stack.Screen name="games/[gameId]" options={{ animation: 'default' }} />
       </Stack>
       <TabBar active={tabForPathname(pathname)} onPress={openTab} />
     </View>

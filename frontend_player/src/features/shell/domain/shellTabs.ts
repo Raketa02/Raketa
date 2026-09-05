@@ -44,14 +44,31 @@ export type ShellRoute = (typeof SHELL_TAB_ROOT)[TabBarKey];
 export const PLAY_STACK = [SHELL_TAB_ROOT.now, SHELL_TAB_ROOT.play] as const;
 
 /**
+ * The segments that are **inside** a tab without being its root.
+ *
+ * Play needs none: its root is `/play`, so everything under it shares that first segment and the
+ * rule below lights the right column for free. Now is the one tab that cannot do that — its root
+ * is `/`, which is the shell's own root and has no segment — so a screen pushed over it is
+ * necessarily a sibling at the top level. Naming it here is what makes the Now column stay lit
+ * on a game rather than falling through to the default answer below, which is the same answer
+ * for a path the shell does not own at all.
+ */
+const INSIDE_A_TAB: Readonly<Partial<Record<string, TabBarKey>>> = {
+  games: 'now',
+};
+
+/**
  * The table read the other way: first path segment to tab, with `''` for the root.
  *
  * Inverted from `SHELL_TAB_ROOT` rather than written out, so the two can never disagree
  * about a route — which is the failure a second hand-kept table has.
  */
-const TAB_FOR_SEGMENT: Readonly<Partial<Record<string, TabBarKey>>> = Object.fromEntries(
-  Object.entries(SHELL_TAB_ROOT).map(([tab, route]) => [route.slice(1), tab as TabBarKey]),
-);
+const TAB_FOR_SEGMENT: Readonly<Partial<Record<string, TabBarKey>>> = {
+  ...Object.fromEntries(
+    Object.entries(SHELL_TAB_ROOT).map(([tab, route]) => [route.slice(1), tab as TabBarKey]),
+  ),
+  ...INSIDE_A_TAB,
+};
 
 /**
  * Which tab a pathname belongs to — **by its first segment**, so Play stays lit for every
