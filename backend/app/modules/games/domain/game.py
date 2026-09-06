@@ -209,7 +209,7 @@ class Game:
 
         if side.other in self.proposals:
             raise YourSideHasAlreadyAnswered()
-        if self._live_acceptance() is not None:
+        if self.standing_acceptance() is not None:
             raise TheOtherSideHasAnswered()
         self._record_that(
             ResultCorrected(
@@ -238,7 +238,7 @@ class Game:
             raise AcceptingYourOwnSidesResult()
         if side.other not in self.proposals:
             raise NobodyHasProposedAResult()
-        standing = self._live_acceptance()
+        standing = self.standing_acceptance()
         if standing is not None and standing.side is side:
             raise TheResultIsAlreadyAccepted()
 
@@ -316,18 +316,56 @@ class Game:
         score = self.confirmed_score_at(now)
         return None if score is None else score.outcome_for(side)
 
-    def standing_proposal(self) -> Proposal | None:
-        """The score currently waiting on an answer, when exactly one is.
+    def standing_proposals(self) -> tuple[Proposal, ...]:
+        """Every score currently on the table. **At most two, side ``A`` first.**
 
-        ``None`` when nothing has been entered and when both sides have spoken —
-        in the second case there are two scores standing and neither is *the*
-        one, which is the disagreement this platform does not resolve.
+        Empty before anybody has entered one, and two of them is the
+        disagreement this platform does not resolve — which is a state a reader
+        has to be able to *see*, because either side accepting the other's is its
+        only end that is not the game going unscored.
+
+        Ordered by side rather than by arrival, because the order of the two acts
+        is a fact about who reached their phone first and nothing here is about
+        that. A fold over ``proposals`` would order by insertion, which is the
+        stream's order and not a promise anybody made (``docs/adr/0105``).
         """
 
-        if len(self.proposals) != 1:
+        return tuple(
+            self.proposals[side]
+            for side in (GameSide.A, GameSide.B)
+            if side in self.proposals
+        )
+
+    def standing_acceptance(self) -> Acceptance | None:
+        """The agreement that still stands, if one does. **A counter voids it.**
+
+        It does not answer *has this settled* — ``standing_at`` does — and the
+        gap between the two answers is the whole point of it: for the length of
+        the grace the proposing side has stopped waiting on silence, and nothing
+        else on this aggregate says so.
+        """
+
+        return live_acceptance(
+            proposals=self.proposals, acceptance=self.acceptance
+        )
+
+    def accepted_proposal(self) -> Proposal | None:
+        """The score a standing agreement agreed with. ``None`` with no agreement.
+
+        The other half of ``standing_acceptance``, and they are ``None``
+        together: an agreement is always *of* a score, and the grace it runs out
+        is measured from **that score** rather than from the tap — so anybody
+        rendering the moment needs both, and neither is answerable alone.
+
+        Asked through ``get`` like the fold's own three readers, and for their
+        reason: an agreement whose score is missing is a stream nothing here
+        wrote, and the failure mode of a subscript is a crash in a **read**.
+        """
+
+        agreement = self.standing_acceptance()
+        if agreement is None:
             return None
-        (only,) = self.proposals.values()
-        return only
+        return self.proposals.get(agreement.of_side)
 
     # -- folding ----------------------------------------------------------
 
@@ -389,13 +427,6 @@ class Game:
         self.version += 1
 
     # -- internals --------------------------------------------------------
-
-    def _live_acceptance(self) -> Acceptance | None:
-        """The acceptance that still stands, if one does — a counter voids it."""
-
-        return live_acceptance(
-            proposals=self.proposals, acceptance=self.acceptance
-        )
 
     def _side_of(self, player_id: UUID) -> GameSide:
         side = self.line_up.side_of(player_id)

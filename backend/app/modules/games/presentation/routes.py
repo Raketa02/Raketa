@@ -39,6 +39,7 @@ from app.modules.games.presentation.dependencies import (
     StateResultDep,
 )
 from app.modules.games.presentation.schemas import (
+    AcceptanceSchema,
     GameListResponse,
     GameSchema,
     ScoreSchema,
@@ -104,7 +105,8 @@ _STATING_REFUSALS: dict[int | str, dict[str, Any]] = {
             "what bounds an argument to two rounds, and what makes silence safe "
             "to read as agreement.\n\n"
             "`the_other_side_has_answered` — correcting is free until they "
-            "respond and not afterwards."
+            "respond and not afterwards. `acceptance.agreed_at` is when they "
+            "did, so the sentence a player reads need not be vague about it."
         ),
     },
 }
@@ -233,8 +235,10 @@ async def state_result(
         "**It does not settle the result immediately.** The grace runs from the "
         "*score*, not from your tap, and inside it a disagreement still wins — "
         "so a partner who is quick to their phone cannot close the door on an "
-        "opponent who has not read it yet. `standing_proposal.settles_at` is "
-        "when it becomes final.\n\n"
+        "opponent who has not read it yet. `acceptance.settles_at` is when it "
+        "becomes final, and it is on the response the **proposing** side reads "
+        "too — a score that has been agreed is no longer a score waiting on "
+        "silence.\n\n"
         "**Saying nothing does the same thing**, a day later. Accepting is how "
         "you make it true sooner, and it is never how you avoid a penalty — "
         "there is none."
@@ -276,7 +280,11 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
 
     game: Game = one.game
     now = one.read_at
-    proposal = game.standing_proposal()
+    # **The argument travels only while it is one.** Before an entry there is
+    # nothing on the table, and after an ending the ending is the answer: a
+    # confirmed score is ``score``, and an unscored game is an evening rather
+    # than a transcript of what was said about it.
+    arguing = one.standing is GameStanding.AWAITING_ANSWER
     return GameSchema(
         game_id=game.id,
         challenge_id=game.challenge_id,
@@ -295,10 +303,8 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
         ],
         score=_rendered(game.confirmed_score_at(now)),
         outcome=game.outcome_for(reader_id, now=now),
-        standing_proposal=(
-            None
-            if proposal is None or one.standing is not GameStanding.AWAITING_ANSWER
-            else StandingProposalSchema(
+        proposals=[
+            StandingProposalSchema(
                 side=proposal.side,
                 proposed_by=proposal.by,
                 score=_rendered(proposal.score),
@@ -306,7 +312,29 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
                 answer_by=proposal_closes_at(proposal.at),
                 settles_at=acceptance_settles_at(proposal.at),
             )
-        ),
+            for proposal in (game.standing_proposals() if arguing else ())
+        ],
+        acceptance=_agreement(game) if arguing else None,
+    )
+
+
+def _agreement(game: Game) -> AcceptanceSchema | None:
+    """The agreement waiting out its grace, and ``None`` when none is.
+
+    The two readers are asked together because the moment is dated from the
+    **score** and never from the tap: an agreement and the proposal it settles
+    are one answer, and the aggregate returns them ``None`` together.
+    """
+
+    acceptance = game.standing_acceptance()
+    accepted = game.accepted_proposal()
+    if acceptance is None or accepted is None:
+        return None
+    return AcceptanceSchema(
+        agreed_by=acceptance.by,
+        of_side=acceptance.of_side,
+        agreed_at=acceptance.at,
+        settles_at=acceptance_settles_at(accepted.at),
     )
 
 

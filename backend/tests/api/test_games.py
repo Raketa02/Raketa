@@ -143,9 +143,10 @@ async def test_stating_a_result_records_that_the_game_happened(
     assert body["played_at"] is not None
     assert body["entry_closes_at"] is None
     assert body["score"] is None, "a score nobody has answered is not the result"
-    proposal = body["standing_proposal"]
+    (proposal,) = body["proposals"]
     assert proposal["proposed_by"] == str(searcher["id"])
     assert proposal["answer_by"] > proposal["settles_at"] > proposal["proposed_at"]
+    assert body["acceptance"] is None, "nobody has agreed with it yet"
 
 
 async def test_the_other_side_agrees_and_the_game_has_a_winner(
@@ -167,11 +168,7 @@ async def test_the_other_side_agrees_and_the_game_has_a_winner(
         headers=world.auth(searcher["token"]),
     )
 
-    theirs = next(
-        one
-        for one in people.values()
-        if _side_of(game, str(one["id"])) != _side_of(game, str(searcher["id"]))
-    )
+    theirs = _an_opponent_of(game, searcher, people)
     agreed = await client.post(
         f"/api/v1/games/{game['game_id']}/result/acceptance",
         headers=world.auth(theirs["token"]),
@@ -254,11 +251,7 @@ async def test_there_is_no_rejection_and_a_disagreement_carries_a_score(
         json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
         headers=world.auth(searcher["token"]),
     )
-    opponent = next(
-        one
-        for one in people.values()
-        if _side_of(game, str(one["id"])) != _side_of(game, str(searcher["id"]))
-    )
+    opponent = _an_opponent_of(game, searcher, people)
 
     countered = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
@@ -266,9 +259,14 @@ async def test_there_is_no_rejection_and_a_disagreement_carries_a_score(
         headers=world.auth(opponent["token"]),
     )
     assert countered.status_code == 200, countered.text
-    assert countered.json()["standing_proposal"] is None, (
-        "two scores stand and neither of them is *the* one"
-    )
+    body = countered.json()
+    assert body["score"] is None, "neither of the two is *the* one"
+    assert [
+        one["score"]["sets"] for one in body["proposals"]
+    ] == [
+        [{"a": 6, "b": 4}, {"a": 6, "b": 3}],
+        [{"a": 4, "b": 6}, {"a": 3, "b": 6}],
+    ], "the argument crosses with both sides of it on"
 
     again = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
@@ -277,6 +275,114 @@ async def test_there_is_no_rejection_and_a_disagreement_carries_a_score(
     )
     assert again.status_code == 409
     assert again.json()["code"] == "your_side_has_already_answered"
+
+
+async def test_a_disagreement_offers_its_own_way_out_to_the_side_that_started_it(
+    client, session_factory, candidate_source, searcher
+):
+    """**The exit from an argument, readable by both people in it.**
+
+    ``accept_result`` passes with both sides in ``proposals`` — either side
+    accepting the other's is the only end a two-proposal disagreement has that is
+    not the game going unscored. A response that carried neither score offered
+    that act to nobody: agreeing with a score you cannot be shown is worse than
+    not being asked.
+
+    The proposals travel **side A first and never in the order they arrived**, so
+    the pair reads the same on both phones and on a second reading of the same
+    game.
+    """
+
+    people, _ = await _an_arranged_game(
+        client, session_factory, candidate_source, searcher
+    )
+    (game,) = await _games(client, searcher["token"])
+    opponent = _an_opponent_of(game, searcher, people)
+    assert _side_of(game, str(opponent["id"])) == "B", (
+        "the organiser holds A, so the counter below is what puts A in second"
+    )
+
+    # **The far side enters first**, so arrival order is B then A and the order
+    # asserted below is the sort's doing rather than the stream's.
+    await client.post(
+        f"/api/v1/games/{game['game_id']}/result",
+        json={"score": {"sets": [{"a": 4, "b": 6}, {"a": 3, "b": 6}]}},
+        headers=world.auth(opponent["token"]),
+    )
+    await client.post(
+        f"/api/v1/games/{game['game_id']}/result",
+        json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
+        headers=world.auth(searcher["token"]),
+    )
+
+    (mine,) = await _games(client, searcher["token"])
+    assert mine["standing"] == "AWAITING_ANSWER"
+    assert [one["side"] for one in mine["proposals"]] == ["A", "B"]
+    assert [one["proposed_by"] for one in mine["proposals"]] == [
+        str(searcher["id"]),
+        str(opponent["id"]),
+    ], "side A first, though side B is what arrived first"
+
+    agreed = await client.post(
+        f"/api/v1/games/{game['game_id']}/result/acceptance",
+        headers=world.auth(searcher["token"]),
+    )
+
+    assert agreed.status_code == 200, agreed.text
+    body = agreed.json()
+    ours, theirs = body["proposals"]
+    acceptance = body["acceptance"]
+    assert acceptance["of_side"] == "B", (
+        "the score agreed with is the other side's, and the response names it"
+    )
+    # **Two scores, two graces**, and the one that counts is the one whose score
+    # was agreed with — a check the single-proposal case cannot make, because
+    # there the wrong answer and the right one are the same instant.
+    assert ours["settles_at"] != theirs["settles_at"]
+    assert acceptance["settles_at"] == theirs["settles_at"]
+
+
+async def test_a_pending_acceptance_says_who_agreed_and_when_it_settles(
+    client, session_factory, candidate_source, searcher
+):
+    """**The grace, visible to the side it is being run against.**
+
+    It settles nothing for six hours, and for those six hours the proposing side
+    was told silence would confirm their score — which had stopped being the live
+    question — and was offered a correction ``state_result`` refuses. Both are
+    read off this field, and *when* they answered is on it because a second ago
+    and five hours ago are not the same news.
+    """
+
+    people, _ = await _an_arranged_game(
+        client, session_factory, candidate_source, searcher
+    )
+    (game,) = await _games(client, searcher["token"])
+    stated = await client.post(
+        f"/api/v1/games/{game['game_id']}/result",
+        json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
+        headers=world.auth(searcher["token"]),
+    )
+    assert stated.status_code == 200, stated.text
+    opponent = _an_opponent_of(game, searcher, people)
+    await client.post(
+        f"/api/v1/games/{game['game_id']}/result/acceptance",
+        headers=world.auth(opponent["token"]),
+    )
+
+    (mine,) = await _games(client, searcher["token"])
+
+    assert mine["standing"] == "AWAITING_ANSWER", (
+        "an acceptance settles nothing until its grace has passed"
+    )
+    acceptance = mine["acceptance"]
+    assert acceptance["agreed_by"] == str(opponent["id"])
+    assert acceptance["of_side"] == _side_of(game, str(searcher["id"]))
+    assert acceptance["agreed_at"] <= acceptance["settles_at"]
+    (proposal,) = mine["proposals"]
+    assert acceptance["settles_at"] == proposal["settles_at"], (
+        "the grace is measured from the score, not from the tap"
+    )
 
 
 async def test_a_level_score_is_refused_because_a_result_names_a_winner(
@@ -317,6 +423,16 @@ async def test_nobody_who_did_not_play_can_see_or_touch_the_game(
     )
     assert refused.status_code == 403
     assert refused.json()["code"] == "you_were_not_on_this_court"
+
+
+def _an_opponent_of(game: dict, searcher: dict, people: dict) -> dict:
+    """Somebody from across the net. **Which of the two is nobody's business.**"""
+
+    return next(
+        one
+        for one in people.values()
+        if _side_of(game, str(one["id"])) != _side_of(game, str(searcher["id"]))
+    )
 
 
 def _side_of(game: dict, player_id: str) -> str:

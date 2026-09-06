@@ -18,6 +18,13 @@ and none for *who has not answered*: a result nobody agreed on is a fact about a
 pair, and the two people who were there can read the two scores and see it. The
 platform does not arbitrate, and a wire shape that named a side would be it
 starting to.
+
+That last sentence is why ``proposals`` is a **list and not one standing score**.
+The field used to carry a proposal *when exactly one stood*, which made the
+disagreement the one state whose two scores never crossed — the client was told
+there was an argument and shown nothing being argued about, and could not offer
+the acceptance that ends it. Both scores and one acceptance are what the four
+people on the court can see between them, and none of the three names anybody.
 """
 
 from __future__ import annotations
@@ -93,12 +100,13 @@ class SeatingSchema(BaseModel):
 
 
 class StandingProposalSchema(BaseModel):
-    """The score waiting on an answer, when exactly one is.
+    """One side's score, on the table and not yet settled on.
 
-    ``null`` in every other case, and the two are different: nothing has been
-    entered, or **both sides have spoken** and neither score is *the* one. The
-    second is the disagreement this platform does not resolve, and the client
-    reads it off `standing` rather than off an absence here.
+    **At most one per side**, which is what bounds an argument to two rounds. Two
+    of them is the disagreement this platform does not resolve — and it does not
+    resolve it by *arbitrating*, not by hiding it: both scores travel, either
+    side may agree with the other's, and that is the only end short of the game
+    going unscored.
     """
 
     side: GameSide = Field(..., description="Which side put this score on the table")
@@ -119,6 +127,44 @@ class StandingProposalSchema(BaseModel):
             "When an acceptance of this score would become final. Earlier than "
             "`answer_by`, and it is the grace an opponent who has not read the "
             "score yet is given: inside it a disagreement still wins."
+        ),
+    )
+
+
+class AcceptanceSchema(BaseModel):
+    """Somebody agreed with the other side's score, and it has not settled yet.
+
+    **Present only while the grace runs.** Once it has passed the game is
+    confirmed and the agreed score is on `score`; inside it nothing has settled,
+    a disagreement still wins, and the proposing side is no longer waiting on
+    silence — which is a different sentence on their screen and a correction the
+    aggregate will now refuse.
+    """
+
+    agreed_by: UUID
+    of_side: GameSide = Field(
+        ...,
+        description=(
+            "Whose score was agreed with. **Always the accepter's opposite** — a "
+            "teammate agreeing with a teammate proves nothing — so this names the "
+            "score and, with it, which of the two people this is news for."
+        ),
+    )
+    agreed_at: datetime = Field(
+        ...,
+        description=(
+            "When they agreed. On the wire because *a second ago* and *five hours "
+            "ago* are the same refusal to a client that cannot see it, and the "
+            "sentence a player reads has to be able to say which."
+        ),
+    )
+    settles_at: datetime = Field(
+        ...,
+        description=(
+            "When this agreement becomes final. Measured from the **score**, not "
+            "from the tap: the person the grace protects is the opponent who has "
+            "not read the score yet, and their clock started when it was put in "
+            "front of them."
         ),
     )
 
@@ -191,9 +237,24 @@ class GameSchema(BaseModel):
             "no outcome to give anybody."
         ),
     )
-    standing_proposal: StandingProposalSchema | None = Field(
+    proposals: list[StandingProposalSchema] = Field(
+        ...,
+        description=(
+            "The scores on the table, **side A's first and never in the order "
+            "they arrived**. Empty unless the game is awaiting an answer: before "
+            "that nobody has entered one, and after it the ending is on "
+            "`standing` — a confirmed score is `score` and an unscored game is an "
+            "evening, not a transcript of the argument. Two entries **is** the "
+            "disagreement, and either side may agree with the other's."
+        ),
+    )
+    acceptance: AcceptanceSchema | None = Field(
         default=None,
-        description="The score waiting on an answer, when exactly one is.",
+        description=(
+            "The agreement that is waiting out its grace, and `null` when none "
+            "is. **A counter voids one**, so this is what still stands rather "
+            "than what was once recorded."
+        ),
     )
 
 

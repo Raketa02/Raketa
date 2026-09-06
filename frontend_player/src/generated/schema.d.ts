@@ -905,7 +905,7 @@ export interface paths {
          * Agree with the result
          * @description **One opponent suffices.** The person across the net is the whole of the evidence that a score was real.
          *
-         *     **It does not settle the result immediately.** The grace runs from the *score*, not from your tap, and inside it a disagreement still wins — so a partner who is quick to their phone cannot close the door on an opponent who has not read it yet. `standing_proposal.settles_at` is when it becomes final.
+         *     **It does not settle the result immediately.** The grace runs from the *score*, not from your tap, and inside it a disagreement still wins — so a partner who is quick to their phone cannot close the door on an opponent who has not read it yet. `acceptance.settles_at` is when it becomes final, and it is on the response the **proposing** side reads too — a score that has been agreed is no longer a score waiting on silence.
          *
          *     **Saying nothing does the same thing**, a day later. Accepting is how you make it true sooner, and it is never how you avoid a penalty — there is none.
          */
@@ -920,6 +920,37 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AcceptanceSchema
+         * @description Somebody agreed with the other side's score, and it has not settled yet.
+         *
+         *     **Present only while the grace runs.** Once it has passed the game is
+         *     confirmed and the agreed score is on `score`; inside it nothing has settled,
+         *     a disagreement still wins, and the proposing side is no longer waiting on
+         *     silence — which is a different sentence on their screen and a correction the
+         *     aggregate will now refuse.
+         */
+        AcceptanceSchema: {
+            /**
+             * Agreed By
+             * Format: uuid
+             */
+            agreed_by: string;
+            /** @description Whose score was agreed with. **Always the accepter's opposite** — a teammate agreeing with a teammate proves nothing — so this names the score and, with it, which of the two people this is news for. */
+            of_side: components["schemas"]["GameSide"];
+            /**
+             * Agreed At
+             * Format: date-time
+             * @description When they agreed. On the wire because *a second ago* and *five hours ago* are the same refusal to a client that cannot see it, and the sentence a player reads has to be able to say which.
+             */
+            agreed_at: string;
+            /**
+             * Settles At
+             * Format: date-time
+             * @description When this agreement becomes final. Measured from the **score**, not from the tap: the person the grace protects is the opponent who has not read the score yet, and their clock started when it was put in front of them.
+             */
+            settles_at: string;
+        };
         /** AnswerOptionResponse */
         AnswerOptionResponse: {
             /** Id */
@@ -1818,8 +1849,13 @@ export interface components {
             score?: components["schemas"]["ScoreSchema"] | null;
             /** @description Win or loss **for you**. ``null`` for every standing but a confirmed one: a game nobody scored moves nobody's Level and has no outcome to give anybody. */
             outcome?: components["schemas"]["Outcome"] | null;
-            /** @description The score waiting on an answer, when exactly one is. */
-            standing_proposal?: components["schemas"]["StandingProposalSchema"] | null;
+            /**
+             * Proposals
+             * @description The scores on the table, **side A's first and never in the order they arrived**. Empty unless the game is awaiting an answer: before that nobody has entered one, and after it the ending is on `standing` — a confirmed score is `score` and an unscored game is an evening, not a transcript of the argument. Two entries **is** the disagreement, and either side may agree with the other's.
+             */
+            proposals: components["schemas"]["StandingProposalSchema"][];
+            /** @description The agreement that is waiting out its grace, and `null` when none is. **A counter voids one**, so this is what still stands rather than what was once recorded. */
+            acceptance?: components["schemas"]["AcceptanceSchema"] | null;
         };
         /**
          * GameSide
@@ -3711,12 +3747,13 @@ export interface components {
         Standing: "AWAITING_ANSWERS" | "ON" | "LINE_UP_INCOMPLETE" | "DECLINED" | "LAPSED";
         /**
          * StandingProposalSchema
-         * @description The score waiting on an answer, when exactly one is.
+         * @description One side's score, on the table and not yet settled on.
          *
-         *     ``null`` in every other case, and the two are different: nothing has been
-         *     entered, or **both sides have spoken** and neither score is *the* one. The
-         *     second is the disagreement this platform does not resolve, and the client
-         *     reads it off `standing` rather than off an absence here.
+         *     **At most one per side**, which is what bounds an argument to two rounds. Two
+         *     of them is the disagreement this platform does not resolve — and it does not
+         *     resolve it by *arbitrating*, not by hiding it: both scores travel, either
+         *     side may agree with the other's, and that is the only end short of the game
+         *     going unscored.
          */
         StandingProposalSchema: {
             /** @description Which side put this score on the table */
@@ -5692,7 +5729,7 @@ export interface operations {
              *
              *     `your_side_has_already_answered` — one score per side. The cap is what bounds an argument to two rounds, and what makes silence safe to read as agreement.
              *
-             *     `the_other_side_has_answered` — correcting is free until they respond and not afterwards.
+             *     `the_other_side_has_answered` — correcting is free until they respond and not afterwards. `acceptance.agreed_at` is when they did, so the sentence a player reads need not be vague about it.
              */
             409: {
                 headers: {
