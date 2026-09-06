@@ -31,7 +31,7 @@ import app.modules.player_profile.infrastructure.flag_rate_cli as cli
 from app.modules.player_profile.application.measure_on_court_flag_rates import (
     FlagRateAtThreshold,
     MeasureOnCourtFlagRates,
-    MeasuredUnder,
+    ReviewerCorpus,
     OnCourtCorpusReading,
 )
 from app.modules.player_profile.domain.photos import (
@@ -181,34 +181,44 @@ async def test_evidence_that_will_not_score_is_dropped_and_counted() -> None:
     assert result.unreadable_evidence == 1
 
 
-async def test_the_reading_names_the_reviewers_the_corpus_was_scored_by() -> None:
-    """Two corpora scored by two models are two corpora.
+async def test_two_reviewers_get_two_curves_and_never_one_blended_rate() -> None:
+    """Two corpora scored by two models are two corpora, so they are two tables.
 
-    The sharpest instance is not a model upgrade: the workbench's own seeded
-    photographs carry declared verdicts written through the real constructors
-    (``app/seeds/photos.py``), so their notes are well-formed, current-fingerprint
-    and **counted**. A run on a laptop therefore prints a perfectly plausible
-    rate over fixtures unless the report says whose numbers those were.
+    **Naming the reviewers beside a blended rate is not enough** — the blend is
+    still the headline number, and it is a fact about no population. The sharpest
+    instance is not a model upgrade: the workbench's own seeded photographs carry
+    declared verdicts written through the real constructors
+    (``app/seeds/photos.py``), so their notes are well-formed,
+    current-fingerprint and counted. On a laptop that is most of the bucket.
+
+    So the rate is computed **per reviewer**, and a run that has no single
+    corpus cannot print a single number.
     """
 
     storage = InMemoryPhotoStorage()
-    scored(storage, 0.34)
-    scored(storage, 0.10)
-    scored(storage, 0.22, model="seed-declared")
+    real = [scored(storage, on_court) for on_court in (0.34, 0.10)]
+    fixture = [scored(storage, 0.22, model="seed-declared")]
 
-    result = await reading(storage)
+    result = await reading(storage, candidates=(0.5,))
 
-    assert result.measured_by == (
-        MeasuredUnder(model=MODEL, photographs=2),
-        MeasuredUnder(model="seed-declared", photographs=1),
-    )
+    assert result.comparable == 3
+    assert [(row.model, row.photographs) for row in result.by_reviewer] == [
+        (MODEL, 2),
+        ("seed-declared", 1),
+    ]
+    for corpus, confidences in zip(
+        result.by_reviewer, (real, fixture), strict=True
+    ):
+        expected = sum(1 for c in confidences if c < 0.5)
+        assert corpus.rates[0].flagged == expected
+        assert corpus.rates[0].rate == pytest.approx(expected / len(confidences))
 
 
 async def test_a_corpus_nobody_could_measure_names_no_reviewer() -> None:
     storage = InMemoryPhotoStorage()
     store(storage, PhotoReviewVerdict(decision=PhotoReviewDecision.ALLOWED))
 
-    assert (await reading(storage)).measured_by == ()
+    assert (await reading(storage)).by_reviewer == ()
 
 
 # ---------------------------------------------------------------------------
@@ -229,9 +239,10 @@ async def test_the_rate_at_the_line_in_force_is_what_the_upload_path_flagged() -
             flagged_by_the_upload_path += 1
 
     result = await reading(storage, candidates=(ON_COURT_CONFIDENCE_THRESHOLD,))
+    (corpus,) = result.by_reviewer
 
-    assert result.rates[0].flagged == flagged_by_the_upload_path
-    assert result.rates[0].rate == pytest.approx(flagged_by_the_upload_path / 5)
+    assert corpus.rates[0].flagged == flagged_by_the_upload_path
+    assert corpus.rates[0].rate == pytest.approx(flagged_by_the_upload_path / 5)
 
 
 async def test_the_rate_at_a_candidate_is_the_share_below_it() -> None:
@@ -239,8 +250,9 @@ async def test_the_rate_at_a_candidate_is_the_share_below_it() -> None:
     confidences = [scored(storage, on_court) for on_court in (0.34, 0.22, 0.10)]
 
     result = await reading(storage, candidates=(0.2, 0.8))
+    (corpus,) = result.by_reviewer
 
-    for row in result.rates:
+    for row in corpus.rates:
         expected = sum(1 for c in confidences if c < row.threshold)
         assert row.flagged == expected
         assert row.rate == pytest.approx(expected / len(confidences))
@@ -254,10 +266,11 @@ async def test_a_candidate_is_asked_once_and_the_table_climbs() -> None:
         scored(storage, on_court)
 
     result = await reading(storage, candidates=(0.9, 0.1, 0.5, 0.5))
+    (corpus,) = result.by_reviewer
 
-    assert [row.threshold for row in result.rates] == [0.1, 0.5, 0.9]
-    assert [row.flagged for row in result.rates] == sorted(
-        row.flagged for row in result.rates
+    assert [row.threshold for row in corpus.rates] == [0.1, 0.5, 0.9]
+    assert [row.flagged for row in corpus.rates] == sorted(
+        row.flagged for row in corpus.rates
     )
 
 
@@ -276,7 +289,8 @@ async def test_the_table_sizes_the_re_stamp_the_move_would_need() -> None:
     result = await reading(
         storage, candidates=(ON_COURT_CONFIDENCE_THRESHOLD, 0.9, 0.1)
     )
-    at_the_line = {row.threshold: row for row in result.rates}
+    (corpus,) = result.by_reviewer
+    at_the_line = {row.threshold: row for row in corpus.rates}
 
     assert at_the_line[ON_COURT_CONFIDENCE_THRESHOLD].would_change == 0
     for threshold in (0.9, 0.1):
@@ -299,7 +313,7 @@ async def test_no_photos_means_no_rate_rather_than_a_rate_of_zero() -> None:
     result = await reading(storage, candidates=(0.1, 0.5, 0.9))
 
     assert result.comparable == 0
-    assert result.rates == ()
+    assert result.by_reviewer == ()
 
 
 async def test_nothing_is_written_and_no_bytes_are_read() -> None:
@@ -358,13 +372,18 @@ def test_the_report_names_the_population_before_the_curve() -> None:
             unavailable=2,
             superseded=1,
             unreadable_evidence=0,
-            measured_by=(MeasuredUnder(model="seed-declared", photographs=4),),
-            rates=(
-                FlagRateAtThreshold(
-                    threshold=ON_COURT_CONFIDENCE_THRESHOLD,
-                    flagged=1,
-                    rate=0.25,
-                    would_change=0,
+            by_reviewer=(
+                ReviewerCorpus(
+                    model="seed-declared",
+                    photographs=4,
+                    rates=(
+                        FlagRateAtThreshold(
+                            threshold=ON_COURT_CONFIDENCE_THRESHOLD,
+                            flagged=1,
+                            rate=0.25,
+                            would_change=0,
+                        ),
+                    ),
                 ),
             ),
         )
@@ -374,7 +393,7 @@ def test_the_report_names_the_population_before_the_curve() -> None:
     assert rendered.index("never asked") < rendered.index("threshold   flagged")
     assert rendered.index("seed-declared") < rendered.index("threshold   flagged")
     assert "in force" in rendered
-    assert "4 photographs is enough" in rendered
+    assert "large enough" in rendered
 
 
 def test_measuring_nothing_says_so_and_exits_non_zero(
@@ -392,8 +411,7 @@ def test_measuring_nothing_says_so_and_exits_non_zero(
         unavailable=0,
         superseded=0,
         unreadable_evidence=0,
-        measured_by=(),
-        rates=(),
+        by_reviewer=(),
     )
 
     async def measured(candidates: Sequence[float]) -> OnCourtCorpusReading:

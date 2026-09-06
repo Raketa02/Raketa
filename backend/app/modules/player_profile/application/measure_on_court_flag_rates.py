@@ -36,7 +36,7 @@ one walks the corpus or reports nothing.
 
 from __future__ import annotations
 
-from collections import Counter
+from collections import defaultdict
 from contextlib import aclosing
 from dataclasses import dataclass
 from typing import Sequence
@@ -73,20 +73,27 @@ class FlagRateAtThreshold:
 
 
 @dataclass(frozen=True, slots=True)
-class MeasuredUnder:
-    """How many of the measured photographs one reviewer scored.
+class ReviewerCorpus:
+    """One reviewer's photographs, and the curve over them.
 
-    **Two corpora scored by two models are two corpora**, and the report says so
-    rather than blending them into one rate. The instance this exists for is not
-    a model upgrade: the workbench's seeded photographs carry *declared* verdicts
-    written through the real constructors (``app/seeds/photos.py``), so their
-    notes are well-formed, current-fingerprint and counted like any other. A run
-    on a laptop would otherwise print a perfectly plausible rate over fixtures,
-    which is the one way this exercise can mislead the decision it exists for.
+    **Two corpora scored by two models are two corpora, so they get two
+    curves.** Naming the reviewers beside a blended rate would not be enough —
+    the blend would still be the headline, and it is a fact about no population:
+    a number two thirds of the way between what one model saw and what another
+    did describes neither.
+
+    The instance this exists for is not a model upgrade. The workbench's seeded
+    photographs carry *declared* verdicts written through the real constructors
+    (``app/seeds/photos.py``), so their notes are well-formed,
+    current-fingerprint and counted like any other — and on a laptop they are
+    most of the bucket. A run that blended them would print a perfectly
+    plausible rate over fixtures, which is the one way this exercise can mislead
+    the decision it exists for.
     """
 
     model: str
     photographs: int
+    rates: tuple[FlagRateAtThreshold, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,11 +135,9 @@ class OnCourtCorpusReading:
     #: will not score. A note this application did not write.
     unreadable_evidence: int
 
-    #: Who scored the measured photographs, most first. Empty when nothing was
-    #: measured — see `MeasuredUnder` for why a rate without this can mislead.
-    measured_by: tuple[MeasuredUnder, ...]
-
-    rates: tuple[FlagRateAtThreshold, ...]
+    #: One corpus per reviewer, most photographs first, each with its own curve.
+    #: Empty when nothing could be measured — see `ReviewerCorpus`.
+    by_reviewer: tuple[ReviewerCorpus, ...]
 
 
 class MeasureOnCourtFlagRates:
@@ -148,8 +153,7 @@ class MeasureOnCourtFlagRates:
         many lines as somebody wants to ask about.
         """
 
-        confidences: list[float] = []
-        reviewers: Counter[str] = Counter()
+        measured: dict[str, list[float]] = defaultdict(list)
         examined = 0
         never_asked = 0
         unavailable = 0
@@ -189,13 +193,12 @@ class MeasureOnCourtFlagRates:
                     # own.
                     unreadable_evidence += 1
                     continue
-                confidences.append(confidence)
-                reviewers[score.model] += 1
+                measured[score.model].append(confidence)
 
         return OnCourtCorpusReading(
             prompt_set=PROMPT_SET_FINGERPRINT,
             examined=examined,
-            comparable=len(confidences),
+            comparable=sum(len(rows) for rows in measured.values()),
             never_asked=never_asked,
             unavailable=unavailable,
             superseded=superseded,
@@ -203,13 +206,16 @@ class MeasureOnCourtFlagRates:
             # Most-scored first, then alphabetically — so the reviewer that
             # produced most of the corpus is the first thing read, and a rerun
             # over an unchanged bucket prints the same order.
-            measured_by=tuple(
-                MeasuredUnder(model=model, photographs=count)
-                for model, count in sorted(
-                    reviewers.items(), key=lambda pair: (-pair[1], pair[0])
+            by_reviewer=tuple(
+                ReviewerCorpus(
+                    model=model,
+                    photographs=len(confidences),
+                    rates=flag_rates(confidences, candidates),
+                )
+                for model, confidences in sorted(
+                    measured.items(), key=lambda pair: (-len(pair[1]), pair[0])
                 )
             ),
-            rates=flag_rates(confidences, candidates),
         )
 
 

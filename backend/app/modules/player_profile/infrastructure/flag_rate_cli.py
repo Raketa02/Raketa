@@ -109,17 +109,6 @@ def _a_share(value: str) -> float:
     return share
 
 
-def _widest(reading: OnCourtCorpusReading) -> int:
-    """The longest reviewer name in this reading, so the counts line up.
-
-    Measured rather than fixed: a model name is whatever the sidecar calls
-    itself, and a hard-coded column would either waste half the line or push
-    the count out of it the first time one grew.
-    """
-
-    return max((len(row.model) for row in reading.measured_by), default=0)
-
-
 def _report(reading: OnCourtCorpusReading) -> list[str]:
     """What the operator reads.
 
@@ -134,10 +123,6 @@ def _report(reading: OnCourtCorpusReading) -> list[str]:
         f"  prompt set            {reading.prompt_set}",
         f"  photographs seen      {reading.examined}",
         f"  measured              {reading.comparable}",
-        *(
-            f"    scored by {row.model:<{_widest(reading)}}  {row.photographs}"
-            for row in reading.measured_by
-        ),
         f"  never asked           {reading.never_asked}"
         "   (nobody looked — ADR-0132 population 1)",
         f"  unavailable           {reading.unavailable}"
@@ -148,24 +133,35 @@ def _report(reading: OnCourtCorpusReading) -> list[str]:
         "   (a note this application did not write)",
         "",
     ]
-    if not reading.rates:
+    if not reading.by_reviewer:
         lines.append(
             "  nothing could be measured — there is no rate over no photographs"
         )
         return lines
 
-    lines.append("  threshold   flagged      rate   would re-stamp")
-    for row in reading.rates:
-        in_force = (
-            "   <- in force" if row.threshold == ON_COURT_CONFIDENCE_THRESHOLD else ""
+    # One table per reviewer, never one blended. Two models are two corpora, and
+    # a rate across both is a fact about neither — see `ReviewerCorpus`.
+    for corpus in reading.by_reviewer:
+        lines.extend(
+            [
+                f"  scored by {corpus.model} — {corpus.photographs} photographs",
+                "    threshold   flagged      rate   would re-stamp",
+            ]
         )
-        lines.append(
-            f"  {row.threshold:>9.2f}   {row.flagged:>7}   {row.rate:>7.1%}"
-            f"   {row.would_change:>14}{in_force}"
-        )
+        for row in corpus.rates:
+            in_force = (
+                "   <- in force"
+                if row.threshold == ON_COURT_CONFIDENCE_THRESHOLD
+                else ""
+            )
+            lines.append(
+                f"    {row.threshold:>9.2f}   {row.flagged:>7}   {row.rate:>7.1%}"
+                f"   {row.would_change:>14}{in_force}"
+            )
+        lines.append("")
+
     lines.extend(
         [
-            "",
             "  'would re-stamp' is how many stored verdicts the move would make"
             " wrong.",
             "  A photograph keeps the stamp it was given until something"
@@ -174,13 +170,13 @@ def _report(reading: OnCourtCorpusReading) -> list[str]:
             " pick it up: whether",
             "  to re-stamp the corpus is a second decision (#316).",
             "",
-            f"  Where the rate should sit, and whether {reading.comparable}"
-            " photographs is enough for",
+            "  Where the rate should sit, and whether any of these corpora is"
+            " large enough for",
             "  one to mean anything, are the two judgements this cannot make."
-            " Read the reviewers",
-            "  above before either: a corpus scored by a workbench's declared"
-            " fixtures is a",
-            "  well-formed rate about nothing.",
+            " Read the reviewer",
+            "  each table is headed by first: a corpus scored by a workbench's"
+            " declared fixtures",
+            "  is a well-formed rate about nothing.",
         ]
     )
     return lines

@@ -684,11 +684,16 @@ instead of the default sweep, and `-host` runs it outside the stack.
 denominator. Four exclusions: the photos nobody looked at, the ones that arrived
 while the sidecar was down and the ones scored against captions that have since
 moved — ADR-0132's three populations — plus a fourth for a note this application
-did not write. And it names **who scored what remained**: a corpus of
-`seed-declared` fixtures (`app/seeds/photos.py`) carries perfectly well-formed
-notes and is a well-formed rate about nothing. Where the rate should sit, and
-whether the corpus is yet big enough for one to mean anything, are the two
-judgements the command deliberately does not make.
+did not write.
+
+**And there is one curve per reviewer, never one blended.** Two models are two
+corpora, and a rate across both is a fact about neither. The instance that
+matters is not a model upgrade: the seed's declared verdicts
+(`app/seeds/photos.py`) go through the real constructors, so their notes are
+well-formed and current-fingerprint, and on a laptop they are most of the bucket.
+Where the rate should sit, and whether any one corpus is yet big enough for a
+rate to mean anything, are the two judgements the command deliberately does not
+make.
 
 **It fails open, and an outage now costs silence rather than a word.** An
 unreachable, slow, refusing or unusably-answering sidecar yields **no decision**,
