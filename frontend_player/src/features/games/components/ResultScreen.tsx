@@ -157,6 +157,10 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
     sideOf(game, playerId) === undefined ? EMPTY_COURT : courtSizes(game, side);
   const sides = sideLabels(ours);
   const sport = sportLabel(game.sport);
+  // **Not uppercased here.** `ScreenHeader` already draws an eyebrow uppercase in its style,
+  // and a second copy in the string would reach a screen reader — which, now that the eyebrow
+  // names the people on the court, is a handle spelled out letter by letter.
+  const eyebrow = gameEyebrow(sport, game, playerId);
 
   // Both rules are the domain's: which controls exist, and what a grid opened here would send.
   const acts = actsOffered(conversation);
@@ -216,7 +220,7 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
   return (
     <ShellScreen
       title={resultTitle(conversation)}
-      eyebrow={gameEyebrow(sport, game).toUpperCase()}
+      eyebrow={eyebrow}
       onBack={router.back}
       action={
         <Footer>

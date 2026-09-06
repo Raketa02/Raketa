@@ -6,6 +6,8 @@
  * an error, a correction is never called a proposal, and nothing anywhere blames anybody.
  */
 
+import type { NamedPlayer } from '@/shared/formatting/playerName';
+
 import type { ResultConversation } from '../domain/conversation';
 import type { Game } from '../domain/game';
 
@@ -36,13 +38,17 @@ const GAME: Game = {
   kind: 'COUNTED',
   standing: 'AWAITING_ANSWER',
   seats: [
-    { side: 'A', playerId: 'me' },
-    { side: 'B', playerId: 'them' },
+    { side: 'A', playerId: 'me', nickname: 'me_' },
+    { side: 'B', playerId: 'them', nickname: 'tomek.p' },
   ],
   plannedAt: '2026-09-01T09:00:00Z',
   proposals: [],
   readAt: READ_AT,
 };
+
+/** The two people any of these sentences can name: you, and the player across the net. */
+const YOU: NamedPlayer = { kind: 'you' };
+const THEM: NamedPlayer = { kind: 'player', nickname: 'tomek.p' };
 
 const PROPOSAL = {
   side: 'A',
@@ -77,13 +83,13 @@ const ARGUING: ResultConversation = { kind: 'both-stand', ours: PROPOSAL, theirs
 /** One agreement, as the two sides read it — six hours from `READ_AT`, measured from the score. */
 const AGREED_WITH_OURS: ResultConversation = {
   kind: 'agreed',
-  agreement: { with: 'ours', settlesAt: '2026-09-05T15:00:00Z' },
+  agreement: { with: 'ours', by: THEM, settlesAt: '2026-09-05T15:00:00Z' },
   ours: PROPOSAL,
 };
 
 const AGREED_WITH_THEIRS: ResultConversation = {
   kind: 'agreed',
-  agreement: { with: 'theirs', settlesAt: '2026-09-05T15:00:00Z' },
+  agreement: { with: 'theirs', by: YOU, settlesAt: '2026-09-05T15:00:00Z' },
   theirs: COUNTER,
 };
 
@@ -104,7 +110,7 @@ describe('silence confirming, which has to be visible before it happens', () => 
   });
 
   it('says it to the side that has not answered, which is the side it costs', () => {
-    const line = standingLine({ kind: 'theirs-stands', proposal: PROPOSAL }, READ_AT);
+    const line = standingLine({ kind: 'theirs-stands', proposal: PROPOSAL, by: THEM }, READ_AT);
 
     expect(line).toContain('23 hours');
     expect(line).toContain('stands');
@@ -159,7 +165,9 @@ describe('nobody is penalised, which is a sentence and not an omission', () => {
   });
 
   it('says so where agreeing might otherwise look like the safe move', () => {
-    expect(resultBody({ kind: 'theirs-stands', proposal: PROPOSAL })).toContain('there is none');
+    expect(resultBody({ kind: 'theirs-stands', proposal: PROPOSAL, by: THEM })).toContain(
+      'there is none',
+    );
   });
 });
 
@@ -194,9 +202,9 @@ describe('the clock, which is how silence is made visible', () => {
       figure: '23 hours',
       line: 'left for the other side to answer. If they say nothing, this becomes the result.',
     });
-    expect(clockLine({ kind: 'theirs-stands', proposal: PROPOSAL }, READ_AT)?.line).toContain(
-      'silence confirms it',
-    );
+    expect(
+      clockLine({ kind: 'theirs-stands', proposal: PROPOSAL, by: THEM }, READ_AT)?.line,
+    ).toContain('silence confirms it');
   });
 
   it('runs on the entry window too, so a game does not quietly become a ghost', () => {
@@ -211,7 +219,7 @@ describe('the clock, which is how silence is made visible', () => {
    * time here would be the first one in the app.
    */
   it('quotes no clock time and no date, because there is no calendar to print one against', () => {
-    const clock = clockLine({ kind: 'theirs-stands', proposal: PROPOSAL }, READ_AT);
+    const clock = clockLine({ kind: 'theirs-stands', proposal: PROPOSAL, by: THEM }, READ_AT);
 
     expect(`${clock?.figure ?? ''} ${clock?.line ?? ''}`).not.toMatch(/\d{1,2}:\d{2}|Sunday/);
   });
@@ -317,7 +325,7 @@ describe('an agreement, which the proposing side could not see at all', () => {
   it('tells the side that agreed the same fact from their end', () => {
     const line = standingLine(AGREED_WITH_THEIRS, READ_AT);
 
-    expect(line).toContain('Your side agreed');
+    expect(line).toContain('You agreed with their score');
     expect(line).toContain('6 hours');
   });
 
@@ -360,7 +368,64 @@ describe('the rest', () => {
     expect(outcomeLine(undefined)).toBeUndefined();
   });
 
-  it('tells two games apart by a duration, because there is no calendar to print', () => {
-    expect(gameEyebrow('Padel', GAME)).toBe('Padel · arranged 4 days ago');
+  it('tells two games apart by who was on the court, and by a duration after that', () => {
+    // The duration was the **only** distinguishing fact until a seat carried a handle, which
+    // made three padel games in a week three near-identical rows (#319). It is still here,
+    // because there is no calendar to print a date against.
+    expect(gameEyebrow('Padel', GAME, 'me')).toBe('Padel · with tomek.p · arranged 4 days ago');
+  });
+
+  it('names the whole court in the order it was handed over, and never you', () => {
+    const doubles: Game = {
+      ...GAME,
+      seats: [
+        { side: 'A', playerId: 'me', nickname: 'me_' },
+        { side: 'A', playerId: 'partner', nickname: 'kasia_w' },
+        { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+        { side: 'B', playerId: 'other', nickname: 'marekb' },
+      ],
+    };
+
+    expect(gameEyebrow('Padel', doubles, 'me')).toContain('with kasia_w, tomek.p and marekb');
+  });
+
+  it('draws the unknown player for a seat users can no longer answer for', () => {
+    // A missing handle is never a missing seat: dropping it would draw a three-person doubles
+    // game, so the court keeps its shape and loses a word.
+    const erased: Game = {
+      ...GAME,
+      seats: [
+        { side: 'A', playerId: 'me', nickname: 'me_' },
+        { side: 'B', playerId: 'them' },
+      ],
+    };
+
+    expect(gameEyebrow('Padel', erased, 'me')).toBe('Padel · with ? · arranged 4 days ago');
+  });
+});
+
+describe('who a sentence names, and who it deliberately does not', () => {
+  /**
+   * *That's right* settles a score against a person, and until a seat carried a handle the
+   * screen could not say which — the second of #319's two costs.
+   */
+  it('names whoever on the other side put the score up', () => {
+    const line = standingLine({ kind: 'theirs-stands', proposal: PROPOSAL, by: THEM }, READ_AT);
+
+    expect(line).toContain('tomek.p put a score up');
+  });
+
+  it('names the person who agreed, and says You where that person is the reader', () => {
+    expect(standingLine(AGREED_WITH_OURS, READ_AT)).toContain('tomek.p agreed with your score');
+    expect(standingLine(AGREED_WITH_THEIRS, READ_AT)).toContain('You agreed with their score');
+  });
+
+  /**
+   * **A score is a side's claim**, capped one per side and answerable by either of the two who
+   * played it — so a column headed with a handle would charge a doubles score to one of them.
+   */
+  it('still calls the two columns of a score sides, never people', () => {
+    expect(sideLabels(2)).toEqual({ ours: 'Your side', theirs: 'Their side' });
+    expect(sideLabels(1)).toEqual({ ours: 'You', theirs: 'Them' });
   });
 });

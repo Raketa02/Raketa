@@ -66,6 +66,7 @@ from app.bootstrap.composition import (
     build_play_intent_declaration_repository,
     build_photo_storage,
     build_player_card_source,
+    build_player_handles,
     build_player_record_source,
     build_player_profile_repository,
     build_player_score_query,
@@ -298,6 +299,7 @@ async def read_paths(
     games = build_game_repository(
         session=session, event_store=event_store, events=events
     )
+    handles = build_player_handles(session)
     history = build_match_history_query(session)
     ruleset = build_ruleset()
     engine = build_match_fit_engine()
@@ -403,9 +405,11 @@ async def read_paths(
             planned_games=build_planned_game_opening(session),
         ),
         decline=DeclineSeat(challenges=challenges, uow=uow, clock=clock),
-        state_result=StateResult(games=games, uow=uow, clock=clock),
-        accept_result=AcceptResult(games=games, uow=uow, clock=clock),
-        read_games=ReadGames(games=build_game_directory(session), clock=clock),
+        state_result=StateResult(games=games, handles=handles, uow=uow, clock=clock),
+        accept_result=AcceptResult(games=games, handles=handles, uow=uow, clock=clock),
+        read_games=ReadGames(
+            games=build_game_directory(session), handles=handles, clock=clock
+        ),
         read_challenges=ReadChallenges(
             directory=build_challenge_directory(session), clock=clock
         ),

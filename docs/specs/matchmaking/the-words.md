@@ -765,6 +765,16 @@ addressing a person by a name they never gave it."*
 > head-to-head row, §B16's side-name formatter, §B17's `SH.propose`, and **all eight of
 > §F3's toasts that name somebody.**
 
+**The result screens join that list, and they name a person only where a person acted**
+([ADR-0141](../../adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)). A games seat
+carries a handle and nothing else about its occupant, so the row's eyebrow says *who you
+played* — the fact that tells two padel games in a week apart, where a duration cannot — and two
+sentences name somebody: *{name} put a score up* and *{name} agreed with your score*. **The two
+columns of a score stay sides.** A score is a **side's** claim, capped one per side and
+answerable by either of the two who played it, so a column headed with a handle would charge a
+doubles score to one of them and a listener reading a set cell by cell would hear the wrong
+person's six.
+
 **A seat label may truncate visually; a sentence may not, and a spoken name never does.**
 ADR-0107's rule is against *inventing* a familiar form — a visual truncation invents nothing,
 and the accessible name carries the whole handle, which is where the rule actually bites.

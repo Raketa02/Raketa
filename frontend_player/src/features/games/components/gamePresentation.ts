@@ -26,12 +26,20 @@
  *   side whose counter went unaccepted. Every sentence here that could be read as a reproach
  *   says so out loud.
  *
- * ## Nobody on this court is named, and no sentence here pretends otherwise
+ * ## A person is named where a person acted, and a side where a side did
  *
- * The games contract carries a side and a player id per seat and no handle at all, so the words
- * are about **sides**. That is a stated gap rather than a style: inventing a name is what
- * [ADR-0107](../../../../../docs/adr/0107-a-handle-is-the-whole-handle.md) forbids in one
- * sentence, and there is nothing here to shorten because there is nothing here at all.
+ * A seat carries a handle
+ * ([ADR-0141](../../../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)),
+ * and the split is not a matter of taste. **A score is a side's claim** — the aggregate caps one
+ * per side and either side may agree with the other's — so the two columns of every score here
+ * stay *Your side* and *Their side*, and naming whoever typed one would charge a side's single
+ * turn to a teammate. **Agreeing and putting a score up are things a person did**, and those two
+ * sentences say who.
+ *
+ * The handle is drawn **whole** wherever it appears — these are sentences, and
+ * [ADR-0107](../../../../../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4
+ * forbids deriving a familiar form from one. `playerName()` is the single formatter, and it is
+ * what draws the `?` for a seat `users` can no longer answer for.
  *
  * ## The words are the prototype's where the prototype had them
  *
@@ -52,10 +60,11 @@
  */
 
 import { counted } from '@/shared/formatting/counted';
+import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { ResultConversation } from '../domain/conversation';
+import { othersOn, type ResultConversation } from '../domain/conversation';
 import type { Game } from '../domain/game';
 import type { ScoreKey, ScoreProblem } from '../domain/score';
 import { scoreColumn, type GameKind, type Outcome } from '../domain/vocabulary';
@@ -72,16 +81,41 @@ import { durationLeft, durationSince } from './durations';
 export const GAMES_HEADING = 'Your games';
 
 /**
- * The eyebrow on a row and at the head of the screen: the sport, and how long ago it was
- * arranged.
+ * The eyebrow on a row and at the head of the screen: the sport, **who you played**, and how
+ * long ago it was arranged.
  *
  * **A duration and never a date**, because this platform has no calendar to print one against —
  * the grid is *an ordinary week*, a `Window` is a label on a search rather than a proposed time,
- * and there is no date picker anywhere in this app. It is also the only thing that tells two
- * padel games apart in a list where nobody is named.
+ * and there is no date picker anywhere in this app. That duration used to be the *only* thing
+ * telling two padel games apart, which made three games in a week three near-identical rows
+ * ([#319](https://github.com/Raketa02/Raketa/issues/319)); the handles are what tell them apart
+ * now, and the duration goes on saying which was longest ago.
+ *
+ * **The court's own order, and the whole of every handle.** A doubles court is three people and
+ * a comma-and list of three sixty-four-character handles is a long line — it is one the row
+ * clips rather than one this deck shortens, because
+ * [ADR-0107](../../../../../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4
+ * is about what a sentence *says*, and a box deciding how much of a sentence fits is that box's
+ * business.
  */
-export function gameEyebrow(sportName: string, game: Game): string {
-  return `${sportName} · arranged ${durationSince(game.plannedAt, game.readAt)} ago`;
+export function gameEyebrow(sportName: string, game: Game, playerId: string): string {
+  const played = withWhom(othersOn(game, playerId));
+  return `${sportName}${played} · arranged ${durationSince(game.plannedAt, game.readAt)} ago`;
+}
+
+/**
+ * *with kasia_w, tomek.p and marekb* — **and the empty string for a court with nobody else on
+ * it**, which is the stale-link case rather than a game.
+ *
+ * `counted()` is not reached for: nothing here is counted, and the join is a list of names in
+ * the court's own order. The last comma is an *and* because this is prose and not a legend.
+ */
+function withWhom(others: readonly NamedPlayer[]): string {
+  const names = others.map(playerName);
+  if (names.length === 0) return '';
+  const last = names[names.length - 1] ?? '';
+  const rest = names.slice(0, -1);
+  return rest.length === 0 ? ` · with ${last}` : ` · with ${rest.join(', ')} and ${last}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,17 +147,24 @@ export function standingLine(conversation: ResultConversation, readAt: string): 
     case 'ours-stands':
       return `Your side's score is on the table. If nobody answers within ${durationLeft(conversation.proposal.answerBy, readAt)}, it stands.`;
     case 'theirs-stands':
-      return `The other side put a score up. If you say nothing for ${durationLeft(conversation.proposal.answerBy, readAt)}, it stands.`;
+      // **The one sentence on these screens that was addressed to nobody.** *That's right*
+      // settles a score against a person, and until a seat carried a handle the screen could
+      // not say which (#319).
+      return `${playerName(conversation.by)} put a score up. If you say nothing for ${durationLeft(conversation.proposal.answerBy, readAt)}, it stands.`;
     case 'both-stand':
       return "Both sides wrote a score down and they don't match.";
     case 'agreed': {
       // The side it is news for is the only thing that differs, and it is the whole of why this
       // is on the standing line: the line is **the row's sentence too**, so the person whose
       // score was agreed with reads it without opening anything.
+      // *You* on your own tap, and your partner by name on theirs — the second is the whole
+      // reason the accepter travels: in a doubles game *your side agreed* is news about somebody
+      // the reader did not watch do it.
+      const agreed = playerName(conversation.agreement.by);
       const who =
         conversation.agreement.with === 'ours'
-          ? 'The other side agreed with your score.'
-          : 'Your side agreed with their score.';
+          ? `${agreed} agreed with your score.`
+          : `${agreed} agreed with their score.`;
       return `${who} It becomes the result in ${durationLeft(conversation.agreement.settlesAt, readAt)}.`;
     }
     case 'confirmed':
@@ -224,9 +265,10 @@ export interface ClockBlock {
  * changed.
  *
  * The prototype named the other side (*"You have now played with Kuba & Ada"*) and stated the
- * kind as a fact (*"It was a counted match, not a friendly"*); this app names nobody, and the
- * kind is `worthLine`'s and may be absent. What is left is the three that are true of every
- * unscored game and read as an account rather than as an apology.
+ * kind as a fact (*"It was a counted match, not a friendly"*); the kind is `worthLine`'s and may
+ * be absent, and the naming is the **eyebrow's**, two lines above this list on the same screen.
+ * A second copy of the court here would be the same fact twice in one view. What is left is the
+ * three that are true of every unscored game and read as an account rather than as an apology.
  */
 export const UNSCORED_FACTS: readonly string[] = [
   'It is in your history, and in how much you have played',
@@ -310,14 +352,26 @@ export function outcomeLine(outcome: Outcome | undefined): string | undefined {
 // The court, with nobody on it
 // ---------------------------------------------------------------------------
 
-/** Who was on court, as a shape. Nobody is named, because the games contract names nobody. */
+/**
+ * Who was on court, **as a shape** — the eyebrow above it is where they are named.
+ *
+ * A doubles line naming four people would put the same three handles on screen twice, and this
+ * sentence's job is the other half: how many were out there, and who was against whom.
+ */
 export function courtLine(ours: number, theirs: number): string {
   return ours + theirs > 2
     ? 'Doubles — you and your partner against two others.'
     : 'Singles — you against one other player.';
 }
 
-/** What the two columns of every score on these screens are called. */
+/**
+ * What the two columns of every score on these screens are called.
+ *
+ * **Sides and never people, even where a handle is available.** A score is a fact about a side —
+ * one per side, and either side may agree with the other's — so a column headed with a name
+ * would attribute a doubles score to one of the two who played it, and a listener reading a set
+ * cell by cell would hear the wrong person's six.
+ */
 export function sideLabels(ours: number): { readonly ours: string; readonly theirs: string } {
   return ours > 1 ? { ours: 'Your side', theirs: 'Their side' } : { ours: 'You', theirs: 'Them' };
 }

@@ -49,10 +49,25 @@
  * the side that may make one is the side that has not spoken. Two scores standing means neither
  * can, which is the aggregate's one-per-side cap rather than a rule invented here.
  *
+ * ## Somebody did each of these things, and two of the eight say who
+ *
+ * A seat carries a handle ([ADR-0141](../../../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)),
+ * so *the other side put a score up* and *the other side agreed* can name the person they are
+ * about. Two states and no more: an entry, a correction and a disagreement are acts of a
+ * **side** — a score is one side's claim and the aggregate caps it per side, not per person —
+ * and naming whoever typed one would attribute a side's turn to a teammate.
+ *
+ * Whoever a sentence names is a {@link NamedPlayer} rather than a string, on
+ * `challengePresentation`'s precedent: *you*, *a player*, and a seat the record can no longer
+ * describe are three cases, and a formatter taking an optional handle would let the third read
+ * as the second with an empty name.
+ *
  * **Nothing here folds a standing.** The standing is *derived from the record and the clock*,
  * and `read_at` is what every duration on these screens is measured from; a client that decided
  * *the grace has passed* would be the second place that answer lives.
  */
+
+import type { NamedPlayer } from '@/shared/formatting/playerName';
 
 import type { Acceptance, Game, Score, StandingProposal } from './game';
 import type { GameSide, Outcome } from './vocabulary';
@@ -83,6 +98,8 @@ export interface ScoresOnTable {
 export interface StandingAgreement {
   /** Whose score was agreed with. */
   readonly with: 'ours' | 'theirs';
+  /** Who agreed. **You**, on your own side's agreement in a doubles game, or the person. */
+  readonly by: NamedPlayer;
   /** When it becomes the result — measured from the **score**, never from anybody's tap. */
   readonly settlesAt: string;
 }
@@ -104,7 +121,12 @@ export type ResultConversation =
   | { readonly kind: 'awaiting-entry'; readonly entryClosesAt?: string }
   | { readonly kind: 'never-played' }
   | { readonly kind: 'ours-stands'; readonly proposal: StandingProposal }
-  | { readonly kind: 'theirs-stands'; readonly proposal: StandingProposal }
+  /** `by` is whoever on the other side put it up — the one person a screen here can name. */
+  | {
+      readonly kind: 'theirs-stands';
+      readonly proposal: StandingProposal;
+      readonly by: NamedPlayer;
+    }
   | {
       readonly kind: 'both-stand';
       readonly ours: StandingProposal;
@@ -122,12 +144,40 @@ export type ResultConversation =
 /**
  * Which side of the net is yours — **a join, not a rule.**
  *
- * `SeatingSchema` carries a side and a player id and states no `Relationship`, unlike the
- * arrangements a builder reads, so the answer is a lookup of your own id in a frozen court.
+ * `SeatingSchema` carries a side, a player id and a handle and states no `Relationship`, unlike
+ * the arrangements a builder reads, so the answer is a lookup of your own id in a frozen court.
  * `undefined` when no seat is yours, which the list cannot produce and a link can.
  */
 export function sideOf(game: Game, playerId: string): GameSide | undefined {
   return game.seats.find((seat) => seat.playerId === playerId)?.side;
+}
+
+/**
+ * Who somebody on this court is, **in the reader's own terms** — the one join that turns an id
+ * on this contract into somebody a sentence can name.
+ *
+ * *You* for the reader themselves, because a player reading their own handle in a row about
+ * them is the one place the whole handle is the wrong word. The unknown player's `?` for a seat
+ * `users` can no longer answer for, and for an id that holds no seat at all — the second is
+ * unreachable from a game's own fields and is answered rather than thrown, on the rule the
+ * court draws by: a seat is never emptied.
+ */
+export function whoIs(game: Game, reader: string, playerId: string): NamedPlayer {
+  if (playerId === reader) return { kind: 'you' };
+  const nickname = game.seats.find((seat) => seat.playerId === playerId)?.nickname;
+  return nickname === undefined ? { kind: 'unknown' } : { kind: 'player', nickname };
+}
+
+/**
+ * Everybody on this court but you, **in the order the challenge handed it over.**
+ *
+ * The court's order and never a re-sort: which side was short is part of what a court is, and a
+ * list re-ordered here would say a different thing about the same evening on two screens.
+ */
+export function othersOn(game: Game, reader: string): readonly NamedPlayer[] {
+  return game.seats
+    .filter((seat) => seat.playerId !== reader)
+    .map((seat) => whoIs(game, reader, seat.playerId));
 }
 
 /** Everybody on your side but you, and everybody across the net. Sides, because nobody is named. */
@@ -155,7 +205,7 @@ export function resultConversation(game: Game, playerId: string): ResultConversa
     case 'AWAITING_ANSWER': {
       const ours = game.proposals.find((one) => one.side === side);
       const theirs = game.proposals.find((one) => one.side !== side);
-      const agreement = agreementFrom(game.acceptance, side);
+      const agreement = agreementFrom(game, playerId, side);
 
       if (ours === undefined) {
         // An answer awaited with nothing on the table at all — the case the standing's own fold
@@ -163,7 +213,11 @@ export function resultConversation(game: Game, playerId: string): ResultConversa
         // cannot produce it.
         if (theirs === undefined) return { kind: 'unreadable' };
         return agreement === undefined
-          ? { kind: 'theirs-stands', proposal: theirs }
+          ? {
+              kind: 'theirs-stands',
+              proposal: theirs,
+              by: whoIs(game, playerId, theirs.proposedBy),
+            }
           : { kind: 'agreed', agreement, theirs };
       }
       if (agreement !== undefined) return { kind: 'agreed', agreement, ours, theirs };
@@ -176,12 +230,15 @@ export function resultConversation(game: Game, playerId: string): ResultConversa
 
 /** An agreement in the reader's own terms, and `undefined` where none stands. */
 function agreementFrom(
-  acceptance: Acceptance | undefined,
+  game: Game,
+  playerId: string,
   side: GameSide,
 ): StandingAgreement | undefined {
+  const acceptance: Acceptance | undefined = game.acceptance;
   if (acceptance === undefined) return undefined;
   return {
     with: acceptance.ofSide === side ? 'ours' : 'theirs',
+    by: whoIs(game, playerId, acceptance.agreedBy),
     settlesAt: acceptance.settlesAt,
   };
 }

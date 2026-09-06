@@ -77,10 +77,10 @@ function GameRow({ game, playerId }: { readonly game: Game; readonly playerId: s
 
   return (
     <PressableCard
-      accessibilityLabel={gameRowLabel(sport, game, line)}
+      accessibilityLabel={gameRowLabel(sport, game, playerId, line)}
       onPress={() => router.push({ pathname: GAME_ROUTE, params: { gameId: game.gameId } })}
     >
-      <Text style={s.eyebrow}>{gameEyebrow(sport, game)}</Text>
+      <Text style={s.eyebrow}>{gameEyebrow(sport, game, playerId)}</Text>
       <Text style={s.line}>{line}</Text>
     </PressableCard>
   );

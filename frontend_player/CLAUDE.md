@@ -94,9 +94,18 @@ the one being typed, and an unscored evening ends on a fact list rather than an 
 things are rewritten because the model moved. **There is no absolute time anywhere** — the
 prototype quoted one beside every duration, and this platform has no calendar to print one
 against — so every span is measured from `read_at`, the instant the standing beside it was folded.
-And **nobody is named**: `SeatingSchema` is a side and a player id, so the words are about _your
-side_ and _the other side_, and inventing a handle is what
-[ADR-0107](../docs/adr/0107-a-handle-is-the-whole-handle.md) forbids in one sentence. The
+And **a person is named where a person acted, and a side where a side did**
+([ADR-0141](../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)). A seat carries
+a handle and nothing else about the person in it — no Level, no band, no run of form, because a
+card is what a _searcher_ reads to decide about a game that might happen and this is the record of
+one that did. So the eyebrow says **who you played**, which is what tells two padel games in a week
+apart, and _tomek.p put a score up_ and _tomek.p agreed with your score_ name the person a result is
+being settled with. The score's two columns stay _You / Them_ and _Your side / Their side_: a score
+is a **side's** claim, capped one per side and answerable by either of the two who played it, so a
+column headed with a handle would charge a doubles score to one of them. Every handle is drawn
+**whole**, which is
+[ADR-0107](../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4, and a seat
+`users` can no longer answer for draws the unknown player's `?` rather than being dropped. The
 prototype's `✓` went the way the on-court mark's did — **Archivo ships no U+2713** — and the
 winner's row carries the word instead.
 

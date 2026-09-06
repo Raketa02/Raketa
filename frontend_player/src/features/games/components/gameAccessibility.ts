@@ -71,8 +71,13 @@ export interface ScoreView {
  * Identifying facts lead, which is §20.3's order and the reason it exists — a listener who has
  * heard enough interrupts and acts, and *what* they would be acting on has to come first.
  */
-export function gameRowLabel(sportName: string, game: Game, standing: string): string {
-  return `${gameEyebrow(sportName, game)}. ${standing}`;
+export function gameRowLabel(
+  sportName: string,
+  game: Game,
+  playerId: string,
+  standing: string,
+): string {
+  return `${gameEyebrow(sportName, game, playerId)}. ${standing}`;
 }
 
 /**

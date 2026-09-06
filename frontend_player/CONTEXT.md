@@ -557,10 +557,22 @@ not restated here; what follows is only what this client had to invent to draw t
   thirty — so it is the sentence _we know the shape, not the rulebook_ built into the instrument
   and not only into the validator. _Avoid_: "the keyboard" (the system one is what this exists
   instead of) and treating `padTo` as a maximum.
-- **Side labels** — _You / Them_ in singles, _Your side / Their side_ in doubles. **The games
-  contract carries a side and a player id per seat and no handle at all**, so every sentence in
-  the feature is about sides and none of them names anybody. _Avoid_: inventing a name, which
-  [ADR-0107](../docs/adr/0107-a-handle-is-the-whole-handle.md) forbids in one sentence.
+- **Side labels** — _You / Them_ in singles, _Your side / Their side_ in doubles. **Sides even
+  though a seat carries a handle**, and that is the decision rather than a leftover: a score is a
+  **side's** claim — one per side, and either of the two who played it may agree with the other's
+  — so a column headed with a name would charge a doubles score to one of them, and a listener
+  reading a set cell by cell would hear the wrong person's six
+  ([ADR-0141](../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)). _Avoid_:
+  heading a score column with a handle.
+- **The court's handles** — what a seat says about the person in it, and **the whole of it**: no
+  Level, no band, no area, no run of form, because those are what a _searcher_ reads to decide
+  about a game that might happen. They are drawn in the eyebrow — _Padel · with kasia_w, tomek.p
+  and marekb_, which is what tells two padel games in a week apart — and in the two sentences
+  about something a **person** did: putting a score up, and agreeing with one. Always the
+  **whole** handle
+  ([ADR-0107](../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4), and the
+  unknown player's `?` for a seat `users` can no longer answer for. _Avoid_: shortening one, and
+  dropping a seat that has no handle — the court keeps its shape and loses a word.
 - **The read instant** — `read_at`, the moment every standing and deadline in the list was
   folded against. **Every duration on these screens is measured from it and never from the
   device clock**, so a countdown cannot drift out of agreement with the word printed beside it.

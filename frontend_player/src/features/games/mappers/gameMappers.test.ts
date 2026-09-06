@@ -115,7 +115,11 @@ describe('one game off the wire', () => {
       READ_AT,
     );
 
-    expect(game?.acceptance).toEqual({ ofSide: 'A', settlesAt: '2026-09-05T02:12:00Z' });
+    expect(game?.acceptance).toEqual({
+      agreedBy: 'them',
+      ofSide: 'A',
+      settlesAt: '2026-09-05T02:12:00Z',
+    });
   });
 
   it('leaves an agreement absent when the response carried none', () => {
@@ -146,6 +150,50 @@ describe('a code this build has never seen', () => {
   it('drops a game whose sport has no score shape, because there is no instrument to draw', () => {
     // @ts-expect-error — a fifth sport is a release, and this build is the one before it.
     expect(toGames({ read_at: READ_AT, games: [wireGame({ sport: 'PICKLEBALL' })] })).toEqual([]);
+  });
+
+  it('reads the handle on a seat, which is the whole of what a seat says about a person', () => {
+    const [game] = toGames({
+      read_at: READ_AT,
+      games: [
+        wireGame({
+          seats: [
+            { side: 'A', player_id: 'me', nickname: 'me_' },
+            { side: 'B', player_id: 'them', nickname: 'tomek.p' },
+          ],
+        }),
+      ],
+    });
+
+    expect(game?.seats).toEqual([
+      { side: 'A', playerId: 'me', nickname: 'me_' },
+      { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+    ]);
+  });
+
+  /**
+   * **A missing handle is not a missing seat**, which is the one place this mapper's *structure
+   * is refused whole* rule deliberately does not apply: dropping the seat would draw a
+   * three-person doubles game, and `users` no longer having an account is not a court changing
+   * shape (`docs/adr/0141`).
+   */
+  it('keeps a seat whose handle the response could not answer for', () => {
+    const [game] = toGames({
+      read_at: READ_AT,
+      games: [
+        wireGame({
+          seats: [
+            { side: 'A', player_id: 'me', nickname: 'me_' },
+            { side: 'B', player_id: 'them', nickname: null },
+          ],
+        }),
+      ],
+    });
+
+    expect(game?.seats).toEqual([
+      { side: 'A', playerId: 'me', nickname: 'me_' },
+      { side: 'B', playerId: 'them' },
+    ]);
   });
 
   it('drops a game whose court it cannot place somebody on', () => {

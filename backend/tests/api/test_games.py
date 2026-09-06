@@ -20,6 +20,11 @@ the whole mechanism, and the response says when it closes.
 
 **Disagreement carries a score.** There is no rejection endpoint and no body
 without one.
+
+**A seat names the person in it and says nothing else about them.** The handle
+travels and the card does not, and the court is the whole of the permission —
+so a block, which is forward-looking, does not reach back and unname somebody
+you already played (``docs/adr/0141``).
 """
 
 from __future__ import annotations
@@ -115,6 +120,123 @@ async def test_a_completed_line_up_leaves_a_game_behind(
         assert game["played_at"] is None
         assert game["entry_closes_at"] is not None
         assert len(game["seats"]) == 4
+
+
+#: Every field a *card* carries. None of them may appear on a seat: a Level, a
+#: band and a run of form are what a searcher reads to decide about a game that
+#: might happen, and a game is the record of one that did.
+_CARD_FIELDS = (
+    "player_card",
+    "level",
+    "band",
+    "range",
+    "area_code",
+    "social_tags",
+    "photo_id",
+    "photo_url",
+    "review",
+    "player_score",
+    "counted_games",
+    "last_five",
+)
+
+
+async def test_a_seat_names_the_person_in_it_and_says_nothing_else_about_them(
+    client, session_factory, candidate_source, searcher
+):
+    """**The handle travels; the card does not.**
+
+    Without it the screens name *sides*, which leaves a result agreed with
+    nobody and three padel games in a week told apart by nothing but how long
+    ago they were arranged. With a card on it, a game would be a directory with
+    extra steps — every value on one is as-of-now, stapled to an evening in the
+    past, and it is what a *gate* decided a searcher may see.
+
+    **Your own seat carries your own handle**, and the client is what decides to
+    print *You* over it: which id is the reader's is already on the response.
+    """
+
+    people, _ = await _an_arranged_game(
+        client, session_factory, candidate_source, searcher
+    )
+    everybody = {str(searcher["id"]): "searcher"} | {
+        str(one["id"]): name for name, one in people.items()
+    }
+
+    for token in [searcher["token"]] + [one["token"] for one in people.values()]:
+        (game,) = await _games(client, token)
+        assert {seat["player_id"]: seat["nickname"] for seat in game["seats"]} == (
+            everybody
+        )
+        for seat in game["seats"]:
+            assert not [field for field in _CARD_FIELDS if field in seat], (
+                "a seat carries a handle and nothing else about the person"
+            )
+
+
+async def test_the_two_acts_name_the_court_the_way_the_list_does(
+    client, session_factory, candidate_source, searcher
+):
+    """One shape, three routes.
+
+    A screen that could name the other side while reading and not after
+    answering would go anonymous at the moment it most needs a name — the tap
+    that settles a score against a person.
+    """
+
+    people, _ = await _an_arranged_game(
+        client, session_factory, candidate_source, searcher
+    )
+    (game,) = await _games(client, searcher["token"])
+    named = {seat["player_id"]: seat["nickname"] for seat in game["seats"]}
+
+    stated = await client.post(
+        f"/api/v1/games/{game['game_id']}/result",
+        json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
+        headers=world.auth(searcher["token"]),
+    )
+    assert stated.status_code == 200, stated.text
+    assert {
+        seat["player_id"]: seat["nickname"] for seat in stated.json()["seats"]
+    } == named
+
+    theirs = _an_opponent_of(game, searcher, people)
+    agreed = await client.post(
+        f"/api/v1/games/{game['game_id']}/result/acceptance",
+        headers=world.auth(theirs["token"]),
+    )
+    assert agreed.status_code == 200, agreed.text
+    assert {
+        seat["player_id"]: seat["nickname"] for seat in agreed.json()["seats"]
+    } == named
+
+
+async def test_a_block_does_not_unname_somebody_you_already_played(
+    client, session_factory, candidate_source, searcher
+):
+    """**The court is the gate, and nothing here is re-gated.**
+
+    ``docs/adr/0095`` §7 settles it forwards — a block does not reach into a
+    game already agreed — and §8 settles it backwards: a handle that vanished
+    from a row would be the trace neither party is ever shown. The four
+    fail-closed gates decide who may be *introduced*, and an evening you were
+    both at is not an introduction.
+    """
+
+    people, _ = await _an_arranged_game(
+        client, session_factory, candidate_source, searcher
+    )
+    (game,) = await _games(client, searcher["token"])
+    theirs = _an_opponent_of(game, searcher, people)
+
+    blocked = await world.block_between(client, searcher["token"], theirs["id"])
+    assert blocked.status_code == 204, blocked.text
+
+    for token in (searcher["token"], theirs["token"]):
+        (after,) = await _games(client, token)
+        assert all(seat["nickname"] is not None for seat in after["seats"]), (
+            "a block is forward-looking and does not unname a court"
+        )
 
 
 async def test_stating_a_result_records_that_the_game_happened(

@@ -467,6 +467,20 @@ Rules to preserve:
   rating context walks confirmed counted results forward, oldest first, ordered on the derived
   moment each became final
   ([ADR-0139](../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
+  It has **one inward port too**, and it is a single field wide:
+  `PlayerHandles` puts a **nickname** on a seat and nothing else about the person in it
+  ([ADR-0141](../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)). A card is
+  what a *searcher* reads to decide about a game that might happen, so a Level, an area or a run
+  of form on a record of an evening would be an as-of-now fact stapled to the past; the handle is
+  what four people already knew about each other by the time they were on a court together, and
+  without it the screens named **sides** — a result agreed with nobody, and three padel games in
+  a week told apart by nothing but how long ago they were arranged. **The court is the whole of
+  the permission and nothing is re-gated against the reader**: the four fail-closed gates decide
+  who may be *introduced*, ADR-0095 §7 already settled that a block does not reach into a game
+  already agreed, and a handle that vanished from a row would be §8's trace. It is **one set read
+  per response** over the union of every court in the answer, and a handle `users` cannot answer
+  for is `null` with the seat kept — the opposite of the shortlist, which drops a row it cannot
+  name.
 - **A Player Score is what the platform watched, and two strands is what it can see**
   ([ADR-0140](../docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
   `app/modules/player_score/` is the seventh context and the first that **keeps no record at

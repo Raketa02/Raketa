@@ -26,7 +26,7 @@ from app.modules.games.application.commands import (
 from app.modules.games.application.read_games import StandingGame
 from app.modules.games.domain.errors import YouWereNotOnThisCourt
 from app.modules.games.domain.game import Game
-from app.modules.games.domain.ports import GameRepository
+from app.modules.games.domain.ports import GameRepository, PlayerHandles
 
 
 class _ActOnAResult:
@@ -36,10 +36,12 @@ class _ActOnAResult:
         self,
         *,
         games: GameRepository,
+        handles: PlayerHandles,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._games = games
+        self._handles = handles
         self._uow = uow
         self._clock = clock
 
@@ -63,11 +65,20 @@ class _ActOnAResult:
 
         **After the write and against the same instant**, so an entry and the
         ``AWAITING_ANSWER`` it produced are one reading rather than two.
+
+        **The handles are read after the commit**, because they are not part of
+        it: a game's court is frozen at the plan, so nothing this act writes
+        could change who is on it, and a read inside the transaction would hold
+        it open for a question about somebody else's context.
         """
 
         await self._games.save(game)
         await self._uow.commit()
-        return StandingGame.folded(game, now=at)
+        return StandingGame.folded(
+            game,
+            now=at,
+            handles=await self._handles.handles_of(game.line_up.players),
+        )
 
 
 @final

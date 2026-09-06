@@ -78,10 +78,19 @@ function toScore(wire: ScoreSchema): Score {
   return { sets: wire.sets.map((set) => ({ a: set.a, b: set.b })) };
 }
 
-/** A seat, or nothing when its side is not a side this build can place on a court. */
+/**
+ * A seat, or nothing when its side is not a side this build can place on a court.
+ *
+ * **A missing handle is not a missing seat.** `null` here is an account `users` no longer has,
+ * and the seat keeps its place: dropping it would draw a three-person doubles game. It collapses
+ * to absent like every other optional in this file, and the screen draws the unknown player.
+ */
 function toSeat(wire: SeatingSchema): GameSeat | undefined {
   const side = member(SIDES, wire.side);
-  return side === undefined ? undefined : { side, playerId: wire.player_id };
+  if (side === undefined) return undefined;
+
+  const nickname = wire.nickname ?? undefined;
+  return { side, playerId: wire.player_id, ...(nickname === undefined ? {} : { nickname }) };
 }
 
 function toStandingProposal(wire: StandingProposalSchema): StandingProposal | undefined {
@@ -100,13 +109,16 @@ function toStandingProposal(wire: StandingProposalSchema): StandingProposal | un
 /**
  * An agreement, or nothing when the side whose score it settles is not one this build can read.
  *
- * **Two of the wire's four fields**, on the rule {@link toStandingProposal} already follows:
- * what a screen reads and nothing else. `agreed_by` names a person on a court where nobody is
- * named, and `agreed_at` answers *when did they answer* for screens that never have to ask.
+ * **Three of the wire's four fields**, on the rule {@link toStandingProposal} already follows:
+ * what a screen reads and nothing else. `agreed_by` is read now that a seat carries a handle to
+ * name it with; `agreed_at` still is not, because it answers *when did they answer* for screens
+ * that never have to ask.
  */
 function toAcceptance(wire: AcceptanceSchema): Acceptance | undefined {
   const ofSide = member(SIDES, wire.of_side);
-  return ofSide === undefined ? undefined : { ofSide, settlesAt: wire.settles_at };
+  return ofSide === undefined
+    ? undefined
+    : { agreedBy: wire.agreed_by, ofSide, settlesAt: wire.settles_at };
 }
 
 /** One game, or nothing when its sport, its court or a score on it is one this build cannot draw. */

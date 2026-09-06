@@ -272,10 +272,21 @@ def _score(payload: ScoreSchema) -> Score:
 def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
     """One game as its own court is allowed to see it.
 
-    The occupants are bare ids, for the reason a challenge's are: a card, a Level
-    and an area belong to a search's answer, where a gate decided they may be
-    shown. A game is a record of an evening, and a screen that re-published
-    somebody's profile off the back of it would be a directory with extra steps.
+    The occupants carry **a handle and nothing else** (``docs/adr/0141``). A
+    card, a Level and an area belong to a search's answer, where a gate decided
+    they may be shown; a game is a record of an evening, and a screen that
+    re-published somebody's profile off the back of it would be a directory with
+    extra steps. A handle is not that: it is what these four people already knew
+    about each other by the time they were on a court together, and without it
+    the screens name *sides* — which leaves a result agreed with nobody and three
+    padel games in a week told apart by nothing but how long ago they were
+    arranged.
+
+    **Nothing here is re-gated against who is reading.** The four fail-closed
+    gates decide who may be *introduced*, and an evening you were both at is not
+    an introduction; ``docs/adr/0095`` §7 already settled that a block is
+    forward-looking and does not reach into a game already agreed. A handle that
+    vanished from a row would also be the trace §8 says neither party ever sees.
     """
 
     game: Game = one.game
@@ -298,7 +309,11 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
             entry_closes_at(game.planned_at) if game.played_at is None else None
         ),
         seats=[
-            SeatingSchema(side=seating.side, player_id=seating.player_id)
+            SeatingSchema(
+                side=seating.side,
+                player_id=seating.player_id,
+                nickname=one.handles.get(seating.player_id),
+            )
             for seating in game.line_up.seatings
         ],
         score=_rendered(game.confirmed_score_at(now)),

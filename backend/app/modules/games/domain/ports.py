@@ -1,7 +1,9 @@
-"""What this context stores behind, and what it publishes outward.
+"""What this context stores behind, what it reads elsewhere, and what it
+publishes outward.
 
-**Two of these are the module's own** — the repository and the directory — and
-two are the platform's. ``GameHistoryQuery`` is the read every other context in
+**Two of these are the module's own** — the repository and the directory — one
+is somebody else's, and two are the platform's. ``GameHistoryQuery`` is the read
+every other context in
 [#302](https://github.com/Raketa02/Raketa/issues/302) was blocked on: the
 pairwise history the matcher's familiarity term has been standing down for want
 of, the count under `player_card.counted_games`, and the five results *Last 5*
@@ -19,6 +21,14 @@ absent from the answer instead.
 
 **Fewer than five results is a real answer and is never padded.** The card draws
 a gap; a fifth invented row would be the same mistake in a smaller place.
+
+**``PlayerHandles`` is the one port here this context consumes rather than
+offers**, and it is a single field wide on purpose. A game says who was on the
+court, and until it carried a handle it said so in ids — which left the screens
+naming *sides* and a result agreed with nobody
+(``docs/adr/0141``). What it does **not** borrow is a card: a Level, a band, an
+area and a run of form are what a searcher reads to decide about a game that
+might happen, and this is the record of one that did.
 
 **``attendance_for`` is the one read here that answers about fewer people than it
 was asked about**, and the exception proves the rule above rather than bending it
@@ -298,6 +308,37 @@ class GameDirectory(Protocol):
 
 
 @runtime_checkable
+class PlayerHandles(Protocol):
+    """What the people on a court are called. **The one thing this context
+    borrows about a person, and the whole of it.**
+
+    A game is a record of an evening, and ``docs/adr/0141`` fixes what a record
+    may say about the people in it: the handle they chose, and nothing that
+    changes with who is looking or with when you ask. So there is one method here
+    and there is nowhere on it for a Level, an area or a photograph to arrive
+    later — a card is what a *search* attaches, where a gate decided the person
+    may be shown at all.
+
+    **One call for a whole list, never one per seat**, which is the shape every
+    set read in this codebase takes: reading four games costs one question about
+    at most sixteen people rather than sixteen questions.
+    """
+
+    async def handles_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
+        """Each of these players' handle, as one set read.
+
+        **A player absent from the answer keeps their seat.** A card with no
+        nickname is not a card and the shortlist drops that row; a *seat* with no
+        nickname is still a person who was on the court, and dropping it would
+        publish a three-person doubles game. The handle goes ``None`` on the
+        wire, the screen says the side, and the game is unchanged — which is the
+        same fall-back a Play court already draws for a seat whose row the record
+        can no longer describe.
+        """
+        ...
+
+
+@runtime_checkable
 class GameHistoryQuery(Protocol):
     """The four facts this context owes the rest of the platform, and the fifth
     it owes an honest ``None``."""
@@ -400,5 +441,6 @@ __all__ = [
     "GameHistoryQuery",
     "GameRepository",
     "PlayedOutcome",
+    "PlayerHandles",
     "PlayedTally",
 ]

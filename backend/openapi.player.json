@@ -5300,6 +5300,18 @@
             "type": "string",
             "format": "uuid",
             "title": "Player Id"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nickname",
+            "description": "The whole handle, and **nothing may derive a familiar form from it** \u2014 every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``).\n\n``null`` where ``users`` no longer has this account. The seat stays: dropping it would publish a three-person doubles game, and the screen has a side to name instead."
           }
         },
         "type": "object",
@@ -5308,7 +5320,7 @@
           "player_id"
         ],
         "title": "SeatingSchema",
-        "description": "One person, on one side. The court is frozen at the plan."
+        "description": "One person, on one side. The court is frozen at the plan.\n\n**A handle, and nothing else about them** (``docs/adr/0141``). A Level, a\nband, an area and a run of form are what a *searcher* reads to decide about a\ngame that might happen, and a gate decided they may see them; this is the\nrecord of a game that did, and it re-publishes nobody's profile off the back\nof it. The court is the whole of the permission \u2014 ``GET /games`` answers\nabout games you were on the court of \u2014 so nothing here is re-gated against\nwho is reading."
       },
       "SendChallengeRequest": {
         "properties": {

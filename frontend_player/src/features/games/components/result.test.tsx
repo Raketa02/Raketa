@@ -62,6 +62,9 @@ const READ_AT = '2026-09-05T09:00:00Z';
 const ME = GATE_USER.id;
 const OPPONENT = 'bbbbbbbb-0000-4000-8000-000000000002';
 
+/** What the opponent's seat is called, and the one handle these screens ever print. */
+const THEIR_HANDLE = 'tomek.p';
+
 /** A singles padel game with me on side A. Singles, so the column heads are *You* and *Them*. */
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   return {
@@ -73,8 +76,8 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
     planned_at: '2026-09-01T09:00:00Z',
     entry_closes_at: '2026-09-09T09:00:00Z',
     seats: [
-      { side: 'A', player_id: ME },
-      { side: 'B', player_id: OPPONENT },
+      { side: 'A', player_id: ME, nickname: 'me_' },
+      { side: 'B', player_id: OPPONENT, nickname: THEIR_HANDLE },
     ],
     proposals: [],
     ...over,
@@ -177,7 +180,7 @@ async function openGame(served: Wire['GameSchema'], sport = 'Padel') {
   stubGames(transport, [served], READ_AT);
   await launchSignedIn();
 
-  const row = await screen.findByLabelText(new RegExp(`^${sport} · arranged`));
+  const row = await screen.findByLabelText(new RegExp(`^${sport} · with `));
   fireEvent.press(row);
   await waitFor(() => expect(screen).toHavePathname(`/games/${GAME_ID}`));
 }
@@ -667,12 +670,16 @@ const COUNTER = {
 /** One agreement, as the two sides read it. Six hours from `READ_AT`, measured from the score. */
 const AGREED_WITH_OURS: ResultConversation = {
   kind: 'agreed',
-  agreement: { with: 'ours', settlesAt: '2026-09-05T15:00:00Z' },
+  agreement: {
+    with: 'ours',
+    by: { kind: 'player', nickname: 'tomek.p' },
+    settlesAt: '2026-09-05T15:00:00Z',
+  },
   ours: PROPOSAL,
 };
 
 const AGREED_WITH_THEIRS: ResultConversation = {
   kind: 'agreed',
-  agreement: { with: 'theirs', settlesAt: '2026-09-05T15:00:00Z' },
+  agreement: { with: 'theirs', by: { kind: 'you' }, settlesAt: '2026-09-05T15:00:00Z' },
   theirs: PROPOSAL,
 };

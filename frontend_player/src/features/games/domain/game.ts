@@ -15,15 +15,24 @@
  * is carried on each game rather than left with the list because the screens hold **one** game
  * and would otherwise each need to be handed the pair.
  *
- * ## Nobody on this court has a name
+ * ## A seat carries a handle, and nothing else about the person in it
  *
- * `SeatingSchema` is a side and a player id, and that is all the games contract carries — no
- * handle, no level, no relationship. It is the gap `SearchEnvelope.myAreaCode` is
- * ([#279](https://github.com/Raketa02/Raketa/issues/279)): stated here rather than worked
- * around, because the alternative is this feature learning to guess a nickname, which
- * [ADR-0107](../../../../../docs/adr/0107-a-handle-is-the-whole-handle.md) forbids in one
- * sentence. So the screens name **sides** — *your side*, *the other side* — derived from which
- * seat is yours, and no sentence in this feature says anybody's handle.
+ * `SeatingSchema` is a side, a player id and a nickname — no Level, no band, no area, no run of
+ * form ([ADR-0141](../../../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)).
+ * A card is what a *searcher* reads to decide about a game that might happen; this is the record
+ * of one that did, and every value on a card would be an as-of-now fact stapled to an evening in
+ * the past. So the screens name **people** where a person did something — put a score up, agreed
+ * with one — and **sides** where the score itself is being drawn, because a score is a fact about
+ * a side and not about whoever typed it.
+ *
+ * The handle is the **whole** handle, always:
+ * [ADR-0107](../../../../../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4
+ * forbids deriving a familiar form from one, and `@/shared/formatting/playerName` is the single
+ * formatter that turns a seat into words.
+ *
+ * `nickname` is **absent** where `users` no longer has that account, which is a `?` on screen and
+ * never a dropped seat — the same fall-back a Play court draws for a seat whose row the record
+ * can no longer describe.
  *
  * Which seat *is* yours is a **join and not a rule**: `ArrangementSeatSchema` states a
  * `Relationship` and this one does not, so the client looks its own id up in the seats. That
@@ -57,6 +66,11 @@ export interface Score {
 export interface GameSeat {
   readonly side: GameSide;
   readonly playerId: string;
+  /**
+   * What they are called — **the whole handle, and nothing may shorten it into a sentence.**
+   * Absent where `users` no longer has the account, which draws the unknown player's `?`.
+   */
+  readonly nickname?: string;
 }
 
 /**
@@ -90,13 +104,16 @@ export interface StandingProposal {
  * read the score yet. What it does change is that the proposing side has stopped waiting on
  * silence, and that the correction the aggregate now refuses is no longer worth offering.
  *
- * **Two of the wire's four fields, on the rule `StandingProposal` already follows**: this holds
- * what the screens read and nothing else. `agreed_by` names a person on a court where nobody is
- * named, and `agreed_at` answers *when did they answer* for a screen that never has to ask —
- * the refusal that would have wanted it is only reachable when no agreement had crossed at all
+ * **Three of the wire's four fields, on the rule `StandingProposal` already follows**: this holds
+ * what the screens read and nothing else. `agreed_by` is here now that a seat carries a handle —
+ * *somebody agreed* is the one sentence on these screens that was addressed to nobody. `agreed_at`
+ * stays off: it answers *when did they answer* for a screen that never has to ask, and the refusal
+ * that would have wanted it is only reachable when no agreement had crossed at all
  * (`components/gameErrorMessage.ts`).
  */
 export interface Acceptance {
+  /** Who agreed. A player id, named through the seat they hold. */
+  readonly agreedBy: string;
   /**
    * Whose score was agreed with — **always the accepter's opposite**, because a teammate
    * agreeing with a teammate proves nothing. So it names the score *and* which of the two

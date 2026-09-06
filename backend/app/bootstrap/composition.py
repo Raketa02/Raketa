@@ -78,6 +78,7 @@ from app.modules.games.domain.ports import (
     GameDirectory,
     GameHistoryQuery,
     GameRepository,
+    PlayerHandles,
 )
 from app.modules.games.infrastructure.event_sourced_confirmed_results import (
     EventSourcedConfirmedResults,
@@ -88,6 +89,7 @@ from app.modules.games.infrastructure.event_sourced_game_history import (
 from app.modules.games.infrastructure.event_sourced_game_repository import (
     EventSourcedGameRepository,
 )
+from app.modules.games.infrastructure.users_handles import UsersHandles
 from app.modules.matchmaking.infrastructure.games_match_history import (
     GamesPlayedAndChallengesAnswered,
 )
@@ -764,6 +766,16 @@ def build_game_history_query(
     sweep.
     """
     return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
+
+
+def build_player_handles(session: AsyncSession) -> PlayerHandles:
+    """*What is this person called* — the one thing ``games`` borrows about one.
+
+    Built from ``users``' own repository rather than from the session, so this
+    line stays a choice of implementation and the fold behind it stays with the
+    context that owns it (``docs/adr/0141``).
+    """
+    return UsersHandles(build_user_repository(session))
 
 
 def build_game_directory(

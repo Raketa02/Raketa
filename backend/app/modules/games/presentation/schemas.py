@@ -93,10 +93,30 @@ class StateResultRequest(BaseModel):
 
 
 class SeatingSchema(BaseModel):
-    """One person, on one side. The court is frozen at the plan."""
+    """One person, on one side. The court is frozen at the plan.
+
+    **A handle, and nothing else about them** (``docs/adr/0141``). A Level, a
+    band, an area and a run of form are what a *searcher* reads to decide about a
+    game that might happen, and a gate decided they may see them; this is the
+    record of a game that did, and it re-publishes nobody's profile off the back
+    of it. The court is the whole of the permission — ``GET /games`` answers
+    about games you were on the court of — so nothing here is re-gated against
+    who is reading.
+    """
 
     side: GameSide
     player_id: UUID
+    nickname: str | None = Field(
+        default=None,
+        description=(
+            "The whole handle, and **nothing may derive a familiar form from "
+            "it** — every sentence naming somebody uses all of it or names "
+            "nobody (``docs/adr/0107``).\n\n"
+            "``null`` where ``users`` no longer has this account. The seat "
+            "stays: dropping it would publish a three-person doubles game, and "
+            "the screen has a side to name instead."
+        ),
+    )
 
 
 class StandingProposalSchema(BaseModel):
