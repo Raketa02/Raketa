@@ -24,6 +24,15 @@
  * request** and completely different news, so the screen that offers one never offers the other,
  * and the words for each say which it is before the tap.
  *
+ * ## A disagreement draws both scores, and the control names the one it agrees with
+ *
+ * Two scores on the table used to cross with **neither** of them on the response, so the screen
+ * stated the ending and offered nothing — *"the client could offer the act only by asking
+ * somebody to agree with a score it cannot show them"*. Both travel now
+ * ([#317](https://github.com/Raketa02/Raketa/issues/317)), so the reader's own is drawn quiet
+ * above the other side's and the agreement is offered under them, named for the score it agrees
+ * with. There is no counter there: that side has had its one turn.
+ *
  * ## The grid opens over what is already on screen, and closes on the answer
  *
  * On a game nobody has claimed, there is nothing to open over — the grid *is* the screen. On a
@@ -61,6 +70,7 @@ import {
   courtSizes,
   editingAct,
   resultConversation,
+  scoresOnTable,
   sideOf,
 } from '../domain/conversation';
 import type { Game } from '../domain/game';
@@ -76,11 +86,11 @@ import {
   COUNTER_LABEL,
   CORRECT_LABEL,
   NOT_YOURS_LINE,
+  SCORE_LEAD,
   SENDING_LABEL,
   STILL_ON_THE_TABLE,
   UNSCORED_FACTS,
   YOURS,
-  acceptedLine,
   clockLine,
   courtLine,
   gameEyebrow,
@@ -153,10 +163,16 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
   const act = editingAct(conversation);
   const entering = act === 'enter';
   const open = draft ?? (entering ? emptyDraft(game.sport) : undefined);
-  const standing =
-    conversation.kind === 'ours-stands' || conversation.kind === 'theirs-stands'
-      ? conversation.proposal
-      : undefined;
+  // The two scores on the table, and every control hangs off one of them rather than off the
+  // state's name: an agreement is with `theirs`, a correction is of `ours`, and a counter
+  // answers `theirs` with a score of our own. Either may be absent and both may be.
+  const { ours: ourScore, theirs: theirScore } = scoresOnTable(conversation);
+  // What each table is called, and which of them is played down — both are statements about the
+  // score rather than about the layout, so they are decided here rather than inside the render
+  // tree. A score is quiet where it is context: beside a grid being typed into, and the reader's
+  // own beside the other side's, where the one control on the screen agrees with the other one.
+  const theirLead = ourScore === undefined ? SCORE_LEAD.only : SCORE_LEAD.theirs;
+  const ourScoreIsContext = theirScore !== undefined || open !== undefined;
 
   function edit(next: ScoreDraft): void {
     setDraft(next);
@@ -173,7 +189,11 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
     // The one refusal that is about the other side's score rather than this draft. A counter
     // that agrees with what it answers is a second proposal nobody will accept, and it ends the
     // game unscored between two people who agreed.
-    if (act === 'counter' && standing !== undefined && sameScore(reading.score, standing.score)) {
+    if (
+      act === 'counter' &&
+      theirScore !== undefined &&
+      sameScore(reading.score, theirScore.score)
+    ) {
       setProblem(COUNTER_IS_THEIR_SCORE);
       return;
     }
@@ -232,14 +252,14 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
             </>
           ) : (
             <>
-              {/* An acceptance is offered until this mount has made one. It cannot be hidden
-                  after a remount — nothing on the response says one happened — which is the
-                  second gap `domain/conversation.ts` records. */}
-              {acts.includes('accept') && standing !== undefined && !accept.isSuccess ? (
+              {/* Whether an agreement stands is the response's answer and `actsOffered`'s to
+                  fold — `accept.isSuccess` only covers the round trip between the tap and the
+                  list catching up, which is the echo and not the fact. */}
+              {acts.includes('accept') && theirScore !== undefined && !accept.isSuccess ? (
                 <Button
                   label={ACCEPT_LABEL}
                   accessibilityLabel={acceptLabel({
-                    score: standing.score,
+                    score: theirScore.score,
                     sport: game.sport,
                     mine: side,
                     sides,
@@ -249,19 +269,19 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
                   busyLabel={SENDING_LABEL}
                 />
               ) : null}
-              {acts.includes('counter') && standing !== undefined ? (
+              {acts.includes('counter') && theirScore !== undefined ? (
                 <Button
                   label={COUNTER_LABEL}
                   accessibilityLabel={COUNTER_A11Y_LABEL}
                   variant="secondary"
-                  onPress={() => edit(draftFrom(standing.score, game.sport))}
+                  onPress={() => edit(draftFrom(theirScore.score, game.sport))}
                 />
               ) : null}
-              {acts.includes('correct') && standing !== undefined ? (
+              {acts.includes('correct') && ourScore !== undefined ? (
                 <Button
                   label={CORRECT_LABEL}
                   variant="secondary"
-                  onPress={() => edit(draftFrom(standing.score, game.sport))}
+                  onPress={() => edit(draftFrom(ourScore.score, game.sport))}
                 />
               ) : null}
             </>
@@ -293,26 +313,44 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
             sport={game.sport}
             mine={side}
             sides={sides}
-            lead="The agreed score"
+            lead={SCORE_LEAD.agreed}
           />
         </View>
       ) : null}
 
+      {/* Our own score, quiet wherever it is context rather than the subject: beside the other
+          side's on a disagreement, and beside the grid while it is being corrected. */}
+      {ourScore === undefined ? null : (
+        <View style={s.block}>
+          <ScoreTable
+            score={ourScore.score}
+            sport={game.sport}
+            mine={side}
+            sides={sides}
+            quiet={ourScoreIsContext}
+            lead={SCORE_LEAD.ours}
+          />
+        </View>
+      )}
+
       {/* The score being answered stays on screen beside the one being typed — variant C's own
-          arrangement, and the thing it said only a route had room for. */}
-      {standing !== undefined ? (
+          arrangement, and the thing it said only a route had room for. On a disagreement it is
+          also the score the one control agrees with, which is why it is the loud one. The
+          *THEIRS* heading is on this table alone now: it used to sit over whichever score was
+          standing, which put it over the reader's **own** score while they corrected it. */}
+      {theirScore === undefined ? null : (
         <View style={s.block}>
           {open === undefined ? null : <Text style={s.attrib}>{STILL_ON_THE_TABLE}</Text>}
           <ScoreTable
-            score={standing.score}
+            score={theirScore.score}
             sport={game.sport}
             mine={side}
             sides={sides}
             quiet={open !== undefined}
-            lead={conversation.kind === 'ours-stands' ? 'Your score' : 'The score on the table'}
+            lead={theirLead}
           />
         </View>
-      ) : null}
+      )}
 
       {/* The clock, big enough to read at arm's length. It is the whole of *silence confirming
           is visible before it happens*, and it stands down while a score is being typed. */}
@@ -323,13 +361,13 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
         </View>
       )}
 
-      {accept.isSuccess && standing !== undefined ? (
-        <Note variant="mint">{acceptedLine(standing.settlesAt, game.readAt)}</Note>
-      ) : null}
-
       {open !== undefined ? (
         <View style={s.block}>
-          {standing === undefined ? null : <Text style={s.attrib}>{YOURS}</Text>}
+          {/* The heading exists to keep two tables apart, so it is drawn when there is another
+              one — which is every state but the entry, where the grid is the whole screen. */}
+          {ourScore === undefined && theirScore === undefined ? null : (
+            <Text style={s.attrib}>{YOURS}</Text>
+          )}
           <ScoreEntry draft={open} onChange={edit} sport={game.sport} mine={side} sides={sides} />
         </View>
       ) : null}

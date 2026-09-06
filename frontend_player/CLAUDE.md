@@ -48,24 +48,40 @@ radius and the per-sport declaration that Play's search screen is drawn from, wi
 is followed by, below; and `games` is the result conversation — the list on Now, the screen a
 row pushes, and the entering, correcting, agreeing and disagreeing that close the loop, below.
 
-**The result conversation is one screen and seven states, and the state is derived**
+**The result conversation is one screen and eight states, and the state is derived**
 ([#314](https://github.com/Raketa02/Raketa/issues/314),
 [ADR-0137](../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). **A result is the
 record that a game happened** — no booking, no calendar, no date field anywhere — so the entry
 _is_ the fact, and everything after it is an argument bounded to two rounds. `domain/conversation.ts`
-folds the standing, the standing proposal and **which seat is yours** into what to draw, and
+folds the standing, the scores on the table and **which seat is yours** into what to draw, and
 nothing outside that file reads a `GameStanding`: a **correction** and a **counter** are the same
 `POST` and completely different news, and #314's own worry is that _"a player will spend an
-attempt fixing a typo."_ Two of the seven are worth knowing. **Silence confirming is drawn before
+attempt fixing a typo."_ Three of the eight are worth knowing. **Silence confirming is drawn before
 it happens**: the standing line says it **on the row as well as on the screen**, so a deadline is
 never something a player reaches by tapping, and the screen adds
 `prototype/result-confirmation`'s clock block over it — a figure at arm's length above one
-sentence. And **`both-stand` offers nothing**: the aggregate lets either side accept the other's
-score there, and the wire returns **neither** score — `standing_proposal` is _"when exactly one
-is"_ — so the only way to draw the control is to ask somebody to agree with a score the screen
-cannot show them. It states the ending instead and promises no control, and the missing half is a
-**contract gap** rather than a rule this client invented. `both-stand` is read off the standing
-and never off the absent proposal, which is the schema's own instruction.
+sentence. **`both-stand` draws both scores and offers the agreement that ends it** — ADR-0137
+§4's only exit short of the game going unscored, and the one the screen could not offer while
+`standing_proposal` was _"when exactly one is"_ and the wire returned **neither** score
+([#317](https://github.com/Raketa02/Raketa/issues/317),
+[#318](https://github.com/Raketa02/Raketa/issues/318)) — the **eighth** state is the agreement
+itself, below. The reader's own score is drawn quiet
+above the other side's, the one control is named for the score it agrees with, and the copy names
+the way out instead of stating an ending as though it were the only one. There is never a counter
+there: that side has had its one turn. **Which of the three `AWAITING_ANSWER` screens it is comes
+off the count** — `proposals` carries nought, one or two — rather than off an absence that used to
+mean _nothing entered_ and _both sides have spoken_ alike. And **an agreement is a state of its own rather than a flag on the three it can happen in**: for
+the length of the grace the standing still reads `AWAITING_ANSWER`, but the proposing side has
+stopped waiting on silence, so the headline and the clock say the score was agreed and when it
+settles, the correction goes (`state_result` refuses it with `the_other_side_has_answered`, whose
+sentence can now say _while this screen was open_, because the control's own absence is what
+proves the timing), a second agreement from the same side goes with it, and **the disagreement
+stays** — inside the grace a counter still beats an agreement, which is the whole reason the
+grace exists. It is an arm rather than an optional field because carried as a field it was a
+state every renderer had to remember to pre-empt its own `switch` with, and the one that forgot
+said something false. It **keeps both proposals**, because what is left to do is read off them:
+the side that may counter is the side that has not spoken, and two scores standing means neither
+can — the aggregate's one-per-side cap rather than a rule this client invented.
 
 **The instrument is the prototype's, and so is most of the copy.** #314 says the score-entry
 interaction is solved work, and it is: a **pad** over a grid of the sport's own legs, both sides

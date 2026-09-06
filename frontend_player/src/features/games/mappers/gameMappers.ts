@@ -11,10 +11,15 @@
  *   becomes `undefined`, and the screen writes a named gap or drops a clause. Nothing about the
  *   game stops being drawable, and the list does not get shorter — *"a list that quietly
  *   dropped this morning's is a list that lies."*
- * - **Structure is refused whole.** The sport keys the score's shape and the side places
- *   somebody on a court, so a game carrying one this build cannot read is a game with no
- *   instrument and no court. It is dropped, and it cannot arrive without a redesign that would
- *   ship a new client anyway — `wireVocabulary.ts` fails the build first.
+ * - **Structure is refused whole.** The sport keys the score's shape, and the side places
+ *   somebody on a court *and* attributes every score on the table — so a game carrying one this
+ *   build cannot read is a game with no instrument and no court. It is dropped, and it cannot
+ *   arrive without a redesign that would ship a new client anyway — `wireVocabulary.ts` fails
+ *   the build first. A **score** whose side is unreadable goes the same way, for a sharper
+ *   reason than a seat's: dropping one of two would leave a lone proposal on screen, which is a
+ *   different story about the same game told with no hedge in it. So does an **agreement**
+ *   whose side is unreadable — it names the score it settles, and one that names nothing settles
+ *   nothing.
  *
  * ## `null` is *this response said nothing*, and it collapses to absent
  *
@@ -33,9 +38,10 @@
 import type { components } from '@/generated/schema';
 import { toSport } from '@/features/onboarding/types';
 
-import type { Game, GameSeat, Score, StandingProposal } from '../domain/game';
+import type { Acceptance, Game, GameSeat, Score, StandingProposal } from '../domain/game';
 import type { GameKind, GameSide, GameStanding, Outcome } from '../domain/vocabulary';
 
+type AcceptanceSchema = components['schemas']['AcceptanceSchema'];
 type GameListResponse = components['schemas']['GameListResponse'];
 type GameSchema = components['schemas']['GameSchema'];
 type ScoreSchema = components['schemas']['ScoreSchema'];
@@ -91,7 +97,19 @@ function toStandingProposal(wire: StandingProposalSchema): StandingProposal | un
   };
 }
 
-/** One game, or nothing when its sport or its court is not one this build can draw. */
+/**
+ * An agreement, or nothing when the side whose score it settles is not one this build can read.
+ *
+ * **Two of the wire's four fields**, on the rule {@link toStandingProposal} already follows:
+ * what a screen reads and nothing else. `agreed_by` names a person on a court where nobody is
+ * named, and `agreed_at` answers *when did they answer* for screens that never have to ask.
+ */
+function toAcceptance(wire: AcceptanceSchema): Acceptance | undefined {
+  const ofSide = member(SIDES, wire.of_side);
+  return ofSide === undefined ? undefined : { ofSide, settlesAt: wire.settles_at };
+}
+
+/** One game, or nothing when its sport, its court or a score on it is one this build cannot draw. */
 export function toGame(wire: GameSchema, readAt: string): Game | undefined {
   const sport = toSport(wire.sport);
   if (sport === undefined) return undefined;
@@ -99,8 +117,14 @@ export function toGame(wire: GameSchema, readAt: string): Game | undefined {
   const seats = wire.seats.map(toSeat);
   if (seats.some((seat) => seat === undefined)) return undefined;
 
-  const proposal =
-    wire.standing_proposal == null ? undefined : toStandingProposal(wire.standing_proposal);
+  const proposals = wire.proposals.map(toStandingProposal);
+  if (proposals.some((proposal) => proposal === undefined)) return undefined;
+
+  // The two absences do not collapse into one here, unlike everywhere else in this file: `null`
+  // is *this response carried no agreement*, and `undefined` back from the mapper is an
+  // agreement naming a side with no place on this court, which takes the game with it.
+  const acceptance = wire.acceptance == null ? undefined : toAcceptance(wire.acceptance);
+  if (wire.acceptance != null && acceptance === undefined) return undefined;
 
   return {
     gameId: wire.game_id,
@@ -114,7 +138,8 @@ export function toGame(wire: GameSchema, readAt: string): Game | undefined {
     entryClosesAt: wire.entry_closes_at ?? undefined,
     score: wire.score == null ? undefined : toScore(wire.score),
     outcome: wire.outcome == null ? undefined : member(OUTCOMES, wire.outcome),
-    standingProposal: proposal,
+    proposals: proposals.filter((one): one is StandingProposal => one !== undefined),
+    acceptance,
     readAt,
   };
 }

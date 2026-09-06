@@ -60,11 +60,11 @@ export interface GameSeat {
 }
 
 /**
- * The score waiting on an answer, **when exactly one is**.
+ * One side's score, on the table and not yet settled on.
  *
- * Absent in two cases the screens must not confuse: nothing has been entered, or both sides
- * have spoken and neither score is *the* one. The second is read off the standing, never off
- * this absence.
+ * **At most one per side**, which is what bounds an argument to two rounds. Two of them is the
+ * disagreement this platform does not resolve — and it does not resolve it by *arbitrating*,
+ * not by hiding it: both scores travel, and either side may agree with the other's.
  */
 export interface StandingProposal {
   readonly side: GameSide;
@@ -78,6 +78,34 @@ export interface StandingProposal {
   /**
    * When an acceptance of this score would become final — earlier than {@link answerBy}, and
    * the grace an opponent who has not read the score yet is given. Inside it a counter wins.
+   */
+  readonly settlesAt: string;
+}
+
+/**
+ * Somebody agreed with the other side's score, and the grace has not run out.
+ *
+ * **It settles nothing on its own.** Inside the grace a disagreement still wins, which is what
+ * stops a partner who is quick to their phone from closing the door on an opponent who has not
+ * read the score yet. What it does change is that the proposing side has stopped waiting on
+ * silence, and that the correction the aggregate now refuses is no longer worth offering.
+ *
+ * **Two of the wire's four fields, on the rule `StandingProposal` already follows**: this holds
+ * what the screens read and nothing else. `agreed_by` names a person on a court where nobody is
+ * named, and `agreed_at` answers *when did they answer* for a screen that never has to ask —
+ * the refusal that would have wanted it is only reachable when no agreement had crossed at all
+ * (`components/gameErrorMessage.ts`).
+ */
+export interface Acceptance {
+  /**
+   * Whose score was agreed with — **always the accepter's opposite**, because a teammate
+   * agreeing with a teammate proves nothing. So it names the score *and* which of the two
+   * people this is news for.
+   */
+  readonly ofSide: GameSide;
+  /**
+   * When this agreement becomes the result. Measured from the **score** and never from the tap:
+   * the person the grace protects is the opponent who has not read the score yet.
    */
   readonly settlesAt: string;
 }
@@ -109,7 +137,14 @@ export interface Game {
   readonly score?: Score;
   /** Win or loss **for you**, and absent for every standing but a confirmed one. */
   readonly outcome?: Outcome;
-  readonly standingProposal?: StandingProposal;
+  /**
+   * The scores on the table, **side A's first and never in the order they arrived**. Empty
+   * unless an answer is being awaited: before that nobody has entered one, and after it the
+   * ending is the answer. Two of them **is** the disagreement.
+   */
+  readonly proposals: readonly StandingProposal[];
+  /** The agreement waiting out its grace, and absent when none is. **A counter voids one.** */
+  readonly acceptance?: Acceptance;
   /** The instant this game's standing and every deadline on it were folded against. */
   readonly readAt: string;
 }

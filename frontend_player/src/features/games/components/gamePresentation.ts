@@ -116,6 +116,16 @@ export function standingLine(conversation: ResultConversation, readAt: string): 
       return `The other side put a score up. If you say nothing for ${durationLeft(conversation.proposal.answerBy, readAt)}, it stands.`;
     case 'both-stand':
       return "Both sides wrote a score down and they don't match.";
+    case 'agreed': {
+      // The side it is news for is the only thing that differs, and it is the whole of why this
+      // is on the standing line: the line is **the row's sentence too**, so the person whose
+      // score was agreed with reads it without opening anything.
+      const who =
+        conversation.agreement.with === 'ours'
+          ? 'The other side agreed with your score.'
+          : 'Your side agreed with their score.';
+      return `${who} It becomes the result in ${durationLeft(conversation.agreement.settlesAt, readAt)}.`;
+    }
     case 'confirmed':
       return 'Agreed.';
     case 'unscored':
@@ -143,6 +153,10 @@ export function resultTitle(conversation: ResultConversation): string {
       return 'Is that right?';
     case 'both-stand':
       return 'Two scores';
+    case 'agreed':
+      // Not *Sent — waiting* and not *Two scores*: both are titles about an open question, and
+      // the question has been answered. What is left is the grace running out.
+      return 'Agreed — settling';
     case 'confirmed':
       return 'The result';
     case 'unscored':
@@ -168,6 +182,16 @@ export function clockLine(
   conversation: ResultConversation,
   readAt: string,
 ): ClockBlock | undefined {
+  // An agreement moves the clock off the answer window and onto the grace, which is a shorter
+  // span measured from a different moment — the **score**, never anybody's tap. Silence has
+  // stopped being the question, so the sentence under the figure stops naming it.
+  if (conversation.kind === 'agreed') {
+    return {
+      figure: durationLeft(conversation.agreement.settlesAt, readAt),
+      line: 'until this becomes the result. Nothing more is needed from anybody.',
+    };
+  }
+
   if (conversation.kind === 'ours-stands') {
     return {
       figure: durationLeft(conversation.proposal.answerBy, readAt),
@@ -229,10 +253,21 @@ export function resultBody(conversation: ResultConversation): string | undefined
     case 'theirs-stands':
       return 'One tap from either of you settles it now. A modification always carries a score of its own — there is no way to just say no — and agreeing is never how you avoid a penalty, because there is none.';
     case 'both-stand':
-      // The offer that is deliberately not here. The wire returns neither score in this state,
-      // so the sentence states the ending rather than promising a control the screen cannot draw
-      // — see `domain/conversation.ts`.
-      return "Raketa doesn't decide between them. Nobody is marked for a disagreement, on either side.";
+      // **It names the exit rather than stating an ending.** ADR-0137 §4 has always allowed
+      // either side to accept the other's here, and with both scores on the response the screen
+      // can finally offer it — so the sentence promises the control that is drawn under it, and
+      // goes on saying that the other ending costs nobody anything.
+      return 'Raketa doesn’t decide between them. One of you agreeing with the other’s score is the only thing that gives this game a result; if neither of you does it stays unscored, which takes nothing away from anybody. Nobody is marked for a disagreement, on either side.';
+    case 'agreed':
+      // **The one sentence that has to know how many scores are up.** The grace is a window in
+      // which a disagreement still wins, and saying so over a game where each side has already
+      // used its one turn would promise an act `state_result` refuses with
+      // `your_side_has_already_answered` — the same failure the old `both-stand` copy was
+      // written to avoid, one state along. Which side could make one is the screen's business
+      // and not this sentence's: what differs here is only whether anybody can.
+      return conversation.ours !== undefined && conversation.theirs !== undefined
+        ? 'Both scores stay up until then, and neither side can put another one there — each side gets one, and both have been used. Nobody is marked either way.'
+        : 'Until then, anybody who played can still put a different score up. That window is what stops somebody quick to their phone from closing the door on a player who has not read the score yet. Nobody is marked either way.';
     case 'unscored':
       // Variant C's own lead, and the register the ticket asks for: *an evening, not evidence*
       // — an account of what it still is, never an apology for what it is not.
@@ -269,17 +304,6 @@ export function worthLine(kind: GameKind | undefined): string | undefined {
 export function outcomeLine(outcome: Outcome | undefined): string | undefined {
   if (outcome === undefined) return undefined;
   return outcome === 'WIN' ? 'You won.' : 'You lost.';
-}
-
-/**
- * What an acceptance has bought, before the grace has run out.
- *
- * The grace is measured from **the score** and not from the tap, so this is a fact about the
- * proposal rather than about how quickly somebody answered — which is the whole reason a fast
- * partner cannot close the door on an opponent still reading it.
- */
-export function acceptedLine(settlesAt: string, readAt: string): string {
-  return `You have agreed. It is final in ${durationLeft(settlesAt, readAt)} — until then anybody who played can still put a different score up.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -423,6 +447,21 @@ export const COUNTER_LABEL = 'Propose a modification';
 
 /** Backing out of a grid that was opened over something already on screen. */
 export const CANCEL_LABEL = 'Leave it as it is';
+
+/**
+ * What each printed score **is**, spoken before the figures — the one thing about a score that
+ * differs by where it is drawn.
+ *
+ * Two of them name the same score from opposite sides of one disagreement, and they are drawn
+ * together: *the score on the table* is what a lone one is called, and it stops being that word
+ * the moment there are two of them and one is yours.
+ */
+export const SCORE_LEAD = {
+  agreed: 'The agreed score',
+  ours: 'Your score',
+  theirs: 'Their score',
+  only: 'The score on the table',
+} as const;
 
 /** The heading over the score a counter is answering, still on the table beside the new one. */
 export const STILL_ON_THE_TABLE = 'THEIRS — STILL ON THE TABLE';

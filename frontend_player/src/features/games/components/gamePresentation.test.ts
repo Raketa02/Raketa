@@ -14,7 +14,6 @@ import {
   COUNTER_LABEL,
   CORRECT_LABEL,
   UNSCORED_FACTS,
-  acceptedLine,
   clockLine,
   courtLine,
   gameEyebrow,
@@ -41,6 +40,7 @@ const GAME: Game = {
     { side: 'B', playerId: 'them' },
   ],
   plannedAt: '2026-09-01T09:00:00Z',
+  proposals: [],
   readAt: READ_AT,
 };
 
@@ -56,6 +56,39 @@ const PROPOSAL = {
   answerBy: '2026-09-06T08:00:00Z',
   settlesAt: '2026-09-05T15:00:00Z',
 } as const;
+
+/** The other side's answer to it, which is what makes the argument two scores rather than one. */
+const COUNTER = {
+  side: 'B',
+  proposedBy: 'them',
+  score: {
+    sets: [
+      { a: 6, b: 4 },
+      { a: 4, b: 6 },
+    ],
+  },
+  answerBy: '2026-09-06T10:00:00Z',
+  settlesAt: '2026-09-05T17:00:00Z',
+} as const;
+
+/** The disagreement, read from the side that put `PROPOSAL` up. */
+const ARGUING: ResultConversation = { kind: 'both-stand', ours: PROPOSAL, theirs: COUNTER };
+
+/** One agreement, as the two sides read it — six hours from `READ_AT`, measured from the score. */
+const AGREED_WITH_OURS: ResultConversation = {
+  kind: 'agreed',
+  agreement: { with: 'ours', settlesAt: '2026-09-05T15:00:00Z' },
+  ours: PROPOSAL,
+};
+
+const AGREED_WITH_THEIRS: ResultConversation = {
+  kind: 'agreed',
+  agreement: { with: 'theirs', settlesAt: '2026-09-05T15:00:00Z' },
+  theirs: COUNTER,
+};
+
+/** The same agreement over a disagreement, where each side has already used its one turn. */
+const AGREED_OVER_BOTH: ResultConversation = { ...AGREED_WITH_OURS, theirs: COUNTER };
 
 describe('silence confirming, which has to be visible before it happens', () => {
   /**
@@ -122,7 +155,7 @@ describe('nobody is penalised, which is a sentence and not an omission', () => {
   });
 
   it('says so on the disagreement, on both sides of it', () => {
-    expect(resultBody({ kind: 'both-stand' })).toContain('Nobody is marked');
+    expect(resultBody(ARGUING)).toContain('Nobody is marked');
   });
 
   it('says so where agreeing might otherwise look like the safe move', () => {
@@ -247,11 +280,81 @@ describe('the court, with nobody on it', () => {
   });
 });
 
-describe('the rest', () => {
-  it('measures the grace from the score and never from the tap', () => {
-    expect(acceptedLine(PROPOSAL.settlesAt, READ_AT)).toContain('6 hours');
+describe('a disagreement names its way out, and never only its ending', () => {
+  /**
+   * The paragraph used to state the ending and promise no control, because the wire returned
+   * neither score and *"the client could offer the act only by asking somebody to agree with a
+   * score it cannot show them"* ([#317](https://github.com/Raketa02/Raketa/issues/317)). Both
+   * scores travel now, so it names the exit — and goes on saying the other ending is free.
+   */
+  it('names the agreement that ends it, and keeps going unscored costless', () => {
+    const body = resultBody(ARGUING);
+
+    expect(body).toContain('agreeing with the other’s score');
+    expect(body).toContain('unscored');
+    expect(body).toContain('Nobody is marked');
   });
 
+  it('still refuses to pick between them, which is the thing the platform does not do', () => {
+    expect(resultBody(ARGUING)).toContain('doesn’t decide between them');
+  });
+});
+
+describe('an agreement, which the proposing side could not see at all', () => {
+  /**
+   * The side that put the score up was being told *if nobody answers within N, this stands*
+   * for the whole grace after somebody already had. It is the standing line rather than a note
+   * because the standing line is **the row's sentence too**, so the news reaches Now.
+   */
+  it('tells the proposing side their score was agreed, instead of waiting on silence', () => {
+    const line = standingLine(AGREED_WITH_OURS, READ_AT);
+
+    expect(line).toContain('agreed with your score');
+    expect(line).toContain('6 hours');
+    expect(line).not.toContain('nobody answers');
+  });
+
+  it('tells the side that agreed the same fact from their end', () => {
+    const line = standingLine(AGREED_WITH_THEIRS, READ_AT);
+
+    expect(line).toContain('Your side agreed');
+    expect(line).toContain('6 hours');
+  });
+
+  /**
+   * The grace runs from the **score** and the answer window from the same moment, so the two
+   * are different spans: a clock still counting the answer window would be counting a question
+   * nobody is being asked any more.
+   */
+  it('moves the clock off the answer window and onto the grace', () => {
+    const clock = clockLine(AGREED_WITH_OURS, READ_AT);
+
+    expect(clock?.figure).toBe('6 hours');
+    expect(clock?.line).not.toContain('silence');
+  });
+
+  /** Inside the grace nothing has settled, and the body is that rule rather than a repetition. */
+  it('says a different score can still go up, which is what the wait is for', () => {
+    expect(resultBody(AGREED_WITH_OURS)).toContain('can still put a different score up');
+    expect(resultBody(AGREED_WITH_THEIRS)).toContain('can still put a different score up');
+  });
+
+  /**
+   * **The one sentence that has to count the scores.** Over a disagreement each side has already
+   * used its one turn, so promising a different score could still go up would promise an act
+   * `state_result` refuses with `your_side_has_already_answered` — the same failure the old
+   * `both-stand` copy was written to avoid, one state along.
+   */
+  it('never promises a score nobody may send, over an argument already down to one exit', () => {
+    const body = resultBody(AGREED_OVER_BOTH);
+
+    expect(body).not.toContain('can still put a different score up');
+    expect(body).toContain('each side gets one');
+    expect(body).toContain('Nobody is marked');
+  });
+});
+
+describe('the rest', () => {
   it('says what a confirmed result said about you, and nothing when it said nothing', () => {
     expect(outcomeLine('WIN')).toBe('You won.');
     expect(outcomeLine(undefined)).toBeUndefined();

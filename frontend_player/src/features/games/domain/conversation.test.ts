@@ -7,10 +7,14 @@
  * make"* — so what this decides is not *which act to send* but **what to draw**: a correction
  * and a counter are the same request and a completely different screen, and a player who spent
  * their side's one turn fixing a typo is the failure the ticket names first.
+ *
+ * Two of these describe acts the **aggregate refuses**, and they are here rather than left to a
+ * red note after the tap: a correction once the other side has answered, and a second agreement
+ * from a side that has already made one.
  */
 
-import type { Game, StandingProposal } from './game';
-import { actsOffered, resultConversation } from './conversation';
+import type { Acceptance, Game, StandingProposal } from './game';
+import { actsOffered, editingAct, resultConversation } from './conversation';
 
 const ME = 'me-1111-4444-8888-000000000001';
 const PARTNER = 'partner-11-4444-8888-000000002';
@@ -29,6 +33,25 @@ const PROPOSAL: StandingProposal = {
   settlesAt: '2026-09-06T02:12:00Z',
 };
 
+/** The other side's answer to it — one digit apart, which is what a real disagreement is. */
+const COUNTER: StandingProposal = {
+  side: 'B',
+  proposedBy: OPPONENT,
+  score: {
+    sets: [
+      { a: 6, b: 4 },
+      { a: 4, b: 6 },
+    ],
+  },
+  answerBy: '2026-09-06T22:00:00Z',
+  settlesAt: '2026-09-06T04:00:00Z',
+};
+
+/** An agreement with one side's score. The accepter is always the other side. */
+function agreed(withSide: 'A' | 'B'): Acceptance {
+  return { ofSide: withSide, settlesAt: '2026-09-06T02:12:00Z' };
+}
+
 function game(over: Partial<Game> = {}): Game {
   return {
     gameId: 'game-1111-4444-8888-00000000001',
@@ -44,6 +67,7 @@ function game(over: Partial<Game> = {}): Game {
     ],
     plannedAt: '2026-09-01T18:00:00Z',
     entryClosesAt: '2026-09-09T18:00:00Z',
+    proposals: [],
     readAt: '2026-09-05T09:00:00Z',
     ...over,
   };
@@ -74,7 +98,7 @@ describe('one score on the table', () => {
     standing: 'AWAITING_ANSWER',
     playedAt: '2026-09-04T20:12:00Z',
     entryClosesAt: undefined,
-    standingProposal: PROPOSAL,
+    proposals: [PROPOSAL],
   } as const;
 
   it('is a correction to the side that put it there, and never a second turn', () => {
@@ -102,27 +126,100 @@ describe('one score on the table', () => {
 });
 
 describe('two scores on the table', () => {
-  /**
-   * `standing_proposal` is `null` in two cases that mean opposite things — nothing entered, or
-   * **both sides have spoken** — and the client reads which off the standing rather than off
-   * the absence, which is exactly what the schema's own docblock instructs.
-   */
-  it('is read off the standing and never off the missing proposal', () => {
-    const conversation = resultConversation(
-      game({ standing: 'AWAITING_ANSWER', playedAt: '2026-09-04T20:12:00Z' }),
-      ME,
-    );
+  const arguing = {
+    standing: 'AWAITING_ANSWER',
+    playedAt: '2026-09-04T20:12:00Z',
+    entryClosesAt: undefined,
+    proposals: [PROPOSAL, COUNTER],
+  } as const;
 
-    expect(conversation).toEqual({ kind: 'both-stand' });
+  /**
+   * The count *is* the state. It used to be read off the standing, because the field it
+   * replaced was absent for *nothing entered* and for *both sides have spoken* alike
+   * ([#317](https://github.com/Raketa02/Raketa/issues/317)).
+   */
+  it('hands both scores over, the reader’s own named as theirs', () => {
+    expect(resultConversation(game(arguing), ME)).toEqual({
+      kind: 'both-stand',
+      ours: PROPOSAL,
+      theirs: COUNTER,
+    });
+    expect(resultConversation(game(arguing), OPPONENT)).toEqual({
+      kind: 'both-stand',
+      ours: COUNTER,
+      theirs: PROPOSAL,
+    });
   });
 
   /**
-   * **Nothing is offered, and the module note is why**: the wire returns neither score in this
-   * state, and a control asking somebody to agree with a score the screen cannot show them is
-   * the one thing worse than not offering it.
+   * **The only exit that is not the game going unscored** — ADR-0137 §4, and the act the
+   * aggregate has allowed here all along. There is no counter: this side has had its turn, and
+   * the cap of one score per side is what bounds the argument to two rounds.
    */
-  it('offers nothing, because there is nothing on screen to agree with', () => {
-    expect(actsOffered({ kind: 'both-stand' })).toEqual([]);
+  it('offers an agreement with the other side’s score, and never a second one of our own', () => {
+    expect(actsOffered(resultConversation(game(arguing), ME))).toEqual(['accept']);
+  });
+
+  /**
+   * **Neither side may counter here, and that is the aggregate's cap rather than a rule about
+   * agreements**: each side gets one score and both have used theirs, so `state_result` refuses
+   * with `your_side_has_already_answered`. It is the one thing the `agreed` state has to know
+   * how many scores are up to say correctly.
+   */
+  it('offers nothing once somebody has agreed, whichever score they agreed with', () => {
+    for (const side of ['A', 'B'] as const) {
+      const conversation = resultConversation(game({ ...arguing, acceptance: agreed(side) }), ME);
+
+      expect(conversation).toMatchObject({ kind: 'agreed', ours: PROPOSAL, theirs: COUNTER });
+      expect(actsOffered(conversation)).toEqual([]);
+    }
+  });
+});
+
+describe('an agreement waiting out its grace', () => {
+  const played = {
+    standing: 'AWAITING_ANSWER',
+    playedAt: '2026-09-04T20:12:00Z',
+    entryClosesAt: undefined,
+  } as const;
+
+  /**
+   * `state_result` refuses this with `the_other_side_has_answered`, so the control was a
+   * promise the server breaks — and the screen kept offering it because nothing on the response
+   * said an answer had arrived.
+   */
+  it('takes the correction away from the side whose score was agreed with', () => {
+    const conversation = resultConversation(
+      game({ ...played, proposals: [PROPOSAL], acceptance: agreed('A') }),
+      ME,
+    );
+
+    expect(conversation).toEqual({
+      kind: 'agreed',
+      agreement: { with: 'ours', settlesAt: '2026-09-06T02:12:00Z' },
+      ours: PROPOSAL,
+    });
+    expect(actsOffered(conversation)).toEqual([]);
+    expect(editingAct(conversation)).toBeUndefined();
+  });
+
+  /**
+   * Inside the grace a disagreement still wins — that is the rule the grace exists for — so the
+   * one control that survives an agreement is the one that beats it.
+   */
+  it('leaves the disagreement standing on the side that agreed, and takes the agreement away', () => {
+    const conversation = resultConversation(
+      game({ ...played, proposals: [PROPOSAL], acceptance: agreed('A') }),
+      OPPONENT,
+    );
+
+    expect(conversation).toEqual({
+      kind: 'agreed',
+      agreement: { with: 'theirs', settlesAt: '2026-09-06T02:12:00Z' },
+      theirs: PROPOSAL,
+    });
+    expect(actsOffered(conversation)).toEqual(['counter']);
+    expect(editingAct(conversation)).toBe('counter');
   });
 });
 
@@ -168,7 +265,7 @@ describe('somebody who was not on this court', () => {
   });
 });
 
-describe('a standing this build is too old to read', () => {
+describe('a state this build cannot name', () => {
   /**
    * A standing *is* the whole line, so it draws the out-of-date sentence rather than being
    * dropped — `the-words.md` §3's named gap, exactly as a challenge's standing does. What it
@@ -177,6 +274,21 @@ describe('a standing this build is too old to read', () => {
    */
   it('has a conversation with no acts in it', () => {
     const conversation = resultConversation(game({ standing: undefined }), ME);
+
+    expect(conversation).toEqual({ kind: 'unreadable' });
+    expect(actsOffered(conversation)).toEqual([]);
+  });
+
+  /**
+   * An answer awaited with nothing on the table, which the aggregate cannot produce and the
+   * standing's own fold states rather than leaves to a `max()` over an empty sequence. Reading
+   * it as a disagreement would offer an agreement with a score nobody put up.
+   */
+  it('says the same about an answer awaited with no score to answer', () => {
+    const conversation = resultConversation(
+      game({ standing: 'AWAITING_ANSWER', playedAt: '2026-09-04T20:12:00Z' }),
+      ME,
+    );
 
     expect(conversation).toEqual({ kind: 'unreadable' });
     expect(actsOffered(conversation)).toEqual([]);

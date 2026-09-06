@@ -43,12 +43,18 @@ const BY_CODE: Readonly<Record<string, string>> = {
     'Your side has already put a score on the table, and each side gets one.',
   /**
    * A correction that arrived after the other side responded. It is a race, not a mistake — and
-   * **it never says when**, because it cannot know: `GameSchema` carries no acceptance, so the
-   * answer may have landed a second ago or five hours ago inside the acceptance grace, and *while
-   * you were typing* would be wrong for most of that window. See `domain/conversation.ts`, gap 2.
+   * it can now **say when**, which it could not before the response carried an acceptance: the
+   * answer may have landed a second ago or five hours ago inside the grace, and this sentence
+   * had to be vague about which.
+   *
+   * What makes it sayable is not a field but the **control's own absence**. An agreement on the
+   * response takes the correction away (`domain/conversation.ts`), so the only way to reach this
+   * refusal is an answer that arrived after the list this screen is drawn from was read. The
+   * acceptance's own `agreed_at` cannot be quoted here and never could be — at the moment of the
+   * refusal there is no acceptance on this side to read it off.
    */
   the_other_side_has_answered:
-    'The other side has answered, so this score cannot be changed any more.',
+    'The other side answered while this screen was open, so this score cannot be changed any more.',
   nobody_has_proposed_a_result: 'There is no score from the other side to agree with.',
   /** A teammate agreeing with a teammate proves nothing, so only the other side may. */
   accepting_your_own_sides_result: 'Only the other side can agree with a score.',

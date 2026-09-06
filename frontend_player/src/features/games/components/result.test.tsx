@@ -15,6 +15,8 @@
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { AppError } from '@/shared/errors';
+
+import type { ResultConversation } from '../domain/conversation';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
@@ -43,7 +45,6 @@ import {
   STILL_ON_THE_TABLE,
   UNSCORED_FACTS,
   YOURS,
-  acceptedLine,
   clockLine,
   resultBody,
   resultTitle,
@@ -75,6 +76,7 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
       { side: 'A', player_id: ME },
       { side: 'B', player_id: OPPONENT },
     ],
+    proposals: [],
     ...over,
   };
 }
@@ -98,13 +100,48 @@ function proposal(side: 'A' | 'B'): Wire['StandingProposalSchema'] {
   };
 }
 
+/** The other side's answer to it — one digit apart, which is what a real disagreement is. */
+const COUNTER_SCORE: Wire['ScoreSchema'] = {
+  sets: [
+    { a: 6, b: 4 },
+    { a: 4, b: 6 },
+  ],
+};
+
 /** A played game with one score waiting on an answer. */
 function awaitingAnswer(side: 'A' | 'B'): Wire['GameSchema'] {
   return game({
     standing: 'AWAITING_ANSWER',
     played_at: '2026-09-04T20:00:00Z',
     entry_closes_at: null,
-    standing_proposal: proposal(side),
+    proposals: [proposal(side)],
+  });
+}
+
+/** Both scores on the table — side A's first, which is the order the server sends them in. */
+function disagreement(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
+  return game({
+    standing: 'AWAITING_ANSWER',
+    played_at: '2026-09-04T20:00:00Z',
+    entry_closes_at: null,
+    proposals: [proposal('A'), { ...proposal('B'), score: COUNTER_SCORE }],
+    ...over,
+  });
+}
+
+/** A played game with one score up and an agreement waiting out its grace. */
+function agreedWith(side: 'A' | 'B'): Wire['GameSchema'] {
+  return game({
+    standing: 'AWAITING_ANSWER',
+    played_at: '2026-09-04T20:00:00Z',
+    entry_closes_at: null,
+    proposals: [proposal(side)],
+    acceptance: {
+      agreed_by: side === 'A' ? OPPONENT : ME,
+      of_side: side,
+      agreed_at: '2026-09-04T21:00:00Z',
+      settles_at: '2026-09-05T15:00:00Z',
+    },
   });
 }
 
@@ -332,17 +369,27 @@ describe('answering the other side’s score', () => {
     expect(screen.getByText(YOURS)).toBeTruthy();
   });
 
+  /**
+   * **The agreement is read back rather than remembered.** It was drawn from `accept.isSuccess`,
+   * so it was visible to the person who tapped, in that mount, and to nobody else — the response
+   * carries it now, and this asserts the re-read rather than the tap.
+   */
   it('agrees across the net, and says when that becomes final', async () => {
-    transport.on('POST', ACCEPTANCE_PATH, () => json(awaitingAnswer('B')));
+    transport.on('POST', ACCEPTANCE_PATH, () => {
+      stubGames(transport, [agreedWith('B')], READ_AT);
+      return json(agreedWith('B'));
+    });
     await openGame(awaitingAnswer('B'));
 
     fireEvent.press(screen.getByText(ACCEPT_LABEL));
 
-    await screen.findByText(acceptedLine('2026-09-05T15:00:00Z', READ_AT));
+    await screen.findByText(standingLine(AGREED_WITH_THEIRS, READ_AT));
     expect(transport.requestsTo('POST', ACCEPTANCE_PATH)).toHaveLength(1);
     // The grace runs from the score, so a disagreement still wins inside it — and the control
     // for one is still there.
     expect(screen.getByText(COUNTER_LABEL)).toBeTruthy();
+    // A second agreement is what the aggregate refuses with `the_result_is_already_accepted`.
+    expect(screen.queryByText(ACCEPT_LABEL)).toBeNull();
   });
 
   it('disagrees with a score, because there is no rejection without one', async () => {
@@ -459,25 +506,6 @@ describe('the ends', () => {
     expect(screen.queryByText(ACCEPT_LABEL)).toBeNull();
   });
 
-  /**
-   * Two scores stand and the wire returns neither — `standing_proposal` is *"when exactly one
-   * is"*. So the screen states the ending and offers no control, rather than asking somebody to
-   * agree with a score it cannot show them. See `domain/conversation.ts`.
-   */
-  it('states the disagreement without offering an agreement it cannot draw', async () => {
-    await openGame(
-      game({
-        standing: 'AWAITING_ANSWER',
-        played_at: '2026-09-04T20:00:00Z',
-        entry_closes_at: null,
-      }),
-    );
-
-    expect(screen.getByText(standingLine({ kind: 'both-stand' }, READ_AT))).toBeTruthy();
-    expect(screen.queryByText(ACCEPT_LABEL)).toBeNull();
-    expect(screen.queryByText(COUNTER_LABEL)).toBeNull();
-  });
-
   it('draws a confirmed result with both sides named, and nothing to press', async () => {
     await openGame(
       game({
@@ -492,6 +520,83 @@ describe('the ends', () => {
     expect(screen.getByLabelText(/^The agreed score\. Set 1, You 6, Them 4/)).toBeTruthy();
     expect(screen.getByText('You won.')).toBeTruthy();
     expect(screen.queryByText(ENTER_LABEL)).toBeNull();
+  });
+});
+
+describe('a disagreement, which used to cross with neither score on it', () => {
+  /**
+   * Both scores travel now, so a reader can see what is being argued about — and *"the client
+   * could offer the act only by asking somebody to agree with a score it cannot show them"*
+   * stops being true ([#317](https://github.com/Raketa02/Raketa/issues/317)).
+   */
+  it('draws both scores, the reader’s own side first in each', async () => {
+    await openGame(disagreement());
+
+    expect(
+      screen.getByLabelText('Your score. Set 1, You 6, Them 4. Set 2, You 6, Them 2'),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText('Their score. Set 1, You 6, Them 4. Set 2, You 4, Them 6'),
+    ).toBeTruthy();
+  });
+
+  /**
+   * ADR-0137 §4's only end short of the game going unscored, offered at last — and **named for
+   * the score it agrees with**, because *That's right* is true of every game ever played.
+   */
+  it('offers agreeing with the other side’s score, and never a second one of our own', async () => {
+    transport.on('POST', ACCEPTANCE_PATH, () => json(disagreement()));
+    await openGame(disagreement());
+
+    expect(
+      screen.getByLabelText(`${ACCEPT_LABEL}. Set 1, You 6, Them 4. Set 2, You 4, Them 6`),
+    ).toBeTruthy();
+    // This side has had its one turn, which is what bounds the argument to two rounds.
+    expect(screen.queryByText(COUNTER_LABEL)).toBeNull();
+    expect(screen.queryByText(CORRECT_LABEL)).toBeNull();
+
+    fireEvent.press(screen.getByText(ACCEPT_LABEL));
+
+    await waitFor(() => expect(transport.requestsTo('POST', ACCEPTANCE_PATH)).toHaveLength(1));
+  });
+
+  it('names the way out rather than stating an ending as though it were the only one', async () => {
+    await openGame(disagreement());
+
+    // Against the deck rather than against a string: what this suite is for is that the
+    // disagreement's own paragraph is the one on screen. `gamePresentation.test.ts` is where
+    // what that paragraph has to say is held.
+    expect(
+      screen.getByText(resultBody({ kind: 'both-stand', ours: PROPOSAL, theirs: COUNTER })!),
+    ).toBeTruthy();
+  });
+});
+
+describe('an agreement, which the side it protects could not see', () => {
+  /**
+   * The proposing side went on being told silence would confirm their score for the whole grace
+   * after somebody had already agreed with it, and went on being offered a correction
+   * `state_result` refuses with `the_other_side_has_answered`.
+   */
+  it('tells the proposing side their score was agreed, and stops offering the correction', async () => {
+    await openGame(agreedWith('A'));
+
+    expect(screen.getByText(standingLine(AGREED_WITH_OURS, READ_AT))).toBeTruthy();
+    expect(screen.queryByText(/If nobody answers within/)).toBeNull();
+    expect(screen.queryByText(CORRECT_LABEL)).toBeNull();
+  });
+
+  /**
+   * The grace and the answer window run from the same moment and are different spans, so a clock
+   * still counting the answer window would be counting a question nobody is being asked.
+   */
+  it('counts down to the moment it settles, not to a question already answered', async () => {
+    await openGame(agreedWith('A'));
+
+    const clock = clockLine(AGREED_WITH_OURS, READ_AT)!;
+
+    expect(clock.figure).toBe('6 hours');
+    expect(screen.getByLabelText(`${clock.figure} ${clock.line}`)).toBeTruthy();
   });
 });
 
@@ -544,3 +649,30 @@ const PROPOSAL = {
   answerBy: '2026-09-06T08:00:00Z',
   settlesAt: '2026-09-05T15:00:00Z',
 } as const;
+
+/** The other side's score, as the domain reads it. Only its figures reach any assertion here. */
+const COUNTER = {
+  side: 'B',
+  proposedBy: OPPONENT,
+  score: {
+    sets: [
+      { a: 6, b: 4 },
+      { a: 4, b: 6 },
+    ],
+  },
+  answerBy: '2026-09-06T08:00:00Z',
+  settlesAt: '2026-09-05T15:00:00Z',
+} as const;
+
+/** One agreement, as the two sides read it. Six hours from `READ_AT`, measured from the score. */
+const AGREED_WITH_OURS: ResultConversation = {
+  kind: 'agreed',
+  agreement: { with: 'ours', settlesAt: '2026-09-05T15:00:00Z' },
+  ours: PROPOSAL,
+};
+
+const AGREED_WITH_THEIRS: ResultConversation = {
+  kind: 'agreed',
+  agreement: { with: 'theirs', settlesAt: '2026-09-05T15:00:00Z' },
+  theirs: PROPOSAL,
+};

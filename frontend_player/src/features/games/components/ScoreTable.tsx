@@ -40,7 +40,11 @@ export interface ScoreTableProps {
   readonly sides: SpokenSides;
   /** What this score **is** — *the agreed score*, *the score on the table*. Spoken first. */
   readonly lead: string;
-  /** Quiet where it is standing beside a score being typed, so the two are never confused. */
+  /**
+   * Quiet where this score is context rather than the subject — standing beside a score being
+   * typed, and the reader's own beside the other side's on a disagreement, where the one control
+   * on the screen agrees with the other one.
+   */
   readonly quiet?: boolean;
 }
 

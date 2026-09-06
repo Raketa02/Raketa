@@ -1,72 +1,121 @@
 /**
  * **What a player may do about a result, and what the screen is therefore drawing.**
  *
- * One route takes three acts and the record decides which — *"a client that named which would
- * be a client that could name it wrongly, and a mislabelled correction is a proposal nobody may
+ * One route takes three acts and the record decides which — *"a client that named which would be
+ * a client that could name it wrongly, and a mislabelled correction is a proposal nobody may
  * make"*. So nothing here chooses a request. What it chooses is a **screen**, and the ticket
  * names why that matters: a correction and a counter are the same `POST` and completely
  * different news, and *"a player will spend an attempt fixing a typo"* unless the difference is
  * visible before the tap.
  *
- * Seven states, folded from the standing, the standing proposal and which seat is yours.
+ * Eight states, folded from the standing, the scores on the table, whether anybody has agreed,
+ * and which seat is yours.
  *
- * | Standing | Whose score stands | The screen |
+ * | Standing | On the table | The screen |
  * | --- | --- | --- |
  * | `AWAITING_ENTRY` | — | the entry, and when it stops being sayable |
  * | `NEVER_PLAYED` | — | a ghost: nothing to do, and nobody marked for it |
- * | `AWAITING_ANSWER` | yours | free correction, and the hour silence agrees |
- * | `AWAITING_ANSWER` | theirs | agree, or disagree **with a score** |
- * | `AWAITING_ANSWER` | both | the disagreement this platform does not arbitrate |
+ * | `AWAITING_ANSWER` | your score | free correction, and the hour silence agrees |
+ * | `AWAITING_ANSWER` | their score | agree, or disagree **with a score** |
+ * | `AWAITING_ANSWER` | both scores | both of them, and the agreement that ends the argument |
+ * | `AWAITING_ANSWER` | an agreement | who agreed, when it settles, and what is left to do |
  * | `CONFIRMED` | — | the agreed score, and what it said about you |
  * | `UNSCORED` | — | an evening, not evidence |
  *
- * ## `both-stand` is read off the standing and never off the missing proposal
+ * ## Which of the three is read off the count, and never off an absence
  *
- * `standing_proposal` is absent in two cases that mean opposite things, and the schema says so:
- * nothing has been entered, or **both sides have spoken**. The standing tells them apart, and a
- * client that inferred *nothing entered* from the absence would draw the entry control over a
- * game in the middle of an argument.
+ * `proposals` carries nought, one or two, and **the count is the state**: nothing on the table,
+ * one score waiting on the other side, or the disagreement. The field it replaced was absent for
+ * *nothing entered* and for *both sides have spoken* alike, which is two opposite things in one
+ * spelling ([#317](https://github.com/Raketa02/Raketa/issues/317)) — so the standing had to tell
+ * them apart, and now it only says the argument is still live at all.
  *
- * ## Two contract gaps are recorded here, and neither is a rule this feature invented
+ * ## An agreement is a **state**, and not a flag riding on three of them
  *
- * **1. Nothing is offered on `both-stand`.** The aggregate allows an acceptance there — either
- * side may accept the other's, which is the only way out of a two-proposal disagreement, and
- * ADR-0137 §4 keeps it — and **the wire returns neither score in that state**: `score` is the
- * agreed one and is absent, and `standing_proposal` is *"when exactly one is"*. So the client
- * could offer the act only by asking somebody to agree with a score it cannot show them, which
- * is worse than not offering it. The copy states what happens now and promises no control.
- * **Two proposals crossing on the response would close it**, and until they do this flow's one
- * documented exit is unreachable from a client.
+ * Somebody agreeing settles nothing for the length of the grace, and the standing goes on
+ * reading `AWAITING_ANSWER` throughout — but everything a screen says about the game changes:
+ * two of the acts stop being legal, and **both were being offered because nothing on the wire
+ * said anybody had answered.** A correction is refused with `the_other_side_has_answered`, and a
+ * second agreement from the same side with `the_result_is_already_accepted`.
  *
- * **2. A pending acceptance is invisible.** `GameSchema` carries no acceptance, and
- * `standing_of` returns `AWAITING_ANSWER` for the whole six-hour grace after one — so the
- * proposing side goes on being told *if nobody answers, this stands*, and goes on being offered
- * a correction the aggregate will refuse with `the_other_side_has_answered`. This side cannot
- * fold the grace: nothing on the response says an acceptance happened. What the client does
- * instead is refuse to guess — the refusal's own sentence says only that the other side has
- * answered, and **never when**, because *while you were typing* would be hours wrong.
- * **An acceptance and its `settles_at` on `GameSchema` would close it.**
+ * So it is `agreed`, an arm of its own, rather than an optional field on the three states it can
+ * happen in. Carried as a field it was a state every renderer had to remember to pre-empt its
+ * own `switch` with, and the one that forgot said something false — which is how the body came
+ * to promise *anybody can still put a different score up* over a disagreement in which each side
+ * had already used its one turn.
+ *
+ * It **keeps both proposals**, because what is left to do is read off them and off nothing else:
+ * inside the grace a counter still beats an agreement — the whole reason the grace exists — and
+ * the side that may make one is the side that has not spoken. Two scores standing means neither
+ * can, which is the aggregate's one-per-side cap rather than a rule invented here.
+ *
+ * **Nothing here folds a standing.** The standing is *derived from the record and the clock*,
+ * and `read_at` is what every duration on these screens is measured from; a client that decided
+ * *the grace has passed* would be the second place that answer lives.
  */
 
-import type { Game, Score, StandingProposal } from './game';
+import type { Acceptance, Game, Score, StandingProposal } from './game';
 import type { GameSide, Outcome } from './vocabulary';
 
 /** The one act a screen state offers, in the order the screen draws them. */
 export type ResultAct = 'enter' | 'correct' | 'accept' | 'counter';
 
+/**
+ * The three acts that open a grid. **At most one of them is ever offered at once**, which is
+ * what lets {@link editingAct} read the answer off {@link actsOffered} instead of restating it.
+ */
+export type EditingAct = Exclude<ResultAct, 'accept'>;
+
+/** The two scores on the table, **from the reader's side of the net**. Either may be absent. */
+export interface ScoresOnTable {
+  readonly ours?: StandingProposal;
+  readonly theirs?: StandingProposal;
+}
+
+/**
+ * An agreement that has not settled yet, **from the reader's side of the net**.
+ *
+ * The wire names the side whose score was agreed with. Which of the two people that is news for
+ * is the same join this file does for a proposal, done once here so that no screen repeats it:
+ * *they agreed with your score* and *your side agreed with theirs* are the two sentences, and
+ * they are opposite halves of one fact.
+ */
+export interface StandingAgreement {
+  /** Whose score was agreed with. */
+  readonly with: 'ours' | 'theirs';
+  /** When it becomes the result — measured from the **score**, never from anybody's tap. */
+  readonly settlesAt: string;
+}
+
 export type ResultConversation =
   /** No seat of this game is yours. The client half of `you_were_not_on_this_court`. */
   | { readonly kind: 'not-yours' }
   /**
-   * A standing this build has no word for. It draws `OUT_OF_DATE_GAP` and offers nothing:
-   * acting on a game whose state we cannot name is how a correction becomes a second proposal.
+   * A state this build has no word for. It draws `OUT_OF_DATE_GAP` and offers nothing: acting
+   * on a game whose state we cannot name is how a correction becomes a second proposal.
+   *
+   * **Two ways in.** A standing this build cannot read, which is the ordinary one and the reason
+   * old builds live on real phones for months. And an answer awaited with **nothing on the
+   * table**, which the aggregate cannot produce and the standing's own fold states rather than
+   * leaves to a `max()` over an empty sequence — a client that read it as a disagreement would
+   * offer an agreement with a score nobody put up.
    */
   | { readonly kind: 'unreadable' }
   | { readonly kind: 'awaiting-entry'; readonly entryClosesAt?: string }
   | { readonly kind: 'never-played' }
   | { readonly kind: 'ours-stands'; readonly proposal: StandingProposal }
   | { readonly kind: 'theirs-stands'; readonly proposal: StandingProposal }
-  | { readonly kind: 'both-stand' }
+  | {
+      readonly kind: 'both-stand';
+      readonly ours: StandingProposal;
+      readonly theirs: StandingProposal;
+    }
+  /**
+   * Somebody has agreed and the grace has not run out. **It replaces whichever of the three it
+   * happened in**, and keeps their scores: what is still legal here is read off which of them
+   * stands, and every sentence off which side agreed.
+   */
+  | ({ readonly kind: 'agreed'; readonly agreement: StandingAgreement } & ScoresOnTable)
   | { readonly kind: 'confirmed'; readonly score?: Score; readonly outcome?: Outcome }
   | { readonly kind: 'unscored' };
 
@@ -104,12 +153,57 @@ export function resultConversation(game: Game, playerId: string): ResultConversa
     case 'UNSCORED':
       return { kind: 'unscored' };
     case 'AWAITING_ANSWER': {
-      const proposal = game.standingProposal;
-      if (proposal === undefined) return { kind: 'both-stand' };
-      return proposal.side === side
-        ? { kind: 'ours-stands', proposal }
-        : { kind: 'theirs-stands', proposal };
+      const ours = game.proposals.find((one) => one.side === side);
+      const theirs = game.proposals.find((one) => one.side !== side);
+      const agreement = agreementFrom(game.acceptance, side);
+
+      if (ours === undefined) {
+        // An answer awaited with nothing on the table at all — the case the standing's own fold
+        // states rather than leaves to a `max()` over an empty sequence, and the aggregate
+        // cannot produce it.
+        if (theirs === undefined) return { kind: 'unreadable' };
+        return agreement === undefined
+          ? { kind: 'theirs-stands', proposal: theirs }
+          : { kind: 'agreed', agreement, theirs };
+      }
+      if (agreement !== undefined) return { kind: 'agreed', agreement, ours, theirs };
+      return theirs === undefined
+        ? { kind: 'ours-stands', proposal: ours }
+        : { kind: 'both-stand', ours, theirs };
     }
+  }
+}
+
+/** An agreement in the reader's own terms, and `undefined` where none stands. */
+function agreementFrom(
+  acceptance: Acceptance | undefined,
+  side: GameSide,
+): StandingAgreement | undefined {
+  if (acceptance === undefined) return undefined;
+  return {
+    with: acceptance.ofSide === side ? 'ours' : 'theirs',
+    settlesAt: acceptance.settlesAt,
+  };
+}
+
+/**
+ * The scores on the table, **from this side of the net** — and either may be absent.
+ *
+ * The controls hang off these two rather than off the state's name: an agreement is with
+ * `theirs`, a correction is of `ours`, and a counter answers `theirs` with a score of our own.
+ * Folding it here is what keeps the screen from restating which arms carry which score.
+ */
+export function scoresOnTable(conversation: ResultConversation): ScoresOnTable {
+  switch (conversation.kind) {
+    case 'ours-stands':
+      return { ours: conversation.proposal };
+    case 'theirs-stands':
+      return { theirs: conversation.proposal };
+    case 'both-stand':
+    case 'agreed':
+      return { ours: conversation.ours, theirs: conversation.theirs };
+    default:
+      return {};
   }
 }
 
@@ -120,20 +214,13 @@ export function resultConversation(game: Game, playerId: string): ResultConversa
  * player reads: the send's own word, and whether opening the grid is *entering* or *answering*.
  * That is a rule about the state rather than about the screen, so it lives here beside the one
  * that says which controls exist at all.
+ *
+ * **Read off {@link actsOffered}**, because at most one of the three ever stands beside the
+ * agreement — so the two cannot disagree about a state, and the rule that an agreement takes the
+ * correction away is written once.
  */
-export function editingAct(
-  conversation: ResultConversation,
-): 'enter' | 'correct' | 'counter' | undefined {
-  switch (conversation.kind) {
-    case 'awaiting-entry':
-      return 'enter';
-    case 'ours-stands':
-      return 'correct';
-    case 'theirs-stands':
-      return 'counter';
-    default:
-      return undefined;
-  }
+export function editingAct(conversation: ResultConversation): EditingAct | undefined {
+  return actsOffered(conversation).find((act): act is EditingAct => act !== 'accept');
 }
 
 /**
@@ -151,10 +238,20 @@ export function actsOffered(conversation: ResultConversation): readonly ResultAc
       return ['correct'];
     case 'theirs-stands':
       return ['accept', 'counter'];
+    case 'both-stand':
+      // Either side may agree with the other's, and that is the only end short of the game going
+      // unscored. Never a counter — this side has had its one turn, which is what bounds the
+      // argument to two rounds.
+      return ['accept'];
+    case 'agreed':
+      // Correcting is refused with `the_other_side_has_answered` and a second agreement with
+      // `the_result_is_already_accepted`, so both controls go. What is left is the disagreement,
+      // and only the side that has not spoken may make one — two scores standing means neither
+      // can, which is the aggregate's cap rather than a rule invented here.
+      return conversation.ours === undefined ? ['counter'] : [];
     case 'not-yours':
     case 'unreadable':
     case 'never-played':
-    case 'both-stand':
     case 'confirmed':
     case 'unscored':
       return [];
