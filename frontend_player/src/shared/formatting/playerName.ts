@@ -30,11 +30,14 @@
  */
 
 /**
- * Somebody a sentence can name: you, another player, or nobody yet.
+ * Somebody a sentence can name: you, another player, or nobody this side can name.
  *
- * `unknown` is the empty seat. It is a case rather than an `undefined` handle because an
- * empty seat is a **state the court states**, and a formatter that took an optional string
- * would let a missing nickname read as an empty seat.
+ * `unknown` is **two things that draw the same way and are not the same fact**: a seat nobody
+ * has landed in yet, and a seat somebody holds whose handle the record cannot answer for — a
+ * Play row the read-back no longer carries, or a games seat whose account `users` has lost.
+ * They share the `?` because there is no word to draw in either, and they stay one case rather
+ * than an optional handle because the *caller* is what knows which: a formatter taking
+ * `string | undefined` would let one read as the other at the call site instead of at the seat.
  */
 export type NamedPlayer =
   | { readonly kind: 'you' }

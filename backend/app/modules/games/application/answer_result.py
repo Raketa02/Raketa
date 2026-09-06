@@ -14,7 +14,7 @@ the standing back.
 
 from __future__ import annotations
 
-from typing import final
+from typing import Mapping, final
 from uuid import UUID
 
 from app.application.ports import UnitOfWork
@@ -60,25 +60,40 @@ class _ActOnAResult:
             raise YouWereNotOnThisCourt()
         return game
 
-    async def _saved(self, game: Game, at: Instant) -> StandingGame:
+    async def _named(self, game: Game) -> Mapping[UUID, str]:
+        """What the people on this court are called. **Read before the write.**
+
+        The tempting order is the other one — a game's court is frozen at the
+        plan, so nothing either act writes could change who is on it, and asking
+        after the commit would hold the transaction open for a question about
+        somebody else's context. It is wrong for one reason that outweighs that:
+        **after the commit, the score has already landed.** A ``users`` that
+        cannot answer would then turn a successful entry into a 500, and the
+        retry a player makes is refused with ``your_side_has_already_answered``
+        about their own score. Before the write, the same outage is an act that
+        did not happen — which is what ``docs/adr/0141`` promises.
+
+        **Sorted, because a ``frozenset`` is never the source of a traversal**
+        (``docs/adr/0105`` §1). The answer is a mapping and could not observe the
+        order, and the rule is stated on the collection rather than on the
+        observability for exactly that reason: what is safe today is what changes
+        silently.
+        """
+
+        return await self._handles.handles_of(sorted(game.line_up.players))
+
+    async def _saved(
+        self, game: Game, at: Instant, handles: Mapping[UUID, str]
+    ) -> StandingGame:
         """Write the act, then fold the game against the instant it happened at.
 
         **After the write and against the same instant**, so an entry and the
         ``AWAITING_ANSWER`` it produced are one reading rather than two.
-
-        **The handles are read after the commit**, because they are not part of
-        it: a game's court is frozen at the plan, so nothing this act writes
-        could change who is on it, and a read inside the transaction would hold
-        it open for a question about somebody else's context.
         """
 
         await self._games.save(game)
         await self._uow.commit()
-        return StandingGame.folded(
-            game,
-            now=at,
-            handles=await self._handles.handles_of(game.line_up.players),
-        )
+        return StandingGame.folded(game, now=at, handles=handles)
 
 
 @final
@@ -91,8 +106,9 @@ class StateResult(_ActOnAResult):
         game = await self._yours(
             game_id=command.game_id, player_id=command.player_id
         )
+        handles = await self._named(game)
         game.state_result(by=command.player_id, score=command.score, occurred_at=at)
-        return await self._saved(game, at)
+        return await self._saved(game, at, handles)
 
 
 @final
@@ -104,5 +120,6 @@ class AcceptResult(_ActOnAResult):
         game = await self._yours(
             game_id=command.game_id, player_id=command.player_id
         )
+        handles = await self._named(game)
         game.accept_result(by=command.player_id, occurred_at=at)
-        return await self._saved(game, at)
+        return await self._saved(game, at, handles)

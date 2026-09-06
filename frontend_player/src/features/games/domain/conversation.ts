@@ -180,7 +180,13 @@ export function othersOn(game: Game, reader: string): readonly NamedPlayer[] {
     .map((seat) => whoIs(game, reader, seat.playerId));
 }
 
-/** Everybody on your side but you, and everybody across the net. Sides, because nobody is named. */
+/**
+ * Everybody on your side but you, and everybody across the net — **as counts.**
+ *
+ * Counts and not people even though a seat carries a handle: its readers are the singles/doubles
+ * sentence and the two score-column labels, and both are statements about a **side**. Who is on
+ * the court by name is {@link othersOn}.
+ */
 export function courtSizes(game: Game, side: GameSide) {
   const ours = game.seats.filter((seat) => seat.side === side).length;
   return { ours, theirs: game.seats.length - ours };

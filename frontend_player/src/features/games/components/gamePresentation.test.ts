@@ -142,7 +142,7 @@ describe('an unscored game reads as an evening, not as an error', () => {
     expect(body).toContain('Nobody is marked');
   });
 
-  it('lists what it still is, and names nobody, because the contract carries no handle', () => {
+  it('lists what it still is, and leaves the naming to the eyebrow above it', () => {
     expect(UNSCORED_FACTS).toHaveLength(3);
     expect(UNSCORED_FACTS.join(' ')).toContain('in how much you have played');
     expect(UNSCORED_FACTS.join(' ')).toContain('nobody lost anything');
@@ -277,7 +277,7 @@ describe('what the grid declines, said to a player', () => {
 });
 
 describe('the court, with nobody on it', () => {
-  it('states the shape and names nobody, because the contract carries no handle', () => {
+  it('states the shape of the court and not who was on it — the eyebrow does that', () => {
     expect(courtLine(2, 2)).toContain('Doubles');
     expect(courtLine(1, 1)).toContain('Singles');
   });

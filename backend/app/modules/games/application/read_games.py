@@ -89,14 +89,21 @@ class ReadGames:
         standing beside it.
 
         **One handle read for the whole list**, over the union of the courts: a
-        player who appears in three of your games is asked about once, and a list
-        of no games asks nothing at all.
+        player who appears in three of your games is asked about once, however
+        many games there are. A list of no games still asks — about nobody, which
+        the adapter answers without a round trip.
+
+        **The union is sorted on the way out**, because a set is never the source
+        of a traversal (``docs/adr/0105`` §1). Nothing downstream could observe
+        the order — the answer is a mapping keyed by id — and the rule is stated
+        on the collection rather than on what happens to be observable, because
+        that is what changes silently.
         """
 
         now = instant(self._clock.now())
         found = await self._games.playing(player_id)
         handles = await self._handles.handles_of(
-            {seating.player_id for game in found for seating in game.line_up.seatings}
+            sorted({player for game in found for player in game.line_up.players})
         )
         return now, tuple(
             sorted(

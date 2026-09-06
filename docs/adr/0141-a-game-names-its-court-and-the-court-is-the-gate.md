@@ -99,9 +99,22 @@ record can no longer describe.
 `games` borrows the handle through a port of its own — `PlayerHandles` in
 `games/domain/ports.py`, adapted onto `users`' published `find_nicknames_of` — so this
 context does not become a second reader of somebody else's schema. `ReadGames` asks **once
-for a whole list**, over the union of every court in it; the two result acts ask once for
-the one game, **after the commit**, because a game's court is frozen at the plan and
-nothing either act writes could change who is on it.
+for a whole list**, over the union of every court in it.
+
+The two result acts ask once for the one game, and they ask **before the write**. The
+tempting order is the other one: a game's court is frozen at the plan, so nothing either act
+writes could change who is on it, and asking after the commit would not hold the transaction
+open for a question about somebody else's context. It is wrong for one reason that outweighs
+that — **after the commit, the score has already landed.** A `users` that cannot answer would
+turn a successful entry into a `500`, and the retry a player makes is then refused with
+`your_side_has_already_answered` about their own score. Asked first, the same outage is an act
+that did not happen, which is the only failure this ADR's Consequences claim.
+
+**The union is handed over sorted**, in both places. Nothing downstream could observe the
+order — the answer is a mapping keyed by id — and
+[ADR-0105](0105-determinism-is-a-set-iteration-problem-in-python.md) §1 states its rule on the
+collection rather than on what happens to be observable for exactly that reason: what is safe
+today is what changes silently.
 
 ## Consequences
 
@@ -120,7 +133,8 @@ nothing either act writes could change who is on it.
   previously render alone.** It is one set read on a port that already existed and is
   already on the search path, and a failure is a failed request rather than a nameless
   game — there is no soft answer here, because a games list that silently went anonymous
-  would be indistinguishable from four erased accounts.
+  would be indistinguishable from four erased accounts. §4's ordering is what keeps that claim
+  true of the two **write** routes as well as the read.
 - **Somebody will propose the card again**, and the argument will be *we already have
   `PlayerCardSource`, and the search route attaches one*. §1 is written so that proposal
   starts from the reason rather than from the field.

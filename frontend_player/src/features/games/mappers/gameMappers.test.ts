@@ -97,7 +97,8 @@ describe('one game off the wire', () => {
 
   /**
    * Two of the wire's four acceptance fields, on the rule the proposal already follows: what a
-   * screen reads and nothing else. `agreed_by` names a person on a court where nobody is named.
+   * screen reads and nothing else. `agreed_by` is read now that a seat carries a handle to name
+   * it with; `agreed_at` is not, because no screen has to ask when they answered.
    */
   it('reads an agreement as the side whose score it settles, and when', () => {
     const game = toGame(

@@ -48,12 +48,15 @@ class Handles:
     """``PlayerHandles`` over a dict, remembering **every** question it was asked."""
 
     known: Mapping[UUID, str] = field(default_factory=dict)
-    asked: list[frozenset[UUID]] = field(default_factory=list)
+    asked: list[tuple[UUID, ...]] = field(default_factory=list)
 
     async def handles_of(
         self, player_ids: Collection[UUID]
     ) -> Mapping[UUID, str]:
-        self.asked.append(frozenset(player_ids))
+        # **The order is recorded, not just the membership.** A ``frozenset``
+        # here would make the file unable to notice the one thing
+        # ``docs/adr/0105`` §1 is about.
+        self.asked.append(tuple(player_ids))
         return {
             player_id: self.known[player_id]
             for player_id in player_ids
@@ -111,17 +114,24 @@ async def test_one_question_for_a_whole_list_and_never_one_per_seat():
         games=directory, handles=handles, clock=FixedClock()
     ).execute(me)
 
-    assert handles.asked == [{me, partner, one, two, three, four}], (
-        "a read per game — or per seat — answers the same and costs a round trip each"
+    assert handles.asked == [tuple(sorted({me, partner, one, two, three, four}))], (
+        "a read per game — or per seat — answers the same and costs a round trip "
+        "each; and the union is handed over in an order, never as a set "
+        "(``docs/adr/0105`` §1)"
     )
     assert all(one_game.handles[me] == "me_" for one_game in found), (
         "every game in the list is folded against the one answer"
     )
 
 
-async def test_an_empty_list_asks_nothing():
-    """Nought games is nought people, and a question about nobody is a round trip
-    bought for an answer that is already known."""
+async def test_an_empty_list_asks_about_nobody_rather_than_not_asking():
+    """Nought games is nought people, and **the question is still asked.**
+
+    Where the round trip is not spent is in the adapter, which answers an empty
+    collection without going near the database — so the saving is real and it is
+    one layer down. Spelling that here rather than short-circuiting in the use
+    case keeps one rule at the port instead of two half-rules either side of it.
+    """
 
     handles = Handles()
 
@@ -130,7 +140,7 @@ async def test_an_empty_list_asks_nothing():
     ).execute(new_uuid())
 
     assert found == ()
-    assert handles.asked == [frozenset()]
+    assert handles.asked == [()]
 
 
 async def test_a_player_users_cannot_answer_for_keeps_their_seat():

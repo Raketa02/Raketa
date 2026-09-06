@@ -14,8 +14,8 @@
  * **The layout is that variant's, and so is most of the copy**: the clock block, the *still on
  * the table* / *yours* pair over the counter's grid, the two-button footer, and the fact list an
  * unscored evening ends on. What is rewritten is only what the model moved — there are no
- * absolute times, because this platform has no calendar, and nobody is named, because the games
- * contract carries no handle.
+ * absolute times, because this platform has no calendar. Names came back with the handle on a
+ * seat, under `gamePresentation`'s rule: a person where a person acted, a side where a side did.
  *
  * ## One screen, seven states, and the state is derived
  *

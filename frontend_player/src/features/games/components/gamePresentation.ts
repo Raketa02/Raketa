@@ -48,8 +48,9 @@
  * is not, the entry's send is *send this score*, and a correction is *change what I entered* —
  * which says, in the control's own name, the thing the ticket says a player must not have to
  * learn the hard way. What is rewritten is only what the model moved: there are no absolute
- * times here because this platform has no calendar, and nobody is named because the games
- * contract carries no handle.
+ * times here because this platform has no calendar. The prototype's names came **back** — a seat
+ * carries a handle now — under the rule two sections up, which is narrower than the prototype's:
+ * a person where a person acted, a side where a side did.
  *
  * ## A score is never printed as a string
  *
