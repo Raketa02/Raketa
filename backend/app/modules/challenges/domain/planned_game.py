@@ -1,10 +1,16 @@
 """The one thing this context asks somebody else to **do**.
 
-Every other outward seam here is a *read*: ``domain/ports.py`` holds the
-repository, the two log queries and the four gates, each answering a question
-about a fact this context does not own. This is the exception, and it is in its
-own module for the reason ``matchmaking``'s ``MutualChallengeMinting`` is — it is
-a command, and the tables that describe reads have nothing to say about one.
+Every seam on ``domain/ports.py`` is a *read* about a fact this context owns or
+can fold — the repository, the log queries and the four gates. This is the
+exception, and it is in its own module for the reason ``matchmaking``'s
+``MutualChallengeMinting`` is: it is a command, and the tables that describe
+reads have nothing to say about one.
+
+``settled_game.py`` beside it is the other seam that left ``ports.py``, and for
+the neighbouring reason — it is a read, but about a **game**, which is the one
+thing here this context does not know the shape of. The two are one arrow
+(``challenges -> games``) written twice: this one hands an arrangement over, and
+that one asks whether anything more will happen to what came of it.
 
 **It fires exactly once per challenge, at the instant the line-up completes.**
 That is the only moment the arrangement is knowable: every seat accepted, nobody

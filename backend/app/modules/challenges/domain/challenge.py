@@ -335,18 +335,28 @@ class Challenge:
 
         return standing_of(self.seats, organiser_id=self.organiser_id, now=now)
 
-    def is_live_at(self, now: Instant) -> bool:
-        """Whether this challenge **has not ended** — no more and no less.
+    def has_become_a_game_at(self, now: Instant) -> bool:
+        """Whether this challenge's line-up completed and handed over a game.
 
-        The other half of the pair the release split in two. This one is read by
-        the mutual mint, which asks *does a challenge already stand between these
-        two* rather than *are they still arranging*: a mutual-born challenge has
-        no unanswered seat, so it can never lapse or decline, and in a singles
-        sport it is ``ON`` at birth. Asking the pair rule there would answer *no*
-        about a game the two of them already have.
+        ``ON`` and nothing else, which is *every seat accepted* — the moment
+        ``PlannedGameOpening`` fires and the only moment it can, because after it
+        the membership may not change. A singles challenge born of two yeses is
+        ``ON`` the instant it exists and no accept ever happens on it.
+
+        **It is one end of the mutual mint's idempotence key** (``docs/adr/0152``
+        §4): *has a mutual between these two already minted a game in this sport,
+        and is that game finished with?* This half is answerable here; the other
+        half is a fact about a **game**, which this context does not own, and it
+        is asked through ``SettledGameQuery``.
+
+        There is no complement to this and there is deliberately no *has it
+        ended* beside it. A challenge that ended without ever reaching ``ON``
+        minted nothing, so it holds nobody — and a predicate saying *this
+        challenge still stands* is the subtly-wrong second answer to *are these
+        two arranging something* that the pair rule already answers.
         """
 
-        return self.standing_at(now) not in ENDED
+        return self.standing_at(now) is Standing.ON
 
     def is_being_arranged_at(self, now: Instant) -> bool:
         """Whether these people are **still arranging a game** — the pair rule.
@@ -385,27 +395,14 @@ class Challenge:
         **And so is everybody, the moment the line-up completes.** A challenge
         that reached ``ON`` holds nobody: the pair rule exists to stop one game
         being arranged twice, and this one is arranged. Whether the *unplayed
-        game* should carry a block of its own is a question about a ``games``
-        fact that this context has no port onto, and it is filed rather than
-        answered here — so nothing replaces it.
+        game* should carry a block of its own was filed here and is now
+        **decided**: ``docs/adr/0152`` built the port onto ``games`` that would
+        answer it and declined to use it on this read, because a send is somebody
+        deliberately choosing a court. Nothing replaces the release, and that is
+        the decision rather than the deferral.
         """
 
         if not self.is_being_arranged_at(now):
-            return frozenset()
-        return self._seated_at(now)
-
-    def players_seated_at(self, now: Instant) -> frozenset[UUID]:
-        """Everybody on this court while the challenge stands, ``ON`` included.
-
-        **The same people as** :meth:`players_in_it_at` **until the line-up
-        completes, and the difference is the whole point.** That read is the pair
-        rule and lets go the moment two people finish arranging a game; this one
-        holds until the challenge has ended, which for a challenge born of two
-        yeses that met is never. It is what stops a second *Let's play* tap
-        opening a second game between the same two people.
-        """
-
-        if not self.is_live_at(now):
             return frozenset()
         return self._seated_at(now)
 

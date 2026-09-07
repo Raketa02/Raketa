@@ -17,8 +17,15 @@ could see them would not be an aggregate.
 game or they are not; asking for padel while your tennis challenge sits
 unanswered is pestering with a sport chip on it. The matcher's own
 ``OpenChallenge`` carries no sport field at all, so this is the rule its shipped
-contract already assumed rather than a new restriction — which is why nothing on
-this port takes a ``Sport``.
+contract already assumed rather than a new restriction.
+
+**One read here does take a ``Sport``, and it is not that rule.** The mutual
+mint's idempotence key is *has a mutual between these two already minted a game
+in this sport* — a question about an ``Interest``, which is keyed
+``(from, to, sport)`` and expires — and it is a different rule with a different
+scope that happens to be answered off the same log (``docs/adr/0152`` §1). The
+pair rule stays cross-sport; what narrowed is the guard that had been borrowing
+it.
 
 Three more seams arrived with the send, and each is here for a different reason.
 
@@ -115,17 +122,19 @@ class ChallengeRepository(Protocol):
 
 @runtime_checkable
 class OpenChallengeQuery(Protocol):
-    """*Are any two of these people already arranging a game?* — and the second
-    question the first one left behind: *does a challenge already stand between
-    them at all?*
+    """*Are any two of these people already arranging a game?* — and the
+    question the mutual mint asks beside it: *what has a mutual between these
+    two already minted?*
 
-    **Two readings of one fold, and they parted company on ``docs/adr/0142``
-    §1.** They used to be the same question, because a challenge that had not
-    ended was one being arranged. A completed line-up is now neither ended nor
-    being arranged, so the two readers who had been sharing an answer need one
-    each: the **send** and the deck exclusion ask the first, and the **mutual
-    mint** asks the second. Which caller asks which is the decision, and it is
-    written on each method.
+    **Two questions off one fold, and they are about different things.** The
+    first is the ordinary one-open-challenge-per-pair rule and it is a statement
+    about **what state two people are in**; the second is the mutual mint's
+    idempotence key and it is a statement about **whether an act has already been
+    performed** (``docs/adr/0152`` §1). Those have different natural endings, and
+    conflating them is what once gave the mint a guard with no release at all —
+    a question about a *state* answered ``ON`` for ever, bounding an *act*. The
+    mint asks both and both must pass, so it is strictly stricter than a send
+    rather than accidentally so.
 
     **Read at the moment it is asked, against the clock.** There is no projection
     and no cached *open* flag behind this by decision: the standing is derived
@@ -160,40 +169,71 @@ class OpenChallengeQuery(Protocol):
         It answers in **unordered pairs**, because there is nothing for a caller
         to learn from the direction. Sharing a line-up makes a pair regardless of
         who organised it.
+
+        **Every caller asks this one**, the mutual mint included. A repeat tap
+        landing on two people who are already arranging something would be a
+        second challenge between them, and catching that used to be an accident
+        of reading a superset (``docs/adr/0152`` §2).
         """
         ...
 
-    async def standing_pairs_among(
-        self, player_ids: Collection[UUID], *, now: Instant
-    ) -> frozenset[frozenset[UUID]]:
-        """Every pair of these people with a challenge that **has not ended**.
+    async def mutual_born_challenges_that_became_games(
+        self,
+        one_player: UUID,
+        other_player: UUID,
+        *,
+        sport: Sport,
+        now: Instant,
+    ) -> frozenset[UUID]:
+        """Every mutual-born challenge between these two, in this sport, that
+        completed into a game — by id.
 
-        **A superset of** :meth:`open_pairs_among`, **and the difference is one
-        standing.** That read is the pair rule and releases on ``ON``, because
-        two people who completed a line-up have finished arranging a game
-        (``docs/adr/0142`` §1). This one keeps holding them, because the
-        challenge is still there and so is the game.
+        **The mutual mint's idempotence key, and nobody else's read.** *Let's
+        play* is a tap that costs nothing, ``express_interest`` mints on the
+        **mutual** rather than on whether this tap wrote a row — deliberately,
+        because a repeat tap is the one occasion the platform ever gets to retry
+        a mint a gate refused — and a singles mutual is ``ON`` the instant it
+        exists, so the pair rule above lets those two go a moment later. Without
+        this question a repeat tap opens a second challenge, a second game and a
+        second result window between the same two people.
 
-        **It has exactly one caller and it is not the send.** The send may not
-        use it — that would put the permanence #343 removed straight back, one
-        method along. What needs it is the mutual mint: *Let's play* is a tap
-        that costs nothing, ``express_interest`` mints on the **mutual** rather
-        than on whether this tap wrote a row, and a singles mutual is ``ON`` the
-        instant it exists. Without this question a repeat tap opens a second
-        challenge, a second game and a second result window between the same two
-        people, for ever.
+        **Challenges rather than games, because the answer is only half of one.**
+        *Has this mutual finished with what it minted* needs a fact about a
+        **game**, which this context does not own; what comes back here is what
+        :class:`~app.modules.challenges.domain.settled_game.SettledGameQuery`
+        is asked next, and a challenge id is the one name both contexts spell.
 
-        **It is across every sport, like everything else on this port, and that
-        keeps one permanence alive where #343 removed the other.** A pair whose
-        tennis game was minted from a mutual cannot be given a padel one by a
-        second mutual, ever — nothing ends a challenge every seat accepted, so
-        this question never stops answering *yes* about them. That is the
-        behaviour as it stood before the release rather than a new restriction,
-        and the deliberate path is untouched: either of them may still **send**
-        the other a court from a search. Narrowing it to the mutual's own sport
-        is a real question and it is not this one's; the port carries no
-        ``Sport`` today by decision, and changing that is a change to what *one
-        open challenge per pair* means.
+        **Mutual-born only.** A challenge somebody *sent* is not something a
+        mutual minted, and holding the mint on one would be the pair rule wearing
+        a second hat — which is the conflation ``docs/adr/0152`` §1 exists to
+        undo. It is answerable off the streams as they stand, because
+        ``ChallengeOpenedFromMutualInterest`` is already its own event: no new
+        event, no field and no migration.
+
+        **Per sport, and this is where the permanence went.** An ``Interest`` is
+        keyed ``(from, to, sport)`` and expires; a padel yes is not a tennis yes
+        pressed twice, so a tennis game minted from a mutual has nothing to say
+        about a padel one. The one-open-challenge-per-pair rule above stays
+        cross-sport and keeps its own justification — these are two rules, and
+        only one of them was ever about idempotence.
+
+        **Only what has become a game, and the other half of the hold leans on
+        the read above.** ``docs/adr/0152`` §4 puts the mint's hold on a
+        mutual-born challenge that is *unfinished*, which is **either** still
+        being arranged **or** settled on a game that is not. Only the second half
+        is here: a doubles court with a side to fill has minted no game yet, and
+        what holds those two is :meth:`open_pairs_among`, which is cross-sport
+        and therefore strictly broader than this question needs. **That is the
+        coupling to notice** — narrowing the pair rule without moving *still
+        being arranged* into this read would open the hold silently, on the one
+        path where a refusal has nobody to tell. One that ended without ever
+        producing a game holds nobody at all under either question: it is
+        finished with, and there is nothing to wait on settling.
+
+        **Pair-shaped, and deliberately not ``…_among``.** The mint has exactly
+        two people and always will; the bulk shape next door exists to answer a
+        send's six pairs on one court. A method that took a collection and was
+        only ever called with two would be inviting somebody to pass three.
         """
         ...
 

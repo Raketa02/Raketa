@@ -69,8 +69,12 @@ from app.modules.challenges.application.open_from_mutual_interest import (
     OpenChallengeFromMutualInterest,
 )
 from app.modules.challenges.domain.planned_game import PlannedGameOpening
+from app.modules.challenges.domain.settled_game import SettledGameQuery
 from app.modules.challenges.infrastructure.games_planned_game import (
     GamesPlannedGame,
+)
+from app.modules.challenges.infrastructure.games_settled_game import (
+    GamesSettledGame,
 )
 from app.modules.games.application.open_planned_game import OpenPlannedGame
 from app.modules.games.domain.ports import (
@@ -494,6 +498,7 @@ def build_mutual_challenge_minting(
                 events=build_event_publisher(session),
             ),
             open_challenges=build_open_challenge_query(session, runtime=runtime),
+            settled_games=build_settled_game_query(session, runtime=runtime),
             safety=build_court_safety(session),
             clock=build_clock(),
             planned_games=build_planned_game_opening(session, runtime=runtime),
@@ -748,6 +753,39 @@ def build_planned_game_opening(
                 event_store=build_domain_event_store(session, runtime=runtime),
                 events=build_event_publisher(session, runtime=runtime),
             )
+        )
+    )
+
+
+def build_settled_game_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> SettledGameQuery:
+    """*Is anything more going to happen to the game this challenge opened?*
+
+    The read half of the seam above, wired the same way and for the same reason:
+    what *settled* means belongs to ``games``, and which implementation answers
+    belongs here (``docs/adr/0152`` §5).
+
+    It is built on the aggregate repository rather than on a read port, because
+    the join it needs — one challenge to one game — is already there for the
+    opening's idempotence. Nothing is written through it, and it commits nothing.
+
+    **It is a second game repository inside one unit of work**, beside the one
+    ``build_planned_game_opening`` makes, and that is safe here for a reason
+    rather than by luck: a repository's per-unit-of-work state is the version
+    bookkeeping behind optimistic concurrency, this one only ever **reads**, and
+    the one that writes only ever opens a game that does not exist yet. The two
+    can therefore never hold a version of the same stream. Sharing one would mean
+    a builder taking another builder's product, which is not the shape any port
+    is wired in here.
+    """
+    return GamesSettledGame(
+        build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
         )
     )
 

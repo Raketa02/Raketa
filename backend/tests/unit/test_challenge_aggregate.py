@@ -511,34 +511,47 @@ def test_a_completed_line_up_releases_the_pair():
     assert challenge.players_in_it_at(at(24 * 365)) == frozenset()
 
 
-def test_a_completed_line_up_is_still_a_challenge_that_stands():
-    """The read that did **not** let go, and the reason there are two of them.
+def test_a_completed_line_up_has_become_a_game():
+    """The other thing the aggregate answers, and the reason it is not the first.
 
     Releasing the pair rule on ``ON`` took the only guard out from under the
-    mutual mint: *Let's play* is a tap that costs nothing, ``express_interest``
-    mints on the **mutual** rather than on whether this tap wrote a row, and a
-    singles mutual is ``ON`` at birth. So the aggregate answers two questions —
-    *are these two still arranging* and *does this challenge still stand* — and
-    a completed line-up separates them for the first time.
+    mutual mint, and ``docs/adr/0152`` gave that path a question of its own —
+    *has a mutual between these two already minted a game?* This is the half the
+    aggregate can answer. It is not the complement of *are they arranging*: both
+    are false while a challenge is being arranged, and both are false once one
+    has ended.
     """
 
     challenge = a_tennis_challenge()
     challenge.accept(ALICE, occurred_at=at(1))
 
     assert challenge.players_in_it_at(INSIDE) == frozenset()
-    assert challenge.players_seated_at(INSIDE) == frozenset({ORGANISER, ALICE})
-    assert challenge.is_live_at(INSIDE)
     assert not challenge.is_being_arranged_at(INSIDE)
+    assert challenge.has_become_a_game_at(INSIDE)
+
+
+def test_a_challenge_still_being_arranged_has_become_no_game_yet():
+    """The half-built court holds its pair on the **pair rule** and on nothing
+    else: nothing has been minted, so there is no game to be finished with."""
+
+    challenge = a_tennis_challenge()
+
+    assert challenge.is_being_arranged_at(INSIDE)
+    assert not challenge.has_become_a_game_at(INSIDE)
 
 
 def test_an_ended_challenge_stands_between_nobody_either():
-    """Where the two readings meet again: nothing left is nothing on both."""
+    """Where the two readings meet again: nothing left is nothing on both.
+
+    A challenge that ended without ever completing minted nothing, so it holds
+    nobody on either question — which is what releases a pair whose doubles
+    mutual was withdrawn half-built.
+    """
 
     challenge = a_tennis_challenge()
     challenge.decline(ALICE, occurred_at=at(1))
 
-    assert not challenge.is_live_at(INSIDE)
-    assert challenge.players_seated_at(INSIDE) == frozenset()
+    assert not challenge.has_become_a_game_at(INSIDE)
     assert challenge.players_in_it_at(INSIDE) == frozenset()
 
 

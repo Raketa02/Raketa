@@ -15,17 +15,34 @@ month-old deck deal. Two month-old yeses with a block taken since would otherwis
 walk a challenge past every gate in the product, minted inline, with nobody
 looking.
 
-**On the pair rule it asks a different question, and that is deliberate**
-(``docs/adr/0142`` §1, #343). The send asks *are these two still arranging a
-game*, which releases the moment a line-up completes — and a **singles** mutual
-is a completed line-up the instant it exists, both seats accepted from birth. So
-the pair rule cannot police this path: ``express_interest`` mints on the
-**mutual** rather than on whether this tap wrote a row, so every repeat tap of a
-button that says it costs nothing would open another challenge, another game and
-another result window between the same two people. What is asked here instead is
-whether a challenge already **stands** between them. The send may not ask that —
-it is the permanence #343 removed — and this path may not ask the send's, which
-is what one shared question was hiding.
+**It asks two questions where the send asks one, and that is what makes it
+strictly stricter** (``docs/adr/0152``). The send's question — *are these two
+still arranging a game* — releases the moment a line-up completes, and a
+**singles** mutual is a completed line-up the instant it exists, both seats
+accepted from birth. So the pair rule alone cannot police this path:
+``express_interest`` mints on the **mutual** rather than on whether this tap
+wrote a row, so every repeat tap of a button that says it costs nothing would
+open another challenge, another game and another result window between the same
+two people.
+
+What is asked beside it is the mint's own **idempotence** key: *has a mutual
+between these two, in this sport, already minted a game that is not finished
+with?* Both must pass. Keeping them apart is the whole of ``docs/adr/0152`` §1 —
+*are these two already arranging* is a question about a **state** and *has this
+act already been performed* is a question about an **act**, and they have
+different natural endings. Answering the second with the first is what gave this
+path a guard that never released: a mutual-born challenge has every seat accepted
+at birth, so *does a challenge still stand between them* answered yes for the
+life of the database, in every sport, for ever.
+
+**And the release is a fact about a game, so it is read from ``games``.**
+*Finished with* means the mutual-born challenge never became a game, or the game
+it became has **settled** — including a ghost, because an entry window that
+closed on silence is as final as a confirmed score and two people whose game
+evaporated may try again. The send does not get this hold and that is a decision
+rather than an omission (``docs/adr/0152`` §5): a send is somebody deliberately
+choosing a court, and holding them on an unplayed game would put back the block
+#343 argued out.
 
 **Its whole observable is that no challenge exists afterwards.** There is no
 organiser standing at a screen and no press to refuse, so a refusal here has
@@ -52,7 +69,7 @@ from __future__ import annotations
 from typing import final
 from uuid import UUID
 
-from app.kernel import Clock, instant
+from app.kernel import Clock, Instant, instant
 from app.modules.challenges.application.completed_line_up import hand_over
 from app.modules.challenges.application.commands import (
     OpenFromMutualInterestCommand,
@@ -65,6 +82,7 @@ from app.modules.challenges.domain.ports import (
     ChallengeRepository,
     OpenChallengeQuery,
 )
+from app.modules.challenges.domain.settled_game import SettledGameQuery
 from app.modules.challenges.domain.standing import Standing
 from app.shared.ids import new_uuid
 
@@ -78,12 +96,14 @@ class OpenChallengeFromMutualInterest:
         *,
         challenges: ChallengeRepository,
         open_challenges: OpenChallengeQuery,
+        settled_games: SettledGameQuery,
         safety: CourtSafety,
         clock: Clock,
         planned_games: PlannedGameOpening,
     ) -> None:
         self._challenges = challenges
         self._open_challenges = open_challenges
+        self._settled_games = settled_games
         self._safety = safety
         self._clock = clock
         self._planned_games = planned_games
@@ -99,19 +119,31 @@ class OpenChallengeFromMutualInterest:
             return None
         if not admitted:
             return None
-        if await self._open_challenges.standing_pairs_among(pair, now=at):
-            # **One question, and it is this path's own** (``docs/adr/0142`` §1,
-            # #343). *Already arranging* is what the send asks and it is not
-            # enough here: a singles mutual is `ON` the instant it is minted, so
-            # the pair rule lets these two go a moment later — and
-            # ``express_interest`` mints on the **mutual** rather than on whether
-            # this tap wrote a row, deliberately, because a repeat tap is the one
-            # occasion the platform ever gets to retry a mint a gate refused. So
-            # what is asked is whether a challenge already **stands** between
-            # them, in this sport or any other: a second one would be the same
-            # two people asked the same question twice, and the first is the one
-            # they answered. A refused mint leaves nothing standing, so the retry
-            # still works.
+        if await self._open_challenges.open_pairs_among(pair, now=at):
+            # **The send's own question, asked here deliberately** (``docs/adr/
+            # 0152`` §2). Two people with a challenge they are still arranging —
+            # a court one of them sent, or a half-built doubles one a mutual
+            # minted — must not be given a second one; the guard below cannot
+            # catch that, because it is a question about an *act* and this is a
+            # question about a *state*. Today's shape used to catch it by
+            # reading a superset, which is how the two came to be confused.
+            return None
+
+        minted = await self._open_challenges.mutual_born_challenges_that_became_games(
+            command.player_id,
+            command.other_player_id,
+            sport=command.sport,
+            now=at,
+        )
+        if not await self._all_finished_with(minted, at=at):
+            # **One mutual mints one game.** *Let's play* is a tap that costs
+            # nothing and ``express_interest`` mints on the **mutual** rather
+            # than on whether this tap wrote a row — deliberately, because a
+            # repeat tap is the one occasion the platform ever gets to retry a
+            # mint a gate refused. So the second tap has to be refused here, and
+            # it is refused until the game the first one minted is finished
+            # with: settled, ghost included. A refused mint writes nothing, so
+            # the retry still works.
             return None
 
         challenge = Challenge.opened_from_mutual_interest(
@@ -129,3 +161,39 @@ class OpenChallengeFromMutualInterest:
             # path takes it from here.
             await hand_over(challenge, at=at, games=self._planned_games)
         return challenge.id
+
+    async def _all_finished_with(
+        self, minted: frozenset[UUID], *, at: Instant
+    ) -> bool:
+        """Whether every game these two already minted here has settled.
+
+        **A read that cannot answer means *no*, and it may not escape.** The mint
+        runs inside ``express_interest``'s transaction, and a raise would roll
+        back the player's yes — which is somebody's own act and is not the thing
+        being refused. So this fails closed exactly as an unevaluable safety gate
+        does: no game, ``None``, silently.
+
+        **Failing closed is only defensible because a repeat tap retries**
+        (``docs/adr/0152`` §6). The mint hanging off the mutual rather than off
+        *did this tap write a row* is what turns a transient read failure into a
+        delay instead of a game two people never get, and that property is
+        therefore not available to be traded away for simplicity later.
+
+        It catches broadly for ``CourtSafety._read``'s reason: a provider that
+        raises and a provider that answers something malformed are the same
+        event to a guard — it could not be evaluated — and narrowing this to what
+        today's adapter happens to raise would let the next one fail open.
+        """
+
+        if not minted:
+            # **Nothing minted is nothing to ask about**, and the read is not
+            # made. Asking would let an outage in ``games`` refuse every first
+            # mint on the platform — two people with nothing between them held
+            # apart by a fact about a game neither of them has.
+            return True
+
+        try:
+            settled = await self._settled_games.settled_among(minted, now=at)
+        except Exception:
+            return False
+        return minted <= settled

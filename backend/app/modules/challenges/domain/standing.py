@@ -46,9 +46,16 @@ class Standing(str, Enum):
 
 #: The two standings that mean *this challenge has ended* — there is nothing
 #: left to arrange and nothing left to do. Read by ``Challenge.invite``, which
-#: refuses to seat anybody into one; by the standing the client prints; and by
-#: the **mutual mint**, which asks *does a challenge already stand between these
-#: two* and would open a second game on a repeat tap without it.
+#: refuses to seat anybody into one, and by the standing the client prints.
+#:
+#: **The mutual mint used to read it and no longer does** (``docs/adr/0152``).
+#: It asked *does a challenge already stand between these two*, which for a
+#: mutual-born challenge answers *yes* for the life of the database: every seat
+#: is accepted at birth, so it can never lapse, never decline, and 0142 §2
+#: denies ``ON`` the withdraw exit. A guard about whether an act was already
+#: performed had inherited a *state*'s eternity. What the mint asks now is
+#: :data:`ARRANGING` — the same question the send asks — plus one of its own
+#: about the game the last mutual minted.
 #:
 #: **``ON`` is not here, and adding it would be the wrong way to release a pair.**
 #: A challenge every seat accepted is not over: it produced a game, which is the

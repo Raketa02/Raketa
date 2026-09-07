@@ -39,6 +39,7 @@ from app.bootstrap.composition import (
     build_event_publisher,
     build_open_challenge_query,
     build_planned_game_opening,
+    build_settled_game_query,
 )
 from app.kernel import Instant, Sport, instant
 from app.modules.challenges.application.commands import (
@@ -429,12 +430,13 @@ async def test_the_window_and_the_sport_come_from_the_search(session_factory):
 # ---------------------------------------------------------------------------
 
 
-def _mint(session, *, safety=None) -> OpenChallengeFromMutualInterest:
+def _mint(session, *, safety=None, at=SENT_AT) -> OpenChallengeFromMutualInterest:
     return OpenChallengeFromMutualInterest(
         challenges=_repository(session),
         open_challenges=build_open_challenge_query(session),
+        settled_games=build_settled_game_query(session),
         safety=safety or a_safe_court([ALICE, BOB]),
-        clock=FrozenClock(SENT_AT),
+        clock=FrozenClock(at),
         planned_games=build_planned_game_opening(session),
     )
 
@@ -474,7 +476,7 @@ async def test_a_mutual_between_two_admissible_players_opens_the_game(
     challenge is ``ON`` before anybody has done anything to it — which is why
     ``open_from_mutual_interest`` hands it straight to ``games``. The pair rule
     therefore holds nobody (``docs/adr/0142`` §1): they are not *arranging*, they
-    have arranged. The challenge still stands, and the two reads say so
+    have arranged. The challenge has become a game, and the two reads say so
     separately, which is the whole reason there are two of them.
     """
 
@@ -490,41 +492,8 @@ async def test_a_mutual_between_two_admissible_players_opens_the_game(
         stored = await _repository(session).load(minted)
         assert stored is not None
         assert stored.players_in_it_at(SENT_AT) == frozenset()
-        assert stored.players_seated_at(SENT_AT) == frozenset({ALICE, BOB})
+        assert stored.has_become_a_game_at(SENT_AT)
         assert all(seat.is_accepted() for seat in stored.seats)
-
-
-async def test_a_second_mutual_mints_nothing_while_the_first_stands(session_factory):
-    """One game per mutual, and a second tap must not become a second game.
-
-    **This is refused by the mint's own question and no longer by the pair
-    rule.** Releasing a completed line-up (``docs/adr/0142`` §1) took the pair
-    rule out from under this: a singles mutual is ``ON`` at birth, so the two of
-    them are released the instant they are minted, and *Let's play* is a button
-    that says it costs nothing. What refuses a second one is
-    ``standing_pairs_among`` — *a challenge already stands between these two* —
-    which is a different question from *are they still arranging*, asked here
-    and nowhere else.
-    """
-
-    async with session_factory() as session:
-        first = await _mint(session).execute(
-            OpenFromMutualInterestCommand(
-                sport=Sport.TENNIS, player_id=ALICE, other_player_id=BOB
-            )
-        )
-        await session.commit()
-
-    async with session_factory() as session:
-        again = await _mint(session).execute(
-            OpenFromMutualInterestCommand(
-                sport=Sport.PADEL, player_id=BOB, other_player_id=ALICE
-            )
-        )
-        await session.commit()
-
-        assert first is not None
-        assert again is None
 
 
 async def test_a_repeat_tap_on_the_same_mutual_mints_nothing(session_factory):
@@ -537,6 +506,10 @@ async def test_a_repeat_tap_on_the_same_mutual_mints_nothing(session_factory):
     ``ON`` at birth, so the pair rule released it a moment ago. Without this
     check the same two people collect a challenge, a game, a result window and a
     rating input per press.
+
+    What refuses it is the mint's own idempotence key — *this mutual has already
+    minted a game and it is not finished with* — and every bound on that key is
+    in ``test_a_mutual_mints_again.py``.
     """
 
     async with session_factory() as session:

@@ -142,10 +142,15 @@ class GamesPlayedAndChallengesAnswered:
         was held for ever. ``standing.py``'s ``ARRANGING`` is what makes it true
         (``docs/adr/0142`` §1).
 
-        **What is still not asked is whether that game was played.** The block
-        passing to the game and releasing when the result settles is the other
-        answer, and this class — the composing adapter, holding both providers —
-        is where it would live. It is filed, not taken.
+        **Whether that game was played is still not asked, and that is now a
+        decision rather than a filing** (``docs/adr/0152`` §5). The port that
+        would answer it exists — ``challenges`` grew ``SettledGameQuery`` onto
+        ``games`` to bound the mutual mint — and the record that built it
+        declined to use it on this read. Two people with an unplayed game may
+        still deal each other into a deck and send each other a court: a send is
+        somebody deliberately choosing one, and holding them here would re-add
+        #343's block by a side door. This class, the composing adapter holding
+        both providers, is still where it would live if that is ever revisited.
         """
 
         return await self._challenges.open_challenges(searcher_id)

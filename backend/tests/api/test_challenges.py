@@ -45,6 +45,7 @@ from app.bootstrap.composition import (
     build_player_profile_repository,
     build_ruleset,
     build_search_store,
+    build_settled_game_query,
     build_user_repository,
 )
 from app.modules.blocks.domain.errors import BlockStateUnavailable
@@ -552,6 +553,7 @@ def _break_the_block_read(client) -> None:
                         events=build_event_publisher(db),
                     ),
                     open_challenges=build_open_challenge_query(db),
+                    settled_games=build_settled_game_query(db),
                     safety=CourtSafety(
                         blocks=Unreadable(),
                         holds=build_challenge_hold_query(db),

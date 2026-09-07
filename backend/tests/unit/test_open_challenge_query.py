@@ -23,6 +23,12 @@ else on the court once more.
 
 **The send refuses whole and names nobody.** One refusal for the press, with no
 player id anywhere in it.
+
+And a fifth about the port's **other** question, which is not that rule and is
+asserted against confusing it with one: *has a mutual between these two already
+minted a game in this sport* is the mint's idempotence key — mutual-born only,
+one sport, and about the two whose yeses met rather than about everybody who
+ended up on the court (``docs/adr/0152``).
 """
 
 from __future__ import annotations
@@ -139,6 +145,41 @@ def a_tennis_challenge(*, organiser=ORGANISER, invitee=ALICE) -> Challenge:
         arrangement=a_tennis_court(organiser, invitee),
         occurred_at=SENT_AT,
     )
+
+
+def a_mutual_born_challenge(
+    *, sport: Sport = Sport.TENNIS, organiser=ORGANISER, other=ALICE
+) -> Challenge:
+    """Two yeses that met. **``ON`` at birth in a singles sport, half a game in
+    a doubles one** — which is the difference these tests turn on.
+
+    Built by the aggregate rather than by the mint, because what is under test
+    here is the **read** — the use case's own guards are exercised where they
+    live.
+    """
+
+    return Challenge.opened_from_mutual_interest(
+        challenge_id=new_uuid(),
+        sport=sport,
+        organiser_id=organiser,
+        other_player_id=other,
+        occurred_at=SENT_AT,
+    )
+
+
+def a_side_invited_into(challenge: Challenge, *, at_hour: int = 1) -> Challenge:
+    """Fill a half-built padel court's open side, the way its organiser would."""
+
+    challenge.invite(
+        (
+            SeatPlan(side=Side.A, player_id=ORGANISER),
+            SeatPlan(side=Side.A, player_id=ALICE),
+            invited(BOB, Side.B, 1),
+            invited(CAROL, Side.B, 2),
+        ),
+        occurred_at=at(at_hour),
+    )
+    return challenge
 
 
 def a_padel_choice(organiser, *invitees) -> tuple[SeatChoice, ...]:
@@ -270,13 +311,15 @@ async def test_a_completed_line_up_releases_the_pair(session_factory):
         assert pairs == frozenset()
 
 
-async def test_a_completed_line_up_still_stands_between_its_pair(session_factory):
-    """``standing_pairs_among`` — the same fold, one reading along.
+async def test_a_sent_challenge_is_not_something_a_mutual_minted(session_factory):
+    """The port's second question, and the first thing it must not confuse.
 
-    The mutual mint's own question, and the one thing that keeps a repeat *Let's
-    play* from opening a second game between two people who already have one
-    (``docs/adr/0142`` §1, #343). It answers about the same challenge the pair
-    rule just let go of, which is the whole reason it exists.
+    ``mutual_born_challenges_that_became_games`` is the mutual mint's
+    **idempotence** key — *has a mutual between these two already minted a game
+    in this sport* — and a challenge somebody **sent** is not one, however
+    complete it is. Answering
+    otherwise would be the pair rule wearing a second hat, which is the
+    conflation ``docs/adr/0152`` §1 exists to undo.
     """
 
     async with session_factory() as session:
@@ -289,28 +332,150 @@ async def test_a_completed_line_up_still_stands_between_its_pair(session_factory
         assert await query.open_pairs_among([ORGANISER, ALICE], now=INSIDE) == (
             frozenset()
         )
-        assert await query.standing_pairs_among(
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.TENNIS, now=INSIDE
+        ) == frozenset()
+
+
+async def test_a_mutual_born_game_comes_back_keyed_by_its_challenge(
+    session_factory,
+):
+    """What the mint reads, in the currency ``games`` can be asked in.
+
+    A singles mutual is ``ON`` the instant it exists, so it has minted a game
+    from birth — and what comes back is the **challenge** id, because that is the
+    one name both contexts spell and the one ``SettledGameQuery`` is asked with.
+    """
+
+    async with session_factory() as session:
+        challenge = a_mutual_born_challenge()
+        await _record(session, challenge)
+
+        assert await build_open_challenge_query(
+            session
+        ).mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.TENNIS, now=INSIDE
+        ) == frozenset({challenge.id})
+
+
+async def test_it_answers_about_the_sport_it_was_asked_about(session_factory):
+    """**Per sport, and this is the permanence the record removed.**
+
+    An ``Interest`` is keyed ``(from, to, sport)`` and expires: a padel yes is
+    not a tennis yes pressed twice. The one-open-challenge-per-pair rule stays
+    cross-sport on its own justification; this question never was.
+    """
+
+    async with session_factory() as session:
+        await _record(session, a_mutual_born_challenge())
+
+        query = build_open_challenge_query(session)
+
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.PADEL, now=INSIDE
+        ) == frozenset()
+
+
+async def test_a_half_built_mutual_born_court_has_minted_no_game(session_factory):
+    """A doubles mutual is half a game, and half a game is not a game.
+
+    Nothing has been handed to ``games``, so there is nothing to wait on
+    settling — those two are held by the pair rule beside it, and released the
+    moment that court stops being arranged.
+    """
+
+    async with session_factory() as session:
+        await _record(session, a_mutual_born_challenge(sport=Sport.PADEL))
+
+        query = build_open_challenge_query(session)
+
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.PADEL, now=INSIDE
+        ) == frozenset()
+        assert await query.open_pairs_among(
             [ORGANISER, ALICE], now=INSIDE
         ) == frozenset({frozenset({ORGANISER, ALICE})})
 
 
-async def test_an_ended_challenge_stands_between_nobody(session_factory):
-    """The bound on the second question: it holds until the challenge ends, and
-    not one instant longer. A declined seat empties the court on both readings.
+async def test_a_later_invitee_is_not_somebody_the_mutual_was_between(
+    session_factory,
+):
+    """The key is the **mutual**, not the court it grew into.
+
+    A doubles mutual seats its two and leaves a side to fill; whoever is invited
+    into it later shares a mutual-born court with them and shared no yes. Reading
+    the aggregate's membership instead of the opening event would hold a pair no
+    mutual was ever between, which is this guard reaching outside its own key.
     """
 
     async with session_factory() as session:
-        challenge = a_tennis_challenge()
-        challenge.decline(ALICE, occurred_at=at(1))
+        challenge = a_side_invited_into(a_mutual_born_challenge(sport=Sport.PADEL))
+        challenge.accept(BOB, occurred_at=at(2))
+        challenge.accept(CAROL, occurred_at=at(2))
         await _record(session, challenge)
 
         query = build_open_challenge_query(session)
 
-        assert await query.open_pairs_among([ORGANISER, ALICE], now=INSIDE) == (
-            frozenset()
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.PADEL, now=at(3)
+        ) == frozenset({challenge.id})
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, BOB, sport=Sport.PADEL, now=at(3)
+        ) == frozenset()
+
+
+async def test_a_mutual_born_court_with_answers_owed_has_minted_nothing(
+    session_factory,
+):
+    """The bound on the second question, from the side that releases.
+
+    A mutual-born court that was invited into and is still waiting on those
+    answers has produced no game, so there is nothing for the mint to wait on
+    settling — those two are held by the pair rule and by nothing else. It is
+    what makes *a mutual-born challenge that ended without ever producing a game
+    holds nobody* fall out of the release rather than need a rule of its own:
+    when #325's withdraw ends this court, the pair rule lets go and there is
+    nothing behind it.
+    """
+
+    async with session_factory() as session:
+        await _record(
+            session, a_side_invited_into(a_mutual_born_challenge(sport=Sport.PADEL))
         )
-        assert await query.standing_pairs_among(
-            [ORGANISER, ALICE], now=INSIDE
+
+        query = build_open_challenge_query(session)
+
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.PADEL, now=at(3)
+        ) == frozenset()
+
+
+async def test_it_holds_no_pair_a_year_on(session_factory):
+    """The fold-forward that #343 was, asked of the guard that replaced it.
+
+    A mutual-born challenge is ``ON`` for ever — every seat accepted at birth, no
+    lapse, no decline and no withdraw exit — so this read keeps answering *yes*
+    about it, and it is **meant** to: what releases the pair is the game
+    settling, one context over. The regression the shape guards against is the
+    read quietly widening back into *does a challenge still stand between these
+    two, in any sport*, which is what this asserts alongside it.
+    """
+
+    async with session_factory() as session:
+        challenge = a_mutual_born_challenge()
+        await _record(session, challenge)
+
+        a_year_on = at(24 * 365)
+        query = build_open_challenge_query(session)
+
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.TENNIS, now=a_year_on
+        ) == frozenset({challenge.id})
+        assert await query.mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.PADEL, now=a_year_on
+        ) == frozenset()
+        assert await query.open_pairs_among(
+            [ORGANISER, ALICE], now=a_year_on
         ) == frozenset()
 
 

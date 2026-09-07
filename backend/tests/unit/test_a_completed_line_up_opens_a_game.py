@@ -44,8 +44,26 @@ class _NoOpenChallenges:
     async def open_pairs_among(self, player_ids, *, now):
         return frozenset()
 
-    async def standing_pairs_among(self, player_ids, *, now):
+    async def mutual_born_challenges_that_became_games(
+        self, one_player, other_player, *, sport, now
+    ):
         return frozenset()
+
+
+class _NothingToSettle:
+    """A ``SettledGameQuery`` nothing is ever asked of.
+
+    Nobody in this file has minted anything before, so the mint has no id to ask
+    about and never makes the call. **It does not raise to prove that**, because
+    the mint catches broadly on purpose — a stub that objected here would be
+    caught and turned into a silent refusal, which is a guard that has stopped
+    guarding. That property is asserted where it can be seen instead:
+    ``test_a_mutual_mints_again.py``'s
+    ``test_a_first_mint_never_asks_the_settled_read``.
+    """
+
+    async def settled_among(self, challenge_ids, *, now):
+        return frozenset(challenge_ids)
 
 
 class _ASafeCourt:
@@ -99,6 +117,7 @@ def _mint(games: _RecordingGames) -> OpenChallengeFromMutualInterest:
     return OpenChallengeFromMutualInterest(
         challenges=_Remembering(),
         open_challenges=_NoOpenChallenges(),
+        settled_games=_NothingToSettle(),
         safety=_ASafeCourt(),
         clock=_AClock(),
         planned_games=games,
