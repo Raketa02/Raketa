@@ -1099,31 +1099,40 @@ where, money, results or the conversation itself belongs here.
   such thing as a rearrangement on its own.
 - **One open challenge per pair, across every sport.** Two people are either arranging a game or
   they are not; asking for padel while your tennis challenge sits unanswered is pestering with a
-  sport chip on it. The matcher's `OpenChallenge` carries no sport, so this is the rule its shipped
-  contract already assumes rather than a new restriction. **Sharing a line-up makes a pair**: every
-  occupied seat but your own is somebody you have an open game with, co-invitees and organiser
-  alike — and a seat that declined or lapsed is empty again, so that person is a stranger to you
-  once more the moment they leave.
+  sport chip on it. **The rule stands on that argument alone.** The matcher's `OpenChallenge`
+  carries no sport, but it is an internal port type that appears in no published document — so no
+  shipped contract requires this rule, and none would stand in the way of narrowing it.
+  **Sharing a line-up makes a pair**: every occupied seat but your own is somebody you have an open
+  game with, co-invitees and organiser alike — and a seat that declined or lapsed is empty again, so
+  that person is a stranger to you once more the moment they leave.
 - **The rule asks whether two people are still *arranging*, and a completed line-up is not.** It is
   held while a **Standing** is *Awaiting answers* or *Line-up incomplete*, and released otherwise —
   which is **not** the same as *has this challenge ended*. A challenge every seat accepted has not
   ended: it produced a **Game**, the sides are frozen and the client still prints *On*. But the
   arranging is finished, so the pair is released, the two of them are back on each other's surfaces
-  and they may arrange a second game. Whether an *unplayed* game should carry a block of its own is
-  a question about a `games` fact and is deliberately unanswered — nothing replaces the block today
+  and they may arrange a second game. **An unplayed game carries no block of its own here, and that
+  is decided rather than deferred**: the record that built a port onto `games` to bound the mutual
+  mint declined to use it on this path, because a send is somebody deliberately choosing a court
   ([ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
-  §1).
-- **A mutual yes asks its own question, and it is the stricter one.** *Let's play* is a tap that
-  costs nothing and the game is opened on the **mutual**, not on the tap — so a repeat tap has to be
-  refused by something. A singles challenge born of two yeses is *On* the instant it exists, so the
-  rule above lets those two go immediately; what refuses a second one is *does a challenge already
-  stand between them*, in this sport or any other. The two of them may still be sent a second
-  challenge deliberately, from a search, by either of them. **The asymmetry is the point**: a send
-  is somebody choosing a court, and a repeat tap is the same yes pressed twice. This question is
-  across every sport too, so on **this path** the old permanence survives — a pair whose tennis game
-  was born of a mutual will never be given a padel one by a second mutual. That is the behaviour as
-  it stood rather than a new restriction, and narrowing it to the mutual's own sport is its own
-  question.
+  §1, settled by
+  [ADR-0152](docs/adr/0152-a-mutual-mints-again-once-the-last-one-is-finished-with.md)).
+- **A mutual yes asks its own question, and it is an *idempotence* question.** *Let's play* is a tap
+  that costs nothing and the game is opened on the **mutual**, not on the tap — so a repeat tap has
+  to be refused by something. A singles challenge born of two yeses is *On* the instant it exists,
+  so the rule above lets those two go immediately, and what the mint asks instead is **one mutual
+  mints one game**. It asks the rule above as well, and both must pass — so the mutual path is
+  **strictly** stricter than a send rather than accidentally so. **The asymmetry is the point**: a
+  send is somebody choosing a court, and a repeat tap is the same yes pressed twice.
+- **A mutual mints again once the last one it minted is finished with**
+  ([ADR-0152](docs/adr/0152-a-mutual-mints-again-once-the-last-one-is-finished-with.md)).
+  *Finished with* means **still being arranged, or its game not yet settled** — so a doubles mutual
+  holds the pair while its half-built court stands, a game holds them until nothing more can happen
+  to it, and a mutual-born challenge that ended without ever producing a game holds nobody.
+  **Settled is not played**: a ghost game is settled, and two people whose arranged game evaporated
+  may try again. The question is asked **per sport and about mutual-born challenges only**, so a
+  tennis game minted from a mutual no longer refuses a padel one — the permanence that survived on
+  this path when the pair rule was released, and the reason it is now the mutual's *own* question
+  rather than a borrowed one.
 - **No day, part of day, hour or place is ever attached.** The challenge carries a **Window**
   derived from the grid, and the players agree the hour themselves once a court can exist.
 - **A late answer is refused.** Past your own answer window the seat already reads as lapsed and
