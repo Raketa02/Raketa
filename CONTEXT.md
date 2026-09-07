@@ -1226,11 +1226,14 @@ Nothing about when, where, money or the result belongs here — it is **told** a
   Message with a kind**: the backend sends codes and never display text
   ([ADR-0022](docs/adr/0022-kernel-negative-space-and-constant-homes.md)), and nobody typed
   *Tomek set the day*. The two share one stream and one sequence number and are two shapes in it.
-- **Sequence number** — a conversation's own count of what has landed in it, minted on append.
+- **Sequence number** — a conversation's own count of what has landed in it, minted on append and
+  **gapless**, because a count that skips is not a count
+  ([ADR-0147](docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)).
   The cursor for ordering, paging, de-duplication and reconnect, and the reason this context may
   subscribe to the outbox where the candidate index could not
   ([ADR-0110](docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md) —
-  *two subscriptions, two guarantees*).
+  *two subscriptions, two guarantees*). **No reader may infer loss from a gap** — the promise is
+  the server's, and nothing is permitted to depend on it.
 - **Lifetime** — a conversation **ends 24 h after the moment it was arranging** and is then
   **destroyed, not delisted**: the plan's agreed point, or the game settling, whichever comes
   first, or the withdrawal.
