@@ -29,9 +29,10 @@ These are the authority for their terms. There is no Part 2: after the reset, no
 committed ahead of *a decision*, and a speculative list of context names is not one. A
 context that does not appear below has no vocabulary yet — resolve its terms into this file
 before writing it, which is what every section from **Player profile** down was: settled in an
-accepted ADR and written here first, then built. **All of them are built.** Their terms are here
-because that is the order this file asks for, not because the code landed first. Every section
-describes code that exists in `backend/app/` today.
+accepted ADR and written here first, then built. Their terms are here because that is the order
+this file asks for, not because the code landed first — so **whether a context is built is stated
+in its own section and nowhere else**, which is what the paragraph below has always asked for and
+what the last two sections here are the first to need.
 
 > **A verdict narrower than that belongs to the section it is about.** This paragraph carried a
 > clause per context and went stale twice, because a per-context verdict at the top is a second
@@ -1190,6 +1191,110 @@ anything about how good anybody is — that is the rating context reading this o
 - **Nothing announces a conclusion the record already implies.** There is no `ResultConfirmed`,
   no `GameUnscored` and no `GameNeverPlayed` — the same rule `challenges` states about `GameOn`,
   and for the same reason: a derived standing has exactly one place to be true.
+
+### Conversation (`backend/app/modules/conversations/`)
+
+Settled by [ADR-0146](docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) on
+[#332](https://github.com/Raketa02/Raketa/issues/332), with its lifetime from
+[ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md).
+**Settled and not built** — there is no `backend/app/modules/conversations/` yet. Its terms are
+here because this file asks for them before the code, and the section will say so until the module
+exists.
+
+**The place two people who have agreed to play talk about it.** It is deliberately **not** called
+`Chat` — that word promises messaging between anybody, searchable and permanent, and this context
+refuses all four; *Chats* is also the **tab**, which holds challenges as well as conversations, so
+the word names the container rather than the thing in it. `games` used *conversation* in prose for
+the result argument; that argument's terms are **Proposal**, **Correction**, **Counter** and
+**Acceptance**, and the word belongs to the aggregate that needs it.
+
+Its subject is the span between *the first acceptance* and *there is nothing left to arrange*.
+Nothing about when, where, money or the result belongs here — it is **told** about all of them.
+
+- **Conversation** — one purpose-bound thread, opened by the **first acceptance** and never by a
+  request. It **grows with each acceptance** rather than opening complete
+  ([#221](https://github.com/Raketa02/Raketa/issues/221)), which is why `challenges` publishes one
+  event per acceptance and never a single *the challenge is now on*. A conversation opened by a
+  mutual deck yes is the same thing and is listed the same way.
+- **Member** — somebody who has agreed to be on this court **right now**. **Derived, never
+  stored**, from whichever record is currently arranging: the challenge's accepted seats until the
+  line-up completes, the game's frozen line-up after. One rule read against two records, not two
+  rules.
+- **Message** — what a player typed. Content, crossing as-is, with an author in the ordinary
+  sense.
+- **System line** — what happened, as a **code and its values**, rendered by the client. **Not a
+  Message with a kind**: the backend sends codes and never display text
+  ([ADR-0022](docs/adr/0022-kernel-negative-space-and-constant-homes.md)), and nobody typed
+  *Tomek set the day*. The two share one stream and one sequence number and are two shapes in it.
+- **Sequence number** — a conversation's own count of what has landed in it, minted on append.
+  The cursor for ordering, paging, de-duplication and reconnect, and the reason this context may
+  subscribe to the outbox where the candidate index could not
+  ([ADR-0110](docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md) —
+  *two subscriptions, two guarantees*).
+- **Lifetime** — a conversation **ends 24 h after the moment it was arranging** and is then
+  **destroyed, not delisted**: the plan's agreed point, or the game settling, whichever comes
+  first, or the withdrawal.
+
+**Invariants**
+
+- **A conversation is told, and tells nothing.** Its lines are written from events `challenges`,
+  `games` and `plans` publish through the outbox, and **none of those contexts knows it exists**.
+  It is a subscriber, never a participant in anybody's transaction.
+- **There is no messaging between strangers**, and there is no conversation without an arrangement
+  behind it. That refusal is the product: it is what keeps this a sports app rather than a place
+  people are reached.
+- **No system line announces a derived standing.** There is no *Game on* line — the same rule
+  `challenges` and `games` each state, applied to a stream: a folded standing has exactly one
+  place to be true, and it is not a sentence in the backlog.
+- **No sentence is ever stored.** A rewritten line rewrites the whole history, which is what a
+  stored string could not do.
+
+### Plan (`backend/app/modules/plans/`)
+
+Settled by [ADR-0144](docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md) and
+[ADR-0145](docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md), named by
+[ADR-0146](docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md). **Settled and
+not built** — there is no `backend/app/modules/plans/` yet.
+
+**Where and when these people are meeting.** It is **one game's**, identified by that game's id,
+and it is **born by being used** — no record at birth, no opening event, and *no plan* is what a
+game with nothing agreed draws. `challenges` ends at *everybody has answered* and `games` begins
+at *played*; this sits between them and belongs to neither.
+
+The word will one day collide with Around's *plans*. It is taken anyway, on this file's own rule:
+**the cost of a shared word is paid by whoever arrives second**.
+
+- **Plan** — three slots, in the order people discuss them and of decreasing negotiability:
+  **where · day · hour**. One plan per game, for ever.
+- **Where** — short free text, one line, capped. **Never a court**: no id, no lookup, no
+  autocomplete, no reuse, no geocode, and nothing anywhere reads it. A note between the people on
+  the court.
+- **Day** — a local date, chosen from **seven chips, today + 6**, clamped so a plan can never name
+  a day past the game's entry window.
+- **Hour** — a minute of the local day, in **30-minute steps, 06:00–23:00**. It is **the
+  agreement itself**, not a guess at a booking: nothing on this platform will ever hold a booking,
+  so nothing can contradict it (ADR-0145).
+- **Agreed point** — the plan's moment, derived and never stored. The agreed **instant** when the
+  day and the hour are both recorded; the **start of the following local day** when only the day
+  is; nothing at all when no day is. Later rather than earlier, so nobody is asked for a result
+  before they could have played.
+- **Slot count** — how many of the three are filled. Derived. **Filling the third is the lock**,
+  and there is no lock.
+
+**Invariants**
+
+- **Any member may fill or change any slot, any number of times**, and every change writes a
+  system line naming who and what. **The line is the friction**; there is no rate limit and no
+  history beyond the lines.
+- **A slot may be changed but never emptied, and a plan is never unmade.** Nobody turns up and the
+  game ghosts; there is no cancellation, because `games` opens one game per arrangement for ever.
+- **The plan never writes to `games`.** `planned_at` keeps meaning *when it became a game*, and a
+  planned moment and a played moment never reconcile — the entry is the record that the game
+  happened, and it carries its own moment.
+- **One platform zone**, recorded as a locale assumption rather than a constant to tune. Its
+  falsifier is the first shard whose players are somewhere else.
+- **The game leaving its entry window is the only thing that freezes the slots**, read through one
+  port asking one question.
 
 ### Player Score (`backend/app/modules/player_score/`)
 
