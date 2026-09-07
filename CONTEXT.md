@@ -1241,14 +1241,16 @@ Its subject is the span between *the first acceptance* and *there is nothing lef
 Nothing about when, where, money or the result belongs here — it is **told** about all of them.
 
 - **Conversation** — one purpose-bound thread, opened by the **first acceptance** and never by a
-  request. It **grows with each acceptance** rather than opening complete
+  request. **The purpose is the episode** — arrange the game, play it, find out what happened —
+  rather than the arranging alone, which is what decides when it ends. It **grows with each
+  acceptance** rather than opening complete
   ([#221](https://github.com/Raketa02/Raketa/issues/221)), which is why `challenges` publishes one
   event per acceptance and never a single *the challenge is now on*. A conversation opened by a
   mutual deck yes is the same thing and is listed the same way.
 - **Member** — somebody who has agreed to be on this court **right now**. **Derived, never
-  stored**, from whichever record is currently arranging: the challenge's accepted seats until the
-  line-up completes, the game's frozen line-up after. One rule read against two records, not two
-  rules.
+  stored**, from whichever record the room is currently about: the challenge's accepted seats until
+  the line-up completes, the game's frozen line-up after. One rule read against two records, not
+  two rules.
 - **Message** — what a player typed. Content, crossing as-is, with an author in the ordinary
   sense.
 - **System line** — what happened, as a **code and its values**, rendered by the client. **Not a
@@ -1263,9 +1265,11 @@ Nothing about when, where, money or the result belongs here — it is **told** a
   ([ADR-0110](docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md) —
   *two subscriptions, two guarantees*). **No reader may infer loss from a gap** — the promise is
   the server's, and nothing is permitted to depend on it.
-- **Lifetime** — a conversation **ends 24 h after the moment it was arranging** and is then
-  **destroyed, not delisted**: the plan's agreed point, or the game settling, whichever comes
-  first, or the withdrawal.
+- **Lifetime** — a conversation lasts as long as the **episode** it was opened for, and is then
+  **destroyed, not delisted**. It ends at the earliest of: the entry window closing, so *we played*
+  can no longer be said; a grace after somebody says they played; a grace after the challenge ends
+  without ever producing a game. A withdrawal destroys it in the same act
+  ([ADR-0153](docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)).
 
 **Invariants**
 
