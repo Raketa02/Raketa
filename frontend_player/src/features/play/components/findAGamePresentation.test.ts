@@ -5,7 +5,6 @@ import {
   WEEK_ADDED_FOR_THIS_SEARCH,
   WEEK_CHANGED_AND_ADDED,
   WEEK_CHANGED_FROM_PROFILE,
-  courtEntryBody,
   courtEntryLabel,
   courtEntryTitle,
   declarationOptionLabel,
@@ -102,9 +101,6 @@ describe('the way onto the court', () => {
   it('names the game the sport plays, and says two different things about the two shapes', () => {
     expect(courtEntryTitle(4)).toBe('Build a doubles');
     expect(courtEntryTitle(2)).toBe('Build a singles');
-
-    expect(courtEntryBody(4)).toContain('the evenest four');
-    expect(courtEntryBody(2)).toContain('the evenest opponent');
   });
 
   /**

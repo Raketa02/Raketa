@@ -34,8 +34,6 @@
  * its rule is about *Match Fit* and *Match score*, and neither word is here.
  */
 
-import { counted } from '@/shared/formatting/counted';
-
 import { modeWord } from './searchPresentation';
 import { isDoubles, type CourtHalf } from '../domain/lineup';
 import type { SearchMode } from '../domain/vocabulary';
@@ -67,17 +65,6 @@ export function builderEyebrow(court: {
 }
 
 /**
- * `2 seats open · tap one to pick somebody, or let the engine do it`.
- *
- * It states the two ways out in the order the controls under it are drawn, and it is the one
- * place *tap a seat* is said — the court itself cannot say it, because a seat's own accessible
- * name is a place and a state rather than an instruction.
- */
-export function seatsOpenLine(open: number): string {
-  return `${counted(open, 'seat open', 'seats open')} · tap one to pick somebody, or let the engine do it`;
-}
-
-/**
  * ⚡'s label, and it names **what is left** rather than the whole court.
  *
  * *The seats* on an untouched court and *the rest* the moment anybody is seated: the engine
@@ -98,12 +85,6 @@ export const PICK_PLAYERS_LABEL = 'Pick players myself';
  * for the combination that plays out evenest rather than the four best individual fits, which
  * is a different answer and not a quicker one.
  */
-export const TWO_WAYS_TITLE = 'Two ways to the same line-up';
-
-export const TWO_WAYS_BODY =
-  'The engine looks for the combination that plays out evenest — not simply the best fits one ' +
-  'at a time. Picking yourself gives you the same ranked list, with everything on it.';
-
 /**
  * What the swap toggle's row says under its own label, in both states.
  *

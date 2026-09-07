@@ -6,6 +6,19 @@
  * [#219](https://github.com/Raketa02/Raketa/issues/219) B3's whole argument and the reason the
  * deck card is the only user of `radius.deckCard` and the fourth shadow.
  *
+ * ## The card leaves in the direction of the answer
+ *
+ * *Let's play* sends it **right** and *Not today* sends it **left**, which is the two buttons'
+ * own order on the card underneath. It is the deck's one piece of feedback that is not a
+ * sentence: the toast names the person and the answer a beat later, and this says which of the
+ * two buttons was pressed at the instant it was pressed — worth having, because the two are 1:2
+ * in width and a thumb lands on the wrong one.
+ *
+ * The direction is the whole of what the answer changes here. The travel, the turn, the fade
+ * and the duration are one pair of animations mirrored, rather than two, because *left* and
+ * *right* are the same act about two answers and a second set of numbers would be two things
+ * to keep in step.
+ *
  * ## It is a leaving animation and never a promise of a gesture
  *
  * [#231](https://github.com/Raketa02/Raketa/issues/231) §3 decided against a swipe, and **not
@@ -51,22 +64,40 @@ import { theme, useCollapsedPresentation } from '@/shared/ui';
  */
 const LEAVING_MS = 240;
 
-/** Where a leaving card goes — left and slightly turned, exactly as `cardout` draws it. */
-const LEAVING_SHIFT = -40;
-const LEAVING_TURN = '-3deg';
+/**
+ * How far a leaving card travels, and how far it turns — the prototype's `cardout`, **grown to
+ * carry a direction**.
+ *
+ * `cardout` shifted 40 points and turned 3 degrees, which reads as a card settling because it
+ * was the only way a card could leave. Once the two answers leave opposite ways the movement
+ * has to be legible as a *direction* within the 240 ms before the fade takes it, which 40
+ * points is not: at the width of a deck card it is a nudge either way.
+ *
+ * Both numbers are **magnitudes**, and the answer supplies the sign.
+ */
+const LEAVING_SHIFT = 160;
+const LEAVING_TURN = 8;
 
 /** Where an arriving card comes from — `cardin`, at the system's own entrance duration. */
 const ARRIVING_LIFT = 10;
 const ARRIVING_SCALE = 0.98;
 
+/**
+ * The two answers, as the two ways off the screen. **Named for the answer and not for the
+ * direction**: which way a yes goes is this component's decision, and a prop spelling it
+ * `'right'` would put that decision in every caller.
+ */
+export type DeckExit = 'yes' | 'no';
+
 export interface DeckStageProps {
   /**
-   * Whether this card has been answered and is on its way out.
+   * The answer this card was given and is leaving on, or `undefined` while it is still being
+   * decided.
    *
    * The screen owns it, because *which card is showing* is derived from the deal minus the one
    * leaving, and is deliberately held nowhere else (`playSession`).
    */
-  readonly leaving: boolean;
+  readonly leaving: DeckExit | undefined;
   /**
    * The card has gone. Called once, whether it travelled or not.
    *
@@ -79,6 +110,9 @@ export interface DeckStageProps {
 
 export function DeckStage({ leaving, onLeft, children }: DeckStageProps) {
   const collapsed = useCollapsedPresentation();
+  // A yes goes right, a pass goes left. Held as a **sign** rather than as two interpolations,
+  // so the one that is mid-flight when a refusal returns the card is the one reset to nought.
+  const way = leaving === 'yes' ? 1 : -1;
   // One value per phase, and each drives every transform in it: a card is one object moving,
   // where four values would be four things able to be halfway through different animations.
   const arrival = useRef(new Animated.Value(0)).current;
@@ -104,7 +138,7 @@ export function DeckStage({ leaving, onLeft, children }: DeckStageProps) {
   }, [collapsed, arrival]);
 
   useEffect(() => {
-    if (!leaving) {
+    if (leaving === undefined) {
       // **A card that comes back comes back straight.** An answer refused puts the card on
       // screen again, and a stopped `Animated.Value` keeps whatever fraction of the flight it
       // reached — so without this the returned card sits shifted and turned, mid-exit, on the
@@ -137,12 +171,12 @@ export function DeckStage({ leaving, onLeft, children }: DeckStageProps) {
       // Remounted per card by the caller's `key`, so the arrival runs once per person rather
       // than once per render.
       style={{
-        opacity: leaving ? departure.interpolate(FADE_OUT) : arrival,
+        opacity: leaving === undefined ? arrival : departure.interpolate(FADE_OUT),
         transform: [
-          { translateX: departure.interpolate(SLIDE_OUT) },
+          { translateX: departure.interpolate(slideOut(way)) },
           { translateY: arrival.interpolate(LIFT_IN) },
           { scale: arrival.interpolate(SCALE_IN) },
-          { rotate: departure.interpolate(TURN_OUT) },
+          { rotate: departure.interpolate(turnOut(way)) },
         ],
       }}
     >
@@ -152,7 +186,10 @@ export function DeckStage({ leaving, onLeft, children }: DeckStageProps) {
 }
 
 const FADE_OUT = { inputRange: [0, 1], outputRange: [1, 0] };
-const SLIDE_OUT = { inputRange: [0, 1], outputRange: [0, LEAVING_SHIFT] };
-const TURN_OUT = { inputRange: [0, 1], outputRange: ['0deg', LEAVING_TURN] };
+const slideOut = (way: number) => ({ inputRange: [0, 1], outputRange: [0, LEAVING_SHIFT * way] });
+const turnOut = (way: number) => ({
+  inputRange: [0, 1],
+  outputRange: ['0deg', `${LEAVING_TURN * way}deg`],
+});
 const LIFT_IN = { inputRange: [0, 1], outputRange: [ARRIVING_LIFT, 0] };
 const SCALE_IN = { inputRange: [0, 1], outputRange: [ARRIVING_SCALE, 1] };

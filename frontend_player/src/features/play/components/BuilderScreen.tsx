@@ -242,14 +242,11 @@ import {
   SIDE_HEADINGS,
   START_OVER_LABEL,
   SWAP_TOGGLE_DESCRIPTION,
-  TWO_WAYS_BODY,
-  TWO_WAYS_TITLE,
   VS_WORD,
   builderEyebrow,
   builderTitle,
   fillSeatsLabel,
   forecastHeading,
-  seatsOpenLine,
   sideName,
 } from './builderPresentation';
 import { CandidatePhoto } from './candidate/CandidatePhoto';
@@ -858,6 +855,13 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
       <View style={s.root} {...behindOverlay(proposing || explained !== undefined || asking)}>
         <ShellScreen
           title={builderTitle({ seats, filled })}
+          // **The gesture, drawn.** This screen is genuinely pushed — Find a game stays
+          // underneath it — so the platform's own back already lands here, and 10.3's chevron
+          // is opt-in for exactly the screens that can say where it goes. It adds no
+          // behaviour: it is the same `back` a swipe performs, on a control a thumb can find
+          // without knowing the gesture exists. The session is untouched either way — only
+          // `enterPlay` ends one, and going back is not entering.
+          onBack={router.back}
           eyebrow={
             sportName === undefined || origin === undefined
               ? undefined
@@ -985,8 +989,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                 <SeatingWait status={engineFillStatus({ playersInRange, seats })} />
               ) : null}
 
-              {open > 0 && !filling ? <Text style={s.centred}>{seatsOpenLine(open)}</Text> : null}
-
               {/* The court's own statement of its shortfall. The remedy is the pool, one tap
                   away on the seat itself and on the control beneath it — and the block is
                   hidden from a listener, because every seat already announces its own (§20.1's
@@ -1009,12 +1011,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                   <Text style={s.body}>{unfilledSeatLine(record.court.dock)}</Text>
                 </Note>
               )}
-
-              {open > 0 && !filling ? (
-                <Note title={TWO_WAYS_TITLE}>
-                  <Text style={s.body}>{TWO_WAYS_BODY}</Text>
-                </Note>
-              ) : null}
 
               {/* Paused, not loading. `networkMode: 'online'` holds the forecast rather than
                   failing it, and `isFetching` is **false** while it waits — so a screen that
@@ -1570,7 +1566,6 @@ const s = StyleSheet.create({
   acts: { flexDirection: 'row', gap: theme.space.xs },
   failure: { gap: theme.space.sm },
   body: { ...theme.type.tiny, color: theme.color.ink },
-  centred: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
   eyebrow: { ...theme.type.eyebrow, color: theme.color.muted },
   figure: { ...theme.num.xl, ...theme.tabular },
   word: { ...theme.type.cardTitle, color: theme.color.ink },

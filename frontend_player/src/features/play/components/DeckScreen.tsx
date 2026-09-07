@@ -9,21 +9,26 @@
  * thirty days per account with nothing that reverses one — so a swipe would put the cheapest
  * gesture in the app on the most durable act in the feature, and it would flatten the 1:2
  * ratio the layout uses to say which answer is which. **No `react-native-gesture-handler` and
- * no `react-native-reanimated` are added for this**, and the exit animation stays a *leaving*
- * animation rather than a promise of a drag (`DeckStage`).
+ * no `react-native-reanimated` are added for this**, and the exit stays a *leaving* animation
+ * rather than a promise of a drag (`DeckStage`).
+ *
+ * What the exit does carry is **which answer it was**: *Let's play* sends the card right and
+ * *Not today* sends it left, in the two buttons' own left-to-right order. That is the deck's
+ * one piece of feedback that is not a sentence, and it is still an animation over a press —
+ * a card that leaves in the direction of the answer is not a card a finger can drag.
  *
  * ## What this screen holds, and what it refuses to
  *
  * The card in flight is **route-local**, which `playSession` refuses to hold by name: *"which
  * card is showing is derived from the dealt list minus the one leaving — never held here"*. So
- * the whole of this screen's memory is three `useState`s — the ids answered in **this** deal,
- * the one on its way out, and whichever card the sheet is open over.
+ * the whole of this screen's memory is two `useState`s — the card on its way out, and
+ * whichever card the sheet is open over.
  *
- * `answered` is **keyed by the deal it belongs to** rather than cleared when a new one lands.
- * The two are the same behaviour in the happy case and different in the one that matters: a
- * deal replaced while a card is mid-flight cannot leave a stale id behind, because an id from
- * another `search_id` is *derived* as not applying — the same discipline that lets a line-up's
- * invalidity come off its origin instead of a synchronisation somebody has to remember.
+ * **The ids answered are not among them, and used to be.** They belong to the deal rather than
+ * to the screen, and the deal now outlives the screen (`hooks/useDeck`), so a list held here
+ * would put every answered card back on screen the moment the route remounted. Held inside the
+ * deal, an answer cannot outlive the `search_id` it was given on **by construction** — which is
+ * what the pairing of a list with a deal id here was doing by hand.
  *
  * ## Answering is optimistic, and a refusal puts the card back
  *
@@ -41,13 +46,21 @@
  *
  * ## A spent deal deals again, and only a fresh empty deal is an ending
  *
- * The entry deal is the one effect on this screen, guarded on the sport already dealt for —
- * §G6 bug #5 is *"rendering the screen mutates state"*, and the fix it names is to key an act
- * on a moment rather than on a render. Arriving is a moment and changing sport is a moment.
- * Answering the last card of a deal is a third, and it re-deals from the **answer's own
- * handler** for the same reason. `domain/deckHand` is where the three ways of having no card
- * are kept apart, so *the screen runs out of cards long before the pool does* is arithmetic
- * rather than a rule this file remembers.
+ * **The entry deal is no longer an effect at all**, and that is the fix rather than a tidy-up.
+ * It was one, guarded on a ref holding the sport already dealt for — and a ref is a memory that
+ * dies with the route, so arriving was read as a new reason to deal every time the player came
+ * back, and so was every return to a chip already dealt. Since a deal excludes everybody
+ * already dealt, those were not free re-reads: they spent the pool, and toggling between two
+ * chips emptied a deck nobody had answered a card of. What replaces it is the **held deal** —
+ * dealt on the first ask and found on every later one (`hooks/useDeck`), where *already asked*
+ * is a fact about the cache rather than a ref somebody has to keep.
+ *
+ * What is still an effect is the **re-deal of a spent hand**, and it keeps §G6 bug #5's rule —
+ * *"rendering the screen mutates state"* — by firing on a hand becoming spent rather than on a
+ * render that finds it so, and never while a deal is in flight or a refusal is standing.
+ * `domain/deckHand` is where the three ways of having no card are kept apart, so *the screen
+ * runs out of cards long before the pool does* is arithmetic rather than a rule this file
+ * remembers.
  *
  * ## What is deliberately not here
  *
@@ -74,8 +87,8 @@
  * leaves is a sheet whose only answer is *carry on*.
  *
  * **A second sheet for a question already answered here.** A deal is not a press — the entry
- * deal is an effect and a spent hand deals again on its own — so a question keyed by the
- * **deal** would be re-asked every ten cards for as long as the condition holds, which on
+ * deal falls out of arriving and a spent hand deals again on its own — so a question keyed by
+ * the **deal** would be re-asked every ten cards for as long as the condition holds, which on
  * `KEEP_THESE_TIMES` is every deal of the visit. What is remembered instead is the sport and
  * the question (`domain/raisedPrompt`), and answered once is answered for the visit.
  *
@@ -96,19 +109,24 @@ import { offlineMessage, recoveryMessage } from '@/shared/errors';
 import { playerName } from '@/shared/formatting/playerName';
 import { showToast } from '@/shared/store/toast.store';
 import { Button, Note, behindOverlay, moveAccessibilityFocus, theme } from '@/shared/ui';
-import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Candidate } from '../domain/candidate';
 import { deckStanding } from '../domain/deckHand';
 import { findAGameStanding } from '../domain/findAGame';
 import { firstUnasked } from '../domain/raisedPrompt';
 import { differsFromProfile } from '../domain/workingWeek';
-import { useDealDeck, useOutstandingInterest, useSayNo, useSayYes } from '../hooks/useDeck';
+import {
+  useDeal,
+  useDeckProgress,
+  useOutstandingInterest,
+  useSayNo,
+  useSayYes,
+  type DeckQuestion,
+} from '../hooks/useDeck';
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { usePlaySession } from '../store/playSession.store';
-import type { DeckAsk } from '../use-cases/dealDeck';
 
-import { DeckStage } from './DeckStage';
+import { DeckStage, type DeckExit } from './DeckStage';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
 import { DeclarationStanding } from './DeclarationStanding';
 import { PlaySegment } from './PlaySegment';
@@ -133,18 +151,11 @@ import { playErrorMessage } from './playErrorMessage';
 import { poolDescription } from './searchPresentation';
 import { WhyFitSheet } from './whyfit/WhyFitSheet';
 
-/**
- * The ids answered in one deal, **with the deal they were answered in**.
- *
- * The pair rather than a bare list: a `search_id` is what makes an answer belong somewhere,
- * and a list on its own would carry ids from a deal that has been replaced.
- */
-interface Answered {
-  readonly searchId: string;
-  readonly playerIds: readonly string[];
+/** The card on its way out, and **which answer sent it there** — the direction it leaves in. */
+interface Leaving {
+  readonly playerId: string;
+  readonly said: DeckExit;
 }
-
-const NOTHING_ANSWERED: Answered = { searchId: '', playerIds: [] };
 
 export function DeckScreen() {
   const profileSurface = useProfileSurface();
@@ -155,12 +166,11 @@ export function DeckScreen() {
   const chooseSport = usePlayPreferences((state) => state.chooseSport);
   const week = usePlaySession((state) => state.week);
 
-  const deal = useDealDeck();
   const yes = useSayYes();
   const no = useSayNo();
+  const progress = useDeckProgress();
 
-  const [answered, setAnswered] = useState<Answered>(NOTHING_ANSWERED);
-  const [leaving, setLeaving] = useState<string | undefined>(undefined);
+  const [leaving, setLeaving] = useState<Leaving | undefined>(undefined);
   const [explaining, setExplaining] = useState<Candidate | undefined>(undefined);
 
   /**
@@ -185,66 +195,55 @@ export function DeckScreen() {
   const answeredSomebody = useRef(false);
 
   const profile = profileSurface.data;
-  const dealt = deal.data;
   const rated = useMemo(() => (ratings.data ?? []).map((rating) => rating.sport), [ratings.data]);
   const standing = findAGameStanding(rated, sport, profile?.playIntents ?? {});
   const onThisSport = standing.kind === 'no-rated-sport' ? undefined : standing.sport;
   const sportName = onThisSport === undefined ? undefined : sportLabel(onThisSport);
 
   /**
-   * **The ask, or the absence of one** — the one place *may a deal run* is decided.
+   * **The question, or the absence of one** — the one place *may a deal run* is decided.
    *
    * Built as a value rather than spelled once in a guard and once in a `disabled`, which is
    * the shape `mayFinish` and Find a game's own ask exist to refuse.
+   *
+   * `under` is the half that never reaches the wire: the radius and the declaration are
+   * resolved backend-side, and a deal held without them in its key would answer a widened
+   * radius with the deal that ran before it — which is this screen's own *Widen in You*
+   * advice being ignored by this screen (`hooks/searchKeys`).
    */
-  const ask: DeckAsk | undefined =
+  const dealQuestion: DeckQuestion | undefined =
     standing.kind === 'searchable' && profile !== undefined
       ? {
-          sport: standing.sport,
-          // `undefined` omits the override entirely rather than sending a grid the profile
-          // already holds. A deck reached without passing through Find a game has no working
-          // copy at all, and that is the same ask: run it on my profile's week.
-          sentWeek: week !== undefined && differsFromProfile(week, profile.week) ? week : undefined,
-          quotes: { sportName: sportLabel(standing.sport), profileWeek: profile.week },
+          ask: {
+            sport: standing.sport,
+            // `undefined` omits the override entirely rather than sending a grid the profile
+            // already holds. A deck reached without passing through Find a game has no working
+            // copy at all, and that is the same ask: run it on my profile's week.
+            sentWeek:
+              week !== undefined && differsFromProfile(week, profile.week) ? week : undefined,
+            quotes: { sportName: sportLabel(standing.sport), profileWeek: profile.week },
+          },
+          under: { radiusKm: profile.searchRadiusKm, intent: standing.intent },
         }
       : undefined;
 
   /**
-   * Deal, and forget nothing about why.
+   * **The deal itself — dealt on the first ask for it, and found on every later one.**
    *
-   * A ref rather than a `useCallback`, so the effect below depends on the **ask** and not on
-   * a function identity that changes every render — and so the re-deal fired from an answer
-   * reads the current ask rather than the one captured when the card was drawn.
+   * There is no arrival effect and no ref holding the sport already dealt for. Both were the
+   * bug: a ref dies with the route, so coming back to the screen and coming back to a chip
+   * both read as *nobody has asked this yet*, and a deal excludes everybody already dealt —
+   * so each accidental ask spent ten more people out of the player's own pool. Keyed by the
+   * question (`hooks/useDeck`), asking it twice is the same question and is answered from
+   * what is already held.
    */
-  const dealAgain = useRef<() => void>(() => undefined);
-  dealAgain.current = () => {
-    if (ask === undefined) return;
-    setAnswered(NOTHING_ANSWERED);
-    deal.mutate(ask);
-  };
+  const deal = useDeal(dealQuestion);
+  const dealt = deal.data;
+  /** A deal is in flight. `isFetching` rather than `isPending`, which is also *nothing asked*. */
+  const dealing = deal.isFetching;
+  const dealAgain = () => void deal.refetch();
 
-  /**
-   * Deal on arrival, and again when the sport changes — **once each**.
-   *
-   * The guard is the sport already dealt for, held in a ref: a re-render caused by the
-   * response landing must not read as a new reason to deal. A refusal leaves the guard set,
-   * because *nothing in Play retries without the player asking* — the retry is the *Deal
-   * again* control under the sentence.
-   */
-  const dealtFor = useRef<Sport | undefined>(undefined);
-  // The **sport**, not the whole ask: the ask is rebuilt on every render — it reads the
-  // working copy — and an effect keyed on it would deal once per keystroke on the week grid.
-  // What decides whether a deal is owed is which sport this is, and that is a string.
-  const askableSport = ask?.sport;
-  useEffect(() => {
-    if (askableSport === undefined || dealtFor.current === askableSport) return;
-    dealtFor.current = askableSport;
-    dealAgain.current();
-  }, [askableSport]);
-
-  const answeredHere =
-    dealt !== undefined && answered.searchId === dealt.envelope.searchId ? answered.playerIds : [];
-  const hand = dealt === undefined ? undefined : deckStanding(dealt, answeredHere);
+  const hand = dealt === undefined ? undefined : deckStanding(dealt, dealt.answered);
   const showing = hand?.kind === 'card' ? hand.candidate : undefined;
 
   /**
@@ -267,10 +266,14 @@ export function DeckScreen() {
    * not, and dealing from one would put a recording write behind every re-render of a screen
    * whose deal came back short.
    */
+  const { refetch } = deal;
   useEffect(() => {
-    if (hand?.kind !== 'spent' || deal.isPending) return;
-    dealAgain.current();
-  }, [hand?.kind, deal.isPending]);
+    // A refusal stops it: *nothing in Play retries without the player asking*, and a spent hand
+    // left on screen by a failed re-deal would otherwise ask again on every render of it. The
+    // retry is *Deal again* under the sentence, exactly as it is for the entry deal.
+    if (hand?.kind !== 'spent' || dealing || deal.isError) return;
+    void refetch();
+  }, [hand?.kind, dealing, deal.isError, refetch]);
 
   /**
    * **The question this deal raised, and the beat it is asked in.**
@@ -298,27 +301,20 @@ export function DeckScreen() {
 
   const outstandingHere = onThisSport === undefined ? 0 : (interest.data?.[onThisSport] ?? 0);
   const readError = profileSurface.error ?? ratings.error;
-  const answerPaused = yes.isPaused || no.isPaused || deal.isPaused;
+  const answerPaused = yes.isPaused || no.isPaused || deal.fetchStatus === 'paused';
   const answerError = yes.error ?? no.error;
 
   /** The card has finished leaving: it is gone, the buttons unlock, and the deck advances. */
   const cardLeft = (searchId: string, playerId: string) => {
     setLeaving(undefined);
     answeredSomebody.current = true;
-    setAnswered((held) =>
-      held.searchId === searchId
-        ? { searchId, playerIds: [...held.playerIds, playerId] }
-        : { searchId, playerIds: [playerId] },
-    );
+    progress.cardLeft({ searchId, playerId });
   };
 
   /** A refusal puts the card back, so the retry is the button that was pressed. */
-  const cardReturned = (playerId: string) => {
+  const cardReturned = (searchId: string, playerId: string) => {
     setLeaving(undefined);
-    setAnswered((held) => ({
-      ...held,
-      playerIds: held.playerIds.filter((gone) => gone !== playerId),
-    }));
+    progress.cardReturned({ searchId, playerId });
   };
 
   /**
@@ -327,7 +323,7 @@ export function DeckScreen() {
    * The two arms differ in exactly one thing a player can see — **a mutual is told to both
    * sides** — so the sentence is chosen from the response rather than from the press.
    */
-  const answer = (said: 'yes' | 'no', candidate: Candidate) => {
+  const answer = (said: DeckExit, candidate: Candidate) => {
     if (leaving !== undefined || dealt === undefined || onThisSport === undefined) return;
 
     const name = playerName({ kind: 'player', nickname: candidate.card.nickname });
@@ -337,12 +333,12 @@ export function DeckScreen() {
       searchId: dealt.envelope.searchId,
     };
 
-    setLeaving(candidate.playerId);
+    setLeaving({ playerId: candidate.playerId, said });
 
     if (said === 'no') {
       no.mutate(card, {
         onSuccess: () => showToast({ message: passedToast(name) }),
-        onError: () => cardReturned(candidate.playerId),
+        onError: () => cardReturned(card.searchId, card.playerId),
       });
       return;
     }
@@ -353,7 +349,7 @@ export function DeckScreen() {
           message: mutual ? mutualToast(name) : interestToast(name),
           tone: mutual ? 'ok' : 'base',
         }),
-      onError: () => cardReturned(candidate.playerId),
+      onError: () => cardReturned(card.searchId, card.playerId),
     });
   };
 
@@ -364,7 +360,7 @@ export function DeckScreen() {
           would hide itself along with the screen. */}
       <View style={s.root} {...behindOverlay(explaining !== undefined || asking)}>
         <ShellScreen title={MATCH_ME_TITLE}>
-          <PlaySegment active="match" outstanding={outstandingHere} />
+          <PlaySegment active="match" />
 
           {standing.kind === 'no-rated-sport' && ratings.isSuccess ? (
             <Note>{NO_RATED_SPORT_LINE}</Note>
@@ -425,15 +421,11 @@ export function DeckScreen() {
               <Note variant="coral" accessibilityRole="alert">
                 {playErrorMessage(deal.error)}
               </Note>
-              <Button
-                label={DEAL_AGAIN_LABEL}
-                variant="secondary"
-                onPress={() => dealAgain.current()}
-              />
+              <Button label={DEAL_AGAIN_LABEL} variant="secondary" onPress={dealAgain} />
             </View>
           ) : null}
 
-          {deal.isPending && !answerPaused ? (
+          {dealing && !answerPaused ? (
             <ActivityIndicator accessibilityLabel={DEALING_LABEL} color={theme.color.muted} />
           ) : null}
 
@@ -443,7 +435,7 @@ export function DeckScreen() {
                 // Keyed by the person, so the arrival runs once per card rather than once per
                 // render, and the ref below always points at what is on screen.
                 key={showing.playerId}
-                leaving={leaving === showing.playerId}
+                leaving={leaving?.playerId === showing.playerId ? leaving.said : undefined}
                 onLeft={() => cardLeft(dealt.envelope.searchId, showing.playerId)}
               >
                 <DeckCard

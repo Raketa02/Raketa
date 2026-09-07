@@ -97,7 +97,9 @@ _"picks one of several"_. The selection is a **lightness** step on the surface w
 one on the label, so it is not colour alone, and every press is reported including a press on
 the segment already chosen — Play's _Find a game_ half re-enters the tab, which is arriving
 rather than doing nothing. Its label is a whole string rather than a name plus a count slot,
-because _Match me · 3_ is copy and the count belongs to the feature that counts something.
+because anything beyond a name is copy and belongs to the feature that has something to say —
+Play drew _Match me · 3_ through that string and has since struck the number, which is a change
+of copy and not of this primitive.
 
 **The five Play arrivals** are `Switch` (6.12), `FitPill` (7.10), `BalanceBar` (7.11),
 `Court` (7.12) and the availability grid's **diff variant** — and none of them reclaims a

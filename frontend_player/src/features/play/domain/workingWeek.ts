@@ -71,6 +71,21 @@ function cellsOf(week: WorkingWeek): ReadonlySet<string> {
 }
 
 /**
+ * A week as **one stable identity** — the same cells in the same spelling, whatever order they
+ * were ticked in.
+ *
+ * `sameWeek` below asks whether two weeks are the same week; this answers the same question in
+ * the shape a cache key needs, which is a value that can be compared without holding the other
+ * week. Sorted for exactly that reason: ticks are kept in **press order** and a week is a set,
+ * so `[Tue evening, Sat morning]` and `[Sat morning, Tue evening]` have to hash alike or a
+ * player who ticked a cell and unticked it would be asking a question the cache has already
+ * answered and cannot recognise.
+ */
+export function weekIdentity(week: WorkingWeek): readonly string[] {
+  return [...cellsOf(week)].sort();
+}
+
+/**
  * Whether two weeks tick the same cells — **as sets**, because order is not a fact about a
  * week.
  *

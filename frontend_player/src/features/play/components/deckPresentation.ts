@@ -5,6 +5,20 @@
  * §1's mechanism throughout — code → message, never message → message — and nothing here is a
  * template inlined in a component.
  *
+ * ## The segment carries the name and no number
+ *
+ * `Match me · 3` was the count of the player's own outstanding yeses, printed on the control
+ * that reaches the deck. It is **struck**, because the position it was in is the position a
+ * count of *cards waiting* would be in, and that is what it was read as: a number beside a
+ * surface that deals one person at a time says how many people are behind that person, and a
+ * deal is at most ten cards out of a pool nobody sees the size of — the same *`{n} left`* the
+ * deck refused on the card itself (`domain/deckHand`).
+ *
+ * The figure is not lost and was never only here: it is the sentence the empty state prints,
+ * `outgoingYeses` below, where it has room to say what it counts. `MATCH_ME_TITLE` is now the
+ * whole of the segment's half, spoken and drawn alike, which is also why neither has a function
+ * any more.
+ *
  * ## The footer is a promise, and both halves of it are load-bearing
  *
  * The prototype's footer reads *"Passing is silent — nobody is told, nothing is scored"* and
@@ -62,33 +76,6 @@ export const DEALING_LABEL = 'Dealing';
  * control the player presses when a deal is spent, which is why there is one word for both.
  */
 export const DEAL_AGAIN_LABEL = 'Deal again';
-
-/**
- * `Match me` · `Match me · 3` — the count is **your own outstanding yeses, in this sport**.
- *
- * The prototype counted people who had waved at *you*, and that number cannot exist: an
- * incoming yes never crosses the wire in either direction
- * ([ADR-0109](../../../../../docs/adr/0109-a-read-back-names-what-it-withholds.md)), which is
- * what makes saying yes low-stakes. What survives is the count of yeses **you** have out, and
- * it is the same number the empty state prints.
- *
- * **Nought draws no count at all.** A dot and a zero beside a tab's name reads as a badge
- * saying nothing has happened, where the absence of one says it without spending a character.
- */
-export function matchMeSegment(outstanding: number): string {
-  return outstanding === 0 ? MATCH_ME_TITLE : `${MATCH_ME_TITLE} · ${outstanding}`;
-}
-
-/**
- * What the segment announces — the visible label plus what the number **is**.
- *
- * `Match me · 3` is legible on screen beside a deck and cryptic read aloud out of it, which is
- * exactly the case a name of its own is for (`Segment`'s own prop, and 6.9's remove control).
- */
-export function matchMeSegmentLabel(outstanding: number): string {
-  if (outstanding === 0) return MATCH_ME_TITLE;
-  return `${MATCH_ME_TITLE}, ${counted(outstanding, 'yes', 'yeses')} of yours still out`;
-}
 
 /**
  * The two sentences under the card.

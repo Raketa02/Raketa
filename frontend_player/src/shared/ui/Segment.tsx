@@ -30,9 +30,11 @@
  * segment already selected: only the caller knows whether re-entering a view is a no-op or an
  * arrival, and Play's *Find a game* is the second of those.
  *
- * The label may carry more than a name — Play draws `Match me · 3` — so it is a string the
- * caller composes rather than a name plus a count slot. A count is copy, and copy lives with
- * the feature that counts something.
+ * The label is a string the caller composes rather than a name plus a count slot: a label that
+ * carries more than a name is copy, and copy lives with the feature that has something to say.
+ * Play drew `Match me · 3` here and no longer does — a number in a segment reads as *how many
+ * are waiting* — which is a decision this primitive neither made nor needs to know about, and
+ * exactly why the slot was never built into it.
  */
 
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';

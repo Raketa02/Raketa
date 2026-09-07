@@ -13,8 +13,6 @@ import {
   MATCH_ME_TITLE,
   WIDEN_IN_YOU,
   interestToast,
-  matchMeSegment,
-  matchMeSegmentLabel,
   mutualToast,
   outgoingYeses,
   passedToast,
@@ -31,17 +29,14 @@ const EVERY_SENTENCE = [
 ];
 
 describe('the segment', () => {
-  it('draws no count at nought, rather than a zero', () => {
-    expect(matchMeSegment(0)).toBe(MATCH_ME_TITLE);
-  });
-
-  it('draws the count beside the name once there is one', () => {
-    expect(matchMeSegment(3)).toBe('Match me · 3');
-  });
-
-  it('says what the number is when it is read aloud out of context', () => {
-    expect(matchMeSegmentLabel(3)).toBe('Match me, 3 yeses of yours still out');
-    expect(matchMeSegmentLabel(1)).toBe('Match me, 1 yes of yours still out');
+  /**
+   * The count is struck, and this is the shape of the refusal: the deck's half of the segment
+   * is a **name**, so there is no function left that could put a number back beside it. The
+   * figure it used to draw is the ending sentence's, which is asserted below.
+   */
+  it('is a name and never a number, because the deck publishes no count of cards', () => {
+    expect(MATCH_ME_TITLE).toBe('Match me');
+    expect(MATCH_ME_TITLE).not.toMatch(/\d/);
   });
 });
 

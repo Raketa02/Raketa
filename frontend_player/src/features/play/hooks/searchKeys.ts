@@ -12,6 +12,22 @@
  * than from a store. That is what makes AC-70 arithmetic: an abandoned search wrote its rows
  * under its own id, and nothing reads that entry.
  *
+ * ## …except the deal, which is held by the **question** it answers
+ *
+ * The deck is the one ranked list nothing reads back by id, and the one whose second copy
+ * costs something: `POST /deck` excludes everybody already dealt to this player within the
+ * server's `DEALT_MEMORY` — one day — so **a second deal is a different ten people**. That is
+ * what makes *a spent deal deals again* work, and it is what makes an accidental deal
+ * expensive: it spends the pool rather than repeating it.
+ *
+ * A record held only under the id it minted is a record that cannot be *found again*, and a
+ * mutation's response is not held at all — it dies with the screen. Both leave the same hole:
+ * every remount of Match me, and every return to a chip already dealt, mints another deal, so
+ * a player toggling between Padel and Tennis empties their own deck without answering a card.
+ * `deck` below closes it by keying the deal on the **ask** — the sport and the week it was
+ * asked on — which is the one key under which *this question has already been answered* is a
+ * fact the cache can state.
+ *
  * ## Nothing in Play background-refetches
  *
  * The app's defaults are `staleTime: 30_000` and `refetchOnWindowFocus: true`, wired to
@@ -30,14 +46,17 @@
  *
  * **What still refetches on the ordinary defaults**, and should: the profile and the week grid
  * behind the working copy (moderate, 30s), the ratings behind the sport chips
- * (`onboardingKeys.ratings()`, reference data), and the **Match me count** on the segment
- * (AC-5) — the one number in this tab that should move while you look at it.
+ * (`onboardingKeys.ratings()`, reference data), and the **outstanding-yes count** the deck's
+ * ending sentence is written from (AC-5) — the one number in this tab that should move while
+ * you look at it.
  *
  * ## Nothing in Play retries without the player asking
  *
- * The tab's second posture, and the twin of the first. Every act here is a mutation and
+ * The tab's second posture, and the twin of the first. Nearly every act here is a mutation and
  * mutations ship `retry: false`; the read-back was the one exception, and giving the default
- * up too is what makes the rule statable rather than nearly true. See `retry` below.
+ * up too is what makes the rule statable rather than nearly true. See `retry` below — and note
+ * that the deal, read as a query over a route that **records**, needs that same line for a
+ * stronger reason than the read-back does: a retry there is a second recorded deal.
  *
  * ## Re-sorting costs no round trip; only membership does
  *
@@ -54,14 +73,41 @@
  * `forecast` keys on the **set** of players and not on their order.
  */
 
+import type { Sport } from '@/shared/vocabulary/sport';
+
 import type { SeatedPlayerId } from '../domain/lineup';
+import type { PlayIntent } from '../domain/vocabulary';
+import { weekIdentity, type WorkingWeek } from '../domain/workingWeek';
+
+/**
+ * **What a deal is run under that the request does not carry.**
+ *
+ * `POST /deck` sends a sport and — where the player improvised one — a week, and that is the
+ * whole body. The answer also turns on two facts the server resolves from the player's own
+ * profile: the **radius** it searches inside, and the **declaration** it scores under, because
+ * the deck has no mode. Neither is a request field, both change the answer, and so both are in
+ * the key — which is `query-and-errors.md`'s rule read literally: *every parameter that changes
+ * the response is in the key*.
+ *
+ * Leaving them out is not a small imprecision, it is the deck contradicting its own advice.
+ * *Widen in You* is the one piece of advice this surface gives, and a deal held on the sport
+ * alone would answer a widened radius with the deal that ran before it: the player does exactly
+ * what the empty state asked, and the screen says the same thing back for as long as the
+ * process lives.
+ */
+export interface DealtUnder {
+  /** The profile's search radius, in kilometres — the number *Widen in You* points at. */
+  readonly radiusKm: number;
+  /** The declared Play intent for this sport: the deck reads it where a search reads a mode. */
+  readonly intent: PlayIntent;
+}
 
 /**
  * **This file is Play's query-key factory**, in `CONTEXT.md`'s sense of the term — the one
  * place the feature's keys are defined. The exported object is named for the *record* rather
  * than for the feature, because [#228](https://github.com/Raketa02/Raketa/issues/228) named it
  * `searchKeys` and every Play surface reads a search; the keys that are not a search's — the
- * Match me count on the segment — join it here rather than starting a second file.
+ * outstanding-yes count — join it here rather than starting a second file.
  */
 
 /**
@@ -86,10 +132,15 @@ export const RANKED_LIST_QUERY_OPTIONS = {
    * see roughly **31 seconds** away (15s of timeout, a second of backoff, another 15s). An
    * automatic retry the player cannot see is a manual retry they cannot reach.
    *
-   * This is not the phantom-search argument that keeps `TIMEOUT_MS.request` at 15s: a `GET`
-   * records nothing, and re-reading a record costs nobody a row. It is purely about the
-   * affordance, and it stands beside `refetchOnWindowFocus: false` as the second half of one
-   * posture — nothing in this tab moves except when the player asks.
+   * For the read-back this is not the phantom-search argument that keeps `TIMEOUT_MS.request`
+   * at 15s: a `GET` records nothing, and re-reading a record costs nobody a row. It is purely
+   * about the affordance, and it stands beside `refetchOnWindowFocus: false` as the second half
+   * of one posture — nothing in this tab moves except when the player asks.
+   *
+   * **For the deal it is the phantom-search argument itself.** `POST /deck` records before it
+   * answers and spends the pool doing it, so an automatic retry there is a second recorded deal
+   * and ten more people gone. One line, and the weaker of its two reasons is the one written
+   * above it.
    */
   retry: false,
   /**
@@ -113,13 +164,53 @@ export const searchKeys = {
   all: ['play', 'search'] as const,
   details: () => [...searchKeys.all, 'detail'] as const,
   /**
-   * One search's envelope and its rows — the pool, a line-up's shortlist, or a deal.
+   * One search's envelope and its rows — the pool, or a line-up's shortlist.
    *
-   * The **only** key a ranked list is held under. Three routes mint one and the shape is
-   * identical across them, so a second key per surface would be three cache entries for one
-   * kind of record, and a line-up's origin would have nowhere single to be read back from.
+   * The only key a ranked list **read back by id** is held under. Both routes that mint one
+   * and read it again have the identical shape, so a second key per surface would be two cache
+   * entries for one kind of record, and a line-up's origin would have nowhere single to be read
+   * back from.
+   *
+   * A deal is the exception and is held under `deck` instead, because nothing reads one back by
+   * id and dealing a second time is not free — see the section above.
    */
   detail: (searchId: string) => [...searchKeys.details(), searchId] as const,
+  decks: () => [...searchKeys.all, 'deck'] as const,
+  /**
+   * **The deal on Match me, held by the question it answers**: the sport, and the week it was
+   * dealt on.
+   *
+   * The key is the *ask* rather than the answer, which is what lets the screen tell *I have
+   * already asked this* from *I have not asked yet* — the one distinction a mutation cannot
+   * make, since its response dies with the component holding it. Coming back to a chip, and
+   * coming back to the screen, are then the same fact about the cache and neither one mints a
+   * deal.
+   *
+   * **The week is in it, and travels as a set.** A grid improvised on Find a game is a
+   * different question and must deal a different deck — otherwise the player's edit is
+   * silently answered by the deal that ran before it. It is `weekIdentity`'s sorted spelling
+   * rather than the list itself, because ticks are kept in press order and a cell ticked and
+   * unticked leaves the same week in a different order (`domain/workingWeek`).
+   *
+   * **And the radius and the declaration are in it too**, though neither is on the request:
+   * `DealtUnder` above carries that argument. What the key holds is everything that changes the
+   * answer, which is a superset of what travels in the body.
+   *
+   * **The `search_id` is deliberately not in it.** It is minted *by* the answer, so a key
+   * carrying it could never be built before the request that produces it — which is the whole
+   * of what has to happen here.
+   */
+  deck: (
+    sport: Sport | undefined,
+    sentWeek: WorkingWeek | undefined,
+    under: DealtUnder | undefined,
+  ) =>
+    [
+      ...searchKeys.decks(),
+      sport,
+      sentWeek === undefined ? null : weekIdentity(sentWeek),
+      under ?? null,
+    ] as const,
   forecasts: () => [...searchKeys.all, 'forecast'] as const,
   /**
    * What a four you composed would leave on court, keyed by `(search_id, the set of players)`.
@@ -142,11 +233,15 @@ export const searchKeys = {
   forecast: (searchId: string, players: readonly SeatedPlayerId[]) =>
     [...searchKeys.forecasts(), searchId, [...players].sort()] as const,
   /**
-   * The **Match me count** — your outstanding yeses, per sport.
+   * **Your outstanding yeses, per sport** — the figure the deck's ending sentence counts.
    *
    * The one key here that is not a search's, and it joins this factory rather than starting a
    * second file for the reason stated above: `searchKeys` is named for the record because
    * every Play surface reads a search, and one count is not a second feature's worth of keys.
+   *
+   * It fed the segment's `Match me · 3` as well until that number was struck for reading as a
+   * count of waiting cards; what is left is one reader, on the deck, and the read stays exactly
+   * as it was — a yes moves it, and the sentence it is printed in is what makes it answerable.
    *
    * **It is deliberately not under `RANKED_LIST_QUERY_OPTIONS`.** It is a number rather than
    * an ordering, so nothing reorders under a finger when it moves — and it is the one figure

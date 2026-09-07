@@ -1,5 +1,5 @@
 /**
- * The **Match me count**, and the one thing about it worth pinning: it is the *outstanding*
+ * The outstanding-yes count, and the one thing about it worth pinning: it is the *outstanding*
  * figure the contract publishes rather than a length this app derives.
  *
  * *"Outstanding means sent, unexpired and not yet mutual"* — a rule about the server's clock

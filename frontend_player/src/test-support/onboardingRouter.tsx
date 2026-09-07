@@ -300,11 +300,11 @@ export function stubProfileOptions(
 }
 
 /**
- * Your own *Let's play* yeses — the read behind the **Match me count** on Play's segment.
+ * Your own *Let's play* yeses — the read behind the count in the deck's ending sentence.
  *
- * Separate from the three above and defaulted to nothing outstanding, because every Play
- * screen draws the segment and almost no suite is about the number on it: a count that has
- * not landed draws no count, which is the same thing the segment says at nought.
+ * Separate from the three above and defaulted to nothing outstanding, because almost no suite
+ * is about the number: `outgoingYeses` has a sentence for nought as well as for a count, so a
+ * read that has not landed still draws something true.
  */
 export function stubInterest(
   transport: Transport,

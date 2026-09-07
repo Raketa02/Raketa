@@ -351,11 +351,9 @@ export {
   PICK_PLAYERS_LABEL,
   PROVISIONAL_WORD,
   START_OVER_LABEL,
-  TWO_WAYS_TITLE,
   builderTitle,
   fillSeatsLabel,
   forecastHeading,
-  seatsOpenLine,
 } from './components/builderPresentation';
 
 /**
@@ -405,7 +403,6 @@ export {
   SEEN_EVERYBODY_TITLE,
   WIDEN_IN_YOU,
   interestToast,
-  matchMeSegment,
   mutualToast,
   outgoingYeses,
   passedToast,

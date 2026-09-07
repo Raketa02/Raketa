@@ -373,21 +373,16 @@ export function courtEntryTitle(seats: number): string {
   return isDoubles(seats) ? 'Build a doubles' : 'Build a singles';
 }
 
-/** What the court is for, in the order the builder offers it: the engine first, then the pool. */
-export function courtEntryBody(seats: number): string {
-  return (
-    `Start from an empty court. Let the engine find the evenest ${isDoubles(seats) ? 'four' : 'opponent'}, ` +
-    'or read the ranked cards and pick yourself — then swap anybody and watch the forecast move.'
-  );
-}
-
 /**
- * The card's **spoken name**, and one element for one action (`the-words.md` §20.1).
+ * The control's **spoken name**, and one element for one action (`the-words.md` §20.1).
  *
- * The picture is the sighted half and it is hidden from the tree — the card is one button, and
- * a listener navigating a control has no use for a second name inside it — so **the shape the
- * court draws is said here instead**, and this is the only place it is said at all. The sport
- * is not in it: the chip row above has already named which sport this screen is on.
+ * It says the shape in full — *Four seats, two a side* — where the button's own label says it
+ * in one word. That was the split when a picture of the court stood above the control and was
+ * hidden from the tree; the picture has since gone, and the sentence survives the change
+ * rather than being made redundant by it. **A listener has no picture and no chip row to
+ * count**, so *doubles* is a word they have to already know the arity of, and this is the one
+ * place the platform spells it out. The sport is still not in it: the chips above have already
+ * named which sport this screen is on.
  */
 export function courtEntryLabel(seats: number): string {
   const shape = isDoubles(seats) ? 'Four seats, two a side.' : 'Two seats, one a side.';

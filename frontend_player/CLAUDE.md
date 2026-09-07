@@ -466,13 +466,20 @@ a phone is a gate evaluated on a lie_. So the slider's only way to mean anything
 profile to hold what it shows, which makes running the search **one act over two requests** —
 the `PUT` first, and only where the number moved, so a failure there is a search that has not
 happened and the retry is the control the player already pressed. **That control is not a
-button saying _Search_.** It is `CourtEntryCard` — _Build a doubles_ or _Build a singles_,
-named for the game the Sport plays, over a centred column ending in the court itself at
-`size.court.thumb` — because where a completed search goes is the **builder**, and a verb
-naming the machinery left the shape of the court a surprise one screen later. Every word on it
-branches on the seat count read off `Court`'s own coordinates, so a squash court is never told
-to build a four; the card is in the page rather than in `ShellScreen`'s pinned slot, and the
-prototype's 2pt coral outline is **not drawn**, because coral on a card is the pressed state. **A cleared week runs a
+button saying _Search_.** It is **one primary button** at the foot of the form, reading _Build
+a doubles_ or _Build a singles_ — named for the **game the Sport plays**, because where a
+completed search goes is the builder and a verb naming the machinery left the shape of the
+court a surprise one screen later. It arrived as `CourtEntryCard`, a picture of the court at
+`size.court.thumb` with the whole card as the control, and both halves are struck: an
+illustration was being asked to carry the affordance for the one act on the screen, and then a
+drawing of an empty court was saying under the label what _doubles_ says in one word — the
+picture read back as a label, which is the argument that had already removed the hot pill and
+the sentence beside it. Its wording still branches on the seat count read off `Court`'s own
+coordinates, so a squash court is never told to build a four, and the **spoken** name keeps the
+arity in full (_Four seats, two a side_) because a listener has no picture and no chip row to
+count. It is in the page rather than in `ShellScreen`'s pinned slot, and the prototype's 2pt
+coral outline is **still not drawn**, because coral on a card is the pressed state — it arrives
+instead as 6.1's fill on a control, where a press has somewhere to go. **A cleared week runs a
 search**: an omitted override means _use my profile grid_ and an **empty list** means _I
 unticked every cell_, and #247 is what stopped the wire conflating them. _Changed from your
 profile_ is a **client comparison made on every tap** — a slot ticked and unticked is not a
@@ -558,8 +565,23 @@ advice for somebody with nobody in range and an insult to somebody who has answe
 That sentence is gated again by `radius_clamp`, since a player at their own ceiling cannot
 give what it asks for. **There is no _Show them again_**; what stands in its place is the pool
 description and the count of the player's own outgoing yeses, both already on the wire. The
-card in flight is **route-local** and the ids answered are keyed by the deal they belong to,
-so a deal replaced mid-flight cannot leave a stale id behind — derived, never synchronised.
+card in flight is **route-local**; the ids answered are held **inside the deal**, so a deal
+replaced mid-flight cannot leave a stale id behind — by construction, never synchronised.
+
+**And the deal itself is held, because a second deal is not a second copy of the first.** It was
+a `useMutation`, so it died with the route, and the entry deal was an effect guarded by a ref,
+which died with it too — so every return to Match me and every return to a chip already dealt
+read as _nobody has asked this yet_ and dealt again. That is not a wasted read: `POST /deck`
+excludes everybody dealt within the backend's `DEALT_MEMORY`, so each accidental ask **spends
+ten more people out of the player's own pool**, and toggling between two chips emptied a deck
+nobody had answered a card of — after which the ending said, truthfully, that they had seen
+everybody. It is now a query held under `searchKeys.deck(sport, week, under)`, keyed by **the
+question rather than the answer**: the sport, the improvised week, and the radius and the
+declaration, which the request does not carry but the answer turns on — left out, the deck
+answers its own _Widen in You_ with the deal that ran before the widening. Every path that could
+mint one unasked is closed by name — `staleTime`/`gcTime: Infinity`, no refetch on focus or
+reconnect, `retry: false` and **`retryOnMount: false`**, that last one because an errored query
+re-fires on the next mount and a refused deal must not be re-attempted by walking away and back.
 
 **Play's two ways through the tab are one control, and the count on it is the segment's.**
 `PlaySegment` is design-system **6.3**, specified since the document was locked and built for

@@ -54,9 +54,11 @@
  *
  * ## What is deliberately absent
  *
- * **No badge.** The one count this product has is *Match me · 3*, and it belongs to the
- * segmented control inside the Play screen ([6.3](../../../docs/design-system.md#63-segmented-control)).
- * It is **filtered by the sport on screen**, so that the number labels the deck it sits above
+ * **No badge.** The one count this product has is the player's own outstanding yeses, and it
+ * is drawn as a **sentence** on the deck's ending
+ * ([6.3](../../../docs/design-system.md#63-segmented-control)'s segment carried it as
+ * *Match me · 3* until that was struck for reading as a count of waiting cards).
+ * It is **filtered by the sport on screen**, so that the number labels the deck it is about
  * ([#270](https://github.com/Raketa02/Raketa/issues/270)) — and the bar has no sport, so
  * promoting it here would put a number on permanent chrome that only means something beside a
  * control this bar does not draw, on a tab whose own rule is that it always opens somewhere

@@ -7,6 +7,7 @@ import {
   seedWorkingWeek,
   sentWeekForOrigin,
   toggleCell,
+  weekIdentity,
   type WorkingWeek,
 } from './workingWeek';
 
@@ -97,6 +98,31 @@ describe('whether the week differs from the profile', () => {
   it('a cleared week is a legal week, and it is a change', () => {
     expect(sameWeek([], PROFILE)).toBe(false);
     expect(sameWeek([], [])).toBe(true);
+  });
+});
+
+describe('a week as one identity', () => {
+  /**
+   * What a cache key is built from, and therefore the half that has to agree with `sameWeek`:
+   * ticks are kept in press order, so two spellings of one week must hash alike or a player who
+   * ticked a cell and unticked it would be asking a question already answered and unrecognised.
+   */
+  it('is the same value for the same cells in a different press order', () => {
+    expect(weekIdentity([TUESDAY_EVENING, SATURDAY_MORNING])).toEqual(
+      weekIdentity([SATURDAY_MORNING, TUESDAY_EVENING]),
+    );
+  });
+
+  it('tells two different weeks apart, and a cleared one from a filled one', () => {
+    expect(weekIdentity([TUESDAY_EVENING])).not.toEqual(weekIdentity([SATURDAY_MORNING]));
+    expect(weekIdentity([])).not.toEqual(weekIdentity([TUESDAY_EVENING]));
+  });
+
+  /** A duplicate is not a longer week — the same set comparison `sameWeek` is written over. */
+  it('reads a repeated cell as the one cell it is', () => {
+    expect(weekIdentity([TUESDAY_EVENING, TUESDAY_EVENING])).toEqual(
+      weekIdentity([TUESDAY_EVENING]),
+    );
   });
 });
 

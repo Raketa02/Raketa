@@ -8,7 +8,7 @@ describe('query keys', () => {
     expect(searchKeys.forecasts()).toEqual(['play', 'search', 'forecast']);
   });
 
-  it('keys a ranked list by its search id — one key for the pool, the shortlist and the deal', () => {
+  it('keys a read-back ranked list by its search id — one key for the pool and the shortlist', () => {
     expect(searchKeys.detail('s1')).not.toEqual(searchKeys.detail('s2'));
   });
 
@@ -47,6 +47,66 @@ describe('query keys', () => {
     expect(searchKeys.forecast('s1', ['a', 'b'])).not.toEqual(
       searchKeys.forecast('s2', ['a', 'b']),
     );
+  });
+});
+
+/**
+ * **The deal is keyed by the question, not by the answer** — the one ranked list that is, and
+ * the one where asking twice is not free: a deal excludes everybody already dealt for a day, so
+ * a second ask spends ten more people. Everything that changes the answer is therefore in the
+ * key, including the two facts the request does not carry.
+ */
+describe('the deal on Match me', () => {
+  const UNDER = { radiusKm: 12, intent: 'FOR_FUN' } as const;
+  const TUESDAY_EVENING = { day: 2, part: 'evening' } as const;
+  const SATURDAY_MORNING = { day: 6, part: 'morning' } as const;
+
+  it('is one question, so asking it again finds the deal already held', () => {
+    expect(searchKeys.deck('padel', undefined, UNDER)).toEqual(
+      searchKeys.deck('padel', undefined, UNDER),
+    );
+  });
+
+  it('is a different question per sport, which is what a chip press changes', () => {
+    expect(searchKeys.deck('padel', undefined, UNDER)).not.toEqual(
+      searchKeys.deck('tennis', undefined, UNDER),
+    );
+  });
+
+  it('is a different question on an improvised week, and the same one on a re-ticked cell', () => {
+    expect(searchKeys.deck('padel', [TUESDAY_EVENING], UNDER)).not.toEqual(
+      searchKeys.deck('padel', undefined, UNDER),
+    );
+    // Ticks are kept in press order and a week is a set: ticking a cell and unticking another
+    // must not be a second question about the same week.
+    expect(searchKeys.deck('padel', [TUESDAY_EVENING, SATURDAY_MORNING], UNDER)).toEqual(
+      searchKeys.deck('padel', [SATURDAY_MORNING, TUESDAY_EVENING], UNDER),
+    );
+  });
+
+  /**
+   * Neither of these is on the request — the server resolves both from the profile — and both
+   * change the answer. Left out, the deck answers *Widen in You* with the deal that ran before
+   * the widening, which is this screen ignoring its own only piece of advice.
+   */
+  it('is a different question once the radius the advice points at has moved', () => {
+    expect(searchKeys.deck('padel', undefined, { ...UNDER, radiusKm: 30 })).not.toEqual(
+      searchKeys.deck('padel', undefined, UNDER),
+    );
+  });
+
+  it('is a different question under a different declaration, because the deck has no mode', () => {
+    expect(searchKeys.deck('padel', undefined, { ...UNDER, intent: 'COMPETITIVE' })).not.toEqual(
+      searchKeys.deck('padel', undefined, UNDER),
+    );
+  });
+
+  it('sits under the feature root like every other key, so a sign-out clears it', () => {
+    expect(searchKeys.deck('padel', undefined, UNDER).slice(0, 3)).toEqual([
+      'play',
+      'search',
+      'deck',
+    ]);
   });
 });
 

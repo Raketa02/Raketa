@@ -9,6 +9,10 @@
  * screen again, and a stopped `Animated.Value` keeps whatever fraction of the flight it
  * reached — so the transform is asserted here, on the one path the deck documents as
  * recoverable and the screen's own suite can only see in words.
+ *
+ * The third is the **direction**: a yes leaves right and a pass leaves left, which is the one
+ * thing on this surface a player is told without a sentence, and a sign nobody can see is a
+ * sign that flips silently.
  */
 
 import { act, render, screen } from '@testing-library/react-native';
@@ -16,12 +20,12 @@ import { Text, View, type ViewStyle } from 'react-native';
 
 import { ReducedMotionProvider } from '@/shared/ui';
 
-import { DeckStage } from './DeckStage';
+import { DeckStage, type DeckExit } from './DeckStage';
 
 /** How long a card takes to leave. Longer than the component's own 240, so a flight completes. */
 const PAST_THE_FLIGHT = 400;
 
-function drawStage(leaving: boolean, onLeft = jest.fn(), collapsed = false) {
+function drawStage(leaving: DeckExit | undefined, onLeft = jest.fn(), collapsed = false) {
   const view = render(
     <ReducedMotionProvider value={collapsed}>
       <DeckStage leaving={leaving} onLeft={onLeft}>
@@ -48,7 +52,7 @@ afterEach(() => jest.useRealTimers());
 
 describe('a card leaving', () => {
   it('reports that it has gone, once the flight is over', () => {
-    const { onLeft } = drawStage(true);
+    const { onLeft } = drawStage('no');
 
     expect(onLeft).not.toHaveBeenCalled();
     act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
@@ -62,15 +66,36 @@ describe('a card leaving', () => {
    * callback is what tells the screen the deck may advance.
    */
   it('reports it immediately where presentation is collapsed', () => {
-    const { onLeft } = drawStage(true, jest.fn(), true);
+    const { onLeft } = drawStage('no', jest.fn(), true);
 
     expect(onLeft).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * *Let's play* right, *Not today* left — the two buttons' own order. Asserted as **signs**
+   * rather than as distances, because the distance is a number somebody may tune and the
+   * directions are the decision.
+   */
+  it('goes right on a yes and left on a pass', () => {
+    drawStage('yes');
+    act(() => jest.advanceTimersByTime(100));
+    const yes = Number(valueOf(transformOf()[0], 'translateX'));
+
+    screen.unmount();
+
+    drawStage('no');
+    act(() => jest.advanceTimersByTime(100));
+    const no = Number(valueOf(transformOf()[0], 'translateX'));
+
+    expect(yes).toBeGreaterThan(0);
+    expect(no).toBeLessThan(0);
+    expect(no).toBe(-yes);
   });
 });
 
 describe('a card that comes back', () => {
   it('comes back straight, rather than stopped mid-flight', () => {
-    const { rerender } = drawStage(true);
+    const { rerender } = drawStage('no');
     act(() => jest.advanceTimersByTime(100));
 
     // Mid-flight: the card is shifted and turned.
@@ -79,7 +104,7 @@ describe('a card that comes back', () => {
 
     rerender(
       <ReducedMotionProvider value={false}>
-        <DeckStage leaving={false} onLeft={() => undefined}>
+        <DeckStage leaving={undefined} onLeft={() => undefined}>
           <Text>Marek Z.</Text>
         </DeckStage>
       </ReducedMotionProvider>,

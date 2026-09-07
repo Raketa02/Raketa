@@ -51,6 +51,7 @@ import {
 } from './findAGamePresentation';
 import {
   DECK_FOOTER,
+  MATCH_ME_TITLE,
   NOBODY_IN_RANGE_TITLE,
   SEEN_EVERYBODY_TITLE,
   WIDEN_IN_YOU,
@@ -260,9 +261,7 @@ async function openDeck() {
   // segment being real rather than a control over a half-loaded screen.
   await screen.findByLabelText('Tuesday evening');
 
-  // The segment's accessible name carries the count — `Match me, 3 yeses of yours still out`
-  // — so it is matched by its stem rather than by a number a suite would have to restate.
-  fireEvent.press(screen.getByLabelText(/^Match me/));
+  fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
   await waitFor(() => expect(screen).toHavePathname('/play/deck'));
 }
 
@@ -315,7 +314,7 @@ describe('what the deck deals', () => {
     await screen.findByLabelText('Tuesday evening');
     fireEvent.press(screen.getByLabelText('Monday morning'));
 
-    fireEvent.press(screen.getByLabelText(/^Match me/));
+    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
     await waitFor(() => expect(screen).toHavePathname('/play/deck'));
     await screen.findByLabelText(/^Marek Z\./);
 
@@ -344,6 +343,99 @@ describe('what the deck deals', () => {
     await waitFor(() => expect(dealBodies()).toHaveLength(2));
 
     expect(dealBodies()[1]).toEqual({ sport: 'TENNIS' });
+  });
+
+  /**
+   * **A deal is not free, so the screen asks for one once per question and then keeps it.**
+   *
+   * `POST /deck` excludes everybody already dealt to this player for a day, so a second ask is
+   * a *different* ten people — which is what makes *a spent deal deals again* work and what
+   * made a re-ask on every chip press ruinous: toggling between two sports emptied a deck
+   * nobody had answered a card of, and the ending then said, truthfully, that they had seen
+   * everybody.
+   */
+  it('deals once per sport, however often the chips are toggled', async () => {
+    stubProfileSurface(transport, {
+      availability: [{ day: 2, part: 'EVENING' }],
+      search_radius_km: 12,
+      play_intents: { PADEL: 'FOR_FUN', TENNIS: 'COMPETITIVE' },
+    });
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    fireEvent.press(screen.getByLabelText('Tennis'));
+    await waitFor(() => expect(dealBodies()).toHaveLength(2));
+
+    fireEvent.press(screen.getByLabelText('Padel'));
+    await screen.findByLabelText(/^Marek Z\./);
+    fireEvent.press(screen.getByLabelText('Tennis'));
+    await screen.findByLabelText(/^Marek Z\./);
+    fireEvent.press(screen.getByLabelText('Padel'));
+    await screen.findByLabelText(/^Marek Z\./);
+
+    expect(dealBodies()).toEqual([{ sport: 'PADEL' }, { sport: 'TENNIS' }]);
+  });
+
+  /** Leaving Match me replaces the stack, so the screen is genuinely re-entered rather than restored. */
+  it('finds the deal it already holds when the player leaves the screen and comes back', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    fireEvent.press(screen.getByLabelText('Find a game'));
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    await screen.findByLabelText('Tuesday evening');
+    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
+    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+
+    expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
+    expect(dealBodies()).toEqual([{ sport: 'PADEL' }]);
+  });
+
+  /**
+   * The other half of holding the deal: **how far through it the player is is part of it.**
+   * Progress left behind on the screen would put every answered card back on arrival.
+   */
+  it('does not put an answered card back when the screen is re-entered', async () => {
+    transport.on('POST', DECK, () =>
+      json(
+        deal({
+          candidates: [
+            card('Marek Z.', 'aaaaaaaa-0000-4000-8000-000000000001'),
+            card('Ana K.', 'aaaaaaaa-0000-4000-8000-000000000002'),
+          ],
+        }),
+      ),
+    );
+    await openDeck();
+    fireEvent.press(await screen.findByLabelText('Not today, Marek Z.'));
+    await screen.findByLabelText(/^Ana K\./);
+
+    fireEvent.press(screen.getByLabelText('Find a game'));
+    await screen.findByLabelText('Tuesday evening');
+    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
+
+    expect(await screen.findByLabelText(/^Ana K\./)).toBeTruthy();
+    expect(screen.queryByLabelText(/^Marek Z\./)).toBeNull();
+    expect(dealBodies()).toHaveLength(1);
+  });
+
+  /**
+   * **A week is part of the question**, so improvising one is a new ask and deals again. Held
+   * on the sport alone, a grid the player had just edited would be silently answered by the
+   * deal that ran before it.
+   */
+  it('deals again on an improvised week, because that is a different ask', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    fireEvent.press(screen.getByLabelText('Find a game'));
+    await screen.findByLabelText('Tuesday evening');
+    fireEvent.press(screen.getByLabelText('Monday morning'));
+    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
+    await screen.findByLabelText(/^Marek Z\./);
+
+    await waitFor(() => expect(dealBodies()).toHaveLength(2));
+    expect(dealBodies()[1]).toHaveProperty('availability_override');
   });
 
   /**
@@ -401,6 +493,28 @@ describe('what the deck deals', () => {
     transport.on('POST', DECK, () => json(deal()));
     fireEvent.press(screen.getByLabelText('Deal again'));
     await waitFor(() => expect(dealBodies()).toHaveLength(2));
+  });
+
+  /**
+   * **A refusal is not a reason to deal on the next mount either**, which is the spelling of
+   * *nothing in Play retries without the player asking* that a held deal newly needs:
+   * `retryOnMount` defaults to true, so an errored query re-fires the moment a second observer
+   * mounts — and here that is the player walking to Find a game and back, having pressed
+   * nothing. Worse than a wasted request if the refusal was a timeout over a deal the server
+   * did record, since the pool is then spent twice.
+   */
+  it('does not deal again when a screen whose deal was refused is re-entered', async () => {
+    transport.on('POST', DECK, () => errorResponse(503, 'matchmaking_unavailable'));
+    await openDeck();
+    await screen.findByText(playErrorMessage({ code: 'matchmaking_unavailable' } as never));
+
+    fireEvent.press(screen.getByLabelText('Find a game'));
+    await screen.findByLabelText('Tuesday evening');
+    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
+    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+    await screen.findByText(playErrorMessage({ code: 'matchmaking_unavailable' } as never));
+
+    expect(dealBodies()).toHaveLength(1);
   });
 });
 
@@ -598,7 +712,12 @@ describe('the empty deck', () => {
 });
 
 describe('the segment', () => {
-  it('carries the count for the sport on screen, and no other', async () => {
+  /**
+   * **The count is struck**, and the refusal is only observable as an absence. `Match me · 3`
+   * sat where a count of *cards waiting* would sit and was read as one — which is the number
+   * the deck refuses to publish anywhere, the card included.
+   */
+  it('names the deck and puts no number beside it, on either screen', async () => {
     stubInterest(transport, {
       outgoing: [],
       mutual: [],
@@ -611,23 +730,35 @@ describe('the segment', () => {
     fireEvent.press(await screen.findByLabelText('Play'));
     await screen.findByLabelText('Tuesday evening');
 
-    expect(await screen.findByLabelText(/^Match me, 3 yeses/)).toBeTruthy();
-    expect(screen.queryByLabelText(/9 yeses/)).toBeNull();
+    expect(await screen.findByLabelText(MATCH_ME_TITLE)).toBeTruthy();
+    expect(screen.queryByLabelText(/yeses/)).toBeNull();
+    expect(screen.queryByText(/Match me ·/)).toBeNull();
+
+    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
+    await screen.findByLabelText(/^Marek Z\./);
+
+    expect(screen.getByLabelText(MATCH_ME_TITLE)).toBeTruthy();
+    expect(screen.queryByText(/Match me ·/)).toBeNull();
   });
 
-  it('moves on the answer’s own response rather than on a second request', async () => {
+  /**
+   * The figure the segment used to draw still moves on the tap's own answer — it is the
+   * **ending sentence** that prints it now, which is where it has room to say what it counts.
+   */
+  it('moves the ending’s own count on the answer’s response rather than on a second request', async () => {
     stubInterest(transport, {
       outgoing: [],
       mutual: [],
       outstanding: [{ sport: 'PADEL', outstanding: 2, cap: 10 }],
     });
     await openDeck();
-    await screen.findByLabelText(/^Match me, 2 yeses/);
     await screen.findByLabelText(/^Marek Z\./);
 
+    // The yes spends the hand, so the re-deal that follows lands on the ending.
+    transport.on('POST', DECK, () => json(deal({ candidates: [], searchId: 'second-deal' })));
     fireEvent.press(screen.getByLabelText("Let's play, Marek Z."));
 
-    expect(await screen.findByLabelText(/^Match me, 3 yeses/)).toBeTruthy();
+    expect(await screen.findByText(outgoingYeses(3))).toBeTruthy();
     // One read, at mount. The tap's answer carried the new count, so nothing asked again.
     expect(transport.requestsTo('GET', INTEREST)).toHaveLength(1);
   });

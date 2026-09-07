@@ -22,11 +22,16 @@
  * The asymmetry is the shell's rule read out, not a preference: the reset is one function
  * with a growing list of callers, and this is the third.
  *
- * ## The count is the caller's
+ * ## It carries two names and no number
  *
- * `Match me · 3` is composed by `deckPresentation`, because it is copy and because the number
- * is a read this component has no business making. Both screens that draw this segment already
- * hold it.
+ * *Match me* used to be drawn `Match me · 3` — the player's own outstanding yeses, filtered by
+ * the sport on screen. It is struck: in that position a number reads as *how many cards are
+ * waiting*, which is a count the deck refuses to publish anywhere, on the card as well as here
+ * (`deckPresentation`, `domain/deckHand`). The figure survives as the empty state's sentence,
+ * which has room to say what it counts.
+ *
+ * So this component takes an `active` half and nothing else, and neither screen drawing it has
+ * to hold a read for its sake.
  */
 
 import { router } from 'expo-router';
@@ -34,7 +39,7 @@ import { router } from 'expo-router';
 import { enterPlay } from '@/features/shell/types';
 import { Segment } from '@/shared/ui';
 
-import { matchMeSegment, matchMeSegmentLabel } from './deckPresentation';
+import { MATCH_ME_TITLE } from './deckPresentation';
 import { FIND_A_GAME_TITLE } from './findAGamePresentation';
 
 /**
@@ -48,11 +53,9 @@ export type PlaySurface = 'find' | 'match';
 
 export interface PlaySegmentProps {
   readonly active: PlaySurface;
-  /** Your own outstanding yeses in the sport on screen. `0` draws no count. */
-  readonly outstanding: number;
 }
 
-export function PlaySegment({ active, outstanding }: PlaySegmentProps) {
+export function PlaySegment({ active }: PlaySegmentProps) {
   return (
     <Segment
       selected={active}
@@ -60,11 +63,9 @@ export function PlaySegment({ active, outstanding }: PlaySegmentProps) {
         // The screen's own title, rather than a second spelling of it: the segment names a
         // **view**, and the view is that screen. Two constants would be two things to reword.
         { key: 'find', label: FIND_A_GAME_TITLE },
-        {
-          key: 'match',
-          label: matchMeSegment(outstanding),
-          accessibilityLabel: matchMeSegmentLabel(outstanding),
-        },
+        // No `accessibilityLabel`: the label is the whole name, so a second spelling of it
+        // would be a name to keep in step with itself.
+        { key: 'match', label: MATCH_ME_TITLE },
       ]}
       onSelect={(surface) => {
         // A press on the half already showing is deliberately not swallowed on `find`: the

@@ -398,6 +398,19 @@ const crossedForecast = (full = false): Wire['ForecastResponse'] => ({
 });
 
 describe('the header', () => {
+  /**
+   * The court is underneath and this screen **pops** back onto it — the same `back` the row's
+   * own *back to the court* control performs, drawn once at the top of the screen so the way
+   * out of the second level of Play is not a gesture a player has to know about.
+   */
+  it('draws a way back to the court it is filling', async () => {
+    await openThePool();
+
+    fireEvent.press(screen.getByLabelText('Back'));
+
+    await waitFor(() => expect(screen).toHavePathname('/play/builder'));
+  });
+
   it('draws the court it is filling, and gains a seat on every add', async () => {
     await openThePool();
 

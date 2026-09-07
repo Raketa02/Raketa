@@ -121,11 +121,19 @@
  * **stack** — Now is underneath, put there by the reset — so the platform's own gesture already
  * lands where it should and 10.3 makes the chevron opt-in for exactly this case.
  *
- * **A pinned CTA.** `ShellScreen`'s action slot is empty here, and the search runs off
- * `CourtEntryCard` at the foot of the page instead. The control *is* a picture of the court
- * the search opens onto — which is what a player is actually asking for, and what a button
- * saying *Search* left as a surprise — and a card-sized control pinned above the tab bar would
- * take a third of the screen off the week it is drawn from. It is the one way through for a
+ * **A pinned CTA.** `ShellScreen`'s action slot is empty here and the act sits at the foot of
+ * the page instead, where the form it completes ends.
+ *
+ * What it is now is **one primary button**. It was `CourtEntryCard`: a picture of the court at
+ * `size.court.thumb` with the act under it, and before that the whole card was the control.
+ * Both are struck. The picture was there because a verb naming the machinery left the shape of
+ * the court a surprise one screen later ([#268](https://github.com/Raketa02/Raketa/issues/268))
+ * — but *Build a doubles* is not that verb: it names the **game**, and doubles is four people
+ * on a court in the one word a player already has. A drawing of an empty court under a label
+ * that says the same thing is the picture read back as a label, which is the argument that
+ * removed the hot pill and the sentence beside it, applied once more to what was left.
+ *
+ * So the screen ends on the control and nothing else. It is the one way through for a
  * competitive game; *Match me* is the other half of `PlaySegment` and reaches the deck.
  */
 
@@ -167,14 +175,12 @@ import { findAGameStanding } from '../domain/findAGame';
 import { alreadyAsked } from '../domain/raisedPrompt';
 import { SEARCH_MODES } from '../domain/vocabulary';
 import { differsFromProfile, isTicked, sameCell } from '../domain/workingWeek';
-import { useOutstandingInterest } from '../hooks/useDeck';
 import { useFindAGame } from '../hooks/useFindAGame';
 import type { FindAGameAsk } from '../use-cases/findAGame';
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { usePlaySession } from '../store/playSession.store';
 
 import { BUILDER_ROUTE } from './BuilderScreen';
-import { CourtEntryCard } from './CourtEntryCard';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
 import { DeclarationStanding } from './DeclarationStanding';
 import { searchWeekCellLabel } from './accessibilityPresentation';
@@ -195,6 +201,7 @@ import {
   WEEK_HEADING,
   modeControlLabel,
   modeLabel,
+  courtEntryTitle,
   searchControlLabel,
   weekFootnote,
 } from './findAGamePresentation';
@@ -257,16 +264,6 @@ export function FindAGameScreen() {
 
   const search = useFindAGame();
   const radiusWrite = useChangeSearchRadius();
-  /**
-   * The **Match me count**, for the segment above — and the one read on this screen that is
-   * allowed to move on its own.
-   *
-   * It is not gated on anything: a count that failed or has not landed simply draws no count,
-   * which is the same thing the segment says at nought. There is nothing to retry and nothing
-   * to report, because the number labels the *other* half of the control.
-   */
-  const interest = useOutstandingInterest();
-
   const profile = profileSurface.data;
   const bounds = options.data?.searchRadius;
   const radiusKm = chosenRadiusKm ?? profile?.searchRadiusKm;
@@ -274,13 +271,6 @@ export function FindAGameScreen() {
   const rated = useMemo(() => (ratings.data ?? []).map((rating) => rating.sport), [ratings.data]);
   const standing = findAGameStanding(rated, sport, profile?.playIntents ?? {});
   const sportName = standing.kind === 'no-rated-sport' ? undefined : sportLabel(standing.sport);
-  /**
-   * The count on the segment, **filtered by the sport on screen**, so the number labels the
-   * deck it sits above. An absent entry is *nothing outstanding there*, which is nought.
-   */
-  const outstandingHere =
-    standing.kind === 'no-rated-sport' ? 0 : (interest.data?.[standing.sport] ?? 0);
-
   /**
    * Forget what the *last* visit saw without a declaration — **on open, before anything is
    * read.**
@@ -519,9 +509,10 @@ export function FindAGameScreen() {
           ) : null}
 
           {/* Play's two ways through the tab. It is drawn on both screens rather than in the
-              shell, because the count on it is sport-filtered and the sport is this screen's
-              ([#270](https://github.com/Raketa02/Raketa/issues/270)). */}
-          <PlaySegment active="find" outstanding={outstandingHere} />
+              shell, because it names two **views** and the shell's bar names tabs — and it is
+              inside one of them ([#270](https://github.com/Raketa02/Raketa/issues/270)). It
+              carries no count any more, so neither screen holds a read for its sake. */}
+          <PlaySegment active="find" />
 
           {standing.kind === 'no-rated-sport' && ratings.isSuccess ? (
             <Note>{NO_RATED_SPORT_LINE}</Note>
@@ -673,11 +664,12 @@ export function FindAGameScreen() {
                   ) : null}
                   {writesPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
 
-                  <CourtEntryCard
-                    sport={standing.sport}
-                    sportName={sportName}
-                    seats={seats}
-                    label={searchLabel}
+                  {/* The one act on this screen, drawn as one: 6.1's primary fill at `lg`,
+                      full width, and named for the game rather than for the machinery. */}
+                  <Button
+                    label={courtEntryTitle(seats)}
+                    accessibilityLabel={searchLabel}
+                    size="lg"
                     disabled={ask === undefined}
                     onPress={() => {
                       if (ask === undefined) return;

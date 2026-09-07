@@ -65,7 +65,7 @@
  *   border on a card: it is the **pressed** state. A permanent one is every row in a scrolling
  *   list drawn as though a finger were on it, and
  *   [1.2](../../../../../docs/design-system.md#12-one-accent-used-sparingly) is *when everything
- *   is accented, nothing is*. `CourtEntryCard` refused the same 2pt coral outline for the same
+ *   is accented, nothing is*. Find a game's own entry control refused the same 2pt coral outline for the same
  *   reason one screen earlier.
  * - **Green, on the lifted card — drawn**, in `voltStroke`
  *   ([#310](https://github.com/Raketa02/Raketa/issues/310)). #309 refused it and asked for a

@@ -427,6 +427,11 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
       <View style={s.root} {...behindOverlay(latched || explaining !== undefined || asking)}>
         <ShellScreen
           title={POOL_TITLE}
+          // The court is underneath — this screen **pops** back onto it, which is already how
+          // the row's own *back to the court* control returns and why the pending replacement
+          // needs no clearing rule. The chevron is that same `back`, one level up the screen
+          // rather than inside a card.
+          onBack={router.back}
           eyebrow={
             sportName === undefined || origin === undefined
               ? undefined

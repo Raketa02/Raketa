@@ -314,8 +314,15 @@ listed here because it is a Play surface rather than a profile one.
   sides, never seats_ and **a side follows you**. _Avoid_: "seat order" for the value — that is
   the order the wire uses; "the arrangement", which is what a seating selects rather than what
   it is.
-- **Ranked list** — the pool, a line-up's shortlist and a deck deal: **one record shape, minted
-  by a mutation and read by id** from `searchKeys.detail(search_id)`. The entry holds the
+- **Ranked list** — the pool, a line-up's shortlist and a deck deal: **one record shape**. The
+  first two are minted by a mutation and read by id from `searchKeys.detail(search_id)`; **the
+  deal is the exception**, because nothing reads one back by id and a second one is not a second
+  copy — `POST /deck` excludes everybody already dealt for a day, so asking twice spends the
+  player's own pool. It is held under `searchKeys.deck(sport, week, under)`, keyed by **the
+  question rather than the answer**, which is the only key that can be built before the request
+  and therefore the only one under which _already asked_ is a fact. `under` is the radius and the
+  declaration: they are not on the request, they change the answer, and leaving them out is the
+  deck answering _Widen in You_ with the deal that ran before the widening. The entry holds the
   Origin search **and the rows**, which is what lets a Line-up's seats be ids and nothing else:
   every name, level and photograph on a court is read back off them. **Nothing in Play
   background-refetches** — `staleTime: Infinity`, no refetch on focus — because foregrounding
@@ -520,14 +527,18 @@ listed here because it is a Play surface rather than a profile one.
   built for this. _Avoid_: "the play tabs" — the bar has the tabs, and this is inside one of
   them; `router.back()` for the left half, which lands correctly on most paths and silently
   wrongly on the rest.
-- **Match me count** — the number on that segment: your **own outstanding yeses in the sport
-  on screen**, read from `GET /interest` and **filtered by sport**, so that the number labels
-  the deck it sits above. It is the one figure in the tab that background-refetches, because
+- **Outstanding yeses** — your **own** _Let's play_ yeses still standing in the sport on
+  screen, read from `GET /interest` and **filtered by sport**, so that the number is about the
+  deck it is drawn under. It is the one figure in the tab that background-refetches, because
   the rule against that is about **orderings** — a pool reordering under a finger — and a count
   has no order to lose. The prototype counted people who had waved at _you_, and that number
   **cannot exist**: an incoming yes never crosses the wire in either direction, which is what
   makes saying yes low-stakes. It moves on a tap's **own response** rather than on a refetch.
-  _Avoid_: "unread", "inbox" and "badge" — there is no inbox and the bar carries no badge;
+  It is drawn as a **sentence on the deck's ending** and nowhere else: it was `Match me · 3` on
+  the segment until that was struck, because a number in that position reads as _how many cards
+  are waiting_, which is the count the deck refuses to publish anywhere.
+  _Avoid_: "Match me count" — the segment carries no number; "unread", "inbox" and "badge" —
+  there is no inbox and the bar carries no badge;
   counting the outgoing list, which is this app answering a question the response answers.
 
 ### The result conversation

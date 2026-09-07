@@ -70,7 +70,6 @@ import {
   START_OVER_LABEL,
   arrangedYourWayLine,
   fillSeatsLabel,
-  seatsOpenLine,
   sideName,
 } from './builderPresentation';
 import { WITHHELD_SEAT_LINE, optimisedForLine, unfilledSeatLine } from './courtPresentation';
@@ -391,11 +390,27 @@ async function pressFill(filled = 1) {
 }
 
 describe('arriving', () => {
+  /**
+   * **The gesture, drawn.** This screen is pushed and Find a game stays underneath it, so the
+   * platform's own back already lands there — 10.3's chevron is opt-in for exactly the screens
+   * that can say where it goes, and this is one. It adds no behaviour, which is the point: a
+   * thumb should not have to know a swipe exists to get back out of a court it opened.
+   */
+  it('draws a way back to the screen underneath it', async () => {
+    await openTheBuilder();
+
+    fireEvent.press(screen.getByLabelText('Back'));
+
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+  });
+
   it('opens on an empty court that seats you, with the seats it has still open', async () => {
     await openTheBuilder();
 
     expect(screen.getByLabelText(seatLabel('YOUR_SIDE', { kind: 'you' }))).toBeTruthy();
-    expect(screen.getByText(seatsOpenLine(3))).toBeTruthy();
+    // The open seats are the **court's** own statement now: the line that counted them under
+    // the picture said what the picture already showed, and went with the block beneath it.
+    expect(screen.getAllByLabelText(/empty$/)).toHaveLength(3);
     // Nothing has been asked about nobody: `ForecastRequest.players` is *one, two or three*.
     expect(transport.requestsTo('POST', FORECASTS)).toHaveLength(0);
   });

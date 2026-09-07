@@ -44,7 +44,6 @@ import { searchingFloorMs } from './searchingWait';
 import {
   DECLARATION_BODY,
   WEEK_CHANGED_FROM_PROFILE,
-  courtEntryBody,
   courtEntryTitle,
   declarationLine,
   declarationTitle,
@@ -321,12 +320,10 @@ describe('the way onto the court', () => {
     await openPlay(BOTH_DECLARED);
 
     expect(screen.getByText(courtEntryTitle(4))).toBeTruthy();
-    expect(screen.getByText(courtEntryBody(4))).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Tennis'));
 
     expect(await screen.findByText(courtEntryTitle(2))).toBeTruthy();
-    expect(screen.getByText(courtEntryBody(2))).toBeTruthy();
     expect(screen.queryByText(courtEntryTitle(4))).toBeNull();
   });
 
