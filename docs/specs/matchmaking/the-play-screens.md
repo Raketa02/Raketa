@@ -566,9 +566,37 @@ the photo URL is re-minted per response by design
 - **In scope, and exercised today:** `locked_seats`, the `FILL_SEATS` surface,
   `optimised_for: GROUP` and the screen saying so, and *change sides, never seats*. Hand-seating
   somebody in the builder and pressing ⚡ is the same shape and needs no other context.
-- **Out of scope:** *opening the builder from an accepted challenge*. It needs a challenge with
+- ~~**Out of scope:** *opening the builder from an accepted challenge*. It needs a challenge with
   partial acceptances — `matches`. Past the destination rather than unsharp, so it is a scope
-  boundary and not fog.
+  boundary and not fog.~~
+
+> **Amended 2026-09-07 by [Re-entering the builder from an incomplete line-up](https://github.com/Raketa02/Raketa/issues/337)
+> ([ADR-0150](../../adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)),
+> and the map that ruled it out is not the map that ruled it in.** [#217](https://github.com/Raketa02/Raketa/issues/217)'s
+> destination stopped short of a challenge with partial acceptances;
+> [#321](https://github.com/Raketa02/Raketa/issues/321) redrew it, and the entry point is decided.
+>
+> **The split above is right and its labels are wrong.** The mechanism is live **from *Find a
+> game***, where a hand-seated player is a stranger. From a challenge it has never been reachable
+> and could not have worked: `_locked` resolves a locked seat *"from this search's own pool or not
+> at all"*, `gate_of` excludes everybody in `open_challenge_ids`, and
+> [ADR-0142](../../adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
+> holds that pair for the whole of `LINE_UP_INCOMPLETE` — so **everybody who accepted your
+> half-built court is, by construction, absent from the pool of the search meant to complete it**,
+> and ⚡ with them locked is `locked_seat_not_available` every time. The sentence claiming the
+> mechanism worked from a challenge was never tested, because nothing could reach it.
+>
+> **What replaces it:** the fill **names the challenge it completes** — one optional
+> `completing_challenge_id` on `POST /lineups`, with `sport`, `mode` and `locked_seats` refused
+> beside it — **the gate steps aside for that one challenge and nothing else**, and everybody who
+> has already answered it is excluded from its own pool. The four fail-closed gates are untouched,
+> so `locked_seat_not_available` stops being unreachable on this path and **starts meaning
+> something**: somebody in your line-up has been blocked, held or deactivated since they accepted.
+> Followed by §11 item 9's re-read, never by a payload.
+>
+> The entry point is **⚡ Fill the seats on the challenge screen**, which is *Find a game*'s own
+> shape one tab over, and it is specced in
+> [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §2.5.
 
 ---
 
@@ -641,13 +669,27 @@ Each item is a standing obligation and none of them expires on being satisfied o
    already has** — Find a game's *Search*, the court's ⚡ fill, and the pool's re-read — and
    **only the forecast gains one**, because a player who has stopped changing seats would
    otherwise sit with no number and no way to ask again.
-8. **The send fails when offline; the deck's two pause.** Both are correct, and the test
-   that separates them is *does this act carry a deadline the player chose*. A challenge's
-   answer window is derived **at send** (§G1's answer), so a send deferred to the next
-   reconnect carries a deadline nobody picked — the tap and the send must be one moment. A
-   pass is an append-only row and a mutual-born challenge has no window at all, so a queue
-   of them draining on reconnect is the behaviour you want. Two `networkMode` values in one
-   tab is deliberate; left unwritten, the next reader unifies them.
+8. **The send fails when offline; the deck's two pause.** Both are correct, and a pass is an
+   append-only row and a mutual-born challenge has no window at all, so a queue of them
+   draining on reconnect is the behaviour you want. Two `networkMode` values in one tab is
+   deliberate; left unwritten, the next reader unifies them.
+
+   **Narrowed 2026-09-07 to what Play itself does, and the test that separates them moved.**
+   This item said the test was *does this act carry a deadline the player chose*, and
+   [Does an accept pause offline, or fail?](https://github.com/Raketa02/Raketa/issues/327)
+   found that mis-states it: an accept does not **carry** a deadline, it is **judged against**
+   one, so the test as written files the accept on the pausing side — where a queued accept
+   either lands past `answer_by` with no screen left to refuse it on, or fills the last seat
+   and arranges a game at a moment nobody was present for. The test is restated as **is this
+   act's meaning fixed by the moment it is tapped**, and the old one survives as a special
+   case, so nothing already decided moves.
+   
+   The restated rule is **feature-wide and not Play's**: *nothing in `challenges` is sent for
+   you later* — the send, the accept, the decline, the withdraw and the seat fill — and the
+   three new acts happen in **Chats**, on screens this file does not describe. So the
+   statement lives where all of them import from rather than here, and this item keeps only
+   the two postures Play itself has. See
+   [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §2.4.
 9. **A refused send is followed by a re-read, never by a payload.** The refusal names the
    class of problem and nobody in it (§5.1). `line_up_no_longer_sendable` is followed by
    reading the origin search back and marking the seats its withheld rows identify;
@@ -671,9 +713,19 @@ Each item is a standing obligation and none of them expires on being satisfied o
   `outstanding` / `cap` pair.
 - **The staleness threshold behind `index_stale`** — [#173](https://github.com/Raketa02/Raketa/issues/173).
 - **The tag relationship matrix** — [#179](https://github.com/Raketa02/Raketa/issues/179).
-- **The Play screens' interface** — out of scope on *this* map, and taken up by the next one
-  ([#217](https://github.com/Raketa02/Raketa/issues/217)):
+- ~~**The Play screens' interface**~~ — was out of scope on *this* map and **taken up by the
+  next one** ([#217](https://github.com/Raketa02/Raketa/issues/217)), which built it:
   [`the-words.md`](the-words.md) owns every sentence and every accessible name, and
   [`the-play-components.md`](the-play-components.md) owns where one component stops and the
   next begins.
-- **A notification mechanism** — no context in this repository can push anything; in the map's fog.
+- **Every surface outside Play** — the Chats tab, the challenge screen, the conversation and its
+  plan card, Now, and the one state-detail surface both tabs open. They are
+  [#321](https://github.com/Raketa02/Raketa/issues/321)'s, and their counterparts of these two
+  files are [`the-loop-screens.md`](../the-loop/the-loop-screens.md) and
+  [`the-loop-components.md`](../the-loop/the-loop-components.md). **Their sentences are still
+  [`the-words.md`](the-words.md)'s**, at §22–§24: that file is the app's one copy deck and it did
+  not move.
+- ~~**A notification mechanism**~~ — no context in this repository can push anything. **Ruled out
+  of scope** on [#326](https://github.com/Raketa02/Raketa/issues/326) rather than left in fog:
+  push is a bounded context, not a layer, and the loop closes without it because every step after
+  the first acceptance is between people who opted in by answering.

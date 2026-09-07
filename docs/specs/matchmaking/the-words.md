@@ -8,12 +8,23 @@ challenge standings — and **the app writes the words for all of them**
 ([ADR-0022](../../adr/0022-kernel-negative-space-and-constant-homes.md),
 [ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)).
 
-This file is that deck. It is the artifact the Play build tickets cite by section, and the
+This file is that deck. It is the artifact the build tickets cite by section, and the
 artifact a later copy edit is made against — so that §F1's voice can be checked against
 itself in one place rather than a dozen.
 
 Decided by
 [Every sentence the client writes from a code](https://github.com/Raketa02/Raketa/issues/234).
+
+> **It is the whole app's deck, and it lives here for historical reasons rather than scope ones.**
+> §13 and §14 have been `challenges`' since the day this file was written, and
+> [#339](https://github.com/Raketa02/Raketa/issues/339) added §22–§24 for the Chats tab, the
+> challenge screen, the conversation, its plan card, Now and the game screen. It stays in
+> `matchmaking/` because a dozen documents and as many docstrings cite it by relative path, and a
+> move would break every one of them with no path left to repair it. Its **screens** are
+> [`the-play-screens.md`](the-play-screens.md) and
+> [`the-loop-screens.md`](../the-loop/the-loop-screens.md); its **seams** are
+> [`the-play-components.md`](the-play-components.md) and
+> [`the-loop-components.md`](../the-loop/the-loop-components.md).
 
 ---
 
@@ -29,6 +40,12 @@ The three tables are exhaustive by type."*
 
 So: feature-local `*Presentation.ts` modules inside the Play feature, one per **vocabulary
 owner** rather than per screen — three cards and the whyfit sheet read the same tables.
+
+**The owner is the vocabulary, not the feature, and §22 is where that starts to bite.** Four
+features hold copy now: `challengePresentation.ts` keeps §13, §14 and §21; `conversationPresentation.ts`
+takes §23's system lines; `planPresentation.ts` takes §22.2 and §22.4; and the tab's own lines sit
+with the shell. Nothing about the rule changes — a module per vocabulary owner is what it always
+said, and one feature was simply all there was.
 
 **Two shapes, and the split is whether the sentence quotes a value.**
 
@@ -376,7 +393,7 @@ here. #218 marked `area_code` present — it is present, and it is not a word.
 The module licenses exactly one client sentence from it, and that one is honest:
 
 > *"A card saying **they are in your area** is a comparison the client makes between two
-> codes, which is exactly the shape [ADR-0021](../../adr/0021-client-derived-state.md)
+> codes, which is exactly the shape [ADR-0021](../../adr/0021-kernel-in-backend-clients-derive-by-comparison.md)
 > licenses a client to compute."*
 
 So the meta line becomes **`{km} km`**, with **`In your area · {km} km`** when the two codes
@@ -699,29 +716,79 @@ out of visual context, and never the decline button's own words, which would off
 the same choice twice. §20.6 puts focus on the title on the way in, which is what makes the
 question heard before either answer is offered.
 
-## 13. A challenge's standing — five codes, ten sentences
+## 13. A challenge's standing — six codes, fourteen sentences
 
 #221: *"**Challenge sent** and **Challenge for you** are one standing read from two sides, not
 two states."* So the code is one and the sentence is two, keyed by `(standing, side)`, with
 side derived from whether the reader holds the organiser seat.
 
+> **Amended twice by [Closing the loop](https://github.com/Raketa02/Raketa/issues/321), and the
+> five sentences already built are untouched by both.** `LINE_UP_INCOMPLETE` now counts **open
+> seats** ([ADR-0150](../../adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)),
+> `WITHDRAWN` is a sixth code
+> ([ADR-0142](../../adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)),
+> and the invitee column gains a third reading for somebody who has left. Rewriting the rest was
+> ruled out of scope by [#331](https://github.com/Raketa02/Raketa/issues/331) and none of it moves.
+
 | Standing | To the organiser | To an invitee |
 | --- | --- | --- |
 | `AWAITING_ANSWERS` | `Waiting on {n} answers` | `They're waiting on you` |
 | `ON` | `Everybody's in` | `You're in — everybody's in` |
-| `LINE_UP_INCOMPLETE` | `{n} in, {m} still to answer — the chat is already open` | `You're in. {m} still to answer, and the chat is already open` |
+| `LINE_UP_INCOMPLETE` | `{n} in, {m} seats open — the chat is already open` | `You're in. {m} seats open, and the chat is already open` |
 | `DECLINED` | `{name} said no — that seat is open again` | `You said no` |
 | `LAPSED` | `{name}'s day ran out — that seat is open again` | `Your day ran out` |
+| **`WITHDRAWN`** | `You withdrew this` | `{name} withdrew this — that court is closed` |
 
 **`LINE_UP_INCOMPLETE` carries #221's constraint in its words.** *"The chat opens on the first
 acceptance and grows with each one"*, which makes it **not a waiting room** — and its obvious
 phrasing (*"waiting for the rest"*) is the one that would be false.
 
+**And it counts seats, because it can never count answers.** The row shipped reading
+*"{n} in, {m} still to answer"* off an `awaiting` count, and `standing_of` returns
+`AWAITING_ANSWERS` if **any** seat is awaiting — so at the rung that yields
+`LINE_UP_INCOMPLETE` nothing is, `{m}` is structurally zero, and the built line reads *"2 in, 0
+still to answer."* `StandingFacts` takes `open` instead. **A field that could only ever be zero
+is what let the sentence be wrong**, and #221's constraint is untouched: the phrasing that would
+be false is still *waiting for the rest*.
+
 **`LAPSED` is not a decline** and the words hold that apart: a day ran out, nobody said no.
 The `answers challenges` strand needs the denominator, so a lapse that reads as a refusal in
 copy is a fact quietly restated as a different one.
 
-**Five, not twenty.** The twenty card states are *"a presentation vocabulary spanning money,
+**`WITHDRAWN` is neither**, and its word is the documentation's own. Not *cancel* or *call off*,
+which is the plan's and is out of scope; not *stand down*, which the root
+[`CONTEXT.md`](../../../CONTEXT.md) owns platform-wide for a term that cannot be evaluated. **The
+invitee who never answered is told the same as the one who accepted** — separating them would say
+who else was on the court.
+
+### 13.1 The third reading — an invitee who has left a challenge that has not
+
+**Two sentences, added by [#339](https://github.com/Raketa02/Raketa/issues/339), because the two
+above assume the invitee is in and one reader is not.**
+
+A padel four: the organiser invites three, one declines, two accept. No seat is awaiting, so the
+standing is `LINE_UP_INCOMPLETE` — and the player who declined still holds a seat, so
+`GET /challenges` still returns it. Keyed on `(standing, side)` alone they read *"You're in. {m}
+seats open, and the chat is already open"*, which is false in both clauses.
+
+> **The invitee sentence reads the reader's own seat, not only their side.**
+
+| The reader's own seat | The sentence |
+| --- | --- |
+| `ACCEPTED` | `You're in. {m} seats open, and the chat is already open` |
+| `DECLINED` | `You said no. They are still filling the court.` |
+| `LAPSED` | `Your day ran out. They are still filling the court.` |
+
+**The row is not filtered away instead**, because the pair rule still binds the reader: ADR-0142
+holds a pair for the whole of `LINE_UP_INCOMPLETE`, and ADR-0150 §4 records the consequence — *a
+lapsed invitee is unreachable in every sport until this challenge ends*. A row that vanished
+would take the only available explanation with it.
+
+**Neither sentence says how many are in**, and that is deliberate: they have left, so who is on
+that court is no longer theirs to be told. `{m}` is the count of **open seats**, which is a fact
+about the arrangement rather than about anybody in it.
+
+**Six, not twenty.** The twenty card states are *"a presentation vocabulary spanning money,
 booking and results this context does not own"*, and an unknown standing takes §3's gap
 rather than a shorter list.
 
@@ -738,6 +805,26 @@ So the constant is wrong three ways at once, and the fix is three different sent
 | **Pre-send** (`SH.propose`) | `Nobody is contacted until you send it.` — **no duration**, per §21 |
 | **Post-send**, per seat | rendered from `answer_by` through §B16's duration formatter — `{name} · {duration} left` |
 | **Mutual yes** | `You both said yes — this one's already on.` **No deadline clause.** |
+| **Your own seat**, on your own row | `{duration} left to answer` — added by [#339](https://github.com/Raketa02/Raketa/issues/339) |
+
+**The fourth is new because the screen that needs it is.** `{name} · {duration} left` names
+somebody else and is the **organiser's** sentence, listing each seat and its own clock; until this
+map there was no surface that showed you *your* challenge, so nobody had written the sentence for
+your own seat. Naming yourself on your own row would be the app telling you who you are. It is the
+Chats row's line whenever the challenge is yours to answer and unanswered
+([`the-loop-screens.md`](../the-loop/the-loop-screens.md) §1.2) — the badge's own predicate, reused,
+so the badge, the sort and the line cannot disagree.
+
+**All four are folded against the response's `read_at` and never against this phone's clock**, and
+none of them gates a control: the buttons are drawn from the standing the platform sent
+([#327](https://github.com/Raketa02/Raketa/issues/327)). **Draw the clock, never obey it.**
+
+**The window moved from 24 hours to 48 and not one string changed**, which is the payoff of this
+section's own title. [ADR-0151](../../adr/0151-a-window-whose-default-costs-you-the-game-must-outlast-the-gap-between-app-opens.md)
+supplied the reasoning the number never had — *a window must exceed the gap between app opens, not
+equal it* — and because the number is spelled in exactly one file and no sentence quotes it, the
+deck was not touched. The organiser's `Waiting on {n} answers` is unchanged for the same reason:
+there was never a number in it.
 
 **~~`{window}` is a contract obligation, not a constant.~~** A pre-send sentence naming a
 duration must name the number the backend will actually derive, or it stops naming one — and
@@ -907,6 +994,17 @@ shape (ADR-0106 §5).
   than invented.
 - ~~**`KEEP_THESE_TIMES`'s colour-named body**~~ — settled by
   [#277](https://github.com/Raketa02/Raketa/issues/277) in §12.
+
+**And four more, added with §22–§24 by [#339](https://github.com/Raketa02/Raketa/issues/339):**
+
+- **How a hold ends.** §22.5 gives this app its first hold sentence and nothing else; there is no
+  appeal surface in this build, and a sentence offering one would be a promise nobody made.
+- **Anything a reply would say.** Replies are on the map's fog — a question about a *message's
+  shape*, not about delivery, since ADR-0147 made every entry ride one sequence.
+- **The unread mark inside a conversation.** Out of scope, and whatever it is called it is **not**
+  `read_at` — that field is the fold instant and means the opposite.
+- **Moderation and reporting.** §5.2 of the source names *a report opened*; nothing here opens one,
+  so no code has a sentence.
 
 ---
 
@@ -1398,6 +1496,11 @@ that looks like:
   or an explicit hide. This is the one that catches the historical failure, because the
   historical failure was an omission and a type cannot see one.
 
+**The lint rule's scope widens with §24**, and it is the one gate here that is scoped by folder
+rather than by type: `features/challenges/`, `features/conversations/` and `features/plans/` join
+`features/play/`. A rule that watched one feature while three more drew controls would be the
+guardrail that silently stops matching, which this repo already holds is worse than none.
+
 ### 20.13 Cited, not written
 
 | | Where it already is |
@@ -1470,3 +1573,414 @@ the right argument and the wrong home — a per-seat answer window is not a prop
 and the same screen states the real deadline, per person, from a real timestamp, the moment
 after the act. What the pre-send sheet owes is the irreversibility, which is the fact the
 player cannot recover from.
+
+---
+
+## 22. The loop's own sentences
+
+Decided by [Write the screen specs](https://github.com/Raketa02/Raketa/issues/339) on the map
+[Closing the loop](https://github.com/Raketa02/Raketa/issues/321). The surfaces are
+[`the-loop-screens.md`](../the-loop/the-loop-screens.md); the sentences are here, because this file
+is the app's one copy deck and §1's mechanism is the only one there is.
+
+**Four features own copy now, not one.** §1 says *"feature-local `*Presentation.ts` modules inside
+the Play feature, one per **vocabulary owner** rather than per screen"* — and the rule is the
+**vocabulary owner**, not the feature. So `challengePresentation.ts` keeps §13, §14 and §21;
+`conversationPresentation.ts` takes §23; `planPresentation.ts` takes §22.2 and §22.4; and the
+tab's own three lines sit with the shell. **Nothing below is a template inlined in a component.**
+
+**Most of this section is short and that is the point.** Every sentence the previous map already
+wrote and tested is **cited rather than reproduced**, and the ones that had a home elsewhere stayed
+there: [#331](https://github.com/Raketa02/Raketa/issues/331) ruled rewriting the challenge copy out
+of scope, and a session that opens by rewriting §13 is rewriting solved work.
+
+### 22.1 The Chats tab
+
+**The panel states the limit that makes this a sports app**, and both of the design's promises are
+dropped: *"when you count yourself into something tonight"* is Around, which this build does not
+have, and *"inside a game or a plan"* is wrong in the other direction, because a conversation opens
+on the **first acceptance**, before there is a game at all.
+
+> **Chat exists only where you have agreed to play**
+> A conversation opens the moment somebody accepts — theirs or yours. There is no way to message a
+> stranger, and that line is what keeps this a sports app.
+
+**The two section headings carry no count**: `CHALLENGES` and `CONVERSATIONS`. The badge is the
+only number on the screen ([#326](https://github.com/Raketa02/Raketa/issues/326) §6), and the
+section widened to hold a challenge you **sent**, which is what broke the design's
+`CHALLENGES FOR YOU · 1`.
+
+**Neither empty state may assert that nothing is happening** — Now's standing refusal, inherited,
+because a send lands here now. Both are one line, present-tense, and point at the act:
+
+| Section | Empty |
+| --- | --- |
+| `CHALLENGES` | `Challenges you send and challenges sent to you land here.` |
+| `CONVERSATIONS` | `The moment somebody accepts, the two of you can talk here.` |
+
+**`PLACEHOLDER_COPY.chats` dies with them**, and `shellCopy.test.ts`'s *never says nothing is
+happening* **moves with the copy rather than being deleted**.
+
+### 22.2 The plan
+
+**The panel inverts.** ADR-0145 §6: it stops explaining an absence and names one, because a player
+seeing *Zabłocie Sport · Saturday · 18:00* inside an app may reasonably assume the app did
+something about it. It did not. Drawn on the game screen, where the plan is read — never in the
+conversation, where it would be permanent chrome above a composer.
+
+> **Agreed between you — nothing is booked**
+> Raketa does not hold courts. This is the note you are keeping between you: anybody here can
+> change any of it, and everybody sees who changed what.
+
+**The three slots are labelled by what they are**, in ADR-0144's order and never renumbered:
+
+| Slot | Empty | Filled |
+| --- | --- | --- |
+| where | `Where` | the value, as typed |
+| day | `Day` | the weekday |
+| hour | `Hour` | the clock time |
+
+**One refusal, and it is written copy rather than a disabled control**, because the day and the
+hour are filled in either order and either one can be the second:
+
+> `That moment has already passed — change the day or the hour.`
+
+**It names both remedies** because the platform has no opinion about which is wrong, and it names
+no value, because the sentence is true whichever pair produced it.
+
+**There is no lock, so there is nothing to word.** ADR-0144 deleted *Lock it in*, the locked
+border, and `locked by everybody` — a phrase the prototype's own data cannot support, since no
+assent is recorded anywhere and a slot is set by whoever tapped last. **§5.3's guard
+(*a four cannot be locked by two*) has no sentence either**, because the state it refuses is
+unreachable: there is no lock, and there is no plan before the line-up completes.
+
+**And *"whoever books becomes the owner"* is deleted rather than rewritten.** Decision 3 said the
+sentence would be rewritten; ADR-0144 found it has no moment left to be posted at. A sentence with
+nothing to trigger it is not rewritten; it is gone.
+
+### 22.3 The withdraw
+
+**The second irreversible act in this app that reaches other people, and it takes the shape the
+first one already has** — `SH.propose`'s: a title naming the **moment** rather than the act, so the
+act is named once by the control that carries it out, and a dismissal **named by what it does**.
+
+| | |
+| --- | --- |
+| Sheet title | `Before you withdraw` |
+| Body | `Everybody who accepted loses this court.` |
+| Body | `The conversation goes with it, and what people wrote is deleted.` |
+| Body | `This cannot be undone.` |
+| The act | `Withdraw the challenge` |
+| In flight | `Withdrawing…` |
+| Dismissal | `Keep it open` |
+
+**The second body line is the one that earns the sheet.** ADR-0142 chose **destroyed, not
+delisted** — *"on a platform where standings are derived and nothing else is deleted, this is the
+one place deletion is the honest implementation"* — and a confirmation that did not say so would be
+hiding the only consequence the player cannot undo.
+
+**The visible control that opens it says `Withdraw`**; its accessible name says what it withdraws
+(§24). And the sheet says nothing about the pair rule releasing: that is a fact about what becomes
+possible afterwards, and a confirmation is not the place to sell a consequence.
+
+### 22.4 The quick chips
+
+**A chip posts words and nothing else** (ADR-0144). One per unfilled slot, in slot order, plus
+`On my way` when the agreed day is today.
+
+| Condition | Chip |
+| --- | --- |
+| where unfilled | `Where shall we play?` |
+| day unfilled | `Which day works?` |
+| hour unfilled | `What time?` |
+| the agreed day is today | `On my way` |
+
+**Each chip asks the question its slot is about and names nothing.** The prototype's three are
+hard-coded content — one weekday, one part of day and one fixture venue — and §5.1's part of day is
+deleted; a chip naming Saturday is a chip that is wrong six days a week.
+
+**The fallback is conditional, and that corrects [#329](https://github.com/Raketa02/Raketa/issues/329).**
+That ticket collapsed the rule to *one chip per unfilled slot plus the unconditional fallback,
+which never reaches the four-chip cap* — three unfilled slots plus an unconditional fallback is
+**exactly** four, and *On my way* on a Monday for a Saturday game is nonsense besides. Conditional,
+the maximum is three.
+
+### 22.5 Not live, and held
+
+**Two states the records made reachable and left as rules.** ADR-0147 §8 made *not live* honest —
+*"a chat that is not live looks not-live"* — and ADR-0148 §9 made *held* reachable inside a
+conversation. Each gets one sentence, in a `Note` above the composer.
+
+| State | The sentence |
+| --- | --- |
+| not live | `Not live — you can still send, and anything you missed arrives when it reconnects.` |
+| held | `Your account is on hold. You can read here, but not write.` |
+
+**Not live says two things because two things are true**, and only a sentence carries both: sends
+are ordinary authenticated `POST`s and the channel is unidirectional by construction, so writing is
+unaffected and only reading has stopped being live. A dot could not say that, and Part 13 refuses
+colour as the only signal in any case.
+
+**Held names the fact and promises nothing**, because there is no appeal surface in this build and
+a sentence offering one would be a promise nobody made. It is ADR-0130's register: state the
+class of problem, name nobody, grade nothing.
+
+> **A finding, recorded rather than acted on: this app has never drawn a hold.** `account_held` is
+> a backend refusal with no client sentence anywhere, and the two above are the first. Nothing says
+> how a hold ends, because nothing in this build can end one.
+
+**One note for every refused control on the screen**, not one per control. It is one fact about the
+account, and saying it five times is the failure #326 §6 names about counts.
+
+### 22.6 The card's gloss, and the screen's checklist
+
+**The four `AWAITING_ENTRY` rungs have no copy anywhere** and this is it. The rule is one sentence
+in two states plus one override — [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §4.3.
+
+| Rung | The Now card's gloss |
+| --- | --- |
+| **Planning** · **Today** | `Still to agree: where` · `Still to agree: the day` · `Still to agree: the hour` |
+| **Game on** | `Nothing left to agree` |
+| **Needs result** | `{duration} left` |
+
+**The gloss names only the next slot**, in ADR-0144's order. That is what keeps it four words and
+what hands the fuller account to the checklist below — and it uses the ordering that record already
+fixed, where *where* is the most negotiable of the three.
+
+**The checklist is three lines, capped, in one order**, on the game screen and never on the card:
+
+| | Line |
+| --- | --- |
+| what is true now | `Everybody said yes.` |
+| what is still to agree | `Still to agree: {list}.` · `Nothing is left to agree.` |
+| what it moves | **cited, not written** — `worthLine`'s built and tested sentence |
+
+**`{list}` is the unfilled slot names in slot order**, joined with commas and a final *and*:
+`where and the hour`, `where, the day and the hour`. This is the one place the whole list is
+printed, which is why the gloss can name one.
+
+**The first line explains why the plan card is there at all** — a `LINE_UP_INCOMPLETE` challenge
+has an open conversation and no plan — and it is the same three words for all four rungs, because
+the rungs differ by the clock and not by the arrangement.
+
+**The third line is the whole of what survives ADR-0143 §8's refusal**, and it is already shipped.
+
+### 22.7 Now, and the two answers
+
+**Now's empty state**, present-tense, saying what the tab **is** and pointing at the act:
+
+> `Every game you arrange shows up here — what is agreed, what is today, and what still needs a
+> score.`
+> `⚡ Play finds you one.`
+
+**`PLACEHOLDER_COPY.now` dies with it**, and the test moves rather than being deleted.
+
+**The two answers on the challenge screen**, and neither names a state the act cannot produce:
+
+| | |
+| --- | --- |
+| accept | `I'm in` |
+| decline | `Not this time` |
+
+**`I'm in` replaces the design's *Accept — game on*.** [#324](https://github.com/Raketa02/Raketa/issues/324)
+and #329 redefined *Game on* as *the plan is complete and the day is ahead*; accepting arranges
+nothing and draws ***Planning***, so the phrase is false the moment it is tapped. **`I'm in` is what
+the standing says back** — *You're in — everybody's in*, *You're in. {m} seats open…* — so the
+label and the confirmation are one sentence in two persons.
+
+**`Not this time` is kept exactly as drawn**, on #221's own words.
+
+**The three doors this map adds**, each carrying its act's verb and each navigating rather than
+writing:
+
+| Control | Where |
+| --- | --- |
+| `Open the chat` | the challenge screen, the game screen, and the Now card's ✉ — **one act, one spelling** |
+| `⚡ Fill the seats` | the challenge screen's `LINE_UP_INCOMPLETE` arm, and it is the builder's own label for the identical act |
+| `Open` · `We played` · `Confirm the result` | the Now card's footer, one per rung — [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §5.2 |
+
+**Nothing offline gets a third sentence.** `does-not-resume` is the shared value, unchanged, and
+the two values split on **resumption**; a third keyed to the act would break the only distinction
+the function has. One amber note above a greyed pair, pre-emptive, exactly as `BuilderScreen`
+already ships it.
+
+## 23. The system lines — the codes, and what publishes nothing
+
+**A system line is a code and its values, never a Message with a `kind`**
+([ADR-0146](../../adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md)). ADR-0022
+decides it rather than taste: one shape forces either a **stored rendered sentence**, which freezes
+copy into history so rewriting a line cannot rewrite the backlog, or a text field real for one kind
+and meaningless for the other. **Nobody typed *Tomek set the day*.**
+
+**`values` never repeats what membership already says.** The line carries `actor_id` and the client
+fills `{name}` from the members it holds, exactly as `standingLine` does today — so a handle
+correction reaches the whole backlog for free.
+
+| Code | Published by | The sentence |
+| --- | --- | --- |
+| a seat accepted | `challenges` · `SeatAccepted` | `{name} is in` |
+| seats invited | `challenges` · `SeatsInvited` | `{name} asked {n} more` |
+| a seat left | `challenges` · `SeatDeclined` \| `SeatLapsed` | `{name} said no — that seat is open again` · `{name}'s day ran out — that seat is open again` |
+| the game was played | `games` · `GamePlayed` | `{name} said you played` |
+| a place recorded | `plans` | `{name} set the place · {value}` |
+| a day recorded | `plans` | `{name} set the day · {value}` |
+| an hour recorded | `plans` | `{name} set the time · {value}` |
+
+**Seven codes, and the leave code is one with the answer as a value** — #221's *"that seat is open
+again"* is the same news either way, and the two facts stay apart in the value rather than in a
+second code. **A lapse is still not a decline**, which is §13's rule holding one layer down.
+
+**Setting a slot and moving one are one code told twice**, separated by the fold rather than by a
+second class. ADR-0144: *"unlike a lapse and a decline, which do the same thing to the line-up and
+are different facts, these are the same fact told twice."*
+
+**A place line renders the place without the court when it does not fit.** #335: when a system line
+overflows a Chats row, **the fix is a shorter value, not a second line** — one rule for both row
+kinds instead of two.
+
+### 23.1 The six events that publish nothing, and why
+
+A builder reading the event list would write a line for each. **Six are refused, and three
+different rules do it.**
+
+| Event | Why nothing |
+| --- | --- |
+| `ChallengeSent` | no conversation exists yet — nowhere to write |
+| `ChallengeOpenedFromMutualInterest` | it **is** the opening; `seq` 1 is whatever happens next |
+| `GamePlanned` | **the seats already imply it** |
+| `challenges.withdrawn` | it **destroys** the room in the same act |
+| `ResultProposed` · `Corrected` · `Countered` · `Accepted` | `games` has its own conversation for the argument |
+
+**No system line announces a derived standing, and there is no *Game on* line** — the prototype
+writes that phrase four different ways. `GamePlanned` is refused on ADR-0142 §3's own test:
+**an event may announce a conclusion only when no arrangement of the seats could reach it**, and
+everybody having accepted is exactly such an arrangement. What a player sees instead is the **plan
+card appearing** and membership stopping — drawn, not announced.
+
+**The room opening is not a line either**, and the same rule gives all three membership codes one
+shape: **an acceptance, an invitation and a departure each write a line only when there was already
+a room to write it in.** The first acceptor is a founding member, visible in membership.
+
+**The result argument is refused on scope rather than on implication.** It is `games`' and `games`
+has its own eight-arm conversation for it — which is [#325](https://github.com/Raketa02/Raketa/issues/325)'s
+own reason that destroying this room 24 h after the agreed point is safe. A room dated to die one
+day after that point would carry the first two turns of an eight-day argument and then vanish
+mid-sentence, which is worse than carrying none.
+
+**`GamePlayed` is the exception and earns it**: it is not the argument, it is the **answer to the
+question this room was opened to ask**. It also closes the last of
+[#322](https://github.com/Raketa02/Raketa/issues/322)'s four events with no sentence at all —
+ADR-0150 §9 closed `SeatLapsed`, and the other two are refused above with their reason.
+
+## 24. What each new control announces
+
+§20's rules, applied to the five new surfaces. **§20.1's rule decides the element and §20.2's
+decides the role**, and both are used rather than restated — except once, where a stream is a shape
+neither of §20.1's two worked examples covers.
+
+### 24.1 §20.1 gains its complement: a stream is navigated by its entries
+
+> **One accessibility element per action — and one per entry in an ordered stream.**
+
+§20.1 was written against a card and a grid: *"one accessibility element per action; everything
+with no action of its own merges into the nearest action above it."* A conversation's backlog has
+**no actions in it at all**, so the rule as written merges an entire history into one element a
+listener cannot move through — which is the failure 6.8's own argument names from the other side:
+*"21 buttons announce 21 identical actions, where 21 checkboxes announce 21 answers."*
+
+A stream is navigated **by entry**, the way a grid is navigated by cell. The complement is stated
+narrowly so it does not reach the card: it applies to an **ordered stream whose entries are the
+content**, and nothing else on this map is one.
+
+### 24.2 The Chats tab
+
+| Element | Role | Announces |
+| --- | --- | --- |
+| Section heading | `header` | `Challenges` · `Conversations` |
+| A challenge row | `button` | the handles, the sport, then the row's one line — `Ewa M., squash, 21 h left to answer` |
+| A conversation row | `button` | the handles, the sport, then the last entry — `Tomek W. and Ola K., padel, Tomek set the day · Saturday` |
+| The urgency stripe | — | **hidden.** The duration is in the row's own label, and a bar restating it is the second spelling #335 refused |
+| The tab badge | — | **cited** — on the column's own `accessibilityLabel` (#326 §9), because `Column` is `accessible` and a `<Text>` dropped inside is swallowed |
+
+**A row is one element because it is one action** — the whole row is the door, and #324 put every
+act on the surface behind it. **The handles are whole**, and the list truncates for the eye and
+never for the ear: §20.4's *"the visible label truncates, the spoken one never does"*, applied one
+surface over.
+
+### 24.3 The challenge screen
+
+| Element | Role | Announces |
+| --- | --- | --- |
+| The card block | — | **one element, no action** — the handle, the level row, the Fit and its top reasons, capped at roughly twenty words before the buttons below it |
+| Accept | `button` | `I'm in` |
+| Decline | `button` | `Not this time` |
+| Either, offline | `button` + `disabled` | the label, and the amber note is a separate element read before them |
+| ⚡ Fill the seats | `button` | `Fill the seats` — **the ⚡ is decorative and hidden**, which is the tab bar's own precedent |
+| Open the chat | `button` | `Open the chat` |
+| Withdraw | `button` | `Withdraw this challenge` — **the accessible name says what it withdraws**, which is 6.9's rule (*"names which photo it removes"*) applied |
+| The withdraw sheet | — | **cited** — 9.1's modal semantics, `accessibilityViewIsModal`, hidden siblings, Android back. **Focus lands on the title, not the first action**, per §20.6: that action is the destructive one, and landing focus there would make the worst outcome the cheapest to trigger |
+
+**The card is one element and not one per row**, on §20.1 unchanged: it carries no action of its
+own and the buttons are beneath it. A merged label that cannot state its subject inside the cap is
+evidence the seam is wrong — here it states the handle first, which is the fact the whole screen is
+about.
+
+### 24.4 The conversation
+
+| Element | Role | Announces |
+| --- | --- | --- |
+| A message | — | **the author, always** — `Ola K.: on my way` · `You: 18:00 works` |
+| A system line | — | the rendered sentence, which already names its actor |
+| A day separator | `header` | the weekday |
+| A slot chip | `button` | `{Slot}, {value}` · `{Slot}, not set` — `Day, Saturday`, `Hour, not set` |
+| A day option | `radio` + `selected` | the weekday |
+| An hour option | `radio` + `selected` | the clock time |
+| Where | `textbox` | `Where` |
+| The composer | `textbox` | `Message` |
+| Send | `button` | `Send` |
+| A quick chip | `button` | its own text |
+| Details | `button` | `Open the game` — **not *Details***, which names a screen rather than what is behind it |
+
+**A bubble's accessible name always names the author, even where the bubble does not.** The visible
+label is drawn only in a conversation of more than two, because side and colour disambiguate the
+pair — and *side and colour* is precisely what Part 13's **never colour as the only signal**
+refuses to let a listener depend on. **The whole handle**, never a first name (ADR-0107).
+
+**The day and hour options are `radio` rather than `button`**, on §20.2's rule — *prefer the role
+that carries the state* — and 6.8's argument: seven buttons announce seven identical actions where
+seven radios announce seven answers, one of which is chosen. **The slot chip above them is a
+`button`**, because opening the row is an action and the value is not a state it holds.
+
+**`Open the game` rather than `Details`.** The visible label is the design's and stays; the
+accessible name names the destination, because *Details* is a word about a screen and every other
+door on this map is named by its act.
+
+### 24.5 Now, and the game screen
+
+| Element | Role | Announces |
+| --- | --- | --- |
+| `YOUR GAMES · n` | `header` | the heading and its count |
+| A game card | `button` | the tag, the eyebrow, the figure and line, the gloss, then the door's verb — capped at roughly twenty words |
+| The ✉ | `button` | `Open the chat` — **the same words as every other chat door** |
+| The rail's dots | — | **one element, `Game {i} of {n}`, and no role** — 7.9's own shape (*"one element, one label — never one per segment"*), and not pressable, so it announces a position rather than offering an action |
+| The plan, read-only | — | **one element** — `The plan. Where, Zabłocie Sport. Day, Saturday. Hour, 18:00.` |
+| The checklist | — | **one element**, its three lines in order |
+
+**A card is one element and the ✉ is a second, because there are exactly two actions on it.** The
+body tap and the named door go to the same place — #336 made that a rule, so they are one action
+and not two — while the ✉ goes somewhere else and is therefore its own element.
+
+**The three read-only plan tags are one element** because they are one fact in three parts with no
+action: §20.1 unchanged, and the reason `Tag` was chosen over `Chip` for them in the first place.
+
+### 24.6 Cited, not written
+
+| | Where it already is |
+| --- | --- |
+| The tab bar's five columns, and the badge on Chats | §20.13, and [#326](https://github.com/Raketa02/Raketa/issues/326) §9 |
+| The bottom sheet's modal semantics and focus rule | 9.1, and §20.6 |
+| Every toast — announced, queued, one interrupting exception | §20.10 |
+| The four `AWAITING_ANSWER` arms, the score grid, and every control on them | `gameAccessibility.ts`, built and tested by [#314](https://github.com/Raketa02/Raketa/issues/314) |
+| The builder, the court and the seat | §20.4 and §20.4.1 — reached from Chats at a second route, and unchanged by the journey |
+| Durations, weekdays, clock times, counts | §B16, through §18 |
+| Pluralisation | §19 — no string hardcodes an `s`, accessible names included |

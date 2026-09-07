@@ -142,6 +142,9 @@ else lives one layer down. See
 │   ├── specs/player-app/     ← the player app's product + architecture specifications
 │   ├── specs/matchmaking/    ← the matchmaking engine: the spec set + the two frozen inputs
 │   │                            the-engine.md is the entry point and states precedence
+│   │                            the-words.md is the WHOLE app's copy deck, here for history
+│   ├── specs/the-loop/       ← the core loop's screens + seams: Chats, the challenge screen,
+│   │                            the conversation, Now, and the one state-detail surface
 │   └── value-formatting.md   ← the rendering table the client implements
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)

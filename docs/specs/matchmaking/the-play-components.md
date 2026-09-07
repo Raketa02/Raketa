@@ -516,6 +516,13 @@ the thing the row is about no longer exists.
 
 ## 12. What this file does not decide
 
+- **Every seam outside Play.** [#321](https://github.com/Raketa02/Raketa/issues/321) added two
+  client features — `conversations` and `plans` — grew `challenges` a screen, and pointed one
+  one-way arrow between `plans` and `games`. Its counterpart of this file is
+  [`the-loop-components.md`](../the-loop/the-loop-components.md), and **§8's table is extended
+  there rather than rewritten here**: `GET /challenges` finally has consumers, the two seat answers
+  arrive with the screen that answers one, and the challenge screen's card block is `challenges`'
+  rather than a fourth candidate card.
 - **What each surface draws** — UI spec §B and [`the-play-screens.md`](the-play-screens.md).
 - **What each surface says** — [`the-words.md`](the-words.md).
 - **What each control announces** — [`the-words.md`](the-words.md) §20. Independent of this
