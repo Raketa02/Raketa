@@ -468,6 +468,16 @@ async def test_a_mutual_from_two_stale_yeses_with_a_block_between_them_mints_not
 async def test_a_mutual_between_two_admissible_players_opens_the_game(
     session_factory,
 ):
+    """**A singles mutual is a finished arrangement the instant it exists.**
+
+    Both seats are accepted from birth and a tennis court seats two, so this
+    challenge is ``ON`` before anybody has done anything to it — which is why
+    ``open_from_mutual_interest`` hands it straight to ``games``. The pair rule
+    therefore holds nobody (``docs/adr/0142`` §1): they are not *arranging*, they
+    have arranged. The challenge still stands, and the two reads say so
+    separately, which is the whole reason there are two of them.
+    """
+
     async with session_factory() as session:
         minted = await _mint(session).execute(
             OpenFromMutualInterestCommand(
@@ -479,13 +489,23 @@ async def test_a_mutual_between_two_admissible_players_opens_the_game(
         assert minted is not None
         stored = await _repository(session).load(minted)
         assert stored is not None
-        assert stored.players_in_it_at(SENT_AT) == frozenset({ALICE, BOB})
+        assert stored.players_in_it_at(SENT_AT) == frozenset()
+        assert stored.players_seated_at(SENT_AT) == frozenset({ALICE, BOB})
         assert all(seat.is_accepted() for seat in stored.seats)
 
 
 async def test_a_second_mutual_mints_nothing_while_the_first_stands(session_factory):
-    """One open challenge per pair, and a second tap must not become a second
-    game."""
+    """One game per mutual, and a second tap must not become a second game.
+
+    **This is refused by the mint's own question and no longer by the pair
+    rule.** Releasing a completed line-up (``docs/adr/0142`` §1) took the pair
+    rule out from under this: a singles mutual is ``ON`` at birth, so the two of
+    them are released the instant they are minted, and *Let's play* is a button
+    that says it costs nothing. What refuses a second one is
+    ``standing_pairs_among`` — *a challenge already stands between these two* —
+    which is a different question from *are they still arranging*, asked here
+    and nowhere else.
+    """
 
     async with session_factory() as session:
         first = await _mint(session).execute(
@@ -505,6 +525,73 @@ async def test_a_second_mutual_mints_nothing_while_the_first_stands(session_fact
 
         assert first is not None
         assert again is None
+
+
+async def test_a_repeat_tap_on_the_same_mutual_mints_nothing(session_factory):
+    """**The tap that says it costs nothing, pressed twice, in one sport.**
+
+    ``express_interest`` mints on the *mutual* and never on whether this tap
+    wrote a row, because a repeat tap is the platform's one chance to retry a
+    mint that a gate refused. Every other repeat tap has to be refused here, and
+    a singles mutual is the case with nothing else left to refuse it: it is
+    ``ON`` at birth, so the pair rule released it a moment ago. Without this
+    check the same two people collect a challenge, a game, a result window and a
+    rating input per press.
+    """
+
+    async with session_factory() as session:
+        first = await _mint(session).execute(
+            OpenFromMutualInterestCommand(
+                sport=Sport.TENNIS, player_id=ALICE, other_player_id=BOB
+            )
+        )
+        await session.commit()
+
+    async with session_factory() as session:
+        again = await _mint(session).execute(
+            OpenFromMutualInterestCommand(
+                sport=Sport.TENNIS, player_id=ALICE, other_player_id=BOB
+            )
+        )
+        await session.commit()
+
+        assert first is not None
+        assert again is None
+
+
+async def test_a_repeat_tap_retries_a_mint_a_gate_refused(session_factory):
+    """The half the guard must **not** cost, and the reason the mint is not
+    hung off *did this tap write a row*.
+
+    A month-old pair of yeses whose mint was refused by a block have a mutual
+    and no game. The block is lifted; the next tap is the only occasion the
+    platform ever gets to open it, and nothing stands between them to refuse it
+    with.
+    """
+
+    async with session_factory() as session:
+        refused = await _mint(
+            session,
+            safety=a_safe_court(
+                [ALICE, BOB], blocks=StubBlocks(pairs={frozenset({ALICE, BOB})})
+            ),
+        ).execute(
+            OpenFromMutualInterestCommand(
+                sport=Sport.TENNIS, player_id=ALICE, other_player_id=BOB
+            )
+        )
+        await session.commit()
+        assert refused is None
+
+    async with session_factory() as session:
+        opened = await _mint(session).execute(
+            OpenFromMutualInterestCommand(
+                sport=Sport.TENNIS, player_id=ALICE, other_player_id=BOB
+            )
+        )
+        await session.commit()
+
+        assert opened is not None
 
 
 async def test_a_gate_that_cannot_be_read_mints_nothing_and_does_not_raise(

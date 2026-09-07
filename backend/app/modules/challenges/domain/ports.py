@@ -115,7 +115,17 @@ class ChallengeRepository(Protocol):
 
 @runtime_checkable
 class OpenChallengeQuery(Protocol):
-    """*Are any two of these people already arranging a game?*
+    """*Are any two of these people already arranging a game?* — and the second
+    question the first one left behind: *does a challenge already stand between
+    them at all?*
+
+    **Two readings of one fold, and they parted company on ``docs/adr/0142``
+    §1.** They used to be the same question, because a challenge that had not
+    ended was one being arranged. A completed line-up is now neither ended nor
+    being arranged, so the two readers who had been sharing an answer need one
+    each: the **send** and the deck exclusion ask the first, and the **mutual
+    mint** asks the second. Which caller asks which is the decision, and it is
+    written on each method.
 
     **Read at the moment it is asked, against the clock.** There is no projection
     and no cached *open* flag behind this by decision: the standing is derived
@@ -150,6 +160,40 @@ class OpenChallengeQuery(Protocol):
         It answers in **unordered pairs**, because there is nothing for a caller
         to learn from the direction. Sharing a line-up makes a pair regardless of
         who organised it.
+        """
+        ...
+
+    async def standing_pairs_among(
+        self, player_ids: Collection[UUID], *, now: Instant
+    ) -> frozenset[frozenset[UUID]]:
+        """Every pair of these people with a challenge that **has not ended**.
+
+        **A superset of** :meth:`open_pairs_among`, **and the difference is one
+        standing.** That read is the pair rule and releases on ``ON``, because
+        two people who completed a line-up have finished arranging a game
+        (``docs/adr/0142`` §1). This one keeps holding them, because the
+        challenge is still there and so is the game.
+
+        **It has exactly one caller and it is not the send.** The send may not
+        use it — that would put the permanence #343 removed straight back, one
+        method along. What needs it is the mutual mint: *Let's play* is a tap
+        that costs nothing, ``express_interest`` mints on the **mutual** rather
+        than on whether this tap wrote a row, and a singles mutual is ``ON`` the
+        instant it exists. Without this question a repeat tap opens a second
+        challenge, a second game and a second result window between the same two
+        people, for ever.
+
+        **It is across every sport, like everything else on this port, and that
+        keeps one permanence alive where #343 removed the other.** A pair whose
+        tennis game was minted from a mutual cannot be given a padel one by a
+        second mutual, ever — nothing ends a challenge every seat accepted, so
+        this question never stops answering *yes* about them. That is the
+        behaviour as it stood before the release rather than a new restriction,
+        and the deliberate path is untouched: either of them may still **send**
+        the other a court from a search. Narrowing it to the mutual's own sport
+        is a real question and it is not this one's; the port carries no
+        ``Sport`` today by decision, and changing that is a change to what *one
+        open challenge per pair* means.
         """
         ...
 
@@ -527,12 +571,19 @@ class ChallengeHistoryQuery(Protocol):
         """Everybody this player currently has an open game with. **One row each.**
 
         A counterpart is **everybody occupying a seat other than your own** on a
-        challenge that has not ended — co-invitees included, because if we are
-        both in a line-up we have an open game together and that is the same fact
-        from the other side. Somebody whose seat has declined or lapsed is out of
-        the game and out of this answer immediately, because their seat is open
-        again; otherwise a decline would cost them a candidate they never turned
-        down.
+        challenge still being *arranged* — co-invitees included, because if we
+        are both in a line-up we have an open game together and that is the same
+        fact from the other side. Somebody whose seat has declined or lapsed is
+        out of the game and out of this answer immediately, because their seat is
+        open again; otherwise a decline would cost them a candidate they never
+        turned down.
+
+        **And a completed line-up is out of it too** (``docs/adr/0142`` §1). A
+        challenge every seat accepted has not *ended* — ``invite`` does not call
+        it over, and the client still prints ``ON``; what refuses a send into it
+        is the full court, not an ending. But the arranging is finished and a
+        game exists, so it holds nobody here. This is **not** the complement of
+        ``ENDED``, and reading it as one is the bug this sentence replaced.
 
         **Unbounded**, because it is small by construction: a player has a handful
         of live challenges rather than a history of them, and one open challenge

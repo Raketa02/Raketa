@@ -44,10 +44,36 @@ class Standing(str, Enum):
     LAPSED = "LAPSED"
 
 
-#: The two standings that mean *this challenge has ended*. An ended challenge is
-#: not an **open challenge**, so the pair rule releases the moment it is reached
-#: — with or without a sweep having run.
+#: The two standings that mean *this challenge has ended* — there is nothing
+#: left to arrange and nothing left to do. Read by ``Challenge.invite``, which
+#: refuses to seat anybody into one; by the standing the client prints; and by
+#: the **mutual mint**, which asks *does a challenge already stand between these
+#: two* and would open a second game on a repeat tap without it.
+#:
+#: **``ON`` is not here, and adding it would be the wrong way to release a pair.**
+#: A challenge every seat accepted is not over: it produced a game, which is the
+#: opposite of nothing being left. See :data:`ARRANGING`.
 ENDED = frozenset({Standing.DECLINED, Standing.LAPSED})
+
+#: The standings that mean *these two are still arranging a game*, and **this is
+#: the set the one-open-challenge-per-pair rule reads** — not the complement of
+#: :data:`ENDED` (``docs/adr/0142`` §1, on
+#: [#343](https://github.com/Raketa02/Raketa/issues/343)).
+#:
+#: The pair rule asks its own question, and it is neither *has this ended* nor
+#: *is this alive*: it is **are these two still arranging a game?** Held while
+#: an answer is owed, and while a half-built court still has a seat the organiser
+#: can fill. Released otherwise — the two endings release because there is
+#: nothing left, and ``ON`` releases because the arranging is **finished** and a
+#: game exists. Those are different reasons reaching the same answer, which is
+#: exactly why one set cannot serve both readers.
+#:
+#: Before this set existed the rule read ``not in ENDED``, so ``ON`` held its
+#: pair with no expiry: two people who completed a line-up could never challenge
+#: each other again in **any** sport and were gone from each other's deck
+#: permanently, while ``games_match_history.py`` stated the opposite as settled
+#: fact.
+ARRANGING = frozenset({Standing.AWAITING_ANSWERS, Standing.LINE_UP_INCOMPLETE})
 
 
 def standing_of(seats: Iterable[Seat], *, organiser_id: UUID, now: Instant) -> Standing:

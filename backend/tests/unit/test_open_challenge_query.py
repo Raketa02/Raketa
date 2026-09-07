@@ -247,6 +247,106 @@ async def test_a_lapsed_pair_releases_with_no_sweep_having_run(session_factory):
         assert not await query.open_pairs_among([ORGANISER, ALICE], now=OUTSIDE)
 
 
+async def test_a_completed_line_up_releases_the_pair(session_factory):
+    """*A game is never open in this sense* — read through the adapter that
+    decides it, and not only through the aggregate.
+
+    Every seat accepted derives ``ON``, which is not an ending and is not being
+    arranged either: the arranging is **finished**. So the pair is released, the
+    two of them may open a second challenge, and each is back in the other's
+    deck ([#343](https://github.com/Raketa02/Raketa/issues/343),
+    ``docs/adr/0142`` §1).
+    """
+
+    async with session_factory() as session:
+        challenge = a_tennis_challenge()
+        challenge.accept(ALICE, occurred_at=at(1))
+        await _record(session, challenge)
+
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ORGANISER, ALICE], now=INSIDE
+        )
+
+        assert pairs == frozenset()
+
+
+async def test_a_completed_line_up_still_stands_between_its_pair(session_factory):
+    """``standing_pairs_among`` — the same fold, one reading along.
+
+    The mutual mint's own question, and the one thing that keeps a repeat *Let's
+    play* from opening a second game between two people who already have one
+    (``docs/adr/0142`` §1, #343). It answers about the same challenge the pair
+    rule just let go of, which is the whole reason it exists.
+    """
+
+    async with session_factory() as session:
+        challenge = a_tennis_challenge()
+        challenge.accept(ALICE, occurred_at=at(1))
+        await _record(session, challenge)
+
+        query = build_open_challenge_query(session)
+
+        assert await query.open_pairs_among([ORGANISER, ALICE], now=INSIDE) == (
+            frozenset()
+        )
+        assert await query.standing_pairs_among(
+            [ORGANISER, ALICE], now=INSIDE
+        ) == frozenset({frozenset({ORGANISER, ALICE})})
+
+
+async def test_an_ended_challenge_stands_between_nobody(session_factory):
+    """The bound on the second question: it holds until the challenge ends, and
+    not one instant longer. A declined seat empties the court on both readings.
+    """
+
+    async with session_factory() as session:
+        challenge = a_tennis_challenge()
+        challenge.decline(ALICE, occurred_at=at(1))
+        await _record(session, challenge)
+
+        query = build_open_challenge_query(session)
+
+        assert await query.open_pairs_among([ORGANISER, ALICE], now=INSIDE) == (
+            frozenset()
+        )
+        assert await query.standing_pairs_among(
+            [ORGANISER, ALICE], now=INSIDE
+        ) == frozenset()
+
+
+async def test_a_half_built_court_still_stands_between_its_pair(session_factory):
+    """The line the release runs along, asserted from the side that must not move.
+
+    One acceptance on a padel four is ``LINE_UP_INCOMPLETE``: the organiser can
+    still fill the open seat, so those two are still arranging a game and the
+    rule still holds them.
+    """
+
+    async with session_factory() as session:
+        challenge = Challenge.sent(
+            challenge_id=new_uuid(),
+            sport=Sport.PADEL,
+            mode=SearchMode.FOR_FUN,
+            window=Window.ANY,
+            organiser_id=ORGANISER,
+            arrangement=(
+                SeatPlan(side=Side.A, player_id=ORGANISER),
+                invited(ALICE, Side.A, 1),
+                SeatPlan(side=Side.B),
+                SeatPlan(side=Side.B),
+            ),
+            occurred_at=SENT_AT,
+        )
+        challenge.accept(ALICE, occurred_at=at(1))
+        await _record(session, challenge)
+
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ORGANISER, ALICE], now=INSIDE
+        )
+
+        assert pairs == frozenset({frozenset({ORGANISER, ALICE})})
+
+
 async def test_a_challenge_reaching_outside_this_court_is_somebody_elses(
     session_factory,
 ):
@@ -432,6 +532,36 @@ async def test_the_send_lands_when_nothing_stands_between_them(session_factory):
         assert stored.players_in_it_at(INSIDE) == frozenset(
             {ORGANISER, ALICE, BOB, CAROL}
         )
+
+
+async def test_a_pair_whose_line_up_completed_may_arrange_a_second_game(
+    session_factory,
+):
+    """**And this is the consequence the release was taken with open eyes.**
+
+    Nothing replaces the block (``docs/adr/0142`` §1): the same two people may
+    open a second challenge before the first game has been played. Whether an
+    unplayed *game* should carry the block is a question about a ``games`` fact
+    and ``challenges`` has no port onto it, so it is filed rather than answered
+    here — and the send lands.
+    """
+
+    async with session_factory() as session:
+        first = a_tennis_challenge()
+        first.accept(ALICE, occurred_at=at(1))
+        await _record(session, first)
+
+        second = await _send(session, now=INSIDE, sport=Sport.TENNIS).execute(
+            SendChallengeCommand(
+                organiser_id=ORGANISER,
+                search_id=SEARCH,
+                court=a_tennis_choice(ORGANISER, ALICE),
+            )
+        )
+        await session.commit()
+
+        assert await _repository(session).load(second) is not None
+        assert second != first.id
 
 
 async def test_a_challenge_that_lapsed_no_longer_stands_in_the_way(session_factory):

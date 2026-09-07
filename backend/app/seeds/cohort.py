@@ -454,13 +454,24 @@ MEMBER_CELLS_ELSEWHERE: Final = (2, 5)
 # *for fun* one. That is why a padel row seats four and a tennis row seats two —
 # a padel court with one invitee is half a game and opens nothing.
 #
-# **One open challenge per pair, and it never ends.** Nothing on this platform
-# closes a challenge whose seats were all accepted, so a pair that has played is
-# a pair that can never see each other again. Every consequence below follows
-# from that one sentence: a member with five counted games needs **five distinct
-# opponents**, the opponents are chosen where the fixture can afford to spend a
-# pair, and no game names the protagonist — a game with her in it would take that
-# person out of the pool every other assertion in ``screens.py`` is read from.
+# **One open challenge per pair, and it releases when they stop arranging.** A
+# challenge whose seats were all accepted is `ON`: the arranging is finished, so
+# the pair is released and two people who have played can be shown each other
+# again (`docs/adr/0142` §1, #343). That was not true when these rows were
+# chosen — the rule read *has this ended*, `ON` had not, and a played pair was
+# gated for ever — so two of the three consequences below are now **kept rather
+# than forced**, and the third has changed its reason:
+#
+# - **Five counted games still take five distinct opponents**, and the opponents
+#   still sit where the fixture can afford them. Neither is forced any more;
+#   both are kept, because rewriting them would move `cohort.json` and this
+#   fixture's job is to reach states rather than to be minimal.
+# - **No game names the protagonist, and the reason has inverted.** It used to be
+#   that a game with her in it would take that person *out* of the pool every
+#   assertion in ``screens.py`` is read from. Now it would put them back *in* —
+#   carrying an `ACCEPTED` tally, which is `PREVIOUS_ACCEPT`, which
+#   ``screens.py`` names in ``CANNOT_BE_DRAWN`` as absent from this cohort. Same
+#   rule, opposite mechanism, and it is still the rule.
 
 
 @final

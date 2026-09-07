@@ -396,15 +396,20 @@ CANNOT_BE_DRAWN: Mapping[str, str] = {
         "fabricate one"
     ),
     "PREVIOUS_ACCEPT": (
-        "unreachable while nothing closes a challenge every seat accepted. "
-        "`SeatAccepted` makes a seat `ACCEPTED` and *open* is `AWAITING_ANSWERS "
-        "| ON | LINE_UP_INCOMPLETE`, so a pair with an accepted seat is "
-        "permanently `OPEN_CHALLENGE`-gated and the signal is unreachable on "
-        "every surface. **Results shipped and did not change this** "
-        "(`docs/adr/0137`): a played, confirmed, settled game leaves its "
-        "challenge exactly as open as it was, which is what the played history's "
-        "own cost line says out loud. So the code stays narrowed out by name and "
-        "contracted by a demand in `tests/demands/` instead of by a fixture"
+        "reachable on the platform and absent from **this cohort**, which is a "
+        "weaker claim than the one that used to stand here and is the true one. "
+        "*Open* was `AWAITING_ANSWERS | ON | LINE_UP_INCOMPLETE`, so any pair "
+        "with an accepted seat was `OPEN_CHALLENGE`-gated for ever and the "
+        "signal could not be drawn anywhere; `docs/adr/0142` §1 made *open* mean "
+        "**still arranging**, so a completed line-up releases its pair and the "
+        "code can be drawn (#343). It is absent here because every accepted seat "
+        "these eleven fixtures write sits on a court still being arranged: the "
+        "one accept on a court the protagonist holds a seat on is "
+        "`in-your-line-up-and-accepted`'s, and `in-your-line-up-still-deciding` "
+        "has answered nothing beside it — and no game seats her at all, so the "
+        "played history's accepts are not hers either. Both halves are "
+        "contracted by demands in `tests/demands/`: the release, and the "
+        "half-built court that does not release"
     ),
 }
 
@@ -1083,11 +1088,14 @@ async def _refuse_a_pair_with_nothing_between_them(
     ``SharedHistory`` refuses a record of no games, so a pair who arranged and
     never played carries none at all — which means the modifier stands down for
     everybody until two people on this platform have actually played. What is
-    asserted is the **input**, read through the port the matcher reads, because
-    the modifier itself is unreachable on a card by construction: nothing ends a
-    challenge every seat accepted, so a pair that has played can never be shown
-    each other again. That is a fact about the platform rather than about this
-    fixture, and it is stated here rather than discovered in a ranking.
+    asserted is the **input**, read through the port the matcher reads, and it
+    is the input rather than the card because no card in *this* cohort can carry
+    the modifier: the pairs that have played are cohort members, and the pool
+    every assertion here is read from is the protagonist's, who has played
+    nobody. It is no longer unreachable on the platform — `docs/adr/0142` §1
+    releases a pair the moment their line-up completes, so two people who have
+    played are shown each other again — which is a change of reason and not of
+    assertion.
     """
 
     handle = PLAYED_GAMES[0].organiser
@@ -1456,9 +1464,11 @@ def _refuse_a_refusal_no_card_carries(
     """*``they-turned-down-your-court`` is in the pool, carrying the refusal.*
 
     A declined seat reopens and that person returns to the deck immediately, so
-    this is the one pairwise answer a card can carry at all — the accept's
-    counterpart is permanently gated and is narrowed out by name in
-    ``CANNOT_BE_DRAWN``. ``PREVIOUS_DECLINE`` is a **silent** signal, so the claim
+    this is the one pairwise answer a card in **this cohort** carries — the
+    accept's counterpart is still arranging a game and is gated on that, and the
+    code is narrowed out by name in ``CANNOT_BE_DRAWN`` for a reason that is now
+    about these fixtures rather than about the platform (`docs/adr/0142` §1).
+    ``PREVIOUS_DECLINE`` is a **silent** signal, so the claim
     is read off the row's recorded raw input rather than off a reason line: what
     is asserted is that the matcher saw the refusal, which is what a silent
     signal owes anybody.

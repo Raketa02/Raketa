@@ -39,7 +39,12 @@ class _AClock:
 
 
 class _NoOpenChallenges:
+    """Nothing between anybody, on either of the port's two questions."""
+
     async def open_pairs_among(self, player_ids, *, now):
+        return frozenset()
+
+    async def standing_pairs_among(self, player_ids, *, now):
         return frozenset()
 
 

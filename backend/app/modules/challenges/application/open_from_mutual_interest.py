@@ -7,12 +7,25 @@ through a poller: *that player has left the deck for good, because you now have
 an open game together* is a promise about what somebody will never see again, and
 a promise like that should not depend on a worker running.
 
-**It runs the same check the send runs**, and this is the ticket's finding rather
-than a symmetry for its own sake. ``resolve_origin`` has **no freshness bound** —
-a search record is immutable and never expires, and the store will happily find
-any search of yours, ever — so a *Let's play* can cite a month-old deck deal. Two
-month-old yeses with a block taken since would otherwise walk a challenge past
-every gate in the product, minted inline, with nobody looking.
+**It runs the same safety checks the send runs**, and this is the ticket's
+finding rather than a symmetry for its own sake. ``resolve_origin`` has **no
+freshness bound** — a search record is immutable and never expires, and the store
+will happily find any search of yours, ever — so a *Let's play* can cite a
+month-old deck deal. Two month-old yeses with a block taken since would otherwise
+walk a challenge past every gate in the product, minted inline, with nobody
+looking.
+
+**On the pair rule it asks a different question, and that is deliberate**
+(``docs/adr/0142`` §1, #343). The send asks *are these two still arranging a
+game*, which releases the moment a line-up completes — and a **singles** mutual
+is a completed line-up the instant it exists, both seats accepted from birth. So
+the pair rule cannot police this path: ``express_interest`` mints on the
+**mutual** rather than on whether this tap wrote a row, so every repeat tap of a
+button that says it costs nothing would open another challenge, another game and
+another result window between the same two people. What is asked here instead is
+whether a challenge already **stands** between them. The send may not ask that —
+it is the permanence #343 removed — and this path may not ask the send's, which
+is what one shared question was hiding.
 
 **Its whole observable is that no challenge exists afterwards.** There is no
 organiser standing at a screen and no press to refuse, so a refusal here has
@@ -86,10 +99,19 @@ class OpenChallengeFromMutualInterest:
             return None
         if not admitted:
             return None
-        if await self._open_challenges.open_pairs_among(pair, now=at):
-            # Already arranging something, in this sport or any other. A second
-            # challenge would be the same two people asked the same question
-            # twice, and the first one is the one they answered.
+        if await self._open_challenges.standing_pairs_among(pair, now=at):
+            # **One question, and it is this path's own** (``docs/adr/0142`` §1,
+            # #343). *Already arranging* is what the send asks and it is not
+            # enough here: a singles mutual is `ON` the instant it is minted, so
+            # the pair rule lets these two go a moment later — and
+            # ``express_interest`` mints on the **mutual** rather than on whether
+            # this tap wrote a row, deliberately, because a repeat tap is the one
+            # occasion the platform ever gets to retry a mint a gate refused. So
+            # what is asked is whether a challenge already **stands** between
+            # them, in this sport or any other: a second one would be the same
+            # two people asked the same question twice, and the first is the one
+            # they answered. A refused mint leaves nothing standing, so the retry
+            # still works.
             return None
 
         challenge = Challenge.opened_from_mutual_interest(

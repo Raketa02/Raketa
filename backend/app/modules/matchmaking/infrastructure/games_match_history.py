@@ -134,8 +134,18 @@ class GamesPlayedAndChallengesAnswered:
     async def open_challenges(self, searcher_id: UUID) -> tuple[OpenChallenge, ...]:
         """Wholly ``challenges``', and passed straight through.
 
-        A game is never *open* in this sense: the pair rule releases the moment
-        a challenge ends, and it ends when the line-up completes into a game.
+        A game is never *open* in this sense: the pair rule releases when the
+        two of them stop arranging, and they stop the moment the line-up
+        completes into a game. That sentence stood here as settled fact for the
+        whole time nothing implemented it — ``challenges`` read *has this ended*
+        and a completed line-up has not, so a pair that finished arranging a game
+        was held for ever. ``standing.py``'s ``ARRANGING`` is what makes it true
+        (``docs/adr/0142`` §1).
+
+        **What is still not asked is whether that game was played.** The block
+        passing to the game and releasing when the result settles is the other
+        answer, and this class — the composing adapter, holding both providers —
+        is where it would live. It is filed, not taken.
         """
 
         return await self._challenges.open_challenges(searcher_id)

@@ -22,7 +22,7 @@ with the directory read behind *your own challenges*.
 from __future__ import annotations
 
 from itertools import combinations
-from typing import Collection
+from typing import Callable, Collection
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,6 +49,32 @@ class EventSourcedOpenChallengeQuery:
         not a pair, so there is nothing for a challenge to sit between.
         """
 
+        return await self._pairs_among(
+            player_ids, lambda challenge: challenge.players_in_it_at(now)
+        )
+
+    async def standing_pairs_among(
+        self, player_ids: Collection[UUID], *, now: Instant
+    ) -> frozenset[frozenset[UUID]]:
+        """Every pair of these people a challenge still stands between.
+
+        **The same fold, one reading along.** Both questions are answered off one
+        replay of the same streams and differ only in which of the aggregate's
+        two memberships they take — which is why they live on one adapter and one
+        port rather than becoming a second read of the same log.
+        """
+
+        return await self._pairs_among(
+            player_ids, lambda challenge: challenge.players_seated_at(now)
+        )
+
+    async def _pairs_among(
+        self,
+        player_ids: Collection[UUID],
+        membership: Callable[[Challenge], frozenset[UUID]],
+    ) -> frozenset[frozenset[UUID]]:
+        """The fold both questions share, given the membership that answers it."""
+
         wanted = set(player_ids)
         if len(wanted) < 2:
             return frozenset()
@@ -59,6 +85,6 @@ class EventSourcedOpenChallengeQuery:
             challenge = Challenge.from_history(events)
             # The intersection, not the whole line-up: a challenge reaching
             # outside this court is real and is somebody else's business.
-            together = sorted(challenge.players_in_it_at(now) & wanted)
+            together = sorted(membership(challenge) & wanted)
             pairs.update(frozenset(pair) for pair in combinations(together, 2))
         return frozenset(pairs)

@@ -61,7 +61,7 @@ from app.modules.challenges.domain.events import (
 )
 from app.modules.challenges.domain.origins import SentFromSearch, SentOutsideASearch
 from app.modules.challenges.domain.seats import SeatAnswer, SeatPlan, Side
-from app.modules.challenges.domain.standing import Standing
+from app.modules.challenges.domain.standing import ARRANGING, ENDED, Standing
 from app.modules.player_profile.domain.availability import Window
 from app.shared.ids import new_uuid
 
@@ -420,7 +420,7 @@ def test_a_singles_decline_ends_the_challenge():
     challenge.decline(ALICE, occurred_at=at(1))
 
     assert challenge.standing_at(INSIDE) is Standing.DECLINED
-    assert not challenge.is_open_at(INSIDE)
+    assert not challenge.is_being_arranged_at(INSIDE)
 
 
 def test_a_singles_silence_ends_it_as_a_lapse_and_not_as_a_decline():
@@ -482,6 +482,99 @@ def test_an_ended_challenge_holds_nobody():
     challenge.decline(ALICE, occurred_at=at(1))
 
     assert challenge.players_in_it_at(INSIDE) == frozenset()
+
+
+def test_a_completed_line_up_releases_the_pair():
+    """**The bug this rule was shipped with, and the sentence that names it.**
+
+    ``games_match_history.py`` has always said *a game is never open in this
+    sense: the pair rule releases the moment a challenge ends, and it ends when
+    the line-up completes into a game*. Nothing implemented it: every seat
+    accepted derives ``ON``, ``ON`` was not in ``ENDED``, and two people who
+    finished arranging a game were an open pair for as long as the database
+    existed — unable to challenge each other **in any sport**, and gone from each
+    other's deck permanently ([#343](https://github.com/Raketa02/Raketa/issues/343)).
+
+    What released it is not a sixth ending. It is the pair rule asking **its own
+    question** (``docs/adr/0142`` §1): *are these two still arranging a game?*
+    ``ON`` answers no because the arranging is finished, and that is a different
+    reason from the two endings' *there is nothing left*.
+    """
+
+    challenge = a_tennis_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+
+    assert challenge.standing_at(INSIDE) is Standing.ON
+    assert challenge.players_in_it_at(INSIDE) == frozenset()
+    # And it stays released, with no expiry and no sweep: the fold answers the
+    # same a year on, which is exactly how long the old answer stayed wrong.
+    assert challenge.players_in_it_at(at(24 * 365)) == frozenset()
+
+
+def test_a_completed_line_up_is_still_a_challenge_that_stands():
+    """The read that did **not** let go, and the reason there are two of them.
+
+    Releasing the pair rule on ``ON`` took the only guard out from under the
+    mutual mint: *Let's play* is a tap that costs nothing, ``express_interest``
+    mints on the **mutual** rather than on whether this tap wrote a row, and a
+    singles mutual is ``ON`` at birth. So the aggregate answers two questions —
+    *are these two still arranging* and *does this challenge still stand* — and
+    a completed line-up separates them for the first time.
+    """
+
+    challenge = a_tennis_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+
+    assert challenge.players_in_it_at(INSIDE) == frozenset()
+    assert challenge.players_seated_at(INSIDE) == frozenset({ORGANISER, ALICE})
+    assert challenge.is_live_at(INSIDE)
+    assert not challenge.is_being_arranged_at(INSIDE)
+
+
+def test_an_ended_challenge_stands_between_nobody_either():
+    """Where the two readings meet again: nothing left is nothing on both."""
+
+    challenge = a_tennis_challenge()
+    challenge.decline(ALICE, occurred_at=at(1))
+
+    assert not challenge.is_live_at(INSIDE)
+    assert challenge.players_seated_at(INSIDE) == frozenset()
+    assert challenge.players_in_it_at(INSIDE) == frozenset()
+
+
+def test_on_is_not_an_ending_and_is_not_folded_into_one():
+    """The release had one wrong way to get it, and this is the guard against it.
+
+    Adding ``ON`` to ``ENDED`` would have released the pair too, and it would
+    have said a challenge everybody accepted is **over** — which ``invite``
+    reads to refuse a send, and which the client prints. The two sets answer two
+    questions and this asserts they have not been collapsed into one.
+    """
+
+    challenge = a_tennis_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+
+    assert Standing.ON not in ENDED
+    assert Standing.ON not in ARRANGING
+    assert challenge.standing_at(INSIDE) is Standing.ON
+    assert not challenge.is_being_arranged_at(INSIDE)
+
+
+def test_a_half_built_line_up_still_holds_its_pair():
+    """The other half of ``ARRANGING``, and it is the half that must not move.
+
+    A padel four whose acceptor is in and whose other seats have gone quiet is
+    still being arranged — the organiser can fill the open seat — so the people
+    in it are still a pair. Releasing here would let the same two be asked twice
+    for one unfinished game.
+    """
+
+    challenge = a_padel_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+
+    assert challenge.standing_at(OUTSIDE) is Standing.LINE_UP_INCOMPLETE
+    assert challenge.is_being_arranged_at(OUTSIDE)
+    assert challenge.players_in_it_at(OUTSIDE) == frozenset({ORGANISER, ALICE})
 
 
 # ---------------------------------------------------------------------------

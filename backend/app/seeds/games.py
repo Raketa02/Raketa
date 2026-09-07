@@ -174,7 +174,7 @@ async def write_the_played_history(
 
 
 def _costs(written: Sequence[WrittenGame]) -> tuple[str, ...]:
-    """What the played history takes away, said on the report rather than hidden.
+    """What the played history costs, said on the report rather than hidden.
 
     The same disclosure ``pairs.py`` makes about the deal it spends: a developer
     who meets one of these as a symptom should meet it here as a sentence first.
@@ -186,10 +186,12 @@ def _costs(written: Sequence[WrittenGame]) -> tuple[str, ...]:
         for pair in one.game.pairs
     )
     return (
-        f"nothing on this platform ends a challenge every seat accepted, so the "
-        f"{len(pairs)} pair(s) that have played can never be shown each other "
-        f"again — on any surface, in any sport. That is the price of a played "
-        f"history and it is why no game here seats the protagonist: "
+        f"a completed line-up releases its pair (`docs/adr/0142` §1), so the "
+        f"{len(pairs)} pair(s) that have played are back on each other's "
+        f"surfaces — each carrying an ACCEPTED tally, which is what makes "
+        f"PREVIOUS_ACCEPT drawable on their cards. That is why no game here "
+        f"seats the protagonist: her pool is where `CANNOT_BE_DRAWN` is read, "
+        f"and it names that code as absent. Played: "
         + ", ".join(pairs)
         + ".",
     )

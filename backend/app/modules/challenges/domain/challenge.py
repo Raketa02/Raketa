@@ -67,7 +67,12 @@ from app.modules.challenges.domain.seats import (
     Side,
     court_sides,
 )
-from app.modules.challenges.domain.standing import ENDED, Standing, standing_of
+from app.modules.challenges.domain.standing import (
+    ARRANGING,
+    ENDED,
+    Standing,
+    standing_of,
+)
 from app.modules.player_profile.domain.availability import Window
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
@@ -330,10 +335,30 @@ class Challenge:
 
         return standing_of(self.seats, organiser_id=self.organiser_id, now=now)
 
-    def is_open_at(self, now: Instant) -> bool:
-        """Whether this challenge has not ended — what the matcher excludes on."""
+    def is_live_at(self, now: Instant) -> bool:
+        """Whether this challenge **has not ended** — no more and no less.
+
+        The other half of the pair the release split in two. This one is read by
+        the mutual mint, which asks *does a challenge already stand between these
+        two* rather than *are they still arranging*: a mutual-born challenge has
+        no unanswered seat, so it can never lapse or decline, and in a singles
+        sport it is ``ON`` at birth. Asking the pair rule there would answer *no*
+        about a game the two of them already have.
+        """
 
         return self.standing_at(now) not in ENDED
+
+    def is_being_arranged_at(self, now: Instant) -> bool:
+        """Whether these people are **still arranging a game** — the pair rule.
+
+        Not *has it ended*, and deliberately not its complement (``docs/adr/0142``
+        §1). A challenge whose line-up completed is ``ON``: it has not ended —
+        ``invite`` does not call it over and the client still prints ``ON`` —
+        but the arranging is over, a game exists, and there is nothing left for
+        the rule to hold two people apart for.
+        """
+
+        return self.standing_at(now) in ARRANGING
 
     def seat_of(self, player_id: UUID) -> Seat | None:
         """That player's seat on this court, or nothing if it is not theirs.
@@ -350,16 +375,43 @@ class Challenge:
         return None
 
     def players_in_it_at(self, now: Instant) -> frozenset[UUID]:
-        """Everybody still in this game: accepted, or yet to answer.
+        """Everybody still arranging this game: accepted, or yet to answer.
 
         **Sharing a line-up makes a pair.** Every occupied seat but your own is
         somebody you have an open game with — co-invitees and organiser alike —
         and a seat that declined or lapsed is empty again, so that person is a
         stranger to you once more the moment they leave.
+
+        **And so is everybody, the moment the line-up completes.** A challenge
+        that reached ``ON`` holds nobody: the pair rule exists to stop one game
+        being arranged twice, and this one is arranged. Whether the *unplayed
+        game* should carry a block of its own is a question about a ``games``
+        fact that this context has no port onto, and it is filed rather than
+        answered here — so nothing replaces it.
         """
 
-        if not self.is_open_at(now):
+        if not self.is_being_arranged_at(now):
             return frozenset()
+        return self._seated_at(now)
+
+    def players_seated_at(self, now: Instant) -> frozenset[UUID]:
+        """Everybody on this court while the challenge stands, ``ON`` included.
+
+        **The same people as** :meth:`players_in_it_at` **until the line-up
+        completes, and the difference is the whole point.** That read is the pair
+        rule and lets go the moment two people finish arranging a game; this one
+        holds until the challenge has ended, which for a challenge born of two
+        yeses that met is never. It is what stops a second *Let's play* tap
+        opening a second game between the same two people.
+        """
+
+        if not self.is_live_at(now):
+            return frozenset()
+        return self._seated_at(now)
+
+    def _seated_at(self, now: Instant) -> frozenset[UUID]:
+        """Every occupied seat that has neither declined nor lapsed."""
+
         return frozenset(
             seat.player_id
             for seat in self.seats

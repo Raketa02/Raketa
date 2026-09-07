@@ -485,11 +485,15 @@ Three rules shape that layer, and each is a way a relationship fixture goes wron
   accidental reason — no rating, out of range, the wrong gender preference — is absent too,
   and a naive claim passes; the histogram is counted first-in-declaration order, so
   `excluded_by_gate[OPEN_CHALLENGE] >= 4` names the reason exactly.
-- **One code cannot be reached at all.** An accepted seat keeps a challenge open and
-  nothing ends a game without `matches`, so `PREVIOUS_ACCEPT` is permanently gated out of
-  every card. It is listed as unreachable **by name**, with the reason, and contracted by a
-  demand in `tests/demands/` rather than by a fixture — and the run goes red on the day it
-  *is* drawn, which is how it moves back to the promised side.
+- **One code is not reached by these fixtures.** A pair is `OPEN_CHALLENGE`-gated while
+  they are still **arranging**, and this cohort's accepted seat is exactly that — a
+  co-invitee's seat on a doubles court with an unanswered seat beside it — so
+  `PREVIOUS_ACCEPT` is drawn on no card here. It is **not** unreachable on the platform:
+  [ADR-0142](../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
+  §1 releases a pair the moment their line-up completes, so a pair who finished arranging a
+  game are shown each other again. The code is listed as absent **by name**, with that
+  reason, and the release is contracted by a demand in `tests/demands/` — and the run goes
+  red on the day the code *is* drawn here, which is how it moves to the promised side.
 
 Two costs are printed on the report rather than hidden. The pass's suppression is a Redis
 TTL that **fails soft** while its durable row never expires, so the run is idempotent for

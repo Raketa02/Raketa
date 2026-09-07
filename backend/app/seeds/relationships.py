@@ -26,14 +26,18 @@ gender, level and radius before any lift is claimed. It also fixes where these
 accounts sit — at the protagonist's own coordinates, on the protagonist's own
 week, in the protagonist's own band — rather than leaving placement to taste.
 
-**One code cannot be reached at all, and it is narrowed out by name.**
-``SeatAccepted`` makes a seat ``ACCEPTED`` and nothing ends a game without
-``matches``, so a pair with an accepted seat is permanently ``OPEN_CHALLENGE``-
-gated and ``PREVIOUS_ACCEPT`` is unreachable on every surface. It is listed in
-``screens.py``'s ``CANNOT_BE_DRAWN`` with that reason, and contracted by a demand
-in ``tests/demands/`` rather than by a fixture — the failure this avoids is the
-opposite one: a reason line missing from every card, and a developer hunting for
-a bug in the ruleset.
+**One code is not reached by these eleven, and it is narrowed out by name.**
+``SeatAccepted`` makes a seat ``ACCEPTED``, and a pair is ``OPEN_CHALLENGE``-
+gated while they are **still arranging** — which the accepted seat here is, on a
+doubles court with an unanswered seat beside it. So ``PREVIOUS_ACCEPT`` is absent
+from this cohort. It is **not** unreachable on the platform: ``docs/adr/0142`` §1
+releases a pair the moment their line-up completes, so a pair who finished
+arranging a game are shown each other again and the code can be drawn (#343).
+That correction is why the entry in ``screens.py``'s ``CANNOT_BE_DRAWN`` names
+the fixtures rather than the rule, and why the release is contracted by a demand
+in ``tests/demands/`` rather than by a fixture here — the failure this avoids is
+the opposite one: a reason line missing from every card, and a developer hunting
+for a bug in the ruleset.
 
 **Outgoing singles, inbound doubles**, and the asymmetry is doing work. The one
 outgoing challenge is on **tennis**, which buys the one thing a padel edge

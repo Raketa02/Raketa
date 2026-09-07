@@ -450,6 +450,12 @@ class MatchHistoryQuery(Protocol):
         they return to the deck rather than losing a candidate they never turned
         down.
 
+        **Open means *being arranged*, and a completed line-up is not.** The
+        moment every seat is accepted the two of them have finished arranging a
+        game, so they leave this answer and return to each other's deck — free to
+        arrange a second one, because nothing here asks whether the first was
+        ever played (``docs/adr/0142`` §1).
+
         Each row carries **that seat's own** origin, so one doubles send from one
         search at three positions comes back as three rows with three positions —
         which is the join ``docs/specs/matchmaking/search-telemetry.md`` §19.2

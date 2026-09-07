@@ -837,26 +837,30 @@ async def test_a_challenge_born_of_a_mutual_yes_tallies_nothing(
 
 
 @pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_an_accept_is_tallied_and_the_pair_it_belongs_to_never_reopens(
+async def test_an_accept_is_tallied_and_a_completed_line_up_reopens_the_pair(
     implementation, session
 ):
-    """**`PREVIOUS_ACCEPT` is contracted here because no card can ever carry it.**
+    """**The accept is counted, and the pair it finished arranging is released.**
 
-    The signal is priced, printable and unreachable on every surface, and the two
-    halves of this arrangement are why. A seat that accepts is tallied as an
-    `ACCEPTED` outcome on the pair — that half is the demand the matcher makes and
-    it answers. But an accepted seat is a live seat, *open* is
-    `AWAITING_ANSWERS | ON | LINE_UP_INCOMPLETE`, and **nothing in this repository
-    ends a game**: results are out of scope, so the pair stays gated by
-    `OPEN_CHALLENGE` for as long as the database exists and the tally is never
-    read on a candidate row.
+    Two demands meet on one arrangement. A seat that accepts is tallied as an
+    `ACCEPTED` outcome on the pair, which is what prices `PREVIOUS_ACCEPT`. And
+    a singles court whose only invitee accepts is `ON` — every seat accepted, the
+    arranging **finished** — so the pair is no longer *open* and each is back in
+    the other's pool.
 
-    So this is contracted rather than fixtured. `app/seeds/screens.py` names the
-    code in `CANNOT_BE_DRAWN` with that reason, and the day `matches` closes a
-    challenge, the assertion beside it — *a code named unreachable that was
-    drawn* — is what says the code has moved to the promised side. The failure
-    both of them exist to avoid is the opposite one: a reason line missing from
-    every card, and a developer hunting for a bug in the ruleset.
+    This is [#343](https://github.com/Raketa02/Raketa/issues/343) and
+    `docs/adr/0142` §1, contracted at the port both providers sign. It reversed
+    the reading this test used to carry: *open* was `AWAITING_ANSWERS | ON |
+    LINE_UP_INCOMPLETE`, so an accepted pair stayed gated for as long as the
+    database existed and `PREVIOUS_ACCEPT` was unreachable on every surface. It
+    is reachable now — the tally and the ungated row can be held by one pair at
+    the same instant, which is precisely what these two assertions say.
+
+    **`app/seeds/screens.py` still names the code in `CANNOT_BE_DRAWN`, and the
+    reason there is now about that cohort rather than about this rule.** Every
+    accepted seat the seed writes sits on a court still being arranged, so no
+    seeded pair reaches this state — a fact about eleven fixtures, which is
+    checked where it is stated and not here.
     """
 
     port = implementation.build(session)
@@ -874,10 +878,39 @@ async def test_an_accept_is_tallied_and_the_pair_it_belongs_to_never_reopens(
     assert PairwiseOutcome.ACCEPTED in tallied[invitee]
     assert tallied[invitee][PairwiseOutcome.ACCEPTED].count == 1
 
-    # And the same arrangement, read the other way: the pair has an open game,
-    # so nothing that reads a card will ever be asked to price that tally.
-    assert _counterparts(await port.open_challenges(organiser)) == {invitee}
-    assert _counterparts(await port.open_challenges(invitee)) == {organiser}
+    # And the same arrangement, read the other way: they finished arranging a
+    # game, so nothing stands between them and the tally is priceable.
+    assert await port.open_challenges(organiser) == ()
+    assert await port.open_challenges(invitee) == ()
+
+
+@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
+async def test_an_accept_beside_an_unanswered_seat_keeps_the_pair_open(
+    implementation, session
+):
+    """The line the release runs along, from the side that did **not** move.
+
+    An acceptance on a padel four with a seat still deciding is
+    `AWAITING_ANSWERS`, not `ON`: somebody's answer is owed, so those people are
+    still arranging a game and every occupied seat is still a counterpart. This
+    is exactly the court `app/seeds/relationships.py` writes — one co-invitee in,
+    one silent beside them — and the reason `PREVIOUS_ACCEPT` is drawn on no card
+    in that cohort even though the platform can now draw it.
+    """
+
+    port = implementation.build(session)
+    organiser, accepted, silent = (new_uuid() for _ in range(3))
+    challenge = await _sent(
+        session,
+        organiser=organiser,
+        invitees=(accepted, silent),
+        sport=Sport.PADEL,
+        at=_ago(minutes=10),
+    )
+    await _answers(session, challenge, accepted, yes=True, at=_ago(minutes=5))
+
+    assert _counterparts(await port.open_challenges(organiser)) == {accepted, silent}
+    assert _counterparts(await port.open_challenges(accepted)) == {organiser, silent}
 
 
 @pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
