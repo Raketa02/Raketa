@@ -17,7 +17,7 @@
 
 export { useOnForeground, wireFocusManager } from './appState';
 export { openAppSettings } from './appSettings';
-export { wireOnlineManager } from './networkState';
+export { useIsOnline, wireOnlineManager } from './networkState';
 
 export { ensurePermission, type AskablePermission, type PermissionState } from './permission';
 

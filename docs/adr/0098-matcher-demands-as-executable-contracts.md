@@ -15,6 +15,51 @@
 > the two standing-down powers and everything else below are untouched. If a later term wants
 > variety, it returns as that term's demand and signs for it.
 
+> **Amended 2026-08-30 by [#253](https://github.com/Raketa02/Raketa/issues/253): one contract,
+> two providers.** `challenges` shipped, and it signs `MatchHistoryQuery` alongside the
+> still-unwritten `matches`. That knowingly bends *one provider signs one contract* — the rule
+> stated in `matchmaking/domain/ports.py` and the reason the five ports are split the way they
+> are — and the bend is recorded here rather than left in one adapter's docstring, because it is
+> the thing a future reader trips on.
+>
+> **The seam runs *through* `pairwise_counterparts`.** `ACCEPTED` and `DECLINED` are challenge
+> facts; `PLAYED` and `PLANNED_NEVER_PLAYED` are `matches`'. Splitting the port to match would
+> cut §4's 500-counterpart bound in half and leave a caller merging two bounded reads, which is
+> not a bounded read — so the port stays whole, `ChallengesButNobodyHasPlayed` answers the half
+> that exists, and `matches` arrives as a **composing** adapter rather than as a second
+> signature. `NoMatchHistoryExists` is **deleted rather than narrowed**: half of what it asserted
+> is now false.
+>
+> §5 and §6 below are read with that in mind — every count is still measured, but it is measured
+> against real seats rather than against an empty platform. Everything else here is untouched.
+
+> **Amended 2026-09-05 by [#253](https://github.com/Raketa02/Raketa/issues/253),
+> [ADR-0139](0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md) and
+> [ADR-0140](0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md):
+> the three null objects are gone, and the discipline is what retired them.** Every demand in this record was written against a context that did not exist, and each
+> was answered by a **null object named for the fact it asserts** — the shape ADR-0095 chose so
+> that a provider arriving is *one row in the composition register* and not a refactor. All three
+> have now arrived, and each was **swapped rather than narrowed**, on its own stated fact
+> becoming false:
+>
+> | Was | Said | Retired by |
+> | --- | --- | --- |
+> | `NoMatchHistoryExists` | *nobody has played anybody* | **deleted, not narrowed** — half of what it asserted became false when `challenges` shipped ([#253](https://github.com/Raketa02/Raketa/issues/253)); `games` then composed in the other half ([ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)) |
+> | `NoResultUpdateRuleExists` | *nobody's Level has ever moved on a result, because nothing moves it* | [ADR-0139](0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md) — `rating`'s own update rule, read forward as `at_stake` ([#304](https://github.com/Raketa02/Raketa/issues/304)) |
+> | `NoPlayerScoresExist` | *nobody has a Player Score, because nobody has ever been due to play* | [ADR-0140](0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md) — two of the five strands fold out of `games` and `challenges` ([#305](https://github.com/Raketa02/Raketa/issues/305)) |
+>
+> **One consequence is worth naming because it is invisible in a diff.** The set of terms with
+> no provider is now **empty**, so the evidence gate's basis moved from seven live terms to
+> eight and `RELIABILITY` stands down **per person** rather than platform-wide. The function
+> that declares that set stays, and takes no argument any more: *a term the engine weighs before
+> its provider exists* is a live situation with a live rule, and this is where the next one is
+> declared. **`ChallengesButNobodyHasPlayed` is not one of the three** — it is a real provider
+> answering the half it owns, and its name still says which half is measured absence.
+>
+> §5 and §6 are read with that in mind, and the two sentences it makes false are struck below.
+> Everything else here is untouched — above all the discipline itself, which is what made three
+> provider arrivals three composition-root edits.
+
 ## Context
 
 Of the eight Fit terms in
@@ -115,19 +160,32 @@ proposes, the backend disposes* is a second net under a duplicate proposal. The 
 separate read and **keeps failing closed** under ADR-0095.
 
 **5. The contract suite is parameterised over every registered implementation of each port,
-including the null one.** `NoPlayerScoresExist` and `NoMatchHistoryExists` prove the degradation
-behaviour green today, named for the facts they assert in ADR-0095's style. The moment a real
-adapter is registered it is enrolled automatically, and either satisfies the suite or the build
-is red. There is no skipped test to go stale, and no version of *shipped as one blended number*
-that passes.
+including the null one.** ~~`NoPlayerScoresExist` proves the degradation behaviour green today,
+named for the fact it asserts in ADR-0095's style~~ — **it did, and it has since retired; see the
+amendment above.** `ChallengesButNobodyHasPlayed` is the same convention over half a real
+provider, says in its name which half is measured absence, and is **not** one of the three that
+went. The
+moment a real adapter is registered it is enrolled automatically, and either satisfies the suite
+or the build is red. There is no skipped test to go stale, and no version of *shipped as one
+blended number* that passes. **That is what the three retirements were checked by**: each real
+adapter enrolled itself in the suite the null one had been proving green, so *the shape did not
+change when the provider arrived* is asserted rather than hoped.
 
 **6. A gate may be honestly empty; a term may never be honestly neutral.** The test for what a
-missing context yields is whether a zero would be **measured** or **invented**. No challenge has
-ever been sent by anyone, so the open-challenge count is a real zero and the pending-pair set is
-really empty: **true-over-empty**, wired and live, like the hold gate. Nobody has failed to turn
-up, because nobody has ever been due to — so every `player_score` fact is **`NoEvidence`**, and
-so is familiarity with no history, on the grounds that a modifier firing identically on every
-candidate changes no ranking while printing a sentence on every card.
+missing context yields is whether a zero would be **measured** or **invented**. The
+open-challenge count and the pending-pair set were **true-over-empty** while nothing could send
+a challenge, and they are now true over real seats — the shape did not change when the provider
+arrived, which is the property this rule was chosen for. ~~Nobody has failed to turn up, because
+nobody has ever been due to — so every `player_score` fact is **`NoEvidence`**. So is
+familiarity, and it stays that way while `matches` is unwritten.~~ **Both sentences expired the
+same way, and the rule they illustrate is what survived them** (see the amendment above).
+`games` records that a plan settled, so *shows up* has opportunities and `player_score` has
+readings — and a player the platform has watched nothing of is still **`NoEvidence`**, as their
+**own** gap rather than the platform's. Familiarity reads the same context: a challenge accepted
+is not a game played, so a challenge-only pair still has `games_played_together == 0` and the
+modifier is **absent** rather than firing at zero strength on every card. What changed is who
+the absence belongs to; **an invented zero is refused in both readings**, which is the whole of
+this section.
 
 **7. A challenge names its origin, and the field is not optional.** Every challenge carries
 either the `(search_id, position)` it was sent from or an explicit value saying it came from
@@ -148,9 +206,15 @@ tidied away later.
   as one number, because the adapter that would do so cannot pass its own contract suite. That
   is the whole return on this record.
 - **A build that has never had a `matches` context has a red-capable test suite about it.** New
-  engineers will find contract tests for three contexts that do not exist and assume they are
-  dead. The null adapters are named for the facts they assert precisely so the answer is legible
-  at the call site.
+  engineers will find contract tests for contexts that do not exist and assume they are dead. The
+  null adapters are named for the facts they assert precisely so the answer is legible at the
+  call site.
+- **One port's demands are now arranged rather than asserted about emptiness.** The moment
+  `challenges` signed, half of `MatchHistoryQuery`'s suite stopped being vacuous — and one
+  existing demand turned out to be **stronger than the contract**, asserting that every count was
+  a measured `0` rather than that the answer keys the asked set. A demand that only passes while
+  the provider is empty is the failure mode this record's own discipline invites, and it was
+  found by wiring a provider rather than by reading.
 - **The matcher has taken an opinion about a context it does not own.** Naming the denominator
   of *keeps plans* is a demand on whoever builds `matches`, and they may arrive with a better
   one. That is a conversation, and it amends this record; it is not a licence to publish a

@@ -10,6 +10,8 @@ asserted.
 
 from __future__ import annotations
 
+from math import isnan
+
 import pytest
 
 from app.modules.player_profile.domain.photos import (
@@ -20,6 +22,7 @@ from app.modules.player_profile.domain.photos import (
     PROMPT_SET_FINGERPRINT,
     PhotoReviewDecision,
     PhotoReviewUnavailability,
+    flagged_at,
     on_court_confidence,
     review_note,
     verdict_from_similarities,
@@ -213,16 +216,32 @@ def test_the_note_is_ascii_and_fits_beside_the_object() -> None:
 
 
 @pytest.mark.parametrize("why", list(PhotoReviewUnavailability))
-def test_an_unreviewable_photo_is_allowed_and_says_so(
+def test_an_unreviewable_photo_concludes_nothing_and_says_why(
     why: PhotoReviewUnavailability,
 ) -> None:
-    """Fail open — an outage must not refuse a real player's first photo — and
-    say which outage, so a re-review pass can find them."""
+    """**No decision at all**, and the note says which outage produced none.
+
+    Fail-open survives and is now spelled as an absence rather than as
+    ``ALLOWED`` (``docs/adr/0138``). An outage must not refuse a real player's
+    first photo, and it must not put a tick on one either — *nothing to warn
+    about* and *nothing to badge* are the same answer, and this is that answer.
+    """
 
     verdict = verdict_when_unreviewable(why)
 
-    assert verdict.decision is PhotoReviewDecision.ALLOWED
+    assert verdict.decision is None
     assert verdict.note == f"clip;p={PROMPT_SET_FINGERPRINT};unavailable={why.value}"
+
+
+@pytest.mark.parametrize("why", list(PhotoReviewUnavailability))
+def test_an_unreviewable_photo_is_still_never_flagged(
+    why: PhotoReviewUnavailability,
+) -> None:
+    """The half of fail-open that did not change, asserted separately from the
+    half that did: our own outage is never turned into a sentence about
+    somebody's photograph."""
+
+    assert not verdict_when_unreviewable(why).is_flagged
 
 
 def test_an_unreviewable_note_is_distinguishable_from_a_reviewed_one() -> None:
@@ -235,3 +254,74 @@ def test_an_unreviewable_note_is_distinguishable_from_a_reviewed_one() -> None:
 
     assert "unavailable=" not in reviewed
     assert unreviewed is not None and "unavailable=" in unreviewed
+
+
+# ---------------------------------------------------------------------------
+# The line itself, applied to a threshold that is not the one in force
+# ---------------------------------------------------------------------------
+
+
+def test_the_line_is_one_comparison_and_the_verdict_path_uses_it() -> None:
+    """`flagged_at` and `verdict_from_similarities` cannot disagree.
+
+    The same argument the backfill goes through the `PhotoReview` port for
+    (``docs/adr/0132``): a caller with its own copy of the comparison is a
+    second opinion, and the place the two would part company is the boundary —
+    where one `<` typed as `<=` moves every photo sitting exactly on the line.
+    A derivation that reported a flag rate the upload path would not produce is
+    worse than no derivation, because the number reads as measured.
+    """
+
+    for on_court in (0.10, 0.18, 0.20, 0.24, 0.34):
+        vector = similarities(on_court=on_court, off_court=0.20)
+        confidence = on_court_confidence(vector)
+
+        assert flagged_at(
+            confidence=confidence, threshold=ON_COURT_CONFIDENCE_THRESHOLD
+        ) == (
+            verdict_from_similarities(model=MODEL, similarities=vector).is_flagged
+        )
+
+
+def test_exactly_on_the_line_is_allowed_at_every_threshold() -> None:
+    # The tie belongs to the player, and it has to belong to them at a candidate
+    # threshold as much as at the one shipping — otherwise a table's rate is off
+    # by however many photos land exactly on the line being tried.
+    for threshold in (0.0, 0.25, 0.5, 0.75, 1.0):
+        assert not flagged_at(confidence=threshold, threshold=threshold)
+
+
+def test_raising_the_line_only_ever_flags_more() -> None:
+    """Monotone, which is what makes a table of rates readable as a curve.
+
+    A rate at 0.6 that could be *below* the rate at 0.5 would make the whole
+    exercise a scatter of unrelated numbers rather than a distribution somebody
+    can pick a point on.
+    """
+
+    confidence = 0.5
+    flagged = [
+        flagged_at(confidence=confidence, threshold=t / 100) for t in range(0, 101)
+    ]
+
+    assert flagged == sorted(flagged)
+
+
+def test_a_confidence_that_is_not_a_number_is_flagged_rather_than_allowed() -> None:
+    """The one value ``>=`` and ``<`` do not agree about, and it is reachable.
+
+    A cosine similarity of ``nan`` survives the sidecar adapter's number check
+    and ``json`` decodes a bare ``NaN`` by default, so it reaches the arithmetic
+    and comes out the other side as a ``nan`` confidence. It compares false
+    against *both* operators — so a line written as ``confidence < threshold``
+    would call it allowed, which under ``docs/adr/0138`` is a **✓ ON COURT**
+    shield shown to strangers on a photograph whose score is nonsense.
+
+    The tie belongs to the player; a number that is not a number is not a tie.
+    """
+
+    poisoned = similarities(on_court=float("nan"), off_court=0.20)
+
+    assert isnan(on_court_confidence(poisoned))
+    assert flagged_at(confidence=float("nan"), threshold=ON_COURT_CONFIDENCE_THRESHOLD)
+    assert verdict_from_similarities(model=MODEL, similarities=poisoned).is_flagged

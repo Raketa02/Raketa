@@ -53,6 +53,7 @@ import { forwardRef, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { offlineMessage } from '@/shared/errors';
 import {
   behindOverlay,
   Button,
@@ -67,7 +68,7 @@ import {
 } from '@/shared/ui';
 
 import type { AnswerOption } from '../domain/Assessment';
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import { positionOf } from '../domain/onboardingPass';
 import { outstandingPosition, questionAt, standingPosition } from '../domain/questionNavigation';
 import { proposeRevision } from '../domain/revision';
@@ -377,8 +378,7 @@ export function QuestionScreen({ assessmentId, sport, at: openAt }: QuestionScre
           {/* Paused, not loading — see the picker: an offline query is held, not failed. */}
           {assessment.fetchStatus === 'paused' ? (
             <Note variant="amber">
-              You&apos;re offline. Your question will load as soon as you&apos;re back, and your
-              answers so far are safe on the server.
+              {offlineMessage('resumes')} Your answers so far are safe on the server.
             </Note>
           ) : null}
 

@@ -26,11 +26,12 @@ import {
 import { queryClient } from '@/shared/lib/query-client';
 import { refreshTokens } from '@/features/auth/types';
 import {
+  launchSignedIn,
+  NOW_TAB_LINE,
   ONBOARDING_ROUTES,
+  runInProgress,
   RUNS_IN_PROGRESS_PATH,
   SPORTS_SERVED,
-  launchSignedIn,
-  runInProgress,
   stubGate as stubGateWith,
   stubRunsInProgress,
 } from '@/test-support/onboardingRouter';
@@ -120,7 +121,7 @@ describe('where a launch lands', () => {
     await launchSignedIn();
 
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    expect(screen.getByText("Let's find your level")).toBeTruthy();
+    expect(screen.getByText("Let's set you up")).toBeTruthy();
   });
 
   it('sends a player with a rating and a Player profile into the app', async () => {
@@ -132,9 +133,12 @@ describe('where a launch lands', () => {
     // what the gate reads now: a rating says the first part is behind them, and a committed
     // Player profile says the second one is — so this is also the proof that neither part
     // is re-offered to someone who has already been through it.
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
-    expect(screen.getByText('ada · ada@example.com')).toBeTruthy();
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
+    // Which player the gate let through. The landing is the Now tab now that the shell
+    // ships, and the account it let through is one tab along.
+    fireEvent.press(screen.getByLabelText('You'));
+    expect(await screen.findByText('ada · ada@example.com')).toBeTruthy();
     // Not through onboarding, and not through the questionnaire it would have started.
     expect(transport.requestsTo('POST', '/api/v1/assessments')).toEqual([]);
   });
@@ -148,7 +152,7 @@ describe('where a launch lands', () => {
     await launchSignedIn();
 
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    expect(screen.queryByText('Inside the app')).toBeNull();
+    expect(screen.queryByText(NOW_TAB_LINE)).toBeNull();
     // And **not** into the second part, which this player has no rating to have earned.
     // They have no Player profile either, so the two branches are both live here and the
     // order between them is what decides — ratings first, always.
@@ -167,7 +171,7 @@ describe('where a launch lands', () => {
     expect(screen.getByText('Setting up · Step 1 of 7')).toBeTruthy();
     // The first step, never the one they were on. The draft is client-held and died with
     // the process, so there is no middle of the part to be resumed to.
-    expect(screen.queryByText('Inside the app')).toBeNull();
+    expect(screen.queryByText(NOW_TAB_LINE)).toBeNull();
   });
 
   it('resumes an unfinished run ahead of the social steps, not after them', async () => {
@@ -228,11 +232,58 @@ describe('where a launch lands', () => {
     // only honest thing to do with a question it cannot yet answer.
     await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/ratings')).toHaveLength(2));
     expect(screen).not.toHavePathname('/welcome');
-    expect(screen.queryByText("Let's find your level")).toBeNull();
+    expect(screen.queryByText("Let's set you up")).toBeNull();
 
     answerRatings();
 
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(screen).toHavePathname('/');
+  });
+
+  it('waits for the re-read a device still holds the old answer for', async () => {
+    // The same defect as above, at the state a **phone** is actually in — and the reason
+    // the test above could not see it. `expo-router/testing-library` installs jest's fake
+    // timers, so Query's five-minute `gcTime` expires while `waitFor` advances the clock
+    // and the gate's entries are simply *gone* by the time onboarding ends. On a device
+    // they are not: onboarding takes a minute or two, the entries are merely stale, and
+    // Query hands the launch's "no ratings" straight back while the replacement is in
+    // flight. Every suite here stayed green while a real player was sent to welcome on
+    // finishing, three walks in a row.
+    //
+    // So the entry is put back the way a device holds it: the launch's own answer, marked
+    // stale by the completion that follows it.
+    stubGate({ hasPlayerProfile: true });
+
+    await launchSignedIn();
+    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+
+    let answerRatings = () => {};
+    const held = new Promise<void>((resolve) => {
+      answerRatings = resolve;
+    });
+    transport.on('GET', '/api/v1/ratings', async () => {
+      await held;
+      return json<Wire['RatingsResponse']>({ ratings: [RATING] });
+    });
+    stubRunsInProgress(transport, []);
+
+    queryClient.setQueryData(onboardingKeys.ratings(), []);
+    queryClient.invalidateQueries({ queryKey: onboardingKeys.ratings() });
+
+    // "Start playing".
+    router.replace('/');
+
+    await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/ratings')).toHaveLength(2));
+    // Answering from the cached copy is the whole defect, and it does not correct itself:
+    // the redirect unmounts this layout, unmounting cancels the re-read through the
+    // `signal`, and the stale copy stands — so the next attempt reads it again, and the
+    // one after that.
+    expect(screen).not.toHavePathname('/welcome');
+    expect(screen.queryByText("Let's set you up")).toBeNull();
+
+    answerRatings();
+
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
   });
 
@@ -380,7 +431,7 @@ describe('where a launch lands', () => {
     expect(transport.requestsTo('POST', '/api/v1/auth/refresh')).toEqual([]);
   });
 
-  it('says the connection is out rather than rendering nothing, when launched offline', async () => {
+  it('says it is waiting rather than rendering nothing, when launched offline', async () => {
     stubGate();
     // `networkMode: 'online'` *pauses* a query instead of failing it, so the gate's two
     // reads never resolve and never error. Without a branch for that, the app renders a
@@ -390,12 +441,31 @@ describe('where a launch lands', () => {
     await launchSignedIn();
 
     expect(
-      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
+      await screen.findByText("You're offline. This will load as soon as you're back."),
     ).toBeTruthy();
     expect(transport.requests).toHaveLength(0);
 
     onlineManager.setOnline(true);
 
+    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+  });
+
+  it('claims nothing was tried, and offers no retry for a query that resumes itself', async () => {
+    // The shipped bug this replaces: a paused query was converted into a synthesised
+    // `networkUnavailable()`, so the launch screen said "We couldn't reach Raketa" about a
+    // request that was never made, over a *Try again* that could not do anything.
+    stubGate();
+    onlineManager.setOnline(false);
+
+    await launchSignedIn();
+    await screen.findByText("You're offline. This will load as soon as you're back.");
+
+    expect(
+      screen.queryByText("We couldn't reach Raketa. Check your connection and try again."),
+    ).toBeNull();
+    expect(screen.queryByLabelText('Try again')).toBeNull();
+
+    onlineManager.setOnline(true);
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
   });
 });
@@ -416,13 +486,32 @@ describe('walking into the questionnaire', () => {
     await waitFor(() => expect(screen).toHavePathname('/sports'));
   }
 
-  it('sets expectations before the first question, in two cards and no more', async () => {
+  it('says what both parts of the walk are, and what Raketa is for', async () => {
     stubGate();
     await launchSignedIn();
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
 
-    expect(screen.getByText('You get a starting level for each sport')).toBeTruthy();
-    expect(screen.getByText('It takes about a minute per sport')).toBeTruthy();
+    // The title names the whole walk rather than the questionnaire that opens it: the
+    // second part is six more screens, and a player told they were finding their level
+    // would think they had finished after the last rating.
+    expect(screen.getByText("Let's set you up")).toBeTruthy();
+    expect(
+      screen.getByText(/Answer a few sport questions to estimate your starting skill level/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/then tell us a bit about yourself and how you like to play/),
+    ).toBeTruthy();
+
+    // And what they are joining, which is the honest exchange for answering questions
+    // about yourself before you have seen anything.
+    expect(screen.getByText('Value')).toBeTruthy();
+    expect(screen.getByText('Find the right people to play with.')).toBeTruthy();
+    expect(screen.getByText('Mission')).toBeTruthy();
+    expect(
+      screen.getByText('Make playing racket sports more social, accessible and engaging.'),
+    ).toBeTruthy();
+    expect(screen.getByText('Vision')).toBeTruthy();
+    expect(screen.getByText('Build the social network for racket sports.')).toBeTruthy();
 
     // *Nothing here is permanent* and the note about answering for a normal match were both
     // true and both cut: this screen's job is to get a player into the questionnaire, and

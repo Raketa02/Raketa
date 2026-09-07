@@ -198,6 +198,7 @@ Which tier runs against which environment, and the one line that is not crossed.
 | Backend API (`backend/tests/api/`) | An in-memory SQLite database and an ASGI transport. No network. | The shared `client` fixture. Reuse it rather than standing up a second app or database. |
 | Client unit (Jest / Vitest) | Nothing. Pure functions, mocked ports. | Config parsers are pure functions from a raw record to a validated object, which is why they are tested exhaustively. |
 | Client component | A renderer, no network. | Asserts what a user can observe. |
+| Backend demands (`backend/tests/demands/`) | An in-memory SQLite database, for the one port with a real provider. | ADR-0098's consumer-driven **contract suite**, parameterised over every implementation registered in `app/bootstrap/matcher_demands.py`. Not in the *Contract* row below, and not named for it: that word means `openapi.player.json` here. |
 | Contract | `backend/openapi.player.json`. | CI regenerates the client's types and diffs. |
 | End-to-end (Playwright) | `local` today. `development` or `staging` once either is provisioned. | Each test owns its data. |
 | Manual exploratory | `local`; `development` or `staging` once provisioned. | |

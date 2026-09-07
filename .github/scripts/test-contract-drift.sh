@@ -130,6 +130,70 @@ expect_exit 0 "the restored tree passes again" \
 restore
 
 # ---------------------------------------------------------------------------
+# The evidence union (docs/adr/0106). **A number is ruleset; a shape is the API
+# contract**, and adding or reshaping a variant is an API release, because the
+# client generates an exhaustive renderer per variant and must never be handed a
+# shape it cannot draw. The generic probe above proves the check notices *a*
+# contract change; this proves it notices the one change this repository has
+# written a whole ADR about — and that the union is in the document at all, so
+# the probe cannot quietly become a no-op the day evidence stops being published.
+#
+# The other half of this chain is in the backend suite: nothing regenerates the
+# contract document from the code, so tests/unit/test_matchmaking_evidence_vocabulary.py
+# asserts that openapi.player.json still reproduces from the union the code
+# emits. Reshape a variant and one of the two goes red — this one when the
+# document moved without the client, that one when the code moved without the
+# document.
+# ---------------------------------------------------------------------------
+echo
+echo "check-contract-drift.sh — a reshaped evidence variant"
+
+variants=$(python3 - "$DOC" <<'COUNT'
+import json, sys
+schemas = json.load(open(sys.argv[1]))["components"]["schemas"]
+print(" ".join(sorted(n for n in schemas if n.endswith("Evidence"))))
+COUNT
+)
+
+# The eight of `EvidenceKind`. Counted rather than listed, because the roster is
+# pinned in the backend suite and a second list here would be a second answer to
+# *how many kinds are there*.
+[ "$(wc -w <<<"$variants")" -ge 8 ] \
+  && ok "the contract publishes the evidence union" \
+  || bad "the contract publishes the evidence union" \
+         "found: $variants — the drift probe below would prove nothing"
+
+# Reshape one variant the way a real release does: a field added to a shape the
+# client already renders. Nothing else in the document moves.
+python3 - "$DOC" <<'RESHAPE'
+import json, sys
+path = sys.argv[1]
+with open(path) as fh:
+    doc = json.load(fh)
+variant = doc["components"]["schemas"]["AvailabilityOverlapEvidence"]
+variant["properties"]["probe_slots"] = {"type": "integer", "title": "Probe Slots"}
+variant.setdefault("required", []).append("probe_slots")
+with open(path, "w") as fh:
+    json.dump(doc, fh, indent=2)
+    fh.write("\n")
+RESHAPE
+
+out=$(bash "$CHECK" frontend_player 2>&1)
+got=$?
+
+[ "$got" = 1 ] && ok "a reshaped evidence variant without a regenerated client fails" \
+  || bad "a reshaped evidence variant without a regenerated client fails" "want exit 1, got $got"
+
+grep -q 'probe_slots' <<<"$out" && ok "the failure prints the reshaped variant" \
+  || bad "the failure prints the reshaped variant"
+
+restore
+
+expect_exit 0 "the restored tree passes again after the evidence probe" \
+  bash "$CHECK" frontend_player
+restore
+
+# ---------------------------------------------------------------------------
 # The check firing is only half of it. It has to be REACHED — a drift step in a
 # job that a backend-only pull request never runs is dormant in precisely the
 # case it exists to catch.

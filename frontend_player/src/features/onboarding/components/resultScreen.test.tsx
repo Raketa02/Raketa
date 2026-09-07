@@ -265,10 +265,21 @@ describe('the verdict', () => {
 // ---------------------------------------------------------------------------
 
 describe('the evidence trail', () => {
-  it('accounts for what moved the Level, and no longer itemises what widened the range', async () => {
+  it('says what the rows are, reads them against the Level, and itemises no widener', async () => {
     await arriveAtTheResult();
 
-    expect(await screen.findByText('What moved your level')).toBeTruthy();
+    // The heading names the *reading* rather than an arithmetic the response cannot
+    // support: the figures are not weighted and no operation on them produces the Level, so
+    // *what moved your level* invited a reconciliation the engine never performed.
+    expect(await screen.findByText('How each part of your game reads')).toBeTruthy();
+    // And the lede is what makes the scales legible — the rows are independent, and the
+    // mark on each is the player's own Level, quoted.
+    expect(
+      screen.getByText('Each one read on its own. Your level, 2,71, is the mark on every scale.'),
+    ).toBeTruthy();
+
+    // The rows themselves are unchanged: one element each, named by the server's label and
+    // the engine's own comparison.
     expect(screen.getByLabelText('Match execution: above your level, 3,10')).toBeTruthy();
     expect(screen.getByLabelText('Recent activity: below your level, 2,40')).toBeTruthy();
 
@@ -369,7 +380,9 @@ describe('the evidence trail', () => {
     });
 
     expect(await screen.findByText('1,20')).toBeTruthy();
-    expect(screen.getByText('What moved your level')).toBeTruthy();
+    expect(screen.getByText('How each part of your game reads')).toBeTruthy();
+    // One row, read against a Level of 1,20 — the lede quotes whatever the verdict says.
+    expect(screen.getByText(/Your level, 1,20, is the mark on every scale/)).toBeTruthy();
     expect(screen.queryByText('What widened your range')).toBeNull();
     expect(screen.getByLabelText('Questions asked: 1')).toBeTruthy();
   });
@@ -395,13 +408,17 @@ describe('the information marks', () => {
 
     // A real overlay: while it is open nothing behind it answers a query, because the
     // screen root is hidden from assistive technology and the popover is its sibling.
-    expect(await screen.findByText(/How sure we are, not how good you are/)).toBeTruthy();
+    expect(
+      await screen.findByText(
+        /Shows how confident Raketa is about your level, not how good you are/,
+      ),
+    ).toBeTruthy();
     expect(screen.queryByText('2,71')).toBeNull();
 
     fireEvent.press(screen.getByLabelText('Close Confidence'));
 
     await waitFor(() => expect(screen.getByText('2,71')).toBeTruthy());
-    expect(screen.queryByText(/How sure we are, not how good you are/)).toBeNull();
+    expect(screen.queryByText(/Shows how confident Raketa is about your level/)).toBeNull();
   });
 
   it('moves accessibility focus into the popover, and back to the mark on close', async () => {
@@ -430,19 +447,23 @@ describe('the information marks', () => {
 
     fireEvent.press(await screen.findByLabelText('What Confidence means'));
 
-    expect(await screen.findByText(/at most 45%/)).toBeTruthy();
+    expect(await screen.findByText(/questionnaire can provide up to 45% confidence/)).toBeTruthy();
   });
 
   it('drops the sentence naming a ceiling when no ceiling was served', async () => {
-    // The rest of the explanation still holds — what Confidence is, and that matches are
-    // what raise it. Only the claim about a maximum goes, because there is no honest
+    // The rest of the explanation still holds — what Confidence is, and that playing is
+    // what raises it. Only the claim about a maximum goes, because there is no honest
     // number to put in it.
     await arriveAtTheResult({ ...RESULT, confidence_ceiling: null, confidence_reason: null });
 
     fireEvent.press(await screen.findByLabelText('What Confidence means'));
 
-    expect(await screen.findByText(/How sure we are, not how good you are/)).toBeTruthy();
-    expect(screen.queryByText(/at most/)).toBeNull();
+    expect(
+      await screen.findByText(
+        /Shows how confident Raketa is about your level, not how good you are/,
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/can provide up to/)).toBeNull();
   });
 });
 

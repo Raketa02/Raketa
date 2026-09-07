@@ -6,7 +6,7 @@
  * detail this feature is free to change.
  */
 
-export { AccountScreen } from './components/AccountScreen';
+export { AccountPanel } from './components/AccountPanel';
 export { SignInScreen } from './components/SignInScreen';
 export { SignUpScreen } from './components/SignUpScreen';
 

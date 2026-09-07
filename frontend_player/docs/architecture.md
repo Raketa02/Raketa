@@ -134,10 +134,25 @@ src/app/
 ├── (auth)/                sign-in, sign-up, recovery
 └── (app)/                 authenticated tree
     ├── _layout.tsx        the redirect guard
-    └── (tabs)/
+    └── (tabs)/            the shell: one Stack, five tabs
+        ├── _layout.tsx    TabShell — the navigator and the bar, mounted once
+        ├── index.tsx      Now, and the app's landing
+        ├── around.tsx  chats.tsx  you.tsx
+        └── play/          the one tab with depth
 ```
 
 Route groups exist so the **authorization boundary is visible in the file tree**.
+
+### The shell is a `Stack`, and never `<Tabs>`
+
+Four of the five tabs are single-screen roots and only Play has depth, which is thrown away
+every time a player leaves it. `<Tabs>` keeps a history per tab and restores it on return —
+so built out of the box, a player who leaves the deck and comes back lands on the deck, and
+the rule fails with **no symptom at all**. Switching tabs **replaces**; entering Play lays
+down `[Now, Find a game]`; and both go through one function, `resetShellStack`, which is also
+where a Play session ends
+([#227](https://github.com/Raketa02/Raketa/issues/227),
+[#261](https://github.com/Raketa02/Raketa/issues/261)).
 
 A route file may own: the route declaration, its params, a layout, a redirect, navigation
 options, route-scoped provider composition, and a very small adapter. That is the entire
@@ -668,6 +683,32 @@ duplicated across three screens.
 `if (isLoading) return <Spinner/>; if (error) return <Text>Error</Text>;` is not
 acceptable for a product flow. Build the reusable states — `LoadingState`, `EmptyState`,
 `ErrorState`, `OfflineBanner`, `Skeleton` — in `src/shared/ui/`.
+
+> **Amendment — `OfflineBanner` is declined, and the offline sentence is a function
+> instead.** A screen-level banner assumes that being offline makes what is on screen
+> wrong. In Play it does not: every ranked list is a mutation-minted record pinned at
+> `staleTime: Infinity`, so a pool held offline is not stale — it is the record, exactly as
+> it was recorded. What breaks offline is never the data, it is the **acts** — searching,
+> filling, forecasting, sending — and each of those has a control the sentence can sit
+> beside. A banner over correct data teaches the player to ignore banners.
+>
+> The app had already answered this three times before the question was asked:
+> `SocialRadiusStep`, `SocialTagsStep` and `SportsPickerScreen` each render an inline
+> `<Note variant="amber">` at the paused thing. Three copies is the threshold
+> `recoveryMessage.ts` names as the signal to promote, so the sentence moves to **one
+> shared function beside `recoveryMessage`** — and it has exactly **two** values, because
+> only one distinction matters: _does this resume by itself when the connection comes
+> back?_ Everything that pauses says it will load as soon as you are back; the one act that
+> is set to fail rather than defer says it cannot be sent. The test is resumption, **not**
+> the HTTP verb — the line-up forecast is a `POST` that pauses, and it takes the first
+> sentence.
+>
+> `LoadingState`, `EmptyState`, `ErrorState` and `Skeleton` stand as written. This list is
+> a menu of states to model, and declining one of its components is a decision about where
+> a state renders, never about whether it is modelled.
+> Decided by [#239](https://github.com/Raketa02/Raketa/issues/239), built as
+> `src/shared/errors/offlineMessage.ts` by
+> [#265](https://github.com/Raketa02/Raketa/issues/265).
 
 ### Loading granularity
 

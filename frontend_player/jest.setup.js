@@ -1,7 +1,7 @@
 // Test setup for jest-expo.
 //
 // Only the *native* edges are mocked here: the OS keychain, the connectivity module, the
-// device's position and the photo library.
+// device's position, the photo library, and one function of the font registry.
 // Everything above the socket — the http client, its timeouts, error mapping, mappers,
 // use-cases, hooks and screens — runs for real, because a test that mocked those would
 // pass while the app was broken.
@@ -14,8 +14,14 @@
 // It is not being bent. A native module is the far side of a port, not a port; it has no
 // JS implementation to run, so there is nothing to stub by hand and nothing above it
 // would execute. The hand-written stubs the rule asks for are in
-// src/test-support/platform.ts, and they are what every test above the ports uses. These
-// four exist so the two ports themselves can be tested at all.
+// src/test-support/platform.ts, and they are what every test above the ports uses. Four of
+// these exist so the two ports themselves can be tested at all.
+//
+// **The fifth is a different kind and is called out rather than folded in.** `expo-font` is
+// not the far side of a port and nothing here is testing it: it is mocked *partially* — the
+// real module, with one function replaced — because a single native CONSTANT it reads is
+// absent under jest-expo, and every icon in the app asks for it before it draws. That is a
+// harness gap, not a boundary.
 
 // --- the OS keychain --------------------------------------------------------
 // expo-secure-store talks to the iOS Keychain / Android Keystore and has no JS
@@ -92,6 +98,33 @@ jest.mock('expo-image-picker', () => ({
   })),
   launchImageLibraryAsync: jest.fn(async () => ({ canceled: true, assets: null })),
 }));
+
+// --- the font registry ------------------------------------------------------
+// The one partial mock in this file, and the one that is not a port's far side.
+//
+// `@expo/vector-icons` asks `Font.isLoaded()` in every icon's constructor, and `isLoaded`
+// reads `ExpoFontLoader.loadedFonts` — a NATIVE constant jest-expo does not supply, so the
+// real implementation throws `loadedNativeFonts.forEach is not a function` before a single
+// glyph renders. **Only that one function is replaced.** `loadAsync` stays real, because
+// `bootstrap/fonts.ts` is the module this app actually has to get right and `fonts.test.ts`
+// is what holds it; and the answer is `true` because a glyph font the native side registers
+// at launch is loaded by the time anything draws.
+jest.mock('expo-font', () => ({
+  ...jest.requireActual('expo-font'),
+  isLoaded: jest.fn(() => true),
+}));
+
+// --- one function React Native's own jest mock leaves out ---------------------
+// The second gap of the `expo-font` kind, and called out for the same reason: this is not a
+// port's far side and nothing here is testing React Native.
+//
+// `AccessibilityInfo.announceForAccessibilityWithOptions` is public API and is what
+// design-system Part 13's *queued* announcement is — but `react-native/jest/setup.js` lists
+// `announceForAccessibility` and not the variant beside it, so a component that speaks
+// politely throws `is not a function` under jest and passes on a device. The real module is
+// left alone; one absent function is supplied, exactly as `expo-font`'s `isLoaded` is.
+require('react-native/Libraries/Components/AccessibilityInfo/AccessibilityInfo').default.announceForAccessibilityWithOptions ??=
+  jest.fn();
 
 // --- public runtime config --------------------------------------------------
 // The variables themselves are set in jest.config.js — see the note there; Babel inlines

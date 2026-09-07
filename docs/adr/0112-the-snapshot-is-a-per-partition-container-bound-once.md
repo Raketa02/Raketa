@@ -72,8 +72,12 @@ attribute. A search binds the reference once, at entry.**
   the refresh is a pointer copy plus a few decodes.
 
 - **Therefore trigger 4 loses its `× 2`, and ADR-0093 and ADR-0101 are amended in place.**
-  The trigger becomes `bytes_per_row × rows × workers` > half the container limit, which moves
-  it from **~32 000 players to roughly 64 000** at four workers on a 1 GB container. The `× 2`
+  The trigger becomes `bytes_per_row × rows × workers` > half the container limit, which
+  **doubles the player count it fires at** — *~32 000 to roughly 64 000* at four workers on a
+  1 GB container as this was written, and *~12 500 to roughly 25 000* since
+  [#276](https://github.com/Raketa02/Raketa/issues/276) remeasured `bytes_per_row` against the
+  shipping row rather than §7.2's. The doubling is what this ADR bought and it is unaffected.
+  The `× 2`
   was budgeting a duplicate of every row during a refresh that no longer duplicates any of them.
   Amended rather than restated, in ADR-0101's own idiom — a trigger nobody can compute is a
   trigger that fires late, and one computed against a peak that does not occur fires early.

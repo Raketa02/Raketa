@@ -22,19 +22,33 @@ from app.bootstrap.composition import (
     build_image_transcoder,
     build_photo_review,
     build_photo_storage,
+    build_play_intent_declaration_repository,
     build_player_profile_repository,
+)
+from app.modules.player_profile.application.change_availability import (
+    ChangeAvailability,
+)
+from app.modules.player_profile.application.change_search_radius import (
+    ChangeSearchRadius,
 )
 from app.modules.player_profile.application.commit_player_profile import (
     CommitPlayerProfile,
 )
+from app.modules.player_profile.application.declare_play_intent import (
+    DeclarePlayIntent,
+)
 from app.modules.player_profile.application.get_photo import GetPhoto
 from app.modules.player_profile.application.has_player_profile import HasPlayerProfile
+from app.modules.player_profile.application.read_player_profile import (
+    ReadPlayerProfile,
+)
 from app.modules.player_profile.application.upload_photo import UploadPhoto
 from app.modules.player_profile.domain.ports import (
     ImageTranscoder,
     PhotoReview,
     PhotoStorage,
     PlayerProfileRepository,
+    PlayIntentDeclarationRepository,
 )
 
 
@@ -118,6 +132,24 @@ PlayerProfileRepositoryDep = Annotated[
 ]
 
 
+def get_play_intent_declaration_repository(
+    event_store: DomainEventStoreDep,
+    events: EventPublisherDep,
+) -> PlayIntentDeclarationRepository:
+    # Per request, for the reason the profile's is: it remembers the stream
+    # versions it read. Declared here rather than in the matchmaking module that
+    # first reads one, because *where a declaration comes from* is this
+    # context's answer to give.
+    return build_play_intent_declaration_repository(
+        event_store=event_store, events=events
+    )
+
+
+PlayIntentDeclarationRepositoryDep = Annotated[
+    PlayIntentDeclarationRepository, Depends(get_play_intent_declaration_repository)
+]
+
+
 def get_commit_player_profile(
     profiles: PlayerProfileRepositoryDep,
     photos: PhotoStorageDep,
@@ -143,3 +175,53 @@ def get_has_player_profile(profiles: PlayerProfileRepositoryDep) -> HasPlayerPro
 
 
 HasPlayerProfileDep = Annotated[HasPlayerProfile, Depends(get_has_player_profile)]
+
+
+def get_read_player_profile(
+    profiles: PlayerProfileRepositoryDep,
+    declarations: PlayIntentDeclarationRepositoryDep,
+) -> ReadPlayerProfile:
+    # Both repositories, because the read spans both of this context's
+    # aggregates — which is the join ADR-0090's precedent makes cheap, one
+    # context lower than where that record made it.
+    return ReadPlayerProfile(profiles=profiles, declarations=declarations)
+
+
+ReadPlayerProfileDep = Annotated[ReadPlayerProfile, Depends(get_read_player_profile)]
+
+
+def get_change_availability(
+    profiles: PlayerProfileRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ChangeAvailability:
+    # No photo storage: a week has nothing to re-validate against an object
+    # store, which is the difference between an edit and the creating commit.
+    return ChangeAvailability(profiles=profiles, uow=uow, clock=clock)
+
+
+ChangeAvailabilityDep = Annotated[ChangeAvailability, Depends(get_change_availability)]
+
+
+def get_change_search_radius(
+    profiles: PlayerProfileRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ChangeSearchRadius:
+    return ChangeSearchRadius(profiles=profiles, uow=uow, clock=clock)
+
+
+ChangeSearchRadiusDep = Annotated[ChangeSearchRadius, Depends(get_change_search_radius)]
+
+
+def get_declare_play_intent(
+    declarations: PlayIntentDeclarationRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> DeclarePlayIntent:
+    # The declaration repository alone: the profile is a different aggregate on
+    # a different stream, and a declaration neither reads nor writes one.
+    return DeclarePlayIntent(declarations=declarations, uow=uow, clock=clock)
+
+
+DeclarePlayIntentDep = Annotated[DeclarePlayIntent, Depends(get_declare_play_intent)]

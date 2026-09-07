@@ -252,6 +252,18 @@ becomes visible for the first time.
 | `CLASH_SEVERITY_MILD` | 0.06 | |
 | `CLASH_CAP` | 0.25 | Binds at two Real clashes, or one Real plus two Mild |
 
+**`strength · dr(complements)` is written for one discount, and the shipped matrix does not
+have one.** Two rows sit at parity beside ten at the default, so *which* complement takes the
+first and largest increment is a question the single-strength form cannot ask, and #205 had to
+answer it to compute anything at all. `dr` is a sum of shrinking increments,
+`Σ (1 − TAG_PHI)·TAG_PHI ⁱ`, so the arm is that sum with each increment priced at one row's own
+strength, **strongest first**. Two properties pin it, and both are asserted rather than
+described: it is *identically* `strength · dr(n)` whenever every fired row carries the same
+strength — the form this table names — and taking the increments in descending strength is what
+makes **adding a complement row never subtract**, which pairing them in any other order does not
+guarantee. A pairing scored lower for having one more thing in common is not a reading anybody
+could defend on a card.
+
 **Clash penalties are capped and smaller than match bonuses**, per §9.3.6 rule 3. One Real clash
 (0.15) is worth less than one match (0.55), and the full cap costs 2.6 points of 100 in
 competitive — enough to notice, nowhere near enough to bury anybody. Being wrong about a match
@@ -286,42 +298,59 @@ half-the-live-terms bar. It stays true that the evidence gate excludes nobody to
 
 ## 6. Reliability, decomposed by mode
 
-§9.3.4's table transfers unchanged.
+> **Amended by [ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md) and
+> [ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md).**
+> *Confirms results* is **struck from the vocabulary**, not merely unbuilt: an unconfirmed
+> result is a fact about a pair, a strand is a verdict about a person, and every denominator
+> tried on it docks somebody ADR-0049 protects. §9.3.4's six-name table no longer transfers.
+> The five survivors are the **same vector rescaled to sum to a hundred** by largest remainder,
+> because dropping a key from a weight map that must total a hundred forces the rest to be
+> re-expressed. The **scaling** is inert — the term already renormalises over the strands that
+> arrive — so what moves is the integer rounding: 0.016 and 0.009 Fit points on the two
+> reliability readings in the walkthrough goldens, no reordering and no floor crossing.
 
-| Strand | Comp | Fun |
-|---|--:|--:|
-| Shows up | 25 | **32** |
-| Answers challenges | 22 | 22 |
-| Confirms results | **24** | 4 |
-| Keeps plans | 14 | 14 |
-| Settles up | 10 | 12 |
-| Sportsmanship | 5 | **16** |
+| Strand | Comp | Fun | Was (comp/fun, of six) |
+|---|--:|--:|---|
+| Shows up | 33 | 33 | 25 / 32 |
+| Answers challenges | **29** | 23 | 22 / 22 |
+| Keeps plans | 18 | 15 | 14 / 14 |
+| Settles up | 13 | 12 | 10 / 12 |
+| Sportsmanship | 7 | **17** | 5 / 16 |
 
 **The decomposition earns its complexity, and here is the proof rather than the assertion.**
-Take two candidates identical on four strands at 0.75:
+Take two candidates identical on three strands at 0.75:
 
-| | confirms | sportsmanship | **comp** | **fun** |
+| | keeps plans | sportsmanship | **comp** | **fun** |
 |---|--:|--:|--:|--:|
-| P | 0.95 | 0.55 | **0.788** | 0.726 |
-| Q | 0.55 | 0.95 | 0.712 | **0.774** |
+| P | 0.95 | 0.55 | **0.772** | 0.746 |
+| Q | 0.55 | 0.95 | 0.728 | **0.754** |
 
 The two modes order them **oppositely**. A single blended score cannot express that, which is
 §9.3.4's argument, now checkable: **the decomposition is justified for exactly as long as such a
 pair exists.** If a later ruleset flattens the two vectors until none does, the decomposition
 has stopped paying and should collapse to the published number.
 
-There are **three** blends of the same six strands in this system, and confusing them is a live
-risk: the published Player Score at `35/20/15/12/10/8`
+**The inversion narrowed when the sixth strand was struck, and it is now asserted rather than
+assumed.** The widest pair was *confirms results* against *sportsmanship*, at 24/4 versus 5/16;
+what is left is 18/7 versus 15/17, and `tests/unit/test_matchfit_terms.py` holds the pair above
+so the day none inverts is a red build rather than a quiet one.
+
+There are **three** blends of the same five strands in this system, and confusing them is a live
+risk: the published Player Score at `35/20/12/10/8`
 ([`the-five-numbers.md`](the-five-numbers.md) §4), and these two. The reliability *floor* reads
 the published one — the one deliberate exception, recorded there.
 
-**Settles up will stand down past the other five.** Court money is out of scope
-([ADR-0098](../../adr/0098-matcher-demands-as-executable-contracts.md)), so when
-`player_score` lands the strand vector renormalises within itself exactly as §10 renormalises
-the terms.
+**Three strands stand down and two are live** (ADR-0140). *Shows up* and *answers challenges*
+have a provider; *keeps plans* needs a plan with a moment, *settles up* needs court money and
+*sportsmanship* needs a rating surface, and none of the three exists. The strand vector
+renormalises within itself over whatever arrives, exactly as §10 renormalises the terms — which
+is why a strand with no provider costs the reading nothing.
 
 - **Falsified by:** ghost rate and answer rate regressed on each strand **separately**. A strand
-  that predicts nothing on its own is a strand whose weight belongs to its neighbours.
+  that predicts nothing on its own is a strand whose weight belongs to its neighbours. **The
+  first strand this can now be run against is *shows up***, and it is also ADR-0140's own
+  falsifier: if a ghost predicts nothing about who somebody is, the strand is measuring weather
+  and should be withdrawn the way *confirms results* was.
 
 ---
 
@@ -347,7 +376,8 @@ standing insurance, in place before it is needed.
 **`NEWCOMER_ABSORPTION_CAP` keeps its rule and refuses its integer.**
 [ADR-0114](../../adr/0114-a-newcomer-may-not-be-declined.md) bounds how often one player is
 volunteered into a **newcomer's** shortlist — counted per week per sport on the exposure ledger,
-and binding by **dropping** the welcoming modifier and the newcomer reorder, never by withholding.
+and binding by **dropping** the welcoming modifier, never by withholding — and never the newcomer
+lift, which belongs to the other side of the pairing ([ADR-0114](../../adr/0114-a-newcomer-may-not-be-declined.md), amended).
 The number cannot be set here for [`the-five-numbers.md`](the-five-numbers.md)'s reason: with no
 players there is no distribution to sit it in, and with `matches` absent the modifier it bounds
 never fires, so on day one any integer is untestable. Its falsifier is written and its value is
@@ -590,21 +620,27 @@ roster test are untouched.
 the integer here. **The document's 52 is refuted**, and the case that refutes it is named.
 
 With [ADR-0103](../../adr/0103-where-the-curve-saturates-the-gate-begins.md)'s gate and §5's
-normalisation applied, on §2's day-one basis:
+normalisation applied, on §2's day-one basis. **The table is generated** from
+[`judged-pairings.json`](judged-pairings.json) by `make gen-judged-pairings`, and a hand edit
+to it fails the build:
 
+<!-- generated: judged-totals — `make gen-judged-pairings`; do not edit by hand -->
 | Case | Verdict | Comp | Fun |
 |---|---|--:|--:|
 | 1 · same level, full grid overlap, five minutes away, socially blank | Shown | 82.0 | 67.5 |
 | 2 · case 1 with the grid emptied — **no shared slot at all** | Shown | 69.3 | 49.9 |
-| **3′-comp** · just inside competitive's gate, forecast at its floor, no slot, edge of the radius | **Not shown** | 20.4 → **19.5** | — |
-| **3′-fun** · the same, just inside for-fun's gate | **Not shown** | — | 24.2 → **24.5** |
-| 4 · everything exceptional, competitive searcher, friendly-only candidate | Shown, reason printed | 73.8 → **80.3** | — |
-| 5 · **the median stranger** | Shown | 46.0 → **44.5** | 47.9 → **47.8** |
+| **3′-comp** · just inside competitive's gate, forecast at its floor, no slot, edge of the radius | **Not shown** | 19.5 | — |
+| **3′-fun** · the same, just inside for-fun's gate | **Not shown** | — | 24.5 |
+| 4 · everything exceptional, competitive searcher, friendly-only candidate | Shown, reason printed | 80.3 | — |
+| 5 · **the median stranger** | Shown | 44.5 | 47.8 |
 | 6 · case 1 with the candidate's radius shrunk — searcher outside theirs | Shown, docked | 82.0 | 67.5 |
+<!-- /generated: judged-totals -->
 
+<!-- generated: floor-bound — `make gen-judged-pairings`; do not edit by hand -->
 ```
 24.5  <  QUALITY_FLOOR  ≤  44.5
 ```
+<!-- /generated: floor-bound -->
 
 **52 hides the median stranger in both modes**, and case 5's stated job is *"this is where the
 bar sits"*. That is the refutation in the form `the-five-numbers.md` requires of any change: not
@@ -669,6 +705,18 @@ naming which of the cases it now decides differently. It adds one demand on
 [#169](https://github.com/Raketa02/Raketa/issues/169), which already carries it: **which terms
 produced evidence per scored candidate**, without which a Fit is uninterpretable a year later.
 
+**And it is now mechanical rather than a sentence.** `make judged-pairings` re-runs the six
+against the live ruleset and prints the bound the verdicts leave —
+
+```
+max(Fit | not shown)  <  QUALITY_FLOOR  ≤  min(Fit | shown)
+```
+
+— failing when the configured integer sits outside it, from either side. Turning a term on
+moves every renormalised weight at once, so this is the release that finds out; the reader is
+[`backend/scripts/judged_pairings/`](../../../backend/scripts/judged_pairings) and it runs
+in CI on every backend pull request.
+
 ---
 
 ## 12. What the search-side telemetry must record for these
@@ -713,7 +761,12 @@ fact is search-time and cannot be reconstructed afterwards.
 | The familiarity reading map | §8 | Repeat acceptance split by reading |
 | `MOVE_NOTICE` | 6 | Fraction of rows printing a liveness reason. **It does two jobs**: it is also the silent stack's budget, deliberately one constant and not two, because two can drift apart in a ruleset edit and break the printing guarantee silently ([ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md)). Its second falsifier is **how often the silent clamp binds** — never, and the per-player rule was theoretical; often, and previous decline and a negative exposure adjustment are routinely stacking |
 | `ASYM_TOLERANCE` | 12 | Decline rate by asymmetry bucket |
+| `ASYM_SLOPE` | 0.5 | **How often the dock saturates.** Never, and the `−12` bound is decoration and the slope too shallow; routinely, and the slope is charging a full sink for an ordinary shortfall. It is the second half of the reciprocal dock and had no row while the tolerance beside it did — a table titled *every constant* is exactly where the slope in a formula goes unnoticed |
+| The challenge-load rungs | 3 / 5 / 8 → −4 / −8 / −12 | Answer rate by open-challenge bucket. If answer rate does not fall as load rises, the signal is measuring nothing and all three rungs are noise. §14.4's thresholds adopted whole by [ADR-0125](../../adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md); they are the **one** liveness signal read from a count rather than from a normalised reading, because they are the one set somebody measured |
 | Liveness signal bounds | §9 | Acceptance rate per signal, held out |
+| The intent table | §5.2 | Acceptance rate across the six cells. If the `0.35` cell accepts like the `0.85` one, the asymmetry between the two zeros is imagined |
+| `DISTANCE_FULL_MARKS_WITHIN` / `ZERO_AT` | 0.70 / 1.15 | Acceptance rate by distance **as a fraction of the searcher's own radius**. Flat out to the ring ⇒ too steep; falling away well inside 70% ⇒ the shoulder is in the wrong place. Both are fractions and never kilometres, so a ten-kilometre searcher and a fifty-kilometre one are each read against what they said far means |
+| `CONCERN_POINTS` | 5 | The fraction of shown candidates carrying no concern at all. If almost every card warns about something the line has stopped being a warning and become a caption. Anchored rather than picked: the lightest term on the day-one basis is social vibe's 4.6 competitive, so a lower bar would let a term warn about a shortfall it cannot produce even by reading zero |
 | `QUALITY_FLOOR` | **44** | Return rate just above vs just below |
 | `SHORTLIST_MAX` | 20 | Interest and challenge rate **by position**. Nothing past position 12 converting means 20 is decoration |
 | `DECK_DEAL_MAX` | 10 | The **deepest position reached per deal**. Median deal exhausted ⇒ too small; p90 stopping before position four ⇒ the tail is scored for nobody |

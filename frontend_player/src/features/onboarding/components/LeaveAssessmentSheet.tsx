@@ -36,7 +36,7 @@ import { BottomSheet, Button, Note, PressableCard, theme, type FocusTarget } fro
 
 import type { AppError } from '@/shared/errors';
 
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { sportLabel } from './sportPresentation';

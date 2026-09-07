@@ -59,23 +59,27 @@ blocks either direction, no holds. These six cases test the **scorer**.
 
 ## 3. The readings
 
-| Case | Mode | Δμ | level | balance | intent | avail | style | dist | vibe | **Fit** | Verdict |
-|---|---|--:|--:|--:|--:|--:|--:|--:|--:|---|
+<!-- generated: judged-readings — `make gen-judged-pairings`; do not edit by hand -->
+| Case | Mode | Δμ | level | balance | intent | avail | style | distance | vibe | **Fit** | Verdict |
+|---|---|--:|--:|--:|--:|--:|--:|--:|--:|---|---|
 | 1 | comp | 0.000 | 1.000 | 0.813 | 0.850 | 1.000 | 0.200 | 1.000 | 0.200 | **82.0** | Shown |
 | 1 | fun | 0.000 | 1.000 | 0.813 | 0.850 | 1.000 | 0.200 | 1.000 | 0.200 | **67.5** | Shown |
 | 2 | comp | 0.000 | 1.000 | 0.813 | 0.850 | 0.000 | 0.200 | 1.000 | 0.200 | **69.3** | Shown |
 | 2 | fun | 0.000 | 1.000 | 0.813 | 0.850 | 0.000 | 0.200 | 1.000 | 0.200 | **49.9** | Shown |
-| 3'-comp | comp | 0.540 | 0.018 | 0.000 | 0.850 | 0.000 | 0.200 | 0.333 | 0.200 | **19.5** | **Not shown** |
-| 3'-fun | fun | 0.890 | 0.015 | 0.000 | 0.850 | 0.000 | 0.200 | 0.333 | 0.200 | **24.5** | **Not shown** |
-| 4 | comp | 0.000 | 1.000 | 0.813 | 0.000 | 1.000 | 1.000 | 1.000 | 1.000 | **80.3** | Shown |
+| 3′-comp | comp | 0.540 | 0.018 | 0.000 | 0.850 | 0.000 | 0.200 | 0.333 | 0.200 | **19.5** | **Not shown** |
+| 3′-fun | fun | 0.890 | 0.015 | 0.000 | 0.850 | 0.000 | 0.200 | 0.333 | 0.200 | **24.5** | **Not shown** |
+| 4 | comp | 0.000 | 1.000 | 0.813 | 0.000 | 1.000 | 1.000 | 1.000 | 1.000 | **80.3** | Shown, reason printed |
 | 5 | comp | 0.275 | 0.500 | 0.160 | 0.850 | 0.500 | 0.200 | 0.500 | 0.200 | **44.5** | Shown |
 | 5 | fun | 0.275 | 0.962 | 0.160 | 0.850 | 0.500 | 0.200 | 0.500 | 0.200 | **47.8** | Shown |
 | 6 | comp | 0.000 | 1.000 | 0.813 | 0.850 | 1.000 | 0.200 | 1.000 | 0.200 | **82.0** | Shown, docked |
 | 6 | fun | 0.000 | 1.000 | 0.813 | 0.850 | 1.000 | 0.200 | 1.000 | 0.200 | **67.5** | Shown, docked |
+<!-- /generated: judged-readings -->
 
+<!-- generated: floor-bound — `make gen-judged-pairings`; do not edit by hand -->
 ```
 24.5  <  QUALITY_FLOOR  ≤  44.5
 ```
+<!-- /generated: floor-bound -->
 
 **`QUALITY_FLOOR = 44` holds, and 52 stays refuted** — case 5 reads 44.5 competitive and 47.8
 for fun, so the case whose stated job is *this is where the bar sits* is hidden by 52 in **both**
@@ -133,10 +137,12 @@ group objective ordered contrasts instead of judged verdicts.
 Because the searcher is shared, two candidates differ from case 1's in exactly one input — which
 proves what the prose only asserts.
 
+<!-- generated: one-line-assertions — `make gen-judged-pairings`; do not edit by hand -->
 | | Differs by | Assertion |
 |---|---|---|
 | **Case 2** | `shared_cells` 4 → 0 | Fit falls by exactly the availability weight — **12.64 competitive, 17.58 for fun**. Availability overlap is evidence a game can be *arranged*, and its absence costs its weight and not a point more |
 | **Case 6** | candidate radius 10 → 1 km | `Fit(6) == Fit(1)` **identically**. The searcher sitting outside the candidate's ring is a Liveness dock and never enters Fit ([ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md)) |
+<!-- /generated: one-line-assertions -->
 
 Case 6's identity is the only form in which a machine can assert that a named fact moved
 **nothing** — which is the whole of its verdict.
@@ -149,11 +155,13 @@ relationship fires**, so both tag terms read the measured zero of **0.20** — n
 The alternative is not a matter of taste, and here is the number that settles it. Case 1 read with
 both columns *stood down* and renormalised over five terms:
 
+<!-- generated: blank-counterfactual — `make gen-judged-pairings`; do not edit by hand -->
 | | comp | fun |
 |---|--:|--:|
 | Case 1, tags declared, nothing fires | 82.0 | 67.5 |
 | Case 1, **both columns stood down** | **92.9** | **94.4** |
 | Case 4, *everything exceptional* | 80.3 | — |
+<!-- /generated: blank-counterfactual -->
 
 **Declaring nothing beats declaring everything by twelve points.** That is the renormalisation
 pathology [`the-five-numbers.md`](the-five-numbers.md) §1 built the evidence gate against, argued
@@ -176,18 +184,41 @@ Two discrepancies are explained rather than merely observed:
 
 | Recorded | Reconstructed | Explanation |
 |---|---|---|
-| Case 4 · **73.8** | **80.3** | 80.3 − 6.0 = 74.3. The §10 table still carries `intent_opposed` −6, which §6 **deleted** and §7 records as deleted — **the table predates its own §7** |
+| Case 4 · **73.8** | **80.3** | 80.3 − 6.0 = 74.3. The §10 table still carried `intent_opposed` −6, which §6 **deleted** and §7 records as deleted — **the table predated its own §7** |
 | §10's *"misaligned puts case 5 at 38.0"* | **32.3** | 46.0 − 38.0 = 8.0 = 16.092 × 0.50, i.e. intent `0.35` — the **for-fun** row's competitive-candidate cell. Competitive misaligned is `0.00` |
 
-The §10 totals are **struck**. They are superseded rather than corrected, because fitting readings
-to a remembered total is the failure a fixture exists to prevent.
+The §10 totals were **struck**. They were superseded rather than corrected, because fitting
+readings to a remembered total is the failure a fixture exists to prevent — and they are recorded
+as struck in [`ranking-weights.md`](ranking-weights.md) §10's own subsection, which is the only
+place they still appear. **§10's table is now generated** and carries the re-derived numbers
+alone: a table printing *recorded → reconstructed* would be a table half of which nothing
+re-derives, which is how the seven totals above came to be wrong in the first place.
 
 ## 8. What this owes, and what it does not
 
-**It owes no code today.** *This map plans; it does not build* — the reader is
-[#187](https://github.com/Raketa02/Raketa/issues/187): the §20.1 scenario harness, the
-release-time floor re-derivation, and `make` targets on this repo's generate-commit-diff idiom
-(`gen-api`, `check-ruleset-diff`, third instance).
+**The reader is built, and it is [#187](https://github.com/Raketa02/Raketa/issues/187).**
+*This map plans; it does not build* — so the machine landed in its own ticket, and it is
+[`backend/scripts/judged_pairings/`](../../../backend/scripts/judged_pairings):
+
+- **Every table above is generated.** `make gen-judged-pairings` re-derives the six against the
+  live ruleset and writes §3, §6 and [`ranking-weights.md`](ranking-weights.md) §10 back into
+  the marked regions. CI regenerates and diffs
+  ([`check-judged-pairings.sh`](../../../.github/scripts/check-judged-pairings.sh),
+  `make judged-pairings`), so **a hand edit to a generated table fails the build** — this
+  repository's generate-commit-diff idiom, after `make gen-api`.
+- **The floor is re-derived at release time**, which is the half a diff cannot do.
+  [`ranking-weights.md`](ranking-weights.md) §11 has always demanded that *turning a term on is
+  a ruleset release that re-runs the six cases and may move the floor*; the check prints
+  `max(Fit | not shown) < QUALITY_FLOOR ≤ min(Fit | shown)` and **exits red when the configured
+  floor sits outside it**, from either side.
+- **The six are §20.1 scenario fixtures**, in
+  [`test_matchfit_judged_pairings.py`](../../../backend/tests/unit/test_matchfit_judged_pairings.py),
+  asserting **exact** term values and Fits — because §20.1 says a diff in one is a design change
+  and must be argued for in the pull request. They score through the same harness the `make`
+  target runs: two harnesses would be two answers, and the second one drifts.
+- **`make test-judged-pairings` drives the check against a deliberately broken fixture** and
+  asserts it goes red, beside `make test-drift` and `make test-poetry-pin`. A guardrail that
+  silently stops matching is worse than none.
 
 **It is not [#183](https://github.com/Raketa02/Raketa/issues/183)'s machine**, and the two must
 not be merged. [`the-replay-harness.md`](the-replay-harness.md) asks *how does this ruleset move

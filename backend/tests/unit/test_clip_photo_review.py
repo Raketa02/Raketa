@@ -139,6 +139,10 @@ async def test_an_unreachable_sidecar_fails_open() -> None:
     """The one that matters most: a container that is not up must cost a
     verdict, never a signup. A reviewer that turned its own outage into a failed
     upload would refuse a real photo for a reason that is not about the photo.
+
+    **Failing open is now an absence rather than ``ALLOWED``** (``docs/adr/0138``):
+    the photo is not flagged, and it is not claimed to have passed either — the
+    same word would read *checked and passed* on a card a stranger sees.
     """
 
     # A port nothing is listening on — the ordinary state of a laptop stack that
@@ -149,7 +153,8 @@ async def test_an_unreachable_sidecar_fails_open() -> None:
 
     verdict = await reviewer.review(IMAGE)
 
-    assert verdict.decision is PhotoReviewDecision.ALLOWED
+    assert verdict.decision is None
+    assert not verdict.is_flagged
     assert verdict.note == f"clip;p={PROMPT_SET_FINGERPRINT};unavailable=transport"
 
 
@@ -165,7 +170,8 @@ async def test_a_sidecar_that_is_too_slow_fails_open_as_a_timeout() -> None:
     finally:
         await server.close()
 
-    assert verdict.decision is PhotoReviewDecision.ALLOWED
+    assert verdict.decision is None
+    assert not verdict.is_flagged
     assert verdict.note == f"clip;p={PROMPT_SET_FINGERPRINT};unavailable=timeout"
 
 

@@ -18,6 +18,7 @@ from fastapi import FastAPI
 import pytest
 
 import app.core.lifespan as lifespan_module
+from app.bootstrap.jobs import SCALE_PRESSURE_JOB
 from app.core.config import Settings
 
 
@@ -46,8 +47,10 @@ def stub_engine(monkeypatch):
 
     monkeypatch.setattr(lifespan_module, "init_engine", lambda settings: None)
     monkeypatch.setattr(lifespan_module, "get_engine", lambda: object())
+    # The lifespan asks the composition root for its session factory now, so
+    # that is the name a test with no engine has to stand in for.
     monkeypatch.setattr(
-        lifespan_module, "async_sessionmaker", lambda *args, **kwargs: "sessions"
+        lifespan_module, "build_background_session_factory", lambda engine: "sessions"
     )
 
     async def dispose_engine() -> None:
@@ -143,7 +146,18 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
     an unconditional factory is a startup crash rather than an unused object.
     """
 
-    settings = _settings(EVENT_DELIVERY_WORKER_ENABLED=False, PHOTO_SWEEP_ENABLED=False)
+    settings = _settings(
+        EVENT_DELIVERY_WORKER_ENABLED=False,
+        PHOTO_SWEEP_ENABLED=False,
+        PHOTO_REVIEW_BACKFILL_ENABLED=False,
+        CANDIDATE_INDEX_ENABLED=False,
+        EXPOSURE_ROLL_ENABLED=False,
+        INTENT_DRIFT_ENABLED=False,
+        GRID_STALENESS_ENABLED=False,
+        INTEREST_EXPIRY_ENABLED=False,
+        CHALLENGE_LAPSE_ENABLED=False,
+        RATING_CATCH_UP_ENABLED=False,
+    )
     app = FastAPI()
     app.state.event_runtime = object()
     disposed: list[bool] = []
@@ -159,14 +173,34 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
     monkeypatch.setattr(lifespan_module, "dispose_engine", dispose_engine)
 
     async with lifespan_module.build_lifespan(settings)(app):
-        assert app.state.scheduled_jobs == []
+        # The scoring histogram's probe is the one job left, and it is the same
+        # claim the redis assertion below makes: it reads this process's own
+        # counters, so it needs no session, no store and no engine. Everything
+        # that would have reached for a factory is gone.
+        assert [job.name for job in app.state.scheduled_jobs] == [SCALE_PRESSURE_JOB]
+        assert app.state.scoring_meter is not None
+        # The index's own source is one of the things that must not have been
+        # built: it takes a session factory, and building one is what this test
+        # exists to prove did not happen.
+        assert app.state.candidate_source is None
+        # The ephemeral store is **not** the same claim, and the difference is
+        # the point: it needs no session, so it is opened whatever is switched
+        # off. A request path resolves its ledgers through this client, and a
+        # job's toggle may not decide whether a Play surface has one.
+        assert app.state.redis is not None
 
     assert disposed == [True]
 
 
-async def test_the_sweep_is_registered_by_default(monkeypatch, stub_engine):
-    """The default configuration runs it. A job nobody wired up is a decision
-    recorded in an ADR and absent from the running system."""
+async def test_the_two_photo_jobs_are_registered_by_default(monkeypatch, stub_engine):
+    """The default configuration runs both. A job nobody wired up is a decision
+    recorded in an ADR and absent from the running system.
+
+    Both, in one test, because they walk the **same bucket** and the pairing is
+    the thing worth seeing: the sweep deletes what no profile names, the
+    backfill re-reviews what nobody looked at, and neither takes a lock
+    (``docs/adr/0092``, ``docs/adr/0132``).
+    """
 
     settings = _settings(EVENT_DELIVERY_WORKER_ENABLED=False)
     app = FastAPI()
@@ -176,6 +210,7 @@ async def test_the_sweep_is_registered_by_default(monkeypatch, stub_engine):
         names = [job.name for job in app.state.scheduled_jobs]
 
     assert "uncommitted-photo-sweep" in names
+    assert "photo-review-backfill" in names
 
 
 async def test_the_outbox_drain_is_not_published_as_a_scheduled_job(
@@ -253,3 +288,86 @@ async def test_one_task_that_refuses_to_stop_does_not_strand_the_others(
 
     assert survivor.stopped is True
     assert stub_engine == [True], "the engine was disposed anyway"
+
+
+# ---------------------------------------------------------------------------
+# The ephemeral store
+# ---------------------------------------------------------------------------
+
+
+async def test_the_ephemeral_store_is_opened_and_closed_with_the_application(
+    monkeypatch, stub_engine, no_jobs
+):
+    """One pool per process, and the process is what ends it.
+
+    A client the shutdown path forgets holds its connections open past
+    `dispose_engine`, which is the same shutdown bug the engine has and looks
+    the same from outside: a container that takes its whole grace period to die.
+    """
+
+    client = object()
+    opened: list[Settings] = []
+    closed: list[bool] = []
+
+    def init_redis(settings):
+        opened.append(settings)
+        return client
+
+    async def close_redis() -> None:
+        closed.append(True)
+
+    monkeypatch.setattr(lifespan_module, "init_redis", init_redis)
+    monkeypatch.setattr(lifespan_module, "get_redis", lambda: client)
+    monkeypatch.setattr(lifespan_module, "close_redis", close_redis)
+
+    settings = _settings(
+        EVENT_DELIVERY_WORKER_ENABLED=False, EXPOSURE_ROLL_ENABLED=False
+    )
+    app = FastAPI()
+    app.state.event_runtime = object()
+
+    async with lifespan_module.build_lifespan(settings)(app):
+        # Opened even with the roll off, which is the assertion: the pool is the
+        # process's, and only its *readers* are behind flags.
+        assert opened == [settings]
+        assert app.state.redis is client
+        assert closed == []
+
+    assert closed == [True]
+
+
+async def test_the_store_is_closed_after_the_engine_and_after_the_jobs(
+    monkeypatch, stub_engine
+):
+    """Order, because closing a pool under a live job is the whole hazard."""
+
+    order: list[str] = []
+    job = _FakeWorker("exposure-roll")
+
+    async def stop() -> None:
+        order.append("job")
+        job.stopped = True
+
+    job.stop = stop  # type: ignore[method-assign]
+    monkeypatch.setattr(lifespan_module, "build_scheduled_jobs", lambda **_: [job])
+    monkeypatch.setattr(lifespan_module, "init_redis", lambda settings: object())
+    monkeypatch.setattr(lifespan_module, "get_redis", object)
+
+    async def close_redis() -> None:
+        order.append("redis")
+
+    async def dispose_engine() -> None:
+        order.append("engine")
+
+    monkeypatch.setattr(lifespan_module, "close_redis", close_redis)
+    monkeypatch.setattr(lifespan_module, "dispose_engine", dispose_engine)
+
+    app = FastAPI()
+    app.state.event_runtime = object()
+
+    async with lifespan_module.build_lifespan(
+        _settings(EVENT_DELIVERY_WORKER_ENABLED=False, EXPOSURE_ROLL_ENABLED=True)
+    )(app):
+        pass
+
+    assert order == ["job", "engine", "redis"]

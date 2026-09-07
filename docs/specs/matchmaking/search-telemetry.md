@@ -78,6 +78,7 @@ Generation is `sport ∧ box ∧ gates` — the shard conjunct is struck
 | `best_withheld_fit` | The Fit of the best candidate that did not clear. Nullable — null means nothing was withheld, which is not the same as `0` |
 | `pool_description` | ADR-0099's shape: `{sport, radius_km_used, players_in_range, window, post_gate: true}`. Written on **every** search, not only empty ones — a thin pool and a broken floor are indistinguishable without it. Codes, never a sentence (ADR-0022) |
 | `searcher_slot_count` | How many of the twenty-one grid cells the searcher had ticked. The availability term's **denominator**, and per-search rather than per-candidate because the near-miss band pays per-candidate costs ten rows at a time. Added by [#184](https://github.com/Raketa02/Raketa/issues/184) — it is the input to the falsifier for [ADR-0120](../../adr/0120-a-factor-reads-the-pair-or-it-is-not-a-factor.md)'s asymmetry, and there is no other row it could live on |
+| `searcher_area_code` | The searcher's **own** coarse area, as the code the wire spells areas in, and as this search ran on it. Recorded for `searcher_grid`'s reason: the profile's area is what it is *now*, so a read-back that looked it up would say *in your area* over an area the player has since left. Added by [#279](https://github.com/Raketa02/Raketa/issues/279) — it is the second half of the one comparison [ADR-0021](../../adr/0021-kernel-in-backend-clients-derive-by-comparison.md) licenses a card to make, and the candidate's own half was the only one that crossed until it. Nullable, where `searcher_grid` is not, and the difference is that an empty week is a real answer where an empty area is a code nothing can produce: a null is *this search did not record it*, true of every row written before the column and of none written after |
 | `n_excluded_by_suppression` | **Deck deals only**, null elsewhere. How many candidates a **live** pass suppression removed from this deal. It is the only thing that distinguishes *your own passes emptied your deck* from *the pool is empty* — the failure mode that makes `PASS_SUPPRESS` five-numbers-shaped, and one nobody can see from any screen because no route returns a pass. Added by [#194](https://github.com/Raketa02/Raketa/issues/194) |
 | `latency_ms_by_stage` | JSONB. §19.3's operational half |
 
@@ -93,7 +94,7 @@ own future.
 
 | Column | Notes |
 |---|---|
-| `rung_offers` | JSONB: which of A/B/C were offered and each one's **real count**; `null` when `n_returned ≥ MIN_SHORTLIST` meant offers were not computed at all — which is itself the falsifier for `MIN_SHORTLIST` |
+| `rung_offers` | JSONB: which of A/B/C were offered and each one's **real count**; `null` when `n_returned ≥ MIN_SHORTLIST` meant offers were not computed at all — which is itself the falsifier for `MIN_SHORTLIST`. **Empty on a search that took a rung**, because the ladder does not chain: `rung_taken` on the same row is what tells *nothing left to offer* from *you already climbed*, and no column was added for it |
 | `radius_clamp_bit` | Whether the widening ceiling clamped to the profile's own maximum. Tells you how many searchers are already at the ceiling |
 | `offered_by_search_id` | Nullable self-reference: the search whose offer this one accepts |
 | `rung_taken` | Nullable: `A` \| `B` \| `C`. Set on the **accepting** search, beside `offered_by_search_id` |
@@ -115,6 +116,7 @@ person did about it.
 | `fit` | |
 | `terms` | JSONB — every term with its value, weight, contribution and evidence codes. **Deliberately opaque**: it is stamped with `ruleset_version` and its shape is allowed to change between rulesets, which is exactly what a relational schema would fight |
 | `degraded_terms` | `text[]` of the terms that returned `NoEvidence`. Lifted out of the blob so §19.3's per-term `NoEvidence` rate — *"a term quietly dying is invisible otherwise"* — is an array query with a GIN index rather than a JSONB scan. Also the **renormalisation basis**, without which a Fit is uninterpretable a year later |
+| `degraded_reasons` | `text[]`, **index-aligned** with `degraded_terms`: whose gap each stood-down term was, over `NOT_YET_ON_THIS_PLATFORM \| NOTHING_FROM_YOU \| NOTHING_FROM_THEM`. A read-back never recomputes, so the code a card printed has to be the code the row kept. **Not folded into the column above** — pairs in one JSONB column would spend exactly the queryability that lift bought |
 | `modifiers` | JSONB, each with its code |
 | `liveness_reasons` | `text[]` |
 | `liveness_signals` | JSONB — the **raw input value** per liveness signal, never the offset it produced. **For the interest signal the raw input is the age of the yes in days, never the boolean** — [ADR-0127](../../adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md) makes the `+14` flat, so a boolean would be the *sufficient* input and the age would be lost to a Redis TTL within the month. It is the entire x-axis of *acceptance by age of yes*, and it is `their_slot_count`'s argument one signal over: a strike that is not recorded becomes irreversible by accident, and re-admitting a taper would be undiffable.  The offset is a function of the ruleset's bounds, so storing it makes a Liveness-bounds change undiffable: a replay cannot re-derive under new bounds what it only has the old bounds' answer to. Added by [#183](https://github.com/Raketa02/Raketa/issues/183), which corrects [`ranking-weights.md`](ranking-weights.md) §12's *the offset applied* to *the inputs that produced it* |
@@ -167,6 +169,7 @@ returns a near-miss row for a player to act on.
 |---|---|
 | How many were scored, how many cleared, and **the Fit of the best that did not** | `n_scored`, `n_cleared_floor`, `best_withheld_fit`, and layer 3's `position = 1` row |
 | Which terms produced evidence, per scored candidate | `degraded_terms`, on every row whose Fit is kept (layers 2 and 3) |
+| Whether a term produced nothing because **nobody** has it, or because one of these two people did not | `degraded_reasons`, index-aligned with it. `missing_terms` is the same fact from the gate's side and the two may not disagree: a test asserts `missing_terms` is exactly the non-`NOT_YET_ON_THIS_PLATFORM` subset, because two columns computing overlapping facts is how they drift |
 | Whether a candidate was withheld for insufficient evidence, and which terms were missing | `withheld_reason`, `missing_terms` |
 | Shortlist length, and whether the rung offers were computed | `n_returned`, `rung_offers` (null = not computed) |
 | Which rungs were offered, each one's real count, which was taken, and the radius clamp | `rung_offers`, `radius_clamp_bit`, `rung_taken` + `offered_by_search_id` on the accepting search |
@@ -196,6 +199,28 @@ So the pass becomes a durable row — `(passer, passed, sport, at, search_id, po
 that stays true: the **gate** is the cache, the **evidence** is the row. Unlike an interest, a
 pass record does not expire; nothing in this design deletes a row except erasure (ADR-0104 §3),
 and this joins that rule.
+
+**A prompt decline is a durable row, and its denominator is not a column.**
+[#237](https://github.com/Raketa02/Raketa/issues/237) reaches the same split from the other side.
+`prompts.py`'s two constants are falsified by *take-up rate on the prompt*
+(`INTENT_DRIFT_SEARCHES`) and *acceptance rate on the offer, against rung acceptance*
+(`REPEATED_WIDENINGS`) — three outcomes per raised prompt, and only one of the three is
+unrecorded:
+
+| Outcome | Where it already is |
+| --- | --- |
+| **Raised** | derived — the widening condition is `widenings_taken >= 3` over this store, the drift condition is five consecutive disagreeing searches over the same rows, and both are recomputable forever ([ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md)'s *explainable, not reproducible*) |
+| **Accepted** | derived — `PlayIntentDeclared(surface=DRIFT_PROMPT)` by name, and an accepted radius is the next search asking at that radius on rung A |
+| **Declined** | **nowhere.** It writes no value, and a Redis suppression that lapses destroys it |
+
+So the decline earns a row and nothing else does. **There is deliberately no `prompts_raised`
+column on the search record**, and adding one would break two arguments that are already
+written down: `ShortlistAnswer.prompts` is beside the record rather than on it, because *"a
+read-back a month later must not re-ask a question whose answer has since been given"*; and the
+raise runs **after the commit**, because *how often have I taken this widening* has to count the
+search that just ran. The named cost is that derived take-up is **approximate** — a player who
+edits their radius in *You* the same week reads as a take-up — and that is enough for a falsifier
+whose job is to say *nobody ever acts on this*.
 
 **The cap's falsifier is not a search fact and does not live here.** Refusals at
 `OUTSTANDING_INTEREST_CAP` and the distribution of outstanding counts per player are facts about

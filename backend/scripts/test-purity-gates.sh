@@ -37,6 +37,11 @@ SHARED_DOMAIN_PROBE="$ROOT/app/shared/domain/_purity_probe.py"
 MODULE_DOMAIN_PROBE="$ROOT/app/modules/users/domain/_purity_probe.py"
 MODULE_APPLICATION_PROBE="$ROOT/app/modules/users/application/_purity_probe.py"
 MODULE_INFRA_PROBE="$ROOT/app/modules/users/infrastructure/_purity_probe.py"
+# The engine-to-engine fence needs a probe *inside* each engine, because the
+# contract's source is one engine package and its forbidden module is the other —
+# a probe in `app/engines/` itself sits in neither and would prove nothing.
+RACKETSKILL_PROBE="$ROOT/app/engines/racketskill/_purity_probe.py"
+MATCHFIT_PROBE="$ROOT/app/engines/matchfit/_purity_probe.py"
 # A whole context rather than a file: the one claim the wildcard arms make that no
 # probe inside an existing module can check. Fixed, script-owned, and removed with
 # the rest — it is the only probe that is a directory, so it is the only `rm -rf`.
@@ -46,7 +51,8 @@ AST_TEST="tests/unit/test_kernel_purity.py"
 clean() {
   rm -f "$KERNEL_PROBE" "$ENGINE_PROBE" "$OUTSIDE_PROBE" \
         "$APPLICATION_PROBE" "$SHARED_DOMAIN_PROBE" \
-        "$MODULE_DOMAIN_PROBE" "$MODULE_APPLICATION_PROBE" "$MODULE_INFRA_PROBE"
+        "$MODULE_DOMAIN_PROBE" "$MODULE_APPLICATION_PROBE" "$MODULE_INFRA_PROBE" \
+        "$RACKETSKILL_PROBE" "$MATCHFIT_PROBE"
   rm -rf "$NEW_CONTEXT_DIR"
 }
 trap clean EXIT INT TERM
@@ -66,6 +72,8 @@ done
 # check that would have said so in one line instead of an assertion diff.
 for f in app/shared/ids.py \
          app/engines/racketskill/v3/__init__.py \
+         app/engines/racketskill/core.py \
+         app/engines/matchfit/core.py \
          app/core/config.py \
          app/core/exception_handlers.py \
          app/shared/domain/errors.py; do
@@ -80,6 +88,8 @@ done
 # directory the fence no longer covers, and nothing anywhere saying so.
 for d in app/application \
          app/shared/domain \
+         app/engines/racketskill \
+         app/engines/matchfit \
          app/modules/users/domain \
          app/modules/users/application \
          app/modules/users/infrastructure; do
@@ -168,6 +178,29 @@ expect red imports "an engine taking ambient randomness or time is refused" \
   "app.engines is not allowed to import secrets" \
   "app.engines is not allowed to import time" \
   "app.engines is not allowed to import uuid"
+clean
+
+# The engine-to-engine fence (docs/adr/0093). Two engines ship, and the question
+# they could be confused about is a *level*: RacketSkill defines mu, sigma, the
+# bands and the sigma-combination rule, and Match Fit reads them through the module
+# that composes the two rather than by re-deriving one. Both directions are probed
+# because the fence is two contracts and not one — a single contract with
+# overlapping source and forbidden lists would also forbid each package from
+# importing itself, so half of it going missing is a live way to lose the rule.
+probe "$RACKETSKILL_PROBE" 'from app.engines.matchfit.core import K_CEILING
+
+CAP = K_CEILING
+'
+expect red imports "RacketSkill reaching Match Fit is refused" \
+  "app.engines.racketskill is not allowed to import app.engines.matchfit"
+clean
+
+probe "$MATCHFIT_PROBE" 'from app.engines.racketskill.core import combine_sigma
+
+COMBINE = combine_sigma
+'
+expect red imports "Match Fit reaching RacketSkill is refused" \
+  "app.engines.matchfit is not allowed to import app.engines.racketskill"
 clean
 
 # datetime is the one rule that differs between the two packages, so it is
@@ -373,6 +406,49 @@ class Payload(BaseModel):
     code: int = status.HTTP_200_OK
 '
 expect green imports "an infrastructure adapter importing the framework is allowed"
+clean
+
+# ---------------------------------------------------------------------------
+echo
+echo ".importlinter — the ephemeral store fenced out of the business rules"
+
+# The two ledgers are ports, and *behind a port* is only true while nothing on the
+# inside can reach the client. What is actually at stake is the fail-soft posture:
+# every ledger leaves the composition root wrapped, because an unwrapped adapter
+# raises and a raise on either path empties a surface to protect nobody. A use case
+# reaching for Redis itself is a use case that has skipped that.
+probe "$MODULE_APPLICATION_PROBE" 'from redis.asyncio import Redis
+
+
+async def shown(url: str) -> int:
+    return await Redis.from_url(url).hlen("expo:PADEL:2026-W35")
+'
+expect red imports "an application layer importing the redis client is refused" \
+  "app.modules.users.application is not allowed to import redis"
+clean
+
+# The indirect one, which is why the contract sets `allow_indirect_imports = false`.
+# A use case that constructs the adapter has reached past the wrapper exactly as
+# completely as one that imports the client, and with the flag on it would read as
+# KEPT.
+probe "$MODULE_APPLICATION_PROBE" 'from app.modules.matchmaking.infrastructure.redis_ledgers import (
+    RedisExposureLedger,
+)
+
+Ledger = RedisExposureLedger
+'
+expect red imports "an application layer constructing the redis adapter is refused" \
+  "app.modules.users.application is not allowed to import redis" \
+  "app.modules.matchmaking.infrastructure.redis_ledgers -> redis"
+clean
+
+# And the legitimate direction: the adapter is on the outside of the fence, which is
+# where a client belongs.
+probe "$MODULE_INFRA_PROBE" 'from redis.asyncio import Redis
+
+Client = Redis
+'
+expect green imports "an infrastructure adapter importing the redis client is allowed"
 clean
 
 # ---------------------------------------------------------------------------

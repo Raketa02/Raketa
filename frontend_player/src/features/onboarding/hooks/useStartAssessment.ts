@@ -16,7 +16,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AppError } from '@/shared/errors';
 
 import type { AssessmentStep } from '../domain/Assessment';
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import { startAssessment } from '../use-cases/startAssessment';
 
 import { onboardingKeys } from './onboardingKeys';

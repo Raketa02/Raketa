@@ -36,7 +36,7 @@
  * entry gate as a pure function, tested without mounting anything.
  */
 
-import type { Sport } from './Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 /** A run that produced a Skill rating. **Identifiers only** — see above. */
 export interface RatedRun {

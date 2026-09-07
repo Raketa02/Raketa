@@ -27,31 +27,23 @@
  * means *not asked yet*, and it is never quietly read as no.
  */
 
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
+import type { WeekCell } from '@/shared/vocabulary/week';
+
 import type { Gender, GenderPreference } from './gender';
 import { DEFAULT_GENDER_PREFERENCE } from './gender';
-import type { SocialTagId } from './SocialTag';
-
-/** Which part of a day one ticked cell of the availability grid belongs to. */
-export type DayPart = 'morning' | 'afternoon' | 'evening';
-
-/**
- * ISO weekday — 1 is Monday, 7 is Sunday. The grid is Monday-first.
- *
- * A closed union rather than a `number`, for the same reason `DayPart` beside it is not a
- * string: seven is the whole of it, and a `day: 0` is a bug a type can refuse.
- */
-export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 /**
  * One cell of the grid: a day, and one of the three parts of it.
  *
  * In the draft's list it is a **ticked** one, but the same pair names a cell whatever its
  * state — which is why the grid's rules take one of these rather than a loose day and part.
+ *
+ * The cell itself is `@/shared/vocabulary/week`'s, because Play reads the same week back as
+ * *overlap* and two spellings of a day would drift; this alias is the draft's word for it,
+ * where a cell in the list means *ticked*.
  */
-export interface AvailabilitySlot {
-  readonly day: Weekday;
-  readonly part: DayPart;
-}
+export type AvailabilitySlot = WeekCell;
 
 /**
  * Where the player plays.

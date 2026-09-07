@@ -10,7 +10,7 @@
  * once already; restating them anywhere in the client is how the two copies disagree.
  */
 
-import type { Sport } from './Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 export interface LikelyRange {
   readonly low: number;

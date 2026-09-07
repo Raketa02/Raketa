@@ -47,25 +47,15 @@
 import { useRouter } from 'expo-router';
 
 import { AvailabilityGrid, Button } from '@/shared/ui';
+import { cellLabel, dayLabel, dayPartHead } from '@/shared/vocabulary/availabilityPresentation';
+import { DAY_PARTS, WEEKDAYS } from '@/shared/vocabulary/week';
 
 import type { AvailabilitySlot } from '../domain/ProfileDraft';
-import {
-  DAY_PARTS,
-  WEEKDAYS,
-  toggleCell,
-  isTicked,
-  weekStanding,
-} from '../domain/availabilityWeek';
+import { toggleCell, isTicked, weekStanding } from '../domain/availabilityWeek';
 import { stepAfter } from '../domain/socialSteps';
 import { useProfileDraft } from '../store/profileDraft.store';
 
-import {
-  availabilityContinueLabel,
-  availabilityEyebrow,
-  cellLabel,
-  dayLabel,
-  dayPartHead,
-} from './availabilityPresentation';
+import { availabilityContinueLabel, availabilityEyebrow } from './availabilityPresentation';
 import { SocialStepLayout } from './SocialStepLayout';
 import { SOCIAL_STEP_PATH } from './socialStepRoutes';
 import { stepCopy } from './socialStepPresentation';

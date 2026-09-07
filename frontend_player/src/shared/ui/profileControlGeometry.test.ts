@@ -14,8 +14,12 @@
  * less two gutters ([Part 0.2](../../../docs/design-system.md#02-what-replaces-the-frame)),
  * so on a 320pt device there are 290pt to divide. That is the number 7.9 already reasons
  * against for the question navigator, and it is the number that ruled out laying the
- * availability grid out as seven columns: 7 × 44 = 308 does not fit in 290 and no
- * hit-slop closes a 2,6pt-per-cell deficit.
+ * availability grid out as seven columns: 7 × 44 = 308 does not fit in 290, no hit-slop
+ * closes the deficit, and the widest phone in the population does not close it either.
+ *
+ * **6.8 now draws its grid inside a card**, which takes another 24pt off the width before
+ * the three cells divide it. That is why `cardPadding` appears in the arithmetic below: the
+ * bound the section claims is still met, and it is met with less room than it used to be.
  *
  * A test and not a runtime assertion, for the reason `bandEdges.test.ts` gives: a
  * `theme.ts` that checked its own arithmetic would be the app refusing to launch over a
@@ -62,14 +66,21 @@ describe('the narrowest content width', () => {
 describe('the availability cell (6.8)', () => {
   const { availability } = theme.size;
 
+  /** What the grid has to divide: the content width, less the card it sits inside. */
+  const insideTheCard = NARROWEST_CONTENT - 2 * availability.cardPadding;
+
   /**
-   * Three cells share whatever the day-label column leaves. The label column is
-   * content-sized so it grows with Dynamic Type, capped by `labelMaxRatio` — so this is
-   * the *worst* case, the cell width at the largest text setting the cap allows.
+   * Three cells share whatever the day-label column leaves, inside the card. The label
+   * column is content-sized so it grows with Dynamic Type, capped by `labelMaxRatio` — so
+   * this is the *worst* case, the cell width at the largest text setting the cap allows.
    */
-  const widestLabelColumn = NARROWEST_CONTENT * availability.labelMaxRatio;
+  const widestLabelColumn = insideTheCard * availability.labelMaxRatio;
   const cellWidth =
-    (NARROWEST_CONTENT - widestLabelColumn - availability.labelGutter - 2 * availability.gap) / 3;
+    (insideTheCard -
+      widestLabelColumn -
+      availability.labelGutter -
+      (availability.columns - 1) * availability.gap) /
+    availability.columns;
 
   it('reaches the touch minimum by height alone, with no hit-slop to grant', () => {
     expect(availability.cellHeight).toBe(theme.size.minTouch);
@@ -80,13 +91,31 @@ describe('the availability cell (6.8)', () => {
   });
 
   /**
+   * The card is what makes that assertion worth re-reading rather than inheriting: it takes
+   * 24pt off the width, and the margin over the minimum is what is left of what the layout
+   * used to have. Stated so the next person adding padding to the card can see the room they
+   * are spending.
+   */
+  it('is left 15,5pt of room over the minimum once the card has taken its padding', () => {
+    expect(cellWidth - theme.size.minTouch).toBeCloseTo(15.5, 1);
+  });
+
+  /**
+   * The other axis, and the property no other control in the app has: this cell reaches the
+   * minimum in **both** directions without a `hitSlop` entry to grant it either one.
+   */
+  it('needs no hit-slop in either axis', () => {
+    expect(theme.hit).not.toHaveProperty('availability');
+  });
+
+  /**
    * The label column's cap is the only thing standing between Dynamic Type and a cell too
    * narrow to hit, so it is worth stating what it may not grow to: a cap that let the
-   * labels take a third of the width would still pass the assertion above today, and would
-   * stop passing it the moment the gap or the gutter moved.
+   * labels take a third of the card would still pass the assertion above today, and would
+   * stop passing it the moment the gap, the padding or the gutter moved.
    */
   it('caps the label column well short of what would starve the cells', () => {
-    const capThatWouldStarveThem = 1 - (3 * theme.size.minTouch) / NARROWEST_CONTENT;
+    const capThatWouldStarveThem = 1 - (availability.columns * theme.size.minTouch) / insideTheCard;
     expect(availability.labelMaxRatio).toBeLessThan(capThatWouldStarveThem);
   });
 });

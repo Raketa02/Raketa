@@ -13,6 +13,26 @@ type PlayerProfileOptionsResponse = components['schemas']['PlayerProfileOptionsR
 type PhotoResponse = components['schemas']['PhotoResponse'];
 type CommitPlayerProfileRequest = components['schemas']['CommitPlayerProfileRequest'];
 type PlayerProfileResponse = components['schemas']['PlayerProfileResponse'];
+type PlayerProfileReadResponse = components['schemas']['PlayerProfileReadResponse'];
+type ChangeAvailabilityRequest = components['schemas']['ChangeAvailabilityRequest'];
+type AvailabilityResponse = components['schemas']['AvailabilityResponse'];
+type AvailabilitySlotResource = components['schemas']['AvailabilitySlotResource'];
+type ChangeSearchRadiusRequest = components['schemas']['ChangeSearchRadiusRequest'];
+type SearchRadiusResponse = components['schemas']['SearchRadiusResponse'];
+type WirePlayIntent = components['schemas']['PlayIntent'];
+type WireSport = components['schemas']['Sport'];
+/**
+ * Which screen a declaration was made on — the wire's five values, re-exported.
+ *
+ * Aliased out of `generated/` rather than restated: it is a closed vocabulary **nothing
+ * branches on**, recorded beside the fact and never read by a decision, so there is nothing
+ * for a domain table to be about. A second spelling would be a table that buys documentation
+ * nothing was missing and can still drift — and it would have had to be widened by hand when
+ * `DECK` landed ([#280](https://github.com/Raketa02/Raketa/issues/280)), which is the drift
+ * this alias exists to make impossible.
+ */
+export type PlayIntentSurface = components['schemas']['PlayIntentSurface'];
+type PlayIntentDeclarationResponse = components['schemas']['PlayIntentDeclarationResponse'];
 
 export interface PlayerProfileApiOptions {
   readonly signal?: AbortSignal;
@@ -115,5 +135,130 @@ export function commitPlayerProfile({
     body,
     authenticated: true,
     idempotencyKey,
+  });
+}
+
+/**
+ * The week, the radius and the per-sport Play intent — the three facts the Play screens read.
+ *
+ * **One round trip across two aggregates**, which is the cheaper half of a precedent ADR-0090
+ * already set on `GET /users/me`: two round trips are two things that can fail on a bad
+ * connection. The fourth fact a search screen needs — *which sports am I rated in* — is
+ * `GET /ratings` and is deliberately not re-served here.
+ *
+ * It carries no `player_id`: the resource is `/players/me`, so the caller is the bearer token.
+ */
+export function readPlayerProfile({
+  signal,
+}: PlayerProfileApiOptions = {}): Promise<PlayerProfileReadResponse> {
+  return httpRequest<PlayerProfileReadResponse>({
+    method: 'GET',
+    path: '/api/v1/players/me/profile',
+    authenticated: true,
+    signal,
+  });
+}
+
+export interface ChangeAvailabilityOptions {
+  /** Every cell still ticked, in the app's own order. The list **is** the week. */
+  readonly availability: readonly AvailabilitySlotResource[];
+}
+
+/**
+ * Replace this player's week. **The whole grid, every time**, and an empty list clears it.
+ *
+ * The list *is* the week and what is absent from it is unticked, so there is no per-cell
+ * request and nothing to merge: a client that sent a delta would be describing a transition
+ * the aggregate does not have.
+ *
+ * **A cleared week is a legal value here and a refusal at the commit**, and the asymmetry is
+ * the route's rather than this app's to preserve: the floor of one ticked cell binds the
+ * answer a player is *asked for* at the end of onboarding, not every later edit of it. So
+ * nothing here checks the length.
+ *
+ * **This is where a `KEEP_THESE_TIMES` prompt is answered.** The engine notices that a search
+ * ran on a week the profile does not hold and asks; nothing in the matcher writes a profile,
+ * so a *yes* is this request and a *not now* is a different one entirely
+ * ([#275](https://github.com/Raketa02/Raketa/issues/275)).
+ *
+ * **Unkeyed, and no `signal`** — the radius write's two reasons, unchanged: a `PUT` that lands
+ * the same state twice has nothing to deduplicate, and a cancelled write leaves the client
+ * unable to say whether it landed.
+ */
+export function changeAvailability({
+  availability,
+}: ChangeAvailabilityOptions): Promise<AvailabilityResponse> {
+  const body: ChangeAvailabilityRequest = { availability: [...availability] };
+  return httpRequest<AvailabilityResponse>({
+    method: 'PUT',
+    path: '/api/v1/players/me/availability',
+    body,
+    authenticated: true,
+  });
+}
+
+export interface ChangeSearchRadiusOptions {
+  readonly radiusKm: number;
+}
+
+/**
+ * Replace this player's Search radius. **Whole kilometres, unkeyed, and idempotent.**
+ *
+ * A `PUT` rather than a `PATCH`, which is the shape ADR-0094 fixed for the third changeable
+ * fact in this context and the shape the week beside it takes for a sharper reason: a blank
+ * grid is a legal value, so `null` there would mean both *leave it alone* and *clear it*. Two
+ * write shapes in one context is the thing worth avoiding, so the radius takes the same one.
+ *
+ * **No idempotency key**, unlike the commit: that request *creates* an aggregate out of six
+ * answers and a duplicate would be a second profile, where a `PUT` that lands the same state
+ * twice has nothing to deduplicate.
+ *
+ * **No `signal`**, for the reason the commit has none: a cancelled write leaves the client
+ * unable to say whether it landed, and a search runs against whatever the profile now holds.
+ */
+export function changeSearchRadius({
+  radiusKm,
+}: ChangeSearchRadiusOptions): Promise<SearchRadiusResponse> {
+  const body: ChangeSearchRadiusRequest = { search_radius_km: radiusKm };
+  return httpRequest<SearchRadiusResponse>({
+    method: 'PUT',
+    path: '/api/v1/players/me/search-radius',
+    body,
+    authenticated: true,
+  });
+}
+
+export interface DeclarePlayIntentOptions {
+  /** The path, because the sport is half the resource's identity (ADR-0094). */
+  readonly wireSport: WireSport;
+  readonly intent: WirePlayIntent;
+  /**
+   * Which screen said so. Required, because the client is the only party that knows — and
+   * safe to take its word for, because nothing branches on it.
+   */
+  readonly surface: PlayIntentSurface;
+}
+
+/**
+ * Declare what kind of game this player wants, in one sport. **Unkeyed and idempotent.**
+ *
+ * `NO_PREFERENCE` is an explicit answer and there is no null: the matcher must be able to
+ * tell *either kind of evening suits me* from *I never opened that screen*, and nobody is
+ * ever backfilled to it (ADR-0094).
+ *
+ * **A declaration is not a search mode.** Mode is which tab the player is on right now and
+ * has two values; this has three and is what *make this my intent* means — so the mode toggle
+ * on Find a game reaches this route through nothing at all.
+ */
+export function declarePlayIntent({
+  wireSport,
+  intent,
+  surface,
+}: DeclarePlayIntentOptions): Promise<PlayIntentDeclarationResponse> {
+  return httpRequest<PlayIntentDeclarationResponse>({
+    method: 'PUT',
+    path: `/api/v1/play-intents/${wireSport}`,
+    body: { intent, surface },
+    authenticated: true,
   });
 }

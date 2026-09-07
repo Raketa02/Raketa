@@ -30,7 +30,7 @@ Two consequences to keep in mind when editing them:
 ## After any change
 
 ```bash
-make test-hooks        # 65 assertions across both hooks
+make test-hooks        # 69 assertions across both hooks
 ```
 
 The suite covers the false-positive cases too — a commit message mentioning `ecs-deploy`, a

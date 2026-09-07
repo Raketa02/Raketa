@@ -25,8 +25,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from hashlib import sha256
-from math import exp
-from typing import Final, Sequence
+from math import exp, isfinite
+from typing import Final, Mapping, Sequence
 from uuid import UUID
 
 from app.kernel import Instant
@@ -125,9 +125,15 @@ class PhotoReviewDecision(StrEnum):
     the other side of the trade has got heavier. Adding a blocking value later is
     an addition; shipping one now would be a behaviour nothing has earned.
 
-    There is also no value for *the reviewer could not be asked*. This enum says
-    what the reviewer **concluded** about an image, and an outage is not a
-    conclusion about an image — see `verdict_when_unreviewable`.
+    There is also no value for *the reviewer could not be asked*, and there is
+    now a third state rather than two. This enum says what the reviewer
+    **concluded** about an image; *nobody looked* is not a conclusion about an
+    image, so it is spelled as the **absence** of one of these — ``None`` on a
+    verdict, no key on the object, no field on the wire (``docs/adr/0138``).
+    ADR-0133 already spelled the uploader's third state that way rather than
+    folding it into ``allowed`` at the boundary that knows least; the stored
+    verdict is the boundary that was folded, and this is where it is unfolded.
+    See `verdict_when_unreviewable` and `decision_on_record`.
     """
 
     ALLOWED = "allowed"
@@ -146,11 +152,20 @@ class PhotoReviewVerdict:
     `review_note`.
     """
 
-    decision: PhotoReviewDecision
+    #: What the reviewer concluded, or ``None`` for **nobody looked**. Three
+    #: answers rather than two, and only the first two were ever a conclusion:
+    #: an unreachable reviewer used to record ``ALLOWED``, which was the right
+    #: trade while the verdict was a warning nobody else saw and the wrong one
+    #: the day it became a badge on a stranger's card (``docs/adr/0138``).
+    decision: PhotoReviewDecision | None
     note: str | None = None
 
     @property
     def is_flagged(self) -> bool:
+        """Whether this photo should be warned about. **A verdict with no
+        decision is not one** — silence is what an outage costs, on both sides
+        of it."""
+
         return self.decision is PhotoReviewDecision.FLAGGED
 
 
@@ -171,6 +186,25 @@ class StoredPhoto:
 
     ref: PhotoRef
     stored_at: Instant
+
+
+@dataclass(frozen=True, slots=True)
+class NotedPhoto:
+    """A photo the store is holding, and what it says about its review.
+
+    The other thing a listing yields, and the mirror image of `StoredPhoto`:
+    that one carries the stamp and deliberately no metadata, this one carries
+    the metadata and deliberately no stamp. Two shapes rather than one wide one,
+    because the sweep may not be able to read a verdict — a sweep that could
+    would invite a rule about flagged photos — and the backfill has no business
+    with an age.
+
+    ``note`` is absent for every photo stored before the checker existed, and
+    that absence is the signal rather than a gap: see `review_standing`.
+    """
+
+    ref: PhotoRef
+    note: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -235,6 +269,30 @@ class PhotoReviewUnavailability(StrEnum):
     STATUS = "status"
     MALFORMED = "malformed"
 
+    @property
+    def is_about_the_reviewer(self) -> bool:
+        """Whether this says *the reviewer is down* or *it failed this request*.
+
+        **Two of these four describe the container and two describe one call to
+        it**, and a batch re-reviewing a corpus has to tell them apart. A timeout
+        and a transport error mean the sidecar is not answering, so the next
+        photo will get the same answer and there is nothing to do but come back
+        later. A status or a malformed body mean it *answered* — perhaps about
+        this one image, which may be the only image it cannot handle. Treating
+        those as *the reviewer is down* would let one photo end every run at the
+        same place for ever, and nothing after it in the listing would be looked
+        at again.
+
+        Nothing on the upload path reads this: a single upload fails open
+        whichever it was, and the note records which. It is the re-review pass
+        that has a next photo to decide about.
+        """
+
+        return self in {
+            PhotoReviewUnavailability.TIMEOUT,
+            PhotoReviewUnavailability.TRANSPORT,
+        }
+
 
 #: The captions that mean *this is the photo the rule asks for*. One per sport
 #: the platform rates, because a padel court, a squash court and a badminton
@@ -291,11 +349,33 @@ PHOTO_REVIEW_LOGIT_SCALE: Final = 100.0
 #: **Provisional, and it is written down as provisional.** The value that belongs
 #: here is the one that puts the flag rate where the product wants it, and that
 #: is a fact about a corpus of real photos which does not exist yet. Half is the
-#: honest placeholder — *the on-court captions won* — and it costs nothing today
-#: because nothing reads the decision: no route returns it and no copy shows it.
-#: What makes the placeholder safe to replace later is that every verdict records
+#: honest placeholder — *the on-court captions won*.
+#:
+#: **It no longer costs nothing, and this comment used to say it did.** ADR-0129
+#: wrote *"nothing reads the decision: no route returns it and no copy shows
+#: it"*, which stopped being true twice: ``docs/adr/0133`` made this line a
+#: sentence shown to the photograph's owner, and ``docs/adr/0138`` made it a
+#: shield shown to twenty people who are not. A genuine on-court photo scoring
+#: 0.49 now leaves its owner silently unbadged on other people's screens, with no
+#: copy to soften it. That is the sharpest cost this number has, and it is
+#: **#316** — the one place a reader meets the value should not also be the one
+#: place claiming it is inconsequential.
+#:
+#: What makes the placeholder safe to replace at all is that every verdict records
 #: the similarities it was computed from, so the threshold is re-derivable over
-#: the stored corpus without re-running inference on a single image.
+#: the stored corpus without re-running inference on a single image. That is now
+#: a command rather than a promise — ``make photo-flag-rate`` prints the flag rate
+#: each candidate line would have produced, over the photographs the platform
+#: already holds. **What it cannot do is choose**: where the rate should sit, and
+#: whether the corpus is yet large enough for one to mean anything, are product
+#: judgements, which is why #316 is `ready-for-human` and why the number a run
+#: argues for is typed here by hand.
+#:
+#: **Moving it changes what stored verdicts mean without changing them.** A photo
+#: stamped under this value keeps that stamp until something re-reviews it, and
+#: the fingerprint does not move, so ``docs/adr/0132``'s backfill will not pick it
+#: up either. Whether to re-stamp the corpus under a new line is a second decision
+#: — *a new record, not a configuration change* — and the run prints its size.
 ON_COURT_CONFIDENCE_THRESHOLD: Final = 0.5
 
 
@@ -367,6 +447,43 @@ def review_note(*, model: str, similarities: Sequence[float]) -> str:
     )
 
 
+def flagged_at(*, confidence: float, threshold: float) -> bool:
+    """Whether a photo scoring `confidence` is warned about at `threshold`.
+
+    **One comparison, spelled once, for both the threshold in force and any
+    threshold somebody is thinking about.** ADR-0132 makes the argument in its
+    own setting — a batch with its own copy of the rule is a second reviewer,
+    able to disagree with the upload path about one image — and it is sharper
+    here, because the caller with the other copy would be the derivation that
+    chooses the next value (#316). A rate computed with `<=` where the verdict
+    uses `<` differs by exactly the photos sitting on the line, reads as
+    measured, and nothing downstream could tell.
+
+    **Exactly on the line is allowed**, at a candidate threshold as much as at
+    the shipping one: the check soft-warns and the tie belongs to the player.
+
+    **Spelled ``not (>=)`` rather than ``<``, and the difference is one value.**
+    A ``nan`` confidence compares false against both, so ``<`` would call it
+    *allowed* — which under ``docs/adr/0138`` is a shield shown to strangers
+    about a photograph whose score is nonsense — while this calls it flagged.
+    It is reachable: a cosine similarity of ``nan`` passes the sidecar adapter's
+    number check and ``json`` decodes a bare ``NaN`` by default, so the
+    arithmetic below yields one. The tie belongs to the player; a number that is
+    not a number is not a tie, and the soft warning is the cheap side to be
+    wrong on. (The derivation never meets one — `recorded_score_in`
+    refuses a non-finite vector before it can enter a distribution.)
+
+    Both arguments are keyword-only, because they are two floats in the same
+    unit interval and a swapped pair would be silent at every call site.
+
+    Monotone in `threshold` over the finite values, which is not a detail: it is
+    what lets a table of rates be read as one distribution rather than as
+    unrelated numbers.
+    """
+
+    return not confidence >= threshold
+
+
 def verdict_from_similarities(
     *, model: str, similarities: Sequence[float]
 ) -> PhotoReviewVerdict:
@@ -380,9 +497,11 @@ def verdict_from_similarities(
 
     confidence = on_court_confidence(similarities)
     decision = (
-        PhotoReviewDecision.ALLOWED
-        if confidence >= ON_COURT_CONFIDENCE_THRESHOLD
-        else PhotoReviewDecision.FLAGGED
+        PhotoReviewDecision.FLAGGED
+        if flagged_at(
+            confidence=confidence, threshold=ON_COURT_CONFIDENCE_THRESHOLD
+        )
+        else PhotoReviewDecision.ALLOWED
     )
     return PhotoReviewVerdict(
         decision=decision,
@@ -393,19 +512,379 @@ def verdict_from_similarities(
 def verdict_when_unreviewable(why: PhotoReviewUnavailability) -> PhotoReviewVerdict:
     """The verdict for a photo the reviewer could not be asked about.
 
-    **``ALLOWED``, and the note is what says it was never really looked at.** The
-    check soft-warns rather than hard-blocks (``docs/adr/0091``); a reviewer that
-    turned its own outage into a failed upload would refuse a real player's photo
-    for a reason that has nothing to do with the photo, which is worse than the
-    false reject the soft-warn rule already refuses to pay.
+    **No decision, and the note says which outage produced none.** Fail-open is
+    unchanged and is now spelled honestly: the check soft-warns rather than
+    hard-blocks (``docs/adr/0091``), so a reviewer that turned its own outage
+    into a failed upload would refuse a real player's photo for a reason that has
+    nothing to do with the photo — worse than the false reject the soft-warn rule
+    already refuses to pay. What has changed is the other side of it. Until
+    ``docs/adr/0138`` this returned ``ALLOWED``, which said *nothing to warn
+    about* in the only vocabulary it had; a card reading the same word would say
+    *this photograph was checked and passed*, about an image nothing looked at,
+    to twenty people who are not its owner.
 
-    There is deliberately no third decision for it. ``PhotoReviewDecision`` says
-    what the reviewer *concluded*, and *the reviewer was unreachable* is not a
-    conclusion about an image — it belongs in the evidence, where a re-review
-    pass can find every one of them by prefix.
+    So an outage costs **silence in both directions** — no warning to the
+    uploader, no shield to a stranger — and there is still no third value on
+    ``PhotoReviewDecision``. That enum says what the reviewer *concluded*, and
+    *the reviewer was unreachable* is not a conclusion about an image: it is an
+    absence of one, beside evidence a re-review pass can find by prefix.
     """
 
     return PhotoReviewVerdict(
-        decision=PhotoReviewDecision.ALLOWED,
+        decision=None,
         note=f"clip;p={PROMPT_SET_FINGERPRINT};unavailable={why.value}",
     )
+
+
+# ---------------------------------------------------------------------------
+# What the store already says about a photo, and who still owes a look
+# ---------------------------------------------------------------------------
+#
+# Everything above decides what a *new* photo's verdict is. What follows reads
+# the verdict already sitting beside an object, because the platform holds
+# photos from three different eras and they are not the same job
+# (``docs/adr/0132``): the ones the pass-through waved through with no note, the
+# ones that arrived while the sidecar was unreachable, and the ones that were
+# really looked at.
+#
+# **The encoder and the decoder are here together, deliberately.** The upload
+# path writes this metadata and the backfill reads it; two modules spelling the
+# same key is the pair that drifts, and a backfill that misspelled it would
+# silently find no population at all.
+
+
+#: The metadata key the review decision is stored under, beside the bytes.
+REVIEW_METADATA_KEY: Final = "review"
+
+#: The metadata key the reviewer's machine-readable note is stored under, when
+#: it gave one. **Absent rather than empty when it did not**, which is the whole
+#: of how a pass-through-era photo is told apart from a reviewed one.
+REVIEW_NOTE_METADATA_KEY: Final = "review-note"
+
+#: What separates one field of a note from the next, and a field's name from its
+#: value. Named because the note is written here and parsed here, and a
+#: separator written twice is one that eventually disagrees with itself.
+_NOTE_FIELD_SEPARATOR: Final = ";"
+_NOTE_VALUE_SEPARATOR: Final = "="
+
+#: The field a note carries the prompt-set fingerprint in. Every note shape has
+#: it — a verdict names what it was judged against, and an outage names what it
+#: would have been judged against.
+_PROMPT_SET_FIELD: Final = "p"
+
+#: The field that says the reviewer was never asked, and why.
+_UNAVAILABLE_FIELD: Final = "unavailable"
+
+#: The field naming the reviewer that produced the vector. Two corpora scored by
+#: different models are two corpora, and a note that could not say which is a
+#: vector nobody can place.
+_MODEL_FIELD: Final = "m"
+
+#: The field the raw similarity vector rides in — one value per prompt, in the
+#: order they were asked. **The only field on a note that is evidence rather
+#: than a conclusion**, and the reason a threshold can be re-derived over the
+#: stored corpus without paying for inference twice (#316).
+_SIMILARITIES_FIELD: Final = "s"
+
+#: What separates one similarity from the next inside that field.
+_NOTE_LIST_SEPARATOR: Final = ","
+
+#: What a note must carry to count as *this image was actually scored*: the
+#: model, the prompt set, the confidence and the raw vector. All four, because
+#: any three of them is a note this application never wrote.
+_REVIEWED_FIELDS: Final = frozenset(
+    {_MODEL_FIELD, _PROMPT_SET_FIELD, "c", _SIMILARITIES_FIELD}
+)
+
+
+class PhotoReviewStanding(StrEnum):
+    """Whether anybody has actually looked at this photo yet.
+
+    Read off the note the store holds, and **not** the same question as
+    `PhotoReviewDecision`: a photo can be ``allowed`` because a model scored it
+    and a photo can be ``allowed`` because nothing was asked, and until #181
+    landed nothing distinguished the two.
+
+    Three values because there are three populations, and only the first two are
+    work (``docs/adr/0132``).
+    """
+
+    #: No note, or a note nothing can read. The pass-through era, and the
+    #: population that is fixed and only shrinks.
+    NEVER_ASKED = "never-asked"
+
+    #: The reviewer was asked and could not answer — down, slow, or wrong. This
+    #: population keeps growing, which is why the fix is a loop and not a script.
+    UNAVAILABLE = "unavailable"
+
+    #: Scored against a real image. The prompt set it was scored under is in the
+    #: note; whether that set is still the one being asked is a separate
+    #: question, and `judged_against_a_superseded_set` is the one that asks it.
+    REVIEWED = "reviewed"
+
+
+def review_metadata(verdict: PhotoReviewVerdict) -> dict[str, str]:
+    """The metadata one verdict is stored under, beside the bytes.
+
+    A flagged photo is **stored**, not refused — the check soft-warns rather
+    than hard-blocks (``docs/adr/0091``) — and the verdict rides on the object
+    so that what the reviewer concluded is findable later without a second table
+    to keep in step with the blobs.
+
+    The note key is **omitted** rather than written empty when there is none.
+    That is not tidiness: it is the signal, and `review_standing` reads it.
+
+    **The decision key is omitted the same way, and for a sharper reason.** A
+    photo nobody could look at gets no verdict written beside it at all
+    (``docs/adr/0138``), so ``review: allowed`` stops being a word this
+    application writes about an unexamined image. Every object still carrying
+    one is from before that record — the pass-through era, or an outage under
+    ADR-0133 — and `decision_on_record` is what refuses to believe them until
+    ADR-0132's job has been round.
+    """
+
+    metadata: dict[str, str] = {}
+    if verdict.decision is not None:
+        metadata[REVIEW_METADATA_KEY] = verdict.decision.value
+    if verdict.note is not None:
+        metadata[REVIEW_NOTE_METADATA_KEY] = verdict.note
+    return metadata
+
+
+def review_note_in(metadata: Mapping[str, str]) -> str | None:
+    """The reviewer's note out of one object's metadata, or ``None``.
+
+    ``None`` for *this object carries no note*, which is what every photo stored
+    before the checker existed looks like.
+    """
+
+    return metadata.get(REVIEW_NOTE_METADATA_KEY)
+
+
+def decision_on_record(metadata: Mapping[str, str]) -> PhotoReviewDecision | None:
+    """What was concluded about this photo, **believing nothing the note cannot
+    prove**. ``None`` for *nobody looked*.
+
+    The mirror of `review_metadata`, and the one thing on the read side that is
+    allowed to cross to somebody who is not the photograph's owner
+    (``docs/adr/0138``). ``review_note_in`` beside it answers *what does the
+    store say*; this answers *what may be drawn*, and the difference between the
+    two questions is the whole of this function.
+
+    **A stored decision counts only where the note proves an image was really
+    scored** — model, prompt set, confidence and raw vector, all four
+    (`review_standing`). Two populations say ``allowed`` and mean nothing of the
+    kind: the pass-through era, which allowed everything by construction, and
+    every upload that arrived while the sidecar was unreachable before
+    ADR-0138. ADR-0132's job drains both, on a clock measured in hours over a
+    listing that is one ``HEAD`` per object — and *a tick on a photo nobody
+    checked* is not a thing to be wrong about for as long as that takes. So the
+    proof is required at the point of reading rather than assumed to have been
+    written, and the backfill makes the metadata honest at its own pace instead
+    of being the thing a shield waits on.
+
+    **An unrecognised code is nothing, not a guess.** The backend publishes
+    codes (``docs/adr/0022``) and a value outside the enum is one this
+    application never wrote; naming it would be inventing the third decision
+    `PhotoReviewDecision` deliberately does not have.
+
+    **A score under a prompt set that has since moved still counts**, and that is
+    a decision rather than an oversight. `judged_against_a_superseded_set` is
+    population 3, which ``docs/adr/0132`` **counts and deliberately leaves
+    alone** — whether captions moved far enough to be worth re-running is a
+    judgement nobody has made. Refusing those photos here would take that
+    judgement by the back door and would silently unbadge everybody scored before
+    the last comma changed in a caption; showing them says only *somebody looked
+    at this image*, which is what a shield claims. The day population 3 is
+    re-run, or judged not worth re-running, is the day to re-open this line — and
+    the count is already in the backfill's log.
+    """
+
+    if review_standing(review_note_in(metadata)) is not PhotoReviewStanding.REVIEWED:
+        return None
+    recorded = metadata.get(REVIEW_METADATA_KEY)
+    if recorded is None:
+        return None
+    try:
+        return PhotoReviewDecision(recorded)
+    except ValueError:
+        return None
+
+
+def _note_fields(note: str) -> dict[str, str]:
+    """One note's ``name=value`` fields. Anything else in it is ignored.
+
+    Lenient on purpose, and the leniency is bounded by what the callers do with
+    it: a note is only ever read as *reviewed* when all four of the fields that
+    prove a score are present, so a truncated or corrupted string falls short of
+    that and is re-reviewed rather than trusted.
+    """
+
+    fields: dict[str, str] = {}
+    for part in note.split(_NOTE_FIELD_SEPARATOR):
+        name, separator, value = part.partition(_NOTE_VALUE_SEPARATOR)
+        if separator:
+            fields[name] = value
+    return fields
+
+
+def review_standing(note: str | None) -> PhotoReviewStanding:
+    """Which of the three populations the photo carrying `note` is in.
+
+    **A note this cannot read is ``NEVER_ASKED``, not an error**, and that is
+    the opposite of how the sweep treats a key it cannot parse. The sweep
+    refuses to guess because its action is a delete and a wrong answer destroys
+    something a player cannot get back; here the action is a re-review, so a
+    wrong answer costs one inference and leaves behind a note that does parse.
+    """
+
+    if note is None:
+        return PhotoReviewStanding.NEVER_ASKED
+    fields = _note_fields(note)
+    if _UNAVAILABLE_FIELD in fields:
+        return PhotoReviewStanding.UNAVAILABLE
+    if _REVIEWED_FIELDS <= fields.keys():
+        return PhotoReviewStanding.REVIEWED
+    return PhotoReviewStanding.NEVER_ASKED
+
+
+def awaits_review(note: str | None) -> bool:
+    """Whether this photo still owes a look. Populations 1 and 2 together.
+
+    The two are one question at the point of doing the work — *has anything
+    scored this image* — and two different facts about how the platform got
+    there, which is why the standing keeps them apart and this does not.
+    """
+
+    return review_standing(note) is not PhotoReviewStanding.REVIEWED
+
+
+def unavailability_in(note: str | None) -> PhotoReviewUnavailability | None:
+    """Why the reviewer could not be asked, if this note says it could not.
+
+    **The closed set earns its keep here** (`PhotoReviewUnavailability`): a
+    backfill that stops because the sidecar is unreachable and one that stops
+    because the sidecar is rejecting its requests want two different people
+    looking, and the difference is one field of a string nobody had to keep a
+    table of.
+
+    ``None`` for every other note, and for a reason outside the set — which is a
+    note this application did not write, and naming it would be inventing a
+    value the enum deliberately does not have.
+    """
+
+    if note is None:
+        return None
+    reason = _note_fields(note).get(_UNAVAILABLE_FIELD)
+    if reason is None:
+        return None
+    try:
+        return PhotoReviewUnavailability(reason)
+    except ValueError:
+        return None
+
+
+def prompt_set_in(note: str | None) -> str | None:
+    """Which prompt set this note was written under, or ``None`` if it says no.
+
+    The fingerprint is what makes a stored corpus re-readable at all: a
+    similarity vector means nothing without the captions it was measured
+    against (`PROMPT_SET_FINGERPRINT`).
+    """
+
+    if note is None:
+        return None
+    return _note_fields(note).get(_PROMPT_SET_FIELD)
+
+
+@dataclass(frozen=True, slots=True)
+class RecordedScore:
+    """What a note says about an image that was really looked at.
+
+    The two facts travel together because a similarity vector is only readable
+    beside the things that say what produced it: `prompt_set_in` names the
+    captions, and this names the reviewer. **A corpus scored by one model and a
+    corpus scored by another are two corpora**, and a rate derived across both
+    without noticing is the failure mode a threshold derivation has (#316) — the
+    sharpest instance being a workbench's declared fixtures, which carry a
+    perfectly well-formed note and are not evidence about anything.
+    """
+
+    model: str
+    similarities: tuple[float, ...]
+
+
+def recorded_score_in(note: str | None) -> RecordedScore | None:
+    """What this photo was scored as, and by what. ``None`` if it was not.
+
+    **The read #316 is built on.** Every verdict records the numbers it was
+    computed from (`review_note`), so choosing a better threshold is a walk over
+    stored metadata and arithmetic — not a second pass of inference over every
+    photograph the platform holds. This is the decoder for that, and it lives
+    beside the encoder for the reason the section above gives: two modules
+    spelling one format is the pair that drifts silently.
+
+    **The vector rather than the recorded ``c=``, deliberately.** The
+    fingerprint pins the *captions* and nothing else — the scale and the softmax
+    are today's arithmetic — so a stored confidence is what some version of this
+    module concluded, while the vector is what the model actually said. A rate
+    has to be a fact about the line being tried, which means re-deriving through
+    `on_court_confidence` rather than believing a number that may predate it.
+
+    ``None`` for populations 1 and 2: neither was applied to an image, so there
+    is nothing to re-derive, and an empty vector would read as *scored against
+    nothing*. ``None`` too for a field that will not parse — **the sweep's
+    direction of doubt rather than the backfill's**, because the action here is
+    to put a number into a distribution nothing downstream can audit. Dropping
+    one photo costs a row of the corpus; guessing costs the rate.
+
+    **``nan`` and ``inf`` parse, and are refused with the rest.** A cosine
+    similarity is a number in ``[-1, 1]``; the two that are not are the two that
+    survive `float` and then poison every aggregate computed from them without
+    raising anywhere — a ``nan`` confidence compares false against every
+    threshold, so the photo would silently count as allowed at all of them.
+
+    A note judged against a prompt set that has since moved **does** yield its
+    vector. Whether those numbers belong in a corpus is
+    `judged_against_a_superseded_set`'s question, and a caller that could not
+    read them could not count what it dropped either.
+    """
+
+    if note is None or review_standing(note) is not PhotoReviewStanding.REVIEWED:
+        return None
+    fields = _note_fields(note)
+    # Both are guaranteed present by `review_standing` — they are two of the
+    # four fields that make a note *reviewed* — and are read as if they were
+    # not, because the guarantee lives in a frozenset one edit away.
+    model = fields.get(_MODEL_FIELD)
+    recorded = fields.get(_SIMILARITIES_FIELD)
+    if model is None or recorded is None:
+        return None
+    try:
+        vector = tuple(
+            float(value) for value in recorded.split(_NOTE_LIST_SEPARATOR)
+        )
+    except ValueError:
+        return None
+    if not all(isfinite(value) for value in vector):
+        return None
+    return RecordedScore(model=model, similarities=vector)
+
+
+def judged_against_a_superseded_set(note: str | None) -> bool:
+    """Whether this photo was really scored, against captions that have moved.
+
+    **Population 3, and it is a question rather than a job** (``docs/adr/0132``).
+    Re-running it is a judgement about how far the set moved, which nothing here
+    can make; what this buys is that the judgement is *answerable* — the size of
+    the population is a count rather than a guess.
+
+    False for anything that awaits review. An outage's note carries a
+    fingerprint too, and an old one is still the sidecar having been down rather
+    than a verdict worth re-deciding — counting it here would hide it from the
+    population that is actually work.
+    """
+
+    if review_standing(note) is not PhotoReviewStanding.REVIEWED:
+        return False
+    return prompt_set_in(note) != PROMPT_SET_FINGERPRINT

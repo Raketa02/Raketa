@@ -73,7 +73,7 @@ import {
 } from '@/shared/ui';
 
 import type { AssessmentResult } from '../domain/AssessmentResult';
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import { positionOf } from '../domain/onboardingPass';
 import { useAdvanceThroughPass } from '../hooks/useAdvanceThroughPass';
 import { useAssessment } from '../hooks/useAssessment';
@@ -84,7 +84,7 @@ import { OnboardingChrome } from './OnboardingChrome';
 import { BAND_NAMES, bandPresentation, ratingStatusLabel } from './bandPresentation';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { passEyebrow } from './passEyebrow';
-import { formatConfidence, formatLevel, formatRange } from './ratingFormat';
+import { formatLevel, formatPercent, formatRange } from '@/shared/formatting/ratingFormat';
 import { sportLabel } from './sportPresentation';
 
 type ExplainerKey = 'level' | 'range' | 'confidence';
@@ -110,18 +110,18 @@ function explainers(ceiling: number | undefined): Explainers {
   return {
     level: {
       title: 'Your Level',
-      body: 'Where you sit on the 1,00–5,00 scale for this sport. It is an estimate rather than a grade, and it is meant to move — real matches are what settle it.',
+      body: 'Where you sit on the 1,00\u20135,00 scale for this sport. Your level changes as you play competitive matches.',
     },
     range: {
       title: 'Your likely range',
-      body: 'Where we think your Level really sits. A wide range means we are less sure, not that you are weaker: it narrows as you play, without your Level having to move at all.',
+      body: 'Where Raketa thinks your level most likely sits, shown by the thin white bracket. A wider range means we are less certain about your level \u2014 not that you are weaker. As you play more, the range narrows and the confidence increases.',
     },
     confidence: {
       title: 'Confidence',
       body:
         ceiling === undefined
-          ? 'How sure we are, not how good you are. It starts low because a questionnaire is all we have to go on — we have not seen you play yet. Matches are what raise it.'
-          : `How sure we are, not how good you are. A questionnaire can prove at most ${ceiling}% — the mark on the ring — because we have not seen you play yet. Matches are what raise it.`,
+          ? 'Shows how confident Raketa is about your level, not how good you are. As you play more, Raketa learns and becomes more certain about your skill level.'
+          : `Shows how confident Raketa is about your level, not how good you are. The questionnaire can provide up to ${ceiling}% confidence. As you play more, Raketa learns and becomes more certain about your skill level.`,
     },
   };
 }
@@ -264,7 +264,9 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
             </Note>
           ) : null}
 
-          {result !== undefined ? <EvidenceTrail contributions={result.contributions} /> : null}
+          {result !== undefined ? (
+            <EvidenceTrail contributions={result.contributions} level={result.level} />
+          ) : null}
         </ScrollView>
 
         <View style={s.action}>
@@ -332,7 +334,7 @@ function Verdict({ result, marks, onExplain }: VerdictProps) {
   const band = bandPresentation(result.band.name);
   const level = formatLevel(result.level);
   const range = formatRange(result.range);
-  const confidence = formatConfidence(result.confidence);
+  const confidence = formatPercent(result.confidence);
 
   return (
     <>

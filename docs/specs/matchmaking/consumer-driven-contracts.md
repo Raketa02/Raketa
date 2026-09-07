@@ -9,12 +9,21 @@ Decided by [ADR-0098](../../adr/0098-matcher-demands-as-executable-contracts.md)
 [What the matcher demands of player_score, matches and cases](https://github.com/Raketa02/Raketa/issues/163)
 on the map [The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155).
 
-**Why this is written down at all.** The engine reads the Player Score's six strands
-*separately* (§9.3.4), because *confirms results* is close to worthless for a friendly and
-close to essential for a counted game. The Player Score is one number in the UI. Left
-unwritten, the obvious thing to ship is that number — and the strand-decomposition argument
-dies without anybody noticing until the term is wired up. **An unwritten demand is satisfiable
-by accident.**
+**Why this is written down at all.** The engine reads the Player Score's strands *separately*
+(§9.3.4), because they are weighed oppositely in the two modes — *keeps plans* is close to
+worthless for a friendly beside sportsmanship and worth two and a half times it for a counted
+game. The Player Score is one number in the UI. Left unwritten, the obvious thing to ship is
+that number — and the strand-decomposition argument dies without anybody noticing until the
+term is wired up. **An unwritten demand is satisfiable by accident.**
+
+> **Amended twice, and the provider has landed.**
+> [ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md) **struck *confirms
+> results*** — the pair this paragraph originally used as its example — because an unconfirmed
+> result is a fact about a pair and a strand is a verdict about a person.
+> [ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)
+> then built `player_score` over **two** of the five survivors, so the demand below is no longer
+> a promise: it is executed. Where this document says *`player_score` does not exist*, read
+> ADR-0140.
 
 ---
 
@@ -23,23 +32,32 @@ by accident.**
 One provider signs one contract. The split is by who supplies the fact, never by how fresh it
 has to be.
 
+**One of the five now has two, and the bend is recorded rather than absorbed**
+([#253](https://github.com/Raketa02/Raketa/issues/253), ADR-0098's amendment banner).
+`challenges` ships and signs `MatchHistoryQuery` beside the still-unwritten `matches`, because
+the seam runs *through* `pairwise_counterparts`: `ACCEPTED` and `DECLINED` are challenge facts
+and `PLAYED` is `matches`'. Splitting the port to match would cut the 500-counterpart bound in
+half, and two bounded reads merged by a caller is not a bounded read.
+
 | Port | Provider | Supplies |
 | --- | --- | --- |
-| `PlayerScoreQuery` | `player_score` | The six strands with their evidence, and opponent variety |
-| `MatchHistoryQuery` | `matches` | The searcher's pairwise history, the per-player open-challenge count, and the origin key |
+| `PlayerScoreQuery` | `player_score` | The five strands with their evidence, and the published score |
+| `MatchHistoryQuery` | `challenges` **and** `matches` | The searcher's pairwise history, the per-player open-challenge count, and the origin key. `challenges` answers all of it except `PLAYED`, `PLANNED_NEVER_PLAYED` and the late-change threshold |
 | `AccountHoldQuery` | `cases` | One live boolean per player. Already standing from [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) |
 | `AtStakeQuery` | `rating` | What a counted win and a counted loss against one opponent would do to the searcher's Level |
 | `AccountStatusQuery` | `users` | The set of accounts that may not be shown. Gate 8, from [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) |
 
 **The last two are different, and the difference is stated rather than left to be noticed.**
-`player_score`, `matches` and `cases` **do not exist**. `rating` does — it is at
-`backend/app/modules/rating/`, with its engine at `app/engines/racketskill/`, and the matcher
-already reads μ and σ from it. What is missing is not a context but a **rule**: the
-result-update rule and its K-factor, which arrive with `matches` and are out of scope on this
-map. The port is here anyway, in this document rather than a second one, because the value of
-this file is being *the one place* a build agent finds every demand the matcher makes outward.
-Splitting it by does-the-provider-exist would make a reader check two places to be sure they
-had them all.
+`cases` **does not exist**; `player_score`, `challenges` and `games` do — the first over the
+other two (ADR-0140) — and between them the latter
+answer the whole of `MatchHistoryQuery` ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)).
+`rating` exists too — at `backend/app/modules/rating/`, with its engines at
+`app/engines/racketskill/` — and what was missing there was not a context but a **rule**. That
+rule has since been written ([ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)),
+so `AtStakeQuery` has a real adapter and the last of the three null objects it was wired to is
+gone. The port is here rather than in a second document because the value of this file is being
+*the one place* a build agent finds every demand the matcher makes outward. Splitting it by
+does-the-provider-exist would make a reader check two places to be sure they had them all.
 
 `users` exists outright, with **nothing missing at all** — `is_active` ships, `UserDisabled`
 ships, and `auth` already refuses a disabled account four ways. `AccountStatusQuery` is therefore
@@ -57,7 +75,12 @@ Delivery of the indexed half is the backend's existing transactional outbox
 
 ## `PlayerScoreQuery`
 
-### The six strands, and what each one counts
+### The five strands, and what each one counts
+
+> **Two of them are live** (ADR-0140): *shows up*, out of plans that settled either way, and
+> *answers challenges*, out of invitations whose day is over. The other three have no provider
+> and are **absent from a reading** rather than published at nought. *Confirms results* is not
+> in the table below at all: it was **withdrawn**, and a withdrawn demand leaves no row.
 
 Every strand crosses as **the published value, its numerator and denominator, and the moment of
 the most recent observation**. The matcher reads the value the player is shown and never
@@ -66,9 +89,8 @@ is worse than a card that says nothing.
 
 | Strand | Denominator — the opportunity | Numerator — the good outcome |
 | --- | --- | --- |
-| **Shows up** | Games that reached their scheduled moment with this player seated | Games attended |
-| **Answers challenges** | Challenges received that fell due | Challenges answered inside the window |
-| **Confirms results** | Counted games played | Results confirmed inside the window |
+| **Shows up** | Plans that settled: a game somebody said had happened, or a **ghost** whose entry window closed on silence | The ones that were played. **A ghost is charged to every seat**, because nobody proposed and nobody countered |
+| **Answers challenges** | **Invitations** whose day is over — a seat somebody was actually *asked* to take, which is a seat with a deadline | Answered inside the day. **A decline counts**: what this prices is silence, not judgement |
 | **Keeps plans** | Plans agreed | Plans that reached their scheduled moment without a **late** change by this player |
 | **Settles up** | Court shares that fell due | Shares settled **without a case being opened** |
 | **Sportsmanship** | Ratings received | *(a mean of 1–5, not a ratio — crosses as mean plus rating count)* |
@@ -86,12 +108,16 @@ is worse than a card that says nothing.
 
 Two more are worth stating because they will surprise a reader:
 
-- ***Settles up* depends on court money, which this map rules out of scope.** It will stand
-  down long after the other five are live. Expected, not a defect.
+- ***Settles up* depends on court money, which this map rules out of scope.** It stands down,
+  and so do *keeps plans* and *sportsmanship* — two of the five are live (ADR-0140). Expected,
+  not a defect.
 - **The player-facing weights are not the matcher's weights.** The Player Score screen blends
-  the strands at 35/20/15/12/10/8 (`:3374-3380`); §9.3.4 weighs them per mode at 25/32, 22/22,
-  24/4, 14/14, 10/12, 5/16. Both are right. This is precisely why the matcher must read strands
-  and not the blend.
+  the strands at **35/20/12/10/8** (`:3374-3380`, less the struck strand's 15); the ruleset
+  weighs them per mode at **33/33, 29/23, 18/15, 13/12, 7/17**. Both are right. This is
+  precisely why the matcher must read strands and not the blend. **The two vectors total
+  differently on purpose**: a ruleset weight map is validated as summing to a hundred so each
+  number reads as a share of a term's budget, where the published blend's basis is the strands a
+  player actually has.
 
 ### Opponent variety — **withdrawn**
 
@@ -107,6 +133,29 @@ that a demand is executable against a provider; a demand nobody reads is a deman
 going wrong, and a contract suite is exactly where an unread row goes quietly stale. ADR-0098 is
 amended to say so. If a later term wants variety, it returns as **that term's** demand and signs
 for it — which also means it arrives with a consumer who can say what shape it needs.
+
+### The published score, demanded once and read by one consumer
+
+Beside the strands, and **not instead of them**: the **published Player Score** the player sees
+on their own profile, the 35/20/12/10/8 blend renormalised over whatever is there, out of a
+hundred.
+
+It has exactly one consumer **in the matcher** — the **reliability floor**, whose
+`published_score_bar` is ruleset data (`app/engines/matchfit/ruleset.py`, `ReliabilityRules`).
+It is **the one deliberate place the matcher reads the blend instead of the strands**, and it is
+written down here so it does not later read as an oversight or as this contract being quietly
+relaxed: a penalty justified by a figure that exists nowhere a human can look is unexplainable,
+and a player working their visible score back up must be able to watch the penalty lift.
+
+**The player card is a second reader, and it is not a second computation** (ADR-0140). It prints
+the same figure, reached through a port at assembly time — never off the candidate index, which
+[ADR-0111](../../adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md) reserves
+for what a player changes about themselves. The weights themselves belong to `player_score` and
+not to a ruleset: a weight release must not change what somebody's own profile says about them.
+
+**It may never be weighed as a term, and it may never stand in for the strands.** A reading with
+no strand in it is not a reading — which is what stops *shipped as one blended number* passing
+through this door instead of the front one.
 
 ### The absence rule, and the two standing-down powers
 
@@ -149,9 +198,17 @@ time.
 
 | Demanded | Bound | Why |
 | --- | --- | --- |
-| The searcher's pairwise counterparts, each outcome distinguishable — **accepted**, **declined**, **played**, **planned-never-played** — with their moments | The most recent **500** | A searcher has played tens of people. An unbounded read is how one long-standing player's search becomes slow for everyone |
+| The searcher's pairwise counterparts, each outcome distinguishable — **accepted**, **declined**, **played**, **planned-never-played** — each **tallied**: how many times, and when it last happened | The most recent **500** **counterparts**, not events | A searcher has played tens of people. An unbounded read is how one long-standing player's search becomes slow for everyone |
 | Every challenge currently open between the searcher and anyone | **Unbounded** | It is a §7.5 never-stale fact and it is small by construction |
 | Open challenge count, **per player** | The index row | Not pairwise. Advisory, for ranking on load (§7.2, §14.4) — never the last word |
+| **The late-change threshold** — how close to the scheduled moment a change has to be to count as *late* | One published number for the platform | Demanded here rather than of `player_score` because *late* is a fact about a **plan**, and the context that owns plans owns what the word means. It takes no pair, no plan and no case, which is what makes a per-case judgement unexpressible |
+
+**A count and not a latest outcome, because familiarity needs both halves.** `strength` is
+`0.5 ^ (days_since_last / FAMILIARITY_HALF_LIFE_DAYS) × (1 − FAMILIARITY_DEPTH_PHI ⁿ)`, where
+`n` is **games played together** ([`ranking-weights.md`](ranking-weights.md) §8). One outcome and
+one moment per counterpart feeds the decay and never the depth. Tallying also keeps an accept
+visible under a later decline, which a single latest outcome erases — and the previous-decline
+signal and familiarity would then both be reading the same lost history.
 
 **A ghost game is two facts, and they go different places.** As a per-player reliability signal
 it is `player_score`'s input and the matcher never sees it separately. As a **pairwise** outcome
@@ -167,6 +224,8 @@ tell them apart.
 | Disabled set (`AccountStatusQuery`, ADR-0124) | **The search refuses** | Same. Read **once per search as a set**, beside the block set — never a per-row query |
 | Pairwise history | **Fails soft** — familiarity and the previous-decline signal stand down, the search proceeds | Losing a game because we could not remember who you played in March is a worse outcome than a slightly duller list |
 | Open challenge between the pair | **Fails soft** | §7.5's *the matcher proposes, the backend disposes* re-verifies on the shortlist. It is embarrassment with a backstop, not a safety failure |
+| The strands (`PlayerScoreQuery`) | **Fails soft** — the reliability term stands down | Which is what it does for anybody with no record anyway, so a failure costs a term and never the search |
+| At stake (`AtStakeQuery`) | **Fails soft** — the block is not drawn | Derived rather than quoted: it is what the card already does for a pair with no Level between them |
 
 These are separate reads carried in one context object. Bundling them into one read would make
 the strictest fact's failure mode everybody's.
@@ -255,16 +314,29 @@ of them may:
   shown and never re-derives it. A K-factor is the rating engine's opinion about the rating
   engine, and a second implementation of it is exactly the failure ADR-0021 exists to prevent.
 - **This document** cannot specify the maths, for the same reason it has no opinion on how
-  `matches` works internally. It demands the fact and stops.
+  `games` works internally. It demands the fact and stops — and ADR-0139 is where the maths was
+  decided, in the context that owns it.
 
 **For-fun games are never counted** (§23 Q11), so the field is competitive-only — which the
 prototype already enforces at `:2460`. In for-fun it is not absent-because-unavailable; it is
 **meaningless**, and the card renders nothing.
 
-**Today the rule does not exist**, so the only adapter is `NoResultUpdateRuleExists` and the
-field is **absent, never zero**. A zero here would be invented — it would claim a counted game
-against this opponent moves the searcher's Level by nothing, which is false about every
-opponent. The card simply omits the block.
+**The rule exists now** ([ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)),
+and the adapter is `RatingResultUpdateRule` — which calls the *same function* that moves a Level
+when the game is played, so a card promising `+0,07` and an update delivering something else is
+not a state two callers of one function can reach. `NoResultUpdateRuleExists` is deleted, on the
+rule a null object is written under: the fact its name asserted stopped being true.
+
+**The field is still absent rather than zero** whenever either party holds no rating in that
+sport, and that absence is measured: there is nothing to price the pairing against. A zero would
+be invented — it would claim a counted game against this opponent moves the searcher's Level by
+nothing, which is false about every opponent. The card simply omits the block.
+
+**It is priced head-to-head, and in a four that is a decision rather than an oversight.** The
+figure carries the sport's own weighting — a doubles result is half the evidence about any one
+of the four — but the *pairing* it prices is you against the person on the card, because the
+other two seats are unknown when the card is drawn and averaging against an imaginary partner
+would invent the one thing the read has no basis for.
 
 ---
 
@@ -279,10 +351,11 @@ The test is whether a zero would be **measured** or **invented**.
 | Fact | Today | Which, and why |
 | --- | --- | --- |
 | Hold flag | **True-over-empty** | Nobody can be held because nothing can hold anybody. A real, measured absence |
-| Open challenge count | **True-over-empty**, at `0` | No challenge has ever been sent by anyone. A real zero |
-| Pending challenge between a pair | **True-over-empty**, empty set | Same |
-| The six strands, opponent variety | **`NoEvidence`** | Nobody has failed to turn up because nobody has ever been due to. A zero here would be *invented*, and no record is not a bad record |
-| Pairwise history → familiarity | **`NoEvidence`** | *You have never played this person* is true of everyone, and a modifier firing identically on every candidate changes no ranking while printing a sentence on every card |
+| Open challenge count | **True-over-empty**, and **live** since [#253](https://github.com/Raketa02/Raketa/issues/253) | Seats awaiting that player's answer, across every sport, counted from the seats and the clock. Everybody asked gets a count, and a zero is measured — the shape did not change when the provider arrived, which is the property this rule was chosen for |
+| Pending challenge between a pair | **True-over-empty**, and **live** | Every counterpart in every challenge that has not ended. Still **soft**, and still out of the read-back: this is embarrassment, and the send's re-check is the backstop |
+| The strands | **Two live, three `NoEvidence`** since ADR-0140 | *Shows up* and *answers challenges* are folded from `games` and `challenges`; the other three have no provider. A player with no record is **absent from the answer**, never a zero — that zero would be *invented*, and no record is not a bad record |
+| Pairwise history → previous accept · previous decline | **Live** since [#253](https://github.com/Raketa02/Raketa/issues/253) | `SeatAccepted → ACCEPTED` and `SeatDeclined → DECLINED`, and nothing else does. A **lapse tallies nowhere** — silence is not a judgement — and a challenge born of a mutual yes tallies nothing, because nobody answered anything |
+| Pairwise history → familiarity | **`NoEvidence`** | *You have never played this person* is still true of everyone: a challenge accepted is not a game played, so `games_played_together` is `0` and the modifier is absent rather than firing identically on every candidate |
 | Origin key | Demanded from day one | The search half of §19.2's chain ships now; the outcome half joins it when `matches` lands |
 | At stake | **Absent** | Nobody's Level has ever moved on a result, because the rule that moves it is not written. A zero would claim a counted game changes nothing, which is false about every opponent — so the field is omitted and the card shows no block |
 
@@ -291,9 +364,29 @@ The test is whether a zero would be **measured** or **invented**.
 ## How the demand is made binding
 
 **The contract suite is parameterised over every registered implementation of each port,
-including the null one.** `NoPlayerScoresExist`, `NoMatchHistoryExists` and
-`NoResultUpdateRuleExists` prove the degradation table above, green, today — named for the
-facts they assert rather than for being empty, in `NoHoldsExist`'s style.
+including the null one.** `NoHoldsExist` proves the degradation table above, green, today —
+named for the fact it asserts rather than for being empty. `NoMatchHistoryExists`,
+`NoResultUpdateRuleExists` and `NoPlayerScoresExist` were the same convention over the
+same table, and **all three are gone**, each on the day its own stated fact stopped being true
+([#253](https://github.com/Raketa02/Raketa/issues/253),
+[ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md),
+[ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
+**`ChallengesButNobodyHasPlayed` is not one of the three and has not gone anywhere**: it is a
+*real* provider named the same way, answering the half of `MatchHistoryQuery` that `challenges`
+owns, and `games` composes it rather than replacing it
+([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)) — its name still says
+which half was measured absence.
+That is the intended end of a null object named for a fact, and in every case the swap was one
+row in the register. **The one left is a gate**, which is this section's own rule showing
+through rather than a coincidence: every *term* now has a provider.
+
+**The arrangement belongs to the port and never to one implementation**, and where a provider
+ships, the suite arranges a real world through that context's aggregate rather than an `INSERT`
+([ADR-0029](../../adr/0029-seed-data-through-aggregates-never-in-production.md)). For
+`MatchHistoryQuery` that arrangement **splits in two**, and the split is said out loud: the
+challenge half is arranged and asserted, and `PLAYED`, `PLANNED_NEVER_PLAYED` and
+`late_change_threshold` stay shape-only until `matches` signs, because nobody can arrange them
+yet.
 
 Registering a real adapter enrols it in the suite automatically. It either satisfies the
 contract or the build is red. **There is no skipped test to go stale**, and no version of

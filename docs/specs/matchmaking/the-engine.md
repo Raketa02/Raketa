@@ -168,7 +168,7 @@ one, at any rung, ever.
 | 2 | **Held account** | live `AccountHoldQuery`, **both ways** — a held searcher is refused at the entry point | **closed** | wired, `NoHoldsExist` |
 | 3 | **No rating for that sport** | the index row | — | ✅ live |
 | 4 | **Candidate outside the searcher's radius** | the searcher's own ask, so a filter | — | ✅ live |
-| 5 | **An open challenge already exists between you** | live, from `MatchHistoryQuery` | **soft** — §7.5's re-verify is the backstop | `NoMatchHistoryExists` |
+| 5 | **An open challenge already exists between you** | live, from `MatchHistoryQuery` | **soft** — §7.5's re-verify is the backstop | ✅ **live** — `challenges` signs it ([#253](https://github.com/Raketa02/Raketa/issues/253)); still soft and still out of the read-back |
 | 6 | **Missing or unapproved photo** | `PhotoReview` | — | ⚠ **live and inert** — ADR-0091's adapter passes everything through; [#181](https://github.com/Raketa02/Raketa/issues/181) |
 | 7 | **Proposals opt-in explicitly `false`** | **gates the push, not the person** — reads `initiation`, never `surface` | — | ✅ live |
 | 8 | **Account active** | live `AccountStatusQuery` against `users`, **candidate-side only** | **closed** | ✅ **live** — [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) |
@@ -316,9 +316,11 @@ than level — because that is what *for fun* means.
               Play intent. Six cells, ADR-0094. NO_PREFERENCE reads 0.85 in both modes;
               a directly opposite declaration reads 0.00 and takes no further modifier.
 
-4  reliability  six strands read SEPARATELY, weighted per mode (ranking-weights §6), each
+4  reliability  five strands read SEPARATELY, weighted per mode (ranking-weights §6), each
               strand standing down below RELIABILITY_MIN_OBSERVATIONS = 3, the whole term
-              standing down past RELIABILITY_HORIZON_DAYS = 365.
+              standing down past RELIABILITY_HORIZON_DAYS = 365. Two of the five have a
+              provider (ADR-0140); the other three stand down for everybody and the
+              survivors renormalise inside the term.
 
 5  availability  |shared| / |mine|        ← the glossary verbatim. NO CONSTANTS AT ALL.
    |mine| is the SEARCHER's ticked cells. Either grid empty → NoEvidence, on both sides —
@@ -350,7 +352,7 @@ Every term's evidence crosses keyed by `kind`, and the union is enumerated in
 | Level fit | `{level_fit, their_mu, my_mu, delta, direction}` |
 | Predicted balance | `{predicted_balance, pct, my_sigma, their_sigma, confidence}` |
 | Intent alignment | `{intent_alignment, their_intent, my_mode, aligned}` |
-| Reliability | `{reliability, score, strands, floor_breached}` — `strands` is the **six named** strands, closed |
+| Reliability | `{reliability, score, strands, floor_breached}` — `strands` is the **five named** strands, closed (*confirms results* struck by ADR-0137, removed by ADR-0140) |
 | Availability overlap | `{availability_overlap, shared_count, next_slot: {day, part}}` — `grid_stale` gone with staleness; `days_away` is **stored and never crossed** |
 | Playing style | `{playing_style, matched, complementary, clashing}` |
 | Social vibe | same shape, `{social_vibe, …}` |
@@ -415,8 +417,11 @@ the block's job.
 
 **`NEWCOMER_ABSORPTION_CAP` keeps its rule and refuses its integer.** It bounds how often one
 player is volunteered into a **newcomer's** shortlist, counted per week per sport on the exposure
-ledger, and binds by **dropping** the welcoming modifier and the newcomer reorder — **never** by
-withholding, and **nobody is told**, because nothing has happened to them.
+ledger, and binds by **dropping** the welcoming modifier — the thumb that selects the experienced
+players it is about — **never** by withholding, and **nobody is told**, because nothing has
+happened to them. It does **not** reach the newcomer lift: that fires only for a candidate inside
+the window, and capping it would take the subsidy from the people the cap exists to keep from
+being leaned on ([ADR-0114](../../adr/0114-a-newcomer-may-not-be-declined.md), amended).
 
 ---
 
@@ -478,6 +483,22 @@ asserted centrally over every response type rather than per route.
 | **Previous decline between you** | **−6** | ✗ never, either side |
 | **Exposure adjustment** | **−6 … +6** | ✗ |
 | ~~Radius asymmetry~~ | — | **struck** — `fit_ba` already prices it |
+
+**The coarse code the full inbox prints is `SOME` / `BUSY` / `FULL`**, one per rung, carried by
+the rung rather than derived from its position — so moving a threshold cannot silently re-point a
+code at a different depth. There is no fourth code for an empty inbox: a signal that does not fire
+is absent from the list, which is a different statement from *we counted and it was low*.
+
+**Only the full inbox reads a measurement; the ramped signals arrive as a reading in `[0, 1]` and
+are priced linearly across their own bound.** The curve from *days since they last opened the app*
+to a reading is a measurement and lives on the other side of the fence with the clock and the
+ledgers; putting it inside the engine would mean inventing a threshold per signal — six or seven
+constants nobody measured, in the one place whose whole discipline is that every number carries a
+falsifier. The full inbox is the exception because its three thresholds **were** measured (§14.4)
+and [ADR-0125](../../adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md) adopted them
+whole. **Points are whole numbers**, because every bound in the roster is an integer and so is
+`MOVE_NOTICE` — a fractional offset would make *moved more than six* depend on a rounding nobody
+wrote down.
 
 **`+14` is flat for the whole life of the yes and then absent — it does not taper.** §9.5.1's
 decay over the final 7 days is refused by
@@ -760,6 +781,15 @@ the offers are computed at all**; it triggers nothing. **An accepted widen is a 
 the one that offered it**, scoped to that search, never a silent profile write — and afterwards
 the app may offer to make it permanent, inline, bounded by the player's own slider.
 
+**One climb per search screen.** A search that took a rung is offered none: the widening is the
+searcher's own radius by the time a ladder would be priced, so a second rung would be priced off
+the first and four taps from 8 km would land on the 50 km ceiling without the player being asked
+once. *There is no third radius rung* is the same sentence said about multipliers, and this is
+where it binds — **×2.0 of the radius the player saved is the furthest any accepted offer
+reaches.** The climbed search answers an **empty** `rung_offers` rather than `null`, because `null`
+already means *the list was long enough that nobody priced a rung*; `rung_taken` beside it on the
+same row is what tells the two empties apart, and **no field was added for it**.
+
 ⚠ **Rung A can evict.** Adding a slot to the searcher's grid takes every candidate who does not
 share it from `s/m` to `s/(m+1)`. At `|mine| = 3` one unhelpful slot costs **3.5 for-fun points**.
 Nothing is hidden — the offered count is a real re-run — but relaxation that evicts is a real
@@ -780,6 +810,8 @@ searcher how many people a mutual gate hid from them.
 | **Pass** | **durable**, in the module | its constant's only falsifier is *pass rate on **re-shown** profiles*, and a Redis suppression that lapses leaves no trace that the pair was ever passed — so the falsifier the Origin key was bought for is uncomputable. The record is telemetry; the **live suppression stays the Redis TTL below**, derived from it | — |
 | Suppression | Redis, TTL, derived from the pass record | a courtesy | **soft** |
 | Exposure | Redis, TTL | losing a week of *who was shown to whom* costs nobody a fact | **soft** |
+| Prompt | Redis, TTL | a standing question, left by a loop for the next search to pick up. Losing one costs a prompt nobody sees this week, and the loop raises it again on its next tick | **soft** |
+| **Prompt decline** | **durable**, in the module | the two constants in `prompts.py` are falsified by *take-up rate on the prompt* and *acceptance rate on the offer*, and a decline is the only one of a prompt's three outcomes that nothing else records — the raise conditions are recomputable from the search store forever, and an accept writes a value. A suppression that lapses leaves no trace the player was ever asked. The record is telemetry; the **live suppression is derived from it** at the one place every prompt converges | — |
 | ~~Search results~~ | — | **deleted** — §8.3's `search:{id}` at a 30-minute TTL held the same Fit as §19.2's table, free to disagree, in the one place §8.3 calls disagreement fatal | — |
 | ~~Standing searches~~ | — | out of scope; still fog on the map | — |
 
@@ -793,6 +825,19 @@ story: it is a small fact with an expiry date. The same is true of a pass, with 
 the pass happened is kept, because [#194](https://github.com/Raketa02/Raketa/issues/194) found
 that its constant's falsifier needs exactly the fact a TTL destroys. Suppression still fails
 soft, and the split is why: the **gate** is the cache, the **evidence** is the row.
+
+**The split has a second instance, and it is the same argument about a question rather than a
+person.** A prompt is a courtesy and its ledger is a cache; a **decline** is a player's answer,
+and thirty days of silence bought by a Redis key is thirty days of evidence a TTL then destroys
+([#237](https://github.com/Raketa02/Raketa/issues/237),
+[ADR-0094](../../adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md) as amended).
+So the decline is a row, the suppression is derived from it, and neither of them **retires** the
+standing prompt — `PromptLedger`'s *two methods and no delete* is untouched, because suppressing
+stops the next **raise** and clears nothing. The read is one filter over every raised prompt,
+after the commit and inside the courtesy, so it degrades the way the block around it already
+degrades: **to no prompt**. That direction is forced — the two degraded outcomes are *ask
+somebody who said no* and *stay quiet*, and staying quiet is what the rest of the block already
+does.
 
 **The sweeper's loops, after the map.** Loops are ADR-0092 `PeriodicJob`s.
 
@@ -876,17 +921,18 @@ release kind — **weight-only** or **shape-class** — is **derived, never decl
 
 ## 14. The contracts
 
-Eight routes. [`the-two-contracts.md`](the-two-contracts.md) holds the shapes.
+Nine routes. [`the-two-contracts.md`](the-two-contracts.md) holds the shapes.
 
 | Route | Creates a search | Notes |
 | --- | --- | --- |
 | `POST /api/v1/searches` | ✓ | **deliberately not idempotent** — two taps are two searches, and §19's denominator is *searches run* |
 | `POST /api/v1/lineups` | ✓ | `LINEUP` / `FILL_SEATS`, differing only by `locked_seats` |
-| `POST /api/v1/deck` | ✓ | `sport` only |
+| `POST /api/v1/deck` | ✓ | `sport`, and the week this one deal runs on — no mode, no rung |
 | `GET /api/v1/searches/{id}` | — | the **same schema** the `POST` returned |
 | `POST /api/v1/interest` | — | idempotent per `(from, to, sport)`; `search_id` required |
 | `POST /api/v1/forecasts` | **no — deliberately** | re-`POST`ing a line-up per swap would enter a six-edit builder session into the denominator as six searches |
 | `POST /api/v1/passes` | — | write-only |
+| `POST /api/v1/prompt-declines` | — | write-only, **no Origin key** — the pass's was bought for a named falsifier and nothing here needs one, and two of the three questions it answers are raised by a loop with no search to cite ([#237](https://github.com/Raketa02/Raketa/issues/237)) |
 | `GET /api/v1/interest` | — | **outgoing and mutuals only** |
 
 **The client sends what it is asking for and never a fact about the searcher.** The backend reads
@@ -900,7 +946,11 @@ and ADR-0098 forbids the matcher re-deriving it), and `distance_km`.
 
 **`GET /searches/{id}` re-verifies the fail-closed gates and states what it withholds.** The
 record stays immutable; the gate is live. A withheld row is **stated, never vanished** — a list
-that quietly gets shorter is the same class of lie as a breakdown that quietly stops adding up.
+that quietly gets shorter is the same class of lie as a breakdown that quietly stops adding up —
+and it **names no gate**
+([ADR-0130](../../adr/0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md)): a block, a
+hold, an account state and the mutual gender preference reach the wire as one indistinguishable
+statement, on a separate row shape that carries no id and no card.
 The round-trip test asserts **the recorded answer plus live gate state, over the record's
 fields** — never a byte-identical payload, since the photo URL is re-minted per response by
 design. Written down because a test drafted naively will fail on a row that is *supposed* to
@@ -952,13 +1002,14 @@ it makes a Liveness-bounds change undiffable.
 | Distance | ✅ live | area centroid resolution |
 | **Intent alignment** | ✅ live | [#182](https://github.com/Raketa02/Raketa/issues/182) — one aggregate, one event |
 | Reliability | **stands down** | `player_score` |
-| At stake | **omitted** | the result-update rule (`rating` exists; the rule does not) |
-| Familiarity · welcoming record | `NoEvidence` | `matches` |
+| At stake | ✅ **live** | — the rule ships ([ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)); omitted only for an unrated pair |
+| Familiarity | ✅ **live** | — `games` ships ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)) |
+| Welcoming record | `NoEvidence` | the welcoming modifier |
 | Blocks · holds | **wired, true-over-empty** | `blocks`, `cases` |
 | **Gate 8 — account active** | ✅ **live** | — the only outward port whose provider ships ([ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md)) |
 | **Challenge load, all three rungs** | **wired, never binds** | `matches` — and it now *sinks* at `−12` rather than withholding ([ADR-0125](../../adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md)) |
 | Minimum evidence | **live and inert** | — it excludes nobody today, on purpose |
-| `NEWCOMER_ABSORPTION_CAP` | **wired, never binds** | `matches` |
+| `NEWCOMER_ABSORPTION_CAP` | **wired, never binds** | — the tally is counted from searches and read on every newcomer's; what is missing is the **integer**, which stays refused until there are weeks of it to choose against |
 | Newcomer window and its `+8` | ✅ **live** | — |
 | The photo gate | ⚠ **live and inert** | [#181](https://github.com/Raketa02/Raketa/issues/181) |
 | Availability grid required | ⚠ | [#176](https://github.com/Raketa02/Raketa/issues/176)–[#178](https://github.com/Raketa02/Raketa/issues/178) |
@@ -999,7 +1050,8 @@ changes visible instead of quiet.
   runs the ordinary vectors with the gate at `LEVEL_TOL_COMP`.
 - **B's opposed-intent candidate takes no `intent_opposed` modifier**; it was deleted. Asserting
   the old total is asserting a deleted modifier.
-- **A's expected `at_stake` block is omitted, not zero** — `NoResultUpdateRuleExists`.
+- **A's expected `at_stake` block is omitted, not zero** — the walkthrough's players hold no
+  ratings for the rule to price, and an unrated pair is an absence rather than a pair of zeros.
 
 ### 17.2 The six judged pairings
 

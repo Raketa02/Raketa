@@ -184,6 +184,10 @@ The route table above is not the whole surface — `/api/v1/sports`,
 `/api/v1/assessments`, `/api/v1/ratings` and `/api/v1/player-profile/options`
 are in `openapi.player.json`, which is the document that is authoritative.
 
+There is a second surface, and it is not a client: the **dev console** at `/dev`, whose
+contract is `openapi.dev.json` and holds one path. It is served in `local`, `development`
+and `staging` and refuses to be imported in `production`. See *The Dev Console* below.
+
 Example login request:
 
 ```bash
@@ -249,6 +253,7 @@ aggregator.
 |---|---|
 | `APP_ENV` is not one of the four | A typo must not silently change behaviour. |
 | `development`/`staging` with no `APP_HOST` or `WRITER_DB_URL` | Neither is provisioned; falling back points at a database that does not exist. |
+| `development`/`staging` with no `REDIS_URL` | Same reason, one step further: the ledgers behind it fail soft, so falling back to a laptop's service name would boot permanently degraded and look exactly like a quiet week. |
 | `production` with the default `JWT_SECRET_KEY` | It is public in this repo's history, so every token it signs is forgeable. |
 | `production` with the default `PHOTO_STORAGE_SECRET_KEY` | It is the local MinIO container's, published in this repo, and it unlocks every photo the platform holds. |
 | `production` with `DEBUG=true` | It serves verbose errors to callers. |
@@ -285,6 +290,26 @@ serving HTTP.
 | `PHOTO_REVIEW_TIMEOUT_SECONDS` | The whole budget for one review. Exceeding it fails open. |
 | `PHOTO_SWEEP_ENABLED` | Enables the uncommitted-photo sweep job. |
 | `PHOTO_SWEEP_INTERVAL_SECONDS` | How often the sweep runs. Not the retention window — see *Background Jobs*. |
+| `PHOTO_REVIEW_BACKFILL_ENABLED` | Enables the photo re-review backfill job. |
+| `PHOTO_REVIEW_BACKFILL_INTERVAL_SECONDS` | How often the backfill runs. |
+| `PHOTO_REVIEW_BACKFILL_BATCH_LIMIT` | Most photos one backfill run may send to the reviewer. |
+| `PHOTO_REVIEW_BACKFILL_PAUSE_SECONDS` | Gap between two reviews inside one run. Not which photos it picks — that is the note on the object. |
+| `REDIS_URL` | The ephemeral store, holding the exposure and suppression ledgers. Server-to-server; no scheme rule. |
+| `EXPOSURE_ROLL_ENABLED` | Enables the hourly exposure roll. |
+| `EXPOSURE_ROLL_INTERVAL_SECONDS` | How often the roll runs. Not either ledger's TTL — see *The ephemeral store*. |
+| `INTENT_DRIFT_ENABLED` | Enables the daily intent-drift prompt loop. |
+| `INTENT_DRIFT_INTERVAL_SECONDS` | How often it runs. Not any of its thresholds — those are domain. |
+| `GRID_STALENESS_ENABLED` | Enables the daily availability-staleness prompt loop. |
+| `GRID_STALENESS_INTERVAL_SECONDS` | How often it runs. Not how old a grid must be — that is domain. |
+| `INTEREST_EXPIRY_ENABLED` | Enables the hourly *Let's play* expiry sweep. |
+| `INTEREST_EXPIRY_INTERVAL_SECONDS` | How often the sweep runs. **Not `INTEREST_TTL`**, which is a ruleset row. |
+| `CHALLENGE_LAPSE_ENABLED` | Enables the hourly challenge lapse loop, which records a passed answer window as a lapse. |
+| `CHALLENGE_LAPSE_INTERVAL_SECONDS` | How often it runs. **Not `ANSWER_WINDOW`**, which is the promise the invitation makes and is domain. |
+| `RATING_CATCH_UP_ENABLED` | Enables the hourly rating catch-up, which moves a Level on every confirmed counted result. **The only job whose absence a player would notice** — nothing announces a confirmation, so this is the whole path a result has to a rating. |
+| `RATING_CATCH_UP_INTERVAL_SECONDS` | How often it runs. **Not the update rule**, which is `engines/racketskill/results.py` and is domain — an environment that could pick a K-factor decides how a marketplace rates people. |
+| `SCALE_PRESSURE_ENABLED` | Enables the scale-pressure probe — trigger 1's event-loop lag monitor, which also closes the fifteen-minute scoring window. |
+| `SCALE_PRESSURE_INTERVAL_SECONDS` | How often it ticks. The tick *is* the measurement: the probe records how much later than this the loop got back to it. **Not the trigger's 15-minute window and not its thresholds** — those are domain, in `matchmaking/domain/scale_triggers.py`. |
+| `GUNICORN_WORKERS` | How many workers this container runs. Read by `docker/api/startup.prod.sh` and by trigger 4's arithmetic, so the memory reading is about the fleet that exists. It selects no behaviour: it is a multiplier inside a log record. |
 | `RUN_MIGRATIONS_ON_STARTUP` | Optional production startup migration toggle. |
 
 PostgreSQL URLs using `postgresql://` or `postgres://` are normalized to the
@@ -396,16 +421,90 @@ breaks on it.
 | `rating-barely-established@raketa.example` | Padel Level just inside **Established**, its range still reaching into Developing |
 | `rating-well-established@raketa.example` | Padel Level well inside **Established**, clear of the lower edge |
 | `rated-in-every-sport@raketa.example` | All four sports rated, one per band — the longest ratings list there is |
+| `the-populated-player@raketa.example` | **The default protagonist.** Padel and tennis rated, settled, at the centre of every ring — every Play screen is developed signed in as this one |
+| `the-newcomer@raketa.example` | The same answers and a profile committed inside ADR-0113's fourteen days — the widened gate from the newcomer's own side |
+| `the-one-sport-player@raketa.example` | Padel and no tennis at all — a second sport's absence, refused rather than emptied |
+| `the-blank-week-player@raketa.example` | A week committed and then cleared — the availability term stands down rather than scoring a nought |
 
 The password for every seeded account is `raketa-seed1`, and it is public by
 construction — it is written in `app/seeds/catalog.py`.
 
-Scope is what is **modeled**: players, onboarding assessments and Skill ratings. Clubs,
-Courts, Bookings and Matches have no aggregates, so they have no scenarios; each adds its
-own when it exists. A walk over `app/seeds/` asserts the package imports those two
-contexts and no others.
+Behind those eleven state-named addresses is the **cohort**: a population of `cohort-<ring>-<nn>`
+members, generated from a seed and committed as `app/seeds/cohort.json`. It exists because
+one search over eleven accounts finds them all in one ring, and every Play screen would be
+developed against an empty result.
 
-Four rules hold this together, and each exists because of a specific way seed data goes
+It is a **workbench and it says so on its own report**: chosen so that every Play screen
+state is *reachable*, standing for nothing outside itself, describing no real market. The
+comparator corpus under `docs/specs/matchmaking/ruleset-diff/` answers a different question
+and is not this — the cohort borrows its mechanics (seeded draws keyed off a handle,
+assignment by rule rather than by rate) and none of its numbers.
+
+Two lists, and they are asymmetric. `app/seeds/cohort.py` holds the **declarations** — the
+generator's inputs: rings cut by the relaxation ladder's own ×1.5 and ×2.0 plus a handful
+past the slider's 50 km ceiling, one archetype per band, and a rule apiece for the newcomer
+share, the proposals opt-out, the mutual-gender exclusion and the dual-sport membership.
+`app/seeds/screens.py` holds the **assertions**, and every one of them is an outcome of a
+real read path run as the protagonist — the pool search, the deal, the line-up, the ladder.
+Nothing is asserted about a number the generator chose, because a ruleset that tightens
+`QUALITY_FLOOR` moves no distribution at all and still empties every screen.
+
+Regenerate the population with `make gen-cohort` and commit the result. It records
+**inputs only** — no level, no uncertainty, no band, because those are the engine's answers
+and a committed copy of an answer is a second number nothing keeps honest.
+
+Behind the cohort is a third layer, and it exists because **a distribution cannot assert a
+pair**. Five of the ten Liveness codes a card can print are facts about two people — *they
+said yes to you*, *they turned your court down*, *their inbox is full* — and no population,
+however well shaped, can exhibit one: a rate over sixty members produces edges nobody
+named, and it cannot assert that *exactly one* instant-match pair exists. So eleven
+accounts are named for a **relationship to `the-populated-player`**, from her side, and
+`app/seeds/pairs.py` writes each edge through the use case that owns it.
+
+| Address | Relationship, and what it makes true |
+| --- | --- |
+| `said-yes-to-you@raketa.example` | A live inbound *Let's play* — her pool card carries `INTEREST_RECEIVED`, the only lift that admits below `QUALITY_FLOOR` |
+| `your-yes-makes-it-mutual@raketa.example` | A second live yes, on her **deck** — say yes back and a game opens inline. The one instant match this database can produce |
+| `you-said-yes-to-them@raketa.example` | Her own outgoing yes — the outstanding-per-sport count, and a repeat tap that changes nothing |
+| `you-challenged-them@raketa.example` | An open **tennis** singles challenge, so they are missing from her **padel** pool — one open challenge per pair, across sports |
+| `they-challenged-you@raketa.example` | Organiser of a padel doubles court she holds a seat on, with its own day running |
+| `in-your-line-up-and-accepted@raketa.example` | A co-invitee on that court who said yes — a filled seat, and gone from every one of her surfaces |
+| `in-your-line-up-still-deciding@raketa.example` | The other co-invitee, who has answered nothing — an unanswered seat beside the filled one |
+| `they-turned-down-your-court@raketa.example` | Declined a seat on a court she organised; it ended with the seat, so they are back in her pool carrying the refusal |
+| `you-blocked-them@raketa.example` | Blocked by her — absent from all four surfaces, silently |
+| `they-blocked-you@raketa.example` | Blocked **her** — the same absence and a different fact, and it is checkable only by signing in as them |
+| `you-passed-them@raketa.example` | Passed on — gone from her deck and a full candidate in her pool |
+
+Three rules shape that layer, and each is a way a relationship fixture goes wrong:
+
+- **Every edge costs a real search or deal run as the sender**, because `Interest` and
+  `Pass` have no non-search constructor and a send cites the search its court was built on.
+  That cost is turned into the check: the origin must resolve, which proves the protagonist
+  was genuinely findable through gender, level and radius before any lift is claimed.
+- **An absence claim asserts the gate histogram, not the absence.** An account gated for an
+  accidental reason — no rating, out of range, the wrong gender preference — is absent too,
+  and a naive claim passes; the histogram is counted first-in-declaration order, so
+  `excluded_by_gate[OPEN_CHALLENGE] >= 4` names the reason exactly.
+- **One code cannot be reached at all.** An accepted seat keeps a challenge open and
+  nothing ends a game without `matches`, so `PREVIOUS_ACCEPT` is permanently gated out of
+  every card. It is listed as unreachable **by name**, with the reason, and contracted by a
+  demand in `tests/demands/` rather than by a fixture — and the run goes red on the day it
+  *is* drawn, which is how it moves back to the promised side.
+
+Two costs are printed on the report rather than hidden. The pass's suppression is a Redis
+TTL that **fails soft** while its durable row never expires, so the run is idempotent for
+the row and unconditional for the cache — and when a deck deals somebody it should not, the
+complaint names the cache rather than accusing the fixture. And the deal that earned the
+pass's origin key is remembered for a day (ADR-0131), so `make seed` leaves the
+protagonist's deck that many cards short.
+
+Scope is what is **modeled**: players, onboarding assessments, Skill ratings, Player
+profiles, Challenges and Blocks. Clubs, Courts, Bookings and Matches have no aggregates, so they
+have no scenarios; each adds its own when it exists. A walk over `app/seeds/` asserts the
+package **writes** those six contexts and reaches every other one — matchmaking, today —
+only through that context's own use cases.
+
+Six rules hold this together, and each exists because of a specific way seed data goes
 wrong:
 
 - **Seeds execute use cases; nothing writes a table.** These aggregates are event-sourced
@@ -432,6 +531,21 @@ wrong:
   so `rating-barely-established` lands in Developing and `make seed` says so by name — an
   account whose name lies is worse than one that is missing, because nothing about the
   screen it is developed against would look wrong.
+- **The seed runs on injected clocks, and the calendar can fail it.** `SystemClock` makes
+  a *settled* player unreachable on a fresh database — everybody committed through the wall
+  clock is a newcomer, and ADR-0113's gate cannot be seen with one side present. So each
+  account and each member is written on a clock set to its own commit date, straddling the
+  fourteen days with both edges clear. `Clock` is a port and the commit is the same use
+  case, so ADR-0029 is honoured rather than bent. The dates are relative to the run that
+  wrote them and a re-run re-commits nothing, so a fortnight on every newcomer ages out at
+  once — and `make seed` **fails by name, with the age in days**, rather than handing a
+  developer a newcomer path with no newcomers in it.
+- **The assertions read the screens, and the seed ticks the tail first.** They read the
+  candidate index, which has not seen what the run just wrote — so the run folds the log in
+  **in this process** before asserting. That is safe by ADR-0110's own design: the index is
+  a projection behind one `FOR UPDATE` cursor, so a concurrent API tick blocks and then
+  finds nothing to do. Half the gate is a signature: none of this runs in CI, because it
+  needs a database with the seed in it.
 - **Production is refused, on import.** `app/seeds/__init__.py` calls the guard, so
   importing anything in the package under `APP_ENV=production` raises `SeedRefused`
   before a database is opened. The guard is not in the make target: a make target is not
@@ -441,6 +555,47 @@ Addresses are on `.example` — a TLD RFC 2606 reserves, so no registry can sell
 run pointed at the wrong database cannot mail a stranger. Not the `.test` of the same
 sentence, because `EmailStr` at the HTTP boundary refuses that one and a seeded account
 nobody can sign in as is not an account.
+
+## The Dev Console
+
+**Nothing in Play can be exercised with one phone.** `Line-up incomplete`, the decline that
+reopens a seat, the instant match born of a mutual yes — every one of them needs a real
+second player answering. The dev console is that second player.
+
+```bash
+make up && make seed          # the stack, and the accounts to act as
+open http://localhost:8000/dev
+```
+
+Three views, in order — **roster**, **search as**, **answer as**. Pick a row, and the
+console signs in as that account through the ordinary `POST /api/v1/auth/login` with the
+one public seed password. From there it runs real searches, says *Let's play*, and accepts
+or declines seats, all through the player API, as that player.
+
+What it is, stated because each half is load-bearing:
+
+- **It is not a third app.** It is `app/api/dev/`, one no-build `console.html` behind a
+  `FileResponse` and one route. No npm, no bundler, no codegen, no lint lane. The day it
+  wants a component tree it has become a product, and the placement is re-argued rather
+  than grown into.
+- **There is no impersonation endpoint and no `Act-As` header.** The obvious shape —
+  `POST /dev/sessions {handle} → tokens` — was refused by name. The browser presents a
+  credential to the ordinary login route, which means the roster hands it one: the response
+  carries the seed password **once, at the top level**, because one password for every
+  seeded account is what `app/seeds/catalog.py` decided. The consequence is the good one —
+  every write the console presses is a *player-surface* write.
+- **It is gated structurally and by data, and only one of those can fail.** The structural
+  gate is `app/api/dev/gate.py`'s `CONSOLE_SERVED`, a second table written out per
+  environment — importing `app/api/dev/routes.py` under `APP_ENV=production` raises
+  `ConsoleRefused`, and `create_app` mounts nothing. The data gate is a *consequence*: the
+  roster lists accounts addressed on the reserved `.example` TLD, and production has none.
+- **Nothing reacts on its own.** There is not one timer in the page. UI spec §G4 is explicit
+  that *"acceptance is not instant and may never arrive"*, and the console exists so that a
+  human decides when the other side answers.
+- **Its contract is `openapi.dev.json`, and it holds exactly one path** — the roster.
+  Nothing generates types from it, so it is gated by a **freshness** check
+  (`make contract-freshness`) rather than by the client drift check, which has no purchase
+  on a document with no client.
 
 ## Photo Storage
 
@@ -514,18 +669,48 @@ verdict.
 **Every verdict records its evidence** — the model, the prompt-set fingerprint,
 the confidence and the raw similarity vector, in the `review-note` metadata key,
 on allowed photos as much as flagged ones. The threshold shipping today is an
-explicit placeholder; this is what lets a real one be derived later by reading
-stored objects instead of re-running inference over the corpus.
+explicit placeholder, and this is what makes replacing it cheap: the corpus is
+already on the objects.
 
-**It fails open.** An unreachable, slow, refusing or unusably-answering sidecar
-yields `allowed` with a note naming which of those it was, from a closed set. A
-reviewer that turned its own outage into a failed upload would refuse a real
-player's first photo for a reason that is not about the photo.
+**`make photo-flag-rate` reads that corpus** (#316). It walks the stored notes
+and prints the flag rate the check would have produced at each candidate line,
+plus how many stored verdicts each move would make wrong. **Read-only in the
+strongest sense**: no image is re-scored, nothing is written, and the sidecar is
+not asked anything — the whole exercise is a softmax per row over numbers already
+held. `make photo-flag-rate THRESHOLDS="0.55 0.6"` asks about particular lines
+instead of the default sweep, and `-host` runs it outside the stack.
 
-**Nothing a player sees has changed yet.** No route returns a verdict and the
-screen's copy states the product rule without claiming enforcement — the soft
-warning is a `frontend_player/` change and its own ticket. What runs today is the
-measurement that a threshold can eventually be chosen from.
+**It prints the population before the curve**, because a rate is a number over a
+denominator. Four exclusions: the photos nobody looked at, the ones that arrived
+while the sidecar was down and the ones scored against captions that have since
+moved — ADR-0132's three populations — plus a fourth for a note this application
+did not write.
+
+**And there is one curve per reviewer, never one blended.** Two models are two
+corpora, and a rate across both is a fact about neither. The instance that
+matters is not a model upgrade: the seed's declared verdicts
+(`app/seeds/photos.py`) go through the real constructors, so their notes are
+well-formed and current-fingerprint, and on a laptop they are most of the bucket.
+Where the rate should sit, and whether any one corpus is yet big enough for a
+rate to mean anything, are the two judgements the command deliberately does not
+make.
+
+**It fails open, and an outage now costs silence rather than a word.** An
+unreachable, slow, refusing or unusably-answering sidecar yields **no decision**,
+with a note naming which of those it was, from a closed set
+([ADR-0138](../docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)).
+A reviewer that turned its own outage into a failed upload would refuse a real
+player's first photo for a reason that is not about the photo; one that recorded
+`allowed` would tell twenty strangers an unexamined image had been checked.
+
+**The verdict reaches two audiences, which is why the placeholder is now a cost.**
+It crosses on the upload as a warning to the photograph's owner
+([ADR-0133](../docs/adr/0133-the-verdict-crosses-on-the-upload-and-the-warning-may-be-wrong.md))
+and on a player card as a **✓ ON COURT** shield shown to people who are not
+(ADR-0138). A genuine on-court photo scoring 0.49 therefore leaves its owner
+silently unbadged on other people's screens, with nothing they can do about it —
+the sharper of the two costs, and the one no signal we can read would tell us
+about.
 
 ## Background Jobs
 
@@ -537,9 +722,47 @@ process and no second deployable.
   and dispatches to subscribed handlers. Its worker id is the lease its batches
   claim rows under.
 - **Scheduled jobs** (`PeriodicJob`) run because an interval elapsed.
-  `app/bootstrap/jobs.py` is the register, and one job is in it today: the
+  `app/bootstrap/jobs.py` is the register, and ten jobs are in it today: the
   **uncommitted-photo sweep**, which deletes every photo the object store has
-  held for more than 24 hours that no committed profile currently names.
+  held for more than 24 hours that no committed profile currently names; the
+  **photo re-review backfill**, which asks the reviewer about the photos nobody
+  ever asked it about; the candidate index's **tail reader** and **snapshot
+  refresh**; the **exposure roll**, which publishes one scalar per sport per week
+  saying what *shown more often than most* means; the two **prompt loops** —
+  intent drift and availability staleness — which write no value anywhere and each
+  raise a standing question instead; the **interest expiry loop**, which removes
+  every *Let's play* whose twenty-one days have passed; the **scale-pressure
+  probe**, whose work is measuring how late the event loop woke it; and the
+  **challenge lapse loop**, which writes down every answer window that passed with
+  nothing in it. Two of them take no database session: the roll, whose whole input
+  and output are in Redis, and the backfill, whose whole input and output are the
+  object store.
+
+  The expiry loop is the only job here that deletes anything, and **correctness
+  does not depend on it running**: every read of the interest ledger is bounded by
+  `now`, so a lapsed yes lifts nobody and counts against nobody's cap whether or
+  not it has been swept. What the loop buys is a table the size of what is live,
+  and one figure that could not be bought later — *yeses that expired having never
+  lifted anybody*, `INTEREST_TTL`'s only day-one falsifier, which a lapsed row
+  leaves no trace to compute.
+
+  The lapse loop is the only job here that **appends a domain event**, and it is
+  the clearest case of a loop bought for the record rather than for correctness. A
+  seat past its answer window already reads as lapsed, its pair already releases
+  and its challenge already stands as `LAPSED`, because a standing is folded from
+  the seats and the clock and stored nowhere — a reader asking *is this challenge
+  still open* between a deadline and a sweep gets the same answer either way. What
+  the loop buys is a `SeatLapsed` in the log, so that **answers challenges** has a
+  denominator. What it appends is never a `SeatDeclined`: **a lapse is not a
+  decline**, and a Strand that filed silence as judgement would be measuring the
+  wrong people. `ANSWER_WINDOW` is domain, in
+  `app/modules/challenges/domain/answer_window.py`; only
+  `CHALLENGE_LAPSE_INTERVAL_SECONDS` is configuration. It is also the one job
+  here that takes **a transaction per item rather than per run**: every process
+  walks the same clock-derived list in the same order, so a run that ended on its
+  first version conflict would be a loop that made no progress anywhere. A
+  conflict is counted and stepped over, exactly as the backfill does with a
+  refusal about one image.
 
 **A job may only be registered if it is idempotent and safe to run beside
 itself.** With N API processes a job runs N times per interval, at unrelated
@@ -557,6 +780,58 @@ would see — orphans simply accumulate.
 
 The first run of a job happens at startup rather than after the first interval,
 which is the only thing that makes a six-hourly job observable on a laptop.
+
+**The re-review backfill is the same shape and the same rules**
+([ADR-0132](../docs/adr/0132-a-re-review-is-the-same-reviewer-and-a-stale-prompt-set-is-not-one.md)).
+Every photo uploaded before the checker landed carries `review: allowed` written by
+a pass-through that allowed everything, and nothing looked at those images. *Which
+photos need re-reviewing* is a query rather than a guess, because the note already
+tells the three populations apart: no note at all is the pass-through era,
+`unavailable=…` is a photo that arrived while the sidecar was down, and a full
+`clip;m=…;p=…;c=…;s=…` is one that was really scored. The job fixes the first two,
+**counts** the third — reviewed honestly against a prompt set that has since moved —
+without touching it, because whether that is worth re-running is a judgement nobody
+has made. It re-reviews through the same `PhotoReview` port the upload path holds, so
+there is exactly one copy of the rule; it never rewrites a note that is already
+right, because a metadata update is a copy of the object onto itself; and a run
+against a sidecar it cannot **reach** stops rather than stamping a fresh *could
+not be asked* over an old one. A refusal about one image is the other case and is
+stepped over — ending the run on one would let a single photo end every run at the
+same place for ever, which is a stall rather than a pause.
+
+## The ephemeral store
+
+Redis holds the **two ledgers that are allowed to be lossy** — exposure and
+suppression — and nothing else (ADR-0093). The rule that separates it from
+everything durable is one sentence: **the gate is the cache; the evidence is the
+row.** A fact that must survive is a durable row elsewhere. *Who was shown to
+whom in week 34* is answered by the search record; *were these two ever passed
+on* is answered by the durable pass record, which is exactly the fact a TTL
+destroys and exactly why the two are stored apart.
+
+**Both ledgers fail soft, and it is worth saying out loud** because ADR-0095's
+*a gate that cannot be evaluated excludes* reads like it should reach them.
+Applying that to a suppression would **empty the deck rather than protect
+anybody**: a suppression is a courtesy, a block is a safety control. So an
+unreachable Redis degrades **ordering and repetition** and never excludes
+anybody or empties a surface. The posture is applied once, by
+`matchmaking/infrastructure/fail_soft_ledgers.py`, and the composition root
+never hands out an unwrapped adapter — so no caller can get it wrong and none
+has to remember to.
+
+**Neither TTL is configuration.** How long a suppression lasts is
+`PASS_SUPPRESS`, a product number in the released ruleset; how long a week of
+exposure survives is `EXPOSURE_RETENTION_WEEKS`, in
+`app/modules/matchmaking/domain/ledgers.py`. Both decide what can still be
+asked. What *is* configuration is where the store lives and how often the roll
+runs — the same split the photo sweep's retention window and cadence have.
+
+**No test needs Redis running.** Both ledgers sit behind ports with an in-memory
+implementation that the whole HTTP suite runs against, wired in
+`tests/conftest.py` exactly as the object store and the photo-review sidecar
+are; and the Redis adapters themselves are exercised by the same contract suite
+against an in-process stand-in, so the key shapes and TTLs are tested rather
+than assumed.
 
 ## Testing And Quality
 

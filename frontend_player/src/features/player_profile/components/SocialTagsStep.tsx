@@ -39,10 +39,16 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { recoveryMessage } from '@/shared/errors';
+import { offlineMessage, recoveryMessage } from '@/shared/errors';
 import { Button, Chip, Note, theme } from '@/shared/ui';
+import {
+  socialTagGroupHeading,
+  socialTagLabel,
+  socialTagName,
+} from '@/shared/vocabulary/socialTagPresentation';
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 
-import type { SocialTagGroup, SocialTagId } from '../domain/SocialTag';
+import type { SocialTagGroup } from '../domain/SocialTag';
 import { stepAfter } from '../domain/socialSteps';
 import { selectionStanding, toggleSocialTag } from '../domain/socialTagSelection';
 import { useProfileOptions } from '../hooks/useProfileOptions';
@@ -53,9 +59,6 @@ import { SOCIAL_STEP_PATH } from './socialStepRoutes';
 import { stepCopy } from './socialStepPresentation';
 import {
   socialTagCeilingTitle,
-  socialTagGroupHeading,
-  socialTagLabel,
-  socialTagName,
   socialTagsContinueLabel,
   socialTagsEyebrow,
 } from './socialTagPresentation';
@@ -124,9 +127,7 @@ export function SocialTagsStep() {
       {/* Paused, not loading: `networkMode: 'online'` holds a query rather than failing it,
           so an offline player would otherwise watch a spinner forever. */}
       {options.fetchStatus === 'paused' ? (
-        <Note variant="amber">
-          You&apos;re offline. The tags will load as soon as you&apos;re back.
-        </Note>
+        <Note variant="amber">{offlineMessage('resumes')}</Note>
       ) : null}
 
       {options.isPending && options.fetchStatus !== 'paused' ? (

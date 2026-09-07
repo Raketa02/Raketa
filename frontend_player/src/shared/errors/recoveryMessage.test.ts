@@ -8,7 +8,7 @@
  */
 
 import { AppError } from './AppError';
-import { recoveryMessage } from './recoveryMessage';
+import { codeMessage, recoveryMessage } from './recoveryMessage';
 
 const EVERY_RECOVERY: readonly AppError['recovery'][] = [
   'retryable-automatically',
@@ -21,6 +21,10 @@ const EVERY_RECOVERY: readonly AppError['recovery'][] = [
 
 function failure(recovery: AppError['recovery']): AppError {
   return new AppError('server', recovery, 'a diagnostic nobody reads');
+}
+
+function coded(code: string): AppError {
+  return new AppError('conflict', 'business-conflict', 'a diagnostic nobody reads', { code });
 }
 
 describe('the sentence a recovery category gets', () => {
@@ -41,5 +45,25 @@ describe('the sentence a recovery category gets', () => {
     expect(recoveryMessage(failure('requires-reauthentication'))).toBe(
       'Your session has ended. Sign in again.',
     );
+  });
+});
+
+describe('a feature’s code table over that fallback', () => {
+  const TABLE = { a_known_code: 'The sentence that code owns.' };
+
+  it('answers with the table when the code is one this build knows', () => {
+    expect(codeMessage(TABLE, coded('a_known_code'))).toBe('The sentence that code owns.');
+  });
+
+  it('falls back by recovery category for a code added after this build shipped', () => {
+    // Old app versions live on real phones for months, and the compiler cannot help here:
+    // an error `code` is a wire string with no generated union behind it.
+    expect(codeMessage(TABLE, coded('a_code_from_next_year'))).toBe(
+      recoveryMessage(coded('a_code_from_next_year')),
+    );
+  });
+
+  it('falls back for a failure that carried no code at all', () => {
+    expect(codeMessage(TABLE, failure('terminal'))).toBe(recoveryMessage(failure('terminal')));
   });
 });

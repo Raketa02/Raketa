@@ -14,13 +14,26 @@ Run via the Makefile from `backend/`:
 ```bash
 make test        # poetry run pytest tests -q
 make lint        # ruff check .          make format → ruff format .
-make typecheck   # mypy app
+make typecheck   # mypy app scripts
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
 make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
-make openapi     # emit openapi.player.json — the contract the client generates from
+make openapi     # emit openapi.{player,dev}.json — the player contract the client
+                 # generates from, and the dev console's one-path contract
+make gen-walkthroughs  # rewrite the matchmaking golden files (a diff is a design change)
 make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis); logs, shell
 make migrate     # alembic upgrade head inside the API container
-make seed        # deterministic dev accounts (make seed-host to run it on the host)
+make seed        # the named accounts, the cohort and the games they have played, then
+                 # reads every Play screen as the protagonist and refuses a database
+                 # that cannot draw one. Needs the stack up (Postgres + Redis, and
+                 # MinIO for the three photographs — without it the run says so and
+                 # seeds the rest); make seed-host on the host
+                 # Then http://localhost:8000/dev — the dev console, the thing that answers
+                 # back, since no Play flow can be exercised with one phone
+make gen-cohort  # rewrite the cohort's committed population (a diff is a fixture change)
+make rebuild-candidate-index  # fold the log back into the index (…-host on the host)
+make photo-flag-rate  # the on-court flag rate at each candidate threshold, read off the
+                 # similarity vectors already stored beside the photographs — no image
+                 # re-scored, nothing written (…-host on the host)
 ```
 
 One test: `poetry run pytest tests/unit/test_user_domain.py::test_name`.
@@ -80,7 +93,25 @@ Rules to preserve:
   test.
 - **State changes emit domain events.** Use cases persist them through
   `DomainEventStore.append` and enqueue them on the transactional outbox in the same
-  transaction; handlers perform side effects after commit.
+  transaction; handlers perform side effects after commit. **One deliberate exception,
+  and it is the matchmaking module's four durable ledgers** — the `search` record,
+  `interest`, the **pass** record and the **prompt decline** (`the-engine.md` §12:
+  *nothing here is event-sourced*, and an interest is *durable without being an aggregate
+  with a life story*). All four are small facts with no life story, and **nothing
+  *subscribes* to one being written**: a lift is a read on the next search, the
+  suppression a pass writes is a cache its use case fills after the commit rather than a
+  subscriber, and a decline is read by one filter on the next search. The one thing a
+  write here does cause is a **call, never a subscription** — a second *Let's play*
+  facing the first opens a challenge **inline, in the same transaction** through a port
+  `challenges` signs (#251), because *that player has left the deck for good* is a
+  promise that must not wait for a poller. The exemption is about the interest row
+  needing no event of its own, and that is unchanged.
+  The authority naming all four is `the-engine.md` §12;
+  ADR-0128 decides what a pass *is* and says nothing about event sourcing, and ADR-0094
+  says of the decline in its own words that *declining a prompt is not a domain fact and
+  earns no event* — its amendment moved the suppression out of Redis and kept that
+  sentence literally. A new context does **not** inherit this — it needs the same argument made in
+  an ADR.
 - **Seeds execute use cases, never SQL.** `app/seeds/` creates deterministic development
   accounts through the same use cases a request runs, wired from the composition root, so
   a seeded aggregate has the event stream and the outbox rows a real one has. A structural
@@ -90,8 +121,67 @@ Rules to preserve:
 - **A seed account is named for a state, and the name is checked.** The catalog is a list
   of edges — nothing yet, one open run, one abandoned, a rating at the edge of its band —
   and a rated scenario carries the band it promises, checked against the stored rating on
-  every run. Seed only what is **modeled**: Players, onboarding assessments and Skill
-  ratings have aggregates; nothing else does, so nothing else gets a scenario.
+  every run. Four of the eleven are **protagonists** carrying a per-player *profile* axis,
+  and a Play screen is developed signed in as one of them.
+- **Behind the named accounts is the cohort, and it is a workbench that says so on its
+  face** (`app/seeds/cohort.py`, `app/seeds/screens.py`). One search over eleven accounts
+  finds them all in one ring, so a population is generated from a seed and committed as
+  `app/seeds/cohort.json` — **inputs only**, never a level, an uncertainty or a band, and
+  every draw keyed off the member's own handle so adding one changes that row and nobody
+  else's (`make gen-cohort`, and a test asserts byte-identity). It borrows
+  `scripts/ruleset_diff/population.py`'s mechanics and **none of its numbers**: that corpus
+  is a comparator and this one's job is to *reach* states, which is why ADR-0121 is
+  undisturbed. **Two lists, asymmetric** — the declarations are the generator's inputs, and
+  the assertions are outcomes of the **real read paths run as the protagonist**, because a
+  ruleset that tightens `QUALITY_FLOOR` moves no distribution and still empties every
+  screen. It fails `make seed` on **three clocks**: an engine retune moves the band
+  histogram (a range per band, never a μ — a μ would pin the engine), a ruleset retune
+  empties a screen, and the calendar walks every newcomer out of ADR-0113's window, which
+  fails **by name with the age in days**. The run injects a `Clock` — a port, so ADR-0029
+  is honoured rather than bent — and **ticks the candidate index's tail in-process** before
+  reading, which ADR-0110 makes safe rather than exempt. Half the gate is a signature: the
+  assertions need a database and do not run in CI. Seed only what is **modeled**, and the
+  fence is expressed as **writes against reads** rather than as imports — the layer
+  below widened it from three written contexts to five, and the played history made it six.
+- **Beside them is a played history, because a card that prints what the platform
+  watched needs something watched** (`app/seeds/games.py`,
+  `app/seeds/photos.py`). A seeded game is a real challenge sent off a real search,
+  every seat accepted, and a result stated and answered — so the cohort now writes a
+  sixth context. Three things about it are load-bearing. **It is the one layer the seed
+  writes in the past**: a score is confirmed when its window closes, so a game seeded an
+  hour ago is a game still awaiting an answer, and each one is written on its own
+  backdated clock while every relationship is still written at the run's own now.
+  **Five counted games costs five distinct opponents** — nothing ends a challenge every
+  seat accepted, so a pair that has played can never be shown each other again, which is
+  why no game seats the protagonist and why the tennis opponents live in ring d, past the
+  furthest rung her ladder is ever offered. And **the photographs are a declared verdict
+  and generated bytes**: `PhotoReview` is a port the fixture supplies like the clock,
+  because what a check concluded about a synthetic image is a thing a workbench chooses
+  rather than discovers — the note itself is written by the domain's own constructors, so
+  a seeded shield is one `decision_on_record` agrees to believe. The object store is the
+  one thing the seed writes that lives outside the database, so the run **asks it one
+  question first** and reports rather than dies when it cannot answer.
+- **A distribution cannot assert a pair, so eleven accounts are named for one**
+  (`app/seeds/relationships.py`, `app/seeds/pairs.py`, `app/seeds/paths.py`). Five of the
+  ten `LivenessSignal` codes are facts about **two people** — *they said yes to you*, *they
+  turned your court down*, *their inbox is full* — and no cohort, however well shaped, can
+  exhibit one; a rate cannot assert that **exactly one** instant-match pair exists. So the
+  cohort keeps the six that are properties of one person and this layer signs the pairwise
+  five, each account named for the relationship from the protagonist's side.
+  **Every edge costs a real search or deal run as the sender** — `Interest` and `Pass` have
+  no non-search constructor, a send cites the search its court was built on — and that cost
+  is the check: an origin that resolves proves the protagonist was genuinely findable
+  through gender, level and radius before any lift is claimed. **`PREVIOUS_ACCEPT` is
+  narrowed out by name**: `SeatAccepted → ACCEPTED`, nothing ends a game without `matches`,
+  so that pair is permanently `OPEN_CHALLENGE`-gated and the code is contracted by a demand
+  in `tests/demands/` rather than fixtured. **Absence claims assert the gate histogram**,
+  not the absence, because an account gated for an accidental reason is absent too and a
+  naive claim passes. Two costs are **printed on the report** rather than hidden: the
+  pass's suppression is a Redis TTL that fails soft while its row never expires — so the
+  run is idempotent for the row and unconditional for the cache, and the complaint names
+  the **cache** — and the deal that earned the pass's origin key leaves the protagonist's
+  deck a day short (ADR-0131). This is the only place the seed writes `challenges` and
+  `blocks`, and it writes them through their own use cases like everything else.
 - **Photo bytes live behind `PhotoStorage`, and the re-encode behind
   `ImageTranscoder`** ([ADR-0091](../docs/adr/0091-photo-storage-behind-a-port.md)).
   One S3-compatible adapter serves MinIO locally and S3 deployed — same class, different
@@ -111,11 +201,44 @@ Rules to preserve:
   `player_profile/domain/photos.py` beside the size caps — behaviour a domain test can
   observe, never configuration — and `PHOTO_REVIEW_ENDPOINT_URL` /
   `PHOTO_REVIEW_TIMEOUT_SECONDS` cannot change a verdict. It **soft-warns and fails
-  open**: a flagged photo is stored, and an unreachable sidecar yields `allowed` with a
-  note saying so, because an outage is not a conclusion about an image. Every verdict
-  records the similarity vector it was taken from, which is what makes today's
-  placeholder threshold safe. **No test needs the container** — `tests/conftest.py`
-  overrides the port, as it does the store.
+  open**: a flagged photo is stored, and an unreachable sidecar yields **no decision at
+  all** with a note saying which outage, because an outage is not a conclusion about an
+  image. Every verdict records the similarity vector it was taken from, which is what makes
+  today's placeholder threshold safe **and replaceable without paying for inference
+  twice**: `make photo-flag-rate` (#316) walks the stored notes and prints the flag rate
+  each candidate line would have produced, how many stored verdicts each move would make
+  wrong, and — before the curve, because a rate is a number over a denominator — the four
+  exclusions. **One curve per reviewer, never one blended**: two models are two corpora and
+  a rate across both is a fact about neither, which is the way this reading can mislead —
+  the seed's declared verdicts carry well-formed, current-fingerprint notes and on a laptop
+  are most of the bucket. Where the rate should sit is a product judgement the command
+  deliberately does not make; the chosen number goes in `photos.py` beside the caps and
+  never in configuration. **No test needs the container**
+  — `tests/conftest.py` overrides the port, as it does the store.
+  **The verdict now crosses the wire, and only on the upload**
+  ([ADR-0133](../docs/adr/0133-the-verdict-crosses-on-the-upload-and-the-warning-may-be-wrong.md)).
+  `PhotoResponse.review` is an optional code — `allowed` / `flagged`, never a sentence and
+  **never the note**, whose model, fingerprint, confidence and raw vector are evidence for
+  re-deriving the threshold and are not about the player. `GET /photos/{id}` answers `null`
+  there, which is deliberately **not** `allowed`: a warning belongs to the moment a player
+  chose a photograph, and the read would pay a metadata request per tile for a fact no
+  client asks it for. That ended ADR-0129's measure-only posture, which was a property of
+  the tree rather than a flag — so there is nothing to toggle and the fail-open trade was
+  re-examined rather than inherited: an outage now costs the player *silence*, not a
+  sentence about our infrastructure dressed up as one about their photo.
+  **And the verdict now reaches a stranger, on the player card, where *never checked* is a
+  third answer**
+  ([ADR-0138](../docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)).
+  A shield saying *checked and passed* cannot be drawn on a photo nothing looked at, so
+  `verdict_when_unreviewable` records **no decision** and `review_metadata` writes no key
+  — and, because three legacy populations already say `allowed` about unexamined images,
+  `decision_on_record` believes a stored decision **only where the note proves a score**
+  (model, prompt set, confidence, vector — all four). ADR-0132's backfill is therefore the
+  cleanup and never the gate. The card **records** the verdict rather than minting it:
+  `PlayerCardSource` pays one `HEAD` per shortlisted row that has a photograph and
+  `RecordedCard` stores the code, so the read-back draws the shield that *was* drawn
+  (ADR-0109) — the mirror of `photo_url`, which cannot be stored because it dies within the
+  hour. `GET /photos/{id}` is untouched, and the note still crosses on no route at all.
 - **Background work is an `asyncio` loop in the API process, and a job must be safe to
   run beside itself** ([ADR-0092](../docs/adr/0092-periodic-jobs-as-embedded-loops.md)).
   `PeriodicJob` (`app/infrastructure/jobs/`) is the whole mechanism — the outbox worker
@@ -123,10 +246,259 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. The one job today is the uncommitted-photo sweep, whose
-  **retention window is domain and whose cadence is configuration** — those two must not
-  swap places.
-- **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
+  mechanism and its own ADR. Eleven jobs today — the uncommitted-photo sweep, whose
+  **retention window is domain and whose cadence is configuration** (those two must not
+  swap places), the candidate index's two loops below, the **exposure roll**, the
+  first job here that takes no database session at all, the two **prompt loops**
+  (intent drift, availability staleness), which write no value anywhere — each raises a
+  question into the prompt ledger and stops, and every threshold behind them is domain
+  in `matchmaking/domain/prompts.py` while only the cadences are settings — and the
+  **interest expiry loop**, the only one that deletes anything. Turning that one off
+  changes no rule a domain test could observe (every ledger read is bounded by `now`,
+  so a lapsed yes lifts nobody whether or not it has been swept); what it buys is a
+  table the size of what is live, and the one figure a lapsed row could ever be asked
+  for — *yeses that expired having never lifted anybody*, `INTEREST_TTL`'s only day-one
+  falsifier, which cannot be computed once the rows are gone. The eighth is the
+  **scale-pressure probe** — the only job whose work *is* its own scheduling: it measures
+  how late the loop woke it, and closes the fifteen-minute window
+  [`scale-posture.md`](../docs/specs/matchmaking/scale-posture.md) §4 states trigger 1
+  over. It reads this process's own counters and writes nothing anywhere, so it needs no
+  session and no store, and *N processes, N runs* is what the trigger wants — it is
+  stated **per worker**. The ninth is the **photo re-review backfill**
+  ([ADR-0132](../docs/adr/0132-a-re-review-is-the-same-reviewer-and-a-stale-prompt-set-is-not-one.md)),
+  the second job that takes no session — its whole input and output are the object store.
+  Every photo uploaded before ADR-0129's checker landed carries `review: allowed` written
+  by a pass-through that looked at nothing, and **the note is what tells the three
+  populations apart**: no `review-note` key is the pass-through era, `unavailable=…` is a
+  photo that arrived while the sidecar was down and that population keeps growing, and a
+  full `clip;m=…;p=…;c=…;s=…` was really scored. The job fixes the first two and
+  **counts the third without touching it** — reviewed against captions that have since
+  moved is a judgement nobody has made, and `PROMPT_SET_FINGERPRINT` is what makes it
+  answerable. Four rules, each a way it could go wrong invisibly: it re-reviews
+  **through the `PhotoReview` port**, so there is one copy of `verdict_from_similarities`
+  and a batch cannot disagree with the upload path about one image; it **never rewrites a
+  note that is already right**, because an S3 metadata update is a copy of the object onto
+  itself; a run against a sidecar it cannot **reach** stops rather than stamping a fresh
+  `unavailable` over an old one, while a refusal about one image is counted and stepped
+  over — ending the run on one would stall the job at that photo for ever
+  (`PhotoReviewUnavailability.is_about_the_reviewer` is the split); and a note it cannot
+  parse reads as *nobody looked* — the deliberate inverse of the sweep, whose action is a delete. The budget, the
+  pause and the cadence are settings and none of them selects which photos are chosen.
+  The tenth is the **challenge lapse loop** (#252), and it is the only job here that
+  **appends a domain event**. A seat past its answer window already reads as lapsed, its
+  pair already releases and its challenge already stands as `LAPSED` — a standing is
+  folded from the seats and the clock and stored nowhere, so a reader asking *is this
+  challenge still open* between a deadline and a sweep gets the same answer either way.
+  What the loop buys is the **record**: a `SeatLapsed` in the log, so that *answers
+  challenges* has a denominator. What it appends is never a `SeatDeclined` — **a lapse is
+  not a decline**, and a Strand that filed silence as judgement would be measuring the
+  wrong people. Its read names **candidates rather than conclusions** and that is
+  deliberate: a store that could filter on *has this seat lapsed* would be the derived
+  standing, stored. `ANSWER_WINDOW` is domain; only the cadence is a setting.
+  The eleventh is the **rating catch-up**
+  ([ADR-0139](../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)),
+  the second that appends a domain event and **the only one on this list that correctness
+  depends on**. Every other job buys a record or a table's size; this is the only path a
+  confirmed result has to a Level, because ADR-0137 refused a `ResultConfirmed` event — a
+  confirmation is a clock passing and announces nothing — and recorded that cost by name. A
+  player whose game confirmed on Tuesday keeps Monday's Level until it runs. It **holds no
+  cursor**: every move records the game that caused it, so *have I applied this* is answered
+  by replaying the aggregate that would change, and a half-finished run is re-derived in full
+  by the next tick rather than being a lost result. Its walk is over every game the platform
+  has recorded — the same cost profile as every other read in `games`. The **rule** it applies
+  is `engines/racketskill/results.py` and is emphatically not configuration: an environment
+  that could pick a K-factor is an environment that decides how a marketplace rates people.
+- **The candidate index tails the log; the outbox delivers side effects**
+  ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
+  [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
+  [ADR-0112](../docs/adr/0112-the-snapshot-is-a-per-partition-container-bound-once.md)).
+  The platform's first read model, and **the same domain event now has two consumers with
+  different guarantees** — hold both in your head. `CandidateIndexTail` reads `event_store`
+  by `sequence_no`, takes the one cursor row `FOR UPDATE`, and applies **only the contiguous
+  prefix**, because a position is assigned at `INSERT` and not at `COMMIT`. A hole is stepped
+  over only once the snapshot horizon proves it permanent — **and never on SQLite**, which has
+  neither a horizon nor a concurrent appender, so that path is exercised against Postgres or
+  not at all. `DatabaseCandidateSource` holds one immutable container per partition per
+  process, refreshes it by copying row references, and calls `gc.freeze()` after every load and
+  after every refresh that decoded a row — **not** after one that decoded none, because the
+  freeze promotes everything tracked and would otherwise leak whatever was in flight, every two
+  seconds, for ever.
+  Three rules that outlive the code: **the index holds only facts a player changes about
+  themselves** (every live-truth fact travels in the search context instead — a column for one
+  would make staleness cost safety); **the partition is derived and there is no shard-key
+  field**; and **`rebuild == tail`**, which is why every stamp is the moving event's own
+  sequence number and never a batch boundary. Repair is `make rebuild-candidate-index` and
+  **there is no admin route** — a walk over `app/api/` and every `presentation/` fails the
+  build if one appears. The staleness **ladder** is domain
+  (`matchmaking/domain/index_staleness.py`); only the two cadences are configuration.
+- **The three lossy ledgers live in Redis, and the gate is the cache — the evidence is
+  the row** ([ADR-0093](../docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md),
+  `the-engine.md` §12). Exposure and suppression are ports in
+  `matchmaking/domain/ledgers.py` with TTLs, and the **prompt ledger** — where the two
+  loops leave a standing question — is declared in `matchmaking/domain/prompts.py` and
+  registered in the same posture table; everything that must survive is a durable row
+  elsewhere, and a test at each port says so. **All three fail soft**, which is the opposite of
+  the block gate beside them and is deliberate: applying ADR-0095's *a gate that cannot be
+  evaluated excludes* to a courtesy would **empty the deck rather than protect anybody**.
+  The posture is a wrapper applied in the composition root, so **no unwrapped adapter is
+  ever handed out** and `.importlinter` keeps `redis` — and the adapter over it — out of
+  every domain and application layer. Neither TTL is configuration: `PASS_SUPPRESS` is in
+  the released ruleset and `EXPOSURE_RETENTION_WEEKS` in the domain, and only `REDIS_URL`
+  and the loops' cadences are settings. **No test needs Redis** — all three ports have an
+  in-memory implementation that `tests/conftest.py` wires for the whole HTTP suite, and the
+  Redis adapters are held to the same contract suite against an in-process stand-in.
+- **Interest is durable, in the module, and it is the only lift that admits**
+  ([ADR-0127](../docs/adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md),
+  [ADR-0109](../docs/adr/0109-a-read-back-names-what-it-withholds.md)). `POST/GET
+  /api/v1/interest` and the `interest` table are the first durable ledger in this module
+  — a row rather than a Redis key, because a person reached out to a person and that is
+  the one thing here a human would miss. Four rules shape it, and each is structural
+  rather than remembered. **There is no method on `InterestLedger` that answers *who has
+  said yes to me***: the lift's read takes the candidate population it may answer about,
+  so an inbox is not a query the port can express. **The origin key is two columns on the
+  row** — an interest citing a search that is unknown, foreign or that never showed that
+  person is refused, never linked as null, and the position is read off the record rather
+  than sent. **Nothing decays**: `INTEREST_TTL` is flat then absent, `expires_at` is dated
+  at birth, and at `OUTSTANDING_INTEREST_CAP` the write is **refused** rather than
+  shortening a yes already sent. And it is the **one** thing that may admit a candidate
+  below `QUALITY_FLOOR` — `admits(..., interest_received=True)` in `engines/matchfit/v1/
+  floor.py`, with the reason printed; the newcomer and zero-exposure lifts reorder and
+  never admit. All three numbers are ruleset rows and only the sweep's cadence is a
+  setting.
+- **The deck reads a declaration, and a pass is a statement about my deck**
+  ([ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md),
+  `the-two-contracts.md` §6). `POST /api/v1/deck` takes **the sport and the week this one
+  deal runs on** and creates a search: there is no mode on the wire in either direction,
+  because the deck resolves the weight vector backend-side from the viewer's declared Play
+  intent — `NO_PREFERENCE → fun`, never a third vector — and `search.intent_read` records
+  **the declaration as it stood**, so a later change to the mapping does not rewrite
+  history. Its order is its whole variety (three bands, then `PASS_SUPPRESS`); the
+  **relaxation ladder does not reach it** — the week is the only ask beside the sport, and
+  it is an ask like the shortlist's: it writes nothing, and the deal comes back carrying
+  `KEEP_THESE_TIMES`, which is the offer to save it; and a spent deal deals again — a new
+  `search_id`, the same exclusions plus everybody dealt within `DEALT_MEMORY`, so only a
+  *fresh* deal that came back empty is the honest empty state.
+  `POST /api/v1/passes` is **write-only and answers `204`**: no route returns a pass, to
+  anyone, in any shape, and `PASS_SUPPRESS` crosses the wire in **no shape at all**. It
+  has three boundaries, all the opposite of a block's — deck only, one-directional, never
+  escalating — and the split that makes them enforceable is **the gate is the cache; the
+  evidence is the row**: the durable `player_pass` row is written and committed first, and
+  the 30-day Redis suppression derived from it is written after and **fails soft**, so an
+  outage repeats a card and never empties a deal. Two telemetry columns exist for the one
+  falsifier `PASS_SUPPRESS` has — `search.n_excluded_by_suppression` and
+  `search_candidate.suppression_lapsed`, both **deck deals only**, both check-constrained.
+  **`application/search_workbench.py` is the seam the two surfaces share** — read the
+  searcher, bind the snapshot and every live gate fact, attach the card and the at-stake
+  block, record, commit, note exposure — so a shortlist and a deal cannot come to two
+  answers about which reads fail closed. What stays in each use case is what that surface
+  decides: the mode, the exclusions, the order, the ladder, the prompts.
+- **A returned search is a recorded search**
+  ([ADR-0104](../docs/adr/0104-the-search-record-is-the-answer-and-never-expires.md)).
+  `POST /api/v1/searches` is the platform's first matchmaking route, and the rule that
+  shapes it is that the `search` row is written **in the request's own transaction and
+  committed before the response returns** — if that fails, the search fails, because the
+  `search_id` *is* the answer's identity. Every fact on it is search-time and **there is
+  no backfill**, which is why the two tables are wide on day one and why
+  `their_slot_count`, `days_away` and the raw `liveness_signals` are recorded and read by
+  nothing: *a strike that is not recorded becomes irreversible by accident.* Nothing
+  deletes a row; erasure will be the only path that ever does.
+  Three seams are worth holding in your head, because a change lands in exactly one of
+  them. **`domain/shortlist.py` is pure** — a bound `SearchContext` in, an ordered answer
+  out, no I/O — which is what lets the three walkthroughs be golden files
+  (`make gen-walkthroughs`; **a diff there is a design change and must be argued for in
+  the pull request**). **`domain/fence.py` is the crossing**: everything the scorer will
+  ever see is built there, so a field that must not reach it has one place to be refused.
+  And **`application/run_shortlist_search.py` owns the order** — read the searcher live,
+  bind one snapshot and every live gate fact, run the pipeline, record and commit, then
+  write exposure *after* the commit. **Never a fallback list:** when the engine raises the
+  feature is down, and there is deliberately nothing to catch it with.
+  **`GET /api/v1/searches/{id}` reads one back, and it is not a cache**
+  ([ADR-0109](../docs/adr/0109-a-read-back-names-what-it-withholds.md),
+  [ADR-0130](../docs/adr/0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md)). The
+  record is immutable and the four fail-closed gates — block, hold, account state, mutual
+  gender — are re-evaluated live, so a row they no longer admit **keeps its place and states
+  that it is withheld** while naming no gate and carrying no person. That is why both routes
+  render `SearchRecord` through one function and why the row records the card, the concerns,
+  the whole-kilometre distance and the at-stake block: what a read-back cannot reproduce off
+  the row, it would have to re-read from sources that have moved on.
+- **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix. The one
+  exception is the **dev console** (`app/api/dev/`, #256) — a second *surface*, not a
+  second client: one no-build `console.html` behind a `FileResponse` at `/dev`, and one
+  roster route, which is the whole of `openapi.dev.json`. It **acts as another player by
+  signing in as them** through the ordinary `POST /api/v1/auth/login` with the public seed
+  password the roster hands over, so there is no impersonation endpoint, no `Act-As` header
+  and no authorisation path that exists for it — every write it presses is a
+  player-surface write. It is gated **structurally and by data**, asymmetrically:
+  `CONSOLE_SERVED` in `app/api/dev/gate.py` is a **second table** and never `SEEDABLE`
+  (deriving one refusal from another is what `app/seeds/guard.py` argues against), and
+  importing `routes.py` in production raises `ConsoleRefused` — while the data half is a
+  *consequence*, since the roster lists only the reserved `.example` TLD and production has
+  no such accounts. The refusal is at the top of `routes.py` rather than in the package's
+  `__init__`, deliberately: `create_app` reads the gate in **every** environment, so a
+  package that refused on import would take the production deployable down at startup. It
+  **declines the `app/seeds/` import it is entitled to** — which is what keeps the console's
+  own refusal the one that fires — at the cost of spelling two constants twice, pinned by
+  `tests/unit/test_dev_console_surface.py`. Its contract is checked for **freshness**
+  (`make contract-freshness`), not by the client drift check, which has no purchase on a
+  document with no client.
+- **A game is opened by a completed line-up, and a result is the record that it
+  happened** ([ADR-0137](../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)).
+  `app/modules/games/` is the sixth context and the second event-sourced racket-sport one;
+  it adds **no table and no migration**, because the streams live in `event_store` beside
+  everybody else's. Four things about it are load-bearing and none of them is obvious from
+  the code alone. **Nothing creates a game over HTTP** — `challenges` calls
+  `PlannedGameOpening` **inline, in the transaction of the acceptance that filled the last
+  seat**, on `MutualChallengeMinting`'s argument: a subscriber would have to re-derive
+  *did this accept complete the line-up* by reading somebody else's aggregate, and the
+  player who taps the last accept would be told the game is on by a screen that cannot yet
+  show it. **The three ends are folded and never stored, and nothing announces one** —
+  there is no `ResultConfirmed`, no sweep and no job, because a derived standing has
+  exactly one place to be true; *silence confirms* is a clock passing, so the test for it
+  advances a clock and there is deliberately no method called `confirm`. **One route
+  resolves three acts** — `POST /games/{id}/result` is a proposal, a correction or a
+  counter depending on what already stands, so a client cannot mislabel one, and there is
+  no rejection endpoint because *a counter must carry a score*. And **a bad score is a
+  refusal, never an `invariant`**: a score arrives from a person typing it, so a level set
+  answers with `a_score_must_name_a_winner` rather than a 500 — the split
+  `CONTEXT.md`'s *Invariant vs Unavailability* names, applied at the one value object in
+  this repository a player composes by hand. Its three clocks are in
+  `games/domain/windows.py` and **none of them is configuration**. Its fourth published read
+  is `ConfirmedResultLedger`, which exists **because nothing announces a confirmation**: the
+  rating context walks confirmed counted results forward, oldest first, ordered on the derived
+  moment each became final
+  ([ADR-0139](../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
+  It has **one inward port too**, and it is a single field wide:
+  `PlayerHandles` puts a **nickname** on a seat and nothing else about the person in it
+  ([ADR-0141](../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)). A card is
+  what a *searcher* reads to decide about a game that might happen, so a Level, an area or a run
+  of form on a record of an evening would be an as-of-now fact stapled to the past; the handle is
+  what four people already knew about each other by the time they were on a court together, and
+  without it the screens named **sides** — a result agreed with nobody, and three padel games in
+  a week told apart by nothing but how long ago they were arranged. **The court is the whole of
+  the permission and nothing is re-gated against the reader**: the four fail-closed gates decide
+  who may be *introduced*, ADR-0095 §7 already settled that a block does not reach into a game
+  already agreed, and a handle that vanished from a row would be §8's trace. It is **one set read
+  per response** over the union of every court in the answer, and a handle `users` cannot answer
+  for is `null` with the seat kept — the opposite of the shortlist, which drops a row it cannot
+  name.
+- **A Player Score is what the platform watched, and two strands is what it can see**
+  ([ADR-0140](../docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
+  `app/modules/player_score/` is the seventh context and the first that **keeps no record at
+  all** — no aggregate, no repository, no table, no migration. It folds `games`' and
+  `challenges`' published ports and does arithmetic over them, because a stored score would be a
+  second place for *did that game happen* to be true and the copy is what gets believed. Four
+  things about it are load-bearing. **Its port is `PublishedScoreQuery` and not
+  `PlayerScoreQuery`** — the matcher's port of that name is the *demand* and this is the
+  *publication*, and ADR-0137's rule applies: the cost of a shared word is paid by whoever
+  arrives second. **Two of five strands are live and three are absent, never nought** — *keeps
+  plans*, *settles up* and *sportsmanship* have no provider, and a player with no record at all
+  is absent from the answer, which is the one rule the demand suite is written around.
+  **The published weights live in the context and never in a ruleset**, because a weight release
+  must not change what somebody's own profile says about them; they sum to 85 on purpose, since
+  the blend renormalises over the strands present. And **reliability stopped being absent
+  platform-wide**: `NoPlayerScoresExist` retired, `build_absent_terms` answers empty and lost its
+  argument, a stood-down reliability is now `NOTHING_FROM_THEM`, and the evidence gate counts
+  eight live terms rather than seven — excluding nobody, at a margin of zero rather than one.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one
@@ -154,6 +526,14 @@ This app is the single source of truth for the API
 (`make openapi`), so a response-shape change is load-bearing outside this directory. When
 you change it, run the `api-contract-change` skill.
 
+**`make openapi` writes one document per surface, and there are two.** The second is the
+**dev console**'s `openapi.dev.json` — one path, and no client, so nothing generates types
+from it. Both are committed, and both are gated at the repository root by
+`make contract-freshness`: re-emit and diff, which is a different question from
+`make test-drift`'s (that one asks whether the *client's* generated types reproduce from
+the document, and has no purchase on a document with no client). Commit the regenerated
+documents with whatever moved them.
+
 Prefer additive changes. Removing or renaming a field breaks a shipped client — a mobile
 app whose old versions stay installed on real phones for months.
 
@@ -167,6 +547,19 @@ tests.
   classes implementing the `Protocol` (see `tests/unit/test_resolve_current_user.py`).
 - `tests/api/` — full HTTP flows via the `client` fixture (HTTPX ASGI + in-memory SQLite).
   Reuse fixtures from `tests/conftest.py` rather than standing up new app/db instances.
+- `tests/demands/` — the **outward demands**, parameterised over every implementation
+  registered in a register beside the wiring
+  ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
+  to a register enrols an adapter; a port with no row fails the suite. Not named
+  *contract* — that word already means `openapi.player.json` drift here.
+  **Four registers, and they are four on purpose — one per kind of claim.**
+  `app/bootstrap/matcher_demands.py` holds the ports the *matcher* declares of contexts it
+  does not write; `games_demands.py`, `rating_demands.py` and `player_score_demands.py`
+  each hold the ports one *provider* publishes outward. Each register's exhaustiveness
+  assertion is about its own kind of claim and would stop meaning anything with another
+  kind in it — which is also the rule for the next one: **a new provider gets a new
+  register, not a row in somebody else's**, and the first person to add a row should not
+  have to guess which list it belongs in.
 - Async by default (`asyncio_mode = "auto"`) — no `@pytest.mark.asyncio`.
 
 ## Environment gotchas
@@ -187,8 +580,12 @@ tests.
   laptop or a CI runner, and both are `local`.
 - The embedded event-delivery worker polls the outbox on startup; toggle with
   `EVENT_DELIVERY_WORKER_ENABLED`. Scheduled jobs are toggled one at a time —
-  `PHOTO_SWEEP_ENABLED` today — and **every job's first run is at startup**, not after
-  its first interval, so a six-hourly job is observable on a laptop.
+  `PHOTO_SWEEP_ENABLED`, `PHOTO_REVIEW_BACKFILL_ENABLED`, `CANDIDATE_INDEX_ENABLED`,
+  `EXPOSURE_ROLL_ENABLED`, `INTENT_DRIFT_ENABLED`, `GRID_STALENESS_ENABLED`,
+  `INTEREST_EXPIRY_ENABLED`, `SCALE_PRESSURE_ENABLED`, `CHALLENGE_LAPSE_ENABLED`,
+  `RATING_CATCH_UP_ENABLED` — and **every
+  job's first run is at startup**, not after its first interval, so a six-hourly job is
+  observable on a laptop.
 
 ## Git & domain language
 

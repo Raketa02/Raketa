@@ -40,6 +40,7 @@
     {
       "id": "1",
       "verdict": "shown",
+      "label": "same level, full grid overlap, five minutes away, socially blank",
       "intent": "NO_PREFERENCE",
       "candidate": {
         "mu": 2.8,
@@ -90,6 +91,7 @@
     {
       "id": "2",
       "verdict": "shown",
+      "label": "case 1 with the grid emptied — **no shared slot at all**",
       "intent": "NO_PREFERENCE",
       "candidate": {
         "mu": 2.8,
@@ -138,8 +140,9 @@
       }
     },
     {
-      "id": "3'-comp",
+      "id": "3′-comp",
       "verdict": "not_shown",
+      "label": "just inside competitive's gate, forecast at its floor, no slot, edge of the radius",
       "intent": "NO_PREFERENCE",
       "candidate": {
         "mu": 3.34,
@@ -173,8 +176,9 @@
       }
     },
     {
-      "id": "3'-fun",
+      "id": "3′-fun",
       "verdict": "not_shown",
+      "label": "the same, just inside for-fun's gate",
       "intent": "NO_PREFERENCE",
       "candidate": {
         "mu": 3.69,
@@ -210,6 +214,8 @@
     {
       "id": "4",
       "verdict": "shown",
+      "label": "everything exceptional, competitive searcher, friendly-only candidate",
+      "note": "reason printed",
       "intent": "FOR_FUN",
       "candidate": {
         "mu": 2.8,
@@ -247,6 +253,7 @@
     {
       "id": "5",
       "verdict": "shown",
+      "label": "**the median stranger**",
       "intent": "NO_PREFERENCE",
       "candidate": {
         "mu": 3.075,
@@ -297,6 +304,7 @@
     {
       "id": "6",
       "verdict": "shown_docked",
+      "label": "case 1 with the candidate's radius shrunk — searcher outside theirs",
       "intent": "NO_PREFERENCE",
       "candidate": {
         "mu": 2.8,

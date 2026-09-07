@@ -23,6 +23,7 @@
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { Text } from 'react-native';
 
 import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
@@ -147,13 +148,39 @@ describe('what the step opens with', () => {
     expect(isDisabled('Continue')).toBeFalsy();
   });
 
-  it('says what the answer is used for before it is given', async () => {
+  it('says what both answers are used for above both of them', async () => {
     // A player asked a question about themselves is entitled to know what is done with the
     // answer, and *never shown on your profile* is the part that is least guessable — it is
     // said before the press rather than reassured about after it.
+    //
+    // It sits at the top rather than between the two controls, which is what makes that
+    // true: a player deciding whether to answer at all decides it before pressing anything,
+    // and the claim covers the preference below as much as the answer above.
     await reachTheGenderStep();
 
     expect(screen.getByText(GENDER_SCOPE)).toBeTruthy();
+    expect(GENDER_SCOPE).toContain('only to match you with other players');
+    expect(GENDER_SCOPE).toContain('never shown on your profile or shared with other players');
+
+    // Above *About you*, which is above the first control — read off the tree rather than
+    // asserted about a layout, so a note moved back under the buttons fails here.
+    const order = screen
+      .UNSAFE_getAllByType(Text)
+      .map((node) => String(node.props.children))
+      .filter((text) => text === GENDER_SCOPE || text === 'About you');
+
+    expect(order).toEqual([GENDER_SCOPE, 'About you']);
+  });
+
+  /** A setting, not a one-off, and it says where to change it. */
+  it('says the preference is durable and where it applies', async () => {
+    await reachTheGenderStep();
+
+    expect(
+      screen.getByText(
+        'You can change this later in your preferences. It applies to every search.',
+      ),
+    ).toBeTruthy();
   });
 });
 

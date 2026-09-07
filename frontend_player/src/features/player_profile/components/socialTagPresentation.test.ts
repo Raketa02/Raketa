@@ -1,36 +1,17 @@
 /**
- * The words on the tags step, without a renderer.
+ * The words the tags **step** says, without a renderer — the rule it states and the ceiling
+ * it refuses at, both quoting numbers the server served rather than numbers this build
+ * expects.
  *
- * The labels are copy and copy changes; what these hold is the two things that must not.
- * Every id this build can draw has words, and no two ids share the same ones — two chips
- * reading alike are two choices a player cannot tell apart.
+ * What a tag is *called* is asserted beside the promoted table, in
+ * `@/shared/vocabulary/socialTagPresentation`.
  */
-
-import { SOCIAL_TAG_GROUP_IDS, SOCIAL_TAG_IDS } from '../domain/SocialTag';
 
 import {
   socialTagCeilingTitle,
-  socialTagGroupHeading,
-  socialTagLabel,
   socialTagsContinueLabel,
   socialTagsEyebrow,
 } from './socialTagPresentation';
-
-describe('what a tag is called', () => {
-  it('gives every id this build can draw its own words', () => {
-    // A tag added without copy fails here rather than shipping as a chip with nothing on it.
-    const labels = SOCIAL_TAG_IDS.map(socialTagLabel);
-
-    expect(labels.every((label) => label.length > 0)).toBe(true);
-    expect(new Set(labels).size).toBe(SOCIAL_TAG_IDS.length);
-  });
-
-  it('gives every group a heading naming what it is about', () => {
-    const headings = SOCIAL_TAG_GROUP_IDS.map(socialTagGroupHeading);
-
-    expect(headings).toEqual(['After the match', 'On the court', "Why you're here"]);
-  });
-});
 
 describe('the eyebrow', () => {
   it('carries the served rule alongside the position', () => {

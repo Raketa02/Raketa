@@ -12,9 +12,10 @@ the distinction, and ADR-0017 for why this context is event-sourced.
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Collection, Mapping, Protocol, runtime_checkable
 from uuid import UUID
 
+from app.engines.racketskill.core import SkillEstimate
 from app.kernel import Sport
 from app.modules.rating.domain.assessment import Assessment
 from app.modules.rating.domain.skill_rating import SkillRating
@@ -93,12 +94,12 @@ class SkillRatingRepository(Protocol):
     assessment writes this stream and the assessment's inside one transaction,
     so the boundary belongs to the use case.
 
-    **There is no ``load``.** Nothing reads a single rating by id — the one read
-    is "every rating this player holds", and a rating's stream id is derived from
-    the player and the sport rather than looked up, so a by-id port would be a
-    member no caller could want. Add it when something wants it, with the
-    ownership argument ``AssessmentRepository.load`` makes; a rating loaded
-    without saying whose it is has the same hazard.
+    **There is still no ``load`` by id, and ``find_for`` is not one.** Nothing
+    reads a rating by an identifier it was handed; a stream id is *derived* from
+    the player and the sport, so the pair is the address and a by-id member would
+    be one no caller could want. ``find_for`` takes the pair, which is the
+    ownership argument ``AssessmentRepository.load`` makes, satisfied by the
+    signature rather than by an extra argument nobody can forget.
     """
 
     async def save(self, rating: SkillRating) -> None:
@@ -117,10 +118,27 @@ class SkillRatingRepository(Protocol):
         A question rather than the aggregate, deliberately. The stream is keyed
         by ``(player, sport)`` so this is one lookup, where ``find_all_for``
         replays every rating the player holds; and a caller asking *is there
-        one* has no business with an aggregate it might then mutate. The
-        by-id ``load`` this port still lacks stays unwritten until something
-        wants to transition a rating — which is the match-update engine's
-        problem, not this one's.
+        one* has no business with an aggregate it might then mutate — which is
+        why the result-update rule reaches for ``find_for`` below and not for
+        this, even though the two address the same stream.
+        """
+        ...
+
+    async def find_for(
+        self, *, player_id: UUID, sport: Sport
+    ) -> SkillRating | None:
+        """This player's rating for one sport, replayed, or nothing.
+
+        **The read the result-update rule needed and the reason ``exists_for``
+        could not be it.** Moving a Level on a result is a transition, so the
+        caller needs the aggregate rather than an answer about it — and it needs
+        exactly one, because a game is one sport and replaying every rating a
+        player holds to move one of them is a read four times too wide in a
+        four.
+
+        ``None`` for an unrated player, which is ordinary rather than an error:
+        somebody can be on a court in a sport they never answered a questionnaire
+        for, and a result that finds no rating moves nothing.
         """
         ...
 
@@ -130,5 +148,35 @@ class SkillRatingRepository(Protocol):
         Empty for an unrated player — the ordinary state of a new account, never
         an error. Ordered as the ratings were earned, which is what the store's
         oldest-first ids already give.
+        """
+        ...
+
+
+@runtime_checkable
+class RatedPlayerQuery(Protocol):
+    """Levels and uncertainties, **read and never held.**
+
+    The one thing this context publishes outward that is not an aggregate, and it
+    exists so that a consumer wanting to *know* a Level cannot accidentally hold
+    something it could move. ``SkillRatingRepository`` remembers stream versions
+    precisely so that a rating it found can be saved; handing that to a reader
+    would put a mutation path in the matcher's hands for the sake of two floats.
+
+    **It answers about a pair of ratings and computes nothing.** *At stake* is
+    this context's own number and the rule that produces it is
+    ``engines/racketskill/results.py``; what crosses this port is the input to
+    that rule, so nobody outside acquires an opinion about a K-factor by having
+    read a μ.
+    """
+
+    async def estimates_for(
+        self, player_ids: Collection[UUID], *, sport: Sport
+    ) -> Mapping[UUID, SkillEstimate]:
+        """Each of these players' Level and uncertainty for one sport.
+
+        A player with no rating in this sport is **absent from the answer** —
+        never a population mean and never a zero, on the rule the whole platform
+        applies to a fact nobody has measured. Asked about ids the caller already
+        holds, and answers only about those.
         """
         ...

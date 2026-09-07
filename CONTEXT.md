@@ -28,13 +28,16 @@ ports & adapters), DDD, and event sourcing.
 These are the authority for their terms. There is no Part 2: after the reset, no term is
 committed ahead of *a decision*, and a speculative list of context names is not one. A
 context that does not appear below has no vocabulary yet — resolve its terms into this file
-before writing it, which is what the last three sections below are: **Player profile** is
-settled in an accepted ADR and is being built, and **Blocks** and **Matchmaking** are settled
-in accepted ADRs and are not built at all. Their terms are here because that is the order
-this file asks for, not because the code landed first. **Player Score** is a further step out
-again: nothing about it is decided, and it appears only because the matcher has contracted six
-words it will read, and the words are the player's, not the matcher's. Every other section describes code
-that exists in `backend/app/` today.
+before writing it, which is what every section from **Player profile** down was: settled in an
+accepted ADR and written here first, then built. **All of them are built.** Their terms are here
+because that is the order this file asks for, not because the code landed first. Every section
+describes code that exists in `backend/app/` today.
+
+> **A verdict narrower than that belongs to the section it is about.** This paragraph carried a
+> clause per context and went stale twice, because a per-context verdict at the top is a second
+> place for *is this built* to be true. What a context can and cannot see — a strand that stands
+> down, a modifier wired and never binding, a term settled and unbuilt — is stated in its own
+> section, where the reason for it is.
 
 ### Skill rating (`backend/app/modules/rating/`)
 
@@ -50,20 +53,39 @@ A rating is **never only a number**.
   and matchmaking reads the record rather than the headline.
 - **Confidence** — σ restated as a percentage for the player, `100 × (1 − σ/1,20)`, capped
   at 99. **Never 100** — the platform cannot claim total certainty about anybody.
-- **Likely range** — μ ± σ, clamped to the scale. The player's own range, and the only
-  range shown to them; a band's numeric edges are not a second range to compare it against.
+- **Likely range** — μ ± σ, clamped to the scale. **A fact about one player**, so it travels
+  on any card that names them — printing μ while refusing μ ± σ would show a level and hide
+  how sure of it anybody is. A band's numeric edges are **not** a second range to compare it
+  against, and a screen printing a range prints the published values rather than a second set
+  of drawing constants.
 - **Band** — one of four named ranges, deliberately uneven in width, each with a
   plain-language meaning: **New** 1,0–1,5 · **Developing** 1,6–2,6 · **Established**
   2,7–3,8 · **Advanced** 3,9–5,0.
 - **Rating status** — **Initial Estimate** (onboarding output, no counted matches) →
-  **Calibrating** (real matches started, still moving) → **Stable**.
+  **Calibrating** (real matches started, still moving) → **Stable**. **A count opens the
+  door and certainty closes it** ([ADR-0139](docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)):
+  the *first* confirmed counted result leaves Initial Estimate, and Stable is reached when
+  the uncertainty does — not when a game count does, because twenty games against people
+  nobody has watched is not certainty.
 - **At stake** — what a counted win and a counted loss against one specific opponent would do
   to a player's Level, shown before they commit to the game. A **pair** of signed deltas, and a
   fact **this context owns**: it reads the rating engine's own update rule, so nobody else may
   compute it — not the client ([ADR-0021](docs/adr/0021-kernel-in-backend-clients-derive-by-comparison.md):
   a rule, not a comparison), and not the matcher, which reads what a player is shown and never
-  re-derives it. It exists only for games that would be counted. **The rule it needs is not
-  written yet**, so today the value is *absent* rather than zero.
+  re-derives it. It exists only for games that would be counted. **It is not a preview of the
+  rule; it is the rule**, read forward — the same function that moves the Level if the game is
+  played, so the card cannot promise a figure the result then contradicts. *Absent* rather than
+  zero when either party holds no rating in that sport.
+- **Result update** — what a **confirmed counted result** does to the two or four Levels that
+  played it. A result is **evidence about the gap between two people**, fused by inverse
+  variance like every other kind, so *how surprising it was* moves the Level and the certainty
+  tightens out of the same arithmetic rather than out of a second rule. Each side is one player
+  at the average of its Levels, so **everybody on a side moves by the same amount** — a partner
+  is not somebody you are rated against — while each of them keeps the certainty they had. And
+  **a four is half the evidence about any one of the four**.
+  **No single evening moves a Level further than the ceiling** — a brake, because onboarding's
+  uncertainty is a floor rather than a measurement and silence confirms a score nobody read.
+  Decided by [ADR-0139](docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md).
 - **Volatility** — how fast the estimate currently appears to be moving.
 - **Assessment** — an **event-sourced aggregate**: one adaptive questionnaire run, for one
   player and one sport.
@@ -111,6 +133,10 @@ A rating is **never only a number**.
   Manual editing is refused by the domain itself, not guarded by a permission check.
 - **Only the rating context writes μ, σ, volatility and status.** Every other engine
   contributes evidence, an information weight, or an anomaly signal — never a rating point.
+- **A result moves a Level or it moves nothing, and there is no third outcome.** An unscored
+  game is *an evening, not evidence*; a friendly was never evidence about anybody by the choice
+  of the people who arranged it. Both are absent from what the rating context reads, so neither
+  is a branch anybody could forget.
 - **Absence widens, it never lowers.** Layoff and inactivity add to σ and never touch μ. A
   player who was 3,20 two years ago has no obligation to still be 3,20 — and no obligation
   to have got worse. The honest position is *we are less sure*, not *we assume decline*.
@@ -299,6 +325,10 @@ of the code because this file asks for them in that order.
   widened search can carry a different window from the profile. It is what the person answering
   a challenge is told they are agreeing to; it is **not a proposed time**, and the players agree
   the hour themselves ([ADR-0100](docs/adr/0100-challenge-window-derived-never-chosen.md)).
+  **Derived once, at the moment of sending, and then recorded on the Challenge.** ADR-0100
+  forbids *choosing* it, not storing it: the grid it was derived from is the searcher's own and
+  they may edit it a minute later, so a window re-derived on read would quietly change what the
+  invitee is answering. A proposal that moves after it is sent is not a proposal.
 - **Location area** — where a player plays, held coarsely. The precise fix that produced it
   is never a shareable value.
 - **Search radius** — the distance around a player's Location area within which they want to
@@ -339,6 +369,17 @@ of the code because this file asks for them in that order.
 - **Profile photo** — the first of a player's photos, and the one a player card shows. A
   player may hold up to three or none; none is not an absence but a **generated court
   poster**, derived from their identity so it is stable across devices.
+- **On-court check** — what the platform concluded about whether a photograph shows a racket
+  sport, decided at the upload and stored with it
+  ([ADR-0129](docs/adr/0129-the-photo-check-is-a-sidecar-the-backend-asks.md)). **It soft-warns
+  and never blocks**: a flagged photo is stored, keeps its position and keeps the lead if it had
+  it. Its outcome has **three** values, not two — **passed**, **flagged**, and **nobody looked**,
+  which is its own answer and never a spelling of *flagged*
+  ([ADR-0138](docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)).
+  Two readers see it differently and that is deliberate: the **uploader** is warned about their
+  own photograph, and a **player card** marks only the pass — a card must not tell one player
+  that another player's photograph was doubted. **The confidence behind it never crosses on any
+  route**, to either of them.
 - **Profile commit** — the single idempotent request that ends onboarding's second part,
   carrying all seven answers at once. Nothing is written before it, so leaving mid-part
   restarts at step 1 ([ADR-0090](docs/adr/0090-onboarding-per-player-checkpoint.md)). Keyed
@@ -427,8 +468,9 @@ of the code because this file asks for them in that order.
 ### Blocks (`backend/app/modules/blocks/`)
 
 One player deciding they do not want to be shown another, ever again. Settled by
-[ADR-0095](docs/adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md); not
-yet built.
+[ADR-0095](docs/adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) and
+**built**: the aggregate, its two events, the `BlockQuery` port and two routes. The surfaces
+that will consult the port do not exist yet, which is why it is wired and has no caller.
 
 - **Block** — an **event-sourced aggregate**, one stream per **ordered** `(blocker, blocked)`
   pair, with a deterministic stream id derived from that pair. **The record is directed; the
@@ -439,9 +481,19 @@ yet built.
 - **Block events** (durable name / version):
   - **PlayerBlocked** — `blocks.player_blocked` / v1 — the pair and the surface it was made
     from. **No reason, and no free text.**
+    - **Block surface** — which of the four screens that show one player to another the block
+      was made from: `SHORTLIST`, `LINEUP`, `FILL_SEATS`, `DECK` — the same roster
+      [`search-telemetry.md`](docs/specs/matchmaking/search-telemetry.md) §2 calls **Surface**,
+      and deliberately not extended. Client-asserted context recorded beside the fact; **no
+      rule reads it**, in the shape of the Play intent surface. Unblocking records none,
+      because it happens in one place.
   - **PlayerUnblocked** — `blocks.player_unblocked` / v1 — the pair.
 - **BlockQuery** — the port that answers *is either of these two blocked by the other*. One
-  port, consulted by every surface that shows one player to another.
+  port, consulted by every surface that shows one player to another, in two shapes: the
+  searcher's whole **exclusion set** for generation, and the **pairwise** question for
+  re-verifying a row before a response leaves. **It fails closed** — it raises rather than
+  answering *nobody is blocked* when it cannot read the state, because an empty answer it
+  cannot stand behind is a safety control switching itself off under load.
 - **Hold** — the platform stopping a player from starting anything new while an unsettled case
   is open against them. A **held account** is an account under a Hold. Nothing can place one
   today, because the `cases` context does not exist.
@@ -465,8 +517,8 @@ yet built.
   response shape can carry a block or a decline — asserted by a test, not by review.
 - **A block is forward-looking.** It removes each from the other's *future* proposals and
   listings. It does not reach into a game already agreed or a chat already open; what it does
-  to an open challenge is a demand on the unbuilt `matches` context, not a decision this
-  context makes.
+  to an open **Challenge** is a demand on the unbuilt `challenges` context, not a decision
+  this context makes.
 - **Blocking is idempotent, and blocking yourself is an error.** A second block appends
   nothing, in the shape of `disable()`; a self-block raises rather than no-ops.
 - **No cap, no cooldown, no rate limit.** Friction on the one control a person has is a tax
@@ -476,10 +528,15 @@ yet built.
 
 ### Matchmaking (`backend/app/modules/matchmaking/`)
 
-Decided by [ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md);
-**designed and not yet built.** Thirty-three ADRs (0093–0125) and the spec set at
-[`docs/specs/matchmaking/`](docs/specs/matchmaking/) settle it; the pipeline is assembled in one
-place, with the precedence rule for reading them, in
+Decided by [ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md).
+**The shortlist runs end to end**: `POST /api/v1/searches` gates, generates, scores, modifies,
+floors, reorders and records. So do the rest — the **line-up**, the **deck**, the **relaxation
+ladder**, the **interest ledger** and the **read-back** were designed here ahead of their code
+and are now served by `POST /api/v1/lineups`, `POST /api/v1/deck`, `POST /api/v1/forecasts`,
+`POST`/`GET /api/v1/interest`, `POST /api/v1/passes` and
+`GET /api/v1/searches/{search_id}`. Thirty-three ADRs
+(0093–0125) and the spec set at [`docs/specs/matchmaking/`](docs/specs/matchmaking/) settle it;
+the pipeline is assembled in one place, with the precedence rule for reading them, in
 [`the-engine.md`](docs/specs/matchmaking/the-engine.md). Only what a decision has actually settled
 appears here.
 
@@ -524,6 +581,14 @@ appears here.
 - **Liveness** — how likely the game is to *happen*: whether they answer, whether they are
   around, whether they would want it. It **reorders** the list and never enters Fit, so the one
   number a player is asked to trust never quietly contains *"they open the app a lot"*.
+- **Challenge load** — how many challenges are sitting unanswered in a candidate's inbox. It
+  **sinks** them and never withholds them: an exclusion is a **Gate**, and the gate roster is
+  enumerated and closed, so a full inbox joins **Liveness** instead
+  ([ADR-0125](docs/adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md)). It crosses to
+  a searcher as a **coarse code and never the number** — `SOME`, `BUSY`, `FULL` — because their
+  inbox depth is theirs and *they have a lot on* is the whole of what a searcher is owed about a
+  third party's unanswered mail. The deepest rung is anchored strictly below the interest lift,
+  so somebody who said *Let's play* to you still surfaces however full their inbox is.
 - **Term** — one question the engine asks about a pairing, returning a value in `[0,1]` and its
   evidence. **Playing style** and **social vibe** are the two that read **Social tags**, and they
   are split by *the claim a matrix entry makes*, never by which group a tag was printed in.
@@ -563,7 +628,7 @@ appears here.
   a stack of small positives can never erase a recent no-show. It is a **dock and not an
   exclusion**: an otherwise excellent match still appears, low, with the reason shown — where a
   player wants somebody gone entirely, that is a Block. The one place the matcher reads the
-  blended score instead of the six strands, because it is the number the player can see.
+  blended score instead of the strands, because it is the number the player can see.
 - **Minimum evidence** — the least the engine must know about *one specific candidate* before
   showing them to anybody. A **gate**, never an adjustment to their score, and a fraction of the
   terms live for the platform rather than a count. It reads gaps particular to that person and
@@ -572,6 +637,24 @@ appears here.
   their radius — with the real count of candidates it would add. Three exist, times first. The
   player accepts; the engine never relaxes anything by itself, and an accepted widen is scoped to
   that one search ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)).
+- **Prompt** — a question the platform raises about a value it can see drifting, and **never a
+  change to that value**. Four exist — keep the times you improvised for one search, keep a
+  widening you keep taking, update a declaration your searches keep disagreeing with, and
+  refresh a week you described months ago — and each ends at an offer on a screen. It is the
+  one place the platform watches, notices, and deliberately declines to act
+  ([ADR-0094](docs/adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md),
+  [ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)). It crosses as a
+  **code** with the value already in play beside it; the client writes the sentence. It is
+  **answered** by a write through the route that owns the value, never by the prompt itself, and
+  it is **retired** by its own expiry or by its condition ceasing — never by a caller, so a
+  question nobody answered cannot quietly stop being asked. It is **declined** on the sheet — the one
+  answer that writes no value, and so the only one nothing else would record. A decline
+  **suppresses** the prompt for thirty days and **retires** nothing: the standing question still
+  expires on its own, so a caller still cannot make a question quietly stop being asked. Three of
+  the four suppress; *keep these times* does not, because a grid legitimately differs per search
+  where a radius, a declaration and a described week do not. A declined **prompt** is not a
+  declined **seat**; the word is always qualified
+  ([#237](https://github.com/Raketa02/Raketa/issues/237)).
 - **Pool description** — what the response carries when the shortlist is empty: how many players
   of that sport are in range, structured, **counted after every gate**. It is the product in a
   new market, and it is a number on a screen, so it counts real rows and never estimates.
@@ -612,16 +695,24 @@ appears here.
 - **Pairwise history** — what happened between the searcher and one other player: **accepted**,
   **declined**, **played**, **planned-never-played**. Four outcomes the matcher keeps distinct,
   because a pair who ghosted each other is not a pair who played.
-- **Origin key** — the `(search_id, position)` a challenge was sent from, carried by the
-  challenge itself. Required, never optional: a search not joined to its outcome is evidence
-  that no longer exists, and there is no backfill.
+- **Origin key** — the `(search_id, position)` a challenge was sent from. Carried **per
+  invited seat**, never per challenge: a doubles send draws its three invitees from one search
+  at three positions, so a challenge-level key would keep the search and lose every position —
+  and the position is what the telemetry join reads. Required, never optional: a search not
+  joined to its outcome is evidence that no longer exists, and there is no backfill.
 - **PlayerScoreQuery** / **MatchHistoryQuery** — the two ports naming what the matcher demands of
-  `player_score` and `matches`, beside **AccountHoldQuery** for `cases` and **AtStakeQuery** for
-  `rating`. One provider signs one contract. Their only adapters today are
-  **`NoPlayerScoresExist`**, **`NoMatchHistoryExists`** and **`NoResultUpdateRuleExists`**, named
-  for the facts they assert
-  ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). `AtStakeQuery` is the
-  odd one out: its provider **exists** and the rule it needs does not.
+  `player_score` and the record of who has played whom, beside **AccountHoldQuery** for `cases`
+  and **AtStakeQuery** for `rating`. One provider signs one contract — with **one recorded
+  exception**: `challenges` signs `MatchHistoryQuery` beside `games`, because the seam runs
+  *through* the pairwise read and splitting the port would halve its 500-counterpart bound. Its
+  adapter is **`ChallengesButNobodyHasPlayed`**, named for the fact that **played** was empty by
+  construction rather than by luck, and `games` arrives as a **composing** adapter over it rather
+  than as a second signature. **Every one of these ports has a real provider now**: the three null
+  objects that stood in for them — `NoMatchHistoryExists`, `NoResultUpdateRuleExists` and
+  `NoPlayerScoresExist` — each retired on the day its own stated fact stopped being true, which
+  is what a null object **named for a fact** is for
+  ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md) as amended). The one that
+  remains is **`NoHoldsExist`**, and it is a *gate* rather than a term.
 
 - **Tag relationship matrix** — product's claims about how two **Social tags** relate: **matching**,
   **complementary** or **clashing**, each entry naming which term it belongs to, which modes it
@@ -657,6 +748,14 @@ appears here.
   words because the best-of-three forecast answers *are these the right people* while the
   arranged forecast answers *is this the right way round*, and conflating them is how a screen
   stops changing when somebody is moved across the net.
+- **Split** — the two **side** strengths a **forecast** was read from, and the signed gap
+  between them: *your side*, *their side*, and *your side minus theirs*. The evidence behind the
+  percentage — the forecast says *how even*, the split says *between what and what*, on the same
+  scale a **Skill** rating is read on. A side's strength is **not the mean of the two people on
+  it** (the weaker partner sets more of it), which is why it is a number only the engine has and
+  why a client may never compute one. It is **not the group objective** and must not become one:
+  what crosses is an input to a figure already served, never a second score
+  ([ADR-0136](docs/adr/0136-the-split-is-evidence-for-the-forecast-not-a-second-score.md)).
 - **Group objective** — what the engine maximises when it seats four people, as against **Fit**,
   which is about one pairing. A four holds **six pairs and the searcher is in three**, so a term
   earns its place in the objective only by reading something no seat's Fit read: the **cross
@@ -677,10 +776,11 @@ appears here.
 - **Interest** — a player's own *yes* to a specific person, cited to the **Search** that
   surfaced them. It is a human's judgement rather than the engine's, which is why it may lift
   somebody above the **quality floor** where nothing the engine computes may. It outlives the
-  search it came from, and it is not a challenge — a challenge belongs to a context that does
-  not exist yet. **A yes is a statement about *now*, so it expires** — at 21 days, flat until
-  then and then absent, never tapering, because the age of the yes is already printed on the card
-  and a fading lift would charge for it a second time invisibly
+  search it came from, and it is not a **Challenge** — a challenge belongs to `challenges`,
+  and a *mutual* yes is the one thing here that opens one. **A yes is a statement about *now*,
+  so it expires** — at 21 days, flat until then and then absent, never tapering, because the
+  age of the yes is already printed on the card and a fading lift would charge for it a second
+  time invisibly
   ([ADR-0127](docs/adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md)). The expiry
   is **dated when the yes is made**, never announced when it lands.
 - **Outstanding interest** — an **Interest** that is sent, **unexpired**, and **not yet
@@ -730,12 +830,34 @@ appears here.
   append is assigned its position before it commits
   ([ADR-0110](docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md)).
 - **Player card** — who a candidate *is*, as against how well the game would go. A **closed
-  list** — nickname, photo, area, Social tags, level and band, counted games — and it is assembled
+  list** — nickname, photo, area, Social tags, level, band, **likely range**, the photograph's
+  **on-court check** outcome, and the **record block** below — and it is assembled
   by the backend **after** the engine returns, on the seam **at stake** already rides, because the
   scorer is forbidden every field on it. There is no name in this platform, only a **Nickname**.
   **The distance is not on it**: a card says only what its subject published, and a distance is a
   fact about a *pair*, so it is the one field that would change depending on who was looking
   ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
+  **Two entries in that list are not things their subject published** — the check's outcome, and
+  every field of the record block — and they pass the same rule by its other half: each is a
+  fact about **that person alone** and does not change with who is looking, which is where the
+  distance failed. *A card says only what its subject published* is the shorthand; *nothing on a
+  card is a fact about the pair looking at it* is the rule.
+- **Record block** — the three fields of a Player card that say what the platform **watched this
+  person do**, as against what they told it about themselves: their published **Player Score**,
+  their count of **counted games**, and their **Run of form**. They come from contexts of their
+  own rather than off the candidate index, which holds only what a player changes about
+  themselves ([ADR-0111](docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md)).
+  **Every one of them is absent rather than nought** where the platform has watched nothing:
+  *nought games* and *no record* would be one absence in two spellings, and a card spells absence
+  once. A count includes a game nobody agreed a score for and a Run of form does not — *an
+  unscored game is an evening, not evidence*
+  ([ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)).
+- **Run of form** — a player's **last five counted results, oldest to newest**, each a win or a
+  loss. **Outcomes in order and no dates, at any granularity**: a moment beside one of them would
+  be activity recency, which no card carries in any shape
+  ([ADR-0106](docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §5).
+  Fewer than five is a real answer and it is **never padded** — three results are drawn as three,
+  and the gap is the client's to draw.
 - **Forecast** — how the game would go, for a set of people. Three readings of one type and the
   words are not interchangeable: the **best-of-three** forecast answers *are these the right
   people*, the **arranged** forecast answers *is this the right way round*, and a
@@ -759,6 +881,21 @@ appears here.
   same 30 days, because a pass that hardens toward permanence is a Block nobody consented to. The
   **suppression** lapses at 30 days; the **record** of the pass does not, because a lapsed
   suppression leaves no trace that a re-shown card is a re-show.
+- **Exposure** — how often a player has been **shown** in somebody's answer, counted per sport
+  per week. It exists so that the same ten people do not sit at the top of every list: a player
+  shown to nobody this week is lifted, and one shown far more often than most is sunk. Both are
+  **silent and both only reorder** — exposure fairness is not a reason to show somebody a bad
+  evening, so it may never admit anybody below the **quality floor**
+  ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)). *Shown more often than
+  most* is the week's ninetieth percentile, republished hourly rather than computed per search.
+  The same ledger carries `NEWCOMER_ABSORPTION_CAP` — how often one player is volunteered
+  into a **newcomer's** shortlist — as a second count in the same weekly bucket, which binds by
+  dropping a lift and **never** by withholding anybody, and **nobody is told**, because nothing
+  has happened to them. The count is kept; the cap *keeps its rule and refuses its integer*, so
+  nothing binds on it yet. Counting it first is deliberate: the cap's falsifier is answer rate
+  regressed on absorption, and an integer chosen against weeks of real tallies is one somebody
+  can defend.
+  _Avoid_: "impressions", "visibility".
 
 **Terms this context refuses**
 - **Game format** — *mixed doubles*, *women's doubles* and the like. Deliberately does not
@@ -849,12 +986,18 @@ appears here.
   generation and gating and is **absent from the type handed to the scorer**, so no term can
   weigh it — the guarantee is a type boundary the build asserts, not a review checklist
   ([ADR-0096](docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
-- **A card says only what its subject published.** Everything on a **Player card** is something
-  the player themselves put there — a photo, an area, their tags, a level they proved. Nothing
-  the platform merely *observed* about them reaches a stranger's screen. That is what rules out
-  activity recency, which the engine does compute and may not show, and it is the line that
-  separates a fact a player offered from a fact a system noticed
-  ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
+- **Nothing on a card is a fact about the pair looking at it.** Every field of a **Player card**
+  is a fact about **that person alone**, so no field changes value depending on who is looking —
+  which is why the distance between two people sits on the *candidate* beside the card and never
+  on it ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
+  Most of them are things the player themselves put there — a photo, an area, their tags, a
+  level they proved — and **four are the platform's own observation of them**: the photograph's
+  **on-court check**, and the **record block**'s Player Score, counted games and Run of form. *A card says only what its subject published* was the original spelling of this
+  rule and it was narrower than the rule: each of those observations is still a fact about one
+  person, and each arrives through a port at assembly time rather than off the candidate index.
+  **What stays refused is refused for its own reason, not by that shorthand** — activity
+  recency at any granularity, which the engine computes and may never show; a Liveness number;
+  gender; free text; and any block, pass or decline.
 - **A silent signal never becomes an inbox.** *Let's play* was collected on the promise that
   nobody is notified and it becomes visible only when one of you goes looking for a game. So a
   one-sided yes reaches its recipient exactly one way — as an **interest lift** on a card, in a
@@ -878,35 +1021,255 @@ appears here.
   pool counts. A test per route passes forever and then somebody adds a route; the assertion is
   central, over every response type the contract publishes.
 
-### Player Score — demanded, not designed
+### Challenges (`backend/app/modules/challenges/`)
 
-What the platform has watched a player *do*, as distinct from how well they play. **One number
-in the UI, six strands underneath it**, and the matcher reads the strands separately because
-*confirms results* is close to worthless for a friendly and close to essential for a counted
-game ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). Nothing about this
-context is decided and nothing is built; the six words are here because the player reads all
-six on their own screen, so they are the product's language before they are the matcher's.
+Settled by [#221](https://github.com/Raketa02/Raketa/issues/221), built first as an
+**aggregate** ([#250](https://github.com/Raketa02/Raketa/issues/250)) — the model, its six
+events, the derived Standing and the one-open-challenge-per-pair rule — and **served since**:
+`GET`/`POST /api/v1/challenges` with its accept and decline. Beside the routes, a background job
+lapses a seat past its answer window — not to change what a standing *is*, which is folded from
+the seats and the clock either way, but so that *answers challenges* has a denominator. It is the
+context the matcher has been citing since
+ADR-0098 without being able to name: `matchmaking`
+ends at a ranked list, and *asking somebody* begins here. It is deliberately **not** called
+`matches` — that word promises results, history and a played game, none of which is in scope —
+and it deliberately does not live inside `matchmaking`, because the matcher reads challenges
+through a **port** precisely so it does not own them. Those three things now have a context of
+their own, **Games** below, and this one hands over to it at exactly one instant: when a
+line-up completes, through a port declared here and signed there
+([ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)).
 
-- **Player Score** — the blended number a player sees. Computed from what happened, never from
-  opinions and never from results: **losing costs nothing here.**
-- **Strand** — one of the six things the score is made of. Each is a record of opportunities and
-  what came of them, and each is published in its own right.
-  - **Shows up** — whether the game gets played at all.
-  - **Answers challenges** — whether a challenge gets an answer inside its window.
-  - **Confirms results** — whether a counted game gets confirmed, so it *counts*.
-  - **Keeps plans** — whether an agreed plan survives to its day without a late change.
-  - **Settles up** — whether a court share that fell due was settled without a case.
-  - **Sportsmanship** — what opponents said afterwards. A mean, not a ratio.
-- **Opponent variety** — how widely a player spreads their games. Published beside the strands
-  and **explicitly not one of them**; never blended into the Player Score.
+Its whole subject is the span between *send* and *everybody has answered*. Nothing about when,
+where, money, results or the conversation itself belongs here.
+
+- **Challenge** — one player's ask to play, sent to everybody on a built court at once, and
+  answered by each of them separately. **One challenge, however many people are in it**: a
+  doubles send is one thing containing four, not four things. Identity is its own, not the pair's
+  — the same people may be challenged again later, and that is a new challenge.
+- **Seat** — one position on the challenge's court: a **Side** and either an occupant or nothing.
+  The seats are a fixed list of `2 × seats_per_side(sport)`, so *which side is short* is a fact
+  the challenge holds rather than one a reader has to count.
+- **Organiser** — the player who sent it. They hold a seat like anybody else, and it is
+  **accepted from birth**, because they are the one proposing. That is what makes *"every seat
+  accepted"* the whole of the completion rule, with no special case for singles.
+- **Arrangement** — the sides the organiser built, recorded with the challenge and shown to the
+  people answering it. The invitee answers *the arrangement proposed*, never a better one worked
+  out afterwards. **Sides only**: the forecast percentage is not stored, because it follows from
+  the sides and a stored copy goes stale the next time a ruleset ships.
+- **Standing** — what a challenge *is* right now: `AWAITING_ANSWERS`, `ON`, `LINE_UP_INCOMPLETE`,
+  `DECLINED`, `LAPSED`. **Derived from the seats and the clock, never stored.** A status column
+  would be wrong for the whole gap between a deadline passing and a sweep noticing, and it would
+  be the copy that gets believed. *Challenge sent* and *Challenge for you* are not two standings —
+  they are one standing read from two sides.
+- **Answer window** — how long one invitee has to answer, **dated per seat when that seat was
+  invited**. Seats filled later start their own day; they cannot inherit a deadline from a send
+  they were not part of.
+- **Lapse** — a seat whose answer window passed with no answer. **A lapse is not a decline.**
+  They do the same thing to the line-up and they are different facts: *answers challenges* is a
+  **Strand** over challenges that got an answer inside their window, and it is unmeasurable if
+  silence and a no are one event.
+- **Open challenge** — a Challenge that has not ended. What the matcher excludes a pair on. Read
+  from the seats and the clock like the Standing itself, so a seat whose window has passed is not
+  open whether or not anything swept it.
+- **Challenge load** — how many seats are waiting on one player's answer: invited, unanswered and
+  still inside their window, **across every sport**. Not what they organised and not what they have
+  already accepted — the matcher sinks a player on load to predict *will this person answer me*,
+  and somebody with eight sends out is over-committed but is not slow to answer.
 
 **Invariants**
-- **No record is not a bad record.** A player without a score is not bad and not average — the
-  reliability term stands down and the other terms carry the match. The same principle the
-  rating engine already applies to skill.
+
+- **A challenge stands as long as somebody other than the organiser is still in it** — accepted,
+  or yet to answer. A decline reopens that one seat and disturbs nothing else, because the people
+  who already agreed did nothing wrong; but when the last of them is gone, there is nobody left to
+  keep faith with and the challenge is over. Singles gets the right answer for free.
+- **Membership grows one acceptance at a time, and that is the point.** Each accept is
+  consequential the moment it happens rather than a step toward a total: it admits one person to a
+  conversation that starts as soon as the second player is in it, and grows as the others arrive.
+  So `challenges` publishes **one event per acceptance** and never a single *the challenge is now
+  on*. **Line-up incomplete is not a waiting room.**
+- **An acceptance is to the game, not to the side.** An accepted player may be moved across the
+  net afterwards and their acceptance stands: the membership is settled, the arrangement is still
+  the organiser's to choose. They may never be removed or replaced.
+- **Only the newly seated are invited.** Completing a half-built line-up asks the people who were
+  not already in, and nobody else. Asking somebody twice reads as the platform having lost track
+  of them, and it damages the very answer record the matcher reads as reliability.
+- **Once the court is full, the sides are frozen.** The only door back into an arrangement is an
+  open seat, and a send with nobody new to invite is refused rather than recorded — so there is no
+  such thing as a rearrangement on its own.
+- **One open challenge per pair, across every sport.** Two people are either arranging a game or
+  they are not; asking for padel while your tennis challenge sits unanswered is pestering with a
+  sport chip on it. The matcher's `OpenChallenge` carries no sport, so this is the rule its shipped
+  contract already assumes rather than a new restriction. **Sharing a line-up makes a pair**: every
+  occupied seat but your own is somebody you have an open game with, co-invitees and organiser
+  alike — and a seat that declined or lapsed is empty again, so that person is a stranger to you
+  once more the moment they leave.
+- **No day, part of day, hour or place is ever attached.** The challenge carries a **Window**
+  derived from the grid, and the players agree the hour themselves once a court can exist.
+- **A late answer is refused.** Past your own answer window the seat already reads as lapsed and
+  the organiser may have offered it to somebody else; an accept that resurrected it would be
+  contradicting a card the platform already drew.
+- **Nothing announces a conclusion the seats already imply.** There is no `GameOn`, no
+  `ChallengeExpired`, no `ChallengeDeclined` — a **Standing** that is derived has exactly one place
+  to be true, and an event saying otherwise would become the second.
+
+### Games (`backend/app/modules/games/`)
+
+Settled by [ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md) on
+[#303](https://github.com/Raketa02/Raketa/issues/303). **The context that knows a game was
+played**, and before it nothing on this platform did: a Challenge carries a Window and never a
+date, a time or a court, so four acceptances left no fact behind. Every empty block on the
+redrawn competitive card traced back to that.
+
+It is **event-sourced**, and that revises the deleted ADR-0034, which argued a record about a
+product — courts, money, departures, four cancellation flags — that the 2026-08-25 reset
+removed. What is left of a game is a plan, a moment, a score and a two-sided disagreement, and
+the disagreement is the whole of it.
+
+Its subject is the span between *everybody accepted* and *there is nothing more to say about
+this evening*. Nothing about where, money, or the conversation belongs here, and neither does
+anything about how good anybody is — that is the rating context reading this one.
+
+- **Game** — one arranged game and its result. **Opened by a completed line-up**, in the
+  transaction of the acceptance that filled the last seat, and never by a request: nothing a
+  client sends can produce one, which is what makes *these people arranged this* a fact rather
+  than a claim. One game per arrangement, for ever.
+- **Line-up** — who played and on which side, **frozen at the plan**. An acceptance is to the
+  game and not to the side, so the membership is settled the moment the last seat accepts;
+  nothing in this context can move anybody afterwards.
+- **Kind** — **counted** or a **friendly**, stamped when the game is arranged and never derived
+  at the end. A friendly is a thing people *choose*: reclassifying a counted game because nobody
+  typed a score would hand a player the exact evening they said they did not want, and would
+  give one word two meanings. A game arranged from a surface that asks for no kind — the deck,
+  a mutual yes — is **counted**, because counted is what the platform is for and a friendly is
+  the opt-out.
+- **Result** — *we played, here is the score*. **The entry is the record that the game
+  happened**, and it carries the moment: there is no booking, no calendar and no date field
+  anywhere, so the moment a player says it is the moment it was.
+- **Score** — the sets, absolute rather than from anybody's point of view. **A score names a
+  winner**: a level set has not finished and none of the four sports produces a draw, so a level
+  score is refused. *Set* is used for whatever the sport calls its unit.
+- **Proposal** — a score on the table, **one per side**. The cap is what bounds an argument to
+  two rounds, and it is what makes silence safe to read as agreement.
+- **Correction** — the proposing side revising its own score while the other side has not
+  answered. **Not a second proposal**, and **any member of that side may make it** — the rule
+  that makes a teammate's agreement worthless is the same rule that makes a teammate's objection
+  credible.
+- **Counter** — the other side's one turn, and **it carries a score**. There is no bare
+  rejection: a rejection carrying nothing would be free and always optimal for the loser.
+- **Acceptance** — agreement, **from the opposing side only**, because a teammate agreeing with
+  a teammate proves nothing. **One opponent suffices.**
+- **Acceptance grace** — how long an acceptance waits before it settles anything, measured from
+  the *score* and not from the tap. Inside it a counter still wins, so a partner who is quick to
+  their phone cannot close the door on an opponent who has not read the score yet.
+- **Standing** — what a game *is* right now: `AWAITING_ENTRY`, `NEVER_PLAYED`,
+  `AWAITING_ANSWER`, `CONFIRMED`, `UNSCORED`. **Derived from the record and the clock, never
+  stored and never announced.** Spelled `GameStanding` in code and on the wire, because
+  Challenges already publishes a `Standing` component and a second class of that name would
+  *rename* it rather than shadow it — **the contract is one namespace, and the cost of a
+  shared word is paid by whoever arrives second.** The same is true of `GameSide`.
+- **Counted game** — a counted-kind game somebody said was played, **scored or not**. What
+  `player_card.counted_games` prints and what §9.10's newcomer predicate reads.
+- **Ghost game** — a plan whose entry window closed with nobody ever saying it happened. Kept
+  distinguishable from a played game, because familiarity is about people who actually played.
+
+**Invariants**
+
+- **Silence confirms.** A lone score nobody answers stands when its window closes, and the game
+  counts. There is nothing anywhere in this context called *confirm*: a result is agreed when a
+  clock passes, and a clock is nobody's request.
+- **Two standing scores nobody accepts leave the game unscored — and an unscored game is an
+  evening, not evidence.** It is in history, it is in `counted_games`, it establishes that these
+  people have played together, and **it moves nobody's Level.**
+- **No player is penalised for not entering or not agreeing a result.** Not the silent loser,
+  not the four who all went home, not the side whose counter went unaccepted. **This is why
+  Player Score has five strands and not six** — see below.
+- **We will not arbitrate.** Two people who were both on court and cannot agree what happened is
+  not a result, and Raketa will not invent one. A settled result is final: no support correction
+  path and no reversal.
+- **The people who may act are the people who were on the court**, and nobody else, ever.
+- **Nothing announces a conclusion the record already implies.** There is no `ResultConfirmed`,
+  no `GameUnscored` and no `GameNeverPlayed` — the same rule `challenges` states about `GameOn`,
+  and for the same reason: a derived standing has exactly one place to be true.
+
+### Player Score (`backend/app/modules/player_score/`)
+
+What the platform has watched a player *do*, as distinct from how well they play. **One number
+in the UI, five strands underneath it**, and the matcher reads the strands separately because
+they are weighed oppositely in the two modes
+([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). The words are the
+player's before they are the matcher's: they are read on the player's own screen.
+
+**Two of the five have a source and three do not** — decided by
+[ADR-0140](docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md),
+which also settles the clause ADR-0137 opened about whether *shows up* survives at all.
+
+- **Player Score** — the blended number a player sees, out of a hundred. Computed from what
+  happened, never from opinions and never from results: **losing costs nothing here.** The
+  blend is over **the strands that are there**, renormalised, so a player the platform can see
+  two things about is comparable to one it can see five about, and neither is credited for a
+  record nobody keeps.
+- **Strand** — one of the five things the score is made of. Each is a record of **opportunities**
+  and what came of them, and each is published in its own right. An opportunity is something
+  that **fell due**: a strand never counts a question still waiting for its answer.
+  - **Shows up** — whether the game gets played at all. **Live.** The opportunity is a plan that
+    settled — a game somebody said had happened, or a **Ghost game** whose entry window closed
+    on silence — and the good outcome is the game. **A ghost is charged to everybody who was on
+    that court**, because nobody proposed anything and nobody countered anything: what is priced
+    is an arrangement that dissolved, and there is nobody in it to blame.
+  - **Answers challenges** — whether a challenge gets an answer inside its window. **Live.** The
+    opportunity is an **invitation** — a Seat somebody was actually asked to take, which is a
+    seat with a deadline, so the organiser's own seat and both seats of a mutual-born challenge
+    are not opportunities. **A decline is a good outcome**: this is the only strand where a no
+    scores, because what it prices is silence and not judgement.
+  - **Keeps plans** — whether an agreed plan survives to its day without a late change. **Stands
+    down:** no plan on this platform has a moment to be late for, which is why `games` publishes
+    its late-change threshold as an honest absence.
+  - **Settles up** — whether a court share that fell due was settled without a case. **Stands
+    down:** court money is out of scope. It is the **historical record**, never the live case —
+    the open case is the Hold.
+  - **Sportsmanship** — what opponents said afterwards. A mean, not a ratio. **Stands down:**
+    no surface exists on which anybody rates anybody.
+- **Confirms results** — **struck, and not deferred**
+  ([ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). It read *whether a
+  counted game gets confirmed, so it counts*, and it cannot be published honestly: **an
+  unconfirmed result is a fact about a pair and a strand is a verdict about a person**, and
+  every denominator tried on it docks somebody the Games context refuses to penalise — both
+  sides of an honest disagreement included. Withdrawing it rather than leaving it unbuilt is
+  ADR-0098's own rule about a demand nobody can satisfy; the matcher absorbs the loss by
+  construction, because a strand nobody publishes stands down and the survivors renormalise
+  inside the reliability term. `ReliabilityStrand.CONFIRMS_RESULTS` and its two ruleset weights
+  came out with the provider, in ADR-0140.
+- **Opponent variety** — how widely a player spreads their games. **Not demanded of
+  `player_score` any more:** it was contracted on behalf of two consumers and
+  [#164](https://github.com/Raketa02/Raketa/issues/164) and
+  [#175](https://github.com/Raketa02/Raketa/issues/175) struck both, so ADR-0098 was amended to
+  withdraw it — *a consumer-driven contract with no consumer is withdrawn, not carried*. The word
+  survives as product language for the Player Score screen; if a later term wants the statistic,
+  it returns as that term's demand and signs for it.
+
+**Invariants**
+- **No record is not a bad record.** A player without a score is not bad and not average — they
+  are **absent from the answer**, the reliability term stands down and the other terms carry the
+  match. The same principle the rating engine already applies to skill. A strand nobody can
+  publish is absent the same way, and neither is ever a `0` or a `0.5`.
+- **This context keeps no record of its own.** It has no aggregate, no table and no migration:
+  every strand is folded out of `games`' and `challenges`' streams when somebody asks. A stored
+  score would be a second place for *did that game happen* to be true, and the copy would be the
+  one that got believed.
 - **The score is a memory, and it fades with new evidence.** Decay belongs here, on the side
   that owns the record; a consumer that applies its own would be counting the same forgetting
-  twice.
+  twice. **The ratio is the fading** — one no-show among forty games weighs almost nothing —
+  and there is no second window, because a window would be a number that must not disagree with
+  the matcher's horizon.
+- **The published number is the player's, not the matcher's.** Its weights live in this context
+  and never in a ruleset: a weight release must not change what somebody's own profile says
+  about them. It has two readers — the reliability floor, which prices it, and the player card,
+  which prints it — and **a card explaining a match with a figure the player's own profile
+  disagrees with is worse than a card that says nothing.**
+- **It is the platform's observation of a player, so it may not go on the candidate index**
+  ([ADR-0111](docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md)).
+  It reaches a card through a port at assembly time, on the seam the nickname and the photo
+  already ride.
 
 ## Cross-cutting concepts
 

@@ -21,9 +21,10 @@ import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { offlineMessage } from '@/shared/errors';
 import { Button, Note, PressableCard, theme } from '@/shared/ui';
 
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import { toggleSport } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 import { useSports } from '../hooks/useSports';
@@ -73,9 +74,7 @@ export function SportsPickerScreen() {
         {/* Paused, not loading: `networkMode: 'online'` holds a query rather than
             failing it, so an offline player would otherwise watch a spinner forever. */}
         {sports.fetchStatus === 'paused' ? (
-          <Note variant="amber">
-            You&apos;re offline. The sports will load as soon as you&apos;re back.
-          </Note>
+          <Note variant="amber">{offlineMessage('resumes')}</Note>
         ) : null}
 
         {sports.isPending && sports.fetchStatus !== 'paused' ? (

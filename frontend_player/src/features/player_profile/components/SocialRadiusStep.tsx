@@ -46,7 +46,7 @@ import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { recoveryMessage } from '@/shared/errors';
+import { offlineMessage, recoveryMessage } from '@/shared/errors';
 import { Button, Note, RadiusSlider, theme } from '@/shared/ui';
 
 import {
@@ -115,9 +115,7 @@ export function SocialRadiusStep() {
       {/* Paused, not loading: `networkMode: 'online'` holds a query rather than failing it,
           so an offline player would otherwise watch a spinner forever. */}
       {options.fetchStatus === 'paused' ? (
-        <Note variant="amber">
-          You&apos;re offline. The distances will load as soon as you&apos;re back.
-        </Note>
+        <Note variant="amber">{offlineMessage('resumes')}</Note>
       ) : null}
 
       {options.isPending && options.fetchStatus !== 'paused' ? (

@@ -1,0 +1,412 @@
+"""Assembling what crosses the privacy fence — and nothing that may not.
+
+**The fence is the package boundary with no exceptions in it** (``docs/adr/0093``).
+Gating and generation happen on this side, where the I/O is; ``matchfit`` receives
+an already-gated, already-fenced set and does the arithmetic. This module is the
+crossing: every value the scorer will ever see is built here, from an index row
+and the facts the search read live, and **the module holds strictly more than it
+hands over**.
+
+Three things happen here and nowhere else, each because the fence puts them here:
+
+*The σs are combined.* ``combine_sigma`` and the confidence transform are
+RacketSkill's — *the single place any engine is allowed to combine two standard
+deviations* — and ``.importlinter`` forbids one engine to import the other. So
+Match Fit reads that rule **through the module that composes the two**, and a
+``CombinedUncertainty`` arrives already combined. A **four**'s spread arrives the
+same way and cannot arrive as a value, because the enumeration that decides which
+four is on the far side of the fence — so it crosses as ``combine_group_sigma``,
+a fold of the same rule and not a second one.
+
+*The curves are applied.* Four Liveness signals cross as a reading in ``[0, 1]``
+rather than as what was measured, because a curve from *days since a session
+refresh* to a reading is a measurement and belongs beside the clock
+(``measurements``).
+
+*The vocabularies stay single-spelled.* Social tag ids, parts of the day and Play
+intent declarations cross as the machine codes they already are. An engine may
+not import the module that owns a vocabulary, and retyping one on the far side
+would be a second spelling of a closed set.
+
+**What does not cross is asserted, not documented.**
+``tests/unit/test_scorable_candidate_fence.py`` walks the scorer's own types
+transitively and fails the build on a name, a photo, a gender, a birthdate or a
+precise location. Nothing here can put one there; this module is only where
+somebody would try.
+"""
+
+from __future__ import annotations
+
+import math
+from datetime import datetime
+from functools import reduce
+from typing import Sequence
+from uuid import UUID
+
+from app.engines.matchfit.scorable import (
+    CombinedUncertainty,
+    GridCell,
+    LevelReading,
+    LivenessFacts,
+    MeanObservation,
+    ModifierFacts,
+    RatioObservation,
+    ReliabilityRecord,
+    ScorableCandidate,
+    Searcher,
+    SharedHistory,
+    StrandObservation,
+)
+from app.engines.racketskill.core import combine_sigma, confidence_percent
+from app.kernel import invariant, iso_weekday
+from app.modules.matchmaking.domain.areas import area_code_of
+from app.modules.matchmaking.domain.candidate_index import CandidateRow
+from app.modules.matchmaking.domain.geography import Point
+from app.modules.matchmaking.domain.geography import distance_km as measure_distance
+from app.modules.matchmaking.domain.measurements import (
+    Overlap,
+    exposure_reading,
+    overlap_proximity_reading,
+    recent_activity_reading,
+)
+from app.modules.matchmaking.domain.ports import (
+    PairwiseCounterpart,
+    PairwiseOutcome,
+    PlayerScoreReading,
+    RatioStrand,
+)
+from app.modules.matchmaking.domain.ports import (
+    StrandObservation as PublishedStrand,
+)
+from app.modules.matchmaking.domain.search_context import (
+    SearchContext,
+    SearcherFacts,
+    is_new_at,
+)
+from app.modules.player_profile.domain.availability import AvailabilitySlot, DayPart
+
+#: The parts of a day in the order the platform lays them out — **the one
+#: vocabulary fact the engine is told rather than allowed to know.** It is
+#: supplied once per search so the scorer can say *the soonest cell you both
+#: ticked* without ever learning that one of them is called a morning.
+DAY_PARTS: tuple[str, ...] = tuple(part.value for part in DayPart)
+
+#: What ``calibration_priority`` says when a rating is **not** clamouring for
+#: real games. Read as a binary because the rating aggregate has two values: a
+#: 0…+4 ramp over a field with two states is 0 or +4, and the modifier says so.
+CALIBRATION_STANDARD = "STANDARD"
+
+
+def searcher_of(context: SearchContext) -> Searcher:
+    """The searcher, as the scorer is allowed to see them.
+
+    Their grid is the availability term's **denominator** — *how much of my week
+    does this person cover* — which is what makes that reading asymmetric and a
+    fact about the pair rather than about either person.
+    """
+
+    return searcher_from(context.searcher, context.now)
+
+
+def searcher_from(facts: SearcherFacts, now: datetime) -> Searcher:
+    """The same crossing, for a route with **no search context behind it**.
+
+    ``POST /forecasts`` records nothing and binds no snapshot
+    (``docs/adr/0108``), so it has facts and a clock and no context to read them
+    off. The crossing is the same one either way and is written once here, so a
+    field that must not reach the scorer has one place to be refused rather than
+    two.
+    """
+
+    return Searcher(
+        level=LevelReading(mu=facts.mu, sigma=facts.sigma),
+        mode=facts.mode,
+        tags=facts.tags,
+        grid=_cells(facts.grid.slots),
+        radius_km=float(facts.radius_km),
+        today=iso_weekday(now.isoweekday()),
+        day_parts=DAY_PARTS,
+    )
+
+
+def seatable_of(row: CandidateRow, *, searcher: SearcherFacts) -> ScorableCandidate:
+    """One index row, fenced, for a route that seats people without searching.
+
+    ``POST /forecasts`` reads two side strengths and a spread and nothing else,
+    so this is the same crossing :func:`candidate_of` makes with the two fields
+    that need a running search left out: there is no
+    :class:`~app.modules.matchmaking.domain.ports.PlayerScoreReading` because
+    that route reads no Player Score, and the distance is measured from the
+    searcher's own area rather than taken off a generation pass that never ran.
+
+    It is here, beside its sibling, because **the fence is one place**: a second
+    assembler of a scorable candidate written in an application layer is exactly
+    how a field that may not cross gets across.
+    """
+
+    area = area_of(row)
+    return ScorableCandidate(
+        player_id=row.player_id,
+        level=LevelReading(mu=row.mu, sigma=row.sigma),
+        declared_intent=row.declared_intent,
+        tags=row.social_tags,
+        grid=_cells(slots_of(row)),
+        radius_km=float(row.search_radius_km),
+        area_code=area_code_of(area),
+        distance_km=measure_distance(
+            Point(latitude=searcher.area.latitude, longitude=searcher.area.longitude),
+            area,
+        ),
+        combined=_combined(searcher.sigma, row.sigma),
+        reliability=None,
+    )
+
+
+def candidate_of(
+    row: CandidateRow,
+    context: SearchContext,
+    *,
+    distance_km: float,
+    player_uuid: UUID,
+) -> ScorableCandidate:
+    """One index row, as the scorer is allowed to see it.
+
+    The candidate's own radius crosses because it is a Liveness dock and **never
+    a gate** — somebody who set a small ring is not refusing to be found, so the
+    searcher is shown the fact rather than having the person removed.
+    """
+
+    return ScorableCandidate(
+        player_id=row.player_id,
+        level=LevelReading(mu=row.mu, sigma=row.sigma),
+        declared_intent=row.declared_intent,
+        tags=row.social_tags,
+        grid=_cells(slots_of(row)),
+        radius_km=float(row.search_radius_km),
+        area_code=area_code_of(area_of(row)),
+        distance_km=distance_km,
+        combined=_combined(context.searcher.sigma, row.sigma),
+        reliability=reliability_record_of(
+            context.terms.player_scores.get(player_uuid), context.now
+        ),
+    )
+
+
+def modifier_facts_of(
+    row: CandidateRow, context: SearchContext, player_uuid: UUID
+) -> ModifierFacts:
+    """What stage 4 reads. **One of the three still cannot fire.**
+
+    Both familiarity and the welcoming record were waiting on a record of who
+    had actually played whom, and ``games`` is it (``docs/adr/0137``).
+    **Familiarity fires now**: ``MatchHistoryQuery`` answers ``PLAYED``
+    counterparts, so ``_shared_history`` returns a reading for a pair who have
+    been on a court together and nothing for a pair who have only exchanged
+    challenges — *a challenge accepted is not a game played*, which is the same
+    sentence it always was, now separating two populations that both exist.
+
+    **The welcoming record still cannot.** It needs whether this player's past
+    opponents *settled in*, and nothing publishes that — so
+    ``welcomed_settling_opponents`` stays ``None``, meaning *no answer* and
+    emphatically not *no*. Absent rather than ``False``, because a ``False``
+    here is a claim about somebody's record rather than a gap in ours.
+
+    The absorption tally crosses even so, and never was waiting on the modifier
+    it bounds: it is counted from searches, which this build runs. **Wired, and
+    never binding** while the cap refuses its integer.
+    """
+
+    counterpart = context.terms.counterparts.get(player_uuid)
+    return ModifierFacts(
+        calibration_elevated=row.calibration_priority != CALIBRATION_STANDARD,
+        shared_history=_shared_history(counterpart, context.now),
+        welcomed_settling_opponents=None,
+        newcomer_appearances=context.absorption_tally(player_uuid),
+    )
+
+
+def liveness_facts_of(
+    row: CandidateRow,
+    context: SearchContext,
+    overlap: Overlap,
+    player_uuid: UUID,
+) -> LivenessFacts:
+    """What stage 6 reads: ten facts that move a position and never a number.
+
+    ``interest_days_ago`` is the **age of the yes in days and never a boolean**,
+    and it is ``None`` for everybody who has not said *Let's play* to the
+    searcher. The lift the age produces is flat — ``docs/adr/0127`` refused the
+    taper — so the age is carried rather than priced: it crosses as evidence, is
+    recorded as the signal's raw input, and moves nobody by being large or small.
+
+    ``answer_rate`` stays ``None``, and **the reason has changed owner twice.**
+    Challenges are sent and answered, and ``player_score`` publishes the *answers
+    challenges* strand now (``docs/adr/0140``) — so neither *nothing has ever sent
+    one* nor *the provider does not exist* is why any more. What is left is the
+    signal's own name: ``ANSWER_RATE_AND_SPEED`` is a ramp over a rate **and a
+    speed**, and this platform publishes a rate. Feeding a ramp half its
+    definition would be a second definition of the signal, written where nobody
+    would look for it — so the signal stays absent until somebody decides what it
+    means without the half that is missing.
+
+    Deriving a rate here from the pairwise tallies would be the matcher computing
+    somebody else's published number, which is the one thing this module refuses
+    everywhere — and it would be the *wrong* number besides:
+    ``answered_counterparts`` is about answers given to challenges the reader was
+    in, not about this candidate's own record.
+    """
+
+    counterpart = context.terms.counterparts.get(player_uuid)
+    return LivenessFacts(
+        interest_days_ago=context.terms.interest_days_ago.get(player_uuid),
+        newcomer=is_new_at(row.profile_created_at, context.now),
+        previously_accepted=_has(counterpart, PairwiseOutcome.ACCEPTED),
+        previously_declined=_has(counterpart, PairwiseOutcome.DECLINED),
+        answer_rate=None,
+        recent_activity=recent_activity_reading(row.last_active_at, context.now),
+        overlap_proximity=overlap_proximity_reading(overlap.days_away),
+        open_challenges=context.terms.open_challenge_counts.get(player_uuid),
+        exposure=exposure_reading(
+            context.terms.times_shown.get(player_uuid, 0),
+            context.terms.busy_threshold,
+        ),
+    )
+
+
+def reliability_record_of(
+    reading: PlayerScoreReading | None, now: datetime
+) -> ReliabilityRecord | None:
+    """A Player Score, as the reliability term reads one. ``None`` is an absence.
+
+    The horizon's input — *how long since anything was observed* — is measured
+    here because a pure process has no clock, and it is **one** number over the
+    whole record rather than six: the strands share one cause, *this player
+    stopped playing*, and six ages would be six places for it to disagree with
+    itself.
+    """
+
+    if reading is None:
+        return None
+    days = (now - reading.most_recent_observation).days
+    return ReliabilityRecord(
+        strands={
+            strand: _observation(observation)
+            for strand, observation in reading.strands.items()
+        },
+        published_score=reading.published_score,
+        days_since_last_observation=max(0, days),
+    )
+
+
+def combine_group_sigma(sigmas: Sequence[float]) -> float:
+    """A group's spread, **on the two-player basis its coefficient is calibrated
+    against** — ``√2 · rms(σ)``, which at two players *is* ``combine_sigma``.
+
+    The group objective needs one Uncertainty over four Levels and may not derive
+    it: ``combine_sigma`` is *the single place any engine is allowed to combine
+    two standard deviations*, ``.importlinter`` forbids one engine to import the
+    other, and ``√(Σσ²)`` written inside Match Fit would be a second definition of
+    an identity that already has an owner. The quadrature fold is legitimate here
+    because quadrature is associative: combining four is combining two, twice.
+
+    ## The basis, which is the whole of what this function adds
+
+    ``forecast_pct`` is **one function read by two populations** — a pairing of two
+    and a four — and its ``sigma_coefficient`` is a released constant calibrated
+    against *"a typical σ_pair of 0.495"* (``ranking-weights.md``, ``the-engine.md``,
+    ADR-0103). A pairing's ``gap`` is between two players and a four's between two
+    side strengths, and the four's gap **was** re-based for that. Its σ was not:
+    ``√(Σσᵢ²)`` grows with ``√n``, so a four was handed a number ``√2`` larger than
+    the pair the constant was priced for, and paid 1.41× for the identical
+    per-player doubt. A level four of unsettled players read 46 % — the floor's own
+    neighbourhood — with a gap of exactly zero, and above σ 2.03 the clamp swallowed
+    the gap entirely and the forecast stopped answering the question it is about.
+
+    So the fold is normalised to the basis: ``√(2·Σσᵢ²/n)``. At ``n = 2`` it is
+    ``√(σ₁²+σ₂²)`` exactly — the pair's own combination, unchanged, so singles and
+    every pairwise reading are untouched by construction — and at ``n = 4`` it is
+    the spread of a **representative pair drawn from the group**, which is the
+    thing a match is actually played between.
+
+    **This is a units correction, not a retune.** No released constant moves; the
+    caller stops handing one a quantity on a scale it was never priced for. What is
+    *not* settled by it is whether an outcome's uncertainty should discount the
+    evenness figure at all, given ``sigma_group`` crosses beside it —
+    ``docs/handovers/the-forecast-percentage.md`` holds that question.
+
+    It is a **function** where a pair's combination is a value, because the
+    enumeration that decides *which* four is inside the engine — nothing out here
+    could have precomputed the spread of a combination it has not seen.
+    """
+
+    invariant(bool(sigmas), "a spread over nobody at all")
+    return reduce(combine_sigma, sigmas) * math.sqrt(2 / len(sigmas))
+
+
+def area_of(row: CandidateRow) -> Point:
+    """The one coarse area this row is searched from.
+
+    ``areas`` is a set of size one today and a tuple so that a row reachable from
+    two cells costs a pointer rather than a duplicate row; the first is the only
+    one until that day arrives.
+    """
+
+    return Point(latitude=row.areas[0].latitude, longitude=row.areas[0].longitude)
+
+
+def slots_of(row: CandidateRow) -> tuple[AvailabilitySlot, ...]:
+    """The candidate's grid, as the platform's own slots. Empty is a real answer."""
+
+    return tuple(AvailabilitySlot.from_code(code) for code in row.availability)
+
+
+def _cells(slots: tuple[AvailabilitySlot, ...]) -> tuple[GridCell, ...]:
+    return tuple(GridCell(day=slot.day, part=slot.part.value) for slot in slots)
+
+
+def _combined(searcher_sigma: float, candidate_sigma: float) -> CombinedUncertainty:
+    pair = combine_sigma(searcher_sigma, candidate_sigma)
+    return CombinedUncertainty(sigma=pair, confidence=confidence_percent(pair))
+
+
+def _shared_history(
+    counterpart: PairwiseCounterpart | None, now: datetime
+) -> SharedHistory | None:
+    """What the two of them have played. **Absence has one spelling: none at all.**
+
+    A pair who arranged games and never played one has counterparts but no
+    ``SharedHistory``: the type refuses a record of no games, because a zero here
+    would be an invented one and would decay from full strength like a game
+    somebody actually played.
+    """
+
+    if counterpart is None or counterpart.games_played_together < 1:
+        return None
+    return SharedHistory(
+        days_since_last_game=max(0, (now - counterpart.last_at).days),
+        games_played_together=counterpart.games_played_together,
+    )
+
+
+def _has(counterpart: PairwiseCounterpart | None, outcome: PairwiseOutcome) -> bool:
+    return counterpart is not None and outcome in counterpart.outcomes
+
+
+def _observation(observation: PublishedStrand) -> StrandObservation:
+    """One strand, from the port's shape into the scorer's.
+
+    Two shapes on each side, and the mapping is one-to-one — five ratios and a
+    mean. The scorer's ratio carries the **published** figure and the
+    *opportunity* behind it, which is the denominator: the matcher's entire
+    policy over these facts is standing a strand down below the bar, and one
+    no-show out of one game is not thirty-five out of thirty-eight.
+    """
+
+    if isinstance(observation, RatioStrand):
+        return RatioObservation(
+            published_value=observation.value,
+            observations=observation.denominator,
+        )
+    return MeanObservation(
+        mean=observation.mean, observations=observation.rating_count
+    )

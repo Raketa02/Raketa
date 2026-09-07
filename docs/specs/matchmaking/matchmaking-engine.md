@@ -1315,12 +1315,23 @@ fits. It evaluates combinations and picks the one that plays out evenest, then a
 *Four excellent individual matches can produce a lopsided four; three good ones and a modest
 one can produce a perfect evening.*
 
+**σ_group is on the two-player basis, and that is load-bearing.** `pct` is one function read by
+two populations, and its `sigma_coefficient` is calibrated against *a typical σ_pair of 0.495*
+(§9.3.2, `ranking-weights.md`, ADR-0103). A four's `gap` is re-based — it is between two side
+strengths rather than two players — and its σ has to be re-based with it, or the same constant
+prices two different quantities. A plain `√(Σσᵢ²)` grows with `√n`, so a four paid 1.41× what an
+identical pair paid for the identical per-player doubt: a level four of unsettled players read
+46 % with a gap of exactly zero, and above σ 2.03 the clamp swallowed the gap and the forecast
+stopped answering its own question. `√2·rms` reduces to `√(σ₁²+σ₂²)` at n = 2, so singles and
+every pairwise reading are unchanged by construction, and at n = 4 it is the spread of a
+representative pair — which is what a match is played between.
+
 ```
 teamStrength(a, b) = 0.45·max(a,b) + 0.55·min(a,b)          # the weaker player carries more
 
 arrange(four):  enumerate the 3 pairings, pick min |strength_A − strength_B|
 
-forecast(four): σ_group = √(Σ σᵢ²)
+forecast(four): σ_group = √(2·Σ σᵢ² / n)      # √2·rms — the TWO-PLAYER basis
                 pct     = clamp(100 − gap·145 − σ_group·32, 35, 96)
 
 G(lineup) = w_bal      · balance_norm(arrange(lineup))

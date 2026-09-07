@@ -59,7 +59,7 @@ import { weekStanding } from './availabilityWeek';
 import { uploadsInFlight, type ProfilePhoto } from './photoCollection';
 import type { Gender, GenderPreference } from './gender';
 import type { AvailabilitySlot, LocationArea, ProfileDraft, ProposalsOptIn } from './ProfileDraft';
-import type { SocialTagId } from './SocialTag';
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { SocialStep } from './socialSteps';
 
 /**

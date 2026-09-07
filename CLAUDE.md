@@ -44,6 +44,14 @@ the hooks themselves, `make gen-api`.
   its client types fails the build
   ([`.github/scripts/check-contract-drift.sh`](.github/scripts/check-contract-drift.sh),
   proven still to fire by `make test-drift`).
+  **The backend emits one document per surface, and there are two.** The second is the
+  **dev console**'s `backend/openapi.dev.json` (#256) — one path, and no client, so nothing
+  generates types from it. Its analogue of the drift check is a **freshness** check: re-emit
+  the documents and diff the JSON, which is also the only thing that would catch a stale
+  `openapi.player.json` — the drift check regenerates the client's types *from* that
+  document and finds them in perfect agreement
+  ([`.github/scripts/check-contract-freshness.sh`](.github/scripts/check-contract-freshness.sh),
+  `make contract-freshness`, proven still to fire by `make test-contract-freshness`).
 - **One Poetry writes `backend/poetry.lock` and every pin reads it.** The version is
   pinned in five places across `backend/` and `.github/`, and each must be at least the
   version stamped in the lock's header. Poetry only *warns* when a pin is too old and
@@ -53,6 +61,33 @@ the hooks themselves, `make gen-api`.
   [`.github/scripts/check-poetry-pin-drift.sh`](.github/scripts/check-poetry-pin-drift.sh)
   (`make poetry-pin`, proven still to fire by `make test-poetry-pin`). Poetry 2.x
   unbundled `poetry export`, so a site that exports also installs `poetry-plugin-export`.
+- **The six judged pairings are derived, never typed.**
+  `docs/specs/matchmaking/judged-pairings.json` holds them as *inputs* plus one verdict per
+  case ([ADR-0122](docs/adr/0122-a-judged-pairing-is-two-people-never-a-profile-of-scores.md));
+  every term value, every renormalised weight and every Fit is re-derived by the live ruleset
+  and written back into the tables in `the-judged-pairings.md` and `ranking-weights.md` §10.
+  Regenerate with `make gen-judged-pairings` and commit the result — CI regenerates and diffs,
+  so a hand-edited table fails the build, and **a diff there is a design change that must be
+  argued for in the pull request**. The same run re-derives `QUALITY_FLOOR`'s bound —
+  `max(Fit | not shown) < QUALITY_FLOOR ≤ min(Fit | shown)` — and goes red when the configured
+  integer leaves it, which is what `ranking-weights.md` §11 demanded and could not enforce
+  against prose ([`.github/scripts/check-judged-pairings.sh`](.github/scripts/check-judged-pairings.sh),
+  `make judged-pairings`, proven still to fire by `make test-judged-pairings`).
+- **A ruleset ships on an offline diff, and the diff is a build gate.**
+  [ADR-0119](docs/adr/0119-a-ruleset-ships-on-an-offline-diff-and-a-deploy.md) collapsed
+  the shadow/canary rollout ladder: what remains is a synthetic corpus whose population and
+  answers are **committed artifacts** under `docs/specs/matchmaking/ruleset-diff/`.
+  Regenerate with `make gen-ruleset-diff` and commit the result — CI regenerates and diffs,
+  so a ruleset edited without regenerating its diff fails the build, and **the report the
+  run prints is the diff the pull request has to argue for**. It regenerates under **two
+  different `PYTHONHASHSEED`s** and requires both to reproduce, which makes the artifact a
+  continuous whole-pipeline determinism assertion
+  ([ADR-0105](docs/adr/0105-determinism-is-a-set-iteration-problem-in-python.md) §4's
+  sanctioned exception, second instance). Half the gate is a signature and says so: the
+  recorded-corpus diff needs a database restore and cannot run in CI
+  ([`.github/scripts/check-ruleset-diff.sh`](.github/scripts/check-ruleset-diff.sh),
+  `make ruleset-diff`, proven still to fire by `make test-ruleset-diff`; the whole build is
+  written up in [`docs/specs/matchmaking/the-ruleset-gate.md`](docs/specs/matchmaking/the-ruleset-gate.md)).
 - **One session changes one app.** A `PreToolUse` hook blocks writes that cross an app
   boundary. A block is information — surface it, don't route around it. See
   [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
@@ -96,10 +131,11 @@ guardrail doing its job.
   and [ADR-0029](docs/adr/0029-seed-data-through-aggregates-never-in-production.md).
 - [`docs/adr/`](docs/adr/) — decisions affecting the system or the contract between apps.
 
-After changing either hook, run `make test-hooks` (65 assertions). A guardrail that
+After changing either hook, run `make test-hooks` (69 assertions). A guardrail that
 silently stops matching is worse than none, because you stop watching for it. The same
-argument is why `make test-drift` and `make test-poetry-pin` exist: each drives its check
-against a deliberately broken tree and asserts it goes red.
+argument is why `make test-drift`, `make test-poetry-pin`, `make test-judged-pairings`
+and `make test-ruleset-diff` exist: each drives its check against a deliberately broken tree
+and asserts it goes red.
 
 ## Agent skills
 

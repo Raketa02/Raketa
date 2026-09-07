@@ -39,6 +39,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.bootstrap.composition import (
+    build_clock,
     build_domain_event_store,
     build_event_publisher,
     build_skill_rating_repository,
@@ -55,6 +56,7 @@ from app.seeds import catalog
 from app.seeds.catalog import (
     ACCOUNTS,
     BAND_ESTABLISHED,
+    NAMES,
     RESERVED_TLD,
     SEED_EMAIL_DOMAIN,
     SEED_PASSWORD,
@@ -65,10 +67,12 @@ from app.seeds.catalog import (
     RatingClaim,
     SeedAccount,
 )
+from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
 from app.seeds.runner import (
     SeededAccount,
     SeededScenario,
     SeedFailed,
+    SeedReport,
     report,
     seed,
 )
@@ -84,10 +88,54 @@ SEED_MODULES = sorted((ROOT / "app" / "seeds").glob("*.py"))
 #: will sell a name under any of them.
 RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"})
 
-#: The bounded contexts that have aggregates. Clubs, Courts, Bookings and Matches
-#: are named in the glossary and modeled nowhere, so a seed for one of them would
-#: have to invent the aggregate first.
-MODELED_CONTEXTS = frozenset({"users", "rating"})
+#: The contexts the seed path **writes an aggregate in**. Clubs, Courts,
+#: Bookings and Matches are named in the glossary and modeled nowhere, so a seed
+#: for one of them would have to invent the aggregate first.
+#:
+#: `challenges` and `blocks` joined on the day the relationship layer landed, and
+#: they joined as *writes through their own use cases*: five of the ten
+#: `LivenessSignal` codes are facts about a pair, no distribution can exhibit
+#: one, and a court and a block are the only shapes two of them come in. Both are
+#: modeled — which is the whole of what this rule asks.
+WRITTEN_CONTEXTS = frozenset(
+    {"users", "rating", "player_profile", "challenges", "blocks", "games"}
+)
+
+#: The contexts the seed path only **exercises**, through their own use cases.
+#: The assertions run real searches, deal real decks and compose real line-ups,
+#: and those use cases write the module's own durable ledgers — a search record,
+#: an interest row — which is not the same act as seeding an aggregate.
+EXERCISED_CONTEXTS = frozenset({"matchmaking"})
+
+#: The repository builders the seed path may take from the composition root, and
+#: the context each of them writes an aggregate in. Written out by name, because
+#: a builder is how an aggregate is written and the **name** is often the only
+#: place the context appears — a use case takes its repository from here and
+#: never imports the port, so a builder nobody listed is a write nothing in this
+#: file would notice.
+AGGREGATE_WRITERS = {
+    "build_user_repository": "users",
+    "build_assessment_repository": "rating",
+    "build_skill_rating_repository": "rating",
+    "build_player_profile_repository": "player_profile",
+    "build_play_intent_declaration_repository": "player_profile",
+    "build_challenge_repository": "challenges",
+    "build_block_repository": "blocks",
+    # The played history states and answers a result, which is `games`' own
+    # aggregate written through `games`' own two use cases — the same shape the
+    # challenge send has one line up. The **game** itself is opened by the
+    # acceptance that filled the last seat, inline and inside `challenges`, so
+    # nothing here opens one.
+    "build_game_repository": "games",
+}
+
+#: The two infrastructure modules the seed path may import, and neither is an
+#: adapter: both are the **process's own connection**, which is the same
+#: allowance `presentation/dependencies.py` has for `get_db` and `get_redis`.
+#: `redis_client.py` says so in its own docstring — *nothing here knows what a
+#: ledger is* — and the ledgers built over the client come from the composition
+#: root with their fail-soft posture already on them.
+PROCESS_CONNECTIONS = ("database.engine", "infrastructure.redis_client")
 
 #: SQLAlchemy's statement constructors. Importing one into the seed path is how
 #: "just this once, it is only a fixture row" starts.
@@ -166,8 +214,16 @@ def test_the_walk_has_something_to_walk():
         "__init__.py",
         "__main__.py",
         "catalog.py",
+        "clock.py",
+        "cohort.py",
+        "games.py",
         "guard.py",
+        "pairs.py",
+        "paths.py",
+        "photos.py",
+        "relationships.py",
         "runner.py",
+        "screens.py",
     }
 
 
@@ -176,9 +232,9 @@ def test_no_seed_module_imports_an_orm_model_or_a_statement(path):
     for module, name in imported(path):
         assert "infrastructure.database.models" not in module, path.name
         assert not module.endswith("_model"), path.name
-        assert ".infrastructure" not in module or module.endswith("database.engine"), (
-            f"{path.name} imports an adapter's internals: {module}"
-        )
+        assert ".infrastructure" not in module or module.endswith(
+            PROCESS_CONNECTIONS
+        ), f"{path.name} imports an adapter's internals: {module}"
         if module == "sqlalchemy" or module.startswith("sqlalchemy."):
             assert name not in SQL_CONSTRUCTORS, f"{path.name} imports {name}"
 
@@ -197,23 +253,64 @@ def test_no_seed_module_writes_through_a_session(path):
     assert not offending, f"{path.name} calls {sorted(offending)}"
 
 
-def test_the_seed_path_touches_only_the_contexts_that_exist():
+def test_the_seed_path_writes_six_contexts_and_only_reads_the_rest():
     """*No aggregate is invented for a context that is not yet modeled*, stated
-    where it can fail.
+    as **writes against reads** rather than as imports.
 
-    Equality rather than a subset, in both directions on purpose. A Clubs import
-    appearing is the scope creep the rule forbids; `rating` *disappearing* is the
-    seed quietly reducing to a list of registrations, which is the state this
-    catalog grew out of.
+    The rule used to be *the seed path imports `users` and `rating` and nothing
+    else*, and that stopped being able to fail on the day the assertions arrived:
+    reading a screen means running matchmaking's own use cases, so the import
+    appears whatever the seed does with it. Worse, as an import check it would
+    have gone green the day somebody wrote a matchmaking **aggregate** from the
+    seed — the import was already there.
+
+    So the fence is the distinction that actually matters. The seed **writes**
+    aggregates in `users`, `rating` and `player_profile`, and it reaches every
+    other context through that context's own use cases. A repository is how an
+    aggregate is written, so a repository port — or a repository builder — from
+    anywhere else is the line being crossed, and it is refused by name.
+
+    **The matchmaking stores the seed does import are not the line, and that is
+    a decision rather than a gap.** `build_search_store`, `build_interest_ledger`
+    and `build_pass_ledger` are that module's own four durable ledgers — nothing
+    there is event-sourced (`backend/CLAUDE.md`, `the-engine.md` §12) — and they
+    are written by matchmaking's *own use cases*, which is exactly the shape §10
+    sanctioned. Writing a matchmaking **aggregate** would need a matchmaking
+    repository, and there is not one to import; the day somebody writes one, the
+    builder check above is what fails.
+
+    Equality in both directions, on purpose. A Clubs repository appearing is the
+    scope creep the rule forbids; `rating` *disappearing* is the seed quietly
+    reducing to a list of registrations, which is the state this catalog grew out
+    of.
     """
+
+    imports = [
+        (module, name) for path in SEED_MODULES for module, name in imported(path)
+    ]
+
+    builders = {
+        name
+        for module, name in imports
+        if module == "app.bootstrap.composition" and name.endswith("_repository")
+    }
+    assert builders <= set(AGGREGATE_WRITERS), sorted(
+        builders - set(AGGREGATE_WRITERS)
+    )
+
+    written = {
+        module.split(".")[2]
+        for module, name in imports
+        if module.startswith("app.modules.") and name.endswith("Repository")
+    } | {AGGREGATE_WRITERS[name] for name in builders}
+    assert written == WRITTEN_CONTEXTS
 
     contexts = {
         module.split(".")[2]
-        for path in SEED_MODULES
-        for module, _ in imported(path)
+        for module, _ in imports
         if module.startswith("app.modules.")
     }
-    assert contexts == MODELED_CONTEXTS
+    assert contexts == WRITTEN_CONTEXTS | EXERCISED_CONTEXTS
 
 
 # ---------------------------------------------------------------------------
@@ -237,13 +334,24 @@ def test_every_address_is_on_a_reserved_tld():
         assert account.email.endswith(RESERVED_TLD)
 
 
-def test_every_account_is_named_for_its_state():
-    """The address is derived from the name, so an account cannot be called one
-    thing and reachable at another."""
+def test_every_account_is_addressed_by_its_state_and_shown_under_a_name():
+    """**The slug addresses the account; it is never what a person sees.**
+
+    The two were one string, and a screen draws `nickname` — so the builder was
+    printing *said-yes-to-you* where a name goes, and a developer could not tell
+    a court full of people from a list of test conditions. Splitting them keeps
+    the address derived from the state, so an account still cannot be called one
+    thing and reachable at another.
+
+    The name is asserted to be a **dealt** one rather than merely different,
+    because `nickname` falls back to the slug for accounts a guard builds to
+    refuse: this is the test that the fallback never reaches a real one.
+    """
 
     for account in ACCOUNTS:
         assert account.email == f"{account.slug}@{SEED_EMAIL_DOMAIN}"
-        assert account.nickname == account.slug
+        assert account.nickname == NAMES[account.slug]
+        assert account.nickname != account.slug
         assert account.description
 
 
@@ -387,8 +495,11 @@ def test_an_answer_policy_reads_the_split_off_the_ports_own_vocabulary():
 
     policy = AnswerPolicy(claims=1, demonstrations=3)
 
-    assert policy.option_id_for(a_question(tier=None, options=5)) == "o1"
-    assert policy.option_id_for(a_question(tier="standard", options=5)) == "o3"
+    claim = a_question(tier=None, options=5)
+    demonstration = a_question(tier="standard", options=5)
+
+    assert policy.option_id_for(claim, drawn_for="named") == "o1"
+    assert policy.option_id_for(demonstration, drawn_for="named") == "o3"
 
 
 def test_an_answer_policy_clamps_to_the_options_a_question_offers():
@@ -397,8 +508,11 @@ def test_an_answer_policy_clamps_to_the_options_a_question_offers():
 
     policy = AnswerPolicy(claims=4, demonstrations=4)
 
-    assert policy.option_id_for(a_question(tier=None, options=4)) == "o3"
-    assert policy.option_id_for(a_question(tier="basic", options=5)) == "o4"
+    claim = a_question(tier=None, options=4)
+    demonstration = a_question(tier="basic", options=5)
+
+    assert policy.option_id_for(claim, drawn_for="named") == "o3"
+    assert policy.option_id_for(demonstration, drawn_for="named") == "o4"
 
 
 def test_a_claim_is_silent_about_a_rating_that_matches_it():
@@ -496,10 +610,17 @@ async def _streams(session) -> dict[str, int]:
     return {aggregate: count for aggregate, count in rows.all()}
 
 
+#: Every account the catalog walk writes: the states, the four protagonists and
+#: the eleven relationships. Written as one tuple here for the reason the runner
+#: walks one — an assertion counted over half of them goes green on the day the
+#: other half stops being seeded.
+SEEDED_ACCOUNTS = ACCOUNTS + RELATIONSHIP_ACCOUNTS
+
+
 def _rated_scenarios() -> list[tuple[SeedAccount, RatedRun]]:
     return [
         (account, scenario)
-        for account in ACCOUNTS
+        for account in SEEDED_ACCOUNTS
         for scenario in account.scenarios
         if isinstance(scenario, RatedRun)
     ]
@@ -517,10 +638,10 @@ async def test_seeding_writes_an_event_stream_for_every_aggregate(session_factor
         seeded = await seed(session)
         streams = await _streams(session)
 
-    assert len(seeded) == len(ACCOUNTS)
-    assert streams.get("user", 0) == len(ACCOUNTS)
+    assert len(seeded) == len(SEEDED_ACCOUNTS)
+    assert streams.get("user", 0) == len(SEEDED_ACCOUNTS)
     assert streams.get("assessment", 0) >= sum(
-        len(account.scenarios) for account in ACCOUNTS
+        len(account.scenarios) for account in SEEDED_ACCOUNTS
     )
     assert streams.get("skill_rating", 0) == len(_rated_scenarios())
 
@@ -560,7 +681,7 @@ async def _stored_ratings(session):
     )
 
     found = {}
-    for account in ACCOUNTS:
+    for account in SEEDED_ACCOUNTS:
         user = await users.get_by_email(account.email)
         assert user is not None
         for rating in await ratings.find_all_for(player_id=user.id):
@@ -671,13 +792,24 @@ async def test_re_running_leaves_the_same_state(session_factory):
     assert streams_after_first == streams_after_second, "a re-run appended events"
 
 
+def _a_run(*accounts: SeededAccount) -> SeedReport:
+    """One run's report, with no cohort in it.
+
+    The cohort's own lines are asserted in `test_seed_cohort.py`, against a run
+    that really wrote one — a hand-built cohort here would be this test agreeing
+    with a shape it invented.
+    """
+
+    return SeedReport(accounts=accounts, members=(), now=build_clock().now())
+
+
 def test_the_report_names_the_address_the_password_and_every_state():
     """What a developer reads. Built from the run rather than from the catalog,
     so it cannot describe an account the run did not touch."""
 
     account = next(entry for entry in ACCOUNTS if entry.slug == "rated-in-every-sport")
     lines = report(
-        (
+        _a_run(
             SeededAccount(
                 account=account,
                 player_id=UUID(int=1),
@@ -690,7 +822,7 @@ def test_the_report_names_the_address_the_password_and_every_state():
                     )
                     for index, scenario in enumerate(account.scenarios)
                 ),
-            ),
+            )
         )
     )
     text = "\n".join(lines)
@@ -710,7 +842,7 @@ def test_the_report_says_which_state_each_scenario_is_in():
     abandoned one, and a rating. All three are an address and an assessment id."""
 
     states = report(
-        (
+        _a_run(
             SeededAccount(
                 account=SeedAccount(slug="probe", description="probe"),
                 player_id=UUID(int=1),
@@ -736,7 +868,7 @@ def test_the_report_says_which_state_each_scenario_is_in():
                         created=False,
                     ),
                 ),
-            ),
+            )
         )
     )
     text = "\n".join(states)

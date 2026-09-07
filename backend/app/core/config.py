@@ -115,6 +115,12 @@ DEFAULT_JWT_SECRET_KEY = "change-me-in-production"
 DEFAULT_PHOTO_STORAGE_ACCESS_KEY = "raketa_photos"
 DEFAULT_PHOTO_STORAGE_SECRET_KEY = "raketa_photos_pwd"
 
+#: The shipped ephemeral-store address. `redis` is the service name in
+#: `docker-compose-local.yml`, so this default resolves on a laptop running the dev
+#: stack and resolves nowhere else — which is what makes it safe to refuse rather
+#: than fall back on, exactly as the writer database's default is.
+DEFAULT_REDIS_URL = "redis://redis:6379/0"
+
 #: The environments a browser reaches over a public network. `local` is not one of them,
 #: which is what makes `http://localhost:3000` a legal allowed origin on a laptop.
 DEPLOYED = frozenset(
@@ -245,6 +251,211 @@ class Settings(BaseSettings):
     PHOTO_SWEEP_ENABLED: bool = True
     PHOTO_SWEEP_INTERVAL_SECONDS: float = 6 * 60 * 60
 
+    # --- the photo re-review backfill (docs/adr/0132)
+    #
+    # **Not one of these can change which photos get re-reviewed.** That is read
+    # off the note the object already carries (`player_profile/domain/photos.py`
+    # — `review_standing`), so what is left here is operational: how often to
+    # look, how much inference one run may spend, and how far apart to space it.
+    # Turning the job off changes nothing a domain test could observe — the
+    # unreviewed population simply stops shrinking, which is the state the
+    # platform was in before the job existed.
+    #
+    # **Deliberately slow, and the cadence is in hours for the reason the
+    # sweep's is.** A run is a walk of the whole photo prefix — and a `HEAD` per
+    # object, because no S3-compatible listing carries user metadata — so the
+    # cost of a *tick* is paid against the corpus whether or not there is
+    # anything left to review. An hour puts that walk at six times the sweep's
+    # and no more.
+    #
+    # The budget is what the *sidecar* is protected by: one container running a
+    # single worker by design, with a live upload path queueing behind whatever
+    # it is doing, and a second of quiet between asks so an upload is never
+    # behind a hundred of them. A hundred an hour per API process drains any
+    # backlog this platform has in days, and nothing is waiting on it — the
+    # pass-through population is fixed and only shrinks, and the sweep already
+    # removes the photos no profile ever committed.
+    PHOTO_REVIEW_BACKFILL_ENABLED: bool = True
+    PHOTO_REVIEW_BACKFILL_INTERVAL_SECONDS: float = 60 * 60
+    PHOTO_REVIEW_BACKFILL_BATCH_LIMIT: int = 100
+    PHOTO_REVIEW_BACKFILL_PAUSE_SECONDS: float = 1.0
+
+    # --- the candidate index (docs/adr/0110, docs/adr/0112)
+    #
+    # **Two loops with two different jobs, and both cadences are configuration.**
+    # The tail reader folds the log into the index; the snapshot refresh rebuilds
+    # this worker's containers from what moved. Turning either off changes no
+    # rule a domain test could observe — the index simply stops moving, which is
+    # the state the platform was in before it existed.
+    #
+    # **What is emphatically not here is the staleness ladder.** Serve under
+    # 15 minutes, flag to 24 hours, refuse past it — those live in
+    # `matchmaking/domain/index_staleness.py`, because a refusal the environment
+    # could switch off is a rule that is true on a laptop and false in
+    # production. The two must not swap places, exactly as the photo sweep's
+    # retention window and cadence must not.
+    CANDIDATE_INDEX_ENABLED: bool = True
+    #: The cadence `EventWorker` already runs at, so no new number is invented.
+    #: Its falsifier is batches consistently hitting the bound below.
+    CANDIDATE_INDEX_TAIL_INTERVAL_SECONDS: float = 1.0
+    #: §17's p50 index-staleness target, matched directly.
+    CANDIDATE_INDEX_REFRESH_INTERVAL_SECONDS: float = 2.0
+    #: How many log rows one tick may look at, so a projection restarted against
+    #: a long log does bounded work per tick rather than one huge transaction.
+    CANDIDATE_INDEX_BATCH_SIZE: int = 500
+
+    # --- the ephemeral store (docs/adr/0093)
+    #
+    # **Redis holds the two ledgers that are allowed to be lossy** — exposure and
+    # suppression — and nothing else. Everything the platform must be able to say
+    # later is a durable row: the gate is the cache, the evidence is the row.
+    #
+    # A **server-to-server** address, like `PHOTO_STORAGE_ENDPOINT_URL` and
+    # `PHOTO_REVIEW_ENDPOINT_URL`, so the public-network scheme rule has nothing to
+    # say about it — no browser and no phone ever opens it. A deployed environment
+    # that wants TLS spells it `rediss://` in the URL it sets, which is the same
+    # place it sets the credentials.
+    #
+    # **What is emphatically not here is either TTL.** How long a suppression lasts
+    # is `PASS_SUPPRESS`, a product decision in the released ruleset; how long a
+    # week of exposure survives is `EXPOSURE_RETENTION_WEEKS`, in
+    # `matchmaking/domain/ledgers.py`. Both decide what can still be asked, and an
+    # environment that could shorten either would be an environment selecting
+    # behaviour a domain test can observe. What lives here is where the store is,
+    # and how often the roll runs.
+    REDIS_URL: str = DEFAULT_REDIS_URL
+
+    # --- the exposure roll (docs/adr/0092, matchmaking-engine.md §14.5)
+    #
+    # Hourly, matching §14.5. The scalar it publishes is a percentile over a week's
+    # appearances, which barely moves within an hour and is read on every search —
+    # so the cadence is the trade between a stale threshold and an unbounded read on
+    # the request path. Turning it off changes no rule a domain test could observe:
+    # the *shown more than most* rung simply never fires, and the two rungs that
+    # lift are unaffected, which is the state the platform is in today.
+    EXPOSURE_ROLL_ENABLED: bool = True
+    EXPOSURE_ROLL_INTERVAL_SECONDS: float = 60 * 60
+
+    # --- the two prompt loops
+    # (docs/adr/0092, docs/adr/0099, matchmaking-engine.md §6.3)
+    #
+    # **Each raises a question and changes no value**, which is what makes both
+    # of them safe to turn off: the platform simply stops asking. Nothing a
+    # domain test can observe moves — a search still runs on the same grid at the
+    # same radius against the same floor, and the two per-search prompts, which
+    # are facts about the search in front of you rather than about a history, are
+    # raised on the request path and are not switchable at all.
+    #
+    # **What is emphatically not here is any of the four thresholds.** How many
+    # searches make a drift, how many takes make a habit, how old a grid has to
+    # be and how long a raised prompt lives are rules a domain test can observe,
+    # and they live in `matchmaking/domain/prompts.py`. An environment that could
+    # move one would be an environment deciding when a player gets asked about
+    # their own profile — which is the same class of error as an environment that
+    # could move the quality floor.
+    #
+    # Daily, matching §14.5's own cadence for the drift detector. Both read a
+    # window wider than their interval, so a missed tick or a deploy does not
+    # create a day nobody's drift was noticed in.
+    INTENT_DRIFT_ENABLED: bool = True
+    INTENT_DRIFT_INTERVAL_SECONDS: float = 24 * 60 * 60
+    GRID_STALENESS_ENABLED: bool = True
+    GRID_STALENESS_INTERVAL_SECONDS: float = 24 * 60 * 60
+
+    # --- the interest expiry loop (docs/adr/0092, docs/adr/0127)
+    #
+    # **Turning it off changes no rule a domain test could observe.** Every read
+    # of the interest ledger is bounded by `now`, so a yes stops lifting, stops
+    # counting against the cap and stops being listed the moment it expires,
+    # swept or not. What the loop buys is that the table stays the size of what
+    # is live, and the one figure a lapsed row could ever be asked for — *yeses
+    # that expired having never lifted anybody*, which is `INTEREST_TTL`'s only
+    # day-one falsifier and cannot be computed after the rows are gone.
+    #
+    # **`INTEREST_TTL` itself is emphatically not here.** How long a yes lives
+    # decides who is admitted below the quality floor, which is a rule a domain
+    # test observes; it is a ruleset row, and only this cadence is a setting.
+    #
+    # Hourly, which is far finer than a twenty-one-day window needs and is chosen
+    # against the other end: the sweep is a keyed delete over an indexed date, so
+    # a frequent tick is cheap and a rare one lets a deploy gap turn into a
+    # visibly growing table.
+    INTEREST_EXPIRY_ENABLED: bool = True
+    INTEREST_EXPIRY_INTERVAL_SECONDS: float = 60 * 60
+
+    # --- the challenge lapse loop (docs/adr/0092)
+    #
+    # **Turning it off changes no rule a domain test could observe.** A seat past
+    # its answer window reads as lapsed at every instant, its pair releases and
+    # its challenge stands as `LAPSED` whether or not anything has swept it —
+    # `standing.py` folds the seats against the clock and stores nothing. What
+    # the loop buys is the *record*: a `SeatLapsed` in the log, so that **answers
+    # challenges** has a denominator, and a lapse is a fact somebody can count
+    # rather than an absence they have to infer.
+    #
+    # **`ANSWER_WINDOW` itself is emphatically not here.** How long an invitee has
+    # to answer is the promise the invitation makes — moving it moves what every
+    # outstanding challenge already said — and it lives in
+    # `challenges/domain/answer_window.py`. Only this cadence is a setting.
+    #
+    # Hourly, and the number it is chosen against is the window rather than the
+    # backlog: a `SeatLapsed` is stamped with the moment the sweep noticed, so
+    # the interval is how late the record is, and an hour against a day is a
+    # twenty-fourth. Finer would buy a rounder timestamp and pay for it in a read
+    # that is not yet indexed.
+    CHALLENGE_LAPSE_ENABLED: bool = True
+    CHALLENGE_LAPSE_INTERVAL_SECONDS: float = 60 * 60
+
+    # --- the rating catch-up (docs/adr/0139)
+    #
+    # **The second job that appends a domain event, and the first whose absence a
+    # player would notice.** A confirmation is a clock passing and nothing
+    # announces one, so this is what turns a result into a Level that moved. Turn
+    # it off and every rating on the platform quietly stops being tested — which
+    # is why it is the one loop here whose default is on for a reason about the
+    # product rather than about a record.
+    #
+    # Hourly, and the number is chosen against the clock the result settled on: a
+    # move is stamped with the moment the result became final rather than with
+    # the moment the run noticed, so the interval is how late the *stream* is and
+    # never what it says. Finer would buy a fresher card and pay for it in a walk
+    # of every game the platform has recorded.
+    #
+    # The **rule** it applies is not here and could not be: an environment that
+    # could pick a K-factor is an environment that decides how a marketplace
+    # rates people.
+    RATING_CATCH_UP_ENABLED: bool = True
+    RATING_CATCH_UP_INTERVAL_SECONDS: float = 60 * 60
+
+    # --- the two scale triggers (docs/adr/0092, scale-posture.md §4)
+    #
+    # **The instruments are configuration; the thresholds are not.** How often
+    # the loop-lag probe ticks and how many workers this container runs are
+    # facts about the deployment. *p99 above 20 ms*, *duty cycle above 0.25* and
+    # *half the container memory* are the numbers the escalation ladder is
+    # climbed on, and they live in `matchmaking/domain/scale_triggers.py` — an
+    # environment that could widen a trigger is an environment that decides when
+    # the platform is in trouble.
+    #
+    # Turning the probe off changes nothing a domain test could observe: no
+    # search is timed differently and no answer moves. What stops is the record,
+    # and *a trigger that requires somebody to go and measure fires late* is the
+    # reason the default is on.
+    #
+    # A second a tick, because the reading is the loop's own oversleep and a
+    # probe that slept a minute would report a minute's worth of contention as
+    # one sample. Fifteen minutes of ticks then close a window — the interval
+    # that §4 states the trigger over, which is `TRIGGER_WINDOW` and not a
+    # setting.
+    SCALE_PRESSURE_ENABLED: bool = True
+    SCALE_PRESSURE_INTERVAL_SECONDS: float = 1.0
+
+    #: How many workers this container runs, read from the variable
+    #: `docker/api/startup.prod.sh` already passes to gunicorn — so trigger 4's
+    #: arithmetic reads the fleet that exists rather than one somebody typed
+    #: twice. It selects no behaviour: it is a multiplier inside a log record.
+    GUNICORN_WORKERS: int = 1
+
     @field_validator("APP_ENV", mode="before")
     @classmethod
     def _known_environment(cls, v):
@@ -321,6 +532,20 @@ class Settings(BaseSettings):
                     f"defined but not provisioned. Falling back to the local default "
                     f"would point at a database that does not exist — set "
                     f"WRITER_DB_URL explicitly or use 'local'."
+                )
+            if "REDIS_URL" not in provided:
+                # The same refusal as the database's, and for the same reason
+                # rather than for a weaker one. The ledgers behind it fail soft, so
+                # an unreachable Redis costs a search its spread and nothing more —
+                # but *silently degraded for ever* is not a state an environment
+                # should be able to boot into by inheriting a laptop's service
+                # name. A ledger that never works looks exactly like a quiet week.
+                raise ConfigurationError(
+                    f"REDIS_URL is not set, and APP_ENV selects '{env}', which is "
+                    f"defined but not provisioned. Falling back to the local default "
+                    f"would point at an ephemeral store that does not exist, and the "
+                    f"ledgers behind it would degrade silently — set REDIS_URL "
+                    f"explicitly or use 'local'."
                 )
 
         if env in DEPLOYED:

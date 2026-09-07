@@ -80,17 +80,85 @@ player_card: { nickname, photo_id?, area_code, distance_km,
                social_tags[], level, band, counted_games }
 ```
 
-**Nothing else.** `distance_km` is an **integer** — the underlying area is a coarse centroid
+*(as it stood; the amendments below are what it is now)*
+
+**Nothing else.**
+
+> **Amended five times since, all under this ADR's own rule** — *a card says only what its
+> subject published, and every field on it is a fact about that person alone.*
+>
+> - **`range` was added** — the likely range, μ ± σ as `rating` published it, travelling as
+>   `{low, high}` ([#235](https://github.com/Raketa02/Raketa/issues/235),
+>   [#243](https://github.com/Raketa02/Raketa/issues/243)). Printing μ while refusing μ ± σ
+>   shows two players at the same Level with no way to tell that one of them is a guess. It
+>   is **projected** onto the index row and copied onto the card, never derived at assembly.
+>   The band's numeric **edges stay off**: their only consumer is the band bar, which is
+>   drawn from the out-of-scope record sheet, and the glossary refuses them as a second
+>   range in any case.
+>
+> - **`photo_url` was added beside `photo_id`** — a short-lived signed link, minted per
+>   response and recorded nowhere ([#245](https://github.com/Raketa02/Raketa/issues/245)).
+>   The paragraph below already described it; nothing minted one, and
+>   `GET /photos/{id}` refuses another player's id on purpose — so as the contract stood
+>   **no photograph could reach a Play screen at all**. The two fields are omitted
+>   together, and the URL is the one field on a response the record deliberately cannot
+>   reproduce.
+>
+> - **`distance_km` left the card**, for the same rule read the other way: a distance is a
+>   fact about a **pair**, and it is the one field whose value would change depending on who
+>   is looking. It sits on the *candidate*, beside the card
+>   ([`the-play-screens.md`](../specs/matchmaking/the-play-screens.md) §1, which carries the
+>   argument).
+>
+> - **`review` was added beside `photo_id`** — what the on-court check concluded about that
+>   photograph, as a code, or **omitted** for *nobody looked*
+>   ([ADR-0138](0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)).
+>   It is the awkward one for this ADR's rule and it passes: a verdict is not something its
+>   subject *published*, but it is a fact about **their photograph** rather than about the
+>   pair, so it does not change with who is looking — which is the half of the rule
+>   `distance_km` failed. It is **recorded** like `photo_id` and not minted like `photo_url`,
+>   and the two paragraphs below are what decide that: a link is dead within the hour so it
+>   cannot be stored, and a verdict is a store round trip so it must not be re-read per
+>   response.
+>
+> - **The record block was added — `player_score`, `counted_games` and `last_five`**
+>   ([#306](https://github.com/Raketa02/Raketa/issues/306)). `counted_games` was on the list
+>   from the beginning and had never been assembled; the other two joined it when their
+>   providers shipped
+>   ([ADR-0140](0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md),
+>   [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)). All three pass this
+>   ADR's test the way `review` does rather than the way `range` does: they are not something
+>   their subject *published* — they are what the platform **watched them do** — but each is a
+>   fact about that person alone and does not change with who is looking, which is the half of
+>   the rule `distance_km` failed.
+>
+>   Two things about them are decided elsewhere and named here so the list stays readable.
+>   **Every one is omitted rather than nought** where the platform has watched nothing, which
+>   is `distance_km`'s two-spellings rule
+>   ([ADR-0106](0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §4) applied
+>   to three more fields — and, for `counted_games`, the one place this card deliberately
+>   disagrees with its provider, which measures a real zero for its own callers. And
+>   **`last_five` carries outcomes in order and no dates**: a moment beside one of them would
+>   be the activity recency this ADR refuses outright.
+>
+> The list is still closed; it is the two paragraphs below that say what closed means.
+
+`distance_km` is an **integer** — the underlying area is a coarse centroid
 and the profile's own radius is whole kilometres, so a decimal would claim a precision the
 data does not hold and would let *"3 km"* sit under a 3 km radius while being excluded by it.
 
-**`photo_id`, not a URL.** [ADR-0091](0091-photo-storage-behind-a-port.md) serves photos
-through short-lived presigned URLs, and
-[ADR-0104](0104-the-search-record-is-the-answer-and-never-expires.md) keeps every search row
-forever: a presigned URL written into an unexpiring record is a dead link within the hour.
-The record stores the id; the URL is minted per response, on the `POST` and again on every
-`GET`. **`photo_id` is omitted rather than null** when a player has no photo — the glossary
-already calls that *"not an absence but a generated court poster"*, so this is
+**`photo_id` in the record, `photo_url` on the response.**
+[ADR-0091](0091-photo-storage-behind-a-port.md) serves photos through short-lived presigned
+URLs, and [ADR-0104](0104-the-search-record-is-the-answer-and-never-expires.md) keeps every
+search row for ever: a presigned URL written into an unexpiring record is a dead link within
+the hour. The record stores the id; the URL is minted per response, on the `POST` and again
+on every `GET`. **The dead-link argument is about the record, and a URL that never enters it
+does not touch that argument** — which is why both fields can be on one card. The link is
+minted by the server rather than left to the client because `GET /photos/{id}` signs only
+*your own* photos and refuses a stranger's id deliberately — the alternative is an endpoint
+that confirms whether a stranger's id is real — and a card's photo is by definition another
+player's. **Both fields are omitted rather than null** when a player has no photo — the
+glossary already calls that *"not an absence but a generated court poster"*, so this is
 [ADR-0106](0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §4's *does not
 apply* spelling, and the client draws the poster.
 
@@ -128,11 +196,31 @@ themselves"*, which is true and is a different product decision. Recency will co
 *"we already compute it"*, which is exactly the argument ADR-0106 §5 exists to refuse. Both
 are written down here so the next proposal starts from the reason rather than from the field.
 
-**Form and Player Score arrive on their own, through ports that already exist.** They are
-gaps, not refusals: when `matches` and `player_score` land they attach to the card through
-`MatchHistoryQuery` and `PlayerScoreQuery`, and until then the card is shorter and says
-nothing false. This is [ADR-0098](0098-matcher-demands-as-executable-contracts.md)'s shape,
-applied to presentation instead of to scoring.
+**Form and Player Score arrived on their own, through ports that already existed.** They were
+**gaps, not refusals**, and both are closed
+([#306](https://github.com/Raketa02/Raketa/issues/306)). The prediction was right about the
+shape and wrong about one port name, which is worth recording because the correction is the
+rule doing its work:
+
+- **The Player Score reaches the card through `PlayerScoreQuery`**, exactly as written — the
+  same port the reliability term reads, **read again** at assembly
+  ([ADR-0140](0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md) §6).
+  Two reads rather than one because they are bounded by different things: the engine's prices a
+  *term* over everybody who might be scored, and this one prints a *number* over the shortlist.
+  Taking the card's figure off the engine's record would make what a player is shown a
+  consequence of whatever that term happens to carry.
+- **The form does not come from `MatchHistoryQuery`, and could not have.** That port answers
+  *what have these two done together* — a bounded pairwise read, and a fact about a **pair**,
+  which is the one thing this ADR keeps off a card. `counted_games` and `last_five` are facts
+  about one person, so they arrive on a source of their own, `PlayerRecordSource`, beside
+  `PlayerCardSource` at the assembly seam. `matches` never landed either: **`games` is the
+  context that shipped** ([ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)), and
+  it composes into `MatchHistoryQuery` for the pairwise half while answering the card's two
+  fields through the other port.
+
+This is still [ADR-0098](0098-matcher-demands-as-executable-contracts.md)'s shape, applied to
+presentation instead of to scoring — including its rule that **a provider signing half of two
+contracts has signed all of neither**, which is why the split above is two ports and not one.
 
 **Every photo becomes visible to strangers, and [ADR-0091](0091-photo-storage-behind-a-port.md)
 deferred its content check on the argument that they could not be.** That ADR's words were

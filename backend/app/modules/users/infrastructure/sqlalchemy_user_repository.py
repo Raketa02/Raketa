@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Collection, Mapping, Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -79,6 +79,33 @@ class SqlAlchemyUserRepository:
         )
         row = result.scalar_one_or_none()
         return _to_domain(row) if row else None
+
+    async def find_disabled_among(
+        self, user_ids: Collection[UUID]
+    ) -> frozenset[UUID]:
+        ids = list(user_ids)
+        if not ids:
+            # `IN ()` is not portable SQL and SQLAlchemy warns rather than
+            # answering; an empty ask has an empty answer without a round trip.
+            return frozenset()
+        result = await self._session.execute(
+            select(UserORM.id).where(
+                UserORM.id.in_(ids), UserORM.is_active.is_(False)
+            )
+        )
+        return frozenset(result.scalars().all())
+
+    async def find_nicknames_of(
+        self, user_ids: Collection[UUID]
+    ) -> Mapping[UUID, str]:
+        ids = list(user_ids)
+        if not ids:
+            # `IN ()` is not portable SQL, exactly as above.
+            return {}
+        result = await self._session.execute(
+            select(UserORM.id, UserORM.nickname).where(UserORM.id.in_(ids))
+        )
+        return {row.id: row.nickname for row in result}
 
     async def add(self, user: User) -> User:
         row = _to_orm(user)

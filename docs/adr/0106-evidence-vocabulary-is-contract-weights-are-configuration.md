@@ -3,6 +3,33 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
+> **Checked 2026-09-05 against [#306](https://github.com/Raketa02/Raketa/issues/306) and
+> [#312](https://github.com/Raketa02/Raketa/issues/312) — the first batch of fields this record
+> had to classify — and nothing here changed.** This is a confirmation rather than an amendment,
+> recorded because a rule that has never been exercised is a rule nobody knows the cost of. The competitive card grew five fields —
+> `player_card.player_score`, `counted_games`, `last_five` and `review`, and `at_stake` on the
+> candidate — and §3's test answered each of them the same way: **none is a weight, so every one
+> of them is contract**. They are card fields rather than evidence variants, so they cross on
+> [ADR-0107](0107-the-player-card-is-assembled-outside-the-engine.md)'s assembly seam and no
+> variant of the closed union gained a member; the price §3 sets — a client release rather than
+> a ruleset release — is the price all five paid.
+>
+> **§4 is the clause that did the work, and it now binds five more fields.** Every one of them is
+> **omitted rather than nought or false**, each on its own condition — nothing watched, nobody
+> looked, a mode where a counted result is meaningless. One of the five is the interesting case,
+> because it is the first place a **measured** zero met a field that must spell absence: `games`
+> answers a real nought to its own callers, and the card refuses to print one, because *nought
+> games* and *no record* would be one absence in two spellings. The Consequences below predict
+> exactly this for `player_score`, in the future tense; the tense is what expired.
+>
+> **§5 is untouched and was tested rather than trusted.** `last_five` carries outcomes in order
+> and **no dates at any granularity** — five events with moments beside them is *last seen* —
+> and the refusal is asserted centrally over the emitted contract rather than per route. §6 is
+> untouched: `RELIABILITY` had never fired for anybody and now fires for anybody the platform
+> has watched, which is a variant clients have been able to render since day one finally
+> arriving with something in it — and an evidence kind a build cannot read still renders a named
+> gap rather than a shorter list.
+
 ## Context
 
 Two rules this repository already holds point in opposite directions the moment the matcher
@@ -148,4 +175,8 @@ honestly, never fabricate.
 **The absence rule binds every context that later serialises a matcher fact,** not just this
 one. When `matches` and `player_score` land, their absent facts cross by the same two
 spellings — which is what stops *"we have no record"* and *"the record says zero"* collapsing
-into one nullable column somewhere downstream.
+into one nullable column somewhere downstream. **This came true and it came true the hard
+way** (see the amendment at the top): `games` and `player_score` landed, and the card's
+`counted_games` is the one place a provider's **measured** zero meets a field that must spell
+absence — so the adapter drops the row rather than carrying the nought through, and the
+inversion is written at the seam where it happens rather than left to a nullable column.

@@ -10,8 +10,9 @@
  * **Changing a sentence below is a new version, not an edit.** Bump the identifier, keep
  * the old one, and leave every answer already recorded pointing at the wording it was
  * actually shown. A silent re-word turns every standing yes into a record of something
- * nobody said. That has happened once: `v2` dropped the line under the title, so `v1` is
- * retired and retained below rather than overwritten.
+ * nobody said. That has happened twice: `v2` dropped the line under the title, and `v3`
+ * rewrote two of the three promises and the scope note — so `v1` and `v2` are both retired
+ * and retained below rather than overwritten.
  *
  * ## The two answers are buttons, and that changed no wording
  *
@@ -32,7 +33,10 @@
  *
  * `OPT_IN_SCOPE` is the correction that keeps the card honest, and it is load-bearing: it
  * is the sentence that tells a player what saying no leaves untouched, so that no is a
- * decision about proposals rather than a decision about being seen at all.
+ * decision about proposals rather than a decision about being seen at all. In `v3` it is
+ * **the first thing on the screen** rather than a line between the promises and the
+ * controls — the promises are conditional on a yes, and the reader who most needs this
+ * sentence is the one who is not going to give one.
  *
  * ## There is no third control
  *
@@ -63,7 +67,7 @@
  * Not the words themselves: the copy is the client's and is never stored server-side
  * (`copy_version` is a 1–64 character identifier on the wire).
  */
-export const PROPOSALS_OPT_IN_COPY_VERSION = 'proposals-opt-in.v2';
+export const PROPOSALS_OPT_IN_COPY_VERSION = 'proposals-opt-in.v3';
 
 /**
  * **Retired, and kept.** The first wording ever shown to anybody. It differed from `v2` in
@@ -77,6 +81,25 @@ export const PROPOSALS_OPT_IN_COPY_VERSION = 'proposals-opt-in.v2';
  * agreements become unreadable.**
  */
 export const PROPOSALS_OPT_IN_COPY_V1 = 'proposals-opt-in.v1';
+
+/**
+ * **Retired, and kept**, for `v1`'s reason and by the same rule. It differed from `v3` in
+ * three sentences, all of them about what a yes actually delivers:
+ *
+ * - the first promise read *a game we think fits, when your week and theirs overlap* —
+ *   `v3` names the **shape** of the game instead, because *singles or doubles* is the thing a
+ *   player wants to know before agreeing to be sent one, and the week overlap is machinery;
+ * - the second read *You always answer — every game by hand — nothing is ever confirmed for
+ *   you*, which `v3` says as **accepting** rather than answering, because *answer* is what you
+ *   do to a question and this is a thing that is either taken or not;
+ * - and the scope note read *Saying no changes only this. You stay findable in search either
+ *   way.* — `v3` states the same guarantee as what a no **does not** touch, because that is the
+ *   half a player is actually weighing.
+ *
+ * Nothing stamps this any more and nothing should. Answers already recorded against it point
+ * at *those* words. **Delete it and those agreements become unreadable.**
+ */
+export const PROPOSALS_OPT_IN_COPY_V2 = 'proposals-opt-in.v2';
 
 /**
  * The chrome line, which replaces the plain *step 7 of 7* rather than joining it.
@@ -108,11 +131,11 @@ export interface OptInPromise {
 export const OPT_IN_PROMISES: readonly OptInPromise[] = [
   {
     term: 'You may receive',
-    detail: 'a game we think fits, when your week and theirs overlap',
+    detail: 'a singles or doubles game we think fits you',
   },
   {
-    term: 'You always answer',
-    detail: 'every game by hand — nothing is ever confirmed for you',
+    term: 'You always accept',
+    detail: 'a game manually — nothing is ever confirmed for you',
   },
   {
     term: 'You can stop',
@@ -120,8 +143,19 @@ export const OPT_IN_PROMISES: readonly OptInPromise[] = [
   },
 ];
 
-/** The correction. What saying no changes, and — the half that matters — what it does not. */
-export const OPT_IN_SCOPE = 'Saying no changes only this. You stay findable in search either way.';
+/**
+ * The correction. What saying no changes, and — the half that matters — what it does not.
+ *
+ * It leads with the **no**, because the no is what the sentence is for: this is the one claim
+ * on the screen that makes declining a decision about proposals rather than a decision about
+ * being seen at all, and a player weighing it is weighing what they lose. Search and
+ * matchmaking are untouched either way; the whole of what changes is that nothing arrives.
+ *
+ * It sits at the **top** of the step for the same reason — see `SocialOptInStep`.
+ */
+export const OPT_IN_SCOPE =
+  "If you say no, it doesn't affect how other players find you. You just won't receive game " +
+  'suggestions.';
 
 /** Said next to the two controls, because it is a claim about the controls themselves. */
 export const OPT_IN_NEVER_PRE_TICKED = 'Never pre-ticked. Skipping is not consent.';

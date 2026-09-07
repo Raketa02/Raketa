@@ -1,0 +1,167 @@
+"""Where a line-up can complete, and therefore where a game can be opened.
+
+**Two places, and the second one is easy to miss.** The obvious trigger is the
+acceptance that fills the last seat, and ``AcceptSeat`` carries it. The other is a
+challenge born of two *Let's play* yeses that met: both seats are accepted from
+birth, so in a **singles** sport the court is complete the instant it is minted
+and **no accept ever happens on it**. A game opened only from the accept path
+would silently never record a tennis game arranged that way — and the failure
+would look like *this pair has never played*, which is a sentence the matcher
+believes.
+
+This file is the guard on that asymmetry. It drives the mint directly, with
+hand-written stubs, because what is under test is *which act opens a game* rather
+than anything about a database.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Sequence
+from uuid import UUID
+
+from app.kernel import Instant, Sport, instant
+from app.modules.challenges.application.commands import (
+    OpenFromMutualInterestCommand,
+)
+from app.modules.challenges.application.open_from_mutual_interest import (
+    OpenChallengeFromMutualInterest,
+)
+from app.modules.challenges.domain.challenge import Challenge
+from app.shared.ids import new_uuid
+
+MINTED_AT = instant(datetime(2026, 9, 4, 18, 0, tzinfo=timezone.utc))
+
+
+class _AClock:
+    def now(self) -> Instant:
+        return MINTED_AT
+
+
+class _NoOpenChallenges:
+    async def open_pairs_among(self, player_ids, *, now):
+        return frozenset()
+
+
+class _ASafeCourt:
+    async def admits(self, player_ids) -> bool:
+        return True
+
+
+class _Remembering:
+    """A challenge repository that keeps what it was given."""
+
+    def __init__(self) -> None:
+        self.saved: list[Challenge] = []
+
+    async def load(self, challenge_id: UUID) -> Challenge | None:
+        return None
+
+    async def save(self, challenge: Challenge) -> None:
+        self.saved.append(challenge)
+
+
+class _RecordingGames:
+    """A ``PlannedGameOpening`` that records what it was asked to open."""
+
+    def __init__(self) -> None:
+        self.opened: list[dict] = []
+
+    async def open_planned_game(
+        self,
+        *,
+        challenge_id: UUID,
+        sport: Sport,
+        counted: bool,
+        window: str | None,
+        line_up: Sequence[tuple[str, UUID]],
+        occurred_at: Instant,
+    ) -> UUID | None:
+        self.opened.append(
+            {
+                "challenge_id": challenge_id,
+                "sport": sport,
+                "counted": counted,
+                "window": window,
+                "line_up": tuple(line_up),
+                "occurred_at": occurred_at,
+            }
+        )
+        return new_uuid()
+
+
+def _mint(games: _RecordingGames) -> OpenChallengeFromMutualInterest:
+    return OpenChallengeFromMutualInterest(
+        challenges=_Remembering(),
+        open_challenges=_NoOpenChallenges(),
+        safety=_ASafeCourt(),
+        clock=_AClock(),
+        planned_games=games,
+    )
+
+
+async def test_two_yeses_in_a_singles_sport_open_a_game_with_no_accept_in_sight():
+    """The court is complete the moment it exists, so the game is too.
+
+    Nobody will ever tap accept on this challenge — both seats were accepted from
+    birth — so this is the only place the arrangement can be handed over.
+    """
+
+    games = _RecordingGames()
+
+    await _mint(games).execute(
+        OpenFromMutualInterestCommand(
+            sport=Sport.TENNIS,
+            player_id=new_uuid(),
+            other_player_id=new_uuid(),
+        )
+    )
+
+    assert len(games.opened) == 1
+    opened = games.opened[0]
+    assert opened["occurred_at"] == MINTED_AT, (
+        "the game is dated by the act that caused it"
+    )
+    assert {side for side, _ in opened["line_up"]} == {"A", "B"}
+    assert opened["window"] is None, "no grid was proposed from"
+
+
+async def test_a_mutual_born_game_is_counted_because_nobody_chose_a_friendly():
+    """A friendly is a thing people *choose*, and neither of these two did.
+
+    The alternative — no mode means for fun — would make every game arranged this
+    way evidence about nobody, and would hand a player the exact evening they
+    never said they wanted.
+    """
+
+    games = _RecordingGames()
+
+    await _mint(games).execute(
+        OpenFromMutualInterestCommand(
+            sport=Sport.SQUASH,
+            player_id=new_uuid(),
+            other_player_id=new_uuid(),
+        )
+    )
+
+    assert games.opened[0]["counted"] is True
+
+
+async def test_two_yeses_in_a_doubles_sport_open_no_game_yet():
+    """*A one-to-one padel challenge is half a game*, with a side still to fill.
+
+    The accept path takes it from here, and opening a game now would record an
+    arrangement two of the four people are not in.
+    """
+
+    games = _RecordingGames()
+
+    await _mint(games).execute(
+        OpenFromMutualInterestCommand(
+            sport=Sport.PADEL,
+            player_id=new_uuid(),
+            other_player_id=new_uuid(),
+        )
+    )
+
+    assert games.opened == []

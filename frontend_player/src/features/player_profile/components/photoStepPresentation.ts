@@ -1,10 +1,15 @@
 /**
  * The words on the photos step.
  *
- * **The copy states the on-court rule and claims no check is performed.** There is no
- * content review running in this build, and a screen that said *we check* would be telling
- * a player something untrue about how the product works — the one kind of copy defect that
- * survives a redesign, because nobody re-reads a sentence they believe.
+ * **The copy states the on-court rule, and the check is only ever mentioned to the player it
+ * has something to say about.** There *is* a review running now — every upload is scored
+ * server-side against the rule and the answer comes back on the response
+ * ([ADR-0129](../../../../../docs/adr/0129-the-photo-check-is-a-sidecar-the-backend-asks.md))
+ * — so the sentence this file used to be careful not to write is no longer untrue. It is
+ * still not written. Announcing *we check every photo* up front is small print for the
+ * majority whose photo is fine, and it reads as a threat to the rest; it is the same
+ * argument that took the third line off this step. The check earns a sentence at the one
+ * moment it has a claim to make, and that sentence is `FLAGGED_TITLE` and `FLAGGED_BODY`.
  *
  * `Three is the ceiling` deliberately mirrors the tags step's ceiling refusal: a fact,
  * stated without apology and without *you can only*. **The two are one decision** — do not
@@ -21,7 +26,7 @@
  */
 
 import type { AppError } from '@/shared/errors';
-import { recoveryMessage } from '@/shared/errors';
+import { codeMessage } from '@/shared/errors';
 
 import type { ProfilePhoto } from '../domain/photoCollection';
 import type { PhotoAccess } from '../hooks/useProfilePhotos';
@@ -34,16 +39,80 @@ export function photosEyebrow(): string {
 }
 
 /**
- * The one thing this screen asks a player to understand, and the one it must not claim.
+ * The one thing this screen asks a player to understand.
  *
- * It says what a photo is **for** rather than listing what is banned, and it claims no
- * check — there is no content review running in this build.
+ * It says what a photo is **for** rather than listing what is banned, and it is the words
+ * a flagged photo's warning is measured against: the check is the same rule, applied by a
+ * machine, so a player who read this and was warned anyway must not have to work out which
+ * rule they are being told about.
  */
 export const PHOTO_RULE_TITLE = 'Rackets mandatory, faces optional';
 
 export const PHOTO_RULE_BODY =
-  'Show yourself on a court — mid-rally, or catching your breath afterwards. Not a selfie, ' +
-  'not the beach, not the gym mirror. Your face is up to you; the sport is not.';
+  'Photos on Raketa follow one simple rule: keep it about the racket sports. Show yourself ' +
+  'on court or in a racket-sport setting — no casual selfies, party photos, or gym mirrors. ' +
+  "Showing your face is optional. The sport context isn't.";
+
+/**
+ * The words on the sheet a held tile opens, and the one sentence that says the sheet exists.
+ *
+ * **Three acts, and the order is what they do to the row**: swap this picture, add another
+ * beside it, re-frame this one. Remove is deliberately not among them — it is the square on
+ * the tile and has been since the row was drawn, and moving it into a menu would put the one
+ * destructive act behind a gesture nobody can see.
+ *
+ * ## Two of the three open the same picker, and the copy is what keeps them apart
+ *
+ * *Replace* and *Edit* are the same request to the platform, because there is only one crop
+ * frame and it is attached to choosing a picture: nothing in this app can re-crop a file it
+ * already holds (`ImagePickingPort`). So the two are told apart by what a player means by
+ * them, and each hint says the whole truth about what will happen — *choose a different
+ * photo* against *choose this one again and re-frame it*. **The second sentence is the one
+ * that must not be softened.** A player who taps *Edit* expecting their photograph to appear
+ * in a crop frame will instead be looking at their library, and the hint is the only place
+ * they can be told that before it happens.
+ */
+export const PHOTO_SHEET_TITLE = 'This photo';
+
+export const PHOTO_SHEET_CLOSE = 'Close photo options';
+
+/** One act on the sheet: what it is called, and what it will actually do. */
+export interface PhotoAction {
+  readonly label: string;
+  readonly hint: string;
+}
+
+export const REPLACE_ACTION: PhotoAction = {
+  label: 'Replace this photo',
+  hint: 'Choose a different photo for this spot, and crop it',
+};
+
+export const ADD_ANOTHER_ACTION: PhotoAction = {
+  label: 'Add new photo',
+  hint: 'Keeps this one and adds another beside it',
+};
+
+export const EDIT_ACTION: PhotoAction = {
+  label: 'Edit',
+  // The whole truth, and the sentence the sheet exists to be honest about: the crop frame
+  // only ever comes attached to choosing a picture, so re-framing means picking again.
+  hint: 'Opens your photos so you can choose this one again and re-crop it',
+};
+
+/** Names the hold on one tile, and says which photo it is about — `removeControlLabel`'s rule. */
+export function optionsControlLabel(at: number, held: number): string {
+  return `Options for photo ${at + 1} of ${held}`;
+}
+
+/**
+ * That the tile has a third act at all, said once under the row.
+ *
+ * It is one line beside the promote line rather than a mark on every tile, for exactly the
+ * reason `PROMOTE_LINE` is: a per-tile affordance would be this sentence printed three times
+ * over the photographs it describes, and a glyph small enough to fit would be the third 44pt
+ * square the tile has no room for (6.9).
+ */
+export const PHOTO_OPTIONS_LINE = 'Press and hold a photo to replace, add or edit.';
 
 /**
  * The promote affordance, as a sentence under the row.
@@ -69,6 +138,39 @@ export const CEILING_BODY =
 export const PROFILE_WORD = 'Profile';
 export const FAILED_WORD = 'Failed';
 
+/**
+ * What one photo the check did not read as on-court is told, and it is a warning.
+ *
+ * **The reader of this sentence may be somebody the check is wrong about**, and that is the
+ * whole of the design problem — the flag rate is a fact about a corpus nobody has measured
+ * yet, so some share of the people who see it are on a court in the photograph they just
+ * picked. Four things follow, and every clause here is one of them.
+ *
+ * It is written as **our** failure to see rather than the player's failure to comply. *We
+ * could not see a court* is the honest report of what happened; *this is not an on-court
+ * photo* is a verdict about a picture the machine may simply have got wrong.
+ *
+ * It says **nobody has looked**, because nobody has. Nothing reviews a flagged photo a
+ * second time — there is no queue and no human at the end of one — and a warning that let a
+ * player believe otherwise would be inventing a process to reassure them with.
+ *
+ * It says **nothing is blocked**, because nothing is: the photo is stored, it keeps its id,
+ * it is committed with the profile, and `Continue` was never disabled by this. A false
+ * positive has to cost a sentence, not a signup.
+ *
+ * And it ends by naming the **choice**, in that order: keep it if the check is wrong, swap
+ * it if it is not. A player who is on a court is told first, because they are the one the
+ * sentence risks insulting.
+ */
+export function flaggedNoticeTitle(at: number, held: number): string {
+  return `${photoPosition(at, held)} — we could not see a court`;
+}
+
+export const FLAGGED_BODY =
+  'The check is automatic, nobody has looked at your photo, and it gets it wrong ' +
+  'sometimes. Nothing is blocked — keep it if you are on a court in it, and swap it if ' +
+  'you are not.';
+
 /** How many slots remain, said out loud — the row's arithmetic is invisible otherwise. */
 export function addControlLabel(slots: number): string {
   return slots === 1
@@ -82,8 +184,12 @@ export function addControlLabel(slots: number): string {
  * *Of how many* is the number of photos the player actually has, not the ceiling: "Photo 1
  * of 3" on a row holding one would be counting the empty space beside it.
  */
+function photoPosition(at: number, held: number): string {
+  return `Photo ${at + 1} of ${held}`;
+}
+
 export function photoTileLabel(photo: ProfilePhoto, at: number, held: number): string {
-  const position = `Photo ${at + 1} of ${held}`;
+  const position = photoPosition(at, held);
 
   if (photo.upload.kind === 'uploading') return `${position}, uploading`;
   if (photo.upload.kind === 'failed') return `${position}, upload failed`;
@@ -136,7 +242,5 @@ const FAILURE_BY_CODE: Readonly<Record<string, string>> = {
 };
 
 export function photoFailureMessage(error: AppError): string {
-  return (
-    (error.code === undefined ? undefined : FAILURE_BY_CODE[error.code]) ?? recoveryMessage(error)
-  );
+  return codeMessage(FAILURE_BY_CODE, error);
 }

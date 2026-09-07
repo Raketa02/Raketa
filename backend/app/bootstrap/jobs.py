@@ -28,47 +28,782 @@ port that would fix it is not built yet.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
+    build_candidate_index_tail,
+    build_challenge_repository,
     build_clock,
+    build_container_memory_limit,
     build_domain_event_store,
     build_event_publisher,
+    build_exposure_ledger,
+    build_image_transcoder,
+    build_interest_ledger,
+    build_lapsing_challenge_query,
+    build_photo_review,
     build_photo_storage,
+    build_play_intent_declaration_repository,
     build_player_profile_repository,
+    build_prompt_ledger,
+    build_roll_exposure,
+    build_scale_pressure_probe,
+    build_search_store,
+    build_settle_ratings_on_results,
+    build_unit_of_work,
 )
 from app.core.config import Settings
 from app.infrastructure.jobs import PeriodicJob
+from app.kernel import Clock
+from app.modules.matchmaking.domain.index_staleness import (
+    freshness_of,
+    misses_refresh_target,
+)
+from app.modules.matchmaking.domain.scale_triggers import footprint_of
+from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
+    DatabaseCandidateSource,
+)
+from app.modules.matchmaking.infrastructure.scale_instruments import ScoringMeter
+from app.modules.challenges.application.lapse_expired_seats import (
+    LapseExpiredSeats,
+)
+from app.modules.matchmaking.application.detect_intent_drift import (
+    DetectIntentDrift,
+)
+from app.modules.matchmaking.application.lapse_expired_interest import (
+    LapseExpiredInterest,
+)
+from app.modules.matchmaking.application.offer_to_refresh_stale_grids import (
+    OfferToRefreshStaleGrids,
+)
+from app.modules.player_profile.application.review_unreviewed_photos import (
+    ReviewUnreviewedPhotos,
+)
 from app.modules.player_profile.application.sweep_uncommitted_photos import (
     SweepUncommittedPhotos,
 )
 
 logger = logging.getLogger(__name__)
 
+#: *Nobody passed one*, which is not the same as ``None`` — and ``None`` is a
+#: real answer here, meaning **this host has no limit to be half of**. A sentinel
+#: rather than a boolean beside the value, because two fields that must agree are
+#: two fields that eventually do not.
+_UNREAD: Any = object()
+
 #: The sweep's name in the logs and on its asyncio task.
 PHOTO_SWEEP_JOB = "uncommitted-photo-sweep"
+
+#: The re-review backfill's name. It walks the **same bucket** the sweep does
+#: and the two have no lock between them, which is a race each of them handles
+#: rather than one they coordinate over (``docs/adr/0132``).
+PHOTO_REVIEW_BACKFILL_JOB = "photo-review-backfill"
+
+#: The candidate index's two loops. They are **not** one job with two phases:
+#: the tail reader writes the shared tables and is safe beside itself because a
+#: single cursor row serialises it, while the refresh is **per worker by
+#: design** — the one place ``docs/adr/0092``'s *N processes, N runs* is the
+#: behaviour wanted rather than the cost paid.
+CANDIDATE_INDEX_TAIL_JOB = "candidate-index-tail"
+CANDIDATE_INDEX_REFRESH_JOB = "candidate-index-refresh"
+
+#: The exposure roll's name in the logs and on its asyncio task.
+EXPOSURE_ROLL_JOB = "exposure-roll"
+
+#: The two prompt loops. Neither changes a value — **each raises a question and
+#: stops** — and they are two jobs rather than one because they read two
+#: different things: the search rows, and the index's picture of who ticked what
+#: and when. A job that read both would fail as a unit for either's reason.
+INTENT_DRIFT_JOB = "intent-drift"
+GRID_STALENESS_JOB = "availability-staleness"
+
+#: Trigger 1's second instrument (``scale-posture.md`` §4). It is the **event
+#: loop lag monitor** — a job whose work is measuring how late the loop woke it
+#: — and the job that closes the fifteen-minute window the scoring histogram is
+#: read over. It writes one log record per window and nothing else.
+SCALE_PRESSURE_JOB = "scale-pressure"
+
+#: The interest ledger's expiry loop. **A yes lapses; it never quietly decays**
+#: (``docs/adr/0127``). It is the only job here that deletes anything, and the
+#: only one whose log line carries a falsifier rather than a throughput figure.
+INTEREST_EXPIRY_JOB = "interest-expiry"
+
+#: The challenges lapse loop. The **first** job here that writes a domain event,
+#: and the only one whose whole product is a record: a seat past its answer
+#: window already reads as lapsed, so what this appends is the fact somebody can
+#: count rather than a change anybody can see.
+CHALLENGE_LAPSE_JOB = "challenge-lapse"
+
+#: The rating catch-up. The **second** job that writes a domain event, and the
+#: only one on this list whose output a player would miss: a confirmation is a
+#: clock passing and announces nothing (``docs/adr/0137``), so without this a
+#: result never reaches a Level. It holds no cursor — the rating streams are the
+#: cursor (``docs/adr/0139``) — so *N processes, N runs* costs a repeated read
+#: and a counted collision, and a run that dies half way is re-derived in full by
+#: the next tick.
+RATING_CATCH_UP_JOB = "rating-catch-up"
 
 
 def build_scheduled_jobs(
     *,
-    session_factory: async_sessionmaker[AsyncSession],
+    session_factory: async_sessionmaker[AsyncSession] | None,
     settings: Settings,
+    candidate_source: DatabaseCandidateSource | None = None,
+    redis_client: Redis | None = None,
+    meter: ScoringMeter | None = None,
 ) -> list[PeriodicJob]:
     """Every job this process should run, in the order they were registered.
 
-    A list rather than a single object, so adding the second one is appending a
+    A list rather than a single object, so adding the next one is appending a
     line here and changing nothing in the lifespan that starts them.
+
+    ``candidate_source`` is passed in rather than built here because it is the
+    **one** piece of state a job owns that something else will read: a search
+    binds a container from it, so the process must hold exactly one and the
+    lifespan is where that one is kept. Absent, the refresh loop is simply not
+    registered — a process with no index to serve from has nothing to refresh.
+
+    ``redis_client`` arrives the same way and for the same reason: the process
+    holds one connection pool and the lifespan owns it. Unlike
+    ``candidate_source`` its absence is **not** a legitimate state — the pool is
+    opened unconditionally — so omitting it while the roll is enabled raises.
+
+    ``meter`` arrives like ``candidate_source`` and for the same reason: the
+    scoring histogram is **per worker**, so the process holds exactly one and
+    the lifespan is where that one is kept. Absent, the pressure probe is simply
+    not registered — a process nothing scores in has no window to close.
+
+    ``session_factory`` is optional because **the exposure roll is the first job
+    here that wants none** — its whole input and output are in the ephemeral
+    store. It is still required by every job that reads the database, and
+    omitting it while one of those is enabled raises rather than quietly
+    registering nothing.
     """
 
     jobs: list[PeriodicJob] = []
-    if settings.PHOTO_SWEEP_ENABLED:
+    if (
+        settings.PHOTO_SWEEP_ENABLED
+        or settings.CANDIDATE_INDEX_ENABLED
+        or settings.INTEREST_EXPIRY_ENABLED
+        or settings.CHALLENGE_LAPSE_ENABLED
+        or settings.RATING_CATCH_UP_ENABLED
+    ):
+        if session_factory is None:
+            # Loudly, rather than by registering nothing. *The sweep is off* and
+            # *the sweep was enabled and silently dropped* are two states with
+            # one symptom — orphans accumulating — and only one of them is
+            # somebody's decision. The lifespan builds a factory for exactly
+            # these flags, so reaching here is a wiring error and not a
+            # configuration one.
+            raise ValueError(
+                "a job that reads the database is enabled, but no session "
+                "factory was passed to build_scheduled_jobs"
+            )
+        if settings.PHOTO_SWEEP_ENABLED:
+            jobs.append(
+                build_uncommitted_photo_sweep(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.CANDIDATE_INDEX_ENABLED:
+            jobs.append(
+                build_candidate_index_tail_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+            if candidate_source is not None:
+                jobs.append(
+                    build_candidate_index_refresh_job(
+                        source=candidate_source, settings=settings
+                    )
+                )
+        if settings.INTEREST_EXPIRY_ENABLED:
+            jobs.append(
+                build_interest_expiry_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.CHALLENGE_LAPSE_ENABLED:
+            jobs.append(
+                build_challenge_lapse_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.RATING_CATCH_UP_ENABLED:
+            jobs.append(
+                build_rating_catch_up_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+    if settings.PHOTO_REVIEW_BACKFILL_ENABLED:
+        # Outside the block above, because this is the second job here that
+        # reads no database at all: its whole input is the object store and its
+        # whole output is metadata on the objects it read. Nothing to guard, so
+        # nothing to raise about.
+        jobs.append(build_photo_review_backfill(settings=settings))
+    if settings.SCALE_PRESSURE_ENABLED and meter is not None:
+        # Skipped quietly with no meter, exactly as the index refresh is with no
+        # source: a process that scores nothing has no pressure to report, and
+        # there is nothing here to fall back to. The meter is built
+        # unconditionally by the lifespan, so this is a fact about a test's
+        # wiring rather than about a deployment.
+        jobs.append(build_scale_pressure_job(meter=meter, settings=settings))
+    if settings.EXPOSURE_ROLL_ENABLED:
+        if redis_client is None:
+            # As loud as the session factory above, and for the same reason: the
+            # lifespan opens the pool unconditionally, so reaching here is a
+            # wiring error rather than a configuration one — and a roll that
+            # silently did not register looks exactly like a roll that is off.
+            raise ValueError(
+                "the exposure roll is enabled, but no redis client was passed "
+                "to build_scheduled_jobs"
+            )
+        jobs.append(build_exposure_roll_job(client=redis_client, settings=settings))
+    # The two prompt loops. Each is guarded by what **it** needs and nothing
+    # else, so that turning one on cannot refuse the process over a dependency
+    # only the other one wants — and a loop the process cannot host is refused
+    # loudly where its absence would be somebody's decision, and skipped quietly
+    # where it is a fact about the process.
+    if settings.INTENT_DRIFT_ENABLED:
+        if redis_client is None or session_factory is None:
+            raise ValueError(
+                "the intent drift loop is enabled, but no redis client or "
+                "session factory was passed to build_scheduled_jobs"
+            )
         jobs.append(
-            build_uncommitted_photo_sweep(
-                session_factory=session_factory, settings=settings
+            build_intent_drift_job(
+                session_factory=session_factory,
+                client=redis_client,
+                settings=settings,
+            )
+        )
+    if settings.GRID_STALENESS_ENABLED and candidate_source is not None:
+        # Absent a source this is simply not registered, exactly as the index
+        # refresh is: a process with no picture of the city has no grids to find
+        # stale, and there is nothing here to fall back to. The store is a
+        # different matter — the lifespan opens the pool unconditionally, so
+        # reaching here without one is a wiring error.
+        if redis_client is None:
+            raise ValueError(
+                "the availability-staleness loop is enabled, but no redis "
+                "client was passed to build_scheduled_jobs"
+            )
+        jobs.append(
+            build_grid_staleness_job(
+                source=candidate_source,
+                client=redis_client,
+                settings=settings,
             )
         )
     return jobs
+
+
+def build_scale_pressure_job(
+    *,
+    meter: ScoringMeter,
+    settings: Settings,
+) -> PeriodicJob:
+    """Trigger 1, instrumented: the loop's own oversleep and the scoring window.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``) in the
+    only sense that matters for an instrument: it reads and reports this
+    process's own counters and writes nothing anywhere. *N processes, N runs* is
+    what the trigger wants — it is stated **per worker** in
+    ``scale-posture.md`` §4, because the answer to it is a per-worker change and
+    two workers each at 0.2 are not one worker at 0.4.
+
+    **The tick is the measurement.** A periodic job asks the loop to wake it in a
+    second and is woken in a second plus ε, and ε is time the loop could not get
+    back to it — the contention the trigger is about. So the work here *is* the
+    scheduling, and the job does nothing else on the ticks inside a window.
+
+    **One record per fifteen minutes, and it says which half fired.** At
+    ``WARNING`` when the trigger has fired, because a boolean field on an INFO
+    line is a thing nobody is paged by — which is the same as not raising one.
+
+    And the honest part, written where the record is emitted rather than only in
+    the spec: **there is nowhere to read this.** It is a structured log record
+    and this repository has no metrics stack, no dashboard and no alerting
+    behind it (``scale-posture.md`` §7's last row). That is the state the
+    instrument ships in, and it is still strictly better than a trigger somebody
+    has to remember to go and measure.
+    """
+
+    probe = build_scale_pressure_probe(meter=meter, settings=settings)
+
+    async def run() -> None:
+        reading = probe.tick()
+        if reading is None:
+            return
+        logger.log(
+            logging.WARNING if reading.fires else logging.INFO,
+            "scoring pressure window",
+            extra={
+                "job": SCALE_PRESSURE_JOB,
+                "window_seconds": round(reading.window_seconds, 3),
+                "scoring_calls": reading.samples,
+                "scoring_calls_sampled": reading.retained,
+                "scoring_p99_ms": round(reading.scoring_p99_ms, 3),
+                "duty_cycle": round(reading.duty_cycle, 4),
+                "loop_lag_p99_ms": round(reading.loop_lag_p99_ms, 3),
+                # Both halves, whichever fired. *The p99 crossed* is answered by
+                # the posture's rungs 1 and 2 and *the duty cycle crossed* by
+                # rung 4, so a record that only said `trigger_1` would send the
+                # reader to re-measure what the instrument already knew.
+                "trigger_1_p99_crossed": reading.p99_crossed,
+                "trigger_1_duty_cycle_crossed": reading.duty_cycle_crossed,
+                "trigger_1_fires": reading.fires,
+            },
+        )
+
+    return PeriodicJob(
+        name=SCALE_PRESSURE_JOB,
+        interval_seconds=settings.SCALE_PRESSURE_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_interest_expiry_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Remove every *Let's play* whose twenty-one days have passed.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``):
+    deleting a row twice deletes it once, and two processes racing over the same
+    batch leave exactly what one leaves. It is a keyed delete over an indexed
+    date, so *N processes, N runs* costs a wasted query and nothing else.
+
+    **Correctness does not depend on it running.** Every read of the ledger is
+    bounded by ``now``, so a lapsed yes lifts nobody and counts against nobody's
+    cap whether or not it has been swept. What the loop buys is a table the size
+    of what is live, and the falsifier below.
+
+    The log line is the point of the report: *yeses that expired having never
+    lifted anybody* is ``INTEREST_TTL``'s one falsifier that runs without
+    ``matches`` (``the-five-numbers.md`` §8), and a lapsed row leaves no trace, so
+    it is counted here or never.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            lapsed = await LapseExpiredInterest(
+                clock=clock,
+                interest=build_interest_ledger(session),
+                unit_of_work=build_unit_of_work(session),
+            ).execute()
+        logger.info(
+            "interest expiry loop finished",
+            extra={
+                "job": INTEREST_EXPIRY_JOB,
+                "removed": lapsed.removed,
+                "never_lifted": lapsed.never_lifted,
+            },
+        )
+
+    return PeriodicJob(
+        name=INTEREST_EXPIRY_JOB,
+        interval_seconds=settings.INTEREST_EXPIRY_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_challenge_lapse_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Write down every answer window that passed with nothing in it.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): the
+    aggregate skips a seat that already carries an answer, so a second pass
+    appends nothing. A genuine race is caught by the stream version, and the
+    loser **steps over that one challenge and keeps going** — every process walks
+    the same clock-derived list in the same order, so a run that ended on its
+    first conflict would be a loop that made no progress in any process. *N
+    processes, N runs* costs a repeated read and a counted collision.
+
+    **Correctness does not depend on it running.** A seat past its window reads
+    as lapsed, its pair releases and its challenge stands as ``LAPSED`` whether
+    or not anything has been past: the standing is folded from the seats and the
+    clock and is stored nowhere. What the loop buys is the record — *answers
+    challenges* is a Strand over challenges answered inside their window, and
+    silence leaves nothing behind to count unless something writes it down.
+
+    **A lapse is not a decline**, and the loop is where that distinction becomes
+    observable: what it appends is ``SeatLapsed``, never ``SeatDeclined``, because
+    somebody who said nothing made no judgement.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            swept = await LapseExpiredSeats(
+                clock=clock,
+                challenges=build_challenge_repository(
+                    event_store=build_domain_event_store(session),
+                    events=build_event_publisher(session),
+                ),
+                lapsing=build_lapsing_challenge_query(session),
+                unit_of_work=build_unit_of_work(session),
+            ).execute()
+        logger.info(
+            "challenge lapse loop finished",
+            extra={
+                "job": CHALLENGE_LAPSE_JOB,
+                "seats": swept.seats,
+                "challenges": swept.challenges,
+                # Not noise: *the loop is doing nothing* and *the loop is losing
+                # every race* have one symptom — a denominator that stops
+                # growing — and only one of them is somebody's problem.
+                "conflicts": swept.conflicts,
+            },
+        )
+
+    return PeriodicJob(
+        name=CHALLENGE_LAPSE_JOB,
+        interval_seconds=settings.CHALLENGE_LAPSE_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_rating_catch_up_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Move every Level a confirmed result has tested and nothing has applied.
+
+    **The one loop here that correctness depends on.** Every other job buys a
+    record, or a table the size of what is live; this one is the only path a
+    result has to a rating, because ``docs/adr/0137`` refused a
+    ``ResultConfirmed`` event and recorded that cost by name. A player whose game
+    confirmed on Tuesday keeps Monday's Level until this runs.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): every
+    move records the game that caused it, so a rating that has already folded a
+    result skips it inside the aggregate and a second pass appends nothing. A
+    genuine race is caught by the stream version, and the loser **steps over that
+    one game and keeps going** — every process walks the same clock-derived list
+    in the same order, so a run that ended on its first conflict would be a loop
+    that made no progress in any process.
+
+    **It holds no cursor**, which is what makes a half-finished run a non-event:
+    the next tick re-derives the whole walk from the clock and finds exactly the
+    results nobody has folded.
+    """
+
+    async def run() -> None:
+        async with session_factory() as session:
+            settled = await build_settle_ratings_on_results(session).execute()
+        logger.info(
+            "rating catch-up finished",
+            extra={
+                "job": RATING_CATCH_UP_JOB,
+                "games": settled.games,
+                "ratings": settled.ratings,
+                # *Nobody played* and *everybody who played was unrated in that
+                # sport* both show up as nothing moving, and only one of them is
+                # a defect.
+                "unrated_seats": settled.unrated,
+                "conflicts": settled.conflicts,
+            },
+        )
+
+    return PeriodicJob(
+        name=RATING_CATCH_UP_JOB,
+        interval_seconds=settings.RATING_CATCH_UP_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_intent_drift_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    client: Redis,
+    settings: Settings,
+) -> PeriodicJob:
+    """Notice when searches keep disagreeing with a declaration, and **ask**.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): it is
+    a reader whose only write is a prompt keyed by ``(player, sport)``, so four
+    processes raising it four times a day leave exactly what one raise leaves.
+    It writes no value anywhere — that refusal is the point of the loop, not an
+    implementation detail of it.
+    """
+
+    prompts = build_prompt_ledger(client)
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            report = await DetectIntentDrift(
+                searches=build_search_store(session),
+                declarations=build_play_intent_declaration_repository(
+                    event_store=build_domain_event_store(session),
+                    events=build_event_publisher(session),
+                ),
+                prompts=prompts,
+                clock=clock,
+            ).execute()
+        logger.info(
+            "intent drift loop finished",
+            extra={
+                "job": INTENT_DRIFT_JOB,
+                "searches_read": report.searches_read,
+                "pairs_examined": report.pairs_examined,
+                "prompts_raised": report.prompts_raised,
+            },
+        )
+
+    return PeriodicJob(
+        name=INTENT_DRIFT_JOB,
+        interval_seconds=settings.INTENT_DRIFT_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_grid_staleness_job(
+    *,
+    source: DatabaseCandidateSource,
+    client: Redis,
+    settings: Settings,
+) -> PeriodicJob:
+    """Offer to refresh a week that has stopped describing a week.
+
+    **Idempotent and safe beside itself with no lock**: it reads this process's
+    own snapshot and writes one prompt per player, the same prompt every tick
+    while the grid stays old. It takes no session for the same reason the
+    exposure roll does not — the index is already in memory, and asking the
+    database for what the process is holding would be a second answer to one
+    question.
+    """
+
+    prompts = build_prompt_ledger(client)
+    clock = build_clock()
+
+    async def run() -> None:
+        report = await OfferToRefreshStaleGrids(
+            candidates=source, prompts=prompts, clock=clock
+        ).execute()
+        logger.info(
+            "availability staleness loop finished",
+            extra={
+                "job": GRID_STALENESS_JOB,
+                "grids_examined": report.grids_examined,
+                "prompts_raised": report.prompts_raised,
+            },
+        )
+
+    return PeriodicJob(
+        name=GRID_STALENESS_JOB,
+        interval_seconds=settings.GRID_STALENESS_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_exposure_roll_job(
+    *,
+    client: Redis,
+    settings: Settings,
+) -> PeriodicJob:
+    """Publish, per sport, what *shown more often than most* means this week.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``), and
+    for the simplest of the three reasons on this page: it is a **reader** that
+    writes one derived scalar. Two runs racing cannot lose an appearance because
+    neither of them touches one, and two runs over an unchanged bucket publish
+    the identical number. There is nothing to serialise, so nothing is.
+
+    It takes no session. The only thing it reads and the only thing it writes
+    are in the ephemeral store, which makes it the first job here that would run
+    in a process with no database at all — and the first whose failure mode is
+    already handled below it, since the ledger it is handed fails soft.
+    """
+
+    roll = build_roll_exposure(build_exposure_ledger(client))
+
+    async def run() -> None:
+        report = await roll.execute()
+        # Logged at info even when it published nothing, for the reason every
+        # loop here is: *the roll ran and the city was quiet* and *the roll did
+        # not run* are the two states this has to be tellable apart from
+        # outside. ``players_counted`` is what separates a quiet week from a
+        # ledger that answered nothing — the one thing a fail-soft port makes
+        # invisible everywhere else.
+        logger.info(
+            "exposure roll finished",
+            extra={
+                "job": EXPOSURE_ROLL_JOB,
+                "exposure_week": report.week.label,
+                "players_counted": report.players_counted,
+                "thresholds": {
+                    sport.value: threshold
+                    for sport, threshold in report.thresholds.items()
+                },
+            },
+        )
+
+    return PeriodicJob(
+        name=EXPOSURE_ROLL_JOB,
+        interval_seconds=settings.EXPOSURE_ROLL_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_candidate_index_tail_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Fold the log into the candidate index, once a second.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): the
+    single cursor row is taken ``FOR UPDATE`` for the tick, so a concurrent run
+    blocks, then reads the advanced cursor and finds nothing to do. The lock is
+    the transaction, so there is nothing to leak behind a dead process and
+    nothing to expire mid-run — which is the exact property that let ADR-0092
+    refuse leader election.
+    """
+
+    tail = build_candidate_index_tail(settings=settings)
+
+    async def run() -> None:
+        async with session_factory() as session:
+            report = await tail.tick(session)
+        # Logged at info even when it did nothing: *the reader ran and found
+        # nothing* and *the reader did not run* are the two states this has to
+        # be able to tell apart from outside, and a stalled projection is
+        # otherwise silent where a stalled outbox is eventually visible as a
+        # missing side effect.
+        logger.info(
+            "candidate index tail",
+            extra={
+                "job": CANDIDATE_INDEX_TAIL_JOB,
+                "events_applied": report.events_applied,
+                "rows_moved": report.rows_moved,
+                "snapshot_version": report.snapshot_version,
+                "waiting_on_hole": report.waiting_on_hole,
+            },
+        )
+
+    return PeriodicJob(
+        name=CANDIDATE_INDEX_TAIL_JOB,
+        interval_seconds=settings.CANDIDATE_INDEX_TAIL_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_candidate_index_refresh_job(
+    *,
+    source: DatabaseCandidateSource,
+    settings: Settings,
+    clock: Clock | None = None,
+    memory_limit_bytes: int | None = _UNREAD,
+) -> PeriodicJob:
+    """Rebuild this worker's containers from what moved, every two seconds.
+
+    **Two readings of one lag, and they do different things.** Missing §17's p99
+    raises the log level and **changes nothing about what a search does**; the
+    ladder's rung is recorded beside it, which is the *internal* half of
+    ``index_stale`` — on the structured logs and on the search record, never on
+    the wire envelope (``docs/adr/0111``). What the ladder does not do here is
+    decide anything: the refusal belongs where a search reads a container, and
+    that caller does not exist yet.
+
+    **And a third reading, which is trigger 4** (``scale-posture.md`` §4): the
+    memory arithmetic, recomputed at every load from the rows held, the workers
+    configured and the container's own limit. It raises the level and changes
+    nothing — *warning and never refusing* — and it rides on this record rather
+    than on one of its own, because it is a fact about the index this tick just
+    published and a second line would have to say which load it was about.
+
+    **There is nowhere to read any of it.** These are structured log records with
+    no metrics stack behind them, which is the third of the three signals this
+    build ships unread and is stated here rather than papered over.
+    """
+
+    reading = clock or build_clock()
+    # Read **once**, at registration, and through the composition root — a
+    # container's memory limit does not change while the container runs, and
+    # re-reading a cgroup file every two seconds would be a syscall per tick to
+    # learn the same number. A caller may pass one instead, which is how a test
+    # states the container it is talking about rather than the runner's.
+    limit_bytes = (
+        build_container_memory_limit()
+        if memory_limit_bytes is _UNREAD
+        else memory_limit_bytes
+    )
+
+    async def run() -> None:
+        report = await source.refresh()
+        # **Trigger 4, recomputed at every index load** (`scale-posture.md` §4),
+        # from the rows this worker actually holds, the workers this container
+        # actually runs and the limit it actually has. It **warns and never
+        # refuses**: an index that has outgrown half its container is a capacity
+        # decision — `scale-posture.md` §5's memory ladder, sharing the
+        # closed-vocabulary strings first and `array`-packed columns at 43 bytes
+        # a row second — and a process that refused to load its index over it
+        # would take the platform down to avoid using memory it had been given.
+        footprint = footprint_of(
+            rows=report.rows_held,
+            workers=settings.GUNICORN_WORKERS,
+            limit_bytes=limit_bytes,
+        )
+        # The real lag a search would read, not the interval this loop is
+        # configured at: what §17 alerts on is *how far behind the log the
+        # containers are*, and a loop that reported its own cadence back would
+        # be alerting on a constant.
+        lag = reading.now() - report.caught_up_at
+        missed = misses_refresh_target(lag)
+        logger.log(
+            # A miss is an **alert**, so it leaves the level every healthy tick
+            # writes at. A boolean field on an INFO line is a thing nobody is
+            # paged by, which is the same as not raising one.
+            logging.WARNING if missed or footprint.fires else logging.INFO,
+            "candidate index refreshed",
+            extra={
+                "job": CANDIDATE_INDEX_REFRESH_JOB,
+                "snapshot_version": report.snapshot_version,
+                "partitions": report.partitions,
+                "rows_held": report.rows_held,
+                "rows_decoded": report.rows_decoded,
+                "index_lag_seconds": lag.total_seconds(),
+                "misses_refresh_target": missed,
+                # §18's rung, recorded rather than acted on. `index_stale` is
+                # this field being anything but FRESH.
+                "index_freshness": freshness_of(lag).value,
+                # Trigger 4. `None` where there is no limit to be half of — a
+                # laptop, or a host with no cgroup — because **unknown is not
+                # unlimited**, and reporting a comfortable fraction of a
+                # made-up limit would be the invented measurement this map
+                # refuses everywhere else.
+                "index_bytes_held": footprint.bytes_held,
+                "container_memory_limit_bytes": footprint.limit_bytes,
+                "workers": footprint.workers,
+                "memory_budget_fraction": (
+                    None
+                    if footprint.fraction_of_budget is None
+                    else round(footprint.fraction_of_budget, 4)
+                ),
+                "trigger_4_rows_at": footprint.rows_at_trigger,
+                "trigger_4_players_at": footprint.players_at_trigger,
+                "trigger_4_fires": footprint.fires,
+            },
+        )
+
+    return PeriodicJob(
+        name=CANDIDATE_INDEX_REFRESH_JOB,
+        interval_seconds=settings.CANDIDATE_INDEX_REFRESH_INTERVAL_SECONDS,
+        run=run,
+    )
 
 
 def build_uncommitted_photo_sweep(
@@ -113,4 +848,73 @@ def build_uncommitted_photo_sweep(
         name=PHOTO_SWEEP_JOB,
         interval_seconds=settings.PHOTO_SWEEP_INTERVAL_SECONDS,
         run=sweep,
+    )
+
+
+def build_photo_review_backfill(*, settings: Settings) -> PeriodicJob:
+    """Ask the reviewer about the photos nobody ever asked it about (#197).
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): two
+    runs handed the same photo both ask and both write the same-shaped metadata,
+    and the loser overwrites a verdict with a verdict. The bytes are never
+    touched by either. What *N* processes cost here is duplicated inference
+    rather than a wrong answer, which is why the budget is small and the
+    interval is not — see `Settings` for both numbers, and the use case for why
+    neither of them can change which photos are chosen.
+
+    The reviewer is built from the composition root, so this job asks the same
+    sidecar the upload path asks and applies the same rule
+    (``domain/photos.py`` — `verdict_from_similarities`). **A batch with its own
+    copy of the threshold would be a second reviewer**, able to disagree with
+    the upload path about one image with nothing downstream to say which was
+    right.
+    """
+
+    storage = build_photo_storage(settings)
+    transcoder = build_image_transcoder()
+    review = build_photo_review(settings)
+
+    async def run() -> None:
+        report = await ReviewUnreviewedPhotos(
+            storage=storage,
+            transcoder=transcoder,
+            review=review,
+            batch_limit=settings.PHOTO_REVIEW_BACKFILL_BATCH_LIMIT,
+            pause_seconds=settings.PHOTO_REVIEW_BACKFILL_PAUSE_SECONDS,
+        ).execute()
+
+        # At ``WARNING`` when the reviewer would not answer — whether it gave
+        # up the run or refused individual photos — because that is the state
+        # where the loop is running, finding work and fixing nothing, which at
+        # ``INFO`` beside a `photos_updated` of zero is indistinguishable from a
+        # corpus that is already done.
+        logger.log(
+            logging.WARNING
+            if report.stopped_unreviewable or report.refused
+            else logging.INFO,
+            "photo review backfill finished",
+            extra={
+                "job": PHOTO_REVIEW_BACKFILL_JOB,
+                "photos_examined": report.examined,
+                "photos_updated": report.updated,
+                "photos_vanished": report.vanished,
+                "photos_unreadable": report.unreadable,
+                "photos_refused": report.refused,
+                # Population 3, which this job deliberately does not touch. It
+                # is here because a count is what makes *is it worth re-running
+                # the corpus against the new prompts* answerable at all.
+                "photos_against_a_superseded_prompt_set": report.superseded,
+                "stopped_on_budget": report.stopped_on_budget,
+                "reviewer_unavailable": (
+                    report.unavailable.value
+                    if report.unavailable is not None
+                    else None
+                ),
+            },
+        )
+
+    return PeriodicJob(
+        name=PHOTO_REVIEW_BACKFILL_JOB,
+        interval_seconds=settings.PHOTO_REVIEW_BACKFILL_INTERVAL_SECONDS,
+        run=run,
     )

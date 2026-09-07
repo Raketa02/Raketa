@@ -19,7 +19,7 @@
 
 import { useRef } from 'react';
 
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import { admissionTo } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 

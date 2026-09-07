@@ -81,3 +81,38 @@ class NotFoundError(AppError):
 class ConflictError(AppError):
     status_code = HTTPStatus.CONFLICT
     code = "conflict"
+
+
+# ---------------------------------------------------------------------------
+# One refusal, two contexts
+# ---------------------------------------------------------------------------
+#
+# Everything above is a status's default. What follows is the one *specific*
+# failure that does not belong to any single module, and it is here because the
+# alternative was two classes with one code.
+
+
+class AccountHeld(ForbiddenError):
+    """The account making this request is under a live hold. **Both ways.**
+
+    A held player can still sign in, so the gate is bidirectional and their own
+    side is refused **at the entry point** rather than by hiding them from other
+    people's lists (``docs/adr/0095``). ADR-0130's own consequences settled the
+    shape once — *refusing them a fresh search while handing back this morning's
+    would be the hold ending at the one route that remembers* — and a hold that
+    stops you searching but lets you send invitations is that hole with the blast
+    radius pointed at other people.
+
+    **Why it lives beside the taxonomy rather than in a module.** Two contexts
+    refuse on it: the matcher, at every search entry point, and ``challenges``,
+    when an organiser presses send. Neither may import the other — the arrow runs
+    ``matchmaking -> challenges`` and never back — and the provider is a third
+    context, ``cases``, which does not exist. The wire code has to be *one*
+    ``account_held``, because it is one fact with one remedy, and
+    ``tests/unit/test_error_envelope.py`` is right to refuse two classes claiming
+    it. So the class is shared and the *ports* are not: each context declares its
+    own hold query and its own empty provider, which is the duplication the
+    boundary was actually guarding.
+    """
+
+    code = "account_held"

@@ -18,6 +18,13 @@
  * Where the label and the value only mean something together — and on a key-value line
  * they always do — the caller gives an `accessibilityLabel` and the row becomes a single
  * element.
+ *
+ * **And where the value is itself a list of controls, the label is hidden rather than read.**
+ * That is [7.12](../../../docs/design-system.md#712-the-court)'s rule about the court's own
+ * side labels — *"the caption and side labels are hidden, because the summary already names
+ * the Sport and each seat names its own side"* — reaching the one other place a row's key is
+ * a caption over things that each name themselves. It is drawn exactly as before; what
+ * changes is that a listener hears it once, on the control, instead of twice.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -36,6 +43,11 @@ export interface RowProps {
   readonly variant?: RowVariant;
   /** Makes the row one accessibility element, read as a whole. */
   readonly accessibilityLabel?: string;
+  /**
+   * Draw the label and keep it out of the accessibility tree — for a value whose own
+   * elements each name what this label says. See the module note.
+   */
+  readonly labelHidden?: boolean;
 }
 
 export function Row({
@@ -44,6 +56,7 @@ export function Row({
   divided = false,
   variant = 'base',
   accessibilityLabel,
+  labelHidden = false,
 }: RowProps) {
   return (
     <View
@@ -51,7 +64,14 @@ export function Row({
       accessible={accessibilityLabel !== undefined ? true : undefined}
       accessibilityLabel={accessibilityLabel}
     >
-      <Text style={[s.label, LABEL[variant]]}>{label}</Text>
+      <Text
+        style={[s.label, LABEL[variant]]}
+        // Both, because `accessibilityElementsHidden` is iOS and the other is Android.
+        accessibilityElementsHidden={labelHidden}
+        importantForAccessibility={labelHidden ? 'no-hide-descendants' : undefined}
+      >
+        {label}
+      </Text>
       {typeof value === 'string' ? (
         <Text style={[s.value, VALUE[variant]]} numberOfLines={1}>
           {value}

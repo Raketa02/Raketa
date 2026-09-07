@@ -34,9 +34,13 @@ describe('the control that reads the device', () => {
 describe('what the step promises about the reading', () => {
   it('states the rounding, and that the exact position is not what is kept', () => {
     // The sentence that has to earn the OS prompt. It may be re-worded; it may not stop
-    // saying either of these, because both are properties of the code above it.
-    expect(WHY_BODY).toContain('about a kilometre');
-    expect(WHY_BODY).toContain('Not your exact position');
+    // saying either of these, because both are properties of the code above it — the
+    // coarsening `locationArea` applies, and the fact that nothing finer is ever held.
+    expect(WHY_BODY).toContain('round it to about 1 km');
+    expect(WHY_BODY).toContain('never store your exact location');
+    // Foreground only, permanently — the one promise the app config enforces on both
+    // platforms, and the one a player is most entitled to hear before a prompt.
+    expect(WHY_BODY).toContain('track you in the background');
   });
 });
 

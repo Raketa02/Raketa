@@ -38,10 +38,29 @@
  *
  * Motion is skipped when the OS asks for reduced motion (Part 13), which for a `Modal` is
  * the difference between `slide` and `none`.
+ *
+ * ## The body scrolls, and that is what makes 88% a cap rather than a guillotine
+ *
+ * 9.1 stops the sheet at `maxHeight: 88%` so it never becomes the screen. Without a scroll
+ * underneath it that number does not bound the sheet, it **truncates** it: the children keep
+ * their heights, the column overflows, and whatever is last in it goes off the bottom of the
+ * screen — which on a sheet is always the controls, because a sheet reads statement first and
+ * answer last. That is not a hypothetical: `SH.saveav` draws a seven-by-three grid above two
+ * buttons, and on the narrowest phone the buttons were simply not there.
+ *
+ * So the head is fixed and **the children are a `ScrollView` that shrinks**, which is what
+ * the cap has to mean: at any content height the grab, the title and the close control stay
+ * put, and everything below them is reachable. The bottom padding moves onto the scrolled
+ * content, or the last control would sit against the edge of the screen at full scroll.
+ *
+ * **Nothing is pinned.** A footer slot holding the controls outside the scroll was the other
+ * way, and it is a bigger claim than this component can make on every caller's behalf: three
+ * of the four sheets in the app end in something that is not a control, and a slot that
+ * pinned the last child would move a sentence away from the paragraph it belongs to.
  */
 
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CloseControl } from './CloseControl';
 import { moveAccessibilityFocus, useReducedMotion, type FocusTarget } from './overlay';
@@ -108,7 +127,12 @@ export function BottomSheet({
             <CloseControl onPress={onClose} accessibilityLabel={closeLabel} />
           </View>
 
-          {children}
+          {/* `flexShrink` is what lets the cap apply to this rather than to the sheet's
+              last child: without it the ScrollView takes its content's full height and the
+              overflow happens one level up, where nothing can scroll it. */}
+          <ScrollView style={s.body} contentContainerStyle={s.bodyContent}>
+            {children}
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -127,10 +151,15 @@ const s = StyleSheet.create({
     maxHeight: '88%',
     paddingHorizontal: theme.size.gutter,
     paddingTop: theme.space.sm,
-    paddingBottom: theme.space.xxl,
     gap: theme.space.sm,
     ...theme.shadow.sheet,
   },
+  // The cap lands here. `flexShrink` without a `flexGrow`, so a short sheet is still the
+  // height of its content and only a tall one is bounded.
+  body: { flexShrink: 1 },
+  // The sheet's own bottom padding, moved onto the scrolled content: on the sheet it would
+  // sit below the scroll and leave the last control against the screen edge at full scroll.
+  bodyContent: { gap: theme.space.sm, paddingBottom: theme.space.xxl },
   grab: {
     width: theme.size.grabber.width,
     height: theme.size.grabber.height,

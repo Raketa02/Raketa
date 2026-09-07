@@ -30,3 +30,21 @@ const BY_RECOVERY: Readonly<Record<AppError['recovery'], string>> = {
 export function recoveryMessage(error: AppError): string {
   return BY_RECOVERY[error.recovery];
 }
+
+/**
+ * A feature's `code` table, read over that fallback — **the two halves in one call**.
+ *
+ * The table stays local to its feature: those sentences are about that feature's conflicts and
+ * belong beside them. What is shared is the *lookup*, which was written identically three
+ * times — `authErrorMessage`, the photo step's upload failures, and Play's refusals — and this
+ * file's own rule is that the third copy is the signal to promote. Three copies of two lines is
+ * three places for one to stop falling back.
+ *
+ * `noUncheckedIndexedAccess` is what makes the fallback reachable rather than remembered:
+ * `table[code]` is already `string | undefined`, so a code this build has never seen cannot be
+ * read as a sentence.
+ */
+export function codeMessage(table: Readonly<Record<string, string>>, error: AppError): string {
+  const known = error.code === undefined ? undefined : table[error.code];
+  return known ?? recoveryMessage(error);
+}

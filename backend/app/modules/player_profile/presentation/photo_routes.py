@@ -98,7 +98,15 @@ async def _read_body_within_the_cap(request: Request) -> bytes:
         "The returned id is what a profile commit carries; a photo becomes "
         "part of a profile only when a commit names it. Uploaded photos that "
         "are never committed are intended to be swept, and that sweep is not "
-        "running yet."
+        "running yet.\n\n"
+        "**Every upload is checked against the on-court rule, and `review` "
+        "says what the check concluded.** It never refuses: a `flagged` photo "
+        "is stored, answers `201` and is committed like any other, and the "
+        "warning is the client's to word. A photo the check could not be run "
+        "on answers **nothing at all** — the field is `null`, because the "
+        "reviewer's own outage is neither a reason to tell a player something "
+        "about their photograph nor a reason to say it passed. Warn on "
+        "`flagged` and on nothing else."
     ),
 )
 async def upload_photo(
@@ -117,7 +125,14 @@ async def upload_photo(
             declared_media_type=declared_media_type,
         )
     )
-    return PhotoResponse.from_domain(uploaded.ref.photo_id, uploaded.presigned)
+    # The verdict crosses here and nowhere else — `PhotoResponse` argues why.
+    # `uploaded.review.note` is deliberately not passed: it is the evidence the
+    # threshold will be re-derived from, and it is not about the player.
+    return PhotoResponse.from_domain(
+        uploaded.ref.photo_id,
+        uploaded.presigned,
+        review=uploaded.review.decision,
+    )
 
 
 @router.get(
@@ -130,7 +145,11 @@ async def upload_photo(
         "serves the image directly, so a photo never crosses this API twice.\n\n"
         "A photo id that does not exist and one belonging to another player "
         "both answer `photo_not_found`, deliberately — the alternative is an "
-        "endpoint that confirms whether a stranger's id is real."
+        "endpoint that confirms whether a stranger's id is real.\n\n"
+        "**`review` is always `null` here**, and that is not `allowed`: this "
+        "route does not read what the store holds beside the bytes. The "
+        "on-court check's verdict crosses on the upload, where a player has "
+        "just chosen the photograph it is about."
     ),
 )
 async def get_photo(

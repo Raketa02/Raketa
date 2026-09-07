@@ -1,5 +1,9 @@
 """Ticket #161 item 3 — what §7.2's "~160 bytes per row" costs in Python.
 
+**Every shape here is §7.2's field list, and none of them is the shipping
+``CandidateRow``** — see ``population.py``'s docstring and
+``candidate_row_bench.py``, which measures that one by importing it (#276).
+
 Measures the same field list in six representations, with tracemalloc (which
 counts every object the allocator handed out, not just the container), and
 cross-checks against process RSS. Then the multiplier that actually matters:
@@ -176,7 +180,8 @@ def main():
                              "(the naive spelling)", N)
     measure(build_dictrow, "plain class with __dict__, 32 int fields", N)
     measure(build_slots, "__slots__ class, 32 fields (20 int, 4 float, 8 None)", N)
-    rows, _ = measure(build_population, "__slots__ CandidateRow as benchmarked", N)
+    rows, _ = measure(build_population, "__slots__ §7.2 row as specified "
+                                        "(not the shipping CandidateRow)", N)
     measure(build_columns, "array/struct-packed columns", N)
     try:
         npc = build_np(N)

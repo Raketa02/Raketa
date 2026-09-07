@@ -23,16 +23,13 @@ import {
 } from '@/test-support/onboardingRouter';
 import { installTransport, type Transport, type Wire } from '@/test-support/transport';
 
-import { DAY_PARTS, WEEKDAYS, WEEK_CELLS, everyCell } from '../domain/availabilityWeek';
+import { cellLabel, dayLabel, dayPartHead } from '@/shared/vocabulary/availabilityPresentation';
+import { DAY_PARTS, WEEKDAYS } from '@/shared/vocabulary/week';
+
+import { WEEK_CELLS, everyCell } from '../domain/availabilityWeek';
 import { useProfileDraft } from '../store/profileDraft.store';
 
-import {
-  availabilityContinueLabel,
-  availabilityEyebrow,
-  cellLabel,
-  dayLabel,
-  dayPartHead,
-} from './availabilityPresentation';
+import { availabilityContinueLabel, availabilityEyebrow } from './availabilityPresentation';
 
 /** One rating: the first part is behind this player, and the second one is not. */
 const RATING: Wire['RatingResponse'] = {

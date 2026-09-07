@@ -35,10 +35,25 @@ some not.
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
+from functools import lru_cache
+from typing import Sequence
+from uuid import UUID
 
 from app.engines.assessment import Question
 from app.kernel import Sport
+from app.modules.player_profile.domain.availability import AvailabilityGrid
+from app.modules.player_profile.domain.gender import Gender, GenderPreference
+from app.modules.player_profile.domain.play_intent import (
+    PlayIntent,
+    PlayIntentSurface,
+)
+from app.modules.player_profile.domain.search_radius import SearchRadius
+from app.modules.player_profile.domain.social_tags import (
+    SocialTag,
+    SocialTagSelection,
+)
 from app.modules.users.domain.value_objects import Email, Nickname, RawPassword
 
 #: A TLD RFC 2606 reserves: no registry will ever sell a name under it, so a
@@ -99,6 +114,36 @@ class AnswerPolicy:
     id, because an id belongs to an engine version and the seed is wired to
     whichever version the API serves.
 
+    **``spread`` widens an index into an index drawn per question**, and it is
+    what makes a *population* out of a policy. The questionnaire is the only door
+    to a level (there is no *record a rating* use case), so sixty members sharing
+    six policies would be sixty players at six values of μ: ``combine_sigma``
+    constant, predicted balance a function of a handful of Δμ, and a pool of
+    near-identical cards ranked arbitrarily. That is a screen defect rather than
+    a statistics defect, and no amount of realism elsewhere fixes it.
+
+    **The draw is keyed ``(handle, sport, question_id)``, never by consumption
+    order.** The engine chooses adaptively; a policy that consumed a stream in
+    ask-order would have an inserted question reshuffle every later answer for
+    every member, and the band histogram would move for a reason having nothing
+    to do with skill. Keyed this way, a member's answers are a function of who
+    they are and what they were asked — so adding a member changes that member's
+    row and nobody else's, and a question added to the bank changes only the
+    answer to *that* question.
+
+    **The width is per axis, and that is where the one departure lives.** Every
+    question is drawn — there is no question the key is not consulted for — but
+    each of the two axes declares its own width, and an archetype standing for a
+    band declares **zero on the claims**. The reason is the opening question: it
+    is a claim, and its weakest option puts the engine on its one-question
+    beginner path, so a jittered claim would not spread a member around their
+    band — it would move them into a different archetype's. Declared per axis
+    rather than carved out of the mechanism, so the exception is a number in a
+    fixture rather than a branch in this method.
+
+    Both widths default to zero, which is the six named policies below
+    unchanged: a draw of zero width is the index itself.
+
     A policy is *not* a promise about the rating it produces. That is
     ``RatingClaim``, which is checked; this is only how the answers are chosen.
     """
@@ -106,10 +151,53 @@ class AnswerPolicy:
     claims: int
     demonstrations: int
 
-    def option_id_for(self, question: Question) -> str:
-        strength = self.demonstrations if question.tier is not None else self.claims
+    #: Half-widths of the draw around each centre, in option steps. **Zero is a
+    #: named policy**; anything larger is an archetype standing for a band.
+    claim_spread: int = 0
+    demonstration_spread: int = 0
+
+    def option_id_for(self, question: Question, *, drawn_for: str) -> str:
+        """The option this policy picks, for this question, for this member.
+
+        ``drawn_for`` is *who is answering, in which sport* — the two halves of
+        the key the question id completes, and :func:`answer_key` is what spells
+        it. **Required and never defaulted**, even though a zero-spread policy
+        never consults it: a default would let a spread policy be asked without
+        a key and answer identically for everybody, which is a population that
+        looks like a population and is one player repeated.
+        """
+
         options = question.options
-        return options[min(strength, len(options) - 1)].id
+        centre, width = (
+            (self.claims, self.claim_spread)
+            if question.tier is None
+            else (self.demonstrations, self.demonstration_spread)
+        )
+        strength = self._drawn(centre, width, key=f"{drawn_for}|{question.id}")
+        return options[min(max(strength, 0), len(options) - 1)].id
+
+    def _drawn(self, centre: int, width: int, *, key: str) -> int:
+        """One index, drawn from ``key`` alone.
+
+        ``random.Random`` seeded with a *string* hashes it with SHA-512 before
+        seeding, so this is reproducible across processes and unaffected by
+        ``PYTHONHASHSEED`` — which ``docs/adr/0105`` makes the question worth
+        answering out loud rather than assuming.
+        """
+
+        if width == 0:
+            return centre
+        return centre + random.Random(key).randint(-width, width)
+
+
+def answer_key(handle: str, sport: Sport) -> str:
+    """The first two thirds of a draw key, spelled once.
+
+    Here rather than at each call site because a key assembled two ways is two
+    populations, and the one that drifted would be the one nobody re-derived.
+    """
+
+    return f"{handle}|{sport.value}"
 
 
 #: The weakest answer to everything. The opening question's weakest option is
@@ -133,6 +221,42 @@ STRONG = AnswerPolicy(claims=3, demonstrations=3)
 
 #: The strongest answer to everything.
 STRONGEST = AnswerPolicy(claims=4, demonstrations=4)
+
+#: **Eight answer sets that all land inside one band, and differ everywhere
+#: else.** Every one of these finishes between 2,97 and 3,50 for padel — inside
+#: ``Established`` at a position of 0,25 to 0,75, which is
+#: ``THE_PROTAGONISTS_BAND`` — so an account may take any of them and still be
+#: held to the same claim it was held to before.
+#:
+#: **What they exist for.** The eleven relationship accounts are *controls*:
+#: everything that is not the edge under test is held equal, deliberately. The
+#: rating was held equal with it, and it did not have to be — a block, a pass, an
+#: interest and an open challenge are gates on a **pair**, and none of them reads
+#: μ. Holding it equal anyway put eleven accounts at one level in the
+#: protagonist's own pool, where they outscore everybody and tie with each other:
+#: the evenest four is then a tie between clones, ⚡ returns the same court every
+#: time, and the balance forecast reads the same number whatever was asked for.
+#: The edge stays the only axis under test; the level stops being a sixteenth
+#: copy of hers.
+#:
+#: They are **fixed policies and not a spread** — each account answers one way,
+#: deterministically, and ``_refuse_an_impossible_policy`` still refuses a drawn
+#: one. A claim is a band and a position, and a fixed policy can be held to it.
+#:
+#: The two axes move independently on purpose: ``(4, 0)`` and ``(1, 4)`` reach
+#: much the same μ as ``(2, 2)`` by disagreeing with themselves, which finishes
+#: with a **wider σ** — so the spread is a spread of confidence as well as of
+#: level, and the balance term has both to read.
+THE_BAND_FROM_WITHIN: tuple[AnswerPolicy, ...] = (
+    AnswerPolicy(claims=4, demonstrations=0),  # 3,10 — widest
+    AnswerPolicy(claims=3, demonstrations=0),  # 3,06 — wide
+    AnswerPolicy(claims=2, demonstrations=2),  # 3,15 — MIDDLING
+    AnswerPolicy(claims=1, demonstrations=3),  # 3,18 — wide
+    AnswerPolicy(claims=4, demonstrations=1),  # 3,29 — wide
+    AnswerPolicy(claims=2, demonstrations=3),  # 3,32
+    AnswerPolicy(claims=1, demonstrations=4),  # 3,41 — widest
+    AnswerPolicy(claims=2, demonstrations=4),  # 3,50
+)
 
 
 @dataclass(frozen=True)
@@ -215,10 +339,174 @@ class RatedRun:
     claim: RatingClaim
 
 
+#: The one coordinate every distance in this seed is measured from — the
+#: protagonists' own, and the centre ``cohort.py`` cuts its rings around.
+#:
+#: **It lives here rather than in the cohort** because it is a *protagonist's*
+#: fact and the rings are derived from it: a centre owned by the population
+#: would be a centre the four named accounts had to agree with by hand, and the
+#: day one of them moved, every ring would quietly be measured from somewhere
+#: else. London, at ``LocationArea``'s own two decimal places, because that is
+#: the resolution the commit rounds to on the way in.
+CENTRE_LATITUDE = 51.51
+CENTRE_LONGITUDE = -0.13
+
+#: What a seeded profile calls its consent copy. One string, so the accounts and
+#: the cohort answer the consent question the same way.
+SEED_CONSENT_COPY_VERSION = "proposals-seed"
+
+
+@dataclass(frozen=True)
+class SeedProfile:
+    """The Player profile one account commits, as onboarding's second part.
+
+    **A per-player axis on the account, not a fourth member of ``Scenario``.** A
+    scenario is per *sport* — a rating, an open run, an abandoned one — and a
+    profile is per *player*: one week, one radius, one location, one answer about
+    photographs. Folding it into the per-sport union would make an account with
+    two sports carry two profiles, which is a state the domain cannot reach.
+
+    ``intents`` is the one field that *is* per sport, because a declaration is
+    (``docs/adr/0094``). It is a tuple of pairs rather than a mapping so the
+    account stays hashable and its order is the order the run declares in.
+
+    ``committed_days_ago`` is how far **before this run's own now** the profile
+    was committed, and it is what makes ADR-0113's fourteen-day window visible:
+    a profile committed through the wall clock is a newcomer, always, and a gate
+    with only one side present cannot be seen at all. The run injects a clock
+    (``app/seeds/clock.py``); this is the number it is set to.
+
+    ``clear_the_week`` is the one state the commit itself cannot express: the
+    commit refuses an empty grid — the floor binds the answer a player is *asked*
+    for — while ``ChangeAvailability`` accepts one, because clearing a week
+    afterwards is a legal edit. So a blank week is a commit followed by an edit,
+    which is exactly how a player reaches it.
+    """
+
+    #: ``(iso weekday 1–7, part of day)`` — one pair per cell ticked.
+    availability: tuple[tuple[int, str], ...]
+    social_tag_ids: tuple[str, ...]
+    search_radius_km: int
+    gender: Gender
+    gender_preference: GenderPreference
+    proposals_opt_in: bool
+    committed_days_ago: int
+    intents: tuple[tuple[Sport, PlayIntent], ...] = ()
+    latitude: float = CENTRE_LATITUDE
+    longitude: float = CENTRE_LONGITUDE
+    clear_the_week: bool = False
+
+    #: Which screen the declaration was made on. Client-asserted everywhere else
+    #: and asserted here too — the seed answers the questionnaire and declares in
+    #: its tail, which is what ``RATING_TAIL`` names.
+    intent_surface: PlayIntentSurface = PlayIntentSurface.RATING_TAIL
+
+    #: **No photograph, ever**, and it is a wired field rather than a hard-coded
+    #: empty list at the commit: a seeded photo would need bytes in this
+    #: repository and an object store to put them in, and the card renders the
+    #: generated court poster without one — which is the state most cards are in
+    #: and the one worth developing against. It is passed to the command like
+    #: every other answer, so *no photograph* is a declaration something checks
+    #: rather than a line in the runner nothing reads.
+    photo_ids: tuple[UUID, ...] = ()
+
+
 #: What one account holds, for one sport. A closed union, so the runner's match
 #: over it stops typechecking on the day a fourth state exists — an unhandled
 #: scenario would otherwise be an account silently seeded into no state at all.
 Scenario = OpenRun | AbandonedRun | RatedRun
+
+
+#: **The names every seeded player is shown under.**
+#:
+#: A slug says what an account *is for* — ``said-yes-to-you`` names a state, and
+#: naming states is what makes the catalog readable from the report. It is a
+#: terrible thing to meet on a card. Every screen in this product draws
+#: ``nickname``, so a developer testing the builder was reading a sentence about
+#: a fixture where a person's name goes, and could not tell a crowded court from
+#: a list of test conditions.
+#:
+#: So the slug stays the identifier — the address is still ``{slug}@…``, the
+#: report still prints it, and every assertion still names it — and the
+#: **nickname becomes a name**. The two were the same string and did not have to
+#: be.
+#:
+#: **``First.Last`` and not ``First Last``**, because ``Nickname`` is
+#: ``^[A-Za-z0-9_.-]+$``: this platform's nickname is a handle and a space is not
+#: in it. That is a decision the users context already made, and a fixture is not
+#: where it gets reopened — so the dot is the most name-shaped thing a legal
+#: nickname can be.
+#:
+#: **Two surname pools, and that is what keeps them apart.** The catalog and the
+#: cohort are dealt by two different modules and neither can see the other's
+#: list, so a shared pool would collide on a name eventually and the collision
+#: would surface as a unique-constraint violation half way through a run. Given
+#: separate surnames, a catalog name and a cohort name cannot be equal whatever
+#: either list grows to.
+FIRST_NAMES: tuple[str, ...] = (
+    "Marta", "Ines", "Carla", "Nuria", "Alba", "Rocio", "Lucia", "Elena",
+    "Sofia", "Paula", "Irene", "Clara", "Laia", "Nerea", "Ainhoa", "Julia",
+    "Diego", "Hugo", "Pablo", "Mateo", "Bruno", "Alvaro", "Nacho", "Rafa",
+    "Javier", "Sergio", "Tomas", "Adrian", "Ivan", "Marcos", "Gonzalo", "Unai",
+    "Aitor", "Ruben", "Oscar", "Dani", "Pau", "Guillem", "Arnau", "Nil",
+)
+
+#: The catalog's own surnames — see ``FIRST_NAMES`` on why there are two pools.
+CATALOG_SURNAMES: tuple[str, ...] = (
+    "Ferrer", "Solano", "Vidal", "Rojas", "Miralles", "Andrade",
+)
+
+#: The eleven relationship accounts', dealt by their own module.
+RELATIONSHIP_SURNAMES: tuple[str, ...] = (
+    "Nogueira", "Peralta", "Quintana", "Sabater",
+)
+
+#: The cohort's, and disjoint from the other two by construction.
+COHORT_SURNAMES: tuple[str, ...] = (
+    "Bertran", "Casals", "Duarte", "Esteve", "Fabregat", "Gallego",
+    "Herrero", "Iglesias",
+)
+
+
+@lru_cache(maxsize=None)
+def _roster(surnames: tuple[str, ...]) -> tuple[str, ...]:
+    """Every ``First.Last`` this pool can make, **in one shuffled order.**
+
+    Shuffled rather than enumerated, and that is the whole point of the
+    indirection. Read in the obvious nested order, the first forty names dealt
+    all share a surname and a seeded population reads as one family; read with
+    the surname cycling fastest, one first name repeats six times running. A
+    shuffle makes both halves vary at every step while the list stays a
+    permutation of distinct pairs — so uniqueness is still by construction and
+    not by a stride argument nobody re-checks when a surname is added.
+
+    ``random.Random`` seeded with a *string* hashes it with SHA-512 first, so the
+    order is stable across processes and unaffected by ``PYTHONHASHSEED``
+    (``docs/adr/0105``). Keyed off the pool itself, so adding a surname reshuffles
+    that pool and leaves the others alone.
+    """
+
+    pairs = [f"{first}.{last}" for last in surnames for first in FIRST_NAMES]
+    random.Random(f"names|{'|'.join(surnames)}").shuffle(pairs)
+    return tuple(pairs)
+
+
+def dealt_name(index: int, surnames: tuple[str, ...]) -> str:
+    """The ``index``-th name out of one pool, and **no two indices share one.**
+
+    The caller is refused rather than wrapped past the end, since a wrapped name
+    is a duplicate and a duplicate is a unique-constraint violation discovered
+    half way through a seed run.
+    """
+
+    roster = _roster(surnames)
+    if not 0 <= index < len(roster):
+        raise RuntimeError(
+            f"name {index} was asked of a pool that holds {len(roster)}: "
+            f"{len(FIRST_NAMES)} first name(s) over {len(surnames)} surname(s). "
+            f"Add surnames — the pools must stay disjoint from each other."
+        )
+    return roster[index]
 
 
 @dataclass(frozen=True)
@@ -232,11 +520,18 @@ class SeedAccount:
 
     ``scenarios`` is per sport and may be empty: an account with nothing in it is
     a state, and the one every client's empty screen is drawn from.
+
+    ``profile`` is the **per-player** axis, and ``None`` is a state of its own —
+    a player who has finished the questionnaire and never answered onboarding's
+    second part. The four protagonists carry one; the seven states above it do
+    not, because each of those is named for a *rating* state and giving them a
+    week and a location would make each of them two claims in one address.
     """
 
     slug: str
     description: str
     scenarios: tuple[Scenario, ...] = ()
+    profile: SeedProfile | None = None
 
     @property
     def email(self) -> str:
@@ -244,7 +539,23 @@ class SeedAccount:
 
     @property
     def nickname(self) -> str:
-        return self.slug
+        """The name this account is shown under — **never its slug.**
+
+        Read out of the register rather than stored on the account, because the
+        constants above are referenced by name from ``screens.py`` and from the
+        tests: a name written into a field would have to be written at every one
+        of those definitions, and the one somebody forgot would be the account
+        that seeded under a slug again.
+
+        **The slug is the fallback and it is proven unreachable**, by
+        ``refuse_an_account_nobody_named`` over each real list at import. The
+        alternative — raising here — makes ``nickname`` partial, and every guard
+        in this module reads it: an account built to be *refused* for a bad
+        address would explode on its name before the guard could say so, and the
+        refusal a developer got would name the wrong thing.
+        """
+
+        return NAMES.get(self.slug, self.slug)
 
 
 BRAND_NEW_PLAYER = SeedAccount(
@@ -353,6 +664,196 @@ RATED_IN_EVERY_SPORT = SeedAccount(
     ),
 )
 
+# ---------------------------------------------------------------------------
+# The four protagonists — a Play screen is developed *as* one of these
+# ---------------------------------------------------------------------------
+#
+# **They live in the catalog and not in the cohort**, and the reason is the
+# catalog's own idiom: each is named for a state, and a distribution asserting
+# the existence of exactly one person is not a distribution. *the-blank-week-
+# player* is the clearest case — a single named edge — and the cohort is what
+# stands behind them, never what they are drawn from.
+#
+# Each carries a **profile**, which is the axis this file gained for them, and
+# each is committed at a stated age so that ADR-0113's window has both of its
+# sides present among the people a developer actually signs in as. Three of the
+# four settled and one inside the window, deliberately: a protagonist accidental-
+# ly inside it would tighten the level gate on every search a developer ran and
+# nothing on the screen would say why.
+
+#: The week the protagonists tick. Six of the twenty-one cells, spread across
+#: four evenings and a weekend morning, so that a cohort member drawn against it
+#: can share two cells or none and both are ordinary rather than contrived.
+PROTAGONIST_WEEK: tuple[tuple[int, str], ...] = (
+    (2, "EVENING"),
+    (3, "EVENING"),
+    (4, "EVENING"),
+    (5, "EVENING"),
+    (6, "MORNING"),
+    (6, "AFTERNOON"),
+)
+
+#: Three tags on the competitive side of the vocabulary's own split, so the tag
+#: term has something to agree and disagree with.
+#:
+#: **Through the enum and never as strings.** A tag id is persisted on profiles
+#: for ever and has exactly one home; a literal here would be the second copy
+#: `test_no_second_copy_of_a_tag_id_exists_anywhere_in_the_app` exists to refuse,
+#: and it would keep working right up until somebody retired one of the three.
+PROTAGONIST_TAGS: tuple[str, ...] = (
+    SocialTag.PLAYS_TO_WIN.value,
+    SocialTag.HERE_TO_IMPROVE.value,
+    SocialTag.WARMS_UP_PROPERLY.value,
+)
+
+#: The radius every ring in ``cohort.py`` is cut against. **Ten, and not the
+#: fifty the slider allows**, because the relaxation ladder multiplies what the
+#: searcher asked for: at fifty both rungs clamp to the ceiling and there is no
+#: ladder to watch. At ten the rungs land on fifteen and twenty, which is what
+#: the rings are cut by.
+PROTAGONIST_RADIUS_KM = 10
+
+#: Settled, and clear of the fourteen-day window on the far side.
+SETTLED_DAYS_AGO = 40
+
+#: Inside the window, and clear of its near edge — so a change to the window
+#: moves who is a newcomer rather than the arithmetic of one edge case.
+NEWCOMER_DAYS_AGO = 3
+
+#: **Only the default protagonist stays on ``MIDDLING``.** She is the reference
+#: every Play screen is developed against, so her level is the one the others are
+#: read relative to and it does not move. The other three take a level of their
+#: own out of the same band, for the reason ``THE_BAND_FROM_WITHIN`` gives: a
+#: pool holding four people at one μ has an **exactly** even four in it, the
+#: group objective prefers it over every other arrangement because a gap of zero
+#: cannot be beaten, and ⚡ returns that court and a forecast of 62% for ever.
+#: Their own claims are unchanged — each is still *Established, a quarter to
+#: three-quarters in* — because what each of these three exists to show is a
+#: window, a missing second sport and a cleared week, and not one of those reads
+#: a level.
+THE_POPULATED_PLAYER = SeedAccount(
+    slug="the-populated-player",
+    description=(
+        "The default protagonist: rated in two sports, settled well clear of "
+        "the newcomer window, at the centre of every ring the cohort is cut "
+        "into. Every Play screen is developed signed in as this account."
+    ),
+    scenarios=(
+        RatedRun(
+            sport=Sport.PADEL,
+            answers=MIDDLING,
+            claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
+        ),
+        RatedRun(
+            sport=Sport.TENNIS,
+            answers=MIDDLING,
+            claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
+        ),
+    ),
+    profile=SeedProfile(
+        availability=PROTAGONIST_WEEK,
+        social_tag_ids=PROTAGONIST_TAGS,
+        search_radius_km=PROTAGONIST_RADIUS_KM,
+        gender=Gender.WOMAN,
+        gender_preference=GenderPreference.ANY,
+        proposals_opt_in=True,
+        committed_days_ago=SETTLED_DAYS_AGO,
+        intents=(
+            (Sport.PADEL, PlayIntent.COMPETITIVE),
+            (Sport.TENNIS, PlayIntent.FOR_FUN),
+        ),
+    ),
+)
+
+THE_NEWCOMER = SeedAccount(
+    slug="the-newcomer",
+    description=(
+        "A player whose profile was committed inside ADR-0113's fourteen-day "
+        "window — the widened gate, from the newcomer's own side, which is the "
+        "half a settled protagonist can never show."
+    ),
+    scenarios=(
+        RatedRun(
+            sport=Sport.PADEL,
+            answers=THE_BAND_FROM_WITHIN[5],  # 3,32
+            claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
+        ),
+    ),
+    profile=SeedProfile(
+        availability=PROTAGONIST_WEEK,
+        social_tag_ids=PROTAGONIST_TAGS,
+        search_radius_km=PROTAGONIST_RADIUS_KM,
+        gender=Gender.WOMAN,
+        gender_preference=GenderPreference.ANY,
+        proposals_opt_in=True,
+        committed_days_ago=NEWCOMER_DAYS_AGO,
+        intents=((Sport.PADEL, PlayIntent.COMPETITIVE),),
+    ),
+)
+
+THE_ONE_SPORT_PLAYER = SeedAccount(
+    slug="the-one-sport-player",
+    description=(
+        "Rated in padel and in nothing else, with no tennis declaration at "
+        "all — the account that shows what a second sport's absence looks like "
+        "on a screen built to switch between them."
+    ),
+    scenarios=(
+        RatedRun(
+            sport=Sport.PADEL,
+            answers=THE_BAND_FROM_WITHIN[1],  # 3,06
+            claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
+        ),
+    ),
+    profile=SeedProfile(
+        availability=PROTAGONIST_WEEK,
+        social_tag_ids=PROTAGONIST_TAGS,
+        search_radius_km=PROTAGONIST_RADIUS_KM,
+        gender=Gender.MAN,
+        gender_preference=GenderPreference.ANY,
+        proposals_opt_in=True,
+        committed_days_ago=SETTLED_DAYS_AGO,
+        intents=((Sport.PADEL, PlayIntent.COMPETITIVE),),
+    ),
+)
+
+THE_BLANK_WEEK_PLAYER = SeedAccount(
+    slug="the-blank-week-player",
+    description=(
+        "A player who committed a week and then cleared it. The availability "
+        "term stands down for them rather than scoring a nought, and every "
+        "surface that took a week has to say so."
+    ),
+    scenarios=(
+        RatedRun(
+            sport=Sport.PADEL,
+            answers=THE_BAND_FROM_WITHIN[7],  # 3,50
+            claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
+        ),
+    ),
+    profile=SeedProfile(
+        availability=PROTAGONIST_WEEK,
+        social_tag_ids=PROTAGONIST_TAGS,
+        search_radius_km=PROTAGONIST_RADIUS_KM,
+        gender=Gender.WOMAN,
+        gender_preference=GenderPreference.ANY,
+        proposals_opt_in=True,
+        committed_days_ago=SETTLED_DAYS_AGO,
+        intents=((Sport.PADEL, PlayIntent.COMPETITIVE),),
+        clear_the_week=True,
+    ),
+)
+
+#: The four a Play screen is developed *as*, in the order the run walks them:
+#: the default first, so an interrupted run leaves the account most work is done
+#: against already built.
+PROTAGONISTS: tuple[SeedAccount, ...] = (
+    THE_POPULATED_PLAYER,
+    THE_NEWCOMER,
+    THE_ONE_SPORT_PLAYER,
+    THE_BLANK_WEEK_PLAYER,
+)
+
 #: Every account this system creates, in the order a run walks them: emptiest
 #: first, so a run interrupted half way leaves the simple states done.
 ACCOUNTS: tuple[SeedAccount, ...] = (
@@ -363,7 +864,66 @@ ACCOUNTS: tuple[SeedAccount, ...] = (
     RATING_BARELY_ESTABLISHED,
     RATING_WELL_ESTABLISHED,
     RATED_IN_EVERY_SPORT,
-)
+) + PROTAGONISTS
+
+
+#: slug -> the name it is shown under, written by ``name_them`` at import.
+#:
+#: A register rather than a field for the reason ``SeedAccount.nickname`` gives,
+#: and **module-level rather than per-list** so that a name dealt twice is a
+#: collision this process can see. Two lists dealt out of two disjoint surname
+#: pools cannot collide, and this is where that would show up if they ever did.
+NAMES: dict[str, str] = {}
+
+#: The inverse, lower-cased — **only** so a second deal onto a taken name is
+#: refused. Separate from ``NAMES`` because a register keyed by two different
+#: kinds of string is a register whose lookups cannot be read.
+_TAKEN: dict[str, str] = {}
+
+
+def name_them(accounts: Sequence[SeedAccount], surnames: tuple[str, ...]) -> None:
+    """Deal one name to each account in a list, **by sorted slug.**
+
+    Sorted, so the deal is a function of *which accounts exist* rather than of
+    the order somebody wrote them in: a state inserted in the middle of a list
+    moves nobody it does not have to move, and a diff of the seed report stays
+    readable.
+
+    Refuses a name already dealt, which is the check that keeps the surname
+    pools honest: two pools that stopped being disjoint would otherwise seat two
+    people under one nickname and fail on the unique constraint half way through
+    a run, with some accounts written and some not.
+    """
+
+    for index, slug in enumerate(sorted(one.slug for one in accounts)):
+        name = dealt_name(index, surnames)
+        if (taken := _TAKEN.get(name.lower())) is not None:
+            raise RuntimeError(
+                f"'{slug}' was dealt the name '{name}', which '{taken}' already "
+                f"holds. The surname pools have stopped being disjoint."
+            )
+        NAMES[slug] = name
+        _TAKEN[name.lower()] = slug
+
+
+name_them(ACCOUNTS, CATALOG_SURNAMES)
+
+
+def refuse_an_account_nobody_named(accounts: Sequence[SeedAccount]) -> None:
+    """Every account in a real list was dealt a name. **Asked at import.**
+
+    ``SeedAccount.nickname`` falls back to the slug so that the guards can run
+    against accounts built to be refused, and this is what stops that fallback
+    ever reaching a database: a list somebody forgot to hand to ``name_them``
+    fails the import rather than seeding people under ``said-yes-to-you`` again.
+    """
+
+    forgotten = sorted(one.slug for one in accounts if one.slug not in NAMES)
+    if forgotten:
+        raise RuntimeError(
+            f"{forgotten} would seed under their slug: no list holding them was "
+            f"handed to `name_them`. See `FIRST_NAMES`."
+        )
 
 
 def _refuse_an_impossible_catalog() -> None:
@@ -389,30 +949,73 @@ def _refuse_an_impossible_catalog() -> None:
             f"TLD, which cannot be registered. '{SEED_EMAIL_DOMAIN}' can be."
         )
 
-    seen: set[str] = set()
+    refuse_two_accounts_at_one_name(ACCOUNTS)
     for account in ACCOUNTS:
-        Email(account.email)
-        Nickname(account.nickname)
+        refuse_an_impossible_account(account)
+
+
+def refuse_two_accounts_at_one_name(accounts: Sequence[SeedAccount]) -> None:
+    """No two of these are the same person. **Asked across every list at once.**
+
+    Public, and taking the accounts rather than reading ``ACCOUNTS``, because the
+    catalog is no longer the only list the runner walks: the eleven relationships
+    are seeded through the same registration, so a slug shared *between* the two
+    lists is a collision this file could not see and the run would meet half way
+    through, at the second registration for one address.
+    """
+
+    seen: set[str] = set()
+    for account in accounts:
         if account.slug in seen:
             raise RuntimeError(f"two seed accounts are named '{account.slug}'")
         seen.add(account.slug)
 
-        sports: set[Sport] = set()
-        for scenario in account.scenarios:
-            if scenario.sport in sports:
-                raise RuntimeError(
-                    f"'{account.slug}' has two scenarios for "
-                    f"{scenario.sport.value}: one sport is one state."
-                )
-            sports.add(scenario.sport)
-            if isinstance(scenario, RatedRun):
-                _refuse_an_impossible_policy(account, scenario)
+
+def refuse_an_impossible_account(account: SeedAccount) -> None:
+    """Everything that makes one account seedable, asked before a session opens.
+
+    Public because the catalog is no longer the only list of accounts: the
+    eleven relationships in ``app/seeds/relationships.py`` are seeded through the
+    same walk and have to answer the same questions. One copy, so an account
+    added to either list is held to one standard — two would be two standards,
+    and the one that drifted would be the one nobody re-read.
+    """
+
+    Email(account.email)
+    Nickname(account.nickname)
+
+    sports: set[Sport] = set()
+    rated: set[Sport] = set()
+    for scenario in account.scenarios:
+        if scenario.sport in sports:
+            raise RuntimeError(
+                f"'{account.slug}' has two scenarios for "
+                f"{scenario.sport.value}: one sport is one state."
+            )
+        sports.add(scenario.sport)
+        if isinstance(scenario, RatedRun):
+            rated.add(scenario.sport)
+            _refuse_an_impossible_policy(account, scenario)
+    if account.profile is not None:
+        # **The rated sports and not merely the ones with a scenario.** An open
+        # run and an abandoned one are sports this account has no rating in, and
+        # every Play surface refuses an unrated sport — so a declaration against
+        # one would name a screen the account cannot reach.
+        _refuse_an_impossible_profile(account, account.profile, rated=rated)
 
 
 def _refuse_an_impossible_policy(account: SeedAccount, scenario: RatedRun) -> None:
     """An index into a list of options is not a negative number."""
 
     policy = scenario.answers
+    if policy.claim_spread or policy.demonstration_spread:
+        raise RuntimeError(
+            f"'{account.slug}' answers {scenario.sport.value} with a drawn "
+            f"policy ({policy.claim_spread}/{policy.demonstration_spread}). A "
+            f"named account's claim is a band and a position inside it, and a "
+            f"drawn answer set cannot be held to one — a spread belongs to the "
+            f"cohort's archetypes, whose claim is a histogram."
+        )
     if policy.claims < 0 or policy.demonstrations < 0:
         raise RuntimeError(
             f"'{account.slug}' answers {scenario.sport.value} with {policy}, and "
@@ -429,4 +1032,39 @@ def _refuse_an_impossible_policy(account: SeedAccount, scenario: RatedRun) -> No
         )
 
 
+def _refuse_an_impossible_profile(
+    account: SeedAccount, profile: SeedProfile, *, rated: set[Sport]
+) -> None:
+    """A profile the commit would refuse, refused before a session is opened.
+
+    Asked of the **domain's own value objects**, which is the same discipline the
+    addresses above are held to: a tag id this platform does not serve, a radius
+    off the slider or a week with nothing in it would otherwise fail half way
+    through a run, with some accounts written and some not — and a profile is
+    written *after* the questionnaire, so the half that is already there is the
+    expensive half.
+    """
+
+    SocialTagSelection.from_ids(profile.social_tag_ids)
+    SearchRadius.chosen(profile.search_radius_km)
+    AvailabilityGrid.of_cells(profile.availability)
+
+    if profile.committed_days_ago < 0:
+        raise RuntimeError(
+            f"'{account.slug}' commits its profile {profile.committed_days_ago} "
+            f"days ago, which is in the future. A seeded profile is backdated "
+            f"from the run's own now and never forward of it."
+        )
+
+    for sport, _ in profile.intents:
+        if sport not in rated:
+            raise RuntimeError(
+                f"'{account.slug}' declares a {sport.value} Play intent and "
+                f"holds no {sport.value} rating. Every Play surface refuses an "
+                f"unrated sport, so the declaration would name a screen the "
+                f"account cannot reach."
+            )
+
+
+refuse_an_account_nobody_named(ACCOUNTS)
 _refuse_an_impossible_catalog()

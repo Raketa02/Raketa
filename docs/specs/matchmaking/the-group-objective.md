@@ -194,6 +194,14 @@ Because the seat delta varies by arrangement, the combination is chosen by **`ar
 three pairings**, and `arrange()` stops being a separate step. `scale-posture.md`'s 6 072
 evaluations already budget per-arrangement work, so the cost is one array lookup.
 
+**A side's strength is not the average of its two players**, and the figures below assume it:
+`strength = TEAM_STRENGTH_SHARE · stronger + (1 − TEAM_STRENGTH_SHARE) · weaker`, at
+**0.45 / 0.55**. The weaker half sets more of a side because that is the half a doubles pair is
+attacked at all evening — the prototype's `teamStrength()` carried it and no row of §13 ever
+did, which is recorded here rather than left standing as an assumption. **It is the whole reason
+the three arrangements of one four are three different games:** at parity the gaps below collapse
+to a single number and the seat delta would be deciding alone.
+
 **Balance outweighs the seat delta by roughly fifty to one.** The delta is 0.34 points for fun and
 0.19 competitive; balance across the three arrangements of a four at 3.0 / 3.2 / 3.5 / 3.8 spans
 gaps of 0.025, 0.245 and 0.545 — 0.52 of `balance_norm`, **17.8 points** at `w_bal = 34`. So
@@ -263,6 +271,7 @@ finding: at group level the tag arms break ties and intent moves scores.
 | `w_crossmin` | 6 / 14 | Return rate of the player in the *worst* cross pair, against the other two |
 | `w_avail` | 16 / 20 | Challenge-to-played conversion for line-ups with zero four-way slots against non-zero |
 | `significance₄` | §2.3 | The observed live range. If it never leaves the top of its range it discriminates over a range that does not exist |
+| `TEAM_STRENGTH_SHARE` | 0.45 | Forecast error against confirmed doubles results, split by how lopsided the pair's own two Levels were. At 0.50 it is falsified by the arrangement mattering at all |
 | The seat delta | §3.1 | **How often `is_best ≠ is_evenest`.** If never, the argmax is decoration |
 | `K` | 24 | `max(fit_rank)` among the seated, 95th percentile against `K` — **replaces §24's, which cannot fire** |
 
@@ -320,6 +329,50 @@ also how a screen says *"nobody at their level yet"* about a newcomer's first fo
 **And the rule inherited unchanged:** a seat is never filled below the quality floor to complete
 a line-up ([ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md)), a newcomer
 least of all ([#175](https://github.com/Raketa02/Raketa/issues/175)).
+
+> **As built, and one correction the build found.** The four codes are one closed vocabulary,
+> and **three of them ride on a seat while `NO_SHARED_SLOTS` rides on the line-up** — as
+> `lineup.dock`. The table above is what forced it: the first three answer *why is this seat
+> empty* and the fourth is explicitly *seated, but the four-way intersection is empty — a dock,
+> never a refusal*. There is no seat for it to be attached to; on a line-up where every seat is
+> open there is no four-way week either, and on a full four every seat is taken. Written down
+> rather than resolved silently, because `the-two-contracts.md` §5 lists all four as the
+> `unfilled_reason` vocabulary and a reader checking the shape against the build would otherwise
+> find a field it does not mention.
+>
+> **More shapes the build fixed**, all of them detail this file deliberately left open. An
+> arrangement carries a `pairing_id` and an `is_current`; its `sides` name **player ids** rather
+> than repeating four breakdowns three times over; and a `locked_seats` entry the gates no longer
+> admit is **refused** — `locked_seat_not_available`, naming nobody — rather than quietly replaced
+> by somebody else. **A locked seat is held to the six pairs like any other**, which §1 implies
+> and no sentence said: two people the searcher hand-seated who may not share a court are refused
+> under the same code, because hand-seating is not a way past a gate.
+>
+> **Four rules the build had to decide, recorded here because they are decisions and not
+> details.**
+>
+> - **`group_reason` is omitted when there was no runner-up.** §5 lists it unconditionally, but
+>   the code names *the term with the largest margin between the winning combination and the
+>   runner-up* — and with one admissible four there is no margin. Naming a term that decided
+>   nothing would be the engine explaining an argument it never had.
+> - **`is_best` is omitted wherever no objective was computed** — a four with an open seat, a
+>   singles line-up, and every `POST /forecasts` response. §3.1 makes `is_best` mean *best by
+>   `G`*, and there is no `G` in any of the three: no cross pairs, no seat delta, no mean over
+>   three Fits, and on the forecast route no Fits at all. Pointing it at the min-gap arrangement
+>   would give one field two meanings on exactly the responses where the builder needs the first,
+>   so *Even it out* is then the only selection there is.
+> - **The remaining seats of an impossible four are filled in Fit order, subject to the same
+>   mask.** §5.1 fixes that *three of four* is the answer and does not say who takes the third
+>   seat. There is nothing for `G` to compare — that is what *impossible* means here — so the
+>   fill is the ranking the search already produced, admitted one at a time against everybody
+>   already seated. It is what the searcher would do by hand and it introduces no constant.
+> - **The line-up is not read back in full.** `the-two-contracts.md` §1 promises `GET
+>   /searches/{id}` returns the same schema the `POST` did; today it returns the envelope and the
+>   seated rows, and the seating, the arrangements and `group_reason` do not survive. Layer 4
+>   holds the winning combination and **no route may return it**, so reproducing the court needs a
+>   second stored shape — *what was shown*, beside *what was compared* — which is the same split
+>   the returned band and the near-miss band already have. Left out deliberately rather than
+>   half-built, and asserted as a gap by the read-back test so it stays visible.
 
 ---
 

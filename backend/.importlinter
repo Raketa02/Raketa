@@ -14,11 +14,15 @@
 # what enforces them.
 #
 # Engines are also fenced from *each other* when two of them answer questions that
-# could be confused. Only one engine ships today — RacketSkill — so no such contract
-# is written here; the pair that used to be (Pairing and Match Fit, docs/adr/0026)
-# went with their code. The shape to copy when a second engine lands: two `forbidden`
-# contracts and not one, because a single contract with overlapping source and
-# forbidden lists would also forbid each package from importing itself.
+# could be confused. **Two ship today** — RacketSkill and Match Fit (docs/adr/0093) —
+# and the pair below is the shape this comment used to describe in advance: two
+# `forbidden` contracts and not one, because a single contract with overlapping
+# source and forbidden lists would also forbid each package from importing itself.
+# The question they could be confused about is a *level*: RacketSkill defines μ, σ,
+# the bands and the σ-combination rule, and Match Fit reads them by calling
+# `racketskill/core` through the module that composes them — never by re-deriving
+# one. Two engines with two opinions about a level is the failure this fence exists
+# for, and ADR-0093 names it by name.
 #
 # `datetime` is forbidden to the **engines only**. The kernel's time module is its
 # one legitimate home; an engine receives an instant rather than constructing one.
@@ -123,6 +127,24 @@ forbidden_modules =
     datetime
 allow_indirect_imports = true
 
+[importlinter:contract:racketskill-does-not-know-match-fit]
+name = The RacketSkill engine does not import the Match Fit engine
+type = forbidden
+source_modules =
+    app.engines.racketskill
+forbidden_modules =
+    app.engines.matchfit
+allow_indirect_imports = true
+
+[importlinter:contract:match-fit-does-not-know-racketskill]
+name = The Match Fit engine does not import the RacketSkill engine
+type = forbidden
+source_modules =
+    app.engines.matchfit
+forbidden_modules =
+    app.engines.racketskill
+allow_indirect_imports = true
+
 [importlinter:contract:kernel-is-innermost]
 name = The shared kernel depends on nothing in the app, no framework or I/O library, and no ambience
 type = forbidden
@@ -200,4 +222,164 @@ forbidden_modules =
     boto3
     botocore
     aiohttp
+allow_indirect_imports = false
+
+# The ephemeral store is fenced out of the business layers on exactly the argument
+# ADR-0091 makes for photo bytes: *behind a port* is only true while nothing on the
+# inside can reach the library. The two ledgers are ports in
+# `matchmaking/domain/ledgers.py`, and what makes their fail-soft posture a promise
+# rather than a hope is that every ledger leaves the composition root wrapped — an
+# unwrapped adapter raises, and a raise on either path empties a surface to protect
+# nobody. A use case reaching for Redis itself is a use case that has skipped that.
+#
+# `allow_indirect_imports = false`, for the reason the imaging fence sets it: the
+# interesting violation is the indirect one. `RedisExposureLedger` takes a `Redis`,
+# so a use case importing the adapter to construct one is caught here as well as a
+# use case importing the client — and with the flag on, the first would read as
+# KEPT.
+[importlinter:contract:a-business-layer-cannot-reach-the-ephemeral-store]
+name = No domain or application layer imports Redis, or an adapter over it
+type = forbidden
+source_modules =
+    app.application
+    app.shared.domain
+    app.modules.*.domain
+    app.modules.*.application
+forbidden_modules =
+    redis
+allow_indirect_imports = false
+
+# The matcher ends at a ranked list and *asking somebody* begins in `challenges`,
+# and the whole point of the split is that the matcher reads challenges through a
+# port rather than owning them (#221, #250). The arrow therefore runs
+# `matchmaking -> challenges` and never back — which is a rule about one import
+# statement, and so exactly the kind that is broken by somebody in a hurry
+# reaching for `SentFromSearch` or `Side` because a type with the right shape
+# already exists one directory over. Both are deliberately spelled twice; this is
+# what keeps the second spelling from being deleted as duplication.
+#
+# `allow_indirect_imports = true`, for the reason the configuration fence sets it:
+# `challenges` legitimately imports `player_profile` (the `Window` ADR-0100 puts
+# there) and the Match Fit engine (`SearchMode`), and a strict contract would one
+# day go red naming a module that had done nothing. The violation this exists for
+# is the direct one.
+[importlinter:contract:challenges-does-not-know-the-matcher]
+name = The Challenges context does not import the matcher
+type = forbidden
+source_modules =
+    app.modules.challenges
+forbidden_modules =
+    app.modules.matchmaking
+allow_indirect_imports = true
+
+# The same rule one context over, and it is the same rule rather than a copy of
+# it: `games` is a **provider**, it signs `MatchHistoryQuery`'s missing half
+# through a composing adapter that lives in the matcher's own infrastructure, and
+# it does not know a matcher exists (docs/adr/0137). It has more second spellings
+# than `challenges` does, not fewer — `PLAYED_COUNTERPART_BOUND` against
+# `PAIRWISE_COUNTERPART_BOUND`, `PlayedOutcome` against `PairwiseOutcome`,
+# `GameSide` against two other `Side`s — and each of them is a type with the
+# right shape sitting one directory over, which is exactly what somebody in a
+# hurry reaches for. `games_match_history.py` refuses to import when the two
+# bounds disagree, and that guards the **value**; this guards the **direction**,
+# which is the half a constant cannot check.
+#
+# `allow_indirect_imports = true`, for the reason its neighbour sets it: `games`
+# legitimately imports `player_profile` (the `Window` ADR-0100 puts there) and
+# the Match Fit engine (`SearchMode`), and a strict contract would one day go red
+# naming a module that had done nothing.
+[importlinter:contract:games-does-not-know-the-matcher]
+name = The Games context does not import the matcher
+type = forbidden
+source_modules =
+    app.modules.games
+forbidden_modules =
+    app.modules.matchmaking
+allow_indirect_imports = true
+
+# The third of the same rule, and the one most likely to be broken, because
+# `player_score` is the context whose whole output is a number the matcher reads
+# (docs/adr/0140). It publishes `PublishedScoreQuery` in its own vocabulary and
+# an adapter in the matcher's own infrastructure translates it into
+# `PlayerScoreReading` — so the shapes on the two sides are near-identical and
+# sitting one directory apart, which is the exact configuration somebody in a
+# hurry collapses. Importing `RatioStrand` here instead of declaring
+# `StrandRatio` would make this context depend on the consumer it exists to
+# serve, and would put the matcher's rounding inside the number on a player's own
+# profile.
+#
+# It reads two *other* contexts on purpose and that is not what this fences: the
+# arrow runs `player_score -> games` and `player_score -> challenges`, the same
+# direction the matcher's own composing adapters take, and neither provider knows
+# this context exists.
+#
+# `allow_indirect_imports = true`, for the reason its two neighbours set it: it
+# legitimately imports the Match Fit engine for `ReliabilityStrand`, which is the
+# closed vocabulary a second spelling here would fork.
+[importlinter:contract:player-score-does-not-know-the-matcher]
+name = The Player Score context does not import the matcher
+type = forbidden
+source_modules =
+    app.modules.player_score
+forbidden_modules =
+    app.modules.matchmaking
+allow_indirect_imports = true
+
+# `scripts/` holds the offline machines — the ones that read a document, run the
+# engine over it and write the answer back. `scripts/__init__.py` says nothing
+# under `app/` may import from here, and this is what makes that true: the
+# harness reaches into `docs/` and shells out at a shape no shipped code should
+# depend on, and a use case importing it would put a repository path in a
+# request. The direction it forbids is the only one that is wrong — `scripts`
+# imports `app` on every line, which is the whole point of it.
+[importlinter:contract:the-app-never-imports-its-offline-tooling]
+name = No shipped code imports scripts/
+type = forbidden
+source_modules =
+    app
+forbidden_modules =
+    scripts
+allow_indirect_imports = false
+
+# The dev console is a development tool that lives inside the backend, and two
+# arrows keep that from being a claim nobody checks.
+#
+# **The player surface never imports it.** The leak that matters is a dev route
+# reaching the shipped client contract — `openapi.player.json` is what
+# `frontend_player` generates its wire types from, and a type that arrived from
+# a dev tool would ship in an app-store release. `tests/unit/test_dev_console_surface.py`
+# asserts the document itself carries no `/dev` path; this forbids the import
+# that would put one there.
+#
+# **The console does not import the seeds.** It is *entitled* to — both are
+# gated by the same environments — and it declines, for the reason
+# `app/api/dev/__init__.py` writes down: `app/seeds/__init__` refuses on import
+# too, so a console that imported it would refuse in production for the seed
+# table's reason and `CONSOLE_SERVED` would be a second table nothing ever
+# proved fires.
+#
+# Both set `allow_indirect_imports = false`, and the same sentence earns it
+# twice: the interesting violation is the indirect one. A helper module that
+# reaches the seed catalog on the console's behalf breaks the seed rule exactly
+# as completely, and a shared module that pulls a dev schema into the player
+# surface ships it in `openapi.player.json` exactly as completely. Both are
+# green on today's tree with the flag off, which is what makes it affordable —
+# the argument the imaging fence already makes one contract up.
+[importlinter:contract:the-player-surface-does-not-know-the-dev-console]
+name = The player API surface does not import the dev console
+type = forbidden
+source_modules =
+    app.api.v1
+    app.modules
+forbidden_modules =
+    app.api.dev
+allow_indirect_imports = false
+
+[importlinter:contract:the-dev-console-declines-the-seed-import]
+name = The dev console does not import the seed system it is entitled to
+type = forbidden
+source_modules =
+    app.api.dev
+forbidden_modules =
+    app.seeds
 allow_indirect_imports = false

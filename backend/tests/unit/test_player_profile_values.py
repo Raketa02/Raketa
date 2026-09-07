@@ -211,6 +211,31 @@ def test_the_fold_still_accepts_a_blank_grid():
     assert AvailabilityGrid.from_codes(()).codes == ()
 
 
+def test_a_later_edit_of_the_week_may_clear_it():
+    """``edited`` is the floor's named exit, and it takes the same primitives.
+
+    ``SearchRadius.chosen`` / ``recorded``'s discipline, applied to the grid:
+    two named constructors, so every call site says which of the two it is. The
+    commit path refuses a blank week; a player clearing theirs afterwards is a
+    later edit, and the minimum binds the answer they were asked for rather
+    than every edit of it.
+    """
+
+    assert AvailabilityGrid.edited(()).codes == ()
+    assert AvailabilityGrid.edited([(6, "MORNING")]).codes == ("6:MORNING",)
+
+
+def test_an_edited_grid_is_folded_exactly_as_a_committed_one_is():
+    """Same fold, same order, same refusals — the floor is the only difference,
+    so an edit cannot quietly hold a grid a commit could not."""
+
+    grid = AvailabilityGrid.edited([(3, "MORNING"), (1, "EVENING"), (3, "MORNING")])
+
+    assert grid.codes == ("1:EVENING", "3:MORNING")
+    with pytest.raises(InvariantViolated):
+        AvailabilityGrid.edited([(1, "NIGHT")])
+
+
 def test_a_repeated_cell_is_collapsed_rather_than_refused():
     """The opposite of a repeated tag, and deliberately: a grid is a set of
     cells, and a cell ticked twice is ticked."""

@@ -35,6 +35,8 @@ import pytest
 from app.bootstrap.composition import (
     build_assessment_engine,
     build_assessment_repository,
+    build_block_query,
+    build_block_repository,
     build_clock,
     build_domain_event_store,
     build_event_publisher,
@@ -65,10 +67,21 @@ from app.shared.ids import new_uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 
-#: The one infrastructure import a dependency declaration may keep. `get_db` is
-#: not an adapter — it is the request-scoped session itself, which is the single
-#: thing in those files that genuinely belongs to a request.
-SESSION_PROVIDER = "app.infrastructure.database.session"
+#: The infrastructure imports a dependency declaration may keep. Neither is an
+#: adapter: one is the request-scoped session itself, the other the process's
+#: Redis connection pool. They are the connections everything else is built
+#: *over*, and a declaration naming one is saying when it is handed out, not
+#: choosing an implementation.
+#:
+#: A closed set rather than a prefix, so that the next thing under
+#: `app.infrastructure.` has to be argued onto this list instead of inheriting
+#: the allowance.
+CONNECTION_PROVIDERS = frozenset(
+    {
+        "app.infrastructure.database.session",
+        "app.infrastructure.redis_client",
+    }
+)
 
 _MODULE_ADAPTER = re.compile(r"^app\.modules\.[^.]+\.infrastructure(\.|$)")
 _ENGINE_VERSION = re.compile(r"^app\.engines\.[^.]+\.v\d+(\.|$)")
@@ -102,7 +115,7 @@ def imported_modules(path: Path) -> set[str]:
 
 
 def is_adapter(module: str) -> bool:
-    if module == SESSION_PROVIDER:
+    if module in CONNECTION_PROVIDERS:
         return False
     if module.startswith("app.infrastructure."):
         return True
@@ -149,6 +162,11 @@ async def test_every_port_is_built_from_a_session_and_the_settings(session_facto
             # durable contract landed with #182 so the candidate index has an
             # event to read, while ADR-0094's write path is its own build.
             build_play_intent_declaration_repository(event_store=store, events=events),
+            # Also declared before their first caller: every surface that shows
+            # one player to another consults `BlockQuery` (`docs/adr/0095` §7),
+            # and none of those surfaces is built.
+            build_block_repository(event_store=store, events=events),
+            build_block_query(session),
             # No session: photos are bytes in an object store, not rows. What
             # they need instead is the settings — the bucket and which store —
             # which is the other half of what this module promises a caller

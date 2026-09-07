@@ -44,12 +44,23 @@ fi
 # --- 2. writing to .env* / secrets --------------------------------------------
 # A write verb aimed at a .env target, or any redirect into one. `.env*.example`
 # templates are fine — those exist to be edited.
-if printf '%s' "$COMMAND" | grep -qE "${SEP}(cp|mv|rm|tee|touch|sed[[:space:]]+-i)[^|;&]*\.env|>>?[[:space:]]*[^|;&]*\.env"; then
-  # Inspect each .env token individually: `cp .env.local.example .env.local`
+#
+# `.env` counts only where it *names a path segment*: at the start of a token or
+# right after a '/', ending there or carrying a suffix (`.env`, `.env.local`,
+# `backend/.env.docker`). Matching those four characters anywhere also matched
+# `record.envelope` — the Play search DTO's own field — and every `process.env` in
+# a heredoc, and the refusal then named a cause that was not the cause (#281).
+DOTENV_PATH='(^|[^[:alnum:]_.-])\.env(\.[[:alnum:]_-]+)*([^[:alnum:]_.-]|$)'
+
+if printf '%s' "$COMMAND" | grep -qE "${SEP}(cp|mv|rm|tee|touch|sed[[:space:]]+-i)[^|;&]*${DOTENV_PATH}|>>?[[:space:]]*[^|;&]*${DOTENV_PATH}"; then
+  # Inspect each .env path individually: `cp .env.local.example .env.local`
   # mentions an example but still writes a real secret file, so testing the whole
-  # command string for ".example" would wave it through.
+  # command string for ".example" would wave it through. Split on the shell's own
+  # separators first, so the test is "is this token a dotenv path", not "does this
+  # blob of text contain four characters".
   if printf '%s' "$COMMAND" \
-      | grep -oE "[^[:space:]\"']*\.env[^[:space:]\"']*" \
+      | tr -s "[:space:]\"'=<>|;&()" '\n' \
+      | grep -E '(^|/)\.env(\.[[:alnum:]_-]+)*$' \
       | grep -qvE '\.example$'; then
     echo 'Blocked: creating or modifying a real .env* / secret file is not allowed without an explicit human request. Edit the .env*.example template instead, and let a human copy it. See CLAUDE.md Safety.' >&2
     exit 2

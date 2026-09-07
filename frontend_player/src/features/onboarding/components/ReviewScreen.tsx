@@ -51,7 +51,7 @@ import {
   theme,
 } from '@/shared/ui';
 
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import { positionOf } from '../domain/onboardingPass';
 import { answeredQuestions, type StandingQuestion } from '../domain/questionNavigation';
 import { runStanding } from '../domain/runStanding';

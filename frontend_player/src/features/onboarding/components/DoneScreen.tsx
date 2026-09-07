@@ -21,9 +21,13 @@
  * runs are the pass's, which is the concept that records them; every number in a card is
  * Query's, read back through the key the result screen filled.
  *
- * **The sentence under the cards is the point of the screen.** A player who leaves
- * believing their Level is a judgement has been mis-served by it: these are hypotheses,
- * they are made to be tested, and real matches are what narrow them.
+ * **The cards are the whole of the screen now.** Two things under them are gone. The note
+ * saying the ratings are hypotheses was true and said nothing the player had not already been
+ * told: the result screen makes the same claim, per rating, at the moment there is one to make
+ * it about — and repeating it here turned a summary of what somebody just earned into a
+ * second round of caveats. And the engine version was a footnote answering a question nobody
+ * on this screen is asking; it is still on the wire, still read by the mapper, and still
+ * `AssessmentResult.engineVersion` for anything that needs to attribute a retune.
  *
  * **Where Confidence stopped, and why, is two different sentences.** Everyone leaves at or
  * below the ceiling, but a rating held *by* the ceiling and one held by its own evidence
@@ -53,7 +57,7 @@ import { useOnboardingPass } from '../store/onboardingPass.store';
 import { OnboardingChrome } from './OnboardingChrome';
 import { ratingStatusLabel } from './bandPresentation';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
-import { formatConfidence, formatLevel, formatRange } from './ratingFormat';
+import { formatLevel, formatPercent, formatRange } from '@/shared/formatting/ratingFormat';
 import { sportColour, sportLabel } from './sportPresentation';
 
 /**
@@ -119,18 +123,6 @@ export function DoneScreen() {
   const rated = useOnboardingPass((state) => state.pass?.rated ?? NOTHING_RATED);
   const results = useRunResults(rated);
 
-  // Which engine produced these, said out loud, because the data screen claims it is kept
-  // and a claim the player can check is worth more than one they cannot. Deduplicated:
-  // two sports rated a minute apart were rated by the same engine, and saying so twice
-  // reads as two facts.
-  const engines = [
-    ...new Set(
-      results
-        .map((entry) => entry.query.data?.result?.engineVersion)
-        .filter((version): version is string => version !== undefined),
-    ),
-  ];
-
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       {/* No progress bar. The bar measures which sport is being rated, and none is —
@@ -149,16 +141,6 @@ export function DoneScreen() {
         {results.map((entry) => (
           <RatingCard key={entry.run.assessmentId} entry={entry} />
         ))}
-
-        <Note variant="info" title="These are hypotheses, not verdicts">
-          Every rating here is a starting estimate, made to be tested. Real matches are what narrow
-          the range — and they can move a Level in either direction. Nothing here is a judgement
-          about you.
-        </Note>
-
-        {engines.length > 0 ? (
-          <Text style={s.footnote}>{`Produced by rating engine ${engines.join(', ')}`}</Text>
-        ) : null}
       </ScrollView>
 
       <View style={s.action}>
@@ -244,8 +226,8 @@ function RatingCard({ entry: { run, query } }: RatingCardProps) {
             <Row
               divided
               label="Confidence"
-              value={<Figure>{formatConfidence(result.confidence)}</Figure>}
-              accessibilityLabel={`${sport} confidence: ${formatConfidence(result.confidence)}`}
+              value={<Figure>{formatPercent(result.confidence)}</Figure>}
+              accessibilityLabel={`${sport} confidence: ${formatPercent(result.confidence)}`}
             />
             <Row
               divided
@@ -289,7 +271,6 @@ const s = StyleSheet.create({
   figure: { ...theme.num.xs, ...theme.tabular, color: theme.color.ink },
   limit: { ...theme.type.tiny, color: theme.color.muted, marginTop: theme.space.sm },
   failure: { gap: theme.space.sm, marginTop: theme.space.sm },
-  footnote: { ...theme.type.tiny, color: theme.color.muted },
   action: {
     paddingHorizontal: theme.size.gutter,
     paddingTop: theme.space.md,

@@ -3,6 +3,22 @@
 Field list is §7.2 of docs/specs/matchmaking/matchmaking-engine.md, verbatim.
 Everything is seeded, so every number in docs/research/matcher-scale-in-python.md
 is reproducible.
+
+**This is the row §7.2 specified, and it is not the row the index holds.** The
+shipping type is app/modules/matchmaking/domain/candidate_index.CandidateRow, and
+it diverged from §7.2 before it was written: tags and the grid are tuples of
+strings here rather than two int bitmasks, the area is a tuple of IndexedArea
+rather than (cell, lat, lng) scalars, the timestamps are real datetimes rather
+than epoch ints, and there is no shard key (ADR-0101 derives the partition).
+This file is deliberately **not** updated to follow it — every other bench in
+this directory reads these bitmasks and these scalar columns, and the whole of
+results.md is captured against them, so changing the row here would invalidate
+numbers that are still true about the thing they measured.
+
+What it may **not** be used for is a claim about the shipping row's cost. That
+mistake is #276: 782 bytes a row, measured here, was quoted in seven files as the
+cost of a type nobody had measured. candidate_row_bench.py measures that one, by
+importing it.
 """
 from __future__ import annotations
 

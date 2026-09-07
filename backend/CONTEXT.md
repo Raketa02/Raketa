@@ -94,6 +94,30 @@ there; they are not repeated here.
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name
   and despite `User` being an event-sourced aggregate — it is the projection side, not the
   write side. It keeps its name; read the shape, not the noun.
+- **Outward port** — a port this backend defines and **another context implements**, rather
+  than one it implements itself. The five in `modules/matchmaking/domain/ports.py` are the
+  only ones today ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)):
+  the matcher names the facts it needs and has no opinion on the provider's aggregates,
+  storage or state machines. Distinguish it from a repository port, which this backend both
+  defines and adapts. _Avoid_: "external port", "integration".
+- **Null object** — an adapter for an outward port whose provider **does not exist**, named
+  for the fact it asserts and never for being empty: `NoHoldsExist`, not
+  `NullAccountHoldQuery`, because *null* reads as *not wired yet* and these are wired. It is
+  not a stub or a fake — it returns what is *true today*, and stops being true on the day its
+  provider lands. The rule it obeys is **a gate may be honestly empty; a term may never be
+  honestly neutral**, and the test is whether a zero would be **measured** or **invented**.
+  _Avoid_: stub, dummy, placeholder, no-op adapter.
+- **Register** (`app/bootstrap/matcher_demands.py`) — the list of every implementation of
+  every outward port, one row each, read by the **demand suite** in `tests/demands/` and
+  by nothing else. It lives in the composition root because choosing implementations is what
+  a composition root is for, and because a module may not import `app.bootstrap`. Registering
+  an adapter enrols it in the suite; **a port with no row is a red build**, because an empty
+  `parametrize` collects as *skipped* and a skipped test is one nobody is watching.
+  It is ADR-0098's **contract suite**, and the directory is deliberately not called that:
+  [`docs/environments.md`](../docs/environments.md)'s **Contract** tier already means
+  `openapi.player.json` drift, and two suites called *contract* is how a green build starts
+  being read as the wrong assurance. _Avoid_: registry (the ruleset store and the event
+  catalog are already spoken for), provider list.
 
 - **Environment** — one of exactly four: `local`, `development`, `staging`, `production`,
   spelled identically by both apps and carried by `APP_ENV`. `local` is a developer's
@@ -218,6 +242,67 @@ there; they are not repeated here.
   Developing stops the seed by name. The band's edges come from the rating rather than
   from a second copy, so a re-cut band moves the claim with it. _Avoid_: a claim written as
   literal Levels, a check that only runs on the account this run happened to create.
+- **Cohort** — the population behind the named accounts: sixty-odd members generated from
+  one seed, committed as `app/seeds/cohort.json` and **inputs only** — never a level, an
+  uncertainty or a band, because those are the engine's answers to the questionnaire each
+  member sits and a committed copy of an answer is a number nothing keeps honest. It is a
+  **development workbench and says so on its own artifact**: a population chosen so that
+  every Play screen state is *reachable*, standing for nothing outside itself and
+  describing no real market. Every draw is keyed off the member's own handle, so adding one
+  changes that row and nobody else's; every coverage rule is a rule over the member's
+  position rather than a rate, because at this size a 25% draw is four people on a good day
+  and one on a bad one. _Avoid_: reading a rate here as evidence about anything, a μ in the
+  artifact, a rule expressed as a percentage.
+- **Relationship account** — a seed account named for a **pair** rather than for its own
+  state — `said-yes-to-you`, `they-blocked-you` — always from the protagonist's side, with
+  the protagonist named in the description and never in the slug (a pool card is read
+  constantly and a sign-in happens once). The eleven exist because five of the ten
+  `LivenessSignal` codes are facts about two people and **no distribution can exhibit
+  one**: a rate over sixty members produces edges nobody named, and it cannot assert that
+  *exactly one* instant-match pair exists. Every edge costs a **real search or deal run as
+  the sender**, because interest and passes have no non-search constructor and a send cites
+  the search its court was built on — and that cost is the check, since an origin that
+  resolves proves the protagonist was genuinely findable before any lift is claimed.
+  _Avoid_: an account named for its own state here, a second protagonist acquiring edges,
+  an edge written straight into a ledger.
+- **Relationship claim** — what a relationship account promises, and it is **a code on a
+  card or a named absence, read through the protagonist's own read path** — never a ledger
+  lookup, because a check computed from what the generator wrote can only ever pass. An
+  absence claim asserts the **gate histogram** rather than the absence: the histogram is
+  counted first-in-declaration-order, so `excluded_by_gate[OPEN_CHALLENGE] >= 4` names the
+  reason exactly, where a bare absence is also what *no rating*, *out of range* and *the
+  wrong gender preference* look like. _Avoid_: asserting an absence on its own, reading the
+  edge back out of the store that wrote it.
+- **Dev console** — the backend-served development tool at `/dev`: surface `dev`, contract
+  `openapi.dev.json`, code in `app/api/dev/`. Two things a reader would otherwise assume
+  wrongly. **It is not a client** — nothing generates types from its contract, which is why
+  that document is gated by a *freshness* check and not by `check-contract-drift.sh`. And
+  it acts as another player **only by signing in as one**, through the ordinary
+  `POST /api/v1/auth/login` with the public seed password its roster carries at the top
+  level; there is no impersonation endpoint, no `Act-As` header and no authorisation path
+  that exists for it, so every write it presses is a **player-surface** write and *never
+  acts on behalf of anybody* holds by construction rather than by inspection. Three views —
+  roster, search as, answer as — one identity at a time, the token in memory only, the
+  current identity rendered large, and **not one timer**: it exists so that nothing
+  auto-answers. `frontend_club/` was *"the club console"* and is gone; this is the only
+  console, and saying so here is cheaper than having the collision rediscovered.
+  _Avoid_: calling it an app (it is one HTML file and one route), a second client, an admin
+  panel.
+- **Console gate** — `CONSOLE_SERVED` in `app/api/dev/gate.py`: where the dev console is
+  served, written out per environment with the same `_undecided` refusal the **Seed guard**
+  carries. **A second table, and never `SEEDABLE`** — the same answer today to a different
+  question, and deriving one refusal from another is what `guard.py`'s own comment argues
+  against. The refusal sits at the top of `routes.py` rather than in the package's
+  `__init__`, which is where the seed system puts its own and is **wrong here**:
+  `create_app` reads the table in every environment to decide whether to mount anything, so
+  a package that refused on import would make a production deployable crash at startup
+  reading its own dev tool. Beside it the data half is a **filter, not a refusal** — a seed
+  account is one addressed on the reserved `.example` TLD — so *gated structurally and by
+  data* resolves asymmetrically: the structural gate is a check and the data gate is a
+  **consequence**, since production has no such accounts. Both hold; only one can fail.
+  _Avoid_: deriving it from `SEEDABLE`, putting the refusal where the mount reads it,
+  making the roster *refuse* a non-seed address (it would be theatre — the login route any
+  browser reaches takes any credential).
 - **Served vocabulary** — a closed domain constant the platform owns, held in exactly one
   module of the context that owns it and exposed **read-only** over the player API so no
   client hardcodes it. Two exist: the `Sport` registry at `GET /api/v1/sports`, and the
@@ -316,6 +401,29 @@ there; they are not repeated here.
   a profile is as unreachable as one never committed, so it is the same orphan. _Avoid_:
   "orphan" as a status stored anywhere — it is a question asked of the store and the
   stream, never a field.
+- **Review standing** — what the metadata on a stored photo says about whether anybody
+  ever looked at it, read off the `review-note` key and nothing else
+  ([ADR-0132](../docs/adr/0132-a-re-review-is-the-same-reviewer-and-a-stale-prompt-set-is-not-one.md)).
+  Three values, because there are three populations: **never asked** (no note — the
+  pass-through era, and also any note nothing can parse), **unavailable** (`unavailable=…`
+  — the sidecar was down when the photo arrived, and this population keeps growing), and
+  **reviewed** (`clip;m=…;p=…;c=…;s=…` — an image was really scored). It is **not** the
+  same question as the verdict: a photo is `allowed` both when a model scored it and when
+  nothing was asked, which is the confusion that made #197 necessary. _Avoid_: a status
+  column, a second table, "reviewed" as a boolean on the object.
+- **Re-review backfill** — the scheduled job that asks the reviewer about the photos
+  nobody ever asked it about: standings *never asked* and *unavailable*. It re-reviews
+  **through the same `PhotoReview` port the upload path holds**, so there is one copy of
+  the rule and a batch cannot disagree with an upload about one image; it never rewrites a
+  note that is already right, because an S3 metadata update is a copy of the object onto
+  itself. _Avoid_: calling it a re-scan or a migration, and calling anything that applies
+  its own threshold a backfill.
+- **Superseded prompt set** — a photo whose standing is *reviewed*, against a
+  `PROMPT_SET_FINGERPRINT` that is no longer the current one. **Counted, never
+  re-reviewed**: whether captions that have moved are worth re-running is a judgement
+  nobody has made, and the fingerprint exists so that the question is answerable rather
+  than so that a job can act on it. _Avoid_: folding it in with the two populations that
+  are work.
 - **Retention window vs cadence** — the pair that must not swap places. *How old an
   uncommitted photo must be before it is swept* is a rule a domain test can observe and
   lives beside the size caps in `player_profile/domain/photos.py`; *how often the sweep
@@ -336,9 +444,201 @@ there; they are not repeated here.
   silently rewriting every past comparison, and CI regenerating under a different
   `PYTHONHASHSEED` asserts generation and pipeline together. It goes stale by
   **contradiction** — a named parameter leaving its band against the search record — never
-  by ceasing to resemble anything. _Avoid_: "realistic", "production-like", a fixture whose
-  correlations nobody measured, folding §20.1's scenarios or the six judged pairings into
-  it.
+  by ceasing to resemble anything. It lives in `scripts/ruleset_diff/`, its artifacts in
+  `docs/specs/matchmaking/ruleset-diff/`, and **only the thin density is a build gate** —
+  the dense one runs on demand and is measured in hours, where a gate that takes hours is a
+  gate somebody turns off ([`the-ruleset-gate.md`](../docs/specs/matchmaking/the-ruleset-gate.md)
+  §1.1). _Avoid_: "realistic", "production-like", a fixture whose correlations nobody
+  measured, folding §20.1's scenarios or the six judged pairings into it.
+
+- **Judged-pairings harness** — `scripts/judged_pairings/`, the package that reads
+  `docs/specs/matchmaking/judged-pairings.json`, scores its six cases against the **live
+  ruleset**, and writes every derived number back: the fixture's own readings, the tables
+  in `the-judged-pairings.md`, and `ranking-weights.md` §10. The fixture holds **inputs and
+  one verdict per case** and nothing derived is typed into it
+  ([ADR-0122](../docs/adr/0122-a-judged-pairing-is-two-people-never-a-profile-of-scores.md)),
+  so a formula change re-derives the whole thing and arrives as a diff a reviewer must
+  argue for. It does one thing a diff cannot: it re-derives the **floor bound**,
+  `max(Fit | not shown) < QUALITY_FLOOR ≤ min(Fit | shown)`, and exits red when the
+  configured integer leaves it — which is what `ranking-weights.md` §11 always demanded of
+  a ruleset release and could not enforce against prose. It is the **only** scorer in the
+  loop: `tests/unit/test_matchfit_judged_pairings.py` scores through it too, because a
+  second harness is a second answer and the tables would agree with the tests while both
+  disagreed with the engine. _Avoid_: calling it a corpus or a replay — it is pass/fail
+  against named verdicts over six pairings, where the **synthetic corpus** above asks how a
+  ruleset moves a population and has no floor in it
+  ([ADR-0121](../docs/adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md) bars
+  the six from that corpus as circular).
+
+- **Ruleset store** — where the released **Ruleset** datasets live:
+  `app/modules/matchmaking/infrastructure/rulesets/`, a package rather than a table,
+  because a ruleset ships embedded with the code and the runtime store is deferred
+  ([ADR-0093](../docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md)).
+  **The engine owns the shape and the module owns the data**, and the fence forces the
+  split rather than taste: a ruleset names Social tag ids, an engine may not import a
+  module, and retyping the nineteen inside `app/engines/matchfit/` would be a second copy
+  of a closed vocabulary — which `tests/unit/test_social_tag_vocabulary.py` refuses
+  outright. So `Ruleset` and `validate_ruleset` are the engine's, every dataset is here,
+  and the day the runtime store lands it replaces this package rather than growing beside
+  it. _Avoid_: "config", "settings" — the environment may select configuration and may
+  never select a ruleset.
+- **Scorable candidate** — the type the **Match Fit** scorer is handed, in
+  `app/engines/matchfit/scorable.py`. It carries **no gender, no name, no photo, no
+  birthdate, no precise location and no shard key**, which is what makes *a term cannot
+  read a protected characteristic* literally true rather than aspirational: the value is
+  not in the process. `tests/unit/test_scorable_candidate_fence.py` **walks the source
+  transitively**, through every type a field is annotated with, and fails the build on a
+  forbidden word — a shallow check would pass a candidate holding a whole player profile
+  behind one innocent field name. Three kinds of fact live on it and the difference is
+  load-bearing: the candidate's own facts, the **pair's** facts measured outside because
+  the fence puts them there (`combine_sigma` is RacketSkill's and one engine may not import
+  another), and the facts a pure process cannot have — today's weekday, and how old a
+  Player Score is, because `datetime` is forbidden to this layer outright. _Avoid_:
+  "candidate row" for it — that is the index's, on the other side of the fence, and it
+  legitimately holds gender.
+- **Wire evidence union** — the closed, discriminated set of **Evidence** variants in
+  `app/modules/matchmaking/presentation/evidence.py`, keyed by `kind`. The engine's
+  `EvidenceKind` supplies the discriminator strings so the two halves cannot spell one
+  differently. **A ruleset that can emit a kind this union does not publish refuses to
+  load** — checked in `app/bootstrap/matchmaking.py`, which is where the ruleset and the
+  contract are both visible, and a **load failure rather than a lint** because the drift
+  is silent for exactly as long as nobody releases a ruleset with a new kind
+  ([ADR-0106](../docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)).
+  _Avoid_: "terms blob" for it — the store is open where the wire is closed, on purpose.
+
+- **Tail reader** — `CandidateIndexTail`, the **candidate index's only writer**. It
+  subscribes to `event_store` in `sequence_no` order and **not** to the outbox, and the two
+  are different subscriptions with different guarantees
+  ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md)):
+  the outbox delivers side effects once, eventually, out of append order and under a row id
+  unrelated to the event's, so an outbox subscriber could never name the number
+  **snapshot version** is. It takes the single **index cursor** row `FOR UPDATE` for the tick,
+  so a concurrent run **blocks, then reads the advanced cursor and finds nothing to do** —
+  which is how ADR-0092's *idempotent and safe beside itself* stays literally true with no
+  leader election and no lease to leak. _Avoid_: "consumer", "subscriber", "handler" — a
+  **handler** is an outbox subscriber and is the other subscription.
+- **Contiguous prefix** — how far one tick may advance the watermark. `sequence_no` is
+  assigned at `INSERT` and not at `COMMIT`, so a transaction holding 100 may commit after one
+  holding 101, and a reader that consumed to `max(sequence_no)` would record a watermark that
+  is a lie about what it has seen. The tick applies rows up to the last *contiguous* number
+  and no further, which is what makes *everything up to and including this is applied* true by
+  construction rather than by argument. _Avoid_: "high-water mark" for the raw maximum — that
+  number is exactly what this refuses to record.
+- **Snapshot horizon** — what tells an in-flight append apart from an aborted one. A hole in
+  the log is either, and the two are indistinguishable from a reader's side, so the cursor
+  records `pg_snapshot_xmin(pg_current_snapshot())` when it first sees the hole and steps over
+  it once the horizon has moved past that value — every transaction running then has ended, so
+  nothing can fill it. **`None` on SQLite**, where there is no horizon and no concurrent
+  appender: the suite asserts contiguity and the gap-stepping path is exercised against
+  PostgreSQL or not at all, which is a place the suite is **weaker than production** and is
+  recorded rather than papered over. _Avoid_: a wall-clock safety lag — it spends the whole
+  freshness budget on a race whose real duration is milliseconds.
+- **Candidate row** vs **player facts** — the index is two tables because a search reads
+  `(player, sport)` and a player edits their profile once. `candidate_player_facts` holds what
+  a person says about themselves; `candidate_row` holds what is true of them in one sport, and
+  a row **enters a snapshot only when both halves exist** — a player rated before onboarding
+  finished has no grid and no area, and one who onboarded and rated nothing has no Level.
+  Said with a join, never with columns full of nulls a term would eventually read as a
+  measured zero. `CandidateRow` (the in-memory join) is `slots=True`, frozen, primitive and
+  **cycle-free**, which is what makes `gc.freeze()` safe
+  ([ADR-0112](../docs/adr/0112-the-snapshot-is-a-per-partition-container-bound-once.md)) and is
+  walked by `tests/unit/test_candidate_row_fence.py`. It legitimately holds **gender** — the
+  mutual gate reads it and the engine never sees it — which is the one place this fence and the
+  **Scorable candidate**'s differ. _Avoid_: "scorable candidate" for it, and vice versa.
+- **`applied_through_sequence_no`** — the stamp on every projected row, and ADR-0110's
+  replacement for §7.3's four-field row stamp (which was designed against at-least-once HTTP
+  delivery this design does not have). It is written with **the sequence number of the event
+  that moved the row**, never with the batch's own end, so it is independent of how the log
+  happened to be cut into batches — which is what makes **rebuild == tail** an equality over
+  whole tables rather than over the columns somebody remembered to exclude. A profile edit
+  restamps every one of that player's rows, so a delta refresh asks one question of one table.
+- **`rebuild == tail`** — the property the whole projection rests on
+  (`tests/unit/test_candidate_index_rebuild_equals_tail.py`). Tail a fixture incrementally,
+  empty the tables, rebuild the same fixture from zero, require the two identical. It proves
+  the projection is a **pure function of the log**, that **append order** does the job it was
+  written for, and that determinism has a stable input — and it is what would actually be false
+  if a projection had a bug. **Never a wall-clock bound**: a five-minute assertion on a shared
+  runner is a flaky test that gets muted, so the timing figure stays a metric the rebuild
+  command logs. The repair is `make rebuild-candidate-index` and **there is no admin route**,
+  asserted by a walk over `app/api/` and every `presentation/`.
+- **Candidate source** — `DatabaseCandidateSource`, **one per process**, holding one immutable
+  container per **partition**. A refresh rebuilds the containers from the rows whose stamp
+  moved — never past its own `snapshot_version`, or the container would not *be* the index at
+  the version it claims — **copying references** for the rest, and publishing them by rebinding
+  one attribute —
+  atomic under the GIL, which is what `atomic.Pointer` means in this process model. A search
+  binds a container **once, at entry**, so a refresh mid-search cannot move the index
+  underneath it. Because the steady state never holds two copies of a row, ADR-0093's and
+  ADR-0101's **trigger 4 loses its `× 2`**. _Avoid_: a per-request source, or a port that
+  answers questions *about* rows — per-row granularity was priced at **+0.58 ms** and doubles
+  the walk, and this shape exists to make it unavailable.
+- **Index staleness: two budgets** — a **target** and a **ladder**, and reading them as one
+  number is the mistake `matchmaking/domain/index_staleness.py` exists to prevent. The target is
+  the refresh loop's p50 2 s / p99 15 s: missing it raises an alert and **changes no
+  behaviour**. The ladder is serve under 15 minutes, serve and record `index_stale` to 24
+  hours, **refuse** past it — and the refusal stands on **quality**, not safety, because every
+  live-truth fact was taken out of the index by ADR-0095, ADR-0098 and ADR-0109. Anyone who
+  later moves a live-truth fact in has to come back and re-argue that, which is why the reason
+  is written down rather than the number. The ladder is **domain and never configuration**; the
+  two cadences are configuration. _Avoid_: putting the ladder in `config.py`, or `index_stale`
+  on the wire — §18 itself says the player sees nothing at that rung.
+
+- **Ephemeral store** — the module's Redis, holding the **exposure ledger** and the
+  **suppression ledger** and nothing else. The rule that separates it from every durable
+  store is one sentence: **the gate is the cache; the evidence is the row.** A fact that must
+  survive is a durable row elsewhere — *who was shown to whom* is answered by the search
+  record, *were these two ever passed on* by the durable pass record, which is exactly the
+  fact a TTL destroys
+  ([ADR-0093](../docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md),
+  [ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)). Its
+  **address** is configuration (`REDIS_URL`); **neither TTL is** — `PASS_SUPPRESS` is a
+  product number in the released ruleset and `EXPOSURE_RETENTION_WEEKS` is in
+  `matchmaking/domain/ledgers.py`, because both decide what can still be asked. _Avoid_:
+  "cache" alone for it — half of what a cache implies is *recomputable*, and neither ledger
+  is.
+- **Interest ledger** — the module's own **durable** ledger of every live *Let's play*,
+  and the counterweight to the ephemeral store above: it is a table, not a Redis key,
+  because it is the one thing in this context a human would miss. Two shapes are
+  structural rather than remembered. It has **no method that answers *who has said yes to
+  me***: the lift's read (`days_ago_towards`) takes the candidate population it may answer
+  about, so an inbox is not a query the port can express
+  ([ADR-0109](../docs/adr/0109-a-read-back-names-what-it-withholds.md)). And every read is
+  **bounded by `now`**, so a lapsed yes is invisible whether or not the expiry loop has run
+  — *lapsed* and *never sent* are one answer at this seam. It does not fail soft: unlike
+  exposure and suppression it can **admit** somebody, so a lost read is a person the
+  product guaranteed a place and silently dropped. `INTEREST_TTL` and
+  `OUTSTANDING_INTEREST_CAP` are ruleset rows and only the sweep's cadence is
+  configuration. _Avoid_: a `state` or `expired_at` column — a yes is live or gone
+  ([ADR-0127](../docs/adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md)).
+- **The origin key's columns** — `origin_search_id` and `origin_position` on the
+  `interest` row. The **term** is the root glossary's
+  ([`../CONTEXT.md`](../CONTEXT.md)) and is not restated here; what is technical is
+  where it lives and how it is filled. **Two columns, never a third table** — the link
+  is 1:1, and when `matches` lands the chain is `match ← interest ← search`, still
+  foreign keys. The position is read off the cited search's own **returned** rows rather
+  than sent by the client, so it is true by construction, and a citation that cannot be
+  proved raises `origin_search_not_found` rather than writing a null. _Avoid_: making
+  either column nullable "for now" — the whole value of the key is that *interests per
+  search* has no missing rows.
+- **Fail-soft ledger** — how *exposure and suppression fail soft* stops being prose.
+  `FailSoftExposureLedger` and `FailSoftSuppressionLedger` wrap any implementation and
+  degrade every operation to the **empty answer**, and the composition root never hands out
+  an unwrapped adapter. It is a wrapper rather than a `try` per adapter method, because an
+  adapter that swallows its own failures makes *the store answered nothing* and *the store
+  could not be reached* indistinguishable — and rather than a `try` per call site, because
+  that is a discipline, which is what `application/outward_reads.py` refuses for the five
+  outward ports. Applying ADR-0095's *a gate that cannot be evaluated excludes* here would
+  **empty the deck rather than protect anybody**. _Avoid_: reading it as a general resilience
+  wrapper — it is safe **only** because neither ledger is evidence for anything, and it would
+  be indefensible around `BlockQuery`.
+- **Exposure roll** — the hourly `PeriodicJob` that publishes, per sport, what *shown more
+  often than most* means this week. It is the first job in `app/bootstrap/jobs.py` that takes
+  **no database session**. Despite §14.5's name it **rolls no bucket**: the week is derived
+  from `now`, so next week's key starts empty and this week's expires on its own — the same
+  argument that struck the newcomer-window loop. It is idempotent and safe beside itself
+  because it is a **reader** that writes one derived scalar. _Avoid_: adding bucket
+  management to it — a job whose name promises work it does not do is a job somebody adds the
+  work back into.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

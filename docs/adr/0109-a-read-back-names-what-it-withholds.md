@@ -52,6 +52,14 @@ section on this failure mode for an unknown evidence kind — *a breakdown that 
 adding up is the same class of lie as a recomputed score, and worse for being invisible* — and
 a shortlist that quietly loses a row is the same lie one level up.
 
+> **Narrowed by [ADR-0130](0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md) when
+> this was built.** *Stated, never vanished* stands, and is what the route is built on. *And
+> why* is **struck**: `withheld: BLOCKED` is precisely the trace ADR-0095 — cited two
+> paragraphs above — says the other side sees nowhere in any response, delivered to the person
+> the block was designed to be invisible to. The other three fail-closed gates leak a
+> moderation fact or a safety setting for their own recorded reasons, so all four reach the
+> wire as one indistinguishable statement, on a row shape that carries no person.
+
 `the-two-contracts.md` §1's round-trip assertion narrows accordingly: **the round trip
 reproduces the recorded answer, plus live gate state**, and the test asserts both halves.
 Written down because a test drafted naively against the whole payload will fail on a

@@ -6,7 +6,7 @@
  */
 
 import { listSports as fetchSports } from '../api/onboardingApi';
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import { toSports } from '../mappers/onboardingMappers';
 
 export interface ListSportsOptions {

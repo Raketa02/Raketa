@@ -30,6 +30,18 @@ from app.modules.auth.application.event_subscriptions import (
     register_auth_events,
     subscribe_auth_handlers,
 )
+from app.modules.blocks.application.event_subscriptions import (
+    register_block_events,
+    subscribe_block_handlers,
+)
+from app.modules.challenges.application.event_subscriptions import (
+    register_challenge_events,
+    subscribe_challenge_handlers,
+)
+from app.modules.games.application.event_subscriptions import (
+    register_game_events,
+    subscribe_game_handlers,
+)
 from app.modules.player_profile.application.event_subscriptions import (
     register_player_profile_events,
     subscribe_player_profile_handlers,
@@ -48,6 +60,16 @@ from app.modules.users.application.event_subscriptions import (
 class EventRuntime:
     codec: JsonEventCodec
     dispatcher: EventDispatcher
+    #: The durable-name register the codec was built over.
+    #:
+    #: Carried beside the codec rather than left inside it because a **reader of
+    #: the log** needs the mapping in the other direction: the candidate index
+    #: projects a fixed list of *event classes* and has to know which durable
+    #: names those are before it decides whether to decode a row at all
+    #: (``docs/adr/0110``). Re-declaring those names beside the projection would
+    #: be a second copy of a published contract, and the drift would be silent
+    #: for exactly as long as nobody renamed one.
+    catalog: EventCatalog
 
     def create_publisher_for(self, *, session: AsyncSession) -> EventPublisher:
         return EventPublisher(
@@ -81,16 +103,23 @@ def build_event_runtime() -> EventRuntime:
     register_auth_events(catalog)
     register_rating_events(catalog)
     register_player_profile_events(catalog)
+    register_block_events(catalog)
+    register_challenge_events(catalog)
+    register_game_events(catalog)
 
     dispatcher = EventDispatcher()
     subscribe_user_handlers(dispatcher)
     subscribe_auth_handlers(dispatcher)
     subscribe_rating_handlers(dispatcher)
     subscribe_player_profile_handlers(dispatcher)
+    subscribe_block_handlers(dispatcher)
+    subscribe_challenge_handlers(dispatcher)
+    subscribe_game_handlers(dispatcher)
 
     return EventRuntime(
         codec=JsonEventCodec(catalog),
         dispatcher=dispatcher,
+        catalog=catalog,
     )
 
 

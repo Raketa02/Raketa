@@ -28,12 +28,22 @@ runs at all is [ADR-0093](../../adr/0093-matcher-in-the-backend-with-a-pure-matc
 | --- | --- |
 | Players in a launch city | 10³ – 10⁴ |
 | Candidate rows | ~2.5 × players (§17) — **write every threshold in rows, never in players** |
-| Bytes per row, `__slots__` objects | **782** (measured; §7.2's 160 is wrong three different ways) |
+| Bytes per row, `__slots__` objects | **1 991** (measured against the shipping `CandidateRow`; §7.2's 160 is wrong three different ways, and the **782** this said until [#276](https://github.com/Raketa02/Raketa/issues/276) measured §7.2's row rather than this one — see the note below) |
 | Bytes per row, `array`-packed columns | **43** |
-| Whole index, 50 000-player city | **98 MB per worker** |
+| Whole index, 50 000-player city | **249 MB per worker** |
 | Searches at peak (Thursday evening) | 1 – 20 / s (§17) |
 | One 50 000-player city search | **2.79 ms** |
 | Scoring duty cycle at §17's peak | **0.07** |
+
+> **The bytes-per-row figure carries one assumption, and this table would be lying without
+> it.** `availability` is the most expensive field on an index row — a tuple plus one string
+> per ticked cell — so *how much of the grid a player fills* sets the total, and there are no
+> real players to measure. The bench uses `backend/app/seeds/cohort.py`'s density, the only
+> one this repository states (mean **6.2** of 21 cells), and prints the elasticity beside the
+> answer: **1 779** a row at 3 cells and **2 938** at 21, moving trigger 4 between ~28 000 and
+> ~17 000 players. Quote the figure with its assumption — a number quoted without one is how
+> the previous figure survived being about a different row
+> ([#276](https://github.com/Raketa02/Raketa/issues/276)).
 
 At §17's peak the engine uses seven percent of one event loop. **The load the architecture
 would be separated to isolate does not exist**, which is what ADR-0093 rests on and what the
@@ -100,15 +110,22 @@ which amends ADR-0093's prose versions. In short:
 | Trigger | Fires at | Today |
 | --- | --- | ---: |
 | **1** — request latency contends with scoring | p99 of one scoring call > **20 ms**, or duty cycle > **0.25**, on one worker over 15 min | 11.4 ms / 0.07 |
-| **4** — the index no longer fits beside the API | `bytes_per_row × rows × workers` > **50%** of the container memory limit | ~160 000 rows on four workers of a 1 GB container |
+| **4** — the index no longer fits beside the API | `bytes_per_row × rows × workers` > **50%** of the container memory limit | ~63 000 rows on four workers of a 1 GB container |
 
 > **The `× 2` was struck by [ADR-0112](../../adr/0112-the-snapshot-is-a-per-partition-container-bound-once.md).**
 > It budgeted a refresh peak that duplicated every row, and
 > [#173](https://github.com/Raketa02/Raketa/issues/173) made the refresh a **delta** that
 > copies row *references* from the container it replaces — so the steady state never holds
-> two copies of a row, and the trigger fires at roughly **64 000 players** rather than
-> ~32 000. The `× 2` returns the day a refresh implementation stops sharing references,
-> which is the constant's falsifier.
+> two copies of a row, and the trigger fires at twice the player count it otherwise would.
+> The `× 2` returns the day a refresh implementation stops sharing references, which is the
+> constant's falsifier.
+>
+> **The player count that sentence used to name has moved, for an unrelated reason.** It read
+> *64 000 rather than ~32 000* while `bytes_per_row` was 782, a figure measured against
+> §7.2's specified row and never against the shipping one; at the measured **1 991** the same
+> arithmetic gives roughly **25 000 players**
+> ([#276](https://github.com/Raketa02/Raketa/issues/276)). Doubling is still what ADR-0112
+> bought.
 
 **Both ship instrumented in the first build**, as fixed-name structured log records:
 
@@ -119,6 +136,16 @@ which amends ADR-0093's prose versions. In short:
 
 A trigger that requires somebody to go and measure fires late, which is the same disease as a
 claim with no trigger.
+
+> **Built by [#215](https://github.com/Raketa02/Raketa/issues/215).** The histogram wraps the
+> same span the search row already records as `pipeline` — one measurement, not two that could
+> disagree — and the oversleep monitor is the `scale-pressure` job, which writes one
+> `scoring pressure window` record per fifteen minutes per worker, at `WARNING` when either
+> half of trigger 1 has fired. Trigger 4's arithmetic rides on the index refresh's own record,
+> recomputed at every load from `GUNICORN_WORKERS` and the container's cgroup limit, warning
+> and never refusing; where there is no limit to read it says **unknown**, which is not
+> unlimited. All three are structured log records and **nothing reads them** —
+> [`the-ruleset-gate.md`](the-ruleset-gate.md) §2.
 
 **One thing that is not a trigger and belongs beside them: the garbage collector.** One
 automatic gen-2 collection over a live index cost **57.9 ms stop-the-world** — roughly thirty
@@ -148,9 +175,34 @@ below the last rung, not above the first.**
   rows pickle to 658 KB and **5.3 ms of `pickle.dumps` on the event loop** — more than the
   search it was meant to move. Only the resident-index shape in rung 4 survives.
 
-**The memory ladder is separate and has one rung:** `array`-packed columns, **43 bytes a row**,
-which genuinely share across forked workers (5 MB per worker instead of 108) and cost **23% on
-the scan**. They are the answer to **trigger 4** and never to trigger 1.
+**The memory ladder is separate, and it has two rungs.** Both are the answer to **trigger 4**
+and never to trigger 1.
+
+| Rung | Buys | Cost |
+| ---: | --- | --- |
+| 1 | **Share the closed-vocabulary strings** where `_decode` builds a row | **1 991 → ~995 bytes a row** — half the index, and trigger 4's bound doubles to ~50 000 players at four workers | **nothing on the search path**: one lookup per column, once, on the refresh that decodes the row |
+| 2 | `array`-packed columns | **43 bytes a row**, and they genuinely share across forked workers — 5 MB per worker instead of 108 | **23% on the scan** |
+
+**Rung 1 is nearly free and was not on this ladder until
+[#276](https://github.com/Raketa02/Raketa/issues/276) measured the row.** `_decode` copies
+whatever the driver returned, `social_tags` and `availability` are `JSON` columns decoded per
+row, and neither asyncpg nor SQLAlchemy interns — so every row holds its own `"PADEL"`, its own
+`"ANY"` and its own copy of each availability code. Half the index is a second copy of a
+vocabulary of about fifty strings.
+
+**It is a constant factor and rung 2 is a category change, which is why the order is this and
+not the reverse.** Sharing the strings halves the bytes; it does not alter what a fork does,
+because the row *objects* still exist and a scan still dirties the page of every one it
+touches — so a forked worker costs half of 108 MB, not 5. Rung 2 removes the per-row objects
+altogether, and that is what makes copy-on-write finally work. Take rung 1 first because it is
+free, and rung 2 when halving is no longer enough.
+
+**One column is not obviously vocabulary.** `sport`, `rating_status`, `calibration_priority`,
+`declared_intent`, `gender`, `gender_preference`, the tag ids and the twenty-one availability
+codes are closed sets this repository owns. `band` is a *published name* off the Level band
+table, and routing it through a vocabulary here would give this projection an opinion about a
+table `racketskill` owns — the second-source-of-truth argument that put `band_lower` /
+`band_upper` on the row as projected values in the first place.
 
 ## 6. `K = 24`, and why it is not "just a config change"
 

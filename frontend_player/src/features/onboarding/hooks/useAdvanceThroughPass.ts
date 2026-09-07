@@ -45,7 +45,7 @@ import { useCallback, useRef } from 'react';
 
 import type { AppError } from '@/shared/errors';
 
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import { nextDestination, stopDestination, type PassDestination } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 

@@ -1,5 +1,15 @@
 # Captured run
 
+> **Two captures, one machine.** Everything below except the `memory_bench` and
+> `candidate_row_bench` sections is the original run, captured for
+> [#161](https://github.com/Raketa02/Raketa/issues/161). Those two were re-captured
+> for [#276](https://github.com/Raketa02/Raketa/issues/276) — `memory_bench` because
+> its row label was corrected, and `candidate_row_bench` because it is new — on the
+> same hardware and the same CPython named below. `memory_bench`'s figures reproduced
+> the original to the byte (782 a row); its GC pause and RSS lines moved by ordinary
+> run-to-run noise, and those two lines are the only place this file is not the
+> single run its name implies.
+
 ```
 python   : 3.11.6 (v3.11.6:8b6ee5ba3b, Oct  2 2023, 11:18:21) [Clang 13.0.0 (clang-1300.0.29.30)]
 platform : macOS-15.7.1-arm64-arm-64bit
@@ -81,7 +91,7 @@ n = 31,250 rows measured; the last column extrapolates to the 125,000-row index 
 | dataclass, uuid + datetime + str shard (the naive spelling) | 60.3 | 1929 | 241 |
 | plain class with __dict__, 32 int fields | 107.7 | 3447 | 431 |
 | __slots__ class, 32 fields (20 int, 4 float, 8 None) | 29.8 | 953 | 119 |
-| __slots__ CandidateRow as benchmarked | 24.4 | 782 | 98 |
+| __slots__ §7.2 row as specified (not the shipping CandidateRow) | 24.4 | 782 | 98 |
 | array/struct-packed columns | 1.4 | 44 | 6 |
 | numpy columns (exact `.nbytes`) | 1.4 | 46 | 6 |
 | array-packed columns (exact `itemsize x len`) | 1.3 | 43 | 5 |
@@ -98,15 +108,82 @@ n = 31,250 rows measured; the last column extrapolates to the 125,000-row index 
 
 ## GC, with the index live
 - objects tracked by the collector: 174,748
-- median full `gc.collect(2)` pause with a 125,000-row object index live: **34.6 ms**
-- after `gc.freeze()`: **0.0 ms** (138286.8x cheaper)
+- median full `gc.collect(2)` pause with a 125,000-row object index live: **33.4 ms**
+- after `gc.freeze()`: **0.0 ms** (160533.2x cheaper)
 - `gc.get_threshold()` = (700, 10, 10)
 
 ## Refresh headroom (§15.3's snapshot swap, in Python)
-- RSS with one 125,000-row index: 357 MB
-- RSS while both old and new are live: 461 MB (+104 MB)
-- wall clock to build the replacement in-process: 0.90 s — during which the loop is blocked unless it is built off-thread
-- RSS after dropping the old copy: 360 MB (the allocator returns 102 MB)
+- RSS with one 125,000-row index: 367 MB
+- RSS while both old and new are live: 471 MB (+104 MB)
+- wall clock to build the replacement in-process: 0.91 s — during which the loop is blocked unless it is built off-thread
+- RSS after dropping the old copy: 369 MB (the allocator returns 102 MB)
+
+---
+
+# candidate_row_bench — CPython 3.11.6 on arm64
+
+The **shipping** `CandidateRow`, imported from `backend/`. n = 31,250 rows measured; the last column extrapolates to the 125,000-row index of a 50 000-player city.
+
+| representation | MB @ 31 250 rows | bytes/row | MB @ 125 000 rows |
+|---|---|---|---|
+| shipping CandidateRow, vocabulary strings as a driver returns them | 62.2 | 1991 | 249 |
+| the same rows, closed-vocabulary strings shared (not what ships) | 31.1 | 995 | 124 |
+
+Sharing the closed vocabularies would save **996 bytes a row**, 50% of the row.
+
+## One row, field by field
+
+A row with 6 of the 21 cells ticked and 4 tags.
+
+| field | bytes |
+|---|---:|
+| the object itself, 25 slots | 232 |
+| `player_id` | 85 |
+| `sport` | 55 |
+| `mu` | 24 |
+| `sigma` | 24 |
+| `confidence` | 28 |
+| `range_low` | 24 |
+| `range_high` | 24 |
+| `band` | 55 |
+| `band_lower` | 24 |
+| `band_upper` | 24 |
+| `rating_status` | 54 |
+| `calibration_priority` | 57 |
+| `declared_intent` | 60 |
+| `social_tags` | 341 |
+| `tags_updated_at` | 48 |
+| `availability` | 442 |
+| `grid_updated_at` | 48 |
+| `areas` | 144 |
+| `search_radius_km` | 28 |
+| `proposals_opt_in` | 28 |
+| `gender` | 0 |
+| `gender_preference` | 52 |
+| `profile_created_at` | 48 |
+| `last_active_at` | 48 |
+| `applied_through_sequence_no` | 28 |
+| **total** | **2025** |
+
+## What the grid-density assumption is worth
+
+`availability` is the most expensive field on the row, so the number of cells a player ticks sets the total. The headline above is `app/seeds/cohort.py`'s own density (**mean 6.2 of 21**); this is what believing something else would cost. `population.py`'s `getrandbits(21)` — free there, because §7.2's grid is one `int` — is the 10.5 row.
+
+| mean cells ticked | bytes/row | trigger 4, 4 workers on 1 GB |
+|---|---:|---:|
+| 3 | 1779 | ~28,100 players |
+| 5 | 1909 | ~26,184 players |
+| 6.2 **(the assumption above)** | 1990 | ~25,120 players |
+| 7 | 2044 | ~24,466 players |
+| 10.5 | 2277 | ~21,963 players |
+| 14 | 2510 | ~19,918 players |
+| 21 | 2938 | ~17,020 players |
+
+## RSS cross-check
+- RSS before: 169 MB
+- RSS with one 125,000-row index live: 439 MB (+270 MB, **2159 bytes a row**)
+- `tracemalloc` said 1991; the two agree to 8%
+- objects tracked by the collector: 390,106
 
 ---
 

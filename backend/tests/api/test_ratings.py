@@ -182,11 +182,14 @@ async def test_the_endpoint_is_on_the_emitted_player_surface():
 
     `SURFACES` is what `make openapi` writes, so asserting through it — rather
     than through the router directly — is what makes this a claim about the
-    document the client generates from.
+    document the client generates from. It named the *whole* of `SURFACES` until
+    the dev console arrived beside the player surface (#256); what this case is
+    about is that the ratings route is on the document `frontend_player`
+    generates from, and `tests/unit/test_dev_console_surface.py` is where the
+    two surfaces are held apart.
     """
 
     from app.api.contract import SURFACES, build_surface_spec
 
-    assert list(SURFACES) == ["player"]
     player = build_surface_spec("player", SURFACES["player"])
     assert "/api/v1/ratings" in player["paths"]

@@ -17,9 +17,10 @@ import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
-  SPORTS_SERVED,
   launchSignedIn,
+  NOW_TAB_LINE,
   runInProgress,
+  SPORTS_SERVED,
   stubGate as stubGateWith,
 } from '@/test-support/onboardingRouter';
 import {
@@ -399,20 +400,21 @@ describe('the done screen', () => {
     expect(screen.queryByText(/a questionnaire can prove/)).toBeNull();
   });
 
-  it('says the ratings are hypotheses, and that matches are what narrow them', async () => {
+  it('is the cards and nothing under them', async () => {
     await rateBothSports();
 
-    // The sentence that frames the cards. A player who leaves believing their Level is a
-    // verdict has been mis-served by this screen.
-    expect(await screen.findByText('These are hypotheses, not verdicts')).toBeTruthy();
-    expect(screen.getByText(/Real matches are what narrow the range/)).toBeTruthy();
-  });
+    await screen.findByText('Padel');
 
-  it('names the engine that produced them, which is what the data screen claims is kept', async () => {
-    await rateBothSports();
+    // The *these are hypotheses* note is gone, and it was not deleted for being untrue: the
+    // result screen makes the same claim per rating, at the moment there is one to make it
+    // about, so repeating it here turned a summary of what somebody just earned into a
+    // second round of caveats.
+    expect(screen.queryByText('These are hypotheses, not verdicts')).toBeNull();
+    expect(screen.queryByText(/Real matches are what narrow the range/)).toBeNull();
 
-    // Both were rated by the same engine, and saying so twice would read as two facts.
-    expect(await screen.findByText('Produced by rating engine racketskill-v3')).toBeTruthy();
+    // And the engine footnote with it — a question nobody on this screen is asking. It is
+    // still on the wire and still read by the mapper; nothing renders it.
+    expect(screen.queryByText(/Produced by rating engine/)).toBeNull();
   });
 
   it('lists what this run produced, not what the player is rated at', async () => {
@@ -568,7 +570,7 @@ describe('the data screen', () => {
 
     // The gate decides where finishing lands, exactly as it does from every other exit:
     // a player who now holds ratings belongs in the app.
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
 
     // And on the next launch, with nothing cached — which is the whole point of onboarding
@@ -577,10 +579,10 @@ describe('the data screen', () => {
     queryClient.clear();
     await launchSignedIn();
 
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
     // Not back through the questionnaire, and not back through the welcome.
-    expect(screen.queryByText("Let's find your level")).toBeNull();
+    expect(screen.queryByText("Let's set you up")).toBeNull();
   });
 });
 
@@ -609,7 +611,7 @@ describe('a second pass in the same process', () => {
     await waitFor(() => expect(screen).toHavePathname('/data'));
 
     fireEvent.press(screen.getByLabelText('Start playing'));
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
   }
 

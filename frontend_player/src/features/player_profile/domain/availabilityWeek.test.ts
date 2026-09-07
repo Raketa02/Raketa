@@ -12,30 +12,14 @@
  */
 
 import type { AvailabilitySlot } from './ProfileDraft';
-import {
-  DAY_PARTS,
-  WEEKDAYS,
-  WEEK_CELLS,
-  everyCell,
-  isTicked,
-  toggleCell,
-  weekStanding,
-} from './availabilityWeek';
+import { WEEK_CELLS, everyCell, isTicked, toggleCell, weekStanding } from './availabilityWeek';
 
 /** Every cell of the grid, ticked — the far end, and a legal answer like any other. */
 const WHOLE_WEEK: readonly AvailabilitySlot[] = everyCell();
 
 describe('the shape of the week', () => {
-  it('runs Monday to Sunday as ISO weekdays', () => {
-    // The order is the contract's too: `AvailabilitySlotResource` numbers days 1-7 as ISO
-    // weekdays and says the grid is Monday-first, so nothing on this side sorts.
-    expect(WEEKDAYS).toEqual([1, 2, 3, 4, 5, 6, 7]);
-  });
-
-  it('runs the three parts of the day in the order the domain declares them', () => {
-    expect(DAY_PARTS).toEqual(['morning', 'afternoon', 'evening']);
-  });
-
+  // The seven days and the three parts are `@/shared/vocabulary/week`'s, and their order is
+  // asserted there — Play reads the same week back as overlap.
   it('is twenty-one independent answers', () => {
     expect(WEEK_CELLS).toBe(21);
     // The count and the cells are stated separately, so the two can disagree and be caught.

@@ -27,12 +27,22 @@
  * seventh tag out loud rather than by greying the other twelve.
  */
 
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { theme } from './theme';
 
 export interface ChipProps {
   readonly label: string;
+  /**
+   * A 6pt square in a sport's identity colour, before the label — **6.4's dot, on 6.2's
+   * pill**, and the same square rather than a second one.
+   *
+   * It is **decoration and nothing else**, hidden from assistive technology, because the
+   * label beside it always says the same thing. That is the condition 2.3 attaches to every
+   * surface drawing a sport hue, and it is what keeps a fifth sport a decision about colour
+   * rather than a screen that stops being readable.
+   */
+  readonly dot?: string;
   /** Fires on every press, selected or not. The chip reports; the caller decides. */
   readonly onPress: () => void;
   /** Drawn ink-filled and announced as selected. Owned by the caller. */
@@ -46,6 +56,7 @@ export interface ChipProps {
 export function Chip({
   label,
   onPress,
+  dot,
   selected = false,
   accessibilityLabel,
   accessibilityHint,
@@ -72,6 +83,13 @@ export function Chip({
         style,
       ]}
     >
+      {dot === undefined ? null : (
+        <View
+          style={[s.dot, { backgroundColor: dot }]}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        />
+      )}
       <Text style={[s.label, selected ? s.labelSelected : undefined]}>{label}</Text>
     </Pressable>
   );
@@ -90,12 +108,18 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.color.line,
     backgroundColor: theme.color.surface,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: theme.space.xs,
     // `alignSelf`, so a chip in a row is its own width rather than the row's.
     alignSelf: 'flex-start',
   },
   selected: { backgroundColor: theme.color.ink, borderColor: theme.color.ink },
+  // Square, and the tag's own square: 6.4 already specified one sport dot and there is no
+  // second shape for the same fact. It is drawn on both fills unchanged — a sport's hue is
+  // an identity rather than a state, so it does not invert with the pill under it.
+  dot: { width: theme.size.sportDot, height: theme.size.sportDot },
   pressed: { opacity: 0.7 },
   label: { ...theme.type.chip, color: theme.color.ink },
   // `surface` is the app's one white; there is no separate `white` token, deliberately.

@@ -1,7 +1,7 @@
 /**
  * The button, per design-system 6.1.
  *
- * Three variants, four heights, and one rule that is easy to miss: **the primary button
+ * Six variants, four heights, and one rule that is easy to miss: **the primary button
  * is filled `coralInk` and brightens to `coral` when pressed** — the inverse of the
  * prototype, which put white 12pt text on `coral` at 3.89:1. Coral still reads as the
  * accent; the label is legible (Rule C).
@@ -21,13 +21,42 @@
  * reason and with the same momentary exception. **The colour is never the whole fact:** a
  * control that turns green must also change its words, and the screen that uses this is
  * responsible for that half.
+ *
+ * **`on-dark` is the sixth variant, and it was specified in 6.1 and unbuilt** until Play's
+ * one-tap declaration needed it. It is 5.2's repaint read as a control: `onDarkFill` over the
+ * dark card, a white label, and `onDarkFillPressed` under the finger — the two tokens the
+ * theme already names *the on-dark button*. It exists here rather than as a shape copied into
+ * the one feature that draws it, which is `README.md`'s whole rule about a second card.
+ *
+ * **`gloss` is a second line under the label**, and it arrived with the same caller: a column
+ * of three near-synonymous answers — *Competitive*, *For fun*, *Either suits me* — where the
+ * label alone does not say what choosing one means. A glossed button **aligns its two lines to
+ * the start** rather than centring them, because two centred lines of different lengths read
+ * as a caption rather than as a row, and it grows past `HEIGHT[size]` for the reason the label
+ * already does: `minHeight`, never `height`.
+ *
+ * The gloss ink is a table like the label's and **adds no colour** (15.2). Hierarchy is
+ * carried by the type role — `tiny` under `btn` — rather than by a second opacity nobody has
+ * computed: on the dark card it takes 5.2's own `onDarkTiny`, on `secondary` the paper's
+ * `muted`, and on the three saturated fills it is the label's own white, which is the only
+ * ink Rule C has measured against them.
+ *
+ * **`volt` is a fifth variant and the one that does not have the others' shape** (added for
+ * Play's *they want you* signal). Volt is a **fill anywhere and a stroke only on dark** (2.2):
+ * as a foreground on paper it is ~1.3:1 and invisible, but `ink` on it is 13.96:1, so the
+ * fill inverts exactly the problem the stroke has. Its label is therefore `ink` and never
+ * white. Its press is **`opacity: .7`** rather than a second fill — the system's answer for a
+ * pressed surface with no darker companion (6.6: chip, segment, availability cell, photo
+ * tile, tick-box row) — because volt is already the brightest value in the palette, and a
+ * seventh hex invented to satisfy *the variant's pressed fill* would be a colour added to
+ * describe a press.
  */
 
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { theme } from './theme';
 
-export type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'settled';
+export type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'settled' | 'volt' | 'onDark';
 
 /**
  * 32 tertiary-in-card · 34 default · 40 screen action · 42 the primary action on a
@@ -37,6 +66,14 @@ export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
 
 export interface ButtonProps {
   readonly label: string;
+  /**
+   * A second line under the label, saying what choosing this one means.
+   *
+   * **Not part of the accessible name.** A glossed button is one element whose name is the
+   * caller's `accessibilityLabel`, and the gloss is the sighted half of what that name already
+   * says — reading it out as well would say the same thing twice.
+   */
+  readonly gloss?: string;
   readonly onPress: () => void;
   readonly variant?: ButtonVariant;
   readonly size?: ButtonSize;
@@ -62,6 +99,7 @@ export interface ButtonProps {
 
 export function Button({
   label,
+  gloss,
   onPress,
   variant = 'primary',
   size = 'md',
@@ -93,15 +131,19 @@ export function Button({
         s.base,
         HEIGHT[size],
         FILL[variant],
+        gloss !== undefined ? s.glossed : undefined,
         pressed && !blocked ? PRESSED[variant] : undefined,
         blocked ? s.blocked : undefined,
         style,
       ]}
     >
-      <View style={s.labelBox}>
+      <View style={[s.labelBox, gloss !== undefined ? s.labelBoxGlossed : undefined]}>
         <Text style={[s.label, LABEL[variant]]} numberOfLines={1}>
           {shown}
         </Text>
+        {/* No `numberOfLines`: a gloss is a sentence, and at large OS text sizes it wraps
+            rather than being clipped — the rule `minHeight` above is written for. */}
+        {gloss !== undefined ? <Text style={[s.gloss, GLOSS[variant]]}>{gloss}</Text> : null}
       </View>
     </Pressable>
   );
@@ -118,6 +160,11 @@ const s = StyleSheet.create({
   // rather than be clipped by it.
   labelBox: { paddingVertical: theme.space.xs },
   label: { ...theme.type.btn },
+  // Two lines read from the start, so the box stretches rather than centring each of them on
+  // its own width. See the module note.
+  glossed: { alignItems: 'stretch' },
+  labelBoxGlossed: { gap: theme.space.xxs },
+  gloss: { ...theme.type.tiny },
   blocked: { opacity: 0.4 },
 });
 
@@ -130,6 +177,7 @@ const HEIGHT = StyleSheet.create({
 
 const FILL = StyleSheet.create({
   primary: { backgroundColor: theme.color.coralInk },
+  onDark: { backgroundColor: theme.color.onDarkFill },
   dark: { backgroundColor: theme.color.night },
   secondary: {
     backgroundColor: theme.color.surface,
@@ -137,18 +185,42 @@ const FILL = StyleSheet.create({
     borderColor: theme.color.line,
   },
   settled: { backgroundColor: theme.color.mintInk },
+  volt: { backgroundColor: theme.color.volt },
 });
 
 const PRESSED = StyleSheet.create({
   primary: { backgroundColor: theme.color.coral },
+  onDark: { backgroundColor: theme.color.onDarkFillPressed },
   dark: { backgroundColor: theme.color.night2 },
   secondary: { backgroundColor: theme.color.line2 },
   settled: { backgroundColor: theme.color.mint },
+  // Not a fill. Volt has no darker companion and does not get one invented for a press.
+  volt: { opacity: 0.7 },
 });
 
 const LABEL = StyleSheet.create({
   primary: { color: theme.color.surface },
+  onDark: { color: theme.color.surface },
   dark: { color: theme.color.surface },
   secondary: { color: theme.color.ink },
   settled: { color: theme.color.surface },
+  volt: { color: theme.color.ink },
+});
+
+/**
+ * The gloss's ink, per variant — **the label's own colour wherever the system has no measured
+ * secondary against that fill**, which is five of the six.
+ *
+ * A `Record` over the union rather than a partial table: a variant with no gloss ink would
+ * draw a second line in whatever `theme.type.tiny` inherits, which is nothing, and the failure
+ * would be an invisible sentence rather than a red build.
+ */
+const GLOSS = StyleSheet.create({
+  primary: { color: theme.color.surface },
+  // 5.2's repaint: `tiny` inside a dark card is white at .68, 6.97:1 on night.
+  onDark: { color: theme.color.onDarkTiny },
+  dark: { color: theme.color.surface },
+  secondary: { color: theme.color.muted },
+  settled: { color: theme.color.surface },
+  volt: { color: theme.color.ink },
 });

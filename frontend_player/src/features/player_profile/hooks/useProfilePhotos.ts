@@ -22,6 +22,20 @@
  * leaks: the chain ends when the last upload does, and every result is written through the
  * store, which is cleared with the part.
  *
+ * ## Every pick goes through the platform's crop frame
+ *
+ * Both acts open the picker with `PROFILE_PHOTO_ASPECT`, so what reaches the row is what the
+ * player framed rather than whatever the camera happened to hold. The consequence is worth
+ * knowing before reading `add`: **a cropping pick answers with one picture**, because the OS
+ * crop UI is attached to a single choice (`ImagePickingPort`). So adding three photos is
+ * three presses of the add control rather than one multi-select, and the ceiling is still the
+ * ceiling — `addPhotos` still refuses a surplus, because the limit is honoured on the far
+ * side of a boundary this app does not own.
+ *
+ * There is **no re-crop of a photo already held**: that needs pixel work and a second native
+ * module, so *edit* is the picker opened again on the same slot. The step says so in the
+ * words it puts on the control (`photoStepPresentation`).
+ *
  * ## The picker is opened whatever the permission says
  *
  * The port does not consult one and neither does this — on iOS the system picker opens
@@ -39,9 +53,11 @@ import { ensurePermission, useImagePicking, type PermissionState } from '@/share
 
 import {
   addPhotos,
+  PROFILE_PHOTO_ASPECT,
   recordUpload,
   removePhoto,
   promoteToProfile,
+  replacePhoto,
   slotsLeft,
   type ProfilePhoto,
 } from '../domain/photoCollection';
@@ -107,9 +123,12 @@ export function useProfilePhotos() {
             recordUpload(current, photo.uri, { kind: 'uploading', progress }),
           ),
       }).then(
-        (photoId) =>
+        // The verdict is written down with the id and nothing here reads it. Whether a
+        // flagged photo is worth a sentence — and which one — is the step's, and the
+        // queue that runs the uploads has no business holding an opinion about it.
+        ({ photoId, review }) =>
           changePhotos((current) =>
-            recordUpload(current, photo.uri, { kind: 'uploaded', photoId }),
+            recordUpload(current, photo.uri, { kind: 'uploaded', photoId, review }),
           ),
         (cause: unknown) =>
           changePhotos((current) =>
@@ -129,6 +148,25 @@ export function useProfilePhotos() {
     [send],
   );
 
+  /**
+   * Open the picker with the crop frame, having asked for the library first.
+   *
+   * The one sequence both acts share, and the only thing either of them does to the device.
+   * `limit` is still the room the collection has even though a cropping pick answers with at
+   * most one: the number is what the picker is *opened with*, the port owns what a crop frame
+   * does to it, and a caller lying about the room to match the platform's behaviour would be
+   * the ceiling stated in two places that could disagree.
+   */
+  const pickOne = useCallback(
+    async (limit: number) => {
+      const permission = await ensurePermission(picking);
+      const picked = await picking.pickImages({ limit, cropTo: PROFILE_PHOTO_ASPECT });
+
+      return { permission, picked };
+    },
+    [picking],
+  );
+
   const add = useCallback(async () => {
     setStanding(READY);
 
@@ -141,8 +179,7 @@ export function useProfilePhotos() {
       return;
     }
 
-    const permission = await ensurePermission(picking);
-    const picked = await picking.pickImages({ limit: room });
+    const { permission, picked } = await pickOne(room);
 
     if (picked.length === 0) {
       setStanding({ refusedAtTheCeiling: false, access: accessFrom(permission) });
@@ -158,7 +195,47 @@ export function useProfilePhotos() {
     setStanding({ refusedAtTheCeiling: addition.refused > 0, access: 'granted' });
     changePhotos(() => addition.photos);
     enqueue(addition.photos.slice(held.length));
-  }, [changePhotos, enqueue, picking]);
+  }, [changePhotos, enqueue, pickOne]);
+
+  /**
+   * Swap one photo for another the player picks and crops now, **keeping its place**.
+   *
+   * It opens the picker for **one** slot rather than for the room the row has left, and that
+   * is not the same number: a replacement takes a position that is already occupied, so a
+   * collection at the ceiling can still take one. Which is also why nothing here consults
+   * `slotsLeft` and why the ceiling refusal cannot fire — `replacePhoto` swaps in place and
+   * the count does not move.
+   *
+   * The rule is `replacePhoto`'s, including its two ways of doing nothing, and the empty
+   * answer is read exactly as the add control's is: nothing came back **and** we were not
+   * allowed is the one case worth a sentence.
+   */
+  const replace = useCallback(
+    async (uri: string) => {
+      setStanding(READY);
+
+      const { permission, picked } = await pickOne(1);
+      const arrival = picked[0];
+
+      if (arrival === undefined) {
+        setStanding({ refusedAtTheCeiling: false, access: accessFrom(permission) });
+        return;
+      }
+
+      const held = useProfileDraft.getState().photos;
+      const replaced = replacePhoto(held, uri, {
+        uri: arrival.uri,
+        mimeType: arrival.mimeType,
+      });
+      // The picture is already held, or the one it would have replaced is gone. Either way
+      // nothing changed, so nothing is sent.
+      if (replaced === held) return;
+
+      changePhotos(() => replaced);
+      enqueue(replaced.filter((photo) => !held.some((was) => was.uri === photo.uri)));
+    },
+    [changePhotos, enqueue, pickOne],
+  );
 
   const retry = useCallback(
     (uri: string) => {
@@ -190,5 +267,5 @@ export function useProfilePhotos() {
     [changePhotos],
   );
 
-  return { photos, standing, add, retry, promote, remove };
+  return { photos, standing, add, replace, retry, promote, remove };
 }

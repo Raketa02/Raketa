@@ -85,6 +85,7 @@ from app.engines.assessment import (
 from app.engines.racketskill.core import (
     BAND_EDGE_TOLERANCE,
     CONFIDENCE_SIGMA_CEILING,
+    STATUS_INITIAL_ESTIMATE,
     Band,
     SkillEstimate,
     band_for,
@@ -305,8 +306,10 @@ STOP_MARGINAL = "marginal-value-below-threshold"
 
 TIE_BREAKER_REASON = "contradiction-tie-breaker"
 
-# Every onboarding rating is a hypothesis, not a verdict.
-RESULT_STATUS = "Initial Estimate"
+# Every onboarding rating is a hypothesis, not a verdict. The word is the core's
+# because the result-update rule authors the other two and a status spelled twice
+# is a status two screens can disagree about (``docs/adr/0139``).
+RESULT_STATUS = STATUS_INITIAL_ESTIMATE
 
 
 class UnknownAnswer(ValueError):

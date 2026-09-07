@@ -241,3 +241,24 @@ class PlayerProfileAlreadyExists(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("This player already has a profile.")
+
+
+class PlayerProfileNotFound(NotFoundError):
+    """This player has not committed a profile, and one was asked for.
+
+    The ordinary state of every account that has not finished onboarding's
+    second part, so it is a **refusal** rather than a broken precondition: the
+    client's recovery is to finish that part, which is the same thing
+    ``GET /users/me``'s entry gate already tells it (``docs/adr/0090``).
+
+    It is scoped to the caller's own profile — every route that raises it reads
+    or writes ``/players/me`` — so it says nothing about whether anybody else
+    exists. A **declaration** does not raise it: intent is asked for at a rating
+    run's tail, which happens before the profile commit, and its aggregate is a
+    different stream keyed on a different pair (``docs/adr/0094``).
+    """
+
+    code = "player_profile_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("This player has no profile.")

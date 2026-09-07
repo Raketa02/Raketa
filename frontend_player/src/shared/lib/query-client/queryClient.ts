@@ -64,6 +64,19 @@ export function createQueryClient(): QueryClient {
         // repeat — and then at its own call site, with the reason stated there. A global
         // retry of "book this court" is a double booking. See Part 4.
         retry: false,
+        // Paused while offline and resumed on reconnect, which is what nearly every
+        // mutation in this app wants — including Play's deck, whose pass is an
+        // append-only row with no deadline, so a queue of them draining on reconnect is
+        // the behaviour you want.
+        //
+        // **One feature overrides this**, and the asymmetry is deliberate:
+        // `features/challenges/` sets `networkMode: 'always'` on the send, because a
+        // challenge's answer window is derived *at send*, so a tap deferred to the next
+        // reconnect would carry a deadline the player did not choose. The test is *does
+        // this act carry a deadline the player chose*, never the HTTP verb — see
+        // `features/challenges/hooks/sendOptions.ts`. Written here as well as there,
+        // because two values for one option, left unexplained, is something the next
+        // reader unifies.
         networkMode: 'online',
       },
     },

@@ -1,9 +1,10 @@
-"""The SkillRating aggregate — named by no unit test until now.
+"""The SkillRating aggregate — its two transitions, and what a replay rebuilds.
 
-Initialisation is its only transition today, which is exactly why these tests
-matter: everything the match-update engine will later append to this stream has to
-land on state rebuilt by ``from_history``, and the rule that a replayed aggregate
-records nothing is what keeps a read from writing through.
+Initialisation was its only one until ``docs/adr/0139``, which is exactly why
+these tests mattered before there was a second: everything the result-update rule
+appends to this stream lands on state rebuilt by ``from_history``, and the rule
+that a replayed aggregate records nothing is what keeps a read from writing
+through.
 
 The result is built here rather than run through the engine. What is under test is
 the aggregate's carrying of a result, not the engine's producing of one — and a
@@ -30,6 +31,11 @@ from app.shared.ids import new_uuid
 from tests.unit.fake_event_store import utc
 
 RATED_AT = utc(2026, 8, 14)
+#: One player and one assessment, for the block below. Named constants rather
+#: than fresh uuids per test, because a replay has to be handed a stream whose
+#: opening event names the same player as the moves after it.
+PLAYER = new_uuid()
+SOURCE = new_uuid()
 
 
 def a_result(
@@ -175,3 +181,132 @@ def test_an_event_this_aggregate_does_not_know_is_refused() -> None:
 
     with pytest.raises(TypeError):
         SkillRating.from_history([NotARatingEvent()])  # type: ignore[list-item]
+
+
+# ---------------------------------------------------------------------------
+# The second transition — one confirmed result
+# ---------------------------------------------------------------------------
+
+
+def a_move(*, won: bool = True, results_so_far: int = 0):
+    from app.engines.racketskill.core import SkillEstimate
+    from app.engines.racketskill.update_v1 import rating_after
+
+    return rating_after(
+        player=SkillEstimate(mu=3.00, sigma=0.84),
+        opposition=SkillEstimate(mu=3.00, sigma=0.20),
+        won=won,
+        results_so_far=results_so_far,
+    )
+
+
+def a_moved_rating() -> SkillRating:
+    rating = SkillRating.initialise(
+        rating_id=skill_rating_id(PLAYER, Sport.PADEL),
+        player_id=PLAYER,
+        sport=Sport.PADEL,
+        result=a_result(),
+        source_assessment_id=SOURCE,
+        occurred_at=RATED_AT,
+    )
+    rating.pull_events()
+    return rating
+
+
+def _move(rating: SkillRating, game_id, **overrides) -> None:
+    from app.engines.racketskill.core import SkillEstimate
+
+    rating.move_on_result(
+        game_id=game_id,
+        moved=overrides.pop("moved", a_move()),
+        won=overrides.pop("won", True),
+        opposition=SkillEstimate(mu=3.00, sigma=0.20),
+        information_share=1.0,
+        occurred_at=utc(2026, 8, 20),
+    )
+
+
+def test_a_confirmed_result_moves_the_level_and_records_the_game():
+    rating = a_moved_rating()
+    game = new_uuid()
+
+    _move(rating, game)
+
+    assert rating.mu > 3.00
+    assert rating.applied_games == (game,)
+    assert rating.counted_results == 1
+    assert [type(event).__name__ for event in rating.pull_events()] == [
+        "RatingMovedOnResult"
+    ]
+
+
+def test_the_same_game_twice_records_nothing_the_second_time():
+    """**The whole of the catch-up's idempotency**, and it lives here.
+
+    Nothing announces a confirmation, so results are read forward and re-read; a
+    second sighting is the ordinary case rather than an error, and answering it
+    with a refusal would make an at-least-once loop something a caller had to
+    guard.
+    """
+
+    rating = a_moved_rating()
+    game = new_uuid()
+
+    _move(rating, game)
+    moved_to = rating.mu
+    rating.pull_events()
+    _move(rating, game)
+
+    assert rating.pull_events() == []
+    assert rating.mu == moved_to
+    assert rating.applied_games == (game,)
+
+
+def test_the_engine_version_moves_with_the_number_it_produced():
+    """A Level tested by results was last written by the result-update rule."""
+
+    rating = a_moved_rating()
+    onboarding = rating.engine_version
+
+    _move(rating, new_uuid())
+
+    assert rating.engine_version != onboarding
+
+    assert rating.engine_version == "racketskill-result-update-v1"
+
+
+def test_a_replay_rebuilds_every_move_and_records_nothing():
+    rating = a_moved_rating()
+    first, second = new_uuid(), new_uuid()
+    _move(rating, first)
+    _move(rating, second, moved=a_move(won=False, results_so_far=1))
+
+    stream = [
+        RatingInitialised(
+            rating_id=skill_rating_id(PLAYER, Sport.PADEL),
+            player_id=PLAYER,
+            sport=Sport.PADEL.value,
+            mu=a_result().mu,
+            sigma=a_result().sigma,
+            confidence=a_result().confidence,
+            range_low=a_result().range_low,
+            range_high=a_result().range_high,
+            band_name=a_result().band.name,
+            band_lower=a_result().band.lower,
+            band_upper=a_result().band.upper,
+            status=a_result().status,
+            engine_version=a_result().engine_version,
+            source_assessment_id=SOURCE,
+            occurred_at=RATED_AT,
+        ),
+        *rating.pull_events(),
+    ]
+
+    replayed = SkillRating.from_history(stream)
+
+    assert replayed.pull_events() == []
+    assert replayed.applied_games == (first, second)
+    assert replayed.mu == rating.mu
+    assert replayed.sigma == rating.sigma
+    assert replayed.status == rating.status
+    assert replayed.updated_at == rating.updated_at

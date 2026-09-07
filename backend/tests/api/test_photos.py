@@ -70,6 +70,10 @@ async def test_a_player_uploads_one_photo_and_gets_an_id_and_a_url(client) -> No
     assert body["photo_id"]
     assert body["url"]
     assert body["expires_at"]
+    # The ordinary photo is told it is ordinary. The suite's reviewer allows
+    # everything, so this is the *shape* of the answer rather than a claim about
+    # the rule — what a flagged one says is `tests/api/test_photo_review.py`'s.
+    assert body["review"] == "allowed"
 
 
 async def test_the_uploaded_photo_can_be_fetched_back(client) -> None:

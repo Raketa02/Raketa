@@ -38,9 +38,14 @@ from botocore.exceptions import ClientError
 
 from app.kernel import Instant, instant
 from app.modules.player_profile.domain.photos import (
+    STORED_MEDIA_TYPE,
+    NotedPhoto,
     PhotoRef,
+    PhotoReviewDecision,
     StoredPhoto,
     TranscodedImage,
+    decision_on_record,
+    review_note_in,
 )
 
 #: Under the owner, so that *whose photo is this* is answered by the key rather
@@ -97,6 +102,28 @@ def ref_from_object_key(key: str) -> PhotoRef | None:
     return PhotoRef(owner_id=owner_id, photo_id=photo_id)
 
 
+def photo_refs_in(contents: Iterable[Mapping[str, Any]]) -> Iterator[PhotoRef]:
+    """The photos in one listing page, as refs, in the order it listed them.
+
+    What a caller that has **no business with an age** gets: the re-review
+    backfill asks what the metadata says, and a stamp it does not read would be
+    an invariant it could still fail on — `stored_photos_in` refuses a naive
+    ``LastModified`` rather than comparing it, which is right for the sweep and
+    is not this caller's rule to inherit.
+
+    The refusal that *is* shared is the one that matters: a key which is not
+    exactly what this adapter writes yields nothing (`ref_from_object_key`).
+    """
+
+    for entry in contents:
+        key = entry.get("Key")
+        if not isinstance(key, str):
+            continue
+        ref = ref_from_object_key(key)
+        if ref is not None:
+            yield ref
+
+
 def stored_photos_in(contents: Iterable[Mapping[str, Any]]) -> Iterator[StoredPhoto]:
     """The photos in one ``list_objects_v2`` page, in the order it listed them.
 
@@ -120,6 +147,28 @@ def stored_photos_in(contents: Iterable[Mapping[str, Any]]) -> Iterator[StoredPh
         if ref is None:
             continue
         yield StoredPhoto(ref=ref, stored_at=instant(last_modified))
+
+
+def user_metadata_in(response: Mapping[str, Any]) -> Mapping[str, str]:
+    """The user metadata out of one ``head_object`` answer.
+
+    Pure, and defensive about the shape rather than the values: a store that
+    answered with no ``Metadata`` key at all is describing an object that
+    carries none, which is exactly what a photo from the pass-through era looks
+    like — so it must read as *no note* rather than raise.
+
+    Keys come back lowercased by every S3-compatible store. The two this
+    application writes are lowercase already (``domain/photos.py``), which is
+    why nothing here has to normalise and why nothing may start writing a key
+    that would need it.
+    """
+
+    metadata = response.get("Metadata")
+    if not isinstance(metadata, dict):
+        return {}
+    return {
+        str(key): str(value) for key, value in metadata.items() if isinstance(key, str)
+    }
 
 
 def reports_an_absent_object(error: ClientError) -> bool:
@@ -226,6 +275,105 @@ class S3PhotoStorage:
                 for photo in stored_photos_in(page.get("Contents", [])):
                     if photo.stored_at < cutoff:
                         yield photo
+
+    async def with_review_notes(self) -> AsyncGenerator[NotedPhoto, None]:
+        # **A listing does not carry user metadata in any S3-compatible store**,
+        # so this is a page of keys and then one `head_object` per key. That
+        # cost is the honest price of keeping the review verdict on the object
+        # rather than in a table beside it, and it is why the backfill's
+        # interval is measured in minutes rather than seconds — in the steady
+        # state, when every photo is reviewed, a run is that many HEADs and no
+        # inference at all.
+        async with self._client(endpoint_url=self._endpoint_url) as s3:
+            paginator = s3.get_paginator("list_objects_v2")
+            async for page in paginator.paginate(
+                Bucket=self._bucket, Prefix=KEY_PREFIX
+            ):
+                for ref in photo_refs_in(page.get("Contents", [])):
+                    key = object_key_for(ref.owner_id, ref.photo_id)
+                    try:
+                        head = await s3.head_object(Bucket=self._bucket, Key=key)
+                    except ClientError as exc:
+                        if reports_an_absent_object(exc):
+                            # Deleted between the listing and the head — the
+                            # sweep runs over this same bucket with no lock
+                            # between them. Nothing to review, so nothing to
+                            # yield.
+                            continue
+                        raise
+                    yield NotedPhoto(
+                        ref=ref, note=review_note_in(user_metadata_in(head))
+                    )
+
+    async def review_decision(self, ref: PhotoRef) -> PhotoReviewDecision | None:
+        # One `head_object`, and **no `get_object`**: the verdict is metadata and
+        # the bytes are megabytes. What may be drawn from that metadata is the
+        # domain's judgement rather than this adapter's — `decision_on_record`
+        # refuses a decision the note cannot prove, and an adapter that read the
+        # key straight would be the second opinion `review_metadata` and
+        # `review_standing` are kept side by side to prevent.
+        async with self._client(endpoint_url=self._endpoint_url) as s3:
+            try:
+                head = await s3.head_object(
+                    Bucket=self._bucket,
+                    Key=object_key_for(ref.owner_id, ref.photo_id),
+                )
+            except ClientError as exc:
+                if reports_an_absent_object(exc):
+                    # The sweep got here first, or the id names nothing. Either
+                    # way there is no photograph to say anything about, and the
+                    # caller draws the generated court poster.
+                    return None
+                raise
+            return decision_on_record(user_metadata_in(head))
+
+    async def read(self, ref: PhotoRef) -> bytes | None:
+        async with self._client(endpoint_url=self._endpoint_url) as s3:
+            try:
+                response = await s3.get_object(
+                    Bucket=self._bucket,
+                    Key=object_key_for(ref.owner_id, ref.photo_id),
+                )
+            except ClientError as exc:
+                if reports_an_absent_object(exc):
+                    return None
+                raise
+            # Read inside the client's context: the body is a stream over the
+            # connection, and one closed with the client answers nothing.
+            data: bytes = await response["Body"].read()
+            return data
+
+    async def replace_metadata(
+        self, ref: PhotoRef, metadata: Mapping[str, str]
+    ) -> None:
+        # **A metadata update is a copy of the object onto itself.** There is no
+        # cheaper operation in the S3 API — the bytes are copied server-side and
+        # the caller is billed for it — which is why the backfill checks the
+        # note before it ever gets here.
+        #
+        # `REPLACE` drops everything not passed, `ContentType` included, so the
+        # stored media type is restated. It is a constant rather than a read of
+        # the object: every stored photo is JPEG, always, whatever arrived
+        # (``domain/photos.py``), so a HEAD to learn it would be a round trip
+        # for a value this application already decided.
+        key = object_key_for(ref.owner_id, ref.photo_id)
+        async with self._client(endpoint_url=self._endpoint_url) as s3:
+            try:
+                await s3.copy_object(
+                    Bucket=self._bucket,
+                    Key=key,
+                    CopySource={"Bucket": self._bucket, "Key": key},
+                    Metadata=dict(metadata),
+                    MetadataDirective="REPLACE",
+                    ContentType=STORED_MEDIA_TYPE,
+                )
+            except ClientError as exc:
+                if reports_an_absent_object(exc):
+                    # The sweep got here first. The port promises this is
+                    # success: a photo id is never reused, so there is nothing
+                    # this write could have been racing except a delete.
+                    return
+                raise
 
     async def delete(self, ref: PhotoRef) -> None:
         # `DeleteObject` is idempotent: an absent key is a 204, not a 404. That

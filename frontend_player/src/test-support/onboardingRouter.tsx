@@ -18,7 +18,15 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
-import HomeRoute from '@/app/(app)/(tabs)/index';
+import AroundRoute from '@/app/(app)/(tabs)/around';
+import ChatsRoute from '@/app/(app)/(tabs)/chats';
+import GameRoute from '@/app/(app)/(tabs)/games/[gameId]';
+import NowRoute from '@/app/(app)/(tabs)/index';
+import BuilderRoute from '@/app/(app)/(tabs)/play/builder';
+import DeckRoute from '@/app/(app)/(tabs)/play/deck';
+import PoolRoute from '@/app/(app)/(tabs)/play/pool';
+import FindAGameRoute from '@/app/(app)/(tabs)/play/index';
+import YouRoute from '@/app/(app)/(tabs)/you';
 import AuthLayout from '@/app/(auth)/_layout';
 import SignInRoute from '@/app/(auth)/sign-in';
 import AvailabilityRoute from '@/app/(onboarding)/availability';
@@ -36,6 +44,7 @@ import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
+import { PLACEHOLDER_COPY } from '@/features/shell/types';
 import { beginSession } from '@/shared/lib/auth';
 import {
   ImagePickingProvider,
@@ -47,11 +56,34 @@ import { queryClient } from '@/shared/lib/query-client';
 
 import { json, type Transport, type Wire } from './transport';
 
+/**
+ * The Now tab's one line — which is what *the player is in the app* looks like on screen.
+ *
+ * The gate's fourth destination is the shell's root, and the shell's root is the Now tab, so
+ * every suite that asserts a launch, a finish or a commit landed in the app is asserting this
+ * sentence. Taken from the shell's own copy rather than spelled here, because a placeholder is
+ * exactly the kind of sentence that gets reworded and eight suites holding a string literal is
+ * eight red tests for a wording change.
+ */
+export const NOW_TAB_LINE = PLACEHOLDER_COPY.now.line;
+
 export const ONBOARDING_ROUTES = {
   _layout: TestRoot,
   '(app)/_layout': AppLayout,
   '(app)/(tabs)/_layout': TabsLayout,
-  '(app)/(tabs)/index': HomeRoute,
+  // The five-tab shell. Play is a directory because the deck, the builder and the pool
+  // land under it, and the bar reads its active column off that first segment.
+  '(app)/(tabs)/index': NowRoute,
+  '(app)/(tabs)/around': AroundRoute,
+  '(app)/(tabs)/play/index': FindAGameRoute,
+  '(app)/(tabs)/play/deck': DeckRoute,
+  '(app)/(tabs)/play/builder': BuilderRoute,
+  '(app)/(tabs)/play/pool': PoolRoute,
+  // A game is pushed over the Now tab and is a `games/` route rather than a `now/` one,
+  // because the Now tab's root is the shell's own root and has no segment to nest under.
+  '(app)/(tabs)/games/[gameId]': GameRoute,
+  '(app)/(tabs)/chats': ChatsRoute,
+  '(app)/(tabs)/you': YouRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,
   '(onboarding)/_layout': OnboardingLayout,
@@ -222,6 +254,38 @@ export const PROFILE_OPTIONS_SERVED: Wire['PlayerProfileOptionsResponse'] = {
   search_radius: { minimum_km: 1, maximum_km: 50, step_km: 1, default_km: 10 },
 };
 
+export const PROFILE_SURFACE_PATH = '/api/v1/players/me/profile';
+
+/**
+ * The three facts Play's search screen opens on: a week, a radius and one declaration.
+ *
+ * A padel declaration is in it because *rated and undeclared* is a **different screen** —
+ * ADR-0094's one-tap interstitial — so a suite that wants the ordinary case has to say a
+ * declaration exists, and a suite that wants the interstitial passes a surface without one.
+ */
+export const PROFILE_SURFACE_SERVED: Wire['PlayerProfileReadResponse'] = {
+  availability: [
+    { day: 2, part: 'EVENING' },
+    { day: 6, part: 'MORNING' },
+  ],
+  search_radius_km: 12,
+  play_intents: { PADEL: 'FOR_FUN' },
+};
+
+/**
+ * The profile surface, for any suite that renders a screen inside ⚡Play.
+ *
+ * Separate from `stubGate` for the reason the options are: the gate does not read it. It is
+ * the shell's business only because Play's tab is now a screen rather than a placeholder, and
+ * a screen that reads three routes is a screen a harness has to describe.
+ */
+export function stubProfileSurface(
+  transport: Transport,
+  served: Wire['PlayerProfileReadResponse'] = PROFILE_SURFACE_SERVED,
+) {
+  transport.on('GET', PROFILE_SURFACE_PATH, () => json(served));
+}
+
 /**
  * What the profile steps are drawn from.
  *
@@ -235,8 +299,53 @@ export function stubProfileOptions(
   transport.on('GET', PROFILE_OPTIONS_PATH, () => json(served));
 }
 
+/**
+ * Your own *Let's play* yeses — the read behind the count in the deck's ending sentence.
+ *
+ * Separate from the three above and defaulted to nothing outstanding, because almost no suite
+ * is about the number: `outgoingYeses` has a sentence for nought as well as for a count, so a
+ * read that has not landed still draws something true.
+ */
+export function stubInterest(
+  transport: Transport,
+  served: Wire['InterestListResponse'] = { outgoing: [], mutual: [], outstanding: [] },
+) {
+  transport.on('GET', '/api/v1/interest', () => json(served));
+}
+
+export const GAMES_PATH = '/api/v1/games';
+
+/**
+ * Your games, as `GET /games` answers — **arranged, played and finished in one list.**
+ *
+ * `read_at` is the instant every standing and deadline in it was folded against, so a suite that
+ * wants a countdown to say a particular thing sets it here rather than mocking a clock: the
+ * screens measure from this field and never from the device.
+ *
+ * Defaulted to nothing, because every launch now draws the Now tab and almost no suite is about
+ * what is on it — an empty list renders no section at all, which is what the tab shipped with.
+ */
+export function stubGames(
+  transport: Transport,
+  games: readonly Wire['GameSchema'][] = [],
+  readAt = '2026-09-05T09:00:00Z',
+) {
+  transport.on('GET', GAMES_PATH, () =>
+    json<Wire['GameListResponse']>({ read_at: readAt, games: [...games] }),
+  );
+}
+
 export interface GateStub {
   readonly ratings?: readonly Wire['RatingResponse'][];
+  /**
+   * Who this player **is** — the id `GET /users/me` answers with, which is the same id every
+   * route reads off the bearer token and the one a court draws your own seat from.
+   *
+   * Defaulted, because almost no suite is about identity. A suite that seats you beside
+   * candidates has to state it: the poster in your seat is a function of this id, and so is
+   * the court a challenge is sent with.
+   */
+  readonly id?: string;
   /**
    * The runs this player left unfinished, in the order the server sends them — sport
    * registry order. A single run is the ordinary case; two is what proves which one the
@@ -271,20 +380,27 @@ export const GATE_USER: Wire['UserResponse'] = {
  *
  * The unfinished-run read is **one** request covering every sport. An empty list is the
  * answer for a player with nothing outstanding — a 200, not a 204 and not a failure.
+ *
+ * **`stubGames` is in here and it is not a gate read.** The gate's fourth destination is the
+ * shell's root, the shell's root is the Now tab, and the Now tab draws a games list
+ * ([#314](https://github.com/Raketa02/Raketa/issues/314)) — so every suite that lands in the app
+ * makes that request whether or not it is about one. Defaulted to nothing, which draws no
+ * section at all; a suite with games calls `stubGames` after this to replace it.
  */
 export function stubGate(
   transport: Transport,
-  { ratings = [], runs = [], hasPlayerProfile = false }: GateStub = {},
+  { ratings = [], runs = [], hasPlayerProfile = false, id = GATE_USER.id }: GateStub = {},
 ) {
   transport.on('GET', '/api/v1/ratings', () =>
     json<Wire['RatingsResponse']>({ ratings: [...ratings] }),
   );
 
   transport.on('GET', '/api/v1/users/me', () =>
-    json<Wire['UserResponse']>({ ...GATE_USER, has_player_profile: hasPlayerProfile }),
+    json<Wire['UserResponse']>({ ...GATE_USER, id, has_player_profile: hasPlayerProfile }),
   );
 
   stubRunsInProgress(transport, runs);
+  stubGames(transport);
 }
 
 /** Replace the gate's unfinished-run answer — what the server says *now*. */

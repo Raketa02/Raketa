@@ -55,6 +55,20 @@ class PlayIntentSurface(str, Enum):
     is accepted because the client is the only party that knows which screen it
     was, and nothing load-bearing reads it — which is exactly the condition
     under which a self-reported field is safe to keep.
+
+    **It widened rather than renaming, and the reason was cost** (#280). The
+    deck earned the fifth member: ``POST /deck`` has no mode to read, so it
+    reads the declaration, is refused with ``play_intent_not_declared`` exactly
+    as a search is, and draws the same interstitial. Reporting that as
+    ``SEARCH_SWITCH`` was a small untruth in the one field whose whole job is to
+    say which screen it was. The alternative argued was to rename
+    ``SEARCH_SWITCH`` to ``PLAY_SWITCH`` — one value true of both Play surfaces
+    rather than two that each name one — and it lost on cost, not on taste: the
+    code is stored verbatim in ``PlayIntentDeclared`` and read back through
+    ``PlayIntentSurface(event.surface)``, so a rename is an event migration
+    bought on a field nothing branches on, while a widening is one member and
+    leaves every code already in a stream meaning what it meant when it was
+    written.
     """
 
     #: The end of a rating run that produced a rating. Every declaration starts
@@ -62,8 +76,13 @@ class PlayIntentSurface(str, Enum):
     #: that was abandoned asks nothing.
     RATING_TAIL = "RATING_TAIL"
     #: The search screen's own toggle, taken as the edit surface. A settings
-    #: screen is deliberately *not* one of these values.
+    #: screen is deliberately *not* one of these values. It names *that* screen
+    #: alone; the other Play surface has ``DECK``.
     SEARCH_SWITCH = "SEARCH_SWITCH"
+    #: The deck's sport chips, landing on a sport that is rated and undeclared.
+    #: The same interstitial as the search screen's, drawn on the other Play
+    #: surface — one component with two callers, and two codes rather than one.
+    DECK = "DECK"
     #: The daily backstop, for the player who switched once, declined once and
     #: then searched in the new mode for a month.
     DRIFT_PROMPT = "DRIFT_PROMPT"

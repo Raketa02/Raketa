@@ -3,9 +3,9 @@
  * on their next one, and after a reinstall.
  */
 
-import { COURT_POSTER_SPACE } from '@/shared/ui';
+import { COURT_POSTER_POSES, POSTER_HUES } from '@/shared/ui';
 
-import { COURT_POSTER_COUNT, COURT_POSTER_FRAMINGS, courtPosterFor } from './courtPosterFraming';
+import { COURT_POSTER_COUNT, courtPosterFor } from './courtPosterFraming';
 
 const PLAYER = '11111111-2222-4333-8444-555555555555';
 
@@ -33,51 +33,42 @@ describe('the poster a player has', () => {
     expect(posters.size).toBeGreaterThan(COURT_POSTER_COUNT / 2);
   });
 
-  it('varies its framing and its ball independently', () => {
+  it('varies its hue and its pose independently', () => {
     const posters = Array.from({ length: 400 }, (_unused, at) => courtPosterFor(`p-${at}`));
 
-    const framings = new Set(posters.map((poster) => JSON.stringify(poster.view)));
-    const balls = new Set(posters.map((poster) => JSON.stringify(poster.ball)));
+    const hues = new Set(posters.map((poster) => poster.hue.light));
+    const pairs = new Set(posters.map((poster) => `${poster.hue.light} ${poster.pose}`));
 
-    // Tied together, the ball would take exactly one position per framing and there would
-    // be as many distinct balls as framings.
-    expect(framings.size).toBe(COURT_POSTER_FRAMINGS.length);
-    expect(balls.size).toBeGreaterThan(framings.size);
+    // Tied together, one hue would take exactly one pose and there would be as many pairs
+    // as hues — which is the forty-eight collapsing to sixteen this file exists to prevent.
+    expect(hues.size).toBe(POSTER_HUES.length);
+    expect(pairs.size).toBeGreaterThan(hues.size);
+  });
+
+  it('draws every hue and every pose the design system published', () => {
+    const posters = Array.from({ length: 400 }, (_unused, at) => courtPosterFor(`q-${at}`));
+
+    expect(new Set(posters.map((poster) => poster.hue))).toEqual(new Set(POSTER_HUES));
+    expect(new Set(posters.map((poster) => poster.pose))).toEqual(new Set(COURT_POSTER_POSES));
   });
 });
 
-describe('every framing this file hands out', () => {
-  it('is a window inside the court the design system draws', () => {
-    for (const view of COURT_POSTER_FRAMINGS) {
-      expect(view.x).toBeGreaterThanOrEqual(0);
-      expect(view.y).toBeGreaterThanOrEqual(0);
-      expect(view.x + view.width).toBeLessThanOrEqual(COURT_POSTER_SPACE.width);
-      expect(view.y + view.height).toBeLessThanOrEqual(COURT_POSTER_SPACE.height);
-    }
-  });
-
-  it('keeps its ball inside itself, whichever framing was chosen', () => {
-    for (let at = 0; at < 400; at += 1) {
-      const { view, ball } = courtPosterFor(`p-${at}`);
-
-      expect(ball.x).toBeGreaterThan(view.x);
-      expect(ball.x).toBeLessThan(view.x + view.width);
-      expect(ball.y).toBeGreaterThan(view.y);
-      expect(ball.y).toBeLessThan(view.y + view.height);
-    }
+describe('how many distinct posters there are', () => {
+  it('is sixteen hues by three poses, and never fewer than the forty-eight it was', () => {
+    expect(COURT_POSTER_COUNT).toBe(POSTER_HUES.length * COURT_POSTER_POSES.length);
+    // The eight framings by six ball positions are gone; the count they justified is not a
+    // number to quietly lower, so it is held here rather than recomputed and forgotten.
+    expect(COURT_POSTER_COUNT).toBeGreaterThanOrEqual(48);
   });
 });
 
 describe('what a poster never carries', () => {
-  it('is a colour — every field it has is geometry', () => {
-    // Every colour in the palette already means something, so a hue chosen by a hash would
-    // be assigning meaning to a hash. There is nowhere for one to go, and this is what
-    // keeps it that way.
+  it('is a fact — a hue and a pose are the whole of it, and neither says anything', () => {
+    // A player whose pose is `serve` is not a server, and the handedness a pose appears to
+    // show is not theirs. A poster is shown and never read: nothing may take an input from
+    // it, and the smallest guarantee of that is that there is nothing in it to take.
     const poster = courtPosterFor(PLAYER);
 
-    expect(Object.keys(poster).sort()).toEqual(['ball', 'view']);
-    expect(Object.values(poster).flatMap((part) => Object.values(part))).toEqual(
-      expect.arrayContaining([expect.any(Number)]),
-    );
+    expect(Object.keys(poster).sort()).toEqual(['hue', 'pose']);
   });
 });

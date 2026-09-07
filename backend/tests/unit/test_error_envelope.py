@@ -42,6 +42,11 @@ from app.shared.domain.errors import (
 # Imported for their side effect: every error module must be loaded before the
 # subclass walk below can see its classes.
 from app.modules.auth.domain import errors as auth_errors  # noqa: F401
+from app.modules.blocks.domain import errors as blocks_errors  # noqa: F401
+from app.modules.challenges.domain import errors as challenges_errors  # noqa: F401
+from app.modules.matchmaking.domain import (  # noqa: F401
+    errors as matchmaking_errors,
+)
 from app.modules.player_profile.domain import errors as profile_errors
 from app.modules.rating.domain import errors as rating_errors
 from app.modules.users.domain import errors as users_errors  # noqa: F401
@@ -89,6 +94,9 @@ def test_the_walk_actually_finds_the_domain_errors():
         "PhotoNotFound",
         "ProposalsOptInNotAnswered",
         "PlayerProfileAlreadyExists",
+        "GateDataUnavailable",
+        "TheLineUpIsNoLongerSendable",
+        "AccountHeld",
     } <= names
 
 

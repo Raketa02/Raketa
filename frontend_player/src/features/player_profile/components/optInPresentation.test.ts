@@ -19,6 +19,7 @@
 import { stepCopy } from './socialStepPresentation';
 import {
   PROPOSALS_OPT_IN_COPY_V1,
+  PROPOSALS_OPT_IN_COPY_V2,
   OPT_IN_ANSWERS,
   OPT_IN_EYEBROW,
   OPT_IN_FINISH_BLOCKED_HINT,
@@ -30,13 +31,20 @@ import {
   PROPOSALS_OPT_IN_COPY_VERSION,
 } from './optInPresentation';
 
-/** Everything a player reads on this screen, in the order they read it. */
+/**
+ * Everything a player reads on this screen, in the order they read it.
+ *
+ * The scope note leads, because in `v3` it does: it moved above the card, so a player leaning
+ * towards no meets the sentence addressed to them before three promises that are not. The
+ * order is part of what the version names — a sentence read somewhere else is a different
+ * screen — so moving one back would fail this pin as loudly as rewording it.
+ */
 const theWholeScreen = [
   stepCopy('opt-in').title,
   OPT_IN_EYEBROW,
+  OPT_IN_SCOPE,
   OPT_IN_PROMISE_HEADING,
   ...OPT_IN_PROMISES.map((promise) => `${promise.term} — ${promise.detail}`),
-  OPT_IN_SCOPE,
   OPT_IN_NEVER_PRE_TICKED,
   // In the order they are offered, so reversing them fails the pin as loudly as a reword.
   ...OPT_IN_ANSWERS.map((answer) => answer.label),
@@ -61,16 +69,16 @@ describe('the copy version', () => {
    * nobody was ever shown, which is a consent record that evidences nothing.
    */
   it('names exactly these words, so a reword cannot pass as an edit', () => {
-    expect(PROPOSALS_OPT_IN_COPY_VERSION).toBe('proposals-opt-in.v2');
+    expect(PROPOSALS_OPT_IN_COPY_VERSION).toBe('proposals-opt-in.v3');
     expect(theWholeScreen).toBe(
       [
         'May we suggest games?',
         'The one thing we ask before finishing',
+        "If you say no, it doesn't affect how other players find you. You just won't receive game suggestions.",
         'If you say yes',
-        'You may receive — a game we think fits, when your week and theirs overlap',
-        'You always answer — every game by hand — nothing is ever confirmed for you',
+        'You may receive — a singles or doubles game we think fits you',
+        'You always accept — a game manually — nothing is ever confirmed for you',
         'You can stop — any time, from your profile',
-        'Saying no changes only this. You stay findable in search either way.',
         'Never pre-ticked. Skipping is not consent.',
         "No — don't suggest games",
         'Yes — suggest games',
@@ -81,15 +89,22 @@ describe('the copy version', () => {
   });
 });
 
-describe('the retired version', () => {
+describe('the retired versions', () => {
   /**
    * A retired identifier is kept, never deleted: an answer recorded against it points at the
    * wording it was shown, and a version with no record of what it named evidences nothing.
-   * It must also never be what a fresh answer is stamped with.
+   * None of them may ever be what a fresh answer is stamped with.
+   *
+   * There are two now. `v2` dropped the line under the title; `v3` rewrote two of the three
+   * promises and the scope note, and moved that note above the card.
    */
-  it('is still named, and is not the one being stamped', () => {
+  it('are all still named, and none of them is the one being stamped', () => {
     expect(PROPOSALS_OPT_IN_COPY_V1).toBe('proposals-opt-in.v1');
-    expect(PROPOSALS_OPT_IN_COPY_VERSION).not.toBe(PROPOSALS_OPT_IN_COPY_V1);
+    expect(PROPOSALS_OPT_IN_COPY_V2).toBe('proposals-opt-in.v2');
+
+    for (const retired of [PROPOSALS_OPT_IN_COPY_V1, PROPOSALS_OPT_IN_COPY_V2]) {
+      expect(PROPOSALS_OPT_IN_COPY_VERSION).not.toBe(retired);
+    }
   });
 });
 
@@ -112,7 +127,7 @@ describe('what the card promises', () => {
   it('makes exactly the three approved promises', () => {
     expect(OPT_IN_PROMISES.map((promise) => promise.term)).toEqual([
       'You may receive',
-      'You always answer',
+      'You always accept',
       'You can stop',
     ]);
   });

@@ -19,14 +19,16 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:boundaries": "bash scripts/test-import-boundaries.sh",
+    "test:labels": "bash scripts/test-play-label-rule.sh",
     "gen:api": "openapi-typescript ../backend/openapi.player.json -o src/generated/schema.d.ts",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm test:boundaries",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm test:boundaries && pnpm test:labels",
     "doctor": "npx expo-doctor",
     "prebuild": "expo prebuild"
   },
   "dependencies": {
     "@expo-google-fonts/archivo": "^0.2.3",
     "@expo-google-fonts/ibm-plex-mono": "^0.2.3",
+    "@expo/vector-icons": "~14.0.4",
     "@tanstack/react-query": "^5.62.0",
     "expo": "~52.0.0",
     "expo-constants": "~17.0.0",

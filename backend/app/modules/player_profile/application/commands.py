@@ -6,8 +6,13 @@ from dataclasses import dataclass
 from typing import Sequence
 from uuid import UUID
 
+from app.kernel import Sport
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
+from app.modules.player_profile.domain.play_intent import (
+    PlayIntent,
+    PlayIntentSurface,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,3 +95,56 @@ class CommitPlayerProfileCommand:
     proposals_opt_in: bool | None
     consent_copy_version: str
     consent_surface: ConsentSurface
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeAvailabilityCommand:
+    """A player's week, replaced whole.
+
+    **Primitives from the boundary**, exactly as the commit carries them, so the
+    two write paths hand the domain the same shape and the grid is built in one
+    place. There is no *clear my week* flag: an empty sequence **is** a cleared
+    week, and it is a legal value here where it is refused at the commit — the
+    floor binds the answer a player is asked for rather than every later edit of
+    it (``domain/availability.py``).
+    """
+
+    player_id: UUID
+    #: ``(iso weekday 1–7, part of day)`` — one pair per cell still ticked.
+    availability: Sequence[tuple[int, str]]
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeSearchRadiusCommand:
+    """A player's Search radius, replaced whole.
+
+    ``search_radius_km`` stays an ``int`` for the commit's reason: it is what
+    lets the *domain* refuse a radius outside the served bounds with a code the
+    client can branch on, rather than a schema layer refusing it as a shapeless
+    422.
+    """
+
+    player_id: UUID
+    search_radius_km: int
+
+
+@dataclass(frozen=True, slots=True)
+class DeclarePlayIntentCommand:
+    """What kind of game this player wants, in one sport.
+
+    Three enums and no string: ``Sport``, ``PlayIntent`` and
+    ``PlayIntentSurface`` are all closed sets the boundary *selects from* rather
+    than constructs, which is ``ConsentSurface``'s shape in this same context.
+    None of them is served, so a client cannot hold a different version of any.
+
+    ``surface`` is **required and client-asserted**. The client is the only party
+    that knows which screen a declaration was made on, and nothing branches on
+    the answer (``docs/adr/0094``) — which is exactly the condition under which a
+    self-reported field is safe to keep. A default would be this layer guessing
+    on the client's behalf and recording the guess as evidence.
+    """
+
+    player_id: UUID
+    sport: Sport
+    intent: PlayIntent
+    surface: PlayIntentSurface

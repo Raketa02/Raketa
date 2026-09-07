@@ -88,12 +88,20 @@ response.
 > ([ADR-0107](../../adr/0107-the-player-card-is-assembled-outside-the-engine.md)). Both halves
 > are asserted. Written down because a test drafted against the whole payload will fail on a
 > re-verified row and the temptation will be to loosen it.
+>
+> **And narrowed again by [ADR-0130](../../adr/0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md).**
+> A withheld row is stated and the **gate is not named** — `withheld: BLOCKED` is the trace
+> [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) says
+> the other side sees nowhere in any response. It is a separate wire shape carrying one field,
+> so a withheld row has no id and no card to render.
 
 **Three more routes exist, added by [#171](https://github.com/Raketa02/Raketa/issues/171)** and
 specified in [`the-play-screens.md`](the-play-screens.md): `POST /forecasts`
 ([ADR-0108](../../adr/0108-a-forecast-is-a-route-not-a-search.md) — deliberately records
-nothing), `POST /passes`, and `GET /interest`. The four above are the ones that create searches,
-and that is what §1 is about.
+nothing), `POST /passes`, and `GET /interest`. A fourth was added by
+[#237](https://github.com/Raketa02/Raketa/issues/237): `POST /prompt-declines`, write-only and
+with no Origin key, which answers *not now* to a prompt and writes no value anywhere. The four
+above are the ones that create searches, and that is what §1 is about.
 
 ### `POST /searches` is deliberately not idempotent
 
@@ -185,7 +193,13 @@ is part of what widening costs, and ADR-0099's whole argument for offered-not-ap
 the player sees the cost before paying it.
 
 **`rung_offers: null`** means the offers were not computed at all — the shortlist cleared
-`MIN_SHORTLIST`. An empty list would mean computed and none available. See §7.
+`MIN_SHORTLIST`. An **empty list** means computed and none available, and it has two causes the
+client does not have to tell apart: there was nothing left to offer, or **this search took a rung
+and the ladder does not chain**. One climb per search screen, so the widest any accepted offer
+reaches is ×2.0 of the radius the player saved. The two empties are told apart on the **record**,
+by `rung_taken` beside the list ([`search-telemetry.md`](search-telemetry.md) §2) — **no field was
+added to this envelope for it**, and a client that renders an empty list as *nothing left to
+offer* is right either way. See §7.
 
 **`index_stale`** is the flag; the threshold that turns it into a refusal belongs to
 [The matcher's picture of the city](https://github.com/Raketa02/Raketa/issues/173), not here.
@@ -199,11 +213,12 @@ Carried in full on every returned row, on every route, on the `POST` and on the 
 ```
 candidate: {
   player_id, fit, distance_km,
-  player_card: { nickname, photo_id?, area_code, social_tags[],
-                 level, band, counted_games },
+  player_card: { nickname, photo_id?, photo_url?, review?, area_code, social_tags[],
+                 level, band, range,
+                 player_score?, counted_games?, last_five? },
   concerns: [ { term } ],
   terms: [ { term, weight, value, contribution, evidence: <closed union> } ],
-  degraded_terms: [ term ],
+  degraded_terms: [ { term, reason: DegradedReason } ],
   modifiers: [ { code, points } ],
   liveness_reasons: [ code ],
   inclusion_reason?: INTEREST_LIFT,
@@ -224,6 +239,37 @@ types that drift.
 renormalisation basis, and without it a Fit is uninterpretable — §10 renormalises per
 comparison, so which terms fired *is* the reading.
 
+**Each entry says whose gap it is, over a three-value `DegradedReason`** —
+`NOT_YET_ON_THIS_PLATFORM | NOTHING_FROM_YOU | NOTHING_FROM_THEM`, settled by
+[#233](https://github.com/Raketa02/Raketa/issues/233). A flat list of `Term` held *reliability
+is not a thing on this platform yet* and *they have not said what kind of evening they want*
+as the same fact, twenty times a search — the exact conflation `floor.py` refuses by name at
+the point it changes a number: *the gate counts person-specific gaps and never platform-wide
+absence.*
+
+It is a **code and not a sentence**, on this file's own rule and
+[ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)'s: a
+client writing *"they haven't declared"* from a bare `INTENT_ALIGNMENT` is an engine rule in
+TypeScript, and *"nobody has a record yet"* goes silently false the day `matches` ships, with
+nothing that goes red. `NOTHING_FROM_THEM` **deliberately swallows every reason a record could
+not be read** — no record, an observation past the horizon, no strand clearing the bar — so
+that §5's recency refusal is held by the shape of the vocabulary rather than by a reviewer
+noticing it in a later ticket. `NOTHING_FROM_YOU` wins a tie, because it is the only one of
+the two the reader can act on.
+
+**Two authors, and neither can be the other.** Only the term function knows which side was
+empty; only the layer holding `absent` knows a term has no provider at all, and that set is
+built in the composition root rather than read off the ruleset. So a term in `absent` reports
+`NOT_YET_ON_THIS_PLATFORM` **whatever the term said**, overwritten one layer out where
+`Admission.live` already is, and the scorer never learns which contexts this platform has
+built.
+
+**The platform tier repeats on every row and is drawn once.** It stays on the row because it
+is that candidate's renormalisation basis and a card whose basis is incomplete cannot be read;
+[`the-play-screens.md`](the-play-screens.md) §8 puts it in the sheet's footer beside the
+version stamps, where the per-person gaps stay with the person. Suppressing it on the wire
+instead was refused: the basis is not decoration.
+
 **No liveness number.** Reasons only. There is no field to write one to
 ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §5).
 
@@ -242,9 +288,10 @@ union of one so the next reason that genuinely admits somebody has somewhere to 
 different author. It is `AtStakeQuery` over `rating`
 ([`consumer-driven-contracts.md`](consumer-driven-contracts.md)), attached after `matchfit`
 returns, because ADR-0021 forbids the client computing it and ADR-0098 forbids the matcher
-re-deriving it. **Omitted in for-fun** (meaningless — §23 Q11) and **omitted today in
-competitive** (`NoResultUpdateRuleExists`). The card shows no block either way and the client
-needs no branch.
+re-deriving it. **Omitted in for-fun** (meaningless — §23 Q11) and, in competitive, **omitted
+only for a pair with no Level between them** — the rule ships
+([ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
+The card shows no block when it is absent, and the client needs no branch either way.
 
 **`player_card`, `distance_km` and `concerns` are [#171](https://github.com/Raketa02/Raketa/issues/171)'s
 additions.** The card is attached by the **backend** after `matchfit` returns — the second field
@@ -272,7 +319,7 @@ is given ([`ranking-weights.md`](ranking-weights.md) §13).
 lineup: {
   arrangements: [ { pairing_id, is_current, is_best, is_evenest,
                     sides: { A: [seat], B: [seat] },
-                    forecast: <Forecast> } ],
+                    forecast: <Forecast>, split: <Split> } ],
   seats: [ { side, seat_index, relationship: SELF | PARTNER | OPPONENT,
              candidate? , unfilled_reason?: code } ],
   group_reason: EVENEST_ARRANGEMENT | STRONGEST_WEAKEST_SEAT | BEST_AVERAGE_FIT
@@ -288,6 +335,16 @@ that they **differ** — which happens precisely when a four's levels are near-e
 nothing left to say. **`G` itself is never returned**: a second score the player must trust is
 worse than none, so the evidence half is paid by one closed code naming the term with the largest
 margin between the winning combination and the runner-up.
+
+**`is_current` on a line-up is the *evenest* arrangement**, in both modes
+([#289](https://github.com/Raketa02/Raketa/issues/289)). Who is on the court does not change:
+the group objective still chose the four and `group_reason` still says why. What changes is
+which way round they sit — the same re-seating *Even it out* performs by hand, so a builder
+that opened on `is_best` would be showing a court the player's first tap undoes. `is_best`
+keeps its meaning and keeps crossing, and `lineup.seats` follows `is_current`, so the seating
+in the response is the evenest seating. **`ForecastResponse.is_current` is untouched** — there
+it means *the seat order you sent*, and a client that sends an arrangement must get that one
+back marked current or a swap cannot be drawn.
 
 **All three arrangements cross, each with its own forecast.** There are exactly three pairings
 of four people and `arrange()` already walks all of them to pick the min-gap one. Returning
@@ -313,12 +370,19 @@ answer, and no seat is ever filled below `QUALITY_FLOOR` to complete a four (ADR
 different shape from *nobody*** — both are this shape, with one or three seats carrying a reason,
 and there is no separate empty state for a line-up.
 
+> **One closed vocabulary, two places on the wire.** The build found that the fourth code cannot
+> sit on a seat: §5.1 defines `NO_SHARED_SLOTS` as *seated, but the four-way intersection is
+> empty — a dock, never a refusal*, which is a statement about the whole line-up and about
+> nobody's seat. It rides as **`lineup.dock`**, in the same enum, and the other three ride as
+> `seats[].unfilled_reason`. Recorded there in full.
+
 ### The forecast
 
 One type, everywhere it appears:
 
 ```
 Forecast: { pct, sigma_group, provisional: bool, assumption?: code }
+Split:    { your_side, their_side, gap }        // on the arrangement, not the forecast
 ```
 
 **`provisional` travels inside the forecast, not beside it.** The failure §9.9 is guarding
@@ -331,6 +395,42 @@ words.
 §9.9's equality test stands: the moment the last seat is taken, the provisional figure and the
 arranged figure agree exactly.
 
+**The split is the evidence behind the percentage** ([#289](https://github.com/Raketa02/Raketa/issues/289),
+[ADR-0136](../../adr/0136-the-split-is-evidence-for-the-forecast-not-a-second-score.md)). The card
+the builder is built against prints two side strengths, the gap between them and a two-segment
+bar, and every one of those is a number **only the engine has**: a side's strength is not the
+mean of the two people on it (§3.1's `TEAM_STRENGTH_SHARE`), so a client drawing them would be
+averaging seated levels — which is §11.3's *"no forecast arithmetic on the client"*, the one rule
+whose check is looking for arithmetic rather than reading intent. §12 rule 1 is the argument:
+**name the evidence, not a category** — the same rule that put `sigma_group` beside `pct`. `pct`
+says *how even*; the split says *between what and what*, on the scale players already read levels
+on.
+
+**It is not the group objective and must not become one.** `is_best`'s own refusal — *a second
+score you would have to trust is worse than none* — stands unchanged, and `G` still never
+crosses in any shape. What crosses here is an **input** to a figure already served.
+
+Four rules, each a way the four numbers could come apart:
+
+- **On the arrangement, not on the `Forecast`.** `Forecast` is *one type, everywhere it appears*
+  and rides on every shortlist row's `would_be_forecast`; a response carries at most three
+  arrangements and tens of candidate rows, and this is a fact about an arrangement.
+- **`gap` is served rather than left to a subtraction.** A client subtracting two rounded figures
+  and an engine subtracting two unrounded ones disagree at the boundary, and the card prints all
+  three.
+- **`gap` is signed** — `your_side − their_side` — because the client's bar takes an *advantage*
+  ([`design-system.md`](../../../frontend_player/docs/design-system.md) 7.11: `BalanceBar.advantage`
+  is *your side's strength minus theirs*). An unsigned gap would leave the client deciding which
+  half of the bar is bigger, which is the same arithmetic in a smaller disguise.
+- **The four numbers are one computation.** `pct`, `your_side`, `their_side` and `gap` come off
+  one reading of the two sides — a card showing `gap 0,00` beside `74% · fairly even` is the
+  failure this exists to prevent.
+
+**Singles** carries one arrangement and no swap, so the split is two player strengths and their
+difference. **A provisional arrangement carries a split like any other**, under the same
+assumption `pct` is carried under — the empty seat is read *as if the missing player matched the
+one already there* — and `provisional` carries that caveat for all four numbers at once.
+
 **`would_be_forecast`** is §8.2's one exception to client-side sorting: *Evenest* with a single
 seat left needs an arranged forecast per candidate, so the engine precomputes one per shortlist
 row when `open_seats == 1` and **omits it otherwise**. Everything else — *Best fit*, *Closest*,
@@ -341,8 +441,17 @@ per sort tap is latency spent on nothing.
 
 ## 6. The deck
 
-`POST /api/v1/deck` takes **`sport` only** and returns one deal: an ordered batch of cards,
-one `search` row, one `search_id` shared by every card in the deal.
+`POST /api/v1/deck` takes **the sport and the week you are asking about** — and nothing
+else — and returns one deal: an ordered batch of cards, one `search` row, one `search_id`
+shared by every card in the deal.
+
+**The three refusals this body is written under are a mode, a widening and a pass window,
+and a grid is none of them.** *Match me* is reached from the screen the week is edited on,
+so a deal that ignored the edit would rank on a week the player had just replaced; the
+client cannot compute the difference itself, because a search that took a times rung ran on
+a grid with a slot the player never ticked and only the backend holds that. Like the
+shortlist's, it is an **ask and never a correction**: it writes no profile, and the offer to
+keep it — `KEEP_THESE_TIMES` — rides back on the response of the route that used it.
 
 **A deal is at most `DECK_DEAL_MAX` cards, 10**, and a spent deal deals again — a new request, a
 new `search_id`, the same exclusions plus everybody already dealt. **Exhausting a deal is not

@@ -33,14 +33,21 @@ export const GENDER_HEADING = 'About you';
 export const PREFERENCE_HEADING = 'Who we should match you with';
 
 /**
- * What the platform does with the first answer, said once, before it is given.
+ * What the platform does with both answers, said **before either is given**.
  *
  * It is the honest scope note this step needs for the reason the opt-in card needs one: a
- * player asked a question about themselves is entitled to know what is done with the
- * answer, and *nothing is shown on your profile* is the part that is least guessable.
+ * player asked a question about themselves is entitled to know what is done with the answer,
+ * and *never shown on your profile* is the part that is least guessable.
+ *
+ * It sits at the top of the screen rather than between the two controls. A player deciding
+ * whether to answer at all is deciding it **before** they press anything, so a reassurance
+ * underneath the control they have already used is a reassurance that arrived late — and it
+ * covers the preference below as much as the answer above, which it could not claim to do
+ * from between them.
  */
 export const GENDER_SCOPE =
-  'We use this only to match you. It is never shown on your profile and never shown to anyone.';
+  'We use this only to match you with other players. It is never shown on your profile or ' +
+  'shared with other players.';
 
 const GENDER_LABEL: Readonly<Record<Gender, string>> = {
   woman: 'Woman',
@@ -92,7 +99,8 @@ export function reachNote(reach: PreferenceReach): string | undefined {
 }
 
 /** Said under the preference control: this is a setting, not a one-off. */
-export const PREFERENCE_IS_DURABLE = 'You can change this later. It applies to every search.';
+export const PREFERENCE_IS_DURABLE =
+  'You can change this later in your preferences. It applies to every search.';
 
 /** Why the continue will not move, for whoever cannot see that it will not. */
 export const GENDER_CONTINUE_BLOCKED_HINT = 'Choose an answer above to continue';

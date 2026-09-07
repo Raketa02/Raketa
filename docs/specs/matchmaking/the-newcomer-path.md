@@ -209,7 +209,7 @@ helped**. So the valve is a bound on the ask, not a switch.
 | --- | --- |
 | **Counts** | Appearances in a **newcomer's** shortlist, per week, per sport |
 | **Where** | The exposure ledger — same shape, same cadence, no second ledger |
-| **When it binds** | The welcoming modifier and the newcomer-driven reorder are **dropped**; the player still ranks on their merits |
+| **When it binds** | The welcoming modifier is **dropped**; the player still ranks on their merits. **Not the newcomer lift** — that is the other side of the pairing's own subsidy ([ADR-0114](../../adr/0114-a-newcomer-may-not-be-declined.md), amended) |
 | **Never** | Withheld from generation |
 | **Who is told** | **Nobody** |
 
@@ -340,14 +340,32 @@ to the person it protects most.
 | Tightened level gate | μ, `profile_created_at` | **Live** |
 | Newcomer window and its `+8` lift | `profile_created_at` | **Live** |
 | Minimum-evidence exemption | The gate | **Live but inert** — the gate excludes nobody yet |
-| Welcoming record | `matches` + a result-update rule | **`NoEvidence`** |
+| Welcoming record | A settling-in record nobody publishes | **`NoEvidence`** — and still, since nothing publishes one |
 | The cap | The welcoming modifier | **Wired, never binds** |
 
 **Everything ships wired.** The map has settled this shape three times —
 [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md)'s hold
-gate ships *wired and true-over-empty*, and ADR-0098's ports ship as `NoPlayerScoresExist` and
-`NoMatchHistoryExists`. Welcoming ships as a null-object read returning `NoEvidence`; the cap
-ships as code that never binds.
+gate ships *wired and true-over-empty*, and ADR-0098's ports shipped as `NoPlayerScoresExist`
+and `NoResultUpdateRuleExists` — **both of which have since retired into real adapters**, which
+is what a null object named for a fact is *for*
+([ADR-0139](../../adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md),
+[ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
+Welcoming ships as a read that yields `NoEvidence` — today a hardcoded absence at the fence
+rather than a port, because there is no provider to name one against; the cap ships as code that
+never binds.
+
+**The welcoming record survived two providers arriving on `MatchHistoryQuery`, and each time it
+was checked rather than assumed.** `challenges` signed it first
+([#253](https://github.com/Raketa02/Raketa/issues/253)) answering `ACCEPTED` and `DECLINED` and
+nothing else, so `PLAYED` stayed empty by construction. Then `games` composed in the other half
+([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)) and `PLAYED` stopped
+being empty — **so familiarity fires now, and the welcoming record still does not.** The two were
+never waiting on the same fact. Familiarity asks *have these two played each other*, which
+`games` answers; the welcoming record asks whether **this player's past opponents settled in**,
+which nothing publishes, so `welcomed_settling_opponents` stays `None` and the modifier stays
+**absent** rather than firing at zero strength on every card. A challenge accepted is not a game
+played — that sentence is unchanged, and it now separates two populations that both exist rather
+than one from an empty set.
 
 **Nothing stands in for the welcoming record**, and the reason is already written: *a gate may be
 honestly empty; a term may never be honestly neutral*. Every proxy available is one of the inputs

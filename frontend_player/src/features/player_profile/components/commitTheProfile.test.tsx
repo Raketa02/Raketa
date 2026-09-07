@@ -19,9 +19,10 @@ import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
-  SPORTS_SERVED,
   launchSignedIn,
+  NOW_TAB_LINE,
   resetLocation,
+  SPORTS_SERVED,
   stubGate as stubGateWith,
   stubLocation,
   stubProfileOptions,
@@ -233,7 +234,7 @@ describe('finishing the part', () => {
       // The served default, written into the draft when the step opened — so a screen the
       // player walked straight past is still a screen they answered.
       search_radius_km: 10,
-      proposals_opt_in: { accepted: true, copy_version: 'proposals-opt-in.v2' },
+      proposals_opt_in: { accepted: true, copy_version: 'proposals-opt-in.v3' },
       gender: 'WOMAN',
       // The widest preference, sent as itself for the reason the empty photo list is: the
       // field has a default on the wire, and an omission would land the same value by a
@@ -250,7 +251,7 @@ describe('finishing the part', () => {
     fireEvent.press(finish());
     await waitFor(() => expect(commits()).toHaveLength(1));
 
-    expect(bodyOf(commits()[0])?.proposals_opt_in.copy_version).toBe('proposals-opt-in.v2');
+    expect(bodyOf(commits()[0])?.proposals_opt_in.copy_version).toBe('proposals-opt-in.v3');
   });
 
   it('sends a declined opt-in as a recorded no, and finishes just the same', async () => {
@@ -266,7 +267,7 @@ describe('finishing the part', () => {
 
     expect(bodyOf(commits()[0])?.proposals_opt_in).toEqual({
       accepted: false,
-      copy_version: 'proposals-opt-in.v2',
+      copy_version: 'proposals-opt-in.v3',
     });
     // The data screen, not the summary: a player reaches the second part *from* the
     // summary now, so landing back on it would show the same account of the same walk
@@ -384,11 +385,12 @@ describe('a photo still on its way up when the player reaches the finish', () =>
     aPhotoIsStillArriving();
 
     act(() => {
-      useProfileDraft
-        .getState()
-        .changePhotos((photos) =>
-          photos.map((photo) => ({ ...photo, upload: { kind: 'uploaded', photoId: 'photo-1' } })),
-        );
+      useProfileDraft.getState().changePhotos((photos) =>
+        photos.map((photo) => ({
+          ...photo,
+          upload: { kind: 'uploaded', photoId: 'photo-1', review: 'allowed' } as const,
+        })),
+      );
     });
 
     expect(finish().props.accessibilityState?.disabled).toBe(false);
@@ -448,7 +450,7 @@ describe('a failed commit', () => {
     // had been written at all.
     expect(screen).toHavePathname('/opt-in');
     expect(screen.getByLabelText(YES).props.accessibilityState?.selected).toBe(true);
-    expect(screen.queryByText(/Inside the app/)).toBeNull();
+    expect(screen.queryByText(NOW_TAB_LINE)).toBeNull();
 
     // And the retry is the control that failed, open rather than stuck busy.
     expect(finish().props.accessibilityState?.disabled).toBe(false);
@@ -525,7 +527,7 @@ describe('once the commit has landed', () => {
     expect(screen.getByText('What we keep from setting up')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Start playing'));
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
   });
 
@@ -538,7 +540,7 @@ describe('once the commit has landed', () => {
 
     fireEvent.press(screen.getByLabelText('Start playing'));
 
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
     // The gate's fourth branch is answered now, so the way it used to turn this player round
     // into the steps is closed.
     expect(screen).toHavePathname('/');
@@ -555,7 +557,7 @@ describe('once the commit has landed', () => {
 
     await launchSignedIn();
 
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
     // And no second commit was made on the way: nothing about launching writes anything.
     expect(commits()).toHaveLength(1);

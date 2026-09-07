@@ -16,7 +16,10 @@ ECS_CLUSTER      ?= raketa-cluster
 ECS_SERVICE      ?= raketa-service
 
 .PHONY: help install test lint lint-imports format typecheck check test-gates openapi \
+        gen-walkthroughs gen-cohort \
         build-dev up down logs ps shell migrate seed seed-host \
+        rebuild-candidate-index rebuild-candidate-index-host \
+        photo-flag-rate photo-flag-rate-host \
         build-prod ecr-login ecr-push ecs-deploy
 
 help:
@@ -41,13 +44,37 @@ test-gates:        ## verify the kernel/engines purity gates still fire
 format:            ## ruff format
 	poetry run ruff format .
 
+# `scripts` as well as `app`: the judged-pairings harness runs the engine over a
+# spec and writes tables back into it, and an implicit `Any` in the machine that
+# derives a Fit is the same defect there as it is one directory over.
 typecheck:         ## mypy
-	poetry run mypy app
+	poetry run mypy app scripts
 
 check: lint lint-imports typecheck test  ## the full local gate (matches CI)
 
+# The three walkthroughs are golden files at the pure seam: a fixed population, a
+# fixed clock, a fixed ruleset and the complete expected answer. **A diff is a
+# design change and must be argued for in the pull request** — which is the whole
+# point, because it makes a weight change visible instead of quiet. This target
+# rewrites them; it is never run by CI.
+gen-walkthroughs:  ## rewrite the matchmaking walkthrough golden files
+	UPDATE_GOLDEN=1 poetry run pytest tests/unit/test_matchmaking_walkthroughs.py -q
+
+# The seed cohort's population, generated from a seed and committed as a file
+# (app/seeds/cohort.json). **Inputs only** — no level, no uncertainty and no
+# band, because those are the engine's answers and a committed copy of an answer
+# is a number nothing keeps honest. A diff here is a change to the fixture every
+# Play screen is developed against, and it is readable per member because every
+# draw is keyed off that member's handle.
+gen-cohort:        ## rewrite the seed cohort's committed population
+	poetry run python -m scripts.gen_cohort
+
 ## ----- API contract
-openapi:           ## emit the API contract (openapi.player.json)
+## One document per surface. `openapi.player.json` is what the client generates
+## its wire types from; `openapi.dev.json` is the dev console's one path and has
+## no client at all, which is why it is gated by a freshness check at the
+## repository root (`make contract-freshness`) rather than by the drift check.
+openapi:           ## emit the API contracts (openapi.player.json, openapi.dev.json)
 	poetry run python -m app.api.contract
 
 ## ----- local docker
@@ -82,6 +109,29 @@ seed:              ## seed deterministic dev accounts into the running stack's d
 
 seed-host:         ## the same seed from the host — needs .env, like host-run uvicorn
 	poetry run python -m app.seeds
+
+## ----- the candidate index (docs/adr/0110)
+## The index is a projection of the event log, so a corrupt one is a command and
+## not an incident: this empties the tables and folds the whole log back in.
+## There is deliberately no admin route — a button that drops and rebuilds an
+## index is a button eventually pressed in the wrong place.
+rebuild-candidate-index:  ## rebuild the candidate index from the event log, in the running stack
+	$(COMPOSE_LOCAL) exec api python -m app.modules.matchmaking.infrastructure.rebuild_cli
+
+rebuild-candidate-index-host: ## the same rebuild from the host — needs .env, like seed-host
+	poetry run python -m app.modules.matchmaking.infrastructure.rebuild_cli
+
+## ----- the on-court threshold (#316)
+## Read-only. Every verdict recorded the similarity vector it was taken from, so
+## the flag rate at a candidate line is arithmetic over stored object metadata —
+## no image is re-scored, nothing is written and the sidecar is not asked. The
+## default is a twentieth-interval sweep; `make photo-flag-rate THRESHOLDS="0.55
+## 0.6"` asks about particular lines instead.
+photo-flag-rate:   ## the on-court flag rate at each candidate threshold, from stored notes
+	$(COMPOSE_LOCAL) exec api python -m app.modules.player_profile.infrastructure.flag_rate_cli $(THRESHOLDS)
+
+photo-flag-rate-host: ## the same reading from the host — needs .env, like seed-host
+	poetry run python -m app.modules.player_profile.infrastructure.flag_rate_cli $(THRESHOLDS)
 
 ## ----- production / ECR / ECS
 ## DORMANT — AWS deployment is not in use; development is entirely local

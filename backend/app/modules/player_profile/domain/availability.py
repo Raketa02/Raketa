@@ -31,7 +31,17 @@ retroactively refuse to rehydrate a profile that was legal when it was written.
 and here it is narrower than that: **the commit path refuses.**
 ``PlayerProfile.change_availability`` is a write too, and it accepts a blank grid
 deliberately — a player may clear their week after committing, and the minimum
-binds the answer they are asked for rather than every later edit of it.
+binds the answer they are asked for rather than every later edit of it. That
+counterpart now has a name: ``edited`` takes the same primitives as ``of_cells``
+and enforces no floor, so the edit path is a constructor a reader can see rather
+than an asymmetry they have to infer.
+
+**A search's improvised week is an edit and not an answer**, so it builds through
+``edited`` too. That is the sentence above read literally rather than loosely:
+*the commit path* is one route, and a player who unticks every cell on the Play
+screen and searches is not on it. Building a search override through ``of_cells``
+enforced the floor a layer out from this module and refused them a `400`; a grid
+this module hands out blank cannot be one a matcher refuses to run on.
 
 **The floor is not served.** Unlike the tag floor and ceiling it is fixed by the
 record rather than by product, so a client holds it as a constant the way it
@@ -184,16 +194,13 @@ class AvailabilityGrid:
     def of_cells(cls, cells: Iterable[tuple[int, str]]) -> "AvailabilityGrid":
         """The grid these ``(weekday, part)`` pairs make. **At least one.**
 
-        The command path's entry point, so that a *command* carries primitives
+        The commit path's entry point, so that a *command* carries primitives
         from the boundary and the domain is what turns them into slots
-        (``backend/CONTEXT.md`` — *Command*). Raises through ``invariant`` for a
-        pair that is not a cell, because the boundary schema constrains the day
-        to 1–7 and the part to the three there are: reaching this with anything
-        else means a caller inside the application built it.
+        (``backend/CONTEXT.md`` — *Command*).
 
         **This is the one place the floor is enforced**, because it is the one
-        place a player's own answer arrives. Nothing ticked is refused with
-        ``AvailabilityGridEmpty`` — a *refusal* rather than a broken
+        place the answer a player was *asked for* arrives. Nothing ticked is
+        refused with ``AvailabilityGridEmpty`` — a *refusal* rather than a broken
         precondition, because it is a legitimate thing for a client to send and
         the client's recovery is to go back to the week and tick a cell.
 
@@ -202,13 +209,45 @@ class AvailabilityGrid:
         the player ticked, and never of what arrived.
         """
 
-        grid = cls.of(
-            AvailabilitySlot(day=iso_weekday(day), part=_part(part))
-            for day, part in cells
-        )
+        grid = cls.edited(cells)
         if not grid.slots:
             raise AvailabilityGridEmpty()
         return grid
+
+    @classmethod
+    def edited(cls, cells: Iterable[tuple[int, str]]) -> "AvailabilityGrid":
+        """The grid a player just edited. **The floor's named exit.**
+
+        The same ``(weekday, part)`` primitives ``of_cells`` takes and the same
+        fold, minus the minimum — because *the commit path refuses* is this
+        module's rule and a later edit is not the commit. A player may clear
+        their week afterwards, and ``PlayerProfile.change_availability`` has
+        always accepted a blank grid; until this existed there was no boundary
+        constructor that could hand it one.
+
+        **Two callers, and neither is a commit**: the availability write route,
+        and a search's ``availability_override`` — the week a player improvised
+        for one evening, on any of the three surfaces that take one. Both are
+        edits of an answer already given, which is exactly what the floor does
+        not bind.
+
+        **Named rather than a flag on ``of_cells``**, which is
+        ``SearchRadius.chosen`` / ``recorded``'s discipline applied to the grid:
+        every call site says which of the two it is, where a flag re-asks the
+        question at each of them and makes the wrong answer the shorter one. It
+        is not ``from_codes`` either — that is the **replay** constructor, and
+        building a player's live edit through it is a category error.
+
+        Raises through ``invariant`` for a pair that is not a cell, exactly as
+        ``of_cells`` does: the boundary schema constrains the day to 1–7 and the
+        part to the three there are, so reaching this with anything else means a
+        caller inside the application built it.
+        """
+
+        return cls.of(
+            AvailabilitySlot(day=iso_weekday(day), part=_part(part))
+            for day, part in cells
+        )
 
     @classmethod
     def from_codes(cls, codes: Iterable[str]) -> "AvailabilityGrid":
@@ -239,3 +278,88 @@ def _in_reading_order(
     slots: Iterable[AvailabilitySlot],
 ) -> list[AvailabilitySlot]:
     return sorted(slots, key=lambda slot: slot.in_reading_order)
+
+
+#: A single day carrying at most this many ticks reads as a **window on that
+#: day** rather than as a week. Adopted from the prototype as a starting
+#: position (``docs/adr/0100`` §6); its falsifier is the rate at which a
+#: challenge is answered with a counter-proposal outside its stated window, and
+#: a label carrying no information is **removed rather than tuned**.
+WINDOW_SINGLE_DAY_MAX_SLOTS: Final = 2
+
+#: At or above this many ticks over the whole grid, no window is narrower than
+#: *any*. Same provenance and the same falsifier.
+WINDOW_ANY_MIN_SLOTS: Final = 12
+
+#: Saturday and Sunday. **A locale assumption, recorded as one rather than as a
+#: constant to tune** (``docs/adr/0100`` §7) — it is not a number, and its
+#: falsifier is the first shard whose weekend is somewhere else.
+_WEEKEND = frozenset({6, 7})
+
+
+class Window(StrEnum):
+    """When a game found on a grid would plausibly be played. **A code, never a
+    sentence** — *"tonight"* is the client's word (``docs/adr/0022``).
+
+    **Derived, never chosen** (``docs/adr/0100``). There is no window picker
+    anywhere: a player changes their window by changing their grid, which is the
+    same act that changes their matches. One control, one meaning.
+
+    It is a **label on the search**, not a proposed time — the grid is still
+    never rendered to anybody as a calendar, and this says only how soon the week
+    it ran on comes round.
+    """
+
+    TODAY = "TODAY"
+    TOMORROW = "TOMORROW"
+    WEEKEND = "WEEKEND"
+    THIS_WEEK = "THIS_WEEK"
+    ANY = "ANY"
+
+
+def window_of(grid: AvailabilityGrid, today: IsoWeekday) -> Window:
+    """The window a search run on this grid is asking about.
+
+    ``docs/adr/0100`` §4 puts the function here, beside the grid, and hands the
+    caller the one thing this module refuses to know: **what day it is.**
+    ``IsoWeekday`` is kernel vocabulary and is neither a date nor a timezone, so
+    the module's negative space — *nothing here has a duration, a date or a
+    timezone in it* — is intact.
+
+    The ladder is read narrowest-first, and every rung is a statement about the
+    **grid**, never about the pair:
+
+    - a wide-open week says nothing about when, and reads ``ANY``;
+    - a grid ticked on one day alone, lightly, is that day — *today*, *tomorrow*,
+      or simply *this week* when it is further off;
+    - a grid ticked only across Saturday and Sunday is the weekend;
+    - anything else is this week.
+
+    An empty grid reads ``ANY``. A blank grid means *we do not know* rather than
+    *never*, and *any* is the only rung that claims nothing.
+    """
+
+    days = {int(slot.day) for slot in grid.slots}
+    if not days or len(grid) >= WINDOW_ANY_MIN_SLOTS:
+        return Window.ANY
+    if len(days) == 1 and len(grid) <= WINDOW_SINGLE_DAY_MAX_SLOTS:
+        return _single_day(next(iter(days)), int(today))
+    if days <= _WEEKEND:
+        return Window.WEEKEND
+    return Window.THIS_WEEK
+
+
+def _single_day(day: int, today: int) -> Window:
+    """Which of the three near rungs one ticked day lands on.
+
+    *Tomorrow* wraps the week — Sunday's tomorrow is Monday — because the grid is
+    an **ordinary** week and has no notion of a particular one. Anything further
+    off than tomorrow is ``THIS_WEEK`` rather than a count of days: a number of
+    days is a date, and this module holds none.
+    """
+
+    if day == today:
+        return Window.TODAY
+    if day == today % DAYS_IN_THE_GRID + 1:
+        return Window.TOMORROW
+    return Window.THIS_WEEK

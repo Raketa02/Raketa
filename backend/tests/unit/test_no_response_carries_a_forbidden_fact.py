@@ -1,0 +1,258 @@
+"""No forbidden fact reaches any response type. Asserted **centrally**.
+
+A test per route passes for ever and then somebody adds a route. So this walks
+the **emitted contract** — every schema reachable from a response on the player
+surface, transitively, however it got there — and refuses a property that names
+one of the facts this product has decided it does not publish.
+
+The list below is not a style guide. Every row is a decision somebody argued for,
+and every one of them is broken the same way: months later, by a helpful field
+added to a candidate row, in a diff where nothing looks wrong.
+
+- **gender** — a protected characteristic may **gate**; it may never be shown
+  or scored.
+- **a bio, or any player-authored free text** — the platform's first moderation
+  surface, and out of scope.
+- **activity recency, at any granularity** — *last seen* is a presence indicator
+  and this product does not have one.
+- **a decline, a pass** — a refusal is not a notification, and a pass is
+  write-only.
+- **a withheld or near-miss row** — *a player may ask why somebody was shown;
+  nobody may ask who was withheld.* One field is admitted against this rule and
+  is named in ``PERMITTED`` with its reason: the read-back's own ``withheld``,
+  which says a row **it already showed** is no longer shown and names nobody.
+- **a birthdate or an age** — nothing in this backend collects one, and no gate
+  may reopen it here.
+- **a real name** — the platform holds a **nickname**, and nothing may derive a
+  familiar form from it.
+- **a shard key** — the partition is derived, so there is no field for a future
+  conjunct to attach to.
+- **an unsettled case** — the matcher never reads `cases`; the hold does its
+  work at the gate.
+
+**Matching is on the words of a property name, never on a substring.** So
+``gender`` catches ``gender_preference`` and ``threshold`` is not a hold. Both
+halves are load-bearing, and both are driven against deliberately broken
+documents below.
+
+Two neighbours assert the same shape over the same document and are kept apart
+because each needs a judgement this one does not:
+``test_matchmaking_liveness_never_crosses`` refuses the word beside a **number**
+where ``liveness_reasons`` is exactly what the contract does carry, and
+``test_no_response_carries_a_block`` covers the block vocabulary.
+"""
+
+from __future__ import annotations
+
+from typing import Iterable
+
+import pytest
+
+from app.api.contract import build_surface_spec
+from app.api.v1.player import player_api_router
+
+#: One entry per decision, so a failure names the rule rather than a regex. A
+#: signal is either a word, or a tuple of words that must **all** appear — which
+#: is what lets *last name* be refused while *last* alone is ordinary.
+FORBIDDEN: dict[str, tuple[object, ...]] = {
+    "gender": ("gender",),
+    "free text about a player": ("bio", "biography", "blurb", ("about", "me")),
+    "activity recency": (
+        "recency",
+        "online",
+        ("last", "seen"),
+        ("last", "active"),
+        ("seen", "at"),
+        ("active", "at"),
+    ),
+    "a decline": ("decline", "declined", "declines"),
+    "a pass": ("passed", "passes"),
+    "a withheld row": ("withheld", ("near", "miss")),
+    "a birthdate": ("birth", "birthdate", "birthday", "age", ("date", "of", "birth")),
+    "a real name": (
+        ("first", "name"),
+        ("last", "name"),
+        ("full", "name"),
+        ("given", "name"),
+    ),
+    "a shard key": ("shard",),
+    "an unsettled case": ("unsettled", "hold", ("case", "id")),
+}
+
+#: Fields that trip a rule above and are published **on purpose**, each with the
+#: reason it is not the thing the rule was written about. Kept as a named list
+#: rather than by loosening a rule, so admitting one is a decision somebody
+#: writes down instead of a signal quietly getting weaker.
+PERMITTED: dict[str, str] = {
+    "withheld": (
+        "The read-back's statement that a row it recorded is no longer shown "
+        "(ADR-0109), and **not** the fact this rule was written about. That one "
+        "is layer 3 — *who did not clear the floor* — and it is a person the "
+        "searcher was never shown, named to them for the first time; this is a "
+        "person they were shown this morning, and all it says is that the "
+        "product has stopped showing them. It carries no id, no card and no "
+        "gate: `withheld_reason` and `near_miss_count` are still refused, which "
+        "is what keeps this an exemption for one field rather than a weakened "
+        "rule."
+    ),
+}
+
+
+def words(name: str) -> set[str]:
+    """The identifier words in a property name, lowercased.
+
+    Both spellings the contract could arrive in — a generated document may carry
+    ``last_seen`` or ``lastSeen`` depending on how somebody declares an alias —
+    so camelCase is split as well as snake_case.
+    """
+
+    found: list[str] = []
+    word: list[str] = []
+    for character in name:
+        if character.isalnum():
+            if character.isupper() and word:
+                found.append("".join(word))
+                word = []
+            word.append(character.lower())
+        elif word:
+            found.append("".join(word))
+            word = []
+    if word:
+        found.append("".join(word))
+    return set(found)
+
+
+def names(signal: object, present: set[str]) -> bool:
+    if isinstance(signal, tuple):
+        return set(signal) <= present
+    return signal in present
+
+
+def offends(field: str, signals: Iterable[object]) -> bool:
+    present = words(field)
+    return any(names(signal, present) for signal in signals)
+
+
+def _refs(node: object) -> set[str]:
+    found: set[str] = set()
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key == "$ref" and isinstance(value, str):
+                found.add(value.rsplit("/", 1)[-1])
+            else:
+                found |= _refs(value)
+    elif isinstance(node, list):
+        for item in node:
+            found |= _refs(item)
+    return found
+
+
+def schemas_reachable_from_responses(spec: dict) -> dict[str, dict]:
+    """Every schema a client could ever be handed, transitively.
+
+    Requests are deliberately outside the walk: what a player *sends* is not what
+    the platform *publishes*, and a search request carrying a sport is not the
+    platform telling anybody anything.
+    """
+
+    components = spec.get("components", {}).get("schemas", {})
+    frontier: set[str] = set()
+    for path in spec["paths"].values():
+        for operation in path.values():
+            if isinstance(operation, dict):
+                frontier |= _refs(operation.get("responses", {}))
+
+    reached: dict[str, dict] = {}
+    while frontier:
+        name = frontier.pop()
+        if name in reached:
+            continue
+        schema = components.get(name, {})
+        reached[name] = schema
+        frontier |= _refs(schema) - set(reached)
+    return reached
+
+
+def _spec() -> dict:
+    return build_surface_spec("Raketa Player API", player_api_router)
+
+
+def _properties(spec: dict | None = None) -> list[tuple[str, str]]:
+    return [
+        (name, field)
+        for name, schema in schemas_reachable_from_responses(spec or _spec()).items()
+        for field in schema.get("properties", {})
+    ]
+
+
+def test_the_walk_reaches_the_shortlist_and_not_only_the_error_envelope():
+    """The guard on the guard: a walk that reached nothing would pass for ever,
+    and would go on passing the day the surface grew the field it guards."""
+
+    reached = schemas_reachable_from_responses(_spec())
+
+    assert "ErrorResponse" in reached
+    assert "ShortlistResponse" in reached, "the search route is not in the walk"
+    assert "PlayerCardSchema" in reached
+    assert len(_properties()) > 50
+
+
+@pytest.mark.parametrize("rule", sorted(FORBIDDEN))
+def test_no_response_schema_publishes_a_forbidden_fact(rule: str):
+    offenders = {
+        f"{owner}.{field}"
+        for owner, field in _properties()
+        if offends(field, FORBIDDEN[rule]) and field not in PERMITTED
+    }
+
+    assert offenders == set(), f"{rule} reaches a response: {sorted(offenders)}"
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "gender",
+        "gender_preference",
+        "bio",
+        "last_seen_at",
+        "lastActiveAt",
+        "declined_at",
+        "shard_key",
+        "withheld_reason",
+        "near_miss_count",
+        "date_of_birth",
+        "first_name",
+    ],
+)
+def test_the_walk_refuses_the_fields_it_exists_to_refuse(field: str):
+    """Driven against a deliberately broken document, because a gate that has
+    never been observed to fail is indistinguishable from one that does not
+    work — and these are fields somebody will add with a good reason."""
+
+    assert any(offends(field, signals) for signals in FORBIDDEN.values())
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "nickname",
+        "area_code",
+        "fit",
+        "liveness_reasons",
+        "degraded_terms",
+        "concerns",
+        "threshold",
+        "password_changed_at",
+        "page",
+        "last_position",
+    ],
+)
+def test_the_walk_admits_what_the_contract_actually_carries(field: str):
+    """The other half of the judgement, and the one a substring check fails.
+
+    ``threshold`` is not a hold, ``page`` is not an age, and ``last_position`` is
+    not a name — a rule that caught any of them would be loosened within the
+    month, and a loosened rule catches nothing.
+    """
+
+    assert not any(offends(field, signals) for signals in FORBIDDEN.values())
