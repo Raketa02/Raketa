@@ -51,6 +51,7 @@ from app.modules.challenges.domain import answer_window
 from app.modules.challenges.domain.answer_window import (
     ANSWER_WINDOW,
     SHORTEST_WINDOW_EVER_STAMPED,
+    WINDOWS_EVER_STAMPED,
 )
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.seats import SeatAnswer, SeatPlan, Side
@@ -370,6 +371,27 @@ async def test_a_challenge_younger_than_the_window_is_not_a_candidate(session_fa
         assert young.id not in candidates
 
 
+def test_the_ledger_still_carries_every_window_this_repository_has_shipped():
+    """The one thing about the ledger a test can know: what is already in the log.
+
+    ``WINDOWS_EVER_STAMPED`` is a claim about **history**, and nothing in a
+    running process can tell you what a seat committed last month was stamped
+    with. What a test can hold is that the values this repository has actually
+    shipped are still in it — #217's day, and today's two.
+
+    It exists for the one way the ledger can be mismaintained without going red
+    anywhere else: a future lengthening that **replaces** the old value instead
+    of appending it. ``min`` would then move up with the constant, the sweep
+    would narrow past every seat still running on the shorter window, and the
+    record would be late for all of them — the exact failure this cutoff was
+    introduced to end.
+    """
+
+    assert timedelta(hours=24) in WINDOWS_EVER_STAMPED
+    assert ANSWER_WINDOW in WINDOWS_EVER_STAMPED
+    assert SHORTEST_WINDOW_EVER_STAMPED == min(WINDOWS_EVER_STAMPED)
+
+
 def _sent_under(window, *, invitee=ALICE) -> Challenge:
     """A challenge whose invited seat is stamped with ``window`` rather than today's.
 
@@ -423,10 +445,19 @@ async def test_a_seat_on_a_window_that_has_since_shortened_is_still_swept(
 
     The mirror of the case above, and the one a future **shortening** puts every
     outstanding seat into at once: they keep the longer promise they were sent
-    with, and a cutoff that had moved down with the constant would have to reach
-    them anyway. It does, because the narrowing is the shortest window ever
-    stamped — over-naming costs a stream read and an aggregate that appends
-    nothing, and under-naming costs the record.
+    with, and the cutoff has to reach them anyway.
+
+    **This one pins a property rather than reproducing a bug, and it says so
+    because the difference matters.** ADR-0151 §7 reads the asymmetry the other
+    way round — *"survives lengthening and would not have survived shortening"* —
+    and the predicate does not agree: ``occurred_at <= now - W`` is monotone in
+    ``now`` and holds no cursor, so a stream that qualifies once qualifies for
+    ever and the only thing any window can cost is **lateness**. A shortening
+    makes the cutoff *wider*, which over-names and is free; it was the lengthening
+    above that had a bug. So there is no shortening regression to drive, and what
+    is asserted instead is the invariant that would make one impossible if the
+    ledger were ever mismaintained: the sweep never narrows on a window longer
+    than one a live seat carries.
     """
 
     stamped = ANSWER_WINDOW * 2

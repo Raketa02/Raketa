@@ -8,8 +8,8 @@ stated and answered. Nothing here opens a table, and nothing here calls
 ``games`` directly except through the two acts a player performs on a result.
 
 **This is the one layer of the seed that writes in the past, and the reason is
-the clock.** A relationship is a thing happening now: a seat's twenty-four hours
-have to start when the run starts or the court is over before it is read. A
+the clock.** A relationship is a thing happening now: a seat's own answer window
+has to start when the run starts or the court is over before it is read. A
 played game is a thing that *happened* — a score is confirmed when its window
 closes and two scores nobody agreed leave the game unscored when both of theirs
 do, so a game seeded an hour ago is a game still awaiting an answer, and the

@@ -77,7 +77,7 @@ from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
 from app.kernel import Instant, Sport
 from app.modules.challenges.application.read_challenges import ReadChallengesCommand
-from app.modules.challenges.domain.answer_window import ANSWER_WINDOW
+from app.modules.challenges.domain.answer_window import ANSWER_WINDOW_HOURS
 from app.modules.challenges.domain.seats import SeatAnswer
 from app.modules.challenges.domain.standing import ENDED
 from app.modules.games.domain.standing import GameStanding
@@ -144,12 +144,11 @@ from app.seeds.relationships import (
 #: deck asserted at its ceiling would be asserting the cap rather than the pool.
 CARDS_A_DEAL_MUST_CARRY = 3
 
-#: How long an invited seat has, **read off the domain rather than restated**.
-#: Nothing here backdates a challenge, so how stale a database may be and still
-#: draw the inbound-court screen *is* this number — and a refusal that named its
-#: own copy of it would send a developer looking for a court that lapsed hours
-#: before the sentence said it could.
-ANSWER_WINDOW_HOURS = int(ANSWER_WINDOW.total_seconds() // 3600)
+# **How long an invited seat has is read off the domain, never restated here.**
+# Nothing in this package backdates a challenge, so how stale a database may be
+# and still draw the inbound-court screen *is* that number — and a refusal
+# carrying its own copy would send a developer looking for a court that lapsed
+# hours before the sentence said it could.
 
 
 class ScreenIsEmpty(RuntimeError):

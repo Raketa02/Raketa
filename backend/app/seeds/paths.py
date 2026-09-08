@@ -19,9 +19,9 @@ constructor argument rather than a call — which is what lets one run assemble
 these more than once, at more than one instant.
 
 **An edge is written at the run's own now and a played game is not**, and the two
-halves of that are one rule rather than an exception to it: a seat's
-twenty-four hours have to start when the run starts or the court is over before
-it is read, and a *result* is confirmed by silence when its window closes — so a
+halves of that are one rule rather than an exception to it: a seat's own answer
+window has to start when the run starts or the court is over before it is read,
+and a *result* is confirmed by silence when its window closes — so a
 game seeded an hour ago is a game still awaiting an answer, which is a different
 card from the one the fixture is for. A relationship is a thing happening now; a
 played game is a thing that happened. ``app/seeds/games.py`` builds one of these

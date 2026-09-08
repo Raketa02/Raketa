@@ -63,7 +63,10 @@ ANSWER_WINDOW: Final = timedelta(hours=48)
 
 #: Every window this log has ever stamped on a seat: this one, and each one that
 #: stood before it. **Changing ``ANSWER_WINDOW`` means adding the old value
-#: here**, and that is the whole maintenance this ledger asks for.
+#: here** — appending, never replacing — and that is the whole maintenance this
+#: ledger asks for. It is public so that a test can hold what this repository has
+#: actually shipped; ``SHORTEST_WINDOW_EVER_STAMPED`` below is what a caller
+#: narrowing on it wants, and no read should reach for this tuple directly.
 #:
 #: It exists because the lapse sweep cannot read a deadline. ``may_have_lapsed``
 #: asks the store which challenges are old enough to hold a seat past its window,
@@ -73,7 +76,17 @@ ANSWER_WINDOW: Final = timedelta(hours=48)
 #: window to *historical* events, and the current one is the wrong choice —
 #: today's forty-eight would be applied to seats stamped under yesterday's
 #: twenty-four, which lapse a day before it looks for them.
-_WINDOWS_EVER_STAMPED: Final = (timedelta(hours=24), ANSWER_WINDOW)
+WINDOWS_EVER_STAMPED: Final = (timedelta(hours=24), ANSWER_WINDOW)
+
+#: The window as a whole number of hours, for the one description that has to
+#: name it (``challenges/presentation/routes.py``) and the one seed refusal whose
+#: whole subject is how stale a database may be (``seeds/screens.py``).
+#:
+#: **Here rather than at either call site.** *The only place it is written* stops
+#: being true the moment a caller does the arithmetic itself, and two callers
+#: doing it two different ways is how the sentence and the constant come apart
+#: without anybody editing either.
+ANSWER_WINDOW_HOURS: Final = int(ANSWER_WINDOW // timedelta(hours=1))
 
 #: The window the lapse sweep narrows on. **The shortest one any live seat can
 #: carry**, which is the only cutoff that is right whichever way the number next
@@ -85,7 +98,7 @@ _WINDOWS_EVER_STAMPED: Final = (timedelta(hours=24), ANSWER_WINDOW)
 #: A shortening is picked up here the moment ``ANSWER_WINDOW`` moves, because
 #: ``min`` reads the new value; a lengthening is covered by the old value staying
 #: in the ledger above.
-SHORTEST_WINDOW_EVER_STAMPED: Final = min(_WINDOWS_EVER_STAMPED)
+SHORTEST_WINDOW_EVER_STAMPED: Final = min(WINDOWS_EVER_STAMPED)
 
 
 def answer_by(invited_at: Instant) -> Instant:

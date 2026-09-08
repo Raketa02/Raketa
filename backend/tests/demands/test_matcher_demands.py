@@ -313,8 +313,8 @@ def _ago(**offset) -> Instant:
     return instant(datetime.now(timezone.utc) - timedelta(**offset))
 
 
-def _a_send_that_has_run_out() -> Instant:
-    """A send old enough that every seat still unanswered on it has lapsed.
+def _long_enough_ago_to_have_lapsed() -> Instant:
+    """A moment far enough back that a seat invited then has run out of window.
 
     **Derived from ``ANSWER_WINDOW``, with an hour to spare, rather than typed as
     *yesterday*.** The window moved from a day to two (``docs/adr/0151``), and a
@@ -326,10 +326,10 @@ def _a_send_that_has_run_out() -> Instant:
     return instant(datetime.now(timezone.utc) - ANSWER_WINDOW - timedelta(hours=1))
 
 
-def _just_after(sent: Instant, **offset) -> Instant:
+def _just_after(sent_at: Instant, **offset) -> Instant:
     """A moment that far after a send, and well inside that seat's window."""
 
-    return instant(sent + timedelta(**offset))
+    return instant(sent_at + timedelta(**offset))
 
 
 async def _sent(
@@ -482,7 +482,7 @@ async def test_a_seat_past_its_window_is_not_open_with_no_sweep_having_run(
 
     port = implementation.build(session)
     organiser, kept, silent, also_silent = (new_uuid() for _ in range(4))
-    long_ago = _a_send_that_has_run_out()
+    long_ago = _long_enough_ago_to_have_lapsed()
     challenge = await _sent(
         session,
         organiser=organiser,
@@ -527,7 +527,7 @@ async def test_a_decline_and_a_lapse_leave_the_open_read_and_only_one_is_an_answ
 
     port = implementation.build(session)
     organiser, said_yes, said_no, said_nothing = (new_uuid() for _ in range(4))
-    long_ago = _a_send_that_has_run_out()
+    long_ago = _long_enough_ago_to_have_lapsed()
     challenge = await _sent(
         session,
         organiser=organiser,
@@ -734,7 +734,7 @@ async def test_the_count_is_unanswered_invited_seats_and_nothing_else(
         organiser=elsewhere,
         invitees=(waiting,),
         sport=Sport.TENNIS,
-        at=_a_send_that_has_run_out(),
+        at=_long_enough_ago_to_have_lapsed(),
     )
 
     counts = await port.open_challenge_counts(
@@ -818,7 +818,7 @@ async def test_a_lapse_tallies_nowhere_even_once_it_has_been_recorded(
         organiser=organiser,
         invitees=(silent,),
         sport=Sport.TENNIS,
-        at=_a_send_that_has_run_out(),
+        at=_long_enough_ago_to_have_lapsed(),
     )
 
     assert await port.pairwise_counterparts(organiser) == ()

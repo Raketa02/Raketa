@@ -26,12 +26,14 @@ exists the sender can no longer see the protagonist at all (an open challenge
 gates the pair), so a run that searched first would fail on its second pass with
 a message about a pool.
 
-**A seat's window is twenty-four hours and nothing here backdates it.** A
-database seeded yesterday has courts that have lapsed, and that is the right
-answer rather than a defect: the pair is released the moment the last seat goes,
-so the next ``make seed`` finds nothing standing and sends again. The alternative
-— backdating so a court looks fresh — is a fixture for a state no organiser ever
-had.
+**A seat's window runs from the send and nothing here backdates one.** A
+database left standing longer than ``ANSWER_WINDOW`` has courts that have lapsed,
+and that is the right answer rather than a defect: the pair is released the
+moment the last seat goes, so the next ``make seed`` finds nothing standing and
+sends again. The alternative — backdating so a court looks fresh — is a fixture
+for a state no organiser ever had. The window is named rather than spelled,
+because it has moved once already (``docs/adr/0151``) and a fixture citing its
+own copy of the old number is the stale citation that record refuses.
 """
 
 from __future__ import annotations

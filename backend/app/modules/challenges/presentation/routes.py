@@ -23,7 +23,6 @@ court, which is the one thing a safety gate may never say.
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -39,7 +38,7 @@ from app.modules.challenges.application.read_challenges import (
     ReadChallengesCommand,
     StandingChallenge,
 )
-from app.modules.challenges.domain.answer_window import ANSWER_WINDOW
+from app.modules.challenges.domain.answer_window import ANSWER_WINDOW_HOURS
 from app.modules.challenges.presentation.dependencies import (
     AcceptSeatDep,
     DeclineSeatDep,
@@ -56,15 +55,6 @@ from app.modules.challenges.presentation.schemas import (
 from app.modules.users.presentation.dependencies import CurrentUserDep
 
 router = APIRouter(prefix="/challenges", tags=["challenges"])
-
-#: The one duration this surface names, **derived and never typed**.
-#: ``answer_window.py`` decides how long an invitee has, and a description that
-#: spelled the number a second time would be a promise going quietly wrong the
-#: day the first one moved — which it has (``docs/adr/0151``). This is the only
-#: place the window is named as a number outside that module: every *player*
-#: sentence renders a seat's own ``answer_by`` instead, which is why the window
-#: doubled without a string changing.
-_ANSWER_WINDOW_HOURS = int(ANSWER_WINDOW // timedelta(hours=1))
 
 _REFUSALS: dict[int | str, dict[str, Any]] = {
     status.HTTP_403_FORBIDDEN: {
@@ -138,7 +128,13 @@ _REFUSALS: dict[int | str, dict[str, Any]] = {
         "three separate invitations.\n\n"
         "**Your own seat is accepted from birth.** You are the one proposing, so "
         "nothing asks whether you want to play the game you just built.\n\n"
-        f"**Each invitee gets {_ANSWER_WINDOW_HOURS} hours from when *their* "
+        # The one duration this surface names, and it is **read, never typed**:
+        # a description spelling its own copy would be a promise going quietly
+        # wrong the day ``answer_window.py`` moved — which it has
+        # (``docs/adr/0151``). No *player* sentence names one at all; they render
+        # a seat's own ``answer_by``, which is why the window doubled without a
+        # string changing.
+        f"**Each invitee gets {ANSWER_WINDOW_HOURS} hours from when *their* "
         "seat was invited**, so a seat filled later is not already half "
         "expired.\n\n"
         "**The arrangement you built is what is recorded**, and it is what they "
