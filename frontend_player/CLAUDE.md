@@ -857,7 +857,16 @@ variant there, with the send confirmation as the one message that still interrup
 **meter** joins them with the accessibility contract, and it is `Bar`'s opposite: a bar states
 a fraction and reports one through `accessibilityValue`, where a meter visualises a number the
 row beside it already printed — so it takes **no label and no value at all**, and
-`progressbar` appears nowhere in Play. The rest
+`progressbar` appears nowhere in Play. **Two more arrived by promotion rather than by being
+built there** — the **Social tag row** and 7.13's **run of form**, both the competitive card's
+until the player record sheet turned out to draw both
+([#375](https://github.com/Raketa02/Raketa/issues/375)). A copy of either would be a second
+thing to keep in step with a **pinned** geometry test, and importing them out of
+`features/play/` would point the arrow the wrong way. **The drawing came down and the rule
+stayed**: `play/domain/socialTagOverlap` reads the row's four answers off a _candidate_, which
+is a search result and Play's alone, and hands the value down — so the union and the two words
+it draws (`socialTagChip`, `NO_TAGS_IN_COMMON`) sit in `shared/vocabulary` beside the nineteen
+labels, and `GameResult` went with the squares for `PLAY_INTENTS`' reason. The rest
 arrive with the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.

@@ -2091,6 +2091,12 @@ blank_ the reason list, the meta line and the sort row already take.
 square per counted-and-agreed result, oldest to newest, left-aligned — so three results are three
 squares and a gap, and a fourth square in some neutral fill would claim a game nobody played.
 
+**The run is one drawn object and the block only places it.** `RunOfForm` is a `shared/ui`
+component, because the player record sheet draws the same run for a resolved sport — a second copy
+would be a second set of fills the pinned test below never sees. It pads nothing and caps nothing:
+what it is handed is what it draws, and how many results a surface was served is that surface's
+own question.
+
 **Won and lost are a lightness step, not two hues.** `ink` against `muted` is 3,24:1, clearing
 [1.4.11](#25-contrast--computed)'s 3:1 for a graphical object, and both clear it against the
 block's ground — so the run is legible to somebody who can tell no two hues apart, which is the

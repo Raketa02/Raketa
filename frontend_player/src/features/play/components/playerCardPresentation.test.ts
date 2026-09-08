@@ -11,9 +11,11 @@
  * coordinate string and `areas.py` refuses in writing to make it a name; and **nothing is
  * said about activity**, which is the slot #218 refused.
  *
- * The **Social tag row**'s words join them, and the assertion there is the split between the
- * two registers: the chip carries a glyph and a per-tag marker, the spoken clause carries
- * neither and groups instead ([#311](https://github.com/Raketa02/Raketa/issues/311)).
+ * The **Social tag row**'s spoken clauses join them, and the assertion there is one half of a
+ * split: the clause carries neither the glyph nor the per-tag marker and groups the shared
+ * ones instead ([#311](https://github.com/Raketa02/Raketa/issues/311)). The other half — what
+ * the chip is *drawn* with — moved to `shared/vocabulary/socialTagPresentation.test.ts` with
+ * the row itself, and is asserted there against the same two registers.
  */
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
@@ -28,7 +30,6 @@ import {
   ON_COURT_CLAUSE,
   ON_COURT_MARK,
   recordClauses,
-  socialTagChip,
   socialTagClauses,
   stakeClauses,
 } from './playerCardPresentation';
@@ -139,11 +140,6 @@ describe('what a card’s primary button says', () => {
 describe('the social tag row’s words', () => {
   const shared = (id: SocialTagId) => ({ id, shared: true });
   const theirs = (id: SocialTagId) => ({ id, shared: false });
-
-  it('draws the tag with its glyph, and the marker only where it is shared', () => {
-    expect(socialTagChip(shared('PLAYS_TO_WIN'))).toBe('🏆 Plays to win · you too');
-    expect(socialTagChip(theirs('PLAYS_TO_WIN'))).toBe('🏆 Plays to win');
-  });
 
   it('speaks the shared ones under one clause rather than marking each of them', () => {
     // A listener hearing *you too* six times is being read a table, not a card.

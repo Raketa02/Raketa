@@ -18,13 +18,22 @@
  * half is `lastFiveReading`'s and is asserted with the card.
  *
  * Derived here and copied into 2.5, beside `bandEdges.test.ts` and `textOnMedia.test.ts` and
- * exactly as they derive theirs — so repainting either fill goes red instead of going unnoticed. A test rather
- * than a runtime check, for those files' reason: a `theme.ts` that checked its own arithmetic
- * would be the app refusing to launch over a drawing detail.
+ * exactly as they derive theirs — so repainting either fill goes red instead of going
+ * unnoticed. A test rather than a runtime check, for those files' reason: a `theme.ts` that
+ * checked its own arithmetic would be the app refusing to launch over a drawing detail.
+ *
+ * **The two fills are read off `RunOfForm` and not off the theme**, which is what makes that
+ * sentence true. A test that parsed `theme.color.ink` would go on passing the day the
+ * component was repainted to some other token, and the run is a **drawn object** rather than
+ * a pair of tokens — it is the square on screen that has to clear 3:1, so it is the square
+ * on screen the arithmetic is done against. The ground is still the theme's, because it
+ * belongs to the box the run is drawn in ([7.13](../../../docs/design-system.md#713-the-record-block))
+ * rather than to the run.
  */
 
 import { contrast, hueAngle, hueDistance, parse } from '@/test-support/contrast';
 
+import { RUN_OF_FORM_FILL } from './RunOfForm';
 import { theme } from './theme';
 
 /** WCAG 2.1's floor for a graphical object — a square is not text and is not held to 4.5. */
@@ -34,8 +43,8 @@ const GRAPHICAL = 3;
 const SAME_FAMILY = 7;
 
 const GROUND = parse(theme.color.paper2).rgb;
-const WON = parse(theme.color.ink).rgb;
-const LOST = parse(theme.color.muted).rgb;
+const WON = parse(RUN_OF_FORM_FILL.WIN).rgb;
+const LOST = parse(RUN_OF_FORM_FILL.LOSS).rgb;
 
 describe('the run of form (2.5, 7.13)', () => {
   /** The three rows 2.5 publishes. Copied from here, never the other way round. */

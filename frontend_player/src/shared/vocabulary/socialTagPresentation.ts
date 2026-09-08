@@ -29,8 +29,20 @@
  * The step-specific copy — the eyebrow, the continue control, the ceiling refusal — stayed
  * in `player_profile`: those sentences are about that step's rules and quote numbers only
  * that step is served.
+ *
+ * ## The row's own three words came last, and came for the same reason
+ *
+ * `socialTagChip`, its `· you too` marker and `NO_TAGS_IN_COMMON` are at the foot of this
+ * file. They began on the competitive candidate card, where the tag row was the only thing
+ * that drew them; they are here because the record sheet draws that row too
+ * ([#373](https://github.com/Raketa02/Raketa/issues/373)) and the row is now one component
+ * in `shared/ui`. A second spelling of the marker is exactly the drift the nineteen labels
+ * were promoted to stop, one register down. What each surface **says about** a row still
+ * belongs to that surface: the clauses a listener gets on a candidate card are
+ * `features/play/components/playerCardPresentation`'s.
  */
 
+import type { SharedTag } from './socialTagOverlap';
 import type { SocialTagGroupId, SocialTagId } from './socialTags';
 
 const LABEL: Readonly<Record<SocialTagId, string>> = {
@@ -110,3 +122,51 @@ const GROUP_HEADING: Readonly<Record<SocialTagGroupId, string>> = {
 export function socialTagGroupHeading(group: SocialTagGroupId): string {
   return GROUP_HEADING[group];
 }
+
+/**
+ * **The Social tag row's words** — the chip, its *you too* marker, and the amber sentence.
+ *
+ * The row is `socialTagOverlap`'s four answers; these are the four things they say
+ * ([#311](https://github.com/Raketa02/Raketa/issues/311)). Nothing here decides which tags are
+ * shared, and nothing here re-words a tag: `socialTagLabel` and `socialTagName` are the
+ * promoted table's, and a second spelling of nineteen labels is what the promotion existed to
+ * prevent ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §1).
+ *
+ * ## The chip is drawn with a glyph and a marker, and spoken as neither
+ *
+ * `socialTagLabel` carries the emoji because a wall of same-length chips is found by shape;
+ * `socialTagName` is what a listener gets, because *"beer mug, stays for a drink"* is the app
+ * reading its own layout aloud. The **marker** goes the other way and is the more interesting
+ * half: `· you too` is drawn on the chip because the tint alone would be colour as the only
+ * cue ([Part 13](../../../docs/design-system.md#part-13--accessibility)), and it is *not*
+ * repeated per tag in the spoken name — the label groups the shared ones under one clause
+ * instead, because a listener hearing *you too* six times is being read a table.
+ *
+ * **A shared chip can truncate its marker at the largest text sizes.** `Tag` is
+ * `numberOfLines={1}` by design ([6.4](../../../docs/design-system.md#64-tag--the-status-pill)
+ * — *a long state tag truncates rather than breaking the row*), and the longest label plus the
+ * marker exceeds the card at roughly double the system size. The tint survives it and the
+ * spoken name always carries the whole clause, so the fact is never lost; what is lost is the
+ * second cue, for the reader who has asked for the largest type. Recorded rather than papered
+ * over — fixing it means a wrapping tag, which is a change to the primitive and to 6.4.
+ *
+ * What a chip in the row is **drawn** with: the tag, and the marker where it is shared.
+ */
+export function socialTagChip(tag: SharedTag): string {
+  const label = socialTagLabel(tag.id);
+  return tag.shared ? `${label} · ${YOU_TOO_MARKER}` : label;
+}
+
+/** The two words, once. Re-worded here and nowhere else — the clause has its own phrasing. */
+const YOU_TOO_MARKER = 'you too';
+
+/**
+ * The amber sentence, which **stands in the row's place** rather than beside it.
+ *
+ * The one claim this row makes, and the only state in which the subject's own tags are not
+ * drawn: six untinted chips under a line saying none of them matched would be the card
+ * answering a question nobody asked twice over, and the ticket puts the sentence *in the row's
+ * place* in as many words. The tags are still a fact about their owner alone — they are read
+ * in full on the surface that draws tags as tags, and the row's job here is the comparison.
+ */
+export const NO_TAGS_IN_COMMON = 'No tags in common';

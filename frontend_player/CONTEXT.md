@@ -409,13 +409,16 @@ listed here because it is a Play surface rather than a profile one.
   it verifies nothing about a person and it is a label with no ground; "photo review", which is
   the uploader's surface and a different fold of the same code (`player_profile` warns where a
   card marks); a **tick** anywhere in this app that is not `shared/ui/Tick`'s drawn geometry.
-- **Social tag row** — the competitive card's row of up to six of the candidate's Social tags,
-  and the **overlap** drawn over it. The ones the searcher also chose are tinted and carry
-  `· you too` in words; the intersection is `matched[]`'s, off the wire, and is never recomputed
-  from a profile read. `domain/socialTagOverlap` is the rule and `SocialTagRow` draws it, which
-  is why the type and the component do not share a name. _Avoid_: "chips" — nothing here is
-  pressable, so they are tags (6.4); tinting a `complementary` or `clashing` pair, which is a
-  different relationship and reaches the card as prose.
+- **Social tag row** — a row of up to six of somebody's Social tags, and the **overlap** drawn
+  over it. The ones the reader also chose are tinted and carry `· you too` in words; on a
+  candidate card the intersection is `matched[]`'s, off the wire, and is never recomputed from a
+  profile read. **The rule and the drawing are two layers**: `SocialTagRow` and the four-answer
+  `SocialTagOverlap` are `shared/`'s, because the competitive card and the record sheet both draw
+  the row, while `play/domain/socialTagOverlap` — the rule that reads one of those answers off a
+  **candidate** — is Play's, because a candidate row is. That is why the type and the component do
+  not share a name. _Avoid_: "chips" — nothing here is pressable, so they are tags (6.4); tinting
+  a `complementary` or `clashing` pair, which is a different relationship and reaches the card as
+  prose.
 - **Stat box** — the drawn shape the competitive card states a **record block** and an **at
   stake** pair in (both are the root [`CONTEXT.md`](../CONTEXT.md)'s terms, not this file's):
   `StatBox`, a recessed `paper2` box with a name over a figure, three across and then two.
@@ -426,13 +429,16 @@ listed here because it is a Play surface rather than a profile one.
   which is a surface and this is a box inside one.
 - **Run of form, drawn** — five squares, one per result, oldest to newest and **never padded**: a
   run of three is three squares and the space after them, because the length is the statement.
-  Won is `ink` and lost is `muted` — a **lightness** step at 3,24:1, derived in
-  `recordSquares.test.ts`, so it reads with no hue perception at all — and because a square
-  carries no word, the whole row reaches a listener as **one counted clause** against the run's
-  own length (_3 of the last 5 won_) rather than as five elements. An outcome this build cannot
-  read takes the **whole field** with it at the mapper, for the same reason: half a run cannot be
-  drawn honestly, and _Counted_ beside it goes on printing. _Avoid_: a fifth square in a neutral
-  fill, which claims a game nobody played; five spoken states, which reads the row as a table.
+  `RunOfForm` is `shared/ui`'s, because the record block and the record sheet both draw it and a
+  second copy would be a second thing to keep in step with a **pinned** geometry test. Won is
+  `ink` and lost is `muted` — a **lightness** step at 3,24:1, derived from the component's own
+  `RUN_OF_FORM_FILL` in `recordSquares.test.ts`, so it reads with no hue perception at all — and
+  because a square carries no word, the whole row reaches a listener as **one counted clause**
+  against the run's own length (_3 of the last 5 won_) rather than as five elements. An outcome
+  this build cannot read takes the **whole field** with it at the mapper, for the same reason:
+  half a run cannot be drawn honestly, and _Counted_ beside it goes on printing. _Avoid_: a
+  fifth square in a neutral fill, which claims a game nobody played; five spoken states, which
+  reads the row as a table.
 - **Singles-only stake** — the rule that hides _Win, counted_ / _Lose, counted_ on a doubles seat.
   It is `domain/atStake` rather than the component's, because it is a thing somebody could be
   **wrong** about; the component is handed a pair or nothing. A **refusal to draw** and not an
