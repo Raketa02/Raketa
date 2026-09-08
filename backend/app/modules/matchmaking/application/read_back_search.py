@@ -11,7 +11,16 @@ hole dressed as a cache — ``docs/adr/0095`` reaches *every surface that shows 
 player to another*, and a stored search read back an hour later is that surface
 with a longer memory. So the four fail-closed gates — a block either way, a hold,
 an account that may not be shown, and the mutual gender preference — are
-re-evaluated here, at read time, over the rows the record holds.
+re-evaluated at read time, over the rows the record holds.
+
+**They are not evaluated *here*, and that is the point.** They live in
+:class:`~app.modules.matchmaking.application.fail_closed_gates.FailClosedGates`,
+because a read-back is not the only surface that shows a player somebody the
+platform introduced earlier and this use case would otherwise be the only place
+the four are spelled. A second spelling of a safety gate is precisely the defect
+the fail-closed rule exists to prevent, so what is left here is the one thing the
+read-back decides for itself: that the partition to ask in is the sport this
+search ran on.
 
 **A row they no longer admit is stated as withheld, never silently dropped.** A
 list that quietly gets shorter is the same class of lie as a breakdown that
@@ -37,32 +46,29 @@ merely stopped being a good match is still a row this search returned.
 **What this use case costs.** ADR-0109 priced the read-back as *a lookup plus a
 block-set read*; the mutual gender gate makes it a lookup, three set reads and one
 snapshot binding, because gender is the one fail-closed gate whose facts live on
-the index row rather than in a set the platform can answer in one query. The
+the index row rather than in a set the platform can answer in one query. Moving
+the four out changed none of that — a collaborator is not a query. The
 staleness ladder is **not** applied: it refuses on ranking quality
 (``docs/adr/0111``) and a read-back ranks nothing. A candidate the index no longer
 holds at all is a gate that cannot be evaluated, and *a gate that cannot be
 evaluated excludes*.
+
+**The reader's own hold stays here.** It is a refusal about the person asking
+rather than a verdict on anybody shown to them, it raises where the four withhold,
+and it is the same rule ``SearchWorkbench.refuse_a_held_searcher`` states at the
+entry to a fresh search — an entry rule belongs to the surface whose entry it is.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Collection, Mapping, final
+from typing import final
 from uuid import UUID
 
-from app.modules.blocks.domain.ports import BlockQuery
-from app.modules.matchmaking.application.outward_reads import (
-    live_block_set,
-    read_demand,
-)
-from app.modules.matchmaking.domain.candidate_index import CandidateRow, Partition
-from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
-from app.modules.matchmaking.domain.errors import (
-    PlayerProfileNotCommitted,
-    SearchNotFound,
-)
-from app.modules.matchmaking.domain.gates import gender_satisfied
-from app.modules.matchmaking.domain.ports import AccountHoldQuery, AccountStatusQuery
+from app.modules.matchmaking.application.fail_closed_gates import FailClosedGates
+from app.modules.matchmaking.application.outward_reads import read_demand
+from app.modules.matchmaking.domain.errors import SearchNotFound
+from app.modules.matchmaking.domain.ports import AccountHoldQuery
 from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.domain.searches import (
     SearchCandidateRecord,
@@ -70,7 +76,6 @@ from app.modules.matchmaking.domain.searches import (
     SortOption,
 )
 from app.modules.matchmaking.domain.sorting import of_record, sorts_available
-from app.modules.player_profile.domain.ports import PlayerProfileRepository
 from app.shared.domain.errors import AccountHeld
 
 
@@ -149,18 +154,12 @@ class ReadBackSearch:
         self,
         *,
         searches: SearchStore,
-        profiles: PlayerProfileRepository,
-        candidates: CandidateSource,
-        blocks: BlockQuery,
         holds: AccountHoldQuery,
-        account_status: AccountStatusQuery,
+        gates: FailClosedGates,
     ) -> None:
         self._searches = searches
-        self._profiles = profiles
-        self._candidates = candidates
-        self._blocks = blocks
         self._holds = holds
-        self._account_status = account_status
+        self._gates = gates
 
     async def execute(self, command: ReadBackSearchCommand) -> ReadBackAnswer:
         record = await self._searches.find(
@@ -171,7 +170,14 @@ class ReadBackSearch:
         await self._refuse_a_held_reader(command.reader_id)
 
         rows = record.returned
-        withheld = await self._withheld(record, rows)
+        # **The sport handed over is the one this search ran on**, which is the
+        # partition its rows were drawn from and therefore the only container
+        # their index rows can be found in.
+        withheld = await self._gates.withheld_among(
+            reader_id=record.searcher_id,
+            subject_ids=tuple(row.player_id for row in rows),
+            sport=record.sport,
+        )
         verdicts = tuple(
             ReadBackRow(recorded=row, withheld=row.player_id in withheld)
             for row in rows
@@ -198,83 +204,3 @@ class ReadBackSearch:
         )
         if reader_id in held:
             raise AccountHeld("this account is under a hold")
-
-    async def _withheld(
-        self, record: SearchRecord, rows: tuple[SearchCandidateRecord, ...]
-    ) -> frozenset[UUID]:
-        """Which of these rows the live fail-closed gates no longer admit.
-
-        Every read here is a **set read over the whole list**, never one query
-        per row: the same shape the search itself uses, for the same reason.
-        """
-
-        if not rows:
-            return frozenset()
-        player_ids = tuple(row.player_id for row in rows)
-        blocked = await live_block_set(self._blocks, record.searcher_id)
-        held = await read_demand(
-            AccountHoldQuery, lambda: self._holds.held_among(player_ids)
-        )
-        unshowable = await read_demand(
-            AccountStatusQuery,
-            lambda: self._account_status.may_not_be_shown(player_ids),
-        )
-        return frozenset(blocked | held | unshowable) | await self._gender_refuses(
-            record, player_ids
-        )
-
-    async def _gender_refuses(
-        self, record: SearchRecord, player_ids: tuple[UUID, ...]
-    ) -> frozenset[UUID]:
-        """The mutual gender gate, re-evaluated against both sides as they stand.
-
-        The reader's own half is read **live from their profile**, exactly as the
-        search read it: a preference is the one gate fact its owner can change
-        between running a search and opening it again, and reading it from
-        anywhere else would be evaluating a safety setting on a stale copy.
-
-        The other half is the index row, which is where the gate reads it inside
-        a search — so the two paths cannot come to different answers about the
-        same pair. A candidate the index no longer holds has no preference to
-        read, which is a gate that cannot be evaluated, and it excludes.
-        """
-
-        profile = await self._profiles.load(record.searcher_id)
-        if profile is None:
-            raise PlayerProfileNotCommitted(
-                "the searcher has no profile to read a preference from"
-            )
-        indexed = self._indexed(record, player_ids)
-        return frozenset(
-            player_id
-            for player_id in player_ids
-            if not gender_satisfied(
-                searcher_gender=profile.gender,
-                searcher_preference=profile.gender_preference,
-                theirs=indexed.get(str(player_id)),
-            )
-        )
-
-    def _indexed(
-        self, record: SearchRecord, player_ids: Collection[UUID]
-    ) -> Mapping[str, CandidateRow]:
-        """The index rows for these players, in one pass over the partition.
-
-        The container is bound once, exactly as a search binds it — a read-back
-        that took two snapshots would be a read-back the index could move
-        underneath, which is the same rule and not a weaker version of it.
-
-        Resolving twenty ids costs **one pass over the partition**, and that is
-        the port's shape rather than an oversight: ``CandidateSource`` answers
-        with the container and never with questions about rows
-        (``docs/adr/0112``), because a source that answered per-row questions is
-        a source a search could call inside its walk.
-        """
-
-        wanted = {str(player_id) for player_id in player_ids}
-        snapshot = self._candidates.snapshot(Partition.for_sport(record.sport))
-        return {
-            row.player_id: row
-            for row in snapshot.rows
-            if row.player_id in wanted
-        }
