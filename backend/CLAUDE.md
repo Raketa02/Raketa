@@ -532,10 +532,23 @@ Rules to preserve:
   it is also why the reliability pill stays the counted-only number. And **no individual
   rating reaches anybody in any shape**: the write answers `204`, the use case returns
   `None`, and `SportsmanshipLedger` has no method that answers *what did somebody say about
-  me* — only *which of these cards are closed*, which is a fact about an act. There is one
-  read here and it grew without touching that: `GET /api/v1/sportsmanship` lists the courts
-  **waiting** for somebody's stars, as a game id and the people on it, and an open card is
-  by definition one nobody has answered. It borrows one thing,
+  me* — only *which of these cards are closed*, which is a fact about an act. **What this
+  context publishes outward is a third port and never a method on that one**
+  ([ADR-0154](../docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)
+  amendment, #382): `PublishedSportsmanshipQuery` answers the figure and how many different
+  people it rests on for a reader, and a **coarse band** for the subject — two methods
+  rather than one answer a caller narrows, because a use case that received the figure
+  would already hold the subtraction ADR-0154 §2 refuses, whatever it then drew. The
+  collapse costs that fold nothing, which is what the key bought: one row already is one
+  person, so *the fifty most recent raters* is a `LIMIT` on a total order rather than a
+  read-time collapse, and nothing is trimmed at either end. The band's edges are whole
+  stars, coarsened from the **published** figure so a subject's step cannot land on the
+  other side of an edge from what a reader sees. The word `stars` reaches no wire — the
+  forbidden-fact sweep refuses that property name — so it crosses as `average` and
+  `raters`. There are two reads here and neither touched the silence:
+  `GET /api/v1/sportsmanship` lists the courts **waiting** for somebody's stars, as a game
+  id and the people on it, and an open card is by definition one nobody has answered.
+  It borrows one thing,
   `SettledCourts` over `games`' directory, whose adapter lives in **this** context the way
   `PlayerHandles`' lives in `games`; *settled* there is narrowed to **played and over**,
   because a ghost has nobody to rate and an unscored game very much does. **The card's two
@@ -635,6 +648,20 @@ Rules to preserve:
   rather than respells: the engines are the pure layer every context reads and none owns —
   the argument `player_score` already made beside its own import contract — and the codes are
   on the player contract under that spelling already.
+  **What other players said is the fifth fact and the first that depends on who is
+  reading** (#382). Every other zone is one answer retitled for the subject; this is two —
+  the figure and its count for a reader, a **coarse band and neither** for the person it is
+  about, since an average beside a count is a subtraction that names each new rating and
+  they know who they played. The split is on the **port** rather than in the assembler, so
+  the sheet about you asks a question with no figure in its answer, and `PlayerRecord`
+  refuses the pair beside `is_self` outright — the branch decides, the invariant makes a
+  wrong branch loud. It takes **neither a sport nor an instant**, the only demand here that
+  takes neither: nothing decays, because the window is fifty *people* and not fifty days.
+  Its absence is the **fourth**, asking a fourth question — rating is a favour, ignoring a
+  card costs nothing, and nothing records the omission, so a nought would publish a verdict
+  nobody gave. The matcher reads none of it, held by an `.importlinter` contract, and a
+  test walks the emitted contract to prove the words reach exactly one response type, which
+  is where *it is not on search result cards* stopped being a promise.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one
@@ -688,17 +715,21 @@ tests.
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Five registers, and they are five on purpose — one per kind of claim.**
+  **Six registers, and they are six on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
   *consumer* declares of contexts it does not write; `games_demands.py`,
-  `rating_demands.py` and `player_score_demands.py` each hold the ports one *provider*
-  publishes outward. Each register's exhaustiveness assertion is about its own kind of
+  `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
+  the ports one *provider* publishes outward. Each register's exhaustiveness assertion
+  is about its own kind of
   claim and would stop meaning anything with another kind in it — which is also the rule
   for the next one: **a new provider or a new consumer gets a new register, not a row in
   somebody else's**, and the first person to add a row should not have to guess which
-  list it belongs in. One port on the record's list has **three** implementations, which
-  is what the suite has to be parameterised over: *where has this reader been shown this
-  person* is a question three contexts each answer about themselves.
+  list it belongs in. The sixth is that rule being followed rather than restated: the
+  sportsmanship figure could have been a row on the record's consumer list, and a
+  provider's publication on a consumer's register is exactly what makes an exhaustiveness
+  assertion a claim about something else. One port on the record's list has **three**
+  implementations, which is what the suite has to be parameterised over: *where has this
+  reader been shown this person* is a question three contexts each answer about themselves.
 - Async by default (`asyncio_mode = "auto"`) — no `@pytest.mark.asyncio`.
 
 ## Environment gotchas

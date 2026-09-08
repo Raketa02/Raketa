@@ -41,6 +41,7 @@ from app.bootstrap.composition import (
     build_subject_identity_source,
     build_subject_ratings,
     build_subject_reliability,
+    build_subject_sportsmanship,
     build_subject_variety,
 )
 from app.modules.matchmaking.presentation.dependencies import (
@@ -59,6 +60,7 @@ from app.modules.player_record.domain.ports import (
     SubjectIdentitySource,
     SubjectRatings,
     SubjectReliability,
+    SubjectSportsmanship,
     SubjectVariety,
 )
 
@@ -118,6 +120,23 @@ def get_subject_variety(db: DbSession) -> SubjectVariety:
 SubjectVarietyDep = Annotated[SubjectVariety, Depends(get_subject_variety)]
 
 
+def get_subject_sportsmanship(db: DbSession) -> SubjectSportsmanship:
+    """What other players said. **One adapter, and it serves both routes.**
+
+    Both use cases below take the same collaborator, and which of its two methods
+    is called is the assembler's decision off ``is_self`` — not a second wiring.
+    Two adapters here would be two answers to *whose sheet is this*, and the one
+    the wiring gave would win over the one the record states.
+    """
+
+    return build_subject_sportsmanship(db)
+
+
+SubjectSportsmanshipDep = Annotated[
+    SubjectSportsmanship, Depends(get_subject_sportsmanship)
+]
+
+
 def get_record_admission(
     db: DbSession,
     gates: FailClosedGatesDep,
@@ -152,6 +171,7 @@ def get_read_player_record(
     form: SubjectFormDep,
     reliability: SubjectReliabilityDep,
     variety: SubjectVarietyDep,
+    sportsmanship: SubjectSportsmanshipDep,
     clock: ClockDep,
 ) -> ReadPlayerRecord:
     return ReadPlayerRecord(
@@ -162,6 +182,7 @@ def get_read_player_record(
         form=form,
         reliability=reliability,
         variety=variety,
+        sportsmanship=sportsmanship,
         clock=clock,
     )
 
@@ -176,16 +197,22 @@ def get_read_own_record(
     form: SubjectFormDep,
     reliability: SubjectReliabilityDep,
     variety: SubjectVarietyDep,
+    sportsmanship: SubjectSportsmanshipDep,
     clock: ClockDep,
 ) -> ReadOwnRecord:
     """Your own record — **and still not one of these is a gate.**
 
-    Five readers and a clock now, and the property that matters is unchanged:
+    Six readers and a clock now, and the property that matters is unchanged:
     nothing here binds the candidate index, so the one screen that tells a player
     how they appear cannot be taken down by the machinery that gates somebody
     else's sheet. The reliability read is the one that makes that worth the
     wiring: the pill is the number deciding who this player is offered to, and a
     penalty nobody can look up is a penalty nobody can fix.
+
+    **The sportsmanship reader is the same object the other route gets**, and
+    what makes this route safe is not a narrower collaborator but a narrower
+    *question*: the assembler asks it for a band, and the band's method has no
+    figure in it to hand over.
     """
 
     return ReadOwnRecord(
@@ -195,6 +222,7 @@ def get_read_own_record(
         form=form,
         reliability=reliability,
         variety=variety,
+        sportsmanship=sportsmanship,
         clock=clock,
     )
 

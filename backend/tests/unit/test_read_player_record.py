@@ -37,10 +37,12 @@ from app.modules.player_record.domain.record import (
     LikelyRange,
     OnCourtVerdict,
     OpponentVariety,
+    OpinionBand,
     ReliabilityPanel,
     StrandRow,
     SubjectIdentity,
     SubjectRating,
+    WhatPlayersSaid,
 )
 
 NOW: Instant = instant(datetime(2026, 9, 8, 18, 0, tzinfo=timezone.utc))
@@ -150,6 +152,30 @@ class Variety:
         return self.pair
 
 
+class Opinions:
+    """What other players said, at both resolutions. **It records which was
+    asked**, because the whole rule here is which question a sheet is entitled
+    to put."""
+
+    def __init__(
+        self,
+        said: WhatPlayersSaid | None = None,
+        band: OpinionBand | None = None,
+    ) -> None:
+        self.said = said
+        self.band = band
+        self.asked_for_the_figure: list[UUID] = []
+        self.asked_for_the_band: list[UUID] = []
+
+    async def what_players_said(self, player_id: UUID) -> WhatPlayersSaid | None:
+        self.asked_for_the_figure.append(player_id)
+        return self.said
+
+    async def band_for(self, player_id: UUID) -> OpinionBand | None:
+        self.asked_for_the_band.append(player_id)
+        return self.band
+
+
 class Admission:
     def __init__(self, verdict: bool) -> None:
         self.verdict = verdict
@@ -175,6 +201,7 @@ def reading(
     form: Form | None = None,
     reliability: Reliability | None = None,
     variety: Variety | None = None,
+    sportsmanship: Opinions | None = None,
 ):
     identities, links = Identities(identity), Links()
     use_case = ReadPlayerRecord(
@@ -185,6 +212,7 @@ def reading(
         form=form or Form(),
         reliability=reliability or Reliability(),
         variety=variety or Variety(),
+        sportsmanship=sportsmanship or Opinions(),
         clock=Clock(),
     )
     return use_case, identities, links
@@ -273,6 +301,7 @@ async def test_your_own_record_is_read_with_no_admission_collaborator_at_all():
         form=Form(),
         reliability=Reliability(),
         variety=Variety(),
+        sportsmanship=Opinions(),
         clock=Clock(),
     ).execute(reader_id=READER)
 
@@ -292,6 +321,7 @@ async def test_a_reader_whose_own_identity_cannot_be_read_is_refused_alike():
             form=Form(),
             reliability=Reliability(),
             variety=Variety(),
+            sportsmanship=Opinions(),
             clock=Clock(),
         ).execute(reader_id=READER)
 
@@ -311,6 +341,7 @@ async def test_the_sport_asked_for_reaches_the_sheet_and_never_the_admission():
         form=form,
         reliability=Reliability(),
         variety=Variety(),
+        sportsmanship=Opinions(),
         clock=Clock(),
     )
 
@@ -488,3 +519,155 @@ async def test_a_player_rated_in_nothing_is_still_asked_what_was_watched():
     assert record.skill is None
     assert record.reliability == a_panel()
     assert reliability.asked == [SUBJECT]
+
+
+# ---------------------------------------------------------------------------
+# What other players said — the one zone that depends on who is reading
+# ---------------------------------------------------------------------------
+
+
+async def test_a_stranger_is_told_the_figure_and_how_many_people_it_rests_on():
+    """The count crosses beside the figure, always: `3,0 / 5 · 1 player` is
+    visibly one person's opinion and reads as one, which is what lets this
+    publish from the very first rating with no minimum."""
+
+    opinions = Opinions(WhatPlayersSaid(average=4.7, raters=17))
+    use_case, _, _ = reading(
+        admits=True, identity=an_identity(), sportsmanship=opinions
+    )
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert record.sportsmanship == WhatPlayersSaid(average=4.7, raters=17)
+    assert record.sportsmanship_band is None
+    assert opinions.asked_for_the_figure == [SUBJECT]
+    # The band was not asked for and thrown away — it was not asked for.
+    assert opinions.asked_for_the_band == []
+
+
+async def test_the_subject_is_told_a_band_and_the_figure_is_never_asked_for():
+    """**The rule this branch exists for** (``docs/adr/0155``, ``docs/adr/0154``).
+
+    A figure and a count on the sheet titled *How others see you* is a
+    subtraction: moving from 4,80 over ten to 4,73 over eleven names the new
+    rating as a 4, and the subject knows who they played. So the figure is not
+    fetched-and-dropped — the question is never put, and there is nothing in this
+    process to leak.
+    """
+
+    opinions = Opinions(
+        WhatPlayersSaid(average=4.7, raters=17), band=OpinionBand.GOOD
+    )
+    identities, links = Identities(an_identity()), Links()
+
+    record = await ReadOwnRecord(
+        identities=identities,
+        photos=links,
+        ratings=Ratings(),
+        form=Form(),
+        reliability=Reliability(),
+        variety=Variety(),
+        sportsmanship=opinions,
+        clock=Clock(),
+    ).execute(reader_id=READER)
+
+    assert record.sportsmanship_band is OpinionBand.GOOD
+    assert record.sportsmanship is None
+    assert opinions.asked_for_the_band == [READER]
+    assert opinions.asked_for_the_figure == []
+
+
+async def test_asking_about_yourself_by_id_is_answered_with_the_band_too():
+    """The parameterised route reaches the same sheet, so the rule cannot be
+    walked around by naming your own id — ``is_self`` decides this and not which
+    route was called."""
+
+    opinions = Opinions(
+        WhatPlayersSaid(average=2.0, raters=6), band=OpinionBand.POOR
+    )
+    use_case, _, _ = reading(
+        admits=True, identity=an_identity(), sportsmanship=opinions
+    )
+
+    record = await use_case.execute(reader_id=READER, subject_id=READER)
+
+    assert record.sportsmanship is None
+    assert record.sportsmanship_band is OpinionBand.POOR
+    assert opinions.asked_for_the_figure == []
+
+
+async def test_nobody_has_rated_them_leaves_both_fields_empty():
+    """A **fourth absence**, and it asks a fourth question: rating is a favour,
+    ignoring the card costs nothing, and nothing anywhere records that somebody
+    did not answer. Not a nought, and not a bottom band."""
+
+    use_case, _, _ = reading(admits=True, identity=an_identity())
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert record.sportsmanship is None
+    assert record.sportsmanship_band is None
+
+
+async def test_a_player_rated_in_nothing_is_still_asked_what_players_said():
+    """It is about no sport at all, so a newcomer with no Level still draws this
+    zone — the same reason the metered rows and the variety are asked for
+    whatever sport resolved."""
+
+    opinions = Opinions(WhatPlayersSaid(average=5.0, raters=2))
+    use_case, _, _ = reading(
+        admits=True,
+        identity=an_identity(),
+        ratings=Ratings({}),
+        sportsmanship=opinions,
+    )
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert record.skill is None
+    assert record.sportsmanship == WhatPlayersSaid(average=5.0, raters=2)
+
+
+def test_a_figure_beside_is_self_is_refused_at_the_record_itself():
+    """**The last line of defence, and it is a type's own.** The branch above is
+    what decides; this is what makes a branch taken the wrong way loud rather
+    than a screen quietly showing somebody the arithmetic of their own
+    ratings."""
+
+    from app.kernel import InvariantViolated
+    from app.modules.player_record.domain.record import PlayerRecord
+
+    with pytest.raises(InvariantViolated):
+        PlayerRecord(
+            is_self=True,
+            identity=an_identity(),
+            photo_url=None,
+            sports=(),
+            skill=None,
+            reliability=None,
+            variety=None,
+            sportsmanship=WhatPlayersSaid(average=4.7, raters=17),
+            sportsmanship_band=None,
+        )
+
+
+def test_a_band_on_a_strangers_record_is_refused_the_same_way():
+    """The mirror: the coarse reading exists for the one person the figure is
+    withheld from, and drawing it for anybody else would be a second, worse
+    answer to a question that already has one."""
+
+    from app.kernel import InvariantViolated
+    from app.modules.player_record.domain.record import PlayerRecord
+
+    with pytest.raises(InvariantViolated):
+        PlayerRecord(
+            is_self=False,
+            identity=an_identity(),
+            photo_url=None,
+            sports=(),
+            skill=None,
+            reliability=None,
+            variety=None,
+            sportsmanship=None,
+            sportsmanship_band=OpinionBand.GOOD,
+        )

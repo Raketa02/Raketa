@@ -381,3 +381,59 @@ are already on the player contract under that enum's own name.
 a prior disclosure with no expiry, your own record still has no gates — and it now carries the
 number that decides who they are offered to, which was the point of the screen — and this
 context still stores nothing at all.
+
+## Amendment — 2026-09-08: what other players said, and the zone that turns on who reads
+
+[#382](https://github.com/Raketa02/Raketa/issues/382) added the fifth and last zone on the
+sheet, and it is the first thing here that is **not the same fact retitled for the subject**.
+Everything else on this record is one answer drawn two ways; this is two answers.
+
+**A ninth demand, and the second on this list whose provider owns a store.**
+`SubjectSportsmanship` is answered by an adapter over `sportsmanship`'s
+`PublishedSportsmanshipQuery`. It takes **neither a sport nor an instant** — the only demand
+here that takes neither — because how somebody is to play with is not a padel fact and
+nothing about it decays: the window is fifty *people*, so an opinion falls out of the record
+when fifty others have since had one and never when a calendar passes. A `now` would be a
+second horizon nobody could keep in step with the first.
+
+**Two methods, and the second cannot say what the first says.** The figure and the count of
+distinct raters cross for a reader; a coarse band and nothing else crosses for the subject. A
+published average beside a published count in front of the person it is about is a
+subtraction that names each new rating exactly, and they know who they played
+([ADR-0154](0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md) §2). The split is
+on the *port* rather than in the assembler, because a use case that received the figure would
+already be holding the thing the rule forbids whatever it then rendered — so the sheet about
+*you* asks a question with no figure in its answer, and the question with one is never put.
+
+**`is_self` decides more than a title now, and `PlayerRecord` is where that is checked.** Two
+fields, at most one ever present, and an invariant on the record itself refuses a figure
+beside `is_self` and a band without it. The branch is what decides; the invariant is what
+makes a branch taken the wrong way loud rather than a screen quietly showing somebody the
+arithmetic of their own ratings. It is still **one response type** — a second one would be
+how *How others see you* and *how a stranger sees you* stop being the same screen.
+
+**A fourth absence, asking a fourth question.** A player nobody has rated has the whole zone
+omitted, on both sides of `is_self`. It is not `skill`'s, not `variety`'s and not
+`reliability`'s: rating is a favour, ignoring a card costs nothing, and nothing anywhere
+records that somebody did not answer — so a nought here would publish a verdict nobody gave.
+
+**§6's second-spelling rule is paid a fourth time, and this one has a wire consequence.**
+`OpinionBand` and `WhatPlayersSaid` are declared here and translated in an adapter;
+`tests/unit/test_player_record_sportsmanship.py` fails the build if the two vocabularies stop
+agreeing. **The band takes a different name from the provider's on purpose**, as
+`OnCourtVerdict` does beside `PhotoReviewDecision` — and here that is two rules meeting,
+because this enum reaches the wire *as itself*: the emitted contract is one namespace, and a
+class of the same name in two modules does not shadow the other, it renames both. That is
+`RecordLikelyRangeSchema`'s argument one layer down, and it renamed the schema beside it into
+`RecordSportsmanshipSchema` too.
+
+The other wire cost is different in kind: the forbidden-fact sweep refuses the property name
+`stars` outright, so the figure crosses as `average` and `raters` — an honest name for a mean
+rather than a second word for a tap — and a test walks the emitted contract to assert those
+words reach exactly one response type, which is where *it is not on search result cards*
+stopped being a promise.
+
+**Nothing else moves.** The four refusals are still one refusal, admission is still read
+through a prior disclosure with no expiry, `?sport=` still says what the sheet is about and
+never who may be seen, your own record still has no gates, and this context still stores
+nothing at all.

@@ -27,6 +27,7 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_game_repository,
+    build_sportsmanship_ledger,
 )
 from app.engines.matchfit.core import ReliabilityStrand
 from app.kernel import Sport, instant
@@ -44,6 +45,11 @@ from app.modules.player_score.domain.strands import (
 from app.modules.matchmaking.presentation.dependencies import get_candidate_source
 from app.modules.player_profile.domain.availability import Window
 from app.modules.rating.domain.events import RatingInitialised
+from app.modules.sportsmanship.domain.card import (
+    SettledCourt,
+    SportsmanshipCard,
+    StarsGiven,
+)
 from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
     RATING_AGGREGATE,
@@ -927,3 +933,226 @@ async def test_your_own_record_carries_the_number_that_decides_your_exposure(
     # anybody played, so there are rows here and no variety at all. `0` is a
     # measured figure on a row that exists; an omitted zone is not a nought.
     assert "variety" not in body
+
+
+# ---------------------------------------------------------------------------
+# What other players said
+# ---------------------------------------------------------------------------
+
+
+async def stars_for(session_factory, subject: UUID, *stars: int) -> None:
+    """One card per rater, each giving this person that many stars.
+
+    Written through ``sportsmanship``'s own aggregate rather than an ``INSERT``
+    (``docs/adr/0029``), because the collapse *only a rater's most recent stars
+    count* lives in that store's key — a row inserted beside the card would be
+    this suite arranging away the very thing it wants to read.
+    """
+
+    async with session_factory() as session:
+        ledger = build_sportsmanship_ledger(session)
+        for given in stars:
+            at = instant(datetime.now(timezone.utc) - timedelta(days=1))
+            await ledger.record(
+                SportsmanshipCard.answered(
+                    court=SettledCourt(
+                        game_id=new_uuid(),
+                        rater_id=new_uuid(),
+                        others=(subject,),
+                        played_at=at,
+                    ),
+                    given=[StarsGiven(subject_id=subject, stars=given)],
+                    at=at,
+                )
+            )
+        await session.commit()
+
+
+async def test_a_reader_is_told_the_figure_and_how_many_people_it_rests_on(
+    client, session_factory, candidate_source, searcher
+):
+    """**Its own zone, and both numbers in it.** The card above promises
+    *counted by the system, not written by people*; this is the one thing on the
+    sheet people typed, so it crosses under its own name and never among the
+    metered rows."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    await stars_for(session_factory, subject, 5, 4, 5)
+
+    body = (await record_of(client, searcher["token"], subject)).json()
+
+    assert body["sportsmanship"] == {"average": 4.7, "raters": 3}
+    # The band is the subject's own answer and reaches nobody else.
+    assert "sportsmanship_band" not in body
+
+
+async def test_it_publishes_from_a_single_rating_with_the_count_beside_it(
+    client, session_factory, candidate_source, searcher
+):
+    """**No minimum**, because the count does a minimum's work honestly: over one
+    player the field visibly reads as one person's opinion, which is the same
+    discipline the metered rows take by printing their raw pairs."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    await stars_for(session_factory, subject, 3)
+
+    body = (await record_of(client, searcher["token"], subject)).json()
+
+    assert body["sportsmanship"] == {"average": 3.0, "raters": 1}
+
+
+async def test_a_person_nobody_has_rated_has_the_zone_absent_entirely(
+    client, session_factory, candidate_source, searcher
+):
+    """A **fourth absence**, and a fourth question: rating is a favour, ignoring
+    a card costs nothing and nothing records the omission — so this is never a
+    nought and never an empty object."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+
+    body = (await record_of(client, searcher["token"], subject)).json()
+
+    assert "sportsmanship" not in body
+    assert "sportsmanship_band" not in body
+
+
+async def test_nothing_is_trimmed_at_either_end_of_the_window(
+    client, session_factory, candidate_source, searcher
+):
+    """**No outlier trimming of any kind**, because trimming is the platform
+    deciding which raters were wrong — a larger claim than publishing the number,
+    and one with no appeal route behind it either."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    await stars_for(session_factory, subject, 1, 5, 5)
+
+    body = (await record_of(client, searcher["token"], subject)).json()
+
+    assert body["sportsmanship"] == {"average": 3.7, "raters": 3}
+
+
+async def test_your_own_record_carries_a_band_and_never_the_figure(
+    client, session_factory, searcher
+):
+    """**The rule the whole design turns on** (``docs/adr/0154``).
+
+    A published average beside a published count lets the subject subtract: 4,80
+    over ten becoming 4,73 over eleven names the new rating as a 4, and they know
+    who they played. Every answer would be identifiable by the one person who
+    must never see it. So the sheet titled *How others see you* carries three
+    steps and neither number — asserted as an absence of the whole field rather
+    than as a nulled one, because a `null` would be a measured nothing.
+    """
+
+    await stars_for(session_factory, searcher["id"], 5, 4, 5)
+
+    body = (await own_record(client, searcher["token"])).json()
+
+    assert body["is_self"] is True
+    assert body["sportsmanship_band"] == "GOOD"
+    assert "sportsmanship" not in body
+    assert "average" not in json.dumps(body)
+    assert "raters" not in json.dumps(body)
+
+
+async def test_asking_about_yourself_by_id_is_answered_with_the_band_too(
+    client, session_factory, searcher
+):
+    """The parameterised route reaches the same sheet, so the rule cannot be
+    walked around by naming your own id: ``is_self`` decides this and not which
+    route was called."""
+
+    await stars_for(session_factory, searcher["id"], 1, 2)
+
+    body = (await record_of(client, searcher["token"], searcher["id"])).json()
+
+    assert body["is_self"] is True
+    assert body["sportsmanship_band"] == "POOR"
+    assert "sportsmanship" not in body
+
+
+async def test_a_subject_nobody_has_rated_has_no_band_of_their_own(client, searcher):
+    """The same absence a stranger's sheet spells, so a newcomer's own record
+    draws neither an empty zone nor a bottom band."""
+
+    body = (await own_record(client, searcher["token"])).json()
+
+    assert "sportsmanship_band" not in body
+    assert "sportsmanship" not in body
+
+
+async def test_the_sport_asked_for_does_not_move_what_players_said(
+    client, session_factory, candidate_source, searcher
+):
+    """It is about **no sport**, like the metered rows and the variety beside it:
+    how somebody is to play with is not a padel fact, and `?sport=` says what the
+    sheet is about rather than which record is folded."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    await stars_for(session_factory, subject, 4, 4)
+
+    padel = (
+        await record_of(client, searcher["token"], subject, sport=Sport.PADEL)
+    ).json()
+    tennis = (
+        await record_of(client, searcher["token"], subject, sport=Sport.TENNIS)
+    ).json()
+
+    assert (
+        padel["sportsmanship"]
+        == tennis["sportsmanship"]
+        == {
+            "average": 4.0,
+            "raters": 2,
+        }
+    )
+
+
+async def test_stars_move_no_part_of_the_reliability_pill(
+    client, session_factory, candidate_source, searcher
+):
+    """**The figure does not enter the pill, and the matcher reads it nowhere.**
+
+    A star average is not a ratio out of a hundred, so it cannot be a term in a
+    weighted mean over ratios — but that is an argument, and this is the check.
+    The record is read twice over the same watched history, once before anybody
+    has an opinion and once after three people have given the lowest stars there
+    are, and the whole block is identical: no extra row, no moved figure, no
+    moved pill.
+
+    It matters because the pill is exactly what the platform acts on
+    (``docs/adr/0154``): the moment an opinion the matcher ignores got into the
+    number a player can see, the number they can see would stop being the number
+    that demotes them, and the penalty would become the unexplainable kind the
+    reliability floor's own rule forbids. The `.importlinter` contract beside
+    this refuses the matcher the import; this refuses the arithmetic.
+    """
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    await a_ghosted_plan(session_factory, subject, searcher["id"], sport=Sport.PADEL)
+    await an_answered_invitation(
+        session_factory, searcher["id"], subject, sport=Sport.PADEL
+    )
+
+    before = (await record_of(client, searcher["token"], subject)).json()["reliability"]
+
+    await stars_for(session_factory, subject, 1, 1, 1)
+
+    after = (await record_of(client, searcher["token"], subject)).json()
+    assert after["sportsmanship"] == {"average": 1.0, "raters": 3}
+    assert after["reliability"] == before
+    assert "SPORTSMANSHIP" not in [
+        row["strand"] for row in after["reliability"]["strands"]
+    ]

@@ -1,9 +1,10 @@
 """What a record says about a person, in this context's own words.
 
-**The header identity, the sport pills, the skill card, opponent variety and the
-metered rows.** What opponents said arrives on this type later (#382); what
-shipped first was the zone every one of them hangs under, because the route and
-its admission rule are what the rest of the sheet was blocked on.
+**The header identity, the sport pills, the skill card, opponent variety, the
+metered rows and what other players said.** The last of those arrives in two
+shapes rather than one, and the second shape is the only place on this sheet
+where *who is reading* changes what is said rather than only what it is titled
+(``docs/adr/0154``).
 
 **Every one of these fields is spelled here rather than imported**, and the
 duplication is the decision (``docs/adr/0155``). ``matchmaking`` already holds a
@@ -250,6 +251,108 @@ class OpponentVariety:
         )
 
 
+#: The scale a published star average sits on. **This context's own spelling of
+#: two numbers ``sportsmanship`` also holds**, like ``LAST_FIVE`` beside
+#: ``games``' own: a record may not import a provider's constant into its domain
+#: any more than it may import its types. What is avoidable about two spellings
+#: is them being *silent* — a scale that grew a nought over there and not here
+#: would answer a published figure with a 500 rather than a red build — so the
+#: adapter that reads across refuses to import when they disagree.
+LOWEST_AVERAGE: Final = 1.0
+HIGHEST_AVERAGE: Final = 5.0
+
+#: How many **people** a published figure may rest on — the same window, spelled
+#: a second time for the same reason and checked at the same seam. It is here
+#: rather than only over there because the wire *documents* it to clients: a
+#: bound a contract states and nothing enforces is a bound that stops being true
+#: quietly.
+RATER_WINDOW: Final = 50
+
+
+class OpinionBand(StrEnum):
+    """How somebody is coming across, in the three steps **they** may be told.
+
+    **The subject's whole answer, and the coarseness is the safety.** A figure
+    plus a count in front of the person they are about is a subtraction: an
+    average moving from 4,80 over ten to 4,73 over eleven names the new rating as
+    a 4, and they know who they played, so every answer would be identifiable by
+    the one person who must never see it. Three steps across the whole scale tell
+    them *something is going wrong*, which is the useful half.
+
+    **A second spelling of ``sportsmanship``'s ``SportsmanshipBand``**, and it
+    takes a **different name** for the reason ``OnCourtVerdict`` does beside
+    ``PhotoReviewDecision`` and ``GameOutcome`` does beside ``Outcome``. That is
+    two rules meeting: this context borrows no other context's domain types
+    (``docs/adr/0155``), and the emitted contract is **one namespace** — a class
+    of the same name in two modules does not shadow the other, it *renames both*,
+    and every generated type a shipped app already holds moves. It is
+    ``RecordLikelyRangeSchema``'s argument, applied one layer down, because this
+    enum reaches the wire as itself rather than through a schema class.
+
+    The risk a second spelling carries is answered the way those two answer it —
+    ``tests/unit/test_player_record_sportsmanship.py`` fails the build if the two
+    vocabularies stop agreeing.
+
+    **There is no fourth value for *nobody has said anything*.** That is the
+    field's absence, on the rule every zone on this sheet takes.
+    """
+
+    GOOD = "GOOD"
+    MIXED = "MIXED"
+    POOR = "POOR"
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class WhatPlayersSaid:
+    """The one thing on this sheet the platform did not count for itself.
+
+    **Its own heading, and that is the card splitting where the authority
+    splits.** The record card below is headed *counted by the system, not written
+    by people*, which is the promise every metered row under it rests on; a
+    number people typed sitting beneath that title would make the title false.
+
+    **The figure and the count travel together and are never separable.** It
+    publishes from the very first rating with no minimum, and the count is what
+    makes that safe: ``3,0 / 5 · 1 player`` is visibly one person's opinion and
+    reads as one — the same discipline the metered rows take by printing their
+    raw pairs.
+
+    **``raters`` is people, and that is what a reader wants to know.** One
+    standing answer per person is the store's shape over there, so a high count
+    is evidence of *breadth* rather than of repetition, and a weekly partner
+    cannot inflate it.
+
+    **It never reaches the person it is about.** The subject is answered with
+    :class:`OpinionBand`, off a different method on a different port, so
+    the figure has no path to them rather than a rule against printing it.
+
+    **Unlike the pair above it, the division is not the client's.** Opponent
+    variety withholds its share because nothing rounds it and it prices no
+    promise; this is already a mean, taken and rounded once on the other side of
+    the seam, and there is nothing here to divide.
+    """
+
+    average: float
+    raters: int
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.raters >= 1,
+            "a figure over nobody is an absence, not a nought — this sheet omits "
+            "the zone rather than publishing a verdict nobody gave",
+        )
+        invariant(
+            self.raters <= RATER_WINDOW,
+            "a figure over more people than the window admits: "
+            f"{self.raters} over a window of {RATER_WINDOW}",
+        )
+        invariant(
+            LOWEST_AVERAGE <= self.average <= HIGHEST_AVERAGE,
+            f"a mean of one-to-five stars that is not one of them: {self.average}",
+        )
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class StrandRow:
@@ -405,10 +508,46 @@ class PlayerRecord:
     #: absence as ``skill``'s: a player rated in nothing may well have played,
     #: and somebody rated in four sports may never have had a game counted.
     variety: OpponentVariety | None
+    #: What other players said, **for a reader who is not the subject.** ``None``
+    #: for somebody nobody has rated, and ``None`` on every record somebody is
+    #: reading about themselves — the two absences are one field being empty and
+    #: the invariant below says which is which.
+    sportsmanship: WhatPlayersSaid | None
+    #: The coarse band, **for the subject and nobody else.** ``None`` on a record
+    #: about somebody else, and ``None`` for a subject nobody has rated.
+    sportsmanship_band: OpinionBand | None
+
+    def __post_init__(self) -> None:
+        """**The one rule on this type, and it is the privacy rule.**
+
+        Two fields where at most one is ever filled, and which one is decided by
+        ``is_self`` rather than by whoever assembled the record. It is checked
+        here because the failure is silent everywhere else: a figure and a count
+        drawn on the sheet titled *How others see you* is a subtraction the
+        subject can perform against their own record, and nothing about the
+        response would look wrong (``docs/adr/0154``).
+
+        A broken precondition and not a refusal — nobody typed this, and there is
+        no state of the platform in which it is a legitimate answer.
+        """
+
+        invariant(
+            not (self.is_self and self.sportsmanship is not None),
+            "a figure and a count on the subject's own record: they can subtract "
+            "each new rating out of it and they know who they played",
+        )
+        invariant(
+            not (self.sportsmanship_band is not None and not self.is_self),
+            "a band on a stranger's record: the coarse reading exists for the one "
+            "person the figure is withheld from, and nobody else",
+        )
 
 
 __all__ = [
+    "HIGHEST_AVERAGE",
     "LAST_FIVE",
+    "LOWEST_AVERAGE",
+    "RATER_WINDOW",
     "GameOutcome",
     "LikelyRange",
     "OnCourtVerdict",
@@ -417,7 +556,9 @@ __all__ = [
     "ReliabilityPanel",
     "SkillPanel",
     "SportPill",
+    "OpinionBand",
     "StrandRow",
     "SubjectIdentity",
     "SubjectRating",
+    "WhatPlayersSaid",
 ]

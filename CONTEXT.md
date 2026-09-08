@@ -1465,10 +1465,25 @@ still means the μ/σ a player holds in a sport.
   history gives **three** ratings, and the count printed beside the figure means *how many
   different people have an opinion*.
 - **No individual rating is returned to anybody, on any route, in any shape.** Not to the
-  subject, not to the rater who gave it. What may be published is an **average** beside the
+  subject, not to the rater who gave it. What is published is an **average** beside the
   count of distinct people behind it; what the **subject** sees about themselves is a coarse
   band and **no count**, because an average plus a count is a subtraction that names each new
-  rating and they know who they played.
+  rating and they know who they played. The two are **two methods on the published port**, and
+  the subject's one cannot say the figure — a caller that received it would already hold the
+  subtraction, whatever it then drew.
+- **The published figure** — the mean of what other players said, out of five to one decimal,
+  beside how many different people it rests on. **From the very first rating**, because the
+  count does a minimum's work honestly: `3,0 / 5 · 1 player` visibly reads as one person's
+  opinion. **Over the fifty most recent raters**, each contributing the one answer that
+  stands — fifty *people* and not fifty ratings, or a weekly partner would eat twenty of the
+  slots and hand the farming problem back through a side door. **Nothing is trimmed at either
+  end**: trimming is the platform deciding which raters were wrong, a larger claim than
+  publishing the number.
+- **The band** — the three steps the subject may be told about themselves: **good** from 4,0,
+  **mixed** from 3,0, **poor** below. Whole stars over a one-to-five scale, coarsened from the
+  **published** figure so the two can never disagree at an edge. Deliberately too coarse to be
+  informative about any individual: it says *something is going wrong*, which is the useful
+  half, and never who to blame for it, which is the half that keeps people answering.
 - **The matcher never reads it — the floor and the term.** A reader seeing the figure and
   deciding for themselves is the product working; the app demoting somebody silently on the
   same evidence, with nothing they can answer, is not. An import contract enforces it, because
@@ -1537,8 +1552,18 @@ every fact read through the owning context's published port, and one rule of its
   fourth. Variety prices no promise and nothing rounds it, so the division is the client's.
 - **A missing zone is omitted whole, never nulled or emptied.** A player with no publishable
   strand has no reliability section at all — no `player_score` to draw a red pill from and no
-  empty list to head a card with. The three absences on this sheet are three different
-  questions: rated in nothing, no counted game ever played, and nothing ever fallen due.
+  empty list to head a card with. The four absences on this sheet are four different
+  questions: rated in nothing, no counted game ever played, nothing ever fallen due, and
+  nobody having said anything.
+- **One zone depends on who is reading, and it is the only one.** *What other players said*
+  crosses as the figure and its count to a reader, and as a coarse band with neither to the
+  person it is about — everything else here is one answer retitled. `is_self` decides which,
+  the record refuses the pair beside it, and the split is on the **port** so the sheet about
+  you asks a question with no figure in its answer.
+- **What people typed sits under its own heading.** The record card promises *counted by the
+  system, not written by people*, which is what every metered row under it rests on; the
+  sportsmanship figure is the one thing here somebody typed, so it is a second zone rather
+  than a fourth row. Two headings, no lie.
 
 
 ## Cross-cutting concepts

@@ -38,6 +38,7 @@ from app.bootstrap.composition import (
     build_game_repository,
     build_search_store,
     build_skill_rating_repository,
+    build_sportsmanship_ledger,
 )
 from app.engines.assessment import AssessmentResult, BandView
 from app.engines.racketskill.core import (
@@ -83,9 +84,19 @@ from app.modules.player_record.domain.ports import (
     SubjectIdentitySource,
     SubjectRatings,
     SubjectReliability,
+    SubjectSportsmanship,
     SubjectVariety,
 )
-from app.modules.player_record.domain.record import OpponentVariety
+from app.modules.player_record.domain.record import (
+    OpinionBand,
+    OpponentVariety,
+    WhatPlayersSaid,
+)
+from app.modules.sportsmanship.domain.card import (
+    SettledCourt,
+    SportsmanshipCard,
+    StarsGiven,
+)
 from app.modules.player_score.domain.strands import (
     PUBLISHED_WEIGHTS,
     out_of_a_hundred,
@@ -635,6 +646,124 @@ async def test_an_invitation_still_inside_its_day_is_no_row_at_all(
 
 
 # ---------------------------------------------------------------------------
+# What other players said
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectSportsmanship))
+async def test_the_figure_crosses_with_the_count_of_people_behind_it(
+    implementation, session
+):
+    """**Both numbers, from the very first rating.** There is no minimum here,
+    because the count does a minimum's work honestly: a figure over one player
+    reads as one person's opinion because it says so beside itself.
+
+    The two ratings are different on purpose, so a fold that published one of
+    them rather than their mean would be visible.
+    """
+
+    subject = new_uuid()
+    await _stars(session, subject=subject, stars=5)
+    await _stars(session, subject=subject, stars=4)
+
+    said = await implementation.build(session).what_players_said(subject)
+
+    assert said == WhatPlayersSaid(average=4.5, raters=2)
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectSportsmanship))
+async def test_a_player_nobody_has_rated_is_absent_and_never_a_nought(
+    implementation, session
+):
+    """**A fourth absence, asking a fourth question.** Rating is a favour: not
+    answering a card costs nothing and leaves no record of the omission, so a
+    nought here would publish *they are unpleasant* about somebody nobody has
+    ever been asked about."""
+
+    assert await implementation.build(session).what_players_said(new_uuid()) is None
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectSportsmanship))
+async def test_the_subjects_own_answer_is_a_band_and_carries_no_number(
+    implementation, session
+):
+    """**The privacy rule, run against the real fold** (``docs/adr/0154``). What
+    comes back for the person the record is about is one of three steps: no
+    average to subtract from and no count to subtract with, so no answer is
+    identifiable by the one person who must never see it."""
+
+    subject = new_uuid()
+    for stars in (5, 4, 5):
+        await _stars(session, subject=subject, stars=stars)
+
+    band = await implementation.build(session).band_for(subject)
+
+    assert band is OpinionBand.GOOD
+    assert not hasattr(band, "average")
+    assert not hasattr(band, "raters")
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectSportsmanship))
+async def test_the_band_and_the_figure_never_disagree_about_one_record(
+    implementation, session
+):
+    """One window, one mean, one rounding — read at two resolutions. A band
+    derived from a second fold would eventually land on the other side of an edge
+    from the figure a reader is shown, and the subject would be looking at a
+    different record from everybody else."""
+
+    subject = new_uuid()
+    for stars in (2, 3, 2):
+        await _stars(session, subject=subject, stars=stars)
+
+    reader = implementation.build(session)
+    said = await reader.what_players_said(subject)
+
+    assert said is not None
+    assert said.average < 3.0
+    assert await reader.band_for(subject) is OpinionBand.POOR
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectSportsmanship))
+async def test_a_subject_nobody_has_rated_has_no_band_either(implementation, session):
+    """The same absence, so the sheet omits one field or the other and never
+    draws an empty one."""
+
+    assert await implementation.build(session).band_for(new_uuid()) is None
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectSportsmanship))
+async def test_a_weekly_partner_is_one_rater_however_many_evenings(
+    implementation, session
+):
+    """**The collapse, through the demand the sheet actually calls.** Only a
+    rater's most recent stars about somebody count, so the count beside the
+    figure keeps meaning *how many different people have an opinion* — which is
+    what makes a high one evidence of breadth rather than of repetition."""
+
+    subject, partner = new_uuid(), new_uuid()
+    for stars in (1, 1, 5):
+        await _stars(session, subject=subject, rater=partner, stars=stars)
+
+    said = await implementation.build(session).what_players_said(subject)
+
+    assert said == WhatPlayersSaid(average=5.0, raters=1)
+
+
+def test_the_sportsmanship_demand_asks_about_one_player_and_takes_no_clock():
+    """**One person, and no instant.** A record is one deliberate tap; nothing
+    here decays, because the window is fifty *people* rather than fifty days, so
+    a ``now`` on this port would be a second horizon nobody could keep in step
+    with the first. The matcher must never read it in any shape at all, and that
+    is held by an import contract rather than by this signature."""
+
+    for method in ("what_players_said", "band_for"):
+        hints = get_type_hints(getattr(SubjectSportsmanship, method))
+        assert set(hints) == {"player_id", "return"}, hints
+        assert hints["player_id"] is UUID
+
+
+# ---------------------------------------------------------------------------
 # The world these demands are run against
 # ---------------------------------------------------------------------------
 
@@ -953,4 +1082,36 @@ async def _answered_by(
     assert loaded is not None
     loaded.accept(invitee, occurred_at=at)
     await repository.save(loaded)
+    await session.commit()
+
+
+async def _stars(
+    session,
+    *,
+    subject: UUID,
+    stars: int,
+    rater: UUID | None = None,
+    at: Instant | None = None,
+) -> None:
+    """One rater answers one court, giving one person stars.
+
+    Written through ``sportsmanship``'s own aggregate rather than an ``INSERT``
+    (``docs/adr/0029``) — the collapse lives in that store's key, and a row
+    inserted beside the card would be this suite arranging away the thing the
+    demand is meant to prove.
+    """
+
+    when = at or _now()
+    await build_sportsmanship_ledger(session).record(
+        SportsmanshipCard.answered(
+            court=SettledCourt(
+                game_id=new_uuid(),
+                rater_id=rater or new_uuid(),
+                others=(subject,),
+                played_at=when,
+            ),
+            given=[StarsGiven(subject_id=subject, stars=stars)],
+            at=when,
+        )
+    )
     await session.commit()

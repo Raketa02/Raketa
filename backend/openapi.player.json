@@ -2333,7 +2333,7 @@
           "player-record"
         ],
         "summary": "Your own record \u2014 how others see you",
-        "description": "**The same sheet everybody else is shown about you**, which is what makes it worth having: the numbers on it have been deciding who you are offered to since you signed up, and a penalty nobody can look up is a penalty nobody can fix.\n\n**Nothing gates it.** A block is between two people and the gender preference is mutual; neither has anything to say about somebody reading their own record, and a hold does not reach it either \u2014 this is the one screen a held player has for finding out how they appear.\n\n`is_self` is `true`. Read it rather than comparing ids.\n\n**`?sport=` works here too**, and picks which of your own Levels the skill card draws \u2014 the same resolution a stranger's sheet takes.",
+        "description": "**The same sheet everybody else is shown about you**, which is what makes it worth having: the numbers on it have been deciding who you are offered to since you signed up, and a penalty nobody can look up is a penalty nobody can fix.\n\n**Nothing gates it.** A block is between two people and the gender preference is mutual; neither has anything to say about somebody reading their own record, and a hold does not reach it either \u2014 this is the one screen a held player has for finding out how they appear.\n\n`is_self` is `true`. Read it rather than comparing ids.\n\n**What other players said comes back as a band and never as a figure.** `sportsmanship_band` is three steps wide and carries no count, and `sportsmanship` is absent \u2014 an average beside a count would let you subtract each new rating out and name it, and you know who you played, so every answer would be identifiable by the one person who must never see it. It changes nothing about how you are matched: the reliability pill is what the platform acts on.\n\n**`?sport=` works here too**, and picks which of your own Levels the skill card draws \u2014 the same resolution a stranger's sheet takes.",
         "operationId": "read_own_record_api_v1_players_me_record_get",
         "security": [
           {
@@ -2400,7 +2400,7 @@
           "player-record"
         ],
         "summary": "One player's record",
-        "description": "Who this person is, as of the moment you opened it.\n\n**Read through a prior disclosure, never about a person.** It opens for somebody a search of yours returned, somebody you share a live challenge or a game with, and yourself \u2014 and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.\n\n**Nothing expires.** A search record is kept for ever, so a sheet you could open this morning opens next year \u2014 any shorter window could only refuse a face the app is currently showing.\n\n**The gates are live.** A block placed since the search, a hold, an account that may not be shown and the mutual gender preference are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.\n\n**Asking about yourself is allowed** and answers `is_self: true` \u2014 the client is told rather than left to compare identifiers.\n\n**`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.",
+        "description": "Who this person is, as of the moment you opened it.\n\n**Read through a prior disclosure, never about a person.** It opens for somebody a search of yours returned, somebody you share a live challenge or a game with, and yourself \u2014 and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.\n\n**Nothing expires.** A search record is kept for ever, so a sheet you could open this morning opens next year \u2014 any shorter window could only refuse a face the app is currently showing.\n\n**The gates are live.** A block placed since the search, a hold, an account that may not be shown and the mutual gender preference are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.\n\n**Asking about yourself is allowed** and answers `is_self: true` \u2014 the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, **including the coarse `sportsmanship_band` in place of the figure**: the rule follows the subject and not the route.\n\n**`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.",
         "operationId": "read_player_record_api_v1_players__player_id__record_get",
         "security": [
           {
@@ -4167,6 +4167,16 @@
         "title": "OpenCardsResponse",
         "description": "Every card waiting for you, **soonest to expire first**.\n\nAn empty list is the ordinary answer and means nothing is waiting. It does\nnot distinguish *no games*, *not yet a day* and *already answered*: all three\nare simply not on the list, and none of them is something a client would draw\ndifferently.\n\n``cards`` is **required and never absent**, empty though it usually is: a\ndefault would emit it as optional and hand every client a list it has to\ncheck for existence before checking for length."
       },
+      "OpinionBand": {
+        "type": "string",
+        "enum": [
+          "GOOD",
+          "MIXED",
+          "POOR"
+        ],
+        "title": "OpinionBand",
+        "description": "How somebody is coming across, in the three steps **they** may be told.\n\n**The subject's whole answer, and the coarseness is the safety.** A figure\nplus a count in front of the person they are about is a subtraction: an\naverage moving from 4,80 over ten to 4,73 over eleven names the new rating as\na 4, and they know who they played, so every answer would be identifiable by\nthe one person who must never see it. Three steps across the whole scale tell\nthem *something is going wrong*, which is the useful half.\n\n**A second spelling of ``sportsmanship``'s ``SportsmanshipBand``**, and it\ntakes a **different name** for the reason ``OnCourtVerdict`` does beside\n``PhotoReviewDecision`` and ``GameOutcome`` does beside ``Outcome``. That is\ntwo rules meeting: this context borrows no other context's domain types\n(``docs/adr/0155``), and the emitted contract is **one namespace** \u2014 a class\nof the same name in two modules does not shadow the other, it *renames both*,\nand every generated type a shipped app already holds moves. It is\n``RecordLikelyRangeSchema``'s argument, applied one layer down, because this\nenum reaches the wire as itself rather than through a schema class.\n\nThe risk a second spelling carries is answered the way those two answer it \u2014\n``tests/unit/test_player_record_sportsmanship.py`` fails the build if the two\nvocabularies stop agreeing.\n\n**There is no fourth value for *nobody has said anything*.** That is the\nfield's absence, on the rule every zone on this sheet takes."
+      },
       "OpponentVarietySchema": {
         "properties": {
           "distinct_opponents": {
@@ -4625,6 +4635,14 @@
           "variety": {
             "$ref": "#/components/schemas/OpponentVarietySchema",
             "description": "How widely they spread their games \u2014 **the raw pair, over their whole record.**\n\n**Omitted where no counted game has ever been recorded for them**, which is not a nought and not `0 / 0`: a habit nobody has been observed having is not a narrow one. It is a **different absence from `skill`'s** \u2014 somebody rated in nothing may have played all week, and somebody rated in four sports may never have had a game counted.\n\n**It is about every sport**, unlike `skill.last_five` above it. `?sport=` does not move it: a person who plays padel with the same four faces and squash with twenty has one habit, and a figure narrowed to one sport would be a different statistic under the same word."
+          },
+          "sportsmanship": {
+            "$ref": "#/components/schemas/RecordSportsmanshipSchema",
+            "description": "**What other players said** \u2014 the average out of five and how many different people it rests on.\n\n**Its own zone, deliberately apart from `reliability`.** That card promises *counted by the system, not written by people*, and this is the one thing here people wrote. Two headings, no lie.\n\n**Omitted where nobody has rated them**, which is most people and is never a nought: rating is a favour, ignoring the card costs nothing, and nothing anywhere records that somebody did not answer. It is a **fourth absence** and asks a fourth question \u2014 not `skill`'s, not `variety`'s and not `reliability`'s, since a plan that dissolved and a seat that ran out are opportunities and neither is an opinion anybody offered.\n\n**Absent on your own record, always.** You are answered with `sportsmanship_band` instead. The two never appear together, and which one you get is decided by `is_self`.\n\n**It is about no sport**, like `variety` and `reliability`: `?sport=` does not move it. How somebody is to play with is not a padel fact.\n\n**The matcher never reads it.** A low figure hides nobody and demotes nobody \u2014 Pass and Block are the controls that act, and both are deliberate."
+          },
+          "sportsmanship_band": {
+            "$ref": "#/components/schemas/OpinionBand",
+            "description": "**How you are coming across, in three steps \u2014 and only ever about yourself.**\n\n**No figure and no count, and that is the whole design.** A published average beside a published count lets you subtract: moving from 4,80 over ten to 4,73 over eleven names the new rating as a 4, and you know who you played. Every answer would be identifiable by the one person who must never see it, and people stop answering honestly once that is true. A band tells you something is going wrong, which is the useful half.\n\n**Deliberately too coarse to read anything into.** At one or two ratings it cannot be informative about any individual, and even at fifty a step this wide moves for a change of habit rather than for one evening. Do not draw a number, a bar or a trend from it.\n\n**Present only when `is_self` is `true`**, and omitted where nobody has rated you yet \u2014 the same absence `sportsmanship` spells on somebody else's record.\n\n**It changes nothing about how you are matched.** The reliability pill is what the platform acts on, and this is not in it."
           }
         },
         "type": "object",
@@ -5074,6 +5092,30 @@
         ],
         "title": "RecordPromptDeclineRequest",
         "description": "One *not now*, about a question. **Write-only.**\n\nNothing is returned by this route and no route anywhere returns a decline \u2014\nnot to you, not as a count, not as *\"you have said no to this four times\"*.\n\n**There is no `search_id` and no idempotency key.** A pass carries an origin\nbecause *pass rate on re-shown profiles* is unmeasurable without one; nothing\na decline is measured by needs one, and two of these questions are raised by\na background loop that has no search to cite. A second *not now* is a second\nrow with its own moment, exactly as a second pass is, and it buys the same\nmonth the first did.\n\n**How long it lasts is not yours to name**, and there is no field here for\nit. What it buys is that this question is not raised at you again for a\nwhile; it retires nothing \u2014 the standing prompt still expires on its own \u2014\nand it changes no value on your profile. Saying *yes* is a write through the\nroute that owns the value, and it is a different request entirely."
+      },
+      "RecordSportsmanshipSchema": {
+        "properties": {
+          "average": {
+            "type": "number",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Average",
+            "description": "The mean of what other players said, **out of five, to one decimal.** Served rather than derived: there is one mean and one rounding of this record on the platform, and it rounds halves up.\n\n**One to five, and never nought.** There is no zero on the scale a player taps \u2014 a rating that reads as *worthless* is a weapon out of proportion to a tap \u2014 so a person nobody has rated is **absent** here rather than sitting at the bottom of it."
+          },
+          "raters": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Raters",
+            "description": "How many **different people** the figure rests on. Always drawn beside it.\n\n**People and not ratings.** Only a rater's most recent stars about somebody count, so ten evenings with the same partner contribute one. A high count is therefore evidence of breadth rather than of repetition, and it cannot be inflated by volume.\n\n**At most fifty**, which is the window: the fifty most recent raters, each contributing the one answer that stands."
+          }
+        },
+        "type": "object",
+        "required": [
+          "average",
+          "raters"
+        ],
+        "title": "RecordSportsmanshipSchema",
+        "description": "What other players said \u2014 **the one thing here nobody counted.**\n\n**Named for its surface, because the contract is one namespace.** The word\nbelongs to ``sportsmanship``, which has a surface of its own; a class simply\ncalled ``SportsmanshipSchema`` here would not shadow whatever that context\npublishes next, it would *rename both* \u2014 and every generated type a shipped\napp already holds would move. It is ``RecordLikelyRangeSchema``'s rule, and\nthe same rule renamed the band this sits beside.\n\n**Its own heading, and never mixed with the rows above.** The record card is\nheaded *counted by the system, not written by people*, which is the promise\nevery metered row under it rests on; a number people typed sitting beneath\nthat title would make the title false. Draw this under *What opponents said*\nand the two apart.\n\n**Both numbers, always, from the very first rating.** There is no minimum\nbecause the count does a minimum's work honestly: `4,7 / 5 \u00b7 17 players` and\n`3,0 / 5 \u00b7 1 player` are the same field, and the second one visibly reads as\none person's opinion. Print them together \u2014 a figure drawn without its count\nis this field's one way of lying.\n\n**`raters` is people, not ratings.** Only somebody's most recent stars about\na person ever count, so a weekly partner is **one** rater however many\nevenings they play. That is what makes a high count evidence of *breadth*.\n\n**It is the fifty most recent raters and nothing is trimmed.** Somebody can\nrecover from a bad patch by playing with fifty other people; nobody's rating\nis discarded for being an outlier, because deciding which raters were wrong\nis a larger claim than publishing the number.\n\n**The matcher does not read it, and you should say so if you draw it beside\nthe pill.** A low figure here does not hide anybody, demote anybody or narrow\nanybody's search results \u2014 the reliability pill is the counted-only number\nand is exactly what the platform acts on.\n\n**Never on your own record.** `sportsmanship_band` is what you get about\nyourself, and this is absent \u2014 see that field for why."
       },
       "RefreshRequest": {
         "properties": {

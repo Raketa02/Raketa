@@ -21,6 +21,17 @@ the sheet is about** — the single thing here nobody else could decide, because
 is a question about the reader rather than about the subject. Every figure that
 lands on this sheet arrives from the context that owns it, already decided.
 
+**One zone is answered differently depending on who is reading, and it is the
+only one.** What other players said crosses as a figure and a count for a
+stranger, and as a coarse band with neither for the subject — because an average
+beside a count in front of the person it is about is a subtraction that names
+each new rating exactly, and they know who they played (``docs/adr/0154``). The
+branch is on ``is_self``, which the assembler already holds; what makes it safe
+is that the *port* has two methods and the subject's one cannot say the figure,
+so a branch taken the wrong way asks for something that does not exist rather
+than quietly publishing something that does. ``PlayerRecord`` refuses the pair
+outright if one ever arrives beside ``is_self``.
+
 **The sport asked for reaches the sheet's contents and never its admission.** It
 selects which Level is printed; the four fail-closed gates run in the partition of
 the **disclosure**, which is a fact the platform holds. A record refused in a
@@ -53,6 +64,7 @@ from app.modules.player_record.domain.ports import (
     SubjectIdentitySource,
     SubjectRatings,
     SubjectReliability,
+    SubjectSportsmanship,
     SubjectVariety,
 )
 from app.modules.player_record.domain.record import (
@@ -76,6 +88,7 @@ async def assemble_record(
     form: SubjectForm,
     reliability: SubjectReliability,
     variety: SubjectVariety,
+    sportsmanship: SubjectSportsmanship,
 ) -> PlayerRecord:
     """The record itself, once somebody has decided it may be read.
 
@@ -90,11 +103,21 @@ async def assemble_record(
     rather than being asked and thrown away — which is the difference between a
     newcomer's record being cheap and it being the same price as anybody's.
 
-    **The rows and the variety are asked for regardless, because neither is about
-    a sport.** The three absences are three different questions and the sheet must
-    not conflate them: a person rated in nothing may have played all week, a
-    person rated in four sports may never have had a game counted, and a person
-    with a full record of games may have had nothing at all *fall due*.
+    **The rows, the variety and what players said are asked for regardless,
+    because none of them is about a sport.** The four absences are four different
+    questions and the sheet must not conflate them: a person rated in nothing may
+    have played all week, a person rated in four sports may never have had a game
+    counted, a person with a full record of games may have had nothing at all
+    *fall due*, and a person with a perfect record of turning up may have been
+    rated by nobody — nobody is obliged to answer a card, and not answering leaves
+    no record of the omission.
+
+    **Exactly one of the two sportsmanship questions is asked**, and which one is
+    the only thing on this sheet that ``is_self`` decides beyond a title. A reader
+    is answered with the figure and its count; the subject is answered with a
+    coarse band and neither. The other is not asked and thrown away — it is not
+    asked, so the figure never enters this process on a sheet about the person it
+    is about.
     """
 
     identity = await identities.identity_of(subject_id)
@@ -129,6 +152,12 @@ async def assemble_record(
         skill=skill,
         reliability=await reliability.reliability_of(subject_id, now=now),
         variety=await variety.variety_of(subject_id, now=now),
+        sportsmanship=(
+            None if is_self else await sportsmanship.what_players_said(subject_id)
+        ),
+        sportsmanship_band=(
+            await sportsmanship.band_for(subject_id) if is_self else None
+        ),
     )
 
 
@@ -165,6 +194,7 @@ class ReadPlayerRecord:
         form: SubjectForm,
         reliability: SubjectReliability,
         variety: SubjectVariety,
+        sportsmanship: SubjectSportsmanship,
         clock: Clock,
     ) -> None:
         self._admission = admission
@@ -174,6 +204,7 @@ class ReadPlayerRecord:
         self._form = form
         self._reliability = reliability
         self._variety = variety
+        self._sportsmanship = sportsmanship
         self._clock = clock
 
     async def execute(
@@ -213,6 +244,7 @@ class ReadPlayerRecord:
             form=self._form,
             reliability=self._reliability,
             variety=self._variety,
+            sportsmanship=self._sportsmanship,
         )
 
 
@@ -235,6 +267,7 @@ class ReadOwnRecord:
         form: SubjectForm,
         reliability: SubjectReliability,
         variety: SubjectVariety,
+        sportsmanship: SubjectSportsmanship,
         clock: Clock,
     ) -> None:
         self._identities = identities
@@ -243,6 +276,7 @@ class ReadOwnRecord:
         self._form = form
         self._reliability = reliability
         self._variety = variety
+        self._sportsmanship = sportsmanship
         self._clock = clock
 
     async def execute(
@@ -261,6 +295,7 @@ class ReadOwnRecord:
             form=self._form,
             reliability=self._reliability,
             variety=self._variety,
+            sportsmanship=self._sportsmanship,
             identities=self._identities,
             photos=self._photos,
         )

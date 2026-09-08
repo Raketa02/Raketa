@@ -4,8 +4,8 @@
 ``matcher_demands.py`` holds the ports the matcher declares of contexts it does
 not write; ``games_demands.py``, ``rating_demands.py`` and
 ``player_score_demands.py`` each hold what one **provider** publishes outward.
-This one is the matcher's kind: a context that writes nothing and asks eight
-questions of seven others. Rows of the two kinds in one list would make every
+This one is the matcher's kind: a context that writes nothing and asks nine
+questions of eight others. Rows of the two kinds in one list would make every
 exhaustiveness assertion a claim about something else, and the first person to
 add a row would have to guess which.
 
@@ -53,6 +53,7 @@ from app.bootstrap.composition import (
     build_search_disclosure,
     build_subject_identity_source,
     build_subject_reliability,
+    build_subject_sportsmanship,
     build_subject_variety,
 )
 from app.bootstrap.matcher_demands import RegisteredImplementation
@@ -67,6 +68,7 @@ from app.modules.player_record.domain.ports import (
     SubjectIdentitySource,
     SubjectRatings,
     SubjectReliability,
+    SubjectSportsmanship,
     SubjectVariety,
 )
 
@@ -184,6 +186,11 @@ PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=SubjectVariety,
         name="GamesSubjectVariety",
         build=build_subject_variety,
+    ),
+    RegisteredImplementation(
+        port=SubjectSportsmanship,
+        name="PublishedSubjectSportsmanship",
+        build=build_subject_sportsmanship,
     ),
 )
 

@@ -310,3 +310,69 @@ rather than of the evening.
 
 **Nothing else moves.** No rating crosses the wire, the collapse is untouched, the matcher
 still reads none of it, and the context still stores exactly the two tables §3 describes.
+
+## Amendment — 2026-09-08: the figure is published, and the band's edges are whole stars
+
+[#382](https://github.com/Raketa02/Raketa/issues/382) built the read §6 called *what may be
+published, in the tickets that follow this one*. Everything that record decided held; what
+follows is what shipping it added, and one thing it did not decide.
+
+**A third port, and it is the only one pointed outward.**
+`PublishedSportsmanshipQuery` answers `published_for` — the figure and how many different
+people it rests on — and `band_for`, three steps wide. It is **not a method on
+`SportsmanshipLedger`**: that port is this module's store, a consumer holding it could write
+through it, and §6's silence is about what a store may be asked rather than about a table.
+`player_record` declares its own `SubjectSportsmanship` beside it and translates in an
+adapter, on ADR-0155 §6's rule.
+
+**Two methods rather than one answer a caller narrows, and that is the whole of §2 made
+structural.** A use case that received the figure and coarsened it itself would already be
+holding the subtraction — the rule is about what crosses the seam, not about what is
+rendered. So the sheet about *you* calls a method with no figure in its return type, and the
+one that has a figure is never called on that path. `PlayerRecord` refuses the pair beside
+`is_self` outright, so a branch taken the wrong way is loud rather than a screen quietly
+showing somebody the arithmetic of their own ratings.
+
+**The band's edges are whole stars, and this record did not decide them.** `GOOD` from 4,0;
+`MIXED` from 3,0; `POOR` below. Whole stars over a one-to-five scale is the coarsest
+three-step reading that is still about the scale a person taps, and the coarseness is the
+safety: at one or two ratings it cannot be informative about any individual, and even at
+fifty a step this wide moves for a change of habit rather than for one evening. **It is
+coarsened from the published figure and never from the raw mean**, so a subject's band cannot
+land on the other side of an edge from what a reader is shown — one record, read at two
+resolutions, with one rounding between them.
+
+**The collapse cost the fold nothing, which is what §4's key bought.** There is no `GROUP
+BY`, no `DISTINCT ON` and no window function in the adapter: one row already is one person,
+so *the fifty most recent raters* is a `LIMIT` on an ordering rather than a collapse
+performed at read time. The order is total — `rated_at` then `rater_id` — because two rows
+written in one transaction carry the same instant and two processes must fold one record to
+one figure (ADR-0105).
+
+**Halves round up, at one decimal, and the rule is spelled in this context.** `round` rounds
+to even, so 4,25 would print 4,2 and 4,35 would print 4,4 — a rule nobody reading a figure
+out of five expects. `player_score` makes the same argument for percentages; the two are
+separate because a context importing the other's rounding would be importing the other's
+scale with it.
+
+**The word `stars` does not reach the wire.** The forbidden-fact sweep refuses that property
+name outright, and §6 said so about itself: *it catches nothing about a figure published
+under an honest name*. What crosses is `average` and `raters` under `sportsmanship`, and
+`sportsmanship_band` for the subject — and a test walks the emitted contract to assert those
+words reach exactly one response type, which is where *it is not on search result cards*
+stopped being a promise.
+
+**The coarseness argument does not hold at the bottom of the window, and that is worth
+recording rather than repeating.** §2 says *at one or two ratings the band is deliberately too
+coarse to be informative about any individual*. It is not: stars are whole, so a subject with
+exactly one rater who is shown `MIXED` has been told their rating is exactly 3, and they know
+who they played. What protects them at n=1 is the other half of the rule — **no count
+crosses**, so they are not told they have one rater, and the inference needs them to work it
+out from their own settled games, which somebody with one game can. This is the same class of
+cost §2 already accepts and it does not change the decision; the mitigation *the band is too
+coarse* simply starts working further up the window than that sentence claims, and the
+sentence should be read as the intent rather than as the arithmetic.
+
+**Nothing else moves.** No individual rating crosses on any route, the matcher still reads
+none of it, the pill is still the counted-only number, and the context still stores exactly
+the two tables §3 describes.

@@ -11,6 +11,13 @@ on, and it is load-bearing rather than tidy.
 no second renderer, because two shapes for one sheet is how *How others see you*
 and *how a stranger sees you* stop being the same screen.
 
+**One zone differs by more than a title, and it is the only one.** What other
+players said crosses as a figure and a count to a reader, and as a coarse band to
+the person it is about (``docs/adr/0154``) — an average beside a count in front of
+the subject is a subtraction that names each new rating exactly, and they know who
+they played. It is still one response type: two fields, at most one of them ever
+present, and which one is decided by ``is_self`` on this side.
+
 **One refusal, and it names nothing** (``docs/adr/0155``). Never disclosed to
 you, blocked either way, held, and no such player return the same `404` and the
 same body, byte for byte. A payload naming the gate delivers a block to the one
@@ -113,6 +120,13 @@ SportAsked = Annotated[
         "reading their own record, and a hold does not reach it either — this "
         "is the one screen a held player has for finding out how they appear.\n\n"
         "`is_self` is `true`. Read it rather than comparing ids.\n\n"
+        "**What other players said comes back as a band and never as a "
+        "figure.** `sportsmanship_band` is three steps wide and carries no "
+        "count, and `sportsmanship` is absent — an average beside a count would "
+        "let you subtract each new rating out and name it, and you know who you "
+        "played, so every answer would be identifiable by the one person who "
+        "must never see it. It changes nothing about how you are matched: the "
+        "reliability pill is what the platform acts on.\n\n"
         "**`?sport=` works here too**, and picks which of your own Levels the "
         "skill card draws — the same resolution a stranger's sheet takes."
     ),
@@ -150,7 +164,10 @@ async def read_own_record(
         "re-evaluated on every open, so a disclosure entitles you to *ask* and "
         "never to be answered.\n\n"
         "**Asking about yourself is allowed** and answers `is_self: true` — the "
-        "client is told rather than left to compare identifiers.\n\n"
+        "client is told rather than left to compare identifiers. It draws the "
+        "same sheet `/players/me/record` does, **including the coarse "
+        "`sportsmanship_band` in place of the figure**: the rule follows the "
+        "subject and not the route.\n\n"
         "**`?sport=` chooses what the sheet is about, never who may be seen.** "
         "Send the sport you arrived from; where they are not rated in it you "
         "get their most played, and admission is decided from what the platform "

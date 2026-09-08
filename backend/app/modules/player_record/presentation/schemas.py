@@ -28,6 +28,7 @@ from app.modules.player_record.domain.record import (
     LAST_FIVE,
     GameOutcome,
     OnCourtVerdict,
+    OpinionBand,
     PlayerRecord,
 )
 
@@ -280,6 +281,77 @@ class StrandRowSchema(BaseModel):
     )
 
 
+class RecordSportsmanshipSchema(BaseModel):
+    """What other players said — **the one thing here nobody counted.**
+
+    **Named for its surface, because the contract is one namespace.** The word
+    belongs to ``sportsmanship``, which has a surface of its own; a class simply
+    called ``SportsmanshipSchema`` here would not shadow whatever that context
+    publishes next, it would *rename both* — and every generated type a shipped
+    app already holds would move. It is ``RecordLikelyRangeSchema``'s rule, and
+    the same rule renamed the band this sits beside.
+
+    **Its own heading, and never mixed with the rows above.** The record card is
+    headed *counted by the system, not written by people*, which is the promise
+    every metered row under it rests on; a number people typed sitting beneath
+    that title would make the title false. Draw this under *What opponents said*
+    and the two apart.
+
+    **Both numbers, always, from the very first rating.** There is no minimum
+    because the count does a minimum's work honestly: `4,7 / 5 · 17 players` and
+    `3,0 / 5 · 1 player` are the same field, and the second one visibly reads as
+    one person's opinion. Print them together — a figure drawn without its count
+    is this field's one way of lying.
+
+    **`raters` is people, not ratings.** Only somebody's most recent stars about
+    a person ever count, so a weekly partner is **one** rater however many
+    evenings they play. That is what makes a high count evidence of *breadth*.
+
+    **It is the fifty most recent raters and nothing is trimmed.** Somebody can
+    recover from a bad patch by playing with fifty other people; nobody's rating
+    is discarded for being an outlier, because deciding which raters were wrong
+    is a larger claim than publishing the number.
+
+    **The matcher does not read it, and you should say so if you draw it beside
+    the pill.** A low figure here does not hide anybody, demote anybody or narrow
+    anybody's search results — the reliability pill is the counted-only number
+    and is exactly what the platform acts on.
+
+    **Never on your own record.** `sportsmanship_band` is what you get about
+    yourself, and this is absent — see that field for why.
+    """
+
+    average: float = Field(
+        ...,
+        ge=1.0,
+        le=5.0,
+        description=(
+            "The mean of what other players said, **out of five, to one "
+            "decimal.** Served rather than derived: there is one mean and one "
+            "rounding of this record on the platform, and it rounds halves "
+            "up.\n\n"
+            "**One to five, and never nought.** There is no zero on the scale a "
+            "player taps — a rating that reads as *worthless* is a weapon out of "
+            "proportion to a tap — so a person nobody has rated is **absent** "
+            "here rather than sitting at the bottom of it."
+        ),
+    )
+    raters: int = Field(
+        ...,
+        ge=1,
+        description=(
+            "How many **different people** the figure rests on. Always drawn "
+            "beside it.\n\n"
+            "**People and not ratings.** Only a rater's most recent stars about "
+            "somebody count, so ten evenings with the same partner contribute "
+            "one. A high count is therefore evidence of breadth rather than of "
+            "repetition, and it cannot be inflated by volume.\n\n"
+            "**At most fifty**, which is the window: the fifty most recent "
+            "raters, each contributing the one answer that stands."
+        ),
+    )
+
+
 class ReliabilitySchema(BaseModel):
     """What the platform watched — the pill, and the rows it is the mean of.
 
@@ -479,6 +551,57 @@ class PlayerRecordResponse(BaseModel):
         ),
     )
 
+    sportsmanship: RecordSportsmanshipSchema = Field(
+        default=OMITTED,
+        description=(
+            "**What other players said** — the average out of five and how many "
+            "different people it rests on.\n\n"
+            "**Its own zone, deliberately apart from `reliability`.** That card "
+            "promises *counted by the system, not written by people*, and this "
+            "is the one thing here people wrote. Two headings, no lie.\n\n"
+            "**Omitted where nobody has rated them**, which is most people and "
+            "is never a nought: rating is a favour, ignoring the card costs "
+            "nothing, and nothing anywhere records that somebody did not "
+            "answer. It is a **fourth absence** and asks a fourth question — not "
+            "`skill`'s, not `variety`'s and not `reliability`'s, since a plan "
+            "that dissolved and a seat that ran out are opportunities and "
+            "neither is an opinion anybody offered.\n\n"
+            "**Absent on your own record, always.** You are answered with "
+            "`sportsmanship_band` instead. The two never appear together, and "
+            "which one you get is decided by `is_self`.\n\n"
+            "**It is about no sport**, like `variety` and `reliability`: "
+            "`?sport=` does not move it. How somebody is to play with is not a "
+            "padel fact.\n\n"
+            "**The matcher never reads it.** A low figure hides nobody and "
+            "demotes nobody — Pass and Block are the controls that act, and both "
+            "are deliberate."
+        ),
+    )
+
+    sportsmanship_band: OpinionBand = Field(
+        default=OMITTED,
+        description=(
+            "**How you are coming across, in three steps — and only ever about "
+            "yourself.**\n\n"
+            "**No figure and no count, and that is the whole design.** A "
+            "published average beside a published count lets you subtract: "
+            "moving from 4,80 over ten to 4,73 over eleven names the new rating "
+            "as a 4, and you know who you played. Every answer would be "
+            "identifiable by the one person who must never see it, and people "
+            "stop answering honestly once that is true. A band tells you "
+            "something is going wrong, which is the useful half.\n\n"
+            "**Deliberately too coarse to read anything into.** At one or two "
+            "ratings it cannot be informative about any individual, and even at "
+            "fifty a step this wide moves for a change of habit rather than for "
+            "one evening. Do not draw a number, a bar or a trend from it.\n\n"
+            "**Present only when `is_self` is `true`**, and omitted where nobody "
+            "has rated you yet — the same absence `sportsmanship` spells on "
+            "somebody else's record.\n\n"
+            "**It changes nothing about how you are matched.** The reliability "
+            "pill is what the platform acts on, and this is not in it."
+        ),
+    )
+
     @classmethod
     def of(cls, record: PlayerRecord) -> "PlayerRecordResponse":
         """Render one record, omitting rather than nulling what is absent.
@@ -526,6 +649,13 @@ class PlayerRecordResponse(BaseModel):
                     for row in watched.strands
                 ],
             )
+        if record.sportsmanship is not None:
+            said = record.sportsmanship
+            fields["sportsmanship"] = RecordSportsmanshipSchema(
+                average=said.average, raters=said.raters
+            )
+        if record.sportsmanship_band is not None:
+            fields["sportsmanship_band"] = record.sportsmanship_band
         if record.variety is not None:
             fields["variety"] = OpponentVarietySchema(
                 distinct_opponents=record.variety.distinct_opponents,
@@ -541,10 +671,11 @@ class PlayerRecordResponse(BaseModel):
 
 __all__ = [
     "OpponentVarietySchema",
-    "RecordLikelyRangeSchema",
     "PlayerRecordResponse",
+    "RecordLikelyRangeSchema",
     "ReliabilitySchema",
     "SkillPanelSchema",
     "SportPillSchema",
+    "RecordSportsmanshipSchema",
     "StrandRowSchema",
 ]

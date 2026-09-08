@@ -262,6 +262,9 @@ from app.modules.player_record.infrastructure.games_subject_form import (
 from app.modules.player_record.infrastructure.games_subject_variety import (
     GamesSubjectVariety,
 )
+from app.modules.player_record.infrastructure.published_subject_sportsmanship import (
+    PublishedSubjectSportsmanship,
+)
 from app.modules.player_record.infrastructure.rating_subject_ratings import (
     RatingSubjectRatings,
 )
@@ -276,6 +279,7 @@ from app.modules.player_record.domain.ports import (
     SubjectIdentitySource,
     SubjectRatings,
     SubjectReliability,
+    SubjectSportsmanship,
     SubjectVariety,
 )
 from app.modules.player_record.infrastructure.disclosures import (
@@ -293,11 +297,15 @@ from app.modules.player_record.infrastructure.subject_identities import (
     ProfileAndAccountIdentity,
 )
 from app.modules.sportsmanship.domain.ports import (
+    PublishedSportsmanshipQuery,
     SettledCourts,
     SportsmanshipLedger,
 )
 from app.modules.sportsmanship.infrastructure.games_settled_courts import (
     GamesSettledCourts,
+)
+from app.modules.sportsmanship.infrastructure.sqlalchemy_standing_answers import (
+    StandingAnswersAboutThem,
 )
 from app.modules.sportsmanship.infrastructure.sqlalchemy_sportsmanship_ledger import (
     SqlAlchemySportsmanshipLedger,
@@ -991,6 +999,22 @@ def build_subject_reliability(session: AsyncSession) -> SubjectReliability:
     return ScoreSubjectReliability(build_published_score_query(session))
 
 
+def build_subject_sportsmanship(
+    session: AsyncSession,
+) -> SubjectSportsmanship:
+    """What other players said about a record's subject — at both resolutions.
+
+    Built over ``sportsmanship``'s **published** port and never over the ledger
+    beside it, which is the same fence every other row here takes: the ledger is
+    that context's store and a sheet holding it could write through it. It is
+    also what keeps the figure and the subject's band one fold — the provider
+    coarsens its own number, so a band cannot land on the other side of an edge
+    from the figure a reader is shown.
+    """
+
+    return PublishedSubjectSportsmanship(build_published_sportsmanship(session))
+
+
 def build_settled_courts(session: AsyncSession) -> SettledCourts:
     """*Is this a settled court of mine, and who else was on it* — over ``games``.
 
@@ -1012,6 +1036,19 @@ def build_sportsmanship_ledger(session: AsyncSession) -> SportsmanshipLedger:
     codebase is given.
     """
     return SqlAlchemySportsmanshipLedger(session)
+
+
+def build_published_sportsmanship(
+    session: AsyncSession,
+) -> PublishedSportsmanshipQuery:
+    """What other players said about somebody — the figure, or the coarse band.
+
+    Built over the session and never over the ledger beside it, which is the
+    fence rather than tidiness: the ledger writes, and a read a sheet performs
+    has no business holding a port a use case commits through. It reads the same
+    rows the ledger writes, which is what a published fold is.
+    """
+    return StandingAnswersAboutThem(session)
 
 
 def build_settle_ratings_on_results(
