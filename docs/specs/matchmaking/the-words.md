@@ -1857,15 +1857,25 @@ writes that phrase four different ways. `GamePlanned` is refused on ADR-0142 §3
 everybody having accepted is exactly such an arrangement. What a player sees instead is the **plan
 card appearing** and membership stopping — drawn, not announced.
 
+**A refused line is not a refused telling, and here that is load-bearing.** `GamePlanned` still
+reaches the room and draws nothing, which is the shape `ChallengeOpenedFromMutualInterest` and
+`challenges.withdrawn` already have — and `Game.planned_at` **is** `GamePlanned.occurred_at`, which
+is where the room's own end is derived from
+([ADR-0153](../../adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)
+§2). Dropping the delivery because nothing renders would drop the anchor with it.
+
 **The room opening is not a line either**, and the same rule gives all three membership codes one
 shape: **an acceptance, an invitation and a departure each write a line only when there was already
 a room to write it in.** The first acceptor is a founding member, visible in membership.
 
-**The result argument is refused on scope rather than on implication.** It is `games`' and `games`
-has its own eight-arm conversation for it — which is [#325](https://github.com/Raketa02/Raketa/issues/325)'s
-own reason that destroying this room 24 h after the agreed point is safe. A room dated to die one
-day after that point would carry the first two turns of an eight-day argument and then vanish
-mid-sentence, which is worse than carrying none.
+**The result argument is refused on scope rather than on implication, and on scope alone.** It is
+`games`' and `games` has its own eight-arm conversation for it: one fact in one place, and
+ADR-0146's rename argument holds at any lifetime — *"two things called conversation in one codebase
+is how somebody eventually subscribes the wrong one."* **The reason used to have a second half**,
+that a room dying a day after the agreed point would carry the first two turns of an eight-day
+argument and then vanish mid-sentence; that lifetime no longer exists
+([ADR-0153](../../adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md) §6),
+and the refusal did not move, because it never depended on it.
 
 **`GamePlayed` is the exception and earns it**: it is not the argument, it is the **answer to the
 question this room was opened to ask**. It also closes the last of

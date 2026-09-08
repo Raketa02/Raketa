@@ -1225,7 +1225,9 @@ anything about how good anybody is — that is the rating context reading this o
 
 Settled by [ADR-0146](docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) on
 [#332](https://github.com/Raketa02/Raketa/issues/332), with its lifetime from
-[ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md).
+[ADR-0153](docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
+which moved
+[ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)'s.
 **Settled and not built** — there is no `backend/app/modules/conversations/` yet. Its terms are
 here because this file asks for them before the code, and the section will say so until the module
 exists.

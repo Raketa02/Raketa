@@ -43,8 +43,10 @@ Both documents are **subordinate** to the client's own two, and to the ADRs:
    gains its first live-surface section, carried by the first client build ticket.
 3. The ten ADRs this map wrote, [ADR-0142](../../adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
    through [ADR-0151](../../adr/0151-a-window-whose-default-costs-you-the-game-must-outlast-the-gap-between-app-opens.md),
-   and the root [`CONTEXT.md`](../../../CONTEXT.md)'s Conversation and Plan sections, which name
-   every domain term these documents use.
+   [ADR-0153](../../adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
+   which was filed outside the map and moved the conversation's lifetime, and the root
+   [`CONTEXT.md`](../../../CONTEXT.md)'s Conversation and Plan sections, which name every domain
+   term these documents use.
 
 Where any of them disagrees with what is here, **they win** — and the disagreement is a defect in
 these files rather than a decision.

@@ -144,7 +144,7 @@ no bubble. That is `CandidatePhoto`'s precedent — *"one component at three siz
 | `features/conversations/domain/` | Falsifier |
 | --- | --- |
 | `entry.ts` — the discriminated union, `(conversation_id, seq)` as identity, the day-separator rule over the platform zone | two people in one room seeing different separators |
-| `membership.ts` — derived from whatever record is currently arranging; who may be named in a `{name}` slot | a line naming somebody who is not a member |
+| `membership.ts` — derived from whichever record the room is currently about; who may be named in a `{name}` slot | a line naming somebody who is not a member |
 | `liveState.ts` — the three-way *live · not live · held* the screen draws, folded from the stream port and the account state | a not-live line on a cold open, before any connect attempt has failed |
 
 **`liveState.ts` is `domain/` and that is the load-bearing placement.** It is a rule somebody can be

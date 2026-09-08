@@ -6,8 +6,7 @@ rather than interface choices.**
 Produced by [Write the screen specs](https://github.com/Raketa02/Raketa/issues/339) on the map
 [Closing the loop — a challenge answered, a game talked about, a result that moves a level](https://github.com/Raketa02/Raketa/issues/321).
 
-**The decisions live in ADRs; this file is the shape to check work against.** The withdraw and
-the conversation's lifetime are
+**The decisions live in ADRs; this file is the shape to check work against.** The withdraw is
 [ADR-0142](../../adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md),
 the challenge card is
 [ADR-0143](../../adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md),
@@ -25,6 +24,9 @@ line-up re-entry is
 [ADR-0150](../../adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md),
 and the answer window is
 [ADR-0151](../../adr/0151-a-window-whose-default-costs-you-the-game-must-outlast-the-gap-between-app-opens.md).
+**The conversation's lifetime was ADR-0142's and is now
+[ADR-0153](../../adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)**,
+which was filed outside the map and governs §3 anyway.
 
 > **This is the shape, not the visual design.** What each surface *says* is
 > [`the-words.md`](../matchmaking/the-words.md); where one component stops and the next begins is
@@ -150,6 +152,12 @@ open again* says the pair rule has released and you may send again, which
 [ADR-0142](../../adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
 made possible for the first time. News has a shelf life; nothing is lost and nothing lies, because
 the list still holds them.
+
+**This 24 h is not the conversation's, and it did not travel with it.** A row here and §4.1's
+ended card are **shelf lives on an inbox**, where the record survives and only the row departs,
+while a conversation's end **destroys an aggregate** — so moving that lifetime left both of these
+exactly where they are, and what agreement is left between the numbers is a coincidence rather
+than a rule ([ADR-0153](../../adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md) §7).
 
 ### 1.2 The challenge row
 
@@ -461,8 +469,27 @@ invalidated rather than patched.
 ## 3. The conversation
 
 `/chats/conversation/[conversationId]`. **The place two people who have agreed to play talk about
-it** — opened by the first acceptance, growing with each one, and destroyed 24 h after the moment
-it was arranging.
+it** — opened by the first acceptance, growing with each one, and destroyed once the episode *it*
+names is over.
+
+**The room is for the whole episode**: arrange the game, play it, find out what happened. That is
+the sentence above read with *it* meaning the game rather than the arranging — and the reading is
+**chosen rather than discovered**, the arrangement reading being coherent and simply left without
+support ([ADR-0153](../../adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md) §1).
+The room is destroyed at the **earliest** of:
+
+- **`entry_closes_at`** — the instant *we played* stops being sayable;
+- **`GamePlayed` plus `CONVERSATION_GRACE`**, which is **48 h**;
+- **the challenge concluding without ever producing a game**, plus the same grace;
+- **the withdrawal**, which destroys it in the same act and writes no line (§3.4).
+
+**The end is derived and never stored**, from facts the room is already told — `Game.planned_at`
+**is** `GamePlanned.occurred_at`, and §3.4 already has both reaching the room — so it costs no new
+event, no new field and no new telling. **`CONVERSATION_GRACE` belongs to the Conversation context
+and not to `games`** (ADR-0153 §4): `PLAN_HORIZON` stays in `games` because its interlock with
+`ENTRY_GRACE` is the argument, and there is no such interlock here — this grace is about the gap
+between app opens
+([ADR-0151](../../adr/0151-a-window-whose-default-costs-you-the-game-must-outlast-the-gap-between-app-opens.md)).
 
 ### 3.1 The header
 
@@ -589,14 +616,17 @@ arrangement of the seats could reach it*.
   `GamePlanned` is refused on exactly ADR-0142 §3's test: everybody having accepted is an
   arrangement of the seats, so the line-up completing is reachable from the record. What a player
   sees instead is the **plan card appearing** and membership stopping — drawn, not announced.
+  **The event still arrives**: §3's end is derived from its `occurred_at`, so a refused line is not
+  a refused telling.
 - **The withdrawal writes nothing**, because there is nobody left to read it. The room is
   destroyed in the same act; the news is on the challenge screen, in §13's sixth row.
 
 **And two refusals are about where the argument lives, not about what implies what.** The four
-result events are `games`' and `games` has its own eight-arm conversation for them — which is
-[#325](https://github.com/Raketa02/Raketa/issues/325)'s own reason that destroying this room at 24 h
-is safe. A room dated to die one day after the agreed point would carry the first two turns of an
-eight-day argument and then vanish mid-sentence, which is worse than carrying none.
+result events are `games`' and `games` has its own eight-arm conversation for them. **That is the
+whole reason** — one fact in one place, and ADR-0146's rename argument holds at any lifetime. It
+used to rest partly on the room dying a day after the agreed point, and that half went with the
+lifetime ([ADR-0153](../../adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md) §6);
+the refusal did not move, because it never depended on the number.
 
 **`GamePlayed` is the exception and earns it**: it is not the argument, it is the answer to the
 question this room was opened to ask. It is also what closes #322's finding that four published
@@ -695,6 +725,14 @@ arrangement other people are already inside would be the blast radius pointed th
 **Destroyed, not delisted.** The row leaves `CONVERSATIONS`; the screen behind it answers
 `conversation_not_found`, which is **one code for two cases** on `challenge_not_found`'s argument
 verbatim — separating them would answer *is this id real* about a stranger's evening.
+
+**And one code for a third case, on the same argument.** Past its end a conversation answers
+`conversation_not_found` **whether or not a sweep has run** — the sweep exists to make the
+destruction real, not to make the answer right, which is the rule `challenges`' `lapse` and
+`entry_closes_at` both already state
+([ADR-0153](../../adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)
+§5). Never existed, destroyed, and past its end but not yet swept are one answer, and the client
+cannot tell them apart because there is nothing it should do differently.
 
 **A client holding a cursor into a destroyed conversation leaves the screen**, on
 `challenge_not_found`'s own arm in §2.4's table. It does **not** retry, and the deletion is **not
@@ -997,9 +1035,6 @@ Standing obligations, none of which expires on being satisfied once. They are th
   **position** rather than a boolean.
 - **Typing indicators and presence.** Out of scope: the only things here with no event and no
   record, needing a second non-durable channel with different rules.
-- **A room to ask *did we play?* in.** A conversation dies 24 h after the agreed moment while entry
-  runs eight days, so a game needs a score for a week with no room left to ask in. Filed as
-  [#347](https://github.com/Raketa02/Raketa/issues/347) rather than answered inside a screen spec.
 - **A pairing forecast on this screen** — §5.5, upheld, and its reversal is
   [#346](https://github.com/Raketa02/Raketa/issues/346).
 - **Push, and any out-of-app reach.** Out of scope. The loop closes without it, because every step
