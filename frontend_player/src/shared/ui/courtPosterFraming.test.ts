@@ -3,9 +3,9 @@
  * on their next one, and after a reinstall.
  */
 
-import { COURT_POSTER_POSES, POSTER_HUES } from '@/shared/ui';
-
+import { COURT_POSTER_POSES } from './CourtPoster';
 import { COURT_POSTER_COUNT, courtPosterFor } from './courtPosterFraming';
+import { POSTER_HUES } from './theme';
 
 const PLAYER = '11111111-2222-4333-8444-555555555555';
 

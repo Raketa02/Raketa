@@ -42,6 +42,7 @@ export {
   type CourtPosterPose,
   type CourtPosterProps,
 } from './CourtPoster';
+export { COURT_POSTER_COUNT, courtPosterFor } from './courtPosterFraming';
 export { Court, courtSeatCount, courtSeatSize, type CourtProps } from './Court';
 export { DarkCard, type DarkCardProps } from './DarkCard';
 export { FIT_HIGH, FIT_SCALE, FitPill, type FitPillProps } from './FitPill';

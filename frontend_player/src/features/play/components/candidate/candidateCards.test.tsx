@@ -16,9 +16,8 @@
 import { render, screen } from '@testing-library/react-native';
 import { Image, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
-import { courtPosterFor } from '@/features/player_profile/types';
 import { formatLevel, formatRange, formatSignedLevel } from '@/shared/formatting/ratingFormat';
-import { balanceShare, courtSeatCount, theme } from '@/shared/ui';
+import { balanceShare, courtPosterFor, courtSeatCount, theme } from '@/shared/ui';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Evidence, ScoredTerm } from '../../domain/evidence';

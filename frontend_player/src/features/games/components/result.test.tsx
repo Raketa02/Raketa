@@ -1,5 +1,5 @@
 /**
- * **The result conversation, walked the way a player walks it**: the real route tree, the real
+ * **The result argument, walked the way a player walks it**: the real route tree, the real
  * shell, and only `fetch` faked.
  *
  * Four of the ticket's acceptance criteria are assertions in this file and not opinions
@@ -16,7 +16,7 @@ import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { AppError } from '@/shared/errors';
 
-import type { ResultConversation } from '../domain/conversation';
+import type { ResultArgument } from '../domain/resultArgument';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
@@ -668,7 +668,7 @@ const COUNTER = {
 } as const;
 
 /** One agreement, as the two sides read it. Six hours from `READ_AT`, measured from the score. */
-const AGREED_WITH_OURS: ResultConversation = {
+const AGREED_WITH_OURS: ResultArgument = {
   kind: 'agreed',
   agreement: {
     with: 'ours',
@@ -678,7 +678,7 @@ const AGREED_WITH_OURS: ResultConversation = {
   ours: PROPOSAL,
 };
 
-const AGREED_WITH_THEIRS: ResultConversation = {
+const AGREED_WITH_THEIRS: ResultArgument = {
   kind: 'agreed',
   agreement: { with: 'theirs', by: { kind: 'you' }, settlesAt: '2026-09-05T15:00:00Z' },
   theirs: PROPOSAL,

@@ -2,11 +2,28 @@
  * What a player with no photo has instead of an empty box: a hue and a pose, framed by their
  * own id.
  *
- * The drawing is the design system's (`CourtPoster`, 6.9) and so are both sets it chooses
- * from — `POSTER_HUES` and `COURT_POSTER_POSES`. **Determinism is this feature's**, exactly
- * as the confidence ring's ceiling belongs to the engine and not to `theme.ts`: the design
- * system's contract is that the same player id produces the same poster, and choosing *which*
- * poster is what this file does.
+ * The drawing is `CourtPoster` (6.9) and both sets it chooses from are the theme's —
+ * `POSTER_HUES` and `COURT_POSTER_POSES`. **The choice sits beside them**: the design system's
+ * contract is that the same player id produces the same poster, and choosing *which* poster is
+ * what this file does.
+ *
+ * ## It left `player_profile/` on the third-caller rule
+ *
+ * It was that feature's, saying *determinism is this feature's*, while `features/play` was
+ * already importing it across a feature boundary through `player_profile`'s public surface.
+ * `recoveryMessage.ts` states the rule as a count of **copies** — *"a third copy is the signal
+ * to move it"* — and this file's own previous docblock refused the move on exactly that
+ * reading: *"there is no second copy."* True, and the wrong test. The third and fourth callers
+ * arrive with the Chats rows and the conversation header
+ * ([`the-loop-components.md`](../../../../docs/specs/the-loop/the-loop-components.md) §5), and
+ * a hash four features deep in cross-boundary imports is one somebody copies rather than
+ * reaches — so a copy is what the move now prevents rather than what it waits to count.
+ * **One person being two colours on two screens is precisely the drift the seam rule exists
+ * for**, and it is drift no type could have caught: two correct hashes that disagree are two
+ * correct posters.
+ *
+ * A promotion and never a copy — there is exactly one implementation of the hash, and every
+ * surface that draws somebody's poster reaches it through `@/shared/ui`.
  *
  * ## Same id, same poster, forever
  *
@@ -25,12 +42,11 @@
  * hopes. A poster is shown and never read: no engine, no term and no gate may take an input
  * from what this returns.
  *
- * ## It sits beside the copy, not in `domain/`
+ * ## It refuses nothing, which is why it is not a rule anywhere
  *
- * There is no rule here a profile could break. What a player id maps to is a fact about how
- * the poster is *drawn* — expressed in the design system's own vocabulary — which is the same
- * kind of thing as the label a tag id maps to, and it lives in the same layer for the same
- * reason. `domain/` holds what the product refuses and requires; this refuses nothing.
+ * What a player id maps to is a fact about how the poster is *drawn*, expressed in the design
+ * system's own vocabulary — so it belongs beside the drawing rather than under a feature's
+ * `domain/`, which holds what the product refuses and requires. This refuses nothing.
  *
  * ## The crops are gone, and the colour is what replaced them
  *
@@ -43,13 +59,8 @@
  * standing in for, and a fixed composition is what a window would have sliced.
  */
 
-import {
-  COURT_POSTER_POSES,
-  POSTER_HUES,
-  type CourtPosterLook,
-  type CourtPosterPose,
-  type PosterHue,
-} from '@/shared/ui';
+import { COURT_POSTER_POSES, type CourtPosterLook, type CourtPosterPose } from './CourtPoster';
+import { POSTER_HUES, type PosterHue } from './theme';
 
 /**
  * FNV-1a, 32-bit, over the id's code units.

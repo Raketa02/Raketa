@@ -49,8 +49,9 @@
  * `networkMode: 'online'` is the app's default and these three inherit it, so an answer made
  * offline is **held until the connection returns** rather than failed. `features/challenges/`
  * alone overrides it, because a challenge's answer window is derived *at send* and the pause
- * would split the tap from the send (`features/challenges/hooks/sendOptions.ts`). Neither a
- * yes nor a pass derives anything from the moment it lands: a yes carries its own `expires_at`
+ * would split the tap from the send
+ * (`features/challenges/hooks/challengeMutationOptions.ts`). Neither a yes nor a pass derives
+ * anything from the moment it lands: a yes carries its own `expires_at`
  * dated server-side, and a pass's window is *"not yours to name"* and has no field on the
  * request at all. So the deck keeps the pause, and a deferred answer really is the answer.
  */

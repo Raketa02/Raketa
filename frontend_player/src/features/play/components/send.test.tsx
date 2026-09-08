@@ -569,7 +569,8 @@ describe('with no connection', () => {
    * send**, so a tap deferred to the next reconnect would carry a deadline nobody chose. The
    * control closes and the sentence says to wait — Part 11's *button disabling is UX*, riding
    * on top of the `networkMode: 'always'` override that is the mechanism
-   * (`features/challenges/hooks/sendOptions.ts`, and `sendOptions.test.ts` holds that half).
+   * (`features/challenges/hooks/challengeMutationOptions.ts`, and its own test holds that
+   * half).
    *
    * **Where this sits against the ticket.** #274's acceptance criterion reads *"a send with no
    * connection waits rather than fails"*, and taken as a statement about the **mechanism** it

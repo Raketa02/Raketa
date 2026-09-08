@@ -3,8 +3,8 @@
  *
  * **Photos are optional and the ceiling is three** — an empty collection is a complete
  * answer, and a player who adds none gets a generated court poster rather than an empty
- * box (`courtPosterFraming`). Both facts are the product's, not the layout's, which is why
- * they are here rather than in the screen that happens to draw three tiles.
+ * box (`shared/ui`'s `courtPosterFraming`). Both facts are the product's, not the layout's,
+ * which is why they are here rather than in the screen that happens to draw three tiles.
  *
  * ## The first photo is the profile photo, and that is the whole of it
  *

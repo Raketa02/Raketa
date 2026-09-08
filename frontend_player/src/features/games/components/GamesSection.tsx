@@ -1,5 +1,5 @@
 /**
- * **Your games, on the Now tab** — the one way into the result conversation.
+ * **Your games, on the Now tab** — the one way into the result argument.
  *
  * It is a section composed under a placeholder rather than the Now tab being built, which is
  * exactly what the You tab already does with `PlayIntentsSection`: the tab owns its citation and
@@ -29,8 +29,8 @@ import { sportLabel } from '@/features/onboarding/types';
 import { recoveryMessage } from '@/shared/errors';
 import { Note, PressableCard, theme } from '@/shared/ui';
 
-import { resultConversation } from '../domain/conversation';
 import type { Game } from '../domain/game';
+import { resultArgument } from '../domain/resultArgument';
 import { useGames } from '../hooks/useGames';
 
 import { gameRowLabel } from './gameAccessibility';
@@ -73,7 +73,7 @@ export function GamesSection() {
 
 function GameRow({ game, playerId }: { readonly game: Game; readonly playerId: string }) {
   const sport = sportLabel(game.sport);
-  const line = standingLine(resultConversation(game, playerId), game.readAt);
+  const line = standingLine(resultArgument(game, playerId), game.readAt);
 
   return (
     <PressableCard

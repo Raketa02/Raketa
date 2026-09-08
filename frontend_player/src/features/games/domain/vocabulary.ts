@@ -3,8 +3,8 @@
  *
  * Five of them are a standing, two are what kind of evening it was, two are a side of the net
  * and two are what a confirmed result says about you. Every one is the backend's own vocabulary
- * ([ADR-0022](../../../../../docs/adr/0022-wire-codes-never-sentences.md)), and the words for
- * them are this feature's — `components/gamePresentation.ts` and nowhere else.
+ * ([ADR-0022](../../../../../docs/adr/0022-kernel-negative-space-and-constant-homes.md)), and
+ * the words for them are this feature's — `components/gamePresentation.ts` and nowhere else.
  *
  * These are **spelled here rather than `Extract`ed off the generated union**, for the reason
  * `features/play/domain/vocabulary.ts` gives: the wire boundary keeps `generated/` out of

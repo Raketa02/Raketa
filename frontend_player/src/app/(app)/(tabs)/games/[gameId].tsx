@@ -1,9 +1,9 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
 
-import { ResultScreen, parseGameRouteParams } from '@/features/games/types';
+import { GameScreen, parseGameRouteParams } from '@/features/games/types';
 
 /**
- * The result conversation for one game — **pushed over the Now tab, and genuinely a push.**
+ * One game — **pushed over the Now tab, and genuinely a push.**
  *
  * The shell's ordinary move is a replace, and this is one of the few screens it is not: the Now
  * tab stays underneath, and backing out of a game returns to the list it was tapped from.
@@ -19,5 +19,5 @@ export default function GameRoute() {
 
   if (parsed === undefined) return <Redirect href="/" />;
 
-  return <ResultScreen gameId={parsed.gameId} />;
+  return <GameScreen gameId={parsed.gameId} />;
 }

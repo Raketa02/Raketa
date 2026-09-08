@@ -1,5 +1,5 @@
 /**
- * The three routes the result conversation is: read the games, state a score, agree with one.
+ * The three routes the result argument is: read the games, state a score, agree with one.
  *
  * One of the two layers allowed to read generated types, and the only place these paths are
  * written down.
@@ -9,7 +9,7 @@
  * `POST /games/{id}/result` is the entry, the correction **and** the counter — *"one request
  * for three acts, and the record decides which"*. Naming the act on the request would be a
  * client that could name it wrongly, and a mislabelled correction is a proposal nobody may
- * make. What the client decides is what to **draw**, and that is `domain/conversation.ts`.
+ * make. What the client decides is what to **draw**, and that is `domain/resultArgument.ts`.
  *
  * ## No `Idempotency-Key`, and none of these is a repeat that would go through twice
  *

@@ -26,9 +26,9 @@
  *
  * ## The poster is a fact about the id and nothing else
  *
- * `courtPosterFor` is reached through `player_profile`'s public surface rather than copied:
- * the design system's contract is that **one player id always produces one poster**, and a
- * second implementation of the hash is two posters for one person the day either one changes.
+ * `courtPosterFor` is reached from `@/shared/ui` rather than copied: the design system's
+ * contract is that **one player id always produces one poster**, and a second implementation of
+ * the hash is two posters for one person the day either one changes.
  * A poster is shown and never read — the pose is not a fact, and the hue names no Sport.
  *
  * ## It announces nothing
@@ -42,8 +42,7 @@
 
 import { Image, StyleSheet, View } from 'react-native';
 
-import { courtPosterFor } from '@/features/player_profile/types';
-import { CourtPoster, theme } from '@/shared/ui';
+import { CourtPoster, courtPosterFor, theme } from '@/shared/ui';
 
 import { CANDIDATE_POSTER_LABEL } from '../playerCardPresentation';
 

@@ -50,8 +50,8 @@ export { sendRefusal, type SendRefusal } from './domain/sendRefusal';
 /**
  * The send itself, and the read that names the pair a refusal would not.
  *
- * `SEND_MUTATION_OPTIONS` stays internal: it is one line of one hook's own configuration, and
- * a second caller of it would be a second send.
+ * `CHALLENGE_MUTATION_OPTIONS` stays internal: it is this feature's own configuration, and every
+ * caller it will ever have is an act of this feature's.
  */
 export { useOpenPair, useSendChallenge } from './hooks/useChallenges';
 

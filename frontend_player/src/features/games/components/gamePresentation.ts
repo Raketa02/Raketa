@@ -2,8 +2,10 @@
  * **Every sentence these screens say.** Nothing the games contract sends is prose.
  *
  * A `GameStanding`, a `GameKind` and an `Outcome` are codes and the words for them are the
- * client's ([ADR-0022](../../../../../docs/adr/0022-wire-codes-never-sentences.md)), so this
- * file is the feature's copy deck and the components are assembled from it — the same shape
+ * client's
+ * ([ADR-0022](../../../../../docs/adr/0022-kernel-negative-space-and-constant-homes.md)), so
+ * this file is the feature's copy deck and the components are assembled from it — the same
+ * shape
  * `features/play/components/*Presentation.ts` takes, and for the same reason:
  * *code → message, never message → message*, and **a sentence is never a template inlined in a
  * component**.
@@ -65,8 +67,8 @@ import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { othersOn, type ResultConversation } from '../domain/conversation';
 import type { Game } from '../domain/game';
+import { othersOn, type ResultArgument } from '../domain/resultArgument';
 import type { ScoreKey, ScoreProblem } from '../domain/score';
 import { scoreColumn, type GameKind, type Outcome } from '../domain/vocabulary';
 
@@ -133,25 +135,25 @@ function withWhom(others: readonly NamedPlayer[]): string {
  */
 export const NOT_YOURS_LINE = 'No game of yours has this address.';
 
-export function standingLine(conversation: ResultConversation, readAt: string): string {
-  switch (conversation.kind) {
+export function standingLine(argument: ResultArgument, readAt: string): string {
+  switch (argument.kind) {
     case 'not-yours':
       return NOT_YOURS_LINE;
     case 'unreadable':
       return OUT_OF_DATE_GAP;
     case 'awaiting-entry':
-      return conversation.entryClosesAt === undefined
+      return argument.entryClosesAt === undefined
         ? 'Nobody has said this one happened yet.'
-        : `Nobody has said this one happened yet — ${durationLeft(conversation.entryClosesAt, readAt)} left to say you played.`;
+        : `Nobody has said this one happened yet — ${durationLeft(argument.entryClosesAt, readAt)} left to say you played.`;
     case 'never-played':
       return 'Nobody said this one happened before the window closed, so nothing was recorded.';
     case 'ours-stands':
-      return `Your side's score is on the table. If nobody answers within ${durationLeft(conversation.proposal.answerBy, readAt)}, it stands.`;
+      return `Your side's score is on the table. If nobody answers within ${durationLeft(argument.proposal.answerBy, readAt)}, it stands.`;
     case 'theirs-stands':
       // **The one sentence on these screens that was addressed to nobody.** *That's right*
       // settles a score against a person, and until a seat carried a handle the screen could
       // not say which (#319).
-      return `${playerName(conversation.by)} put a score up. If you say nothing for ${durationLeft(conversation.proposal.answerBy, readAt)}, it stands.`;
+      return `${playerName(argument.by)} put a score up. If you say nothing for ${durationLeft(argument.proposal.answerBy, readAt)}, it stands.`;
     case 'both-stand':
       return "Both sides wrote a score down and they don't match.";
     case 'agreed': {
@@ -161,12 +163,12 @@ export function standingLine(conversation: ResultConversation, readAt: string): 
       // *You* on your own tap, and your partner by name on theirs — the second is the whole
       // reason the accepter travels: in a doubles game *your side agreed* is news about somebody
       // the reader did not watch do it.
-      const agreed = playerName(conversation.agreement.by);
+      const agreed = playerName(argument.agreement.by);
       const who =
-        conversation.agreement.with === 'ours'
+        argument.agreement.with === 'ours'
           ? `${agreed} agreed with your score.`
           : `${agreed} agreed with their score.`;
-      return `${who} It becomes the result in ${durationLeft(conversation.agreement.settlesAt, readAt)}.`;
+      return `${who} It becomes the result in ${durationLeft(argument.agreement.settlesAt, readAt)}.`;
     }
     case 'confirmed':
       return 'Agreed.';
@@ -179,8 +181,8 @@ export function standingLine(conversation: ResultConversation, readAt: string): 
  * The screen's own title — **variant C's, unchanged**, plus the three states the prototype's
  * five screens did not have to name.
  */
-export function resultTitle(conversation: ResultConversation): string {
-  switch (conversation.kind) {
+export function resultTitle(argument: ResultArgument): string {
+  switch (argument.kind) {
     case 'not-yours':
       return 'Not your game';
     case 'unreadable':
@@ -220,35 +222,32 @@ export function resultTitle(conversation: ResultConversation): string {
  * in this product and no date picker in this app, so an absolute time would be the first one and
  * it would be this screen inventing it.
  */
-export function clockLine(
-  conversation: ResultConversation,
-  readAt: string,
-): ClockBlock | undefined {
+export function clockLine(argument: ResultArgument, readAt: string): ClockBlock | undefined {
   // An agreement moves the clock off the answer window and onto the grace, which is a shorter
   // span measured from a different moment — the **score**, never anybody's tap. Silence has
   // stopped being the question, so the sentence under the figure stops naming it.
-  if (conversation.kind === 'agreed') {
+  if (argument.kind === 'agreed') {
     return {
-      figure: durationLeft(conversation.agreement.settlesAt, readAt),
+      figure: durationLeft(argument.agreement.settlesAt, readAt),
       line: 'until this becomes the result. Nothing more is needed from anybody.',
     };
   }
 
-  if (conversation.kind === 'ours-stands') {
+  if (argument.kind === 'ours-stands') {
     return {
-      figure: durationLeft(conversation.proposal.answerBy, readAt),
+      figure: durationLeft(argument.proposal.answerBy, readAt),
       line: 'left for the other side to answer. If they say nothing, this becomes the result.',
     };
   }
-  if (conversation.kind === 'theirs-stands') {
+  if (argument.kind === 'theirs-stands') {
     return {
-      figure: durationLeft(conversation.proposal.answerBy, readAt),
+      figure: durationLeft(argument.proposal.answerBy, readAt),
       line: 'until this becomes the result. Nobody has to do anything — silence confirms it.',
     };
   }
-  if (conversation.kind === 'awaiting-entry' && conversation.entryClosesAt !== undefined) {
+  if (argument.kind === 'awaiting-entry' && argument.entryClosesAt !== undefined) {
     return {
-      figure: durationLeft(conversation.entryClosesAt, readAt),
+      figure: durationLeft(argument.entryClosesAt, readAt),
       line: 'left to say this game happened. After that it is recorded as one that never did.',
     };
   }
@@ -283,8 +282,8 @@ export const UNSCORED_FACTS: readonly string[] = [
  * `undefined` where the standing line has already said the whole of it: a second sentence
  * restating the first is what teaches somebody to stop reading the first.
  */
-export function resultBody(conversation: ResultConversation): string | undefined {
-  switch (conversation.kind) {
+export function resultBody(argument: ResultArgument): string | undefined {
+  switch (argument.kind) {
     case 'awaiting-entry':
       // ADR-0137 §2 for a player: there is no booking behind any of this, so the entry is not
       // paperwork about a game the platform already knows about — it *is* the record.
@@ -308,7 +307,7 @@ export function resultBody(conversation: ResultConversation): string | undefined
       // `your_side_has_already_answered` — the same failure the old `both-stand` copy was
       // written to avoid, one state along. Which side could make one is the screen's business
       // and not this sentence's: what differs here is only whether anybody can.
-      return conversation.ours !== undefined && conversation.theirs !== undefined
+      return argument.ours !== undefined && argument.theirs !== undefined
         ? 'Both scores stay up until then, and neither side can put another one there — each side gets one, and both have been used. Nobody is marked either way.'
         : 'Until then, anybody who played can still put a different score up. That window is what stops somebody quick to their phone from closing the door on a player who has not read the score yet. Nobody is marked either way.';
     case 'unscored':

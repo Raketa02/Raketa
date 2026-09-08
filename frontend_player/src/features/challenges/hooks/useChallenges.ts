@@ -34,14 +34,14 @@ import { readChallenges } from '../use-cases/readChallenges';
 import { sendChallenge, type SendAsk, type SentChallenge } from '../use-cases/sendChallenge';
 
 import { challengeKeys } from './challengeKeys';
-import { SEND_MUTATION_OPTIONS } from './sendOptions';
+import { CHALLENGE_MUTATION_OPTIONS } from './challengeMutationOptions';
 
 /**
  * ⚡ becomes a challenge.
  *
- * `SEND_MUTATION_OPTIONS` is spread whole rather than partly: it is one decision about one act,
- * and a call site that copied half of it would leave the paused queue reachable, which is the
- * thing the override exists to close.
+ * `CHALLENGE_MUTATION_OPTIONS` is spread whole rather than partly: it is one decision about every
+ * act in this feature, and a call site that copied half of it would leave the paused queue
+ * reachable, which is the thing the override exists to close.
  *
  * No `retry`. The app-wide mutation default is already `retry: false`, and a send is the one
  * request in this app where an automatic repeat would ask four people twice — refused by the
@@ -52,7 +52,7 @@ export function useSendChallenge() {
 
   return useMutation<SentChallenge, AppError, SendAsk>({
     mutationFn: sendChallenge,
-    ...SEND_MUTATION_OPTIONS,
+    ...CHALLENGE_MUTATION_OPTIONS,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: challengeKeys.list() });
     },

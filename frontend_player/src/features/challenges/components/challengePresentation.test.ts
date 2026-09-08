@@ -1,10 +1,12 @@
 /**
  * What a challenge says.
  *
- * Three things are asserted rather than the wording. One code reads as **two sentences**, one
+ * Four things are asserted rather than the wording. One code reads as **two sentences**, one
  * per side; `LINE_UP_INCOMPLETE` never reads as a waiting room, because the chat is already
- * open; and **a lapse is not a decline**, because the `answers challenges` strand needs the
- * denominator and copy that blurred them would restate one fact as another.
+ * open; that same line counts **open seats** and not answers, because at that rung there are
+ * none outstanding and the figure it used to quote could only ever be zero; and **a lapse is
+ * not a decline**, because the `answers challenges` strand needs the denominator and copy that
+ * blurred them would restate one fact as another.
  */
 
 import type { NamedPlayer } from '@/shared/formatting/playerName';
@@ -28,7 +30,7 @@ function facts(side: ChallengeSide): readonly StandingFacts[] {
   return [
     { side, standing: 'AWAITING_ANSWERS', awaiting: 3 },
     { side, standing: 'ON' },
-    { side, standing: 'LINE_UP_INCOMPLETE', accepted: 2, awaiting: 1 },
+    { side, standing: 'LINE_UP_INCOMPLETE', accepted: 2, open: 1 },
     { side, standing: 'DECLINED', player: SOMEBODY },
     { side, standing: 'LAPSED', player: SOMEBODY },
   ];
@@ -64,11 +66,39 @@ describe('a half-answered line-up is not a waiting room', () => {
     // #221: the chat opens on the first acceptance and grows with each one, so *waiting for
     // the rest* is the obvious phrasing and the false one.
     for (const side of ['organiser', 'invitee'] as const) {
-      const line = standingLine({ side, standing: 'LINE_UP_INCOMPLETE', accepted: 2, awaiting: 1 });
+      const line = standingLine({ side, standing: 'LINE_UP_INCOMPLETE', accepted: 2, open: 1 });
 
       expect(line).toMatch(/the chat is already open/);
       expect(line).not.toMatch(/waiting for the rest|once everybody/i);
     }
+  });
+
+  it('counts the seats that are open, and never the answers that cannot be outstanding', () => {
+    // `standing_of` returns `AWAITING_ANSWERS` while **any** seat is still awaiting, so at the
+    // rung that yields this standing nothing is. The figure this line used to quote could only
+    // ever be zero, and the sentence it built read *"2 in, 0 still to answer"*.
+    const organiser = standingLine({
+      side: 'organiser',
+      standing: 'LINE_UP_INCOMPLETE',
+      accepted: 2,
+      open: 1,
+    });
+    const invitee = standingLine({
+      side: 'invitee',
+      standing: 'LINE_UP_INCOMPLETE',
+      accepted: 2,
+      open: 1,
+    });
+
+    expect(organiser).toBe('2 in, 1 seat open — the chat is already open');
+    expect(invitee).toBe("You're in. 1 seat open, and the chat is already open");
+    for (const line of [organiser, invitee]) expect(line).not.toMatch(/still to answer/i);
+  });
+
+  it('hardcodes no plural here either', () => {
+    expect(
+      standingLine({ side: 'organiser', standing: 'LINE_UP_INCOMPLETE', accepted: 1, open: 2 }),
+    ).toBe('1 in, 2 seats open — the chat is already open');
   });
 });
 

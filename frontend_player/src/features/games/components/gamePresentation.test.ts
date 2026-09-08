@@ -8,7 +8,7 @@
 
 import type { NamedPlayer } from '@/shared/formatting/playerName';
 
-import type { ResultConversation } from '../domain/conversation';
+import type { ResultArgument } from '../domain/resultArgument';
 import type { Game } from '../domain/game';
 
 import {
@@ -78,23 +78,23 @@ const COUNTER = {
 } as const;
 
 /** The disagreement, read from the side that put `PROPOSAL` up. */
-const ARGUING: ResultConversation = { kind: 'both-stand', ours: PROPOSAL, theirs: COUNTER };
+const ARGUING: ResultArgument = { kind: 'both-stand', ours: PROPOSAL, theirs: COUNTER };
 
 /** One agreement, as the two sides read it — six hours from `READ_AT`, measured from the score. */
-const AGREED_WITH_OURS: ResultConversation = {
+const AGREED_WITH_OURS: ResultArgument = {
   kind: 'agreed',
   agreement: { with: 'ours', by: THEM, settlesAt: '2026-09-05T15:00:00Z' },
   ours: PROPOSAL,
 };
 
-const AGREED_WITH_THEIRS: ResultConversation = {
+const AGREED_WITH_THEIRS: ResultArgument = {
   kind: 'agreed',
   agreement: { with: 'theirs', by: YOU, settlesAt: '2026-09-05T15:00:00Z' },
   theirs: COUNTER,
 };
 
 /** The same agreement over a disagreement, where each side has already used its one turn. */
-const AGREED_OVER_BOTH: ResultConversation = { ...AGREED_WITH_OURS, theirs: COUNTER };
+const AGREED_OVER_BOTH: ResultArgument = { ...AGREED_WITH_OURS, theirs: COUNTER };
 
 describe('silence confirming, which has to be visible before it happens', () => {
   /**
@@ -133,7 +133,7 @@ describe('silence confirming, which has to be visible before it happens', () => 
 });
 
 describe('an unscored game reads as an evening, not as an error', () => {
-  const unscored: ResultConversation = { kind: 'unscored' };
+  const unscored: ResultArgument = { kind: 'unscored' };
 
   it('says what it still is, and that nobody is marked for it', () => {
     const body = resultBody(unscored);

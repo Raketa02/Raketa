@@ -18,6 +18,16 @@
  * first acceptance and grows with each one"*, which makes it **not a waiting room** — and its
  * obvious phrasing, *waiting for the rest*, is the one that would be false.
  *
+ * **And it counts open seats, because it can never count answers.** It shipped reading
+ * *"{n} in, {m} still to answer"* off an `awaiting` count, and `standing_of` returns
+ * `AWAITING_ANSWERS` while **any** seat is still awaiting — so at the rung that yields
+ * `LINE_UP_INCOMPLETE` nothing is, `{m}` was structurally zero, and the built line read *"2 in,
+ * 0 still to answer"*. It takes `open` instead
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §13,
+ * [ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)).
+ * **A field that could only ever be zero is what let the sentence be wrong**, and #221's
+ * constraint is untouched: the phrasing that would be false is still *waiting for the rest*.
+ *
  * **`LAPSED` is not a decline**, and the words hold that apart: a day ran out, nobody said no.
  * The `answers challenges` strand needs the denominator, so a lapse that read as a refusal in
  * copy would be a fact quietly restated as a different one.
@@ -52,7 +62,11 @@ export type StandingFacts = { readonly side: ChallengeSide } & (
   | {
       readonly standing: 'LINE_UP_INCOMPLETE';
       readonly accepted: number;
-      readonly awaiting: number;
+      /**
+       * Seats with nobody in them — **never a count of who has yet to answer**, which in this
+       * standing is nobody by construction.
+       */
+      readonly open: number;
     }
   | { readonly standing: 'DECLINED'; readonly player: NamedPlayer }
   | { readonly standing: 'LAPSED'; readonly player: NamedPlayer }
@@ -68,10 +82,12 @@ export function standingLine(facts: StandingFacts): string {
         : "They're waiting on you";
     case 'ON':
       return organiser ? "Everybody's in" : "You're in — everybody's in";
-    case 'LINE_UP_INCOMPLETE':
+    case 'LINE_UP_INCOMPLETE': {
+      const open = counted(facts.open, 'seat open', 'seats open');
       return organiser
-        ? `${facts.accepted} in, ${facts.awaiting} still to answer — the chat is already open`
-        : `You're in. ${facts.awaiting} still to answer, and the chat is already open`;
+        ? `${facts.accepted} in, ${open} — the chat is already open`
+        : `You're in. ${open}, and the chat is already open`;
+    }
     case 'DECLINED':
       return organiser
         ? `${playerName(facts.player)} said no — that seat is open again`

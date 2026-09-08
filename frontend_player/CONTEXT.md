@@ -541,20 +541,25 @@ listed here because it is a Play surface rather than a profile one.
   there is no inbox and the bar carries no badge;
   counting the outgoing list, which is this app answering a question the response answers.
 
-### The result conversation
+### The result argument
 
 Five client-only concepts, all of them in `features/games/`. The domain terms — Game, Result,
 Score, Proposal, Correction, Counter, Acceptance, Standing — are the **root glossary's** and are
 not restated here; what follows is only what this client had to invent to draw them.
 
-- **Result conversation** — **the seven screen states** a game can be in for the player reading
-  it, folded in `domain/conversation.ts` from the standing, the standing proposal and which seat
-  is theirs: awaiting an entry · never played · our score stands · their score stands · both
-  stand · confirmed · unscored, plus _not yours_ for a link that has gone stale. It is what
+- **Result argument** — **the seven screen states** a game can be in for the player reading
+  it, folded in `domain/resultArgument.ts` from the standing, the standing proposal and which
+  seat is theirs: awaiting an entry · never played · our score stands · their score stands ·
+  both stand · confirmed · unscored, plus _not yours_ for a link that has gone stale. It is what
   decides whether a screen offers a **correction** or a **counter** — the same request and
   completely different news — so nothing outside that file reads a `GameStanding` directly.
-  _Avoid_: "the result state" (there are two clocks and neither is a state machine), and naming
-  a screen after the act, since one route takes three.
+  _Avoid_: "the result **conversation**", which this client used until
+  [ADR-0146](../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) gave the
+  glossary word to the Conversation context — two things called _conversation_ in one codebase
+  is how somebody eventually subscribes the wrong one, and this one's own terms are Proposal,
+  Correction, Counter and Acceptance. Also avoid "the result state" (there are two
+  clocks and neither is a state machine), and naming a screen after the act, since one route
+  takes three.
 - **The score draft** — the grid as it is being typed: one entry per row it draws, each cell
   holding what somebody put there as characters. Characters rather than numbers because `''` and
   `'0'` are different facts — losing a set to love is a result and an unfilled cell is not — and

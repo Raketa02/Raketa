@@ -1,5 +1,5 @@
 /**
- * **The result conversation, on a screen of its own.**
+ * **The result argument, on a screen of its own.**
  *
  * `prototype/result-confirmation` offered three homes for it — inside the Now state card, a
  * sheet over Now, or a route — and the first two were arguments about a card this build does not
@@ -19,7 +19,7 @@
  *
  * ## One screen, seven states, and the state is derived
  *
- * `domain/conversation.ts` decides which; nothing here reads a standing directly. That matters
+ * `domain/resultArgument.ts` decides which; nothing here reads a standing directly. That matters
  * most at the two states that look alike and are not: **a correction and a counter are the same
  * request** and completely different news, so the screen that offers one never offers the other,
  * and the words for each say which it is before the tap.
@@ -65,15 +65,15 @@ import { ShellScreen } from '@/features/shell/types';
 import { offlineMessage, recoveryMessage } from '@/shared/errors';
 import { Button, Note, theme } from '@/shared/ui';
 
+import type { Game } from '../domain/game';
 import {
   actsOffered,
   courtSizes,
   editingAct,
-  resultConversation,
+  resultArgument,
   scoresOnTable,
   sideOf,
-} from '../domain/conversation';
-import type { Game } from '../domain/game';
+} from '../domain/resultArgument';
 import { draftFrom, emptyDraft, readScore, sameScore, type ScoreDraft } from '../domain/score';
 import { useAcceptResult, useGame, useStateResult } from '../hooks/useGames';
 
@@ -106,12 +106,12 @@ import {
 import { ScoreEntry } from './ScoreEntry';
 import { ScoreTable } from './ScoreTable';
 
-export interface ResultScreenProps {
+export interface GameScreenProps {
   /** Validated by `schemas/routeParams.ts` before it reaches here; the route does that. */
   readonly gameId: string;
 }
 
-export function ResultScreen({ gameId }: ResultScreenProps) {
+export function GameScreen({ gameId }: GameScreenProps) {
   const { game, isPending, error } = useGame(gameId);
   const me = useCurrentUser().data?.id;
 
@@ -131,14 +131,14 @@ export function ResultScreen({ gameId }: ResultScreenProps) {
     );
   }
 
-  return <Conversation game={game} playerId={me} />;
+  return <Argument game={game} playerId={me} />;
 }
 
 /** No seat of this game is yours, so there is no court to describe and no side to draw from. */
 const EMPTY_COURT = { ours: 0, theirs: 0 } as const;
 
-function Conversation({ game, playerId }: { readonly game: Game; readonly playerId: string }) {
-  const conversation = resultConversation(game, playerId);
+function Argument({ game, playerId }: { readonly game: Game; readonly playerId: string }) {
+  const argument = resultArgument(game, playerId);
   const state = useStateResult();
   const accept = useAcceptResult();
 
@@ -163,14 +163,14 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
   const eyebrow = gameEyebrow(sport, game, playerId);
 
   // Both rules are the domain's: which controls exist, and what a grid opened here would send.
-  const acts = actsOffered(conversation);
-  const act = editingAct(conversation);
+  const acts = actsOffered(argument);
+  const act = editingAct(argument);
   const entering = act === 'enter';
   const open = draft ?? (entering ? emptyDraft(game.sport) : undefined);
   // The two scores on the table, and every control hangs off one of them rather than off the
   // state's name: an agreement is with `theirs`, a correction is of `ours`, and a counter
   // answers `theirs` with a score of our own. Either may be absent and both may be.
-  const { ours: ourScore, theirs: theirScore } = scoresOnTable(conversation);
+  const { ours: ourScore, theirs: theirScore } = scoresOnTable(argument);
   // What each table is called, and which of them is played down — both are statements about the
   // score rather than about the layout, so they are decided here rather than inside the render
   // tree. A score is quiet where it is context: beside a grid being typed into, and the reader's
@@ -207,10 +207,10 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
     );
   }
 
-  const body = resultBody(conversation);
+  const body = resultBody(argument);
   const worth = worthLine(game.kind);
-  const outcome = conversation.kind === 'confirmed' ? outcomeLine(conversation.outcome) : undefined;
-  const clock = open === undefined ? clockLine(conversation, game.readAt) : undefined;
+  const outcome = argument.kind === 'confirmed' ? outcomeLine(argument.outcome) : undefined;
+  const clock = open === undefined ? clockLine(argument, game.readAt) : undefined;
   const sending = state.isPending && !state.isPaused;
   // Two mutations, one at a time by construction — the grid is either open or it is not — so one
   // sentence rather than two identical blocks that could never both be right.
@@ -219,7 +219,7 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
 
   return (
     <ShellScreen
-      title={resultTitle(conversation)}
+      title={resultTitle(argument)}
       eyebrow={eyebrow}
       onBack={router.back}
       action={
@@ -293,13 +293,13 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
         </Footer>
       }
     >
-      <Text style={s.line}>{standingLine(conversation, game.readAt)}</Text>
+      <Text style={s.line}>{standingLine(argument, game.readAt)}</Text>
       {body === undefined ? null : <Text style={s.body}>{body}</Text>}
       {worth === undefined ? null : <Text style={s.body}>{worth}</Text>}
       {outcome === undefined ? null : <Text style={s.outcome}>{outcome}</Text>}
       {ours === 0 ? null : <Text style={s.body}>{courtLine(ours, theirs)}</Text>}
 
-      {conversation.kind === 'unscored' ? (
+      {argument.kind === 'unscored' ? (
         <View style={s.facts}>
           {UNSCORED_FACTS.map((fact) => (
             <View key={fact} style={s.factRow}>
@@ -310,10 +310,10 @@ function Conversation({ game, playerId }: { readonly game: Game; readonly player
         </View>
       ) : null}
 
-      {conversation.kind === 'confirmed' && conversation.score !== undefined ? (
+      {argument.kind === 'confirmed' && argument.score !== undefined ? (
         <View style={s.block}>
           <ScoreTable
-            score={conversation.score}
+            score={argument.score}
             sport={game.sport}
             mine={side}
             sides={sides}

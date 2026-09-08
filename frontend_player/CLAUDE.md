@@ -45,18 +45,21 @@ answers either way, and the **profile commit**: every answer in one idempotent
 radius and the per-sport declaration that Play's search screen is drawn from, with an unkeyed
 `PUT` behind each of the three). `play` has its four screens and the sheet over them, below;
 `challenges` is the send: `POST /challenges`, `SH.propose`, and the two re-reads a refusal
-is followed by, below; and `games` is the result conversation — the list on Now, the screen a
+is followed by, below; and `games` is the result argument — the list on Now, the screen a
 row pushes, and the entering, correcting, agreeing and disagreeing that close the loop, below.
 
-**The result conversation is one screen and eight states, and the state is derived**
+**The result argument is one screen and eight states, and the state is derived**
 ([#314](https://github.com/Raketa02/Raketa/issues/314),
 [ADR-0137](../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). **A result is the
 record that a game happened** — no booking, no calendar, no date field anywhere — so the entry
-_is_ the fact, and everything after it is an argument bounded to two rounds. `domain/conversation.ts`
-folds the standing, the scores on the table and **which seat is yours** into what to draw, and
-nothing outside that file reads a `GameStanding`: a **correction** and a **counter** are the same
-`POST` and completely different news, and #314's own worry is that _"a player will spend an
-attempt fixing a typo."_ Three of the eight are worth knowing. **Silence confirming is drawn before
+_is_ the fact, and everything after it is an argument bounded to two rounds —
+`domain/resultArgument.ts` is named for it, because the glossary word _conversation_ belongs to
+the room the first acceptance opens, and two of them in one codebase is how somebody eventually
+subscribes the wrong one. It folds the standing, the scores on the table and **which seat is
+yours** into what to draw, and nothing outside that file reads a `GameStanding`: a
+**correction** and a **counter** are the same `POST` and completely different news, and #314's
+own worry is that _"a player will spend an attempt fixing a typo."_ Three of the eight are worth
+knowing. **Silence confirming is drawn before
 it happens**: the standing line says it **on the row as well as on the screen**, so a deadline is
 never something a player reaches by tapping, and the screen adds
 `prototype/result-confirmation`'s clock block over it — a figure at arm's length above one
@@ -336,8 +339,8 @@ Anything actionless inside the body **merges**: the photograph, and the balance 
 reading is drawn as a word beside it and spoken as a clause, because a bar is a tint and
 _never colour alone_ binds the sighted half too. `CandidatePhoto` draws the minted
 `photo_url` and falls back to the generated poster when the id is omitted, reaching
-`courtPosterFor` through `player_profile`'s public surface rather than copying the hash: one
-player id, one poster, forever. **Only the deck card floats** — #219 B3's argument is about a
+`courtPosterFor` from `shared/ui` rather than copying the hash: one player id, one poster,
+forever. **Only the deck card floats** — #219 B3's argument is about a
 card that translates and rotates out under a thumb, and a row in a scrolling list does neither,
 so the pool draws one shape twice. **The volt tag is a tag again on the competitive card and a
 sentence on the other two**, which is #231's open decision #14 reversed where the identity row

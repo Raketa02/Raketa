@@ -14,7 +14,7 @@
  */
 
 import type { Acceptance, Game, StandingProposal } from './game';
-import { actsOffered, editingAct, resultConversation } from './conversation';
+import { actsOffered, editingAct, resultArgument } from './resultArgument';
 
 const ME = 'me-1111-4444-8888-000000000001';
 const PARTNER = 'partner-11-4444-8888-000000002';
@@ -75,21 +75,21 @@ function game(over: Partial<Game> = {}): Game {
 
 describe('before anybody has said it happened', () => {
   it('offers the entry, and says when saying so stops being possible', () => {
-    const conversation = resultConversation(game(), ME);
+    const argument = resultArgument(game(), ME);
 
-    expect(conversation).toEqual({ kind: 'awaiting-entry', entryClosesAt: '2026-09-09T18:00:00Z' });
-    expect(actsOffered(conversation)).toEqual(['enter']);
+    expect(argument).toEqual({ kind: 'awaiting-entry', entryClosesAt: '2026-09-09T18:00:00Z' });
+    expect(actsOffered(argument)).toEqual(['enter']);
   });
 
   it('offers it to anybody who held a seat, which is all four of them', () => {
-    expect(actsOffered(resultConversation(game(), OPPONENT))).toEqual(['enter']);
+    expect(actsOffered(resultArgument(game(), OPPONENT))).toEqual(['enter']);
   });
 
   it('offers nothing once the window has closed — the game is a ghost and stays one', () => {
-    const conversation = resultConversation(game({ standing: 'NEVER_PLAYED' }), ME);
+    const argument = resultArgument(game({ standing: 'NEVER_PLAYED' }), ME);
 
-    expect(conversation).toEqual({ kind: 'never-played' });
-    expect(actsOffered(conversation)).toEqual([]);
+    expect(argument).toEqual({ kind: 'never-played' });
+    expect(actsOffered(argument)).toEqual([]);
   });
 });
 
@@ -102,10 +102,10 @@ describe('one score on the table', () => {
   } as const;
 
   it('is a correction to the side that put it there, and never a second turn', () => {
-    const conversation = resultConversation(game(played), ME);
+    const argument = resultArgument(game(played), ME);
 
-    expect(conversation).toEqual({ kind: 'ours-stands', proposal: PROPOSAL });
-    expect(actsOffered(conversation)).toEqual(['correct']);
+    expect(argument).toEqual({ kind: 'ours-stands', proposal: PROPOSAL });
+    expect(actsOffered(argument)).toEqual(['correct']);
   });
 
   /**
@@ -114,20 +114,20 @@ describe('one score on the table', () => {
    * neither side gets two turns.
    */
   it('is a correction to the partner too, because the score is the side’s', () => {
-    expect(actsOffered(resultConversation(game(played), PARTNER))).toEqual(['correct']);
+    expect(actsOffered(resultArgument(game(played), PARTNER))).toEqual(['correct']);
   });
 
   it('is an agreement or a disagreement across the net, and the agreement leads', () => {
-    const conversation = resultConversation(game(played), OPPONENT);
+    const argument = resultArgument(game(played), OPPONENT);
 
-    expect(conversation).toEqual({
+    expect(argument).toEqual({
       kind: 'theirs-stands',
       proposal: PROPOSAL,
       // Whoever put it up, in the reader's own terms — the person *That's right* settles a
       // score against, which this screen could not name until a seat carried a handle (#319).
       by: { kind: 'player', nickname: 'me_' },
     });
-    expect(actsOffered(conversation)).toEqual(['accept', 'counter']);
+    expect(actsOffered(argument)).toEqual(['accept', 'counter']);
   });
 });
 
@@ -145,12 +145,12 @@ describe('two scores on the table', () => {
    * ([#317](https://github.com/Raketa02/Raketa/issues/317)).
    */
   it('hands both scores over, the reader’s own named as theirs', () => {
-    expect(resultConversation(game(arguing), ME)).toEqual({
+    expect(resultArgument(game(arguing), ME)).toEqual({
       kind: 'both-stand',
       ours: PROPOSAL,
       theirs: COUNTER,
     });
-    expect(resultConversation(game(arguing), OPPONENT)).toEqual({
+    expect(resultArgument(game(arguing), OPPONENT)).toEqual({
       kind: 'both-stand',
       ours: COUNTER,
       theirs: PROPOSAL,
@@ -163,7 +163,7 @@ describe('two scores on the table', () => {
    * the cap of one score per side is what bounds the argument to two rounds.
    */
   it('offers an agreement with the other side’s score, and never a second one of our own', () => {
-    expect(actsOffered(resultConversation(game(arguing), ME))).toEqual(['accept']);
+    expect(actsOffered(resultArgument(game(arguing), ME))).toEqual(['accept']);
   });
 
   /**
@@ -174,10 +174,10 @@ describe('two scores on the table', () => {
    */
   it('offers nothing once somebody has agreed, whichever score they agreed with', () => {
     for (const side of ['A', 'B'] as const) {
-      const conversation = resultConversation(game({ ...arguing, acceptance: agreed(side) }), ME);
+      const argument = resultArgument(game({ ...arguing, acceptance: agreed(side) }), ME);
 
-      expect(conversation).toMatchObject({ kind: 'agreed', ours: PROPOSAL, theirs: COUNTER });
-      expect(actsOffered(conversation)).toEqual([]);
+      expect(argument).toMatchObject({ kind: 'agreed', ours: PROPOSAL, theirs: COUNTER });
+      expect(actsOffered(argument)).toEqual([]);
     }
   });
 });
@@ -195,12 +195,12 @@ describe('an agreement waiting out its grace', () => {
    * said an answer had arrived.
    */
   it('takes the correction away from the side whose score was agreed with', () => {
-    const conversation = resultConversation(
+    const argument = resultArgument(
       game({ ...played, proposals: [PROPOSAL], acceptance: agreed('A') }),
       ME,
     );
 
-    expect(conversation).toEqual({
+    expect(argument).toEqual({
       kind: 'agreed',
       agreement: {
         with: 'ours',
@@ -209,8 +209,8 @@ describe('an agreement waiting out its grace', () => {
       },
       ours: PROPOSAL,
     });
-    expect(actsOffered(conversation)).toEqual([]);
-    expect(editingAct(conversation)).toBeUndefined();
+    expect(actsOffered(argument)).toEqual([]);
+    expect(editingAct(argument)).toBeUndefined();
   });
 
   /**
@@ -218,26 +218,26 @@ describe('an agreement waiting out its grace', () => {
    * one control that survives an agreement is the one that beats it.
    */
   it('leaves the disagreement standing on the side that agreed, and takes the agreement away', () => {
-    const conversation = resultConversation(
+    const argument = resultArgument(
       game({ ...played, proposals: [PROPOSAL], acceptance: agreed('A') }),
       OPPONENT,
     );
 
-    expect(conversation).toEqual({
+    expect(argument).toEqual({
       kind: 'agreed',
       // Read by the opponent, who is the one who agreed: *You agreed with their score*, which
       // is the same fact from the other end and a different sentence.
       agreement: { with: 'theirs', by: { kind: 'you' }, settlesAt: '2026-09-06T02:12:00Z' },
       theirs: PROPOSAL,
     });
-    expect(actsOffered(conversation)).toEqual(['counter']);
-    expect(editingAct(conversation)).toBe('counter');
+    expect(actsOffered(argument)).toEqual(['counter']);
+    expect(editingAct(argument)).toBe('counter');
   });
 });
 
 describe('the ends', () => {
   it('confirms with the agreed score and what it says about you', () => {
-    const conversation = resultConversation(
+    const argument = resultArgument(
       game({
         standing: 'CONFIRMED',
         playedAt: '2026-09-04T20:12:00Z',
@@ -247,18 +247,18 @@ describe('the ends', () => {
       ME,
     );
 
-    expect(conversation).toEqual({ kind: 'confirmed', score: PROPOSAL.score, outcome: 'WIN' });
-    expect(actsOffered(conversation)).toEqual([]);
+    expect(argument).toEqual({ kind: 'confirmed', score: PROPOSAL.score, outcome: 'WIN' });
+    expect(actsOffered(argument)).toEqual([]);
   });
 
   it('leaves an unscored game alone — a settled result is final, and so is no result', () => {
-    const conversation = resultConversation(
+    const argument = resultArgument(
       game({ standing: 'UNSCORED', playedAt: '2026-09-04T20:12:00Z' }),
       ME,
     );
 
-    expect(conversation).toEqual({ kind: 'unscored' });
-    expect(actsOffered(conversation)).toEqual([]);
+    expect(argument).toEqual({ kind: 'unscored' });
+    expect(actsOffered(argument)).toEqual([]);
   });
 });
 
@@ -269,11 +269,11 @@ describe('somebody who was not on this court', () => {
    * `you_were_not_on_this_court`, and it names the same two cases the server refuses to tell
    * apart.
    */
-  it('has no side, so there is no conversation and nothing to offer', () => {
-    const conversation = resultConversation(game(), 'stranger-1-4444-8888-00000005');
+  it('has no side, so there is no argument and nothing to offer', () => {
+    const argument = resultArgument(game(), 'stranger-1-4444-8888-00000005');
 
-    expect(conversation).toEqual({ kind: 'not-yours' });
-    expect(actsOffered(conversation)).toEqual([]);
+    expect(argument).toEqual({ kind: 'not-yours' });
+    expect(actsOffered(argument)).toEqual([]);
   });
 });
 
@@ -284,11 +284,11 @@ describe('a state this build cannot name', () => {
    * must never do is offer an act: acting on a game whose state we cannot name is how a
    * correction becomes a second proposal.
    */
-  it('has a conversation with no acts in it', () => {
-    const conversation = resultConversation(game({ standing: undefined }), ME);
+  it('has an argument with no acts in it', () => {
+    const argument = resultArgument(game({ standing: undefined }), ME);
 
-    expect(conversation).toEqual({ kind: 'unreadable' });
-    expect(actsOffered(conversation)).toEqual([]);
+    expect(argument).toEqual({ kind: 'unreadable' });
+    expect(actsOffered(argument)).toEqual([]);
   });
 
   /**
@@ -297,12 +297,12 @@ describe('a state this build cannot name', () => {
    * it as a disagreement would offer an agreement with a score nobody put up.
    */
   it('says the same about an answer awaited with no score to answer', () => {
-    const conversation = resultConversation(
+    const argument = resultArgument(
       game({ standing: 'AWAITING_ANSWER', playedAt: '2026-09-04T20:12:00Z' }),
       ME,
     );
 
-    expect(conversation).toEqual({ kind: 'unreadable' });
-    expect(actsOffered(conversation)).toEqual([]);
+    expect(argument).toEqual({ kind: 'unreadable' });
+    expect(actsOffered(argument)).toEqual([]);
   });
 });

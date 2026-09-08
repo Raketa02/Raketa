@@ -70,13 +70,13 @@ export function createQueryClient(): QueryClient {
         // the behaviour you want.
         //
         // **One feature overrides this**, and the asymmetry is deliberate:
-        // `features/challenges/` sets `networkMode: 'always'` on the send, because a
-        // challenge's answer window is derived *at send*, so a tap deferred to the next
-        // reconnect would carry a deadline the player did not choose. The test is *does
-        // this act carry a deadline the player chose*, never the HTTP verb — see
-        // `features/challenges/hooks/sendOptions.ts`. Written here as well as there,
-        // because two values for one option, left unexplained, is something the next
-        // reader unifies.
+        // `features/challenges/` sets `networkMode: 'always'` on every act it makes,
+        // because a challenge's answer window is derived *at the act*, so a tap deferred
+        // to the next reconnect would carry a deadline the player did not choose. The
+        // test is *does this act carry a deadline the player chose*, never the HTTP verb
+        // — see `features/challenges/hooks/challengeMutationOptions.ts`. Written here as
+        // well as there, because two values for one option, left unexplained, is
+        // something the next reader unifies.
         networkMode: 'online',
       },
     },

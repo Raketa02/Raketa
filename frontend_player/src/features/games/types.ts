@@ -9,7 +9,7 @@
  * for the three ends a game can reach.
  *
  * **What is exported is what has a caller**, which is two components and nothing else. The
- * conversation rule, the score's shape, the copy deck and both writes stay internal: they are
+ * result argument's fold, the score's shape, the copy deck and both writes stay internal: they are
  * the feature, and the only things outside it are the surface Now composes and the screen a row
  * pushes.
  */
@@ -21,12 +21,12 @@
 export { GamesSection } from './components/GamesSection';
 
 /**
- * The result conversation, on the screen a row pushes.
+ * One game, on the screen a row pushes — and most of it is the result argument.
  *
  * The route validates its param and hands over a `gameId`; everything else on that screen is
  * derived from the one list this feature reads.
  */
-export { ResultScreen, type ResultScreenProps } from './components/ResultScreen';
+export { GameScreen, type GameScreenProps } from './components/GameScreen';
 
 /**
  * The route's own check on the id it is handed, because a route param is attacker-controlled and

@@ -45,22 +45,6 @@ export type { Gender, GenderPreference } from './domain/gender';
 export { useSocialStepAdmission, type SocialStepAdmission } from './hooks/useSocialStepAdmission';
 
 /**
- * Which poster a player id gets — exported because **Play draws other people's**.
- *
- * A candidate with no photograph gets the generated poster on every card in Play, and the
- * design system's contract is that *one player id always produces one poster*: the drawing is
- * `CourtPoster`'s and both sets it chooses from are the theme's, but **which** member of them
- * an id maps to is a feature's, and this is the feature that decided it. A second copy of the
- * hash in `play/` would be two posters for one person the day either copy is touched — which
- * is the drift `Tick` was extracted to prevent, in a place a type could not see it.
- *
- * It is a **re-export rather than a promotion to `shared/`**: `recoveryMessage.ts`'s rule is
- * that the *third copy* is the signal to move something, and there is no second copy. The
- * cross-feature import goes through this surface, which is what this file is for.
- */
-export { COURT_POSTER_COUNT, courtPosterFor } from './components/courtPosterFraming';
-
-/**
  * **The profile surface Play reads, and the two writes beside it.**
  *
  * One read of the week, the radius and the per-sport declaration

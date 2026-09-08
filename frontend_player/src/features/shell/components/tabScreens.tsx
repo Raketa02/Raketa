@@ -23,7 +23,7 @@ import { PLACEHOLDER_COPY } from './shellCopy';
  *
  * **The games list is the first thing built on it** ([#314](https://github.com/Raketa02/Raketa/issues/314)),
  * composed under the tab's own line the way `PlayIntentsSection` is on You: a game is *what is
- * happening today and next*, and the result conversation had no door without one. The line above
+ * happening today and next*, and the result argument had no door without one. The line above
  * it stays exactly as it is — what Now becomes is still mostly owed — and the section draws
  * nothing at all when there are no games, because asserting emptiness is the one thing this tab
  * has refused to do since it was built.

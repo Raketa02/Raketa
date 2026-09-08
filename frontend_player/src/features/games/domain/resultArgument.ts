@@ -104,7 +104,7 @@ export interface StandingAgreement {
   readonly settlesAt: string;
 }
 
-export type ResultConversation =
+export type ResultArgument =
   /** No seat of this game is yours. The client half of `you_were_not_on_this_court`. */
   | { readonly kind: 'not-yours' }
   /**
@@ -193,7 +193,7 @@ export function courtSizes(game: Game, side: GameSide) {
 }
 
 /** What this game is asking of this player, right now. */
-export function resultConversation(game: Game, playerId: string): ResultConversation {
+export function resultArgument(game: Game, playerId: string): ResultArgument {
   const side = sideOf(game, playerId);
   if (side === undefined) return { kind: 'not-yours' };
 
@@ -256,15 +256,15 @@ function agreementFrom(
  * `theirs`, a correction is of `ours`, and a counter answers `theirs` with a score of our own.
  * Folding it here is what keeps the screen from restating which arms carry which score.
  */
-export function scoresOnTable(conversation: ResultConversation): ScoresOnTable {
-  switch (conversation.kind) {
+export function scoresOnTable(argument: ResultArgument): ScoresOnTable {
+  switch (argument.kind) {
     case 'ours-stands':
-      return { ours: conversation.proposal };
+      return { ours: argument.proposal };
     case 'theirs-stands':
-      return { theirs: conversation.proposal };
+      return { theirs: argument.proposal };
     case 'both-stand':
     case 'agreed':
-      return { ours: conversation.ours, theirs: conversation.theirs };
+      return { ours: argument.ours, theirs: argument.theirs };
     default:
       return {};
   }
@@ -282,8 +282,8 @@ export function scoresOnTable(conversation: ResultConversation): ScoresOnTable {
  * agreement — so the two cannot disagree about a state, and the rule that an agreement takes the
  * correction away is written once.
  */
-export function editingAct(conversation: ResultConversation): EditingAct | undefined {
-  return actsOffered(conversation).find((act): act is EditingAct => act !== 'accept');
+export function editingAct(argument: ResultArgument): EditingAct | undefined {
+  return actsOffered(argument).find((act): act is EditingAct => act !== 'accept');
 }
 
 /**
@@ -293,8 +293,8 @@ export function editingAct(conversation: ResultConversation): EditingAct | undef
  * that has to carry a score — and because *"there is no bare rejection"* means the second
  * control is never the cheap one.
  */
-export function actsOffered(conversation: ResultConversation): readonly ResultAct[] {
-  switch (conversation.kind) {
+export function actsOffered(argument: ResultArgument): readonly ResultAct[] {
+  switch (argument.kind) {
     case 'awaiting-entry':
       return ['enter'];
     case 'ours-stands':
@@ -311,7 +311,7 @@ export function actsOffered(conversation: ResultConversation): readonly ResultAc
       // `the_result_is_already_accepted`, so both controls go. What is left is the disagreement,
       // and only the side that has not spoken may make one — two scores standing means neither
       // can, which is the aggregate's cap rather than a rule invented here.
-      return conversation.ours === undefined ? ['counter'] : [];
+      return argument.ours === undefined ? ['counter'] : [];
     case 'not-yours':
     case 'unreadable':
     case 'never-played':
