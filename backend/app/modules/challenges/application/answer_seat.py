@@ -44,7 +44,7 @@ from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.errors import NoChallengeOfYoursHasThatId
 from app.modules.challenges.application.read_challenges import StandingChallenge
 from app.modules.challenges.domain.planned_game import PlannedGameOpening
-from app.modules.challenges.domain.ports import ChallengeRepository
+from app.modules.challenges.domain.ports import ChallengeRepository, PlayerHandles
 from app.modules.challenges.domain.standing import Standing
 
 
@@ -55,10 +55,12 @@ class _AnswerSeat:
         self,
         *,
         challenges: ChallengeRepository,
+        handles: PlayerHandles,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._challenges = challenges
+        self._handles = handles
         self._uow = uow
         self._clock = clock
 
@@ -90,10 +92,27 @@ class _AnswerSeat:
         return challenge.standing_at(at)
 
     async def _committed(
-        self, challenge: Challenge, standing: Standing
+        self, challenge: Challenge, standing: Standing, at: Instant
     ) -> StandingChallenge:
+        """The court as it now stands — **the reply is the redraw** (#327).
+
+        The handles are read **after** the commit, because they are the one thing
+        on the answer that is not part of it: a name that could not be looked up
+        must not roll back somebody's yes. One set read over this court, which is
+        the same question the list asks over many.
+        """
+
         await self._uow.commit()
-        return StandingChallenge(challenge=challenge, standing=standing)
+        handles = await self._handles.handles_of(
+            sorted(
+                seat.player_id
+                for seat in challenge.seats
+                if seat.player_id is not None
+            )
+        )
+        return StandingChallenge(
+            challenge=challenge, standing=standing, read_at=at, handles=handles
+        )
 
 
 @final
@@ -110,11 +129,14 @@ class AcceptSeat(_AnswerSeat):
         self,
         *,
         challenges: ChallengeRepository,
+        handles: PlayerHandles,
         uow: UnitOfWork,
         clock: Clock,
         planned_games: PlannedGameOpening,
     ) -> None:
-        super().__init__(challenges=challenges, uow=uow, clock=clock)
+        super().__init__(
+            challenges=challenges, handles=handles, uow=uow, clock=clock
+        )
         self._planned_games = planned_games
 
     async def execute(self, command: AnswerSeatCommand) -> StandingChallenge:
@@ -128,7 +150,7 @@ class AcceptSeat(_AnswerSeat):
             # in this transaction, so the accept and the game it produced
             # commit together or neither does (``domain/planned_game.py``).
             await hand_over(challenge, at=at, games=self._planned_games)
-        return await self._committed(challenge, standing)
+        return await self._committed(challenge, standing, at)
 
 
 @final
@@ -140,5 +162,5 @@ class DeclineSeat(_AnswerSeat):
         challenge = await self._yours(command)
         challenge.decline(command.player_id, occurred_at=at)
         return await self._committed(
-            challenge, await self._written(challenge, at)
+            challenge, await self._written(challenge, at), at
         )

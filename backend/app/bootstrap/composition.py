@@ -102,9 +102,11 @@ from app.modules.challenges.domain.ports import (
     ChallengeDirectory,
     ChallengeHistoryQuery,
     ChallengeRepository,
+    CourtPairingQuery,
     LapsingChallengeQuery,
     OpenChallengeQuery,
     OriginSearchQuery,
+    PlayerHandles as ChallengePlayerHandles,
 )
 from app.modules.challenges.infrastructure.absent_providers import (
     NoHoldsExist as NoChallengeHoldsExist,
@@ -120,6 +122,9 @@ from app.modules.challenges.infrastructure.event_sourced_challenge_repository im
 )
 from app.modules.challenges.infrastructure.event_sourced_lapsing_challenge_query import (  # noqa: E501
     EventSourcedLapsingChallengeQuery,
+)
+from app.modules.challenges.infrastructure.users_handles import (
+    UsersHandles as ChallengeUsersHandles,
 )
 from app.modules.challenges.infrastructure.event_sourced_open_challenge_query import (
     EventSourcedOpenChallengeQuery,
@@ -211,6 +216,13 @@ from app.modules.matchmaking.infrastructure.challenges_match_history import (
 )
 from app.modules.matchmaking.infrastructure.challenges_mutual_challenge import (
     ChallengesMutualChallenge,
+)
+from app.modules.matchmaking.application.pair_with_a_court import PairWithACourt
+from app.modules.matchmaking.application.search_workbench import SearchWorkbench
+from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
+from app.modules.matchmaking.infrastructure.challenge_court_cards import (
+    ChallengeCourtCards,
+    NoCourtCanBePriced,
 )
 from app.modules.matchmaking.infrastructure.search_court_origin import (
     SearchCourtOrigin,
@@ -432,6 +444,17 @@ def build_lapsing_challenge_query(session: AsyncSession) -> LapsingChallengeQuer
     return EventSourcedLapsingChallengeQuery(session)
 
 
+def build_challenge_handles(session: AsyncSession) -> ChallengePlayerHandles:
+    """*What is this person called* — the one thing a challenge **list** borrows.
+
+    The second line in this file building a handles adapter, and the second
+    ``UsersHandles`` class behind it: ``challenges`` and ``games`` each declare
+    the port because neither may import the other, so the two are aliased apart
+    here rather than one context signing the other's (``docs/adr/0143`` §7).
+    """
+    return ChallengeUsersHandles(build_user_repository(session))
+
+
 def build_challenge_hold_query(session: AsyncSession) -> ChallengeAccountHoldQuery:
     """``cases`` does not exist, so nothing can hold an account.
 
@@ -474,6 +497,120 @@ def build_origin_search_query(session: AsyncSession) -> OriginSearchQuery:
     take a client's word for.
     """
     return SearchCourtOrigin(build_search_store(session))
+
+
+def build_court_pairing_query(
+    *,
+    session: AsyncSession,
+    clock: Clock,
+    unit_of_work: UnitOfWork,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+    settings: Settings,
+    store: Redis | None,
+    candidates: CandidateSource | None,
+) -> CourtPairingQuery:
+    """Who the people on a court are, and what the reader makes of each of them.
+
+    The second outward demand ``challenges`` makes of the matcher and the second
+    line here where the two meet — ``build_origin_search_query``'s shape, one
+    screen later (``docs/adr/0143`` §4). It is the **expensive** one: a search
+    context bound live, the whole Fit stack run over the court, a card assembled
+    per person and a photograph signed for each, so it is wired to a route a tap
+    opens and never to a list.
+
+    **Everything it needs is a whole workbench**, because the pairing is
+    recomputed through the same code path a search runs rather than replayed from
+    a record — which is the only shape under which a challenge born of a search
+    and one born of a mutual yes render the same way, and the only one under
+    which *Match score for you* is true.
+
+    ``candidates`` is ``None`` in a process with no index, and ``store`` is
+    ``None`` where the ephemeral store never came up. Neither is a refusal here:
+    both reach the reader as *the pairing could not be read*, because answering a
+    challenge is not gated on the matcher.
+
+    **Two entry points and one assembly.** This one is the route's, over the
+    connections a request holds; :func:`build_court_pairing_query_over` is the
+    same wiring over the two seams a demands suite supplies itself, so what the
+    suite exercises is what ships rather than a second construction of it.
+    """
+
+    if candidates is None or store is None:
+        return NoCourtCanBePriced()
+    return build_court_pairing_query_over(
+        session=session,
+        clock=clock,
+        unit_of_work=unit_of_work,
+        event_store=event_store,
+        events=events,
+        settings=settings,
+        exposure=build_exposure_ledger(store),
+        candidates=candidates,
+    )
+
+
+def build_court_pairing_query_over(
+    *,
+    session: AsyncSession,
+    clock: Clock,
+    unit_of_work: UnitOfWork,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+    settings: Settings,
+    exposure: ExposureLedger,
+    candidates: CandidateSource,
+) -> CourtPairingQuery:
+    """The assembly itself, over an index and a ledger the caller already holds.
+
+    The two seams a demands suite supplies for itself: the candidate index is the
+    **process's** rather than the request's (``docs/adr/0112``), and the exposure
+    ledger is Redis, which no test in this repository needs running.
+    """
+
+    storage = build_photo_storage(settings)
+    return ChallengeCourtCards(
+        pairing=PairWithACourt(
+            workbench=SearchWorkbench(
+                clock=clock,
+                ruleset=build_ruleset(),
+                searches=build_search_store(session),
+                unit_of_work=unit_of_work,
+                candidates=candidates,
+                profiles=build_player_profile_repository(
+                    event_store=event_store, events=events
+                ),
+                ratings=build_skill_rating_repository(
+                    event_store=event_store, events=events
+                ),
+                declarations=build_play_intent_declaration_repository(
+                    event_store=event_store, events=events
+                ),
+                blocks=build_block_query(session),
+                holds=build_account_hold_query(session),
+                account_status=build_account_status_query(session),
+                history=build_match_history_query(session),
+                player_scores=build_player_score_query(session),
+                at_stake=build_at_stake_query(session),
+                exposure=exposure,
+                interest=build_interest_ledger(session),
+                cards=build_player_card_source(
+                    session=session,
+                    event_store=event_store,
+                    events=events,
+                    storage=storage,
+                ),
+                records=build_player_record_source(session),
+                absent_terms=build_absent_terms(),
+                # **Nothing is recorded and nothing is measured.** The meter
+                # reports the scoring stage of a *search*, and this is not one.
+                meter=None,
+            ),
+            ruleset=build_ruleset(),
+            engine=build_match_fit_engine(),
+        ),
+        photos=build_card_photo_links(storage=storage, settings=settings),
+    )
 
 
 def build_mutual_challenge_minting(

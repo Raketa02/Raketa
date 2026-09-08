@@ -1,7 +1,8 @@
-"""Every seam this context is built on: one to write a challenge, and six reads.
+"""Every seam this context is built on: one to write a challenge, and the reads.
 
-The first two are the ones it started with — one to write a challenge, one to ask
-whether a game is already being arranged between two people.
+One write and eight reads, then. The first two are the ones it started with: one
+to write a challenge, and one to ask whether a game is already being arranged
+between two people.
 
 ``ChallengeRepository`` is the **aggregate repository** kind — how a use case
 reaches an event-sourced ``Challenge`` without knowing that it is event-sourced,
@@ -51,6 +52,13 @@ scrolled to.
 client re-reads when a send is refused on the pair rule, and the one an invitee
 opens to find that they were asked.
 
+``PlayerHandles`` is the one thing this context borrows about a person on a list,
+and ``CourtPairingQuery`` is everything it borrows about one on a **detail**. The
+split is ``docs/adr/0143``'s: a handle is what these people already call each
+other and costs a set read, while a card is as-of-now and costs a profile read
+and an object-store signature per person — which is why the list carries the
+first and only the detail carries the second.
+
 ``LapsingChallengeQuery`` arrived with the sweep and is the odd one out: it
 answers with **candidates** rather than with an answer. Nothing in this context
 may hold a *has lapsed* column — the whole of ``standing.py`` is that refusal —
@@ -80,7 +88,8 @@ here and four over there.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Collection, Mapping, Protocol, final, runtime_checkable
+from enum import Enum
+from typing import Any, Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
@@ -336,6 +345,224 @@ class OriginSearchQuery(Protocol):
         ...
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class CourtPerson:
+    """Who one person on this court is — **the person half of a card.**
+
+    ``docs/adr/0143`` §5's first block, and every field on it is a fact that
+    person changes about themselves. There is **no bio and no free text of any
+    kind**: ``PlayerCardSchema`` refuses one *"ever"*, and the refusal is
+    stronger here than where it was written, because a searcher chose to look and
+    an invitee was put in front of somebody without asking.
+
+    ``photo_id`` and ``photo_url`` are present **exactly together**. An id with
+    no link beside it is a photograph nothing can draw, and neither means the
+    client draws the generated court poster — which needs nothing from the wire
+    (``docs/adr/0134``). Refusing the photograph outright would make the person
+    who asked you to play more anonymous than a stranger in a deck, which is the
+    wrong way round.
+
+    ``player_score`` is the **published** figure and never a re-derivation of
+    one, ``None`` where the platform has watched nothing — which is most people,
+    and is why the segment disappears rather than reading ``Score 0``
+    (``docs/adr/0140``).
+    """
+
+    player_id: UUID
+    nickname: str
+    area_code: str
+    level: float
+    band: str
+    range_low: float
+    range_high: float
+    photo_id: UUID | None = None
+    photo_url: str | None = None
+    player_score: int | None = None
+
+    def __post_init__(self) -> None:
+        invariant(
+            (self.photo_id is None) == (self.photo_url is None),
+            f"a photograph with only half an address: {self!r}",
+        )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class LevelDeltas:
+    """What a **counted** game against this person would do to the reader's Level.
+
+    Never a pair of zeros: ``None`` in for-fun, where a counted result is
+    meaningless rather than unavailable, and ``None`` where either of the two
+    holds no rating in the sport.
+    """
+
+    win_delta: float
+    loss_delta: float
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class PairingForecast:
+    """What this pairing would leave on court, read in the reader's direction."""
+
+    pct: int
+    sigma_group: float
+    provisional: bool
+    assumption: str | None = None
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class CourtPairing:
+    """What this platform makes of the reader **against** one person on the court.
+
+    ``docs/adr/0143`` §5's second block, and it has a different author from the
+    first: the person block is facts about them, and this is a reading of the two
+    of them together, computed **in the reader's own direction**. Neither stored
+    Fit could stand in for it — ``fit_ab`` is the organiser's reading of the
+    invitee under a label that says *for you*, and ``fit_ba`` is scored with the
+    searcher's own reliability deliberately set to ``None`` and was built not to
+    be published (§9).
+
+    ``terms`` crosses as the same opaque mappings the search record stores. One
+    serialiser, two consumers: the store keeps it opaque so a five-year-old row
+    still deserialises, and this context validates it into its own closed union
+    so the wire type stays exhaustive today.
+
+    ``degraded_terms`` is ``(term, whose gap)`` pairs and **ships even though no
+    *Why?* sheet is drawn over them**: without the renormalisation basis a Fit is
+    uninterpretable — a 78 built on four terms and a 78 built on seven are
+    different readings of one number — and the alternative, printing no Fit,
+    throws away the number the screen exists to give.
+
+    ``distance_km`` is whole kilometres and ``None`` when the distance term stood
+    down, which is **omitted** on the wire and never a zero: somebody whose
+    distance could not be read is not next door.
+    """
+
+    fit: float
+    terms: tuple[Mapping[str, Any], ...]
+    degraded_terms: tuple[tuple[str, str], ...]
+    concerns: tuple[str, ...]
+    forecast: PairingForecast
+    distance_km: int | None = None
+    at_stake: LevelDeltas | None = None
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class CourtCard:
+    """One person on the court, and the reader's pairing with them."""
+
+    person: CourtPerson
+    pairing: CourtPairing
+
+
+class PairingAbsence(str, Enum):
+    """Why a court came back with no cards on it. **Two codes, and a third
+    answer that is their absence** (``docs/adr/0143`` §6).
+
+    Three answers rather than two, because an outage drawing the *identical*
+    absence as an unrated sport is the collapse ADR-0141's Consequences refused
+    in as many words. And refusing the whole read with a 503 is worse than
+    either: it turns an unrelated matchmaking outage into *you cannot answer your
+    challenge*, and answering is not gated.
+
+    **The codes are the contract and the client writes both sentences**
+    (``docs/adr/0106``).
+    """
+
+    #: There is nothing to compute. The reader holds no rating, has declared no
+    #: Play intent, or has committed no player profile in the sport they were
+    #: challenged in — and being asked to play a sport you never declared for is
+    #: how this feature works rather than a corner of it.
+    NOTHING_TO_COMPUTE = "NOTHING_TO_COMPUTE"
+    #: It could not be read. Somebody else's outage, and the arrangement still
+    #: answers.
+    COULD_NOT_BE_READ = "COULD_NOT_BE_READ"
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class CourtCards:
+    """The cards for one court, **or the reason there are none.**
+
+    Not a bare tuple, because an empty one would have to mean two different
+    things at once. ``absent`` names whose gap it is; with no ``absent`` the read
+    ran, and a court whose every card failed to assemble is still a court that
+    was read.
+    """
+
+    cards: tuple[CourtCard, ...] = ()
+    absent: PairingAbsence | None = None
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.absent is None or not self.cards,
+            f"cards beside the reason there are none: {self!r}",
+        )
+
+
+@runtime_checkable
+class CourtPairingQuery(Protocol):
+    """*Who are these people, and what do I make of each of them?*
+
+    An outward demand on the matcher, signed by an adapter that lives on the
+    matcher's side of the arrow — ``OriginSearchQuery``'s seam exactly, one
+    screen later. The detail read needs a card and a pairing and cannot go and
+    get them: ``challenges`` may not import ``matchmaking``.
+
+    **One question and not three**, carrying the origin seam's own sentence. The
+    card, the pairing and the photograph's address come back **together**,
+    because a caller that asked for each separately would be three reads of one
+    computation, and a court assembled from two of them and refused on the third.
+
+    **The photograph is minted where the photo store already is.** ``photo_url``
+    is a short-lived signed link minted per response by the adapter, exactly as
+    the shortlist, deck and line-up routes mint theirs, so ``challenges`` never
+    touches the photo store.
+
+    **Nothing here re-gates.** The four fail-closed gates ran over every pair of
+    this court in the send's own transaction and are not run again
+    (``docs/adr/0143`` §2): a card that vanished from behind two buttons that
+    still work is the disclosure a safety gate may never make, by a slower route.
+    What makes that safe is that the pairing is **recomputed rather than
+    replayed** — a card that cannot be assembled today has no card, which is
+    fail-closed without leaving a trace.
+    """
+
+    async def cards_for(
+        self,
+        *,
+        reader_id: UUID,
+        sport: Sport,
+        mode: SearchMode | None,
+        court_ids: Collection[UUID],
+    ) -> CourtCards:
+        """A card per person on that court, computed **for the reader**.
+
+        ``court_ids`` is everybody the reader wants a card for and never includes
+        the reader themselves: a pairing with yourself is not a question, and
+        asking would refuse the whole court.
+
+        ``mode`` is the challenge's own, and ``None`` on one born of a mutual yes
+        — where the surface it came from asked nobody to pick one. The
+        implementation reads the reader's own declaration in that case, which is
+        the deck's rule and not a third vector.
+
+        **Asked once for the whole court and handed back sorted**, on the
+        player's id. A set is never the source of an order (``docs/adr/0105``
+        §1), stated on the collection rather than on what happens to be
+        observable, because what is safe today is what changes silently.
+
+        **A person with no card is absent from the answer and keeps their seat.**
+        Their row may be gone from the index, or their profile from the store;
+        the arrangement is unchanged and the screen draws the seat without one.
+        """
+        ...
+
+
 @runtime_checkable
 class ChallengeDirectory(Protocol):
     """Every challenge one player is seated in. **Their own, and nobody else's.**
@@ -357,6 +584,40 @@ class ChallengeDirectory(Protocol):
         Newest first is part of the demand rather than a convenience: the client
         renders them in order, and a list whose order depended on how the streams
         happened to be read would reorder itself between two identical requests.
+        """
+        ...
+
+
+@runtime_checkable
+class PlayerHandles(Protocol):
+    """What the people on a court are called. **A handle, and the whole of it.**
+
+    **A second spelling of ``games``' port of the same name, and the duplication
+    is the decision** — ``origins.py`` and ``Side`` take it for the same reason.
+    Two contexts each need *what do I print on this seat*, neither may import the
+    other, and the alternative to two spellings is one of them owning the other's
+    vocabulary. The adapters meet ``users``' own ``find_nicknames_of`` and it is
+    where the two sentences are kept apart.
+
+    ``docs/adr/0141`` §1 fixes what may be borrowed about a person here and
+    ``docs/adr/0143`` §7 applies it one surface over: the handle they chose, and
+    nothing that changes with who is looking. A Level, an area and a photograph
+    are what a **card** carries, and a card is drawn on the detail read alone,
+    where the arrangement is still being decided.
+
+    **One call for a whole list, never one per seat**, which is the shape every
+    set read in this codebase takes: reading a challenge list costs one question
+    about the union of everybody on any of its courts.
+    """
+
+    async def handles_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, str]:
+        """Each of these players' handle, as one set read.
+
+        **A player absent from the answer keeps their seat.** The handle goes
+        ``None`` on the wire and the seat stays, because a seat with no nickname
+        is still a person who was asked — and dropping it would publish a
+        three-person doubles court. That is ``games``' rule verbatim, and it is
+        the reason ``docs/adr/0143`` §7 could put the field on the seat at all.
         """
         ...
 

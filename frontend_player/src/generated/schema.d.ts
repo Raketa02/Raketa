@@ -792,6 +792,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/challenges/{challenge_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One challenge
+         * @description **The screen you answer on.** The list tells you what you have been asked; this tells you who is asking and what this platform makes of playing them.
+         *
+         *     **The pairing is computed when you open this, in your own direction.** Nothing is copied at send and nothing is replayed from the organiser's search — which is why a challenge born of a mutual yes draws the same screen as one built from a shortlist, and why the Fit here is genuinely yours.
+         *
+         *     **The card block is drawn while the arrangement is being decided and at no other time.** A challenge that ended draws its arrangement and the handles alone, and so does the seat of somebody who declined or lapsed inside one that is still open: they have left, and that person is a stranger to you again.
+         *
+         *     **Answering is never gated on any of it.** If the pairing cannot be computed — you hold no rating in this sport, or something the matcher needs could not be read — `pairing_absence` says which, the arrangement answers as always, and the buttons are drawn from the standing.
+         *
+         *     **Nothing here is re-checked against who is reading.** The safety gates ran when this challenge was minted, in both directions, and they are not run again.
+         */
+        get: operations["read_challenge_api_v1_challenges__challenge_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/challenges/{challenge_id}/accept": {
         parameters: {
             query?: never;
@@ -1249,6 +1277,71 @@ export interface components {
             would_be_forecast?: components["schemas"]["ForecastSchema"];
         };
         /**
+         * ChallengeDetailResponse
+         * @description One challenge, richly — the arrangement, the people and the pairing.
+         *
+         *     **Its own ``read_at``**, because it is its own fold against its own instant:
+         *     the standing, every seat's deadline and which seats are still in were all
+         *     read against this one moment.
+         *
+         *     **The card block is drawn while the arrangement is being decided and at no
+         *     other time** (``docs/adr/0143`` §8) — one rule stated on the two standings
+         *     that draw one, so a standing added later is silent by default. `DECLINED` and
+         *     `LAPSED` draw the arrangement and the handles alone; `ON` draws neither,
+         *     because the game's own screen owns it the moment a game exists.
+         *
+         *     **Nothing here is re-gated against who is reading** (§2). The four
+         *     fail-closed gates ran over every pair of this court when it was minted, and a
+         *     card that vanished from behind two buttons that still work would be the one
+         *     disclosure a safety gate may never make.
+         */
+        ChallengeDetailResponse: {
+            /**
+             * Read At
+             * Format: date-time
+             * @description The instant this whole answer was folded against — the standing, every deadline on it, and which seats are still in.
+             */
+            read_at: string;
+            /**
+             * Challenge Id
+             * Format: uuid
+             */
+            challenge_id: string;
+            sport: components["schemas"]["Sport"];
+            /** @description The kind of evening it was sent for. ``null`` when the surface it came from has none, and on every challenge born of a mutual yes. */
+            mode?: components["schemas"]["SearchMode"] | null;
+            /** @description How soon the week this was proposed for comes round. ``null`` on a mutual-born challenge: no grid was proposed from. */
+            window?: components["schemas"]["Window"] | null;
+            /**
+             * Organiser Id
+             * Format: uuid
+             * @description Whose proposal this is. Their seat is **accepted from birth** — they are the one asking.
+             */
+            organiser_id: string;
+            /** @description What this challenge is at ``read_at``. **Derived from the seats and the clock, never stored.** */
+            standing: components["schemas"]["Standing"];
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+            /**
+             * Seats
+             * @description The court in its fixed order — every **A** seat, then every **B**. Empty seats are in the list, because which side is short is part of what a court is.
+             */
+            seats: components["schemas"]["DetailSeatSchema"][];
+            /**
+             * @description Why no seat carries a card, when the arrangement is still being decided and none was drawn. **Omitted when there is no absence to report** — either the cards are on the seats, or this standing draws no card block at all and the standing already says so.
+             *
+             *     `NOTHING_TO_COMPUTE` — you hold no rating, have declared no Play intent, or have committed no player profile in the sport you were challenged in. Being asked to play a sport you never declared for is how this works rather than a corner of it, and the screen does not apologise for it.
+             *
+             *     `COULD_NOT_BE_READ` — somebody else's outage. **Three answers and not two**, because an outage drawing the identical absence as an unrated sport is indistinguishable from four erased accounts.
+             *
+             *     **Answering is never gated on any of this.** The arrangement always answers and the buttons are drawn from the standing, so a matchmaking outage never becomes *you cannot answer your challenge*.
+             */
+            pairing_absence?: components["schemas"]["PairingAbsence"];
+        };
+        /**
          * ChallengeListResponse
          * @description Your challenges, newest first.
          *
@@ -1259,8 +1352,19 @@ export interface components {
          *     **Ended challenges are in it, and their standing says so.** A list that
          *     quietly dropped this morning's lapse would be the same class of lie as a
          *     read-back that got shorter.
+         *
+         *     ``read_at`` is the instant every standing and deadline here was folded
+         *     against. It travels so a client's countdowns and the standings beside them
+         *     cannot come from two different readings of the clock — ``GameListResponse``'s
+         *     field verbatim, for its written reason (``docs/adr/0143`` §7). The detail
+         *     read carries **its own**, because it is its own fold against its own instant.
          */
         ChallengeListResponse: {
+            /**
+             * Read At
+             * Format: date-time
+             */
+            read_at: string;
             /** Challenges */
             challenges: components["schemas"]["ChallengeSchema"][];
         };
@@ -1415,6 +1519,516 @@ export interface components {
          * @enum {string}
          */
         ConsentSurface: "ONBOARDING" | "PROFILE";
+        /**
+         * CourtAtStakeSchema
+         * @description What a **counted** game against this person would do to your Level.
+         */
+        CourtAtStakeSchema: {
+            /** Win Delta */
+            win_delta: number;
+            /** Loss Delta */
+            loss_delta: number;
+        };
+        /**
+         * CourtAvailabilityOverlapEvidence
+         * @description How much of the searcher's week the candidate is free in.
+         *
+         *     The term is ``|shared| / |mine|`` and has **no constants at all** — the
+         *     denominator is the searcher's own ticked cells, which is what makes the
+         *     reading asymmetric and what makes it a fact about the pair.
+         *
+         *     Overlap is evidence a game can be *arranged*, never a proposed time, which is
+         *     why a candidate sharing no slot at all is still shown: the times rung exists
+         *     for exactly that pairing.
+         */
+        CourtAvailabilityOverlapEvidence: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "availability_overlap";
+            /**
+             * Shared Count
+             * @description Cells both of them ticked
+             */
+            shared_count: number;
+            /** @description The soonest cell both ticked, or null when there is none */
+            next_slot: components["schemas"]["CourtSharedSlot"] | null;
+        };
+        /**
+         * CourtConcernSchema
+         * @description One term the platform is not comfortable about on this pairing.
+         */
+        CourtConcernSchema: {
+            term: components["schemas"]["Term"];
+        };
+        /**
+         * CourtDegradedTermSchema
+         * @description One term that stood down, and **whose gap that is**.
+         *
+         *     A pair rather than a bare ``Term``, because a flat list holds two different
+         *     sentences as one fact: *reliability is not a thing on this platform yet* and
+         *     *they have not said what kind of evening they want*.
+         *
+         *     **It ships even though no *Why?* sheet is drawn over it**, and its own
+         *     contract is the reason: without the renormalisation basis a Fit is
+         *     uninterpretable — a 78 built on four terms and a 78 built on seven are
+         *     different readings of one number. Printing a Fit without it is the exact
+         *     failure this field exists to prevent, and the alternative — printing no Fit —
+         *     throws away the number the screen exists to give.
+         */
+        CourtDegradedTermSchema: {
+            term: components["schemas"]["Term"];
+            /** @description Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` — the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), or theirs (`NOTHING_FROM_THEM`). The last deliberately covers every reason a record could not be read, because separating them would publish activity recency. */
+            reason: components["schemas"]["DegradedReason"];
+        };
+        /**
+         * CourtDistanceEvidence
+         * @description How far away they are, and whether the searcher is outside *their* ring.
+         *
+         *     A candidate's own radius is a Liveness dock and **never a gate**: somebody
+         *     who set a small radius is not refusing to be found, and the searcher is
+         *     shown the fact rather than having the person removed. The standalone flat
+         *     dock for it is struck — the reciprocal reading already prices it, and
+         *     proportionately.
+         */
+        CourtDistanceEvidence: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "distance";
+            /**
+             * Km
+             * @description Whole kilometres between the two areas
+             */
+            km: number;
+            /**
+             * Area Code
+             * @description The candidate's coarse area, as a machine code
+             */
+            area_code: string;
+            /**
+             * Outside Their Radius
+             * @description Whether the searcher sits outside the candidate's own ring
+             */
+            outside_their_radius: boolean;
+        };
+        /**
+         * CourtForecastSchema
+         * @description How even a game against this person is forecast to be.
+         *
+         *     ``provisional`` travels **inside** the forecast rather than beside it: the
+         *     failure being guarded against is a screen showing the number without its
+         *     caveat, and a sibling boolean is exactly how the two get separated in a
+         *     refactor.
+         *
+         *     **One seat a side, whatever the sport's court seats.** The block is drawn per
+         *     person, and *how would a game against **you** go* is the question somebody
+         *     answering an invitation is asking; a four-way figure would be one answer
+         *     printed once per seat.
+         */
+        CourtForecastSchema: {
+            /** Pct */
+            pct: number;
+            /**
+             * Sigma Group
+             * @description The confidence is part of the claim, so it crosses with it
+             */
+            sigma_group: number;
+            /** Provisional */
+            provisional: boolean;
+            /**
+             * Assumption
+             * @description What the provisional figure assumed, as a code the client renders in its own words. Null when nothing was assumed.
+             */
+            assumption: string | null;
+        };
+        /**
+         * CourtIntentAlignmentEvidence
+         * @description What kind of evening each of them is after.
+         *
+         *     **Intent is a weight and not a gate.** A candidate who declared the opposite
+         *     loses the term's entire weight and takes no further charge — the zero is the
+         *     whole answer, and a second dock would be a gate wearing a modifier's clothes.
+         *     A candidate who has *not* declared has the term dropped and renormalised away
+         *     instead, so declaring against the searcher already costs strictly more than
+         *     saying nothing.
+         */
+        CourtIntentAlignmentEvidence: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "intent_alignment";
+            /** @description The searcher's mode, this search */
+            my_mode: components["schemas"]["SearchMode"];
+            /** @description The candidate's declaration for this sport */
+            their_intent: components["schemas"]["PlayIntent"];
+            /**
+             * Aligned
+             * @description Whether the two read the same evening
+             */
+            aligned: boolean;
+        };
+        /**
+         * CourtLevelFitEvidence
+         * @description How far apart the two levels are, and which way.
+         *
+         *     The tolerance behind the curve is absolute on μ and never reads a band: the
+         *     shipped bands are deliberately uneven because *evidence* is unevenly
+         *     available down the scale, not because a tenth of a point means less at the
+         *     top.
+         */
+        CourtLevelFitEvidence: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "level_fit";
+            /**
+             * My Mu
+             * @description The searcher's Level
+             */
+            my_mu: number;
+            /**
+             * Their Mu
+             * @description The candidate's Level
+             */
+            their_mu: number;
+            /**
+             * Delta
+             * @description The gap, unsigned
+             */
+            delta: number;
+            /** @description Which side of the searcher */
+            direction: components["schemas"]["LevelDirection"];
+        };
+        /**
+         * CourtLikelyRangeSchema
+         * @description The **likely range** — μ ± σ, clamped to the scale — as `rating` published it.
+         *
+         *     Nested rather than two flat fields, because a range is one value with two
+         *     edges. **The client computes nothing here**: the rounding lives in the
+         *     engine, and a range derived anywhere else is a second set of drawing
+         *     constants.
+         */
+        CourtLikelyRangeSchema: {
+            /** Low */
+            low: number;
+            /** High */
+            high: number;
+        };
+        /**
+         * CourtPairingSchema
+         * @description What this platform makes of you **against** this person.
+         *
+         *     **Recomputed when the screen is opened, in your own direction** — never
+         *     copied at send and never replayed from the organiser's search
+         *     (``docs/adr/0143`` §3). That is the only shape under which *Match score for
+         *     you* is true: neither stored Fit is publishable, because one is the
+         *     organiser's reading of the invitee and the other was scored with the
+         *     searcher's own reliability deliberately set to null.
+         */
+        CourtPairingSchema: {
+            /**
+             * Fit
+             * @description The Fit, in your own direction. **The only number here you are asked to trust**, and it contains no Liveness offset.
+             */
+            fit: number;
+            /**
+             * Distance Km
+             * @description Whole kilometres between your two areas. **Omitted and never zero** when the distance term stood down: somebody whose distance could not be read is not next door.
+             */
+            distance_km?: number;
+            /**
+             * Terms
+             * @description Every term that fired, **ranked by contribution**, each with the evidence behind it. The contributions sum to the Fit.
+             */
+            terms: components["schemas"]["CourtScoredTermSchema"][];
+            /**
+             * Degraded Terms
+             * @description Every term that stood down, and whose gap each one is. **The Fit's renormalisation basis**, without which the number above cannot be read.
+             */
+            degraded_terms: components["schemas"]["CourtDegradedTermSchema"][];
+            /**
+             * Concerns
+             * @description Terms the platform is not comfortable about on this pairing.
+             */
+            concerns: components["schemas"]["CourtConcernSchema"][];
+            /** @description What a game between the two of you would leave on court */
+            forecast: components["schemas"]["CourtForecastSchema"];
+            /**
+             * @description What a counted game against this person would do to your Level — the rating engine's own update rule read forward.
+             *
+             *     **Omitted in for fun**, where a counted result is meaningless rather than unavailable, and **omitted when either of you holds no rating in this sport** — never drawn as a pair of zeros.
+             */
+            at_stake?: components["schemas"]["CourtAtStakeSchema"];
+        };
+        /**
+         * CourtPersonSchema
+         * @description Who one person on this court is. **A closed list with two permanent gaps.**
+         *
+         *     No bio and no free text of any kind, ever; and **no activity recency at any
+         *     granularity** — not a timestamp, not *active today*, not a green dot.
+         *
+         *     **``photo_id`` and ``photo_url`` are present exactly together.** An id with
+         *     no link beside it is a photograph nothing can draw; neither means the client
+         *     draws the generated court poster, which chooses by hash and needs nothing
+         *     from the wire (``docs/adr/0134``). Refusing the photograph outright would
+         *     make the person who asked you to play more anonymous than a stranger in your
+         *     deck, which is the wrong way round.
+         */
+        CourtPersonSchema: {
+            /**
+             * Nickname
+             * @description The whole handle. There is no name in this platform and **nothing may derive a familiar form from it** — every sentence naming somebody uses the whole handle or names nobody.
+             */
+            nickname: string;
+            /**
+             * Photo Id
+             * Format: uuid
+             * @description Their current photograph. Omitted when they have none, and omitted together with `photo_url` — the two travel as a pair or not at all.
+             */
+            photo_id?: string;
+            /**
+             * Photo Url
+             * @description A short-lived signed link to that photograph, minted for **this response**. It expires within minutes and is not a stored value: a client that keeps one keeps a dead link.
+             */
+            photo_url?: string;
+            /**
+             * Area Code
+             * @description Their coarse area, as a machine code
+             */
+            area_code: string;
+            /**
+             * Level
+             * @description Their Level, as RacketSkill published it
+             */
+            level: number;
+            /**
+             * Band
+             * @description The Level band's published name
+             */
+            band: string;
+            /** @description Where their Level most likely sits */
+            range: components["schemas"]["CourtLikelyRangeSchema"];
+            /**
+             * Player Score
+             * @description Their **published** Player Score, and never a re-derivation of one (`docs/adr/0140`).
+             *
+             *     **Omitted where the platform has watched nothing**, which is most people today — the segment disappears rather than reading `Score 0`, because a nought printed for somebody nothing was watched of is a claim where there is a gap.
+             */
+            player_score?: number;
+        };
+        /**
+         * CourtPlayingStyleEvidence
+         * @description What the two of them are like during the hour on court.
+         *
+         *     The split from social vibe is **by relationship, not by tag group**: every
+         *     matrix row carries its own column, so a tag can be read for the hour on court
+         *     in one row and for the evening around it in another.
+         *
+         *     A pair with nothing firing is *different, not incompatible* — the term's zero
+         *     is a real clash, never an absence of relationship.
+         */
+        CourtPlayingStyleEvidence: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "playing_style";
+            /**
+             * Matched
+             * @description Tag ids they both hold, in this column
+             */
+            matched: string[];
+            /**
+             * Complementary
+             * @description Pairs product claims fit together
+             */
+            complementary: components["schemas"]["CourtTagPair"][];
+            /**
+             * Clashing
+             * @description Pairs product claims do not
+             */
+            clashing: components["schemas"]["CourtTagPair"][];
+        };
+        /**
+         * CourtPredictedBalanceEvidence
+         * @description How even the game is forecast to be, and how sure of that the platform is.
+         *
+         *     ``pct`` is the forecast the player is shown; ``confidence`` is the platform's
+         *     existing σ transform and never a second spelling of certainty.
+         */
+        CourtPredictedBalanceEvidence: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "predicted_balance";
+            /**
+             * Pct
+             * @description The evenness forecast
+             */
+            pct: number;
+            /**
+             * My Sigma
+             * @description The searcher's Uncertainty
+             */
+            my_sigma: number;
+            /**
+             * Their Sigma
+             * @description The candidate's Uncertainty
+             */
+            their_sigma: number;
+            /**
+             * Confidence
+             * @description The platform's confidence transform over the combined σ, as a whole percent. Never 100: the platform cannot tell a player it is certain.
+             */
+            confidence: number;
+        };
+        /**
+         * CourtReliabilityEvidence
+         * @description What the candidate's record says about turning up and following through.
+         *
+         *     ``score`` is the **published Player Score** — the number on the player's own
+         *     profile — and never the matcher's private per-mode blend of the same six
+         *     strands. A penalty justified by a figure that exists nowhere a human can look
+         *     is unexplainable, and a player who works their visible score back up must be
+         *     able to see the penalty lift.
+         */
+        CourtReliabilityEvidence: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "reliability";
+            /**
+             * Score
+             * @description The published Player Score
+             */
+            score: number;
+            /**
+             * Strands
+             * @description The strands that produced a reading, over the closed six
+             */
+            strands: components["schemas"]["CourtStrandReading"][];
+            /**
+             * Floor Breached
+             * @description Whether the published score sits under the reliability bar
+             */
+            floor_breached: boolean;
+        };
+        /**
+         * CourtScoredTermSchema
+         * @description One term that produced a reading, and what it was worth here.
+         */
+        CourtScoredTermSchema: {
+            term: components["schemas"]["Term"];
+            /**
+             * Weight
+             * @description The **renormalised** weight — this term's share of a hundred over the terms that actually fired.
+             */
+            weight: number;
+            /** Value */
+            value: number;
+            /**
+             * Contribution
+             * @description The weight times the value.
+             *
+             *     **The contributions sum to the Fit before the reliability dock**, and `fit` above is the figure after it — the same number every other surface prints for this pairing. The dock itself is engine internals and is not drawn here, so the breakdown explains the pairing rather than reconstructing the total to the decimal.
+             */
+            contribution: number;
+            /** Evidence */
+            evidence: components["schemas"]["CourtLevelFitEvidence"] | components["schemas"]["CourtPredictedBalanceEvidence"] | components["schemas"]["CourtIntentAlignmentEvidence"] | components["schemas"]["CourtReliabilityEvidence"] | components["schemas"]["CourtAvailabilityOverlapEvidence"] | components["schemas"]["CourtPlayingStyleEvidence"] | components["schemas"]["CourtSocialVibeEvidence"] | components["schemas"]["CourtDistanceEvidence"];
+        };
+        /**
+         * CourtSharedSlot
+         * @description The next cell of the week both players ticked.
+         *
+         *     **The grid is never rendered to anybody as a calendar.** Only the count of
+         *     shared slots and the name of the next shared one are ever shown, because
+         *     overlap is a fact about a pair where a calendar is a fact about a person.
+         */
+        CourtSharedSlot: {
+            /**
+             * Day
+             * @description ISO weekday — 1 is Monday, 7 is Sunday. The grid is Monday-first.
+             */
+            day: number;
+            /** @description Which part of that day */
+            part: components["schemas"]["DayPart"];
+        };
+        /**
+         * CourtSocialVibeEvidence
+         * @description What the two of them are like around the game.
+         *
+         *     The same shape as playing style and deliberately a **separate variant**: the
+         *     two terms carry different weights, invert between the modes, and a client
+         *     renders them under different headings. One variant with a column field would
+         *     make *which term is this* a value the client has to branch on rather than a
+         *     type it can dispatch over.
+         */
+        CourtSocialVibeEvidence: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "social_vibe";
+            /**
+             * Matched
+             * @description Tag ids they both hold, in this column
+             */
+            matched: string[];
+            /**
+             * Complementary
+             * @description Pairs product claims fit together
+             */
+            complementary: components["schemas"]["CourtTagPair"][];
+            /**
+             * Clashing
+             * @description Pairs product claims do not
+             */
+            clashing: components["schemas"]["CourtTagPair"][];
+        };
+        /**
+         * CourtStrandReading
+         * @description One reliability strand that produced a reading.
+         *
+         *     A strand with too few observations **stands down and is absent from the
+         *     list** rather than present at zero: *we have not seen enough* and *they are
+         *     bad at this* are different facts, and a term may never be honestly neutral.
+         */
+        CourtStrandReading: {
+            /** @description Which of the six */
+            strand: components["schemas"]["ReliabilityStrand"];
+            /**
+             * Value
+             * @description The strand's own reading
+             */
+            value: number;
+        };
+        /**
+         * CourtTagPair
+         * @description Two tag ids one relationship row fired on.
+         *
+         *     Ids only. The row's kind is the field it sits under, its column is the term
+         *     it sits under, and its strength or severity is a ruleset number the player is
+         *     not shown — what is owed here is *which two things about you two this reads*.
+         */
+        CourtTagPair: {
+            /**
+             * A
+             * @description A Social tag id
+             */
+            a: string;
+            /**
+             * B
+             * @description The other Social tag id
+             */
+            b: string;
+        };
         /** CreateAssessmentRequest */
         CreateAssessmentRequest: {
             sport: components["schemas"]["Sport"];
@@ -1542,6 +2156,45 @@ export interface components {
             term: components["schemas"]["Term"];
             /** @description Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` — the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), or theirs (`NOTHING_FROM_THEM`). The last deliberately covers every reason a record could not be read, because separating them would publish activity recency. */
             reason: components["schemas"]["DegradedReason"];
+        };
+        /**
+         * DetailSeatSchema
+         * @description One seat on the detail read — the list's seat, and a card where one is drawn.
+         *
+         *     **The card is per seat as well as per challenge** (``docs/adr/0143`` §8).
+         *     Somebody who declined or lapsed inside a still-open court gets none: the pair
+         *     releases the moment a seat leaves, and *that person is a stranger to you once
+         *     more.* Their seat stays and keeps its handle, because the standing sentences
+         *     name them.
+         *
+         *     **Your own seat never carries one either.** A pairing with yourself is not a
+         *     question.
+         */
+        DetailSeatSchema: {
+            side: components["schemas"]["app__modules__challenges__domain__seats__Side"];
+            /**
+             * Player Id
+             * @description Who holds this seat. ``null`` on a seat nobody was put in.
+             */
+            player_id?: string | null;
+            /** @description What they did about being asked. ``null`` while they have not answered, and on a seat nobody was put in. **A lapse is not a refusal** — they are different facts and the platform counts them apart. */
+            answer?: components["schemas"]["SeatAnswer"] | null;
+            /**
+             * Answer By
+             * @description When this seat's answer stops being wanted. Past it the seat reads as lapsed whether or not anything has swept it, and a late answer is refused rather than accepted late. ``null`` exactly when nobody was asked: an empty seat, the organiser's, and both seats of a challenge born from a mutual yes.
+             */
+            answer_by?: string | null;
+            /**
+             * Nickname
+             * @description The whole handle, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``).
+             *
+             *     ``null`` on a seat nobody was put in, and ``null`` where ``users`` no longer has the account. The seat stays either way: a seat with no handle is still a position on the court, and the screen has a side to name instead.
+             *
+             *     **A handle is the whole of what a challenge borrows about a person here.** A Level, a band, an area and a photograph are a card's, and a card is drawn on the detail read alone.
+             */
+            nickname?: string | null;
+            /** @description Who this person is and what you make of them, drawn only while the arrangement is still being decided and only for somebody still in it. Omitted on your own seat, on an empty one, on a seat that declined or lapsed, and on every seat when `pairing_absence` says there is no pairing to draw. */
+            card?: components["schemas"]["SeatCardSchema"];
         };
         /**
          * DistanceEvidence
@@ -2282,6 +2935,22 @@ export interface components {
              */
             cap: number;
         };
+        /**
+         * PairingAbsence
+         * @description Why a court came back with no cards on it. **Two codes, and a third
+         *     answer that is their absence** (``docs/adr/0143`` §6).
+         *
+         *     Three answers rather than two, because an outage drawing the *identical*
+         *     absence as an unrated sport is the collapse ADR-0141's Consequences refused
+         *     in as many words. And refusing the whole read with a 503 is worse than
+         *     either: it turns an unrelated matchmaking outage into *you cannot answer your
+         *     challenge*, and answering is not gated.
+         *
+         *     **The codes are the contract and the client writes both sentences**
+         *     (``docs/adr/0106``).
+         * @enum {string}
+         */
+        PairingAbsence: "NOTHING_TO_COMPUTE" | "COULD_NOT_BE_READ";
         /**
          * PhotoResponse
          * @description One photo: the id a profile commit will carry, and a URL that reads it.
@@ -3380,6 +4049,14 @@ export interface components {
          */
         SeatAnswer: "ACCEPTED" | "DECLINED" | "LAPSED";
         /**
+         * SeatCardSchema
+         * @description The card for one seat: who they are, and what you make of them.
+         */
+        SeatCardSchema: {
+            person: components["schemas"]["CourtPersonSchema"];
+            pairing: components["schemas"]["CourtPairingSchema"];
+        };
+        /**
          * SeatChoiceSchema
          * @description One position on the court as the organiser left it.
          *
@@ -3424,6 +4101,15 @@ export interface components {
              * @description When this seat's answer stops being wanted. Past it the seat reads as lapsed whether or not anything has swept it, and a late answer is refused rather than accepted late. ``null`` exactly when nobody was asked: an empty seat, the organiser's, and both seats of a challenge born from a mutual yes.
              */
             answer_by?: string | null;
+            /**
+             * Nickname
+             * @description The whole handle, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``).
+             *
+             *     ``null`` on a seat nobody was put in, and ``null`` where ``users`` no longer has the account. The seat stays either way: a seat with no handle is still a position on the court, and the screen has a side to name instead.
+             *
+             *     **A handle is the whole of what a challenge borrows about a person here.** A Level, a band, an area and a photograph are a card's, and a card is drawn on the detail read alone.
+             */
+            nickname?: string | null;
         };
         /**
          * SeatingSchema
@@ -5561,6 +6247,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_challenge_api_v1_challenges__challenge_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                challenge_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The arrangement, the people on it, and what you make of each of them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeDetailResponse"];
+                };
+            };
+            /** @description `challenge_not_found` — no challenge of **yours** has that id. One code for two cases — it does not exist, or you are not on its court — because separating them would answer *is this id real* about a stranger's evening. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

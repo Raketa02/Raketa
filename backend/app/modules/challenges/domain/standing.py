@@ -80,6 +80,14 @@ ENDED = frozenset({Standing.DECLINED, Standing.LAPSED})
 #: each other again in **any** sport and were gone from each other's deck
 #: permanently, while ``games_match_history.py`` stated the opposite as settled
 #: fact.
+#: **It has a second reader now, and it is the same question** — the card block
+#: on the detail read (``docs/adr/0143`` §8). *A card is part of an arrangement
+#: being decided, and it stops when the deciding does*, which is this set's own
+#: sentence read one surface over: ``DECLINED`` and ``LAPSED`` draw the
+#: arrangement and the handle alone because the pair has released, and ``ON``
+#: draws neither because the arranging is **finished** and the game's own screen
+#: owns it. Stated on the two that draw a card rather than on the ones that do
+#: not, so a standing added later is silent by default.
 ARRANGING = frozenset({Standing.AWAITING_ANSWERS, Standing.LINE_UP_INCOMPLETE})
 
 

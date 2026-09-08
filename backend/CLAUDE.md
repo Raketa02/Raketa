@@ -561,14 +561,23 @@ tests.
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Four registers, and they are four on purpose — one per kind of claim.**
+  **Five registers, and they are five on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` holds the ports the *matcher* declares of contexts it
   does not write; `games_demands.py`, `rating_demands.py` and `player_score_demands.py`
-  each hold the ports one *provider* publishes outward. Each register's exhaustiveness
+  each hold the ports one *provider* publishes outward; and `challenge_demands.py` holds
+  what `challenges` demands of the **matcher** — the arrow's other direction, which
+  arrived with the challenge detail read
+  ([ADR-0143](../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)).
+  Each register's exhaustiveness
   assertion is about its own kind of claim and would stop meaning anything with another
   kind in it — which is also the rule for the next one: **a new provider gets a new
   register, not a row in somebody else's**, and the first person to add a row should not
   have to guess which list it belongs in.
+  **A row carries a builder, and not always over a bare session.** `challenge_demands.py`'s
+  takes the two seams the platform supplies from outside a request — the process's
+  candidate index and the exposure ledger behind Redis — because the pairing it contracts
+  is recomputed through the whole scoring pipeline, and **no test in this repository needs
+  Redis running**.
 - Async by default (`asyncio_mode = "auto"`) — no `@pytest.mark.asyncio`.
 
 ## Environment gotchas

@@ -34,18 +34,26 @@ from app.modules.challenges.application.commands import (
     SeatChoice,
     SendChallengeCommand,
 )
+from app.modules.challenges.application.read_challenge import (
+    DetailedChallenge,
+    ReadChallengeCommand,
+)
 from app.modules.challenges.application.read_challenges import (
     ReadChallengesCommand,
     StandingChallenge,
 )
 from app.modules.challenges.domain.answer_window import ANSWER_WINDOW_HOURS
+from app.modules.challenges.domain.ports import CourtCard
+from app.modules.challenges.domain.seats import Seat
 from app.modules.challenges.presentation.dependencies import (
     AcceptSeatDep,
     DeclineSeatDep,
+    ReadChallengeDep,
     ReadChallengesDep,
     SendChallengeDep,
 )
 from app.modules.challenges.presentation.schemas import (
+    ChallengeDetailResponse,
     ChallengeListResponse,
     ChallengeSchema,
     SeatSchema,
@@ -197,8 +205,12 @@ async def read_challenges(
     user: CurrentUserDep,
     use_case: ReadChallengesDep,
 ) -> ChallengeListResponse:
-    found = await use_case.execute(ReadChallengesCommand(reader_id=user.id))
-    return ChallengeListResponse(challenges=[_challenge(one) for one in found])
+    read_at, found = await use_case.execute(
+        ReadChallengesCommand(reader_id=user.id)
+    )
+    return ChallengeListResponse(
+        read_at=read_at, challenges=[_challenge(one) for one in found]
+    )
 
 
 _ANSWER_REFUSALS: dict[int | str, dict[str, Any]] = {
@@ -224,6 +236,66 @@ _ANSWER_REFUSALS: dict[int | str, dict[str, Any]] = {
         ),
     },
 }
+
+
+@router.get(
+    "/{challenge_id}",
+    response_model=ChallengeDetailResponse,
+    response_model_exclude_unset=True,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "description": (
+                "The arrangement, the people on it, and what you make of each "
+                "of them."
+            ),
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`challenge_not_found` — no challenge of **yours** has that id. "
+                "One code for two cases — it does not exist, or you are not on "
+                "its court — because separating them would answer *is this id "
+                "real* about a stranger's evening."
+            ),
+        },
+    },
+    summary="One challenge",
+    description=(
+        "**The screen you answer on.** The list tells you what you have been "
+        "asked; this tells you who is asking and what this platform makes of "
+        "playing them.\n\n"
+        "**The pairing is computed when you open this, in your own "
+        "direction.** Nothing is copied at send and nothing is replayed from "
+        "the organiser's search — which is why a challenge born of a mutual "
+        "yes draws the same screen as one built from a shortlist, and why the "
+        "Fit here is genuinely yours.\n\n"
+        "**The card block is drawn while the arrangement is being decided and "
+        "at no other time.** A challenge that ended draws its arrangement and "
+        "the handles alone, and so does the seat of somebody who declined or "
+        "lapsed inside one that is still open: they have left, and that person "
+        "is a stranger to you again.\n\n"
+        "**Answering is never gated on any of it.** If the pairing cannot be "
+        "computed — you hold no rating in this sport, or something the matcher "
+        "needs could not be read — `pairing_absence` says which, the "
+        "arrangement answers as always, and the buttons are drawn from the "
+        "standing.\n\n"
+        "**Nothing here is re-checked against who is reading.** The safety "
+        "gates ran when this challenge was minted, in both directions, and "
+        "they are not run again."
+    ),
+)
+async def read_challenge(
+    challenge_id: UUID,
+    user: CurrentUserDep,
+    use_case: ReadChallengeDep,
+) -> ChallengeDetailResponse:
+    return _detailed(
+        await use_case.execute(
+            ReadChallengeCommand(challenge_id=challenge_id, reader_id=user.id)
+        ),
+        reader_id=user.id,
+    )
 
 
 @router.post(
@@ -300,10 +372,15 @@ async def decline_seat(
 def _challenge(one: StandingChallenge) -> ChallengeSchema:
     """One challenge as its court is allowed to see it.
 
-    The occupants are bare ids: a card, a Level and an area belong to a search's
-    answer, where a gate decided they may be shown. A challenge is a fact about
-    an arrangement, and a screen that quietly re-published somebody's profile off
-    the back of it would be a directory with extra steps.
+    **The occupants carry a handle and nothing else** (``docs/adr/0143`` §7). A
+    Level, a band, an area and a photograph are what a *card* carries, and a card
+    is as-of-now: it belongs on the detail read, where the arrangement is still
+    being decided and the person reading is doing what a searcher does. A list
+    that drew one would be a directory with extra steps, priced over somebody's
+    whole history of being asked.
+
+    A handle passes ``docs/adr/0141`` §1's test instead: it is what these people
+    were already calling each other, and nothing a gate decided somebody may see.
     """
 
     challenge = one.challenge
@@ -321,7 +398,124 @@ def _challenge(one: StandingChallenge) -> ChallengeSchema:
                 player_id=seat.player_id,
                 answer=seat.answer,
                 answer_by=seat.answer_by,
+                nickname=(
+                    None
+                    if seat.player_id is None
+                    else one.handles.get(seat.player_id)
+                ),
             )
             for seat in challenge.seats
         ],
     )
+
+
+def _detailed(one: DetailedChallenge, *, reader_id: UUID) -> ChallengeDetailResponse:
+    """One challenge as the person answering it is allowed to see it.
+
+    Built through ``model_validate`` over a dict rather than by keyword,
+    because this route is declared ``response_model_exclude_unset=True`` and the
+    two spellings of absence have to survive it: a key that is **not here** is
+    *this does not apply* and generates as ``field?: T``, while a key present as
+    ``None`` is *this applies and the answer is a measured nothing*. The seat's
+    four list-read fields are therefore always set, ``null`` included, and the
+    card block's are set only when they apply.
+    """
+
+    challenge = one.challenge
+    fields: dict[str, Any] = {
+        "read_at": one.read_at,
+        "challenge_id": challenge.id,
+        "sport": challenge.sport,
+        "mode": challenge.mode,
+        "window": challenge.window,
+        "organiser_id": challenge.organiser_id,
+        "standing": one.standing,
+        "opened_at": challenge.opened_at,
+        "seats": [
+            _detailed_seat(one, seat, reader_id=reader_id)
+            for seat in challenge.seats
+        ],
+    }
+    if one.court is not None and one.court.absent is not None:
+        fields["pairing_absence"] = one.court.absent
+    return ChallengeDetailResponse.model_validate(fields)
+
+
+def _detailed_seat(
+    one: DetailedChallenge, seat: Seat, *, reader_id: UUID
+) -> dict[str, Any]:
+    """One seat, with its card where this read drew one.
+
+    **Absent for four different reasons and the same way each time**: an empty
+    seat, the reader's own, somebody who has left, and a read that produced no
+    cards at all. Only the last of those has a code, on the response, because it
+    is the only one the client cannot see for itself from the arrangement it is
+    holding.
+    """
+
+    fields: dict[str, Any] = {
+        "side": seat.side,
+        "player_id": seat.player_id,
+        "answer": seat.answer,
+        "answer_by": seat.answer_by,
+        "nickname": (
+            None if seat.player_id is None else one.handles.get(seat.player_id)
+        ),
+    }
+    if seat.player_id is None or seat.player_id == reader_id:
+        return fields
+    card = one.card_for(seat.player_id)
+    if card is not None:
+        fields["card"] = _seat_card(card)
+    return fields
+
+
+def _seat_card(card: CourtCard) -> dict[str, Any]:
+    """The two blocks, in this context's own narrower vocabulary.
+
+    **The second mapper ``docs/adr/0143`` priced in its Consequences.** The
+    person's three omissions and the pairing's two are each on their own terms:
+    a photograph and its address travel together or not at all, a Player Score
+    is absent where the platform has watched nothing, a distance is absent where
+    the term stood down, and what is at stake is absent in for fun and where
+    either player holds no rating.
+    """
+
+    person: dict[str, Any] = {
+        "nickname": card.person.nickname,
+        "area_code": card.person.area_code,
+        "level": card.person.level,
+        "band": card.person.band,
+        "range": {"low": card.person.range_low, "high": card.person.range_high},
+    }
+    if card.person.photo_id is not None and card.person.photo_url is not None:
+        person["photo_id"] = card.person.photo_id
+        person["photo_url"] = card.person.photo_url
+    if card.person.player_score is not None:
+        person["player_score"] = card.person.player_score
+
+    pairing: dict[str, Any] = {
+        "fit": card.pairing.fit,
+        # The same mappings the search record stores, validated here into this
+        # context's own closed union. One serialiser, two consumers.
+        "terms": [dict(term) for term in card.pairing.terms],
+        "degraded_terms": [
+            {"term": term, "reason": reason}
+            for term, reason in card.pairing.degraded_terms
+        ],
+        "concerns": [{"term": term} for term in card.pairing.concerns],
+        "forecast": {
+            "pct": card.pairing.forecast.pct,
+            "sigma_group": card.pairing.forecast.sigma_group,
+            "provisional": card.pairing.forecast.provisional,
+            "assumption": card.pairing.forecast.assumption,
+        },
+    }
+    if card.pairing.distance_km is not None:
+        pairing["distance_km"] = card.pairing.distance_km
+    if card.pairing.at_stake is not None:
+        pairing["at_stake"] = {
+            "win_delta": card.pairing.at_stake.win_delta,
+            "loss_delta": card.pairing.at_stake.loss_delta,
+        }
+    return {"person": person, "pairing": pairing}

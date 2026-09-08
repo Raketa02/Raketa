@@ -646,7 +646,7 @@ async def _the_court_they_sent(paths: ReadPaths, organiser: str) -> Challenge | 
 
     organiser_id = paths.player(organiser)
     reader = paths.player(PROTAGONIST.email)
-    standing = await paths.read_challenges.execute(
+    _, standing = await paths.read_challenges.execute(
         ReadChallengesCommand(reader_id=reader)
     )
     for row in standing:

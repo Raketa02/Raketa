@@ -66,6 +66,8 @@ from app.bootstrap.composition import (
     build_play_intent_declaration_repository,
     build_photo_storage,
     build_player_card_source,
+    build_challenge_handles,
+    build_court_pairing_query_over,
     build_player_handles,
     build_player_record_source,
     build_player_profile_repository,
@@ -91,6 +93,7 @@ from app.modules.challenges.application.commands import (
     SeatChoice,
     SendChallengeCommand,
 )
+from app.modules.challenges.application.read_challenge import ReadChallenge
 from app.modules.challenges.application.read_challenges import ReadChallenges
 from app.modules.challenges.application.send_challenge import SendChallenge
 from app.modules.challenges.domain.seats import court_sides
@@ -171,6 +174,12 @@ class ReadPaths:
     accept: AcceptSeat
     decline: DeclineSeat
     read_challenges: ReadChallenges
+    #: The detail read, and **the only surface in this fixture that costs the
+    #: matcher a whole scoring pass** (``docs/adr/0143``). It is here so the run
+    #: can assert the card block a challenge screen draws rather than only the
+    #: arrangement behind it — which is the one half of that screen no other
+    #: read in this file exercises.
+    read_challenge: ReadChallenge
     #: The three acts a played game costs after the seats are answered, and the
     #: screen that reads one back. ``games`` opens the game itself — inline, in
     #: the transaction of the accept that filled the last seat — so there is no
@@ -300,6 +309,10 @@ async def read_paths(
         session=session, event_store=event_store, events=events
     )
     handles = build_player_handles(session)
+    # ``challenges`` declares its own handles port and may not sign ``games``'
+    # (``docs/adr/0143`` §7), so the seed holds both adapters exactly as a
+    # request does.
+    court_handles = build_challenge_handles(session)
     history = build_match_history_query(session)
     ruleset = build_ruleset()
     engine = build_match_fit_engine()
@@ -400,18 +413,42 @@ async def read_paths(
         ),
         accept=AcceptSeat(
             challenges=challenges,
+            handles=court_handles,
             uow=uow,
             clock=clock,
             planned_games=build_planned_game_opening(session),
         ),
-        decline=DeclineSeat(challenges=challenges, uow=uow, clock=clock),
+        decline=DeclineSeat(
+            challenges=challenges, handles=court_handles, uow=uow, clock=clock
+        ),
         state_result=StateResult(games=games, handles=handles, uow=uow, clock=clock),
         accept_result=AcceptResult(games=games, handles=handles, uow=uow, clock=clock),
         read_games=ReadGames(
             games=build_game_directory(session), handles=handles, clock=clock
         ),
         read_challenges=ReadChallenges(
-            directory=build_challenge_directory(session), clock=clock
+            directory=build_challenge_directory(session),
+            handles=court_handles,
+            clock=clock,
+        ),
+        read_challenge=ReadChallenge(
+            challenges=challenges,
+            handles=court_handles,
+            # **The run's own index and ledger**, for the reason every other
+            # seam here takes the caller's: the run ticks the index in process
+            # before it reads, and a pairing computed against a different one
+            # would be a card about a city this run never built.
+            pairings=build_court_pairing_query_over(
+                session=session,
+                clock=clock,
+                unit_of_work=uow,
+                event_store=event_store,
+                events=events,
+                settings=settings,
+                exposure=exposure,
+                candidates=candidates,
+            ),
+            clock=clock,
         ),
         history=history,
         games=build_game_history_query(session),

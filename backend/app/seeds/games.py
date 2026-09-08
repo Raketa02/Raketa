@@ -367,7 +367,7 @@ async def _the_court_already_sent(
 
     organiser = _player(paths, cohort, game.organiser)
     wanted = frozenset(_ids(paths, cohort, game.players))
-    standing = await paths.read_challenges.execute(
+    _, standing = await paths.read_challenges.execute(
         ReadChallengesCommand(reader_id=organiser)
     )
     for row in standing:

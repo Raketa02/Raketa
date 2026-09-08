@@ -18,6 +18,10 @@ anything noticing.
 **A seat given to somebody else stops being yours.** The stream still matches the
 substring read — their id is in an earlier event — and the challenge is not
 theirs to keep watching.
+
+**And a fourth, from ``docs/adr/0143`` §7:** the handles come back with the rows,
+read once over the union of every court, and a seat whose account ``users`` no
+longer has keeps its place with no handle on it.
 """
 
 from __future__ import annotations
@@ -76,9 +80,35 @@ def _repository(session):
     )
 
 
-def _reading(session, *, now: Instant) -> ReadChallenges:
+class RecordingHandles:
+    """What ``users`` calls these people — and what it was asked about.
+
+    A stub rather than the real adapter, because the claim worth making is about
+    the **question**: one set read over the union of every court, so a player
+    seated in three of your challenges is asked about once. Whether ``users``
+    can answer is ``users``'s own suite's.
+    """
+
+    def __init__(self, known: dict | None = None) -> None:
+        self.known = {} if known is None else known
+        self.asked: list[tuple] = []
+
+    async def handles_of(self, player_ids):
+        self.asked.append(tuple(player_ids))
+        return {
+            player_id: self.known[player_id]
+            for player_id in player_ids
+            if player_id in self.known
+        }
+
+
+def _reading(
+    session, *, now: Instant, handles: RecordingHandles | None = None
+) -> ReadChallenges:
     return ReadChallenges(
-        directory=build_challenge_directory(session), clock=FrozenClock(now)
+        directory=build_challenge_directory(session),
+        handles=handles or RecordingHandles(),
+        clock=FrozenClock(now),
     )
 
 
@@ -114,10 +144,10 @@ async def test_a_challenge_reaches_both_sides_of_it(session_factory):
     async with session_factory() as session:
         sent = await _record(session, a_tennis_challenge(invitee=ALICE, sent_at=at()))
 
-        mine = await _reading(session, now=at(1)).execute(
+        _, mine = await _reading(session, now=at(1)).execute(
             ReadChallengesCommand(reader_id=ORGANISER)
         )
-        theirs = await _reading(session, now=at(1)).execute(
+        _, theirs = await _reading(session, now=at(1)).execute(
             ReadChallengesCommand(reader_id=ALICE)
         )
 
@@ -130,7 +160,7 @@ async def test_a_stranger_sees_none_of_it(session_factory):
     async with session_factory() as session:
         await _record(session, a_tennis_challenge(invitee=ALICE, sent_at=at()))
 
-        theirs = await _reading(session, now=at(1)).execute(
+        _, theirs = await _reading(session, now=at(1)).execute(
             ReadChallengesCommand(reader_id=BOB)
         )
 
@@ -146,7 +176,7 @@ async def test_the_list_is_newest_first(session_factory):
             session, a_tennis_challenge(invitee=BOB, sent_at=at(2))
         )
 
-        mine = await _reading(session, now=at(3)).execute(
+        _, mine = await _reading(session, now=at(3)).execute(
             ReadChallengesCommand(reader_id=ORGANISER)
         )
 
@@ -162,10 +192,10 @@ async def test_the_standing_is_folded_against_the_clock_with_no_sweep_having_run
     async with session_factory() as session:
         await _record(session, a_tennis_challenge(invitee=ALICE, sent_at=at()))
 
-        inside = await _reading(session, now=at(1)).execute(
+        _, inside = await _reading(session, now=at(1)).execute(
             ReadChallengesCommand(reader_id=ORGANISER)
         )
-        outside = await _reading(
+        _, outside = await _reading(
             session, now=instant(at() + ANSWER_WINDOW + timedelta(minutes=1))
         ).execute(ReadChallengesCommand(reader_id=ORGANISER))
 
@@ -182,7 +212,7 @@ async def test_an_ended_challenge_stays_on_the_list(session_factory):
         challenge.decline(ALICE, occurred_at=at(1))
         await _record(session, challenge)
 
-        theirs = await _reading(session, now=at(2)).execute(
+        _, theirs = await _reading(session, now=at(2)).execute(
             ReadChallengesCommand(reader_id=ALICE)
         )
 
@@ -226,12 +256,101 @@ async def test_a_seat_given_to_somebody_else_is_no_longer_yours(session_factory)
         )
         await _record(session, challenge)
 
-        hers = await _reading(session, now=at(3)).execute(
+        _, hers = await _reading(session, now=at(3)).execute(
             ReadChallengesCommand(reader_id=ALICE)
         )
-        his = await _reading(session, now=at(3)).execute(
+        _, his = await _reading(session, now=at(3)).execute(
             ReadChallengesCommand(reader_id=BOB)
         )
 
         assert hers == ()
         assert [one.challenge.id for one in his] == [challenge.id]
+
+
+# ---------------------------------------------------------------------------
+# The handles, and the instant — ``docs/adr/0143`` §7
+# ---------------------------------------------------------------------------
+
+
+async def test_the_handles_are_one_question_over_the_union_of_every_court(
+    session_factory,
+):
+    """One set read for the whole list, and a player seated twice asked about once.
+
+    The union rather than a question per court, and **sorted**, because a set is
+    never the source of a traversal (``docs/adr/0105`` §1) — nothing downstream
+    could observe the order, which is exactly why the rule is stated on the
+    collection rather than on what happens to be visible.
+    """
+
+    handles = RecordingHandles({ORGANISER: "Ola", ALICE: "Alicja", BOB: "Bartek"})
+    async with session_factory() as session:
+        await _record(session, a_tennis_challenge(invitee=ALICE, sent_at=at()))
+        await _record(session, a_tennis_challenge(invitee=BOB, sent_at=at(1)))
+
+        _, mine = await _reading(session, now=at(2), handles=handles).execute(
+            ReadChallengesCommand(reader_id=ORGANISER)
+        )
+
+        assert handles.asked == [tuple(sorted([ORGANISER, ALICE, BOB]))]
+        assert all(
+            one.handles == {ORGANISER: "Ola", ALICE: "Alicja", BOB: "Bartek"}
+            for one in mine
+        )
+
+
+async def test_a_seat_whose_account_is_gone_keeps_its_place_with_no_handle(
+    session_factory,
+):
+    """**A player absent from the answer keeps their seat.**
+
+    A card with no nickname is not a card and a shortlist drops that row; a
+    *seat* with no nickname is still a person who was asked, and dropping it
+    would publish a court one person short. The handle goes absent, the seat
+    stays, and the screen has a side to name instead.
+    """
+
+    handles = RecordingHandles({ORGANISER: "Ola"})
+    async with session_factory() as session:
+        await _record(session, a_tennis_challenge(invitee=ALICE, sent_at=at()))
+
+        _, mine = await _reading(session, now=at(1), handles=handles).execute(
+            ReadChallengesCommand(reader_id=ORGANISER)
+        )
+
+        assert len(mine[0].challenge.seats) == 2
+        assert mine[0].handles == {ORGANISER: "Ola"}
+
+
+async def test_the_instant_answers_even_when_the_list_is_empty(session_factory):
+    """The fold's own moment, beside the rows as well as on them.
+
+    An empty list still has to say **when**: a client's countdowns are read
+    against it and there would otherwise be no row to read it off.
+    """
+
+    async with session_factory() as session:
+        read_at, mine = await _reading(session, now=at(4)).execute(
+            ReadChallengesCommand(reader_id=BOB)
+        )
+
+        assert mine == ()
+        assert read_at == at(4)
+
+
+async def test_every_standing_is_folded_against_the_one_instant(session_factory):
+    """One clock read for the whole list, carried on every row.
+
+    Folding each challenge against its own reading would let a list disagree
+    with itself about which of two seats had just lapsed.
+    """
+
+    async with session_factory() as session:
+        await _record(session, a_tennis_challenge(invitee=ALICE, sent_at=at()))
+        await _record(session, a_tennis_challenge(invitee=BOB, sent_at=at(1)))
+
+        read_at, mine = await _reading(session, now=at(2)).execute(
+            ReadChallengesCommand(reader_id=ORGANISER)
+        )
+
+        assert {one.read_at for one in mine} == {read_at}

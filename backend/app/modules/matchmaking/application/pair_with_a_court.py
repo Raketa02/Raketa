@@ -1,0 +1,286 @@
+"""*What do I make of each of these people* — the pairing, recomputed at read.
+
+``docs/adr/0143``. Somebody has been asked to play, and the screen they answer on
+prints what this platform makes of the person asking. Three facts rule out every
+cheaper shape, and none of them is visible from the schemas:
+
+- **The invitee cannot read the organiser's search.** ``GET /searches/{id}`` is
+  *a searcher may read their own search and nobody else's*, so the one person who
+  most needs this screen has no access to the record it would be built from.
+- **A challenge born of a mutual yes has no search at all**, and a design leaning
+  on one leaves that conversation blank.
+- **The stored reverse Fit was built not to be published.** ``fit_ba`` is scored
+  with the searcher's own reliability deliberately set to ``None``; it prices how
+  good a bet the searcher looks from the other side and feeds one liveness
+  signal. It is the number that *looks* like exactly what a *for you* label
+  wants, and it is not one.
+
+So nothing is copied at send and nothing is replayed. **This is not a search**
+(``docs/adr/0104``'s rule binds searches): no candidates are generated, nothing
+is ranked, withheld or explained, there is no ``search_id``, no Origin key and no
+record. What it borrows from a search is the arithmetic, and it borrows it
+through the same workbench every surface uses — because two implementations of
+*bind a search context* would be two answers to which reads fail closed.
+
+**The gates are not run, and that is the decision rather than an economy**
+(§2). They ran over every pair of this court in the send's own transaction, and
+re-running them would tell an answerer that something changed about somebody else
+on the court — the one thing a safety gate may never say, and the disclosure the
+answer routes already refuse to make. Both mutual gates were passed in the
+reader's own direction at mint by construction, so *the challenge is the gate* is
+a permission the reader holds themselves.
+
+**The floor is not applied either, for the neighbouring reason.** A quality floor
+decides who is worth putting in a **list**; nobody is being listed here. This
+person is already on your court, and a card that vanished because a term stood
+down would be the same disclosure by a third route.
+
+**Two refusals, and they are two on purpose** (§6). The reader holding no rating,
+no declared intent or no committed profile in the sport they were challenged in
+raises this module's own three errors and means *there is nothing to compute* —
+which is how this feature works rather than a corner of it. Anything else means
+*it could not be read*. The caller keeps them apart because an outage drawing the
+identical absence as an unrated sport is the collapse ADR-0141's Consequences
+refused in as many words.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import final
+from uuid import UUID
+
+from app.engines.matchfit.grouping import Arrangement, Forecast, Seated
+from app.engines.matchfit.ruleset import Ruleset
+from app.engines.matchfit.scoring import MatchFit
+from app.engines.matchfit.core import SearchMode
+from app.engines.matchfit.v1 import arranged
+from app.kernel import InvariantViolated, Sport, iso_weekday
+from app.modules.matchmaking.application.search_workbench import (
+    AnsweredCandidate,
+    SearchWorkbench,
+)
+from app.modules.matchmaking.domain.deck import mode_for_intent
+from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
+from app.modules.matchmaking.domain.fence import (
+    area_of,
+    combine_group_sigma,
+    searcher_of,
+    slots_of,
+)
+from app.modules.matchmaking.domain.geography import distance_km as measure_distance
+from app.modules.matchmaking.domain.measurements import overlap_of
+from app.modules.matchmaking.domain.search_context import SearchContext
+from app.modules.matchmaking.domain.searches import (
+    SearchInitiation,
+    SearchSurface,
+)
+from app.modules.matchmaking.domain.shortlist import (
+    Generated,
+    Generation,
+    score_all,
+)
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class PairWithACourtCommand:
+    """*Price these people for me, in this sport.*
+
+    ``court_ids`` never contains the reader: a pairing with yourself is not a
+    question, and the whole read would have to refuse it.
+
+    ``mode`` is the challenge's own and ``None`` on one born of a mutual yes,
+    where the surface asked nobody to pick a kind of evening. ``None`` reads the
+    reader's **own** declaration through the deck's mapping, which is the rule
+    that already exists for a surface with no tab — never a third vector.
+    """
+
+    reader_id: UUID
+    sport: Sport
+    mode: SearchMode | None
+    court_ids: tuple[UUID, ...]
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class PairedSeat:
+    """One person on the court, priced in the reader's own direction.
+
+    The forecast rides beside the card rather than on it because it has a third
+    author again: the card is facts about them, the Fit is a reading of the two
+    of them, and this is what the **game** would look like. It is
+    ``would_be_forecast``'s own question — *what would this pairing leave on
+    court* — asked one seat at a time, which is the granularity the card block is
+    drawn at.
+    """
+
+    answered: AnsweredCandidate
+    forecast: Forecast
+
+    @property
+    def player_id(self) -> UUID:
+        return UUID(self.answered.scored.player_id)
+
+
+@final
+class PairWithACourt:
+    """The pairing block for one court, computed for one reader.
+
+    **It holds no store it could write to.** Nothing here is recorded, which is
+    what keeps a screen that is opened by a tap out of *searches run*.
+    """
+
+    def __init__(
+        self,
+        *,
+        workbench: SearchWorkbench,
+        ruleset: Ruleset,
+        engine: MatchFit,
+    ) -> None:
+        self._work = workbench
+        self._ruleset = ruleset
+        self._engine = engine
+
+    async def execute(
+        self, command: PairWithACourtCommand
+    ) -> tuple[PairedSeat, ...]:
+        """A priced seat per person the index can still describe, sorted.
+
+        **Sorted on the player's id**, because a set is never the source of an
+        order and the rule is stated on the collection rather than on what
+        happens to be observable (``docs/adr/0105`` §1).
+        """
+
+        if not command.court_ids:
+            return ()
+        searcher = await self._work.searcher_facts(
+            player_id=command.reader_id,
+            sport=command.sport,
+            mode_of=lambda intent: (
+                command.mode
+                if command.mode is not None
+                else mode_for_intent(intent, self._ruleset.intent)
+            ),
+        )
+        now = self._work.clock.now()
+        # **The workbench's own binding, staleness refusal and all.** A day-old
+        # index means a stale Level, a stale band and a stale area, and ADR-0111
+        # refuses past that on quality grounds — which is exactly the ground a
+        # card stands on. The refusal reaches the reader as *the pairing could
+        # not be read*, never as a failed screen.
+        snapshot, _ = self._work.bound_snapshot(command.sport, now)
+        context = await self._work.bind(
+            searcher,
+            snapshot,
+            now,
+            # **The population every live read is about is the court itself.**
+            # A search binds the bounding box because that is who it might
+            # score; this reads at most three other people, all of them already
+            # named on an arrangement the reader is inside.
+            in_box=command.court_ids,
+            # Neither of these is read by anything this use case runs, and
+            # nothing is recorded, so neither reaches a column. They are on
+            # ``SearchContext`` because a *search* stores them: ``surface`` is
+            # never read outside the record at all, and ``initiation`` is read
+            # by the proposals gate alone, which is one of the gates §2 does not
+            # run.
+            surface=SearchSurface.SHORTLIST,
+            initiation=SearchInitiation.HUMAN,
+            # The absorption cap binds inside the newcomer **gate**, and no gate
+            # runs here — so the read it would need is skipped rather than
+            # answered emptily.
+            for_a_newcomer=False,
+        )
+        try:
+            scored = score_all(
+                _the_court(context, command.court_ids), context, self._engine
+            )
+        except InvariantViolated as broken:
+            raise MatchmakingUnavailable(
+                f"the matcher refused to price the court: {broken}"
+            ) from broken
+        answered = await self._work.attach(scored, context)
+        return tuple(
+            sorted(
+                (
+                    PairedSeat(answered=row, forecast=self._forecast(row, context))
+                    for row in answered
+                ),
+                key=lambda seat: seat.player_id,
+            )
+        )
+
+    def _forecast(self, row: AnsweredCandidate, context: SearchContext) -> Forecast:
+        """What the two of them would leave on court, as a singles pairing.
+
+        **The fenced candidate is reused rather than re-fenced.** ``evidence.py``
+        states the principle the other way round — *overlap is a fact about a
+        pair where a calendar is a fact about a person* — and
+        ``_searcher_as_candidate`` already refuses to recompute a pair's combined
+        uncertainty for the same reason: two chances to disagree about one
+        number.
+
+        One seat a side, whatever the sport's court seats. The block is drawn per
+        person, and *how would a game against **you** go* is the question a
+        person answering an invitation is asking; a four-way figure would be one
+        answer printed four times.
+        """
+
+        return arranged(
+            searcher_of(context),
+            Arrangement(
+                partner=None,
+                opponents=(
+                    Seated(candidate=row.scored.fenced, fit=0.0, locked=True),
+                ),
+            ),
+            self._ruleset,
+            combine_group_sigma,
+            seats_per_side=1,
+        ).forecast
+
+
+def _the_court(context: SearchContext, court_ids: tuple[UUID, ...]) -> Generation:
+    """The named people, measured — **and deliberately not gated.**
+
+    ``generate`` walks a bounding box and applies every gate; this walks a list
+    somebody was already put on an arrangement with. Neither the box nor the
+    gates belong here: a court member outside the reader's radius is still on
+    their court, and §2 is the whole argument for not re-running the four
+    fail-closed gates against the reader.
+
+    The two counts on :class:`Generation` are what a search **records**, and
+    nothing here is recorded. ``n_generated`` is the court, and there is no gate
+    to have excluded anybody.
+
+    **Somebody the index cannot describe is simply absent**, and their seat is
+    untouched. A row can be missing because the tail has not reached them yet or
+    because they are gone; neither is a fact this screen is entitled to state, so
+    it states none and draws the seat without a card.
+    """
+
+    centre = context.searcher.area
+    searcher_slots = context.searcher.grid.slots
+    today = iso_weekday(context.now.isoweekday())
+    wanted = {str(player_id) for player_id in court_ids}
+    admitted = tuple(
+        Generated(
+            row=row,
+            distance_km=measure_distance(centre, area_of(row)),
+            overlap=overlap_of(searcher_slots, slots_of(row), today),
+            player_uuid=UUID(row.player_id),
+        )
+        for row in context.snapshot.rows
+        if row.player_id in wanted
+    )
+    return Generation(
+        admitted=admitted, n_generated=len(admitted), excluded_by_gate={}
+    )
+
+
+__all__ = [
+    "PairWithACourt",
+    "PairWithACourtCommand",
+    "PairedSeat",
+]

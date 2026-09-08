@@ -165,6 +165,22 @@ class CardPhotoLinks(Protocol):
         """
         ...
 
+    async def links_over(self, owned: Mapping[UUID, UUID]) -> Mapping[UUID, str]:
+        """The same signatures, over owner-and-photo pairs rather than rows.
+
+        **The general question, and :meth:`links_for` is the record-shaped one
+        over it.** A search holds recorded rows and reaches for the first; the
+        challenge detail holds a card it just assembled and no record at all
+        (``docs/adr/0143``), so it would otherwise have to forge rows to ask.
+        Two implementations of *sign this photograph as its owner* is exactly
+        how one of them ends up signing as the reader instead — which reaches an
+        object that does not exist.
+
+        Keyed by owner both ways in and out. A player with no photograph is not
+        in ``owned`` and is not in the answer.
+        """
+        ...
+
 
 @final
 @dataclass(frozen=True, slots=True)

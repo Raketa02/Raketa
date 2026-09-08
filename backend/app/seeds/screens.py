@@ -76,6 +76,7 @@ from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
 from app.kernel import Instant, Sport
+from app.modules.challenges.application.read_challenge import ReadChallengeCommand
 from app.modules.challenges.application.read_challenges import ReadChallengesCommand
 from app.modules.challenges.domain.answer_window import ANSWER_WINDOW_HOURS
 from app.modules.challenges.domain.seats import SeatAnswer
@@ -1241,6 +1242,7 @@ async def _the_eleven(
         _refuse_an_absence_with_no_gate_behind_it(paths, pool, deck, line_up),
         await _refuse_a_block_only_one_side_can_see(paths),
         await _refuse_a_seat_that_is_not_hers_to_answer(paths),
+        await _refuse_a_challenge_screen_with_nobody_on_it(paths),
         await _refuse_a_pass_the_deck_still_deals(paths, pool, pairs=pairs),
     ]
 
@@ -1612,7 +1614,7 @@ async def _refuse_a_seat_that_is_not_hers_to_answer(paths: ReadPaths) -> str:
 
     her = paths.player(PROTAGONIST.email)
     organiser = paths.player(THEY_CHALLENGED_YOU.account.email)
-    standing = await paths.read_challenges.execute(
+    _, standing = await paths.read_challenges.execute(
         ReadChallengesCommand(reader_id=her)
     )
     courts = [
@@ -1664,6 +1666,80 @@ async def _refuse_a_seat_that_is_not_hers_to_answer(paths: ReadPaths) -> str:
         f"{THEY_CHALLENGED_YOU.account.slug} reads {courts[0].standing.value}: "
         f"{PROTAGONIST.slug} on side {hers.side.value} answering by "
         f"{hers.answer_by:%Y-%m-%d %H:%M}, one seat accepted and one still out"
+    )
+
+
+async def _refuse_a_challenge_screen_with_nobody_on_it(paths: ReadPaths) -> str:
+    """*The court she is answering names who is asking, and prices playing them.*
+
+    The one screen in this fixture whose card is **recomputed rather than
+    replayed** (``docs/adr/0143``). Every other card here was recorded by the
+    search that dealt it; this one is scored when the screen opens, in **her**
+    direction, against somebody whose search she cannot read — which is the whole
+    reason the port exists and the one thing no other assertion in this file
+    touches.
+
+    **What is asserted is a drawn card and not a shape.** A pairing block is
+    allowed to be absent for two named reasons, and both of them are the fixture
+    failing rather than the product working: the protagonist is rated and has
+    declared for this sport, and the run has just ticked the index it is about to
+    read. So an absence here is reported as the refusal it is, with the code that
+    says whose gap it would have been.
+
+    **The two absences are not fixtures, and that is written down rather than
+    left as a gap.** *Nothing to compute* needs a reader with no rating in the
+    sport they were challenged in, and a challenge only reaches somebody through
+    a search or a mutual yes — both of which need that rating on both sides — so
+    there is no way to seat one through the real routes. *Could not be read*
+    needs the matcher broken, which is a dependency override rather than a state
+    a database can hold. Both are contracted in ``tests/api/`` instead, where an
+    override is the right instrument.
+    """
+
+    her = paths.player(PROTAGONIST.email)
+    organiser = paths.player(THEY_CHALLENGED_YOU.account.email)
+    _, standing = await paths.read_challenges.execute(
+        ReadChallengesCommand(reader_id=her)
+    )
+    courts = [
+        row
+        for row in standing
+        if row.challenge.organiser_id == organiser and row.standing not in ENDED
+    ]
+    if not courts:
+        raise ScreenIsEmpty(
+            f"'{THEY_CHALLENGED_YOU.account.slug}' sent {PROTAGONIST.slug} no "
+            f"court that still stands, so there is no challenge screen to draw "
+            f"a card on. The seat assertion above says why."
+        )
+    detail = await paths.read_challenge.execute(
+        ReadChallengeCommand(challenge_id=courts[0].challenge.id, reader_id=her)
+    )
+    absent = None if detail.court is None else detail.court.absent
+    if detail.court is None or absent is not None:
+        why = "the standing draws none" if absent is None else absent.value
+        raise ScreenIsEmpty(
+            f"{PROTAGONIST.slug}'s challenge screen draws no card block: {why}. "
+            f"She is rated and declared for {courts[0].challenge.sport.value} and "
+            f"this run ticked the index before reading, so both absences are "
+            f"this fixture failing rather than the product working."
+        )
+    card = detail.card_for(organiser)
+    if card is None:
+        raise ScreenIsEmpty(
+            f"the card block came back with nobody in it: "
+            f"'{THEY_CHALLENGED_YOU.account.slug}' organises the court "
+            f"{PROTAGONIST.slug} holds a seat on, and a screen that priced "
+            f"everybody except the person asking is the one card it owes her."
+        )
+    return (
+        f"court · {PROTAGONIST.slug} reads "
+        f"{THEY_CHALLENGED_YOU.account.slug}'s card on challenge "
+        f"{courts[0].challenge.id}: {card.person.nickname}, level "
+        f"{card.person.level:.2f} in band {card.person.band}, Fit "
+        f"{card.pairing.fit:.0f} over {len(card.pairing.terms)} term(s) with "
+        f"{len(card.pairing.degraded_terms)} stood down, forecast "
+        f"{card.pairing.forecast.pct}%"
     )
 
 
