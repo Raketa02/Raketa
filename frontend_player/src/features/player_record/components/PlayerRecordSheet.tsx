@@ -74,8 +74,10 @@ import { RecordHeader } from './RecordHeader';
 import { SkillCard } from './SkillCard';
 import {
   FIT_ROW_BODY,
+  READING_RECORD_LABEL,
   RECORD_UNAVAILABLE,
   RECORD_UNAVAILABLE_CODE,
+  RETRY_RECORD_LABEL,
   fitRowLabel,
   fitRowTitle,
   recordCloseLabel,
@@ -87,9 +89,6 @@ import {
 const RECORD_FAILURES: Readonly<Record<string, string>> = {
   [RECORD_UNAVAILABLE_CODE]: RECORD_UNAVAILABLE,
 };
-
-const RETRY_LABEL = 'Try again';
-const LOADING_LABEL = 'Reading their record';
 
 /**
  * How tall the sheet stands before it knows anything.
@@ -197,7 +196,9 @@ function Standing({
   readonly onRetry: () => void;
 }) {
   if (error === null) {
-    return <ActivityIndicator accessibilityLabel={LOADING_LABEL} color={theme.color.muted} />;
+    return (
+      <ActivityIndicator accessibilityLabel={READING_RECORD_LABEL} color={theme.color.muted} />
+    );
   }
 
   if (error.code === RECORD_UNAVAILABLE_CODE) {
@@ -209,7 +210,7 @@ function Standing({
       <Note variant="coral" accessibilityRole="alert">
         {codeMessage(RECORD_FAILURES, error)}
       </Note>
-      <Button label={RETRY_LABEL} variant="secondary" onPress={onRetry} />
+      <Button label={RETRY_RECORD_LABEL} variant="secondary" onPress={onRetry} />
     </View>
   );
 }

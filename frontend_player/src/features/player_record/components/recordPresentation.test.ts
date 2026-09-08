@@ -29,11 +29,14 @@ const HERE = 'A+050612+0019938';
 const THERE = 'A+050614+0019944';
 
 describe('the identity line', () => {
+  const about = (facts: Omit<Parameters<typeof identityLine>[0], 'isSelf'>) =>
+    identityLine({ ...facts, isSelf: false });
+
   it('states the area only where two codes actually match', () => {
-    expect(identityLine({ areaCode: HERE, viewerAreaCode: HERE, distanceKm: 1 })).toBe(
+    expect(about({ areaCode: HERE, viewerAreaCode: HERE, distanceKm: 1 })).toBe(
       `${IN_YOUR_AREA} · 1 km`,
     );
-    expect(identityLine({ areaCode: HERE, viewerAreaCode: THERE, distanceKm: 4 })).toBe('4 km');
+    expect(about({ areaCode: HERE, viewerAreaCode: THERE, distanceKm: 4 })).toBe('4 km');
   });
 
   /**
@@ -42,18 +45,29 @@ describe('the identity line', () => {
    * are in it, and must not be told they are not either.
    */
   it('makes no claim at all where the reader’s own area is unknown', () => {
-    expect(identityLine({ areaCode: HERE, distanceKm: 4 })).toBe('4 km');
+    expect(about({ areaCode: HERE, distanceKm: 4 })).toBe('4 km');
   });
 
-  it('prints no distance on your own record, and leaves no separator behind', () => {
-    expect(identityLine({ areaCode: HERE, viewerAreaCode: HERE })).toBe(IN_YOUR_AREA);
-    expect(identityLine({ areaCode: HERE })).toBe('');
+  /**
+   * **The whole line goes on your own record, and not only the distance.** The two codes are
+   * equal by construction there, so a line that dropped the kilometres alone would tell somebody
+   * they are in their own area — which is the failure that hides behind *no distance about
+   * yourself* being the obvious half of the rule.
+   */
+  it('says nothing at all about where you are on your own record', () => {
+    expect(
+      identityLine({ areaCode: HERE, viewerAreaCode: HERE, distanceKm: 0, isSelf: true }),
+    ).toBe('');
+    expect(identityLine({ areaCode: HERE, viewerAreaCode: HERE, isSelf: true })).toBe('');
+  });
+
+  it('leaves no separator behind where only one part is absent', () => {
+    expect(about({ areaCode: HERE, viewerAreaCode: HERE })).toBe(IN_YOUR_AREA);
+    expect(about({ areaCode: HERE })).toBe('');
   });
 
   it('never prints the area code itself, which is a coordinate and not a name', () => {
-    expect(identityLine({ areaCode: HERE, viewerAreaCode: HERE, distanceKm: 4 })).not.toContain(
-      HERE,
-    );
+    expect(about({ areaCode: HERE, viewerAreaCode: HERE, distanceKm: 4 })).not.toContain(HERE);
   });
 });
 

@@ -28,8 +28,10 @@
  * `In your area · 4 km`, or the kilometres alone, or nothing. An `area_code` is a coordinate
  * string; the only sentence a client is licensed to write from two of them is *these two are in
  * the same square*, and a reader whose own area is unknown gets no claim in either direction.
- * On your own record the distance is gone, because the sheet does not tell somebody they are
- * nought kilometres from themselves.
+ * On your own record the **whole line** is gone rather than the distance alone — the two codes
+ * are equal by construction there, so a line that dropped only the kilometres would tell
+ * somebody they are in their own area — and `identityLine` reads `isSelf` for exactly that
+ * reason, rather than leaving two call sites to remember one condition.
  *
  * ## One element, and the pills merge into it
  *
@@ -78,8 +80,9 @@ export function RecordHeader({ record, playerId, distanceKm, viewerAreaCode }: R
   const handle = recordHandle(record.nickname, record.isSelf);
   const identity = identityLine({
     areaCode: record.areaCode,
+    isSelf: record.isSelf,
     ...(viewerAreaCode === undefined ? {} : { viewerAreaCode }),
-    ...(distanceKm === undefined || record.isSelf ? {} : { distanceKm }),
+    ...(distanceKm === undefined ? {} : { distanceKm }),
   });
 
   return (

@@ -49,10 +49,7 @@ export function SkillCard({ skill }: SkillCardProps) {
 
   return (
     <Card>
-      <View
-        accessible
-        accessibilityLabel={skillCardLabel({ ...skill, sportName, likelyRange: skill.likelyRange })}
-      >
+      <View accessible accessibilityLabel={skillCardLabel({ ...skill, sportName })}>
         <Text style={s.headline}>{skillHeadline({ ...skill, sportName })}</Text>
 
         {/* Drawn and hidden: every figure on it is in the card's own reading two lines up, and

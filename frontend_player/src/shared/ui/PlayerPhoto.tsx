@@ -3,7 +3,7 @@
  * box the surface has for it.
  *
  * One component at three sizes, per
- * [`the-play-components.md`](../../../../../../docs/specs/matchmaking/the-play-components.md)
+ * [`the-play-components.md`](../../../../docs/specs/matchmaking/the-play-components.md)
  * §4: the ground of the competitive card's photo panel, the full-bleed media on the social and
  * deck cards, and the face in a court seat. It exists so that the photo-or-poster switch is
  * written once, and its radius rule has **one owner** — which is how §G2's *34 % against 33 %*
@@ -31,7 +31,7 @@
  * `photo_url` is a short-lived signed link **minted per response and recorded nowhere**, and
  * it is the only address this photograph has: `GET /photos/{id}` signs your own photos and
  * refuses a stranger's id deliberately, so a client cannot sign one
- * ([`the-play-components.md`](../../../../../../docs/specs/matchmaking/the-play-components.md)
+ * ([`the-play-components.md`](../../../../docs/specs/matchmaking/the-play-components.md)
  * §9). The two fields are **omitted together**, and an expired link is not an error to report
  * — both fall back to the poster, which is what a player with no photo has in any case.
  *

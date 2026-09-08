@@ -27,7 +27,9 @@ import { onlineManager } from '@tanstack/react-query';
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  IN_YOUR_AREA,
   OWN_RECORD_TITLE,
+  YOU_MARK,
   RECORD_TITLE,
   RECORD_UNAVAILABLE,
   fitRowLabel,
@@ -884,7 +886,15 @@ describe('who this person is', () => {
    * one that answers a held player — the reader this screen most exists for — and the sheet
    * retitles to the outside view rather than reading as a settings screen.
    */
-  it('opens your own record retitled, and with no distance on it', async () => {
+  it('opens your own record retitled, and says nothing about where you are', async () => {
+    // The searcher's own area, which the envelope carries and no route serves today (#279).
+    // Served here so the self case is exercised rather than passing by absence: the two codes
+    // are then equal by construction, and a line that dropped only the kilometres would tell
+    // somebody they are in their own area.
+    const full = seatedFour();
+    transport.on('POST', LINEUPS, () =>
+      json({ ...full, search: { ...full.search, my_area_code: 'A+050612+0019938' } }),
+    );
     transport.on('GET', OWN_RECORD, () => json(record({ is_self: true, nickname: 'me_myself' })));
     await openTheBuilder();
     await pressFill();
@@ -894,9 +904,14 @@ describe('who this person is', () => {
 
     expect(await screen.findByText(OWN_RECORD_TITLE)).toBeTruthy();
     expect(screen.queryByText(RECORD_TITLE)).toBeNull();
-    // The distance every other seat's record prints. Zero kilometres from yourself is not a
-    // fact worth stating, so the line is dropped rather than drawn empty.
+    // **Waited for**, because the title is drawn while the sheet is still filling: every
+    // assertion below is about something the record does *not* say, and a skeleton says none of
+    // it either.
+    expect(await screen.findByText(`me_myself ${YOU_MARK}`)).toBeTruthy();
+    // Neither half of the identity line: nought kilometres from yourself is not a fact, and
+    // neither is being in your own area.
     expect(screen.queryByText('4 km')).toBeNull();
+    expect(screen.queryByText(new RegExp(IN_YOUR_AREA))).toBeNull();
     expect(transport.requestsTo('GET', OWN_RECORD)).toHaveLength(1);
   });
 
@@ -920,7 +935,9 @@ describe('who this person is', () => {
     await screen.findByText('91%');
 
     fireEvent.press(yourFace('YOUR_SIDE'));
-    await screen.findByText(OWN_RECORD_TITLE);
+    // The record, not the title: the title is drawn while the sheet is still filling, and a
+    // skeleton offers no Fit row either.
+    await screen.findByText(`${NAMES[C] ?? ''} ${YOU_MARK}`);
 
     expect(screen.queryByLabelText(fitRowLabel(78))).toBeNull();
   });

@@ -34,7 +34,7 @@
  *
  * ## Text over an arbitrary photograph, and the pin that makes it computable
  *
- * Every pair in [2.5](../../../../../docs/design-system.md#25-contrast--computed) is a
+ * Every pair in [2.5](../../../docs/design-system.md#25-contrast--computed) is a
  * **fixed** pair — two hexes and one ratio. The court broke that once already: its ground is
  * drawn from a Sport hue, so #219 B6 **pinned `courtScrim`** and an unbounded set collapsed
  * to four known composites. A player's photograph is the same problem one turn worse: it is
@@ -45,7 +45,7 @@
  * unknowable set collapses to its **worst case** — for white text, the brightest ground there
  * can be, which is pure white. White over that composite is **5.24:1**, AA, and every real
  * photograph is darker somewhere and never lighter anywhere. One ratio, derived in
- * [`textOnMedia.test.ts`](../../../../shared/ui/textOnMedia.test.ts) rather than asserted, so
+ * [`textOnMedia.test.ts`](./textOnMedia.test.ts) rather than asserted, so
  * unpinning the scrim goes red instead of going unnoticed.
  *
  * **The panel is drawn identically over the generated poster**, which is why 2.5 gains one row

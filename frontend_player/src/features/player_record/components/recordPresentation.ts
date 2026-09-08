@@ -74,22 +74,29 @@ export function recordHandle(name: string, isSelf: boolean): string {
  * reader's area is unknown draws the kilometres alone, because *the comparison cannot be made*
  * and *they are not in your area* are two facts and only one of them is a claim.
  *
- * **On your own record there is no distance at all** — the sheet does not tell somebody they
- * are nought kilometres from themselves — and the parts are dropped rather than left as a gap,
- * so the line is empty and the sheet draws nothing rather than a stray separator.
+ * **On your own record the whole line goes, and not only the distance.** *Nought kilometres
+ * from yourself* is the obvious half; the other is that the two codes are equal **by
+ * construction** there, so a line built from the same comparison would tell somebody they are
+ * in their own area. Both halves are one condition, which is why `isSelf` is read here rather
+ * than at the two call sites that would each have to remember. What is left is an empty string,
+ * so the sheet draws nothing rather than a stray separator.
  */
 export const IN_YOUR_AREA = 'In your area';
 
 export interface IdentityFacts {
-  /** Whole kilometres, as the contract sends them. Absent on your own record, always. */
+  /** Whole kilometres, as the contract sends them. */
   readonly distanceKm?: number;
   /** Their coarse area, as a machine code. **Never printed.** */
   readonly areaCode: string;
   /** Yours, for the one comparison — absent where the surface that opened this knows none. */
   readonly viewerAreaCode?: string;
+  /** Whether the record is the reader's own. The whole line is dropped when it is. */
+  readonly isSelf: boolean;
 }
 
 export function identityLine(facts: IdentityFacts): string {
+  if (facts.isSelf) return '';
+
   const near =
     facts.viewerAreaCode !== undefined && facts.viewerAreaCode === facts.areaCode
       ? [IN_YOUR_AREA]
@@ -261,15 +268,21 @@ export function socialTagsLabel(row: SocialTagOverlap): string {
  *
  * The visible title carries the ✦ and the spoken one does not, which is §20.6's one exception
  * arriving here for the reason it exists: a glyph is doing work in the visible name.
+ *
+ * **The figure is rounded here, because this is where it is printed.** `whyFitColumn` writes the
+ * whole breakdown against `Math.round(fit)` and the sheet's own title and accessible name are
+ * that number, so a served `78,4` shown whole on this row would promise *why fit 78,4* and open
+ * *Why fit 78*. Rounding at the call site instead would be a rule each of the three entry points
+ * had to remember — `signedFigure`'s own rule that a figure is rounded where it is printed.
  */
 export function fitRowTitle(fit: number): string {
-  return `Why ✦ ${fit}`;
+  return `Why ✦ ${Math.round(fit)}`;
 }
 
 export const FIT_ROW_BODY = 'How you two were scored against each other — not a fact about them.';
 
 export function fitRowLabel(fit: number): string {
-  return `Why fit ${fit}. ${FIT_ROW_BODY}`;
+  return `Why fit ${Math.round(fit)}. ${FIT_ROW_BODY}`;
 }
 
 /**
@@ -285,6 +298,21 @@ export const RECORD_UNAVAILABLE = 'This record isn’t available.';
 
 /** The backend's one code for all four causes. */
 export const RECORD_UNAVAILABLE_CODE = 'record_unavailable';
+
+/**
+ * The control a failure to **reach** the platform gets, which the refusal above deliberately
+ * does not: that one would answer identically, and this one genuinely can succeed.
+ */
+export const RETRY_RECORD_LABEL = 'Try again';
+
+/**
+ * What a listener is told while the sheet is filling.
+ *
+ * A spinner is a drawing and announces nothing, so the wait needs a name — and it is a name
+ * rather than a sentence, because a listener meets it as one element in a sheet whose title has
+ * already said whose record this is.
+ */
+export const READING_RECORD_LABEL = 'Reading their record';
 
 /** The words alone. Prose does not carry glyphs — `socialTagPresentation`'s own split. */
 function tagNames(tagIds: readonly SocialTagId[]): string {

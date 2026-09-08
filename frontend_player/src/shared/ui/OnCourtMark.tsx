@@ -6,7 +6,7 @@
  * looked* draw **identically**, which is `domain/onCourtMark`'s rule and not this
  * component's: a card must not tell one player that another player's photograph was doubted,
  * so what crosses is the positive alone
- * ([ADR-0138](../../../../../../docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)).
+ * ([ADR-0138](../../../../docs/adr/0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)).
  *
  * ## It is a label rather than a shield, and the panel's own width is why
  *
@@ -16,7 +16,7 @@
  * - **The tick.** Archivo Bold **does not draw U+2713** — the app's own face has no glyph for
  *   it, so `<Text>✓</Text>` renders in a per-platform fallback whose face, weight and advance
  *   this app neither controls nor can measure. That is
- *   [ADR-0135](../../../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)'s
+ *   [ADR-0135](../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)'s
  *   finding about `U+26A1` arriving one surface over: *the one mark in the bar whose colour
  *   this app would not control*. The app's own drawn tick (`shared/ui/Tick`) is a fixed
  *   12 × 12 geometry, and 12pt beside the words does not cost them their headroom — it costs
@@ -31,7 +31,7 @@
  * **The words are what a reader can act on, and that is why they are the half that survives.**
  * A green tick alone on a stranger's photograph is a mark whose meaning nobody has been told —
  * and the meaning it would be assumed to have, in 2026, is *verified account*, which this
- * platform does not do and has never claimed. [6.9](../../../../../docs/design-system.md#69-the-photo-tile-and-picker)
+ * platform does not do and has never claimed. [6.9](../../../docs/design-system.md#69-the-photo-tile-and-picker)
  * already refuses the mirror of that for the poster: *nobody should have to see a poster to
  * know they are not looking at the player.*
  *
@@ -41,14 +41,14 @@
  * simply not there — volt's own problem, in the other hue. `mintSoft` is **4,55:1** against
  * the worst photograph there can be, which is AA and is the tightest pair on this panel; it is
  * the pinned scrim that makes it computable at all, exactly as the white Level beside it is,
- * and it is derived in [`textOnMedia.test.ts`](../../../../shared/ui/textOnMedia.test.ts)
+ * and it is derived in [`textOnMedia.test.ts`](./textOnMedia.test.ts)
  * rather than asserted here.
  *
  * It carries `textOnMedia` for the panel's own reason: the ratio is the ground's brightest
  * case and a label can sit anywhere on a photograph.
  *
  * **Colour is not the signal.** The words carry it and the mint reinforces it, which is
- * [Part 13](../../../../../docs/design-system.md#part-13--accessibility)'s *never colour
+ * [Part 13](../../../docs/design-system.md#part-13--accessibility)'s *never colour
  * alone* answered by the copy rather than by a second cue — and the spoken half is
  * {@link ON_COURT_CLAUSE}, in the drawing surface's own name, because the panel announces
  * nothing (§20.1).
@@ -88,10 +88,10 @@ export const ON_COURT_CLAUSE = 'Photo checked: on court';
 /**
  * How far the mark's words may grow, and **derived rather than chosen**.
  *
- * Part 13 requires text to scale with the OS setting, and the panel is a fixed 74 × 92 box —
- * so the label may neither be frozen nor grow without bound, and `maxFontSizeMultiplier` is
- * what is left. That is the tab bar's mechanism, second instance
- * ([`tabBarLabelCap.test.ts`](../../../../shared/ui/tabBarLabelCap.test.ts)), and the number
+ * Part 13 requires text to scale with the OS setting, and a panel is a fixed box at whichever
+ * of its two sizes it is drawn — so the label may neither be frozen nor grow without bound,
+ * and `maxFontSizeMultiplier` is what is left. That is the tab bar's mechanism, second instance
+ * ([`tabBarLabelCap.test.ts`](./tabBarLabelCap.test.ts)), and the number
  * comes from the same place: the real Archivo Bold advance widths, against the width the
  * panel's own corner leaves at the mark's own top edge.
  *

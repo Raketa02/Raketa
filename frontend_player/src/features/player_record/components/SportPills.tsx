@@ -1,5 +1,10 @@
 /**
- * **One pill per sport somebody holds a rating in** — design-system 7.18.
+ * **One pill per sport somebody holds a rating in.**
+ *
+ * It is [6.4](../../../../docs/design-system.md#64-tag)'s tag with its own dot and nothing new
+ * drawn: 15.1's first question — *is it one of the existing primitives?* — is answered yes here,
+ * where the star row answered it no. What the composition adds is the label, and the label is
+ * `recordPresentation`'s.
  *
  * It answers *what else do they play*, which is useful to a reader inside a padel four and is
  * the whole of what a pill is for: how sure the platform is and what that rests on belong to

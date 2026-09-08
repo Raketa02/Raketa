@@ -1308,18 +1308,10 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           {...(reading.candidate === undefined
             ? {}
             : { tagOverlap: socialTagOverlap(reading.candidate) })}
-          {...(reading.candidate === undefined
-            ? {}
-            : {
-                pairing: {
-                  fit: Math.round(reading.candidate.fit),
-                  onExplain: () => {
-                    const pairing = reading.candidate;
-                    setReading(undefined);
-                    if (pairing !== undefined) setExplaining(pairing);
-                  },
-                },
-              })}
+          {...pairingOf(reading, (pairing) => {
+            setReading(undefined);
+            setExplaining(pairing);
+          })}
         />
       )}
 
@@ -1365,6 +1357,25 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
       )}
     </>
   );
+}
+
+/**
+ * **The Fit row's props, or none at all** — the pairing behind a tapped face, where there is one.
+ *
+ * A function rather than an expression at the call site because the `undefined` has to be
+ * narrowed *before* the callback closes over it: written inline, the closure re-reads the state
+ * it was built from and has to re-check a branch the spread has already taken. The figure is not
+ * rounded here — `fitRowTitle` rounds where it prints, which is the rule the day a second entry
+ * point builds this prop.
+ */
+function pairingOf(
+  read: ReadRecord,
+  onExplain: (pairing: Candidate) => void,
+): { readonly pairing?: { readonly fit: number; readonly onExplain: () => void } } {
+  const pairing = read.candidate;
+  return pairing === undefined
+    ? {}
+    : { pairing: { fit: pairing.fit, onExplain: () => onExplain(pairing) } };
 }
 
 /**
