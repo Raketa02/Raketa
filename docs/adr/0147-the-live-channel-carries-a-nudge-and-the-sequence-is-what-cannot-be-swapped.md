@@ -24,6 +24,14 @@
 - Settles [#333](https://github.com/Raketa02/Raketa/issues/333) on the map
   [#321](https://github.com/Raketa02/Raketa/issues/321).
 
+> **Amended 2026-09-08 by [#342](https://github.com/Raketa02/Raketa/issues/342): the subscriber's
+> own client is the shared module's, and `REDIS_TIMEOUT_SECONDS` no longer exists.** Decision 5
+> gives the subscriber its own Redis client because that constant was passed as both timeouts;
+> it is now two — `REDIS_CONNECT_TIMEOUT_SECONDS` and `REDIS_READ_TIMEOUT_SECONDS` — beside a
+> `create_redis_subscriber_client` whose connect is bounded and whose read has no deadline at all.
+> **What Decision 5 asks for is unchanged**; one of the stated consequences retires. The amendment
+> at the foot of this record says what moved and what did not.
+
 ## Context
 
 **This is the first live surface in either app.** `backend/app` has no websocket and no SSE;
@@ -181,7 +189,9 @@ Redis Streams are not needed. A subscriber that misses a notification loses **la
 `REDIS_TIMEOUT_SECONDS = 2.0` is passed as **both** `socket_timeout` and `socket_connect_timeout`,
 and a `socket_timeout` of 2.0 makes `pubsub.listen()` reconnect every two seconds. That is
 [#342](https://github.com/Raketa02/Raketa/issues/342), and this decision does not wait on it: a
-long-lived subscriber owns its own connection policy whichever way #342 lands.
+long-lived subscriber owns its own connection policy whichever way #342 lands. *(Amended 2026-09-08 —
+see the amendment below. #342 has landed: that constant is now two, and the subscriber's own
+client is the shared module's rather than hand-rolled. What this clause asks for is unchanged.)*
 
 **Pre-authorised fallback:** if dynamic subscribe against `redis-py` 7.4's `PubSub` proves fiddly,
 one channel for everything, filtered in-process, is acceptable at this concurrency. The swap is
@@ -321,7 +331,8 @@ entire surface; the list is a Query cache on ordinary defaults.
   would need reopening before one does.
 - **A second Redis connection policy to maintain**, which cannot simply reuse
   `REDIS_TIMEOUT_SECONDS`, and which will look like an inconsistency to anyone who has not read
-  #342.
+  #342. *(Amended 2026-09-08 — see the amendment below: #342 landed and this
+  consequence retires.)*
 - **The stream body is outside the contract checks.** Decision 7 covers the declaration; nothing
   proves the emission matches it. Named, mitigated, not closed.
 - **The pre-authorised fallback in Decision 5 is a small invitation to take a shortcut without
@@ -340,3 +351,57 @@ entire surface; the list is a Query cache on ordinary defaults.
 - **`fastapi.sse` is a young API** — 0.135.0, and this repo pins 0.136.1. Being an early adopter of
   a first-party module in a dependency already pinned is a smaller risk than adding a dependency,
   but it is not zero.
+
+## Amendment — 2026-09-08: #342 landed, and the subscriber's own client is the shared module's
+
+Decision 5 said the subscriber constructs its own Redis client with its own timeout policy, and
+named [#342](https://github.com/Raketa02/Raketa/issues/342) as the reason it could not reuse the
+one the process holds. **#342 has landed, and `REDIS_TIMEOUT_SECONDS` no longer exists.**
+`app/infrastructure/redis_client.py` now names the two halves separately —
+`REDIS_CONNECT_TIMEOUT_SECONDS` and `REDIS_READ_TIMEOUT_SECONDS`, both still `2.0`, for two
+unrelated reasons, which is the whole argument for two names — and hands out a subscriber-shaped
+client from `create_redis_subscriber_client`: connecting still bounded at the shared constant, and
+**no read deadline at all**.
+
+**What Decision 5 asks for is unchanged.** The subscriber still gets its *own* client rather than
+the process's pool, and the caller still owns both ends of it: a blocking read has no business in
+the pool a player's critical path draws commands from. What is gone is the hand-rolling — the
+policy is written once, in the module every other Redis caller already reads.
+
+**One consequence retires.** *A second Redis connection policy to maintain, which cannot simply
+reuse `REDIS_TIMEOUT_SECONDS`* is no longer a cost. It is one module naming both halves, with one
+place a later edit could re-merge them and be caught: `tests/unit/test_redis_client.py` substitutes
+one constant and asserts the other did not move, because both hold the same number and nothing else
+can tell them apart.
+
+**The mechanism is confirmed on the async client, which is a sibling of the one #342's triage
+read rather than a layer under it.** The triage traced `redis/connection.py` — the **sync**
+client, whose `read_response` genuinely takes no timeout argument — and this codebase imports
+`redis.asyncio`. There, `PubSub.parse_response` does map `block=True` to `timeout=None`, and
+`Connection.read_response` reads `None` as *use the socket's* rather than as *do not time out*
+(`read_timeout = timeout if timeout is not None else self.socket_timeout`). Two routes, one
+outcome, and **no dependency bump either way** — which is the part of the triage that mattered and
+was right.
+
+**This record's own sentence understates it, and the correction is recorded rather than made.**
+Decision 5 says a 2-second `socket_timeout` makes `pubsub.listen()` *"reconnect every two
+seconds"*. It does reconnect — `call_with_retry`'s failure callback disconnects, reconnects and
+resubscribes — but a connection's default `Retry` allows **zero** retries, so `failures (1) >
+retries (0)` and the `TimeoutError` is then **re-raised at the caller**. An idle `async for` over
+`listen()` does not loop quietly; it dies. The defect is worse than the sentence describing it,
+which strengthens this record's conclusion rather than weakening it, and the sentence stands as
+written per this repo's rule that a record is not retro-edited.
+
+**What dropping the read deadline costs, named here so the first subscriber inherits a choice
+rather than a default.** A socket-wide read timeout is a crude liveness check as well as a
+deadline: it is what noticed a connection that had died without saying so, and to a blocking read
+with no deadline a TCP session severed by an idle NAT looks exactly like a quiet conversation. So
+**liveness on a subscription becomes the subscriber's own to keep**, and there are three ways that
+are not a socket-wide deadline — a per-read timeout the caller passes, `health_check_interval`, or
+a keepalive. This record does not pick one. `create_redis_subscriber_client` deliberately does not
+either, because a factory that chose would be making the decision for every subscriber that ever
+uses it; what it refuses to do is leave a two-second deadline lying where it measures the wrong
+thing.
+
+**Nothing this record decides moves, and no subscriber is built.** #342 made the client usable by
+one; the transport, the channel key and the envelope are still what Decisions 4 through 7 say.
