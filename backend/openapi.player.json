@@ -2280,6 +2280,273 @@
         }
       }
     },
+    "/api/v1/conversations": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Your conversations",
+        "description": "**A room opens on the first acceptance and grows with each one after it.** A doubles court whose line-up is still filling draws the members it has, not the court it will be.\n\n**Ordered by the last entry, newest first.** A room where nothing has happened yet carries `last_entry: null` and orders on the moment it opened \u2014 the opening writes no line, so there is genuinely nothing there yet.\n\n**No state pill and no standing.** The last entry is what a pill would have said; a standing beside it would be a second place for one fact to be true. The state-keyed surfaces are the challenge screen and the game screen.\n\n**Only live rooms are here, because there are only live rooms.** A conversation is destroyed rather than delisted once the episode it was opened for is over \u2014 deliberately the opposite of `GET /challenges`, which keeps ended challenges and says so. The difference is the difference between a record and a room.\n\n**This is one of two reads for the Chats tab, and they are not merged.** `GET /challenges` is the other. Two sections, two contexts, two queries, two caches.",
+        "operationId": "read_conversations_api_v1_conversations_get",
+        "responses": {
+          "200": {
+            "description": "Every room you are a member of, the ones that moved last first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/conversations/{conversation_id}": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "One conversation",
+        "description": "**The header and the newest page in one response**, folded against one instant, so the members you are holding and the entries you are drawing can never disagree about who is in the room.\n\n**Open at the newest entry and page backward** from `entries[0].seq` through `/entries`. You have the whole conversation when you hold `seq` 1 \u2014 there is no `has_more`, because a gapless sequence makes `seq` 1 the beginning.\n\n**Nothing here is re-evaluated against you.** The safety gates ran when the challenge was minted; a read that re-ran them would tell you something changed about somebody else.",
+        "operationId": "read_conversation_api_v1_conversations__conversation_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The room's header and its newest page, from one fold.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`conversation_not_found` \u2014 **one code for two cases**: there is no room with that id, or there is one and you are not in it. They are not told apart on purpose, because a 403 would answer *is this id real* about a stranger's evening.\n\nLeave the screen. There is no retry that changes this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{conversation_id}/entries": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "A page of a conversation, backward",
+        "description": "**A cursor over `seq`, never an offset.** One code path serves history and catch-up: a client that has been away and finds a hole below the newest page walks backward through this route until it reaches its own high-water mark.\n\n**`before_seq` is exclusive**, and omitting it asks for the newest page.\n\n**No header and no `read_at` here.** A page of entries is folded against nothing \u2014 every entry carries its own moment \u2014 so a second instant would be a second clock to reconcile against the one the detail read gave you.",
+        "operationId": "read_entries_api_v1_conversations__conversation_id__entries_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          },
+          {
+            "name": "before_seq",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Return the entries **before** this one. Omit for the newest page. An empty answer means you are holding the beginning.",
+              "title": "Before Seq"
+            },
+            "description": "Return the entries **before** this one. Omit for the newest page. An empty answer means you are holding the beginning."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "How many entries to return. **Over the cap is a 422 rather than a silent clamp** \u2014 a route that quietly returns something other than what was asked for cannot be told apart from one that ran out.",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "How many entries to return. **Over the cap is a 422 rather than a silent clamp** \u2014 a route that quietly returns something other than what was asked for cannot be told apart from one that ran out."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page, oldest first inside it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryPageResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`conversation_not_found` \u2014 **one code for two cases**: there is no room with that id, or there is one and you are not in it. They are not told apart on purpose, because a 403 would answer *is this id real* about a stranger's evening.\n\nLeave the screen. There is no retry that changes this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{conversation_id}/messages": {
+      "post": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Say something",
+        "description": "**`200`, not `201`, and the message comes back.** A repeat carrying the same `client_message_id` answers with the same message and the same `seq`, and records nothing \u2014 so a send that paused offline and resumed can never become two bubbles.\n\n**The message is returned rather than refetched**, which is also what keeps your own message off the live channel's round trip.\n\n**It has no id of its own.** `(conversation_id, seq)` identifies it.",
+        "operationId": "send_message_api_v1_conversations__conversation_id__messages_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The message as it was recorded \u2014 **or, on a repeat, the one that already stands.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageSchema"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`message_is_empty` \u2014 nothing but whitespace.\n\n`message_is_too_long` \u2014 past the cap. **Refused, never truncated**: a shortened message is one you believe you sent whole, in front of other people.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`account_held` \u2014 your account is under a live hold. **A hold stops you writing anywhere another player sees it, and never stops you reading**: every read on this context stays open to you, because a hold must not erase an arrangement other people are already inside.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`conversation_not_found` \u2014 **one code for two cases**: there is no room with that id, or there is one and you are not in it. They are not told apart on purpose, because a 403 would answer *is this id real* about a stranger's evening.\n\nLeave the screen. There is no retry that changes this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/games": {
       "get": {
         "tags": [
@@ -3189,6 +3456,225 @@
         "title": "ConsentSurface",
         "description": "Where a player was standing when they answered.\n\nTwo values, and both are reachable. ``ONBOARDING`` is the only one the commit\ncan record \u2014 the commit *is* the end of onboarding's second part. The profile\nscreen edits the same value later (``docs/adr/0089``), which is what\n``PROFILE`` is for; the aggregate transition it uses exists, and the endpoint\nthat drives it does not yet."
       },
+      "ConversationListResponse": {
+        "properties": {
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At",
+            "description": "The instant this list was folded. It earns one because **its very membership is a fold**: a room is destroyed rather than delisted, so whether a row appears at all was decided against this instant."
+          },
+          "conversations": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationRowSchema"
+            },
+            "type": "array",
+            "title": "Conversations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "read_at",
+          "conversations"
+        ],
+        "title": "ConversationListResponse",
+        "description": "Every room you are a member of, the ones that moved last first."
+      },
+      "ConversationMemberSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Who they are, and what a line's `actor_id` matches"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nickname",
+            "description": "The whole handle, and **`null` for an account `users` can no longer name**. The member keeps their place either way: dropping them would draw a three-person doubles court. Nothing may derive a familiar form from it."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Their current photograph. Omitted when they have none, and omitted together with `photo_url` \u2014 the two travel as a pair or not at all."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "A short-lived signed link to that photograph, minted for **this response**. It expires within minutes and is not a stored value."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname"
+        ],
+        "title": "ConversationMemberSchema",
+        "description": "One person who has agreed to be on this court right now.\n\n**Derived from whichever record is arranging, never stored**\n(``docs/adr/0146`` \u00a77), and it **grows one acceptance at a time**: a doubles\nroom whose line-up is still filling draws the members it has, because a row\nwith four faces for a two-member room would be drawing the court rather than\nthe room.\n\n**A handle and a face, and nothing else.** No Level, no band, no area, no\nscore \u2014 those are a *card*'s, and a card is what a searcher reads to decide\nabout a game that might happen. These people have already agreed to play."
+      },
+      "ConversationResponse": {
+        "properties": {
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At",
+            "description": "The instant the header and the page were folded \u2014 **one instant for both**, so members and entries can never disagree."
+          },
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id"
+          },
+          "challenge_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Challenge Id"
+          },
+          "game_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Id",
+            "description": "See `ConversationRowSchema.game_id`."
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationMemberSchema"
+            },
+            "type": "array",
+            "title": "Members"
+          },
+          "entries": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/MessageSchema"
+                },
+                {
+                  "$ref": "#/components/schemas/SystemLineSchema"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "message": "#/components/schemas/MessageSchema",
+                  "system_line": "#/components/schemas/SystemLineSchema"
+                }
+              }
+            },
+            "type": "array",
+            "title": "Entries",
+            "description": "The newest page, **oldest first inside it**. Page backward from `entries[0].seq` through `GET /conversations/{id}/entries`; you have the beginning when you hold `seq` 1."
+          }
+        },
+        "type": "object",
+        "required": [
+          "read_at",
+          "conversation_id",
+          "challenge_id",
+          "game_id",
+          "sport",
+          "members",
+          "entries"
+        ],
+        "title": "ConversationResponse",
+        "description": "One room's header **and** its newest page, from one fold."
+      },
+      "ConversationRowSchema": {
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id",
+            "description": "The room's own id"
+          },
+          "challenge_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Challenge Id",
+            "description": "The challenge whose first acceptance opened it"
+          },
+          "game_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Id",
+            "description": "The game its line-up completed into, and **`null` until it does**. A room whose line-up is still filling has no game and no plan, so there is nothing for a *Details* door to open \u2014 draw no door rather than a dead one."
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "What they are arranging"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationMemberSchema"
+            },
+            "type": "array",
+            "title": "Members",
+            "description": "Who has agreed to be on this court right now"
+          },
+          "last_entry": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/MessageSchema"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SystemLineSchema"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "message": "#/components/schemas/MessageSchema",
+                    "system_line": "#/components/schemas/SystemLineSchema"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Entry",
+            "description": "The newest thing in the room, rendered by the same two components the stream uses \u2014 never a preview string.\n\n**`null` in a room where nothing has happened yet**, which is a real state rather than an edge case: the opening writes no line, so a room whose first acceptance is its whole history has no entry at all."
+          }
+        },
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "challenge_id",
+          "game_id",
+          "sport",
+          "members",
+          "last_entry"
+        ],
+        "title": "ConversationRowSchema",
+        "description": "One room, as a row in the Chats tab.\n\n**No state pill, and no standing anywhere on it** (``docs/adr/0148`` \u00a76).\nReading one would make the conversation ask `challenges` and `games` what\nthey are, which it never does \u2014 and it does not need to, because **the last\nentry is what a pill would have said.**"
+      },
       "CourtAtStakeSchema": {
         "properties": {
           "win_delta": {
@@ -4043,6 +4529,38 @@
         "title": "DistanceEvidence",
         "description": "How far away they are, and whether the searcher is outside *their* ring.\n\nA candidate's own radius is a Liveness dock and **never a gate**: somebody\nwho set a small radius is not refusing to be found, and the searcher is\nshown the fact rather than having the person removed. The standalone flat\ndock for it is struck \u2014 the reciprocal reading already prices it, and\nproportionately."
       },
+      "EntryPageResponse": {
+        "properties": {
+          "entries": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/MessageSchema"
+                },
+                {
+                  "$ref": "#/components/schemas/SystemLineSchema"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "message": "#/components/schemas/MessageSchema",
+                  "system_line": "#/components/schemas/SystemLineSchema"
+                }
+              }
+            },
+            "type": "array",
+            "title": "Entries",
+            "description": "The page, **oldest first inside it**. Empty when `before_seq` was 1 \u2014 there is nothing before the beginning."
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries"
+        ],
+        "title": "EntryPageResponse",
+        "description": "One page backward. **No header, and no instant.**"
+      },
       "ErrorResponse": {
         "description": "The body of every error response, on both API surfaces.",
         "properties": {
@@ -4893,6 +5411,55 @@
         },
         "type": "object",
         "title": "LogoutResponse"
+      },
+      "MessageSchema": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "message",
+            "title": "Type",
+            "description": "The discriminator. Two genuinely different shapes ride one ordered stream; this is not a `kind` on one shape (`docs/adr/0148` \u00a74).",
+            "default": "message"
+          },
+          "seq": {
+            "type": "integer",
+            "title": "Seq",
+            "description": "This entry's place in the conversation. **Gapless and starting at 1**, so `seq` 1 is the beginning of the room \u2014 which is why there is no `has_more`. Ordering, paging, de-duplication and reconnect all key on it, and **no reader may infer loss from a gap**: the promise is the server's and nothing may depend on it."
+          },
+          "author_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Author Id",
+            "description": "Which member typed it"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At",
+            "description": "When it landed"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Their own words, unrendered and unchanged"
+          },
+          "client_message_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Client Message Id",
+            "description": "The id the sending client generated, echoed back. It does **two jobs**: the idempotency key for a resumed send, and the key an optimistic bubble is replaced on."
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "author_id",
+          "sent_at",
+          "text",
+          "client_message_id"
+        ],
+        "title": "MessageSchema",
+        "description": "What a player typed. **Content, crossing as-is.**"
       },
       "ModifierCode": {
         "type": "string",
@@ -6473,6 +7040,28 @@
         "title": "SendChallengeRequest",
         "description": "One press. **The court, and the search it was built on.**\n\n``search_id`` is the origin, and it is one search for the whole court: the\narrangement was built and forecast against a single answer, and a court\nassembled out of two searches is a court no forecast was ever computed for.\n\n**The sport, the kind of evening and the week are not sent.** All three are\nread off that search's own record \u2014 there is no window picker anywhere\n(``docs/adr/0100``), and a player changes their window by changing their grid."
       },
+      "SendMessageRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "What to say. Leading and trailing whitespace is trimmed; empty after trimming is `message_is_empty`, and past the cap is `message_is_too_long`. **Neither is silently fixed** \u2014 a shortened message is one the sender believes they sent whole."
+          },
+          "client_message_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Client Message Id",
+            "description": "An id you generate for this send, **in the body rather than an `Idempotency-Key` header**, because it does two jobs: it makes a retry safe, and it is what you reconcile your optimistic bubble on.\n\n**Send the same one on a retry.** A repeat answers `200` with the same message and the same `seq`, and records nothing \u2014 so a send that paused offline and resumed can never become two messages."
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "client_message_id"
+        ],
+        "title": "SendMessageRequest",
+        "description": "One player's own words."
+      },
       "SentChallengeResponse": {
         "properties": {
           "challenge_id": {
@@ -6940,6 +7529,64 @@
           "option_id"
         ],
         "title": "SubmitAnswerRequest"
+      },
+      "SystemLineSchema": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "system_line",
+            "title": "Type",
+            "description": "The discriminator. See `MessageSchema.type`.",
+            "default": "system_line"
+          },
+          "seq": {
+            "type": "integer",
+            "title": "Seq",
+            "description": "This entry's place. See `MessageSchema.seq`."
+          },
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "What happened, as a machine code the client renders a sentence from. **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`** and **`GAME_PLAYED`** today; the Plan adds three more.\n\n**A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news either way \u2014 and a lapse is still not a decline, which is what `values.departure` keeps apart.\n\n**There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping \u2014 drawn, not announced."
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At",
+            "description": "When it happened"
+          },
+          "actor_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id",
+            "description": "Who did it, or `null`. **Render `{name}` from the members you are already holding** \u2014 the handle is never repeated here, so a corrected one fixes the whole backlog."
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Values",
+            "description": "What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED` or `LAPSED`. The others carry nothing."
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "code",
+          "occurred_at",
+          "actor_id",
+          "values"
+        ],
+        "title": "SystemLineSchema",
+        "description": "What happened, as a code and its values. **Never a sentence.**"
       },
       "TagPair": {
         "properties": {

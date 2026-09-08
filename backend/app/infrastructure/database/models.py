@@ -5,6 +5,9 @@ from app.infrastructure.events.event_store_model import EventStoreORM
 from app.modules.auth.infrastructure.sqlalchemy_refresh_token_model import (
     RefreshTokenORM,
 )
+from app.modules.conversations.infrastructure.conversation_model import (
+    ConversationORM,
+)
 from app.modules.matchmaking.infrastructure.candidate_index_model import (
     CandidateIndexCursorORM,
     CandidatePlayerFactsORM,
@@ -21,6 +24,7 @@ __all__ = [
     "CandidateIndexCursorORM",
     "CandidatePlayerFactsORM",
     "CandidateRowORM",
+    "ConversationORM",
     "EventOutboxORM",
     "EventStoreORM",
     "InterestORM",

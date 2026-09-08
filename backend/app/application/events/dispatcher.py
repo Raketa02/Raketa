@@ -41,6 +41,26 @@ class EventDispatcher:
     def subscribe(self, event_cls: Type[E], handler: EventHandler[E]) -> None:
         self._handlers.setdefault(event_cls, []).append(handler)
 
+    def copy(self) -> "EventDispatcher":
+        """These subscriptions, in a dispatcher further ones do not reach back into.
+
+        **For the handlers that cannot be registered once for the process.**
+        Every subscriber was a logger until the Conversation context arrived
+        (``docs/adr/0146`` §5), and a logger needs nothing per delivery; a
+        subscriber that *writes* needs the session the batch will mark the outbox
+        row published in, and that session exists for one tick. So the process's
+        dispatcher is copied per batch and the session-bound handlers are added
+        to the copy — which is what stops one tick's handlers accumulating on the
+        next tick's.
+        """
+
+        twin = EventDispatcher()
+        twin._handlers = {
+            event_cls: list(handlers)
+            for event_cls, handlers in self._handlers.items()
+        }
+        return twin
+
     async def dispatch(
         self, event: DomainEvent, context: DeliveryContext
     ) -> DispatchResult:

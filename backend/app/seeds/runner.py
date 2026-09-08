@@ -186,6 +186,7 @@ from app.seeds.photos import (
     the_store_answers,
 )
 from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
+from app.seeds.rooms import SeededRooms, open_the_rooms
 from app.seeds.screens import assert_the_screens
 
 #: A questionnaire the seed can no longer finish is a hang, and a hang in a
@@ -1101,6 +1102,10 @@ class SeedReport:
     #: The played history, and the pairs it spent. ``None`` on the same callers
     #: and for the same reason.
     played: SeededGames | None = None
+    #: The rooms the seeded acceptances earned, once the outbox was delivered.
+    #: ``None`` on the callers that drive the populations without the layers
+    #: above them, exactly as the two above are.
+    rooms: SeededRooms | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1168,6 +1173,16 @@ async def run(settings: Settings | None = None) -> SeedReport:
         pairs = await write_the_relationships(
             session_factory, settings=settings, now=now, photos=photos
         )
+        # **After every layer that writes and before the screens.** A room is
+        # *told* through the outbox by contexts that do not know it exists
+        # (``docs/adr/0146`` §5), so nothing above this line opened one — the
+        # acceptances, the completions and the *we played*s are all sitting in
+        # the queue. Delivering here is the same barrier the candidate index's
+        # tick is, for the same reason: the assertions read the real path, and
+        # the real path has a poller in front of it.
+        rooms = await open_the_rooms(
+            session_factory, settings=settings, now=now
+        )
         screens = await assert_the_screens(
             session_factory,
             settings=settings,
@@ -1183,6 +1198,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             screens=screens,
             pairs=pairs,
             played=played,
+            rooms=rooms,
             photographs=photographs,
         )
     finally:
@@ -1248,6 +1264,8 @@ def report(run_report: SeedReport) -> list[str]:
     lines.extend(["", *_photograph_lines(run_report.members)])
     if run_report.pairs is not None:
         lines.extend(["", *_relationship_lines(run_report.pairs)])
+    if run_report.rooms is not None:
+        lines.extend(["", *_room_lines(run_report.rooms)])
     if run_report.screens:
         lines.extend(["", "The screens, read as the protagonist:"])
         lines.extend(f"  {line}" for line in run_report.screens)
@@ -1267,6 +1285,26 @@ def report(run_report: SeedReport) -> list[str]:
         lines.append("")
         lines.extend(f"Cost: {cost}" for cost in costs)
     return lines
+
+
+def _room_lines(rooms: SeededRooms) -> list[str]:
+    """The rooms the delivery opened, and the one shape this fixture does not reach.
+
+    **The gap is on the report rather than in a docstring**, on the rule the two
+    relationship costs already follow: a fixture that quietly reached three of
+    four shapes reads as having reached four, and the person it misleads is the
+    one about to build the screen.
+    """
+
+    return [
+        "The rooms, once the outbox was delivered:",
+        f"  {rooms.delivered} event(s) delivered · {rooms.said} message(s) said",
+        *(f"  {line}" for line in rooms.rooms),
+        "  not reached · a room carrying every system-line code. It needs a "
+        "`SeatsInvited`, and nothing here performs a fill — which would cost a "
+        "real search that seats somebody new and move the gate histogram this "
+        "run asserts.",
+    ]
 
 
 def _played_lines(played: SeededGames) -> list[str]:

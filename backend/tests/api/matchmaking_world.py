@@ -30,6 +30,8 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from app.bootstrap.composition import build_clock
+from app.bootstrap.events import build_event_runtime
 from app.kernel import Sport
 from app.modules.matchmaking.infrastructure.pass_model import PassORM
 from app.modules.matchmaking.infrastructure.prompt_decline_model import (
@@ -715,3 +717,38 @@ async def forecast(
         },
         headers=auth(token),
     )
+
+
+async def deliver_the_outbox(session_factory, *, rounds: int = 6) -> int:
+    """Run the transactional outbox to exhaustion, the way the worker does.
+
+    **Nothing in this suite runs the delivery loop**, because until the
+    Conversation context arrived every subscriber was a logger and no response
+    depended on one having run. A room, though, is *told* through the outbox by
+    contexts that do not know it exists (``docs/adr/0146`` §5), so a test that
+    wants one has to let the poll happen.
+
+    It builds the batch through ``EventRuntime.create_event_batch_for`` rather
+    than assembling handlers itself, which is what makes the delivery this drives
+    the delivery that ships — including the session-bound subscriber the batch
+    adds for itself.
+
+    **Rounds, because delivery cascades.** A room opened by an acceptance
+    publishes its own events, and those are outbox rows too. Draining until a
+    round publishes nothing is the honest stopping condition.
+    """
+
+    runtime = build_event_runtime()
+    published = 0
+    for _ in range(rounds):
+        async with session_factory() as session:
+            batch = runtime.create_event_batch_for(
+                session=session,
+                clock=build_clock(),
+                batch_size=100,
+            )
+            delivered = await batch.execute(worker_id="tests")
+        published += delivered
+        if not delivered:
+            break
+    return published

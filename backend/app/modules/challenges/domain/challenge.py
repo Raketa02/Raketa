@@ -333,7 +333,13 @@ class Challenge:
 
     # -- completing a half-built game -------------------------------------
 
-    def invite(self, arrangement: Sequence[SeatPlan], *, occurred_at: Instant) -> None:
+    def invite(
+        self,
+        arrangement: Sequence[SeatPlan],
+        *,
+        by: UUID,
+        occurred_at: Instant,
+    ) -> None:
         """Fill the open seats, and arrange the court that results.
 
         **Only the newly seated are invited.** Everybody already in keeps their
@@ -341,6 +347,10 @@ class Challenge:
         may not be taken out. A send with nobody new is **refused rather than
         recorded**, which is where *once the court is full, the sides are frozen*
         comes from: the only door back into an arrangement is an open seat.
+
+        ``by`` is the member who filled them, recorded because *any live member
+        may fill* — so the person who asked is a fact nothing else on the stream
+        holds.
         """
 
         if self.standing_at(occurred_at) in ENDED:
@@ -380,6 +390,7 @@ class Challenge:
                 seats=tuple(seat.code for seat in seats),
                 newly_invited=tuple(str(player_id) for player_id in newly_invited),
                 occurred_at=occurred_at,
+                invited_by=by,
             )
         )
 

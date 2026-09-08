@@ -502,11 +502,31 @@ complaint names the cache rather than accusing the fixture. And the deal that ea
 pass's origin key is remembered for a day (ADR-0131), so `make seed` leaves the
 protagonist's deck that many cards short.
 
+Behind all of it is a fourth layer, and it is the only one that **writes nothing until the
+outbox has run**. A conversation is *told* — its rooms are opened and grown from events
+`challenges` and `games` publish, by contexts that do not know it exists
+([ADR-0146](../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) §5) —
+so there is no *open a room* use case for a fixture to call and deliberately none.
+`app/seeds/rooms.py` drains the transactional outbox in process, exactly as the embedded
+worker drains it under the API, and every acceptance, completion and *we played* the layers
+above already seeded arrives at the room it belongs to. What it then writes is the one
+thing a room cannot be told: somebody saying something, through `SendMessage`, enough of it
+to reach **a room long enough to page backward through**.
+
+It reaches three of the four room shapes a screen has to draw — a two-member room whose
+game is recorded, a doubles room whose membership is still growing, and the deep one — and
+**names the fourth on the report rather than in a docstring**: a room carrying every
+system-line code needs a `SeatsInvited`, nothing here performs a fill, and a fill would cost
+a real search that seats somebody new and moves the gate histogram this run asserts. A
+fixture that quietly reached three of four reads as having reached four.
+
 Scope is what is **modeled**: players, onboarding assessments, Skill ratings, Player
 profiles, Challenges and Blocks. Clubs, Courts, Bookings and Matches have no aggregates, so they
 have no scenarios; each adds its own when it exists. A walk over `app/seeds/` asserts the
 package **writes** those six contexts and reaches every other one — matchmaking, today —
-only through that context's own use cases.
+only through that context's own use cases. Conversations is on neither side of that walk,
+and that is the point: the seed never writes one, and the rooms in the database are there
+because the outbox delivered what the six wrote.
 
 Six rules hold this together, and each exists because of a specific way seed data goes
 wrong:

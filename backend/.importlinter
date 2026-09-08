@@ -383,3 +383,37 @@ source_modules =
 forbidden_modules =
     app.seeds
 allow_indirect_imports = false
+
+# **A conversation is told, and tells nothing** (docs/adr/0146 §5). Its system
+# lines are written from events `challenges`, `games` and — when it lands — the
+# Plan publish through the outbox, and **none of those contexts knows it
+# exists**. That ignorance is the whole of the record's argument: the moment
+# `challenges` knows a conversation exists, the two ship as one thing, and the
+# two alternatives it refuses by name — an inline port and a read at open —
+# would both begin with exactly this import.
+#
+# It is the one decision on that record a *reader* could not check. The others
+# leave evidence in the code — two modules, a discriminated union, a membership
+# with nowhere to be stored — and this one leaves none: a room opened from an
+# accept path looks like ordinary wiring and would be argued over in review
+# rather than caught.
+#
+# `allow_indirect_imports = true`, for the reason the challenges/matcher fence
+# sets it and one this file has now met twice: **every module's
+# `presentation/dependencies.py` imports the composition root, and the
+# composition root imports every context.** A strict contract here is red on the
+# day it is written, naming `player_profile` for reaching `conversations`
+# through `app.bootstrap.composition` — which is the composition root doing
+# exactly its job. The violation this exists for is the direct one, and it is
+# the only one anybody would write.
+[importlinter:contract:a-conversation-is-told-and-tells-nothing]
+name = No context knows the Conversation exists
+type = forbidden
+source_modules =
+    app.modules.challenges
+    app.modules.games
+    app.modules.matchmaking
+    app.modules.player_score
+forbidden_modules =
+    app.modules.conversations
+allow_indirect_imports = true

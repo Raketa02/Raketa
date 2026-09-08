@@ -188,12 +188,49 @@ class SeatsInvited:
     ``newly_invited`` is stated rather than derived: *only the newly seated are
     invited* is the rule a notification path reads, and asking somebody twice
     reads as the platform having lost track of them.
+
+    ``invited_by`` is the member who filled the seats, and it is **not the
+    organiser**: ADR-0150 settled that *any live member may fill; only the
+    organiser may withdraw*, so a reader that took the organiser would name the
+    wrong person on a mutual-born doubles court. It is the only whole-court event
+    here that names a player, which is ``ChallengeWithdrawn``'s argument in
+    reverse — there the organiser is already on the stream, and here the filler
+    may be anybody on it.
+
+    **Nullable, and only for rows written before it existed** — which is also
+    why this is an addition rather than a version 2, against the letter of this
+    module's own docstring. Three things decide it and each is checkable.
+
+    *The rule's reason survives.* ``.claude/rules/domain-events.md`` asks that
+    *the rows already in the store must keep decoding*, and they do:
+    ``_coerce_payload`` walks the **payload's** keys, so a row written before this
+    field takes the default. Nothing stored is reinterpreted — a missing
+    ``invited_by`` reads as *nobody knows who filled these seats*, which is the
+    truth about those rows.
+
+    *A version 2 here costs two classes and buys nothing.*
+    ``EventCatalog.register`` binds one class to one ``(name, version)`` and
+    raises on a second, so *version 2 beside version 1* is two Python classes and
+    a fold with two branches for the life of the context — to express one
+    nullable field that changes no existing row's meaning.
+
+    *And the line that needs it could not be drawn otherwise.* The seats-invited
+    system line renders ``{name}`` from ``actor_id``, ADR-0150 lets **any live
+    member** fill, and the organiser is on the stream already — so taking the
+    organiser would name the wrong person on exactly the mutual-born doubles
+    court that record was written for.
+
+    **The rule still binds where it was aimed.** A field whose absence would have
+    to be *guessed at* rather than read as an honest nothing, or one that changes
+    what a stored row means, is still a version 2 — and then it is worth its two
+    classes.
     """
 
     challenge_id: UUID
     seats: tuple[str, ...]
     newly_invited: tuple[str, ...]
     occurred_at: datetime
+    invited_by: UUID | None = None
 
     def __post_init__(self) -> None:
         _retuple(self, "seats", "newly_invited")

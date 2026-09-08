@@ -178,13 +178,70 @@ class _InMemoryStore:
         )
 
 
-def _batch(store, dispatcher):
+class _CountingUnitOfWork:
+    """The transaction the handlers ran in, as a pair of counters.
+
+    A handler that writes commits with the row that told it to, so what is worth
+    asserting here is that a **failed** delivery rolls back before its attempt is
+    recorded — otherwise half of what the handler wrote would be committed by the
+    update that says it failed.
+    """
+
+    def __init__(self) -> None:
+        self.commits = 0
+        self.rollbacks = 0
+
+    async def commit(self) -> None:
+        self.commits += 1
+
+    async def flush(self) -> None:
+        return None
+
+    async def rollback(self) -> None:
+        self.rollbacks += 1
+
+
+def _batch(store, dispatcher, uow=None):
     return EventBatch(
         outbox=store,
         codec=_codec(),
         dispatcher=dispatcher,
+        uow=uow or _CountingUnitOfWork(),
         clock=_FrozenClock(datetime(2026, 1, 2, tzinfo=timezone.utc)),
     )
+
+
+@pytest.mark.asyncio
+async def test_a_failed_delivery_rolls_back_before_the_attempt_is_recorded():
+    """``docs/adr/0146`` §5 put the first *writing* subscriber on this loop."""
+
+    store = _InMemoryStore([_record()])
+    dispatcher = EventDispatcher()
+    uow = _CountingUnitOfWork()
+
+    async def handler(event: _SampleEvent, context: DeliveryContext) -> None:
+        raise RuntimeError("half a system line")
+
+    dispatcher.subscribe(_SampleEvent, handler)
+    published = await _batch(store, dispatcher, uow).execute(worker_id="test")
+
+    assert published == 0
+    assert uow.rollbacks == 1
+
+
+@pytest.mark.asyncio
+async def test_a_successful_delivery_is_not_rolled_back():
+    store = _InMemoryStore([_record()])
+    dispatcher = EventDispatcher()
+    uow = _CountingUnitOfWork()
+
+    async def handler(event: _SampleEvent, context: DeliveryContext) -> None:
+        return None
+
+    dispatcher.subscribe(_SampleEvent, handler)
+    await _batch(store, dispatcher, uow).execute(worker_id="test")
+
+    assert uow.rollbacks == 0
 
 
 @pytest.mark.asyncio

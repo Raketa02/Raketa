@@ -435,6 +435,7 @@ async def _refill(
             )
             for seat, (side, occupant) in enumerate(zip(sides, occupants, strict=True))
         ],
+        by=loaded.organiser_id,
         occurred_at=at,
     )
     await repository.save(loaded)

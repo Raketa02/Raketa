@@ -370,6 +370,7 @@ def test_a_seat_filled_later_starts_its_own_day():
             invited(BOB, Side.B, 7),
             invited(CAROL, Side.B, 8),
         ),
+        by=challenge.organiser_id,
         occurred_at=at(10),
     )
 
@@ -764,6 +765,7 @@ def test_only_the_newly_seated_are_invited():
             invited(BOB, Side.B, 7),
             invited(CAROL, Side.B, 8),
         ),
+        by=challenge.organiser_id,
         occurred_at=at(10),
     )
 
@@ -785,6 +787,7 @@ def test_an_accepted_player_may_cross_the_net_and_keep_their_acceptance():
             SeatPlan(side=Side.B, player_id=ALICE),
             invited(CAROL, Side.B, 8),
         ),
+        by=challenge.organiser_id,
         occurred_at=at(10),
     )
 
@@ -804,6 +807,7 @@ def test_an_accepted_player_may_not_be_removed():
                 invited(CAROL, Side.B, 8),
                 SeatPlan(side=Side.B),
             ),
+            by=challenge.organiser_id,
             occurred_at=at(10),
         )
 
@@ -821,6 +825,7 @@ def test_a_send_with_nobody_new_is_refused():
                 SeatPlan(side=Side.B),
                 SeatPlan(side=Side.B),
             ),
+            by=challenge.organiser_id,
             occurred_at=at(10),
         )
 
@@ -839,6 +844,7 @@ def test_once_the_court_is_full_the_sides_are_frozen():
                 SeatPlan(side=Side.B, player_id=ALICE),
                 SeatPlan(side=Side.B, player_id=CAROL),
             ),
+            by=challenge.organiser_id,
             occurred_at=at(4),
         )
 
@@ -855,6 +861,7 @@ def test_a_challenge_that_is_over_takes_no_more_invitations():
                 invited(CAROL, Side.B, 8),
                 SeatPlan(side=Side.B),
             ),
+            by=challenge.organiser_id,
             occurred_at=at(2),
         )
 
@@ -872,6 +879,7 @@ def test_a_reopened_seat_can_be_offered_to_somebody_else():
             SeatPlan(side=Side.B, player_id=BOB),
             invited(STRANGER, Side.B, 9),
         ),
+        by=challenge.organiser_id,
         occurred_at=at(4),
     )
 
@@ -900,6 +908,7 @@ def test_nobody_is_asked_twice():
                 SeatPlan(side=Side.B, player_id=BOB),
                 invited(CAROL, Side.B, 9),
             ),
+            by=challenge.organiser_id,
             occurred_at=at(4),
         )
 
@@ -921,6 +930,7 @@ def test_somebody_who_lapsed_is_not_asked_again_either():
                 SeatPlan(side=Side.B, player_id=BOB),
                 invited(CAROL, Side.B, 9),
             ),
+            by=challenge.organiser_id,
             occurred_at=OUTSIDE,
         )
 
@@ -954,6 +964,7 @@ def test_somebody_who_lapsed_is_not_asked_again_with_no_sweep_having_run():
                 SeatPlan(side=Side.B, player_id=BOB),
                 invited(CAROL, Side.B, 9),
             ),
+            by=challenge.organiser_id,
             occurred_at=OUTSIDE,
         )
 
@@ -992,6 +1003,7 @@ def test_a_plan_may_not_carry_an_invitation_for_somebody_already_in():
                 invited(BOB, Side.B, 8),
                 invited(CAROL, Side.B, 9),
             ),
+            by=challenge.organiser_id,
             occurred_at=at(10),
         )
 
@@ -1061,6 +1073,7 @@ def test_a_mutual_padel_game_can_be_completed_from_the_builder():
             invited(BOB, Side.B, 1),
             invited(CAROL, Side.B, 2),
         ),
+        by=challenge.organiser_id,
         occurred_at=at(48),
     )
 
@@ -1099,6 +1112,7 @@ def test_a_whole_life_replays_into_itself():
             invited(STRANGER, Side.B, 7),
             invited(new_uuid(), Side.B, 8),
         ),
+        by=challenge.organiser_id,
         occurred_at=OUTSIDE,
     )
 
@@ -1299,6 +1313,7 @@ def test_a_withdrawn_challenge_takes_no_more_invitations():
                 invited(STRANGER, Side.B, 7),
                 invited(new_uuid(), Side.B, 8),
             ),
+            by=challenge.organiser_id,
             occurred_at=at(5),
         )
 

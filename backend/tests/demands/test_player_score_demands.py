@@ -209,6 +209,7 @@ async def _refills(
     assert loaded is not None
     loaded.invite(
         _court(loaded.sport, organiser, replacement, already_in=still_in),
+        by=loaded.organiser_id,
         occurred_at=at,
     )
     await repository.save(loaded)

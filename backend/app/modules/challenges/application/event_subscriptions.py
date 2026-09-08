@@ -12,6 +12,16 @@ send that one day cites something other than a search — and
 ``challenges.seats_invited``. Either will be a version 2 registered beside
 version 1, never an edit to it: the rows already in the store must keep decoding.
 
+**``seats_invited`` was asked, and it took a nullable ``invited_by`` instead.**
+The argument is written at the field in ``domain/events.py``, because that is
+where the interesting part is: the rule's *reason* is that stored rows keep
+decoding, and a key the codec never sees takes its default rather than being
+reinterpreted — while a version 2 in this catalog costs **two Python classes**,
+since ``EventCatalog.register`` binds one class to one ``(name, version)``. What
+still earns those two classes is a change that makes a stored row **mean**
+something else. That distinction, rather than *never an edit*, is the line these
+two files now draw together.
+
 **No name here says the challenge is on, expired or declined.** That is not an
 omission to be filled in by whoever needs one; the standing is derived from the
 seats and the clock, and a durable name announcing a conclusion would be a second

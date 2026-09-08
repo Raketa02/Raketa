@@ -14,6 +14,9 @@ from app.modules.blocks.presentation.routes import router as blocks_router
 from app.modules.challenges.presentation.routes import (
     router as challenges_router,
 )
+from app.modules.conversations.presentation.routes import (
+    router as conversations_router,
+)
 from app.modules.games.presentation.routes import router as games_router
 from app.modules.matchmaking.presentation.deck_routes import (
     passes_router,
@@ -69,4 +72,5 @@ player_api_router.include_router(deck_router)
 player_api_router.include_router(passes_router)
 player_api_router.include_router(prompt_declines_router)
 player_api_router.include_router(challenges_router)
+player_api_router.include_router(conversations_router)
 player_api_router.include_router(games_router)

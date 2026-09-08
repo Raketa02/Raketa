@@ -936,6 +936,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your conversations
+         * @description **A room opens on the first acceptance and grows with each one after it.** A doubles court whose line-up is still filling draws the members it has, not the court it will be.
+         *
+         *     **Ordered by the last entry, newest first.** A room where nothing has happened yet carries `last_entry: null` and orders on the moment it opened — the opening writes no line, so there is genuinely nothing there yet.
+         *
+         *     **No state pill and no standing.** The last entry is what a pill would have said; a standing beside it would be a second place for one fact to be true. The state-keyed surfaces are the challenge screen and the game screen.
+         *
+         *     **Only live rooms are here, because there are only live rooms.** A conversation is destroyed rather than delisted once the episode it was opened for is over — deliberately the opposite of `GET /challenges`, which keeps ended challenges and says so. The difference is the difference between a record and a room.
+         *
+         *     **This is one of two reads for the Chats tab, and they are not merged.** `GET /challenges` is the other. Two sections, two contexts, two queries, two caches.
+         */
+        get: operations["read_conversations_api_v1_conversations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One conversation
+         * @description **The header and the newest page in one response**, folded against one instant, so the members you are holding and the entries you are drawing can never disagree about who is in the room.
+         *
+         *     **Open at the newest entry and page backward** from `entries[0].seq` through `/entries`. You have the whole conversation when you hold `seq` 1 — there is no `has_more`, because a gapless sequence makes `seq` 1 the beginning.
+         *
+         *     **Nothing here is re-evaluated against you.** The safety gates ran when the challenge was minted; a read that re-ran them would tell you something changed about somebody else.
+         */
+        get: operations["read_conversation_api_v1_conversations__conversation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversation_id}/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A page of a conversation, backward
+         * @description **A cursor over `seq`, never an offset.** One code path serves history and catch-up: a client that has been away and finds a hole below the newest page walks backward through this route until it reaches its own high-water mark.
+         *
+         *     **`before_seq` is exclusive**, and omitting it asks for the newest page.
+         *
+         *     **No header and no `read_at` here.** A page of entries is folded against nothing — every entry carries its own moment — so a second instant would be a second clock to reconcile against the one the detail read gave you.
+         */
+        get: operations["read_entries_api_v1_conversations__conversation_id__entries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversation_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say something
+         * @description **`200`, not `201`, and the message comes back.** A repeat carrying the same `client_message_id` answers with the same message and the same `seq`, and records nothing — so a send that paused offline and resumed can never become two bubbles.
+         *
+         *     **The message is returned rather than refetched**, which is also what keeps your own message off the live channel's round trip.
+         *
+         *     **It has no id of its own.** `(conversation_id, seq)` identifies it.
+         */
+        post: operations["send_message_api_v1_conversations__conversation_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/games": {
         parameters: {
             query?: never;
@@ -1587,6 +1687,135 @@ export interface components {
          * @enum {string}
          */
         ConsentSurface: "ONBOARDING" | "PROFILE";
+        /**
+         * ConversationListResponse
+         * @description Every room you are a member of, the ones that moved last first.
+         */
+        ConversationListResponse: {
+            /**
+             * Read At
+             * Format: date-time
+             * @description The instant this list was folded. It earns one because **its very membership is a fold**: a room is destroyed rather than delisted, so whether a row appears at all was decided against this instant.
+             */
+            read_at: string;
+            /** Conversations */
+            conversations: components["schemas"]["ConversationRowSchema"][];
+        };
+        /**
+         * ConversationMemberSchema
+         * @description One person who has agreed to be on this court right now.
+         *
+         *     **Derived from whichever record is arranging, never stored**
+         *     (``docs/adr/0146`` §7), and it **grows one acceptance at a time**: a doubles
+         *     room whose line-up is still filling draws the members it has, because a row
+         *     with four faces for a two-member room would be drawing the court rather than
+         *     the room.
+         *
+         *     **A handle and a face, and nothing else.** No Level, no band, no area, no
+         *     score — those are a *card*'s, and a card is what a searcher reads to decide
+         *     about a game that might happen. These people have already agreed to play.
+         */
+        ConversationMemberSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             * @description Who they are, and what a line's `actor_id` matches
+             */
+            player_id: string;
+            /**
+             * Nickname
+             * @description The whole handle, and **`null` for an account `users` can no longer name**. The member keeps their place either way: dropping them would draw a three-person doubles court. Nothing may derive a familiar form from it.
+             */
+            nickname: string | null;
+            /**
+             * Photo Id
+             * Format: uuid
+             * @description Their current photograph. Omitted when they have none, and omitted together with `photo_url` — the two travel as a pair or not at all.
+             */
+            photo_id?: string;
+            /**
+             * Photo Url
+             * @description A short-lived signed link to that photograph, minted for **this response**. It expires within minutes and is not a stored value.
+             */
+            photo_url?: string;
+        };
+        /**
+         * ConversationResponse
+         * @description One room's header **and** its newest page, from one fold.
+         */
+        ConversationResponse: {
+            /**
+             * Read At
+             * Format: date-time
+             * @description The instant the header and the page were folded — **one instant for both**, so members and entries can never disagree.
+             */
+            read_at: string;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Challenge Id
+             * Format: uuid
+             */
+            challenge_id: string;
+            /**
+             * Game Id
+             * @description See `ConversationRowSchema.game_id`.
+             */
+            game_id: string | null;
+            sport: components["schemas"]["Sport"];
+            /** Members */
+            members: components["schemas"]["ConversationMemberSchema"][];
+            /**
+             * Entries
+             * @description The newest page, **oldest first inside it**. Page backward from `entries[0].seq` through `GET /conversations/{id}/entries`; you have the beginning when you hold `seq` 1.
+             */
+            entries: (components["schemas"]["MessageSchema"] | components["schemas"]["SystemLineSchema"])[];
+        };
+        /**
+         * ConversationRowSchema
+         * @description One room, as a row in the Chats tab.
+         *
+         *     **No state pill, and no standing anywhere on it** (``docs/adr/0148`` §6).
+         *     Reading one would make the conversation ask `challenges` and `games` what
+         *     they are, which it never does — and it does not need to, because **the last
+         *     entry is what a pill would have said.**
+         */
+        ConversationRowSchema: {
+            /**
+             * Conversation Id
+             * Format: uuid
+             * @description The room's own id
+             */
+            conversation_id: string;
+            /**
+             * Challenge Id
+             * Format: uuid
+             * @description The challenge whose first acceptance opened it
+             */
+            challenge_id: string;
+            /**
+             * Game Id
+             * @description The game its line-up completed into, and **`null` until it does**. A room whose line-up is still filling has no game and no plan, so there is nothing for a *Details* door to open — draw no door rather than a dead one.
+             */
+            game_id: string | null;
+            /** @description What they are arranging */
+            sport: components["schemas"]["Sport"];
+            /**
+             * Members
+             * @description Who has agreed to be on this court right now
+             */
+            members: components["schemas"]["ConversationMemberSchema"][];
+            /**
+             * Last Entry
+             * @description The newest thing in the room, rendered by the same two components the stream uses — never a preview string.
+             *
+             *     **`null` in a room where nothing has happened yet**, which is a real state rather than an edge case: the opening writes no line, so a room whose first acceptance is its whole history has no entry at all.
+             */
+            last_entry: (components["schemas"]["MessageSchema"] | components["schemas"]["SystemLineSchema"]) | null;
+        };
         /**
          * CourtAtStakeSchema
          * @description What a **counted** game against this person would do to your Level.
@@ -2303,6 +2532,17 @@ export interface components {
             outside_their_radius: boolean;
         };
         /**
+         * EntryPageResponse
+         * @description One page backward. **No header, and no instant.**
+         */
+        EntryPageResponse: {
+            /**
+             * Entries
+             * @description The page, **oldest first inside it**. Empty when `before_seq` was 1 — there is nothing before the beginning.
+             */
+            entries: (components["schemas"]["MessageSchema"] | components["schemas"]["SystemLineSchema"])[];
+        };
+        /**
          * ErrorResponse
          * @description The body of every error response, on both API surfaces.
          */
@@ -2947,6 +3187,45 @@ export interface components {
              * @default Logged out successfully
              */
             message: string;
+        };
+        /**
+         * MessageSchema
+         * @description What a player typed. **Content, crossing as-is.**
+         */
+        MessageSchema: {
+            /**
+             * @description The discriminator. Two genuinely different shapes ride one ordered stream; this is not a `kind` on one shape (`docs/adr/0148` §4). (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "message";
+            /**
+             * Seq
+             * @description This entry's place in the conversation. **Gapless and starting at 1**, so `seq` 1 is the beginning of the room — which is why there is no `has_more`. Ordering, paging, de-duplication and reconnect all key on it, and **no reader may infer loss from a gap**: the promise is the server's and nothing may depend on it.
+             */
+            seq: number;
+            /**
+             * Author Id
+             * Format: uuid
+             * @description Which member typed it
+             */
+            author_id: string;
+            /**
+             * Sent At
+             * Format: date-time
+             * @description When it landed
+             */
+            sent_at: string;
+            /**
+             * Text
+             * @description Their own words, unrendered and unchanged
+             */
+            text: string;
+            /**
+             * Client Message Id
+             * Format: uuid
+             * @description The id the sending client generated, echoed back. It does **two jobs**: the idempotency key for a resumed send, and the key an optimistic bubble is replaced on.
+             */
+            client_message_id: string;
         };
         /**
          * ModifierCode
@@ -4293,6 +4572,25 @@ export interface components {
             court: components["schemas"]["SeatChoiceSchema"][];
         };
         /**
+         * SendMessageRequest
+         * @description One player's own words.
+         */
+        SendMessageRequest: {
+            /**
+             * Text
+             * @description What to say. Leading and trailing whitespace is trimmed; empty after trimming is `message_is_empty`, and past the cap is `message_is_too_long`. **Neither is silently fixed** — a shortened message is one the sender believes they sent whole.
+             */
+            text: string;
+            /**
+             * Client Message Id
+             * Format: uuid
+             * @description An id you generate for this send, **in the body rather than an `Idempotency-Key` header**, because it does two jobs: it makes a retry safe, and it is what you reconcile your optimistic bubble on.
+             *
+             *     **Send the same one on a retry.** A repeat answers `200` with the same message and the same `seq`, and records nothing — so a send that paused offline and resumed can never become two messages.
+             */
+            client_message_id: string;
+        };
+        /**
          * SentChallengeResponse
          * @description What a send answers with. **An id, and deliberately nothing else.**
          *
@@ -4652,6 +4950,49 @@ export interface components {
             question_id: string;
             /** Option Id */
             option_id: string;
+        };
+        /**
+         * SystemLineSchema
+         * @description What happened, as a code and its values. **Never a sentence.**
+         */
+        SystemLineSchema: {
+            /**
+             * @description The discriminator. See `MessageSchema.type`. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "system_line";
+            /**
+             * Seq
+             * @description This entry's place. See `MessageSchema.seq`.
+             */
+            seq: number;
+            /**
+             * Code
+             * @description What happened, as a machine code the client renders a sentence from. **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`** and **`GAME_PLAYED`** today; the Plan adds three more.
+             *
+             *     **A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news either way — and a lapse is still not a decline, which is what `values.departure` keeps apart.
+             *
+             *     **There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping — drawn, not announced.
+             */
+            code: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             * @description When it happened
+             */
+            occurred_at: string;
+            /**
+             * Actor Id
+             * @description Who did it, or `null`. **Render `{name}` from the members you are already holding** — the handle is never repeated here, so a corrected one fixes the whole backlog.
+             */
+            actor_id: string | null;
+            /**
+             * Values
+             * @description What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED` or `LAPSED`. The others carry nothing.
+             */
+            values: {
+                [key: string]: string;
+            };
         };
         /**
          * TagPair
@@ -6670,6 +7011,189 @@ export interface operations {
             };
             /** @description `not_a_half_built_line_up` — this challenge has some other end already. **One code for five standings**, because they are one sentence: `AWAITING_ANSWERS` ends itself when the clocks run out, `ON` has become a game, and the three endings have ended. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_conversations_api_v1_conversations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every room you are a member of, the ones that moved last first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationListResponse"];
+                };
+            };
+        };
+    };
+    read_conversation_api_v1_conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The room's header and its newest page, from one fold. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationResponse"];
+                };
+            };
+            /**
+             * @description `conversation_not_found` — **one code for two cases**: there is no room with that id, or there is one and you are not in it. They are not told apart on purpose, because a 403 would answer *is this id real* about a stranger's evening.
+             *
+             *     Leave the screen. There is no retry that changes this.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_entries_api_v1_conversations__conversation_id__entries_get: {
+        parameters: {
+            query?: {
+                /** @description Return the entries **before** this one. Omit for the newest page. An empty answer means you are holding the beginning. */
+                before_seq?: number | null;
+                /** @description How many entries to return. **Over the cap is a 422 rather than a silent clamp** — a route that quietly returns something other than what was asked for cannot be told apart from one that ran out. */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page, oldest first inside it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryPageResponse"];
+                };
+            };
+            /**
+             * @description `conversation_not_found` — **one code for two cases**: there is no room with that id, or there is one and you are not in it. They are not told apart on purpose, because a 403 would answer *is this id real* about a stranger's evening.
+             *
+             *     Leave the screen. There is no retry that changes this.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_message_api_v1_conversations__conversation_id__messages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description The message as it was recorded — **or, on a repeat, the one that already stands.** */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageSchema"];
+                };
+            };
+            /**
+             * @description `message_is_empty` — nothing but whitespace.
+             *
+             *     `message_is_too_long` — past the cap. **Refused, never truncated**: a shortened message is one you believe you sent whole, in front of other people.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `account_held` — your account is under a live hold. **A hold stops you writing anywhere another player sees it, and never stops you reading**: every read on this context stays open to you, because a hold must not erase an arrangement other people are already inside. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `conversation_not_found` — **one code for two cases**: there is no room with that id, or there is one and you are not in it. They are not told apart on purpose, because a 403 would answer *is this id real* about a stranger's evening.
+             *
+             *     Leave the screen. There is no retry that changes this.
+             */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

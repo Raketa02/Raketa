@@ -1248,9 +1248,11 @@ Settled by [ADR-0146](docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-i
 [ADR-0153](docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
 which moved
 [ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)'s.
-**Settled and not built** — there is no `backend/app/modules/conversations/` yet. Its terms are
-here because this file asks for them before the code, and the section will say so until the module
-exists.
+**Built, except its lifetime.** The module exists, the four routes are on the player contract, and
+a room is opened and grown through the outbox by contexts that do not know it exists. What is not
+built is the **destruction** — nothing sweeps a room today, so *destroyed, not delisted* below is
+the one line in this section that describes a decision rather than the code
+([#359](https://github.com/Raketa02/Raketa/issues/359)).
 
 **The place two people who have agreed to play talk about it.** It is deliberately **not** called
 `Chat` — that word promises messaging between anybody, searchable and permanent, and this context

@@ -252,6 +252,7 @@ async def test_a_seat_given_to_somebody_else_is_no_longer_yours(session_factory)
                 SeatPlan(side=Side.B, player_id=CAROL),
                 SeatPlan(side=Side.B),
             ),
+            by=challenge.organiser_id,
             occurred_at=at(2),
         )
         await _record(session, challenge)

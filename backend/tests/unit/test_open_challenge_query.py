@@ -177,6 +177,7 @@ def a_side_invited_into(challenge: Challenge, *, at_hour: int = 1) -> Challenge:
             invited(BOB, Side.B, 1),
             invited(CAROL, Side.B, 2),
         ),
+        by=challenge.organiser_id,
         occurred_at=at(at_hour),
     )
     return challenge
@@ -728,6 +729,7 @@ async def test_a_stream_whose_membership_changed_is_read_whole(session_factory):
                 invited(BOB, Side.B, 7),
                 invited(CAROL, Side.B, 8),
             ),
+            by=challenge.organiser_id,
             occurred_at=at(2),
         )
         challenge.decline(BOB, occurred_at=at(3))

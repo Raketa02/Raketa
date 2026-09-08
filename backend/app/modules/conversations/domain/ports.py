@@ -1,0 +1,277 @@
+"""What this context stores behind, and what it demands of contexts it does not
+write.
+
+**Nothing here is published outward.** A conversation is *told* and tells
+nothing (``docs/adr/0146``), so it has no consumers — which is why there is no
+provider register for it and why every port below is a demand rather than an
+offer.
+
+**Four demands, and three of them are somebody else's.** ``ArrangingCourt`` is
+``challenges``', ``PlayedCourt`` is ``games``', ``MemberFaces`` reaches the
+Player profile and ``users``, and ``AccountHoldQuery`` is the third spelling of a
+port whose provider does not exist yet. Each is contracted in ``tests/demands/``
+over every registered implementation, because *a demand nobody executes is a
+demand satisfied by accident*.
+
+**Membership is one rule read against two records, and it is two ports because
+they are two records.** The challenge's accepted seats until the line-up
+completes; the game's frozen line-up after. A single port would have to know
+which record answers, and the thing that knows is the room's own nullable
+``game_id``.
+
+**The finding read is the challenge's alone, and that is a claim worth stating.**
+A game's line-up is *frozen from* the challenge's accepted seats and nothing in
+``games`` can move anybody, so every room a player is a member of is reachable
+through the challenges they have accepted — including after the line-up
+completes. Which record membership is then *read from* is still the two-record
+rule; what the challenge supplies is only the set of rooms to ask about.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Collection, Mapping, Protocol, final, runtime_checkable
+from uuid import UUID
+
+from app.kernel import Sport, invariant
+from app.modules.conversations.domain.conversation import Conversation
+
+
+@runtime_checkable
+class ConversationRepository(Protocol):
+    """How this context loads and saves its own aggregate.
+
+    **``load_for_append`` is not ``load``**, and the difference is the whole of
+    ``docs/adr/0147`` §2: an append reads and writes ``last_seq`` under the
+    conversation row's lock, so the read that precedes a write takes that lock
+    and the read that precedes a response does not. Two methods rather than a
+    flag, because a caller that forgot the flag would mint a duplicate sequence
+    number under load and nothing would notice until two people saw one bubble
+    twice.
+
+    **Nothing here commits.** The transaction boundary is the use case's — and
+    for a telling it is the outbox delivery's, so a system line and the outbox
+    row that caused it stand or fall together.
+    """
+
+    async def load(self, conversation_id: UUID) -> Conversation | None: ...
+
+    async def load_for_append(self, conversation_id: UUID) -> Conversation | None:
+        """The same aggregate, with the row locked for a sequence to be minted."""
+        ...
+
+    async def for_challenge(self, challenge_id: UUID) -> Conversation | None:
+        """The room this challenge already opened, if it has.
+
+        **Locked like ``load_for_append``**, because its caller is the opening
+        itself: this is the read that makes *one arrangement is one room* an
+        invariant rather than a race between two acceptances arriving together.
+        """
+        ...
+
+    async def save(self, conversation: Conversation) -> None: ...
+
+
+@runtime_checkable
+class ConversationDirectory(Protocol):
+    """*Which rooms are these?* The list read's only store question."""
+
+    async def for_challenges(
+        self, challenge_ids: Collection[UUID]
+    ) -> tuple[Conversation, ...]:
+        """Every live room opened by one of these challenges.
+
+        **One set read over the whole answer**, never one per challenge, which is
+        the shape every set read in this codebase takes.
+
+        The order is not part of the demand: the list is ordered by its last
+        entry (``docs/adr/0148`` §11), which is a fold and belongs to the use
+        case rather than to the store.
+        """
+        ...
+
+    async def for_game(self, game_id: UUID) -> Conversation | None:
+        """The room whose line-up completed into this game, if it has one.
+
+        **Locked like ``load_for_append``**, because its one caller is the
+        telling that writes the *played* line. ``GamePlayed`` names a game and
+        nothing else, so this is the only way back to the room — which is why
+        ``GamePlanned`` has to reach the room even though it draws nothing.
+        """
+        ...
+
+
+@runtime_checkable
+class ArrangingCourt(Protocol):
+    """Who has agreed to be on a **challenge's** court right now. ``challenges``'.
+
+    The first half of *one rule read against two records*. It answers about
+    accepted seats and nothing else: not who was invited, not who declined, and
+    not what the challenge's standing is — a standing is a fold this context has
+    no business performing on somebody else's record.
+    """
+
+    async def accepted_on(
+        self, challenge_ids: Collection[UUID]
+    ) -> Mapping[UUID, frozenset[UUID]]:
+        """The players who have accepted each of these challenges. **One call.**
+
+        One question about the whole list rather than one per room — which is
+        what the caller promises, not what the store does: a challenge is an
+        event stream and folding one is that context's business, so an
+        implementation may well pay a replay each.
+
+        A challenge absent from the answer is one this reader may not be told
+        about, and its room is dropped rather than drawn empty.
+        """
+        ...
+
+    async def accepted_by(self, player_id: UUID) -> frozenset[UUID]:
+        """Every challenge this player has accepted a seat on, whatever it is now.
+
+        **A fact about seats and never about a standing.** An ended challenge's
+        room is destroyed by the sweep rather than filtered out here, so a
+        narrowing on the standing would be this context folding somebody else's
+        record — and would silently drop rooms whose challenge concluded a minute
+        ago and whose members are still talking.
+        """
+        ...
+
+    async def sport_of(self, challenge_id: UUID) -> Sport | None:
+        """What game this challenge is about. **The one fact a room borrows.**
+
+        A room is opened by a **seat's acceptance**, and an acceptance names a
+        challenge and a player and nothing else. The alternative was to widen
+        ``SeatAccepted`` so the sport travelled with it, which would have put a
+        field on a published event for the benefit of one subscriber — the shape
+        ``docs/adr/0146`` exists to refuse, since the publisher would then be
+        carrying something only the conversation reads.
+
+        ``None`` for a challenge this context may not be told about, and the
+        room is then not opened at all rather than opened without a sport.
+        """
+        ...
+
+
+@runtime_checkable
+class PlayedCourt(Protocol):
+    """The **game's** frozen line-up. ``games``'.
+
+    The second half of the rule. It is asked only about rooms whose ``game_id``
+    is set, which is exactly the rooms whose line-up has completed — so the two
+    records never both answer about one room.
+    """
+
+    async def line_ups_of(
+        self, game_ids: Collection[UUID]
+    ) -> Mapping[UUID, frozenset[UUID]]:
+        """Who was on the court of each of these games. **One question, one call.**
+
+        A game absent from the answer is one this reader may not be told about,
+        and its room is dropped rather than drawn empty.
+        """
+        ...
+
+    async def game_of(self, challenge_id: UUID) -> UUID | None:
+        """The game this challenge's line-up completed into, if it has one.
+
+        **This exists because the outbox has no order inside one transaction.**
+        The accept that fills the last seat writes ``SeatAccepted`` and
+        ``GamePlanned`` together, and the queue orders by ``(created_at, id)``
+        where ``created_at`` is ``func.now()`` — transaction-start time, identical
+        across a transaction (``docs/adr/0097``). The tie-break is a minted uuid,
+        so which of the two is delivered first is a coin flip.
+
+        Without this read the coin decides whether a singles room ever learns its
+        game: ``GamePlanned`` arriving first finds no room, drops, and nothing
+        ever tells the room again. With it, the **opening** asks — so both orders
+        arrive at the same room, and a client's *Details* door does not depend on
+        a uuid comparison.
+        """
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class MemberFace:
+    """What one member is called and what they look like.
+
+    **A handle, a photograph, and nothing else.** No Level, no band, no area, no
+    score: a card is what a *searcher* reads to decide about a game that might
+    happen, and these people have already agreed to play. ``docs/adr/0141`` §1
+    fixes what may be borrowed about a person on a record of an evening, and this
+    room is one.
+
+    ``nickname`` is ``None`` for a player ``users`` can no longer name. **The
+    member keeps their place** — they are still somebody who agreed to play, and
+    dropping them would draw a three-person doubles court.
+
+    ``photo_id`` and ``photo_url`` are present **exactly together**. An id with
+    no link beside it is a photograph nothing can draw, and neither means the
+    client draws the generated court poster, which needs nothing from the wire.
+
+    **Photographs are affordable here where ``docs/adr/0143`` refused them.**
+    That record priced a photo per person against a challenges list that keeps
+    ended challenges for ever; a room is destroyed rather than kept, so this list
+    is bounded and small. A difference between a record and a room, not a change
+    of mind.
+    """
+
+    player_id: UUID
+    nickname: str | None = None
+    photo_id: UUID | None = None
+    photo_url: str | None = None
+
+    def __post_init__(self) -> None:
+        invariant(
+            (self.photo_id is None) == (self.photo_url is None),
+            f"a photograph with only half an address: {self!r}",
+        )
+
+
+@runtime_checkable
+class MemberFaces(Protocol):
+    """What the people in a room are called and what they look like.
+
+    **A third spelling of a handle read, and the duplication is the decision** —
+    ``challenges`` and ``games`` each have their own, for the reason both say:
+    two contexts needing *what do I print on this seat* is not a reason for one
+    to own the other's vocabulary. This one carries a face beside the handle
+    because a room draws one and neither of the others does.
+    """
+
+    async def faces_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, MemberFace]:
+        """Each of these players. **One question about the union, never one per
+        seat** — a list of rooms asks once, about everybody in any of them.
+
+        *One question* rather than *one query*, and the difference is worth
+        stating: the handles are a set read, but a photograph is chosen off a
+        Player profile and a profile is a **stream folded per person**, so the
+        implementation pays a fold each. What the port promises is that no caller
+        ever loops — not that the provider does not.
+
+        **A player absent from the answer keeps their membership.** They are
+        still somebody who agreed to play, and dropping them would draw a
+        three-person doubles court — ``games``' rule verbatim.
+        """
+        ...
+
+
+@runtime_checkable
+class AccountHoldQuery(Protocol):
+    """Whether an account is under a live hold. **Asked on writes only.**
+
+    ``docs/adr/0148`` §9: *a hold stops you writing anywhere another player sees
+    it, and never stops you reading.* The hold's own argument is about **reach**,
+    and a message is reach — but a hold must not erase an arrangement other
+    people are already inside, so every read here is ungated and the send is not.
+
+    **The matcher's port and ``challenges``' port, spelled a third time**, and
+    for the third time it is deliberate: the provider is ``cases``, which does not
+    exist, and the alternative to a third spelling is this context importing one
+    of the other two to ask a safety question.
+    """
+
+    async def held_among(self, player_ids: Collection[UUID]) -> frozenset[UUID]:
+        """Which of these players are under a live hold, right now."""
+        ...

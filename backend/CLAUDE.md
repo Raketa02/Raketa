@@ -523,6 +523,41 @@ Rules to preserve:
   per response** over the union of every court in the answer, and a handle `users` cannot answer
   for is `null` with the seat kept — the opposite of the shortlist, which drops a row it cannot
   name.
+- **A room is opened by the first acceptance, and it is told by contexts that do not know
+  it exists** ([ADR-0146](../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md),
+  [ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md),
+  [ADR-0148](../docs/adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md)).
+  `app/modules/conversations/` is the eighth context, the platform's first messaging of any
+  kind, and it is deliberately narrow: purpose-bound, never between strangers, never
+  permanent. Five things about it are load-bearing and none is obvious from the code alone.
+  **It is the outbox's first *writing* subscriber**, and that is ADR-0110's second
+  guarantee: the candidate index went to the log because an outbox subscriber *"could never
+  name the `sequence_no`"*, and a room names no event's sequence — only its own. Two
+  consequences fell out of being first. `EventBatch` now takes a unit of work and **rolls
+  back a failed delivery before recording the attempt**, because `mark_failed` commits the
+  session the handlers ran in; and the teller is subscribed **per batch, over that batch's
+  session** (`EventRuntime._dispatcher_over`), so a system line commits with the outbox row
+  that caused it. Delivery is still at-least-once, so **every write here is idempotent** —
+  a room per challenge on a unique index, a line per **outbox row** on `source_event_id`,
+  a message per `client_message_id`. **The sequence is gapless and it is the aggregate's
+  own fact**: `last_seq + 1`, minted under the conversation row's lock inside the appending
+  transaction — not a Postgres sequence object, which is documented not to be gapless, and
+  not a timestamp, which ADR-0097 disqualified. It is **not** the stream version, and the
+  two part company at row one because the opening event writes no entry. The lock is the
+  one thing this suite cannot exercise: SQLite renders no `FOR UPDATE` and runs one
+  connection, so that path meets Postgres or nothing. **Membership is derived, never
+  stored** — the challenge's accepted seats until the line-up completes, the game's frozen
+  line-up after, one rule read against two records, and a stored roster would be the copy
+  that decides who may read the messages. **Two shapes ride one stream and no sentence is
+  ever stored**: a Message is content, a system line is a code and its values, and `values`
+  never repeats what membership already says, so a corrected handle fixes the whole backlog.
+  **What is refused is a table rather than prose** — `application/telling.py` names every
+  event either half of the loop publishes and what this room does about it, including the
+  ones that write nothing and why, because a builder reading only the event list would write
+  a line for each. There is no *Game on* line. And **a refused line is not a refused
+  telling**: `GamePlanned` reaches the room, draws nothing, and is where the room learns its
+  game. Not built here: the **destruction** ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
+  #359) and the **live channel** (ADR-0147, #357).
 - **A Player Score is what the platform watched, and two strands is what it can see**
   ([ADR-0140](../docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
   `app/modules/player_score/` is the seventh context and the first that **keeps no record at
@@ -594,13 +629,17 @@ tests.
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Five registers, and they are five on purpose — one per kind of claim.**
+  **Six registers, and they are six on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` holds the ports the *matcher* declares of contexts it
   does not write; `games_demands.py`, `rating_demands.py` and `player_score_demands.py`
-  each hold the ports one *provider* publishes outward; and `challenge_demands.py` holds
+  each hold the ports one *provider* publishes outward; `challenge_demands.py` holds
   what `challenges` demands of the **matcher** — the arrow's other direction, which
   arrived with the challenge detail read
-  ([ADR-0143](../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)).
+  ([ADR-0143](../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md));
+  and `conversation_demands.py` holds what a **room** demands of the three contexts it is
+  told by and reads from. There is deliberately no *conversations provider* register and
+  there never will be: a conversation is told and tells nothing, so it has no consumers and
+  publishes no port.
   Each register's exhaustiveness
   assertion is about its own kind of claim and would stop meaning anything with another
   kind in it — which is also the rule for the next one: **a new provider gets a new

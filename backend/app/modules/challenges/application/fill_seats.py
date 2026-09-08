@@ -155,6 +155,7 @@ class FillSeats(AChallengeOfYours):
                 origin=origin,
                 already_in=still_in,
             ),
+            by=command.player_id,
             occurred_at=at,
         )
         return await self._committed(

@@ -77,6 +77,35 @@ from app.modules.challenges.infrastructure.games_settled_game import (
     GamesSettledGame,
 )
 from app.modules.games.application.open_planned_game import OpenPlannedGame
+from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
+from app.modules.conversations.application.membership import Membership
+from app.modules.conversations.application.tell_the_room import TellTheRoom
+from app.modules.conversations.domain.ports import (
+    AccountHoldQuery as ConversationAccountHoldQuery,
+    ArrangingCourt,
+    ConversationDirectory,
+    ConversationRepository,
+    MemberFaces,
+    PlayedCourt,
+)
+from app.modules.conversations.infrastructure.absent_providers import (
+    NoHoldsExist as NoConversationHoldsExist,
+)
+from app.modules.conversations.infrastructure.challenges_arranging_court import (
+    ChallengesArrangingCourt,
+)
+from app.modules.conversations.infrastructure.event_sourced_conversation_repository import (  # noqa: E501
+    EventSourcedConversationRepository,
+)
+from app.modules.conversations.infrastructure.games_played_court import (
+    GamesPlayedCourt,
+)
+from app.modules.conversations.infrastructure.profile_member_faces import (
+    ProfileMemberFaces,
+)
+from app.modules.conversations.infrastructure.sqlalchemy_conversation_directory import (  # noqa: E501
+    SqlAlchemyConversationDirectory,
+)
 from app.modules.games.domain.ports import (
     ConfirmedResultLedger,
     GameDirectory,
@@ -1472,4 +1501,190 @@ def build_rebuild_candidate_index(
         session_factory=session_factory,
         tail=build_candidate_index_tail(settings=settings),
         clock=build_clock(),
+    )
+
+
+# --------------------------------------------------------------------------
+# Conversations
+# --------------------------------------------------------------------------
+
+
+def build_conversation_repository(
+    *,
+    session: AsyncSession,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> ConversationRepository:
+    """Per unit of work, for the same reason every aggregate repository is —
+    **and for one more.**
+
+    It remembers the stream versions it loaded, like every other; and it takes
+    the session as well as the store because two of its three reads take the
+    conversation row's **lock**, which is where a gapless sequence is minted
+    (``docs/adr/0147`` §2). A repository outliving its transaction would be one
+    holding a lock nothing is going to release.
+    """
+    return EventSourcedConversationRepository(
+        event_store=event_store, events=events, session=session
+    )
+
+
+def build_conversation_directory(
+    *,
+    session: AsyncSession,
+    conversations: ConversationRepository,
+) -> ConversationDirectory:
+    """*Which rooms are these* — the lookup on the rows, folded through the
+    repository.
+
+    It is handed the repository rather than building one, because the aggregates
+    it answers with carry stream versions somebody may be about to append
+    against: two repositories in one transaction would be two answers to *what
+    version have I seen*.
+    """
+    return SqlAlchemyConversationDirectory(
+        session=session, conversations=conversations
+    )
+
+
+def build_arranging_court(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> ArrangingCourt:
+    """Half of *one rule read against two records*, answered by ``challenges``.
+
+    Built here rather than at the surface for the reason every adapter is: which
+    context answers *who has agreed to be on this court* is a wiring choice, and
+    a read path that reached into ``challenges`` itself would put a second author
+    on it.
+    """
+    return ChallengesArrangingCourt(
+        challenges=build_challenge_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        directory=build_challenge_directory(session, runtime=runtime),
+    )
+
+
+def build_played_court(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> PlayedCourt:
+    """The other half, answered by ``games``."""
+    return GamesPlayedCourt(
+        build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
+def build_member_faces(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> MemberFaces:
+    """A handle from ``users``, a face from the Player profile, a link from the
+    store.
+
+    **The third handles adapter in this file**, and the first that carries a
+    photograph beside the name: ``docs/adr/0148`` §6 made one affordable here
+    where ``docs/adr/0143`` refused it, because a room is destroyed rather than
+    kept.
+
+    Built over the **three providers' own ports** rather than over the session,
+    which is what keeps this context from becoming a second reader of somebody
+    else's schema — and it is why a Player profile arrives as a stream folded
+    through the event store: where a photograph lives is that context's business.
+
+    The window is the platform's one photo window, so a room and
+    ``GET /photos/{id}`` cannot come to two answers about how long a link lives.
+    """
+    return ProfileMemberFaces(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        photos=build_photo_storage(settings),
+        photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
+    )
+
+
+def build_conversation_hold_query(
+    session: AsyncSession,
+) -> ConversationAccountHoldQuery:
+    """``cases`` does not exist, so nothing can hold an account.
+
+    **The third line in this file that says so.** Each context declares its own
+    hold port because none may import another to ask a safety question; on the
+    day ``cases`` ships, all three change to the same adapter.
+    """
+    return NoConversationHoldsExist()
+
+
+def build_membership(
+    session: AsyncSession,
+    *,
+    arranging: ArrangingCourt | None = None,
+    runtime: EventRuntime | None = None,
+) -> Membership:
+    """*The people who have agreed to be on this court right now* — one rule,
+    over both records.
+
+    ``arranging`` is takeable because the list read needs the same port for a
+    second question — *which challenges has this player accepted a seat on* —
+    and two courts over one session would be two aggregate repositories each
+    remembering its own stream versions. One per request, handed in.
+    """
+    return Membership(
+        arranging=arranging or build_arranging_court(session, runtime=runtime),
+        played=build_played_court(session, runtime=runtime),
+    )
+
+
+def build_a_room_of_yours(
+    *,
+    conversations: ConversationRepository,
+    membership: Membership,
+) -> ARoomOfYours:
+    """*This room, if you are in it* — the seam every act on one room shares.
+
+    Built from the two collaborators rather than from a session, because both are
+    already request-scoped and a second copy of either would be a second answer
+    to *who is in this*.
+    """
+    return ARoomOfYours(conversations=conversations, membership=membership)
+
+
+def build_tell_the_room(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> TellTheRoom:
+    """The outbox subscriber that writes system lines. **Per delivery batch.**
+
+    It is built over the batch's own session — the one ``EventBatch`` marks the
+    outbox row published in — so a line and the delivery that caused it commit
+    together. That is why this is not registered once for the process the way
+    every logging handler is.
+    """
+    conversations = build_conversation_repository(
+        session=session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+    played = build_played_court(session, runtime=runtime)
+    return TellTheRoom(
+        conversations=conversations,
+        directory=build_conversation_directory(
+            session=session, conversations=conversations
+        ),
+        arranging=build_arranging_court(session, runtime=runtime),
+        played=played,
     )

@@ -286,6 +286,7 @@ async def test_a_fill_by_somebody_who_declined_is_refused_as_a_member(
                 _invited(ONE, Side.B, 2),
                 SeatPlan(side=Side.B),
             ),
+            by=loaded.organiser_id,
             occurred_at=LATER,
         )
         loaded.decline(ONE, occurred_at=LATER)
