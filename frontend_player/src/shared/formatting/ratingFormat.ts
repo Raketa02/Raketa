@@ -23,6 +23,9 @@
 
 const DECIMALS = 2;
 
+/** What the platform publishes a star average to — see {@link formatStars}. */
+const STAR_DECIMALS = 1;
+
 /**
  * **U+2212, never the hyphen** — `the-words.md` §6.2's *"two decimals, decimal comma, U+2212
  * minus"*, which is §B16 read at the one place a figure on this scale can be negative.
@@ -60,6 +63,22 @@ export function formatLevel(value: number): string {
  */
 export function formatSignedLevel(value: number): string {
   return value > 0 ? `+${decimal(value)}` : decimal(value);
+}
+
+/**
+ * A **star average** — `4,7`, `3,0`. One decimal, and the trailing nought is never trimmed.
+ *
+ * Not `formatLevel`, though both are on a one-to-five scale: the platform publishes this mean to
+ * **one** decimal, and printing `4,70` would claim a second place nobody serves, on the one
+ * figure whose whole design is being coarse enough to be honest. It is here rather than beside
+ * the block that draws it because the decimal comma is a house convention with one home — a
+ * second `replace('.', ',')` in a feature is exactly the drift this module's note names.
+ *
+ * The word *rating* on this platform is Skill rating's, which is why this is spelled **stars**
+ * ([`CONTEXT.md`](../../../../CONTEXT.md) · Sportsmanship).
+ */
+export function formatStars(value: number): string {
+  return value.toFixed(STAR_DECIMALS).replace('.', ',');
 }
 
 export function formatRange(range: { readonly low: number; readonly high: number }): string {

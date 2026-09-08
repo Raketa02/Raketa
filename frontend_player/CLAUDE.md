@@ -112,6 +112,29 @@ than asserting it in prose. Every bar is hidden and carries no name, the fractio
 two words earlier; and a player nothing has ever fallen due for draws **no card at all**,
 because _we have not seen enough_ and _they are bad at this_ are different facts.
 
+**What opponents said is a second block, and the heading above it is the whole reason**
+([#387](https://github.com/Raketa02/Raketa/issues/387)). _Counted by the system, not written by
+people_ is one star average away from false at all times, so the one thing on this sheet people
+wrote stands **outside** that card under a heading naming its own author: two headings, no lie,
+and the heading is the cheap half of the pair. A reader gets `4,7 / 5 · 17 players`, and **the
+count is never separable from the figure** — `3,0 / 5 · 1 player` is the same field and has to
+visibly read as one person's opinion, which is the raw pair's own rule one block up; the average
+is written to **one decimal** through the app's single comma formatter, because `4,70` would
+claim a second place nobody serves on the one figure whose design is being coarse enough to be
+honest. The **subject** gets a band and no count, since an average beside a count is a
+subtraction that names each new rating exactly and they know who they played — and which arm a
+record carries is folded from the server's `is_self` **at the wire boundary**, so a response that
+carried both draws the band and _your own record drew the figure_ is unrepresentable rather than
+merely unlikely. The band **takes no tone**: `scoreTone` is this sheet's one ladder and it
+belongs to the number the matcher acts on, so a coarse three-step painted in the same three
+colours would offer itself to be read as a second Player Score on the one screen a held player
+opens to find out what is holding them back. Both arms carry one sentence with **two halves the
+contract asks for by name** — it is not in the Player Score, and it **hides nobody and holds
+nobody back** — because naming the pill only says where the figure is not counted, and the half
+a reader needs is that a low one acts on nobody. And a subject nobody has rated draws **no block
+at all**: a fourth absence asking a fourth question, since rating is a favour and nothing
+anywhere records that a card was ignored.
+
 **The result conversation is one screen and eight states, and the state is derived**
 ([#314](https://github.com/Raketa02/Raketa/issues/314),
 [ADR-0137](../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). **A result is the

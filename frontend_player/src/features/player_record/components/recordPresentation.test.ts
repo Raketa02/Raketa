@@ -11,17 +11,24 @@ import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 import type { StrandRow } from '../domain/playerRecord';
 
 import {
+  BAND_HAS_NO_COUNT,
   IN_YOUR_AREA,
+  OPINION_BAND_NAME,
+  OPINION_CARD_TITLE,
+  OPINION_CARD_TITLE_DRAWN,
   OWN_RECORD_TITLE,
   RECORD_CARD_TITLE,
   RECORD_CARD_TITLE_DRAWN,
   RECORD_TITLE,
   STRAND_NAME,
+  WRITTEN_BY_PLAYERS,
   YOU_MARK,
   fitRowLabel,
   fitRowTitle,
   identityLine,
   lastFiveReading,
+  opinionCardLabel,
+  opinionFigure,
   recordCloseLabel,
   recordCardLabel,
   recordHandle,
@@ -263,5 +270,77 @@ describe('the record card', () => {
   /** A card with one row is one clause. Nothing is spoken as absent. */
   it('says nothing about a row it was not given', () => {
     expect(recordCardLabel({ rows: [row()] })).toBe(`${RECORD_CARD_TITLE}. Shows up, 9 of 9`);
+  });
+});
+
+/**
+ * **The second block's words**, and the two things they must never say.
+ *
+ * A figure without its count is this field's one way of lying — `3,0 / 5` over one rater reads
+ * as a settled fact about somebody — and a figure about *yourself* is the leak the whole design
+ * exists to prevent. Both are asserted here, because both are a sentence rather than a rule.
+ */
+describe('what opponents said', () => {
+  it('is headed for its author, drawn in caps and spoken in words', () => {
+    expect(OPINION_CARD_TITLE).toBe('What opponents said');
+    expect(OPINION_CARD_TITLE_DRAWN).toBe(OPINION_CARD_TITLE.toUpperCase());
+  });
+
+  /**
+   * **The count is never separable from the figure.** `4,7 / 5 · 17 players` and
+   * `3,0 / 5 · 1 player` are the same field, and the second one has to visibly read as one
+   * person's opinion.
+   */
+  it('prints the average with the scale and the count of people it rests on', () => {
+    expect(opinionFigure({ average: 4.7, raters: 17 })).toBe('4,7 / 5 · 17 players');
+    expect(opinionFigure({ average: 3, raters: 1 })).toBe('3,0 / 5 · 1 player');
+  });
+
+  /**
+   * One decimal, because that is what the platform publishes: `4,70` would claim a second place
+   * nobody serves, on a scale whose whole point is that it is coarse enough to be honest.
+   */
+  it('writes one decimal, in the house comma', () => {
+    expect(opinionFigure({ average: 4.25, raters: 4 })).toBe('4,3 / 5 · 4 players');
+  });
+
+  it('names the three steps a subject may be told, and nothing finer', () => {
+    expect(OPINION_BAND_NAME).toEqual({ GOOD: 'Good', MIXED: 'Mixed', POOR: 'Poor' });
+  });
+
+  /**
+   * **The contract's own instruction, discharged in words** — *the matcher does not read it, and
+   * you should say so if you draw it beside the pill*. Naming the Player Score is only where the
+   * figure is not counted; the half a reader needs is that a low one acts on nobody, and it is
+   * asserted here rather than left to whoever edits the file next.
+   */
+  it('says both halves: who wrote it, and that it acts on nobody', () => {
+    expect(WRITTEN_BY_PLAYERS).toBe(
+      'Written by other players. It is not in the Player Score, and it hides nobody and holds ' +
+        'nobody back.',
+    );
+  });
+
+  /**
+   * **The block names its own author**, which is what keeps the card above answerable for
+   * *counted by the system, not written by people* — and it says the matcher never reads it,
+   * because it is drawn on the same sheet as the pill that the matcher does read.
+   */
+  it('reaches a listener as the heading, the figure and who wrote it', () => {
+    expect(opinionCardLabel({ kind: 'figure', average: 4.7, raters: 17 })).toBe(
+      `${OPINION_CARD_TITLE}. 4,7 out of 5, 17 players. ${WRITTEN_BY_PLAYERS}`,
+    );
+  });
+
+  /**
+   * **Your own record carries no figure and no count anywhere**, spoken or drawn — a published
+   * average beside a published count is a subtraction that names each new rating, and the
+   * subject knows who they played.
+   */
+  it('speaks a band with no number in it at all', () => {
+    const spoken = opinionCardLabel({ kind: 'band', band: 'GOOD' });
+
+    expect(spoken).toBe(`${OPINION_CARD_TITLE}. Good. ${BAND_HAS_NO_COUNT} ${WRITTEN_BY_PLAYERS}`);
+    expect(spoken).not.toMatch(/\d/);
   });
 });

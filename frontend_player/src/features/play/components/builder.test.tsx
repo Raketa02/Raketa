@@ -27,7 +27,10 @@ import { onlineManager } from '@tanstack/react-query';
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  BAND_HAS_NO_COUNT,
   IN_YOUR_AREA,
+  OPINION_BAND_NAME,
+  OPINION_CARD_TITLE_DRAWN,
   OWN_RECORD_TITLE,
   PLAYER_SCORE_NAME,
   YOU_MARK,
@@ -36,6 +39,7 @@ import {
   RECORD_UNAVAILABLE,
   STRAND_NAME,
   fitRowLabel,
+  opinionFigure,
   recordCloseLabel,
   strandFraction,
   varietyValue,
@@ -804,6 +808,7 @@ describe('who this person is', () => {
         ],
       },
       variety: { distinct_opponents: 14, games_played: 20 },
+      sportsmanship: { average: 4.7, raters: 17 },
       ...over,
     };
   }
@@ -971,13 +976,62 @@ describe('who this person is', () => {
   });
 
   /**
+   * **What other players said stands outside the counted card**, under a heading naming its own
+   * author — because that card's heading is a promise about authorship and this is the one thing
+   * on the sheet people wrote ([#387](https://github.com/Raketa02/Raketa/issues/387)).
+   */
+  it('draws the average and the count of raters, in a block of its own', async () => {
+    await openAFace();
+    await screen.findByText(NAMES[C] ?? '');
+
+    expect(screen.getByText(OPINION_CARD_TITLE_DRAWN)).toBeTruthy();
+    expect(screen.getByText(opinionFigure({ average: 4.7, raters: 17 }))).toBeTruthy();
+  });
+
+  /**
+   * **The subject is answered with a band and never with the figure.** An average beside a count
+   * lets them subtract each new rating out and name it, and they know who they played — so the
+   * arm is chosen from `is_self` at the wire boundary, and a response carrying both draws the
+   * band. Asserted end to end here, because that is where a response can carry both.
+   */
+  it('draws a band and no count on your own record, whatever the response carried', async () => {
+    transport.on('GET', OWN_RECORD, () =>
+      json(record({ is_self: true, nickname: 'me_myself', sportsmanship_band: 'GOOD' })),
+    );
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    fireEvent.press(yourFace('YOUR_SIDE'));
+    await screen.findByText(`me_myself ${YOU_MARK}`);
+
+    expect(screen.getByText(OPINION_BAND_NAME.GOOD)).toBeTruthy();
+    expect(screen.getByText(BAND_HAS_NO_COUNT)).toBeTruthy();
+    // Neither half on its own either: the average is what a subtraction starts from, and the
+    // count is what makes each new answer name itself.
+    expect(screen.queryByText(opinionFigure({ average: 4.7, raters: 17 }))).toBeNull();
+    expect(screen.queryByText(/4,7/)).toBeNull();
+    expect(screen.queryByText(/17 players/)).toBeNull();
+  });
+
+  /**
    * **A newcomer's record is a short sheet, never a card of noughts.** Nothing has fallen due
    * for most players on this platform today, and *we have not seen enough* must not be drawn as
    * *they are bad at this* — which is what a heading over an empty box would say.
+   *
+   * Nobody has rated them either, and that is a **fourth** absence rather than the same one:
+   * rating is a favour, nothing records that a card was ignored, and a player with a full
+   * record of counted games may have been rated by nobody. Both blocks go, and so does every
+   * sentence either of them would have said about a Player Score that is not on the sheet.
    */
-  it('draws no record card, and no Player Score, for somebody nothing has fallen due for', async () => {
+  it('draws no record card, no opinion and no Player Score, for somebody nothing has fallen due for', async () => {
     transport.on('GET', RECORD_OF(C), () => {
-      const { reliability: _reliability, variety: _variety, ...rest } = record();
+      const {
+        reliability: _reliability,
+        variety: _variety,
+        sportsmanship: _sportsmanship,
+        ...rest
+      } = record();
       return json(rest);
     });
     await openTheBuilder();
@@ -988,6 +1042,7 @@ describe('who this person is', () => {
     await screen.findByText(NAMES[C] ?? '');
 
     expect(screen.queryByText(RECORD_CARD_TITLE_DRAWN)).toBeNull();
+    expect(screen.queryByText(OPINION_CARD_TITLE_DRAWN)).toBeNull();
     expect(screen.queryByText(new RegExp(PLAYER_SCORE_NAME))).toBeNull();
   });
 

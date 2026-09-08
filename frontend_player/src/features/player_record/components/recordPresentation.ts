@@ -6,13 +6,13 @@
  * this surface writes — the band's name, the Social tags' words and the sport names are all
  * somebody else's and are quoted through their own tables.
  *
- * ## Four regions, four elements
+ * ## Five regions, five elements
  *
  * The sheet has **no interactive element inside it** other than the pairing row, so every group
- * in it is actionless and merges into the nearest heading (§20.1). That is what the four
- * `…Label` functions below are: the header, the skill card, the record card and the tag row
- * each reach a listener as one clause list rather than as a table of figures read one stop at a
- * time.
+ * in it is actionless and merges into the nearest heading (§20.1). That is what the five
+ * `…Label` functions below are: the header, the skill card, the record card, *What opponents
+ * said* and the tag row each reach a listener as one clause list rather than as a table of
+ * figures read one stop at a time.
  *
  * ## Two absences are deliberately unwritten
  *
@@ -23,7 +23,12 @@
  */
 
 import { counted } from '@/shared/formatting/counted';
-import { formatLevel, formatPercent, formatRange } from '@/shared/formatting/ratingFormat';
+import {
+  formatLevel,
+  formatPercent,
+  formatRange,
+  formatStars,
+} from '@/shared/formatting/ratingFormat';
 import { NO_TAGS_IN_COMMON, socialTagName } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
@@ -31,7 +36,14 @@ import type { GameResult } from '@/shared/vocabulary/gameResult';
 // `Photo checked: on court` is the mark's own clause, quoted rather than re-written.
 import { ON_COURT_CLAUSE } from '@/shared/ui';
 
-import type { OpponentVariety, ReliabilityStrand, StrandRow } from '../domain/playerRecord';
+import type {
+  Opinion,
+  OpinionBand,
+  OpinionFigure,
+  OpponentVariety,
+  ReliabilityStrand,
+  StrandRow,
+} from '../domain/playerRecord';
 import { varietyShare } from '../domain/recordCard';
 
 /** The sheet's title about somebody else, and **its accessible name** — the two are one string. */
@@ -345,6 +357,118 @@ export function recordCardLabel(facts: RecordCardFacts): string {
     ...facts.rows.map(strandReading),
     ...(facts.variety === undefined ? [] : [varietyReading(facts.variety)]),
   ]);
+}
+
+/**
+ * **The second block's heading, which names an author rather than a subject.**
+ *
+ * *What opponents said* is the whole reason this figure is not a row on the card above: that
+ * card is headed *counted by the system, not written by people*, and a number people typed
+ * beneath it would make the title false. Two headings, no lie — and the heading is the cheaper
+ * half of the pair, which is what makes keeping the promise affordable.
+ *
+ * Drawn in caps at the eyebrow's 9,5pt and spoken in the sentence case below, which is
+ * `RECORD_CARD_TITLE`'s own split one block up.
+ */
+export const OPINION_CARD_TITLE = 'What opponents said';
+
+export const OPINION_CARD_TITLE_DRAWN = OPINION_CARD_TITLE.toUpperCase();
+
+/**
+ * The scale, printed beside the figure: `4,7` alone says nothing about what five would be.
+ *
+ * It is **copy** rather than a formatting constant, which is why it is here and the decimal
+ * place is in `ratingFormat`: the drawn register writes it as `/ 5` and the spoken one as *out
+ * of 5*, so the two are one word apart and neither is a number's shape.
+ */
+const STAR_SCALE = 5;
+
+/**
+ * `4,7 / 5 · 17 players` — **the average and the count, and never one without the other.**
+ *
+ * A figure drawn without its count is this field's one way of lying: `4,7 / 5 · 17 players` and
+ * `3,0 / 5 · 1 player` are the same field, and the second has to visibly read as one person's
+ * opinion. There is no minimum before it publishes because the count does a minimum's work
+ * honestly — which is the discipline the metered rows already take by printing their raw pair.
+ *
+ * The mean is **served, not derived**: there is one rounding of this record on the platform.
+ */
+export function opinionFigure(figure: OpinionFigure): string {
+  return `${formatStars(figure.average)} / ${STAR_SCALE} · ${ratersReading(figure.raters)}`;
+}
+
+/** **People, not ratings** — a weekly partner is one rater however many evenings they play. */
+function ratersReading(raters: number): string {
+  return counted(raters, 'player', 'players');
+}
+
+/**
+ * **The three steps a subject may be told**, and there is nothing finer anywhere on their own
+ * record.
+ *
+ * One word each, drawn in the type register a sentence takes rather than in a figure's mono, and
+ * **carrying no tone**: `scoreTone` is the sheet's one ladder and it belongs to the number the
+ * matcher acts on, so tinting a coarse band in the same three colours would offer this one to be
+ * read as a second Player Score. The word is the whole answer, which is what makes the band safe.
+ */
+export const OPINION_BAND_NAME: Readonly<Record<OpinionBand, string>> = {
+  GOOD: 'Good',
+  MIXED: 'Mixed',
+  POOR: 'Poor',
+};
+
+/**
+ * **Why the subject gets a word where a reader gets a figure**, said on the block rather than
+ * left to be noticed.
+ *
+ * Somebody reads other people's records all day and then opens their own: the difference is
+ * visible, and *the platform is holding something back about me* is the wrong reading of it. The
+ * right one is that the coarseness protects whoever answered — an average beside a count is a
+ * subtraction that names each new rating, and the subject knows who they played.
+ */
+export const BAND_HAS_NO_COUNT =
+  'A band and no count, so no single answer can be worked out of it.';
+
+/**
+ * **Who wrote it, and that it does not act** — the contract's own instruction, which is written
+ * for exactly this case: *say so if you draw it beside the pill*.
+ *
+ * Both halves are load-bearing and the second one is the half that is easy to leave out. Naming
+ * the Player Score says where the figure is **not counted**; it does not say what the reader
+ * actually wants to know, which is that a low one **hides nobody and holds nobody back**. That
+ * is the sentence a held player opening their own record to find out what is holding them back
+ * must not have to guess at — and the one a reader of somebody else's needs before treating a
+ * `3,0` as a warning the platform issued.
+ *
+ * It is one sentence for both arms and takes no pronoun, because *they* and *you* are the only
+ * difference and a second spelling of a promise is how the two eventually make different ones.
+ */
+export const WRITTEN_BY_PLAYERS = `Written by other players. It is not in the ${PLAYER_SCORE_NAME}, and it hides nobody and holds nobody back.`;
+
+/**
+ * **The answer as a listener meets it** — clauses, where the block draws a separator and a
+ * slash, and the band's own sentence with it.
+ *
+ * One switch on the arm and not two: what a listener is told and how much of it there is are
+ * the same fact about which arm this is, and splitting them is how a block ends up speaking one
+ * arm's sentence over the other's figure.
+ */
+function opinionClauses(opinion: Opinion): readonly string[] {
+  return opinion.kind === 'band'
+    ? [`${OPINION_BAND_NAME[opinion.band]}.`, BAND_HAS_NO_COUNT]
+    : [`${formatStars(opinion.average)} out of ${STAR_SCALE}, ${ratersReading(opinion.raters)}.`];
+}
+
+/**
+ * **The block, as one element** — the heading, the answer, and who wrote it.
+ *
+ * Assembled from sentences that carry their own full stops, which is `fitRowLabel`'s shape
+ * rather than the clause list every other label on this sheet is: two of the three parts are
+ * prose the block also draws, and a spoken copy that punctuated them differently would be a
+ * second wording of the same sentence.
+ */
+export function opinionCardLabel(opinion: Opinion): string {
+  return [`${OPINION_CARD_TITLE}.`, ...opinionClauses(opinion), WRITTEN_BY_PLAYERS].join(' ');
 }
 
 /**

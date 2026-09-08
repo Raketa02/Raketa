@@ -16,6 +16,8 @@
 export { PlayerRecordSheet, type PlayerRecordSheetProps } from './components/PlayerRecordSheet';
 
 export type {
+  Opinion,
+  OpinionBand,
   OpponentVariety,
   PlayerRecord,
   RatedSport,
@@ -40,11 +42,15 @@ export { playerRecordKeys } from './hooks/playerRecordKeys';
  * one every copy deck in this app is read through. What is exported is what the **builder's**
  * walk reads: the two titles, the close control's name, the pairing row's spoken name, the one
  * line a record that cannot be opened draws, the one clause a client is licensed to write from
- * two area codes — which the walk asserts is **absent** from your own record — and the record
- * card's heading with the two figures it prints.
+ * two area codes — which the walk asserts is **absent** from your own record — the record
+ * card's heading with the two figures it prints, and the second block's heading with the figure
+ * and the three band words that are the two things it draws instead of each other.
  */
 export {
+  BAND_HAS_NO_COUNT,
   IN_YOUR_AREA,
+  OPINION_BAND_NAME,
+  OPINION_CARD_TITLE_DRAWN,
   OWN_RECORD_TITLE,
   YOU_MARK,
   RECORD_CARD_TITLE_DRAWN,
@@ -53,6 +59,7 @@ export {
   RECORD_UNAVAILABLE,
   STRAND_NAME,
   fitRowLabel,
+  opinionFigure,
   recordCloseLabel,
   strandFraction,
   varietyValue,

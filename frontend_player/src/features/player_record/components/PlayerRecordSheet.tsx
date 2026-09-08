@@ -50,13 +50,15 @@
  * action than tapping a face should feel like — and it opens at a **standing height** so the
  * skeleton and the record are the same size and the panel does not jump when the answer lands.
  *
- * ## Four regions, four elements
+ * ## Five regions, five elements
  *
  * There is no interactive element inside it other than the pairing row, so every group merges
- * into the nearest heading (§20.1) and `recordPresentation` writes what each of them says.
- * Focus lands on the **title** on the way in, which is `BottomSheet`'s flat rule for every
- * sheet — and there is **no `returnFocusTo`**: up to four faces open this from one card, so
- * there is no one control to return to.
+ * into the nearest heading (§20.1) and `recordPresentation` writes what each of them says. The
+ * counted card and *What opponents said* are two of them for a reason that is not layout: one
+ * is headed with a promise about **authorship**, and the other is what would break it. Focus
+ * lands on the **title** on the way in, which is `BottomSheet`'s flat rule for every sheet —
+ * and there is **no `returnFocusTo`**: up to four faces open this from one card, so there is no
+ * one control to return to.
  */
 
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -70,6 +72,7 @@ import type { PlayerRecord, RecordSubject } from '../domain/playerRecord';
 import { recordTagRow } from '../domain/tagRow';
 import { usePlayerRecord } from '../hooks/usePlayerRecord';
 
+import { OpinionCard } from './OpinionCard';
 import { RecordCard } from './RecordCard';
 import { RecordHeader } from './RecordHeader';
 import { SkillCard } from './SkillCard';
@@ -251,6 +254,11 @@ function Filled({
         {...(record.reliability === undefined ? {} : { reliability: record.reliability })}
         {...(record.variety === undefined ? {} : { variety: record.variety })}
       />
+
+      {/* Outside the card above and under a heading of its own, because that card promises
+          *counted by the system, not written by people* and this is the one thing here people
+          wrote. A fourth absence, asking a fourth question: most people have not been rated. */}
+      <OpinionCard {...(record.opinion === undefined ? {} : { opinion: record.opinion })} />
 
       {tagsLabel === '' ? null : (
         <View accessible accessibilityLabel={tagsLabel}>

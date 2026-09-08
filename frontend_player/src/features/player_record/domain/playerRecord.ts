@@ -15,9 +15,11 @@
  *
  * Every optional here is *the platform has nothing to say*, and **never a nought**. A player
  * with no rating in any sport has no `skill` and an empty `sports`; one nothing has ever
- * fallen due for has no `reliability`. The four absences on this response ask four different
- * questions and do not move together — somebody rated in four sports may never have had a
- * game counted — so each is read where it is drawn and nothing is inferred from another.
+ * fallen due for has no `reliability`; one nobody has rated has no `opinion`. **Each absence
+ * asks a different question and they do not move together** — somebody rated in four sports may
+ * never have had a game counted, and somebody with a full record of counted games may have been
+ * rated by nobody, since rating is a favour and nothing anywhere records that a card was
+ * ignored — so each is read where it is drawn and nothing is inferred from another.
  *
  * ## What is deliberately not here
  *
@@ -149,6 +151,63 @@ export interface OpponentVariety {
   readonly gamesPlayed: number;
 }
 
+/**
+ * **The three steps a subject may be told**, and there is no fourth for *nobody has said
+ * anything* — that is the field's absence, on the rule every zone on this sheet takes.
+ *
+ * Written down here rather than read off the contract for the reason `RELIABILITY_STRANDS` is:
+ * a copy table is keyed by it and transport does not reach `components/`. The two are held
+ * equal by the compiler in `mappers/wireVocabulary.ts`.
+ */
+export const OPINION_BANDS = ['GOOD', 'MIXED', 'POOR'] as const;
+
+export type OpinionBand = (typeof OPINION_BANDS)[number];
+
+/**
+ * **What other players said** — one arm or the other, and never both.
+ *
+ * A reader is answered with the average and the number of different people it rests on; the
+ * **subject** is answered with a band and no count. The contract sends those as two fields and
+ * says they never cross together; this is one value with two arms, so a build cannot draw the
+ * figure over somebody's own record even if a response carried both.
+ *
+ * That is not tidiness. A published average beside a published count is a **subtraction**: an
+ * average moving from 4,80 over ten to 4,73 over eleven names the new rating as a 4, and the
+ * subject knows who they played — so every answer would be identifiable by the one person who
+ * must never see it, and people stop answering honestly once that is true. Which arm a record
+ * carries is decided at the wire boundary, from `is_self`.
+ *
+ * **Neither arm is a strand and neither enters the pill.** A star average is not a ratio out of
+ * a hundred, the matcher never reads it, and it is drawn one block down under a heading naming
+ * its own author — because the card above promises *counted by the system, not written by
+ * people* and this is the one thing on the sheet people wrote.
+ */
+export type Opinion =
+  | ({ readonly kind: 'figure' } & OpinionFigure)
+  | {
+      readonly kind: 'band';
+      /** Deliberately too coarse to read anything into. Never a number, a bar or a trend. */
+      readonly band: OpinionBand;
+    };
+
+/**
+ * **The two numbers a reader is answered with, named** — because three layers pass them around.
+ *
+ * The mapper builds them, the block draws them and the spoken name reads them, and a shape
+ * restated at each of those is the shape that eventually differs at one of them.
+ */
+export interface OpinionFigure {
+  /** The mean of what they said, out of five, to one decimal. **Served, never derived.** */
+  readonly average: number;
+  /**
+   * How many **different people** it rests on — always drawn beside the figure.
+   *
+   * People and not ratings: only somebody's most recent stars count, so a weekly partner is one
+   * rater however many evenings they play. At most fifty, which is the window.
+   */
+  readonly raters: number;
+}
+
 /** One sport somebody holds a rating in, as the header's pill draws it. */
 export interface RatedSport {
   readonly sport: Sport;
@@ -232,4 +291,13 @@ export interface PlayerRecord {
    * without being a game anybody played.
    */
   readonly variety?: OpponentVariety;
+  /**
+   * What other players said, in whichever of the two registers the subject is owed.
+   *
+   * A **fourth absence**, asking a fourth question: omitted where nobody has rated them, which
+   * is most people. Rating is a favour, ignoring the card costs nothing, and nothing anywhere
+   * records that somebody did not answer — so a plan that dissolved and a seat that ran out are
+   * opportunities above, and neither is an opinion anybody offered.
+   */
+  readonly opinion?: Opinion;
 }
