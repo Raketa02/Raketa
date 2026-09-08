@@ -92,6 +92,35 @@ class WithdrawChallengeCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class FillSeatsCommand:
+    """*Ask these people to take the open seats on this court.*
+
+    **The send's shape minus the mint** (``docs/adr/0150`` §6): the challenge
+    already exists and its id is in the path, so what is left is the court and
+    the search it was built on.
+
+    ``court`` is the **whole** arrangement, not the new seats: an acceptance is
+    to the game and not to the side, so the people already in may be moved across
+    the net and may not be taken out — and an arrangement that named only the
+    newcomers could not say which way round the four ended up sitting.
+
+    ``player`` is whoever pressed it, and **any live member may**. Growing a court
+    and ending one are different acts: the withdraw is the organiser's, and a
+    challenge born of two mutual yeses has an organiser who is only whoever said
+    yes second.
+
+    **No sport, no mode and no window.** All three are the challenge's, and the
+    window is never re-stamped — a re-stamp would move a fact other people have
+    already answered against.
+    """
+
+    challenge_id: UUID
+    player_id: UUID
+    search_id: UUID
+    court: tuple[SeatChoice, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class OpenFromMutualInterestCommand:
     """*These two just said yes to each other.*
 

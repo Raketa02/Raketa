@@ -25,7 +25,7 @@ from typing import final
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Sport
+from app.kernel import Sport, invariant
 from app.modules.matchmaking.domain.prompts import Prompt
 from app.modules.matchmaking.domain.relaxation import Rung
 
@@ -192,19 +192,59 @@ class RunLineupSearchCommand:
     offer it may be accepting. There is still no radius, and there is still no
     seat count — how many people sit down is the sport's own fact
     (``kernel/sports.py``), not a number a phone may name.
+
+    **A fill names the challenge it completes, and says nothing else about the
+    court** (``docs/adr/0150`` §2). ``completing_challenge_id`` and the three
+    facts that challenge already holds are **mutually exclusive**: the sport, the
+    kind of evening and who is already seated are read off the aggregate, and a
+    caller supplying one of them is offering a second place for a fact to be
+    true. The request's own boundary refuses that shape; the invariant below is
+    the backstop for a caller inside this process, where a malformed command is a
+    bug rather than somebody's typing.
+
+    ``availability_override`` stays sendable beside a challenge — it is *this
+    search's* week and says nothing about the court — and so do
+    ``offered_by_search_id`` and ``rung``, which are about the search that
+    offered a rung and not about anybody's line-up.
     """
 
     searcher_id: UUID
-    sport: Sport
-    mode: SearchMode
+    #: ``None`` exactly when a challenge is named: the sport is that challenge's.
+    sport: Sport | None
+    #: ``None`` when a challenge is named, and the resolved mode never arrives
+    #: here — a challenge born with one keeps it, and one born without takes the
+    #: filler's declared Play intent through the deck's own mapping. **No mode
+    #: picker appears anywhere.**
+    mode: SearchMode | None
     #: Player ids the searcher has already seated by hand, in the order they were
     #: sent. **Their order is their seating**, so a builder that put somebody
-    #: beside itself gets them beside itself.
+    #: beside itself gets them beside itself. Empty when a challenge is named,
+    #: because the locked seats are that challenge's live members.
     locked_seats: tuple[UUID, ...]
+    #: The half-built court this fill completes, or nothing. It is what the
+    #: open-challenge gate steps aside for, and it is the whole of what makes the
+    #: people who accepted your court visible to the search meant to finish it.
+    completing_challenge_id: UUID | None
     availability_override: tuple[tuple[int, str], ...] | None
     offered_by_search_id: UUID | None
     rung: Rung | None
     trace_id: str
+
+    def __post_init__(self) -> None:
+        if self.completing_challenge_id is None:
+            invariant(
+                self.sport is not None and self.mode is not None,
+                "a line-up that names no challenge has to say its sport and its "
+                f"mode: {self.sport}, {self.mode}",
+            )
+            return
+        invariant(
+            self.sport is None
+            and self.mode is None
+            and not self.locked_seats,
+            "a fill names the challenge it completes and says nothing else "
+            f"about the court: {self.sport}, {self.mode}, {self.locked_seats}",
+        )
 
 
 @final

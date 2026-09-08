@@ -520,6 +520,7 @@ class SearchWorkbench:
         surface: SearchSurface,
         initiation: SearchInitiation,
         for_a_newcomer: bool,
+        completing_challenge_id: UUID | None = None,
     ) -> SearchContext:
         """Every live fact, resolved **once per search as a set**, never per row.
 
@@ -531,6 +532,16 @@ class SearchWorkbench:
         ``read_demand``. The two ledgers below are the module's own and carry
         their posture in the wrapper around them; the interest ledger is the
         module's own too and is **durable**, so it fails like the record does.
+
+        ``completing_challenge_id`` is the **one** challenge the open-challenge
+        gate steps aside for (``docs/adr/0150`` §3), and it is an argument rather
+        than a condition reconstructed here: a reader asking why this search can
+        see the people it is arranging with finds the answer in the call. The
+        gate is not weakened and its meaning does not move — it still excludes
+        everybody the searcher is arranging with, **except the people already
+        sitting on the court this search exists to finish**, which is the same
+        rule read correctly. Every other surface passes nothing and gets the
+        gate it always had.
         """
 
         blocked = await live_block_set(self._blocks, searcher.player_id)
@@ -606,7 +617,13 @@ class SearchWorkbench:
                 held_player_ids=frozenset(str(one) for one in held),
                 unshowable_player_ids=frozenset(str(one) for one in unshowable),
                 open_challenge_ids=frozenset(
-                    str(challenge.counterpart_id) for challenge in challenges
+                    str(challenge.counterpart_id)
+                    for challenge in challenges
+                    # **The exemption is a smaller set, never a gate that fired
+                    # and was ignored.** ``GATE_ROSTER`` is unchanged, the
+                    # histogram still counts ten codes, and a court member
+                    # excluded for any of the other nine still falls out.
+                    if challenge.challenge_id != completing_challenge_id
                 ),
             ),
             terms=LiveTermFacts(

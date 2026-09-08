@@ -59,6 +59,7 @@ from app.bootstrap.composition import (
     build_match_fit_engine,
     build_match_history_query,
     build_mutual_challenge_minting,
+    build_half_built_court_query,
     build_open_challenge_query,
     build_origin_search_query,
     build_planned_game_opening,
@@ -375,6 +376,10 @@ async def read_paths(
             ruleset=ruleset,
             engine=engine,
             blocks=blocks,
+            # Real rather than stubbed, for the reason the mutual mint above is:
+            # the seed completes a half-built court through this use case, and a
+            # use case assembled with a hole in it is not the one a request runs.
+            courts=build_half_built_court_query(session),
         ),
         interest=ExpressInterest(
             clock=clock,

@@ -1,4 +1,4 @@
-"""The matchmaking context's refusals — fourteen codes, distinct at four statuses.
+"""The matchmaking context's refusals — fifteen codes, distinct at four statuses.
 
 **Distinct codes at the same status, because a client must be able to tell a
 transient outage from a refusal about *you*.* Four of these are 503 and mean
@@ -171,6 +171,26 @@ class LockedSeatNotAvailable(ConflictError):
     """
 
     code = "locked_seat_not_available"
+
+
+class TheChallengeIsNotYoursToFill(ConflictError):
+    """The challenge a fill named is not one this player can complete.
+
+    **One code for three cases, on the port's own rule** (``docs/adr/0150`` §6):
+    no challenge has that id, the caller holds no live seat on it, or nobody is
+    arranging it any more — it became a game, or it ended. Telling them apart
+    would answer *is this challenge id real* about a stranger's evening, one
+    probe at a time, which is the refusal ``origin_search_not_found`` already
+    makes about a search.
+
+    A **conflict** rather than a not-found, for the reason the origin search's is:
+    the challenge is a *citation* inside a request about a search, and the state
+    of the thing cited is what refuses. It is also what the client will actually
+    see — ⚡ is drawn on a half-built court, so reaching this means the court moved
+    while somebody was looking at it, and the remedy is to re-read the challenge.
+    """
+
+    code = "challenge_not_yours_to_fill"
 
 
 class PromptDoesNotSuppress(ConflictError):

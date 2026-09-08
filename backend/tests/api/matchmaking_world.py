@@ -668,15 +668,25 @@ async def lineup(
     *,
     locked_seats: list[UUID] | None = None,
     availability_override: list[dict] | None = None,
+    completing_challenge_id: str | UUID | None = None,
 ):
     """One ⚡. **`locked_seats` is the whole difference** between the two surfaces.
 
     Omitted rather than sent empty when a test is not hand-seating anybody, for
     the same reason the search's three optional asks are: a client says *fill
     every seat* by not naming one.
+
+    **Naming a challenge drops the sport and the mode**, because that is the only
+    shape the route accepts: all three are facts the challenge holds, and sending
+    one beside it is refused at the boundary. A test asserting *that* refusal
+    posts its own body rather than asking this for a shape it will not build.
     """
 
-    body: dict = {"sport": sport.value, "mode": mode}
+    body: dict = {}
+    if completing_challenge_id is None:
+        body = {"sport": sport.value, "mode": mode}
+    else:
+        body["completing_challenge_id"] = str(completing_challenge_id)
     if locked_seats is not None:
         body["locked_seats"] = [str(one) for one in locked_seats]
     if availability_override is not None:

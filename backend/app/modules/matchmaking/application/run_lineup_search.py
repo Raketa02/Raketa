@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from itertools import combinations
-from typing import Sequence, final
+from typing import Callable, Sequence, final
 from uuid import UUID
 
 from app.engines.matchfit.grouping import (
@@ -45,18 +45,24 @@ from app.engines.matchfit.grouping import (
     PairAdmissibility,
     Seating,
 )
+from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scoring import MatchFit
 from app.engines.matchfit.v1 import seat
 from app.kernel import InvariantViolated, invariant
 from app.modules.blocks.domain.ports import BlockQuery
 from app.modules.matchmaking.application.commands import RunLineupSearchCommand
-from app.modules.matchmaking.application.outward_reads import live_block_pairs
+from app.modules.matchmaking.application.outward_reads import (
+    live_block_pairs,
+    read_demand,
+)
 from app.modules.matchmaking.application.record_rows import group_term_rows
 from app.modules.matchmaking.application.search_workbench import SearchWorkbench
+from app.modules.matchmaking.domain.deck import mode_for_intent
 from app.modules.matchmaking.domain.errors import (
     LockedSeatNotAvailable,
     MatchmakingUnavailable,
+    TheChallengeIsNotYoursToFill,
 )
 from app.modules.matchmaking.domain.fence import (
     combine_group_sigma,
@@ -77,6 +83,10 @@ from app.modules.matchmaking.domain.lineups import (
     unfilled_reason,
     who_turned_up,
 )
+from app.modules.matchmaking.domain.ports import (
+    HalfBuiltCourt,
+    HalfBuiltCourtQuery,
+)
 from app.modules.matchmaking.domain.relaxation import radius_ladder
 from app.modules.matchmaking.domain.searches import (
     CombinationBand,
@@ -95,6 +105,7 @@ from app.modules.matchmaking.domain.prompts import (
 from app.modules.matchmaking.domain.shortlist import Scored
 from app.modules.matchmaking.domain.sorting import sorts_available
 from app.modules.player_profile.domain.availability import window_of
+from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.shared.ids import new_uuid
 
 
@@ -156,21 +167,36 @@ class RunLineupSearch:
         ruleset: Ruleset,
         engine: MatchFit,
         blocks: BlockQuery,
+        courts: HalfBuiltCourtQuery,
     ) -> None:
         self._work = workbench
         self._ruleset = ruleset
         self._engine = engine
         self._blocks = blocks
+        self._courts = courts
 
     async def execute(self, command: RunLineupSearchCommand) -> LineupAnswer:
         now = self._work.clock.now()
         stages: dict[str, int] = {}
 
+        # **The challenge is read before anything else, because it is what the
+        # search is *about*.** The sport, the mode and the locked seats are all
+        # read off it (``docs/adr/0150`` §2), so a read that happened later would
+        # be a search already bound to facts a client sent.
+        court = await self._completing(command)
+        sport = invariant(
+            command.sport if court is None else court.sport,
+            "a line-up with neither a sport nor a challenge to read one from",
+        )
+        locked_seats = (
+            command.locked_seats if court is None else court.seated_ids
+        )
+
         with self._work.timed(stages, "read_searcher"):
             declared = await self._work.searcher_facts(
                 player_id=command.searcher_id,
-                sport=command.sport,
-                mode_of=lambda _: command.mode,
+                sport=sport,
+                mode_of=self._mode_of(command, court),
             )
         await self._work.refuse_a_held_searcher(declared.player_id)
 
@@ -181,17 +207,17 @@ class RunLineupSearch:
             rung=command.rung,
         )
         searcher = replace(declared, grid=asked.grid, radius_km=asked.radius_km)
-        snapshot, freshness = self._work.bound_snapshot(command.sport, now)
+        snapshot, freshness = self._work.bound_snapshot(sport, now)
         for_a_newcomer = searcher.is_new_at(now)
 
         # **The surface is derived, never sent.** A line-up and filling seats
         # differ only by locked seats, which is a property of the request, so
         # ``search.surface`` records which of the two happened without the
-        # client having chosen a route (``the-two-contracts.md`` §1).
+        # client having chosen a route (``the-two-contracts.md`` §1). A fill
+        # from a challenge lands here too and needs no fifth value: a half-built
+        # court always has somebody on it, so its locked seats are never empty.
         surface = (
-            SearchSurface.FILL_SEATS
-            if command.locked_seats
-            else SearchSurface.LINEUP
+            SearchSurface.FILL_SEATS if locked_seats else SearchSurface.LINEUP
         )
         with self._work.timed(stages, "read_gates"):
             context = await self._work.bind(
@@ -202,18 +228,31 @@ class RunLineupSearch:
                 surface=surface,
                 initiation=SearchInitiation.HUMAN,
                 for_a_newcomer=for_a_newcomer,
+                completing_challenge_id=(
+                    None if court is None else court.challenge_id
+                ),
             )
 
         with self._work.scoring(stages):
             try:
-                pool = pool_for(context, self._engine)
+                pool = pool_for(
+                    context,
+                    self._engine,
+                    # **Nobody who has answered this challenge is a candidate for
+                    # its own fill** (§4). They were released back into the deck
+                    # the moment they declined or lapsed, and without this the
+                    # send would refuse — after the player chose them.
+                    excluding=(
+                        frozenset() if court is None else court.answered_and_gone
+                    ),
+                )
             except InvariantViolated as broken:
                 raise MatchmakingUnavailable(
                     f"the matcher refused to answer: {broken}"
                 ) from broken
 
-        locked = self._locked(pool, command.locked_seats)
-        guests = guests_for(command.sport)
+        locked = self._locked(pool, locked_seats)
+        guests = guests_for(sport)
         fenced = searcher_of(context)
         # **Minted here rather than at the record**, because it is what turnout
         # is keyed off: one search, one draw, and the same search re-read draws
@@ -292,8 +331,15 @@ class RunLineupSearch:
         record = SearchRecord(
             id=search_id,
             searcher_id=searcher.player_id,
-            sport=command.sport,
-            mode=command.mode,
+            sport=sport,
+            # **The mode the search actually ran under**, read off the searcher
+            # the workbench built rather than off the request — which is the only
+            # spelling that stays true when the mode was inherited from a
+            # challenge or resolved from a declaration. ``intent_read`` stays
+            # ``None``: it is non-null **exactly on the deck**, where ``mode`` is
+            # null and a declaration is the only record of what was scored. Here
+            # a real mode was chosen and recorded, so the row says which.
+            mode=searcher.mode,
             intent_read=None,
             surface=surface,
             initiation=SearchInitiation.HUMAN,
@@ -306,7 +352,7 @@ class RunLineupSearch:
             counts=replace(pool.counts, n_returned=len(returned)),
             best_withheld_fit=pool.best_withheld_fit,
             pool_description=PoolDescription(
-                sport=command.sport,
+                sport=sport,
                 radius_km_used=searcher.radius_km,
                 players_in_range=pool.players_in_range,
                 window=window_of(searcher.grid, context.today),
@@ -327,7 +373,7 @@ class RunLineupSearch:
             candidates=self._work.recorded_rows(rows, pool.near_misses),
         )
         await self._work.record(record)
-        await self._work.note_exposure(command.sport, now, returned, for_a_newcomer)
+        await self._work.note_exposure(sport, now, returned, for_a_newcomer)
         searcher_id = str(searcher.player_id)
         week = improvised_week(asked=asked.grid, profile=declared.grid)
         return LineupAnswer(
@@ -370,8 +416,70 @@ class RunLineupSearch:
                 if no_shared_slots(fenced, seating)
                 else None
             ),
-            optimised_for_group=bool(command.locked_seats),
+            optimised_for_group=bool(locked_seats),
         )
+
+    async def _completing(
+        self, command: RunLineupSearchCommand
+    ) -> HalfBuiltCourt | None:
+        """The half-built court this fill names, or nothing at all.
+
+        **Fails closed**, which is what the port declared and why it is its own
+        port: a read that stood down would run an ordinary ⚡ over a pool that
+        still excludes every person on the court, and hand the player a four of
+        strangers where their own line-up should have been.
+
+        The refusal for an id that answers nothing is a **conflict about the
+        challenge**, and it names none of the three reasons — no such challenge,
+        no seat of yours on it, nobody arranging it any more.
+        """
+
+        if command.completing_challenge_id is None:
+            return None
+        challenge_id = command.completing_challenge_id
+        found = await read_demand(
+            HalfBuiltCourtQuery,
+            lambda: self._courts.half_built_court(
+                challenge_id=challenge_id, member_id=command.searcher_id
+            ),
+        )
+        if found is None:
+            raise TheChallengeIsNotYoursToFill(
+                "that challenge is not one of yours to fill"
+            )
+        return found
+
+    def _mode_of(
+        self, command: RunLineupSearchCommand, court: HalfBuiltCourt | None
+    ) -> Callable[[PlayIntent], SearchMode]:
+        """Which weight vector this search runs under. **Three answers, one read.**
+
+        A function rather than a value, for the workbench's own reason: the
+        declaration a mode is chosen from is the declaration recorded beside it,
+        and there is no second load for the two to disagree across.
+
+        *No challenge* — the request said, and a tab is a constant.
+
+        *A challenge born with a mode* — **it keeps it.** A competitive court must
+        not have its last seat filled by a for-fun search, and the mode is the
+        court's rather than the filler's.
+
+        *A challenge born without one* — deck-born, and every mutual-born court —
+        resolves one from the **filler's** declared Play intent on the deck's own
+        rule, ``NO_PREFERENCE → fun`` (``docs/adr/0150`` §5). **No mode picker
+        appears anywhere**, and ADR-0100 keeps its silence.
+        """
+
+        if court is None:
+            asked = invariant(
+                command.mode,
+                "a line-up that names no challenge and no mode",
+            )
+            return lambda _: asked
+        inherited = court.mode
+        if inherited is not None:
+            return lambda _: inherited
+        return lambda intent: mode_for_intent(intent, self._ruleset.intent)
 
     def _locked(
         self, pool: LineupPool, locked_seats: tuple[UUID, ...]
@@ -387,6 +495,14 @@ class RunLineupSearch:
         It **refuses rather than quietly dropping the seat**: a four that came
         back without the person the searcher put in it, and with somebody else
         there instead, is the builder lying about what it was asked to do.
+
+        **On a fill it is reachable and it means something** (``docs/adr/0150``).
+        The open-challenge gate steps aside for the challenge being completed, so
+        the people who accepted are ordinary rows in this pool; the four
+        fail-closed gates are untouched, and the only way this can now fire from
+        a challenge is that somebody in the line-up has been blocked, held or
+        deactivated since they accepted. That is a true thing to say, and it is
+        followed by a re-read rather than by a payload.
         """
 
         rows: list[Scored] = []

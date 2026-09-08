@@ -133,6 +133,7 @@ from app.modules.matchmaking.domain.ports import (
     AccountHoldQuery,
     AccountStatusQuery,
     AtStakeQuery,
+    HalfBuiltCourtQuery,
     MatchHistoryQuery,
     PlayerScoreQuery,
 )
@@ -210,6 +211,9 @@ from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
 )
 from app.modules.matchmaking.domain.mutual_challenge import (
     MutualChallengeMinting,
+)
+from app.modules.matchmaking.infrastructure.challenges_half_built_court import (
+    ChallengesHalfBuiltCourts,
 )
 from app.modules.matchmaking.infrastructure.challenges_match_history import (
     ChallengesButNobodyHasPlayed,
@@ -1010,6 +1014,21 @@ def build_match_history_query(session: AsyncSession) -> MatchHistoryQuery:
         ),
         games=build_game_history_query(session),
         clock=build_clock(),
+    )
+
+
+def build_half_built_court_query(session: AsyncSession) -> HalfBuiltCourtQuery:
+    """The court a fill names, answered by ``challenges`` and translated.
+
+    **One provider and one contract**, unlike the history port beside it: every
+    fact on this read is a challenge fact, so nothing composes with it.
+
+    The clock is built here rather than taken, for the reason the history's is:
+    *is this court still being arranged* is a fact about the instant the read
+    happens, and a caller holding one could hold a stale one.
+    """
+    return ChallengesHalfBuiltCourts(
+        build_challenge_history_query(session), build_clock()
     )
 
 

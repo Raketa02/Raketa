@@ -114,6 +114,41 @@ class SendChallengeRequest(BaseModel):
     )
 
 
+class FillSeatsRequest(BaseModel):
+    """**The send's shape minus the mint**: the court, and the search behind it.
+
+    The challenge is in the path, so what is left is the two things a fill has to
+    say — and the two the send says. Everything else about the game is already on
+    the challenge: the sport, the kind of evening, and the **window**, which is
+    stamped when a challenge is sent and never again. A challenge born of two
+    mutual yeses has no window at all and keeps none.
+
+    ``court`` is the **whole** arrangement and not the seats being filled. An
+    acceptance is to the game and not to the side, so the people already in may
+    be moved across the net — and may not be taken out. A court that omitted one
+    of them is refused.
+    """
+
+    search_id: UUID = Field(
+        ...,
+        description=(
+            "The search this fill was built from — **yours, and run just now**. "
+            "Everybody being newly asked must have appeared in it, and each new "
+            "seat cites where they sat. The people already on the court are not "
+            "looked up in it: they came from somewhere else, possibly weeks ago."
+        ),
+    )
+    court: list[SeatChoiceSchema] = Field(
+        ...,
+        description=(
+            "The whole court as it will stand, in the court's own order: every "
+            "**A** seat, then every **B**. It must be the sport's shape, you "
+            "must be in it, and **everybody already on the court must still be "
+            "in it** — they may change sides and they may not lose their place."
+        ),
+    )
+
+
 class SentChallengeResponse(BaseModel):
     """What a send answers with. **An id, and deliberately nothing else.**
 

@@ -51,12 +51,23 @@ class EventSourcedOpenChallengeQuery:
         self._codec = codec
 
     async def open_pairs_among(
-        self, player_ids: Collection[UUID], *, now: Instant
+        self,
+        player_ids: Collection[UUID],
+        *,
+        now: Instant,
+        except_challenge_id: UUID | None = None,
     ) -> frozenset[frozenset[UUID]]:
         """Every pair of these people with an open game already between them.
 
         Empty in, empty out, and that emptiness is **measured**: one person is
         not a pair, so there is nothing for a challenge to sit between.
+
+        **One stream may be stepped over, and it is named rather than
+        recognised** (``docs/adr/0150`` §3). A send that grows the court it is
+        already part of would otherwise be refused for its own pairs. The
+        exception is by **id**: it steps over the one challenge the caller named
+        and reads every other stream exactly as before, so an unrelated open
+        challenge between two of these people still refuses.
         """
 
         wanted = set(player_ids)
@@ -65,7 +76,9 @@ class EventSourcedOpenChallengeQuery:
 
         streams = await streams_seating(self._session, self._codec, wanted)
         pairs: set[frozenset[UUID]] = set()
-        for events in streams.values():
+        for challenge_id, events in streams.items():
+            if challenge_id == except_challenge_id:
+                continue
             challenge = Challenge.from_history(events)
             # The intersection, not the whole line-up: a challenge reaching
             # outside this court is real and is somebody else's business.

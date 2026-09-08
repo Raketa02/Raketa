@@ -1,5 +1,5 @@
 """The challenge routes: send one, read yours, read one richly, answer a seat
-either way, and end a half-built one.
+either way, grow a half-built one and end one.
 
 **All of them are on the player surface.** The one that looks like a console's — a
 read of your own pending challenges — is not: an invitee has to be able to find
@@ -32,6 +32,7 @@ from fastapi import APIRouter, status
 from app.core.exception_handlers import ErrorResponse
 from app.modules.challenges.application.commands import (
     AnswerSeatCommand,
+    FillSeatsCommand,
     SeatChoice,
     SendChallengeCommand,
     WithdrawChallengeCommand,
@@ -50,6 +51,7 @@ from app.modules.challenges.domain.seats import Seat
 from app.modules.challenges.presentation.dependencies import (
     AcceptSeatDep,
     DeclineSeatDep,
+    FillSeatsDep,
     ReadChallengeDep,
     ReadChallengesDep,
     SendChallengeDep,
@@ -59,6 +61,7 @@ from app.modules.challenges.presentation.schemas import (
     ChallengeDetailResponse,
     ChallengeListResponse,
     ChallengeSchema,
+    FillSeatsRequest,
     SeatSchema,
     SendChallengeRequest,
     SentChallengeResponse,
@@ -374,6 +377,114 @@ async def decline_seat(
 
 
 @router.post(
+    "/{challenge_id}/seats",
+    response_model=ChallengeSchema,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "description": (
+                "The seats are filled and the court is returned as it now "
+                "stands. Everybody newly seated has their **own** day from this "
+                "moment."
+            )
+        },
+        status.HTTP_404_NOT_FOUND: _ANSWER_REFUSALS[status.HTTP_404_NOT_FOUND],
+        status.HTTP_403_FORBIDDEN: {
+            "model": ErrorResponse,
+            "description": (
+                "`account_held` — **your** account is under a live hold, and a "
+                "hold that let you invite people would be the same hole with the "
+                "blast radius pointed at them.\n\n"
+                "`fill_is_the_live_members` — you hold a seat on this court and "
+                "you have left it. **Not a 404**: your own seat is still drawn "
+                "on the challenge, so pretending it is not there would be the "
+                "wrong lie."
+            ),
+        },
+        status.HTTP_400_BAD_REQUEST: _REFUSALS[status.HTTP_400_BAD_REQUEST],
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`court_origin_not_found` — no search of yours showed all of the "
+                "people you are newly asking. One code for four cases, on "
+                "purpose. **The people already on the court are not looked up in "
+                "it**, so a court that keeps them is not refused for them.\n\n"
+                "`line_up_no_longer_sendable` — somebody on this court can no "
+                "longer be invited to it. **Which one is deliberately not said, "
+                "and neither is why.** Re-read the challenge and the origin "
+                "search.\n\n"
+                "`open_challenge_stands` — two people on this court already have "
+                "a game between them **in any sport**, and it is not this one: "
+                "this court's own pairs are excepted, and no other challenge "
+                "is.\n\n"
+                "`nobody_new_to_invite` — every seat on the court you posted is "
+                "already taken by somebody in the game. **The court is not "
+                "grown, and nothing is written.**\n\n"
+                "`nobody_is_asked_twice` — somebody on that court has already "
+                "answered this challenge. Unreachable through the builder, which "
+                "does not offer them; this is the aggregate's backstop.\n\n"
+                "`accepted_player_may_not_be_removed` — a court that dropped "
+                "somebody who is already in.\n\n"
+                "`challenge_is_over` — this challenge has ended."
+            ),
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: _REFUSALS[
+            status.HTTP_503_SERVICE_UNAVAILABLE
+        ],
+    },
+    summary="Fill the open seats",
+    description=(
+        "**Grows a court that is already standing**, from a line-up you just "
+        "built. The people who accepted keep their places and their answers; the "
+        "open seats are offered to the people you name.\n\n"
+        "**Any live member may do this — only the organiser may withdraw.** "
+        "Growing a court and ending one are different acts. A challenge born of "
+        "two mutual yeses has an organiser who is only whoever said yes second, "
+        "and leaving the other one unable to finish the four would make an "
+        "arbitrary tiebreak decide whose game it is. Somebody who declined or "
+        "let their day run out is **not** a live member.\n\n"
+        "**Post the whole court, not the new seats.** An acceptance is to the "
+        "game and not to the side, so you may move somebody across the net — and "
+        "you may never take them out.\n\n"
+        f"**Each newly seated player gets their own {ANSWER_WINDOW_HOURS} "
+        "hours**, dated from this moment. A seat filled later is not already "
+        "half expired, and nobody's existing deadline moves.\n\n"
+        "**The window is not re-stamped.** The week this challenge was proposed "
+        "for was fixed when it was sent, and a challenge born of a mutual yes "
+        "has none at all — the plan, not the window, is what says when anybody "
+        "actually plays.\n\n"
+        "**Everything is re-checked here**, in one transaction, exactly as a "
+        "send is: the four fail-closed gates over the whole court, and the "
+        "open-challenge rule with **this** challenge excepted and no other. The "
+        "fill either happens whole or writes nothing.\n\n"
+        "**A lapsed invitee is unreachable in every sport until this challenge "
+        "ends**, and the withdrawal is the only thing that ends it. Somebody who "
+        "let your invitation run out is not a candidate for this fill, and not "
+        "for any other search of yours in any sport, while this court stands."
+    ),
+)
+async def fill_seats(
+    challenge_id: UUID,
+    payload: FillSeatsRequest,
+    user: CurrentUserDep,
+    use_case: FillSeatsDep,
+) -> ChallengeSchema:
+    return _challenge(
+        await use_case.execute(
+            FillSeatsCommand(
+                challenge_id=challenge_id,
+                player_id=user.id,
+                search_id=payload.search_id,
+                court=tuple(
+                    SeatChoice(side=seat.side, player_id=seat.player_id)
+                    for seat in payload.court
+                ),
+            )
+        )
+    )
+
+
+@router.post(
     "/{challenge_id}/withdrawal",
     response_model=ChallengeSchema,
     status_code=status.HTTP_200_OK,
@@ -425,6 +536,12 @@ async def decline_seat(
         "**Nobody who was still deciding is charged a lapse for it.** An "
         "invitation whose challenge stopped existing is neither answered nor "
         "unanswered, and it leaves the record that prices silence.\n\n"
+        "**This is the only thing that releases somebody who let their day run "
+        "out.** A lapsed invitee is unreachable in every sport for as long as "
+        "this court stands: their seat reopened, but the pair the challenge "
+        "holds does not, and they are excluded from the fill that would replace "
+        "them and from every other search of yours. Ending the challenge is what "
+        "releases them, and asking them again is a **new** challenge.\n\n"
         "**A noun and not a verb**, because what this creates is the withdrawal "
         "— the one thing in this context that a fold of the seats could never "
         "produce."

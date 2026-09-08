@@ -42,6 +42,7 @@ from app.bootstrap.composition import (
 )
 from app.infrastructure.redis_client import get_redis
 from app.modules.challenges.application.answer_seat import AcceptSeat, DeclineSeat
+from app.modules.challenges.application.fill_seats import FillSeats
 from app.modules.challenges.application.read_challenge import ReadChallenge
 from app.modules.challenges.application.read_challenges import ReadChallenges
 from app.modules.challenges.application.send_challenge import SendChallenge
@@ -235,3 +236,34 @@ def get_withdraw_challenge(
 
 
 WithdrawChallengeDep = Annotated[WithdrawChallenge, Depends(get_withdraw_challenge)]
+
+
+def get_fill_seats(
+    db: DbSession,
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    challenges: ChallengeRepositoryDep,
+) -> FillSeats:
+    """The fill: an act on one challenge, holding the send's three extra reads.
+
+    **It is both of the shapes in this file at once**, which is what it is: an
+    act on a challenge of yours — load, write, commit, redraw — that re-verifies
+    everything a send does, because growing a court puts two more people in front
+    of each other exactly as minting one does.
+
+    The three come from the same builders the send's do, so a fill and a send
+    cannot end up wired to two different answers about who may share a court.
+    """
+
+    return FillSeats(
+        challenges=challenges,
+        handles=build_challenge_handles(db),
+        open_challenges=build_open_challenge_query(db),
+        origins=build_origin_search_query(db),
+        safety=build_court_safety(db),
+        uow=uow,
+        clock=clock,
+    )
+
+
+FillSeatsDep = Annotated[FillSeats, Depends(get_fill_seats)]

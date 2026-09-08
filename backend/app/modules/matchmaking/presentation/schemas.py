@@ -1004,16 +1004,35 @@ class RunLineupRequest(BaseModel):
     There is **no seat count** here and there never will be: how many people sit
     down is the sport's own fact. There is no radius either, for the reason the
     shortlist has none.
+
+    **A fill names the challenge it completes and says nothing else about the
+    court** (`ADR-0150`). Send `completing_challenge_id` and `sport`, `mode` and
+    `locked_seats` are **refused** beside it rather than made optional: all three
+    are facts that challenge already holds, and a caller supplying one is
+    offering a second place for a fact to be true — which is how somebody who is
+    not in the challenge gets locked, or somebody who is gets forgotten.
     """
 
-    sport: Sport = Field(..., description="Which sport this line-up is for")
+    sport: Sport = Field(
+        OMITTED,
+        description=(
+            "Which sport this line-up is for. **Required, except beside "
+            "`completing_challenge_id`** — a challenge already knows what game "
+            "is being arranged, and sending both is refused."
+        ),
+    )
     mode: SearchMode = Field(
-        ...,
+        OMITTED,
         description=(
             "Competitive or for fun — the weight vector for this one search. "
             "It selects the **group** vector too, which inverts against the "
             "shortlist's: for fun puts more weight on how the four get on than "
-            "on how even the sides are."
+            "on how even the sides are.\n\n"
+            "**Required, except beside `completing_challenge_id`**, and refused "
+            "there. A challenge sent with a mode keeps it — a competitive court "
+            "must not have its last seat filled by a for-fun search — and one "
+            "sent without a mode takes yours, resolved from your declared Play "
+            "intent. **There is no mode picker anywhere.**"
         ),
     )
     locked_seats: list[UUID] = Field(
@@ -1028,21 +1047,75 @@ class RunLineupRequest(BaseModel):
             "binds all six pairs. Either refusal is "
             "`locked_seat_not_available`, naming nobody, rather than a quiet "
             "replacement.\n\n"
-            "Nobody twice, and never more than the sport seats."
+            "Nobody twice, and never more than the sport seats.\n\n"
+            "**Refused beside `completing_challenge_id`.** The people already "
+            "on that court are its locked seats, read off the challenge."
+        ),
+    )
+    completing_challenge_id: UUID = Field(
+        OMITTED,
+        description=(
+            "The half-built challenge this fill completes. **Send it and send "
+            "nothing else about the court**: the sport, the kind of evening and "
+            "the locked seats are all read off it.\n\n"
+            "**Any live member may fill; only the organiser may withdraw.** A "
+            "challenge born of two mutual yeses has an organiser who is only "
+            "whoever said yes second, and leaving the other one unable to finish "
+            "the four would be an arbitrary tiebreak deciding whose game it "
+            "is.\n\n"
+            "The people who accepted come back as **ordinary candidate rows**, "
+            "so the builder can draw them; the open-challenge gate steps aside "
+            "for this one challenge and for nothing else, and the four "
+            "fail-closed gates are untouched — so somebody blocked, held or "
+            "deactivated since they accepted is still "
+            "`locked_seat_not_available`.\n\n"
+            "Everybody who has already **answered** this challenge is out of its "
+            "own pool, including the people who declined it.\n\n"
+            "**The window is never re-stamped**, and a challenge born of a "
+            "mutual yes has none at all: a newly-invited player answers against "
+            "the label the original send derived, and the plan is the authority "
+            "on when anybody actually plays."
         ),
     )
 
     @model_validator(mode="after")
     def _is_a_court_that_could_exist(self) -> "RunLineupRequest":
-        """The same two refusals the forecast makes, at the same boundary.
+        """The same two refusals the forecast makes, plus the one this route owns.
 
         A court with the same person on it twice and a court with more people
         than it has seats are malformed **asks**, and both are refused here
         rather than inside — where the second would surface as a `503` about the
         engine, which is a sentence about the platform for a mistake in the
         request.
+
+        **The third is the fill's own** (`ADR-0150` §2): `completing_challenge_id`
+        and the three facts that challenge already holds are mutually exclusive,
+        and this is the boundary that says so. Refusing here rather than making
+        the three optional is what stops a caller locking somebody who is not in
+        the challenge, or forgetting somebody who is.
         """
 
+        if self.completing_challenge_id is not None:
+            named = [
+                field
+                for field, sent in (
+                    ("sport", self.sport is not None),
+                    ("mode", self.mode is not None),
+                    ("locked_seats", bool(self.locked_seats)),
+                )
+                if sent
+            ]
+            if named:
+                raise ValueError(
+                    "a fill names the challenge it completes and nothing else "
+                    f"about the court: remove {', '.join(named)}"
+                )
+            return self
+        if self.sport is None or self.mode is None:
+            raise ValueError(
+                "a line-up that completes no challenge has to name its sport "
+                "and its mode"
+            )
         return _a_court_that_could_exist(self, self.sport, self.locked_seats)
     availability_override: list[AvailabilitySlotResource] = Field(
         OMITTED,

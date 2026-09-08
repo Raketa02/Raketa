@@ -50,6 +50,7 @@ from app.bootstrap.composition import (
     build_at_stake_query,
     build_card_photo_links,
     build_exposure_ledger,
+    build_half_built_court_query,
     build_interest_ledger,
     build_match_fit_engine,
     build_match_history_query,
@@ -529,15 +530,24 @@ ReadInterestDep = Annotated[ReadInterest, Depends(get_read_interest)]
 
 
 def get_run_lineup_search(
+    db: DbSession,
     workbench: SearchWorkbenchDep,
     blocks: BlockQueryDep,
 ) -> RunLineupSearch:
-    """The line-up use case: the workbench, plus the gate a shortlist never asked.
+    """The line-up use case: the workbench, plus the two reads a shortlist never
+    makes.
 
-    One collaborator beyond the shared ones, and it is the whole of what
-    ``docs/adr/0116`` added: a four contains six pairs and the searcher is in
-    three of them, so the line-up makes **one bulk block query over the ``K``
-    candidate ids** that no other surface has any use for.
+    The first is the whole of what ``docs/adr/0116`` added: a four contains six
+    pairs and the searcher is in three of them, so the line-up makes **one bulk
+    block query over the ``K`` candidate ids** that no other surface has any use
+    for.
+
+    The second is ``docs/adr/0150``'s: a fill names the challenge it completes,
+    and the sport, the mode and the locked seats are read off that challenge.
+    It is declared here rather than on the workbench because **this is the only
+    surface that can name one** — a shortlist, a deal and an ordinary ⚡ never
+    reach it, and a collaborator every surface held would be a read every surface
+    could start making.
 
     There is no prompt ledger and no search store of its own: the ladder does not
     run here — ``MIN_SHORTLIST`` counts rows in a list somebody reads and a
@@ -550,6 +560,7 @@ def get_run_lineup_search(
         ruleset=build_ruleset(),
         engine=build_match_fit_engine(),
         blocks=blocks,
+        courts=build_half_built_court_query(db),
     )
 
 

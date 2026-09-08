@@ -547,6 +547,7 @@ async def _refuse_a_court_that_cannot_be_filled(
             sport=Sport.PADEL,
             mode=SearchMode.COMPETITIVE,
             locked_seats=(),
+            completing_challenge_id=None,
             availability_override=None,
             offered_by_search_id=None,
             rung=None,

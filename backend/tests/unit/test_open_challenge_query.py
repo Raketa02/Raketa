@@ -263,6 +263,78 @@ async def test_sharing_a_line_up_makes_a_pair_of_everybody_in_it(session_factory
         )
 
 
+async def test_one_named_challenge_may_be_stepped_over_and_only_one(
+    session_factory,
+):
+    """**The exception a fill names** (``docs/adr/0150`` §3).
+
+    A court being completed would otherwise be refused for the pairs it is made
+    of: the people on it are, by definition, people the filler is arranging with.
+    So the send that grows it names that challenge and the read steps over that
+    stream — and over no other, which is the half of this that could go wrong
+    invisibly. Alice and Bob share a second, unrelated court, and it still
+    refuses.
+    """
+
+    async with session_factory() as session:
+        completing = await _record(
+            session,
+            Challenge.sent(
+                challenge_id=new_uuid(),
+                sport=Sport.PADEL,
+                mode=SearchMode.FOR_FUN,
+                window=Window.WEEKEND,
+                organiser_id=ORGANISER,
+                arrangement=a_padel_court(ORGANISER, ALICE, BOB, CAROL),
+                occurred_at=SENT_AT,
+            ),
+        )
+        await _record(
+            session,
+            Challenge.sent(
+                challenge_id=new_uuid(),
+                sport=Sport.TENNIS,
+                mode=SearchMode.COMPETITIVE,
+                window=Window.WEEKEND,
+                organiser_id=ALICE,
+                arrangement=a_tennis_court(ALICE, BOB),
+                occurred_at=SENT_AT,
+            ),
+        )
+        reading = build_open_challenge_query(session)
+
+        every = await reading.open_pairs_among(
+            [ORGANISER, ALICE, BOB, CAROL], now=INSIDE
+        )
+        excepted = await reading.open_pairs_among(
+            [ORGANISER, ALICE, BOB, CAROL],
+            now=INSIDE,
+            except_challenge_id=completing.id,
+        )
+
+        assert frozenset({ORGANISER, ALICE}) in every
+        assert excepted == frozenset({frozenset({ALICE, BOB})}), (
+            "the court being completed is stepped over and the other one is not"
+        )
+
+
+async def test_a_challenge_nobody_named_is_still_read(session_factory):
+    """An id that matches no stream these people share changes nothing.
+
+    The exception is by **id** rather than by shape, so naming a stranger's
+    challenge cannot quietly excuse anybody's.
+    """
+
+    async with session_factory() as session:
+        await _record(session, a_tennis_challenge())
+
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ORGANISER, ALICE], now=INSIDE, except_challenge_id=new_uuid()
+        )
+
+        assert pairs == frozenset({frozenset({ORGANISER, ALICE})})
+
+
 async def test_a_declined_seat_releases_its_pairs(session_factory):
     async with session_factory() as session:
         challenge = a_tennis_challenge()

@@ -49,7 +49,7 @@ from enum import Enum
 from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
-from app.engines.matchfit.core import ReliabilityStrand
+from app.engines.matchfit.core import ReliabilityStrand, SearchMode
 from app.kernel import Instant, Minutes, Sport, invariant
 
 
@@ -395,6 +395,18 @@ class OpenChallenge:
     counterpart_id: UUID
     origin: ChallengeOrigin
     opened_at: Instant
+    #: Which challenge stands between the two of them. **The one field here
+    #: that is not about the pair**, and the only place *which challenge* could
+    #: come from: a counterpart, an origin and an instant cannot name an
+    #: aggregate (``docs/adr/0150`` §3, and the published port's growth is the
+    #: honest price of it).
+    #:
+    #: It has exactly one reader and one use — a fill names the challenge it
+    #: completes, and the open-challenge gate steps aside for **that one and
+    #: nothing else**. It is not an id to fetch anything with: nothing here
+    #: reads a challenge by it, and the exemption is a smaller
+    #: ``open_challenge_ids`` rather than a gate that fired and was ignored.
+    challenge_id: UUID
 
 
 @runtime_checkable
@@ -687,6 +699,85 @@ class AccountStatusQuery(Protocol):
         ...
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class HalfBuiltCourt:
+    """The challenge a fill names, as the search completing it reads it.
+
+    **Everything a fill may not be told and must know** (``docs/adr/0150`` §2).
+    The sport, the kind of evening and who is already sitting down are facts the
+    challenge holds, and a request offering any of them would be a second place
+    for one of them to be true — which is the failure the request's own boundary
+    refuses.
+
+    ``mode`` is ``None`` exactly where the challenge has none: a deck-born send,
+    and every mutual-born court. The filler's own declared Play intent resolves
+    one then, on the deck's own rule, and **no mode picker appears anywhere**.
+    **There is no window on this row and there will not be one** — a window is
+    stamped by the send and by nothing else, so a mutual-born challenge stays
+    window-less for its whole life and a newly-invited player answers against a
+    label somebody else's grid produced (§5).
+
+    ``seated_ids`` is everybody live on that court besides the filler, in the
+    court's own order: **the locked seats**, resolved out of this search's own
+    pool like any other hand-seated player. They are not a way past the pool —
+    a seated player with no scored row is a player the group objective cannot
+    optimise around, and ``optimised_for: GROUP`` *is* that optimisation.
+
+    ``answered_and_gone`` is everybody who answered this challenge and left it.
+    They are back in the deck the moment they declined or lapsed, so without this
+    they would be candidates for the very fill they turned down — and the send
+    would refuse with ``NobodyIsAskedTwice`` *after* the player chose them (§4).
+    """
+
+    challenge_id: UUID
+    sport: Sport
+    mode: SearchMode | None
+    seated_ids: tuple[UUID, ...]
+    answered_and_gone: frozenset[UUID]
+
+
+@runtime_checkable
+class HalfBuiltCourtQuery(Protocol):
+    """*Which court is this, who is on it, and who has already answered it?*
+
+    **A sixth demand rather than a method on ``MatchHistoryQuery``, and the
+    posture is the reason.** That port is history and every read on it fails
+    **soft**: losing a game because we could not remember who you played in March
+    is worse than a duller list. This one fails **closed**, because a fill that
+    cannot read the court it is completing has nothing to complete — it would
+    silently become an ordinary ⚡ over a pool that still excludes the very people
+    it was meant to seat around. One port, one posture, and the table below is
+    where that is said.
+
+    **It is asked once per fill and on no other surface.** A shortlist, a deal
+    and an ordinary line-up name no challenge and never reach it.
+    """
+
+    async def half_built_court(
+        self, *, challenge_id: UUID, member_id: UUID
+    ) -> HalfBuiltCourt | None:
+        """That challenge, if this member is on its court and it is still being
+        arranged.
+
+        **``None`` covers three cases on purpose**: no such challenge, the member
+        holds no live seat on it, and a court nobody is arranging any more.
+        Telling them apart would answer *is this challenge id real* about a
+        stranger's evening, one probe at a time — which is the posture
+        ``court_origin`` already takes about a search.
+
+        **Any live member, never only the organiser.** Growing a court and ending
+        one are different acts and get different permissions (§1): the withdraw
+        is the organiser's, and a mutual-born doubles court has an "organiser"
+        who is only whoever's yes arrived second.
+
+        **It takes no clock**, exactly as ``open_challenges`` takes none: whether
+        a court is still being arranged is a fact about this instant, and a caller
+        that could supply the instant could supply a stale one.
+        """
+        ...
+
+
 # ---------------------------------------------------------------------------
 # How each demand fails
 # ---------------------------------------------------------------------------
@@ -753,9 +844,16 @@ FAIL_POSTURE: Mapping[type, FailPosture] = {
     AtStakeQuery: FailPosture.SOFT,
     AccountHoldQuery: FailPosture.CLOSED,
     AccountStatusQuery: FailPosture.CLOSED,
+    # **Closed, and it is not a gate** — which is the one row here that shows
+    # the table classifies *what a failure costs* rather than *what kind of
+    # fact this is*. A fill that cannot read the court it names has nothing to
+    # complete: standing down would run an ordinary ⚡ over a pool still
+    # excluding the people it was meant to seat around, and hand the player a
+    # court with strangers where their own line-up should have been.
+    HalfBuiltCourtQuery: FailPosture.CLOSED,
 }
 
-#: The five outward ports, as the suite in ``tests/demands/`` walks them.
+#: The six outward ports, as the suite in ``tests/demands/`` walks them.
 #:
 #: Declared as data rather than left to a reader to collect, so that *a port with
 #: no registered implementation* is a question something can ask. A demand nobody
@@ -773,4 +871,5 @@ MATCHER_DEMANDS: tuple[type, ...] = (
     AtStakeQuery,
     AccountHoldQuery,
     AccountStatusQuery,
+    HalfBuiltCourtQuery,
 )

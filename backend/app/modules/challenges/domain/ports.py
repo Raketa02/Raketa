@@ -164,9 +164,22 @@ class OpenChallengeQuery(Protocol):
     """
 
     async def open_pairs_among(
-        self, player_ids: Collection[UUID], *, now: Instant
+        self,
+        player_ids: Collection[UUID],
+        *,
+        now: Instant,
+        except_challenge_id: UUID | None = None,
     ) -> frozenset[frozenset[UUID]]:
         """Every pair of these people who already have an open game between them.
+
+        **One challenge may be excepted, and exactly one** (``docs/adr/0150``
+        §3). A fill names the challenge it completes, and asking this question
+        over the whole court of *that* challenge would return the court's own
+        pairs and refuse the send for the arrangement it is made of. The
+        exception is an **input** rather than a condition somebody reconstructs:
+        a reader asking why a send into a half-built court is not refused finds
+        it in the argument list. Every other open challenge still refuses, so the
+        rule is not weakened — it is read correctly.
 
         **One bulk read over the whole court, never one read per pair.** A four
         contains six pairs and the organiser is in only three of them, so a send
@@ -844,19 +857,83 @@ class SharedChallenge:
     counterpart_id: UUID
     origin: ChallengeOrigin
     opened_at: Instant
+    #: Which challenge this row is about. **The only field here that is not
+    #: about the pair**, and it is here because one reader needs to take exactly
+    #: one row out of this answer: a fill names the challenge it completes, and
+    #: the open-challenge gate steps aside for that one and for nothing else
+    #: (``docs/adr/0150`` §3). A counterpart and an instant cannot say *which*
+    #: challenge, and reconstructing it from ``opened_at`` would be a join on a
+    #: timestamp.
+    challenge_id: UUID
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class HalfBuiltLineUp:
+    """A court still being arranged, as the search that would finish it reads it.
+
+    **The whole of what a fill needs and nothing a fill could decide.** The
+    sport, the kind of evening and who is already sitting down are facts this
+    challenge holds, and a caller that could send any of them would be offering a
+    second place for one of them to be true (``docs/adr/0150`` §2).
+
+    ``mode`` is ``None`` exactly where the challenge has none — deck-born, and
+    every mutual-born court — and the filler's own declared Play intent resolves
+    one on the deck's own rule. **There is no window here and there never will
+    be**: a window is stamped by ``ChallengeSent`` and by nothing else, so a
+    mutual-born challenge stays window-less for its whole life (§5).
+
+    ``seated_ids`` is everybody live on the court **other than the member
+    asking**, in the court's own order, and they are what a fill locks. It
+    excludes the member for the reason a search never returns its own searcher.
+
+    ``answered_and_gone`` is everybody who answered this challenge and holds no
+    seat on it any more — the declined and the lapsed. They are released back
+    into the deck the instant they leave (``open_challenges_with``), so without
+    this they would be candidates for the very fill they turned down and
+    ``NobodyIsAskedTwice`` would refuse the send *after* the player chose them
+    (§4). It never contains anybody in ``seated_ids``: somebody who accepted has
+    answered and is still in.
+    """
+
+    challenge_id: UUID
+    sport: Sport
+    mode: SearchMode | None
+    seated_ids: tuple[UUID, ...]
+    answered_and_gone: frozenset[UUID]
+
+    def __post_init__(self) -> None:
+        invariant(
+            not (set(self.seated_ids) & self.answered_and_gone),
+            f"somebody both seated and gone from {self.challenge_id}: "
+            f"{sorted(set(self.seated_ids) & self.answered_and_gone)}",
+        )
+        invariant(
+            bool(self.seated_ids),
+            f"a half-built line-up nobody but the member is on: "
+            f"{self.challenge_id}",
+        )
 
 
 @runtime_checkable
 class ChallengeHistoryQuery(Protocol):
-    """Who answered, who is open, who is full — and who answers at all.
+    """Who answered, who is open, who is full, who answers at all — and one court.
 
-    **Four reads and not one bag.** They are separate because their consumers
+    **Five reads and not one bag.** They are separate because their consumers
     are: two Liveness signals, one gate, a third signal that is a count over
-    everybody rather than a fact about a pair, and — since ``docs/adr/0140`` —
-    one Player Score strand. Bundling them would make the slowest read's cost and
-    the strictest read's failure everybody's, which is the same argument
+    everybody rather than a fact about a pair, one Player Score strand since
+    ``docs/adr/0140``, and — since ``docs/adr/0150`` — the fill that completes one
+    named challenge. Bundling them would make the slowest read's cost and the
+    strictest read's failure everybody's, which is the same argument
     ``MatchHistoryQuery`` makes about carrying them as separate methods on one
     port.
+
+    **The fifth read fails differently from the other four, and that is decided
+    where the matcher declares it rather than here.** The four are history and a
+    search survives without them; a fill that cannot read the court it is
+    completing has nothing to complete, so the matcher declares it as its own
+    port with its own posture (``HalfBuiltCourtQuery``) rather than folding it
+    into the soft one.
 
     **Three of the four go to the matcher and the fourth does not**, which is why
     the sentence above no longer says *what this context owes the matcher*.
@@ -928,6 +1005,14 @@ class ChallengeHistoryQuery(Protocol):
         **Unbounded**, because it is small by construction: a player has a handful
         of live challenges rather than a history of them, and one open challenge
         per pair is a rule this context enforces on the way in.
+
+        **Somebody who *lapsed* is out of this answer and is not free**, and the
+        asymmetry is the cost ``docs/adr/0150`` §4 records rather than softens.
+        Their seat reopened, so they leave this read — but the challenge they
+        never answered still stands, and the fill that would replace them
+        excludes everybody who has answered it. A lapsed invitee is therefore
+        unreachable in **every sport** until that challenge ends, and the
+        organiser's withdraw is the only thing that ends it.
         """
         ...
 
@@ -977,5 +1062,40 @@ class ChallengeHistoryQuery(Protocol):
         seats would lose every answer given by somebody who has since been
         replaced — and the replacement's own invitation would inherit a deadline
         that was never theirs.
+        """
+        ...
+
+    async def half_built_line_up(
+        self, *, challenge_id: UUID, member_id: UUID, now: Instant
+    ) -> HalfBuiltLineUp | None:
+        """The court this member is on and could still grow, or nothing.
+
+        **The fifth read, and the first that is asked about one challenge rather
+        than about one player.** A fill names the challenge it completes
+        (``docs/adr/0150`` §2), so the sport, the kind of evening and the people
+        already sitting down are read off *that* aggregate — and an id is the
+        only thing a caller has to hand over for it.
+
+        **``None`` covers three cases and does so on purpose**: no such
+        challenge, this member holds no live seat on it, and a challenge nobody
+        is arranging any more. Telling them apart would answer *is this challenge
+        id real* about a stranger's evening, which is the refusal
+        ``NoChallengeOfYoursHasThatId`` already makes one surface over.
+
+        **Any live member, and never only the organiser** (§1). Growing a court
+        and ending one are different acts with different permissions: the withdraw
+        is the organiser's, and the fill is everybody's who is still on the court.
+        A mutual-born doubles challenge decides it — it is ``LINE_UP_INCOMPLETE``
+        from birth with an "organiser" who is only whoever's yes arrived second,
+        and making that arbitrary tiebreak the only person who can finish the four
+        would leave the other looking at a court they can neither complete nor
+        leave.
+
+        **Still *being arranged*, which is the pair rule's own set** and not a
+        narrower one of this read's invention (``standing.py``'s ``ARRANGING``).
+        A court every seat accepted has become a game and holds no open seat; a
+        court that ended has ended. What is left is exactly where a seat can still
+        be grown, and ``Challenge.invite``'s own refusals stay the authority on
+        the rest.
         """
         ...

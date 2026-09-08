@@ -37,7 +37,7 @@ from app.bootstrap.matcher_demands import (
     implementations_of,
 )
 from app.engines.assessment import AssessmentResult, BandView
-from app.engines.matchfit.core import ReliabilityStrand
+from app.engines.matchfit.core import ReliabilityStrand, SearchMode
 from app.engines.racketskill.core import (
     STATUS_INITIAL_ESTIMATE,
     band_for,
@@ -63,6 +63,7 @@ from app.modules.matchmaking.domain.ports import (
     AtStakeQuery,
     ChallengeOrigin,
     FailPosture,
+    HalfBuiltCourtQuery,
     MatchHistoryQuery,
     OpenChallenge,
     OutcomeTally,
@@ -341,6 +342,7 @@ async def _sent(
     at: Instant,
     search_id: UUID | None = None,
     positions: dict[UUID, int] | None = None,
+    mode: SearchMode | None = None,
 ) -> Challenge:
     """One send, through the aggregate: an organiser, a court, and a search behind it.
 
@@ -372,7 +374,7 @@ async def _sent(
     challenge = Challenge.sent(
         challenge_id=new_uuid(),
         sport=sport,
-        mode=None,
+        mode=mode,
         window=Window.THIS_WEEK,
         organiser_id=organiser,
         arrangement=arrangement,
@@ -655,6 +657,47 @@ async def test_each_open_row_carries_its_own_seats_origin(implementation, sessio
     }
     theirs = {row.counterpart_id: row.origin for row in await port.open_challenges(one)}
     assert isinstance(theirs[organiser], SentOutsideASearch)
+
+
+@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
+async def test_every_open_row_names_the_challenge_it_is_about(
+    implementation, session
+):
+    """**The exemption is an input, and this is where it comes from.**
+
+    A fill names the challenge it completes and the open-challenge gate steps
+    aside for that one and for nothing else (``docs/adr/0150`` §3) — which needs
+    the reader to be able to take one challenge's rows out of this answer. A
+    counterpart, an origin and an instant cannot say *which*, so the row carries
+    the id; reconstructing it from ``opened_at`` would be a join on a timestamp.
+
+    Two open challenges, and each row names its own: a reader excusing one must
+    not excuse the other.
+    """
+
+    port = implementation.build(session)
+    organiser, one, other = (new_uuid() for _ in range(3))
+    padel = await _sent(
+        session,
+        organiser=organiser,
+        invitees=(one,),
+        sport=Sport.PADEL,
+        at=_ago(minutes=5),
+    )
+    tennis = await _sent(
+        session,
+        organiser=organiser,
+        invitees=(other,),
+        sport=Sport.TENNIS,
+        at=_ago(minutes=4),
+    )
+
+    named = {
+        row.counterpart_id: row.challenge_id
+        for row in await port.open_challenges(organiser)
+    }
+
+    assert named == {one: padel.id, other: tennis.id}
 
 
 @pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
@@ -1181,6 +1224,186 @@ async def test_at_stake_never_crosses_as_a_pair_that_changes_nothing(
 
 
 # ---------------------------------------------------------------------------
+# HalfBuiltCourtQuery — the court a fill names, and the three ways it answers
+# nothing
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
+async def test_a_half_built_court_answers_with_what_a_fill_may_not_be_told(
+    implementation, session
+):
+    """The sport, the kind of evening and who is already sitting down.
+
+    All three are the challenge's, which is the whole of why the request refuses
+    them: a caller supplying one offers a second place for a fact to be true. The
+    member asking is **not** in the seated set, for the reason a search never
+    returns its own searcher.
+    """
+
+    organiser, acceptor = new_uuid(), new_uuid()
+    sent_at = _ago(hours=2)
+    challenge = await _sent(
+        session,
+        organiser=organiser,
+        invitees=(acceptor,),
+        sport=Sport.PADEL,
+        at=sent_at,
+        mode=SearchMode.COMPETITIVE,
+    )
+    await _answers(
+        session, challenge, acceptor, yes=True, at=_just_after(sent_at, minutes=5)
+    )
+
+    court = await implementation.build(session).half_built_court(
+        challenge_id=challenge.id, member_id=organiser
+    )
+
+    assert court is not None
+    assert court.challenge_id == challenge.id
+    assert court.sport is Sport.PADEL
+    assert court.mode is SearchMode.COMPETITIVE
+    assert court.seated_ids == (acceptor,)
+    assert court.answered_and_gone == frozenset()
+
+
+@pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
+async def test_a_mutual_born_court_carries_its_pair_and_no_mode(
+    implementation, session
+):
+    """The commonest half-built court, and the case that decided *any live
+    member may fill*.
+
+    Both seats accepted from birth, both on side A in a doubles sport, no mode
+    and no window — and its "organiser" is only whoever's yes arrived second, so
+    the read answers the **other** one exactly as readily.
+    """
+
+    one, other = new_uuid(), new_uuid()
+    challenge = await _mutual(session, one=one, other=other, at=_ago(hours=1))
+
+    theirs = await implementation.build(session).half_built_court(
+        challenge_id=challenge.id, member_id=other
+    )
+
+    assert theirs is not None
+    assert theirs.mode is None
+    assert theirs.seated_ids == (one,)
+
+
+@pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
+async def test_everybody_who_answered_and_left_is_named_apart_from_the_seated(
+    implementation, session
+):
+    """A decline reopens a seat and releases the pair, so the person who turned
+    the court down is back in the pool that would fill it.
+
+    They are named here so the fill can leave them out — otherwise the aggregate
+    refuses the send **after** the player chose them.
+    """
+
+    organiser, acceptor, decliner = new_uuid(), new_uuid(), new_uuid()
+    sent_at = _ago(hours=3)
+    challenge = await _sent(
+        session,
+        organiser=organiser,
+        invitees=(acceptor, decliner),
+        sport=Sport.PADEL,
+        at=sent_at,
+    )
+    await _answers(
+        session, challenge, acceptor, yes=True, at=_just_after(sent_at, minutes=1)
+    )
+    await _answers(
+        session, challenge, decliner, yes=False, at=_just_after(sent_at, minutes=2)
+    )
+
+    court = await implementation.build(session).half_built_court(
+        challenge_id=challenge.id, member_id=organiser
+    )
+
+    assert court is not None
+    assert court.seated_ids == (acceptor,)
+    assert court.answered_and_gone == frozenset({decliner})
+
+
+@pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
+async def test_a_court_answers_nothing_to_a_stranger_an_absentee_or_an_ending(
+    implementation, session
+):
+    """**One refusal for three cases, and it is the port's own rule.**
+
+    No such challenge, a member holding no live seat, and a court nobody is
+    arranging any more. Telling them apart would answer *is this challenge id
+    real* about a stranger's evening, one probe at a time.
+    """
+
+    organiser, acceptor, decliner = new_uuid(), new_uuid(), new_uuid()
+    sent_at = _ago(hours=3)
+    challenge = await _sent(
+        session,
+        organiser=organiser,
+        invitees=(acceptor, decliner),
+        sport=Sport.PADEL,
+        at=sent_at,
+    )
+    await _answers(
+        session, challenge, acceptor, yes=True, at=_just_after(sent_at, minutes=1)
+    )
+    await _answers(
+        session, challenge, decliner, yes=False, at=_just_after(sent_at, minutes=2)
+    )
+    reading = implementation.build(session)
+
+    assert (
+        await reading.half_built_court(
+            challenge_id=new_uuid(), member_id=organiser
+        )
+        is None
+    ), "no such challenge"
+    assert (
+        await reading.half_built_court(
+            challenge_id=challenge.id, member_id=decliner
+        )
+        is None
+    ), "they hold a seat and have left it"
+    assert (
+        await reading.half_built_court(
+            challenge_id=challenge.id, member_id=new_uuid()
+        )
+        is None
+    ), "never on this court at all"
+
+
+@pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
+async def test_a_court_every_seat_accepted_is_nobody_to_arrange_with_any_more(
+    implementation, session
+):
+    """A completed line-up has become a game: the arranging is **finished**, and
+    there is no open seat for a fill to grow into."""
+
+    organiser, invitee = new_uuid(), new_uuid()
+    sent_at = _ago(hours=1)
+    challenge = await _sent(
+        session,
+        organiser=organiser,
+        invitees=(invitee,),
+        sport=Sport.TENNIS,
+        at=sent_at,
+    )
+    await _answers(
+        session, challenge, invitee, yes=True, at=_just_after(sent_at, minutes=1)
+    )
+
+    assert (
+        await implementation.build(session).half_built_court(
+            challenge_id=challenge.id, member_id=organiser
+        )
+        is None
+    )
+
+
+# ---------------------------------------------------------------------------
 # The register itself
 # ---------------------------------------------------------------------------
 
@@ -1289,6 +1512,20 @@ def test_the_two_gates_fail_closed_and_the_three_terms_fail_soft():
     assert FAIL_POSTURE[MatchHistoryQuery] is FailPosture.SOFT
     assert FAIL_POSTURE[PlayerScoreQuery] is FailPosture.SOFT
     assert FAIL_POSTURE[AtStakeQuery] is FailPosture.SOFT
+
+
+def test_the_court_a_fill_names_fails_closed_and_is_not_a_gate():
+    """**The row that shows what this table classifies.**
+
+    It is not one of the four fail-closed gates and it is not a term: it is the
+    subject of the search. Standing down would run an ordinary ⚡ over a pool that
+    still excludes every person on the court, and hand the player a four of
+    strangers where their own line-up should have been — so there is nothing to
+    fall through to, and ``read_demand`` refuses a caller that offers one.
+    """
+
+    assert FAIL_POSTURE[HalfBuiltCourtQuery] is FailPosture.CLOSED
+    assert HalfBuiltCourtQuery in MATCHER_DEMANDS
 
 
 # ---------------------------------------------------------------------------

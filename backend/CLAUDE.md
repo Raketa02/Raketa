@@ -430,6 +430,39 @@ Rules to preserve:
   render `SearchRecord` through one function and why the row records the card, the concerns,
   the whole-kilometre distance and the at-stake block: what a read-back cannot reproduce off
   the row, it would have to re-read from sources that have moved on.
+- **The fill names the challenge it completes, and the gate steps aside for that one court**
+  ([ADR-0150](../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)).
+  Half the mechanism had been written and unreachable since it was authored: `Challenge.invite`
+  had no caller anywhere in `app/`, and ⚡ from a challenge could not have worked if it had —
+  `_locked` resolves a hand-seated player *out of this search's own pool or not at all*,
+  `gate_of` excludes everybody in `open_challenge_ids`, and ADR-0142 holds that pair for the
+  whole of `LINE_UP_INCOMPLETE`, so **everybody who accepted your half-built court was by
+  construction absent from the pool of the search meant to finish it.** Four things fix it and
+  each is narrow on purpose. `POST /lineups` grows one optional **`completing_challenge_id`**,
+  and `sport`, `mode` and `locked_seats` are **refused beside it** rather than made optional —
+  all three are facts that challenge holds, and a caller supplying one could lock somebody who
+  is not in the challenge or forget somebody who is. `search_workbench.bind` takes that id and
+  builds `open_challenge_ids` from every open challenge **except** it, which is why
+  `OpenChallenge` and `SharedChallenge` grew a `challenge_id`: the exemption is an **input**,
+  the roster still counts ten codes, and a court member excluded for any of the other nine
+  still falls out — so `locked_seat_not_available` stops being unreachable on this path and
+  starts meaning *somebody has been blocked, held or deactivated since they accepted*.
+  `pool_for` takes an `excluding` set so **nobody who has answered that challenge is a
+  candidate for its own fill**, which keeps `NobodyIsAskedTwice` a backstop rather than a
+  screen a player reaches after choosing somebody. And **`POST /challenges/{id}/seats`** is
+  the send's shape minus the mint: it re-verifies the send's five facts with the pair rule
+  excepting this one court by id, resolves origins for the **newly seated only**, and calls
+  `Challenge.invite`. **Any live member may fill; only the organiser may withdraw** — the
+  case that decides it is the mutual-born doubles challenge, `LINE_UP_INCOMPLETE` from birth
+  with an "organiser" who is only whoever's yes arrived second. The mode is **inherited, or
+  resolved from the filler's declared Play intent** on the deck's own rule, and the **window
+  is never re-stamped**, so a mutual-born challenge stays window-less for life. The cost is
+  recorded rather than softened, on the port and on the two routes that meet it: **a lapsed
+  invitee is unreachable in every sport until that challenge ends**, and the withdraw is the
+  only thing that ends it. `HalfBuiltCourtQuery` is the **sixth** matcher demand and the only
+  one whose posture is `CLOSED` without being a gate: a fill that cannot read the court it
+  names would silently become an ordinary ⚡ over a pool that still excludes the very people
+  it was meant to seat around.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix. The one
   exception is the **dev console** (`app/api/dev/`, #256) — a second *surface*, not a
   second client: one no-build `console.html` behind a `FileResponse` at `/dev`, and one

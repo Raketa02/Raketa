@@ -220,6 +220,29 @@ class TheWithdrawIsTheOrganisers(ForbiddenError):
         super().__init__("Only the organiser may withdraw a challenge.")
 
 
+class TheFillIsTheLiveMembers(ForbiddenError):
+    """Somebody holding a seat they have left tried to grow the court.
+
+    **The mirror of the withdraw's refusal, one act over** (``docs/adr/0150``
+    §1). Growing a court and ending one are different acts with different
+    permissions: the withdraw is the organiser's, and the fill is every **live**
+    member's — accepted, or still deciding.
+
+    A declined or lapsed invitee still holds their seat and still sees the
+    challenge on their own list, which is why this is a `403` and not a `404`:
+    pretending it is not there while their own seat is drawn on it would be the
+    wrong lie. They have left the game, and filling somebody else's court is not
+    a thing leaving entitles you to.
+    """
+
+    code = "fill_is_the_live_members"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Only somebody still on this court may fill its open seats."
+        )
+
+
 class OnlyAHalfBuiltLineUpIsWithdrawn(ConflictError):
     """A withdraw asked of a challenge that has some other end already.
 

@@ -1,8 +1,10 @@
-"""``ChallengeHistoryQuery`` over the event log — its four facts.
+"""``ChallengeHistoryQuery`` over the event log — its five facts.
 
-**Three of them are the matcher's and the fourth is ``player_score``'s**
-(``docs/adr/0140``): *did you answer inside your day* is the same walk over the
-same stream, tallied per person instead of per pair.
+**Three of them are the matcher's history, the fourth is ``player_score``'s**
+(``docs/adr/0140``) — *did you answer inside your day* is the same walk over the
+same stream, tallied per person instead of per pair — **and the fifth is the
+matcher's fill** (``docs/adr/0150``), which is the only one that reads a single
+named stream rather than searching for the streams somebody sits in.
 
 **The third read this context has over the log, and the first with a reader
 outside it.** It shares ``challenge_streams.py`` with the other two, so the
@@ -60,10 +62,14 @@ from app.modules.challenges.domain.ports import (
     AnsweringRecord,
     AnswerTally,
     ChallengeCounterpart,
+    HalfBuiltLineUp,
     SharedChallenge,
 )
 from app.modules.challenges.domain.seats import Seat, SeatAnswer
-from app.modules.challenges.infrastructure.challenge_streams import streams_seating
+from app.modules.challenges.infrastructure.challenge_streams import (
+    stream_of,
+    streams_seating,
+)
 from app.shared.domain import DomainEvent
 
 #: The two events that are an **answer**, and the answer each one is.
@@ -168,6 +174,7 @@ class EventSourcedChallengeHistory:
                     counterpart_id=other,
                     origin=_origin_of(challenge, other),
                     opened_at=challenge.opened_at,
+                    challenge_id=challenge.id,
                 )
         rows = sorted(
             newest.values(),
@@ -256,6 +263,53 @@ class EventSourcedChallengeHistory:
             )
             for player_id, at in latest.items()
         }
+
+    async def half_built_line_up(
+        self, *, challenge_id: UUID, member_id: UUID, now: Instant
+    ) -> HalfBuiltLineUp | None:
+        """One named court, folded, for a member who is still on it.
+
+        **One stream, addressed rather than searched for.** The other four reads
+        here start by asking *which streams seat these people*, which is a
+        substring match over every challenge the platform has recorded; this one
+        is handed the id and reads the stream by it.
+
+        **Three refusals and one answer.** Nothing at that id, a member holding
+        no live seat, and a challenge nobody is arranging any more all answer
+        ``None`` — one refusal for three cases, on the port's own rule.
+
+        **The two sets are computed against the same fold and the same instant**,
+        so *seated* and *gone* cannot disagree about anybody: everybody live on
+        the court is seated, and everybody who ever answered and is not live has
+        gone. The member themselves is in neither, because a search never returns
+        its own searcher and a fill never re-invites the person pressing it.
+        """
+
+        events = await stream_of(self._session, self._codec, challenge_id)
+        if not events:
+            return None
+        challenge = Challenge.from_history(events)
+        if not challenge.is_being_arranged_at(now):
+            return None
+        live = challenge.players_in_it_at(now)
+        if member_id not in live:
+            return None
+        return HalfBuiltLineUp(
+            challenge_id=challenge.id,
+            sport=challenge.sport,
+            mode=challenge.mode,
+            # **In the court's own order**, which is the arrangement these people
+            # are actually sitting in — the order a fill hands the engine as its
+            # locked seats, and the one the builder opens on.
+            seated_ids=tuple(
+                seat.player_id
+                for seat in challenge.seats
+                if seat.player_id is not None
+                and seat.player_id in live
+                and seat.player_id != member_id
+            ),
+            answered_and_gone=frozenset(challenge.answered - live),
+        )
 
 
 def _invitations_in(
