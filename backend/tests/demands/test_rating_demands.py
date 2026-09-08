@@ -55,8 +55,8 @@ def registered(port):
     ]
 
 
-async def _rated(session, *, mu: float, sigma: float, sport: Sport):
-    player_id = new_uuid()
+async def _rated(session, *, mu: float, sigma: float, sport: Sport, player_id=None):
+    player_id = player_id or new_uuid()
     band = band_for(mu)
     low, high = likely_range(mu, sigma)
     ratings = build_skill_rating_repository(
@@ -106,6 +106,71 @@ async def test_a_rated_player_crosses_as_the_level_and_the_uncertainty(
 
     assert found[player_id].mu == 3.20
     assert found[player_id].sigma == 0.30
+
+
+@pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))
+async def test_one_player_crosses_with_every_sport_they_are_rated_in(
+    implementation, session
+):
+    """**The record's read, and the mirror of the one above it.** The matcher
+    holds twenty rows in one sport; a record is one person opened by a tap and
+    wants every sport they hold."""
+
+    port = implementation.build(session)
+    player_id = await _rated(session, mu=3.20, sigma=0.30, sport=Sport.PADEL)
+    await _rated(
+        session, mu=4.10, sigma=0.50, sport=Sport.SQUASH, player_id=player_id
+    )
+
+    held = await port.ratings_of(player_id)
+
+    assert set(held) == {Sport.PADEL, Sport.SQUASH}
+    assert held[Sport.PADEL].mu == 3.20
+    assert held[Sport.SQUASH].mu == 4.10
+    assert held[Sport.SQUASH].band_name == band_for(4.10).label
+
+
+@pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))
+async def test_a_published_rating_carries_what_a_screen_prints_and_no_more(
+    implementation, session
+):
+    """The figures the rating already committed to its own stream — the
+    certainty, the range the engine rounded and the band's published name — with
+    nothing derived a second time on the way out."""
+
+    port = implementation.build(session)
+    player_id = await _rated(session, mu=2.60, sigma=0.40, sport=Sport.TENNIS)
+
+    (rating,) = (await port.ratings_of(player_id)).values()
+
+    low, high = likely_range(2.60, 0.40)
+    assert rating.sport is Sport.TENNIS
+    assert rating.confidence == confidence_percent(0.40)
+    assert (rating.range_low, rating.range_high) == (round(low, 2), round(high, 2))
+    assert rating.band_name == band_for(2.60).label
+
+
+@pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))
+async def test_a_rating_no_game_has_tested_rests_on_nought_counted_results(
+    implementation, session
+):
+    """**A measured nought and not an absence.** A Level straight out of the
+    questionnaire has moved on no result, and the number the skill card prints
+    beside its certainty says exactly that (``docs/adr/0139``)."""
+
+    port = implementation.build(session)
+    player_id = await _rated(session, mu=3.00, sigma=0.35, sport=Sport.PADEL)
+
+    assert (await port.ratings_of(player_id))[Sport.PADEL].counted_results == 0
+
+
+@pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))
+async def test_a_player_rated_in_nothing_holds_nothing(implementation, session):
+    """The ordinary state part way through onboarding, and never an error."""
+
+    port = implementation.build(session)
+
+    assert await port.ratings_of(new_uuid()) == {}
 
 
 @pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))

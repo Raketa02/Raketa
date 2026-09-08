@@ -36,7 +36,18 @@ from app.bootstrap.composition import (
     build_event_publisher,
     build_game_repository,
     build_search_store,
+    build_skill_rating_repository,
 )
+from app.engines.assessment import AssessmentResult, BandView
+from app.engines.racketskill.core import (
+    STATUS_INITIAL_ESTIMATE,
+    band_for,
+    confidence_percent,
+    likely_range,
+)
+from app.modules.games.domain.results import Score, SetScore
+from app.modules.rating.domain.ids import skill_rating_id
+from app.modules.rating.domain.skill_rating import SkillRating
 from app.bootstrap.player_record_demands import (
     PLAYER_RECORD_DEMANDS,
     PLAYER_RECORD_IMPLEMENTATIONS,
@@ -66,7 +77,9 @@ from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
+    SubjectForm,
     SubjectIdentitySource,
+    SubjectRatings,
 )
 from app.shared.ids import new_uuid
 
@@ -331,8 +344,181 @@ async def test_a_link_names_the_owner_and_the_photograph(implementation, session
 
 
 # ---------------------------------------------------------------------------
+# SubjectRatings — every sport they hold, and nothing that could be saved
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectRatings))
+async def test_every_sport_they_are_rated_in_crosses_with_its_own_figures(
+    implementation, session
+):
+    """One person and every sport, which is the shape a tap on a face has.
+
+    The certainty, the range and the band's published name travel with the Level
+    because a Level with none of them beside it is the claim the range amendment
+    exists to stop.
+    """
+
+    ratings = implementation.build(session)
+    player_id = new_uuid()
+    await _a_rating(session, player_id, sport=Sport.PADEL, mu=3.20)
+    await _a_rating(session, player_id, sport=Sport.SQUASH, mu=4.10)
+
+    held = await ratings.ratings_of(player_id)
+
+    assert set(held) == {Sport.PADEL, Sport.SQUASH}
+    assert held[Sport.PADEL].level == 3.20
+    assert held[Sport.PADEL].sport is Sport.PADEL
+    assert held[Sport.PADEL].band
+    assert held[Sport.PADEL].confidence > 0
+    spread = held[Sport.PADEL].likely_range
+    assert spread.low < 3.20 < spread.high
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectRatings))
+async def test_a_rating_no_result_has_moved_rests_on_nought_counted_games(
+    implementation, session
+):
+    """**A measured nought and never an absence**, which is the one place this
+    number differs in kind from every other absent figure on the sheet: a Level
+    straight out of the questionnaire has been tested by no game, and saying so
+    is what stops it reading like a Level built on forty."""
+
+    ratings = implementation.build(session)
+    player_id = new_uuid()
+    await _a_rating(session, player_id, sport=Sport.PADEL, mu=3.00)
+
+    assert (await ratings.ratings_of(player_id))[Sport.PADEL].counted_games == 0
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectRatings))
+async def test_a_player_rated_in_nothing_holds_nothing(implementation, session):
+    """The ordinary state part way through onboarding. The sheet draws the
+    poster with no Level on it and the skill card is simply absent."""
+
+    assert await implementation.build(session).ratings_of(new_uuid()) == {}
+
+
+# ---------------------------------------------------------------------------
+# SubjectForm — the run of five, in one sport, with no moment on it
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectForm))
+async def test_a_run_is_this_sports_results_oldest_first(implementation, session):
+    """**Per sport, which is the defect this port exists to make
+    unrepresentable**: a run built across every sport and drawn beneath a single
+    sport's Level was squash results under a padel number."""
+
+    form = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, opponent = new_uuid(), new_uuid()
+    await _a_confirmed_game(session, player, opponent, sport=Sport.PADEL, won=True)
+    await _a_confirmed_game(session, player, opponent, sport=Sport.TENNIS, won=True)
+    await _a_confirmed_game(session, player, opponent, sport=Sport.PADEL, won=False)
+
+    run = await form.last_results_in(player, sport=Sport.PADEL, now=now)
+
+    assert [one.value for one in run] == ["WIN", "LOSS"]
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectForm))
+async def test_a_sport_with_nothing_counted_in_it_is_an_empty_run(
+    implementation, session
+):
+    """Never padded and never a placeholder: the client draws the gap."""
+
+    form = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+
+    assert await form.last_results_in(new_uuid(), sport=Sport.PADEL, now=now) == ()
+
+
+# ---------------------------------------------------------------------------
 # The world these demands are run against
 # ---------------------------------------------------------------------------
+
+
+async def _a_rating(session, player_id: UUID, *, sport: Sport, mu: float) -> None:
+    """One rating, opened through the aggregate that opens one.
+
+    Never an ``INSERT``: what these ports answer are folds over somebody else's
+    streams, and the only honest way to exercise one is to make the history it
+    reads (``docs/adr/0029``).
+    """
+
+    sigma = 0.35
+    band = band_for(mu)
+    low, high = likely_range(mu, sigma)
+    await build_skill_rating_repository(
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    ).save(
+        SkillRating.initialise(
+            rating_id=skill_rating_id(player_id, sport),
+            player_id=player_id,
+            sport=sport,
+            result=AssessmentResult(
+                mu=mu,
+                sigma=sigma,
+                confidence=confidence_percent(sigma),
+                range_low=round(low, 2),
+                range_high=round(high, 2),
+                band=BandView(name=band.label, lower=band.lower, upper=band.upper),
+                status=STATUS_INITIAL_ESTIMATE,
+                questions_asked=7,
+                engine_version="racketskill-fusion-v3",
+                confidence_ceiling=confidence_percent(sigma),
+            ),
+            source_assessment_id=new_uuid(),
+            occurred_at=datetime.now(timezone.utc),
+        )
+    )
+    await session.commit()
+
+
+#: A moment far enough back that a lone score has confirmed itself by ``now``.
+#: The run of form reads only confirmed counted results, and a confirmation is a
+#: clock passing rather than an act (``docs/adr/0137``) — so these games are made
+#: in the past instead of anything being told they are over.
+_LONG_ENOUGH_AGO = timedelta(days=30)
+
+
+async def _a_confirmed_game(
+    session, player: UUID, opponent: UUID, *, sport: Sport, won: bool
+) -> None:
+    """One counted singles game, played and confirmed by silence."""
+
+    played = instant(datetime.now(timezone.utc) - _LONG_ENOUGH_AGO)
+    game = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=sport,
+        kind=GameKind.COUNTED,
+        window=Window.TODAY,
+        line_up=LineUp.of(
+            (
+                Seating(side=GameSide.A, player_id=player),
+                Seating(side=GameSide.B, player_id=opponent),
+            )
+        ),
+        occurred_at=instant(played - timedelta(hours=1)),
+    )
+    game.state_result(
+        by=player,
+        score=Score.of(
+            [SetScore(a=6, b=4), SetScore(a=6, b=3)]
+            if won
+            else [SetScore(a=4, b=6), SetScore(a=3, b=6)]
+        ),
+        occurred_at=played,
+    )
+    await build_game_repository(
+        session=session,
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    ).save(game)
+    await session.commit()
 
 
 def _disclosure(name: str, session) -> PriorDisclosure:

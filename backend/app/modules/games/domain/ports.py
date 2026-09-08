@@ -391,6 +391,36 @@ class GameHistoryQuery(Protocol):
         """
         ...
 
+    async def recent_results_in(
+        self, player_id: UUID, *, sport: Sport, now: Instant
+    ) -> tuple[CountedResult, ...]:
+        """One player's last few counted results **in one sport**, oldest first.
+
+        **A second read and not a parameter on the one above**, because the two
+        answer for different callers and one of them must not move. The set read
+        is what a *search* attaches to twenty rows and freezes into a record kept
+        for ever; narrowing it to a sport would make the same person's card read
+        differently before and after, which is a change worth making deliberately
+        rather than as a side effect. This one is what a record sheet draws
+        beneath a single sport's Level, where a run built across every sport is
+        squash results under a padel number.
+
+        **Filtered before it is trimmed**, which is the whole reason a caller
+        cannot build this from the set read: that one answers at most
+        ``RECENT_RESULTS`` across every sport, so a consumer filtering afterwards
+        would show three results to somebody who has played thirty.
+
+        **One player and never a collection.** A record is one person opened by a
+        deliberate tap; a set-shaped version of this would be an invitation to
+        call it inside a walk over five hundred candidates.
+
+        At most ``RECENT_RESULTS``, and **fewer is a real answer that is never
+        padded**. Empty for a player with none — which needs no second spelling
+        here, unlike the mapping above, because a short tuple already says the
+        whole of *there is less to show*.
+        """
+        ...
+
     async def attendance_for(
         self, player_ids: Collection[UUID], *, now: Instant
     ) -> Mapping[UUID, Attendance]:

@@ -17,11 +17,29 @@ over in-memory SQLite, **no MinIO, no Redis and no sidecar**.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 import pytest
 
+from app.bootstrap.composition import (
+    build_domain_event_store,
+    build_event_publisher,
+    build_game_repository,
+)
+from app.kernel import Sport, instant
+from app.modules.games.domain.game import Game
+from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
+from app.modules.games.domain.results import Score, SetScore
 from app.modules.matchmaking.presentation.dependencies import get_candidate_source
+from app.modules.player_profile.domain.availability import Window
+from app.modules.rating.domain.events import RatingInitialised
+from app.modules.rating.domain.ids import skill_rating_id
+from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
+    RATING_AGGREGATE,
+)
+from app.shared.ids import new_uuid
+from tests.unit.candidate_index_fixtures import append
 from tests.api import matchmaking_world as world
 
 
@@ -49,16 +67,101 @@ async def a_search_that_showed(client, session_factory, candidate_source, search
     return subject
 
 
-async def record_of(client, token: str, player_id: UUID):
+async def record_of(client, token: str, player_id: UUID, *, sport: Sport | None = None):
     return await client.get(
-        f"/api/v1/players/{player_id}/record", headers=world.auth(token)
+        f"/api/v1/players/{player_id}/record",
+        params={} if sport is None else {"sport": sport.value},
+        headers=world.auth(token),
     )
 
 
-async def own_record(client, token: str):
+async def own_record(client, token: str, *, sport: Sport | None = None):
     return await client.get(
-        "/api/v1/players/me/record", headers=world.auth(token)
+        "/api/v1/players/me/record",
+        params={} if sport is None else {"sport": sport.value},
+        headers=world.auth(token),
     )
+
+
+async def also_rated_in(session_factory, player_id: UUID, *, sport: Sport, mu: float):
+    """One more Level for somebody already rated, filed where a rating lives.
+
+    Through the log at the stream id the rating context derives, because that is
+    the address the read port asks — a rating filed anywhere else is one the
+    sheet can never find (``docs/adr/0105``).
+    """
+
+    at = datetime.now(timezone.utc) - timedelta(days=3)
+    await append(
+        session_factory,
+        RatingInitialised(
+            rating_id=skill_rating_id(player_id, sport),
+            player_id=player_id,
+            sport=sport.value,
+            mu=mu,
+            sigma=0.20,
+            confidence=83,
+            range_low=mu - 0.2,
+            range_high=mu + 0.2,
+            band_name="Established",
+            band_lower=2.7,
+            band_upper=3.8,
+            status="INITIAL_ESTIMATE",
+            engine_version="v3",
+            source_assessment_id=new_uuid(),
+            occurred_at=at,
+        ),
+        aggregate_type=RATING_AGGREGATE,
+        aggregate_id=skill_rating_id(player_id, sport),
+    )
+
+
+async def a_confirmed_game(
+    session_factory, a: UUID, b: UUID, *, sport: Sport, a_won: bool
+):
+    """One counted singles game between them, played and confirmed by silence.
+
+    Written through the aggregate rather than as rows, which is the rule every
+    suite in this repository takes about somebody else's context: what the record
+    reads is a fold, and the only honest way to exercise one is to make the
+    history it folds.
+
+    **Dated a month back on purpose.** A confirmation is a clock passing rather
+    than an act (``docs/adr/0137``), so a game is made in the past instead of
+    anything being told it is over.
+    """
+
+    played = instant(datetime.now(timezone.utc) - timedelta(days=30))
+    game = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=sport,
+        kind=GameKind.COUNTED,
+        window=Window.TODAY,
+        line_up=LineUp.of(
+            (
+                Seating(side=GameSide.A, player_id=a),
+                Seating(side=GameSide.B, player_id=b),
+            )
+        ),
+        occurred_at=instant(played - timedelta(hours=1)),
+    )
+    game.state_result(
+        by=a,
+        score=Score.of(
+            [SetScore(a=6, b=4), SetScore(a=6, b=3)]
+            if a_won
+            else [SetScore(a=4, b=6), SetScore(a=3, b=6)]
+        ),
+        occurred_at=played,
+    )
+    async with session_factory() as session:
+        await build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        ).save(game)
+        await session.commit()
 
 
 def without_the_trace(response) -> str:
@@ -98,6 +201,28 @@ async def test_a_search_that_showed_them_opens_their_record(
         "nickname": "subject",
         "area_code": "A+05151-000013",
         "social_tags": list(world.COMPETITIVE_TAGS),
+        "sports": [
+            {
+                "sport": "PADEL",
+                "level": pytest.approx(searcher["mu"]),
+                "band": "Improver",
+            }
+        ],
+        "skill": {
+            "sport": "PADEL",
+            "level": pytest.approx(searcher["mu"]),
+            "band": "Improver",
+            "confidence": 62,
+            # A Level out of the questionnaire that no game has tested yet. **A
+            # measured nought and not an absence** — the confidence beside it is
+            # what makes that readable.
+            "counted_games": 0,
+            "likely_range": {
+                "low": pytest.approx(searcher["mu"] - 0.3),
+                "high": pytest.approx(searcher["mu"] + 0.3),
+            },
+            "last_five": [],
+        },
     }
     # The photograph's three fields are **omitted together** for a player with
     # none, and never sent as nulls: the client draws the generated poster.
@@ -325,3 +450,136 @@ async def test_me_is_never_parsed_as_a_player_id(client, searcher):
     response = await own_record(client, searcher["token"])
 
     assert response.status_code == 200, response.text
+
+
+# ---------------------------------------------------------------------------
+# Which sport the sheet is about
+# ---------------------------------------------------------------------------
+
+
+async def test_the_sport_asked_for_is_the_one_the_skill_card_draws(
+    client, session_factory, candidate_source, searcher
+):
+    """The overwhelming case, and the pills beside it name every sport they hold
+    **in the registry's own order** rather than the order the ratings arrived."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    await also_rated_in(session_factory, subject, sport=Sport.SQUASH, mu=4.10)
+
+    asked = await record_of(client, searcher["token"], subject, sport=Sport.SQUASH)
+    body = asked.json()
+
+    assert [one["sport"] for one in body["sports"]] == ["PADEL", "SQUASH"]
+    assert body["skill"]["sport"] == "SQUASH"
+    assert body["skill"]["level"] == pytest.approx(4.10)
+    assert body["skill"]["band"] == "Established"
+    assert body["skill"]["confidence"] == 83
+
+
+async def test_a_sport_they_do_not_play_falls_back_and_never_refuses(
+    client, session_factory, candidate_source, searcher
+):
+    """**The parameter chooses what is drawn and never whether it is.** Admission
+    ran in the partition of the search that showed them, which is a fact the
+    platform holds — so naming a sport nobody was ever shown in changes the
+    header and nothing else."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+
+    response = await record_of(client, searcher["token"], subject, sport=Sport.TENNIS)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["skill"]["sport"] == "PADEL"
+
+
+async def test_asking_for_no_sport_falls_back_the_same_way(
+    client, session_factory, candidate_source, searcher
+):
+    """A record opened from a surface with no sport behind it — a chat, a games
+    list — takes the same fallback rather than a third rule."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+
+    body = (await record_of(client, searcher["token"], subject)).json()
+
+    assert body["skill"]["sport"] == "PADEL"
+
+
+async def test_your_own_record_takes_the_sport_too(client, session_factory, searcher):
+    """The same resolution on the one sheet nothing gates."""
+
+    await also_rated_in(session_factory, searcher["id"], sport=Sport.SQUASH, mu=2.40)
+
+    body = (await own_record(client, searcher["token"], sport=Sport.SQUASH)).json()
+
+    assert body["is_self"] is True
+    assert body["skill"]["sport"] == "SQUASH"
+    assert [one["sport"] for one in body["sports"]] == ["PADEL", "SQUASH"]
+
+
+# ---------------------------------------------------------------------------
+# The run of five
+# ---------------------------------------------------------------------------
+
+
+async def test_the_run_of_five_is_the_resolved_sports_and_nobody_elses(
+    client, session_factory, candidate_source, searcher
+):
+    """**The defect this ticket fixes, over the wire.** A run built across every
+    sport and drawn beneath a single sport's Level was squash results under a
+    padel number.
+
+    The subject has one padel result and two squash ones; the padel sheet draws
+    the padel one alone.
+    """
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    await also_rated_in(session_factory, subject, sport=Sport.SQUASH, mu=4.10)
+    await a_confirmed_game(
+        session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
+    )
+    await a_confirmed_game(
+        session_factory, subject, searcher["id"], sport=Sport.SQUASH, a_won=False
+    )
+    await a_confirmed_game(
+        session_factory, subject, searcher["id"], sport=Sport.SQUASH, a_won=True
+    )
+
+    padel = (
+        await record_of(client, searcher["token"], subject, sport=Sport.PADEL)
+    ).json()
+    squash = (
+        await record_of(client, searcher["token"], subject, sport=Sport.SQUASH)
+    ).json()
+
+    assert padel["skill"]["last_five"] == ["WIN"]
+    assert sorted(squash["skill"]["last_five"]) == ["LOSS", "WIN"]
+    # And the count the certainty rests on is **not** the run's length: a Level
+    # moves when the rating context walks a result forward, and nothing here has.
+    assert padel["skill"]["counted_games"] == 0
+
+
+async def test_a_run_shorter_than_five_is_never_padded(
+    client, session_factory, candidate_source, searcher
+):
+    """One result means one, and the client draws the gap rather than filling
+    it. An empty list is what somebody with none gets."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    await a_confirmed_game(
+        session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=False
+    )
+
+    body = (await record_of(client, searcher["token"], subject)).json()
+
+    assert body["skill"]["last_five"] == ["LOSS"]

@@ -504,6 +504,86 @@ async def test_the_last_results_are_oldest_first_bounded_and_never_padded(
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_run_in_one_sport_is_filtered_before_it_is_trimmed(
+    implementation, session
+):
+    """**The whole reason this read exists beside the set one.**
+
+    Six padel games and then six tennis ones. The set read answers the last five
+    of everything — all tennis — and a consumer narrowing that afterwards would
+    show a padel Level with an empty run under it. This one filters first, so a
+    player who has played thirty in a sport gets five.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, opponent = new_uuid(), new_uuid()
+
+    for day, sport in enumerate([Sport.PADEL] * 6 + [Sport.TENNIS] * 6, start=1):
+        played = _ago(days=20 - day)
+        game = _planned(
+            line_up=_singles(player, opponent),
+            at=instant(played - timedelta(hours=1)),
+            sport=sport,
+        )
+        game.state_result(by=player, score=_score((6, 4)), occurred_at=played)
+        await _saved(session, game)
+
+    everything = await port.recent_results_for([player], now=now)
+    padel = await port.recent_results_in(player, sport=Sport.PADEL, now=now)
+
+    assert {one.sport for one in everything[player]} == {Sport.TENNIS}
+    assert len(padel) == RECENT_RESULTS
+    assert {one.sport for one in padel} == {Sport.PADEL}
+    assert [one.played_at for one in padel] == sorted(one.played_at for one in padel)
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_run_shorter_than_five_in_that_sport_is_never_padded(
+    implementation, session
+):
+    """Two results means two, and the card draws the gap."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, opponent = new_uuid(), new_uuid()
+
+    for day, winner in enumerate((player, opponent), start=1):
+        played = _ago(days=10 - day)
+        game = _planned(
+            line_up=_singles(player, opponent),
+            at=instant(played - timedelta(hours=1)),
+            sport=Sport.SQUASH,
+        )
+        game.state_result(
+            by=winner,
+            score=_score((6, 4)) if winner is player else _score((4, 6)),
+            occurred_at=played,
+        )
+        await _saved(session, game)
+
+    run = await port.recent_results_in(player, sport=Sport.SQUASH, now=now)
+
+    assert [one.outcome for one in run] == [Outcome.WIN, Outcome.LOSS]
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_sport_they_have_played_nothing_counted_in_is_an_empty_run(
+    implementation, session
+):
+    """**Empty and not absent**, unlike the mapping beside it: this read answers
+    about one player, so a short tuple already says the whole of *there is less
+    to show* and a second spelling would be one to get wrong."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+
+    assert (
+        await port.recent_results_in(new_uuid(), sport=Sport.BADMINTON, now=now) == ()
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
 async def test_a_player_with_no_results_is_absent_rather_than_empty(
     implementation, session
 ):

@@ -255,11 +255,19 @@ from app.modules.rating.infrastructure.event_sourced_assessment_repository impor
 from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
     EventSourcedSkillRatingRepository,
 )
+from app.modules.player_record.infrastructure.games_subject_form import (
+    GamesSubjectForm,
+)
+from app.modules.player_record.infrastructure.rating_subject_ratings import (
+    RatingSubjectRatings,
+)
 from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
+    SubjectForm,
     SubjectIdentitySource,
+    SubjectRatings,
 )
 from app.modules.player_record.infrastructure.disclosures import (
     ChallengesTheyShare,
@@ -899,6 +907,34 @@ def build_confirmed_result_ledger(
     return EventSourcedConfirmedResults(
         session, (runtime or get_event_runtime()).codec
     )
+
+
+def build_subject_ratings(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> SubjectRatings:
+    """Every sport a record's subject is rated in, in the record's own words.
+
+    Built over ``rating``'s **read** port and never its repository, which is the
+    whole reason that port exists: a repository remembers stream versions so a
+    rating it found can be moved, and a sheet drawing a number must not be able
+    to. The translation lives in ``player_record``'s infrastructure, which is
+    where every borrowed fact is renamed on this platform.
+    """
+
+    return RatingSubjectRatings(build_rated_player_query(session, runtime=runtime))
+
+
+def build_subject_form(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> SubjectForm:
+    """The run of five for one sport, over ``games``' published history.
+
+    The same query the player card's run is drawn from, asked its per-sport
+    question — so a record and a card cannot come to two answers about what a
+    counted result is.
+    """
+
+    return GamesSubjectForm(build_game_history_query(session, runtime=runtime))
 
 
 def build_settled_courts(session: AsyncSession) -> SettledCourts:

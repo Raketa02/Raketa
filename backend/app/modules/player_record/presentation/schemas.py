@@ -22,13 +22,141 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.modules.player_record.domain.record import OnCourtVerdict, PlayerRecord
+from app.kernel import Sport
+from app.modules.player_record.domain.record import (
+    LAST_FIVE,
+    GameOutcome,
+    OnCourtVerdict,
+    PlayerRecord,
+)
 
 #: The default that spells **omitted** — the same sentinel the shortlist's schema
 #: uses, spelled here rather than imported: this context declares its own
 #: presentation vocabulary for the reason it declares its own ports, and the two
 #: are one line each.
 OMITTED: Any = None
+
+
+class SportPillSchema(BaseModel):
+    """One sport this person is rated in, as a pill: the dot, the Level, the band.
+
+    **Narrower than the panel below it, deliberately.** A pill answers *what else
+    do they play*; how sure the platform is and what that rests on belong to the
+    one sport the sheet is about, and repeating them four times would be four
+    skill cards drawn as jewellery.
+    """
+
+    sport: Sport = Field(
+        ..., description="Which sport. The client draws its own dot and short form."
+    )
+    level: float = Field(
+        ..., description="Their Level in it, as RacketSkill published it."
+    )
+    band: str = Field(
+        ...,
+        description=(
+            "The Level band's published name. **A key and never derived from "
+            "the Level** — a client mapping a number to a band would be a second "
+            "set of drawing constants, and the day the boundaries move the two "
+            "would disagree."
+        ),
+    )
+
+
+class RecordLikelyRangeSchema(BaseModel):
+    """The **likely range** a Level sits in — μ ± σ, clamped to the scale.
+
+    **Named for its surface, because the contract is one namespace and this
+    arrived second.** ``matchmaking`` already publishes a ``LikelyRangeSchema``
+    on the player card; a second class of that name does not shadow it, it
+    *renames* it — the emitted document qualifies both by module and every
+    generated type a shipped app already holds moves. It is ``games``' rule for
+    ``GameStanding``, applied to the wire: the cost of a shared word is paid by
+    whoever arrives second.
+
+    The shape is deliberately identical to the card's. Two edges of one value,
+    both rounded by the engine, and a client computes neither.
+    """
+
+    low: float
+    high: float
+
+
+class SkillPanelSchema(BaseModel):
+    """The skill card, for the one sport this sheet is about.
+
+    **The sport is resolved by the server and stated back.** You asked with
+    `?sport=`; what you get is that sport where they are rated in it, and
+    otherwise the one they have played most — so read `sport` here rather than
+    assuming the answer is what you sent.
+    """
+
+    sport: Sport = Field(
+        ...,
+        description=(
+            "Which sport this panel is about — **the resolved one, not the one "
+            "asked for.** They differ whenever the subject holds no rating in "
+            "the sport you arrived from."
+        ),
+    )
+    level: float = Field(..., description="Their Level, as RacketSkill published it.")
+    band: str = Field(
+        ...,
+        description=(
+            "The band's published name, as a key. The band's numeric edges are "
+            "**not** here: they are not a second range to compare `likely_range` "
+            "against."
+        ),
+    )
+    confidence: int = Field(
+        ...,
+        description=(
+            "How sure the platform is, as a whole percentage — `rating`'s own "
+            "figure and never re-derived here.\n\n"
+            "**It travels with `counted_games` and is meaningless without it.** "
+            "A confident-looking number built on three games must not read like "
+            "one built on forty, which is the whole reason both cross."
+        ),
+    )
+    counted_games: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "**How many confirmed counted results have moved this Level, in this "
+            "sport.** Deliberately not the player card's `counted_games`, which "
+            "is how much they have *played*, over every sport, and includes an "
+            "evening nobody agreed a score for.\n\n"
+            "This one is what the certainty rests on, so it comes off the same "
+            "stream as the Level beside it and moves in step with it. **`0` is a "
+            "real answer here** and is not an absence: a rating from the "
+            "questionnaire that no game has tested yet is exactly what it says."
+        ),
+    )
+    likely_range: RecordLikelyRangeSchema = Field(
+        ...,
+        description=(
+            "The range their Level probably sits in, μ ± σ as the engine "
+            "rounded it. Always present: two people both showing 2,75 are told "
+            "apart by how wide this is."
+        ),
+    )
+    last_five: list[GameOutcome] = Field(
+        ...,
+        max_length=LAST_FIVE,
+        description=(
+            "Their last counted results **in this sport**, oldest to newest — "
+            "the run of form drawn left to right.\n\n"
+            "**Per sport, which is the fix.** A run built across every sport and "
+            "drawn beneath a single sport's Level was squash results under a "
+            "padel number.\n\n"
+            "**Fewer than five is a real answer and is never padded**: three "
+            "entries means three counted results, and the client draws the gap. "
+            "An empty list means none of theirs has been counted and agreed.\n\n"
+            "**There are no dates here, at any granularity.** A moment beside "
+            "one of these would be activity recency, which no surface on this "
+            "platform carries in any shape."
+        ),
+    )
 
 
 class PlayerRecordResponse(BaseModel):
@@ -119,6 +247,31 @@ class PlayerRecordResponse(BaseModel):
             "nothing about common ground."
         ),
     )
+    sports: list[SportPillSchema] = Field(
+        ...,
+        description=(
+            "One pill per sport they hold a rating in, **in the sport "
+            "registry's own order** — the same order every list of sports on "
+            "this surface takes, so a client never sorts one.\n\n"
+            "**Empty for somebody rated in nothing**, which is an ordinary state "
+            "part way through onboarding rather than an error. It is empty "
+            "exactly when `skill` is absent."
+        ),
+    )
+    skill: SkillPanelSchema = Field(
+        default=OMITTED,
+        description=(
+            "The skill card, for the one sport this sheet is about.\n\n"
+            "**Which sport is resolved here and stated back on the panel.** The "
+            "`?sport=` you asked with wins where they are rated in it; otherwise "
+            "it falls back to the sport they have played most, ties broken by "
+            "the sport registry's own order. A fallback on their *highest* Level "
+            "would make the header a boast about a sport nobody asked about.\n\n"
+            "**Omitted where no sport resolves** — that is, where they are rated "
+            "in nothing at all. The header draws the poster with no Level on it, "
+            "and there is no panel of noughts to mistake for a bad record."
+        ),
+    )
 
     @classmethod
     def of(cls, record: PlayerRecord) -> "PlayerRecordResponse":
@@ -135,7 +288,24 @@ class PlayerRecordResponse(BaseModel):
             "nickname": identity.nickname,
             "area_code": identity.area_code,
             "social_tags": list(identity.social_tags),
+            "sports": [
+                SportPillSchema(sport=one.sport, level=one.level, band=one.band)
+                for one in record.sports
+            ],
         }
+        if record.skill is not None:
+            panel = record.skill
+            fields["skill"] = SkillPanelSchema(
+                sport=panel.sport,
+                level=panel.level,
+                band=panel.band,
+                confidence=panel.confidence,
+                counted_games=panel.counted_games,
+                likely_range=RecordLikelyRangeSchema(
+                    low=panel.likely_range.low, high=panel.likely_range.high
+                ),
+                last_five=list(panel.last_five),
+            )
         if identity.photo_id is not None and record.photo_url is not None:
             fields["photo_id"] = identity.photo_id
             fields["photo_url"] = record.photo_url
@@ -144,4 +314,9 @@ class PlayerRecordResponse(BaseModel):
         return cls.model_validate(fields)
 
 
-__all__ = ["PlayerRecordResponse"]
+__all__ = [
+    "RecordLikelyRangeSchema",
+    "PlayerRecordResponse",
+    "SkillPanelSchema",
+    "SportPillSchema",
+]

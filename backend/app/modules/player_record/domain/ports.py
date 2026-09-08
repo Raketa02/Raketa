@@ -1,4 +1,4 @@
-"""What this context asks of contexts it does not write. **Four demands.**
+"""What this context asks of contexts it does not write. **Six demands.**
 
 ``docs/adr/0098``'s consumer-driven shape, and this is the second *consumer*
 register on the platform after the matcher's. Every port here is declared in
@@ -12,11 +12,18 @@ no aggregate, no table and no migration; every fact it publishes it reads throug
 the owning context's published port, and the one thing it decides for itself is
 whether the reader may see any of them.
 
-**Two of the four are single-player reads and say so in their signatures.** A
+**Four of the six are single-player reads and say so in their signatures.** A
 record is one person opened by a deliberate tap, so a set-shaped port here would
 be a contract nobody can honour cheaply for a caller that never batches — the
 mirror of the rule every read in ``matchmaking`` takes, where the caller always
 has twenty rows and asks once.
+
+**One sport crosses two of them, and it is the same sport both times.** The sheet
+is *about* one sport, resolved in ``domain/sport_choice.py`` from what the reader
+arrived from and what the subject is rated in, and the run of form is asked for
+in it. That sport never reaches ``RecordGates``, which runs in the partition of
+the **disclosure** — what a sheet is about and who may be seen are two questions,
+and the second one is not the client's to influence.
 
 **The disclosure port is the interesting one, and its shape is the whole
 admission rule.** It does not answer *may this reader see this person* — that is
@@ -30,11 +37,15 @@ and a gate that cannot be evaluated excludes.
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Mapping, Protocol, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant, Sport
-from app.modules.player_record.domain.record import SubjectIdentity
+from app.modules.player_record.domain.record import (
+    GameOutcome,
+    SubjectIdentity,
+    SubjectRating,
+)
 
 
 @runtime_checkable
@@ -158,6 +169,67 @@ class RecordGates(Protocol):
         ...
 
 
+@runtime_checkable
+class SubjectRatings(Protocol):
+    """Every sport this person is rated in, and what the platform holds in each.
+
+    **A read and never an aggregate.** ``rating``'s own repository remembers
+    stream versions precisely so that a rating it found can be saved, and handing
+    that to a sheet that draws a number would put a mutation path behind a `GET`.
+    This port cannot express a write, which is the narrowness being real rather
+    than promised.
+
+    **One player at a time.** A record is one person opened by a deliberate tap,
+    and every sport they hold is at most four streams — where the matcher's
+    equivalent read answers about one sport over twenty people, because that is
+    the shape *its* caller has.
+    """
+
+    async def ratings_of(self, player_id: UUID) -> Mapping[Sport, SubjectRating]:
+        """This player's rating in each sport they hold one, keyed by sport.
+
+        **A sport they are not rated in is absent** — never a population mean and
+        never a nought, on the rule the whole platform applies to a fact nobody
+        has measured. An empty mapping is the ordinary answer for somebody part
+        way through onboarding.
+
+        **A mapping and not a list**, because the caller's two questions are *do
+        they hold this one* and *walk them in the registry's order*, and both are
+        answered off a mapping without anybody having to promise an order the
+        streams underneath do not have.
+        """
+        ...
+
+
+@runtime_checkable
+class SubjectForm(Protocol):
+    """How this person's last few counted games went, **in one sport.**
+
+    The run of form the skill card draws left to right. It takes the sport
+    because the panel it lands on is about one, and a run built across every sport
+    and drawn beneath a single sport's Level is squash results under a padel
+    number — which is the defect this port exists to make unrepresentable rather
+    than to fix.
+    """
+
+    async def last_results_in(
+        self, player_id: UUID, *, sport: Sport, now: Instant
+    ) -> tuple[GameOutcome, ...]:
+        """Their last few counted results in this sport, **oldest to newest.**
+
+        At most five, and **fewer is a real answer that is never padded** — the
+        card draws the gap. Empty for somebody with none, which needs no second
+        spelling here: a tuple that is short is already the whole of *there is
+        less to show*, and this port answers about one player rather than a
+        collection an absence could be spelled in.
+
+        ``now`` is taken rather than read, because whether a result has settled is
+        folded from the record and a clock (``docs/adr/0137``) and every fact on
+        one response is folded against one instant.
+        """
+        ...
+
+
 #: What this context asks of the platform, declared as data so that *a port with
 #: no registered implementation* is a question something can ask
 #: (``app/bootstrap/player_record_demands.py``). A demand nobody executes is a
@@ -167,6 +239,8 @@ PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
     RecordPhotoLink,
     PriorDisclosure,
     RecordGates,
+    SubjectRatings,
+    SubjectForm,
 )
 
 
@@ -175,5 +249,7 @@ __all__ = [
     "PriorDisclosure",
     "RecordGates",
     "RecordPhotoLink",
+    "SubjectForm",
     "SubjectIdentitySource",
+    "SubjectRatings",
 ]

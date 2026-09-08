@@ -4,8 +4,8 @@
 ``matcher_demands.py`` holds the ports the matcher declares of contexts it does
 not write; ``games_demands.py``, ``rating_demands.py`` and
 ``player_score_demands.py`` each hold what one **provider** publishes outward.
-This one is the matcher's kind: a context that writes nothing and asks four
-questions of five others. Rows of the two kinds in one list would make every
+This one is the matcher's kind: a context that writes nothing and asks six
+questions of six others. Rows of the two kinds in one list would make every
 exhaustiveness assertion a claim about something else, and the first person to
 add a row would have to guess which.
 
@@ -20,7 +20,7 @@ signs half a contract* true of a port with more than one signatory.
 
 **A row carries a builder over a session**, not an instance, so the suite cannot
 quietly excuse the implementations with a database behind them — which here is
-four of the six.
+six of the eight.
 
 **A port with nothing registered is a red build**, asserted against
 ``PLAYER_RECORD_DEMANDS``, because a port added in a hurry would otherwise look
@@ -34,6 +34,8 @@ from typing import TypeVar
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
+    build_subject_form,
+    build_subject_ratings,
     build_account_hold_query,
     build_account_status_query,
     build_block_query,
@@ -57,7 +59,9 @@ from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
+    SubjectForm,
     SubjectIdentitySource,
+    SubjectRatings,
 )
 
 
@@ -154,6 +158,16 @@ PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=RecordGates,
         name="LiveRecordGates",
         build=_record_gates,
+    ),
+    RegisteredImplementation(
+        port=SubjectRatings,
+        name="RatingSubjectRatings",
+        build=build_subject_ratings,
+    ),
+    RegisteredImplementation(
+        port=SubjectForm,
+        name="GamesSubjectForm",
+        build=build_subject_form,
     ),
 )
 

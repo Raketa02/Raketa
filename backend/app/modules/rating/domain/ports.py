@@ -12,13 +12,47 @@ the distinction, and ADR-0017 for why this context is event-sourced.
 
 from __future__ import annotations
 
-from typing import Collection, Mapping, Protocol, runtime_checkable
+from dataclasses import dataclass
+from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.engines.racketskill.core import SkillEstimate
 from app.kernel import Sport
 from app.modules.rating.domain.assessment import Assessment
 from app.modules.rating.domain.skill_rating import SkillRating
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class RatedSport:
+    """One player's published rating in one sport. **What a screen may print.**
+
+    The second thing this context publishes that is not an aggregate, and the
+    wider of the two: ``SkillEstimate`` is the engine's currency and this is the
+    **published** form — the figures a rating already committed to its own stream
+    and a rating route already prints, carried outward without anybody deriving
+    one of them a second time.
+
+    **Nothing here is computed on the way out.** ``confidence`` is the rating's
+    own whole percentage, the range is the one the engine rounded, and the band
+    travels with its name because a screen printing a band it derived from a
+    Level would be a second set of drawing constants (``CONTEXT.md``).
+
+    ``counted_results`` is **how many confirmed counted results have moved this
+    Level** and is deliberately not *how many counted games they have played*.
+    The second is ``games``' number, is over every sport, and counts an evening
+    two people never agreed a score for; this one is what a certainty rests on,
+    and it moves in step with the ``mu`` beside it because they come off the same
+    stream (``docs/adr/0139``).
+    """
+
+    sport: Sport
+    mu: float
+    confidence: int
+    range_low: float
+    range_high: float
+    band_name: str
+    counted_results: int
 
 
 @runtime_checkable
@@ -167,6 +201,12 @@ class RatedPlayerQuery(Protocol):
     ``engines/racketskill/results.py``; what crosses this port is the input to
     that rule, so nobody outside acquires an opinion about a K-factor by having
     read a μ.
+
+    **Two methods, and the shapes are opposite because the callers are.** The
+    matcher holds twenty rows in one sport and asks once; a record is one person
+    opened by a tap and wants every sport they hold. Neither is the other with an
+    argument moved, and a single method covering both would be a set read
+    answering about four streams per id.
     """
 
     async def estimates_for(
@@ -180,3 +220,26 @@ class RatedPlayerQuery(Protocol):
         holds, and answers only about those.
         """
         ...
+
+    async def ratings_of(self, player_id: UUID) -> Mapping[Sport, RatedSport]:
+        """Every sport this one player is rated in, keyed by sport.
+
+        **One player and every sport**, which is the mirror of the read above and
+        exists because a record is opened by a tap on one face. A sport they hold
+        no rating in is **absent**, on the same rule, and an empty mapping is the
+        ordinary answer for somebody part way through onboarding.
+
+        **A read, and there is deliberately no way to save what comes back.** The
+        repository beside this port remembers stream versions so that a rating it
+        found can be moved; a sheet that draws a number has no business holding
+        that, and the narrowness is the whole reason this port exists.
+        """
+        ...
+
+
+__all__ = [
+    "AssessmentRepository",
+    "RatedPlayerQuery",
+    "RatedSport",
+    "SkillRatingRepository",
+]

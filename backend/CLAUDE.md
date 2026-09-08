@@ -579,8 +579,29 @@ Rules to preserve:
   own types**: it borrows nothing from another context's domain, held by an `.importlinter`
   contract rather than a test, because an application layer importing `CardIdentity` would
   read as sensible reuse in the diff and nothing would go red. The cost is a second
-  spelling of two words — `OnCourtVerdict` beside `PhotoReviewDecision` — and their
-  agreement is asserted, the way `games` asserts its two bounds against each other.
+  spelling of four words — `OnCourtVerdict` beside `PhotoReviewDecision`, `GameOutcome`
+  beside `games`' `Outcome` — and their agreement is asserted, the way `games` asserts its
+  two bounds against each other; the same rule reaches the **wire**, where
+  `RecordLikelyRangeSchema` is named for its surface because a second `LikelyRangeSchema`
+  would not shadow the card's, it would rename it.
+  **`?sport=` says what the sheet is about and never who may be seen** — it reaches the
+  assembler and never the admission, so naming a sport you were never shown somebody in
+  changes what is drawn and nothing about whether it is drawn. Resolving it is the one rule
+  this context owns (`domain/sport_choice.py`): the sport asked for where they hold a
+  rating in it, otherwise their **most counted** — never their highest Level, which would
+  make the header a boast, and never their most recent, which is activity recency wearing a
+  sport's name — ties broken by the sport registry's own order, and `None` for somebody
+  rated in nothing, whose sheet draws pills and no skill card. Registry order is
+  **structural**: both functions walk `Sport` and look the mapping up rather than iterating
+  a mapping and sorting after (ADR-0105). **`counted_games` on the skill card is not the
+  card's number under the same word** — it is `SkillRating`'s own applied-games count, per
+  sport, *what this certainty rests on*, so it comes off the same stream as the Level and
+  moves in step with it; the player card's is *how much have they played*, over every sport,
+  and counts an evening nobody agreed a score for. Two provider ports widened for it:
+  `rating`'s **read** port gained `ratings_of` (one player, every sport — never the
+  repository, which remembers stream versions), and `games` gained `recent_results_in` as a
+  **second method rather than a parameter**, because the set read is frozen into search
+  records kept for ever and because this one filters on the sport *before* it trims to five.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one

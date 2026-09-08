@@ -215,3 +215,63 @@ else's facts. The day this context grows a migration is the day it stopped being
 assembler, and that should fail a build rather than pass a review, so
 `tests/unit/test_player_record_stores_nothing.py` walks the context for an import of the ORM
 and the migrations for a table named after it.
+
+## Amendment — 2026-09-08: the parameter arrives, and the demands are six
+
+Building the sport pills and the skill card
+([#379](https://github.com/Raketa02/Raketa/issues/379)) cashed the two forward references
+above. Both are corrected here rather than in place, because this record is immutable once
+accepted.
+
+**§2's *there is no `?sport=` yet* is now a parameter on both routes**, and it does exactly
+what that sentence promised it would: it selects which sport the sheet is *about* and reaches
+nothing else. `ReadPlayerRecord` hands it to the assembler and never to the admission, which
+still runs in the partitions of the **disclosure** — so a caller naming a sport they were
+never shown this person in changes what is drawn and nothing about whether it is drawn. That
+is asserted rather than described: the admission stub in `tests/unit/test_read_player_record.py`
+records what it was asked, and there is nowhere on its signature for a sport to arrive.
+
+**§6's *four demands* are six.** `SubjectRatings` answers *every sport this person is rated
+in*, and `SubjectForm` answers *how their last few counted games in one sport went*. Both are
+single-player reads, which is now four of the six — a record is one person opened by a
+deliberate tap, and a set-shaped port here would be a contract nobody can honour cheaply for
+a caller that never batches.
+
+**One rule moved into this context and it is the only one here.** `domain/sport_choice.py`
+resolves which sport the sheet is about: the sport asked for where they are rated in it,
+otherwise their **most counted**, ties broken by the sport registry's own order, and `None`
+for somebody rated in nothing. It lives here because it is a question about the *reader* —
+nobody else could answer it — and every other figure on the sheet still arrives from the
+context that owns it, already decided. Registry order is **structural**: both functions walk
+`Sport` and look the mapping up, rather than iterating a mapping and sorting afterwards, so
+ADR-0105's failure mode has nowhere to happen.
+
+**The cost of §6's second-spelling rule is paid a second time**, on the same terms.
+`GameOutcome` sits beside `games`' `Outcome` carrying the same two strings, and the agreement
+is asserted in both directions in `tests/unit/test_player_record_skill.py` — as
+`OnCourtVerdict`'s is against `PhotoReviewDecision`.
+
+**Two provider ports widened, and one of them deliberately did not.** `rating`'s
+`RatedPlayerQuery` gains `ratings_of(player_id)` — one player and every sport, the mirror of
+the existing read's twenty people in one sport — and it is on the **read** port rather than
+the repository precisely because a sheet drawing a number must not hold something it could
+save. `games`' `GameHistoryQuery` gains `recent_results_in(player_id, sport=, now=)` as a
+**second method and not a parameter on the set read**: that one is what a search attaches to
+twenty rows and freezes into a record kept for ever, and narrowing it would make the same
+person's card read differently before and after. The new one filters on the sport **before**
+it trims to five, which is the whole reason a consumer could not have built it out of the
+other.
+
+**One number on the skill card is not the number the player card carries under the same
+word.** `counted_games` here is *how many confirmed counted results have moved this Level, in
+this sport* — `SkillRating`'s own applied-games count — where the card's is *how much have
+they played*, over every sport, including an evening nobody agreed a score for. The skill card
+claims to say what a certainty **rests on**, and the honest answer to that is the results that
+moved it: a number off the same stream as the Level beside it, which therefore moves in step
+with it (ADR-0139). The cost is admitted — a confirmed result is on the card before the
+catch-up job has run and before it is here — and it is the right cost, because the alternative
+prints a certainty beside a count of games that certainty has never seen.
+
+**Nothing else moves.** The four refusals are still one refusal, admission is still read
+through a prior disclosure with no expiry, your own record still has no gates, and this
+context still stores nothing at all.

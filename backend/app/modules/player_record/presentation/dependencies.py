@@ -37,7 +37,9 @@ from app.bootstrap.composition import (
     build_record_gates,
     build_record_photo_link,
     build_search_disclosure,
+    build_subject_form,
     build_subject_identity_source,
+    build_subject_ratings,
 )
 from app.modules.matchmaking.presentation.dependencies import (
     AccountHoldQueryDep,
@@ -51,7 +53,9 @@ from app.modules.player_record.application.read_player_record import (
 )
 from app.modules.player_record.domain.ports import (
     RecordPhotoLink,
+    SubjectForm,
     SubjectIdentitySource,
+    SubjectRatings,
 )
 
 
@@ -78,6 +82,20 @@ def get_record_photo_link(
 
 
 RecordPhotoLinkDep = Annotated[RecordPhotoLink, Depends(get_record_photo_link)]
+
+
+def get_subject_ratings(db: DbSession) -> SubjectRatings:
+    return build_subject_ratings(db)
+
+
+SubjectRatingsDep = Annotated[SubjectRatings, Depends(get_subject_ratings)]
+
+
+def get_subject_form(db: DbSession) -> SubjectForm:
+    return build_subject_form(db)
+
+
+SubjectFormDep = Annotated[SubjectForm, Depends(get_subject_form)]
 
 
 def get_record_admission(
@@ -110,10 +128,17 @@ def get_read_player_record(
     admission: RecordAdmissionDep,
     identities: SubjectIdentitySourceDep,
     photos: RecordPhotoLinkDep,
+    ratings: SubjectRatingsDep,
+    form: SubjectFormDep,
     clock: ClockDep,
 ) -> ReadPlayerRecord:
     return ReadPlayerRecord(
-        admission=admission, identities=identities, photos=photos, clock=clock
+        admission=admission,
+        identities=identities,
+        photos=photos,
+        ratings=ratings,
+        form=form,
+        clock=clock,
     )
 
 
@@ -123,10 +148,25 @@ ReadPlayerRecordDep = Annotated[ReadPlayerRecord, Depends(get_read_player_record
 def get_read_own_record(
     identities: SubjectIdentitySourceDep,
     photos: RecordPhotoLinkDep,
+    ratings: SubjectRatingsDep,
+    form: SubjectFormDep,
+    clock: ClockDep,
 ) -> ReadOwnRecord:
-    """Your own record — **two collaborators, and neither of them is a gate.**"""
+    """Your own record — **and still not one of these is a gate.**
 
-    return ReadOwnRecord(identities=identities, photos=photos)
+    Two more readers and a clock arrived with the skill card, and the property
+    that matters is unchanged: nothing here binds the candidate index, so the one
+    screen that tells a player how they appear cannot be taken down by the
+    machinery that gates somebody else's sheet.
+    """
+
+    return ReadOwnRecord(
+        identities=identities,
+        photos=photos,
+        ratings=ratings,
+        form=form,
+        clock=clock,
+    )
 
 
 ReadOwnRecordDep = Annotated[ReadOwnRecord, Depends(get_read_own_record)]

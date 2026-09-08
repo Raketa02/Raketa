@@ -15,10 +15,22 @@ than as a branch:
   skipped it when ``reader == subject`` is one refactor away from skipping it
   when it should not.
 
-**The assembler does no arithmetic and holds no rule.** It reads identity, mints
-one link, and says whether the record is the reader's own. Every figure that
-lands on this sheet later — the strands, the pills, the sportsmanship average —
-arrives from the context that owns it, already decided.
+**The assembler does no arithmetic and holds one rule.** It reads identity, mints
+one link, says whether the record is the reader's own, and resolves **which sport
+the sheet is about** — the single thing here nobody else could decide, because it
+is a question about the reader rather than about the subject. Every figure that
+lands on this sheet arrives from the context that owns it, already decided.
+
+**The sport asked for reaches the sheet's contents and never its admission.** It
+selects which Level is printed; the four fail-closed gates run in the partition of
+the **disclosure**, which is a fact the platform holds. A record refused in a
+sport a client sent would be a client choosing whether it may see somebody
+(``docs/adr/0155``).
+
+**One clock, read once, handed down.** The run of form is folded against an
+instant, and the record's own gate against the same one — two reads of the clock
+in one response is how a sheet ends up admitting a pair on one instant and
+describing them on another.
 """
 
 from __future__ import annotations
@@ -26,7 +38,7 @@ from __future__ import annotations
 from typing import final
 from uuid import UUID
 
-from app.kernel import Clock
+from app.kernel import Clock, Instant, Sport
 from app.modules.player_record.application.admission import RecordAdmission
 from app.modules.player_record.domain.errors import (
     RECORD_UNAVAILABLE,
@@ -34,17 +46,29 @@ from app.modules.player_record.domain.errors import (
 )
 from app.modules.player_record.domain.ports import (
     RecordPhotoLink,
+    SubjectForm,
     SubjectIdentitySource,
+    SubjectRatings,
 )
-from app.modules.player_record.domain.record import PlayerRecord
+from app.modules.player_record.domain.record import (
+    GameOutcome,
+    PlayerRecord,
+    SkillPanel,
+    SubjectRating,
+)
+from app.modules.player_record.domain.sport_choice import pills_of, sport_to_print
 
 
 async def assemble_record(
     *,
     subject_id: UUID,
     is_self: bool,
+    arrived_from: Sport | None,
+    now: Instant,
     identities: SubjectIdentitySource,
     photos: RecordPhotoLink,
+    ratings: SubjectRatings,
+    form: SubjectForm,
 ) -> PlayerRecord:
     """The record itself, once somebody has decided it may be read.
 
@@ -53,6 +77,11 @@ async def assemble_record(
     handle that cannot be read and a profile that was never committed are one
     answer here, because they have one remedy and separating them would answer
     *is this id real* about a stranger.
+
+    **A player rated in nothing costs no run of form.** The sheet is about no
+    sport, so there is no sport to ask a run about, and the question is not asked
+    rather than being asked and thrown away — which is the difference between a
+    newcomer's record being cheap and it being the same price as anybody's.
     """
 
     identity = await identities.identity_of(subject_id)
@@ -69,7 +98,42 @@ async def assemble_record(
             photo_id=identity.photo_id,
         )
     )
-    return PlayerRecord(is_self=is_self, identity=identity, photo_url=photo_url)
+    held = await ratings.ratings_of(subject_id)
+    printed = sport_to_print(arrived_from, held)
+    skill = (
+        None
+        if printed is None
+        else _panel(
+            held[printed],
+            last_five=await form.last_results_in(subject_id, sport=printed, now=now),
+        )
+    )
+    return PlayerRecord(
+        is_self=is_self,
+        identity=identity,
+        photo_url=photo_url,
+        sports=pills_of(held),
+        skill=skill,
+    )
+
+
+def _panel(rating: SubjectRating, *, last_five: tuple[GameOutcome, ...]) -> SkillPanel:
+    """The rating plus the run, and nothing derived from either.
+
+    Written out rather than spread, so a field added to ``SubjectRating`` that
+    does **not** belong on the printed panel is a decision somebody makes here
+    rather than one that happens.
+    """
+
+    return SkillPanel(
+        sport=rating.sport,
+        level=rating.level,
+        band=rating.band,
+        confidence=rating.confidence,
+        counted_games=rating.counted_games,
+        likely_range=rating.likely_range,
+        last_five=last_five,
+    )
 
 
 @final
@@ -82,14 +146,20 @@ class ReadPlayerRecord:
         admission: RecordAdmission,
         identities: SubjectIdentitySource,
         photos: RecordPhotoLink,
+        ratings: SubjectRatings,
+        form: SubjectForm,
         clock: Clock,
     ) -> None:
         self._admission = admission
         self._identities = identities
         self._photos = photos
+        self._ratings = ratings
+        self._form = form
         self._clock = clock
 
-    async def execute(self, *, reader_id: UUID, subject_id: UUID) -> PlayerRecord:
+    async def execute(
+        self, *, reader_id: UUID, subject_id: UUID, arrived_from: Sport | None = None
+    ) -> PlayerRecord:
         """**Gate first, and everything else afterwards.**
 
         The order is the decision: a read that fetched a stranger's handle,
@@ -100,17 +170,28 @@ class ReadPlayerRecord:
         makes, and that is one comparison used for two purposes rather than a
         rule spelled twice: one decides whether a gate is owed, the other decides
         what the sheet is titled.
+
+        ``arrived_from`` reaches the assembler and **never the admission**. It
+        says which sport the sheet is about; who may be seen is decided in the
+        partitions of the disclosure, which the platform holds and a client does
+        not send. A caller passing a sport they were never shown this person in
+        changes what is printed and nothing about whether it is.
         """
 
+        now = self._clock.now()
         if not await self._admission.admits(
-            reader_id=reader_id, subject_id=subject_id, now=self._clock.now()
+            reader_id=reader_id, subject_id=subject_id, now=now
         ):
             raise RecordUnavailable(RECORD_UNAVAILABLE)
         return await assemble_record(
             subject_id=subject_id,
             is_self=reader_id == subject_id,
+            arrived_from=arrived_from,
+            now=now,
             identities=self._identities,
             photos=self._photos,
+            ratings=self._ratings,
+            form=self._form,
         )
 
 
@@ -125,15 +206,34 @@ class ReadOwnRecord:
     """
 
     def __init__(
-        self, *, identities: SubjectIdentitySource, photos: RecordPhotoLink
+        self,
+        *,
+        identities: SubjectIdentitySource,
+        photos: RecordPhotoLink,
+        ratings: SubjectRatings,
+        form: SubjectForm,
+        clock: Clock,
     ) -> None:
         self._identities = identities
         self._photos = photos
+        self._ratings = ratings
+        self._form = form
+        self._clock = clock
 
-    async def execute(self, *, reader_id: UUID) -> PlayerRecord:
+    async def execute(
+        self, *, reader_id: UUID, arrived_from: Sport | None = None
+    ) -> PlayerRecord:
+        """**Still no gate, and now a clock.** The instant is read for the run of
+        form and for nothing else here — a sheet about yourself has nothing to
+        re-evaluate."""
+
         return await assemble_record(
             subject_id=reader_id,
             is_self=True,
+            arrived_from=arrived_from,
+            now=self._clock.now(),
+            ratings=self._ratings,
+            form=self._form,
             identities=self._identities,
             photos=self._photos,
         )

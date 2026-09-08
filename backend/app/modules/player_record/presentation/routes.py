@@ -18,21 +18,23 @@ person the block was meant to be invisible to; a payload separating *never
 disclosed* from *no such player* answers *is this id real* about a stranger. The
 client draws one line, and there is nothing here to draw a second one from.
 
-**There is no ``?sport=`` on either route yet.** The reader's arrival sport
-selects which sport the sheet is *about* and never who may be seen — the gates
-run in the partition of the **disclosure**, which is a fact the platform holds
-rather than one the client sends. Nothing on this response is per sport today, so
-the parameter arrives with the skill card that needs it.
+**``?sport=`` says what the sheet is about and never who may be seen.** The gates
+run in the partition of the **disclosure** — a fact the platform holds — and the
+parameter reaches only the resolver that picks which Level is printed. A caller
+naming a sport they were never shown this person in changes what is drawn and
+nothing about whether it is drawn; a caller naming none gets the subject's most
+counted sport, which is the same fallback as naming one they do not play.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 from app.core.exception_handlers import ErrorResponse
+from app.kernel import Sport
 from app.modules.player_record.presentation.dependencies import (
     ReadOwnRecordDep,
     ReadPlayerRecordDep,
@@ -60,6 +62,26 @@ _ONE_REFUSAL: dict[int | str, dict[str, Any]] = {
         ),
     }
 }
+
+
+SportAsked = Annotated[
+    Sport | None,
+    Query(
+        alias="sport",
+        description=(
+            "Which sport you arrived from. **It selects what the sheet is "
+            "about and never who may be seen.**\n\n"
+            "Where the subject holds a rating in it, that is the sport `skill` "
+            "is drawn for. Where they do not — and where you send nothing — it "
+            "falls back to the sport they have played most, ties broken by the "
+            "sport registry's own order. Read `skill.sport` for the answer "
+            "rather than assuming it is what you sent.\n\n"
+            "Admission is untouched by this. Whether a record opens at all is "
+            "decided in the partitions the platform already showed you this "
+            "person in, which is not something a client sends."
+        ),
+    ),
+]
 
 
 @router.get(
@@ -90,14 +112,19 @@ _ONE_REFUSAL: dict[int | str, dict[str, Any]] = {
         "preference is mutual; neither has anything to say about somebody "
         "reading their own record, and a hold does not reach it either — this "
         "is the one screen a held player has for finding out how they appear.\n\n"
-        "`is_self` is `true`. Read it rather than comparing ids."
+        "`is_self` is `true`. Read it rather than comparing ids.\n\n"
+        "**`?sport=` works here too**, and picks which of your own Levels the "
+        "skill card draws — the same resolution a stranger's sheet takes."
     ),
 )
 async def read_own_record(
     user: CurrentUserDep,
     use_case: ReadOwnRecordDep,
+    sport: SportAsked = None,
 ) -> PlayerRecordResponse:
-    return PlayerRecordResponse.of(await use_case.execute(reader_id=user.id))
+    return PlayerRecordResponse.of(
+        await use_case.execute(reader_id=user.id, arrived_from=sport)
+    )
 
 
 @router.get(
@@ -123,14 +150,21 @@ async def read_own_record(
         "re-evaluated on every open, so a disclosure entitles you to *ask* and "
         "never to be answered.\n\n"
         "**Asking about yourself is allowed** and answers `is_self: true` — the "
-        "client is told rather than left to compare identifiers."
+        "client is told rather than left to compare identifiers.\n\n"
+        "**`?sport=` chooses what the sheet is about, never who may be seen.** "
+        "Send the sport you arrived from; where they are not rated in it you "
+        "get their most played, and admission is decided from what the platform "
+        "already showed you regardless."
     ),
 )
 async def read_player_record(
     player_id: UUID,
     user: CurrentUserDep,
     use_case: ReadPlayerRecordDep,
+    sport: SportAsked = None,
 ) -> PlayerRecordResponse:
     return PlayerRecordResponse.of(
-        await use_case.execute(reader_id=user.id, subject_id=player_id)
+        await use_case.execute(
+            reader_id=user.id, subject_id=player_id, arrived_from=sport
+        )
     )

@@ -30,7 +30,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports.events import EventCodec
-from app.kernel import Instant, Minutes
+from app.kernel import Instant, Minutes, Sport
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind
 from app.modules.games.domain.ports import (
@@ -151,6 +151,41 @@ class EventSourcedGameHistory:
         if not wanted:
             return {}
 
+        found = await self._counted_results(wanted, now=now)
+        return {
+            player_id: tuple(rows[-RECENT_RESULTS:])
+            for player_id, rows in found.items()
+        }
+
+    async def recent_results_in(
+        self, player_id: UUID, *, sport: Sport, now: Instant
+    ) -> tuple[CountedResult, ...]:
+        """This player's last few counted results in one sport, oldest to newest.
+
+        **Filtered before it is trimmed**, and that order is the whole reason
+        this cannot be built out of the read above: that one answers at most five
+        across every sport, so a caller filtering afterwards would show three
+        results to somebody who has played thirty in the sport asked about.
+        """
+
+        found = await self._counted_results({player_id}, now=now)
+        rows = [one for one in found.get(player_id, []) if one.sport is sport]
+        return tuple(rows[-RECENT_RESULTS:])
+
+    async def _counted_results(
+        self, wanted: set[UUID], *, now: Instant
+    ) -> dict[UUID, list[CountedResult]]:
+        """Every confirmed counted result for these people, **oldest first.**
+
+        The fold both reads above are trims of, written once so the two cannot
+        come to two answers about what a counted result is. Untrimmed, because
+        the two trim differently and one of them narrows first — a shared helper
+        that had already cut to five would be the bug it exists to prevent.
+
+        A player with none is **absent**, which is what lets the mapping read
+        above keep one spelling for *nothing to show*.
+        """
+
         found: dict[UUID, list[CountedResult]] = defaultdict(list)
         for game in await self._games_among(wanted):
             if game.kind is not GameKind.COUNTED:
@@ -169,12 +204,11 @@ class EventSourcedGameHistory:
                         played_at=game.played_at or game.planned_at,
                     )
                 )
-
-        results: dict[UUID, tuple[CountedResult, ...]] = {}
-        for player_id, rows in found.items():
+        for rows in found.values():
+            # Sorted here rather than at each caller, so *oldest to newest* is
+            # the fold's promise and not two of them.
             rows.sort(key=lambda one: (one.played_at, one.game_id))
-            results[player_id] = tuple(rows[-RECENT_RESULTS:])
-        return results
+        return found
 
     async def attendance_for(
         self, player_ids: Collection[UUID], *, now: Instant

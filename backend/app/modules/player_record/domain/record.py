@@ -1,10 +1,9 @@
 """What a record says about a person, in this context's own words.
 
-**The header identity, and today that is the whole of it.** The skill card, the
-metered rows, what opponents said and the sport pills all arrive on this type
-later (#379–#387); what ships first is the zone every one of them hangs under,
-because the route and its admission rule are what the rest of the sheet is
-blocked on.
+**The header identity, the sport pills and the skill card.** The metered rows,
+opponent variety and what opponents said arrive on this type later (#380–#382);
+what shipped first was the zone every one of them hangs under, because the route
+and its admission rule are what the rest of the sheet was blocked on.
 
 **Every one of these fields is spelled here rather than imported**, and the
 duplication is the decision (``docs/adr/0155``). ``matchmaking`` already holds a
@@ -27,8 +26,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import final
+from typing import Final, final
 from uuid import UUID
+
+from app.kernel import Sport
 
 
 class OnCourtVerdict(StrEnum):
@@ -80,6 +81,120 @@ class SubjectIdentity:
     social_tags: tuple[str, ...]
 
 
+#: How many results a run of form draws. **This context's own spelling of a
+#: number ``games`` also holds**, because a record may not import a provider's
+#: constant into its domain any more than it may import its types. What is
+#: avoidable about two spellings is them being *silent*: the adapter that reads
+#: ``games`` refuses to import when they disagree, which is the seam
+#: ``matchmaking`` already puts the same pair of numbers through.
+LAST_FIVE: Final = 5
+
+
+class GameOutcome(StrEnum):
+    """How one counted game went for the person the record is about. **Two.**
+
+    *Unscored* is not a third value: a game nobody agreed a score for produced no
+    outcome for anybody, and the absence is spelled by not being in the run at
+    all (``docs/adr/0137``).
+
+    **A second spelling of ``games``' own ``Outcome``**, mapped at the adapter
+    that reads it — which is the shape ``matchmaking``'s ``GameResult`` already
+    takes for the same two words, and this context's standing rule about
+    borrowing another context's domain types (``docs/adr/0155``). The risk is the
+    same one ``OnCourtVerdict`` carries and it is answered the same way:
+    ``tests/unit/test_player_record_skill.py`` fails the build if the two
+    vocabularies stop agreeing.
+    """
+
+    WIN = "WIN"
+    LOSS = "LOSS"
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class LikelyRange:
+    """The band a Level probably sits in — μ ± σ, clamped to the scale.
+
+    **One value with two edges**, nested rather than two loose floats beside the
+    Level, which is the shape the rating routes and the player card already
+    spell it in. The client computes nothing: the rounding lives in the engine,
+    and a range derived anywhere else is a second set of drawing constants.
+    """
+
+    low: float
+    high: float
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SubjectRating:
+    """What this platform holds about one person in one sport.
+
+    **Read and never held.** It is a projection of a ``SkillRating`` and not the
+    aggregate: a reader that could hold one could save it, and this context
+    stores nothing at all.
+
+    ``counted_games`` is **the games this Level was moved by** and not every
+    counted game they have played — the two differ, and the difference is the
+    point. A player card's ``counted_games`` is *how much have they played*, over
+    every sport, and an unscored evening is in it. This one is *what does this
+    certainty rest on*: confirmed counted results in **this** sport that the
+    rating actually folded (``docs/adr/0139``). It moves in step with the Level
+    beside it, which the other number could not promise.
+    """
+
+    sport: Sport
+    level: float
+    band: str
+    #: How sure the platform is, as ``rating`` published it — a whole percentage.
+    confidence: int
+    counted_games: int
+    likely_range: LikelyRange
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SportPill:
+    """One sport this person is rated in: the dot, the abbreviation, the Level.
+
+    **Narrower than the rating it is drawn from, deliberately.** A pill answers
+    *what else do they play*, and a confidence and a counted-games count on every
+    one of them would be four skill cards drawn as jewellery — the panel below is
+    where those belong, for the one sport the sheet is about.
+    """
+
+    sport: Sport
+    level: float
+    band: str
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SkillPanel:
+    """The skill card, for the one sport this sheet is about.
+
+    **The three headline figures travel together and are never separable.** A
+    Level with no certainty beside it and no count under it is the claim
+    ``docs/adr/0107``'s range amendment exists to stop: two people both showing
+    2,75 are told apart by how sure the platform is about each, and a
+    confident-looking number built on three games must not read like one built on
+    forty.
+
+    ``last_five`` is **oldest to newest and never padded** — the run of form a
+    reader takes left to right — and it is this sport's, which is the defect this
+    panel fixes by construction: a run built across every sport and drawn beneath
+    a single sport's Level was drawing squash results under a padel number.
+    """
+
+    sport: Sport
+    level: float
+    band: str
+    confidence: int
+    counted_games: int
+    likely_range: LikelyRange
+    last_five: tuple[GameOutcome, ...]
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class PlayerRecord:
@@ -101,10 +216,24 @@ class PlayerRecord:
     #: signing is a signature over a request that is never sent, so there is no
     #: outage that produces an id without an address for it.
     photo_url: str | None
+    #: One per sport they hold a rating in, **in the sport registry's own
+    #: order**. Empty for somebody rated in nothing, which is an ordinary state
+    #: during onboarding rather than an error.
+    sports: tuple[SportPill, ...]
+    #: The sport the sheet is *about*, or ``None`` where no sport resolves —
+    #: which is exactly when ``sports`` is empty, and the client draws the poster
+    #: with no Level on it. An omission and never a panel full of noughts.
+    skill: SkillPanel | None
 
 
 __all__ = [
+    "LAST_FIVE",
+    "GameOutcome",
+    "LikelyRange",
     "OnCourtVerdict",
     "PlayerRecord",
+    "SkillPanel",
+    "SportPill",
     "SubjectIdentity",
+    "SubjectRating",
 ]
