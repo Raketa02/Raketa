@@ -228,6 +228,9 @@ async def test_a_search_that_showed_them_opens_their_record(
     # none, and never sent as nulls: the client draws the generated poster.
     assert "photo_id" not in body and "photo_url" not in body
     assert "review" not in body
+    # And nobody has watched them play, so there is no habit to describe: the
+    # row is **absent** rather than drawn at nought over nought.
+    assert "variety" not in body
 
 
 async def test_your_own_record_opens_with_nothing_behind_it(client, searcher):
@@ -583,3 +586,87 @@ async def test_a_run_shorter_than_five_is_never_padded(
     body = (await record_of(client, searcher["token"], subject)).json()
 
     assert body["skill"]["last_five"] == ["LOSS"]
+
+
+# ---------------------------------------------------------------------------
+# Opponent variety
+# ---------------------------------------------------------------------------
+
+
+async def test_the_record_says_how_widely_they_spread_their_games(
+    client, session_factory, candidate_source, searcher
+):
+    """**A pair and never a share**, over the **whole** record.
+
+    Three counted games against two people: two different faces, three evenings.
+    The percentage is the client's division, because *two of three* and *twenty
+    of thirty* are the same share and different claims — the same argument the
+    rows above it print their raw fractions for.
+    """
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    somebody_else = uuid4()
+    await a_confirmed_game(
+        session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
+    )
+    await a_confirmed_game(
+        session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=False
+    )
+    await a_confirmed_game(
+        session_factory, subject, somebody_else, sport=Sport.TENNIS, a_won=True
+    )
+
+    body = (await record_of(client, searcher["token"], subject)).json()
+
+    assert body["variety"] == {"distinct_opponents": 2, "games_played": 3}
+
+
+async def test_variety_counts_every_sport_and_the_sport_asked_for_moves_it_not(
+    client, session_factory, candidate_source, searcher
+):
+    """**It is about no sport at all**, unlike the run of five above it.
+
+    The same sheet asked for padel and for squash draws the same variety and two
+    different runs of form: one is a habit and the other is this sport's record.
+    """
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    await also_rated_in(session_factory, subject, sport=Sport.SQUASH, mu=4.10)
+    await a_confirmed_game(
+        session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
+    )
+    await a_confirmed_game(
+        session_factory, subject, uuid4(), sport=Sport.SQUASH, a_won=True
+    )
+
+    padel = (
+        await record_of(client, searcher["token"], subject, sport=Sport.PADEL)
+    ).json()
+    squash = (
+        await record_of(client, searcher["token"], subject, sport=Sport.SQUASH)
+    ).json()
+
+    assert padel["variety"] == {"distinct_opponents": 2, "games_played": 2}
+    assert squash["variety"] == padel["variety"]
+    assert padel["skill"]["last_five"] == ["WIN"]
+    assert squash["skill"]["last_five"] == ["WIN"]
+
+
+async def test_your_own_record_carries_the_same_pair(
+    client, session_factory, searcher
+):
+    """*How others see you* draws the number everybody else is shown, which is
+    the whole reason the screen exists."""
+
+    await a_confirmed_game(
+        session_factory, searcher["id"], uuid4(), sport=Sport.PADEL, a_won=True
+    )
+
+    body = (await own_record(client, searcher["token"])).json()
+
+    assert body["is_self"] is True
+    assert body["variety"] == {"distinct_opponents": 1, "games_played": 1}

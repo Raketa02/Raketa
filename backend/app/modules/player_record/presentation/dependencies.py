@@ -40,6 +40,7 @@ from app.bootstrap.composition import (
     build_subject_form,
     build_subject_identity_source,
     build_subject_ratings,
+    build_subject_variety,
 )
 from app.modules.matchmaking.presentation.dependencies import (
     AccountHoldQueryDep,
@@ -56,6 +57,7 @@ from app.modules.player_record.domain.ports import (
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
+    SubjectVariety,
 )
 
 
@@ -98,6 +100,13 @@ def get_subject_form(db: DbSession) -> SubjectForm:
 SubjectFormDep = Annotated[SubjectForm, Depends(get_subject_form)]
 
 
+def get_subject_variety(db: DbSession) -> SubjectVariety:
+    return build_subject_variety(db)
+
+
+SubjectVarietyDep = Annotated[SubjectVariety, Depends(get_subject_variety)]
+
+
 def get_record_admission(
     db: DbSession,
     gates: FailClosedGatesDep,
@@ -130,6 +139,7 @@ def get_read_player_record(
     photos: RecordPhotoLinkDep,
     ratings: SubjectRatingsDep,
     form: SubjectFormDep,
+    variety: SubjectVarietyDep,
     clock: ClockDep,
 ) -> ReadPlayerRecord:
     return ReadPlayerRecord(
@@ -138,6 +148,7 @@ def get_read_player_record(
         photos=photos,
         ratings=ratings,
         form=form,
+        variety=variety,
         clock=clock,
     )
 
@@ -150,14 +161,15 @@ def get_read_own_record(
     photos: RecordPhotoLinkDep,
     ratings: SubjectRatingsDep,
     form: SubjectFormDep,
+    variety: SubjectVarietyDep,
     clock: ClockDep,
 ) -> ReadOwnRecord:
     """Your own record — **and still not one of these is a gate.**
 
-    Two more readers and a clock arrived with the skill card, and the property
-    that matters is unchanged: nothing here binds the candidate index, so the one
-    screen that tells a player how they appear cannot be taken down by the
-    machinery that gates somebody else's sheet.
+    Four readers and a clock now, and the property that matters is unchanged:
+    nothing here binds the candidate index, so the one screen that tells a player
+    how they appear cannot be taken down by the machinery that gates somebody
+    else's sheet.
     """
 
     return ReadOwnRecord(
@@ -165,6 +177,7 @@ def get_read_own_record(
         photos=photos,
         ratings=ratings,
         form=form,
+        variety=variety,
         clock=clock,
     )
 

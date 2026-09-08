@@ -602,6 +602,20 @@ Rules to preserve:
   repository, which remembers stream versions), and `games` gained `recent_results_in` as a
   **second method rather than a parameter**, because the set read is frozen into search
   records kept for ever and because this one filters on the sport *before* it trims to five.
+  **Opponent variety is the third fact to arrive, and it is a *separate port* on `games`
+  rather than a sixth method on that one** (#380). The fold is deliberately **unbounded** —
+  that is what makes it a career statistic, and a window here would be a second horizon that
+  must not disagree with the matcher's — so an unbounded fold on the port a search already
+  holds is one somebody eventually calls inside the walk over five hundred candidates. It
+  answers about **one player and never a collection**, the fence is the signature, and both
+  sides of the seam assert their own. What crosses is the **raw pair and no percentage**: a
+  bare share would hide whether *70 %* is fourteen of twenty or seven of ten, which is the
+  argument the metered rows beside it print their fractions for, and the division is a
+  client's. Absence is the same absence everything else here spells — no counted game means
+  the row is **omitted**, never `0` and never `0 / 0` — and it is a *different* absence from
+  `skill`'s, so the assembler asks for it whatever sport resolved. Its denominator is
+  `counted_games_for`'s own predicate, written once in `games` and read by both, so the sheet
+  cannot print a pair that disagrees with the card beside it.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one

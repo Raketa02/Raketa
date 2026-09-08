@@ -2,7 +2,7 @@
 publishes outward.
 
 **Two of these are the module's own** — the repository and the directory — one
-is somebody else's, and two are the platform's. ``GameHistoryQuery`` is the read
+is somebody else's, and three are the platform's. ``GameHistoryQuery`` is the read
 every other context in
 [#302](https://github.com/Raketa02/Raketa/issues/302) was blocked on: the
 pairwise history the matcher's familiarity term has been standing down for want
@@ -21,6 +21,16 @@ absent from the answer instead.
 
 **Fewer than five results is a real answer and is never padded.** The card draws
 a gap; a fifth invented row would be the same mistake in a smaller place.
+
+**``OpponentVarietyQuery`` is a separate port and not a sixth fact on the history
+read**, and the split is a fence rather than a filing decision. Every read there
+is bounded — five results, five hundred counterparts — because its caller holds
+twenty rows and asks once; that one is deliberately unbounded, because *how
+widely do they spread their games* is a career statistic and a window would be a
+second horizon nothing keeps in step with the matcher's. An unbounded fold on the
+port a search already holds is one somebody eventually calls inside that walk, so
+it answers about one player, in a type only the surface that opens one person at
+a time is handed.
 
 **``PlayerHandles`` is the one port here this context consumes rather than
 offers**, and it is a single field wide on purpose. A game says who was on the
@@ -228,6 +238,81 @@ class ConfirmedGame:
             "a confirmed result with an empty side: a score names a winner and "
             f"somebody it was won against ({len(self.winners)}/{len(self.losers)})",
         )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class OpponentVariety:
+    """How many different people one player's counted games were played against.
+
+    **A pair and never a share.** The division is a drawing decision and the two
+    counts are the fact: *fourteen of twenty* and *seven of ten* are the same
+    percentage and different claims, and a reader told only the percentage cannot
+    tell which one they are looking at.
+
+    ``distinct_counterparts`` counts **everybody who was on a court with them**,
+    partner included, on ``LineUp.counterparts_of``'s own rule that *a pair is
+    anybody you were on a court with*. A figure counting opponents alone would
+    say that somebody who partners the same person every week spreads their games
+    as widely as somebody who does not.
+
+    **Both halves are read off the same games**, which is what keeps the pair
+    coherent: a friendly and a ghost are in neither, so a player with forty
+    friendlies and two counted games cannot be described as playing twenty
+    different people an evening.
+    """
+
+    distinct_counterparts: int
+    counted_games: int
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.counted_games >= 1,
+            "a variety over no counted game is an absence, not a nought — "
+            "absence is spelled by not being in the answer at all",
+        )
+        invariant(
+            self.distinct_counterparts >= 1,
+            "a counted game somebody played alone: "
+            f"{self.distinct_counterparts} people over {self.counted_games} games",
+        )
+
+
+@runtime_checkable
+class OpponentVarietyQuery(Protocol):
+    """*How widely does this person spread their games?* — over the whole record.
+
+    **A second port rather than a sixth fact on ``GameHistoryQuery``, and the
+    split is the fence.** That port is held by a caller that walks twenty rows
+    and, for the pairwise read, five hundred counterparts; this fold is
+    deliberately **unbounded**, because a career statistic that stopped at a
+    window would be a second horizon that must not disagree with the matcher's.
+    An unbounded fold on the same port a search already holds is an invitation to
+    call it inside that walk. So it is handed only to the consumer that opens one
+    person at a time.
+
+    **One player and never a collection**, stated in the signature and asserted
+    there. There is no set-shaped version of this to reach for.
+
+    **Cost.** Bounded by how many games this player has ever been seated in — the
+    same profile as every other read in this context, because the fold *is* the
+    answer.
+    """
+
+    async def variety_of(
+        self, player_id: UUID, *, now: Instant
+    ) -> OpponentVariety | None:
+        """Their different faces and their counted games, or **nothing at all**.
+
+        ``None`` for a player no counted game has been recorded for, which is
+        this platform's one spelling for *we watched nothing*. A ``0`` would be a
+        habit nobody has, and a ``0 / 0`` would be arithmetic nobody can draw.
+
+        ``now`` is taken rather than read for the reason every fold here takes
+        it: whether a game was played is folded from the record against a clock,
+        and one response's facts are folded against one instant.
+        """
+        ...
 
 
 @runtime_checkable
@@ -470,6 +555,8 @@ __all__ = [
     "GameDirectory",
     "GameHistoryQuery",
     "GameRepository",
+    "OpponentVariety",
+    "OpponentVarietyQuery",
     "PlayedOutcome",
     "PlayerHandles",
     "PlayedTally",

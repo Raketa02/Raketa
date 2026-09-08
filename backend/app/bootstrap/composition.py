@@ -78,6 +78,7 @@ from app.modules.games.domain.ports import (
     GameDirectory,
     GameHistoryQuery,
     GameRepository,
+    OpponentVarietyQuery,
     PlayerHandles,
 )
 from app.modules.games.infrastructure.event_sourced_confirmed_results import (
@@ -258,6 +259,9 @@ from app.modules.rating.infrastructure.event_sourced_skill_rating_repository imp
 from app.modules.player_record.infrastructure.games_subject_form import (
     GamesSubjectForm,
 )
+from app.modules.player_record.infrastructure.games_subject_variety import (
+    GamesSubjectVariety,
+)
 from app.modules.player_record.infrastructure.rating_subject_ratings import (
     RatingSubjectRatings,
 )
@@ -268,6 +272,7 @@ from app.modules.player_record.domain.ports import (
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
+    SubjectVariety,
 )
 from app.modules.player_record.infrastructure.disclosures import (
     ChallengesTheyShare,
@@ -892,6 +897,22 @@ def build_at_stake_query(
     return RatingResultUpdateRule(build_rated_player_query(session, runtime=runtime))
 
 
+def build_opponent_variety_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> OpponentVarietyQuery:
+    """*How widely does this person spread their games* — over the whole record.
+
+    The same class as the history read and a **separate port**, which is the
+    whole of the fence: this fold is unbounded, and a caller holding it as part
+    of the port a search already carries could call it inside a walk over five
+    hundred candidates. Typed narrowly here, it reaches only the surface that
+    opens one person at a time.
+    """
+    return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
+
+
 def build_confirmed_result_ledger(
     session: AsyncSession,
     *,
@@ -935,6 +956,22 @@ def build_subject_form(
     """
 
     return GamesSubjectForm(build_game_history_query(session, runtime=runtime))
+
+
+def build_subject_variety(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> SubjectVariety:
+    """How widely a record's subject spreads their games, over their whole record.
+
+    Built over ``games``' **variety port** and never over the history read beside
+    it, which is the fence rather than tidiness: this fold is unbounded, and the
+    narrow type is what stops it being reachable from a caller that walks five
+    hundred candidates.
+    """
+
+    return GamesSubjectVariety(
+        build_opponent_variety_query(session, runtime=runtime)
+    )
 
 
 def build_settled_courts(session: AsyncSession) -> SettledCourts:

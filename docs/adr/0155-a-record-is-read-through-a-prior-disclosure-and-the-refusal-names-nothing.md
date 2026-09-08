@@ -275,3 +275,58 @@ prints a certainty beside a count of games that certainty has never seen.
 **Nothing else moves.** The four refusals are still one refusal, admission is still read
 through a prior disclosure with no expiry, your own record still has no gates, and this
 context still stores nothing at all.
+
+## Amendment — 2026-09-08: opponent variety, and a seventh demand
+
+Building opponent variety ([#380](https://github.com/Raketa02/Raketa/issues/380)) cashed one
+more of the forward references above: *the metered rows, opponent variety and the
+sportsmanship figure are all somebody else's facts*, and this is the first of the three to
+arrive. It arrived as a port, and this context still has no table.
+
+**§6's demands are seven.** `SubjectVariety` answers *how widely does this person spread their
+games* — five of the seven are now single-player reads. On this one the single-player signature
+is a **fence rather than a convenience**, and that is the whole argument for it being a
+*separate port on `games`* rather than a sixth fact on `GameHistoryQuery`: the fold is
+deliberately unbounded, and an unbounded fold on the port a search already holds is one
+somebody eventually calls inside the walk over five hundred candidates ADR-0098 §4 bounds. The
+narrow type is what makes that unreachable rather than discouraged, and both sides of the seam
+assert their own signature.
+
+**It returns as this context's demand, which is what ADR-0098's withdrawal said would happen.**
+Opponent variety was contracted on `player_score`'s behalf for two consumers, both were struck,
+and the amendment recorded the terms of its return: *if a later term wants variety, it returns
+as that term's demand and signs for it.* This record is that consumer. It is **not a strand** —
+it prices no promise and enters no weighted score — and the matcher still never reads it.
+
+**Unbounded is the definition and not an omission.** *How widely do they spread their games* is
+a claim about a habit, so there is no window, no decay and no floor. A window would be a second
+horizon that must not disagree with the matcher's; a floor — a minimum number of games before
+the figure is published — was in the older implementation document and is **dropped rather than
+forgotten**, because the newer decision publishes the **raw pair** and a pair carries its own
+sample size. *Fourteen of twenty* and *seven of ten* are the same share and different claims,
+which is the argument the metered rows beside it print their raw fractions for; a percentage on
+this response would be the one number that could hide which of the two a reader is looking at,
+and it is a client's division rather than a platform judgement.
+
+**Two absences on one sheet, and they are different questions.** `skill` is absent for somebody
+rated in nothing; `variety` is absent for somebody no counted game was ever recorded for.
+Neither implies the other — a newcomer rated in nothing may have played all week, and somebody
+rated in four sports may never have had a game counted — so the assembler asks for variety
+whatever the sport resolved to, and asks for a run of form only when one did.
+
+**`?sport=` does not reach it, and that is a third thing that parameter does not do.** A person
+who plays padel with the same four faces and squash with twenty has one habit, and a figure
+narrowed to a sport would be a different statistic under the same word.
+
+**The cost of §6's second-spelling rule is paid a third time.** `games` measured
+`distinct_counterparts` over `counted_games` — everybody who was on a court with them, on that
+context's own rule that *a pair is anybody you were on a court with*, partner included — and
+this context prints `distinct_opponents` over `games_played`, which is what the row is called on
+screen. The rename lives in one adapter. And on the provider's side the denominator is
+`counted_games_for`'s own predicate, written once and read by both, because the sheet prints
+this pair beside a count of counted games and two spellings of *counted and played* would
+eventually disagree on the same screen.
+
+**Nothing else moves.** The four refusals are still one refusal, admission is still read through
+a prior disclosure with no expiry, your own record still has no gates, and this context still
+stores nothing at all.

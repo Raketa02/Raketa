@@ -27,10 +27,10 @@ the **disclosure**, which is a fact the platform holds. A record refused in a
 sport a client sent would be a client choosing whether it may see somebody
 (``docs/adr/0155``).
 
-**One clock, read once, handed down.** The run of form is folded against an
-instant, and the record's own gate against the same one — two reads of the clock
-in one response is how a sheet ends up admitting a pair on one instant and
-describing them on another.
+**One clock, read once, handed down.** The run of form and the variety fold are
+both folded against an instant, and the record's own gate against the same one —
+two reads of the clock in one response is how a sheet ends up admitting a pair on
+one instant and describing them on another.
 """
 
 from __future__ import annotations
@@ -49,6 +49,7 @@ from app.modules.player_record.domain.ports import (
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
+    SubjectVariety,
 )
 from app.modules.player_record.domain.record import (
     GameOutcome,
@@ -69,6 +70,7 @@ async def assemble_record(
     photos: RecordPhotoLink,
     ratings: SubjectRatings,
     form: SubjectForm,
+    variety: SubjectVariety,
 ) -> PlayerRecord:
     """The record itself, once somebody has decided it may be read.
 
@@ -82,6 +84,11 @@ async def assemble_record(
     sport, so there is no sport to ask a run about, and the question is not asked
     rather than being asked and thrown away — which is the difference between a
     newcomer's record being cheap and it being the same price as anybody's.
+
+    **Variety is asked for regardless, because it is about no sport.** The two
+    absences are different questions and the sheet must not conflate them: a
+    person rated in nothing may have played all week, and a person rated in four
+    sports may never have had a game counted.
     """
 
     identity = await identities.identity_of(subject_id)
@@ -114,6 +121,7 @@ async def assemble_record(
         photo_url=photo_url,
         sports=pills_of(held),
         skill=skill,
+        variety=await variety.variety_of(subject_id, now=now),
     )
 
 
@@ -148,6 +156,7 @@ class ReadPlayerRecord:
         photos: RecordPhotoLink,
         ratings: SubjectRatings,
         form: SubjectForm,
+        variety: SubjectVariety,
         clock: Clock,
     ) -> None:
         self._admission = admission
@@ -155,6 +164,7 @@ class ReadPlayerRecord:
         self._photos = photos
         self._ratings = ratings
         self._form = form
+        self._variety = variety
         self._clock = clock
 
     async def execute(
@@ -192,6 +202,7 @@ class ReadPlayerRecord:
             photos=self._photos,
             ratings=self._ratings,
             form=self._form,
+            variety=self._variety,
         )
 
 
@@ -212,12 +223,14 @@ class ReadOwnRecord:
         photos: RecordPhotoLink,
         ratings: SubjectRatings,
         form: SubjectForm,
+        variety: SubjectVariety,
         clock: Clock,
     ) -> None:
         self._identities = identities
         self._photos = photos
         self._ratings = ratings
         self._form = form
+        self._variety = variety
         self._clock = clock
 
     async def execute(
@@ -234,6 +247,7 @@ class ReadOwnRecord:
             now=self._clock.now(),
             ratings=self._ratings,
             form=self._form,
+            variety=self._variety,
             identities=self._identities,
             photos=self._photos,
         )

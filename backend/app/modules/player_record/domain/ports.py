@@ -1,4 +1,4 @@
-"""What this context asks of contexts it does not write. **Six demands.**
+"""What this context asks of contexts it does not write. **Seven demands.**
 
 ``docs/adr/0098``'s consumer-driven shape, and this is the second *consumer*
 register on the platform after the matcher's. Every port here is declared in
@@ -12,11 +12,14 @@ no aggregate, no table and no migration; every fact it publishes it reads throug
 the owning context's published port, and the one thing it decides for itself is
 whether the reader may see any of them.
 
-**Four of the six are single-player reads and say so in their signatures.** A
+**Five of the seven are single-player reads and say so in their signatures.** A
 record is one person opened by a deliberate tap, so a set-shaped port here would
 be a contract nobody can honour cheaply for a caller that never batches — the
 mirror of the rule every read in ``matchmaking`` takes, where the caller always
-has twenty rows and asks once.
+has twenty rows and asks once. On ``SubjectVariety`` that signature is a **fence
+rather than a convenience**: the fold behind it is deliberately unbounded, and a
+set-shaped version would be an invitation to call a career statistic inside a
+walk over five hundred candidates.
 
 **One sport crosses two of them, and it is the same sport both times.** The sheet
 is *about* one sport, resolved in ``domain/sport_choice.py`` from what the reader
@@ -43,6 +46,7 @@ from uuid import UUID
 from app.kernel import Instant, Sport
 from app.modules.player_record.domain.record import (
     GameOutcome,
+    OpponentVariety,
     SubjectIdentity,
     SubjectRating,
 )
@@ -230,6 +234,45 @@ class SubjectForm(Protocol):
         ...
 
 
+@runtime_checkable
+class SubjectVariety(Protocol):
+    """How widely this person spreads their games — over their **whole** record.
+
+    **Unbounded, which is what makes it a career statistic.** *How widely do they
+    spread their games* is a claim about a habit, not about a season, so there is
+    no window and no decay here. A second window would be a figure that must not
+    disagree with the matcher's horizon, and the two would eventually part
+    company with nothing to notice.
+
+    **One player, and the signature is the fence.** Every port on this list
+    answers about one person because a record is one deliberate tap; this one
+    would be dangerous in any other shape, because an unbounded fold behind a
+    set-shaped read is a fold somebody calls once per candidate.
+
+    **No sport reaches it.** Variety is about every game they have played, so
+    unlike the run of form it is not narrowed by whichever sport the sheet turned
+    out to be about — a person who plays padel with the same four faces and
+    squash with twenty has one habit, and printing it per sport would be a
+    different statistic under the same word.
+    """
+
+    async def variety_of(
+        self, player_id: UUID, *, now: Instant
+    ) -> OpponentVariety | None:
+        """Their different faces and their counted games, or **nothing at all**.
+
+        ``None`` for a player no counted game has been recorded for. The record
+        omits the row rather than drawing a nought: a habit nobody has been
+        observed having is not a narrow one, and ``0 / 0`` is arithmetic nothing
+        can draw.
+
+        ``now`` is taken rather than read, because whether a game was played is
+        folded from a record against a clock and every fact on one response is
+        folded against one instant.
+        """
+        ...
+
+
 #: What this context asks of the platform, declared as data so that *a port with
 #: no registered implementation* is a question something can ask
 #: (``app/bootstrap/player_record_demands.py``). A demand nobody executes is a
@@ -241,6 +284,7 @@ PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
     RecordGates,
     SubjectRatings,
     SubjectForm,
+    SubjectVariety,
 )
 
 
@@ -252,4 +296,5 @@ __all__ = [
     "SubjectForm",
     "SubjectIdentitySource",
     "SubjectRatings",
+    "SubjectVariety",
 ]

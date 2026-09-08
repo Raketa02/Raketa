@@ -21,6 +21,7 @@ at two instants.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import get_type_hints
 from uuid import UUID
 
 import pytest
@@ -52,6 +53,8 @@ from app.modules.games.domain.ports import (
     ConfirmedResultLedger,
     GameDirectory,
     GameHistoryQuery,
+    OpponentVariety,
+    OpponentVarietyQuery,
     PlayedOutcome,
 )
 from app.modules.games.domain.results import Outcome, Score, SetScore
@@ -78,6 +81,21 @@ def registered(port):
     return [
         pytest.param(implementation, id=implementation.name)
         for implementation in implementations_of(port)
+    ]
+
+
+def every_row():
+    """Every row in the register, whichever port it signs.
+
+    Named apart from ``registered`` because the two answer different questions:
+    that one is *run this demand against each signatory*, and this is *walk the
+    whole register* — which is what a structural check about the register itself
+    wants, now that one class here answers three contracts.
+    """
+
+    return [
+        pytest.param(one, id=f"{one.port.__name__}:{one.name}")
+        for one in GAME_IMPLEMENTATIONS
     ]
 
 
@@ -831,12 +849,18 @@ def test_every_registered_implementation_is_of_a_published_port():
     assert stray == []
 
 
-@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+@pytest.mark.parametrize("implementation", every_row())
 def test_every_implementation_satisfies_the_protocol(implementation):
     """Structural, so a method renamed on one side is red rather than a runtime
-    ``AttributeError`` on somebody's search."""
+    ``AttributeError`` on somebody's search.
 
-    assert isinstance(implementation.build(None), GameHistoryQuery)
+    **Over every row rather than over one port's**, which is the shape the
+    consumer registers already take: one class here answers three of these
+    contracts, and a check that only walked the first would have watched half
+    the register.
+    """
+
+    assert isinstance(implementation.build(None), implementation.port)
 
 
 # ---------------------------------------------------------------------------
@@ -1079,3 +1103,163 @@ async def test_the_ledger_reads_the_same_answer_twice(implementation, session):
 
     assert once == twice
     assert len(once) == 1
+
+
+# ---------------------------------------------------------------------------
+# OpponentVarietyQuery — the career statistic, unbounded and about one person
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
+async def test_variety_is_the_people_over_the_counted_games_they_were_in(
+    implementation, session
+):
+    """The pair a record divides, and the two halves come from one fold.
+
+    Three counted games against two people: two different faces, three
+    evenings. Publishing the counts rather than the share is the whole shape of
+    this read — *fourteen of twenty* and *seven of ten* are different claims and
+    a percentage alone hides which one it is.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, one, other = new_uuid(), new_uuid(), new_uuid()
+
+    for opponent in (one, other, one):
+        game = _planned(line_up=_singles(player, opponent), at=_ago(days=3))
+        game.state_result(
+            by=player, score=_score((6, 4), (6, 3)), occurred_at=_ago(days=2)
+        )
+        await _saved(session, game)
+
+    variety = await port.variety_of(player, now=now)
+
+    assert variety == OpponentVariety(distinct_counterparts=2, counted_games=3)
+
+
+@pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
+async def test_a_player_with_no_counted_game_is_absent_rather_than_nought(
+    implementation, session
+):
+    """**Absent, never ``0`` and never ``0/0``.** A player nothing was ever
+    counted for has not narrowed their circle — there is nothing to describe,
+    and the record omits the row rather than printing a habit nobody has."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+
+    assert await port.variety_of(new_uuid(), now=now) is None
+
+
+@pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
+async def test_a_four_is_one_evening_and_three_different_people(
+    implementation, session
+):
+    """**A partner is one of the faces**, exactly as they are for familiarity.
+
+    *A pair is anybody you were on a court with*, and a variety figure that
+    counted opponents alone would say a player who partners the same person
+    every week spreads their games as widely as one who does not.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, partner = new_uuid(), new_uuid()
+    against_one, against_other = new_uuid(), new_uuid()
+
+    game = _planned(
+        line_up=_four(player, partner, against_one, against_other), at=_ago(days=3)
+    )
+    game.state_result(by=player, score=_score((6, 4), (6, 3)), occurred_at=_ago(days=2))
+    await _saved(session, game)
+
+    variety = await port.variety_of(player, now=now)
+
+    assert variety == OpponentVariety(distinct_counterparts=3, counted_games=1)
+
+
+@pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
+async def test_a_friendly_and_a_ghost_are_in_neither_half_of_the_pair(
+    implementation, session
+):
+    """**Both halves are read off the same games**, which is why they are one
+    method.
+
+    A friendly is an acquaintance for familiarity and it is not evidence, so it
+    is out of the denominator — and it has to be out of the numerator too, or a
+    player with forty friendlies and two counted games would be described as
+    playing twenty different people per evening.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, opponent = new_uuid(), new_uuid()
+    friend, never_came = new_uuid(), new_uuid()
+
+    counted = _planned(line_up=_singles(player, opponent), at=_ago(days=3))
+    counted.state_result(
+        by=player, score=_score((6, 4), (6, 3)), occurred_at=_ago(days=2)
+    )
+    await _saved(session, counted)
+
+    friendly = _planned(
+        line_up=_singles(player, friend), at=_ago(days=3), kind=GameKind.FRIENDLY
+    )
+    friendly.state_result(by=player, score=_score((6, 4),), occurred_at=_ago(days=2))
+    await _saved(session, friendly)
+
+    await _saved(
+        session,
+        _planned(
+            line_up=_singles(player, never_came),
+            at=instant(now - PLAN_HORIZON - ENTRY_GRACE - timedelta(hours=1)),
+        ),
+    )
+
+    variety = await port.variety_of(player, now=now)
+
+    assert variety == OpponentVariety(distinct_counterparts=1, counted_games=1)
+
+
+@pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
+async def test_the_fold_reaches_the_whole_record_and_never_a_window(
+    implementation, session
+):
+    """**Unbounded is what makes it a career statistic.**
+
+    A game from three years ago is in it, because *how widely do they spread
+    their games* is a claim about a habit rather than about this season — and a
+    window here would be a second horizon that must not disagree with the
+    matcher's.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, long_ago, lately = new_uuid(), new_uuid(), new_uuid()
+
+    for opponent, days in ((long_ago, 1100), (lately, 3)):
+        game = _planned(line_up=_singles(player, opponent), at=_ago(days=days + 1))
+        game.state_result(
+            by=player, score=_score((6, 4), (6, 3)), occurred_at=_ago(days=days)
+        )
+        await _saved(session, game)
+
+    variety = await port.variety_of(player, now=now)
+
+    assert variety == OpponentVariety(distinct_counterparts=2, counted_games=2)
+
+
+def test_the_variety_fold_takes_one_player_and_can_never_be_called_over_a_list():
+    """**The fence is the signature**, and it is asserted rather than described.
+
+    This fold is unbounded on purpose, so a set-shaped version of it would be an
+    invitation to call it inside a search's walk over five hundred candidates.
+    One player in, one answer or an absence out — and both halves of that are
+    what a widening would have to break first.
+    """
+
+    hints = get_type_hints(OpponentVarietyQuery.variety_of)
+
+    assert hints["player_id"] is UUID
+    assert hints["return"] == OpponentVariety | None

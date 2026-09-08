@@ -225,7 +225,11 @@ class PlayerScoreQuery(Protocol):
     was demanded on behalf of two consumers and both were struck (#164, #175). *A
     consumer-driven contract with no consumer is withdrawn, not carried* — a
     demand nobody reads is a demand nobody notices going wrong, and a contract
-    suite is exactly where an unread row goes quietly stale.
+    suite is exactly where an unread row goes quietly stale. It has since come
+    back on **somebody else's** register — the player record demands it of
+    ``games``, which owns both its inputs (``docs/adr/0098`` as amended, #380) —
+    and that changes nothing here: the matcher does not read it, it is not a
+    strand, and its fold is unbounded in a way no read on this port may be.
 
     ***Settles up* will stand down long after the other four are live.** It
     depends on court money, which is out of scope. Expected, not a defect — and

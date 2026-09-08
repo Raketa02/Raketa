@@ -1387,13 +1387,17 @@ which also settles the clause ADR-0137 opened about whether *shows up* survives 
   construction, because a strand nobody publishes stands down and the survivors renormalise
   inside the reliability term. `ReliabilityStrand.CONFIRMS_RESULTS` and its two ruleset weights
   came out with the provider, in ADR-0140.
-- **Opponent variety** — how widely a player spreads their games. **Not demanded of
-  `player_score` any more:** it was contracted on behalf of two consumers and
-  [#164](https://github.com/Raketa02/Raketa/issues/164) and
+- **Opponent variety** — how widely a player spreads their games: how many **different
+  people** over how many **counted games**, across their whole record. **Not
+  `player_score`'s, and it now has a consumer:** it was contracted here on behalf of two
+  consumers and [#164](https://github.com/Raketa02/Raketa/issues/164) and
   [#175](https://github.com/Raketa02/Raketa/issues/175) struck both, so ADR-0098 was amended to
-  withdraw it — *a consumer-driven contract with no consumer is withdrawn, not carried*. The word
-  survives as product language for the Player Score screen; if a later term wants the statistic,
-  it returns as that term's demand and signs for it.
+  withdraw it — *a consumer-driven contract with no consumer is withdrawn, not carried*. It
+  returned in [#380](https://github.com/Raketa02/Raketa/issues/380) exactly as that amendment
+  said it would: as **the player record's** demand, signed for by `player_record`, answered by
+  `games` and never by this context. It is **not a strand** — it prices no promise and is in no
+  weighted score; it is context for a Level, because a low figure is somebody playing the same
+  few faces every week, whose rating may be narrow but untested. See *Player record* below.
 
 **Invariants**
 - **No record is not a bad record.** A player without a score is not bad and not average — they
@@ -1507,6 +1511,15 @@ every fact read through the owning context's published port, and one rule of its
   comparing identifiers, and the subject's id is not on the response for it to compare.
 - **This context declares its own ports and its own types.** It borrows no other context's
   domain types, so a card's closed list does not reach the record by the back door.
+- **A career statistic is unbounded, and its read takes one player.** *Opponent variety* is
+  every counted game the platform has recorded, with no window and no decay — a second window
+  would be a figure that must not disagree with the matcher's horizon. Because the fold behind
+  it is unbounded, the port answers about **one person and never a collection**: the fence is
+  the signature, and a set-shaped version would be an invitation to call it inside a search's
+  walk over five hundred candidates.
+- **A raw pair crosses, and the sheet divides it.** *Fourteen of twenty* and *seven of ten* are
+  the same share and different claims, so the record publishes the two counts and no
+  percentage — the same honesty the metered rows print their raw fractions for.
 
 
 ## Cross-cutting concepts

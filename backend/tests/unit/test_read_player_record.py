@@ -35,6 +35,7 @@ from app.modules.player_record.domain.record import (
     GameOutcome,
     LikelyRange,
     OnCourtVerdict,
+    OpponentVariety,
     SubjectIdentity,
     SubjectRating,
 )
@@ -108,6 +109,18 @@ class Form:
         return self.run
 
 
+class Variety:
+    def __init__(self, pair: OpponentVariety | None = None) -> None:
+        self.pair = pair
+        self.asked: list[UUID] = []
+
+    async def variety_of(
+        self, player_id: UUID, *, now: Instant
+    ) -> OpponentVariety | None:
+        self.asked.append(player_id)
+        return self.pair
+
+
 class Admission:
     def __init__(self, verdict: bool) -> None:
         self.verdict = verdict
@@ -131,6 +144,7 @@ def reading(
     identity: SubjectIdentity | None,
     ratings: Ratings | None = None,
     form: Form | None = None,
+    variety: Variety | None = None,
 ):
     identities, links = Identities(identity), Links()
     use_case = ReadPlayerRecord(
@@ -139,6 +153,7 @@ def reading(
         photos=links,
         ratings=ratings or Ratings(),
         form=form or Form(),
+        variety=variety or Variety(),
         clock=Clock(),
     )
     return use_case, identities, links
@@ -175,13 +190,17 @@ async def test_a_refused_read_touches_no_provider():
     stranger up and then refused would have done the lookup the admission rule
     exists to prevent."""
 
-    use_case, identities, links = reading(admits=False, identity=an_identity())
+    variety = Variety(OpponentVariety(distinct_opponents=9, games_played=11))
+    use_case, identities, links = reading(
+        admits=False, identity=an_identity(), variety=variety
+    )
 
     with pytest.raises(RecordUnavailable):
         await use_case.execute(reader_id=READER, subject_id=SUBJECT)
 
     assert identities.asked == []
     assert links.asked == []
+    assert variety.asked == []
 
 
 async def test_a_person_the_platform_cannot_describe_refuses_the_same_way():
@@ -216,6 +235,7 @@ async def test_your_own_record_is_read_with_no_admission_collaborator_at_all():
         photos=links,
         ratings=Ratings(),
         form=Form(),
+        variety=Variety(),
         clock=Clock(),
     ).execute(reader_id=READER)
 
@@ -233,6 +253,7 @@ async def test_a_reader_whose_own_identity_cannot_be_read_is_refused_alike():
             photos=Links(),
             ratings=Ratings(),
             form=Form(),
+            variety=Variety(),
             clock=Clock(),
         ).execute(reader_id=READER)
 
@@ -250,6 +271,7 @@ async def test_the_sport_asked_for_reaches_the_sheet_and_never_the_admission():
         photos=Links(),
         ratings=Ratings({Sport.SQUASH: a_rating(Sport.SQUASH)}),
         form=form,
+        variety=Variety(),
         clock=Clock(),
     )
 
@@ -324,3 +346,52 @@ async def test_the_pills_carry_every_rated_sport_and_the_panel_carries_one():
 
     assert [one.sport for one in record.sports] == [Sport.PADEL, Sport.BADMINTON]
     assert record.skill is not None and record.skill.sport is Sport.BADMINTON
+
+
+async def test_the_record_carries_the_pair_and_never_the_share():
+    """**Two counts and no percentage.** *Fourteen of twenty* and *seven of ten*
+    are the same share and different claims, and the division is a drawing
+    decision this context does not make for the client."""
+
+    variety = Variety(OpponentVariety(distinct_opponents=14, games_played=20))
+    use_case, _, _ = reading(
+        admits=True, identity=an_identity(), variety=variety
+    )
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert record.variety == OpponentVariety(distinct_opponents=14, games_played=20)
+    assert variety.asked == [SUBJECT]
+
+
+async def test_a_player_no_counted_game_was_watched_for_carries_no_variety():
+    """**Absent and never a nought.** A habit nobody has been observed having is
+    not a narrow one, and the row is omitted rather than drawn at zero."""
+
+    use_case, _, _ = reading(
+        admits=True, identity=an_identity(), variety=Variety(None)
+    )
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert record.variety is None
+
+
+async def test_a_player_rated_in_nothing_is_still_asked_how_widely_they_play():
+    """**Variety is about no sport at all**, so unlike the run of form it is not
+    skipped for somebody the sheet resolves no sport for: a newcomer rated in
+    nothing may still have played, and the record says so."""
+
+    variety = Variety(OpponentVariety(distinct_opponents=2, games_played=3))
+    use_case, _, _ = reading(
+        admits=True,
+        identity=an_identity(),
+        ratings=Ratings({}),
+        variety=variety,
+    )
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert record.skill is None
+    assert record.variety == OpponentVariety(distinct_opponents=2, games_played=3)
+    assert variety.asked == [SUBJECT]

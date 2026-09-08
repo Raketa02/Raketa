@@ -12,7 +12,7 @@ clock, so a game past a deadline has moved in this answer whether or not anythin
 swept it. A projection storing the standing would be right until a deadline
 passed, wrong until something rebuilt it, and believed throughout.
 
-**One clock per read, taken from the caller.** All four reads take ``now``
+**One clock per read, taken from the caller.** Every read here takes ``now``
 rather than reading one, because a search that asked about counted games and
 about familiarity in one request must get one instant's answer to both.
 
@@ -39,6 +39,7 @@ from app.modules.games.domain.ports import (
     Attendance,
     CountedResult,
     GameCounterpart,
+    OpponentVariety,
     PlayedOutcome,
     PlayedTally,
 )
@@ -49,12 +50,15 @@ from app.modules.games.infrastructure.game_streams import streams_seating
 
 @final
 class EventSourcedGameHistory:
-    """``GameHistoryQuery`` and ``GameDirectory`` over ``event_store``.
+    """``GameHistoryQuery``, ``GameDirectory`` and ``OpponentVarietyQuery`` over
+    ``event_store``.
 
-    **One class for two ports, because both are one read of the log folded
+    **One class for three ports, because all three are one read of the log folded
     differently** and splitting them would run the same substring match twice for
-    a screen that wants both. The ports stay separate: a caller that wants the
-    counts has no business holding the aggregates.
+    a screen that wants both. The ports stay separate, and each split is a rule
+    rather than a filing decision: a caller that wants the counts has no business
+    holding the aggregates, and a caller that walks twenty rows has no business
+    holding an unbounded career fold.
     """
 
     def __init__(self, session: AsyncSession, codec: EventCodec) -> None:
@@ -130,7 +134,7 @@ class EventSourcedGameHistory:
             return counts
 
         for game in await self._games_among(wanted):
-            if game.kind is not GameKind.COUNTED or not game.was_played_at(now):
+            if not _counted_and_played(game, now):
                 continue
             for player_id in game.line_up.players & wanted:
                 counts[player_id] += 1
@@ -265,6 +269,40 @@ class EventSourcedGameHistory:
 
         return None
 
+    # -- OpponentVarietyQuery ---------------------------------------------
+
+    async def variety_of(
+        self, player_id: UUID, *, now: Instant
+    ) -> OpponentVariety | None:
+        """How many different people, over how many counted games. **One pass.**
+
+        **The denominator is ``counted_games_for``'s, and it is written once**
+        (``_counted_and_played`` below), because the sheet prints this pair
+        beside a count of counted games and two spellings of *counted and
+        played* would eventually disagree on the same screen.
+
+        **The numerator is read off those same games and no others**, so a
+        friendly or a ghost can never put a face in the count without putting an
+        evening under it — which is what keeps the pair divisible.
+
+        **Nothing is trimmed and nothing is windowed.** The whole record is the
+        statistic; the sort-then-bound the pairwise read applies exists because a
+        matcher asked for the *recent* few, and this caller asked for a career.
+        """
+
+        faces: set[UUID] = set()
+        counted = 0
+        for game in await self._games_of(player_id):
+            if not _counted_and_played(game, now):
+                continue
+            counted += 1
+            faces |= game.line_up.counterparts_of(player_id)
+        if counted == 0:
+            return None
+        return OpponentVariety(
+            distinct_counterparts=len(faces), counted_games=counted
+        )
+
     # -- internals --------------------------------------------------------
 
     async def _games_of(self, player_id: UUID) -> list[Game]:
@@ -273,6 +311,22 @@ class EventSourcedGameHistory:
     async def _games_among(self, player_ids: Collection[UUID]) -> list[Game]:
         streams = await streams_seating(self._session, self._codec, player_ids)
         return [Game.from_history(events) for events in streams.values()]
+
+
+def _counted_and_played(game: Game, now: Instant) -> bool:
+    """Whether this game is one *how much have they played* counts.
+
+    **Counted rather than a friendly**, because the people who arranged a
+    friendly said it was not evidence; **played rather than merely arranged**,
+    because a plan nobody claimed is not an evening. An unscored game passes
+    both: it is an evening and it is not evidence, and those are two questions.
+
+    Written once and read by both the count and the variety fold, so the two
+    numbers a record prints beside each other cannot come from two ideas of what
+    a counted game is.
+    """
+
+    return game.kind is GameKind.COUNTED and game.was_played_at(now)
 
 
 def _pairwise_outcome(game: Game, now: Instant) -> PlayedOutcome | None:

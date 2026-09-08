@@ -159,6 +159,63 @@ class SkillPanelSchema(BaseModel):
     )
 
 
+class OpponentVarietySchema(BaseModel):
+    """How widely this person spreads their games, over their **whole** record.
+
+    **Two counts and no percentage, deliberately.** The card this sits on argues
+    two rows above that a perfect record over nine games and one over forty are
+    different claims and that a bar alone hides which — so publishing a bare
+    share here would break the rule the card had just made about itself. Draw
+    both: `70 % · 14 of 20`.
+
+    **The share is yours to compute and it is one division.** Nothing is rounded
+    on this side and there is no banding, no floor and no tone attached — unlike
+    a Level's band, which is a key precisely because a client deriving it would
+    be a second set of drawing constants.
+
+    **This is a career statistic, not a window.** It is every counted game the
+    platform has recorded for them, which is what the number means: *how widely
+    do they spread their games*, rather than *how widely this season*. There is
+    no decay behind it and no horizon.
+
+    **It prices no promise.** It is not a reliability strand, it is in no
+    weighted score, and it neither raises nor lowers anybody's standing. It is
+    context for a Level — a low figure is somebody playing the same few faces
+    every week, whose rating may be narrow but untested.
+    """
+
+    distinct_opponents: int = Field(
+        ...,
+        ge=1,
+        description=(
+            "How many **different people** those games were against.\n\n"
+            "**A doubles partner is one of them.** *A pair is anybody you were "
+            "on a court with* is the rule this platform already counts "
+            "familiarity by, and a figure counting opponents alone would say "
+            "that somebody who partners the same person every week spreads "
+            "their games as widely as somebody who does not."
+        ),
+    )
+    games_played: int = Field(
+        ...,
+        ge=1,
+        description=(
+            "How many **counted games** they were on the court for — the "
+            "denominator of the pair.\n\n"
+            "**It is not `skill.counted_games`, and the two will differ on this "
+            "same response.** That one is *what this Level rests on*: confirmed "
+            "results, in one sport, that the rating actually folded. This one "
+            "is *how much have they played*: every sport, and an evening "
+            "nobody agreed a score for is in it. Two honest numbers about the "
+            "same person, answering two questions — do not reconcile them.\n\n"
+            "**Counted rather than every game**: a friendly was never evidence "
+            "about anybody by the choice of the people who arranged it, and it "
+            "is out of both halves of this pair rather than only the bottom "
+            "one."
+        ),
+    )
+
+
 class PlayerRecordResponse(BaseModel):
     """Everything the platform will say about one person, to this reader.
 
@@ -273,6 +330,25 @@ class PlayerRecordResponse(BaseModel):
         ),
     )
 
+    variety: OpponentVarietySchema = Field(
+        default=OMITTED,
+        description=(
+            "How widely they spread their games — **the raw pair, over their "
+            "whole record.**\n\n"
+            "**Omitted where no counted game has ever been recorded for "
+            "them**, which is not a nought and not `0 / 0`: a habit nobody has "
+            "been observed having is not a narrow one. It is a **different "
+            "absence from `skill`'s** — somebody rated in nothing may have "
+            "played all week, and somebody rated in four sports may never have "
+            "had a game counted.\n\n"
+            "**It is about every sport**, unlike `skill.last_five` above it. "
+            "`?sport=` does not move it: a person who plays padel with the same "
+            "four faces and squash with twenty has one habit, and a figure "
+            "narrowed to one sport would be a different statistic under the "
+            "same word."
+        ),
+    )
+
     @classmethod
     def of(cls, record: PlayerRecord) -> "PlayerRecordResponse":
         """Render one record, omitting rather than nulling what is absent.
@@ -306,6 +382,11 @@ class PlayerRecordResponse(BaseModel):
                 ),
                 last_five=list(panel.last_five),
             )
+        if record.variety is not None:
+            fields["variety"] = OpponentVarietySchema(
+                distinct_opponents=record.variety.distinct_opponents,
+                games_played=record.variety.games_played,
+            )
         if identity.photo_id is not None and record.photo_url is not None:
             fields["photo_id"] = identity.photo_id
             fields["photo_url"] = record.photo_url
@@ -315,6 +396,7 @@ class PlayerRecordResponse(BaseModel):
 
 
 __all__ = [
+    "OpponentVarietySchema",
     "RecordLikelyRangeSchema",
     "PlayerRecordResponse",
     "SkillPanelSchema",

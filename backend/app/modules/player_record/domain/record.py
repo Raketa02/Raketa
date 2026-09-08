@@ -1,7 +1,7 @@
 """What a record says about a person, in this context's own words.
 
-**The header identity, the sport pills and the skill card.** The metered rows,
-opponent variety and what opponents said arrive on this type later (#380–#382);
+**The header identity, the sport pills, the skill card and opponent variety.**
+The metered rows and what opponents said arrive on this type later (#381, #382);
 what shipped first was the zone every one of them hangs under, because the route
 and its admission rule are what the rest of the sheet was blocked on.
 
@@ -29,7 +29,7 @@ from enum import StrEnum
 from typing import Final, final
 from uuid import UUID
 
-from app.kernel import Sport
+from app.kernel import Sport, invariant
 
 
 class OnCourtVerdict(StrEnum):
@@ -197,6 +197,50 @@ class SkillPanel:
 
 @final
 @dataclass(frozen=True, slots=True)
+class OpponentVariety:
+    """How many different people this person's counted games were against.
+
+    **The pair, and the sheet divides it.** The card two rows above argues that a
+    perfect record over nine games and one over forty are different claims and
+    that a bar alone hides which — so a bare percentage here would break the rule
+    the card had just made about itself. What crosses is the fraction; *70 %* is
+    what a client draws from it.
+
+    **It is a career statistic and never a window.** The fold behind it is
+    unbounded, which is what the number means: *how widely do they spread their
+    games*, not *how widely this season*. A second window here would be a figure
+    that must not disagree with the matcher's horizon, and eventually would.
+
+    **This is not a strand and it prices no promise.** It neither raises nor
+    lowers a Player Score; it is context for a Level — a low figure is somebody
+    playing the same few faces every week, whose rating may be narrow but
+    untested.
+
+    **A second spelling of a pair ``games`` publishes**, like every fact on this
+    sheet (``docs/adr/0155``). There ``distinct_counterparts`` says what was
+    measured — everybody who was on a court with them, partner included; here
+    ``distinct_opponents`` says what the row is called on screen. The translation
+    is one adapter, and there is no third place for either word.
+    """
+
+    distinct_opponents: int
+    games_played: int
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.games_played >= 1,
+            "a variety over no counted game is an absence, not a nought — this "
+            "sheet omits the row rather than drawing a habit nobody has",
+        )
+        invariant(
+            self.distinct_opponents >= 1,
+            "a counted game played against nobody: "
+            f"{self.distinct_opponents} people over {self.games_played} games",
+        )
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class PlayerRecord:
     """One player's record, as of the moment somebody opened it.
 
@@ -224,6 +268,11 @@ class PlayerRecord:
     #: which is exactly when ``sports`` is empty, and the client draws the poster
     #: with no Level on it. An omission and never a panel full of noughts.
     skill: SkillPanel | None
+    #: How widely they spread their games, over the **whole** record. ``None``
+    #: for somebody no counted game has been watched for — which is not the same
+    #: absence as ``skill``'s: a player rated in nothing may well have played,
+    #: and somebody rated in four sports may never have had a game counted.
+    variety: OpponentVariety | None
 
 
 __all__ = [
@@ -231,6 +280,7 @@ __all__ = [
     "GameOutcome",
     "LikelyRange",
     "OnCourtVerdict",
+    "OpponentVariety",
     "PlayerRecord",
     "SkillPanel",
     "SportPill",

@@ -25,6 +25,7 @@ that cannot be evaluated excludes. The register's row builds a real
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import get_type_hints
 from uuid import UUID
 
 import pytest
@@ -80,7 +81,9 @@ from app.modules.player_record.domain.ports import (
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
+    SubjectVariety,
 )
+from app.modules.player_record.domain.record import OpponentVariety
 from app.shared.ids import new_uuid
 
 SPORT = Sport.PADEL
@@ -432,6 +435,80 @@ async def test_a_sport_with_nothing_counted_in_it_is_an_empty_run(
     now = instant(datetime.now(timezone.utc))
 
     assert await form.last_results_in(new_uuid(), sport=Sport.PADEL, now=now) == ()
+
+
+# ---------------------------------------------------------------------------
+# SubjectVariety — the whole record, one player, and a pair rather than a share
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectVariety))
+async def test_variety_crosses_as_two_counts_in_this_contexts_own_words(
+    implementation, session
+):
+    """**The pair, renamed and not recomputed.** ``games`` measured everybody who
+    was on a court with them over the games that counted; the record calls those
+    two numbers ``distinct_opponents`` and ``games_played`` and divides
+    neither."""
+
+    variety = implementation.build(session)
+    now = _now()
+    player, one, other = new_uuid(), new_uuid(), new_uuid()
+    await _a_confirmed_game(session, player, one, sport=Sport.PADEL, won=True)
+    await _a_confirmed_game(session, player, other, sport=Sport.TENNIS, won=False)
+    await _a_confirmed_game(session, player, one, sport=Sport.PADEL, won=True)
+
+    assert await variety.variety_of(player, now=now) == OpponentVariety(
+        distinct_opponents=2, games_played=3
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectVariety))
+async def test_a_player_no_counted_game_was_watched_for_is_absent(
+    implementation, session
+):
+    """**Absent, and the absence passes through every layer unchanged.** A habit
+    nobody has been observed having is not a narrow one, so there is no nought
+    here and no empty pair for a sheet to draw a zero-width bar from."""
+
+    variety = implementation.build(session)
+
+    assert await variety.variety_of(new_uuid(), now=_now()) is None
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectVariety))
+async def test_variety_is_about_every_sport_and_never_the_one_on_the_sheet(
+    implementation, session
+):
+    """**No sport reaches this port**, unlike the run of form beside it.
+
+    Somebody who plays padel with the same face and squash with a different one
+    has one habit, and a figure narrowed to whichever sport the sheet turned out
+    to be about would be a different statistic under the same word.
+    """
+
+    variety = implementation.build(session)
+    player, one, other = new_uuid(), new_uuid(), new_uuid()
+    await _a_confirmed_game(session, player, one, sport=Sport.PADEL, won=True)
+    await _a_confirmed_game(session, player, other, sport=Sport.SQUASH, won=True)
+
+    assert await variety.variety_of(player, now=_now()) == OpponentVariety(
+        distinct_opponents=2, games_played=2
+    )
+
+
+def test_the_variety_demand_takes_one_player_and_never_a_collection():
+    """**The fence is the signature on this side of the seam too.**
+
+    The fold behind it is unbounded, which is what makes it a career statistic —
+    and what makes a set-shaped version of it an invitation to call it inside a
+    search's walk over five hundred candidates.
+    """
+
+    hints = get_type_hints(SubjectVariety.variety_of)
+
+    assert hints["player_id"] is UUID
+    assert hints["return"] == OpponentVariety | None
 
 
 # ---------------------------------------------------------------------------

@@ -4167,6 +4167,29 @@
         "title": "OpenCardsResponse",
         "description": "Every card waiting for you, **soonest to expire first**.\n\nAn empty list is the ordinary answer and means nothing is waiting. It does\nnot distinguish *no games*, *not yet a day* and *already answered*: all three\nare simply not on the list, and none of them is something a client would draw\ndifferently.\n\n``cards`` is **required and never absent**, empty though it usually is: a\ndefault would emit it as optional and hand every client a list it has to\ncheck for existence before checking for length."
       },
+      "OpponentVarietySchema": {
+        "properties": {
+          "distinct_opponents": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Distinct Opponents",
+            "description": "How many **different people** those games were against.\n\n**A doubles partner is one of them.** *A pair is anybody you were on a court with* is the rule this platform already counts familiarity by, and a figure counting opponents alone would say that somebody who partners the same person every week spreads their games as widely as somebody who does not."
+          },
+          "games_played": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Games Played",
+            "description": "How many **counted games** they were on the court for \u2014 the denominator of the pair.\n\n**It is not `skill.counted_games`, and the two will differ on this same response.** That one is *what this Level rests on*: confirmed results, in one sport, that the rating actually folded. This one is *how much have they played*: every sport, and an evening nobody agreed a score for is in it. Two honest numbers about the same person, answering two questions \u2014 do not reconcile them.\n\n**Counted rather than every game**: a friendly was never evidence about anybody by the choice of the people who arranged it, and it is out of both halves of this pair rather than only the bottom one."
+          }
+        },
+        "type": "object",
+        "required": [
+          "distinct_opponents",
+          "games_played"
+        ],
+        "title": "OpponentVarietySchema",
+        "description": "How widely this person spreads their games, over their **whole** record.\n\n**Two counts and no percentage, deliberately.** The card this sits on argues\ntwo rows above that a perfect record over nine games and one over forty are\ndifferent claims and that a bar alone hides which \u2014 so publishing a bare\nshare here would break the rule the card had just made about itself. Draw\nboth: `70 % \u00b7 14 of 20`.\n\n**The share is yours to compute and it is one division.** Nothing is rounded\non this side and there is no banding, no floor and no tone attached \u2014 unlike\na Level's band, which is a key precisely because a client deriving it would\nbe a second set of drawing constants.\n\n**This is a career statistic, not a window.** It is every counted game the\nplatform has recorded for them, which is what the number means: *how widely\ndo they spread their games*, rather than *how widely this season*. There is\nno decay behind it and no horizon.\n\n**It prices no promise.** It is not a reliability strand, it is in no\nweighted score, and it neither raises nor lowers anybody's standing. It is\ncontext for a Level \u2014 a low figure is somebody playing the same few faces\nevery week, whose rating may be narrow but untested."
+      },
       "OptimisedFor": {
         "type": "string",
         "enum": [
@@ -4594,6 +4617,10 @@
           "skill": {
             "$ref": "#/components/schemas/SkillPanelSchema",
             "description": "The skill card, for the one sport this sheet is about.\n\n**Which sport is resolved here and stated back on the panel.** The `?sport=` you asked with wins where they are rated in it; otherwise it falls back to the sport they have played most, ties broken by the sport registry's own order. A fallback on their *highest* Level would make the header a boast about a sport nobody asked about.\n\n**Omitted where no sport resolves** \u2014 that is, where they are rated in nothing at all. The header draws the poster with no Level on it, and there is no panel of noughts to mistake for a bad record."
+          },
+          "variety": {
+            "$ref": "#/components/schemas/OpponentVarietySchema",
+            "description": "How widely they spread their games \u2014 **the raw pair, over their whole record.**\n\n**Omitted where no counted game has ever been recorded for them**, which is not a nought and not `0 / 0`: a habit nobody has been observed having is not a narrow one. It is a **different absence from `skill`'s** \u2014 somebody rated in nothing may have played all week, and somebody rated in four sports may never have had a game counted.\n\n**It is about every sport**, unlike `skill.last_five` above it. `?sport=` does not move it: a person who plays padel with the same four faces and squash with twenty has one habit, and a figure narrowed to one sport would be a different statistic under the same word."
           }
         },
         "type": "object",
