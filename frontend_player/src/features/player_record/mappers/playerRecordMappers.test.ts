@@ -161,10 +161,72 @@ describe('what the platform watched', () => {
       },
     });
 
-    expect(toPlayerRecord(served).playerScore).toBe(93);
+    expect(toPlayerRecord(served).reliability?.playerScore).toBe(93);
   });
 
   it('leaves it absent where nothing has ever fallen due, and never at nought', () => {
-    expect(toPlayerRecord(response()).playerScore).toBeUndefined();
+    expect(toPlayerRecord(response()).reliability).toBeUndefined();
+  });
+
+  it('carries every row behind the figure, in the order they were served', () => {
+    const served = response({
+      reliability: {
+        player_score: 93,
+        strands: [
+          { strand: 'SHOWS_UP', good: 9, opportunities: 9, pct: 100 },
+          { strand: 'ANSWERS_RESULTS', good: 8, opportunities: 10, pct: 80 },
+        ],
+      },
+    });
+
+    expect(toPlayerRecord(served).reliability?.strands).toEqual([
+      { strand: 'SHOWS_UP', good: 9, opportunities: 9, pct: 100 },
+      { strand: 'ANSWERS_RESULTS', good: 8, opportunities: 10, pct: 80 },
+    ]);
+  });
+
+  /**
+   * **A shorter card, not a wrong one** — which is the opposite answer the run of five gets one
+   * panel up, and deliberately: a run's length is itself a claim, where a card states one row
+   * per thing the platform watched and never promises how many. The figure over it is the
+   * server's own blend and is not recomputed here, so the pill goes on being right about a row
+   * this build could not name.
+   */
+  it('drops a strand this build has no words for, and keeps the figure and the rest', () => {
+    const served = response({
+      reliability: {
+        player_score: 93,
+        strands: [
+          {
+            strand: 'TURNS_UP_EARLY' as Wire['ReliabilityStrand'],
+            good: 3,
+            opportunities: 3,
+            pct: 100,
+          },
+          { strand: 'SHOWS_UP', good: 9, opportunities: 9, pct: 100 },
+        ],
+      },
+    });
+    const read = toPlayerRecord(served).reliability;
+
+    expect(read?.strands.map((one) => one.strand)).toEqual(['SHOWS_UP']);
+    expect(read?.playerScore).toBe(93);
+  });
+});
+
+/**
+ * **A different absence, asking a different question.** Somebody rated in nothing may have
+ * played all week, and somebody rated in four sports may never have had a game counted — so
+ * this moves with neither the skill panel nor the strands above it.
+ */
+describe('how widely they spread their games', () => {
+  it('carries the raw pair, and never a share computed at the boundary', () => {
+    const served = response({ variety: { distinct_opponents: 14, games_played: 20 } });
+
+    expect(toPlayerRecord(served).variety).toEqual({ distinctOpponents: 14, gamesPlayed: 20 });
+  });
+
+  it('is absent where no counted game was ever recorded, and never `0 of 0`', () => {
+    expect(toPlayerRecord(response()).variety).toBeUndefined();
   });
 });

@@ -15,7 +15,16 @@
 
 export { PlayerRecordSheet, type PlayerRecordSheetProps } from './components/PlayerRecordSheet';
 
-export type { PlayerRecord, RatedSport, RecordSubject, SkillPanel } from './domain/playerRecord';
+export type {
+  OpponentVariety,
+  PlayerRecord,
+  RatedSport,
+  RecordSubject,
+  Reliability,
+  ReliabilityStrand,
+  SkillPanel,
+  StrandRow,
+} from './domain/playerRecord';
 
 /**
  * The record's query keys, exported for the one thing outside this feature that needs them:
@@ -30,15 +39,21 @@ export { playerRecordKeys } from './hooks/playerRecordKeys';
  * changes and the screen stops saying what it meant — `findAGamePresentation`'s rule, and the
  * one every copy deck in this app is read through. What is exported is what the **builder's**
  * walk reads: the two titles, the close control's name, the pairing row's spoken name, the one
- * line a record that cannot be opened draws, and the one clause a client is licensed to write
- * from two area codes — which the walk asserts is **absent** from your own record.
+ * line a record that cannot be opened draws, the one clause a client is licensed to write from
+ * two area codes — which the walk asserts is **absent** from your own record — and the record
+ * card's heading with the two figures it prints.
  */
 export {
   IN_YOUR_AREA,
   OWN_RECORD_TITLE,
   YOU_MARK,
+  RECORD_CARD_TITLE_DRAWN,
   RECORD_TITLE,
+  PLAYER_SCORE_NAME,
   RECORD_UNAVAILABLE,
+  STRAND_NAME,
   fitRowLabel,
   recordCloseLabel,
+  strandFraction,
+  varietyValue,
 } from './components/recordPresentation';

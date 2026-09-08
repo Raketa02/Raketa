@@ -54,7 +54,7 @@ export {
   type LevelBarProps,
   type LevelBarVariant,
 } from './LevelBar';
-export { Meter, type MeterProps } from './Meter';
+export { METER_TONE_FILL, Meter, type MeterProps, type MeterTone } from './Meter';
 export {
   ON_COURT_CLAUSE,
   ON_COURT_MARK,

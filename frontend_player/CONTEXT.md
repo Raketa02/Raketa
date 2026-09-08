@@ -798,6 +798,13 @@ comment and a commit message all use the same word.
   screen that names its denominator and reports one through `accessibilityValue`; a **meter**
   visualises a number the row beside it has already printed and is **hidden from assistive
   technology**. _Avoid_: using either word for the other, or calling a meter a progress bar.
+- **A meter's tone** — which of three fills it draws in, `good` · `neutral` · `poor`. It is
+  the **caller's** reading of the figure and never the meter's own: where a number turns poor
+  is a fact about what the number means, so one ladder is read by every surface drawing it and
+  a bar can never disagree with a pill above it about one ratio. _Avoid_: "the meter's
+  threshold", which puts the ladder in the primitive, and treating the tone as the carrier of
+  a value — it is always the third cue, behind the bar's length and the figure printed beside
+  it.
 - **Accessible name** — what a control announces. It is **copy**, not a component detail: it
   is localisable, it quotes formatted numbers, and it is composed from codes in a
   `*Presentation.ts`, never written as a template in the component that draws the control.

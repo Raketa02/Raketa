@@ -8,21 +8,29 @@
 
 import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 
+import type { StrandRow } from '../domain/playerRecord';
+
 import {
   IN_YOUR_AREA,
   OWN_RECORD_TITLE,
+  RECORD_CARD_TITLE,
+  RECORD_CARD_TITLE_DRAWN,
   RECORD_TITLE,
+  STRAND_NAME,
   YOU_MARK,
   fitRowLabel,
   fitRowTitle,
   identityLine,
   lastFiveReading,
   recordCloseLabel,
+  recordCardLabel,
   recordHandle,
   recordHeaderLabel,
   skillCardLabel,
   skillHeadline,
   socialTagsLabel,
+  strandFraction,
+  varietyValue,
 } from './recordPresentation';
 
 const HERE = 'A+050612+0019938';
@@ -177,5 +185,83 @@ describe('the pairing row', () => {
     expect(fitRowTitle(78)).toContain('✦');
     expect(fitRowLabel(78)).not.toContain('✦');
     expect(fitRowLabel(78).startsWith('Why fit 78')).toBe(true);
+  });
+});
+
+/**
+ * **The card's own words**, and the two rules a build session could quietly undo: the raw pair
+ * beside every figure, and the strand that is named for what it counts.
+ */
+describe('the record card', () => {
+  const row = (over: Partial<StrandRow> = {}): StrandRow => ({
+    strand: 'SHOWS_UP',
+    good: 9,
+    opportunities: 9,
+    pct: 100,
+    ...over,
+  });
+
+  /**
+   * **The heading is the rule, not a label.** It is the sentence the whole card is answerable
+   * for, so it is asserted rather than left to whoever edits the file next — and it is spoken
+   * in sentence case, because a run of capitals reaches some engines as letters.
+   */
+  it('is headed with the rule it enforces, drawn in caps and spoken in words', () => {
+    expect(RECORD_CARD_TITLE).toBe('The record — counted by the system, not written by people');
+    expect(RECORD_CARD_TITLE_DRAWN).toBe(RECORD_CARD_TITLE.toUpperCase());
+  });
+
+  /**
+   * **Answering, never confirming.** Countering a score you believe is wrong is an answer and
+   * costs nothing; a player who did exactly that and watched a *confirms* figure rise is the
+   * one person certain to notice the word was wrong.
+   */
+  it('names the results strand for the thing it counts', () => {
+    expect(STRAND_NAME.ANSWERS_RESULTS).toBe('Answers about results');
+    expect(Object.values(STRAND_NAME).join(' ')).not.toMatch(/confirm/i);
+  });
+
+  /**
+   * A perfect record over nine games and one over forty draw the same bar. The pair is what
+   * tells them apart, which is why it is printed and why the bar is allowed to say nothing.
+   */
+  it('prints the raw pair, so nine and forty are visibly different claims', () => {
+    expect(strandFraction(row({ good: 9, opportunities: 9 }))).toBe('9 of 9');
+    expect(strandFraction(row({ good: 40, opportunities: 40 }))).toBe('40 of 40');
+  });
+
+  /**
+   * **Variety obeys the same honesty rule as the rows above it.** A bare `70%` would break the
+   * rule the card had just made about itself, so the pair is printed beside the share — and the
+   * share is this client's one division, because the platform serves two counts and no
+   * percentage.
+   */
+  it('prints variety as a percentage and its raw pair, never one of the two', () => {
+    expect(varietyValue({ distinctOpponents: 14, gamesPlayed: 20 })).toBe('70% · 14 of 20');
+  });
+
+  it('writes the share as a whole percentage, through the app’s one formatter', () => {
+    expect(varietyValue({ distinctOpponents: 2, gamesPlayed: 3 })).toBe('67% · 2 of 3');
+  });
+
+  /**
+   * The card is one accessibility element: the heading leads, one clause per row follows, and
+   * **no bar is in it** — every meter draws a fraction spoken two words earlier.
+   */
+  it('reaches a listener as the heading and one clause a row', () => {
+    expect(
+      recordCardLabel({
+        rows: [row(), row({ strand: 'ANSWERS_RESULTS', good: 8, opportunities: 10, pct: 80 })],
+        variety: { distinctOpponents: 14, gamesPlayed: 20 },
+      }),
+    ).toBe(
+      `${RECORD_CARD_TITLE}. Shows up, 9 of 9. Answers about results, 8 of 10. ` +
+        'Opponent variety, 70%, 14 of 20',
+    );
+  });
+
+  /** A card with one row is one clause. Nothing is spoken as absent. */
+  it('says nothing about a row it was not given', () => {
+    expect(recordCardLabel({ rows: [row()] })).toBe(`${RECORD_CARD_TITLE}. Shows up, 9 of 9`);
   });
 });

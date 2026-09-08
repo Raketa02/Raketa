@@ -78,6 +78,9 @@ const SCORE_VARIANT = { good: 'ok', neutral: 'base', poor: 'bad' } as const;
 
 export function RecordHeader({ record, playerId, distanceKm, viewerAreaCode }: RecordHeaderProps) {
   const handle = recordHandle(record.nickname, record.isSelf);
+  // The figure and the rows beneath it are one fact, so the pill is drawn exactly when the card
+  // under it is — see `Reliability`.
+  const playerScore = record.reliability?.playerScore;
   const identity = identityLine({
     areaCode: record.areaCode,
     isSelf: record.isSelf,
@@ -94,7 +97,7 @@ export function RecordHeader({ record, playerId, distanceKm, viewerAreaCode }: R
         onCourt: record.onCourt,
         identity,
         sports: record.sports.map(({ sport, level }) => sportPill(sportLabel(sport), level)),
-        ...(record.playerScore === undefined ? {} : { playerScore: record.playerScore }),
+        ...(playerScore === undefined ? {} : { playerScore }),
       })}
     >
       {/* The Level and the Sport are the resolved panel's, so somebody rated in nothing draws
@@ -121,12 +124,9 @@ export function RecordHeader({ record, playerId, distanceKm, viewerAreaCode }: R
 
         <SportPills sports={record.sports} />
 
-        {record.playerScore === undefined ? null : (
+        {playerScore === undefined ? null : (
           <View style={s.score}>
-            <Tag
-              label={scorePill(record.playerScore)}
-              variant={SCORE_VARIANT[scoreTone(record.playerScore)]}
-            />
+            <Tag label={scorePill(playerScore)} variant={SCORE_VARIANT[scoreTone(playerScore)]} />
           </View>
         )}
       </View>

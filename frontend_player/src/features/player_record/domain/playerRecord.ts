@@ -15,7 +15,7 @@
  *
  * Every optional here is *the platform has nothing to say*, and **never a nought**. A player
  * with no rating in any sport has no `skill` and an empty `sports`; one nothing has ever
- * fallen due for has no `playerScore`. The four absences on this response ask four different
+ * fallen due for has no `reliability`. The four absences on this response ask four different
  * questions and do not move together — somebody rated in four sports may never have had a
  * game counted — so each is read where it is drawn and nothing is inferred from another.
  *
@@ -50,6 +50,104 @@ import type { Sport } from '@/shared/vocabulary/sport';
 export type RecordSubject =
   | { readonly kind: 'me'; readonly playerId: string }
   | { readonly kind: 'player'; readonly playerId: string };
+
+/**
+ * **The six strands a reliability reading is built from**, read separately.
+ *
+ * Written down here rather than read off the contract because a copy table is keyed by it and
+ * transport does not reach `components/` — the two are held equal by the compiler in
+ * `mappers/wireVocabulary.ts`, which is where a code added, removed or renamed fails the build.
+ *
+ * **Three of them have no provider on this platform today** and never cross on this response.
+ * They are in the union because the vocabulary is closed and shared with the Fit breakdown,
+ * not because they are coming.
+ */
+export const RELIABILITY_STRANDS = [
+  'SHOWS_UP',
+  'ANSWERS_CHALLENGES',
+  'ANSWERS_RESULTS',
+  'KEEPS_PLANS',
+  'SETTLES_UP',
+  'SPORTSMANSHIP',
+] as const;
+
+export type ReliabilityStrand = (typeof RELIABILITY_STRANDS)[number];
+
+/**
+ * **One metered row: what fell due, what came of it, and the figure the platform acts on.**
+ *
+ * All three are carried and the third is not a convenience. `good` and `opportunities` are the
+ * raw pair, because a perfect record over nine and one over forty are different claims and a
+ * bar alone hides which; `pct` is the platform's own rounding of them, so that a client
+ * dividing for itself is not the fourth place one record gets rounded.
+ */
+export interface StrandRow {
+  readonly strand: ReliabilityStrand;
+  /**
+   * How many of those opportunities went the way the strand is named for.
+   *
+   * **A no is a good outcome on two of the three.** Turning somebody down inside your day *is*
+   * answering them, and so is countering a score you believe is wrong: what both price is
+   * silence, which is the whole of
+   * [ADR-0156](../../../../../docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md).
+   */
+  readonly good: number;
+  /**
+   * How many times it fell due. **An opportunity and never a total** — a game still awaiting
+   * its entry and a score still inside its window are in neither half, because publishing them
+   * either way would state a conclusion the clock has not reached. Never nought: a row with
+   * nothing behind it is not served at all.
+   */
+  readonly opportunities: number;
+  /** The figure out of a hundred. **Served, never derived** — see the interface note. */
+  readonly pct: number;
+}
+
+/**
+ * **What the platform watched somebody do** — the pill, and the rows it is the mean of.
+ *
+ * One optional and not two, because it is **one absence**: nothing has ever fallen due for
+ * them. A `playerScore` beside a separate list of rows would let a build draw a figure over an
+ * empty card, which is the shape this response is served whole precisely to prevent. There is
+ * always at least one row.
+ */
+export interface Reliability {
+  /** Out of a hundred — the figure the matcher acts on, at the player's own published weights. */
+  readonly playerScore: number;
+  /** In the strand vocabulary's own order, and never re-sorted. Only the strands they have. */
+  readonly strands: readonly StrandRow[];
+}
+
+/**
+ * **How widely they spread their games — the raw pair, over their whole record.**
+ *
+ * Two counts and no percentage, deliberately: the card argues three rows above that a perfect
+ * record over nine games and one over forty are different claims, so a bare share here would
+ * break the rule the card had just made about itself. The share is one division and it is this
+ * client's ([`recordCard`](./recordCard.ts)).
+ *
+ * **It is about every sport**, unlike the skill panel's run of five — a person who plays padel
+ * with the same four faces and squash with twenty has one habit — and it is a **career
+ * statistic rather than a window**, which is what makes the number mean *how widely do they
+ * spread their games* rather than *how widely this season*.
+ */
+export interface OpponentVariety {
+  /**
+   * How many **different people** those games were against.
+   *
+   * A doubles partner is one of them: *a pair is anybody you were on a court with* is the rule
+   * this platform already counts familiarity by.
+   */
+  readonly distinctOpponents: number;
+  /**
+   * How many **counted games** they were on the court for.
+   *
+   * **Not the skill panel's `countedGames`, and the two will differ on one response.** That one
+   * is what a Level rests on — confirmed results, in one sport, that the rating folded. This is
+   * how much they have played, across every sport. Two honest numbers, two questions.
+   */
+  readonly gamesPlayed: number;
+}
 
 /** One sport somebody holds a rating in, as the header's pill draws it. */
 export interface RatedSport {
@@ -120,10 +218,18 @@ export interface PlayerRecord {
   /** Omitted where they hold no rating at all; the pills then speak alone. */
   readonly skill?: SkillPanel;
   /**
-   * Their **Player Score** out of a hundred — the figure the matcher acts on.
+   * The pill and the metered rows under it.
    *
    * Omitted where nothing has ever fallen due for them, which is most people today, and is
    * never a nought: nobody has failed to turn up who was never due to.
    */
-  readonly playerScore?: number;
+  readonly reliability?: Reliability;
+  /**
+   * The variety row, which is a **different absence** and does not move with the one above.
+   *
+   * Omitted where no counted game has ever been recorded for them — a habit nobody has been
+   * observed having is not a narrow one — and a plan that dissolved is an opportunity above
+   * without being a game anybody played.
+   */
+  readonly variety?: OpponentVariety;
 }

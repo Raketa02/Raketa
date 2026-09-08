@@ -16,7 +16,14 @@
  * | `social_tags[]` | that tag is dropped | a chip with no words on it |
  * | `skill.sport` | the **whole panel** goes | the sport is printed on the panel and on the poster beside it; a card that could not say which sport it was about would be a Level with no subject |
  * | `skill.last_five` | the **whole run** goes | its length is a claim: dropping one entry says a counted game fewer than the platform counted, and a third kind of square is a drawing nobody has designed |
+ * | `reliability.strands[].strand` | that row is dropped | a metered row with no label is a bar with a fraction beside it and nothing saying what was counted |
  * | `review` | folded to *no mark* | the absence is already a state, and it is the one that draws nothing |
+ *
+ * A dropped strand row is a **shorter card and not a wrong one**, which is the opposite answer
+ * to the run of five's above it and for the reason stated there: a run's length is itself the
+ * claim, where a card states one row per thing the platform has watched and has never promised
+ * how many. The figure over it is the server's own blend and is not recomputed from what
+ * survived, so the pill goes on being right about a row this build could not name.
  *
  * ## The verdict is folded to a boolean here and is never carried further
  *
@@ -40,10 +47,21 @@ import { toSport } from '@/features/onboarding/types';
 import { GAME_RESULTS, type GameResult } from '@/shared/vocabulary/gameResult';
 import { SOCIAL_TAG_IDS, type SocialTagId } from '@/shared/vocabulary/socialTags';
 
-import type { PlayerRecord, RatedSport, SkillPanel } from '../domain/playerRecord';
+import {
+  RELIABILITY_STRANDS,
+  type OpponentVariety,
+  type PlayerRecord,
+  type RatedSport,
+  type Reliability,
+  type ReliabilityStrand,
+  type SkillPanel,
+  type StrandRow,
+} from '../domain/playerRecord';
 
 type PlayerRecordResponse = components['schemas']['PlayerRecordResponse'];
 type SkillPanelSchema = components['schemas']['SkillPanelSchema'];
+type ReliabilitySchema = components['schemas']['ReliabilitySchema'];
+type OpponentVarietySchema = components['schemas']['OpponentVarietySchema'];
 
 export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
   return {
@@ -59,7 +77,47 @@ export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
     ...skillPanel(response.skill),
     ...(response.reliability === undefined
       ? {}
-      : { playerScore: response.reliability.player_score }),
+      : { reliability: reliability(response.reliability) }),
+    ...(response.variety === undefined ? {} : { variety: variety(response.variety) }),
+  };
+}
+
+/**
+ * The pill and its rows, as one fact.
+ *
+ * They are carried together because they are **one absence** — nothing has ever fallen due —
+ * and splitting them here is how a build ends up drawing a figure over an empty card.
+ */
+function reliability(served: ReliabilitySchema): Reliability {
+  return {
+    playerScore: served.player_score,
+    strands: served.strands.flatMap(toStrandRow),
+  };
+}
+
+/** One row, or none — see the narrowing table above. The order is the server's and is kept. */
+function toStrandRow(served: ReliabilitySchema['strands'][number]): readonly StrandRow[] {
+  const strand = toStrand(served.strand);
+  return strand === undefined
+    ? []
+    : [
+        {
+          strand,
+          good: served.good,
+          opportunities: served.opportunities,
+          // Served rather than divided here: `good / opportunities` on this side would be the
+          // fourth rounding of one record, and the two disagree by a point on exactly the
+          // values a player notices.
+          pct: served.pct,
+        },
+      ];
+}
+
+/** The raw pair, whole. The share it is drawn as is `varietyShare`'s one division. */
+function variety(served: OpponentVarietySchema): OpponentVariety {
+  return {
+    distinctOpponents: served.distinct_opponents,
+    gamesPlayed: served.games_played,
   };
 }
 
@@ -109,6 +167,7 @@ function lastFive(served: readonly string[]): { readonly lastFive?: readonly Gam
 
 const KNOWN_RESULTS = new Set<string>(GAME_RESULTS);
 const KNOWN_TAGS = new Set<string>(SOCIAL_TAG_IDS);
+const KNOWN_STRANDS = new Set<string>(RELIABILITY_STRANDS);
 
 function toGameResult(served: string): GameResult | undefined {
   return KNOWN_RESULTS.has(served) ? (served as GameResult) : undefined;
@@ -116,4 +175,8 @@ function toGameResult(served: string): GameResult | undefined {
 
 function toSocialTagId(served: string): SocialTagId | undefined {
   return KNOWN_TAGS.has(served) ? (served as SocialTagId) : undefined;
+}
+
+function toStrand(served: string): ReliabilityStrand | undefined {
+  return KNOWN_STRANDS.has(served) ? (served as ReliabilityStrand) : undefined;
 }

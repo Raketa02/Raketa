@@ -29,11 +29,16 @@ import { queryClient } from '@/shared/lib/query-client';
 import {
   IN_YOUR_AREA,
   OWN_RECORD_TITLE,
+  PLAYER_SCORE_NAME,
   YOU_MARK,
+  RECORD_CARD_TITLE_DRAWN,
   RECORD_TITLE,
   RECORD_UNAVAILABLE,
+  STRAND_NAME,
   fitRowLabel,
   recordCloseLabel,
+  strandFraction,
+  varietyValue,
 } from '@/features/player_record/types';
 import { BALANCE_SOFT, POSTER_LABEL, courtSeatCount, theme } from '@/shared/ui';
 import { NO_TAGS_IN_COMMON, socialTagChip } from '@/shared/vocabulary/socialTagPresentation';
@@ -792,8 +797,13 @@ describe('who this person is', () => {
       },
       reliability: {
         player_score: 93,
-        strands: [{ strand: 'SHOWS_UP', good: 9, opportunities: 9, pct: 100 }],
+        strands: [
+          { strand: 'SHOWS_UP', good: 9, opportunities: 9, pct: 100 },
+          { strand: 'ANSWERS_CHALLENGES', good: 11, opportunities: 11, pct: 100 },
+          { strand: 'ANSWERS_RESULTS', good: 8, opportunities: 10, pct: 80 },
+        ],
       },
+      variety: { distinct_opponents: 14, games_played: 20 },
       ...over,
     };
   }
@@ -940,6 +950,45 @@ describe('who this person is', () => {
     await screen.findByText(`${NAMES[C] ?? ''} ${YOU_MARK}`);
 
     expect(screen.queryByLabelText(fitRowLabel(78))).toBeNull();
+  });
+
+  /**
+   * **The card is headed with the rule it enforces**, and every row on it prints the pair it was
+   * measured over: a perfect record over nine games and one over forty draw the same bar, so the
+   * bar is never the claim ([#385](https://github.com/Raketa02/Raketa/issues/385)).
+   */
+  it('draws the counted rows and the variety pair, each with its raw fraction', async () => {
+    await openAFace();
+    await screen.findByText(NAMES[C] ?? '');
+
+    expect(screen.getByText(RECORD_CARD_TITLE_DRAWN)).toBeTruthy();
+    for (const strand of ['SHOWS_UP', 'ANSWERS_CHALLENGES', 'ANSWERS_RESULTS'] as const) {
+      expect(screen.getByText(STRAND_NAME[strand])).toBeTruthy();
+    }
+    expect(screen.getByText(strandFraction({ good: 8, opportunities: 10 }))).toBeTruthy();
+    // The share **and** the pair: a bare `70%` would break the rule the card just made.
+    expect(screen.getByText(varietyValue({ distinctOpponents: 14, gamesPlayed: 20 }))).toBeTruthy();
+  });
+
+  /**
+   * **A newcomer's record is a short sheet, never a card of noughts.** Nothing has fallen due
+   * for most players on this platform today, and *we have not seen enough* must not be drawn as
+   * *they are bad at this* — which is what a heading over an empty box would say.
+   */
+  it('draws no record card, and no Player Score, for somebody nothing has fallen due for', async () => {
+    transport.on('GET', RECORD_OF(C), () => {
+      const { reliability: _reliability, variety: _variety, ...rest } = record();
+      return json(rest);
+    });
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    fireEvent.press(named('YOUR_PARTNER', C));
+    await screen.findByText(NAMES[C] ?? '');
+
+    expect(screen.queryByText(RECORD_CARD_TITLE_DRAWN)).toBeNull();
+    expect(screen.queryByText(new RegExp(PLAYER_SCORE_NAME))).toBeNull();
   });
 
   /**

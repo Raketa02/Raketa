@@ -162,6 +162,18 @@ is the double announcement 6.8 hides its column heads to avoid (`the-words.md` �
 is no prop to pass one through, which is what stops somebody helpfully adding
 `accessibilityRole="progressbar"` and having every row announced twice.
 
+**The meter's fill takes a `tone` and the ladder does not come with it.** Three steps in an
+existing fill — `mint` · `night` · `red` — because the record card stacks three metered rows in
+one column where the why-fit sheet draws one fill for all of them
+([#385](https://github.com/Raketa02/Raketa/issues/385)). What the component deliberately does
+not hold is **where** a figure turns poor: that is a fact about the figure and belongs to
+whoever knows what it means, which on the record sheet is the same rule that tints the
+reliability pill above the card. A meter that banded its own share would be a second opinion,
+and the screen would eventually show a green bar under a red pill for one ratio. `METER_TONE_FILL`
+is exported so `meterTone.test.ts` derives the ratios off the component rather than off the
+theme — and the pair bound there is stated in `L*` rather than as a contrast ratio, because
+three fills that each clear their track cannot also be 3:1 from one another.
+
 **Two OS questions, one collapse.** `overlay.tsx` reads reduced motion **and** whether a
 screen reader is running, and `useCollapsedPresentation()` is the single condition either
 satisfies. They are not synonyms: a player may have VoiceOver on and reduced motion off,

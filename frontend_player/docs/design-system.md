@@ -322,8 +322,41 @@ for text**, and the audit did not catch it.
 | voltStroke on paper                                                            | 3.58      | ≥3:1, meets **1.4.11**              |
 | voltStroke on `line` (the border it replaces)                                  | 3.07      | ≥3:1, meets **1.4.11**              |
 | `ink` on a poster hue's dark stop                                              | 3.09–3.12 | ≥3:1, meets **1.4.11**              |
+| `night` on `line2` (a `neutral` meter fill in its track)                       | 11.36     | ≥3:1, meets **1.4.11**              |
+| `red` on `line2` (a `poor` meter fill)                                         | 5.04      | ≥3:1, meets **1.4.11**              |
+| `mint` on `line2` (a `good` meter fill)                                        | 3.48      | ≥3:1, meets **1.4.11**              |
 
 Deliberately absent: _white on coral_ (3.89) and _white on mint_ (4.07) — see Rule C.
+
+### Three fills that must be told apart — and the one row this table cannot hold
+
+The meter's three tones ([7.3](#73-meter-and-bar)) are the first set of **three** fills in this
+system that stack in one column, and the pairwise rows the run of form gets are impossible for
+them. Not for want of colours: each has to clear 3:1 against a near-white track, which caps how
+light it may be, and 3:1 from each of the other two caps the second and third again — run
+together, the third fill needs a **negative** luminance. `meterTone.test.ts` computes exactly
+that, so the bound below is not one somebody softened when the first one failed.
+
+- **Each fill clears the track**, which is the 1.4.11 pairing and is the three rows above.
+- **Each pair is a hue step of at least 25°** — the poster's own bound, so no two read as one
+  colour.
+- **And each pair is a lightness step of at least 10 `L*`**, which is what a reader with no hue
+  perception separates them by. `good` against `poor` is a green and a red, the pair colour
+  vision most often collapses, and it is the pair at the floor: **10,2**, with neither half
+  movable — a lighter green fails the track bound and there is no darker red in the palette.
+- The tone is therefore the **third** cue on every row that draws it, behind the bar's own
+  length and the raw fraction printed two words earlier, both of which carry the value alone.
+- **Separable, and deliberately not a ramp.** In lightness the three read good › poor ›
+  neutral, which is not the ladder's order. A tone names _which step a caller's rule reached_;
+  the **value** is carried by the bar's own length, which is monotone by construction. Ordering
+  the three by lightness too would need a colour this palette does not have — the darkest fill
+  available for `poor` is the one `neutral` already uses.
+
+`L*` rather than a contrast ratio because the ratio is the wrong instrument at the dark end: it
+adds 0,05 of flare to both sides, so two obviously different darks score barely above 1:1. Both
+measures are folded from one relative luminance in
+[`test-support/contrast.ts`](../src/test-support/contrast.ts), so they cannot disagree about a
+colour.
 
 ### The court ground — the one rule for text over a generated fill
 
@@ -1725,6 +1758,24 @@ it was written.
 A bar states a fraction, so it is only for a value with a denominator somebody knows. The
 questionnaire has none — see [7.9](#79-the-question-navigator).
 
+**The meter's fill takes a `tone`, and the ladder behind it belongs to the caller.**
+
+| `tone`    | Fill    | Why that colour                                            |
+| --------- | ------- | ---------------------------------------------------------- |
+| `neutral` | `night` | the default — the fill every meter drew before this        |
+| `good`    | `mint`  | _good, settled, covered_ ([2.2](#22-accent-and-semantics)) |
+| `poor`    | `red`   | _failure_, the same table's own word for it                |
+
+Three steps in an existing fill, which is [15.2](#152-adding-a-colour)'s own licence — no
+colour is invented. **Where** a figure falls on the ladder is never the meter's: the record
+sheet's card and the reliability pill above it read one rule, so a green bar can never appear
+under a red pill for one ratio. The three fills are held against the track and against each
+other in [2.5](#25-contrast--computed).
+
+The meter's accessibility contract is unchanged and is the whole of what it is for: it is
+**hidden, takes no name and reports no value**, because every caller prints the number in words
+two words away.
+
 ## 7.5 The level bar
 
 Not a styled component — a drawn object, built from Views. Its geometry is fixed:
@@ -3113,6 +3164,7 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-09-08 | [2.5](#25-contrast--computed)                                                                         | `ink on surface`, `muted on surface` and the `ink`-against-`muted` pair each stood as a row, and no drawn object on a card had been held to the last of them                                                                                                                                                                                   | The same three rows, naming the star row as well — **17,50** given, **5,40** blank, **3,24** apart                                                                                                                                                                                                                                                                                                                                                | No number moves. What changes is that a **graphical object** is now held to two of the rows that had only ever described text, and to a third that had one caller — the run of form, in a recessed box. A star is a mark and not a word, so 1.4.11's 3:1 is the floor all three have to clear on the card's own ground, and [`starRow.test.ts`](../src/shared/ui/starRow.test.ts) computes them off the component's table rather than asserting them, exactly as `recordSquares.test.ts` derives its own                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-09-08 | [`theme.ts`](../src/shared/ui/theme.ts)                                                               | No `size.star`                                                                                                                                                                                                                                                                                                                                 | `size.star = { target: 44, glyph: 24 }`, with the arithmetic that fixes both                                                                                                                                                                                                                                                                                                                                                                      | 15.3 permits a size step where a surface genuinely needs one and requires `theme.ts` and this document to change in the same commit. The target is 6.5's minimum reached by geometry, and the glyph is the drawing inside it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-09-08 | [7.15](#715-the-on-court-mark) · [7.16](#716-the-photo-panel)                                         | The panel had one size — 74 x 92, the competitive card's — and the mark one derived cap                                                                                                                                                                                                                                                        | A **second panel size**, `record` at 112 x 140, and a second derived cap beside it. The Level's role steps to `num.levelLarge` at that size; nothing else about the panel changes, and the components move to `shared/ui` as `PhotoPanel`, `PlayerPhoto` and `OnCourtMark`                                                                                                                                                                        | [#384](https://github.com/Raketa02/Raketa/issues/384) draws this panel in the player record sheet's header, which is a second feature — and `player_record` may not import `features/play/`, because Play is what opens the sheet. It is [7.13](#713-the-record-block)'s promotion again, one ticket later. **No value is scaled**: the corner is a third of each panel's own width, so what it leaves the mark is a different fraction of a different box, and both caps come out of `largestStepThatFits` against the real Archivo advances. The pinned `photoScrim` and its worst case are untouched, which is why [2.5](#25-contrast--computed) gains no row                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-09-08 | [7.3](#73-meter-and-bar) · [2.5](#25-contrast--computed)                                              | The meter had one fill, `night`, and 2.5 held no pair for it — nothing had drawn a meter anywhere but the why-fit sheet, where one fill is the whole vocabulary                                                                                                                                                                                | `Meter` takes a **`tone`** — `good` · `neutral` · `poor`, drawn `mint` · `night` · `red`, defaulting to the fill it already had. 2.5 gains the three track pairings and a short section stating the bound the three are told apart by                                                                                                                                                                                                             | [#385](https://github.com/Raketa02/Raketa/issues/385)'s record card stacks three metered rows in one column, and the tone is the third cue on each — behind the bar's own length and the raw fraction printed beside it. It invents no colour, which is [15.2](#152-adding-a-colour)'s own licence, and it takes **no ladder**: where a figure turns poor is the caller's rule, read once so that a bar and the reliability pill above it cannot disagree about one ratio. The new 2.5 section exists because three stacked fills cannot take the pairwise 3:1 rows the run of form gets — the arithmetic makes the third fill darker than black, so the pair bound is stated in `L*` and derived in `meterTone.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 # Part 17 — What the reset removed
 

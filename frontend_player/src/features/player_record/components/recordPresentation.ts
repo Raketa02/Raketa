@@ -10,8 +10,9 @@
  *
  * The sheet has **no interactive element inside it** other than the pairing row, so every group
  * in it is actionless and merges into the nearest heading (§20.1). That is what the four
- * `…Label` functions below are: the header, the skill card and the tag row each reach a
- * listener as one clause list rather than as a table of figures read one stop at a time.
+ * `…Label` functions below are: the header, the skill card, the record card and the tag row
+ * each reach a listener as one clause list rather than as a table of figures read one stop at a
+ * time.
  *
  * ## Two absences are deliberately unwritten
  *
@@ -29,6 +30,9 @@ import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 import type { GameResult } from '@/shared/vocabulary/gameResult';
 // `Photo checked: on court` is the mark's own clause, quoted rather than re-written.
 import { ON_COURT_CLAUSE } from '@/shared/ui';
+
+import type { OpponentVariety, ReliabilityStrand, StrandRow } from '../domain/playerRecord';
+import { varietyShare } from '../domain/recordCard';
 
 /** The sheet's title about somebody else, and **its accessible name** — the two are one string. */
 export const RECORD_TITLE = 'Player record';
@@ -226,6 +230,120 @@ export function skillCardLabel(facts: SkillCardFacts): string {
     ...(facts.lastFive === undefined || facts.lastFive.length === 0
       ? []
       : [lastFiveReading(facts.lastFive)]),
+  ]);
+}
+
+/**
+ * **The record card's heading, which is the rule it enforces rather than a label on it.**
+ *
+ * Every row beneath it is a ratio the platform observed. What other players *said* is not here
+ * and will not be — an opinion under this title would make the title false — so sportsmanship
+ * stands one block down under a heading naming its own author, and
+ * [`countedRows`](../domain/recordCard.ts) is what keeps the promise rather than trusting a
+ * remote service to keep it.
+ *
+ * Drawn in caps at the eyebrow's 9,5pt, which is *a label for a region you are reading*, and
+ * **spoken in the sentence case below**: a listener meets a run of capitals as emphasis or, on
+ * some engines, as letters. It is `skillHeadline`'s split, one card lower.
+ */
+export const RECORD_CARD_TITLE = 'The record — counted by the system, not written by people';
+
+export const RECORD_CARD_TITLE_DRAWN = RECORD_CARD_TITLE.toUpperCase();
+
+/**
+ * **What each strand is called on screen**, keyed off the served code and never off the row's
+ * position — a strand with nothing behind it is absent from the list entirely, so the rows a
+ * card gets are the rows that person has.
+ *
+ * **`ANSWERS_RESULTS` is *Answers about results* and never *confirms* anything.** Countering a
+ * score you believe is wrong is an answer and costs nothing
+ * ([ADR-0156](../../../../../docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md));
+ * a player who did exactly that and then watched a *confirms* figure rise is the one person
+ * certain to notice the word was wrong.
+ *
+ * Three of the six have **no provider on this platform today** and never reach a screen. They
+ * carry words anyway, because the table is keyed by the whole vocabulary and a code with no
+ * words is a build failure — which is the point of keying it that way.
+ */
+export const STRAND_NAME: Readonly<Record<ReliabilityStrand, string>> = {
+  SHOWS_UP: 'Shows up',
+  ANSWERS_CHALLENGES: 'Answers challenges',
+  ANSWERS_RESULTS: 'Answers about results',
+  KEEPS_PLANS: 'Keeps plans',
+  SETTLES_UP: 'Settles up',
+  SPORTSMANSHIP: 'Sportsmanship',
+};
+
+/**
+ * `9 of 9` — **the raw pair, in the one spelling every row on this card prints it in.**
+ *
+ * A perfect record over nine games and one over forty are different claims and a bar alone
+ * hides which, which is the whole reason the card carries three numbers per row and draws two
+ * of them. It is also what makes the bar decoration: the figure is text two words earlier, so
+ * a meter announcing itself would be the same fact read twice.
+ *
+ * The variety row prints its pair through here too — the honesty rule is the card's rather
+ * than the strand rows', and a second spelling of it is how the two rows drift apart.
+ */
+function rawPair(part: number, whole: number): string {
+  return `${part} of ${whole}`;
+}
+
+export function strandFraction(row: Pick<StrandRow, 'good' | 'opportunities'>): string {
+  return rawPair(row.good, row.opportunities);
+}
+
+/** One row as a listener meets it — the name and the pair, never the bar. */
+function strandReading(row: StrandRow): string {
+  return `${STRAND_NAME[row.strand]}, ${strandFraction(row)}`;
+}
+
+export const VARIETY_LABEL = 'Opponent variety';
+
+/** The two halves, computed once so the drawn row and the spoken one cannot disagree. */
+function varietyParts(variety: OpponentVariety): readonly [string, string] {
+  return [
+    formatPercent(varietyShare(variety)),
+    rawPair(variety.distinctOpponents, variety.gamesPlayed),
+  ];
+}
+
+/**
+ * `70% · 14 of 20` — **the share and the pair, because the card just made that rule about
+ * itself.**
+ *
+ * The percentage is the client's one division; the pair is the platform's and is what stops the
+ * share being read as a settled habit over three games. The row draws **no bar**: the contract
+ * attaches no banding, floor or tone to this figure, and an untoned meter in a column of toned
+ * ones would be a tone claim made by adjacency.
+ */
+export function varietyValue(variety: OpponentVariety): string {
+  return varietyParts(variety).join(' · ');
+}
+
+/** The same two halves as a listener meets them — clauses, where the row draws a separator. */
+function varietyReading(variety: OpponentVariety): string {
+  return `${VARIETY_LABEL}, ${varietyParts(variety).join(', ')}`;
+}
+
+/**
+ * **The record card, as one element** — the heading first, then one clause per row.
+ *
+ * The bars are not in it and carry nothing of their own: each is a drawing of the fraction
+ * spoken two words earlier, which is 6.8's argument about the availability grid's column heads
+ * arriving on a third surface.
+ */
+export interface RecordCardFacts {
+  /** The rows the card actually drew, in the order it drew them. */
+  readonly rows: readonly StrandRow[];
+  readonly variety?: OpponentVariety;
+}
+
+export function recordCardLabel(facts: RecordCardFacts): string {
+  return sentences([
+    RECORD_CARD_TITLE,
+    ...facts.rows.map(strandReading),
+    ...(facts.variety === undefined ? [] : [varietyReading(facts.variety)]),
   ]);
 }
 

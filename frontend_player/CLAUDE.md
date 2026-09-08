@@ -90,6 +90,28 @@ record plainly holds six. The **band is a key** and never derived from the Level
 number the engine acts on, and every absence is the field's own — no panel of noughts, and no
 sentence explaining a gap.
 
+**The card under it is headed with the rule it enforces, and one ladder tints the pill and
+every bar** ([#385](https://github.com/Raketa02/Raketa/issues/385)). Three metered rows —
+turning up, answering challenges and **answering about results**, never _confirming_ them,
+because countering a score you believe is wrong is an answer and costs nothing
+([ADR-0156](../docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md)) — each
+printing the raw pair it was measured over, since a perfect record over nine games and one over
+forty draw the **same bar**; and opponent variety as `70% · 14 of 20`, the share being the one
+division this client makes and the pair being what stops it reading as a settled habit over
+three games. _Counted by the system, not written by people_ is a promise about **authorship**
+rather than a title, so the one strand that is somebody's opinion is dropped in `countedRows`
+rather than trusted not to arrive — what other players said gets its own block, one heading
+down — while `KEEPS_PLANS` and `SETTLES_UP` are kept though nothing serves them, because the
+day either lights up the rows must still add to the figure above them. The tone is
+`scoreTone`'s, **read twice and never written twice**: two ladders would eventually disagree and
+the screen would show a green bar under a red pill for one ratio. The three fills clear 1.4.11
+against their track and are told apart by lightness as well as hue, at a bound stated in `L*`
+because three fills that each clear a near-white track **cannot** also be 3:1 from one another
+— the arithmetic makes the third darker than black, and `meterTone.test.ts` computes it rather
+than asserting it in prose. Every bar is hidden and carries no name, the fraction being text
+two words earlier; and a player nothing has ever fallen due for draws **no card at all**,
+because _we have not seen enough_ and _they are bad at this_ are different facts.
+
 **The result conversation is one screen and eight states, and the state is derived**
 ([#314](https://github.com/Raketa02/Raketa/issues/314),
 [ADR-0137](../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). **A result is the

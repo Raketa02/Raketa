@@ -81,3 +81,19 @@ export function hueDistance(a: number, b: number): number {
   const apart = Math.abs(a - b) % 360;
   return Math.min(apart, 360 - apart);
 }
+
+/**
+ * CIE **L\***, 0–100 — perceived lightness, which is not what `contrast` measures.
+ *
+ * The two answer different questions and the difference bites at the dark end: WCAG's ratio
+ * adds a fixed 0,05 of flare to both luminances, so two dark colours a reader separates easily
+ * score barely above 1:1. That is the right instrument for *can this be read against its
+ * ground* and the wrong one for *are these two marks telling themselves apart*.
+ *
+ * It is a pure function of the same relative luminance `contrast` already folds, so the two
+ * measures cannot disagree about a colour — one formula, read two ways.
+ */
+export function lightness(rgb: Rgb): number {
+  const y = luminance(rgb);
+  return y > 0.008856 ? 116 * Math.cbrt(y) - 16 : 903.3 * y;
+}

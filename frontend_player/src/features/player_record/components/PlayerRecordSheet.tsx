@@ -70,6 +70,7 @@ import type { PlayerRecord, RecordSubject } from '../domain/playerRecord';
 import { recordTagRow } from '../domain/tagRow';
 import { usePlayerRecord } from '../hooks/usePlayerRecord';
 
+import { RecordCard } from './RecordCard';
 import { RecordHeader } from './RecordHeader';
 import { SkillCard } from './SkillCard';
 import {
@@ -243,6 +244,13 @@ function Filled({
       {/* Absent where they hold no rating at all — the pills speak instead, and there is no
           panel of noughts to mistake for a bad record. */}
       {record.skill === undefined ? null : <SkillCard skill={record.skill} />}
+
+      {/* Two absences that do not move together, handed down separately and drawn as whatever
+          survives them: a newcomer's record is a short sheet rather than an empty card. */}
+      <RecordCard
+        {...(record.reliability === undefined ? {} : { reliability: record.reliability })}
+        {...(record.variety === undefined ? {} : { variety: record.variety })}
+      />
 
       {tagsLabel === '' ? null : (
         <View accessible accessibilityLabel={tagsLabel}>
