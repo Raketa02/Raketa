@@ -77,6 +77,7 @@ from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
 from app.kernel import Instant, Sport
 from app.modules.challenges.application.read_challenges import ReadChallengesCommand
+from app.modules.challenges.domain.answer_window import ANSWER_WINDOW
 from app.modules.challenges.domain.seats import SeatAnswer
 from app.modules.challenges.domain.standing import ENDED
 from app.modules.games.domain.standing import GameStanding
@@ -142,6 +143,13 @@ from app.seeds.relationships import (
 #: How many cards a deal must produce. Deliberately below ``deck_deal_max``: a
 #: deck asserted at its ceiling would be asserting the cap rather than the pool.
 CARDS_A_DEAL_MUST_CARRY = 3
+
+#: How long an invited seat has, **read off the domain rather than restated**.
+#: Nothing here backdates a challenge, so how stale a database may be and still
+#: draw the inbound-court screen *is* this number — and a refusal that named its
+#: own copy of it would send a developer looking for a court that lapsed hours
+#: before the sentence said it could.
+ANSWER_WINDOW_HOURS = int(ANSWER_WINDOW.total_seconds() // 3600)
 
 
 class ScreenIsEmpty(RuntimeError):
@@ -1617,9 +1625,9 @@ async def _refuse_a_seat_that_is_not_hers_to_answer(paths: ReadPaths) -> str:
         raise ScreenIsEmpty(
             f"'{THEY_CHALLENGED_YOU.account.slug}' sent {PROTAGONIST.slug} a "
             f"court and her own list carries no open one from them, across "
-            f"{len(standing)} challenge(s). A seat's window is twenty-four hours "
-            f"and nothing here backdates one, so a court seeded yesterday has "
-            f"lapsed — seed again."
+            f"{len(standing)} challenge(s). A seat's window is "
+            f"{ANSWER_WINDOW_HOURS} hours and nothing here backdates one, so "
+            f"a court seeded longer ago than that has lapsed — seed again."
         )
     court = courts[0].challenge
     hers = court.seat_of(her)

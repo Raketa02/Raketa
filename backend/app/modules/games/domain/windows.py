@@ -31,10 +31,18 @@ from app.kernel import Instant, instant
 #: on the search*, never a proposed time.
 PLAN_HORIZON: Final = timedelta(days=7)
 
-#: How long after the horizon somebody may still say *we played*. A day is what
-#: this platform already asks of a person it needs an answer from — the
-#: challenge's own answer window — and it is asked here for the same reason and
-#: with the same excuse: we cannot ring them. Kept as its own constant rather
+#: How long after the horizon somebody may still say *we played*. **Twenty-four
+#: hours, on a reason of its own.** It used to borrow the challenge's answer
+#: window — *a day is what this platform already asks of a person it needs an
+#: answer from* — and that window is now forty-eight hours
+#: (``docs/adr/0151``). The citation goes rather than standing: an argument
+#: pointing at a fact that has moved is worse than no argument, because it reads
+#: as agreement between two numbers that have stopped agreeing.
+#:
+#: What keeps it at a day is ADR-0145 §5's interlock. ADR-0144 clamps the plan's
+#: day chips at ``planned_at + PLAN_HORIZON`` and entry closes one grace after
+#: that, so this number is exactly what makes **every plannable day leave at
+#: least twenty-four hours to say *we played***. Kept as its own constant rather
 #: than folded into *eight days*, because gluing the two would hide both
 #: arguments.
 ENTRY_GRACE: Final = timedelta(hours=24)
@@ -43,6 +51,16 @@ ENTRY_GRACE: Final = timedelta(hours=24)
 #: ADR-0048's reason: the prompt reaches nobody who has not opened the app, and
 #: shortening it without a notification channel reintroduces the discarded-game
 #: problem the flow was designed to remove.
+#:
+#: **It did not move when the challenge's answer window did, and the difference
+#: is what the default does.** The two were the same twenty-four hours until
+#: ``docs/adr/0151`` doubled that one for reaching nobody who has not opened the
+#: app — the very coupling this constant already records. What separates them is
+#: that silence on a proposed score **confirms** it, while silence on an
+#: invitation **costs you the game**: a window whose default is benign can be
+#: short, and one whose default takes the game away has to be long enough to
+#: actually reach somebody. Written down because otherwise the next reader
+#: re-aligns two numbers that have stopped being one.
 PROPOSAL_WINDOW: Final = timedelta(hours=24)
 
 #: How long an acceptance waits before it settles anything. **Six hours, not

@@ -777,7 +777,7 @@ export interface paths {
          *
          *     **Your own seat is accepted from birth.** You are the one proposing, so nothing asks whether you want to play the game you just built.
          *
-         *     **Each invitee gets 24 hours from when *their* seat was invited**, so a seat filled later is not already half expired.
+         *     **Each invitee gets 48 hours from when *their* seat was invited**, so a seat filled later is not already half expired.
          *
          *     **The arrangement you built is what is recorded**, and it is what they answer — never a better one worked out afterwards.
          *

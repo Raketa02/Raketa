@@ -46,6 +46,7 @@ from app.engines.racketskill.core import (
 )
 from app.kernel import Instant, InvariantViolated, Sport, instant
 from app.modules.challenges.application.send_challenge import SendChallenge
+from app.modules.challenges.domain.answer_window import ANSWER_WINDOW
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.origins import (
     SentFromSearch as WrittenFromSearch,
@@ -312,6 +313,25 @@ def _ago(**offset) -> Instant:
     return instant(datetime.now(timezone.utc) - timedelta(**offset))
 
 
+def _a_send_that_has_run_out() -> Instant:
+    """A send old enough that every seat still unanswered on it has lapsed.
+
+    **Derived from ``ANSWER_WINDOW``, with an hour to spare, rather than typed as
+    *yesterday*.** The window moved from a day to two (``docs/adr/0151``), and a
+    fixture carrying its own copy of the old number would have gone on passing
+    while asserting nothing about a lapse — which is the way a case like this
+    fails silently rather than red.
+    """
+
+    return instant(datetime.now(timezone.utc) - ANSWER_WINDOW - timedelta(hours=1))
+
+
+def _just_after(sent: Instant, **offset) -> Instant:
+    """A moment that far after a send, and well inside that seat's window."""
+
+    return instant(sent + timedelta(**offset))
+
+
 async def _sent(
     session,
     *,
@@ -462,15 +482,17 @@ async def test_a_seat_past_its_window_is_not_open_with_no_sweep_having_run(
 
     port = implementation.build(session)
     organiser, kept, silent, also_silent = (new_uuid() for _ in range(4))
-    yesterday = _ago(hours=25)
+    long_ago = _a_send_that_has_run_out()
     challenge = await _sent(
         session,
         organiser=organiser,
         invitees=(kept, silent, also_silent),
         sport=Sport.PADEL,
-        at=yesterday,
+        at=long_ago,
     )
-    await _answers(session, challenge, kept, yes=True, at=_ago(hours=24, minutes=30))
+    await _answers(
+        session, challenge, kept, yes=True, at=_just_after(long_ago, minutes=30)
+    )
 
     assert _counterparts(await port.open_challenges(organiser)) == {kept}
     assert _counterparts(await port.open_challenges(kept)) == {organiser}
@@ -505,16 +527,17 @@ async def test_a_decline_and_a_lapse_leave_the_open_read_and_only_one_is_an_answ
 
     port = implementation.build(session)
     organiser, said_yes, said_no, said_nothing = (new_uuid() for _ in range(4))
+    long_ago = _a_send_that_has_run_out()
     challenge = await _sent(
         session,
         organiser=organiser,
         invitees=(said_yes, said_no, said_nothing),
         sport=Sport.PADEL,
-        at=_ago(hours=25),
+        at=long_ago,
     )
-    yesterday_evening = _ago(hours=24, minutes=40)
-    a_little_later = _ago(hours=24, minutes=20)
-    await _answers(session, challenge, said_yes, yes=True, at=yesterday_evening)
+    that_evening = _just_after(long_ago, minutes=20)
+    a_little_later = _just_after(long_ago, minutes=40)
+    await _answers(session, challenge, said_yes, yes=True, at=that_evening)
     await _answers(session, challenge, said_no, yes=False, at=a_little_later)
 
     assert _counterparts(await port.open_challenges(organiser)) == {said_yes}
@@ -711,7 +734,7 @@ async def test_the_count_is_unanswered_invited_seats_and_nothing_else(
         organiser=elsewhere,
         invitees=(waiting,),
         sport=Sport.TENNIS,
-        at=_ago(hours=25),
+        at=_a_send_that_has_run_out(),
     )
 
     counts = await port.open_challenge_counts(
@@ -795,7 +818,7 @@ async def test_a_lapse_tallies_nowhere_even_once_it_has_been_recorded(
         organiser=organiser,
         invitees=(silent,),
         sport=Sport.TENNIS,
-        at=_ago(hours=25),
+        at=_a_send_that_has_run_out(),
     )
 
     assert await port.pairwise_counterparts(organiser) == ()

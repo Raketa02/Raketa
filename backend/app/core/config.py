@@ -394,15 +394,19 @@ class Settings(BaseSettings):
     # rather than an absence they have to infer.
     #
     # **`ANSWER_WINDOW` itself is emphatically not here.** How long an invitee has
-    # to answer is the promise the invitation makes — moving it moves what every
-    # outstanding challenge already said — and it lives in
+    # to answer is the promise the invitation makes — behaviour a domain test can
+    # observe, and an environment that could select it would be an environment
+    # that decides how long a player has to answer — and it lives in
     # `challenges/domain/answer_window.py`. Only this cadence is a setting.
+    # Moving it there moves nothing already sent: a seat's `answer_by` is stamped
+    # when the seat is invited, so every outstanding challenge keeps the promise
+    # it was sent with.
     #
     # Hourly, and the number it is chosen against is the window rather than the
     # backlog: a `SeatLapsed` is stamped with the moment the sweep noticed, so
-    # the interval is how late the record is, and an hour against a day is a
-    # twenty-fourth. Finer would buy a rounder timestamp and pay for it in a read
-    # that is not yet indexed.
+    # the interval is how late the record is, and an hour against a two-day
+    # window is a forty-eighth. Finer would buy a rounder timestamp and pay for
+    # it in a read that is not yet indexed.
     CHALLENGE_LAPSE_ENABLED: bool = True
     CHALLENGE_LAPSE_INTERVAL_SECONDS: float = 60 * 60
 

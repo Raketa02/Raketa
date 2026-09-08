@@ -591,6 +591,14 @@ RULESET = Ruleset(
         # Falsified by answer rate by open-challenge bucket. If answer rate does
         # not fall as load rises, the signal is measuring nothing and all three
         # rungs are noise.
+        #
+        # **They did not move when the answer window doubled** (`docs/adr/0151`),
+        # and that is a decision rather than an oversight: these count *seats
+        # awaiting your answer*, so a window twice as long roughly doubles the
+        # steady-state count and every rung bites at half the invitation rate.
+        # Nobody has measured the falsifier above, and moving two numbers at once
+        # makes neither of them falsifiable — the window's own reading is answer
+        # rate against time since invitation, which a re-cut rung would confound.
         challenge_load_rungs=(
             ChallengeLoadRung(at_least=3, points=-4, prints=ChallengeLoad.SOME),
             ChallengeLoadRung(at_least=5, points=-8, prints=ChallengeLoad.BUSY),

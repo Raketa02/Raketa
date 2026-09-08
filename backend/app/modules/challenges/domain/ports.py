@@ -381,11 +381,17 @@ class LapsingChallengeQuery(Protocol):
         """Every challenge whose seats could include one past its window.
 
         **The window is what makes this narrow rather than *everything*.** A
-        seat's deadline is the seating event that created it plus
-        ``ANSWER_WINDOW`` and nothing else, so a challenge opened later than
-        ``now`` minus that window holds no seat that could have lapsed — which
-        is a claim about the store rather than about any aggregate, and is the
-        one narrowing an implementation may make.
+        seat's deadline is the seating event that created it plus the window that
+        stood when it was invited, and nothing else — so a challenge opened later
+        than ``now`` minus ``SHORTEST_WINDOW_EVER_STAMPED`` holds no seat that
+        could have lapsed, which is a claim about the store rather than about any
+        aggregate and is the one narrowing an implementation may make.
+
+        **The shortest window ever stamped, and never the current one.** They are
+        the same number only while the window has never moved; the moment it has,
+        a cutoff written from today's promise goes looking for yesterday's seats
+        after they have already lapsed, and the record this port exists to make
+        possible is written late for every seat in flight across the change.
 
         **In one stable order, oldest first**, which is a determinism demand and
         not a safety one: a run commits as a unit, so an interrupted one records
