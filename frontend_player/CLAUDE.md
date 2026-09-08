@@ -860,8 +860,15 @@ variant there, with the send confirmation as the one message that still interrup
 **meter** joins them with the accessibility contract, and it is `Bar`'s opposite: a bar states
 a fraction and reports one through `accessibilityValue`, where a meter visualises a number the
 row beside it already printed — so it takes **no label and no value at all**, and
-`progressbar` appears nowhere in Play. The rest
-arrive with the features that need them. **Build outward from the structure below** rather than reaching
+`progressbar` appears nowhere in Play. The **text field** (6.13) closes the oldest gap of the
+lot: the app shipped four boxes on the two auth screens with no primitive under them, and
+`AuthField` — geometry, focus border, error rendering and a reveal — lived in `features/auth/`
+until the chat map needed a field twice more. It is **one control in two shapes**, a single line
+capped by `maxLength` and one that grows an `rlValue` line at a time to a **cap the caller sets**,
+because neither growing surface has been drawn on a phone and a number here is written only for
+what a device drew. **Auth moved onto it in the same commit and `AuthField` is gone** — a
+primitive introduced without moving its existing caller is a second implementation, not a shared
+one. The rest arrive with the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 

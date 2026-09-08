@@ -24,7 +24,7 @@ import { Button, theme } from '@/shared/ui';
 import { useSignOut } from '../hooks/useAuthActions';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 
-import { AuthNotice } from './AuthControls';
+import { AuthNotice } from './AuthNotice';
 import { authErrorMessage } from './authErrorMessage';
 
 export function AccountPanel() {

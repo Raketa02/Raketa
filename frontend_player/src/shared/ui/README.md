@@ -228,10 +228,29 @@ hidden from assistive technology here so they are not read a second and a third 
 it draws both arrive as props, because those four numbers are served and product's to
 retune — what reaches the component is where the thumb goes and what the figure says.
 
+**The text field** (6.13) is one control in two shapes — a **one line** capped by the caller's
+`maxLength`, and one that **grows an `rlValue` line at a time to a cap** and then scrolls — and
+they are one component because they differ by a number rather than by what they take. Its cap is
+a count of **lines** and it belongs to the caller: neither surface that needs a growing field has
+been drawn on a phone, so what the design system owns is the arithmetic, one line per step with
+the box's padding derived so that one grown line **is** the one-line box. The **field** is the
+touch surface, not the input — the box alone is 42 against a 44 minimum, and a grown box's value
+is 16pt tall inside 13pt of padding — so a press anywhere on the label, the box or the message
+moves the caret in, and at 57 the control clears the minimum on its own geometry with no
+`hitSlop` granted. The label is a real `Text` bound by `accessibilityLabel` and never a
+placeholder, and it is always drawn: the field that wants the **name without the drawing** is the
+composer, and that prop arrives with it. **The reveal is the field's**, named for the field it
+operates on, so a sign-up form's two password boxes are not two buttons both called _Show_, and
+it dims by 6.6's `.7` rather than the `.6` it was drawn with in `features/auth/`. Android is told twice
+— `includeFontPadding: false` and `textAlignVertical: 'top'` — because a line box is taller there
+than `lineHeight` and a multiline value is centred rather than topped, and both are properties
+iOS ignores.
+
 **A feature never keeps a second copy of one of these.** If a primitive does not do what
-a screen needs, extend the primitive — the two auth-form controls that remain in
-`features/auth/components/AuthControls.tsx` are there because the design system genuinely
-specifies no text field and no _ended badly_ note variant, and each says so in place.
+a screen needs, extend the primitive — the one auth-form control that remains in
+`features/auth/components/AuthNotice.tsx` is there because the design system genuinely
+specifies no _ended badly_ note variant, and it says so in place. The field beside it left
+for 6.13, and the placeholder button before that for `Button`.
 
 **The tab bar** (10.2) is the app's bottom chrome, and it is the drawn object only — it
 takes the active tab and a press handler and knows nothing about routes or stacks. **Its

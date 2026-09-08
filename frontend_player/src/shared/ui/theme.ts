@@ -590,6 +590,19 @@ const size = {
    *  surface, exactly as 6.11's is: a 23pt track is well under the 44pt minimum, and a
    *  `hitSlop` around it would leave the words beside it inert. */
   switch: { track: 40, height: 23, knob: 18, row: 44 },
+  /** The text field — 6.13. `row` is the box at ONE line, and it is `btnXl`: the field and
+   *  the button it sits above are the same control height, which is what four shipped auth
+   *  boxes have drawn since sign-up. It is written as its own number rather than borrowed
+   *  inline, because 6.13 is entitled to state its height; that the two agree is DERIVED in
+   *  `TextField.test.tsx` rather than typed here twice.
+   *
+   *  There is no cap token and that is deliberate. A field that grows stops at a number of
+   *  LINES, and the number is the caller's — the two surfaces that need one, the composer and
+   *  the plan's *where*, have not been drawn on a phone, and #338 §1's rule is that a number
+   *  is written only for what a device drew. What the component owns is the arithmetic: one
+   *  `type.rlValue` line per step, and the box's vertical padding is `(row - lineHeight) / 2`
+   *  rather than a fourth number. */
+  textField: { row: 42 },
   /** The court — 7.12, and the drawn object whose numbers cannot be derived.
    *
    *  `space` is the drawing's own box and every coordinate below is in it. The 1,32 aspect

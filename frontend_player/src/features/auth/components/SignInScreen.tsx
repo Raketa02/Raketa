@@ -27,12 +27,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, theme } from '@/shared/ui';
+import { Button, TextField, theme } from '@/shared/ui';
 
 import { useSignIn } from '../hooks/useAuthActions';
 import { signInSchema, validate, type FieldErrors } from '../schemas/authForms';
 
-import { AuthField, AuthNotice } from './AuthControls';
+import { AuthNotice } from './AuthNotice';
 import { authErrorMessage } from './authErrorMessage';
 
 export function SignInScreen() {
@@ -76,7 +76,7 @@ export function SignInScreen() {
           {signIn.error !== null ? <AuthNotice message={authErrorMessage(signIn.error)} /> : null}
 
           <View style={s.form}>
-            <AuthField
+            <TextField
               label="Email"
               value={email}
               onChangeText={setEmail}
@@ -89,7 +89,7 @@ export function SignInScreen() {
               returnKeyType="next"
               editable={!signIn.isPending}
             />
-            <AuthField
+            <TextField
               label="Password"
               value={password}
               onChangeText={setPassword}

@@ -40,12 +40,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, TickBox, theme } from '@/shared/ui';
+import { Button, TextField, TickBox, theme } from '@/shared/ui';
 
 import { useSignUp } from '../hooks/useAuthActions';
 import { ADULT_LABEL, signUpSchema, validate, type FieldErrors } from '../schemas/authForms';
 
-import { AuthField, AuthNotice } from './AuthControls';
+import { AuthNotice } from './AuthNotice';
 import { authErrorField, authErrorMessage } from './authErrorMessage';
 
 export function SignUpScreen() {
@@ -111,7 +111,7 @@ export function SignUpScreen() {
           ) : null}
 
           <View style={s.form}>
-            <AuthField
+            <TextField
               label="Email"
               value={email}
               onChangeText={setEmail}
@@ -123,7 +123,7 @@ export function SignUpScreen() {
               textContentType="emailAddress"
               editable={!signUp.isPending}
             />
-            <AuthField
+            <TextField
               label="Nickname"
               value={nickname}
               onChangeText={setNickname}
@@ -133,7 +133,7 @@ export function SignUpScreen() {
               textContentType="nickname"
               editable={!signUp.isPending}
             />
-            <AuthField
+            <TextField
               label="Password"
               value={password}
               onChangeText={setPassword}
@@ -145,7 +145,7 @@ export function SignUpScreen() {
               textContentType="newPassword"
               editable={!signUp.isPending}
             />
-            <AuthField
+            <TextField
               label="Repeat password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
