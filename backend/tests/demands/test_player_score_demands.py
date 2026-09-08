@@ -46,6 +46,7 @@ from app.bootstrap.player_score_demands import (
 from app.engines.matchfit.core import ReliabilityStrand
 from app.kernel import Instant, Sport, instant
 from app.modules.challenges.domain.challenge import Challenge
+from app.modules.challenges.domain.events import ChallengeWithdrawn
 from app.modules.challenges.domain.seats import SeatPlan, court_sides
 from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.games.domain.game import Game
@@ -210,6 +211,47 @@ async def _refills(
         _court(loaded.sport, organiser, replacement, already_in=still_in),
         occurred_at=at,
     )
+    await repository.save(loaded)
+    await session.commit()
+
+
+async def _withdraws(
+    session,
+    challenge: Challenge,
+    *,
+    at: Instant,
+    past_the_standing_rule: bool = False,
+) -> None:
+    """The organiser ends a half-built line-up.
+
+    ``past_the_standing_rule`` records the event straight onto the aggregate's
+    own recorder, stepping around the one rule ``withdraw`` enforces — and it is
+    here for exactly one demand. A withdraw is legal only in
+    ``LINE_UP_INCOMPLETE``, which is reached only when no seat is awaiting, so
+    **no legal withdrawal can catch an invitation whose day is still running**
+    and the state ``docs/adr/0142`` §5 legislates for cannot be built through
+    ``withdraw`` at all.
+
+    It is still a state this read has to be right about. This is a walk over
+    **history**, not a fold of the aggregate, and a denominator that came out
+    right only because a rule in another module happens to order two rungs a
+    particular way is one that goes wrong silently the day that order is
+    revisited.
+
+    Everything else about the write is the ordinary path — the aggregate's own
+    fold, the repository, the codec and the store — so what is exercised is the
+    read and not a fixture's idea of one.
+    """
+
+    repository = _challenges(session)
+    loaded = await repository.load(challenge.id)
+    assert loaded is not None
+    if past_the_standing_rule:
+        loaded._record_that(
+            ChallengeWithdrawn(challenge_id=loaded.id, occurred_at=at)
+        )
+    else:
+        loaded.withdraw(loaded.organiser_id, occurred_at=at)
     await repository.save(loaded)
     await session.commit()
 
@@ -584,3 +626,74 @@ def test_every_registered_implementation_is_of_a_published_port():
     ]
 
     assert stray == []
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_a_day_that_ran_out_before_the_withdraw_is_still_silence(
+    implementation, session
+):
+    """**A withdrawal does not erase a lapse that had already happened.**
+
+    A padel four: one invitee accepts, the other says nothing until their day
+    runs out, and only then — with nobody deciding and a seat still open — does
+    the organiser end it. The second invitee was silent for the whole of their
+    own window, and that is the fact *answers challenges* exists to price. The
+    exemption is narrow on purpose, and this is the side of it that must not
+    move.
+    """
+
+    port = implementation.build(session)
+    organiser, answerer, silent = new_uuid(), new_uuid(), new_uuid()
+    challenge = await _invited(
+        session,
+        organiser=organiser,
+        invitee=answerer,
+        beside=silent,
+        at=_ago(days=4),
+    )
+    await _answers(session, challenge, answerer, yes=True, at=_ago(days=4))
+    await _withdraws(session, challenge, at=_ago(days=1))
+
+    scores = await port.scores_for([answerer, silent], now=_now())
+
+    assert scores[silent].strands[ReliabilityStrand.ANSWERS_CHALLENGES].value == 0
+    assert scores[answerer].strands[ReliabilityStrand.ANSWERS_CHALLENGES].value == 100
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_a_challenge_that_stopped_existing_charges_nobody_a_lapse(
+    implementation, session
+):
+    """**Silence on a challenge that had stopped existing is not silence**
+    (`docs/adr/0142` §5).
+
+    An invitation is keyed by who was asked and when their day runs out, and a
+    lapse is decided on `now >= answer_by` alone — so a withdrawal that left the
+    seats exactly as they were, which is what a withdrawal does, would charge
+    somebody who was still deciding a lapse a day later, for a court nobody was
+    waiting on any more.
+
+    Absent, and not a nought: they were never given the chance to answer, so the
+    record they get for it is no record at all — exactly as the organiser's own
+    seat has none. The acceptance beside it is untouched, which is what says the
+    withdrawal dropped an invitation rather than a challenge's whole history.
+    """
+
+    port = implementation.build(session)
+    organiser, answerer, deciding = new_uuid(), new_uuid(), new_uuid()
+    challenge = await _invited(
+        session,
+        organiser=organiser,
+        invitee=answerer,
+        beside=deciding,
+        at=_ago(days=4),
+    )
+    await _answers(session, challenge, answerer, yes=True, at=_ago(days=4))
+    await _withdraws(
+        session, challenge, at=_ago(days=3), past_the_standing_rule=True
+    )
+
+    scores = await port.scores_for([answerer, deciding], now=_now())
+
+    assert set(scores) == {answerer}
+    assert scores[answerer].strands[ReliabilityStrand.ANSWERS_CHALLENGES].value == 100

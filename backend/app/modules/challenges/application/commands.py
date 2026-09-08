@@ -72,6 +72,26 @@ class AnswerSeatCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class WithdrawChallengeCommand:
+    """*End this challenge, for everybody on it.*
+
+    **Not an ``AnswerSeatCommand`` with a third value**, and the two fields being
+    identical is not a reason to make it one: an answer is about the seat the
+    caller holds and this is about the arrangement everybody holds one in. A
+    command they shared would be a caller that could withdraw where it meant to
+    decline, and a reader who had to look at the use case to find out which.
+
+    The player is named for the reason every command here names one — a use case
+    that read the caller from an ambient current user is a use case a seed run
+    cannot drive — and the aggregate is what decides that this player is the
+    organiser.
+    """
+
+    challenge_id: UUID
+    player_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
 class OpenFromMutualInterestCommand:
     """*These two just said yes to each other.*
 

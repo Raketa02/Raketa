@@ -46,6 +46,7 @@ from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.events import (
     ChallengeOpenedFromMutualInterest,
     ChallengeSent,
+    ChallengeWithdrawn,
     SeatAccepted,
     SeatDeclined,
     SeatsInvited,
@@ -216,6 +217,13 @@ class EventSourcedChallengeHistory:
         **Absent rather than a measured zero.** Somebody nobody has ever invited
         has not failed to answer anybody, and the record they get is no record at
         all.
+
+        **And an invitation whose challenge was withdrawn under it is in neither
+        half either** (``docs/adr/0142`` §5). Silence on a challenge that had
+        stopped existing is not silence, and this read is the only place that
+        could tell: the seats are left exactly as they were by a withdrawal, so
+        a lapse decided on ``now >= answer_by`` alone would charge a
+        still-deciding invitee for a court nobody was waiting on any more.
         """
 
         wanted = set(player_ids)
@@ -273,6 +281,23 @@ def _invitations_in(
     still holding one. **Only the answer *events* set it**: a later seating event
     restates the whole court, including seats that have already answered, and
     reading the answer off the restatement would date it from the wrong moment.
+
+    **A withdrawal drops every invitation still open under it**, and only those:
+    an invitation whose day had already run out was genuine silence before
+    anybody withdrew anything, and it stays in the denominator. Dropping is the
+    only spelling available — *neither answered nor lapsed* is exactly what
+    absence from this mapping means, and it is what the organiser's own seat
+    already is.
+
+    **Nothing in the aggregate can reach that state today, and the rule is here
+    anyway.** A withdraw is legal only in ``LINE_UP_INCOMPLETE``
+    (``challenge.py``), and that standing is reached only when no seat is
+    awaiting — so at the instant of a legal withdrawal every unanswered
+    invitation is already past its deadline. This read is ``player_score``'s and
+    is a **walk over history**, not a fold of the aggregate: it must be right
+    about a stream, and a denominator that was right only because a rule in
+    another module happened to order two rungs a particular way is a denominator
+    that goes wrong silently the day that order is revisited.
     """
 
     invitations: dict[tuple[UUID, Instant], Instant | None] = {}
@@ -284,6 +309,13 @@ def _invitations_in(
                     continue
                 if seat.player_id in wanted:
                     invitations.setdefault((seat.player_id, seat.answer_by), None)
+        elif isinstance(event, ChallengeWithdrawn):
+            withdrawn_at = Instant(event.occurred_at)
+            invitations = {
+                (player_id, answer_by): answered_at
+                for (player_id, answer_by), answered_at in invitations.items()
+                if answered_at is not None or answer_by <= withdrawn_at
+            }
         elif isinstance(event, (SeatAccepted, SeatDeclined)):
             if event.player_id not in wanted:
                 continue

@@ -512,6 +512,95 @@ async def test_a_half_built_court_still_stands_between_its_pair(session_factory)
         assert pairs == frozenset({frozenset({ORGANISER, ALICE})})
 
 
+async def test_a_withdrawn_court_releases_the_pair_it_was_holding(session_factory):
+    """The other side of that line, and the permanence the withdraw exists to end.
+
+    A half-built four holds its pair with no expiry: nobody is deciding, so
+    nothing lapses, and the acceptor cannot leave a seat they have answered.
+    Before ``docs/adr/0142`` that was for ever and in **every** sport. A
+    withdrawal is an ending, so the arranging stops and both of them are
+    strangers again.
+    """
+
+    async with session_factory() as session:
+        challenge = Challenge.sent(
+            challenge_id=new_uuid(),
+            sport=Sport.PADEL,
+            mode=SearchMode.FOR_FUN,
+            window=Window.ANY,
+            organiser_id=ORGANISER,
+            arrangement=(
+                SeatPlan(side=Side.A, player_id=ORGANISER),
+                invited(ALICE, Side.A, 1),
+                SeatPlan(side=Side.B),
+                SeatPlan(side=Side.B),
+            ),
+            occurred_at=SENT_AT,
+        )
+        challenge.accept(ALICE, occurred_at=at(1))
+        challenge.withdraw(ORGANISER, occurred_at=at(2))
+        await _record(session, challenge)
+
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ORGANISER, ALICE], now=INSIDE
+        )
+
+        assert pairs == frozenset()
+
+
+async def test_the_same_people_may_be_asked_again_once_it_is_withdrawn(
+    session_factory,
+):
+    """**A new challenge, and that is what it is.** Fresh deadlines and its own
+    record of who has answered — the send is not a resurrection of the one that
+    was withdrawn, and nothing here reopens anything."""
+
+    async with session_factory() as session:
+        challenge = Challenge.sent(
+            challenge_id=new_uuid(),
+            sport=Sport.PADEL,
+            mode=SearchMode.FOR_FUN,
+            window=Window.ANY,
+            organiser_id=ORGANISER,
+            arrangement=(
+                SeatPlan(side=Side.A, player_id=ORGANISER),
+                invited(ALICE, Side.A, 1),
+                SeatPlan(side=Side.B),
+                SeatPlan(side=Side.B),
+            ),
+            occurred_at=SENT_AT,
+        )
+        challenge.accept(ALICE, occurred_at=at(1))
+        await _record(session, challenge)
+
+        with pytest.raises(AnOpenChallengeStandsWithThisPair):
+            await _send(session, now=INSIDE).execute(
+                SendChallengeCommand(
+                    organiser_id=ORGANISER,
+                    search_id=SEARCH,
+                    court=a_padel_choice(ORGANISER, ALICE, BOB, CAROL),
+                )
+            )
+
+        # One repository per unit of work, which is why the load and the save
+        # are the same one: a second would not know the version it read.
+        repository = _repository(session)
+        loaded = await repository.load(challenge.id)
+        loaded.withdraw(ORGANISER, occurred_at=at(2))
+        await repository.save(loaded)
+        await session.commit()
+
+        again = await _send(session, now=INSIDE).execute(
+            SendChallengeCommand(
+                organiser_id=ORGANISER,
+                search_id=SEARCH,
+                court=a_padel_choice(ORGANISER, ALICE, BOB, CAROL),
+            )
+        )
+
+        assert again != challenge.id
+
+
 async def test_a_challenge_reaching_outside_this_court_is_somebody_elses(
     session_factory,
 ):

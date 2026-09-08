@@ -1,4 +1,4 @@
-"""The Challenges context's domain events — **six, and none of them a conclusion**.
+"""The Challenges context's domain events — **seven, and one of them a conclusion**.
 
 Events carry **primitive** fields, so their wire format survives any later
 refactor of the Python types: a sport, a mode and a window as their codes, a
@@ -33,6 +33,16 @@ comes from.
 standing has exactly one place to be true (``standing.py``), and an event
 announcing a conclusion the fold already reaches would become the second — and it
 would be the one that got believed.
+
+**One withdrawal, and it is that rule's first and only exemption**
+(``docs/adr/0142`` §3). ``ChallengeWithdrawn`` announces a conclusion, and it is
+allowed to because **no arrangement of the seats reaches it**: every other
+standing is a reading of the seats and the clock, and this one is a decision a
+person took, with nothing in the seats to fold it out of. So the event is not a
+second place for the fact to be true — it is the only place, and the fold reads
+it exactly as it reads an acceptance. That is the whole of the test any future
+candidate has to pass, and ``tests/unit/test_challenge_aggregate.py`` runs it
+over this module rather than leaving it as prose.
 
 **Every seating event carries the seats, and that is what makes the log
 queryable.** A challenge's stream id is minted rather than derived from the
@@ -143,6 +153,27 @@ class SeatLapsed:
 
     challenge_id: UUID
     player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class ChallengeWithdrawn:
+    """The organiser ended a line-up nobody was going to complete.
+
+    **The one event here that is not about a seat**, which is exactly what makes
+    it the exemption rather than a breach: a fact about a seat is a fact the fold
+    already has, and this one is not in the seats anywhere.
+
+    It carries **no player**, and that is not an omission. Only the organiser may
+    withdraw, the organiser's seat is on the stream from the opening event, and a
+    second copy of *who* would be a second place for it to be true — the failure
+    ``SeatLapsed`` avoids by carrying the one player a whole-court event could
+    not otherwise name. Whole-challenge and irreversible: there is no
+    ``ChallengeReopened`` beside this, because re-asking the same people is a
+    **new** challenge with fresh deadlines and its own ``answered`` set.
+    """
+
+    challenge_id: UUID
     occurred_at: datetime
 
 

@@ -19,8 +19,15 @@ it. The sweep (``lapse``) exists for the **record**, not for correctness.
 **What it refuses** is in ``errors.py``, and the list is short on purpose:
 answering a seat you do not hold, answering twice, answering after your own
 deadline, challenging yourself, a challenge with no invitee, a court that is not
-the sport's, removing somebody who is already in the game, and a send with nobody
-new to invite. Everything else this context knows is derived.
+the sport's, removing somebody who is already in the game, a send with nobody
+new to invite, and a withdraw that is not the organiser's or is asked of a
+standing that has some other end already. Everything else this context knows is
+derived.
+
+**One act here announces its own conclusion, and exactly one may**
+(``docs/adr/0142``). ``withdraw`` records the only standing no arrangement of the
+seats could reach; every other transition changes a seat and lets the fold
+answer.
 
 **What it does not refuse, and states as an invariant instead:** *an acceptance
 is to the game, not to the side.* The membership is settled; the arrangement is
@@ -46,15 +53,18 @@ from app.modules.challenges.domain.errors import (
     NobodyNewToInvite,
     NotYourSeat,
     OnePersonToASeat,
+    OnlyAHalfBuiltLineUpIsWithdrawn,
     TheAnswerWindowHasPassed,
     TheChallengeIsOver,
     TheCourtIsNotThisSports,
     TheOrganiserHoldsASeat,
     TheSeatIsAlreadyAnswered,
+    TheWithdrawIsTheOrganisers,
 )
 from app.modules.challenges.domain.events import (
     ChallengeOpenedFromMutualInterest,
     ChallengeSent,
+    ChallengeWithdrawn,
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
@@ -101,6 +111,13 @@ class Challenge:
     answered: frozenset[UUID]
     opened_at: Instant
     updated_at: Instant
+    #: Whether the organiser has ended it. **The one thing about a challenge that
+    #: is not in its seats** — a decision somebody took, folded off
+    #: ``ChallengeWithdrawn`` and read by ``standing_at`` before anything else.
+    #: A ``bool`` and not an instant, because it is folded exactly as an answer
+    #: is: the moment it happened is the event's, and a second copy on the
+    #: aggregate would be a moment two readers could disagree about.
+    withdrawn: bool = False
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -276,6 +293,44 @@ class Challenge:
             recorded += 1
         return recorded
 
+    # -- ending it ---------------------------------------------------------
+
+    def withdraw(self, player_id: UUID, *, occurred_at: Instant) -> None:
+        """The organiser ends a line-up nobody is going to complete.
+
+        **Whole-challenge, and irreversible** (``docs/adr/0142`` §2). Per-seat
+        would be the organiser removing an accepted player, which
+        ``AnAcceptedPlayerMayNotBeRemoved`` refuses and keeps refusing — the
+        people who already agreed did nothing wrong. A withdrawn challenge does
+        not come back: re-asking the same people is a **new** challenge, with
+        fresh deadlines and its own ``answered`` set, which is what it actually
+        is.
+
+        **``LINE_UP_INCOMPLETE`` and nowhere else**, because the rule is *the
+        exit exists exactly where nothing else ends it*. ``AWAITING_ANSWERS``
+        ends itself when the clocks run out, and the only thing a withdraw would
+        add there is the ability to ask the same person again tomorrow —
+        ``NobodyIsAskedTwice`` is scoped to one aggregate and cannot see a
+        withdraw-and-resend. ``ON`` has become a game and ending the challenge
+        would not touch it.
+
+        **Whose act it is, asked first.** That the caller is not the organiser is
+        true regardless of what the seats say, exactly as *who is on the court*
+        is checked ahead of anything a send has to read; asking the standing
+        first would tell an invitee which standings they cannot end, one probe at
+        a time.
+        """
+
+        if player_id != self.organiser_id:
+            raise TheWithdrawIsTheOrganisers()
+        if self.standing_at(occurred_at) is not Standing.LINE_UP_INCOMPLETE:
+            raise OnlyAHalfBuiltLineUpIsWithdrawn()
+        self._record_that(
+            ChallengeWithdrawn(
+                challenge_id=self.challenge_id, occurred_at=occurred_at
+            )
+        )
+
     # -- completing a half-built game -------------------------------------
 
     def invite(self, arrangement: Sequence[SeatPlan], *, occurred_at: Instant) -> None:
@@ -333,7 +388,12 @@ class Challenge:
     def standing_at(self, now: Instant) -> Standing:
         """What this challenge is, right now. **Derived, never stored.**"""
 
-        return standing_of(self.seats, organiser_id=self.organiser_id, now=now)
+        return standing_of(
+            self.seats,
+            organiser_id=self.organiser_id,
+            now=now,
+            withdrawn=self.withdrawn,
+        )
 
     def has_become_a_game_at(self, now: Instant) -> bool:
         """Whether this challenge's line-up completed and handed over a game.
@@ -430,6 +490,7 @@ class Challenge:
         challenge.version = 0
         challenge.seats = ()
         challenge.answered = frozenset()
+        challenge.withdrawn = False
         challenge._events = EventRecorder()
         return challenge
 
@@ -472,6 +533,13 @@ class Challenge:
             return
         if isinstance(event, SeatsInvited):
             self.seats = tuple(Seat.from_code(code) for code in event.seats)
+            self._touch(event.occurred_at)
+            return
+        if isinstance(event, ChallengeWithdrawn):
+            # The seats are left exactly as they were, which is the point: the
+            # person who accepted still accepted, and a withdraw that emptied
+            # their seat would be the organiser removing them.
+            self.withdrawn = True
             self._touch(event.occurred_at)
             return
         raise TypeError(f"Unsupported challenge event {event!r}")

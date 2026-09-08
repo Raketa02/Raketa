@@ -1,6 +1,7 @@
-"""The four challenge routes: send one, read yours, answer a seat either way.
+"""The challenge routes: send one, read yours, read one richly, answer a seat
+either way, and end a half-built one.
 
-**All four are on the player surface.** The one that looks like a console's — a
+**All of them are on the player surface.** The one that looks like a console's — a
 read of your own pending challenges — is not: an invitee has to be able to find
 that they were asked, and *Now* is where a sent challenge lands. The dev console
 consumes the same routes by signing in as a seeded player, which is why there is
@@ -33,6 +34,7 @@ from app.modules.challenges.application.commands import (
     AnswerSeatCommand,
     SeatChoice,
     SendChallengeCommand,
+    WithdrawChallengeCommand,
 )
 from app.modules.challenges.application.read_challenge import (
     DetailedChallenge,
@@ -51,6 +53,7 @@ from app.modules.challenges.presentation.dependencies import (
     ReadChallengeDep,
     ReadChallengesDep,
     SendChallengeDep,
+    WithdrawChallengeDep,
 )
 from app.modules.challenges.presentation.schemas import (
     ChallengeDetailResponse,
@@ -194,8 +197,9 @@ async def send_challenge(
         "**The standing is derived, never stored.** It is folded from the seats "
         "and the clock at the moment you asked, so a seat whose day ran out reads "
         "as lapsed whether or not anything has swept it yet.\n\n"
-        "**Ended challenges are here too**, carrying `DECLINED` or `LAPSED`. A "
-        "list that quietly dropped this morning's is a list that lies.\n\n"
+        "**Ended challenges are here too**, carrying `DECLINED`, `LAPSED` or "
+        "`WITHDRAWN`. A list that quietly dropped this morning's is a list that "
+        "lies.\n\n"
         "**This is also the remedy for `open_challenge_stands`.** A refused send "
         "names nobody; read this to find out which of your own open games is in "
         "the way."
@@ -365,6 +369,75 @@ async def decline_seat(
     return _challenge(
         await use_case.execute(
             AnswerSeatCommand(challenge_id=challenge_id, player_id=user.id)
+        )
+    )
+
+
+@router.post(
+    "/{challenge_id}/withdrawal",
+    response_model=ChallengeSchema,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "description": (
+                "The challenge is over, and it is returned as it now stands at "
+                "`WITHDRAWN`."
+            )
+        },
+        status.HTTP_404_NOT_FOUND: _ANSWER_REFUSALS[status.HTTP_404_NOT_FOUND],
+        status.HTTP_403_FORBIDDEN: {
+            "model": ErrorResponse,
+            "description": (
+                "`withdraw_is_the_organisers` — you hold a seat on this court "
+                "and the act is not yours. **Not a 404**: you can already see "
+                "this challenge, so pretending it is not there while your own "
+                "seat is drawn on it would be the wrong lie."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`not_a_half_built_line_up` — this challenge has some other end "
+                "already. **One code for five standings**, because they are one "
+                "sentence: `AWAITING_ANSWERS` ends itself when the clocks run "
+                "out, `ON` has become a game, and the three endings have ended."
+            ),
+        },
+    },
+    summary="Withdraw the challenge",
+    description=(
+        "**The exit for a line-up nobody is going to complete**, and the only "
+        "one: somebody is in, a seat is open, nobody is deciding, and nothing "
+        "in this challenge will ever end it. The acceptor cannot leave — their "
+        "seat is answered — and until now the organiser had no act at all.\n\n"
+        "**`LINE_UP_INCOMPLETE` and nowhere else.** Before anybody answers, the "
+        "seats lapse on their own and the pair is released within the window; "
+        "what a withdraw would add there is the ability to ask the same person "
+        "again tomorrow, on a fresh clock, which nothing in this context can "
+        "police.\n\n"
+        "**Whole-challenge, and it never removes one person.** A withdraw ends "
+        "the arrangement for everybody on it — the people who already agreed "
+        "did nothing wrong, and taking one of them out of a court that still "
+        "stands is refused here as it is everywhere else.\n\n"
+        "**Irreversible.** There is no route back. Asking the same people again "
+        "is a **new** challenge, with fresh deadlines and its own record of who "
+        "has answered — which is what it actually is.\n\n"
+        "**Nobody who was still deciding is charged a lapse for it.** An "
+        "invitation whose challenge stopped existing is neither answered nor "
+        "unanswered, and it leaves the record that prices silence.\n\n"
+        "**A noun and not a verb**, because what this creates is the withdrawal "
+        "— the one thing in this context that a fold of the seats could never "
+        "produce."
+    ),
+)
+async def withdraw_challenge(
+    challenge_id: UUID,
+    user: CurrentUserDep,
+    use_case: WithdrawChallengeDep,
+) -> ChallengeSchema:
+    return _challenge(
+        await use_case.execute(
+            WithdrawChallengeCommand(challenge_id=challenge_id, player_id=user.id)
         )
     )
 

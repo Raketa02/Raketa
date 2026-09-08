@@ -25,16 +25,28 @@ judgement.
 **Membership grows one acceptance at a time.** One event per accept and nothing
 that says *the game is now on*: a chat built later subscribes to those and grows
 its roster, and *Line-up incomplete* is not a waiting room.
+
+And a sixth, which arrived with ``docs/adr/0142``:
+
+**One event announces a conclusion, and the rule that lets it is run here rather
+than written down.** *An event may announce a conclusion only when no arrangement
+of the seats could reach it.* ``WITHDRAWN`` is the one standing that passes, and
+the last section of this module folds every arrangement of every court this
+context can hold to prove that it still does.
 """
 
 from __future__ import annotations
 
+from dataclasses import fields as dataclass_fields
 from datetime import datetime, timedelta, timezone
+from itertools import product
+from typing import Iterator
 
 import pytest
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, InvariantViolated, Sport, instant
+from app.modules.challenges.domain import events as challenge_events
 from app.modules.challenges.domain.answer_window import ANSWER_WINDOW
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.errors import (
@@ -45,23 +57,37 @@ from app.modules.challenges.domain.errors import (
     NobodyNewToInvite,
     NotYourSeat,
     OnePersonToASeat,
+    OnlyAHalfBuiltLineUpIsWithdrawn,
     TheAnswerWindowHasPassed,
     TheChallengeIsOver,
     TheCourtIsNotThisSports,
     TheOrganiserHoldsASeat,
     TheSeatIsAlreadyAnswered,
+    TheWithdrawIsTheOrganisers,
 )
 from app.modules.challenges.domain.events import (
     ChallengeOpenedFromMutualInterest,
     ChallengeSent,
+    ChallengeWithdrawn,
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
     SeatsInvited,
 )
 from app.modules.challenges.domain.origins import SentFromSearch, SentOutsideASearch
-from app.modules.challenges.domain.seats import SeatAnswer, SeatPlan, Side
-from app.modules.challenges.domain.standing import ARRANGING, ENDED, Standing
+from app.modules.challenges.domain.seats import (
+    Seat,
+    SeatAnswer,
+    SeatPlan,
+    Side,
+    court_sides,
+)
+from app.modules.challenges.domain.standing import (
+    ARRANGING,
+    ENDED,
+    Standing,
+    standing_of,
+)
 from app.modules.player_profile.domain.availability import Window
 from app.shared.ids import new_uuid
 
@@ -1026,7 +1052,7 @@ def test_a_whole_life_replays_into_itself():
 
 
 def test_the_opening_events_are_the_only_two_that_open_a_stream():
-    """Six events, and the two that can start a challenge are named."""
+    """Seven events, and the two that can start a challenge are named."""
 
     assert isinstance(a_padel_challenge().pull_events()[0], ChallengeSent)
     assert isinstance(a_mutual().pull_events()[0], ChallengeOpenedFromMutualInterest)
@@ -1042,3 +1068,299 @@ def test_a_decline_is_not_a_lapse():
 
     assert isinstance(declined.pull_events()[-1], SeatDeclined)
     assert isinstance(lapsed.pull_events()[-1], SeatLapsed)
+
+
+# ---------------------------------------------------------------------------
+# The withdraw
+# ---------------------------------------------------------------------------
+
+
+def a_court_nobody_will_finish() -> Challenge:
+    """A padel four with one acceptance on it and nobody left deciding.
+
+    ``LINE_UP_INCOMPLETE``, and the one standing a withdraw is legal in: the
+    acceptor is in and cannot leave, two seats are open, and nothing about this
+    challenge will ever end it.
+    """
+
+    challenge = a_padel_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+    challenge.decline(BOB, occurred_at=at(2))
+    challenge.decline(CAROL, occurred_at=at(3))
+    return challenge
+
+
+def test_the_organiser_withdraws_a_line_up_nobody_will_finish():
+    challenge = a_court_nobody_will_finish()
+    assert challenge.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+
+    challenge.withdraw(ORGANISER, occurred_at=at(4))
+
+    assert challenge.standing_at(INSIDE) is Standing.WITHDRAWN
+    assert isinstance(challenge.pull_events()[-1], ChallengeWithdrawn)
+
+
+def test_a_withdrawn_challenge_stays_withdrawn_at_every_instant():
+    """It is not a deadline and there is no clock in it.
+
+    The other two endings arrive because time passed or somebody answered; this
+    one arrived because a person decided, so a year of clock moves nothing.
+    """
+
+    challenge = a_court_nobody_will_finish()
+    challenge.withdraw(ORGANISER, occurred_at=at(4))
+
+    assert challenge.standing_at(at(4)) is Standing.WITHDRAWN
+    assert challenge.standing_at(at(24 * 365)) is Standing.WITHDRAWN
+
+
+def test_the_withdraw_is_the_organisers_and_an_invitee_is_told_so():
+    """**Forbidden and not not-found**: they can see this challenge already."""
+
+    challenge = a_court_nobody_will_finish()
+
+    with pytest.raises(TheWithdrawIsTheOrganisers):
+        challenge.withdraw(ALICE, occurred_at=at(4))
+
+    assert challenge.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+
+
+def test_whose_act_it_is_is_asked_before_what_the_standing_is():
+    """An invitee is never told which standings they cannot end.
+
+    Asking the standing first would answer *is this challenge withdrawable* for
+    somebody who may not withdraw it either way — the send's own rule, that a
+    fact about the caller is checked ahead of anything it would have to read.
+    """
+
+    challenge = a_padel_challenge()
+
+    with pytest.raises(TheWithdrawIsTheOrganisers):
+        challenge.withdraw(ALICE, occurred_at=at(1))
+
+
+def test_a_withdraw_is_refused_while_an_answer_is_still_owed():
+    """`AWAITING_ANSWERS` ends itself, and the act's one unique power there
+    would be a resend handing the same person a fresh clock.
+
+    ``NobodyIsAskedTwice`` is scoped to one aggregate and cannot see a
+    withdraw-and-resend, which is why this is refused rather than allowed early.
+    """
+
+    challenge = a_padel_challenge()
+
+    with pytest.raises(OnlyAHalfBuiltLineUpIsWithdrawn):
+        challenge.withdraw(ORGANISER, occurred_at=at(1))
+
+
+def test_a_completed_line_up_has_no_withdraw():
+    """`ON` has become a game, and ending the challenge would not touch it."""
+
+    challenge = a_tennis_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+
+    with pytest.raises(OnlyAHalfBuiltLineUpIsWithdrawn):
+        challenge.withdraw(ORGANISER, occurred_at=at(2))
+
+
+def test_a_challenge_that_already_ended_has_no_withdraw():
+    challenge = a_tennis_challenge()
+    challenge.decline(ALICE, occurred_at=at(1))
+
+    with pytest.raises(OnlyAHalfBuiltLineUpIsWithdrawn):
+        challenge.withdraw(ORGANISER, occurred_at=at(2))
+
+
+def test_a_withdrawal_does_not_come_back():
+    """Irreversible, and the second press is refused by the same rule as the
+    first would be on any other standing: this is not a half-built line-up."""
+
+    challenge = a_court_nobody_will_finish()
+    challenge.withdraw(ORGANISER, occurred_at=at(4))
+
+    with pytest.raises(OnlyAHalfBuiltLineUpIsWithdrawn):
+        challenge.withdraw(ORGANISER, occurred_at=at(5))
+
+
+def test_a_withdraw_ends_the_whole_challenge_and_removes_nobody():
+    """**The accepted-player invariant is untouched.**
+
+    Per-seat would be the organiser taking out somebody who already agreed,
+    which ``AnAcceptedPlayerMayNotBeRemoved`` refuses and keeps refusing. So the
+    seats are left exactly as they were: the person who accepted still accepted,
+    and what ended is the arrangement.
+    """
+
+    challenge = a_court_nobody_will_finish()
+    before = challenge.seats
+
+    challenge.withdraw(ORGANISER, occurred_at=at(4))
+
+    assert challenge.seats == before
+    assert challenge.seat_of(ALICE).answer is SeatAnswer.ACCEPTED
+
+
+def test_a_withdrawn_challenge_releases_its_pair():
+    """The permanence this act exists to end.
+
+    A half-built four held its pair for the life of the database — the acceptor
+    unreachable in every sport, with nobody holding an exit. ``WITHDRAWN`` is in
+    ``ENDED`` and in nothing else, so the arranging stops and everybody on the
+    court is a stranger again.
+    """
+
+    challenge = a_court_nobody_will_finish()
+    assert challenge.players_in_it_at(INSIDE) == frozenset({ORGANISER, ALICE})
+
+    challenge.withdraw(ORGANISER, occurred_at=at(4))
+
+    assert Standing.WITHDRAWN in ENDED
+    assert Standing.WITHDRAWN not in ARRANGING
+    assert not challenge.is_being_arranged_at(INSIDE)
+    assert challenge.players_in_it_at(INSIDE) == frozenset()
+
+
+def test_a_withdrawn_challenge_never_became_a_game():
+    """It ended without reaching ``ON``, so it minted nothing and holds nobody
+    on either question the aggregate answers."""
+
+    challenge = a_court_nobody_will_finish()
+    challenge.withdraw(ORGANISER, occurred_at=at(4))
+
+    assert not challenge.has_become_a_game_at(INSIDE)
+
+
+def test_a_withdrawn_challenge_takes_no_more_invitations():
+    """Its seats are open and its standing is settled; filling one would be a
+    proposal to a different set of people, which is a **new** challenge."""
+
+    challenge = a_court_nobody_will_finish()
+    challenge.withdraw(ORGANISER, occurred_at=at(4))
+
+    with pytest.raises(TheChallengeIsOver):
+        challenge.invite(
+            (
+                SeatPlan(side=Side.A, player_id=ORGANISER),
+                SeatPlan(side=Side.A, player_id=ALICE),
+                invited(STRANGER, Side.B, 7),
+                invited(new_uuid(), Side.B, 8),
+            ),
+            occurred_at=at(5),
+        )
+
+
+def test_a_withdrawal_replays_into_itself():
+    challenge = a_court_nobody_will_finish()
+    challenge.withdraw(ORGANISER, occurred_at=at(4))
+
+    assert replayed(challenge) == challenge
+
+
+# ---------------------------------------------------------------------------
+# The exemption — run rather than written down
+# ---------------------------------------------------------------------------
+
+def _asked(side: Side, who, answer: SeatAnswer | None, deadline: Instant) -> Seat:
+    """An invited seat: somebody, their answer or the absence of one, and their
+    own day. The origin is the same for all of them because it is the one field
+    on a seat that no standing reads."""
+
+    return Seat(
+        side=side,
+        player_id=who,
+        answer=answer,
+        answer_by=deadline,
+        origin=SentFromSearch(search_id=SEARCH, position=1),
+    )
+
+
+#: Every state one seat of a court can be in, as a factory taking the side and
+#: whoever sits there. Six and not five: a seat whose day has run out with no
+#: sweep having been past reads as lapsed, and it is a *different* arrangement
+#: from one the sweep recorded — folding both is what makes the enumeration
+#: below an enumeration of the states this context can hold rather than of the
+#: ones it happens to write down.
+_SEAT_STATES = (
+    lambda side, who: Seat(side=side),
+    lambda side, who: _asked(side, who, None, OUTSIDE),
+    lambda side, who: _asked(side, who, None, SENT_AT),
+    lambda side, who: _asked(side, who, SeatAnswer.ACCEPTED, OUTSIDE),
+    lambda side, who: _asked(side, who, SeatAnswer.DECLINED, OUTSIDE),
+    lambda side, who: _asked(side, who, SeatAnswer.LAPSED, OUTSIDE),
+)
+
+
+def _every_arrangement_of(sport: Sport) -> Iterator[tuple[Seat, ...]]:
+    """Every court this sport can hold, with the organiser on the first seat.
+
+    The organiser's seat is fixed because it is fixed everywhere: accepted from
+    birth, because they are the one proposing. Every other position takes each
+    of the six states in turn, and a distinct person, so no arrangement here is
+    one the aggregate would have refused for a reason having nothing to do with
+    what is being asked.
+    """
+
+    sides = court_sides(sport)
+    organiser = Seat(side=sides[0], player_id=ORGANISER, answer=SeatAnswer.ACCEPTED)
+    people = [new_uuid() for _ in sides[1:]]
+    for states in product(_SEAT_STATES, repeat=len(sides) - 1):
+        yield (organiser,) + tuple(
+            state(side, who)
+            for state, side, who in zip(states, sides[1:], people, strict=True)
+        )
+
+
+def test_an_event_may_announce_a_conclusion_only_when_the_seats_cannot_reach_it():
+    """**The exemption, as a test rather than as a sentence** (`docs/adr/0142`).
+
+    Every standing but one is a reading of the seats and the clock, so an event
+    announcing one would be a *second* place for it to be true — and the one a
+    subscriber would believe. `WITHDRAWN` is exempt because there is no first
+    place: no arrangement of any court this context can hold folds to it.
+
+    This is the test the next person to add an event has to pass. It goes red
+    two ways, and both of them are the failure: a standing that stops being
+    reachable from the seats, and a standing added to the enum without an event
+    or a fold that can produce it.
+    """
+
+    reachable = {
+        standing_of(seats, organiser_id=ORGANISER, now=INSIDE, withdrawn=False)
+        for sport in (Sport.TENNIS, Sport.PADEL)
+        for seats in _every_arrangement_of(sport)
+    }
+
+    assert reachable == set(Standing) - {Standing.WITHDRAWN}
+
+
+def test_the_one_event_that_is_not_about_a_seat_is_the_withdrawal():
+    """The other half of the same rule, read off the events module itself.
+
+    An event carrying a seat or a player is a fact the fold already has; an
+    event carrying neither is announcing something about the challenge as a
+    whole, which is the shape a conclusion takes here. There is exactly one, and
+    a ``GameOn`` added tomorrow is caught without anybody having to remember to
+    add it to a list.
+
+    **It is a proxy and it is deliberately blunt.** A whole-challenge event that
+    announced *no* conclusion would fail this too, and that is the intended
+    outcome rather than a false positive: the exemption above is what makes an
+    event of that shape legal in this context, so the second one has to be
+    argued for in writing rather than discovered later. The precise rule is the
+    test above; this one is what stops it being reached around.
+    """
+
+    declared = [
+        value
+        for name, value in vars(challenge_events).items()
+        if isinstance(value, type)
+        and not name.startswith("_")
+        and value.__module__ == challenge_events.__name__
+    ]
+    about_a_seat = {
+        event
+        for event in declared
+        if {"seats", "player_id"} & {one.name for one in dataclass_fields(event)}
+    }
+
+    assert set(declared) - about_a_seat == {ChallengeWithdrawn}

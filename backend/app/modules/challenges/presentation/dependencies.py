@@ -45,6 +45,7 @@ from app.modules.challenges.application.answer_seat import AcceptSeat, DeclineSe
 from app.modules.challenges.application.read_challenge import ReadChallenge
 from app.modules.challenges.application.read_challenges import ReadChallenges
 from app.modules.challenges.application.send_challenge import SendChallenge
+from app.modules.challenges.application.withdraw_challenge import WithdrawChallenge
 from app.modules.challenges.domain.ports import (
     ChallengeRepository,
     CourtPairingQuery,
@@ -213,3 +214,24 @@ def get_decline_seat(
 
 
 DeclineSeatDep = Annotated[DeclineSeat, Depends(get_decline_seat)]
+
+
+def get_withdraw_challenge(
+    db: DbSession,
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    challenges: ChallengeRepositoryDep,
+) -> WithdrawChallenge:
+    """The withdraw, and it is the decline's four collaborators exactly.
+
+    **No game opening here**, and the absence is the same statement ``DeclineSeat``
+    makes: only an accept can fill the last seat, and a withdraw is the act for a
+    line-up that never will.
+    """
+
+    return WithdrawChallenge(
+        challenges=challenges, handles=build_challenge_handles(db), uow=uow, clock=clock
+    )
+
+
+WithdrawChallengeDep = Annotated[WithdrawChallenge, Depends(get_withdraw_challenge)]

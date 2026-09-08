@@ -96,6 +96,7 @@ from app.modules.challenges.application.commands import (
 from app.modules.challenges.application.read_challenge import ReadChallenge
 from app.modules.challenges.application.read_challenges import ReadChallenges
 from app.modules.challenges.application.send_challenge import SendChallenge
+from app.modules.challenges.application.withdraw_challenge import WithdrawChallenge
 from app.modules.challenges.domain.seats import court_sides
 from app.modules.games.application.answer_result import AcceptResult, StateResult
 from app.modules.games.application.read_games import ReadGames
@@ -173,6 +174,11 @@ class ReadPaths:
     send: SendChallenge
     accept: AcceptSeat
     decline: DeclineSeat
+    #: The organiser's exit from a line-up nobody will finish, and the only act
+    #: in this fixture that **ends** a challenge on purpose. It is here for the
+    #: same reason the two answers are: a state a screen has to draw is reached
+    #: through the use case a request runs, never written into the log.
+    withdraw: WithdrawChallenge
     read_challenges: ReadChallenges
     #: The detail read, and **the only surface in this fixture that costs the
     #: matcher a whole scoring pass** (``docs/adr/0143``). It is here so the run
@@ -419,6 +425,9 @@ async def read_paths(
             planned_games=build_planned_game_opening(session),
         ),
         decline=DeclineSeat(
+            challenges=challenges, handles=court_handles, uow=uow, clock=clock
+        ),
+        withdraw=WithdrawChallenge(
             challenges=challenges, handles=court_handles, uow=uow, clock=clock
         ),
         state_result=StateResult(games=games, handles=handles, uow=uow, clock=clock),

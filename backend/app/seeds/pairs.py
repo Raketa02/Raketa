@@ -51,11 +51,14 @@ from app.engines.matchfit.ruleset import ChallengeLoadRung
 from app.kernel import Instant, Sport, exhaustive
 from app.modules.blocks.application.commands import BlockPlayerCommand
 from app.modules.blocks.domain.surface import BlockSurface
-from app.modules.challenges.application.commands import AnswerSeatCommand
+from app.modules.challenges.application.commands import (
+    AnswerSeatCommand,
+    WithdrawChallengeCommand,
+)
 from app.modules.challenges.application.read_challenges import ReadChallengesCommand
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.seats import SeatAnswer
-from app.modules.challenges.domain.standing import ENDED
+from app.modules.challenges.domain.standing import ENDED, Standing
 from app.modules.matchmaking.application.commands import (
     ExpressInterestCommand,
     ReadInterestCommand,
@@ -197,6 +200,11 @@ class SeededPairs:
 
     edges: tuple[WrittenEdge, ...]
     inboxes: tuple[str, ...]
+    #: The one court this run **ended on purpose**, as a line for the report.
+    #: It is not one of the eleven and it is not one of the inboxes: it is a
+    #: state rather than a relationship, and the only state in ``challenges``
+    #: that no arrangement of the seats can reach.
+    withdrawn: str
     costs: tuple[str, ...]
     the_deal_that_earned_the_pass: SearchRecord
     #: Whether that deal found a deck this run had **already spent**. ADR-0131
@@ -249,7 +257,8 @@ async def write_the_relationships(
 
 
 async def _write(paths: ReadPaths, *, cohort: Cohort) -> SeededPairs:
-    """The eleven, then the inboxes the cohort carries."""
+    """The eleven, then the inboxes the cohort carries, then the one court that
+    was ended."""
 
     written: list[WrittenEdge] = []
     court: Challenge | None = None
@@ -293,9 +302,11 @@ async def _write(paths: ReadPaths, *, cohort: Cohort) -> SeededPairs:
             "record to read its own claims off."
         )
     inboxes = await _fill_the_inboxes(paths, cohort=cohort)
+    withdrawn = await _withdraw_a_half_built_court(paths, cohort=cohort)
     return SeededPairs(
         edges=tuple(written),
         inboxes=inboxes,
+        withdrawn=withdrawn,
         costs=tuple(costs),
         the_deal_that_earned_the_pass=deal,
         the_deck_was_already_spent=spent,
@@ -1090,3 +1101,157 @@ def _refuse_a_search_that_showed_nobody(
         f"relationship cannot be written at all. "
         f"Gates: {dict(sorted(record.counts.excluded_by_gate.items()))}."
     )
+
+
+# ---------------------------------------------------------------------------
+# The one court that is ended on purpose
+# ---------------------------------------------------------------------------
+
+
+async def _withdraw_a_half_built_court(paths: ReadPaths, *, cohort: Cohort) -> str:
+    """One cohort member ends a padel court somebody else had already accepted.
+
+    **`WITHDRAWN` is the only standing this database cannot reach by waiting.**
+    The other five arrive from the seats and the clock — a send is awaiting, an
+    acceptance is on, a decline or a silent day is an ending — so every one of
+    them is somewhere in the eleven or the inboxes already. This one is a
+    decision a person took, and the only way a screen ever sees it is if
+    somebody takes it.
+
+    **Neither seat is the protagonist's, and that is the constraint that picks
+    the pair.** A court she organised would need somebody to accept it, and an
+    accepted seat that then releases is `PREVIOUS_ACCEPT` on her own card —
+    which `app/seeds/screens.py` asserts is absent from this cohort, by name and
+    with the reason. A court she was *invited* to is `they-challenged-you`'s and
+    is named for a seat that is still hers to answer. So this is two cohort
+    members, exactly as the inboxes are, for the same reason: a state that is
+    nobody's relationship belongs to the population and not to the eleven.
+
+    **Idempotent by the state it writes rather than by a key.** A withdrawn
+    court is an ending, so the pair it held is released and a second run would
+    find nothing in its way; what stops it is the probe — *has this organiser
+    already ended one?* — which is the same question the report answers.
+
+    **It walks the candidate organisers rather than naming one**, exactly as the
+    inboxes do and for the same reason: whether a member can see anybody at all
+    is a question about their own pool that only a real search answers, and a
+    fixture that named one would discover on the day that it had named the wrong
+    one. Handle order puts the nearest ring first, so the walk almost always
+    ends on its first member.
+    """
+
+    for organiser in members_who_might_organise(cohort):
+        organiser_id = paths.player(organiser.email)
+        ended = await _the_court_they_ended(paths, organiser_id)
+        if ended is not None:
+            return (
+                f"withdrawn · {organiser.handle} has already ended challenge "
+                f"{ended.id}, and it still reads {Standing.WITHDRAWN.value}"
+            )
+        # **The plain search and not ``_a_search_that_showed``**: that one is the
+        # search and the refusal in one act because an *edge* names who it must
+        # surface, and this court names nobody in advance — who it asks is
+        # whoever the pool turns out to hold, and a member who can see nobody is
+        # the next member's turn rather than a failure.
+        record = await run_a_shortlist(
+            paths,
+            organiser.email,
+            Sport.PADEL,
+            _mode_declared_by(paths, _declarations_of(organiser), Sport.PADEL),
+        )
+        invitee = await _somebody_new_to(paths, organiser_id, record, cohort=cohort)
+        if invitee is None:
+            continue
+        challenge_id = await send_a_court(
+            paths,
+            organiser=organiser.email,
+            sport=Sport.PADEL,
+            record=record,
+            invitees=(invitee.email,),
+        )
+        await paths.accept.execute(
+            AnswerSeatCommand(
+                challenge_id=challenge_id, player_id=paths.player(invitee.email)
+            )
+        )
+        withdrawn = await paths.withdraw.execute(
+            WithdrawChallengeCommand(
+                challenge_id=challenge_id, player_id=organiser_id
+            )
+        )
+        if withdrawn.standing is not Standing.WITHDRAWN:
+            raise EdgeRefused(
+                f"{organiser.handle} withdrew challenge {challenge_id} and it "
+                f"reads {withdrawn.standing.value}. The court was a padel four "
+                f"with one acceptance on it, which is the one standing a "
+                f"withdraw is legal in."
+            )
+        return (
+            f"withdrawn · {organiser.handle} ended challenge {challenge_id}, "
+            f"which {invitee.handle} had accepted a seat on; it reads "
+            f"{withdrawn.standing.value} and the pair is released"
+        )
+    raise EdgeRefused(
+        "every cohort member who might organise ran a padel search and none of "
+        "them can see another member free to be asked, so this run has no court "
+        "to end. `WITHDRAWN` is then the one challenge standing no screen in "
+        "this database can draw. The rule that places the population is "
+        "`app/seeds/cohort.py`."
+    )
+
+
+async def _the_court_they_ended(
+    paths: ReadPaths, organiser_id: UUID
+) -> Challenge | None:
+    """A challenge this organiser has already withdrawn, if there is one.
+
+    Read through the organiser's own list, because that is the read the Chats
+    screen makes: a probe that found it any other way would not have proved the
+    screen can.
+    """
+
+    _, standing = await paths.read_challenges.execute(
+        ReadChallengesCommand(reader_id=organiser_id)
+    )
+    for row in standing:
+        if (
+            row.challenge.organiser_id == organiser_id
+            and row.standing is Standing.WITHDRAWN
+        ):
+            return row.challenge
+    return None
+
+
+async def _somebody_new_to(
+    paths: ReadPaths, organiser_id: UUID, record: SearchRecord, *, cohort: Cohort
+) -> CohortMember | None:
+    """The first cohort member this search showed who is free to be asked, or
+    nobody.
+
+    **Nobody is an answer here and not a refusal**, because *can this member see
+    anybody* is a question about their own pool that only a real search answers —
+    the same posture ``_who_can_reach`` takes about the inboxes. The refusal
+    belongs to the walk, once every candidate has been asked.
+
+    **The loaded three are held out by name.** Their whole fixture is a *count*
+    of unanswered seats, and a court that arrived and left inside one run is a
+    depth that was briefly wrong for a reason nobody reading the report could
+    see.
+
+    Sorted by handle, so which member this is depends on the population rather
+    than on what order a search happened to return.
+    """
+
+    shown = returned_ids(record)
+    already = {
+        row.counterpart_id
+        for row in await paths.history.open_challenges(organiser_id)
+    }
+    loaded = {member.handle for member in members_who_carry_an_inbox(cohort)}
+    for member in sorted(cohort.members, key=lambda one: one.handle):
+        if member.handle in loaded:
+            continue
+        player = paths.player(member.email)
+        if player in shown and player not in already:
+            return member
+    return None

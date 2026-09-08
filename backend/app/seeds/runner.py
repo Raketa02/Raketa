@@ -1316,6 +1316,7 @@ def _relationship_lines(pairs: SeededPairs) -> list[str]:
         lines.append(f"      {edge.line}")
         lines.append(f"      claims: {edge.relationship.claim}")
     lines.extend(f"  {line}" for line in pairs.inboxes)
+    lines.append(f"  {pairs.withdrawn}")
     return lines
 
 

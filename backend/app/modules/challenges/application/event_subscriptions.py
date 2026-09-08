@@ -3,8 +3,9 @@
 A name here is a **published contract** and outlives every Python class it maps
 to: renaming ``ChallengeSent`` must never change what is already in the store.
 
-**Six names, on one aggregate.** The prefix is the context's, which is what makes
-a name a statement about *what happened* rather than about which class wrote it.
+**Seven names, on one aggregate.** The prefix is the context's, which is what
+makes a name a statement about *what happened* rather than about which class
+wrote it.
 
 The two most likely to be asked to carry more later are ``challenges.sent`` — a
 send that one day cites something other than a search — and
@@ -15,6 +16,14 @@ version 1, never an edit to it: the rows already in the store must keep decoding
 omission to be filled in by whoever needs one; the standing is derived from the
 seats and the clock, and a durable name announcing a conclusion would be a second
 place for it to be true — the one a subscriber would believe.
+
+**``challenges.withdrawn`` is the one that does say a challenge ended, and it is
+allowed to** (``docs/adr/0142`` §3): a withdrawal is a decision a person took and
+no arrangement of the seats reaches it, so the name is the only place the fact is
+true rather than a second one. It is also the first name here a **subscriber**
+will want: the conversation the first acceptance opened has to be destroyed, and
+the context that owns conversations will hear it here rather than being called
+from the use case.
 """
 
 from __future__ import annotations
@@ -24,6 +33,7 @@ from app.modules.challenges.application.handlers import LogChallengeEvent
 from app.modules.challenges.domain.events import (
     ChallengeOpenedFromMutualInterest,
     ChallengeSent,
+    ChallengeWithdrawn,
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
@@ -40,6 +50,7 @@ _CONTRACTS = (
     (SeatDeclined, "challenges.seat_declined"),
     (SeatLapsed, "challenges.seat_lapsed"),
     (SeatsInvited, "challenges.seats_invited"),
+    (ChallengeWithdrawn, "challenges.withdrawn"),
 )
 
 

@@ -1,12 +1,18 @@
 """Every Challenges event survives the round trip through storage, and there are
-six of them.
+seven of them.
 
 A durable name is a **published contract**, so three things are asserted: that
 each event has one, that an event decoded out of the store equals the event that
-was appended, and that **no name announces a conclusion**. The last is the one
-that would be quietly deleted by a well-meaning addition: a ``challenges.game_on``
-would be a second place for a derived standing to be true, and it is the one a
-subscriber would believe.
+was appended, and that **exactly one name announces a conclusion**. The last is
+the one that would be quietly widened by a well-meaning addition: a
+``challenges.game_on`` would be a second place for a derived standing to be true,
+and it is the one a subscriber would believe.
+
+``challenges.withdrawn`` is the exemption and the count of one is the assertion
+(``docs/adr/0142`` §3). It is allowed to announce a conclusion because no
+arrangement of the seats reaches ``WITHDRAWN``, so the name is the fact's only
+home rather than a second one — and that rule is run over the fold itself in
+``test_challenge_aggregate.py``.
 
 The round trip is what the seat codes need. A seat is five fields inside one
 string precisely because the codec coerces scalars only, and the assertion here
@@ -27,6 +33,7 @@ from app.modules.challenges.application.event_subscriptions import (
 from app.modules.challenges.domain.events import (
     ChallengeOpenedFromMutualInterest,
     ChallengeSent,
+    ChallengeWithdrawn,
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
@@ -92,6 +99,7 @@ EVENTS = [
         newly_invited=(str(ALICE),),
         occurred_at=AT,
     ),
+    ChallengeWithdrawn(challenge_id=CHALLENGE, occurred_at=AT),
 ]
 
 
@@ -148,21 +156,27 @@ def test_every_event_this_context_records_has_a_durable_name():
     assert all(name.startswith("challenges.") for name in names)
 
 
-def test_there_are_six_events_and_the_suite_covers_all_of_them():
-    """A seventh event added without a round trip here is the failure this catches."""
+def test_there_are_seven_events_and_the_suite_covers_all_of_them():
+    """An eighth event added without a round trip here is the failure this catches."""
 
     registered = {event_cls for event_cls, _ in _CONTRACTS}
 
-    assert len(registered) == 6
+    assert len(registered) == 7
     assert {type(event) for event in EVENTS} == registered
 
 
-def test_no_durable_name_announces_a_conclusion():
-    """No `GameOn`, no `ChallengeExpired`, no `ChallengeDeclined`.
+def test_one_durable_name_announces_a_conclusion_and_it_is_the_withdrawal():
+    """No `GameOn`, no `ChallengeExpired`, no `ChallengeDeclined` — and one
+    `challenges.withdrawn`.
 
     A derived standing has exactly one place to be true, and a published name
-    saying otherwise would become the second — and the believed one. This is the
-    assertion that goes red the day somebody adds the convenient event.
+    saying otherwise would become the second — and the believed one. The
+    withdrawal is the exemption, and it is exempt because there is no *first*
+    place: no arrangement of the seats reaches `WITHDRAWN`.
+
+    This is the assertion that goes red the day somebody adds the convenient
+    event, and it is written as *exactly one* rather than *none* so that the day
+    it goes red is not the day this list quietly grew a second entry.
     """
 
     catalog = EventCatalog()
@@ -172,6 +186,9 @@ def test_no_durable_name_announces_a_conclusion():
     forbidden = ("game_on", "expired", "declined", "on", "complete", "over")
     conclusions = {name for name in names if name.rsplit(".", 1)[1] in forbidden}
     assert conclusions == set()
+    assert {name for name in names if name.rsplit(".", 1)[1] == "withdrawn"} == {
+        "challenges.withdrawn"
+    }
     # The two that *are* about one seat say so, and neither is the challenge's.
     assert "challenges.seat_declined" in names
     assert "challenges.seat_lapsed" in names

@@ -7,10 +7,12 @@ shape here in which a withheld seat, a gate or a reason could arrive: a refused
 send answers with a code and an empty body, and the client re-reads the two
 sources it already owns.
 
-**The standing is derived and travels as a code.** ``Standing`` is five values and
-the words for them are the client's (``docs/adr/0022``). It is on the response
-because it is a fold of the seats against the moment the list was read — and it is
-**not** on the aggregate, in the store, or anywhere a second copy could go stale.
+**The standing is derived and travels as a code.** ``Standing`` is six values and
+the words for them are the client's (``docs/adr/0022``). Five of them are a fold
+of the seats against the moment the list was read; ``WITHDRAWN`` is the one a
+recorded decision puts there, because no arrangement of the seats reaches it
+(``docs/adr/0142``). Either way it is **not** on the aggregate, in the store, or
+anywhere a second copy could go stale.
 
 **A seat carries its own deadline and no standing of its own.** Whether it is
 waiting, lapsed or open is read off ``answer`` and ``answer_by`` against the

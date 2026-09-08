@@ -5,10 +5,16 @@ gap between a deadline passing and a sweep noticing, and it would be the copy
 that gets believed. So there is no status field on the aggregate, no status
 column in the store, and this function is the only place a standing exists.
 
-Five values, and they are the five this context can justify. The twenty card
-states the prototype draws are a *presentation* vocabulary spanning money,
-booking and results that nothing here owns; these are the ones the seats and the
-clock can answer for.
+Six values, and five of them are what the seats and the clock can answer for.
+The twenty card states the prototype draws are a *presentation* vocabulary
+spanning money, booking and results that nothing here owns.
+
+**The sixth is the one exemption this module holds, and it is written down so it
+stays one.** A withdrawal is a decision a person took, and there is nothing in
+the seats to fold it out of — so it is the one standing an event announces, and
+the rule that lets it is *an event may announce a conclusion only when no
+arrangement of the seats could reach it* (``docs/adr/0142`` §3). The event is not
+a second place for the fact to be true; it is the only place.
 
 *Challenge sent* and *Challenge for you* are **not** two standings. They are one
 standing read from two sides, which is why nothing here takes a reader.
@@ -26,7 +32,7 @@ from app.modules.challenges.domain.seats import Seat, SeatAnswer
 
 @final
 class Standing(str, Enum):
-    """The five standings, as codes. A client's words are the client's own."""
+    """The six standings, as codes. A client's words are the client's own."""
 
     #: Somebody's answer is still owed and still wanted.
     AWAITING_ANSWERS = "AWAITING_ANSWERS"
@@ -42,11 +48,28 @@ class Standing(str, Enum):
     DECLINED = "DECLINED"
     #: Over, and nobody said anything.
     LAPSED = "LAPSED"
+    #: Over, and the organiser ended it. **The one value here that no
+    #: arrangement of the seats reaches**: nobody said no and nobody was silent,
+    #: so it can reuse neither ending, and a court that was withdrawn still
+    #: holds the acceptance that put it in ``LINE_UP_INCOMPLETE``. It arrives on
+    #: the fold from ``ChallengeWithdrawn`` and from nowhere else.
+    #:
+    #: **Not ``STOOD_DOWN``.** The root ``CONTEXT.md`` owns *stands down*
+    #: platform-wide for a term that cannot be evaluated, and one word means one
+    #: idea in the file that owns it. *Cancel* and *call off* belong to the plan.
+    WITHDRAWN = "WITHDRAWN"
 
 
-#: The two standings that mean *this challenge has ended* — there is nothing
+#: The three standings that mean *this challenge has ended* — there is nothing
 #: left to arrange and nothing left to do. Read by ``Challenge.invite``, which
 #: refuses to seat anybody into one, and by the standing the client prints.
+#:
+#: **``WITHDRAWN`` is the third, and it is a third *kind* of ending** rather than
+#: a spelling of either of the other two (``docs/adr/0142`` §4). A decline is
+#: somebody's judgement and a lapse is somebody's silence; a withdrawal is the
+#: organiser ending an arrangement nobody was going to complete. Filing it as
+#: either would restate a decision as one of the two facts *answers challenges*
+#: exists to keep apart.
 #:
 #: **The mutual mint used to read it and no longer does** (``docs/adr/0152``).
 #: It asked *does a challenge already stand between these two*, which for a
@@ -60,7 +83,7 @@ class Standing(str, Enum):
 #: **``ON`` is not here, and adding it would be the wrong way to release a pair.**
 #: A challenge every seat accepted is not over: it produced a game, which is the
 #: opposite of nothing being left. See :data:`ARRANGING`.
-ENDED = frozenset({Standing.DECLINED, Standing.LAPSED})
+ENDED = frozenset({Standing.DECLINED, Standing.LAPSED, Standing.WITHDRAWN})
 
 #: The standings that mean *these two are still arranging a game*, and **this is
 #: the set the one-open-challenge-per-pair rule reads** — not the complement of
@@ -91,10 +114,25 @@ ENDED = frozenset({Standing.DECLINED, Standing.LAPSED})
 ARRANGING = frozenset({Standing.AWAITING_ANSWERS, Standing.LINE_UP_INCOMPLETE})
 
 
-def standing_of(seats: Iterable[Seat], *, organiser_id: UUID, now: Instant) -> Standing:
-    """The challenge's standing, from its seats and this instant.
+def standing_of(
+    seats: Iterable[Seat],
+    *,
+    organiser_id: UUID,
+    now: Instant,
+    withdrawn: bool,
+) -> Standing:
+    """The challenge's standing, from its seats, this instant, and the one thing
+    about it the seats cannot hold.
 
     The order of the questions is the design, and each rung is a decision:
+
+    **Was it withdrawn?** The one question here that is not about the seats, and
+    it is asked first because every other answer is still *yes*: the acceptance
+    that put this court in ``LINE_UP_INCOMPLETE`` is still on it, so a fold that
+    read the seats first would answer with the standing the organiser has just
+    ended. ``withdrawn`` is **stated by every caller and never defaulted**, so a
+    second reader of this function has to say which challenge it is asking about
+    rather than inheriting an answer.
 
     **Is anybody but the organiser still in it?** A challenge stands exactly as
     long as one is — accepted, or yet to answer. A decline reopens that one seat
@@ -115,6 +153,8 @@ def standing_of(seats: Iterable[Seat], *, organiser_id: UUID, now: Instant) -> S
     what makes *every seat accepted* the whole of the completion rule.
     """
 
+    if withdrawn:
+        return Standing.WITHDRAWN
     seats = tuple(seats)
     if not any(seat.is_live_at(now) and not seat.holds(organiser_id) for seat in seats):
         return _how_it_ended(seats)

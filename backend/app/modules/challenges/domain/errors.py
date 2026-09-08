@@ -200,6 +200,46 @@ class NobodyIsAskedTwice(ConflictError):
         super().__init__("Somebody in this line-up has already answered.")
 
 
+class TheWithdrawIsTheOrganisers(ForbiddenError):
+    """Somebody on the court asked to end the whole challenge.
+
+    Forbidden rather than not-found, for ``NotYourSeat``'s reason: the challenge
+    exists and the caller can see it, and what is being refused is an act on
+    everybody else's arrangement.
+
+    **The invitee is not offered a smaller version of it either.** Leaving a
+    seat you have already answered is refused by ``TheSeatIsAlreadyAnswered``
+    and stays refused; a withdraw is whole-challenge, and a per-seat one would
+    be the organiser removing an accepted player, which
+    ``AnAcceptedPlayerMayNotBeRemoved`` exists to say no to.
+    """
+
+    code = "withdraw_is_the_organisers"
+
+    def __init__(self) -> None:
+        super().__init__("Only the organiser may withdraw a challenge.")
+
+
+class OnlyAHalfBuiltLineUpIsWithdrawn(ConflictError):
+    """A withdraw asked of a challenge that has some other end already.
+
+    **The exit exists exactly where nothing else ends it** (``docs/adr/0142``
+    §2). ``AWAITING_ANSWERS`` ends itself when the clocks run out; ``ON`` has
+    become a game, and ending the challenge would not touch it; the three endings
+    have ended. ``LINE_UP_INCOMPLETE`` is the one standing that never ends on its
+    own and where nobody else holds an exit, so it is the one that gets the act.
+
+    **One code for five standings, deliberately.** They are one sentence — *this
+    is not a half-built line-up* — and splitting them would be five ways of
+    saying that the caller is looking at a standing it has already been told.
+    """
+
+    code = "not_a_half_built_line_up"
+
+    def __init__(self) -> None:
+        super().__init__("Only a half-built line-up can be withdrawn.")
+
+
 class TheChallengeIsOver(ConflictError):
     """Something was asked of a challenge nobody is left in.
 

@@ -1058,10 +1058,20 @@ where, money, results or the conversation itself belongs here.
   out afterwards. **Sides only**: the forecast percentage is not stored, because it follows from
   the sides and a stored copy goes stale the next time a ruleset ships.
 - **Standing** — what a challenge *is* right now: `AWAITING_ANSWERS`, `ON`, `LINE_UP_INCOMPLETE`,
-  `DECLINED`, `LAPSED`. **Derived from the seats and the clock, never stored.** A status column
-  would be wrong for the whole gap between a deadline passing and a sweep noticing, and it would
-  be the copy that gets believed. *Challenge sent* and *Challenge for you* are not two standings —
-  they are one standing read from two sides.
+  `DECLINED`, `LAPSED`, `WITHDRAWN`. **Derived from the seats and the clock, never stored** — with
+  one exception, below. A status column would be wrong for the whole gap between a deadline
+  passing and a sweep noticing, and it would be the copy that gets believed. *Challenge sent* and
+  *Challenge for you* are not two standings — they are one standing read from two sides.
+- **Withdraw** — the organiser **ending** a half-built line-up, for everybody on it
+  ([ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)).
+  Legal while the **Standing** is *Line-up incomplete* and nowhere else, because that is the one
+  standing nothing else ends: the acceptor's seat is answered so they cannot leave it, and nobody
+  is deciding so no clock will run out. **Whole-challenge, and it removes nobody** — a withdraw
+  that emptied one seat would be the organiser taking out somebody who already agreed.
+  **Irreversible**: asking the same people again is a *new* Challenge, with fresh deadlines and
+  its own record of who has answered.
+  The word is *withdraw* and not **stand down**, which this file owns platform-wide for a term
+  that cannot be evaluated, and not *cancel* or *call off*, which belong to a plan.
 - **Answer window** — how long one invitee has to answer, **dated per seat when that seat was
   invited**. Seats filled later start their own day; they cannot inherit a deadline from a send
   they were not part of.
@@ -1141,6 +1151,16 @@ where, money, results or the conversation itself belongs here.
 - **Nothing announces a conclusion the seats already imply.** There is no `GameOn`, no
   `ChallengeExpired`, no `ChallengeDeclined` — a **Standing** that is derived has exactly one place
   to be true, and an event saying otherwise would become the second.
+- **An event may announce a conclusion only when no arrangement of the seats could reach it**, and
+  exactly one does. A **Withdraw** is a decision a person took and there is nothing in the seats to
+  fold it out of, so `challenges.withdrawn` is the fact's *only* home rather than a second one, and
+  the fold reads it exactly as it reads an acceptance. The rule above is unchanged and this is its
+  one exemption; it is kept to one by a test that folds every arrangement of every court this
+  context can hold and asserts that `WITHDRAWN` is the only Standing none of them reaches.
+- **A withdrawn invitation is not a lapse.** Somebody who was still deciding when the challenge
+  stopped existing is neither answered nor lapsed and is absent from *answers challenges*'
+  denominator, exactly as the organiser's own seat is. That Strand prices **silence**, and this
+  is not silence.
 
 ### Games (`backend/app/modules/games/`)
 

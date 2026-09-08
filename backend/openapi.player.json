@@ -1789,7 +1789,7 @@
           "challenges"
         ],
         "summary": "Your challenges",
-        "description": "**Sent and received in one list.** *Challenge sent* and *Challenge for you* are one standing read from two sides; tell them apart by whether `organiser_id` is yours.\n\n**The standing is derived, never stored.** It is folded from the seats and the clock at the moment you asked, so a seat whose day ran out reads as lapsed whether or not anything has swept it yet.\n\n**Ended challenges are here too**, carrying `DECLINED` or `LAPSED`. A list that quietly dropped this morning's is a list that lies.\n\n**This is also the remedy for `open_challenge_stands`.** A refused send names nobody; read this to find out which of your own open games is in the way.",
+        "description": "**Sent and received in one list.** *Challenge sent* and *Challenge for you* are one standing read from two sides; tell them apart by whether `organiser_id` is yours.\n\n**The standing is derived, never stored.** It is folded from the seats and the clock at the moment you asked, so a seat whose day ran out reads as lapsed whether or not anything has swept it yet.\n\n**Ended challenges are here too**, carrying `DECLINED`, `LAPSED` or `WITHDRAWN`. A list that quietly dropped this morning's is a list that lies.\n\n**This is also the remedy for `open_challenge_stands`.** A refused send names nobody; read this to find out which of your own open games is in the way.",
         "operationId": "read_challenges_api_v1_challenges_get",
         "responses": {
           "200": {
@@ -2071,6 +2071,85 @@
           },
           "409": {
             "description": "`seat_already_answered` \u2014 you have answered this one. **Not idempotent, deliberately**: *yes* after *no* is a different answer and not a repeat of one.\n\n`answer_window_has_passed` \u2014 your day ran out. The seat already reads as lapsed and may have been offered to somebody else, so an answer that resurrected it would contradict a card the platform has already drawn.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/challenges/{challenge_id}/withdrawal": {
+      "post": {
+        "tags": [
+          "challenges"
+        ],
+        "summary": "Withdraw the challenge",
+        "description": "**The exit for a line-up nobody is going to complete**, and the only one: somebody is in, a seat is open, nobody is deciding, and nothing in this challenge will ever end it. The acceptor cannot leave \u2014 their seat is answered \u2014 and until now the organiser had no act at all.\n\n**`LINE_UP_INCOMPLETE` and nowhere else.** Before anybody answers, the seats lapse on their own and the pair is released within the window; what a withdraw would add there is the ability to ask the same person again tomorrow, on a fresh clock, which nothing in this context can police.\n\n**Whole-challenge, and it never removes one person.** A withdraw ends the arrangement for everybody on it \u2014 the people who already agreed did nothing wrong, and taking one of them out of a court that still stands is refused here as it is everywhere else.\n\n**Irreversible.** There is no route back. Asking the same people again is a **new** challenge, with fresh deadlines and its own record of who has answered \u2014 which is what it actually is.\n\n**Nobody who was still deciding is charged a lapse for it.** An invitation whose challenge stopped existing is neither answered nor unanswered, and it leaves the record that prices silence.\n\n**A noun and not a verb**, because what this creates is the withdrawal \u2014 the one thing in this context that a fold of the seats could never produce.",
+        "operationId": "withdraw_challenge_api_v1_challenges__challenge_id__withdrawal_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "challenge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Challenge Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The challenge is over, and it is returned as it now stands at `WITHDRAWN`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeSchema"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`challenge_not_found` \u2014 no challenge of **yours** has that id. One code for two cases \u2014 it does not exist, or you are not on its court \u2014 because separating them would answer *is this id real* about a stranger's evening.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`withdraw_is_the_organisers` \u2014 you hold a seat on this court and the act is not yours. **Not a 404**: you can already see this challenge, so pretending it is not there while your own seat is drawn on it would be the wrong lie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`not_a_half_built_line_up` \u2014 this challenge has some other end already. **One code for five standings**, because they are one sentence: `AWAITING_ANSWERS` ends itself when the clocks run out, `ON` has become a game, and the three endings have ended.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6620,10 +6699,11 @@
           "ON",
           "LINE_UP_INCOMPLETE",
           "DECLINED",
-          "LAPSED"
+          "LAPSED",
+          "WITHDRAWN"
         ],
         "title": "Standing",
-        "description": "The five standings, as codes. A client's words are the client's own."
+        "description": "The six standings, as codes. A client's words are the client's own."
       },
       "StandingProposalSchema": {
         "properties": {

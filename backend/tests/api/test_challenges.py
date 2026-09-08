@@ -571,3 +571,160 @@ def _break_the_block_read(client) -> None:
         )
 
     world.override(client, get_express_interest, factory)
+
+
+# ---------------------------------------------------------------------------
+# The withdraw — the one conclusion the seats cannot reach
+# ---------------------------------------------------------------------------
+
+
+async def _a_court_nobody_will_finish(
+    client, session_factory, candidate_source, searcher
+) -> tuple[str, dict]:
+    """A padel four with one acceptance on it and nobody left deciding.
+
+    One yes and two noes leaves the organiser and the acceptor in, two seats
+    open and nothing awaiting — `LINE_UP_INCOMPLETE`, reached through the routes
+    alone, with no clock moved and nothing swept. It is the state that never
+    ends: the acceptor's seat is answered so they cannot leave it, and until now
+    the organiser had no act at all.
+    """
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = (
+        await _send(client, searcher["token"], search_id, court)
+    ).json()["challenge_id"]
+    for name, act in (("ana", "accept"), ("bo", "decline"), ("cy", "decline")):
+        answered = await client.post(
+            f"/api/v1/challenges/{challenge_id}/{act}",
+            headers=world.auth(people[name]["token"]),
+        )
+        assert answered.status_code == 200, answered.text
+    assert answered.json()["standing"] == "LINE_UP_INCOMPLETE"
+    return challenge_id, people
+
+
+async def test_the_organiser_withdraws_and_the_reply_is_the_redraw(
+    client, session_factory, candidate_source, searcher
+):
+    """The route answers with the challenge as it now stands, at `WITHDRAWN` —
+    and the seats it draws are the seats it had, because a withdraw ends the
+    arrangement and never takes one person out of it."""
+
+    challenge_id, people = await _a_court_nobody_will_finish(
+        client, session_factory, candidate_source, searcher
+    )
+
+    withdrawn = await client.post(
+        f"/api/v1/challenges/{challenge_id}/withdrawal",
+        headers=world.auth(searcher["token"]),
+    )
+
+    assert withdrawn.status_code == 200, withdrawn.text
+    body = withdrawn.json()
+    assert body["standing"] == "WITHDRAWN"
+    seats = {seat["player_id"]: seat for seat in body["seats"]}
+    assert seats[str(people["ana"]["id"])]["answer"] == "ACCEPTED"
+
+
+async def test_a_withdrawn_challenge_keeps_its_row_and_says_what_it_is(
+    client, session_factory, candidate_source, searcher
+):
+    """A list that quietly dropped this morning's is a list that lies — and the
+    person who accepted has to be able to find out the court is closed."""
+
+    challenge_id, people = await _a_court_nobody_will_finish(
+        client, session_factory, candidate_source, searcher
+    )
+    await client.post(
+        f"/api/v1/challenges/{challenge_id}/withdrawal",
+        headers=world.auth(searcher["token"]),
+    )
+
+    hers = await _challenges(client, people["ana"]["token"])
+
+    assert [row["standing"] for row in hers] == ["WITHDRAWN"]
+
+
+async def test_an_invitee_is_told_the_withdraw_is_the_organisers(
+    client, session_factory, candidate_source, searcher
+):
+    """**403 and not 404**: they hold a seat on this court and can already see
+    it, so pretending it is not there would be the wrong refusal."""
+
+    challenge_id, people = await _a_court_nobody_will_finish(
+        client, session_factory, candidate_source, searcher
+    )
+
+    refused = await client.post(
+        f"/api/v1/challenges/{challenge_id}/withdrawal",
+        headers=world.auth(people["ana"]["token"]),
+    )
+
+    assert refused.status_code == 403
+    assert refused.json()["code"] == "withdraw_is_the_organisers"
+
+
+async def test_a_challenge_still_being_answered_has_no_withdraw(
+    client, session_factory, candidate_source, searcher
+):
+    """The seats lapse on their own inside the window, so the only thing a
+    withdraw would add here is a resend on a fresh clock — which
+    `nobody_is_asked_twice` is scoped to one aggregate and cannot see."""
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = (
+        await _send(client, searcher["token"], search_id, court)
+    ).json()["challenge_id"]
+
+    refused = await client.post(
+        f"/api/v1/challenges/{challenge_id}/withdrawal",
+        headers=world.auth(searcher["token"]),
+    )
+
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "not_a_half_built_line_up"
+
+
+async def test_a_withdrawal_does_not_come_back(
+    client, session_factory, candidate_source, searcher
+):
+    """Irreversible: re-asking the same people is a **new** challenge."""
+
+    challenge_id, _ = await _a_court_nobody_will_finish(
+        client, session_factory, candidate_source, searcher
+    )
+    await client.post(
+        f"/api/v1/challenges/{challenge_id}/withdrawal",
+        headers=world.auth(searcher["token"]),
+    )
+
+    again = await client.post(
+        f"/api/v1/challenges/{challenge_id}/withdrawal",
+        headers=world.auth(searcher["token"]),
+    )
+
+    assert again.status_code == 409
+    assert again.json()["code"] == "not_a_half_built_line_up"
+
+
+async def test_a_stranger_cannot_withdraw_and_is_told_nothing_exists(
+    client, session_factory, candidate_source, searcher
+):
+    """One code for two cases, exactly as the answers refuse: separating them
+    would answer *is this id real* about a stranger's evening."""
+
+    challenge_id, _ = await _a_court_nobody_will_finish(
+        client, session_factory, candidate_source, searcher
+    )
+    _, outsider = await world.register(client, "zed")
+
+    refused = await client.post(
+        f"/api/v1/challenges/{challenge_id}/withdrawal",
+        headers=world.auth(outsider),
+    )
+
+    assert refused.status_code == 404
+    assert refused.json()["code"] == "challenge_not_found"
