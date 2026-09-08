@@ -5220,12 +5220,13 @@
         "enum": [
           "SHOWS_UP",
           "ANSWERS_CHALLENGES",
+          "ANSWERS_RESULTS",
           "KEEPS_PLANS",
           "SETTLES_UP",
           "SPORTSMANSHIP"
         ],
         "title": "ReliabilityStrand",
-        "description": "The five strands a reliability reading is built from, read separately.\n\nThey are weighted **per mode** and the two vectors order people oppositely \u2014\na candidate strong on *keeps plans* and weak on *sportsmanship* wins in\ncompetitive and loses in for fun. A single blended score cannot express that,\nwhich is the whole argument for the decomposition, and it is justified for\nexactly as long as such a pair exists (``ranking-weights.md`` \u00a76).\n\n**The inversion narrowed when the sixth strand was struck, and it is watched\nrather than assumed.** *Confirms results* carried it at 24/4 against\nsportsmanship's 5/16; what is left is 18/7 against 15/17, which still flips\nand is asserted in ``tests/unit/test_matchfit_terms.py``. The day no pair\ninverts, the decomposition has stopped paying for itself and the argument for\nit is due again.\n\n**There were six, and *confirms results* was struck rather than deferred**\n(``docs/adr/0137``, carried out by ``docs/adr/0140``). An unconfirmed result\nis a fact about a **pair** and a strand is a verdict about a **person**, and\nevery denominator tried on it docked somebody ADR-0049 protects. A withdrawn\nstrand costs the term nothing by construction: a strand nobody publishes\nstands down and the survivors renormalise inside the reading.\n\n**Three different blends of these five exist in this system and confusing\nthem is a live risk:** the published Player Score at 35/20/12/10/8, and these\ntwo. The reliability *floor* reads the published one \u2014 the one deliberate\nexception, because a penalty justified by a figure that exists nowhere a\nhuman can look is unexplainable."
+        "description": "The six strands a reliability reading is built from, read separately.\n\nThey are weighted **per mode** and the two vectors order people oppositely \u2014\na candidate strong on *answers about results* and weak on *sportsmanship*\nwins in competitive and loses in for fun. A single blended score cannot\nexpress that, which is the whole argument for the decomposition, and it is\njustified for exactly as long as such a pair exists (``ranking-weights.md``\n\u00a76).\n\n**The inversion is watched rather than assumed, and it widened again.** It\nwas 24/4 against sportsmanship's 5/16 while *confirms results* was here; the\nstrike left 18/7 against 15/17, and *answers about results* restores the wide\npair at 24/4 against 5/16 (``docs/adr/0156``). It is asserted in\n``tests/unit/test_matchfit_terms.py``, and the day no pair inverts, the\ndecomposition has stopped paying for itself and the argument for it is due\nagain.\n\n**The sixth name is not the one that was struck, and the difference is the\nwhole of ``docs/adr/0156``.** *Confirms results* asked whether a game reached\nan agreed score, which is a fact about a **pair**, and every denominator\ntried on it docked somebody ADR-0049 protects \u2014 both sides of an honest\ndisagreement included (``docs/adr/0137``). *Answers about results* asks\nwhether **this person** replied to a score put in front of them, and a\ncounter is as good an answer as an acceptance, so disagreeing costs nothing\nand only silence is priced.\n\n**Three different blends of these six exist in this system and confusing\nthem is a live risk:** the published Player Score at 35/20/15/12/10/8, and\nthese two. The reliability *floor* reads the published one \u2014 the one\ndeliberate exception, because a penalty justified by a figure that exists\nnowhere a human can look is unexplainable."
       },
       "ResultResponse": {
         "properties": {
@@ -6413,19 +6414,19 @@
         "properties": {
           "strand": {
             "$ref": "#/components/schemas/ReliabilityStrand",
-            "description": "Which strand this row is. **Key your copy off this code**, never off the row's position: a strand with nothing behind it is absent from the list entirely, so the rows you get are the rows this person has.\n\nThree of the five names have no provider on this platform today and never appear here. They are listed on the enum because the vocabulary is closed and shared with the Fit breakdown, not because they are coming."
+            "description": "Which strand this row is. **Key your copy off this code**, never off the row's position: a strand with nothing behind it is absent from the list entirely, so the rows you get are the rows this person has.\n\nThree of the six names have no provider on this platform today and never appear here. They are listed on the enum because the vocabulary is closed and shared with the Fit breakdown, not because they are coming."
           },
           "good": {
             "type": "integer",
             "minimum": 0.0,
             "title": "Good",
-            "description": "How many of those opportunities went the way the strand is named for \u2014 a game that was played, a challenge that got an answer.\n\n**A no is a good outcome on `ANSWERS_CHALLENGES`.** Turning somebody down inside your day *is* answering them; what that strand prices is silence."
+            "description": "How many of those opportunities went the way the strand is named for \u2014 a game that was played, a challenge that got an answer, a score that got a reply.\n\n**A no is a good outcome on `ANSWERS_CHALLENGES` and on `ANSWERS_RESULTS`.** Turning somebody down inside your day *is* answering them, and so is countering a score you believe is wrong; what both strands price is silence."
           },
           "opportunities": {
             "type": "integer",
             "minimum": 1.0,
             "title": "Opportunities",
-            "description": "How many times this fell due. **An opportunity and never a total**: a game still awaiting its entry and a seat still inside its day are in neither half of this row, because publishing them either way would state a conclusion the clock has not reached.\n\nNever `0` \u2014 a row with nothing behind it is not drawn at all."
+            "description": "How many times this fell due. **An opportunity and never a total**: a game still awaiting its entry, a seat still inside its day and a score still inside its window are in neither half of this row, because publishing them either way would state a conclusion the clock has not reached.\n\n**`ANSWERS_RESULTS` counts the last twelve months and the other rows count a career.** It is the one strand that forgets, so a player can work a bad month off it.\n\nNever `0` \u2014 a row with nothing behind it is not drawn at all."
           },
           "pct": {
             "type": "integer",

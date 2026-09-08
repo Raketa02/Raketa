@@ -31,6 +31,10 @@ from typing import Iterable
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant
+from app.modules.games.domain.answering import (
+    ScorePutToASide,
+    score_put_to_a_side,
+)
 from app.modules.games.domain.errors import (
     AcceptingYourOwnSidesResult,
     AResultMustCarryAScore,
@@ -301,6 +305,26 @@ class Game:
         if self.standing_at(now) is not GameStanding.CONFIRMED:
             return None
         return settled_at(proposals=self.proposals, acceptance=self.acceptance)
+
+    def score_put_to_a_side_at(self, now: Instant) -> ScorePutToASide | None:
+        """The one score this game put to somebody, and what became of it.
+
+        ``None`` while nothing has been asked of anybody yet — nobody has said it
+        happened, nobody has put a score up, or the score that is up is still
+        inside its window.
+
+        The fold is in ``answering.py`` beside the standing it is read off,
+        because *is a counter an answer* is a judgement about what a result is;
+        this is where a reader asks the question, on the aggregate, the way
+        ``was_played_at`` and ``confirmed_at`` are asked (``docs/adr/0156``).
+        """
+
+        return score_put_to_a_side(
+            played_at=self.played_at,
+            proposals=self.proposals,
+            acceptance=self.acceptance,
+            now=now,
+        )
 
     def outcome_for(self, player_id: UUID, *, now: Instant) -> Outcome | None:
         """Win or loss for one of the people who played. **Never a draw.**

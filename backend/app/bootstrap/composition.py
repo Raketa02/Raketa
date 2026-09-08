@@ -161,8 +161,8 @@ from app.modules.matchmaking.infrastructure.published_player_scores import (
     PublishedPlayerScores,
 )
 from app.modules.player_score.domain.ports import PublishedScoreQuery
-from app.modules.player_score.infrastructure.two_strands_from_the_record import (
-    TwoStrandsFromTheRecord,
+from app.modules.player_score.infrastructure.three_strands_from_the_record import (
+    ThreeStrandsFromTheRecord,
 )
 from app.modules.matchmaking.infrastructure.candidate_index_tail import (
     CandidateIndexTail,
@@ -722,7 +722,7 @@ def build_published_score_query(session: AsyncSession) -> PublishedScoreQuery:
     session, so this line stays a choice of implementation and the folds behind
     it stay with the contexts that own them.
     """
-    return TwoStrandsFromTheRecord(
+    return ThreeStrandsFromTheRecord(
         games=build_game_history_query(session),
         challenges=build_challenge_history_query(session),
     )

@@ -194,7 +194,7 @@ async def test_an_account_status_read_invents_nobody(implementation, session):
 
 
 # ---------------------------------------------------------------------------
-# PlayerScoreQuery — the five strands, separately, with their evidence
+# PlayerScoreQuery — the six strands, separately, with their evidence
 # ---------------------------------------------------------------------------
 
 
@@ -238,11 +238,12 @@ async def test_a_score_read_answers_only_about_players_it_was_asked_about(
 async def test_every_strand_that_crosses_carries_its_own_evidence(
     implementation, session
 ):
-    """The five are read separately, and each brings what it was measured from.
+    """The six are read separately, and each brings what it was measured from.
 
-    **No longer vacuous**: ``player_score`` ships and answers two of the five for
-    anybody with a record (``docs/adr/0140``). It stays written over whatever
-    arrives rather than over the two, because the shape is the demand — a strand
+    **No longer vacuous**: ``player_score`` ships and answers three of the six
+    for anybody with a record (``docs/adr/0140``, ``docs/adr/0156``). It stays
+    written over whatever arrives rather than over the three, because the shape
+    is the demand — a strand
     is its own published value with the numerator and denominator behind it and
     the moment it was last observed, or, for sportsmanship, a mean and a rating
     count, because it is not a ratio.
@@ -1422,26 +1423,27 @@ async def test_late_is_one_published_threshold_and_never_a_per_case_judgement(
     assert await port.late_change_threshold() is None
 
 
-def test_all_five_strands_cross_separately_and_keep_their_own_evidence():
-    """Five readings in, five readings out, none of them averaged on the way.
+def test_all_six_strands_cross_separately_and_keep_their_own_evidence():
+    """Six readings in, six readings out, none of them averaged on the way.
 
-    The subset check above says a reading may not invent a sixth strand; this
-    says it can carry all five *at once* without them collapsing into each other
+    The subset check above says a reading may not invent a seventh strand; this
+    says it can carry all six *at once* without them collapsing into each other
     — which is the half that would go wrong if somebody satisfied the shape by
     writing the same figure into every key. Each strand keeps the numerator and
     denominator it was measured from, and sportsmanship keeps a mean and a rating
     count because it is not a ratio.
 
-    **Only two of the five have a provider**, and this reading is hand-built to
+    **Only three of the six have a provider**, and this reading is hand-built to
     carry all of them: the shape has to keep working the day the other three
     land, and a contract exercised only over what happens to be wired is a
-    contract that goes stale quietly (``docs/adr/0140``).
+    contract that goes stale quietly (``docs/adr/0140``, ``docs/adr/0156``).
     """
 
     observed = instant(datetime(2026, 8, 1, tzinfo=timezone.utc))
     ratios = {
         ReliabilityStrand.SHOWS_UP: (95, 38, 40),
         ReliabilityStrand.ANSWERS_CHALLENGES: (70, 14, 20),
+        ReliabilityStrand.ANSWERS_RESULTS: (88, 22, 25),
         ReliabilityStrand.KEEPS_PLANS: (83, 25, 30),
         ReliabilityStrand.SETTLES_UP: (50, 1, 2),
     }
@@ -1479,7 +1481,7 @@ def test_all_five_strands_cross_separately_and_keep_their_own_evidence():
     assert reading.most_recent_observation == observed
 
 
-def test_the_five_strands_are_the_platform_s_five():
+def test_the_six_strands_are_the_platform_s_six():
     """The keys are the engine's closed vocabulary, not a second spelling of it.
 
     A reading keyed by a locally-declared enum would satisfy every other
@@ -1489,20 +1491,27 @@ def test_the_five_strands_are_the_platform_s_five():
     names too, and it imports the same enum rather than declaring its own
     (``docs/adr/0140``).
 
-    **There were six.** *Confirms results* was struck rather than deferred
+    **The sixth name is not the one that was struck**, and the order is asserted
+    rather than the membership, because the evidence rows are drawn in the enum's
+    own declaration order. *Confirms results* was struck rather than deferred
     (``docs/adr/0137``): an unconfirmed result is a fact about a pair and a strand
     is a verdict about a person, and every denominator tried on it docked
     somebody ADR-0049 protects. It is listed nowhere because a withdrawn demand
-    is withdrawn, not carried.
+    is withdrawn, not carried. *Answers about results* counts **answers** to a
+    score put in front of somebody — a counter scores exactly as an acceptance
+    does — which is a different measurement over the same events
+    (``docs/adr/0156``).
     """
 
     assert [strand.value for strand in ReliabilityStrand] == [
         "SHOWS_UP",
         "ANSWERS_CHALLENGES",
+        "ANSWERS_RESULTS",
         "KEEPS_PLANS",
         "SETTLES_UP",
         "SPORTSMANSHIP",
     ]
+    assert "CONFIRMS_RESULTS" not in {strand.value for strand in ReliabilityStrand}
 
 
 def test_a_strand_cannot_claim_more_good_outcomes_than_opportunities():

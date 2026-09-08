@@ -1212,7 +1212,9 @@ anything about how good anybody is — that is the rating context reading this o
   people have played together, and **it moves nobody's Level.**
 - **No player is penalised for not entering or not agreeing a result.** Not the silent loser,
   not the four who all went home, not the side whose counter went unaccepted. **This is why
-  Player Score has five strands and not six** — see below.
+  *confirms results* is not a Player Score strand** — and why the strand that does read this
+  context's records counts **answers**, where a counter scores exactly as an acceptance does,
+  so disagreeing still costs nothing. See below.
 - **We will not arbitrate.** Two people who were both on court and cannot agree what happened is
   not a result, and Raketa will not invent one. A settled result is final: no support correction
   path and no reversal.
@@ -1335,21 +1337,23 @@ The word will one day collide with Around's *plans*. It is taken anyway, on this
 ### Player Score (`backend/app/modules/player_score/`)
 
 What the platform has watched a player *do*, as distinct from how well they play. **One number
-in the UI, five strands underneath it**, and the matcher reads the strands separately because
+in the UI, six strands underneath it**, and the matcher reads the strands separately because
 they are weighed oppositely in the two modes
 ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). The words are the
 player's before they are the matcher's: they are read on the player's own screen.
 
-**Two of the five have a source and three do not** — decided by
+**Three of the six have a source and three do not** — decided by
 [ADR-0140](docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md),
-which also settles the clause ADR-0137 opened about whether *shows up* survives at all.
+which also settles the clause ADR-0137 opened about whether *shows up* survives at all, and by
+[ADR-0156](docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md), which adds
+the third.
 
 - **Player Score** — the blended number a player sees, out of a hundred. Computed from what
   happened, never from opinions and never from results: **losing costs nothing here.** The
   blend is over **the strands that are there**, renormalised, so a player the platform can see
   two things about is comparable to one it can see five about, and neither is credited for a
   record nobody keeps.
-- **Strand** — one of the five things the score is made of. Each is a record of **opportunities**
+- **Strand** — one of the six things the score is made of. Each is a record of **opportunities**
   and what came of them, and each is published in its own right. An opportunity is something
   that **fell due**: a strand never counts a question still waiting for its answer.
   - **Shows up** — whether the game gets played at all. **Live.** The opportunity is a plan that
@@ -1360,8 +1364,17 @@ which also settles the clause ADR-0137 opened about whether *shows up* survives 
   - **Answers challenges** — whether a challenge gets an answer inside its window. **Live.** The
     opportunity is an **invitation** — a Seat somebody was actually asked to take, which is a
     seat with a deadline, so the organiser's own seat and both seats of a mutual-born challenge
-    are not opportunities. **A decline is a good outcome**: this is the only strand where a no
+    are not opportunities. **A decline is a good outcome**: one of the two strands where a no
     scores, because what it prices is silence and not judgement.
+  - **Answers about results** — whether a score put in front of a player gets an answer inside
+    its window. **Live** ([ADR-0156](docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md)).
+    The opportunity is a **score put to you**: the entry that records *we played* records a
+    score in the same act, so one side opens and the other is asked, and once both sides have
+    put a score up nobody is asked anything further — the opener facing a counter may only give
+    way, and pricing that would price surrender. **Accepting counts and countering counts**, so
+    this is the second strand where a no scores; what it prices is silence until the window
+    closed. **It is not *confirms results* under a new name** — see below — and it is the only
+    strand that **forgets**: opportunities older than twelve months fall out of it.
   - **Keeps plans** — whether an agreed plan survives to its day without a late change. **Stands
     down:** no plan on this platform has a moment to be late for, which is why `games` publishes
     its late-change threshold as an honest absence.
@@ -1377,7 +1390,7 @@ which also settles the clause ADR-0137 opened about whether *shows up* survives 
     and the matcher must not read it in any shape, because it is the one thing here a person
     can weaponise with no appeal route behind it. It is published as **its own figure**, on
     the player record, under its own heading.
-- **Confirms results** — **struck, and not deferred**
+- **Confirms results** — **struck, and it stays struck**
   ([ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). It read *whether a
   counted game gets confirmed, so it counts*, and it cannot be published honestly: **an
   unconfirmed result is a fact about a pair and a strand is a verdict about a person**, and
@@ -1387,6 +1400,14 @@ which also settles the clause ADR-0137 opened about whether *shows up* survives 
   construction, because a strand nobody publishes stands down and the survivors renormalise
   inside the reliability term. `ReliabilityStrand.CONFIRMS_RESULTS` and its two ruleset weights
   came out with the provider, in ADR-0140.
+  **Answers about results is not this row coming back**
+  ([ADR-0156](docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md)). Silence
+  already *confirms* a lone score, so a row counting confirmations finds ignoring and agreeing
+  indistinguishable and the only unconfirmed games are the ones two people disagreed about — it
+  would be a row counting **disagreements** under a word that sounds like diligence. The
+  replacement counts **answers**, where a counter is as good as an acceptance, so the
+  who-was-wrong problem is dissolved rather than solved. The 15 ADR-0140 set aside rather than
+  redistributed is what it enters at.
 - **Opponent variety** — how widely a player spreads their games: how many **different
   people** over how many **counted games**, across their whole record. **Not
   `player_score`'s, and it now has a consumer:** it was contracted here on behalf of two
@@ -1411,11 +1432,14 @@ which also settles the clause ADR-0137 opened about whether *shows up* survives 
 - **The score is a memory, and it fades with new evidence.** Decay belongs here, on the side
   that owns the record; a consumer that applies its own would be counting the same forgetting
   twice. **The ratio is the fading** — one no-show among forty games weighs almost nothing —
-  and there is no second window, because a window would be a number that must not disagree with
-  the matcher's horizon.
-- **The published number is the player's, not the matcher's.** Its weights live in this context
-  and never in a ruleset: a weight release must not change what somebody's own profile says
-  about them. It has three readers — the reliability floor, which prices it, the player card,
+  and there is **one** window, on one strand, named rather than general: *answers about results*
+  forgets after twelve months, because turning up is a commitment somebody made and answering a
+  score is a habit of opening an app, which is cheap to fail by accident and must therefore be
+  possible to work off. It equals the matcher's horizon by choice and the two spellings are held
+  together by a test, since a provider may not read the matcher's ruleset.
+- **The published number is the player's, not the matcher's.** Its weights are
+  **35 / 20 / 15 / 12 / 10 / 8** and live in this context, never in a ruleset: a weight
+  release must not change what somebody's own profile says about them. It has three readers — the reliability floor, which prices it, the player card,
   which prints it, and the player record, which prints it **beside the rows it is the mean
   of** — and **a card explaining a match with a figure the player's own profile disagrees with
   is worse than a card that says nothing.** The **strand ratios themselves** now cross on that

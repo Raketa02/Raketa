@@ -235,7 +235,7 @@ class StrandRowSchema(BaseModel):
             "off the row's position: a strand with nothing behind it is absent "
             "from the list entirely, so the rows you get are the rows this "
             "person has.\n\n"
-            "Three of the five names have no provider on this platform today "
+            "Three of the six names have no provider on this platform today "
             "and never appear here. They are listed on the enum because the "
             "vocabulary is closed and shared with the Fit breakdown, not "
             "because they are coming."
@@ -246,10 +246,12 @@ class StrandRowSchema(BaseModel):
         ge=0,
         description=(
             "How many of those opportunities went the way the strand is named "
-            "for — a game that was played, a challenge that got an answer.\n\n"
-            "**A no is a good outcome on `ANSWERS_CHALLENGES`.** Turning "
-            "somebody down inside your day *is* answering them; what that "
-            "strand prices is silence."
+            "for — a game that was played, a challenge that got an answer, a "
+            "score that got a reply.\n\n"
+            "**A no is a good outcome on `ANSWERS_CHALLENGES` and on "
+            "`ANSWERS_RESULTS`.** Turning somebody down inside your day *is* "
+            "answering them, and so is countering a score you believe is "
+            "wrong; what both strands price is silence."
         ),
     )
     opportunities: int = Field(
@@ -257,9 +259,13 @@ class StrandRowSchema(BaseModel):
         ge=1,
         description=(
             "How many times this fell due. **An opportunity and never a "
-            "total**: a game still awaiting its entry and a seat still inside "
-            "its day are in neither half of this row, because publishing them "
-            "either way would state a conclusion the clock has not reached.\n\n"
+            "total**: a game still awaiting its entry, a seat still inside its "
+            "day and a score still inside its window are in neither half of "
+            "this row, because publishing them either way would state a "
+            "conclusion the clock has not reached.\n\n"
+            "**`ANSWERS_RESULTS` counts the last twelve months and the other "
+            "rows count a career.** It is the one strand that forgets, so a "
+            "player can work a bad month off it.\n\n"
             "Never `0` — a row with nothing behind it is not drawn at all."
         ),
     )

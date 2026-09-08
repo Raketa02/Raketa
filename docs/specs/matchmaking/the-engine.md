@@ -316,10 +316,11 @@ than level — because that is what *for fun* means.
               Play intent. Six cells, ADR-0094. NO_PREFERENCE reads 0.85 in both modes;
               a directly opposite declaration reads 0.00 and takes no further modifier.
 
-4  reliability  five strands read SEPARATELY, weighted per mode (ranking-weights §6), each
-              strand standing down below RELIABILITY_MIN_OBSERVATIONS = 3, the whole term
-              standing down past RELIABILITY_HORIZON_DAYS = 365. Two of the five have a
-              provider (ADR-0140); the other three stand down for everybody and the
+4  reliability  six strands read SEPARATELY, weighted per mode (ranking-weights §6), each
+              strand standing down below ITS OWN min_observations — 5 for answers about
+              results, 3 for the rest (ADR-0156) — the whole term standing down past
+              RELIABILITY_HORIZON_DAYS = 365. Three of the six have a provider
+              (ADR-0140, ADR-0156); the other three stand down for everybody and the
               survivors renormalise inside the term.
 
 5  availability  |shared| / |mine|        ← the glossary verbatim. NO CONSTANTS AT ALL.
@@ -352,7 +353,7 @@ Every term's evidence crosses keyed by `kind`, and the union is enumerated in
 | Level fit | `{level_fit, their_mu, my_mu, delta, direction}` |
 | Predicted balance | `{predicted_balance, pct, my_sigma, their_sigma, confidence}` |
 | Intent alignment | `{intent_alignment, their_intent, my_mode, aligned}` |
-| Reliability | `{reliability, score, strands, floor_breached}` — `strands` is the **five named** strands, closed (*confirms results* struck by ADR-0137, removed by ADR-0140) |
+| Reliability | `{reliability, score, strands, floor_breached}` — `strands` is the **six named** strands, closed (*confirms results* struck by ADR-0137 and removed by ADR-0140; *answers about results*, which counts answers and not agreements, added by ADR-0156) |
 | Availability overlap | `{availability_overlap, shared_count, next_slot: {day, part}}` — `grid_stale` gone with staleness; `days_away` is **stored and never crossed** |
 | Playing style | `{playing_style, matched, complementary, clashing}` |
 | Social vibe | same shape, `{social_vibe, …}` |
@@ -866,7 +867,7 @@ permanent — because identity is assigned at `INSERT`, not at `COMMIT`, so a re
 
 ```
 Ruleset
-  version            "2026.08.26-a"      immutable once released; a new set is a new name
+  version            "2026.09.08-a"      immutable once released; a new set is a new name
   modes
     competitive      { weights{8}, strand_weights{6}, level_tol, ... }
     for_fun          { weights{8}, strand_weights{6}, level_tol, fun_free_band, ... }
@@ -874,7 +875,7 @@ Ruleset
   tags               { phi, complement_strength, clash_severities, clash_cap,
                        relationship_matrix[37], familiarity_reading_map }
   balance            { coefficients(145, 32), pct_min, pct_max }
-  reliability        { min_observations, horizon_days, published_score_bar }
+  reliability        { min_observations{6}, horizon_days, published_score_bar }
   modifiers          { budget, calibration, familiarity, welcoming,
                        newcomer_absorption_cap }
   liveness           { signal bounds, move_notice, asym_tolerance }

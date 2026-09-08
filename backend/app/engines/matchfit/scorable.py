@@ -101,6 +101,8 @@ class GridCell:
 @dataclass(frozen=True, slots=True)
 class RatioObservation:
     """One of the five ratio strands: the published figure, and how much of it.
+    (Five of the six names — sportsmanship is a mean and crosses as the other
+    shape below.)
 
     ``published_value`` is **the number the player is shown on their own Player
     Score screen** and is never re-derived from a count — a card explaining a

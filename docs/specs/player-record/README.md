@@ -19,7 +19,7 @@ rather than an unbuilt feature. They are argued in §2 and summarised in §2.6:
 | --- | --- |
 | *active now* | ADR-0107 / ADR-0106 §5 — this product has no presence indicator, and Liveness crosses only as a reason code |
 | languages | no field exists anywhere, and the `Language` modifier was **struck** as a nationality proxy under ADR-0096 |
-| *Confirms results* | **struck, not deferred** — ADR-0137: an unconfirmed result is a fact about a pair, and a strand is a verdict about a person |
+| *Confirms results* | **struck, and it stays struck** — ADR-0137: an unconfirmed result is a fact about a pair, and a strand is a verdict about a person. What ships in its place is **Answers about results** (ADR-0156), a different measurement over the same events: it counts answers, a counter scores exactly as an acceptance does, and only silence is a miss |
 | *Sportsmanship, by opponents* | the strand stands down: no surface on this platform lets anybody rate anybody, and turning it on retunes every published score in the product |
 
 **Everything else ships**, and one item the design asks for comes *back* from a withdrawal:

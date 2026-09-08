@@ -76,7 +76,7 @@ APP_ROOT = Path(dataset_module.__file__).parents[4]
 
 def test_the_live_ruleset_is_named_dated_and_registered_under_its_own_name() -> None:
     assert LIVE_RULESET.version == LIVE_RULESET_VERSION
-    assert LIVE_RULESET.released_on == "2026-08-26"
+    assert LIVE_RULESET.released_on == "2026-09-08"
     assert RULESETS[LIVE_RULESET_VERSION] is LIVE_RULESET
 
 
@@ -85,7 +85,7 @@ def test_a_released_ruleset_cannot_be_edited() -> None:
 
     Held by frozen dataclasses and read-only mappings rather than by discipline,
     because the thing it protects is a search recorded a year ago: if the numbers
-    behind ``2026.08.26-a`` can move, then every stamp naming it is a lie about
+    behind ``2026.09.08-a`` can move, then every stamp naming it is a lie about
     what ran.
     """
 
@@ -253,6 +253,49 @@ def test_a_term_missing_from_a_weight_vector_refuses_to_load() -> None:
     short[Term.LEVEL_FIT] += competitive.weights[Term.SOCIAL_VIBE]
     with pytest.raises(InvariantViolated, match="term weights"):
         validate_ruleset(_with_mode(dataclasses.replace(competitive, weights=short)))
+
+
+def test_a_strand_with_no_observation_bar_refuses_to_load() -> None:
+    """**A bar per strand, and the mapping is exhaustive** (``docs/adr/0156``).
+
+    A strand nobody set a bar for would enter a reading on its first observation
+    — a *we have seen one thing about you* published as a verdict — and nothing
+    else in the pipeline would notice. So the field was a single ``int`` and is
+    now a mapping, and the mapping is checked rather than defaulted.
+    """
+
+    reliability = LIVE_RULESET.reliability
+    short = {
+        strand: bar
+        for strand, bar in reliability.min_observations.items()
+        if strand is not ReliabilityStrand.ANSWERS_RESULTS
+    }
+    with pytest.raises(InvariantViolated, match="must name every strand"):
+        validate_ruleset(
+            dataclasses.replace(
+                LIVE_RULESET,
+                reliability=dataclasses.replace(
+                    reliability, min_observations=short
+                ),
+            )
+        )
+
+
+def test_an_observation_bar_below_one_refuses_to_load() -> None:
+    """A bar of nought is a strand with no bar at all, spelled as a number."""
+
+    reliability = LIVE_RULESET.reliability
+    zeroed = dict(reliability.min_observations)
+    zeroed[ReliabilityStrand.SHOWS_UP] = 0
+    with pytest.raises(InvariantViolated, match="SHOWS_UP"):
+        validate_ruleset(
+            dataclasses.replace(
+                LIVE_RULESET,
+                reliability=dataclasses.replace(
+                    reliability, min_observations=zeroed
+                ),
+            )
+        )
 
 
 def test_the_for_fun_free_band_must_sit_inside_its_own_tolerance() -> None:

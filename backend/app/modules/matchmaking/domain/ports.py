@@ -131,8 +131,8 @@ class SportsmanshipStrand:
         )
 
 
-#: What a strand crosses as. Two shapes, because four of the five are ratios and
-#: the fifth is a mean, and one shape covering both would be a shape that
+#: What a strand crosses as. Two shapes, because five of the six are ratios and
+#: the sixth is a mean, and one shape covering both would be a shape that
 #: describes neither.
 StrandObservation = RatioStrand | SportsmanshipStrand
 
@@ -142,20 +142,21 @@ StrandObservation = RatioStrand | SportsmanshipStrand
 class PlayerScoreReading:
     """One player's Player Score, **as strands and never as one number.**
 
-    The ruleset weighs the strands **per mode** — 33/33, 29/23, 18/15, 13/12,
-    7/17 — and the two vectors order people oppositely: *keeps plans* is worth
-    two and a half times sportsmanship for a counted game and less than it for a
-    friendly. One blended number cannot express that. The Player Score is
-    nonetheless *one number in the UI*, so the obvious thing to ship is that
-    number — which is exactly the failure ``docs/adr/0098`` is written against,
-    and why there is **nowhere here to put a blend of the five**.
+    The ruleset weighs the strands **per mode** — 25/32, 22/22, 24/4, 14/14,
+    10/12, 5/16 — and the two vectors order people oppositely: *answers about
+    results* is worth nearly five times sportsmanship for a counted game and a
+    quarter of it for a friendly. One blended number cannot express that. The
+    Player Score is nonetheless *one number in the UI*, so the obvious thing to
+    ship is that number — which is exactly the failure ``docs/adr/0098`` is
+    written against, and why there is **nowhere here to put a blend of the
+    six**.
 
     ``published_score`` is not that blend and is the one deliberate exception,
     recorded so it does not later read as an oversight. It is the figure on the
-    player's own profile at the player-facing weights (35/20/12/10/8, renormalised
-    over the strands present), computed by ``player_score`` and read here rather
-    than derived. Its consumer **in the matcher** is the reliability floor, whose
-    ``published_score_bar`` lives in the ruleset beside it; the player card is a
+    player's own profile at the player-facing weights (35/20/15/12/10/8,
+    renormalised over the strands present), computed by ``player_score`` and read
+    here rather than derived. Its consumer **in the matcher** is the reliability
+    floor, whose ``published_score_bar`` lives in the ruleset beside it; the card is a
     second reader one layer out and prints the same figure (``docs/adr/0140``). A
     penalty justified by a figure that exists nowhere a human can look is
     unexplainable, and a player working their visible score back up must be able
@@ -207,19 +208,24 @@ class PlayerScoreReading:
 
 @runtime_checkable
 class PlayerScoreQuery(Protocol):
-    """The five reliability strands, each with the evidence behind it.
+    """The six reliability strands, each with the evidence behind it.
 
-    **Two of them have a provider** — *shows up*, out of plans that settled either
-    way, and *answers challenges*, out of invitations whose day is over. The other
-    three are absent from every reading rather than published at nought, and the
-    term renormalises over what arrives (``docs/adr/0140``).
+    **Three of them have a provider** — *shows up*, out of plans that settled
+    either way, *answers challenges*, out of invitations whose day is over, and
+    *answers about results*, out of the scores put in front of somebody
+    (``docs/adr/0156``). The other three are absent from every reading rather than
+    published at nought, and the term renormalises over what arrives
+    (``docs/adr/0140``).
 
     **The matcher applies no decay of its own.** The score is a memory and fades
     with new evidence on the provider's side; a second decay here would
     double-count. Its entire policy over these facts is the power to stand a
-    strand down — below ``min_observations`` a strand alone, past
-    ``horizon_days`` the whole term — and both numbers are ruleset configuration
-    under ``docs/adr/0093``, never code and never environment-selected.
+    strand down — below **its own** ``min_observations`` a strand alone, past
+    ``horizon_days`` the whole term — and both are ruleset configuration under
+    ``docs/adr/0093``, never code and never environment-selected. The first is a
+    bar per strand rather than one number over all six (``docs/adr/0156``), so a
+    strand that needs more evidence than the rest can ask for it without changing
+    what the platform demands of a newcomer.
 
     **Opponent variety is not here, and was withdrawn rather than deferred.** It
     was demanded on behalf of two consumers and both were struck (#164, #175). *A

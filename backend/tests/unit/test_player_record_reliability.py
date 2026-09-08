@@ -179,7 +179,7 @@ async def test_the_rows_walk_the_vocabulary_and_never_the_mapping():
 
 
 async def test_a_strand_that_stands_down_is_absent_from_the_rows():
-    """A name with no provider is not a row at nought. Three of the five have
+    """A name with no provider is not a row at nought. Three of the six have
     nothing behind them today, and the sheet says nothing about them at all."""
 
     scores = reading({ReliabilityStrand.SHOWS_UP: a_ratio(3, 4)})

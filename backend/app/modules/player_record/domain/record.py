@@ -19,7 +19,7 @@ other one is asked whether it wants one.
 unbroken.** What ADR-0155 §6 refuses is borrowing another *context's* domain
 types; that enum is not one — it lives in ``app/engines/``, the pure layer every
 context reads and none of them owns, exactly as ``Sport`` lives in the kernel. It
-is also the argument ``player_score`` already made about the same five names: a
+is also the argument ``player_score`` already made about the same six names: a
 locally-declared copy would satisfy every protocol in the suite while being free
 to drift, and the strand codes are on the player contract today under that enum's
 own spelling. A second one would put two words for one strand in front of a
@@ -380,7 +380,7 @@ class StrandRow:
     strand as worth more than another — a claim no screen on this platform makes.
 
     ``pct`` is not called ``value`` deliberately: the Fit breakdown already
-    publishes a ``StrandReading.value`` for the same five names, and that one is
+    publishes a ``StrandReading.value`` for the same six names, and that one is
     the matcher's own reading between nought and one. Two scales under one word
     on one contract is the cost the second arrival pays (``docs/adr/0137``). The
     word itself is the contract's own for a whole percentage — the forecast and
@@ -437,7 +437,7 @@ class ReliabilityPanel:
     would be the unexplainable kind of penalty the reliability floor's own rule
     forbids.
 
-    **A strand with nothing behind it is not a row.** Three of the five names
+    **A strand with nothing behind it is not a row.** Three of the six names
     stand down platform-wide, and a player may have no opportunity under one that
     does not — both are spelled by absence from ``strands``, never by a nought,
     because *we have not seen enough* and *they are bad at this* are different

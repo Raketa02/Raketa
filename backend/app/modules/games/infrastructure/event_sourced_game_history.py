@@ -42,6 +42,7 @@ from app.modules.games.domain.ports import (
     OpponentVariety,
     PlayedOutcome,
     PlayedTally,
+    ResultAnswering,
 )
 from app.modules.games.domain.standing import GameStanding
 from app.modules.games.domain.windows import entry_closes_at
@@ -253,6 +254,54 @@ class EventSourcedGameHistory:
             player_id: Attendance(
                 played=played[player_id],
                 ghosts=ghosts[player_id],
+                last_at=at,
+            )
+            for player_id, at in latest.items()
+        }
+
+    async def result_answering_for(
+        self, player_ids: Collection[UUID], *, since: Instant, now: Instant
+    ) -> Mapping[UUID, ResultAnswering]:
+        """What became of the scores put in front of each of these people.
+
+        **One opportunity per game at most, charged to the side that was asked**,
+        so a doubles pair each carry the score their side never answered and the
+        side that entered it carries nothing. That is the same per-person shape
+        ``attendance_for`` takes and for a different reason: there, everybody on
+        the court was in the arrangement; here, only one side was asked.
+
+        **The window is the caller's** (``docs/adr/0156``). An opportunity that
+        closed before ``since`` is not in either half — it is not a good outcome
+        the player keeps for ever and not a miss they can never work off.
+
+        **Absent rather than a measured zero**, like ``attendance_for``: nobody
+        has ignored a score who was never sent one.
+        """
+
+        wanted = set(player_ids)
+        if not wanted:
+            return {}
+
+        answered: dict[UUID, int] = defaultdict(int)
+        ignored: dict[UUID, int] = defaultdict(int)
+        latest: dict[UUID, Instant] = {}
+        for game in await self._games_among(wanted):
+            asked = game.score_put_to_a_side_at(now)
+            if asked is None or asked.closed_at < since:
+                continue
+            for player_id in game.line_up.players_on(asked.side) & wanted:
+                if asked.answered:
+                    answered[player_id] += 1
+                else:
+                    ignored[player_id] += 1
+                latest[player_id] = max(
+                    asked.closed_at, latest.get(player_id, asked.closed_at)
+                )
+
+        return {
+            player_id: ResultAnswering(
+                answered=answered[player_id],
+                ignored=ignored[player_id],
                 last_at=at,
             )
             for player_id, at in latest.items()

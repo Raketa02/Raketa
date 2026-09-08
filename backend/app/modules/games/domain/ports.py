@@ -40,12 +40,14 @@ naming *sides* and a result agreed with nobody
 area and a run of form are what a searcher reads to decide about a game that
 might happen, and this is the record of one that did.
 
-**``attendance_for`` is the one read here that answers about fewer people than it
-was asked about**, and the exception proves the rule above rather than bending it
-(``docs/adr/0140``). It is ``player_score``'s input for *shows up*, where a
-``0/0`` would say *this person was due somewhere and did not come* about somebody
-nothing was ever arranged for. The two rules live in one class deliberately, so
-that a reader meets the difference instead of rediscovering it.
+**``attendance_for`` and ``result_answering_for`` are the two reads here that
+answer about fewer people than they were asked about**, and the exception proves
+the rule above rather than bending it (``docs/adr/0140``, ``docs/adr/0156``).
+Both are ``player_score``'s inputs — *shows up* and *answers about results* —
+where a ``0/0`` would say *this person was due somewhere and did not come* about
+somebody nothing was ever arranged for, and *this person ignored a score* about
+somebody nobody ever sent one to. The two rules live in one class deliberately,
+so that a reader meets the difference instead of rediscovering it.
 """
 
 from __future__ import annotations
@@ -181,6 +183,64 @@ class Attendance:
             self.played + self.ghosts >= 1,
             "an attendance record with no settled arrangement behind it is an "
             "absence, not a zero — absence is spelled by not being in the answer",
+        )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ResultAnswering:
+    """What one player did about the scores put in front of them. **Per person.**
+
+    The *answers about results* strand's whole input (``docs/adr/0156``).
+    ``answered`` is scores they accepted or countered inside the window;
+    ``ignored`` is scores whose window ran out with nothing said. A score still
+    inside its window is in **neither** — the answer is still wanted, and filing
+    it either way would publish a conclusion the clock has not reached.
+
+    **The denominator is scores put in front of *them*, and never games.** The
+    side that entered the score is asked nothing, and once both sides have put a
+    score up the argument is capped — so a counter is the asked side's answer and
+    never a second question put back to the opener. That is the whole difference
+    from the strand ``docs/adr/0137`` struck: **nobody is docked for
+    disagreeing**, because there is no state a person reaches by holding their
+    position that this read files as a miss.
+
+    **A counter is a good outcome**, which makes this the second strand on this
+    platform where saying *no* scores, after *answers challenges*. What is priced
+    is silence, not judgement — and here the judgement being protected is
+    ADR-0049's: *no player is penalised for not agreeing a result.*
+
+    **Counted and friendly games are both here.** A score put in front of you is a
+    question whether or not the evening was evidence about anybody's Level.
+
+    ``last_at`` is the most recent moment one of those opportunities closed — the
+    instant something was said, or the deadline that passed in silence.
+
+    **It is the same shape as ``Attendance`` above and is deliberately not the
+    same type.** Three counts and a moment is what an opportunity record looks
+    like — ``challenges``' ``AnsweringRecord`` is a third one — and a shared
+    ``Opportunity(good, missed, last_at)`` would be a type whose field names could
+    not say *played* or *ghosted* or *ignored*. The words are the whole content of
+    these rows: a reader of the fold has to know that a ghost is charged to a
+    whole court and an ignored score only to the side it faced, and a generic pair
+    is exactly where that stops being visible. The cost is two invariants spelled
+    twice, and it is smaller than the cost of the alternative.
+    """
+
+    answered: int
+    ignored: int
+    last_at: Instant
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.answered >= 0 and self.ignored >= 0,
+            f"a negative score count: {self.answered} answered, "
+            f"{self.ignored} ignored",
+        )
+        invariant(
+            self.answered + self.ignored >= 1,
+            "an answering record with no closed score behind it is an absence, "
+            "not a zero — absence is spelled by not being in the answer",
         )
 
 
@@ -425,7 +485,7 @@ class PlayerHandles(Protocol):
 
 @runtime_checkable
 class GameHistoryQuery(Protocol):
-    """The four facts this context owes the rest of the platform, and the fifth
+    """The six facts this context owes the rest of the platform, and the seventh
     it owes an honest ``None``."""
 
     async def played_counterparts(
@@ -526,6 +586,29 @@ class GameHistoryQuery(Protocol):
         """
         ...
 
+    async def result_answering_for(
+        self, player_ids: Collection[UUID], *, since: Instant, now: Instant
+    ) -> Mapping[UUID, ResultAnswering]:
+        """What each of these people did about the scores put in front of them.
+
+        **A player with none is absent from the answer**, the second read here
+        whose zero would be invented: somebody nobody has ever put a score to has
+        not ignored one.
+
+        **``since`` is the caller's window and never this context's**
+        (``docs/adr/0156``). A game's own three clocks are in ``windows.py`` and
+        are what a player is promised; *how far back a strand remembers* is a
+        judgement about what a record is worth, and it belongs to the context
+        that publishes the strand. This read answers about opportunities that
+        closed at or after that instant, and holds no opinion about which instant
+        it should be.
+
+        Its reader is ``player_score``. The arithmetic is not here: this context
+        knows what happened to its own games and has no opinion about what that
+        says about a person.
+        """
+        ...
+
     async def late_change_threshold(self) -> Minutes | None:
         """How close to its moment a change has to be to count as **late**.
 
@@ -560,4 +643,5 @@ __all__ = [
     "PlayedOutcome",
     "PlayerHandles",
     "PlayedTally",
+    "ResultAnswering",
 ]

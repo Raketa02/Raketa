@@ -803,6 +803,241 @@ async def test_a_friendly_counts_towards_turning_up_like_any_other_game(
     assert (await port.attendance_for([one], now=now))[one].played == 1
 
 
+# ---------------------------------------------------------------------------
+# result_answering_for — the *answers about results* strand's input
+# ---------------------------------------------------------------------------
+
+
+def _forever_ago() -> Instant:
+    """A ``since`` far enough back that the window is not what is under test."""
+
+    return _ago(days=3650)
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_accepting_and_countering_are_both_answers_and_silence_is_the_miss(
+    implementation, session
+):
+    """The three endings of a score put in front of somebody, on one read.
+
+    **A counter is a good outcome**, which is the whole difference from the
+    strand ``docs/adr/0137`` struck: a player who believes the score is wrong says
+    so and is credited for saying it, so nobody is docked for disagreeing.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    opener, accepter = new_uuid(), new_uuid()
+    counterer, ignorer = new_uuid(), new_uuid()
+
+    accepted = _planned(line_up=_singles(opener, accepter), at=_ago(days=4))
+    accepted.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    accepted.accept_result(by=accepter, occurred_at=_ago(days=3))
+    await _saved(session, accepted)
+
+    countered = _planned(line_up=_singles(opener, counterer), at=_ago(days=4))
+    countered.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    countered.state_result(
+        by=counterer, score=_score((4, 6),), occurred_at=_ago(days=3)
+    )
+    await _saved(session, countered)
+
+    ignored = _planned(line_up=_singles(opener, ignorer), at=_ago(days=4))
+    ignored.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    await _saved(session, ignored)
+
+    answering = await port.result_answering_for(
+        [accepter, counterer, ignorer], since=_forever_ago(), now=now
+    )
+
+    assert (answering[accepter].answered, answering[accepter].ignored) == (1, 0)
+    assert (answering[counterer].answered, answering[counterer].ignored) == (1, 0)
+    assert (answering[ignorer].answered, answering[ignorer].ignored) == (0, 1)
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_the_side_that_entered_the_score_was_asked_nothing(
+    implementation, session
+):
+    """**One opportunity per game, and it belongs to the side that was asked.**
+
+    The entry that records *we played* records a score in the same act, so one
+    side always opens; once the other side counters, the argument is capped and
+    the opener may only give way. Charging the opener for not giving way is
+    exactly the *dock somebody for disagreeing* this strand exists not to do.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    opener, other = new_uuid(), new_uuid()
+
+    game = _planned(line_up=_singles(opener, other), at=_ago(days=4))
+    game.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    game.state_result(by=other, score=_score((4, 6),), occurred_at=_ago(days=3))
+    await _saved(session, game)
+
+    assert game.standing_at(now) is GameStanding.UNSCORED
+
+    answering = await port.result_answering_for(
+        [opener, other], since=_forever_ago(), now=now
+    )
+
+    assert set(answering) == {other}
+    assert (answering[other].answered, answering[other].ignored) == (1, 0)
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_score_still_inside_its_window_is_in_neither_half(
+    implementation, session
+):
+    """The answer is still wanted, so the player is absent rather than at ``0/0``."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    opener, other = new_uuid(), new_uuid()
+
+    game = _planned(line_up=_singles(opener, other), at=_ago(days=1))
+    game.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(hours=1))
+    await _saved(session, game)
+
+    assert (
+        await port.result_answering_for(
+            [opener, other], since=_forever_ago(), now=now
+        )
+        == {}
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_doubles_score_is_put_to_both_people_on_the_side_it_faces(
+    implementation, session
+):
+    """A pair carries the score their side never answered, and the openers carry
+    nothing.
+
+    It is one question and two people were asked it, which is the same per-person
+    shape *shows up* takes for a different reason: there, everybody on the court
+    was in the arrangement.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    a, b, c, d = new_uuid(), new_uuid(), new_uuid(), new_uuid()
+
+    game = _planned(line_up=_four(a, b, c, d), at=_ago(days=4))
+    game.state_result(by=a, score=_score((6, 4),), occurred_at=_ago(days=3))
+    await _saved(session, game)
+
+    answering = await port.result_answering_for(
+        [a, b, c, d], since=_forever_ago(), now=now
+    )
+
+    assert set(answering) == {c, d}
+    assert answering[c] == answering[d]
+    assert (answering[c].answered, answering[c].ignored) == (0, 1)
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_an_opportunity_older_than_the_callers_window_is_in_neither_half(
+    implementation, session
+):
+    """**The window is the caller's and this context holds no opinion about it.**
+
+    The same record read with two ``since`` values gives two answers, which is
+    what makes *how far back a strand remembers* a decision belonging to the
+    context that publishes the strand rather than to the one that owns the games.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    opener, other = new_uuid(), new_uuid()
+
+    game = _planned(line_up=_singles(opener, other), at=_ago(days=400))
+    game.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=399))
+    await _saved(session, game)
+
+    assert await port.result_answering_for(
+        [other], since=_forever_ago(), now=now
+    ) != {}
+    assert (
+        await port.result_answering_for([other], since=_ago(days=365), now=now) == {}
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_friendly_puts_a_score_in_front_of_somebody_like_any_other_game(
+    implementation, session
+):
+    """A score is a question whether or not the evening was evidence.
+
+    The choice that makes a game a friendly is a choice about ratings; it says
+    nothing about whether the people on that court answered each other.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    opener, other = new_uuid(), new_uuid()
+
+    game = _planned(
+        line_up=_singles(opener, other), at=_ago(days=4), kind=GameKind.FRIENDLY
+    )
+    game.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    await _saved(session, game)
+
+    answering = await port.result_answering_for(
+        [other], since=_forever_ago(), now=now
+    )
+
+    assert (answering[other].answered, answering[other].ignored) == (0, 1)
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_player_nobody_ever_put_a_score_to_is_absent(
+    implementation, session
+):
+    """The second read here whose zero would be invented.
+
+    Somebody who has never been sent a score has not ignored one, and a ``0/0``
+    would say they had.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+
+    assert (
+        await port.result_answering_for(
+            [new_uuid()], since=_forever_ago(), now=now
+        )
+        == {}
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_the_moment_is_when_the_opportunity_closed_and_not_when_it_opened(
+    implementation, session
+):
+    """An answer is dated from the answer; silence is dated from the deadline.
+
+    Dating silence from the score going up would age a record faster than the
+    record aged, which is the rule a ghost is already dated by.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    opener, other = new_uuid(), new_uuid()
+
+    proposed_at = _ago(days=3)
+    game = _planned(line_up=_singles(opener, other), at=_ago(days=4))
+    game.state_result(by=opener, score=_score((6, 4),), occurred_at=proposed_at)
+    await _saved(session, game)
+
+    answering = await port.result_answering_for(
+        [other], since=_forever_ago(), now=now
+    )
+
+    assert answering[other].last_at == instant(proposed_at + PROPOSAL_WINDOW)
+
+
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
 async def test_late_is_a_fact_about_a_plan_and_this_context_has_no_number(
     implementation, session
