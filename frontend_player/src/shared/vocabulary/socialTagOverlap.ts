@@ -6,7 +6,7 @@
  * The tags themselves are a fact about one person and cross on their card. This is the
  * **second** register over them: *you too*, or one of three different ways of saying nothing.
  *
- * ## Why this is `shared/` and not `play/domain/`
+ * ## Why this is `shared/vocabulary` and not `play/domain/` — nor `shared/ui`
  *
  * The row began as the competitive candidate card's, and the shape of its answer began beside
  * the rule that computes one. The record sheet draws the same row
@@ -20,6 +20,15 @@
  * `matched[]`. Play computes the overlap and hands the value down; the record sheet will be
  * served its own. That is the split `shared/README.md`'s test asks for: a second feature would
  * have written this union exactly and could not have written that rule at all.
+ *
+ * **And it is not in `SocialTagRow.tsx` beside the component, which is the obvious place.**
+ * A `domain/` module is **pure TypeScript** — no React, no React Native, no Expo, which is what
+ * makes it testable without a renderer and is enforced by `eslint.config.mjs` — and the rule
+ * that returns one of these answers is a `domain/` module. `shared/ui/SocialTagRow.tsx` imports
+ * `react-native`, so a union declared there could not be imported by the one function whose job
+ * is producing it. The shape a pure rule returns and a drawn component consumes has exactly one
+ * home below both, and this is it. `SOCIAL_TAG_ROW_CAP` is here for the same reason and not
+ * because it is a vocabulary: it is a **layout** ceiling, and the rule is what applies it.
  *
  * ## The absence has three spellings, and only one of them is a claim
  *

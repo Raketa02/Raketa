@@ -70,8 +70,8 @@ export {
 export { InfoMark, Popover, type InfoMarkProps, type PopoverProps } from './Popover';
 export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNavigator';
 export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
-export { RUN_OF_FORM_FILL, RunOfForm, type RunOfFormProps } from './RunOfForm';
 export { Row, type RowProps, type RowVariant } from './Row';
+export { RUN_OF_FORM_FILL, RunOfForm, type RunOfFormProps } from './RunOfForm';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
 export { Segment, type SegmentOption, type SegmentProps } from './Segment';
 export { SocialTagRow, type SocialTagRowProps } from './SocialTagRow';

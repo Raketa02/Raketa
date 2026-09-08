@@ -52,14 +52,14 @@ import type { Candidate } from './candidate';
 import { isTagEvidence, type TagRelationships } from './evidence';
 
 /**
- * The row's four answers and its cap — **`shared/vocabulary`'s**, and re-exported here so
- * every caller of the rule reads the value it returns from the file that returns it.
+ * The row's four answers — **`shared/vocabulary`'s**, and re-exported here so a caller of the
+ * rule reads the value it returns from the file that returns it.
+ *
+ * The one name, and not the three. `SharedTag` and `SOCIAL_TAG_ROW_CAP` are read from the
+ * shared module directly by whoever needs them, because a re-export nothing imports is a
+ * second public name for a thing that already has one.
  */
-export {
-  SOCIAL_TAG_ROW_CAP,
-  type SharedTag,
-  type SocialTagOverlap,
-} from '@/shared/vocabulary/socialTagOverlap';
+export type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 
 /** Both columns of the matrix. The amber claim needs an answer from each of them. */
 const TAG_TERMS = ['PLAYING_STYLE', 'SOCIAL_VIBE'] as const;

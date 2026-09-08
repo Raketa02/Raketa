@@ -261,7 +261,8 @@ export const ON_COURT_CLAUSE = 'Photo checked: on court';
 /**
  * What the row contributes to the card's **spoken** name — nought, one or two clauses.
  *
- * Grouped rather than marked per tag — `socialTagChip`'s note is where that is argued — and
+ * Grouped rather than marked per tag — `shared/vocabulary/socialTagPresentation`'s
+ * `socialTagChip` is where that is argued — and
  * worded so each clause says
  * whose fact it is: *tags you share* is about the pair, *their other tags* and *their tags* are
  * about the candidate alone. That distinction is the whole of the row, so it is the one thing
