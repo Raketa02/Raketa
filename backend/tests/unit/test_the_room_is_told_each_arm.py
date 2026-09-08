@@ -34,6 +34,7 @@ from app.modules.challenges.domain.events import (
 )
 from app.modules.conversations.application.tell_the_room import TellTheRoom
 from app.modules.conversations.domain.conversation import Conversation
+from app.modules.conversations.domain.live import Nudge
 from app.modules.conversations.domain.entries import (
     COUNT,
     DEPARTURE,
@@ -129,18 +130,43 @@ class _Games:
         return GAME if self._game_for == challenge_id else None
 
 
-def _teller(rooms: _Rooms, games: _Games | None = None) -> TellTheRoom:
+class _Nudges:
+    """The live channel, recording what the room announced about itself.
+
+    A hand-written stub over the port, like every other collaborator here — what
+    is asserted is *which* tellings announce anything, and a room's own
+    ``last_seq`` is the only thing they announce.
+    """
+
+    def __init__(self) -> None:
+        self.published: list[Nudge] = []
+
+    async def nudge(self, nudge: Nudge) -> None:
+        self.published.append(nudge)
+
+
+def _teller(
+    rooms: _Rooms,
+    games: _Games | None = None,
+    nudges: _Nudges | None = None,
+) -> TellTheRoom:
     return TellTheRoom(
         conversations=rooms,
         directory=rooms,
         arranging=_Court(),
         played=games or _Games(),
+        nudges=nudges or _Nudges(),
     )
 
 
 @pytest.fixture
 def rooms() -> _Rooms:
     return _Rooms()
+
+
+@pytest.fixture
+def nudges() -> _Nudges:
+    return _Nudges()
 
 
 # -- the openings ----------------------------------------------------------
@@ -392,3 +418,78 @@ async def test_the_same_outbox_row_delivered_twice_writes_one_line(rooms):
     await tell(accepted, row)
 
     assert len(rooms.lines) == 1
+
+
+# ---------------------------------------------------------------------------
+# What the room announces about itself
+# ---------------------------------------------------------------------------
+
+
+async def test_a_line_nudges_the_room_and_carries_its_new_length(rooms, nudges):
+    """**One mechanism carries messages and system lines alike** (ADR-0147 §3).
+
+    There is no separate live-plan feature to build and none to defer: a telling
+    that writes a line announces the room's new length on the same channel a
+    message does, and it announces nothing else.
+    """
+
+    teller = _teller(rooms, nudges=nudges)
+    await teller(
+        SeatAccepted(challenge_id=CHALLENGE, player_id=ANA, occurred_at=NOW),
+        _delivery(),
+    )
+    await teller(
+        SeatAccepted(challenge_id=CHALLENGE, player_id=BO, occurred_at=_at(1)),
+        _delivery(),
+    )
+
+    assert nudges.published == [
+        Nudge(conversation_id=rooms.only.conversation_id, last_seq=1)
+    ]
+
+
+async def test_the_opening_announces_nothing_because_it_moved_no_seq(rooms, nudges):
+    """A frame says *the room is now this long*, and an opening changes no length.
+
+    Nudging here would send every phone to the read path to be told what it
+    already holds. The room's existence reaches a client on the ordinary list
+    read, not on this channel.
+    """
+
+    await _teller(rooms, nudges=nudges)(
+        SeatAccepted(challenge_id=CHALLENGE, player_id=ANA, occurred_at=NOW),
+        _delivery(),
+    )
+
+    assert nudges.published == []
+
+
+async def test_the_game_being_noted_announces_nothing_either(rooms, nudges):
+    """``GamePlanned`` reaches the room, draws nothing, and moves no ``seq``.
+
+    It is where the room learns its game — a *Details* door the detail read
+    draws — and there is deliberately no *Game on* line for it to announce.
+    """
+
+    teller = _teller(rooms, games=_Games(game_for=CHALLENGE), nudges=nudges)
+    await teller(
+        SeatAccepted(challenge_id=CHALLENGE, player_id=ANA, occurred_at=NOW),
+        _delivery(),
+    )
+    nudges.published.clear()
+
+    await teller(
+        GamePlanned(
+            game_id=GAME,
+            challenge_id=CHALLENGE,
+            sport=Sport.PADEL.value,
+            kind="COUNTED",
+            window=None,
+            seatings=(),
+            occurred_at=_at(1),
+        ),
+        _delivery(),
+    )
+
+    assert rooms.only.game_id == GAME
+    assert nudges.published == []

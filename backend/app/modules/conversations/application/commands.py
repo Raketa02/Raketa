@@ -1,4 +1,4 @@
-"""What a caller asks this context for. **Four, and every one carries a reader.**
+"""What a caller asks this context for. **Five, and every one carries a reader.**
 
 Membership is the gate on every route, so the reader is not context a use case
 picks up from somewhere — it is an argument, and a command with no reader on it
@@ -40,6 +40,22 @@ class ReadEntriesCommand:
     reader_id: UUID
     before_seq: int | None
     limit: int
+
+
+@dataclass(frozen=True, slots=True)
+class FollowConversationCommand:
+    """*Tell me when this room moves.*
+
+    **It carries no cursor**, and that is the live contract rather than an
+    omission (``docs/adr/0147`` §3): a stream opens with a nudge carrying the
+    room's current ``last_seq``, and the client catches up from **its own**
+    high-water mark through the ordinary read path. A cursor here would be the
+    server deciding what a client has, which is the thing the nudge exists to
+    stop being anybody's business.
+    """
+
+    conversation_id: UUID
+    reader_id: UUID
 
 
 @dataclass(frozen=True, slots=True)

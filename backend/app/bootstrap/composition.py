@@ -88,7 +88,19 @@ from app.modules.conversations.domain.ports import (
     MemberFaces,
     PlayedCourt,
 )
+from app.modules.conversations.domain.live import NudgePublisher, NudgeSubscriber
+from app.modules.conversations.application.follow_conversation import (
+    FollowConversation,
+)
+from app.modules.conversations.infrastructure.fail_soft_nudges import (
+    FailSoftNudgePublisher,
+)
+from app.modules.conversations.infrastructure.redis_live_channel import (
+    RedisNudgePublisher,
+    RedisNudgeSubscriber,
+)
 from app.modules.conversations.infrastructure.absent_providers import (
+    NobodyIsFollowing,
     NoHoldsExist as NoConversationHoldsExist,
 )
 from app.modules.conversations.infrastructure.challenges_arranging_court import (
@@ -1665,6 +1677,7 @@ def build_a_room_of_yours(
 def build_tell_the_room(
     session: AsyncSession,
     *,
+    nudges: NudgePublisher,
     runtime: EventRuntime | None = None,
 ) -> TellTheRoom:
     """The outbox subscriber that writes system lines. **Per delivery batch.**
@@ -1673,6 +1686,13 @@ def build_tell_the_room(
     outbox row published in — so a line and the delivery that caused it commit
     together. That is why this is not registered once for the process the way
     every logging handler is.
+
+    **The publisher is handed in and has no default**, unlike every optional
+    collaborator above it. A delivery that is live and a delivery that is not are
+    both legitimate — an API process is the first, a seed run and a command-line
+    drain are the second — and the difference is not one this file can read off a
+    session. A default would make *this room is not live* the answer somebody
+    inherited rather than the one they wrote.
     """
     conversations = build_conversation_repository(
         session=session,
@@ -1687,4 +1707,68 @@ def build_tell_the_room(
         ),
         arranging=build_arranging_court(session, runtime=runtime),
         played=played,
+        nudges=nudges,
     )
+
+
+def build_nudge_publisher(client: Redis) -> NudgePublisher:
+    """*Tell whoever is listening that a room moved* — **wrapped, always.**
+
+    The composition root never hands out an unwrapped publisher, on
+    ``build_exposure_ledger``'s argument one section up: the entry is already
+    durable in Postgres when this is called, so a bus that is down costs a room
+    its liveness and may never cost anybody their message. An unwrapped one would
+    make that a discipline at two call sites instead of a property of the type.
+
+    **On the command client, not the subscriber's.** A ``PUBLISH`` is a
+    request/response command and belongs on the pool every command path draws
+    from; it is the subscription that cannot live there (``docs/adr/0147`` §5).
+    """
+
+    return FailSoftNudgePublisher(RedisNudgePublisher(client))
+
+
+def build_nobody_is_following() -> NudgePublisher:
+    """*This delivery is not live*, said out loud. **A seed run and a CLI drain.**
+
+    Constructed here rather than reached for at those two call sites, because
+    this file is where an adapter is built and `tests/unit/test_seed_runner.py`
+    holds `app/seeds/` to it: a seed module importing an adapter's internals is
+    the shape that walk refuses, whatever the adapter does.
+
+    It is the correct answer for a run with no phone attached, and not a degraded
+    one — which is why it is a different builder from the fail-soft publisher
+    above rather than the same one with a missing store.
+    """
+
+    return NobodyIsFollowing()
+
+
+def build_nudge_subscriber(client: Redis) -> NudgeSubscriber:
+    """*Everything published about this room* — **and it is not wrapped.**
+
+    The asymmetry with the publisher above is the design (``docs/adr/0147`` §8):
+    a subscription **is** the liveness, so it fails loud and the stream closes.
+    A chat that is not live has to look not-live, and a connection held open
+    delivering nothing looks up to date.
+
+    The client is the subscriber's own — no read deadline, because on a
+    subscription waiting *is* the operation (#342).
+    """
+
+    return RedisNudgeSubscriber(client)
+
+
+def build_follow_conversation(
+    *,
+    rooms: ARoomOfYours,
+    nudges: NudgeSubscriber,
+) -> FollowConversation:
+    """*Follow this room until the token that opened it expires.*
+
+    Built from the two collaborators rather than a session, for
+    ``build_a_room_of_yours``' reason: the gate is a read like every other read
+    on this context, and the stream that follows it touches no database at all.
+    """
+
+    return FollowConversation(rooms=rooms, nudges=nudges, clock=build_clock())

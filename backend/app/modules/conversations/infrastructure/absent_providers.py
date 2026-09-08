@@ -1,9 +1,9 @@
-"""The one provider this context needs and does not have, answering honestly.
+"""What this context asks for and nobody is there to answer, answering honestly.
 
-**Nothing here stands in for an absent provider.** The class below is a null
+**Nothing here stands in for an absent provider.** Each class below is a null
 object **named for the fact it asserts** — ``NoHoldsExist``, not
-``NullAccountHoldQuery`` — because *null* reads as *not wired yet*, and this is
-wired (``docs/adr/0095``).
+``NullAccountHoldQuery`` — because *null* reads as *not wired yet*, and both of
+these are wired (``docs/adr/0095``, ``docs/adr/0147`` §3).
 
 **It is the third spelling of one empty answer, and the duplication is the
 decision.** The matcher and ``challenges`` each declare a port of the same shape
@@ -18,6 +18,8 @@ from __future__ import annotations
 from typing import Collection, final
 from uuid import UUID
 
+from app.modules.conversations.domain.live import Nudge
+
 
 @final
 class NoHoldsExist:
@@ -25,3 +27,21 @@ class NoHoldsExist:
 
     async def held_among(self, player_ids: Collection[UUID]) -> frozenset[UUID]:
         return frozenset()
+
+
+@final
+class NobodyIsFollowing:
+    """A ``NudgePublisher`` for a run with **no phone attached to it.**
+
+    A seed run and a command-line outbox drain both append to rooms, and both do
+    it on a laptop with nobody's conversation screen open. They get this rather
+    than the Redis publisher, and they get it **explicitly** — the parameter is
+    required at every call site, so *this delivery is not live* is a sentence
+    somebody wrote rather than a default somebody inherited.
+
+    It is not a fail-soft publisher with the store missing: that one degrades
+    from a failure and says so in a log line, and this one is the correct answer.
+    """
+
+    async def nudge(self, nudge: Nudge) -> None:
+        return None

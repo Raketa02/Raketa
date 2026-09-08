@@ -135,3 +135,53 @@ async def test_the_connect_timeout_is_its_own_constant(monkeypatch):
     assert subscriber["socket_connect_timeout"] == 9.0
     assert request_response["socket_timeout"] == REDIS_READ_TIMEOUT_SECONDS
     assert subscriber["socket_timeout"] is None
+
+
+# ---------------------------------------------------------------------------
+# The process's two clients
+# ---------------------------------------------------------------------------
+
+
+async def test_the_two_process_clients_are_two_clients():
+    """One pool for commands and one for subscriptions, and they differ.
+
+    #342's whole finding, applied: a subscription built on the command client
+    raises every two seconds and loses whatever was published while it
+    reconnected. The two are told apart by the read deadline, and by nothing
+    else — which is exactly why *are these the same object* is worth asserting
+    rather than assuming from two initialisers with different names.
+    """
+
+    settings = _settings()
+    try:
+        commands = redis_client.init_redis(settings)
+        subscriptions = redis_client.init_redis_subscriber(settings)
+
+        assert commands is not subscriptions
+        assert redis_client.get_redis() is commands
+        assert redis_client.get_redis_subscriber() is subscriptions
+        assert (
+            subscriptions.connection_pool.connection_kwargs.get("socket_timeout")
+            is None
+        )
+    finally:
+        await redis_client.close_redis()
+        await redis_client.close_redis_subscriber()
+
+
+async def test_a_subscriber_client_that_was_never_opened_refuses_rather_than_leaks():
+    """The same refusal `get_redis` makes, and for the same reason.
+
+    A process that never opened one has a bug, and the honest answer is a raise
+    at the seam rather than a `None` that reaches a subscription and looks like
+    a store that is down.
+    """
+
+    await redis_client.close_redis_subscriber()
+
+    try:
+        redis_client.get_redis_subscriber()
+    except RuntimeError as exc:
+        assert "subscriber" in str(exc)
+    else:
+        raise AssertionError("a subscriber client that was never opened must refuse")

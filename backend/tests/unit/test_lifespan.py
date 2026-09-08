@@ -20,6 +20,12 @@ import pytest
 import app.core.lifespan as lifespan_module
 from app.bootstrap.jobs import SCALE_PRESSURE_JOB
 from app.core.config import Settings
+from app.modules.conversations.infrastructure.absent_providers import (
+    NobodyIsFollowing,
+)
+from app.modules.conversations.infrastructure.fail_soft_nudges import (
+    FailSoftNudgePublisher,
+)
 
 
 class _FakeWorker:
@@ -92,6 +98,40 @@ async def test_lifespan_starts_and_stops_embedded_worker(
 
     assert worker.stopped is True
     assert stub_engine == [True]
+
+
+async def test_the_embedded_worker_is_the_delivery_that_is_live(
+    monkeypatch, stub_engine, no_jobs
+):
+    """The outbox drain inside the API process publishes real nudges.
+
+    `create_event_batch_for` requires a publisher, so a delivery cannot be
+    *silently* live-less — but it can be **deliberately** live-less, which is
+    what a seed run and a command-line drain pass `NobodyIsFollowing` for. This
+    is the assertion that the API process is on the other side of that choice:
+    without it, a room told about an acceptance would write its line and reach
+    nobody's phone, and every test of the telling path would still pass.
+    """
+
+    settings = _settings(EVENT_DELIVERY_WORKER_ENABLED=True)
+    app = FastAPI()
+    app.state.event_runtime = object()
+    built: list[dict] = []
+
+    def build_worker(**kwargs):
+        built.append(kwargs)
+        return _FakeWorker()
+
+    monkeypatch.setattr(lifespan_module, "build_event_delivery_worker", build_worker)
+
+    async with lifespan_module.build_lifespan(settings)(app):
+        pass
+
+    nudges = built[0]["nudges"]
+    assert not isinstance(nudges, NobodyIsFollowing)
+    # The wrapped Redis publisher, over the command pool — never the raw one, so
+    # a store that is down costs a room its liveness and never a message.
+    assert isinstance(nudges, FailSoftNudgePublisher)
 
 
 async def test_lifespan_can_disable_embedded_worker(monkeypatch, stub_engine, no_jobs):

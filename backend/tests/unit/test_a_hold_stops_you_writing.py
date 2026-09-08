@@ -35,6 +35,7 @@ from app.modules.conversations.application.read_entries import ReadEntries
 from app.modules.conversations.application.send_message import SendMessage
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.errors import ConversationNotFound
+from app.modules.conversations.domain.live import Nudge
 from app.modules.conversations.domain.ports import MemberFace
 from app.shared.domain.errors import AccountHeld
 
@@ -144,6 +145,16 @@ def membership() -> Membership:
     return Membership(arranging=_TheCourt(), played=_NoGames())
 
 
+class _Nudges:
+    """The live channel, recording what the room announced about itself."""
+
+    def __init__(self) -> None:
+        self.published: list[Nudge] = []
+
+    async def nudge(self, nudge: Nudge) -> None:
+        self.published.append(nudge)
+
+
 def _send(
     room: Conversation,
     membership: Membership,
@@ -151,12 +162,17 @@ def _send(
     *,
     conversations: _OneRoom | None = None,
     uow: _Uow | None = None,
+    nudges: _Nudges | None = None,
 ) -> SendMessage:
     repository = conversations or _OneRoom(room)
     return SendMessage(
         rooms=ARoomOfYours(conversations=repository, membership=membership),
         conversations=repository,
         holds=holds,
+        # A hold refuses the send **before** anything is recorded, so the live
+        # channel is the thing that must stay silent — which is what
+        # `test_a_held_member_writes_nothing_at_all` reads off this list.
+        nudges=nudges or _Nudges(),
         uow=uow or _Uow(),
         clock=_FrozenClock(),
     )
@@ -267,3 +283,47 @@ async def test_a_member_who_is_not_held_says_what_they_like(room, membership):
     assert message.seq == 2
     assert conversations.saved == [room]
     assert uow.commits == 1
+
+
+async def test_a_held_member_reaches_nobodys_phone_either(room, membership):
+    """A hold is about **reach**, and the live channel is reach.
+
+    A refusal that recorded nothing but still nudged would tell every other phone
+    in the room to go and look — at nothing. The refusal comes before the append,
+    so the announcement never happens rather than being suppressed afterwards.
+    """
+
+    nudges = _Nudges()
+    send = _send(room, membership, _HoldOn(HELD), nudges=nudges)
+
+    with pytest.raises(AccountHeld):
+        await send.execute(
+            SendMessageCommand(
+                conversation_id=room.conversation_id,
+                author_id=HELD,
+                client_message_id=uuid4(),
+                text="I'm in",
+            )
+        )
+
+    assert nudges.published == []
+
+
+async def test_a_message_that_lands_announces_the_rooms_new_length(room, membership):
+    """**A nudge published on append**, carrying `last_seq` and nothing else."""
+
+    nudges = _Nudges()
+    send = _send(room, membership, _HoldOn(), nudges=nudges)
+
+    await send.execute(
+        SendMessageCommand(
+            conversation_id=room.conversation_id,
+            author_id=HELD,
+            client_message_id=uuid4(),
+            text="seven?",
+        )
+    )
+
+    assert nudges.published == [
+        Nudge(conversation_id=room.conversation_id, last_seq=room.last_seq)
+    ]

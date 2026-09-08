@@ -257,6 +257,66 @@ class EntryPageResponse(BaseModel):
     )
 
 
+class LiveNudgeSchema(BaseModel):
+    """**The whole live contract: a nudge, and nothing else on the wire.**
+
+    ``docs/adr/0147`` §3. One of these is written into
+    ``GET /conversations/{id}/stream`` whenever the room moves, and one is
+    written the moment the stream opens carrying the room's current `last_seq`.
+
+    **It carries no content, ever.** Not a message, not a system line, not a plan
+    slot. On receiving one, fetch from **your own** high-water mark through the
+    ordinary read path — never from `last_seq`. That is what makes a dropped
+    frame free: the next nudge repairs it, because your cursor is yours.
+
+    **Which also means there is nothing here to render.** Whether the UI may draw
+    something it did not read from the authenticated read path stops being a rule
+    anybody keeps and becomes a thing this shape cannot express.
+
+    **The declaration is generated and the emission is not, and that hole is
+    named** (``docs/adr/0147`` §7). `make openapi` publishes this model into
+    `components.schemas`, the client generates **this type** from it, and the
+    drift and freshness checks cover the declaration. The *operation's* 200 comes
+    out of `openapi-typescript` as `unknown`, because a stream body is an
+    `itemSchema` that generator has no shape for — so the client's live port
+    parses each frame as this type by name, which is still generated and still
+    never hand-written. **What no check covers is the emission** — a stream body is
+    not a response model, and nothing type-checks the route against its own
+    annotation. The mitigation is structural rather than hoped for: the route
+    declares this model as its stream item, so the framework validates and
+    serialises every frame **through this model** before it reaches the wire. The
+    hole is narrowed, not closed, and the residual risk is that of a shape three
+    fields wide.
+    """
+
+    v: int = Field(
+        ...,
+        description=(
+            "The envelope version, **carried from the first frame**. `1` today. "
+            "A client parses the shape it shipped with until that build is gone "
+            "from phones, so this is what a later shape is told apart by."
+        ),
+    )
+    conversation_id: UUID = Field(
+        ...,
+        description=(
+            "The room that moved. It is the room this stream is for — a stream "
+            "carries one room and there is deliberately no second stream for the "
+            "Chats list."
+        ),
+    )
+    last_seq: int = Field(
+        ...,
+        description=(
+            "How long the room is now. **News, not a cursor.** Fetch from your "
+            "own high-water mark, never from this number: a client that paged "
+            "from here would reintroduce exactly the hole the nudge exists to "
+            "close. `0` is a room where nothing has landed yet, which a stream "
+            "opened on a freshly-opened room genuinely reports."
+        ),
+    )
+
+
 class SendMessageRequest(BaseModel):
     """One player's own words."""
 

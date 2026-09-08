@@ -1036,6 +1036,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/conversations/{conversation_id}/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Follow a conversation
+         * @description **A nudge, and nothing else on the wire.** Every frame is `{ v, conversation_id, last_seq }`. On receiving one, fetch from **your own** high-water mark through `GET /conversations/{id}/entries` — never from `last_seq`.
+         *
+         *     **A dropped frame costs nothing.** Because you fetch from your own cursor and not from the frame's number, the *next* nudge repairs whatever the lost one would have said. There is nothing to detect and nothing to reconcile.
+         *
+         *     **One frame arrives the moment the stream opens**, carrying the room's current `last_seq`. That is what makes resume correct without `Last-Event-ID` being load-bearing, and it is how a client that has been away catches up in one step.
+         *
+         *     **The stream closes when your access token expires** — about every fifteen minutes. Reconnect with a fresh one through your ordinary refresh path; the token travels in the `Authorization` header, never a query string.
+         *
+         *     **A closed stream means the room is not live, and nothing more.** It closes on token expiry, on a deploy, and when this server's own subscriber cannot be reached — deliberately, so that a chat which is not live *looks* not-live instead of looking up to date. Every read on this context keeps working throughout; only the latency changes.
+         *
+         *     **Close it when the app backgrounds and re-open on foreground.** iOS severs a backgrounded app's connections, and re-opening is the same code path as any other reconnect.
+         */
+        get: operations["follow_conversation_api_v1_conversations__conversation_id__stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/games": {
         parameters: {
             query?: never;
@@ -3132,6 +3162,56 @@ export interface components {
              *     `NO_ADMISSIBLE_COMBINATION` is the one worth reading twice: there were people, and no four of you could share a court. Omitted on a seat that is taken.
              */
             unfilled_reason?: components["schemas"]["UnfilledReason"];
+        };
+        /**
+         * LiveNudgeSchema
+         * @description **The whole live contract: a nudge, and nothing else on the wire.**
+         *
+         *     ``docs/adr/0147`` §3. One of these is written into
+         *     ``GET /conversations/{id}/stream`` whenever the room moves, and one is
+         *     written the moment the stream opens carrying the room's current `last_seq`.
+         *
+         *     **It carries no content, ever.** Not a message, not a system line, not a plan
+         *     slot. On receiving one, fetch from **your own** high-water mark through the
+         *     ordinary read path — never from `last_seq`. That is what makes a dropped
+         *     frame free: the next nudge repairs it, because your cursor is yours.
+         *
+         *     **Which also means there is nothing here to render.** Whether the UI may draw
+         *     something it did not read from the authenticated read path stops being a rule
+         *     anybody keeps and becomes a thing this shape cannot express.
+         *
+         *     **The declaration is generated and the emission is not, and that hole is
+         *     named** (``docs/adr/0147`` §7). `make openapi` publishes this model into
+         *     `components.schemas`, the client generates **this type** from it, and the
+         *     drift and freshness checks cover the declaration. The *operation's* 200 comes
+         *     out of `openapi-typescript` as `unknown`, because a stream body is an
+         *     `itemSchema` that generator has no shape for — so the client's live port
+         *     parses each frame as this type by name, which is still generated and still
+         *     never hand-written. **What no check covers is the emission** — a stream body is
+         *     not a response model, and nothing type-checks the route against its own
+         *     annotation. The mitigation is structural rather than hoped for: the route
+         *     declares this model as its stream item, so the framework validates and
+         *     serialises every frame **through this model** before it reaches the wire. The
+         *     hole is narrowed, not closed, and the residual risk is that of a shape three
+         *     fields wide.
+         */
+        LiveNudgeSchema: {
+            /**
+             * V
+             * @description The envelope version, **carried from the first frame**. `1` today. A client parses the shape it shipped with until that build is gone from phones, so this is what a later shape is told apart by.
+             */
+            v: number;
+            /**
+             * Conversation Id
+             * Format: uuid
+             * @description The room that moved. It is the room this stream is for — a stream carries one room and there is deliberately no second stream for the Chats list.
+             */
+            conversation_id: string;
+            /**
+             * Last Seq
+             * @description How long the room is now. **News, not a cursor.** Fetch from your own high-water mark, never from this number: a client that paged from here would reintroduce exactly the hole the nudge exists to close. `0` is a room where nothing has landed yet, which a stream opened on a freshly-opened room genuinely reports.
+             */
+            last_seq: number;
         };
         /**
          * LivenessReason
@@ -7186,6 +7266,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `conversation_not_found` — **one code for two cases**: there is no room with that id, or there is one and you are not in it. They are not told apart on purpose, because a 403 would answer *is this id real* about a stranger's evening.
+             *
+             *     Leave the screen. There is no retry that changes this.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    follow_conversation_api_v1_conversations__conversation_id__stream_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description An open `text/event-stream`. Every frame is a `LiveNudgeSchema` and nothing else. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
                 };
             };
             /**

@@ -27,6 +27,35 @@ client.
 
 **What is refused, and why, is in ``telling.py``** — as a table, so the six the
 prose says publish nothing are named in one place a test can walk.
+
+**A line nudges the room and an opening does not**, which is the nudge's own
+shape rather than a rule about tellings (``docs/adr/0147`` §3). A frame says *the
+room is now this long*; the opening and the noting of a game move no ``seq``, so
+a frame about either would send every phone to the read path to be told what it
+already holds. Everything a client draws from those two — the room's existence,
+its game, its *Details* door — arrives on the ordinary list and detail reads.
+
+**The nudge rides ahead of the delivery's own commit, and this is the one place
+that ordering is not guaranteed.** ``send_message`` publishes strictly after its
+own commit and says so; nothing here commits at all — the transaction is
+``EventBatch``'s, closed by the ``published_at`` that marks the row delivered — so
+the publish precedes the commit by the width of one ``UPDATE``.
+
+Two cases, and only one of them is a real window. If the mark **fails**, the row
+is redelivered, the line is re-recorded idempotently and the nudge goes again:
+the outbox repairs it, and this is the ordinary failure. If it **succeeds**, a
+phone that fetched inside the gap would read the room as it stood a moment ago —
+and, for a lone system line, **nothing would nudge again**, so it would stay
+stale until the fifteen-minute reconnect. What makes that unobservable rather
+than merely unlikely is the shape of the gap: it is in-process and microseconds
+wide, while the repair fetch it would have to beat is a network round trip that
+has not been issued yet when the ``UPDATE`` lands.
+
+**It is stated rather than closed, and the alternative is named.** Closing it
+means a post-commit hook through ``EventBatch`` — the one loop every context
+shares — so that a conversation's vocabulary, or a general deferral protocol
+shaped by it, lands in the middle of the outbox. That is a real cost against a
+window nothing can observe, and it is the trade this file takes deliberately.
 """
 
 from __future__ import annotations
@@ -36,7 +65,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from app.application.events import DeliveryContext
-from app.kernel import instant
+from app.kernel import Instant, instant
 from app.modules.challenges.domain.events import (
     ChallengeOpenedFromMutualInterest,
     SeatAccepted,
@@ -50,7 +79,9 @@ from app.modules.conversations.domain.entries import (
     COUNT,
     DEPARTURE,
     SeatDeparture,
+    SystemLineCode,
 )
+from app.modules.conversations.domain.live import Nudge, NudgePublisher
 from app.modules.conversations.domain.ports import (
     ArrangingCourt,
     ConversationDirectory,
@@ -79,11 +110,13 @@ class TellTheRoom:
         directory: ConversationDirectory,
         arranging: ArrangingCourt,
         played: PlayedCourt,
+        nudges: NudgePublisher,
     ) -> None:
         self._conversations = conversations
         self._directory = directory
         self._arranging = arranging
         self._played = played
+        self._nudges = nudges
 
     async def __call__(self, event: DomainEvent, context: DeliveryContext) -> None:
         """Deliver one event to the room it is about.
@@ -147,14 +180,14 @@ class TellTheRoom:
         if room is None:
             await self._open(event.challenge_id, event.occurred_at)
             return
-        room.record_line(
+        await self._write_line(
+            room,
             code=line_for(event),
             actor_id=event.player_id,
             values={},
             source_event_id=context.event_id,
             occurred_at=instant(event.occurred_at),
         )
-        await self._conversations.save(room)
 
     async def _open(self, challenge_id: UUID, occurred_at: datetime) -> None:
         """Open the room, and **ask whether it is already about a game.**
@@ -217,14 +250,14 @@ class TellTheRoom:
             # all — a challenge this context cannot be told about. There is
             # nothing to hang the line on and nothing to retry.
             return
-        room.record_line(
+        await self._write_line(
+            room,
             code=line_for(event),
             actor_id=event.said_by,
             values={},
             source_event_id=context.event_id,
             occurred_at=instant(event.occurred_at),
         )
-        await self._conversations.save(room)
 
     # -- the shared shape --------------------------------------------------
 
@@ -246,11 +279,41 @@ class TellTheRoom:
         room = await self._conversations.for_challenge(challenge_id)
         if room is None:
             return
-        room.record_line(
+        await self._write_line(
+            room,
             code=line_for(event),
             actor_id=actor_id,
             values=values,
             source_event_id=context.event_id,
             occurred_at=instant(event.occurred_at),
         )
+
+    async def _write_line(
+        self,
+        room: Conversation,
+        *,
+        code: SystemLineCode,
+        actor_id: UUID | None,
+        values: dict[str, str],
+        source_event_id: UUID,
+        occurred_at: Instant,
+    ) -> None:
+        """Record one line, save it, and nudge the room. **The three appends
+        share this**, so a fourth cannot arrive live-less by forgetting a call.
+
+        **A redelivery nudges too**, and does not have to be told apart from a
+        first delivery to do so: ``record_line`` answers the line that already
+        stands and records nothing, and the nudge that follows carries the room's
+        unchanged ``last_seq`` — true, and a no-op to every phone already holding
+        it.
+        """
+
+        room.record_line(
+            code=code,
+            actor_id=actor_id,
+            values=values,
+            source_event_id=source_event_id,
+            occurred_at=occurred_at,
+        )
         await self._conversations.save(room)
+        await self._nudges.nudge(Nudge.about(room))

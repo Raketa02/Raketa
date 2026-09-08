@@ -1,6 +1,7 @@
-"""The conversation routes: list your rooms, open one, page back, and say something.
+"""The conversation routes: list your rooms, open one, page back, say something,
+and follow it live.
 
-**Four routes, and membership is the gate on every one of them**
+**Five routes, and membership is the gate on every one of them**
 (``docs/adr/0148`` §2). The four fail-closed safety gates ran over every pair of
 the court in the send's own transaction; **nothing is re-evaluated against the
 reader**, because telling a reader that something changed about somebody else on
@@ -20,14 +21,29 @@ room and keeps seeing the plan.
 acceptance, through the outbox, by a context that does not know this one exists
 (``docs/adr/0146`` §5) — so there is no ``POST /conversations`` and there will
 not be one.
+
+**The fifth route is one-directional and carries no content** (``docs/adr/0147``).
+``/stream`` is Server-Sent Events on the framework's own ``EventSourceResponse``
+— zero new dependencies, against a WebSocket path that starts with one and whose
+absence fails *silently*, since this server is pinned without the standard extra
+and would refuse the upgrade rather than erroring. Sends stay ordinary
+authenticated ``POST``s on this same router: a bidirectional socket would buy a
+second write path with a second place to authorise and a second place to
+validate, and the only thing it adds is a capability we would then write a rule
+forbidding.
+
+**There is no second stream for the Chats list, and there will not be one.** One
+stream per open conversation is the entire live surface; the list is an ordinary
+read on ordinary caching.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, AsyncIterator
 from uuid import UUID
 
 from fastapi import APIRouter, Query, status
+from fastapi.sse import EventSourceResponse
 
 from app.core.exception_handlers import ErrorResponse
 from app.kernel import Instant
@@ -42,12 +58,15 @@ from app.modules.conversations.application.read_conversation import (
 )
 from app.modules.conversations.application.read_conversations import ConversationRow
 from app.modules.conversations.domain.entries import Entry, Message
+from app.modules.conversations.domain.live import Nudge
 from app.modules.conversations.domain.paging import (
     PAGE_LIMIT_CAP,
     PAGE_LIMIT_DEFAULT,
 )
 from app.modules.conversations.domain.ports import MemberFace
 from app.modules.conversations.presentation.dependencies import (
+    FollowConversationDep,
+    OpeningNudgeDep,
     ReadConversationDep,
     ReadConversationsDep,
     ReadEntriesDep,
@@ -59,11 +78,15 @@ from app.modules.conversations.presentation.schemas import (
     ConversationResponse,
     ConversationRowSchema,
     EntryPageResponse,
+    LiveNudgeSchema,
     MessageSchema,
     SendMessageRequest,
     SystemLineSchema,
 )
-from app.modules.users.presentation.dependencies import CurrentUserDep
+from app.modules.users.presentation.dependencies import (
+    AuthenticatedSessionDep,
+    CurrentUserDep,
+)
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -77,6 +100,28 @@ _NOT_FOUND: dict[int | str, dict[str, Any]] = {
             "real* about a stranger's evening.\n\n"
             "Leave the screen. There is no retry that changes this."
         ),
+    },
+}
+
+
+#: The same refusal, spelled as JSON. **Only this route needs it.**
+#:
+#: A route's ``responses`` take their media type from its response *class*, and
+#: this one's is ``text/event-stream`` — so ``"model": ErrorResponse`` would
+#: document the 404 envelope as an event stream, which is not what a refused
+#: request answers with. The refusal is written before the stream begins
+#: (``presentation/dependencies.py``), so it is an ordinary JSON error like every
+#: other one on this router. The reference is built from the class's own name so
+#: a rename cannot leave a dangling pointer here; ``app/api/contract.py``
+#: registers that schema on every surface.
+_NOT_FOUND_AS_JSON: dict[int | str, dict[str, Any]] = {
+    status.HTTP_404_NOT_FOUND: {
+        "description": _NOT_FOUND[status.HTTP_404_NOT_FOUND]["description"],
+        "content": {
+            "application/json": {
+                "schema": {"$ref": f"#/components/schemas/{ErrorResponse.__name__}"}
+            }
+        },
     },
 }
 
@@ -277,10 +322,85 @@ async def send_message(
     return _message(message)
 
 
+@router.get(
+    "/{conversation_id}/stream",
+    response_class=EventSourceResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "description": (
+                "An open `text/event-stream`. Every frame is a `LiveNudgeSchema` "
+                "and nothing else."
+            )
+        },
+        **_NOT_FOUND_AS_JSON,
+    },
+    summary="Follow a conversation",
+    description=(
+        "**A nudge, and nothing else on the wire.** Every frame is "
+        "`{ v, conversation_id, last_seq }`. On receiving one, fetch from "
+        "**your own** high-water mark through `GET /conversations/{id}/entries` "
+        "— never from `last_seq`.\n\n"
+        "**A dropped frame costs nothing.** Because you fetch from your own "
+        "cursor and not from the frame's number, the *next* nudge repairs "
+        "whatever the lost one would have said. There is nothing to detect and "
+        "nothing to reconcile.\n\n"
+        "**One frame arrives the moment the stream opens**, carrying the room's "
+        "current `last_seq`. That is what makes resume correct without "
+        "`Last-Event-ID` being load-bearing, and it is how a client that has "
+        "been away catches up in one step.\n\n"
+        "**The stream closes when your access token expires** — about every "
+        "fifteen minutes. Reconnect with a fresh one through your ordinary "
+        "refresh path; the token travels in the `Authorization` header, never a "
+        "query string.\n\n"
+        "**A closed stream means the room is not live, and nothing more.** It "
+        "closes on token expiry, on a deploy, and when this server's own "
+        "subscriber cannot be reached — deliberately, so that a chat which is "
+        "not live *looks* not-live instead of looking up to date. Every read on "
+        "this context keeps working throughout; only the latency changes.\n\n"
+        "**Close it when the app backgrounds and re-open on foreground.** iOS "
+        "severs a backgrounded app's connections, and re-opening is the same "
+        "code path as any other reconnect."
+    ),
+)
+async def follow_conversation(
+    opening: OpeningNudgeDep,
+    caller: AuthenticatedSessionDep,
+    use_case: FollowConversationDep,
+) -> AsyncIterator[LiveNudgeSchema]:
+    """The live channel.
+
+    **Membership ran in ``OpeningNudgeDep``, before this generator existed** —
+    see ``presentation/dependencies.py``. By the time the first frame is written
+    the reader has been gated and the request's database session is closed.
+
+    **The frames go out through the declared model, and the hole that remains is
+    ``docs/adr/0147`` §7's, named rather than closed.** The checks cover the
+    *declaration*: `make openapi` publishes `LiveNudgeSchema` and the client
+    generates its type from it. **Nothing proves the emission.** What narrows it
+    is that the framework validates and serialises each yielded item against that
+    model on the way out — so a frame that did not match would raise here rather
+    than ship — but a stream body is not a response model, nothing type-checks
+    this route against its own annotation, and the residual risk is affordable
+    only because the shape is three fields wide.
+    """
+
+    async for nudge in use_case.follow(opening, until=caller.expires_at):
+        yield _nudge(nudge)
+
+
 # ---------------------------------------------------------------------------
 # Rendering. **Nothing here folds anything** — the use case did, against one
 # instant, and a second fold in the presentation layer is a second clock.
 # ---------------------------------------------------------------------------
+
+
+def _nudge(nudge: Nudge) -> LiveNudgeSchema:
+    return LiveNudgeSchema(
+        v=nudge.v,
+        conversation_id=nudge.conversation_id,
+        last_seq=nudge.last_seq,
+    )
 
 
 def _row(row: ConversationRow) -> ConversationRowSchema:

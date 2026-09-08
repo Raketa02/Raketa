@@ -130,12 +130,30 @@ def create_redis_subscriber_client(settings: Settings) -> Redis:
     command path shares, and a blocking read has no business in it. Whoever opens
     one closes it, the way ``app/seeds/paths.py`` does with the client it opens
     for a command that has no lifespan to hang it on.
+
+    **The API owns one for its whole life**, and it is ``_subscriber`` below,
+    opened and closed by the lifespan beside the command pool. That is still one
+    caller owning both ends rather than a second pool: an open conversation
+    stream takes a ``PubSub`` off it and hands the connection back when the
+    stream ends, so the count follows the streams and the policy is decided here.
     """
 
     return _build_client(settings, read_timeout=None)
 
 
 _client: Redis | None = None
+
+#: The process's **second** client, and the whole of the exception the module
+#: docstring opens with. It is separate from ``_client`` rather than a flag on it
+#: because the two differ in the one thing a subscription is *for*: a blocking
+#: read with no deadline has no business in the pool a player's critical path
+#: draws its commands from.
+#:
+#: One per process and not one per stream. Every open conversation stream takes a
+#: ``PubSub`` off it, so the connections are pooled and the timeout policy is
+#: decided once — a client per stream would be the connection storm this module
+#: refuses for requests, arriving by a different door.
+_subscriber: Redis | None = None
 
 
 def init_redis(settings: Settings) -> Redis:
@@ -148,6 +166,29 @@ def get_redis() -> Redis:
     if _client is None:
         raise RuntimeError("redis not initialised — call init_redis() first")
     return _client
+
+
+def init_redis_subscriber(settings: Settings) -> Redis:
+    global _subscriber
+    _subscriber = create_redis_subscriber_client(settings)
+    return _subscriber
+
+
+def get_redis_subscriber() -> Redis:
+    if _subscriber is None:
+        raise RuntimeError(
+            "the redis subscriber is not initialised — "
+            "call init_redis_subscriber() first"
+        )
+    return _subscriber
+
+
+async def close_redis_subscriber() -> None:
+    global _subscriber
+    if _subscriber is not None:
+        # See ``close_redis`` for the ignore.
+        await _subscriber.aclose()  # type: ignore[attr-defined]
+        _subscriber = None
 
 
 async def close_redis() -> None:

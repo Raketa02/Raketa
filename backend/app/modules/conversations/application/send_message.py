@@ -18,6 +18,20 @@ folded from the stream, not looked up in a table beside it.
 **The row is locked before the sequence is minted.** ``load_for_append`` is the
 read that takes it, which is what makes ``last_seq + 1`` gapless under two people
 typing at once (``docs/adr/0147`` §2).
+
+**The nudge goes out after the commit, and never before it.** The message is
+durable in Postgres before anybody's phone is told there is something to fetch,
+because the client fetches through the ordinary read path and a phone told a
+moment early would read the room as it stood a moment ago. The publish fails soft
+— an unreachable bus costs this room its liveness and never costs anybody their
+message — and it carries the room's ``last_seq``, which the append has just
+written, so there is no second read in the publish path
+(``docs/adr/0147`` §2, §3).
+
+**A repeat publishes too, and that is not a branch this use case takes.** A nudge
+is a fact about the room rather than about this call — *it is now this long* —
+so a resumed send republishes what already stands, which is news to a phone that
+missed the first one and a no-op to every phone that did not.
 """
 
 from __future__ import annotations
@@ -29,6 +43,7 @@ from app.kernel import Clock
 from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
 from app.modules.conversations.application.commands import SendMessageCommand
 from app.modules.conversations.domain.entries import Message
+from app.modules.conversations.domain.live import Nudge, NudgePublisher
 from app.modules.conversations.domain.ports import (
     AccountHoldQuery,
     ConversationRepository,
@@ -46,12 +61,14 @@ class SendMessage:
         rooms: ARoomOfYours,
         conversations: ConversationRepository,
         holds: AccountHoldQuery,
+        nudges: NudgePublisher,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._rooms = rooms
         self._conversations = conversations
         self._holds = holds
+        self._nudges = nudges
         self._uow = uow
         self._clock = clock
 
@@ -76,4 +93,5 @@ class SendMessage:
         # means here rather than a branch this use case takes.
         await self._conversations.save(room)
         await self._uow.commit()
+        await self._nudges.nudge(Nudge.about(room))
         return message

@@ -23,6 +23,10 @@ from app.bootstrap.composition import build_clock  # noqa: E402
 from app.core.config import get_settings  # noqa: E402
 from app.infrastructure.database.base import Base  # noqa: E402
 from app.infrastructure.database.session import get_db  # noqa: E402
+from app.infrastructure.redis_client import (  # noqa: E402
+    get_redis,
+    get_redis_subscriber,
+)
 from app.main import create_app  # noqa: E402  (also registers ORM models)
 from app.modules.player_profile.infrastructure.passthrough_photo_review import (  # noqa: E402,E501
     PassThroughPhotoReview,
@@ -45,6 +49,7 @@ from tests.unit.fake_ledgers import (  # noqa: E402
     InMemoryPromptLedger,
     InMemorySuppressionLedger,
 )
+from tests.unit.fake_redis import FakeRedis  # noqa: E402
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage  # noqa: E402
 
 
@@ -133,6 +138,26 @@ def prompt_ledger():
 
 
 @pytest.fixture
+def live_channel():
+    """The ephemeral store the conversation stream publishes on and follows.
+
+    **One fake for both clients**, unlike production, which holds two — the
+    command pool and the subscriber's own, which differ in a read deadline this
+    stand-in has no concept of (`docs/adr/0147` §5, #342). Two fakes here would
+    be two message buses and a nudge would never reach a stream.
+
+    Overridden on `client` regardless of whether a test asks for it, so **no test
+    in this suite needs Redis running** — the same acceptance criterion the
+    ledgers above are held to, and here it also means the real
+    `RedisNudgePublisher` and `RedisNudgeSubscriber` run: the classes that decide
+    the channel key and the frame's encoding are exercised rather than stubbed
+    past.
+    """
+
+    return FakeRedis()
+
+
+@pytest.fixture
 def candidate_source(session_factory):
     """The one candidate index this process has, for the length of one test.
 
@@ -152,7 +177,7 @@ def candidate_source(session_factory):
 
 
 @pytest_asyncio.fixture
-async def client(
+async def app(
     session_factory,
     photo_storage,
     photo_review,
@@ -160,7 +185,16 @@ async def client(
     suppression_ledger,
     prompt_ledger,
     candidate_source,
+    live_channel,
 ):
+    """The application every API test drives, with its seams already replaced.
+
+    Requested by name only by a test that needs to replace **one more** seam for
+    itself — the conversation stream's dead-subscriber path is the case that
+    earned this fixture, since *the bus is gone* cannot be expressed by any
+    request. Every other test wants `client` and never sees this.
+    """
+
     get_settings.cache_clear()
     app = create_app()
 
@@ -179,10 +213,22 @@ async def client(
     app.dependency_overrides[get_suppression_ledger] = lambda: suppression_ledger
     app.dependency_overrides[get_prompt_ledger] = lambda: prompt_ledger
     app.dependency_overrides[get_candidate_source] = lambda: candidate_source
+    # `ASGITransport` runs no lifespan, so nothing has initialised either Redis
+    # client and `get_redis()` would raise. The ledgers above are overridden one
+    # layer higher and never reach it; the live channel deliberately is not.
+    app.dependency_overrides[get_redis] = lambda: live_channel
+    app.dependency_overrides[get_redis_subscriber] = lambda: live_channel
+    try:
+        yield app
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def client(app):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-    app.dependency_overrides.clear()
 
 
 @pytest.fixture

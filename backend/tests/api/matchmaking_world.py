@@ -30,9 +30,12 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from app.bootstrap.composition import build_clock
+from app.bootstrap.composition import build_clock, build_nudge_publisher
 from app.bootstrap.events import build_event_runtime
 from app.kernel import Sport
+from app.modules.conversations.infrastructure.absent_providers import (
+    NobodyIsFollowing,
+)
 from app.modules.matchmaking.infrastructure.pass_model import PassORM
 from app.modules.matchmaking.infrastructure.prompt_decline_model import (
     PromptDeclineORM,
@@ -719,7 +722,9 @@ async def forecast(
     )
 
 
-async def deliver_the_outbox(session_factory, *, rounds: int = 6) -> int:
+async def deliver_the_outbox(
+    session_factory, *, rounds: int = 6, live_channel=None
+) -> int:
     """Run the transactional outbox to exhaustion, the way the worker does.
 
     **Nothing in this suite runs the delivery loop**, because until the
@@ -736,9 +741,22 @@ async def deliver_the_outbox(session_factory, *, rounds: int = 6) -> int:
     **Rounds, because delivery cascades.** A room opened by an acceptance
     publishes its own events, and those are outbox rows too. Draining until a
     round publishes nothing is the honest stopping condition.
+
+    **``live_channel`` is what makes this delivery live**, and it is the same
+    fake the ``client`` fixture publishes and follows over. Pass it whenever a
+    test cares that a system line nudged an open stream; leave it out and the
+    drain is the one a seed run does, with nobody following
+    (``docs/adr/0147`` §3). The parameter is required in the application and
+    optional here for exactly that reason: *nobody is following* is the honest
+    answer for most of this file.
     """
 
     runtime = build_event_runtime()
+    nudges = (
+        NobodyIsFollowing()
+        if live_channel is None
+        else build_nudge_publisher(live_channel)
+    )
     published = 0
     for _ in range(rounds):
         async with session_factory() as session:
@@ -746,6 +764,7 @@ async def deliver_the_outbox(session_factory, *, rounds: int = 6) -> int:
                 session=session,
                 clock=build_clock(),
                 batch_size=100,
+                nudges=nudges,
             )
             delivered = await batch.execute(worker_id="tests")
         published += delivered

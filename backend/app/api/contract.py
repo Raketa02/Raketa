@@ -32,6 +32,7 @@ from pathlib import Path
 from fastapi import APIRouter, FastAPI
 
 from app.api.dev.routes import dev_api_router
+from app.api.streaming import restore_stream_item_types
 from app.api.v1.player import player_api_router
 from app.core.config import get_settings
 from app.core.exception_handlers import ErrorResponse
@@ -80,6 +81,11 @@ def build_surface_spec(title: str, router: APIRouter) -> dict:
     settings = get_settings()
     app = FastAPI(title=title, version=settings.VERSION)
     app.include_router(router)
+    # The same repair ``app.main`` applies, and for the half that matters here:
+    # a streaming route that lost its item type documents an opaque string where
+    # the declared envelope should be, and the client would generate no type for
+    # it (``app/api/streaming.py``).
+    restore_stream_item_types(app)
     return _document_error_envelope(app.openapi())
 
 

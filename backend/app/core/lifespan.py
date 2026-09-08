@@ -12,16 +12,22 @@ forgets is one that holds a database connection open past `dispose_engine`, and
 the symptom is a container that takes its whole grace period to die rather than
 anything that looks like a bug.
 
-**Two connection pools, opened unconditionally and closed here.** The database
-engine and the Redis client are the process's, so both are opened before anything
-that might want one and disposed in the same `finally`, after every background
-task has stopped — a job still running against a closed pool is the same
-shutdown bug in either of them. **Neither is gated on a feature flag**, and the
-Redis one especially must not be: a request path resolves its ledgers through
-this client, so a job's toggle deciding whether the pool exists would be a job's
-toggle deciding whether a Play surface 500s. Opening it connects to nothing, so
-a store that is down costs the ledgers their answers and never costs the
-application its start (``matchmaking/domain/ledgers.py``).
+**Three connection pools, opened unconditionally and closed here.** The database
+engine and the two Redis clients are the process's, so all three are opened
+before anything that might want one and disposed in the same `finally`, after
+every background task has stopped — a job still running against a closed pool is
+the same shutdown bug in any of them. **None is gated on a feature flag**, and
+the Redis ones especially must not be: a request path resolves its ledgers
+through the command client, so a job's toggle deciding whether the pool exists
+would be a job's toggle deciding whether a Play surface 500s. Opening one
+connects to nothing, so a store that is down costs the ledgers their answers and
+never costs the application its start (``matchmaking/domain/ledgers.py``).
+
+**The second Redis client is the subscriber's, and it is a second client rather
+than a flag** (``docs/adr/0147`` §5, #342). A conversation stream subscribes on
+it, and a blocking read with no deadline has no business in the pool a player's
+critical path draws its commands from. It is opened here for the same reason the
+first is: an open stream must not be the thing that decides a pool exists.
 
 **One thing here starts nothing and is a refusal.** The matcher's ruleset is
 validated before anything else runs, so that a malformed one **fails the deploy**
@@ -40,6 +46,7 @@ from fastapi import FastAPI
 from app.bootstrap.composition import (
     build_background_session_factory,
     build_candidate_source,
+    build_nudge_publisher,
     build_scoring_meter,
 )
 from app.bootstrap.events import build_event_delivery_worker
@@ -52,7 +59,14 @@ from app.infrastructure.database.engine import (
     init_engine,
 )
 from app.infrastructure.jobs import BackgroundTask
-from app.infrastructure.redis_client import close_redis, get_redis, init_redis
+from app.infrastructure.redis_client import (
+    close_redis,
+    close_redis_subscriber,
+    get_redis,
+    get_redis_subscriber,
+    init_redis,
+    init_redis_subscriber,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +85,10 @@ def build_lifespan(settings: Settings):
         # socket — `redis-py` connects on the first command — so this cannot
         # fail here whatever state the store is in.
         init_redis(settings)
+        # And the third, which is the subscriber's own. Same terms, same place,
+        # and the same lazy connect; what differs is the read deadline, which it
+        # does not have (#342).
+        init_redis_subscriber(settings)
 
         # Every piece of background work that touches the database takes a
         # session per tick, so one factory serves all of them — and it is built
@@ -99,6 +117,9 @@ def build_lifespan(settings: Settings):
         # one reader of the ledgers and the Play surfaces are the rest, so this
         # attribute may not depend on the roll being switched on.
         app.state.redis = get_redis()
+        # Likewise, and for the same reason: an open conversation stream takes a
+        # `PubSub` off this one, so it may not depend on any toggle either.
+        app.state.redis_subscriber = get_redis_subscriber()
 
         session_factory = None
         if (
@@ -116,6 +137,13 @@ def build_lifespan(settings: Settings):
                     event_runtime=app.state.event_runtime,
                     session_factory=session_factory,
                     settings=settings,
+                    # **This is the delivery that is live.** The room teller runs
+                    # inside this loop, so a system line written here reaches an
+                    # open conversation without anybody refreshing. A seed run
+                    # and a command-line drain pass `NobodyIsFollowing` instead,
+                    # and the parameter is required so the difference is written
+                    # down rather than defaulted.
+                    nudges=build_nudge_publisher(app.state.redis),
                 )
                 # Kept on the application because the delivery worker's identity
                 # is the lease its batches claim outbox rows under, and a test or
@@ -165,5 +193,6 @@ def build_lifespan(settings: Settings):
             # is after the tasks: a pool closed under something still using it
             # turns a clean shutdown into an exception nobody reads.
             await close_redis()
+            await close_redis_subscriber()
 
     return lifespan

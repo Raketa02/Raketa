@@ -557,7 +557,36 @@ Rules to preserve:
   a line for each. There is no *Game on* line. And **a refused line is not a refused
   telling**: `GamePlanned` reaches the room, draws nothing, and is where the room learns its
   game. Not built here: the **destruction** ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
-  #359) and the **live channel** (ADR-0147, #357).
+  #359).
+- **The live channel carries a nudge, and nothing else is on the wire**
+  ([ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)).
+  `GET /conversations/{id}/stream` is the platform's **first real-time surface**, and it is
+  Server-Sent Events on FastAPI's own `EventSourceResponse` — **zero new dependencies**,
+  against a WebSocket path that starts with one and whose absence fails *silently*, since
+  `uvicorn` is pinned without `[standard]` and would refuse the upgrade rather than erroring.
+  Six things about it are load-bearing. **The frame is
+  `{v, conversation_id, last_seq}` and never content**: the client fetches from **its own**
+  high-water mark through the ordinary read path, so a lost frame is repaired by the next
+  one for free, and *whether the UI may render what it did not read from the authoritative
+  path* stops being a rule anybody keeps and becomes a thing the wire cannot express. **One
+  mechanism carries messages and system lines alike** — a send publishes after its commit,
+  and the room teller publishes after each line it writes, so there is no separate live-plan
+  feature to build and none to defer. **Fan-out is Redis pub/sub keyed on the
+  conversation**, on the subscriber's **own** client — the process's second, from
+  `create_redis_subscriber_client`, whose read has no deadline because on a subscription
+  waiting *is* the operation (#342). **Publisher soft, subscriber loud**: a publish happens
+  after the entry is durable so an outage costs a room its liveness and never a message,
+  while a dead subscriber **closes the stream**, because a chat that is not live has to look
+  not-live. `/health` stays about the **process** for the same reason — a probe that pinged
+  Redis would take sign-in down with the chat. **The stream closes at the access token's
+  `exp`**, which keeps revocation prompt and makes reconnect run every fifteen minutes in
+  production rather than only on deploys, so the hardest-to-test path cannot rot unnoticed;
+  the gate and the first frame run in a **dependency**, before the response starts, which is
+  also where the request's database session is closed so a fifteen-minute stream holds no
+  connection. And **the envelope is declared on the route and generated** — ADR-0006 gets no
+  exception — which needed `app/api/streaming.py`, a dated shim for a framework bug that
+  drops a stream's item type on every `include_router`. The hole that remains is named: the
+  checks cover the *declaration*, and nothing proves the emission.
 - **A Player Score is what the platform watched, and two strands is what it can see**
   ([ADR-0140](../docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
   `app/modules/player_score/` is the seventh context and the first that **keeps no record at

@@ -639,6 +639,49 @@ there; they are not repeated here.
   because it is a **reader** that writes one derived scalar. _Avoid_: adding bucket
   management to it — a job whose name promises work it does not do is a job somebody adds the
   work back into.
+- **Nudge** — the whole payload of the live channel: `{v, conversation_id, last_seq}`, and
+  never content ([ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
+  §3). It rides Redis pub/sub from an append to whichever servers hold an open stream, and
+  it rides Server-Sent Events from there to the phone — **the same three fields both hops**,
+  which is what makes at-most-once on either leg one harmless risk rather than two. It is
+  **news and not a cursor**: the client fetches from *its own* high-water mark through the
+  ordinary read path, so a lost frame is repaired by the next one for free and *may the UI
+  draw what it did not read from the authoritative path* becomes a thing the wire cannot
+  express. `last_seq` is the conversation row's allocator, so publishing costs no second
+  read. _Avoid_: calling it an event or a message — it announces that a room moved and says
+  nothing about what moved it, and the day it carries an entry the self-healing property is
+  gone.
+- **The conversation channel** — `conversation:{id}`, one Redis pub/sub channel per room,
+  subscribed and unsubscribed as streams open and close. Keyed on the **conversation and
+  never on a member**: per-user would force *who is in this room* into the append path, and
+  membership is derived from whichever record is arranging — a read bought to gain nothing.
+  Nothing is retained on it, which is the point: a subscriber that misses a notification
+  loses **latency, not data**. _Avoid_: Redis Streams here — durability on this leg buys
+  nothing a nudge does not already give away.
+- **Publisher soft, subscriber loud** — the two postures of the live channel, and their
+  asymmetry is the whole degradation story. A publish happens **after** the append has
+  committed, so `FailSoftNudgePublisher` swallows an outage: a room loses its liveness and
+  nobody loses a message. A subscription **is** the liveness, so it is unwrapped and a
+  failure closes the stream — **a chat that is not live has to look not-live**, because a
+  connection held open delivering nothing looks up to date (ADR-0147 §8). `/health` stays
+  about the **process** for the same reason it is safe to close: a health check that pinged
+  Redis would take sign-in, onboarding and challenges down with the chat. _Avoid_: wrapping
+  the subscriber "for symmetry" — the symmetry is what would hide the outage.
+- **The subscriber's own client** — the process's **second** Redis client, from
+  `create_redis_subscriber_client` and opened by the lifespan beside the command pool.
+  Connecting is bounded at `REDIS_CONNECT_TIMEOUT_SECONDS` and reading is not bounded at
+  all, because on a subscription **waiting is the operation** and a `socket_timeout` there
+  does not reconnect quietly — it raises at the caller every two seconds and loses whatever
+  was published in the gap ([#342](https://github.com/Raketa02/Raketa/issues/342)). One
+  client per **process**, not per stream: each open stream takes a `PubSub` off it. _Avoid_:
+  putting a blocking read on the pool a player's critical path draws commands from.
+- **Stream item type** — what a generator route yields, and the thing FastAPI 0.136.1
+  detects **once** and loses on every `include_router`. `app/api/streaming.py` puts it back
+  on the finished application, which is what makes the live envelope generated into
+  `openapi.player.json` rather than documented as an opaque string, and what makes every
+  frame validated through the declared model on the way out. It is a dated shim with a test
+  that goes red if it stops matching. _Avoid_: hand-writing the SSE `itemSchema` in
+  `openapi_extra` — that is the mirror of a backend response ADR-0006 exists to forbid.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

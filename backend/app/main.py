@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.dev.gate import CONSOLE_SERVED
+from app.api.streaming import restore_stream_item_types
 from app.api.v1.router import api_router
 from app.bootstrap.events import get_event_runtime
 from app.core.config import Environment, Settings, get_settings
@@ -49,6 +50,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         from app.api.dev.routes import dev_api_router
 
         app.include_router(dev_api_router)
+
+    # After every `include_router` above, and before anything serves or
+    # generates a document: a streaming route's item type does not survive being
+    # included, and both the wire and the contract need it back. See
+    # `app/api/streaming.py`.
+    restore_stream_item_types(app)
 
     @app.get("/health", tags=["health"], summary="Liveness probe")
     async def health() -> dict:

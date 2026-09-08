@@ -18,6 +18,7 @@ from app.core.security import bearer_scheme
 from app.modules.users.application.get_current_user import GetCurrentUser
 from app.modules.users.application.register_user import RegisterUser
 from app.modules.users.application.resolve_current_user import (
+    AuthenticatedSession,
     ResolveCurrentUserFromAccessToken,
 )
 from app.modules.users.domain.user import User
@@ -69,6 +70,31 @@ ResolveCurrentUserUseCaseDep = Annotated[
 
 BearerCredentialsDep = Annotated[
     HTTPAuthorizationCredentials | None, Depends(bearer_scheme)
+]
+
+
+async def authenticated_session(
+    credentials: BearerCredentialsDep,
+    use_case: ResolveCurrentUserUseCaseDep,
+) -> AuthenticatedSession:
+    """Who is calling, **and until when.**
+
+    Declared beside ``current_user`` rather than instead of it: one route in this
+    application cares when its caller's credential runs out — the conversation
+    stream, which closes at that instant (``docs/adr/0147`` §6) — and every other
+    route wants the user and would have to ignore a deadline.
+    """
+
+    token = credentials.credentials if credentials else None
+    return await use_case.authenticated_session(token)
+
+
+#: Spelled ``Authenticated…`` and never ``CurrentSession``, because *session* in
+#: this codebase means an ``AsyncSession``: one route declares both, and two
+#: parameters called ``session`` and ``db`` would be the wrong way round the
+#: first time somebody edited it.
+AuthenticatedSessionDep = Annotated[
+    AuthenticatedSession, Depends(authenticated_session)
 ]
 
 

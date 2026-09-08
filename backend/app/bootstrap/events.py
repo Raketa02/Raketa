@@ -26,6 +26,7 @@ from app.infrastructure.events.transactional_publisher import (
     EventPublisher,
 )
 from app.kernel import Clock
+from app.modules.conversations.domain.live import NudgePublisher
 from app.modules.auth.application.event_subscriptions import (
     register_auth_events,
     subscribe_auth_handlers,
@@ -92,7 +93,20 @@ class EventRuntime:
         session: AsyncSession,
         clock: Clock,
         batch_size: int,
+        nudges: NudgePublisher,
     ) -> EventBatch:
+        """One batch of the outbox, over this session.
+
+        **``nudges`` is required and reaches exactly one subscriber**, which is
+        the room teller. It is threaded through this generic loop rather than
+        resolved from the process because *is this delivery live* is a fact about
+        the run and not about the machinery: an API process has phones attached
+        to it, a seed run and a command-line drain do not, and a default here
+        would make the quiet answer the one nobody chose. That it is a
+        conversation's port in a shared loop is a coupling this class already
+        carries — ``_dispatcher_over`` below exists for the same subscriber.
+        """
+
         # See ``_dispatcher_over`` for why the composition root is reached at
         # call time here: ``composition`` imports this module, so the arrow
         # already runs the other way.
@@ -101,13 +115,15 @@ class EventRuntime:
         return EventBatch(
             outbox=SqlAlchemyOutboxRepository(session),
             codec=self.codec,
-            dispatcher=self._dispatcher_over(session),
+            dispatcher=self._dispatcher_over(session, nudges=nudges),
             uow=build_unit_of_work(session),
             clock=clock,
             batch_size=batch_size,
         )
 
-    def _dispatcher_over(self, session: AsyncSession) -> EventDispatcher:
+    def _dispatcher_over(
+        self, session: AsyncSession, *, nudges: NudgePublisher
+    ) -> EventDispatcher:
         """The process's subscriptions, plus the ones that need this batch's session.
 
         **Every subscriber was a logger until the Conversation context arrived**
@@ -130,7 +146,9 @@ class EventRuntime:
         from app.bootstrap.composition import build_tell_the_room
 
         dispatcher = self.dispatcher.copy()
-        subscribe_the_room_teller(dispatcher, build_tell_the_room(session))
+        subscribe_the_room_teller(
+            dispatcher, build_tell_the_room(session, nudges=nudges)
+        )
         return dispatcher
 
 
@@ -189,8 +207,16 @@ def build_event_delivery_worker(
     event_runtime: EventRuntime,
     session_factory: async_sessionmaker[AsyncSession],
     settings: Settings,
+    nudges: NudgePublisher,
     clock: Clock | None = None,
 ) -> EventWorker:
+    """The embedded outbox drain. **This is the delivery that is live.**
+
+    It runs inside the API process, beside the streams, so the system lines it
+    writes reach open conversations without anybody refreshing — which is what
+    ``nudges`` is, and why it has no default here either.
+    """
+
     processing_clock = clock or SystemClock()
     return EventWorker(
         session_factory=session_factory,
@@ -198,6 +224,7 @@ def build_event_delivery_worker(
             session=session,
             clock=processing_clock,
             batch_size=settings.EVENT_DELIVERY_BATCH_SIZE,
+            nudges=nudges,
         ),
         poll_interval_seconds=settings.EVENT_DELIVERY_POLL_INTERVAL_SECONDS,
     )

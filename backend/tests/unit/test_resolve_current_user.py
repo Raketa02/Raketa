@@ -19,6 +19,20 @@ from app.modules.users.domain.value_objects import Email, HashedPassword, Nickna
 from app.shared.ids import new_uuid
 
 
+#: What every decoded access token carries beside its subject.
+#:
+#: ``JwtTokenService`` requires ``exp`` on decode — an access token without one
+#: never reaches this use case — and one caller reads it: the conversation stream
+#: closes at that instant rather than outliving the credential that opened it
+#: (`docs/adr/0147` §6). A stub that omitted it would be describing a token this
+#: application cannot issue.
+AN_HOUR_FROM_NOW = int(datetime.now(timezone.utc).timestamp()) + 3600
+
+
+def _payload(**fields) -> dict:
+    return {"exp": AN_HOUR_FROM_NOW, **fields}
+
+
 class StubTokenService:
     def __init__(self, payload=None, error: Exception | None = None) -> None:
         self._payload = payload or {}
@@ -79,7 +93,7 @@ async def test_resolve_current_user_from_access_token_success():
     user = _user()
     getter = StubGetCurrentUser(user=user)
     typed_getter = cast(GetCurrentUser, getter)
-    service = StubTokenService(payload={"sub": str(user.id)})
+    service = StubTokenService(payload=_payload(sub=str(user.id)))
 
     resolved = await ResolveCurrentUserFromAccessToken(
         service, typed_getter
@@ -91,7 +105,7 @@ async def test_resolve_current_user_from_access_token_success():
 
 @pytest.mark.asyncio
 async def test_resolve_current_user_rejects_missing_access_token():
-    service = StubTokenService(payload={"sub": str(new_uuid())})
+    service = StubTokenService(payload=_payload(sub=str(new_uuid())))
     getter = StubGetCurrentUser(user=_user())
     typed_getter = cast(GetCurrentUser, getter)
 
@@ -111,7 +125,7 @@ async def test_resolve_current_user_rejects_invalid_access_token():
 
 @pytest.mark.asyncio
 async def test_resolve_current_user_rejects_malformed_subject():
-    service = StubTokenService(payload={"sub": "not-a-uuid"})
+    service = StubTokenService(payload=_payload(sub="not-a-uuid"))
     getter = StubGetCurrentUser(user=_user())
     typed_getter = cast(GetCurrentUser, getter)
 
@@ -121,9 +135,45 @@ async def test_resolve_current_user_rejects_malformed_subject():
 
 @pytest.mark.asyncio
 async def test_resolve_current_user_preserves_user_eligibility_errors():
-    service = StubTokenService(payload={"sub": str(new_uuid())})
+    service = StubTokenService(payload=_payload(sub=str(new_uuid())))
     getter = StubGetCurrentUser(error=UserNotEligible())
     typed_getter = cast(GetCurrentUser, getter)
 
     with pytest.raises(UserNotEligible):
         await ResolveCurrentUserFromAccessToken(service, typed_getter).execute("token")
+
+
+@pytest.mark.asyncio
+async def test_an_access_token_carries_the_instant_it_stops_being_valid():
+    """One caller needs it, and it is the live channel (`docs/adr/0147` §6).
+
+    A stream is closed at the token's own `exp` rather than on a TTL recomputed
+    beside it: the two agree today, and the honest deadline is the one written
+    into the credential the caller actually presented.
+    """
+
+    user = _user()
+    service = StubTokenService(payload=_payload(sub=str(user.id)))
+
+    session = await ResolveCurrentUserFromAccessToken(
+        service, cast(GetCurrentUser, StubGetCurrentUser(user=user))
+    ).authenticated_session("token")
+
+    assert session.user is user
+    assert session.expires_at == datetime.fromtimestamp(
+        AN_HOUR_FROM_NOW, tz=timezone.utc
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_token_with_no_readable_expiry_is_refused():
+    """**Not defensive.** A credential that never runs out is what `docs/adr/0004`
+    refuses, and a stream with no deadline is what §6 refuses — so *there is no
+    expiry* has to be a refusal here rather than a stream nothing ever closes."""
+
+    service = StubTokenService(payload={"sub": str(new_uuid())})
+
+    with pytest.raises(UnauthorizedError):
+        await ResolveCurrentUserFromAccessToken(
+            service, cast(GetCurrentUser, StubGetCurrentUser(user=_user()))
+        ).execute("token")

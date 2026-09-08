@@ -65,6 +65,7 @@ from app.bootstrap.composition import (
     build_event_publisher,
     build_member_faces,
     build_membership,
+    build_nobody_is_following,
     build_unit_of_work,
     build_user_repository,
 )
@@ -162,6 +163,13 @@ async def deliver_everything_told(
     It builds the batch through ``EventRuntime.create_event_batch_for`` rather
     than assembling handlers here, so this is the delivery that ships — including
     the session-bound subscriber the batch adds for itself.
+
+    **Nobody is following, and the seed says so rather than defaults to it.** A
+    seed run has no phone attached: it drains a laptop's outbox with no
+    conversation screen open anywhere, so the live channel is handed
+    ``NobodyIsFollowing`` — the correct answer, not a degraded one. The API
+    process passes the real publisher (``app/core/lifespan.py``), and the
+    parameter is required at both so the difference stays written down.
     """
 
     runtime = get_event_runtime()
@@ -169,7 +177,10 @@ async def deliver_everything_told(
     while True:
         async with session_factory() as session:
             batch = runtime.create_event_batch_for(
-                session=session, clock=build_clock(), batch_size=200
+                session=session,
+                clock=build_clock(),
+                batch_size=200,
+                nudges=build_nobody_is_following(),
             )
             published = await batch.execute(worker_id="seed")
         if not published:
@@ -441,6 +452,8 @@ def _send_message(
         ),
         conversations=conversations,
         holds=build_conversation_hold_query(session),
+        # Same reason as the drain above: nobody is following a laptop.
+        nudges=build_nobody_is_following(),
         uow=build_unit_of_work(session),
         clock=FixedClock(at=now),
     )
