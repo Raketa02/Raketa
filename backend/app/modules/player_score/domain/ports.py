@@ -39,7 +39,10 @@ class PublishedScoreQuery(Protocol):
     **One call for the whole set, never one per player.** The matcher asks it
     once per search over every candidate still standing, which is five hundred
     people on a busy one; a per-row read behind this port would be five hundred
-    walks of two event logs inside one request.
+    walks of two event logs inside one request. The player record asks about
+    **one** person and is served by the same method with a collection of one —
+    the narrowing lives in that context's adapter, because the shape a port takes
+    belongs to the caller that could not afford another one.
 
     **It takes the clock rather than reading one.** Both halves of the answer are
     facts about an instant — a plan is a ghost only once its entry window has

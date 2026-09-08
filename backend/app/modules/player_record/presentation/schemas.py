@@ -22,6 +22,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.engines.matchfit.core import ReliabilityStrand
 from app.kernel import Sport
 from app.modules.player_record.domain.record import (
     LAST_FIVE,
@@ -216,6 +217,115 @@ class OpponentVarietySchema(BaseModel):
     )
 
 
+class StrandRowSchema(BaseModel):
+    """One metered row: what fell due, what came of it, and the figure shown.
+
+    **All three cross, and the third is not a convenience.** `good` and
+    `opportunities` are the raw pair — a perfect record over nine and one over
+    forty are different claims, and a bar alone hides which. `pct` is the figure
+    the platform itself acts on, served so that a client is not the fourth place
+    this record gets rounded.
+    """
+
+    strand: ReliabilityStrand = Field(
+        ...,
+        description=(
+            "Which strand this row is. **Key your copy off this code**, never "
+            "off the row's position: a strand with nothing behind it is absent "
+            "from the list entirely, so the rows you get are the rows this "
+            "person has.\n\n"
+            "Three of the five names have no provider on this platform today "
+            "and never appear here. They are listed on the enum because the "
+            "vocabulary is closed and shared with the Fit breakdown, not "
+            "because they are coming."
+        ),
+    )
+    good: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "How many of those opportunities went the way the strand is named "
+            "for — a game that was played, a challenge that got an answer.\n\n"
+            "**A no is a good outcome on `ANSWERS_CHALLENGES`.** Turning "
+            "somebody down inside your day *is* answering them; what that "
+            "strand prices is silence."
+        ),
+    )
+    opportunities: int = Field(
+        ...,
+        ge=1,
+        description=(
+            "How many times this fell due. **An opportunity and never a "
+            "total**: a game still awaiting its entry and a seat still inside "
+            "its day are in neither half of this row, because publishing them "
+            "either way would state a conclusion the clock has not reached.\n\n"
+            "Never `0` — a row with nothing behind it is not drawn at all."
+        ),
+    )
+    pct: int = Field(
+        ...,
+        ge=0,
+        le=100,
+        description=(
+            "The figure out of a hundred for this strand. **Served, never "
+            "derived** — dividing `good` by `opportunities` yourself produces a "
+            "fourth rounding of one record: this one rounds halves up, and the "
+            "day a client rounds differently the two disagree by a point on "
+            "exactly the values a player notices.\n\n"
+            "**Not the Fit breakdown's `StrandReading.value`**, which is the "
+            "matcher's own reading of the same strand between 0 and 1. Two "
+            "scales, two surfaces, two names — and `pct` is this contract's "
+            "existing word for a whole percentage, as on the balance forecast."
+        ),
+    )
+
+
+class ReliabilitySchema(BaseModel):
+    """What the platform watched — the pill, and the rows it is the mean of.
+
+    **Counted by the system, not written by people.** Every row under this
+    heading is a ratio the platform observed. What opponents said about somebody
+    is not here and will not be: an opinion under this title would make the title
+    false.
+
+    **The pill is exactly the number the matcher acts on**, at the player's own
+    published weights. That is what makes the screen worth having — somebody who
+    works their record back up can watch the penalty lift — and it is why the
+    weights themselves are **not** on this response: they are a fact about how
+    the number is made, not about the person, and a client that had them could
+    print one strand as worth more than another, which no screen here claims.
+    """
+
+    player_score: int = Field(
+        ...,
+        ge=0,
+        le=100,
+        description=(
+            "Their **Player Score** out of a hundred — the same figure the "
+            "player card prints and the reliability floor prices, at the same "
+            "player-facing weights.\n\n"
+            "**It is the weighted mean of the `pct`s beneath it**, taken over "
+            "the strands that are actually there: a name with nothing behind it "
+            "costs nothing rather than dragging the number down. Read it rather "
+            "than blending the rows yourself."
+        ),
+    )
+    strands: list[StrandRowSchema] = Field(
+        ...,
+        min_length=1,
+        description=(
+            "The rows behind the figure, **in the strand vocabulary's own "
+            "order** — never sort them.\n\n"
+            "**Only the strands this person has.** A strand nobody on this "
+            "platform can measure and a strand nothing has fallen due under for "
+            "*them* are the same absence here, and neither is a `0`: *we have "
+            "not seen enough* and *they are bad at this* are different facts. "
+            "There is always at least one row, because a panel with none is "
+            "omitted whole."
+        ),
+    )
+
+
 class PlayerRecordResponse(BaseModel):
     """Everything the platform will say about one person, to this reader.
 
@@ -330,6 +440,26 @@ class PlayerRecordResponse(BaseModel):
         ),
     )
 
+    reliability: ReliabilitySchema = Field(
+        default=OMITTED,
+        description=(
+            "**What the platform watched them do** — the reliability pill and "
+            "the metered rows it is the mean of.\n\n"
+            "**Omitted where nothing has ever fallen due for them**, which is "
+            "most people today, and never a section of noughts: nobody has "
+            "failed to turn up who was never due to. When it is omitted there "
+            "is no `player_score` to draw a red pill from and no empty "
+            "`strands` to head a card with.\n\n"
+            "**A third absence, asking a third question.** Not `skill`'s — "
+            "somebody rated in four sports may have had nothing fall due at "
+            "all. Not `variety`'s either, and they do not move together: a plan "
+            "that dissolved and a seat that ran out are opportunities here and "
+            "neither is a game anybody played.\n\n"
+            "It is about **no sport**, like `variety`: `?sport=` does not move "
+            "it. Turning up is a habit, not a padel habit."
+        ),
+    )
+
     variety: OpponentVarietySchema = Field(
         default=OMITTED,
         description=(
@@ -382,6 +512,20 @@ class PlayerRecordResponse(BaseModel):
                 ),
                 last_five=list(panel.last_five),
             )
+        if record.reliability is not None:
+            watched = record.reliability
+            fields["reliability"] = ReliabilitySchema(
+                player_score=watched.player_score,
+                strands=[
+                    StrandRowSchema(
+                        strand=row.strand,
+                        good=row.good,
+                        opportunities=row.opportunities,
+                        pct=row.pct,
+                    )
+                    for row in watched.strands
+                ],
+            )
         if record.variety is not None:
             fields["variety"] = OpponentVarietySchema(
                 distinct_opponents=record.variety.distinct_opponents,
@@ -399,6 +543,8 @@ __all__ = [
     "OpponentVarietySchema",
     "RecordLikelyRangeSchema",
     "PlayerRecordResponse",
+    "ReliabilitySchema",
     "SkillPanelSchema",
     "SportPillSchema",
+    "StrandRowSchema",
 ]

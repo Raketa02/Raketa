@@ -616,6 +616,25 @@ Rules to preserve:
   `skill`'s, so the assembler asks for it whatever sport resolved. Its denominator is
   `counted_games_for`'s own predicate, written once in `games` and read by both, so the sheet
   cannot print a pair that disagrees with the card beside it.
+  **The metered rows are the fourth fact, and they are `player_score`'s two live strands put
+  on a wire for the first time** (#381). Nothing new is computed: the raw counts already
+  existed in that domain and the caller stopped throwing them away. Each row crosses as **its
+  pair and its figure** — and that third number is where a strand parts company with the
+  variety beside it: a strand's percentage is what the platform *acts* on, `StrandRatio.value`
+  is derived in one place so a card, a profile and the matcher's evidence cannot print three
+  roundings of one record, and a client dividing the pair would be the fourth. Variety prices
+  no promise, so its division stays the client's. **The weights stay off the wire** — the blend
+  arrives already taken, and a row carrying its weight would let a reader re-derive the pill and
+  draw one strand as worth more than another. A player with no publishable strand has the
+  **whole zone omitted**, a third absence asking a third question: not `skill`'s and not
+  `variety`'s, since a plan that dissolved and a seat that ran out are opportunities and
+  neither is a game anybody played. `SubjectReliability` is the eighth demand and the **first
+  here whose provider reads a set** — `PublishedScoreQuery` answers about five hundred
+  candidates for the matcher, and the narrowing to one person is the adapter's, which is the
+  mirror of variety's fence. And `ReliabilityStrand` is the one name this context imports
+  rather than respells: the engines are the pure layer every context reads and none owns —
+  the argument `player_score` already made beside its own import contract — and the codes are
+  on the player contract under that spelling already.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one

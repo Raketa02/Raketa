@@ -265,6 +265,9 @@ from app.modules.player_record.infrastructure.games_subject_variety import (
 from app.modules.player_record.infrastructure.rating_subject_ratings import (
     RatingSubjectRatings,
 )
+from app.modules.player_record.infrastructure.score_subject_reliability import (
+    ScoreSubjectReliability,
+)
 from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
@@ -272,6 +275,7 @@ from app.modules.player_record.domain.ports import (
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
+    SubjectReliability,
     SubjectVariety,
 )
 from app.modules.player_record.infrastructure.disclosures import (
@@ -972,6 +976,19 @@ def build_subject_variety(
     return GamesSubjectVariety(
         build_opponent_variety_query(session, runtime=runtime)
     )
+
+
+def build_subject_reliability(session: AsyncSession) -> SubjectReliability:
+    """What the platform watched a record's subject do — the pill and its rows.
+
+    Built over ``player_score``'s **published** read and never over the two folds
+    underneath it, which is the same fence every other row here takes: the blend
+    a player is shown is that context's arithmetic, and a second caller reaching
+    past it to ``games`` and ``challenges`` would be a second author of what the
+    number means.
+    """
+
+    return ScoreSubjectReliability(build_published_score_query(session))
 
 
 def build_settled_courts(session: AsyncSession) -> SettledCourts:

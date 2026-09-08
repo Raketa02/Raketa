@@ -185,13 +185,19 @@ class PlayerScore:
         """The number out of a hundred **on the player's own profile.**
 
         The one deliberate blend in this system, and the reason it exists is that
-        a player reads one number about themselves. It is read by two consumers
-        and computed by neither: the reliability floor, whose
-        ``published_score_bar`` prices it, and the player card, which prints it
-        (``docs/adr/0140``). A penalty justified by a figure that exists nowhere
-        a human can look is unexplainable, and a card that printed a figure the
-        player's own profile disagreed with would be worse than a card that said
-        nothing.
+        a player reads one number about themselves. It is read by three consumers
+        and computed by none of them: the reliability floor, whose
+        ``published_score_bar`` prices it, the player card, which prints it
+        (``docs/adr/0140``), and the player record, which prints it **beside the
+        rows it is the mean of** (``docs/adr/0155``). A penalty justified by a
+        figure that exists nowhere a human can look is unexplainable, and a card
+        that printed a figure the player's own profile disagreed with would be
+        worse than a card that said nothing.
+
+        The third consumer is why ``StrandRatio.value`` is worth deriving in one
+        place rather than at each call site: the record prints this number and
+        every figure under it on one screen, so two roundings of one record would
+        be visible side by side.
         """
 
         weighted = sum(

@@ -1415,9 +1415,11 @@ which also settles the clause ADR-0137 opened about whether *shows up* survives 
   the matcher's horizon.
 - **The published number is the player's, not the matcher's.** Its weights live in this context
   and never in a ruleset: a weight release must not change what somebody's own profile says
-  about them. It has two readers — the reliability floor, which prices it, and the player card,
-  which prints it — and **a card explaining a match with a figure the player's own profile
-  disagrees with is worse than a card that says nothing.**
+  about them. It has three readers — the reliability floor, which prices it, the player card,
+  which prints it, and the player record, which prints it **beside the rows it is the mean
+  of** — and **a card explaining a match with a figure the player's own profile disagrees with
+  is worse than a card that says nothing.** The **strand ratios themselves** now cross on that
+  third surface, as a raw pair and the figure derived from it; the weights never do.
 - **It is the platform's observation of a player, so it may not go on the candidate index**
   ([ADR-0111](docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md)).
   It reaches a card through a port at assembly time, on the seam the nickname and the photo
@@ -1491,6 +1493,14 @@ every fact read through the owning context's published port, and one rule of its
   that **returned** the subject, a **live challenge** they are both seated in, a **game** they
   both played, or *being the subject*. **Nothing else, and nothing expires**: a search record
   is kept for ever, so a shorter window could only refuse a face the app is currently showing.
+- **The metered rows** — what the platform *watched* this person do, under the card headed
+  *counted by the system, not written by people*. Each is a **raw pair and its figure**: how
+  many opportunities fell due, how many went the way the strand is named for, and the
+  percentage out of a hundred. Beside them is **the reliability pill** — the published Player
+  Score, which is exactly the number the matcher acts on, so a player working their record back
+  up can watch the penalty lift. Two rows today, `player_score`'s two live strands, read
+  through that context's published port and never recomputed here. **The weights are not on the
+  wire**: they are a fact about how the number is made rather than about the person.
 - **The disclosure's partition** — the sport a disclosure happened in. The four fail-closed
   gates are re-run live on every open **in that sport's partition** and never in whichever
   sport the reader arrived from, because the mutual gender gate reads an index row and the
@@ -1520,6 +1530,15 @@ every fact read through the owning context's published port, and one rule of its
 - **A raw pair crosses, and the sheet divides it.** *Fourteen of twenty* and *seven of ten* are
   the same share and different claims, so the record publishes the two counts and no
   percentage — the same honesty the metered rows print their raw fractions for.
+- **A figure the platform acts on is served, and one it does not is not.** That is why a
+  metered row carries its percentage and opponent variety does not: a strand's figure is
+  derived in exactly one place so that a card, a profile and the matcher's evidence cannot
+  print three roundings of one record, and a client dividing the pair itself would be the
+  fourth. Variety prices no promise and nothing rounds it, so the division is the client's.
+- **A missing zone is omitted whole, never nulled or emptied.** A player with no publishable
+  strand has no reliability section at all — no `player_score` to draw a red pill from and no
+  empty list to head a card with. The three absences on this sheet are three different
+  questions: rated in nothing, no counted game ever played, and nothing ever fallen due.
 
 
 ## Cross-cutting concepts

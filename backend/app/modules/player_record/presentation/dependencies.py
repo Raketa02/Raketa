@@ -40,6 +40,7 @@ from app.bootstrap.composition import (
     build_subject_form,
     build_subject_identity_source,
     build_subject_ratings,
+    build_subject_reliability,
     build_subject_variety,
 )
 from app.modules.matchmaking.presentation.dependencies import (
@@ -57,6 +58,7 @@ from app.modules.player_record.domain.ports import (
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
+    SubjectReliability,
     SubjectVariety,
 )
 
@@ -100,6 +102,15 @@ def get_subject_form(db: DbSession) -> SubjectForm:
 SubjectFormDep = Annotated[SubjectForm, Depends(get_subject_form)]
 
 
+def get_subject_reliability(db: DbSession) -> SubjectReliability:
+    return build_subject_reliability(db)
+
+
+SubjectReliabilityDep = Annotated[
+    SubjectReliability, Depends(get_subject_reliability)
+]
+
+
 def get_subject_variety(db: DbSession) -> SubjectVariety:
     return build_subject_variety(db)
 
@@ -139,6 +150,7 @@ def get_read_player_record(
     photos: RecordPhotoLinkDep,
     ratings: SubjectRatingsDep,
     form: SubjectFormDep,
+    reliability: SubjectReliabilityDep,
     variety: SubjectVarietyDep,
     clock: ClockDep,
 ) -> ReadPlayerRecord:
@@ -148,6 +160,7 @@ def get_read_player_record(
         photos=photos,
         ratings=ratings,
         form=form,
+        reliability=reliability,
         variety=variety,
         clock=clock,
     )
@@ -161,15 +174,18 @@ def get_read_own_record(
     photos: RecordPhotoLinkDep,
     ratings: SubjectRatingsDep,
     form: SubjectFormDep,
+    reliability: SubjectReliabilityDep,
     variety: SubjectVarietyDep,
     clock: ClockDep,
 ) -> ReadOwnRecord:
     """Your own record — **and still not one of these is a gate.**
 
-    Four readers and a clock now, and the property that matters is unchanged:
+    Five readers and a clock now, and the property that matters is unchanged:
     nothing here binds the candidate index, so the one screen that tells a player
     how they appear cannot be taken down by the machinery that gates somebody
-    else's sheet.
+    else's sheet. The reliability read is the one that makes that worth the
+    wiring: the pill is the number deciding who this player is offered to, and a
+    penalty nobody can look up is a penalty nobody can fix.
     """
 
     return ReadOwnRecord(
@@ -177,6 +193,7 @@ def get_read_own_record(
         photos=photos,
         ratings=ratings,
         form=form,
+        reliability=reliability,
         variety=variety,
         clock=clock,
     )

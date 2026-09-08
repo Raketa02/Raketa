@@ -54,13 +54,14 @@ from app.bootstrap.player_record_demands import (
     PLAYER_RECORD_IMPLEMENTATIONS,
     implementations_of,
 )
-from app.engines.matchfit.core import SearchMode
+from app.engines.matchfit.core import ReliabilityStrand, SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.challenges.domain.seats import SeatPlan, court_sides
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
+from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
 from app.modules.matchmaking.domain.ports import AtStake
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
@@ -81,9 +82,14 @@ from app.modules.player_record.domain.ports import (
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
+    SubjectReliability,
     SubjectVariety,
 )
 from app.modules.player_record.domain.record import OpponentVariety
+from app.modules.player_score.domain.strands import (
+    PUBLISHED_WEIGHTS,
+    out_of_a_hundred,
+)
 from app.shared.ids import new_uuid
 
 SPORT = Sport.PADEL
@@ -512,6 +518,123 @@ def test_the_variety_demand_takes_one_player_and_never_a_collection():
 
 
 # ---------------------------------------------------------------------------
+# SubjectReliability — the pill, the rows, and the absence that is not a nought
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectReliability))
+async def test_both_live_strands_cross_as_their_counts_and_their_figure(
+    implementation, session
+):
+    """**The raw pair per row, and the figure derived from it.**
+
+    Two plans, one of which produced a game and one of which nobody ever
+    claimed; two invitations, one answered inside its day and one left to run
+    out. Each strand is a half, and the pair is what makes *one of two* and
+    *twenty of forty* different claims on a sheet.
+    """
+
+    reliability = implementation.build(session)
+    subject, other = new_uuid(), new_uuid()
+    await _a_played_plan(session, subject, other)
+    await _a_ghosted_plan(session, subject, other)
+    answered = await _an_invitation(session, other, subject, at=_ago(days=4))
+    await _answered_by(session, answered, subject, at=_ago(days=4))
+    await _an_invitation(session, other, subject, at=_ago(days=3))
+
+    panel = await reliability.reliability_of(subject, now=_now())
+
+    assert panel is not None
+    assert [
+        (row.strand, row.good, row.opportunities, row.pct) for row in panel.strands
+    ] == [
+        (ReliabilityStrand.SHOWS_UP, 1, 2, 50),
+        (ReliabilityStrand.ANSWERS_CHALLENGES, 1, 2, 50),
+    ]
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectReliability))
+async def test_the_pill_is_the_blend_the_rows_reproduce(implementation, session):
+    """**The pill is the weighted mean of the figures printed beneath it.**
+
+    Asserted by recomputing it from the rows that crossed, through the published
+    weights — which is the honesty the sheet promises: not a number arrived at
+    somewhere else and stated over rows that happen to sit under it.
+
+    The two strands are deliberately unequal here, so a blend that ignored the
+    weights or read them in the wrong order would come out somewhere else.
+    """
+
+    reliability = implementation.build(session)
+    subject, other = new_uuid(), new_uuid()
+    await _a_played_plan(session, subject, other)
+    await _a_ghosted_plan(session, subject, other)
+    answered = await _an_invitation(session, other, subject, at=_ago(days=4))
+    await _answered_by(session, answered, subject, at=_ago(days=4))
+
+    panel = await reliability.reliability_of(subject, now=_now())
+
+    assert panel is not None
+    weighted = sum(PUBLISHED_WEIGHTS[row.strand] * row.pct for row in panel.strands)
+    basis = sum(PUBLISHED_WEIGHTS[row.strand] for row in panel.strands)
+    assert panel.player_score == out_of_a_hundred(weighted, 100 * basis)
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectReliability))
+async def test_a_strand_with_nothing_behind_it_is_absent_and_never_a_nought(
+    implementation, session
+):
+    """One record and not the other is a panel of **one row**.
+
+    Somebody who has answered invitations and never had a plan made for them has
+    a pill built on the strand they have — the three names with no provider and
+    the one with no opportunity are the same absence, and neither drags the
+    number down.
+    """
+
+    reliability = implementation.build(session)
+    subject, other = new_uuid(), new_uuid()
+    answered = await _an_invitation(session, other, subject, at=_ago(days=4))
+    await _answered_by(session, answered, subject, at=_ago(days=4))
+
+    panel = await reliability.reliability_of(subject, now=_now())
+
+    assert panel is not None
+    assert [row.strand for row in panel.strands] == [
+        ReliabilityStrand.ANSWERS_CHALLENGES
+    ]
+    assert panel.player_score == 100
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectReliability))
+async def test_a_player_nothing_has_fallen_due_for_has_no_panel_at_all(
+    implementation, session
+):
+    """**The rule the whole chain is written around.** Nobody has failed to turn
+    up who was never due to, so the answer is nothing rather than a zone of
+    noughts — and *no record* never becomes *a bad record*."""
+
+    reliability = implementation.build(session)
+
+    assert await reliability.reliability_of(new_uuid(), now=_now()) is None
+
+
+@pytest.mark.parametrize("implementation", registered(SubjectReliability))
+async def test_an_invitation_still_inside_its_day_is_no_row_at_all(
+    implementation, session
+):
+    """**An opportunity and never a total.** A seat still inside its window has
+    not been answered *or* missed, and publishing it either way would state a
+    conclusion the clock has not reached."""
+
+    reliability = implementation.build(session)
+    subject, other = new_uuid(), new_uuid()
+    await _an_invitation(session, other, subject, at=_now())
+
+    assert await reliability.reliability_of(subject, now=_now()) is None
+
+
+# ---------------------------------------------------------------------------
 # The world these demands are run against
 # ---------------------------------------------------------------------------
 
@@ -734,3 +857,100 @@ def _a_search(searcher: UUID, shown: UUID) -> SearchRecord:
             ),
         ),
     )
+
+
+def _ago(**offset) -> Instant:
+    """A moment that far behind the clock these demands read ``now`` from."""
+
+    return instant(datetime.now(timezone.utc) - timedelta(**offset))
+
+
+#: Old enough that a plan made then has closed its entry window on silence. Read
+#: off ``games``' own two windows rather than typed, so a change to either moves
+#: this with it instead of leaving a test that passes for the wrong reason.
+_LONG_ENOUGH_TO_GHOST = PLAN_HORIZON + ENTRY_GRACE + timedelta(days=1)
+
+
+def _a_plan(one: UUID, other: UUID, *, at: Instant) -> Game:
+    return Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=SPORT,
+        kind=GameKind.COUNTED,
+        window=Window.TODAY,
+        line_up=LineUp.of(
+            (
+                Seating(side=GameSide.A, player_id=one),
+                Seating(side=GameSide.B, player_id=other),
+            )
+        ),
+        occurred_at=at,
+    )
+
+
+async def _a_played_plan(session, one: UUID, other: UUID) -> None:
+    """A plan that produced a game: somebody said *we played*, with a score."""
+
+    at = _ago(days=3)
+    game = _a_plan(one, other, at=at)
+    game.state_result(
+        by=one,
+        score=Score.of((SetScore(a=6, b=4),)),
+        occurred_at=instant(at + timedelta(hours=2)),
+    )
+    await build_game_repository(
+        session=session,
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    ).save(game)
+    await session.commit()
+
+
+async def _a_ghosted_plan(session, one: UUID, other: UUID) -> None:
+    """A plan nobody ever claimed, old enough that its entry window has shut.
+
+    A ghost is charged to **everybody who was on that court**: a dissolved
+    arrangement is a fact about the court, and there is nobody in it to blame.
+    """
+
+    game = _a_plan(one, other, at=instant(_now() - _LONG_ENOUGH_TO_GHOST))
+    await build_game_repository(
+        session=session,
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    ).save(game)
+    await session.commit()
+
+
+async def _an_invitation(
+    session, organiser: UUID, invitee: UUID, *, at: Instant
+) -> Challenge:
+    """One send through the aggregate — an opportunity to answer, and nothing else."""
+
+    challenge = _sent(organiser, invitee, at=at)
+    await build_challenge_repository(
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    ).save(challenge)
+    await session.commit()
+    return challenge
+
+
+async def _answered_by(
+    session, challenge: Challenge, invitee: UUID, *, at: Instant
+) -> None:
+    """The invitee answers inside their day. **A yes here, and a no would do.**
+
+    *Answers challenges* is the one strand on this platform where turning
+    somebody down is a good outcome: what it prices is silence, not judgement.
+    """
+
+    repository = build_challenge_repository(
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    )
+    loaded = await repository.load(challenge.id)
+    assert loaded is not None
+    loaded.accept(invitee, occurred_at=at)
+    await repository.save(loaded)
+    await session.commit()

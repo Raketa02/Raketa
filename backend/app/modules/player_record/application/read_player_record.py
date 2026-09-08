@@ -27,10 +27,13 @@ the **disclosure**, which is a fact the platform holds. A record refused in a
 sport a client sent would be a client choosing whether it may see somebody
 (``docs/adr/0155``).
 
-**One clock, read once, handed down.** The run of form and the variety fold are
-both folded against an instant, and the record's own gate against the same one —
-two reads of the clock in one response is how a sheet ends up admitting a pair on
-one instant and describing them on another.
+**One clock, read once, handed down.** The run of form, the metered rows and the
+variety fold are all folded against an instant, and the record's own gate against
+the same one — two reads of the clock in one response is how a sheet ends up
+admitting a pair on one instant and describing them on another. It matters most
+on the rows: a plan is a ghost only once its entry window has closed and a seat
+has lapsed only once its day has run out, so two presents would publish a pill
+whose strands disagree with the variety beside them about which games exist.
 """
 
 from __future__ import annotations
@@ -49,6 +52,7 @@ from app.modules.player_record.domain.ports import (
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
+    SubjectReliability,
     SubjectVariety,
 )
 from app.modules.player_record.domain.record import (
@@ -70,6 +74,7 @@ async def assemble_record(
     photos: RecordPhotoLink,
     ratings: SubjectRatings,
     form: SubjectForm,
+    reliability: SubjectReliability,
     variety: SubjectVariety,
 ) -> PlayerRecord:
     """The record itself, once somebody has decided it may be read.
@@ -85,10 +90,11 @@ async def assemble_record(
     rather than being asked and thrown away — which is the difference between a
     newcomer's record being cheap and it being the same price as anybody's.
 
-    **Variety is asked for regardless, because it is about no sport.** The two
-    absences are different questions and the sheet must not conflate them: a
-    person rated in nothing may have played all week, and a person rated in four
-    sports may never have had a game counted.
+    **The rows and the variety are asked for regardless, because neither is about
+    a sport.** The three absences are three different questions and the sheet must
+    not conflate them: a person rated in nothing may have played all week, a
+    person rated in four sports may never have had a game counted, and a person
+    with a full record of games may have had nothing at all *fall due*.
     """
 
     identity = await identities.identity_of(subject_id)
@@ -121,6 +127,7 @@ async def assemble_record(
         photo_url=photo_url,
         sports=pills_of(held),
         skill=skill,
+        reliability=await reliability.reliability_of(subject_id, now=now),
         variety=await variety.variety_of(subject_id, now=now),
     )
 
@@ -156,6 +163,7 @@ class ReadPlayerRecord:
         photos: RecordPhotoLink,
         ratings: SubjectRatings,
         form: SubjectForm,
+        reliability: SubjectReliability,
         variety: SubjectVariety,
         clock: Clock,
     ) -> None:
@@ -164,6 +172,7 @@ class ReadPlayerRecord:
         self._photos = photos
         self._ratings = ratings
         self._form = form
+        self._reliability = reliability
         self._variety = variety
         self._clock = clock
 
@@ -202,6 +211,7 @@ class ReadPlayerRecord:
             photos=self._photos,
             ratings=self._ratings,
             form=self._form,
+            reliability=self._reliability,
             variety=self._variety,
         )
 
@@ -223,6 +233,7 @@ class ReadOwnRecord:
         photos: RecordPhotoLink,
         ratings: SubjectRatings,
         form: SubjectForm,
+        reliability: SubjectReliability,
         variety: SubjectVariety,
         clock: Clock,
     ) -> None:
@@ -230,6 +241,7 @@ class ReadOwnRecord:
         self._photos = photos
         self._ratings = ratings
         self._form = form
+        self._reliability = reliability
         self._variety = variety
         self._clock = clock
 
@@ -247,6 +259,7 @@ class ReadOwnRecord:
             now=self._clock.now(),
             ratings=self._ratings,
             form=self._form,
+            reliability=self._reliability,
             variety=self._variety,
             identities=self._identities,
             photos=self._photos,

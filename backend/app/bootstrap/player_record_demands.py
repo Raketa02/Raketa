@@ -4,8 +4,8 @@
 ``matcher_demands.py`` holds the ports the matcher declares of contexts it does
 not write; ``games_demands.py``, ``rating_demands.py`` and
 ``player_score_demands.py`` each hold what one **provider** publishes outward.
-This one is the matcher's kind: a context that writes nothing and asks seven
-questions of six others. Rows of the two kinds in one list would make every
+This one is the matcher's kind: a context that writes nothing and asks eight
+questions of seven others. Rows of the two kinds in one list would make every
 exhaustiveness assertion a claim about something else, and the first person to
 add a row would have to guess which.
 
@@ -20,7 +20,9 @@ signs half a contract* true of a port with more than one signatory.
 
 **A row carries a builder over a session**, not an instance, so the suite cannot
 quietly excuse the implementations with a database behind them — which here is
-seven of the nine.
+every row but one. The exception is the photo link, which signs a request that is
+never sent and takes a session it does not use, so that a register row stays *a
+builder over a session* and nothing else.
 
 **A port with nothing registered is a red build**, asserted against
 ``PLAYER_RECORD_DEMANDS``, because a port added in a hurry would otherwise look
@@ -50,6 +52,7 @@ from app.bootstrap.composition import (
     build_record_photo_link,
     build_search_disclosure,
     build_subject_identity_source,
+    build_subject_reliability,
     build_subject_variety,
 )
 from app.bootstrap.matcher_demands import RegisteredImplementation
@@ -63,6 +66,7 @@ from app.modules.player_record.domain.ports import (
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
+    SubjectReliability,
     SubjectVariety,
 )
 
@@ -170,6 +174,11 @@ PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=SubjectForm,
         name="GamesSubjectForm",
         build=build_subject_form,
+    ),
+    RegisteredImplementation(
+        port=SubjectReliability,
+        name="ScoreSubjectReliability",
+        build=build_subject_reliability,
     ),
     RegisteredImplementation(
         port=SubjectVariety,

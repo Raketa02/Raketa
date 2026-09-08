@@ -31,11 +31,14 @@ from app.modules.player_record.application.read_player_record import (
     ReadPlayerRecord,
 )
 from app.modules.player_record.domain.errors import RecordUnavailable
+from app.engines.matchfit.core import ReliabilityStrand
 from app.modules.player_record.domain.record import (
     GameOutcome,
     LikelyRange,
     OnCourtVerdict,
     OpponentVariety,
+    ReliabilityPanel,
+    StrandRow,
     SubjectIdentity,
     SubjectRating,
 )
@@ -109,6 +112,32 @@ class Form:
         return self.run
 
 
+def a_panel(*, pct: int = 90) -> ReliabilityPanel:
+    return ReliabilityPanel(
+        player_score=pct,
+        strands=(
+            StrandRow(
+                strand=ReliabilityStrand.SHOWS_UP,
+                good=9,
+                opportunities=10,
+                pct=pct,
+            ),
+        ),
+    )
+
+
+class Reliability:
+    def __init__(self, panel: ReliabilityPanel | None = None) -> None:
+        self.panel = panel
+        self.asked: list[UUID] = []
+
+    async def reliability_of(
+        self, player_id: UUID, *, now: Instant
+    ) -> ReliabilityPanel | None:
+        self.asked.append(player_id)
+        return self.panel
+
+
 class Variety:
     def __init__(self, pair: OpponentVariety | None = None) -> None:
         self.pair = pair
@@ -144,6 +173,7 @@ def reading(
     identity: SubjectIdentity | None,
     ratings: Ratings | None = None,
     form: Form | None = None,
+    reliability: Reliability | None = None,
     variety: Variety | None = None,
 ):
     identities, links = Identities(identity), Links()
@@ -153,6 +183,7 @@ def reading(
         photos=links,
         ratings=ratings or Ratings(),
         form=form or Form(),
+        reliability=reliability or Reliability(),
         variety=variety or Variety(),
         clock=Clock(),
     )
@@ -191,8 +222,12 @@ async def test_a_refused_read_touches_no_provider():
     exists to prevent."""
 
     variety = Variety(OpponentVariety(distinct_opponents=9, games_played=11))
+    reliability = Reliability(a_panel())
     use_case, identities, links = reading(
-        admits=False, identity=an_identity(), variety=variety
+        admits=False,
+        identity=an_identity(),
+        reliability=reliability,
+        variety=variety,
     )
 
     with pytest.raises(RecordUnavailable):
@@ -200,6 +235,7 @@ async def test_a_refused_read_touches_no_provider():
 
     assert identities.asked == []
     assert links.asked == []
+    assert reliability.asked == []
     assert variety.asked == []
 
 
@@ -235,6 +271,7 @@ async def test_your_own_record_is_read_with_no_admission_collaborator_at_all():
         photos=links,
         ratings=Ratings(),
         form=Form(),
+        reliability=Reliability(),
         variety=Variety(),
         clock=Clock(),
     ).execute(reader_id=READER)
@@ -253,6 +290,7 @@ async def test_a_reader_whose_own_identity_cannot_be_read_is_refused_alike():
             photos=Links(),
             ratings=Ratings(),
             form=Form(),
+            reliability=Reliability(),
             variety=Variety(),
             clock=Clock(),
         ).execute(reader_id=READER)
@@ -271,6 +309,7 @@ async def test_the_sport_asked_for_reaches_the_sheet_and_never_the_admission():
         photos=Links(),
         ratings=Ratings({Sport.SQUASH: a_rating(Sport.SQUASH)}),
         form=form,
+        reliability=Reliability(),
         variety=Variety(),
         clock=Clock(),
     )
@@ -395,3 +434,57 @@ async def test_a_player_rated_in_nothing_is_still_asked_how_widely_they_play():
     assert record.skill is None
     assert record.variety == OpponentVariety(distinct_opponents=2, games_played=3)
     assert variety.asked == [SUBJECT]
+
+
+async def test_the_record_carries_the_pill_and_the_rows_behind_it():
+    """**The number the matcher acts on, and what it was the mean of.** Nothing
+    here is computed: the panel arrives from the context that owns the
+    arithmetic, and the assembler puts it on the sheet."""
+
+    reliability = Reliability(a_panel(pct=90))
+    use_case, _, _ = reading(
+        admits=True, identity=an_identity(), reliability=reliability
+    )
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert record.reliability == a_panel(pct=90)
+    assert reliability.asked == [SUBJECT]
+
+
+async def test_a_player_nothing_has_fallen_due_for_carries_no_panel():
+    """**A third absence, and it is its own.** Somebody rated in four sports who
+    has played all year may still have had no plan reach the end of its entry
+    window and no seat reach its deadline — and the zone is omitted rather than
+    drawn at nought."""
+
+    use_case, _, _ = reading(
+        admits=True,
+        identity=an_identity(),
+        reliability=Reliability(None),
+        variety=Variety(OpponentVariety(distinct_opponents=3, games_played=4)),
+    )
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert record.reliability is None
+    assert record.variety is not None
+
+
+async def test_a_player_rated_in_nothing_is_still_asked_what_was_watched():
+    """Like variety and unlike the run of form, the rows are about no sport —
+    so a newcomer the sheet resolves no sport for is still asked."""
+
+    reliability = Reliability(a_panel())
+    use_case, _, _ = reading(
+        admits=True,
+        identity=an_identity(),
+        ratings=Ratings({}),
+        reliability=reliability,
+    )
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert record.skill is None
+    assert record.reliability == a_panel()
+    assert reliability.asked == [SUBJECT]

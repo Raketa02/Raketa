@@ -23,14 +23,24 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.bootstrap.composition import (
+    build_challenge_repository,
     build_domain_event_store,
     build_event_publisher,
     build_game_repository,
 )
+from app.engines.matchfit.core import ReliabilityStrand
 from app.kernel import Sport, instant
+from app.modules.challenges.domain.challenge import Challenge
+from app.modules.challenges.domain.origins import SentFromSearch
+from app.modules.challenges.domain.seats import SeatPlan, court_sides
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
+from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
+from app.modules.player_score.domain.strands import (
+    PUBLISHED_WEIGHTS,
+    out_of_a_hundred,
+)
 from app.modules.matchmaking.presentation.dependencies import get_candidate_source
 from app.modules.player_profile.domain.availability import Window
 from app.modules.rating.domain.events import RatingInitialised
@@ -162,6 +172,108 @@ async def a_confirmed_game(
             events=build_event_publisher(session),
         ).save(game)
         await session.commit()
+
+
+async def a_ghosted_plan(session_factory, a: UUID, b: UUID, *, sport: Sport):
+    """A plan nobody ever claimed, old enough that its entry window has shut.
+
+    The miss half of *shows up*, and it is charged to **everybody who was on that
+    court**: a dissolved arrangement is a fact about the court and there is
+    nobody in it to blame. The age is read off ``games``' own two windows rather
+    than typed, so a change to either moves this with it.
+    """
+
+    # A day past the far edge of both windows, so the plan's entry window has
+    # certainly shut. Read off ``games``' own two constants rather than typed, so
+    # a change to either moves this with it.
+    made = instant(
+        datetime.now(timezone.utc) - PLAN_HORIZON - ENTRY_GRACE - timedelta(days=1)
+    )
+    game = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=sport,
+        kind=GameKind.COUNTED,
+        window=Window.TODAY,
+        line_up=LineUp.of(
+            (
+                Seating(side=GameSide.A, player_id=a),
+                Seating(side=GameSide.B, player_id=b),
+            )
+        ),
+        occurred_at=made,
+    )
+    async with session_factory() as session:
+        await build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        ).save(game)
+        await session.commit()
+
+
+async def an_answered_invitation(
+    session_factory, organiser: UUID, invitee: UUID, *, sport: Sport
+):
+    """One send, answered inside its day — the good half of *answers challenges*.
+
+    Written through the aggregate, seat origins and empty seats and all, because
+    what the strand folds is the seat's own history and a row assembled by hand
+    is not one the platform could have written.
+    """
+
+    at = instant(datetime.now(timezone.utc) - timedelta(days=4))
+    sides = court_sides(sport)
+    occupants: list[UUID | None] = [organiser, invitee]
+    occupants += [None] * (len(sides) - len(occupants))
+    challenge = Challenge.sent(
+        challenge_id=new_uuid(),
+        sport=sport,
+        mode=None,
+        window=Window.THIS_WEEK,
+        organiser_id=organiser,
+        arrangement=[
+            SeatPlan(
+                side=side,
+                player_id=occupant,
+                origin=(
+                    SentFromSearch(search_id=new_uuid(), position=seat)
+                    if occupant == invitee
+                    else None
+                ),
+            )
+            for seat, (side, occupant) in enumerate(
+                zip(sides, occupants, strict=True), 1
+            )
+        ],
+        occurred_at=at,
+    )
+    challenge.accept(invitee, occurred_at=at)
+    async with session_factory() as session:
+        await build_challenge_repository(
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        ).save(challenge)
+        await session.commit()
+
+
+def every_key(payload) -> list[str]:
+    """Every property name anywhere in a response, however deeply nested.
+
+    Keys rather than the raw text, deliberately: a tag id or a handle that
+    happened to contain the word would make a text search fail for a reason that
+    has nothing to do with the rule being kept.
+    """
+
+    if isinstance(payload, dict):
+        return [
+            name
+            for key, value in payload.items()
+            for name in (key, *every_key(value))
+        ]
+    if isinstance(payload, list):
+        return [name for one in payload for name in every_key(one)]
+    return []
 
 
 def without_the_trace(response) -> str:
@@ -670,3 +782,148 @@ async def test_your_own_record_carries_the_same_pair(
 
     assert body["is_self"] is True
     assert body["variety"] == {"distinct_opponents": 1, "games_played": 1}
+
+
+# ---------------------------------------------------------------------------
+# What the platform watched — the pill and the metered rows
+# ---------------------------------------------------------------------------
+
+
+async def test_each_strand_crosses_as_its_raw_pair_and_its_own_figure(
+    client, session_factory, candidate_source, searcher
+):
+    """**A perfect record over nine and one over forty are different claims**,
+    and a bar alone hides which — so the two counts cross beside the figure.
+
+    One plan that produced a game and one nobody ever claimed: an opportunity
+    each, one of them good.
+    """
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    await a_confirmed_game(
+        session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
+    )
+    await a_ghosted_plan(session_factory, subject, searcher["id"], sport=Sport.PADEL)
+
+    body = (await record_of(client, searcher["token"], subject)).json()
+
+    assert body["reliability"]["strands"] == [
+        {"strand": "SHOWS_UP", "good": 1, "opportunities": 2, "pct": 50}
+    ]
+    assert body["reliability"]["player_score"] == 50
+
+
+async def test_the_pill_is_the_blend_a_reader_can_take_from_the_rows(
+    client, session_factory, candidate_source, searcher
+):
+    """**The published figure is the weighted mean of the figures beneath it**,
+    recomputed here through the published weights from the rows that actually
+    crossed.
+
+    The two strands are deliberately unequal, so a pill blended without the
+    weights — or one taken over the unrounded ratios — would land somewhere else.
+    """
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    await a_confirmed_game(
+        session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
+    )
+    await a_ghosted_plan(session_factory, subject, searcher["id"], sport=Sport.PADEL)
+    await an_answered_invitation(
+        session_factory, searcher["id"], subject, sport=Sport.PADEL
+    )
+
+    reliability = (await record_of(client, searcher["token"], subject)).json()[
+        "reliability"
+    ]
+
+    assert [row["strand"] for row in reliability["strands"]] == [
+        "SHOWS_UP",
+        "ANSWERS_CHALLENGES",
+    ]
+    weighted = sum(
+        PUBLISHED_WEIGHTS[ReliabilityStrand(row["strand"])] * row["pct"]
+        for row in reliability["strands"]
+    )
+    basis = sum(
+        PUBLISHED_WEIGHTS[ReliabilityStrand(row["strand"])]
+        for row in reliability["strands"]
+    )
+    assert reliability["player_score"] == out_of_a_hundred(weighted, 100 * basis)
+
+
+async def test_no_weight_crosses_on_this_response_in_any_shape(
+    client, session_factory, candidate_source, searcher
+):
+    """**The weights are a fact about how the number is made, not about the
+    person.** A client holding them could draw one strand as worth more than
+    another, which no screen here claims — and could re-derive the pill, which is
+    a second rounding of a figure the matcher acts on."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    await an_answered_invitation(
+        session_factory, searcher["id"], subject, sport=Sport.PADEL
+    )
+
+    body = (await record_of(client, searcher["token"], subject)).json()
+
+    assert body["reliability"]["strands"]
+    assert [name for name in every_key(body) if "weight" in name.lower()] == []
+
+
+async def test_a_player_nothing_has_fallen_due_for_has_no_section_at_all(
+    client, session_factory, candidate_source, searcher
+):
+    """**Omitted whole, and never a section of noughts.** Nobody has failed to
+    turn up who was never due to, and a zero here is how *no record* becomes *a
+    bad record* on the one screen nobody can appeal.
+
+    **No field of it is nulled or emptied either** — there is no `reliability`
+    key at all, so there is no `player_score: 0` to draw a red pill from and no
+    empty `strands` to draw a heading over.
+
+    This subject has a Level, which is the other half of the claim: the sheet
+    draws what exists, and a newcomer reads as a newcomer rather than as a
+    failure.
+    """
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+
+    body = (await record_of(client, searcher["token"], subject)).json()
+
+    assert "reliability" not in body
+    assert body["skill"] is not None
+
+
+async def test_your_own_record_carries_the_number_that_decides_your_exposure(
+    client, session_factory, searcher
+):
+    """*How others see you* draws the pill the matcher acts on — which is the
+    whole argument for the screen: a penalty nobody can look up is a penalty
+    nobody can fix, and a player working their record back up must be able to
+    watch it lift."""
+
+    await a_ghosted_plan(session_factory, searcher["id"], uuid4(), sport=Sport.PADEL)
+
+    body = (await own_record(client, searcher["token"])).json()
+
+    assert body["is_self"] is True
+    assert body["reliability"] == {
+        "player_score": 0,
+        "strands": [
+            {"strand": "SHOWS_UP", "good": 0, "opportunities": 1, "pct": 0}
+        ],
+    }
+    # **And the two absences are different questions**, which this arrangement
+    # is the proof of: a plan that dissolved is an opportunity and is not a game
+    # anybody played, so there are rows here and no variety at all. `0` is a
+    # measured figure on a row that exists; an omitted zone is not a nought.
+    assert "variety" not in body

@@ -455,9 +455,17 @@ allow_indirect_imports = false
 # layer importing `CardIdentity` would look like a sensible reuse in the diff.
 #
 # `allow_indirect_imports = false`, and it is affordable because these two layers
-# genuinely import nothing but the kernel and each other. The strict flag is what
-# catches the interesting version — a domain module that reaches somebody else's
-# type through a shared helper has borrowed it exactly as completely.
+# import nothing but the kernel, the engines and each other. The strict flag is
+# what catches the interesting version — a domain module that reaches somebody
+# else's type through a shared helper has borrowed it exactly as completely.
+#
+# The engines are deliberately **not** on the forbidden list, and `ReliabilityStrand`
+# is the one name read from there: `app/engines/` is the pure layer every context
+# reads and none of them owns, exactly as the kernel is, so importing from it is not
+# reaching sideways. `player_score` already made that argument about these same five
+# names — a locally-declared copy would satisfy every protocol in the suite while
+# being free to drift — and the strand codes are on the player contract under that
+# enum's own spelling, so a second one would hand a client two words for one strand.
 #
 # The forbidden list is **spelled out rather than wildcarded**, and that carries a
 # cost worth naming: a context nobody has written yet is not on it, so the day an

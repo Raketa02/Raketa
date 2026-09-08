@@ -330,3 +330,54 @@ eventually disagree on the same screen.
 **Nothing else moves.** The four refusals are still one refusal, admission is still read through
 a prior disclosure with no expiry, your own record still has no gates, and this context still
 stores nothing at all.
+
+## Amendment — 2026-09-08: the two live strands, and an eighth demand
+
+Building the metered rows ([#381](https://github.com/Raketa02/Raketa/issues/381)) cashed the
+second of §6's three forward references. Nothing new is computed anywhere: the raw counts
+already existed in `player_score`'s domain and were never put on a wire, so what changed is
+that the caller stopped throwing them away.
+
+**§6's demands are eight.** `SubjectReliability` answers *what has the platform watched this
+person do* — the published Player Score and the rows it is the mean of. It is the **first
+demand here whose provider reads a set**: `PublishedScoreQuery` answers about a whole
+collection because the matcher asks it once per search over every candidate still standing, and
+the narrowing to one person happens in the adapter. That is the mirror of `SubjectVariety`,
+where the single-player signature is a fence against an unbounded fold; here it is the record's
+own shape refusing to inherit the shape of somebody else's caller.
+
+**The raw pair crosses, and so does the figure — and the difference from opponent variety is
+the argument.** Variety publishes two counts and no percentage, because the division is a
+drawing decision and the figure prices no promise. A strand's figure is different in kind: it
+is the number the platform **acts** on. `StrandRatio.value` is derived in one place precisely
+so that a card, a profile and the matcher's evidence cannot print three roundings of one
+record, and a client dividing `good` by `opportunities` would be the fourth. So all three
+cross, and the two counts are what keep a perfect record over nine and one over forty visibly
+different claims.
+
+**The weights stay off the wire.** The blend arrives already taken, and no row carries its
+weight. They are a fact about how the number is made rather than about the person, and a client
+holding them could both re-derive the pill — the fourth rounding again — and draw one strand as
+worth more than another, which no screen here claims. It is also the boundary
+[ADR-0140](0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)
+drew: these weights live in `player_score` and never in a ruleset, because a weight release must
+not change what somebody's own profile says about them.
+
+**A third absence, asking a third question.** A player with no publishable strand has the whole
+zone omitted — no `player_score` to draw a red pill from and no empty `strands` to head a card
+with. It is not `skill`'s absence, and it is not `variety`'s: a plan that dissolved and a seat
+that ran out are opportunities here and neither is a game anybody played. Nobody has failed to
+turn up who was never due to.
+
+**§6's second-spelling rule has one exception, and it is argued rather than taken.**
+`ReliabilityStrand` is imported from `app/engines/matchfit/` rather than respelled. What §6
+refuses is borrowing another *context's* domain types; the engines are the pure layer every
+context reads and none of them owns, exactly as the kernel is — and `player_score` already made
+this argument about these same five names, in the `.importlinter` note beside its own contract.
+A second spelling would also put two words for one strand in front of a client, since the codes
+are already on the player contract under that enum's own name.
+
+**Nothing else moves.** The four refusals are still one refusal, admission is still read through
+a prior disclosure with no expiry, your own record still has no gates — and it now carries the
+number that decides who they are offered to, which was the point of the screen — and this
+context still stores nothing at all.

@@ -1,4 +1,4 @@
-"""What this context asks of contexts it does not write. **Seven demands.**
+"""What this context asks of contexts it does not write. **Eight demands.**
 
 ``docs/adr/0098``'s consumer-driven shape, and this is the second *consumer*
 register on the platform after the matcher's. Every port here is declared in
@@ -12,14 +12,17 @@ no aggregate, no table and no migration; every fact it publishes it reads throug
 the owning context's published port, and the one thing it decides for itself is
 whether the reader may see any of them.
 
-**Five of the seven are single-player reads and say so in their signatures.** A
+**Six of the eight are single-player reads and say so in their signatures.** A
 record is one person opened by a deliberate tap, so a set-shaped port here would
 be a contract nobody can honour cheaply for a caller that never batches — the
 mirror of the rule every read in ``matchmaking`` takes, where the caller always
 has twenty rows and asks once. On ``SubjectVariety`` that signature is a **fence
 rather than a convenience**: the fold behind it is deliberately unbounded, and a
 set-shaped version would be an invitation to call a career statistic inside a
-walk over five hundred candidates.
+walk over five hundred candidates. On ``SubjectReliability`` it runs the other
+way — the provider's own read is set-shaped for a caller that holds five hundred
+candidates, and the narrowing to one person happens in the adapter, so the shape
+of somebody else's caller does not reach a sheet that will never batch.
 
 **One sport crosses two of them, and it is the same sport both times.** The sheet
 is *about* one sport, resolved in ``domain/sport_choice.py`` from what the reader
@@ -47,6 +50,7 @@ from app.kernel import Instant, Sport
 from app.modules.player_record.domain.record import (
     GameOutcome,
     OpponentVariety,
+    ReliabilityPanel,
     SubjectIdentity,
     SubjectRating,
 )
@@ -235,6 +239,51 @@ class SubjectForm(Protocol):
 
 
 @runtime_checkable
+class SubjectReliability(Protocol):
+    """What the platform watched this person do — the pill and its rows.
+
+    **The number the matcher acts on, and the rows it is the mean of.** The pill
+    is the *published* Player Score at the player's own weights and never the
+    matcher's per-mode blend of the same names, because a player who works their
+    record back up must be able to watch the penalty lift — which is only true
+    while the figure they can look at is the figure that demotes them.
+
+    **The weights do not cross this port.** The blend arrives already taken. A
+    row carrying its weight would let a reader re-derive the pill — a second
+    rounding of a number the platform acts on — and would invite a sheet drawing
+    one strand as worth more than another, which nothing on this surface claims.
+
+    **One player, and this is the one demand here whose provider reads a set.**
+    ``PublishedScoreQuery`` answers about a whole collection, because the matcher
+    asks it once per search over every candidate still standing. A record is one
+    deliberate tap, so the narrowing is the adapter's and this signature is the
+    caller's own shape.
+    """
+
+    async def reliability_of(
+        self, player_id: UUID, *, now: Instant
+    ) -> ReliabilityPanel | None:
+        """Their pill and their metered rows, or **nothing at all**.
+
+        ``None`` for somebody the platform has watched nothing of — no plan that
+        reached the end of its entry window, no seat that reached its deadline.
+        The zone is omitted rather than drawn at nought, because nobody has
+        failed to turn up who was never due to, and a section of noughts is how
+        *no record* becomes *a bad record* on the one screen that cannot be
+        appealed.
+
+        A strand nobody can publish is missing from the rows the same way, so a
+        panel that exists carries only what was actually observed.
+
+        ``now`` is taken rather than read, because both live strands are facts
+        about an instant — a plan is a ghost once its window has closed, a seat
+        has lapsed once its day has run out — and every figure on one response is
+        folded against one present.
+        """
+        ...
+
+
+@runtime_checkable
 class SubjectVariety(Protocol):
     """How widely this person spreads their games — over their **whole** record.
 
@@ -284,6 +333,7 @@ PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
     RecordGates,
     SubjectRatings,
     SubjectForm,
+    SubjectReliability,
     SubjectVariety,
 )
 
@@ -296,5 +346,6 @@ __all__ = [
     "SubjectForm",
     "SubjectIdentitySource",
     "SubjectRatings",
+    "SubjectReliability",
     "SubjectVariety",
 ]
