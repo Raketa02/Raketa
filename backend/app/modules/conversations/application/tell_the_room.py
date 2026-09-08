@@ -1,10 +1,10 @@
 """**The room is told, through the outbox, by contexts that do not know it
 exists.**
 
-``docs/adr/0146`` §5. ``challenges`` and ``games`` publish; this subscribes; and
-neither publisher gains a line of code about a conversation. That ignorance is
-the whole of the argument — the moment ``challenges`` knows a room exists, the
-two ship as one thing.
+``docs/adr/0146`` §5. ``challenges``, ``games`` and ``plans`` publish; this
+subscribes; and no publisher gains a line of code about a conversation. That
+ignorance is the whole of the argument — the moment ``challenges`` knows a room
+exists, the two ship as one thing.
 
 **It is a subscriber and never a participant in anybody's transaction.** The two
 alternatives were refused by name: an *inline port* — the shape ``challenges``
@@ -65,7 +65,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from app.application.events import DeliveryContext
-from app.kernel import Instant, instant
+from app.kernel import Instant, instant, minute_of_day
 from app.modules.challenges.domain.events import (
     ChallengeOpenedFromMutualInterest,
     SeatAccepted,
@@ -78,6 +78,7 @@ from app.modules.conversations.application.telling import line_for
 from app.modules.conversations.domain.entries import (
     COUNT,
     DEPARTURE,
+    VALUE,
     SeatDeparture,
     SystemLineCode,
 )
@@ -89,6 +90,12 @@ from app.modules.conversations.domain.ports import (
     PlayedCourt,
 )
 from app.modules.games.domain.events import GamePlanned, GamePlayed
+from app.modules.plans.domain.events import (
+    DayRecorded,
+    HourRecorded,
+    PlaceRecorded,
+)
+from app.modules.plans.domain.slots import as_wall_time
 from app.shared.domain import DomainEvent
 
 
@@ -96,10 +103,10 @@ from app.shared.domain import DomainEvent
 class TellTheRoom:
     """One handler for every event this room is told about.
 
-    One class rather than seven, because the seven share a single shape — *find
-    the room this is about, and either open it or write one line into it* — and
-    the interesting differences are three lines each. Seven classes would put the
-    shared shape in seven places, which is where a redelivery gets handled six
+    One class rather than one per event, because they share a single shape —
+    *find the room this is about, and either open it or write one line into it* —
+    and the interesting differences are three lines each. A class each would put
+    the shared shape in ten places, which is where a redelivery gets handled nine
     times.
     """
 
@@ -165,6 +172,8 @@ class TellTheRoom:
             await self._note_game(event)
         elif isinstance(event, GamePlayed):
             await self._said_they_played(event, context)
+        elif isinstance(event, (PlaceRecorded, DayRecorded, HourRecorded)):
+            await self._a_slot_was_recorded(event, context)
 
     # -- opening ----------------------------------------------------------
 
@@ -259,6 +268,42 @@ class TellTheRoom:
             occurred_at=instant(event.occurred_at),
         )
 
+    # -- being told about the plan ----------------------------------------
+
+    async def _a_slot_was_recorded(
+        self,
+        event: PlaceRecorded | DayRecorded | HourRecorded,
+        context: DeliveryContext,
+    ) -> None:
+        """One slot, one line, and the value is the only thing that travels.
+
+        **Found through the game and not the challenge**, which is what the
+        ``game_id`` on all three plan events buys: a plan exists only for a game,
+        so the room is the one whose line-up completed into it.
+
+        A room that is not there is a **safe drop and not a coin flip**. A plan
+        cannot be written before its game exists, and the game's own
+        ``GamePlanned`` was published in a strictly earlier transaction — so by
+        the time this arrives the room either knows its game or was never opened
+        at all, and there is nothing to hang the line on and nothing to retry.
+
+        **Three codes and one shape.** Which slot it was is the code's business;
+        what was written is the value's; and *set* against *changed* is nobody's,
+        because they are the same fact told twice.
+        """
+
+        room = await self._directory.for_game(event.game_id)
+        if room is None:
+            return
+        await self._write_line(
+            room,
+            code=line_for(event),
+            actor_id=event.recorded_by,
+            values={VALUE: _slot_value(event)},
+            source_event_id=context.event_id,
+            occurred_at=instant(event.occurred_at),
+        )
+
     # -- the shared shape --------------------------------------------------
 
     async def _line_in(
@@ -317,3 +362,25 @@ class TellTheRoom:
         )
         await self._conversations.save(room)
         await self._nudges.nudge(Nudge.about(room))
+
+
+def _slot_value(
+    event: PlaceRecorded | DayRecorded | HourRecorded,
+) -> str:
+    """What a slot line carries. **A value, never a sentence** (``docs/adr/0022``).
+
+    The place as it was typed, the day as an ISO date, and the hour as a clock
+    face — each a thing the client formats rather than a thing it prints.
+
+    **The hour is spelled by the Plan and never here.** It is stored as a minute
+    of the local day, and this calls that context's own inverse rather than
+    formatting one: the spelling belongs to whoever owns the value, and a second
+    ``divmod(minute, 60)`` in this file is how a line and the wire start
+    disagreeing about 18:00.
+    """
+
+    if isinstance(event, PlaceRecorded):
+        return event.place
+    if isinstance(event, DayRecorded):
+        return event.day
+    return as_wall_time(minute_of_day(event.minute_of_day)).isoformat("minutes")

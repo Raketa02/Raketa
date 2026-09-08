@@ -22,9 +22,10 @@ make openapi     # emit openapi.{player,dev}.json — the player contract the cl
 make gen-walkthroughs  # rewrite the matchmaking golden files (a diff is a design change)
 make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis); logs, shell
 make migrate     # alembic upgrade head inside the API container
-make seed        # the named accounts, the cohort and the games they have played, then
-                 # reads every Play screen as the protagonist and refuses a database
-                 # that cannot draw one. Needs the stack up (Postgres + Redis, and
+make seed        # the named accounts, the cohort, the games they have played and four
+                 # more nobody has played — whose plans reach nought, one, two and
+                 # three slots — then reads every Play screen as the protagonist
+                 # and refuses a database that cannot draw one. Needs the stack up (Postgres + Redis, and
                  # MinIO for the three photographs — without it the run says so and
                  # seeds the rest); make seed-host on the host
                  # Then http://localhost:8000/dev — the dev console, the thing that answers
@@ -558,6 +559,37 @@ Rules to preserve:
   telling**: `GamePlanned` reaches the room, draws nothing, and is where the room learns its
   game. Not built here: the **destruction** ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
   #359).
+- **A plan is the game's, and it is born by being used**
+  ([ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md),
+  [ADR-0145](../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md),
+  [ADR-0148](../docs/adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md)).
+  `app/modules/plans/` is the ninth context and the third event-sourced racket-sport one; it
+  adds **no table and no migration**, because the streams live in `event_store` beside
+  everybody else's. Six things about it are load-bearing.
+  **Its aggregate id is the game's**, so *one plan per game for ever* is a fact about the
+  store rather than a rule a caller keeps — and it is the one context here whose reads need
+  no payload match: *this game's plan* is a stream read and *these games' plans* is an `IN`.
+  **Nothing is written at birth**: there is no opening event, no subscriber to `GamePlanned`
+  and no outbox hop, so *no plan* is what a game with nothing agreed draws and the first
+  slot write is the birth. **Three events and no fourth** — a place, a day and an hour
+  recorded — because *setting a slot and moving one are the same event told with two
+  sentences*; there is no completion event (the third recording **is** the completion), no
+  clearing event and no cancel. **Nothing derived is stored**: not the slot count, not the
+  agreed point, and `planned_at` is never written — it keeps meaning *when it became a
+  game*, and the plan writes to `games` at no point at all. **The game leaving
+  `AWAITING_ENTRY` is the only thing that freezes the slots**, read through *one port asking
+  one question* — `PlanningCourt`, which `games` publishes and which answers with the two
+  refusals a slot write can produce plus the anchor its horizon is measured from. And
+  **one platform zone**, `Europe/Warsaw`, recorded as a locale assumption in the shape
+  `availability.py`'s `_WEEKEND` already uses, with its falsifier named: the first shard
+  whose players are somewhere else. The conversion goes through the kernel's `slot_start`
+  and nowhere else — **a dead function comes alive**, since it was written for the booking
+  grid the 2026-08-25 reset deleted and had no caller in `app/` until now.
+  Two cross-module facts are deliberate and both run one way. `PLAN_HORIZON` **stays in
+  `games/domain/windows.py` and `plans` imports it**, because its interlock with
+  `ENTRY_GRACE` is the argument and two numbers whose relationship is the argument must not
+  be separated; and **`games` may not import the Plan**, which is ADR-0145 §4's *"beside
+  that context without being let into it"* made checkable — `.importlinter` holds it.
 - **The live channel carries a nudge, and nothing else is on the wire**
   ([ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)).
   `GET /conversations/{id}/stream` is the platform's **first real-time surface**, and it is
@@ -658,17 +690,24 @@ tests.
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Six registers, and they are six on purpose — one per kind of claim.**
+  **Seven registers, and they are seven on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` holds the ports the *matcher* declares of contexts it
   does not write; `games_demands.py`, `rating_demands.py` and `player_score_demands.py`
   each hold the ports one *provider* publishes outward; `challenge_demands.py` holds
   what `challenges` demands of the **matcher** — the arrow's other direction, which
   arrived with the challenge detail read
   ([ADR-0143](../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md));
-  and `conversation_demands.py` holds what a **room** demands of the three contexts it is
-  told by and reads from. There is deliberately no *conversations provider* register and
-  there never will be: a conversation is told and tells nothing, so it has no consumers and
-  publishes no port.
+  `conversation_demands.py` holds what a **room** demands of the three contexts it is
+  told by and reads from; and `plan_demands.py` holds the one fact a **plan** demands about
+  a *person*. There is deliberately no *conversations provider* and no *plans provider*
+  register, and there never will be: a conversation is told and tells nothing, and nothing
+  on this side of the wire reads a plan — `games` may not import it, and the card ladder
+  that reads one is the client's `domain/`. Neither has a consumer, so neither publishes a
+  port. **The Plan's other read is on somebody else's register**, and that is the rule
+  rather than an exception: *is this player on this game's court, and is that game still
+  open to planning* is `games`' question about `games`' record, so `PlanningCourt` is
+  published there and contracted on `games_demands.py` — a consumer contracting its own
+  provider's port is the consumer marking its own homework.
   Each register's exhaustiveness
   assertion is about its own kind of claim and would stop meaning anything with another
   kind in it — which is also the rule for the next one: **a new provider gets a new

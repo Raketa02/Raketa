@@ -33,6 +33,7 @@ from app.modules.matchmaking.presentation.prompt_decline_routes import (
     router as prompt_declines_router,
 )
 from app.modules.matchmaking.presentation.routes import router as searches_router
+from app.modules.plans.presentation.routes import router as plans_router
 from app.modules.player_profile.presentation.photo_routes import (
     router as photos_router,
 )
@@ -74,3 +75,4 @@ player_api_router.include_router(prompt_declines_router)
 player_api_router.include_router(challenges_router)
 player_api_router.include_router(conversations_router)
 player_api_router.include_router(games_router)
+player_api_router.include_router(plans_router)

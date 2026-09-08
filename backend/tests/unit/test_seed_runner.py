@@ -98,13 +98,17 @@ RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"
 #: one, and a court and a block are the only shapes two of them come in. Both are
 #: modeled — which is the whole of what this rule asks.
 #:
-#: `conversations` joined last, and **it joined for one act rather than for the
-#: rooms.** The seed opens no room and cannot: a room is *told*, through the
-#: outbox, by contexts that do not know it exists, so the fixture drains the
-#: queue and the rooms appear. What it does write is the one thing a room cannot
-#: be told — somebody saying something — through `SendMessage`, because a room
-#: long enough to page backward through is a screen state and no arrangement
-#: produces one.
+#: `conversations` joined for one act rather than for the rooms. The seed opens
+#: no room and cannot: a room is *told*, through the outbox, by contexts that do
+#: not know it exists, so the fixture drains the queue and the rooms appear. What
+#: it does write is the one thing a room cannot be told — somebody saying
+#: something — through `SendMessage`, because a room long enough to page backward
+#: through is a screen state and no arrangement produces one.
+#:
+#: `plans` joined last, and it joined the ordinary way: three slot writes through
+#: the three use cases a request runs, on four games this fixture arranges and
+#: deliberately never plays. A plan is *born by being used*, so there is no
+#: opening act to seed and the write **is** the birth.
 WRITTEN_CONTEXTS = frozenset(
     {
         "users",
@@ -114,6 +118,7 @@ WRITTEN_CONTEXTS = frozenset(
         "blocks",
         "games",
         "conversations",
+        "plans",
     }
 )
 
@@ -149,6 +154,10 @@ AGGREGATE_WRITERS = {
     # and a seeded bubble goes through the use case a request runs like
     # everything else.
     "build_conversation_repository": "conversations",
+    # The three slot writes. There is no *open a plan* act to list beside it: a
+    # plan is born by being used, so the first slot write is the birth and this
+    # is the only repository the layer needs.
+    "build_plan_repository": "plans",
 }
 
 #: The two infrastructure modules the seed path may import, and neither is an
@@ -243,6 +252,7 @@ def test_the_walk_has_something_to_walk():
         "pairs.py",
         "paths.py",
         "photos.py",
+        "plans.py",
         "relationships.py",
         "rooms.py",
         "runner.py",

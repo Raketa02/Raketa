@@ -127,12 +127,17 @@ class SystemLineSchema(BaseModel):
         ...,
         description=(
             "What happened, as a machine code the client renders a sentence "
-            "from. **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`** and "
-            "**`GAME_PLAYED`** today; the Plan adds three more.\n\n"
+            "from. Seven: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, "
+            "**`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's "
+            "**`PLACE_RECORDED`**, **`DAY_RECORDED`** and **`HOUR_RECORDED`**.\n\n"
             "**A seat leaving is one code with the answer as a value**, because "
             "*that seat is open again* is the same news either way — and a lapse "
             "is still not a decline, which is what `values.departure` keeps "
             "apart.\n\n"
+            "**A slot set and a slot moved are one code told twice**, which is "
+            "the opposite rule for the opposite case: three slots are three "
+            "facts, so they are three codes, and there is no value telling a "
+            "first fill from a change because they are the same fact.\n\n"
             "**There is no *Game on* line.** Everybody having accepted is an "
             "arrangement of the seats, so a line announcing it would be a second "
             "place for a folded standing to be true. What appears instead is the "
@@ -153,8 +158,10 @@ class SystemLineSchema(BaseModel):
         description=(
             "What the sentence needs beyond a handle, and **nothing membership "
             "already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` "
-            "carries `departure`, one of `DECLINED` or `LAPSED`. The others "
-            "carry nothing."
+            "carries `departure`, one of `DECLINED` or `LAPSED`; the three plan "
+            "codes each carry `value` — the place as it was typed, the day as "
+            "`YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED` and "
+            "`GAME_PLAYED` carry nothing."
         ),
     )
 

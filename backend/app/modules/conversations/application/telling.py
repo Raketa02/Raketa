@@ -6,6 +6,12 @@ rather than as prose. A builder reading only the event list would write a line
 for each; most of them are refused, and this is where the refusal and its reason
 live so that ``tests/unit/test_the_room_is_told.py`` can name every one.
 
+**Three contexts publish into this table and none of them knows it exists.**
+``challenges``, ``games`` and now ``plans``, and the Plan's three rows are the
+only ones on the list where **every** event of a context draws a line: it has
+exactly three events and all three are somebody writing something down for the
+other people on the court, which is what a system line is for.
+
 **Three different rules do the refusing.**
 
 1. **There was no room to write it in.** ``ChallengeSent`` happens before any
@@ -63,6 +69,11 @@ from app.modules.games.domain.events import (
     ResultCountered,
     ResultProposed,
 )
+from app.modules.plans.domain.events import (
+    DayRecorded,
+    HourRecorded,
+    PlaceRecorded,
+)
 
 
 @final
@@ -110,6 +121,21 @@ TELLINGS: tuple[Telling, ...] = (
     Telling(
         event=GamePlayed,
         line=SystemLineCode.GAME_PLAYED,
+        reaches_the_room=True,
+    ),
+    Telling(
+        event=PlaceRecorded,
+        line=SystemLineCode.PLACE_RECORDED,
+        reaches_the_room=True,
+    ),
+    Telling(
+        event=DayRecorded,
+        line=SystemLineCode.DAY_RECORDED,
+        reaches_the_room=True,
+    ),
+    Telling(
+        event=HourRecorded,
+        line=SystemLineCode.HOUR_RECORDED,
         reaches_the_room=True,
     ),
     Telling(

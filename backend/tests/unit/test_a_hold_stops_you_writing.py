@@ -12,11 +12,17 @@ which does not exist: every route in the suite runs against a hold query whose
 true answer is *nobody*, so a test that went through the app would be asserting
 the null object. What is under test is the rule, and the rule lives in the use
 cases.
+
+**It refuses the send and all three slot writes**, and this file covers all four
+— because ADR-0148 §9 states them in one breath and the way that sentence goes
+wrong is by half of it being implemented. A slot change writes a system line into
+a room other people are in, so it is reach in exactly the sense a message is; the
+plan **read** is ungated for exactly the reason the conversation reads are.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
 from typing import Collection
 from uuid import UUID, uuid4
 
@@ -37,6 +43,16 @@ from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.errors import ConversationNotFound
 from app.modules.conversations.domain.live import Nudge
 from app.modules.conversations.domain.ports import MemberFace
+from app.modules.games.domain.ports import PlannableGame
+from app.modules.plans.application.commands import (
+    ReadPlansCommand,
+    SetDayCommand,
+    SetHourCommand,
+    SetPlaceCommand,
+)
+from app.modules.plans.application.read_plans import ReadPlans
+from app.modules.plans.application.record_a_slot import SetDay, SetHour, SetPlace
+from app.modules.plans.domain.plan import Plan
 from app.shared.domain.errors import AccountHeld
 
 NOW = instant(datetime(2026, 9, 8, 18, 0, tzinfo=timezone.utc))
@@ -44,6 +60,7 @@ HELD = uuid4()
 BESIDE_THEM = uuid4()
 A_STRANGER = uuid4()
 CHALLENGE = uuid4()
+GAME = uuid4()
 
 
 class _FrozenClock:
@@ -327,3 +344,115 @@ async def test_a_message_that_lands_announces_the_rooms_new_length(room, members
     assert nudges.published == [
         Nudge(conversation_id=room.conversation_id, last_seq=room.last_seq)
     ]
+
+
+# ---------------------------------------------------------------------------
+# The three slot writes, and the read beside them
+# ---------------------------------------------------------------------------
+
+
+class _ACourtStillArranging:
+    """``PlanningCourt``, answering about one game that is open to planning."""
+
+    async def plannable_for(self, player_id: UUID, *, now):
+        return {GAME: PlannableGame(planned_at=NOW, open_to_planning=True)}
+
+
+class _OnePlan:
+    """The repository, holding one plan and remembering what was appended."""
+
+    def __init__(self) -> None:
+        self.plan = Plan.unwritten(GAME)
+        self.saved: list[Plan] = []
+
+    async def load(self, game_id: UUID) -> Plan:
+        return self.plan
+
+    async def save(self, plan: Plan) -> None:
+        self.saved.append(plan)
+
+
+class _NoPlans:
+    async def for_games(self, game_ids):
+        return ()
+
+
+def _collaborators(holds, plans: _OnePlan, uow: _Uow) -> dict:
+    return {
+        "plans": plans,
+        "court": _ACourtStillArranging(),
+        "holds": holds,
+        "uow": uow,
+        "clock": _FrozenClock(),
+    }
+
+
+async def test_a_held_member_cannot_set_the_place():
+    """A slot change writes a line other people read, so it is reach."""
+
+    plans, uow = _OnePlan(), _Uow()
+    place = SetPlace(**_collaborators(_HoldOn(HELD), plans, uow))
+
+    with pytest.raises(AccountHeld) as refused:
+        await place.execute(
+            SetPlaceCommand(game_id=GAME, player_id=HELD, place="Zabłocie Sport")
+        )
+
+    assert refused.value.code == "account_held"
+    assert plans.saved == []
+    assert uow.commits == 0
+
+
+async def test_a_held_member_cannot_set_the_day():
+    plans, uow = _OnePlan(), _Uow()
+    day = SetDay(**_collaborators(_HoldOn(HELD), plans, uow))
+
+    with pytest.raises(AccountHeld):
+        await day.execute(
+            SetDayCommand(game_id=GAME, player_id=HELD, day=date(2026, 9, 12))
+        )
+
+    assert plans.saved == []
+
+
+async def test_a_held_member_cannot_set_the_hour():
+    plans, uow = _OnePlan(), _Uow()
+    hour = SetHour(**_collaborators(_HoldOn(HELD), plans, uow))
+
+    with pytest.raises(AccountHeld):
+        await hour.execute(
+            SetHourCommand(game_id=GAME, player_id=HELD, hour=time(18, 0))
+        )
+
+    assert plans.saved == []
+
+
+async def test_a_member_who_is_not_held_writes_the_slot():
+    """The other arm, so the refusal above is the hold and not the wiring."""
+
+    plans, uow = _OnePlan(), _Uow()
+    place = SetPlace(**_collaborators(_HoldOn(), plans, uow))
+
+    written = await place.execute(
+        SetPlaceCommand(game_id=GAME, player_id=HELD, place="Zabłocie Sport")
+    )
+
+    assert written.place is not None
+    assert written.place.value == "Zabłocie Sport"
+    assert uow.commits == 1
+
+
+async def test_a_held_member_still_reads_their_plans():
+    """**A hold must not erase an arrangement other people are already inside.**
+
+    The read takes no hold query at all — there is nowhere for one to be asked —
+    which is what makes *never stops you reading* structural here rather than a
+    branch somebody remembered not to write.
+    """
+
+    read = ReadPlans(
+        plans=_NoPlans(), court=_ACourtStillArranging(), clock=_FrozenClock()
+    )
+
+    assert await read.execute(ReadPlansCommand(reader_id=HELD)) == ()
+    assert "holds" not in ReadPlans.__init__.__code__.co_varnames

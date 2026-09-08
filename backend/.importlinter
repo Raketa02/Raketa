@@ -385,9 +385,8 @@ forbidden_modules =
 allow_indirect_imports = false
 
 # **A conversation is told, and tells nothing** (docs/adr/0146 §5). Its system
-# lines are written from events `challenges`, `games` and — when it lands — the
-# Plan publish through the outbox, and **none of those contexts knows it
-# exists**. That ignorance is the whole of the record's argument: the moment
+# lines are written from events `challenges`, `games` and `plans` publish through
+# the outbox, and **none of those contexts knows it exists**. That ignorance is the whole of the record's argument: the moment
 # `challenges` knows a conversation exists, the two ship as one thing, and the
 # two alternatives it refuses by name — an inline port and a read at open —
 # would both begin with exactly this import.
@@ -414,6 +413,40 @@ source_modules =
     app.modules.games
     app.modules.matchmaking
     app.modules.player_score
+    app.modules.plans
 forbidden_modules =
     app.modules.conversations
+allow_indirect_imports = true
+
+# **`games` cannot read a plan** (docs/adr/0145 §4). ADR-0137's sentence — *"there
+# is no booking, no calendar and no date field anywhere"* — was scoped rather than
+# deleted when the Plan arrived: it is a claim about **`games`' record**, and it is
+# still exactly true of one. The record that scoped it said what would make the
+# scoping checkable rather than aspirational: *"if `games` ever imports the Plan,
+# this clause has been broken."* This is that check.
+#
+# The arrow runs one way and the permitted direction is `plans -> games`
+# (docs/adr/0148 §8): the Plan imports `PLAN_HORIZON`, because its interlock with
+# `ENTRY_GRACE` is the argument and two numbers whose relationship is the argument
+# must not be separated; and it reads `PlanningCourt`, which `games` publishes on
+# its own demands register. Neither direction is a mistake — only the reverse is,
+# and only the reverse is fenced.
+#
+# It is a rule about one import statement, which is the kind broken by somebody in
+# a hurry: `GameSchema` is the obvious place to hang a plan, a per-game plan read
+# is the obvious shape, and both begin with exactly this import. What refuses them
+# is a second list beside the first (docs/adr/0148 §7), and this is what keeps that
+# from being re-litigated in review instead of by the build.
+#
+# `allow_indirect_imports = true`, for the reason every module fence in this file
+# sets it: `games`' own `presentation/dependencies.py` imports the composition
+# root, and the composition root imports every context — so a strict contract is
+# red on the day it is written, naming the composition root doing its job.
+[importlinter:contract:games-does-not-know-the-plan]
+name = The Games context does not import the Plan
+type = forbidden
+source_modules =
+    app.modules.games
+forbidden_modules =
+    app.modules.plans
 allow_indirect_imports = true

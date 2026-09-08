@@ -1313,8 +1313,7 @@ Nothing about when, where, money or the result belongs here — it is **told** a
 
 Settled by [ADR-0144](docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md) and
 [ADR-0145](docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md), named by
-[ADR-0146](docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md). **Settled and
-not built** — there is no `backend/app/modules/plans/` yet.
+[ADR-0146](docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md).
 
 **Where and when these people are meeting.** It is **one game's**, identified by that game's id,
 and it is **born by being used** — no record at birth, no opening event, and *no plan* is what a

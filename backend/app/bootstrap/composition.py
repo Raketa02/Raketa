@@ -123,6 +123,7 @@ from app.modules.games.domain.ports import (
     GameDirectory,
     GameHistoryQuery,
     GameRepository,
+    PlanningCourt,
     PlayerHandles,
 )
 from app.modules.games.infrastructure.event_sourced_confirmed_results import (
@@ -130,6 +131,9 @@ from app.modules.games.infrastructure.event_sourced_confirmed_results import (
 )
 from app.modules.games.infrastructure.event_sourced_game_history import (
     EventSourcedGameHistory,
+)
+from app.modules.games.infrastructure.event_sourced_planning_court import (
+    EventSourcedPlanningCourt,
 )
 from app.modules.games.infrastructure.event_sourced_game_repository import (
     EventSourcedGameRepository,
@@ -277,6 +281,19 @@ from app.modules.matchmaking.infrastructure.rating_at_stake import (
 )
 from app.modules.matchmaking.infrastructure.users_account_status import (
     UsersAccountStatus,
+)
+from app.modules.plans.application.read_plans import ReadPlans
+from app.modules.plans.domain.ports import (
+    AccountHoldQuery as PlanAccountHoldQuery,
+    PlanDirectory,
+    PlanRepository,
+)
+from app.modules.plans.infrastructure.absent_providers import (
+    NoHoldsExist as NoPlanHoldsExist,
+)
+from app.modules.plans.infrastructure.event_sourced_plan_repository import (
+    EventSourcedPlanDirectory,
+    EventSourcedPlanRepository,
 )
 from app.modules.player_profile.domain.ports import (
     PlayIntentDeclarationRepository,
@@ -1033,6 +1050,79 @@ def build_game_directory(
     ports: a caller that wants counts has no business holding the aggregates.
     """
     return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
+
+
+def build_planning_court(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> PlanningCourt:
+    """*Which games is this player arranging* — ``games``' answer, over the log.
+
+    The one thing the Plan reads about a game, and the read that decides whether
+    a slot write may land. It is folded rather than projected for the reason
+    every read in that context is: ``open_to_planning`` is a standing, and a
+    stored one would be wrong for the whole gap between an entry window closing
+    and anything noticing.
+    """
+    return EventSourcedPlanningCourt(session, (runtime or get_event_runtime()).codec)
+
+
+def build_plan_repository(
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> PlanRepository:
+    """Per unit of work, for the reason every aggregate repository here is: it
+    remembers the stream versions it loaded.
+
+    **It takes no session**, unlike ``conversations``' — there is no row to lock
+    and no lookup by payload, because a plan's stream id *is* its game's.
+    """
+    return EventSourcedPlanRepository(event_store=event_store, events=events)
+
+
+def build_plan_directory(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> PlanDirectory:
+    """*Which of these games have a plan* — one ``IN`` over the aggregate ids.
+
+    It reads the rows itself rather than folding through the repository, which is
+    the opposite of the conversation directory beside it and for a stated reason:
+    nothing appends to a plan read from here, so there is no stream version for a
+    second reader to disagree about.
+    """
+    return EventSourcedPlanDirectory(session, (runtime or get_event_runtime()).codec)
+
+
+def build_plan_hold_query(session: AsyncSession) -> PlanAccountHoldQuery:
+    """``cases`` does not exist, so nothing can hold an account.
+
+    **The fourth line in this file that says so.** Each context declares its own
+    hold port because none may import another to ask a safety question; on the
+    day ``cases`` ships, all four change to the same adapter.
+    """
+    return NoPlanHoldsExist()
+
+
+def build_read_plans(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReadPlans:
+    """*Every plan for the games you are on the court of.*
+
+    Assembled here rather than at the surface because a seed run reads it too,
+    and the two must be reading the same thing.
+    """
+    return ReadPlans(
+        plans=build_plan_directory(session, runtime=runtime),
+        court=build_planning_court(session, runtime=runtime),
+        clock=clock,
+    )
 
 
 def build_match_history_query(session: AsyncSession) -> MatchHistoryQuery:

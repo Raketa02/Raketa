@@ -48,6 +48,10 @@ from app.modules.games.application.event_subscriptions import (
     register_game_events,
     subscribe_game_handlers,
 )
+from app.modules.plans.application.event_subscriptions import (
+    register_plan_events,
+    subscribe_plan_handlers,
+)
 from app.modules.player_profile.application.event_subscriptions import (
     register_player_profile_events,
     subscribe_player_profile_handlers,
@@ -161,6 +165,7 @@ def build_event_runtime() -> EventRuntime:
     register_block_events(catalog)
     register_challenge_events(catalog)
     register_game_events(catalog)
+    register_plan_events(catalog)
     register_conversation_events(catalog)
 
     dispatcher = EventDispatcher()
@@ -171,6 +176,7 @@ def build_event_runtime() -> EventRuntime:
     subscribe_block_handlers(dispatcher)
     subscribe_challenge_handlers(dispatcher)
     subscribe_game_handlers(dispatcher)
+    subscribe_plan_handlers(dispatcher)
     subscribe_conversation_handlers(dispatcher)
 
     return EventRuntime(

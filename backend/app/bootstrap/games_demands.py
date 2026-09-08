@@ -3,9 +3,10 @@
 **The same shape as ``matcher_demands.py``, and a second file rather than more
 rows in that one.** That register holds the ports the *matcher* declares of
 contexts it does not write; these are the ports a **provider** publishes for
-four consumers — the card's counted-games block, *Last 5*, the two facts the
-Player Score ticket reads per player, and the confirmed results the rating
-context walks forward (``docs/adr/0139``). Rows of both kinds
+five consumers — the card's counted-games block, *Last 5*, the two facts the
+Player Score ticket reads per player, the confirmed results the rating context
+walks forward (``docs/adr/0139``), and the one question a **plan** asks before
+it lets anybody write a slot (``docs/adr/0148`` §8). Rows of both kinds
 in one list would make ``MATCHER_DEMANDS``'s exhaustiveness assertion a claim
 about two different things, and the first person to add a row would have to guess
 which.
@@ -28,11 +29,13 @@ from app.bootstrap.composition import (
     build_confirmed_result_ledger,
     build_game_directory,
     build_game_history_query,
+    build_planning_court,
 )
 from app.modules.games.domain.ports import (
     ConfirmedResultLedger,
     GameDirectory,
     GameHistoryQuery,
+    PlanningCourt,
 )
 
 #: What this context owes the rest of the platform, declared as data for the
@@ -46,10 +49,18 @@ from app.modules.games.domain.ports import (
 #: about one player — the two facts the rating and Player Score tickets were
 #: promised — so it is a demand somebody else will execute, and a demand nobody
 #: executes is a demand satisfied by accident.
+#:
+#: **``PlanningCourt`` is here even though it has one consumer**, and that is the
+#: rule rather than an exception: it is the read that decides whether a slot
+#: write may land, so *a demand nobody executes* is exactly the thing it must not
+#: be. The Plan cannot contract it — a consumer contracting its own provider's
+#: port is the consumer marking its own homework — which is why it sits beside
+#: the three the rest of the platform already reads.
 GAMES_DEMANDS: tuple[type, ...] = (
     GameHistoryQuery,
     GameDirectory,
     ConfirmedResultLedger,
+    PlanningCourt,
 )
 
 
@@ -68,6 +79,11 @@ GAME_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=ConfirmedResultLedger,
         name="EventSourcedConfirmedResults",
         build=build_confirmed_result_ledger,
+    ),
+    RegisteredImplementation(
+        port=PlanningCourt,
+        name="EventSourcedPlanningCourt",
+        build=build_planning_court,
     ),
 )
 

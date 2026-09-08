@@ -37,7 +37,7 @@ folds against is not the one the first run did.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping, Sequence, final
+from typing import Mapping, Protocol, Sequence, final, runtime_checkable
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -85,6 +85,38 @@ SCORES: Mapping[GameSide, Score] = {
     GameSide.A: Score.of((SetScore(a=6, b=4), SetScore(a=6, b=3))),
     GameSide.B: Score.of((SetScore(a=4, b=6), SetScore(a=3, b=6))),
 }
+
+
+@runtime_checkable
+class Arrangement(Protocol):
+    """The half of a declared game that is about **who is on the court**.
+
+    ``PlayedGame`` satisfies it and so does the Plan layer's own declaration, and
+    that is the whole reason it exists: *send a court the organiser could really
+    see, and answer every seat on it* is one act, and the two layers differ only
+    in what they do **after** the line-up completes. A second copy of the send
+    would be a second opinion about whether an origin has to resolve.
+
+    It is structural rather than a base class because the two declarations are
+    otherwise nothing alike — one carries a moment and a winner, the other a slot
+    count — and a shared parent would be a place for the next field to be added
+    to both.
+    """
+
+    @property
+    def sport(self) -> str: ...
+
+    @property
+    def side_a(self) -> tuple[str, ...]: ...
+
+    @property
+    def side_b(self) -> tuple[str, ...]: ...
+
+    @property
+    def organiser(self) -> str: ...
+
+    @property
+    def players(self) -> tuple[str, ...]: ...
 
 
 class GameRefused(RuntimeError):
@@ -204,12 +236,26 @@ async def _write_one(
 
     sport = Sport(game.sport)
     organiser = cohort.by_handle(game.organiser)
-    standing = await _the_game_already_there(paths, game, cohort)
+    standing = await the_game_already_there(paths, game, cohort)
     if standing is None:
-        standing = await _play_it(paths, game, cohort, sport, organiser)
+        standing = await arrange_the_court(paths, game, cohort, sport, organiser)
         built = "arranged and played"
     else:
         built = "already played"
+
+    # **The kind is this layer's requirement and not the arrangement's**, which
+    # is why it is checked here rather than inside the send. A friendly is a
+    # perfectly good arrangement — the Plan layer wants one either way — and what
+    # a *played history* needs is a game a card counts. Asked on both paths, so a
+    # database whose first run built a friendly is caught on the second.
+    if standing.kind is not GameKind.COUNTED:
+        raise GameRefused(
+            f"the game '{organiser.handle}' arranged is a {standing.kind.value} "
+            f"and the played history is for counted games — *a friendly is a "
+            f"thing people choose*, and a counted game is what a card counts. "
+            f"The kind follows the mode of the search the court was built on, "
+            f"which follows the organiser's own declared Play intent."
+        )
 
     entered = await _enter_the_result(paths, game, standing, cohort)
     return (
@@ -224,8 +270,8 @@ async def _write_one(
     )
 
 
-async def _the_game_already_there(
-    paths: ReadPaths, game: PlayedGame, cohort: Cohort
+async def the_game_already_there(
+    paths: ReadPaths, game: Arrangement, cohort: Cohort
 ) -> Game | None:
     """This declared game, if a previous run already arranged it.
 
@@ -236,7 +282,7 @@ async def _the_game_already_there(
     """
 
     wanted = frozenset(_ids(paths, cohort, game.players))
-    organiser = _player(paths, cohort, game.organiser)
+    organiser = player_of(paths, cohort, game.organiser)
     _, standing = await paths.read_games.execute(organiser)
     for row in standing:
         if row.game.sport.value == game.sport and row.game.line_up.players == wanted:
@@ -244,9 +290,9 @@ async def _the_game_already_there(
     return None
 
 
-async def _play_it(
+async def arrange_the_court(
     paths: ReadPaths,
-    game: PlayedGame,
+    game: Arrangement,
     cohort: Cohort,
     sport: Sport,
     organiser: CohortMember,
@@ -274,21 +320,13 @@ async def _play_it(
                 AnswerSeatCommand(challenge_id=court.id, player_id=seat.player_id)
             )
 
-    opened = await _the_game_already_there(paths, game, cohort)
+    opened = await the_game_already_there(paths, game, cohort)
     if opened is None:
         raise GameRefused(
             f"every seat on challenge {court.id} was accepted and no game "
             f"stands for it. A completed line-up opens a game inline, in the "
             f"transaction of the acceptance that filled the last seat, so an "
             f"absence here is that hand-over having stopped happening."
-        )
-    if opened.kind is not GameKind.COUNTED:
-        raise GameRefused(
-            f"the game '{organiser.handle}' arranged is a {opened.kind.value} "
-            f"and this fixture is for counted games — *a friendly is a thing "
-            f"people choose*, and a counted game is what a card counts. The "
-            f"kind follows the mode of the search the court was built on, which "
-            f"follows the organiser's own declared Play intent."
         )
     return opened
 
@@ -319,8 +357,8 @@ async def _enter_the_result(
     rather than a database to drop.
     """
 
-    speaker = _player(paths, cohort, game.side_a[0])
-    answerer = _player(paths, cohort, game.side_b[0])
+    speaker = player_of(paths, cohort, game.side_a[0])
+    answerer = player_of(paths, cohort, game.side_b[0])
     acts: list[str] = []
 
     if standing.played_at is None:
@@ -355,7 +393,7 @@ async def _enter_the_result(
 
 
 async def _the_court_already_sent(
-    paths: ReadPaths, game: PlayedGame, cohort: Cohort
+    paths: ReadPaths, game: Arrangement, cohort: Cohort
 ) -> Challenge | None:
     """The court this game was sent as, if a run already sent it.
 
@@ -365,7 +403,7 @@ async def _the_court_already_sent(
     challenge list, which is the screen a player reads their courts on.
     """
 
-    organiser = _player(paths, cohort, game.organiser)
+    organiser = player_of(paths, cohort, game.organiser)
     wanted = frozenset(_ids(paths, cohort, game.players))
     _, standing = await paths.read_challenges.execute(
         ReadChallengesCommand(reader_id=organiser)
@@ -385,7 +423,7 @@ async def _the_court_already_sent(
 
 async def _send_the_court(
     paths: ReadPaths,
-    game: PlayedGame,
+    game: Arrangement,
     cohort: Cohort,
     sport: Sport,
     organiser: CohortMember,
@@ -400,23 +438,35 @@ async def _send_the_court(
     """
 
     record = await run_a_shortlist(
-        paths, organiser.email, sport, _mode_of(paths, organiser, sport)
+        paths, organiser.email, sport, mode_of(paths, organiser, sport)
     )
+    shown = returned_ids(record)
     missing = sorted(
         handle
         for handle in game.players[1:]
-        if _player(paths, cohort, handle) not in returned_ids(record)
+        if player_of(paths, cohort, handle) not in shown
     )
     if missing:
+        # **The list it did show is on the message**, because the question a
+        # declaration failure actually asks is *who could I have written down
+        # instead* — and answering it from a gate histogram alone means running
+        # the search again by hand.
+        offered = sorted(
+            member.handle
+            for member in cohort.members
+            if paths.players.get(email_of(cohort, member.handle)) in shown
+        )
         raise GameRefused(
             f"'{organiser.handle}' ran their own {sport.value} search and it "
             f"never showed {missing}, over {record.counts.n_generated} "
-            f"generated and {record.counts.n_returned} returned. A send cites "
+            f"generated and {record.counts.n_returned} returned — it showed "
+            f"{offered}. A send cites "
             f"the search that showed the person, so this game cannot be "
             f"arranged at all — and the pair it declares is a pair the platform "
             f"says cannot see each other. "
             f"Gates: {dict(sorted(record.counts.excluded_by_gate.items()))}. "
-            f"The row is in `PLAYED_GAMES` in `app/seeds/cohort.py`."
+            f"The row is a declared arrangement — `PLAYED_GAMES` in "
+            f"`app/seeds/cohort.py`, or `ARRANGED_GAMES` in `app/seeds/plans.py`."
         )
 
     await send_a_court(
@@ -424,7 +474,7 @@ async def _send_the_court(
         organiser=organiser.email,
         sport=sport,
         record=record,
-        invitees=[_email(cohort, handle) for handle in game.players[1:]],
+        invitees=[email_of(cohort, handle) for handle in game.players[1:]],
     )
     sent = await _the_court_already_sent(paths, game, cohort)
     if sent is None:
@@ -436,7 +486,7 @@ async def _send_the_court(
     return sent
 
 
-def _mode_of(paths: ReadPaths, member: CohortMember, sport: Sport) -> SearchMode:
+def mode_of(paths: ReadPaths, member: CohortMember, sport: Sport) -> SearchMode:
     """Which weight vector this organiser's own declaration puts them under.
 
     **Derived and never tabled**, the rule ``pairs.py`` states: a member takes
@@ -456,22 +506,23 @@ def _mode_of(paths: ReadPaths, member: CohortMember, sport: Sport) -> SearchMode
     )
 
 
-def _email(cohort: Cohort, handle: str) -> str:
+def email_of(cohort: Cohort, handle: str) -> str:
     return cohort.by_handle(handle).email
 
 
-def _player(paths: ReadPaths, cohort: Cohort, handle: str) -> UUID:
+def player_of(paths: ReadPaths, cohort: Cohort, handle: str) -> UUID:
     """The id the write path minted for the member behind this handle.
 
-    Spelled once because the walk from a handle to an id is two steps and this
-    module makes it seven times: a declaration names handles, an address is
-    derived from one, and the id is what the write path minted for that address.
+    Spelled once because the walk from a handle to an id is two steps and the two
+    layers that declare arrangements make it a dozen times: a declaration names
+    handles, an address is derived from one, and the id is what the write path
+    minted for that address.
     """
 
-    return paths.player(_email(cohort, handle))
+    return paths.player(email_of(cohort, handle))
 
 
 def _ids(
     paths: ReadPaths, cohort: Cohort, handles: Sequence[str]
 ) -> tuple[UUID, ...]:
-    return tuple(_player(paths, cohort, handle) for handle in handles)
+    return tuple(player_of(paths, cohort, handle) for handle in handles)

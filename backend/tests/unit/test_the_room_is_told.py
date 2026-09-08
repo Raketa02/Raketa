@@ -38,13 +38,18 @@ from app.modules.games.domain.events import (
     ResultCountered,
     ResultProposed,
 )
+from app.modules.plans.domain.events import (
+    DayRecorded,
+    HourRecorded,
+    PlaceRecorded,
+)
 
 NOW = instant(datetime(2026, 9, 8, 18, 0, tzinfo=timezone.utc))
 
-#: Every event ``challenges`` and ``games`` publish. Spelled out rather than
-#: imported from either register, because the thing under test is whether this
-#: context has an answer for each of them — and a list derived from the same
-#: place the answers come from could not fail.
+#: Every event ``challenges``, ``games`` and ``plans`` publish. Spelled out
+#: rather than imported from any register, because the thing under test is
+#: whether this context has an answer for each of them — and a list derived from
+#: the same place the answers come from could not fail.
 EVERY_PUBLISHED_EVENT = (
     ChallengeSent,
     ChallengeOpenedFromMutualInterest,
@@ -59,6 +64,9 @@ EVERY_PUBLISHED_EVENT = (
     ResultCorrected,
     ResultCountered,
     ResultAccepted,
+    PlaceRecorded,
+    DayRecorded,
+    HourRecorded,
 )
 
 WRITES_NOTHING = tuple(
@@ -141,6 +149,45 @@ def test_a_seat_leaving_is_one_code_told_by_two_events():
     lapsed = next(t for t in TELLINGS if t.event is SeatLapsed)
 
     assert declined.line is lapsed.line is SystemLineCode.SEAT_LEFT
+
+
+def test_every_plan_event_writes_a_line_and_each_writes_its_own():
+    """``the-words.md`` §23 — three codes, and the Plan is the one context on
+    this table where every event it publishes draws a line.
+
+    The inverse of the seat-leaving rule above, and deliberately: a lapse and a
+    decline do the same thing to a line-up and *are* two facts, so they share a
+    code and differ in a value; three slots are three different facts, so they
+    are three codes.
+    """
+
+    lines = {
+        telling.event: telling.line
+        for telling in TELLINGS
+        if telling.event in (PlaceRecorded, DayRecorded, HourRecorded)
+    }
+
+    assert lines == {
+        PlaceRecorded: SystemLineCode.PLACE_RECORDED,
+        DayRecorded: SystemLineCode.DAY_RECORDED,
+        HourRecorded: SystemLineCode.HOUR_RECORDED,
+    }
+    assert all(event in TOLD_ABOUT for event in lines)
+
+
+def test_there_is_no_code_for_a_slot_being_changed():
+    """``docs/adr/0144`` — *setting a slot and moving one are the same event told
+    with two sentences*, separated by the fold rather than by a second class.
+
+    A fourth code, or a value distinguishing the two, would be this context
+    deciding that a change is different news from a first fill — which is the one
+    thing the record says it is not.
+    """
+
+    codes = {code.value for code in SystemLineCode}
+
+    assert not any("CHANGED" in code or "MOVED" in code for code in codes)
+    assert len(codes) == 7
 
 
 # -- membership ------------------------------------------------------------

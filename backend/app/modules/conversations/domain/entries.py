@@ -18,8 +18,9 @@ row.
 **``values`` never repeats what membership already says.** The line carries
 ``actor_id`` and the client fills ``{name}`` from the members it is already
 holding, so a corrected handle reaches the whole backlog for free. That rule is
-what keeps ``values`` down to *the count of seats asked* and *which way somebody
-left* — the two facts membership genuinely cannot supply.
+what keeps ``values`` down to *the count of seats asked*, *which way somebody
+left* and *what a slot was set to* — the three facts membership genuinely cannot
+supply.
 """
 
 from __future__ import annotations
@@ -47,7 +48,7 @@ MESSAGE_LENGTH_CAP = 1000
 
 @final
 class SystemLineCode(str, Enum):
-    """The codes a system line may carry. **Four here, three more with the Plan.**
+    """The codes a system line may carry. **Seven, and the Plan brought three.**
 
     ``the-words.md`` §23 holds the sentence each one renders; nothing in this
     module knows any of them, which is the point.
@@ -57,12 +58,22 @@ class SystemLineCode(str, Enum):
     ([#221](https://github.com/Raketa02/Raketa/issues/221)), and **a lapse is
     still not a decline** — the two facts stay apart in the value rather than in
     a second code, which is ``the-words.md`` §13's rule holding one layer down.
+
+    **The Plan's three are the opposite rule applied to the opposite case.**
+    Setting a slot and moving one are **the same fact told twice**
+    (``docs/adr/0144``), so there is no value telling them apart and no fourth
+    code for a change — where a lapse and a decline do the same thing to a
+    line-up and *are* two facts. A reader of a plan line cannot tell whether it
+    was the first, and has no reason to.
     """
 
     SEAT_ACCEPTED = "SEAT_ACCEPTED"
     SEATS_INVITED = "SEATS_INVITED"
     SEAT_LEFT = "SEAT_LEFT"
     GAME_PLAYED = "GAME_PLAYED"
+    PLACE_RECORDED = "PLACE_RECORDED"
+    DAY_RECORDED = "DAY_RECORDED"
+    HOUR_RECORDED = "HOUR_RECORDED"
 
 
 @final
@@ -82,6 +93,17 @@ class SeatDeparture(str, Enum):
 #: Spelled once here because the writer and the reader are in different layers.
 COUNT = "count"
 DEPARTURE = "departure"
+
+#: The key all three plan codes carry their slot's value under. **One key for
+#: three codes**, because the code already says which slot it is about and a
+#: ``place``/``day``/``hour`` triple would be three keys of which two are always
+#: absent — a shape every reader would have to branch on to read one string.
+#:
+#: It is the one value on this list that is **not** a fact membership could
+#: supply, which is the test ``values`` is held to: a room knows who its members
+#: are and can fill ``{name}`` from ``actor_id``, and it has no way at all to know
+#: what somebody typed into a slot.
+VALUE = "value"
 
 
 @final

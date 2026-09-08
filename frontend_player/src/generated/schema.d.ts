@@ -1142,6 +1142,104 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your plans
+         * @description **A plan is one game's, and this is the only plan read.** Join it against `GET /games` by `game_id` — the plan is not a field on a game, because a game is a record of an evening and a plan is an agreement about a future, and the two contexts do not read each other.
+         *
+         *     **A game with nothing agreed is absent from this list.** *No plan* is what it draws, and it is one spelling: a plan is born by being used, so there is no empty row for a game nobody has arranged anything on yet.
+         *
+         *     **There is no `read_at` here, deliberately.** A plan folds nothing against the clock — its day and hour are wall-clock facts, drawn literally and never counted down — so there is no instant for it to have been folded against. Fold the card against `GET /games`' `read_at`, which keeps every clock on that screen the same one.
+         *
+         *     **`agreed_point` is derived and sent**: the agreed instant when the day and the hour are both recorded, the start of the following local day when only the day is, and `null` when no day is.
+         */
+        get: operations["read_plans_api_v1_plans_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{game_id}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set where you are meeting
+         * @description **Any member may fill or change any slot, any number of times.** There is no lock and no rate limit — every change writes a system line naming who and what, and **the line is the friction**.
+         *
+         *     **Writing the value already there records nothing and answers `200`.** Without that the room fills with *Tomek set the place* three times over.
+         *
+         *     **This is a note and never a court.** No id, no lookup, no autocomplete, no reuse, no geocode — and nothing anywhere reads it. One club will be spelled four ways and nothing will notice, which is what refusing a venue record costs.
+         */
+        put: operations["set_place_api_v1_plans__game_id__place_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{game_id}/day": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the day you are playing
+         * @description **A local day in the platform's one zone**, so one arrangement reads the same on every phone in it.
+         *
+         *     **Clamped to the game's own horizon**, which is what keeps a plan from naming a day on which *we played* can no longer be said — and what leaves every plannable day at least twenty-four hours to say it.
+         *
+         *     **Writing the day already there records nothing and answers `200`.**
+         */
+        put: operations["set_day_api_v1_plans__game_id__day_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{game_id}/hour": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the time you are playing
+         * @description **The hour is the agreement, not a guess at a booking.** Nothing on this platform will ever hold a court, so nothing can ever contradict it — there is no un-agreeing to fear, only re-agreeing, and any member may do that at any time.
+         *
+         *     **Thirty-minute steps between 06:00 and 23:00, validated here.**
+         *
+         *     **Writing the hour already there records nothing and answers `200`.**
+         */
+        put: operations["set_hour_api_v1_plans__game_id__hour_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3504,6 +3602,65 @@ export interface components {
          */
         PhotoReviewDecision: "allowed" | "flagged";
         /**
+         * PlanListResponse
+         * @description Every plan for the games you are on the court of.
+         *
+         *     **No `read_at`, and that is deliberate.** A plan folds nothing against the
+         *     clock, so there is no instant for it to have been folded against — the card
+         *     is folded against `GET /games`' own `read_at`, which is what keeps Now on one
+         *     clock by construction (``docs/adr/0148`` §10).
+         *
+         *     **A game with nothing agreed is absent**, not present with three nulls. *No
+         *     plan* is what such a game draws, and one spelling for it is what stops an
+         *     empty plan being told apart from a missing one.
+         */
+        PlanListResponse: {
+            /** Plans */
+            plans: components["schemas"]["PlanSchema"][];
+        };
+        /**
+         * PlanSchema
+         * @description One game's plan: three slots and the moment they name.
+         *
+         *     **Keyed on the game and on nothing else.** A plan has no id of its own —
+         *     ``game_id`` identifies it, for ever, and a second identity beside that would
+         *     be a second name for one thing.
+         *
+         *     Each slot is nullable and an empty one is spelled ``null``. **A slot is never
+         *     emptied**, so a ``null`` here is a slot that has never been filled and never a
+         *     slot somebody cleared; the client draws the slot's name in its place.
+         */
+        PlanSchema: {
+            /**
+             * Game Id
+             * Format: uuid
+             * @description The game this plan is for. **A plan is one game's, for ever** — join it against `GET /games` by this.
+             */
+            game_id: string;
+            /**
+             * Place
+             * @description Where these people are meeting, as somebody typed it. **Short free text, one line** — never an id, a lookup, an autocomplete, a reuse or a geocode, and **nothing anywhere reads it**. It is a note between the people on the court and never a place the platform knows.
+             */
+            place?: string | null;
+            /**
+             * Day
+             * @description The local day, in the platform's one zone (`Europe/Warsaw`). **A wall-clock fact, drawn literally and never counted down** — nothing expires at the end of it.
+             */
+            day?: string | null;
+            /**
+             * Hour
+             * @description The local clock time. **The agreement itself, not a guess at a booking**: nothing on this platform will ever hold a court, so nothing can contradict it.
+             */
+            hour?: string | null;
+            /**
+             * Agreed Point
+             * @description The moment this plan names, **derived and never stored**. The agreed instant when the day and the hour are both recorded; the **start of the following local day** when only the day is; `null` when no day is.
+             *
+             *     Coarsened **later, never earlier**, so nobody is asked for a result before they could have played. It is sent because it is a timezone conversion the client must not redo.
+             */
+            agreed_point?: string | null;
+        };
+        /**
          * PlayIntent
          * @description What kind of game a player wants, in one sport.
          *
@@ -4687,6 +4844,43 @@ export interface components {
             challenge_id: string;
         };
         /**
+         * SetDayRequest
+         * @description *We are playing on this day.*
+         */
+        SetDayRequest: {
+            /**
+             * Day
+             * Format: date
+             * @description A local day in the platform zone, **clamped to the game's own planning horizon** — so a plan can never name a day past the entry window, and the row of days a client offers shrinks as the week runs out.
+             */
+            day: string;
+        };
+        /**
+         * SetHourRequest
+         * @description *We are playing at this time.*
+         */
+        SetHourRequest: {
+            /**
+             * Hour
+             * Format: time
+             * @description A local clock time in **30-minute steps between 06:00 and 23:00**, validated server-side. Bounded chips the platform offered, never a free instant: the grid a client draws is a convention, and this is what makes it true.
+             */
+            hour: string;
+        };
+        /**
+         * SetPlaceRequest
+         * @description *We are meeting here.*
+         */
+        SetPlaceRequest: {
+            /**
+             * Place
+             * @description Where you are meeting. Runs of whitespace collapse to one space, so the value is one line; empty after that is `the_place_is_empty`, and past 120 characters is `the_place_is_too_long`. **Neither is silently fixed** — a shortened note is one the person who typed it believes they wrote whole, in front of the other people on the court.
+             *
+             *     **The cap is not declared here on purpose.** A `maxLength` would make an over-long note a `422` about a field, where it is a refusal this context owns and names — the same shape `POST /conversations/{id}/messages` already takes.
+             */
+            place: string;
+        };
+        /**
          * SetScoreSchema
          * @description One set, **absolute**: what side A took, and what side B took.
          *
@@ -5048,9 +5242,11 @@ export interface components {
             seq: number;
             /**
              * Code
-             * @description What happened, as a machine code the client renders a sentence from. **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`** and **`GAME_PLAYED`** today; the Plan adds three more.
+             * @description What happened, as a machine code the client renders a sentence from. Seven: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`** and **`HOUR_RECORDED`**.
              *
              *     **A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news either way — and a lapse is still not a decline, which is what `values.departure` keeps apart.
+             *
+             *     **A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.
              *
              *     **There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping — drawn, not announced.
              */
@@ -5068,7 +5264,7 @@ export interface components {
             actor_id: string | null;
             /**
              * Values
-             * @description What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED` or `LAPSED`. The others carry nothing.
+             * @description What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED` or `LAPSED`; the three plan codes each carry `value` — the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED` and `GAME_PLAYED` carry nothing.
              */
             values: {
                 [key: string]: string;
@@ -7467,6 +7663,251 @@ export interface operations {
              *     `accepting_your_own_sides_result` — **only the other side can accept**, because a teammate agreeing with a teammate proves nothing.
              *
              *     `the_result_is_already_accepted` — your side has already agreed to this one.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_plans_api_v1_plans_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every plan for the games you are on the court of, newest arrangement first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanListResponse"];
+                };
+            };
+        };
+    };
+    set_place_api_v1_plans__game_id__place_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPlaceRequest"];
+            };
+        };
+        responses: {
+            /** @description The plan as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanSchema"];
+                };
+            };
+            /**
+             * @description `the_place_is_empty` — nothing but whitespace. **A slot is never emptied**, so a blank value is not a way of clearing one.
+             *
+             *     `the_place_is_too_long` — past the cap. **Refused, never truncated.**
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `account_held` — your account is under a live hold. **A hold stops you writing anywhere another player sees it, and never stops you reading**: `GET /plans` stays open to you, because a hold must not erase an arrangement other people are already inside. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `plan_not_found` — **one code for two cases**: there is no game with that id, or there is one and you were not on its court. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them**, and it is not a lock: once *we played* can no longer be said, the plan is a note about an evening that is over. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_day_api_v1_plans__game_id__day_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetDayRequest"];
+            };
+        };
+        responses: {
+            /** @description The plan as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanSchema"];
+                };
+            };
+            /** @description `the_day_is_past_the_horizon` — past this game's planning window. The days a client offers are clamped to the same bound and shrink as the week runs out; **inside the entry grace there is no day left to set at all**, and the only act remaining is *We played*. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `account_held` — your account is under a live hold. **A hold stops you writing anywhere another player sees it, and never stops you reading**: `GET /plans` stays open to you, because a hold must not erase an arrangement other people are already inside. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `plan_not_found` — **one code for two cases**: there is no game with that id, or there is one and you were not on its court. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them**, and it is not a lock: once *we played* can no longer be said, the plan is a note about an evening that is over.
+             *
+             *     `that_moment_has_already_passed` — the day and the hour together name a moment that has gone. **Raised when the second of the two is filled, in either order**, and it names neither: the platform has no opinion about which one is wrong, so change whichever you meant.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_hour_api_v1_plans__game_id__hour_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetHourRequest"];
+            };
+        };
+        responses: {
+            /** @description The plan as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanSchema"];
+                };
+            };
+            /** @description `the_hour_is_not_offered` — outside the grid, between two of its steps, or carrying seconds. **Bounded chips the platform offered, never a free instant**: the grid a client draws is a convention, and this refusal is what makes it true. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `account_held` — your account is under a live hold. **A hold stops you writing anywhere another player sees it, and never stops you reading**: `GET /plans` stays open to you, because a hold must not erase an arrangement other people are already inside. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `plan_not_found` — **one code for two cases**: there is no game with that id, or there is one and you were not on its court. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them**, and it is not a lock: once *we played* can no longer be said, the plan is a note about an evening that is over.
+             *
+             *     `that_moment_has_already_passed` — the day and the hour together name a moment that has gone. **Raised when the second of the two is filled, in either order**, and it names neither: the platform has no opinion about which one is wrong, so change whichever you meant.
              */
             409: {
                 headers: {

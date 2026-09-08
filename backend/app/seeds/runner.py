@@ -186,6 +186,7 @@ from app.seeds.photos import (
     the_store_answers,
 )
 from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
+from app.seeds.plans import SeededPlans, costs as plan_costs, write_the_plans
 from app.seeds.rooms import SeededRooms, open_the_rooms
 from app.seeds.screens import assert_the_screens
 
@@ -1102,6 +1103,9 @@ class SeedReport:
     #: The played history, and the pairs it spent. ``None`` on the same callers
     #: and for the same reason.
     played: SeededGames | None = None
+    #: The four arranged-and-never-played games, and the plans on them.
+    #: ``None`` on the same callers and for the same reason as the two above.
+    plans: SeededPlans | None = None
     #: The rooms the seeded acceptances earned, once the outbox was delivered.
     #: ``None`` on the callers that drive the populations without the layers
     #: above them, exactly as the two above are.
@@ -1173,6 +1177,14 @@ async def run(settings: Settings | None = None) -> SeedReport:
         pairs = await write_the_relationships(
             session_factory, settings=settings, now=now, photos=photos
         )
+        # **After the relationships and before the delivery.** A plan needs a
+        # game still inside its entry window and every other layer's games are
+        # played, so this one arranges four more and stops — and it has to run
+        # before the outbox is drained, so that the three system lines it writes
+        # reach the rooms in the same pass everything else does.
+        plans = await write_the_plans(
+            session_factory, settings=settings, now=now
+        )
         # **After every layer that writes and before the screens.** A room is
         # *told* through the outbox by contexts that do not know it exists
         # (``docs/adr/0146`` §5), so nothing above this line opened one — the
@@ -1198,6 +1210,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             screens=screens,
             pairs=pairs,
             played=played,
+            plans=plans,
             rooms=rooms,
             photographs=photographs,
         )
@@ -1264,6 +1277,8 @@ def report(run_report: SeedReport) -> list[str]:
     lines.extend(["", *_photograph_lines(run_report.members)])
     if run_report.pairs is not None:
         lines.extend(["", *_relationship_lines(run_report.pairs)])
+    if run_report.plans is not None:
+        lines.extend(["", *_plan_lines(run_report.plans)])
     if run_report.rooms is not None:
         lines.extend(["", *_room_lines(run_report.rooms)])
     if run_report.screens:
@@ -1272,6 +1287,7 @@ def report(run_report: SeedReport) -> list[str]:
     lines.extend(["", COHORT_DISCLAIMER])
     costs = list(run_report.pairs.costs if run_report.pairs else ())
     costs.extend(run_report.played.costs if run_report.played else ())
+    costs.extend(plan_costs(run_report.plans) if run_report.plans else ())
     if not run_report.photographs:
         costs.append(
             "the object store did not answer, so this run seeded no "
@@ -1318,6 +1334,20 @@ def _played_lines(played: SeededGames) -> list[str]:
     return [
         "The played history:",
         *(f"  {one.line}" for one in played.games),
+    ]
+
+
+def _plan_lines(plans: SeededPlans) -> list[str]:
+    """The four card states, each read back off ``GET /plans``' own use case.
+
+    **Nought is a row on this list**, and it is the one that reads oddly: a plan
+    at no slots is a game with *no plan*, so the line says so rather than
+    printing three empty values a client can never be sent.
+    """
+
+    return [
+        "The plans, on games nobody has played:",
+        *(f"  {line}" for line in plans.plans),
     ]
 
 
