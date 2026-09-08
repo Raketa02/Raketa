@@ -40,10 +40,19 @@ there; they are not repeated here.
   *sequential* retry; two concurrent duplicates collide on version 1 of one stream and the
   loser is told `concurrent_modification`, exactly as two concurrent assessment starts are.
   _Avoid_: "dedupe table", "request log".
-- **Event-sourced aggregate** vs **persisted-with-events entity** — the two persistence
-  shapes in this codebase, and a deliberate per-context choice. `User` is the former
-  (state rebuilt from its stream); `RefreshToken` is the latter (current state is the
-  truth, events provide audit + cross-context notification). Neither is the default.
+- **Event-sourced aggregate** vs **persisted-with-events entity** vs **stored aggregate** —
+  the three persistence shapes in this codebase, and a deliberate per-context choice.
+  `User` is the first (state rebuilt from its stream); `RefreshToken` is the second (current
+  state is the truth, events provide audit + cross-context notification). `SportsmanshipCard`
+  is the third and so far the only one: rows, and **no events at all**
+  ([ADR-0154](../docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
+  None is the default, and the third is the one that has to be argued for hardest, because
+  *state changes emit domain events* is a standing rule here — it earns the exemption by
+  having no life story (a card is born answered), no subscriber, and no derived standing
+  anybody folds from it. Distinguish it from a **durable ledger** — the matcher's interest,
+  pass and decline rows — which is a small fact with no aggregate around it at all; this has
+  an aggregate, because the card and every answer on it are written together and every rule
+  about who may be on it holds across the whole of it.
 - **Durable event name** — the stable `"<context>.<event>"` string plus integer version
   registered in the event catalog, e.g. `users.user_registered` / v1. It is the wire
   contract for stored history and is **independent of the Python class name**.

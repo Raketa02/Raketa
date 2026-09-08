@@ -252,6 +252,16 @@ from app.modules.rating.infrastructure.event_sourced_assessment_repository impor
 from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
     EventSourcedSkillRatingRepository,
 )
+from app.modules.sportsmanship.domain.ports import (
+    SettledCourts,
+    SportsmanshipLedger,
+)
+from app.modules.sportsmanship.infrastructure.games_settled_courts import (
+    GamesSettledCourts,
+)
+from app.modules.sportsmanship.infrastructure.sqlalchemy_sportsmanship_ledger import (
+    SqlAlchemySportsmanshipLedger,
+)
 from app.modules.users.domain.ports import UserRepository
 from app.modules.users.infrastructure.sqlalchemy_user_repository import (
     SqlAlchemyUserRepository,
@@ -866,6 +876,29 @@ def build_confirmed_result_ledger(
     return EventSourcedConfirmedResults(
         session, (runtime or get_event_runtime()).codec
     )
+
+
+def build_settled_courts(session: AsyncSession) -> SettledCourts:
+    """*Is this a settled court of mine, and who else was on it* — over ``games``.
+
+    The adapter lives in ``sportsmanship``'s own infrastructure, which is the
+    shape ``games`` takes for ``PlayerHandles``: a provider publishes what it
+    knows about its own subject, and the context that wants it narrower does the
+    narrowing. It is built over the directory rather than beside it, so the
+    court a card is drawn for is folded from the same read of the log the games
+    list already runs.
+    """
+    return GamesSettledCourts(build_game_directory(session))
+
+
+def build_sportsmanship_ledger(session: AsyncSession) -> SportsmanshipLedger:
+    """The answered cards, and one standing answer per pair of people.
+
+    It writes and never commits, so it is built per request beside the unit of
+    work the use case commits through — the lifetime every durable ledger in this
+    codebase is given.
+    """
+    return SqlAlchemySportsmanshipLedger(session)
 
 
 def build_settle_ratings_on_results(

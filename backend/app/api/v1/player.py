@@ -47,6 +47,9 @@ from app.modules.player_profile.presentation.routes import (
 )
 from app.modules.rating.presentation.routes import ratings_router
 from app.modules.rating.presentation.routes import router as assessments_router
+from app.modules.sportsmanship.presentation.routes import (
+    router as sportsmanship_router,
+)
 from app.modules.users.presentation.routes import router as users_router
 
 player_api_router = APIRouter(prefix="/api/v1")
@@ -70,3 +73,4 @@ player_api_router.include_router(passes_router)
 player_api_router.include_router(prompt_declines_router)
 player_api_router.include_router(challenges_router)
 player_api_router.include_router(games_router)
+player_api_router.include_router(sportsmanship_router)

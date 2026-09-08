@@ -1368,8 +1368,15 @@ which also settles the clause ADR-0137 opened about whether *shows up* survives 
   - **Settles up** — whether a court share that fell due was settled without a case. **Stands
     down:** court money is out of scope. It is the **historical record**, never the live case —
     the open case is the Hold.
-  - **Sportsmanship** — what opponents said afterwards. A mean, not a ratio. **Stands down:**
-    no surface exists on which anybody rates anybody.
+  - **Sportsmanship** — what opponents said afterwards. A mean, not a ratio. **Stands down,
+    and now permanently**
+    ([ADR-0154](docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)). The
+    surface it was waiting for exists — see **Sportsmanship** below — and the reason it stays
+    down has changed rather than lapsed: **it is not a strand and never was.** A star average
+    is not a ratio out of a hundred, so it cannot be a term in a weighted mean over ratios;
+    and the matcher must not read it in any shape, because it is the one thing here a person
+    can weaponise with no appeal route behind it. It is published as **its own figure**, on
+    the player record, under its own heading.
 - **Confirms results** — **struck, and not deferred**
   ([ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). It read *whether a
   counted game gets confirmed, so it counts*, and it cannot be published honestly: **an
@@ -1411,6 +1418,57 @@ which also settles the clause ADR-0137 opened about whether *shows up* survives 
   ([ADR-0111](docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md)).
   It reaches a card through a port at assembly time, on the seam the nickname and the photo
   already ride.
+
+### Sportsmanship (`backend/app/modules/sportsmanship/`)
+
+What the *other players* said about being on a court with somebody — the one thing on the
+player record the platform cannot count for itself, and the first part of that sheet that
+**stores** anything rather than deriving it
+([ADR-0154](docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
+
+**The word *rating* is Skill rating's**, and this context pays the cost of arriving second:
+everything here is spelled **stars** or **the card**, and a bare *rating* on this platform
+still means the μ/σ a player holds in a sport.
+
+- **The card** — one court, one rater, answered once. Everybody from one game is on it
+  together, which is what keeps a busy month from becoming a chore list. **Submitting closes
+  it for ever**: a blank stays blank, there is no correction path, and a card answered with
+  everybody blank is closed too — an explicit *I am not rating anyone* is an answer somebody
+  decided.
+- **Stars** — one to five, whole. **No zero**, because a rating that reads as *worthless* is a
+  weapon out of proportion to a tap and one star already dents an average about as hard; **no
+  halves**, because five taps is one number.
+- **Blank** — somebody on the card who was given no stars. It is spelled by **absence** and
+  nothing else: not a zero, not a null, not a row. Leaving somebody blank tonight keeps
+  whatever you last said about them, because a blank is the absence of an opinion and never
+  the withdrawal of one.
+- **Settled court** — the courts a card may be drawn for. `games`' word, **narrowed**: over
+  there a plan nobody ever claimed is settled too, and there is nobody to rate for an evening
+  that did not happen. Here it means **played, and over** — confirmed, or unscored because two
+  sides disagreed and both windows closed. **An unscored game is in**: two people who cannot
+  agree what the score was were still on a court together for two hours.
+
+**Invariants**
+- **You rate everybody else who was on the court.** In doubles both opponents **and your
+  partner** — the person who saw you play closest was on your own side of the net — and in
+  singles the one opponent. There is therefore **no *side* in this context at all**, and
+  rating yourself is refused by the same rule that refuses a stranger.
+- **Only a rater's most recent stars about a person count, and the collapse is the primary
+  key.** Two friends who partner every week would otherwise supply ten of each other's twelve
+  ratings, and the average would drift towards what one regular partner thinks. Collapsed, that
+  history gives **three** ratings, and the count printed beside the figure means *how many
+  different people have an opinion*.
+- **No individual rating is returned to anybody, on any route, in any shape.** Not to the
+  subject, not to the rater who gave it. What may be published is an **average** beside the
+  count of distinct people behind it; what the **subject** sees about themselves is a coarse
+  band and **no count**, because an average plus a count is a subtraction that names each new
+  rating and they know who they played.
+- **The matcher never reads it — the floor and the term.** A reader seeing the figure and
+  deciding for themselves is the product working; the app demoting somebody silently on the
+  same evidence, with nothing they can answer, is not. An import contract enforces it, because
+  a Match Fit term reading a star average would look like every term beside it.
+- **Not rating costs nothing, and the omission is not recorded.** No strand, no obligation, no
+  penalty, and nothing anywhere that says a card went unanswered.
 
 ## Cross-cutting concepts
 

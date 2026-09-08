@@ -2217,6 +2217,88 @@
           }
         }
       }
+    },
+    "/api/v1/sportsmanship/{game_id}": {
+      "post": {
+        "tags": [
+          "sportsmanship"
+        ],
+        "summary": "Rate the players you played",
+        "description": "**Everybody from one game, answered together.** In doubles that is three people \u2014 both opponents *and* your partner, because the person who saw you play closest was on your own side of the net. In singles it is the one opponent.\n\n**Anybody may be left blank**: leave them out of `ratings`. Sending an empty `ratings` answers the card without rating anybody, which is an answer and closes it.\n\n**Submitting closes it for ever.** A second request is refused, a blank stays blank, and there is no correction path \u2014 so ask before you send.\n\n**Only your most recent rating of a given person counts.** Rating somebody again after another game replaces what you said last time rather than adding to it, so partners who play every week cannot inflate each other by volume.\n\n**A low rating feeds the average and nothing else.** It does not pass, hide or block, and it will not stop you being matched with that person again. `POST /api/v1/passes` and `POST /api/v1/blocks` are the controls that do those things, and both are meant to be deliberate.\n\n**Nobody is told, and no individual answer is ever shown to anybody.** What reaches a reader is an average out of five beside how many different people it rests on; what reaches the person you rated is a coarse band about themselves and no count.",
+        "operationId": "answer_the_card_api_v1_sportsmanship__game_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerTheCardRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Answered, and the card is closed. **Nothing is returned, and nothing ever will be** \u2014 there is no route through which an individual rating reaches anybody, including the person who gave it and the person it is about."
+          },
+          "400": {
+            "description": "`they_were_not_on_this_court` \u2014 stars for somebody who was not there, **including yourself**. You rate everybody else on the court and nobody else.\n\n`you_rated_the_same_person_twice` \u2014 one card carries one answer about each player. Refused rather than collapsed, because collapsing means the platform picking which of your two opinions to keep.\n\n`stars_are_one_to_five` \u2014 whole stars, one to five. There is no zero and there are no halves.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`this_game_is_not_yours_to_rate` \u2014 no settled game of **yours** has that id. **One code for three cases** \u2014 it does not exist, you did not play in it, or its result has not settled \u2014 because they have one remedy and separating them would answer *is this id real* about four strangers' evening.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`you_have_already_rated_this_game` \u2014 the card is closed. It closed when you answered it, whatever you put on it, and there is no way to reopen it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2272,6 +2354,21 @@
           "text"
         ],
         "title": "AnswerOptionResponse"
+      },
+      "AnswerTheCardRequest": {
+        "properties": {
+          "ratings": {
+            "items": {
+              "$ref": "#/components/schemas/StarsGivenSchema"
+            },
+            "type": "array",
+            "title": "Ratings",
+            "description": "The players you are rating. **Leave somebody out to leave them blank**, and send an empty list to answer the card without rating anybody \u2014 both are answers, and both close the card for ever."
+          }
+        },
+        "type": "object",
+        "title": "AnswerTheCardRequest",
+        "description": "A whole card, answered once.\n\nEverybody from one game is answered together, which is what keeps a busy\nmonth from becoming a chore list."
       },
       "ArrangementSchema": {
         "properties": {
@@ -5757,6 +5854,28 @@
         ],
         "title": "StandingProposalSchema",
         "description": "One side's score, on the table and not yet settled on.\n\n**At most one per side**, which is what bounds an argument to two rounds. Two\nof them is the disagreement this platform does not resolve \u2014 and it does not\nresolve it by *arbitrating*, not by hiding it: both scores travel, either\nside may agree with the other's, and that is the only end short of the game\ngoing unscored."
+      },
+      "StarsGivenSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "One of the other players on that court \u2014 in doubles an opponent or your partner, in singles the one opponent."
+          },
+          "stars": {
+            "type": "integer",
+            "title": "Stars",
+            "description": "One to five whole stars. There is no zero and there are no halves."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "stars"
+        ],
+        "title": "StarsGivenSchema",
+        "description": "One player on the card, and the stars they were given.\n\n``stars`` is declared as a plain integer **on purpose**. The range is one to\nfive whole stars and it lives in the domain, where a seed, a test and a\nrequest all meet the same refusal; a Pydantic bound restating it here would\nbe a second copy of the rule, and the first of the two to be edited would win\nsilently for whichever callers went through it. A number off the scale comes\nback as `stars_are_one_to_five`."
       },
       "StateResultRequest": {
         "properties": {

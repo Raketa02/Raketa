@@ -508,6 +508,34 @@ Rules to preserve:
   platform-wide**: `NoPlayerScoresExist` retired, `build_absent_terms` answers empty and lost its
   argument, a stood-down reliability is now `NOTHING_FROM_THEM`, and the evidence gate counts
   eight live terms rather than seven — excluding nobody, at a margin of zero rather than one.
+- **Sportsmanship stores, and it is the first aggregate here that is not event-sourced**
+  ([ADR-0154](../docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
+  `app/modules/sportsmanship/` is the eighth context, and it is the mirror image of the
+  seventh: `player_score` keeps no record at all, and this one is the first part of the
+  player record that keeps one — an aggregate, two tables and a migration. The exemption
+  from *state changes emit domain events* is **argued rather than inherited**, on the terms
+  that rule demands: a card is **born answered**, so a stream would be one event per card
+  and a replay a `SELECT` with extra steps; **nothing subscribes**, so an outbox row would
+  wait for nobody; and there is **no standing to derive**, which is the whole reason `games`
+  replays. Five things are load-bearing and none is obvious from the code. **The collapse is
+  the primary key** — `sportsmanship_rating` is keyed `(rater_id, subject_id)` and a later
+  card *replaces* the earlier answer, because a read-time collapse is a rule the first
+  reader to forget hands the farming problem back with a plausible number; the earlier
+  answer is not archived, and the cost of that is named in the record. **Two tables, because
+  the all-blank card has to close** — a blank is spelled by absence and nothing else, which
+  is what makes *not rating leaves no record of the omission* structural, so the closure
+  cannot live on the answers. **You rate everybody else on the court**, partner included, so
+  there is no *side* in this context and rating yourself is refused by the same rule that
+  refuses a stranger. **The matcher never reads it — the floor and the term** — and that is
+  held by an `.importlinter` contract rather than by a test, because a Match Fit term
+  reading a star average would look like every term beside it and nothing would go red;
+  it is also why the reliability pill stays the counted-only number. And **no individual
+  rating reaches anybody in any shape**: the route answers `204`, the use case returns
+  `None`, and `SportsmanshipLedger` has no method that answers *what did somebody say about
+  me* — so a route wanting to leak one has to grow a read first. It borrows one thing,
+  `SettledCourts` over `games`' directory, whose adapter lives in **this** context the way
+  `PlayerHandles`' lives in `games`; *settled* there is narrowed to **played and over**,
+  because a ghost has nobody to rate and an unscored game very much does.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one

@@ -325,6 +325,59 @@ forbidden_modules =
     app.modules.matchmaking
 allow_indirect_imports = true
 
+# The fourth of the same rule, and then — uniquely so far — the same rule pointed
+# back the other way. `sportsmanship` does not import the matcher, for the reason
+# its three neighbours do not: it is a provider, and a provider that knew its
+# consumer would eventually be shaped by it.
+#
+# The second contract is the one that is actually load-bearing, and it is a
+# **product** decision rather than a layering one (docs/adr/0154). The matcher
+# ignores sportsmanship entirely — not in the floor, not as a term, not as a
+# tie-break — because it is the one strand a person can weaponise and there is no
+# appeal route behind it. A reader seeing `3,1 / 5 · 12 players` and deciding for
+# themselves is the product working; the app halving somebody's exposure on the
+# same evidence, silently, with nothing they can answer, is not. That decision has
+# no other enforcement: nothing goes red the day a Match Fit term starts reading
+# a star average, because it would look like every other term beside it. This is
+# what goes red.
+#
+# It is also why the reliability pill is the counted-only number: a star average
+# is not a ratio out of a hundred and cannot be a strand in a weighted mean over
+# ratios, and had the pill included opinions the matcher ignores, the number a
+# player can see would not be the number that demotes them.
+#
+# **`allow_indirect_imports = true` on both, and the second one was measured
+# rather than assumed.** With the flag off it goes red on today's tree naming
+# three modules that have done nothing: every path it reports runs through
+# `app.bootstrap.composition`, which imports every adapter on the platform by
+# design, so a strict contract here is a contract about the composition root and
+# not about the matcher. The violation this exists for is the **direct** one, and
+# it is direct in the only shape it could realistically take: a composing adapter
+# in `matchmaking/infrastructure/`, spelled exactly like `games_match_history.py`
+# beside it, reading a star average into a term. That import names
+# `app.modules.sportsmanship` on its own line.
+#
+# The engines need no arm here: `engines-are-pure` above already forbids them
+# `app.modules` outright, and an arm that restates a rule is an arm that looks
+# like it is doing work.
+[importlinter:contract:sportsmanship-does-not-know-the-matcher]
+name = The Sportsmanship context does not import the matcher
+type = forbidden
+source_modules =
+    app.modules.sportsmanship
+forbidden_modules =
+    app.modules.matchmaking
+allow_indirect_imports = true
+
+[importlinter:contract:the-matcher-never-reads-sportsmanship]
+name = The matcher never reads sportsmanship — not the floor, not a term
+type = forbidden
+source_modules =
+    app.modules.matchmaking
+forbidden_modules =
+    app.modules.sportsmanship
+allow_indirect_imports = true
+
 # `scripts/` holds the offline machines — the ones that read a document, run the
 # engine over it and write the answer back. `scripts/__init__.py` says nothing
 # under `app/` may import from here, and this is what makes that true: the
