@@ -86,11 +86,20 @@ class SettledCourt:
     **A tuple and not a set**, in the line-up's own order, so a walk over a court
     is the same walk on every process and under every ``PYTHONHASHSEED``
     (``docs/adr/0105``).
+
+    **``played_at`` is the moment somebody said *we played*** — ``games``' own,
+    and the only moment this platform has about an evening; the hour four people
+    were actually on a court is recorded nowhere. It is here because the card's
+    window runs from it: the card opens the day after and closes a week later
+    (``window.py``). It is carried on the court rather than fetched beside it
+    because *when did this happen* is a fact about the court and not about the
+    read that wanted it.
     """
 
     game_id: UUID
     rater_id: UUID
     others: tuple[UUID, ...]
+    played_at: Instant
 
     def __post_init__(self) -> None:
         invariant(

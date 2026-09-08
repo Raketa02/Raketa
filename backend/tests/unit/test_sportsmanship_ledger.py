@@ -5,6 +5,10 @@ only as *the row that is left*, and this asserts the shape that produces it; the
 **race** is unreachable at all, because the use case's own check refuses a second
 card long before the key ever sees one.
 
+The third thing here is the read both callers share — *which of these cards are
+closed* — asserted at the two arities it is actually asked at: one game, when a
+card is about to be answered, and a page of them, when the list route joins.
+
 They are here rather than in ``tests/demands/`` because there is one
 implementation and nothing outside this context reads it: the demand registers
 are for ports somebody *else* executes, and a register of one row nobody consumes
@@ -51,7 +55,12 @@ async def ledger(session):
 
 def a_card(*, rater, others, given, at):
     return SportsmanshipCard.answered(
-        court=SettledCourt(game_id=uuid4(), rater_id=rater, others=tuple(others)),
+        court=SettledCourt(
+            game_id=uuid4(),
+            rater_id=rater,
+            others=tuple(others),
+            played_at=MONDAY,
+        ),
         given=[StarsGiven(subject_id=who, stars=stars) for who, stars in given],
         at=at,
     )
@@ -136,9 +145,9 @@ async def test_an_all_blank_card_is_stored_and_closes_the_card(session, ledger):
     await session.commit()
 
     assert await _ratings(session) == []
-    assert await ledger.has_been_answered(
-        game_id=card.game_id, rater_id=card.rater_id
-    )
+    assert await ledger.answered_among(
+        rater_id=card.rater_id, game_ids=(card.game_id,)
+    ) == {card.game_id}
 
 
 async def test_two_cards_racing_for_one_court_meet_the_key_as_a_refusal(
@@ -153,7 +162,9 @@ async def test_two_cards_racing_for_one_court_meet_the_key_as_a_refusal(
     """
 
     rater, partner = uuid4(), uuid4()
-    court = SettledCourt(game_id=uuid4(), rater_id=rater, others=(partner,))
+    court = SettledCourt(
+        game_id=uuid4(), rater_id=rater, others=(partner,), played_at=MONDAY
+    )
     first = SportsmanshipCard.answered(
         court=court, given=[StarsGiven(subject_id=partner, stars=5)], at=MONDAY
     )
@@ -167,7 +178,33 @@ async def test_two_cards_racing_for_one_court_meet_the_key_as_a_refusal(
 
 
 async def test_a_card_nobody_answered_is_not_closed(session, ledger):
-    assert not await ledger.has_been_answered(game_id=uuid4(), rater_id=uuid4())
+    assert (
+        await ledger.answered_among(rater_id=uuid4(), game_ids=(uuid4(),))
+        == frozenset()
+    )
+
+
+async def test_asking_about_nothing_answers_nothing(ledger):
+    """The common case on the list route — a player with no open card — and it
+    is answered without a statement, because ``IN ()`` is a thing two dialects
+    disagree about for an answer known before either sees it."""
+
+    assert await ledger.answered_among(rater_id=uuid4(), game_ids=()) == frozenset()
+
+
+async def test_only_the_closed_ones_among_a_list_come_back(session, ledger):
+    """The list read's whole join: many courts, one question, and the answer is
+    which of them are shut."""
+
+    rater, partner = uuid4(), uuid4()
+    closed = a_card(rater=rater, others=[partner], given=[(partner, 4)], at=MONDAY)
+    await ledger.record(closed)
+    await session.commit()
+    still_open, somebody_elses = uuid4(), uuid4()
+
+    assert await ledger.answered_among(
+        rater_id=rater, game_ids=(closed.game_id, still_open, somebody_elses)
+    ) == {closed.game_id}
 
 
 async def test_one_rater_answering_does_not_close_the_card_for_the_others(
@@ -180,15 +217,25 @@ async def test_one_rater_answering_does_not_close_the_card_for_the_others(
     mine, theirs = uuid4(), uuid4()
     await ledger.record(
         SportsmanshipCard.answered(
-            court=SettledCourt(game_id=game_id, rater_id=mine, others=(theirs,)),
+            court=SettledCourt(
+                game_id=game_id,
+                rater_id=mine,
+                others=(theirs,),
+                played_at=MONDAY,
+            ),
             given=[StarsGiven(subject_id=theirs, stars=4)],
             at=MONDAY,
         )
     )
     await session.commit()
 
-    assert await ledger.has_been_answered(game_id=game_id, rater_id=mine)
-    assert not await ledger.has_been_answered(game_id=game_id, rater_id=theirs)
+    assert await ledger.answered_among(rater_id=mine, game_ids=(game_id,)) == {
+        game_id
+    }
+    assert (
+        await ledger.answered_among(rater_id=theirs, game_ids=(game_id,))
+        == frozenset()
+    )
 
 
 async def test_a_rating_carries_the_card_it_came_from(session, ledger):

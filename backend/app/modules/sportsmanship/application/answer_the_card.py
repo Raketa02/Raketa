@@ -16,6 +16,16 @@ to them. The published figure is a fold over the rows this writes, computed when
 somebody opens a record, and there is nothing anywhere that has to be told a card
 was answered.
 
+**The card's week is not a refusal here, and its absence is the decision.** The
+window in ``window.py`` decides when somebody is *asked* — it is read by the list
+route and by nothing else — and this use case refuses on *whose evening it was*
+and *has it been answered*, neither of which is a clock. A player who opened the
+card at six days and twenty-three hours and tapped submit a minute later would
+otherwise be told their opinion was too late; nobody is docked for a card that
+lapsed, and the collapse already means only a rater's most recent answer about a
+person counts. It is pinned in ``tests/api/test_sportsmanship.py``, because
+*expired means refused* is the reading somebody tidying this up would reach for.
+
 **Nothing is returned.** The return type is the contract as much as the route's
 ``204`` is: a use case that answered something would be a shape a route could be
 tempted to render, and *no individual rating reaches anybody* would become a
@@ -61,8 +71,11 @@ class AnswerTheCard:
         )
         if court is None:
             raise ThisGameIsNotYoursToRate()
-        if await self._ledger.has_been_answered(
-            game_id=command.game_id, rater_id=command.rater_id
+        # The set read asked about one game. It is the same question the list
+        # read asks about a page of them — *which of these cards are closed* —
+        # and a singular spelling beside it would be a second read of one table.
+        if await self._ledger.answered_among(
+            rater_id=command.rater_id, game_ids=(command.game_id,)
         ):
             raise YouHaveAlreadyRatedThisGame()
 

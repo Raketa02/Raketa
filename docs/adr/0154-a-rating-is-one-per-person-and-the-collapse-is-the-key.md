@@ -266,3 +266,47 @@ for it makes the case again.
 refusing the matcher this context is green today because nothing in the matcher has ever
 wanted a star average. That is the point — it is armed before the first person reaches for
 one — but it is also a contract that will look like decoration until it fires.
+
+## Amendment — 2026-09-08: the port answers at two arities, and the read that grew leaks nothing
+
+Building the games-list card ([#378](https://github.com/Raketa02/Raketa/issues/378)) needed
+the one thing this record described as absent: *which of my games are still waiting for my
+stars*. Two sentences above are corrected here rather than in place, because this record is
+immutable once accepted.
+
+**§7's "one method wide" is now two, and it is still one question.** `SettledCourts` gains
+`courts_of(player_id, now)` beside `court_of(game_id, player_id, now)`. Both ask *is this a
+settled court of mine, and who else was on it* — the plural draws the list a player is
+offered and the singular is the gate on the act — and the narrowing (`SETTLED ∩ PLAYED`) is
+applied in one private place so a list cannot offer an ending the act would refuse. The
+adapter is unchanged in shape: the directory only ever answered *which games are mine*, so
+the singular was always the plural with one id kept, and the two arities cost the same thing.
+
+**§6's "a route wanting to leak one would have to grow a read first" was a rule, not a
+prediction, and the rule held.** `GET /api/v1/sportsmanship` is that read, and it carries a
+game id and the people on that court — an evening, and nothing anybody said about it.
+`SportsmanshipLedger`'s `has_been_answered` became `answered_among(rater_id, game_ids)`, a
+set of *closed cards*: still a fact about an act, with no method anywhere on the port that
+answers *what did somebody say*. What the write route returns is unchanged and is still a
+`204`.
+
+**The card's week is enforced on the read and deliberately not on the write.** *Not until
+the day after, and for seven days* lives in `sportsmanship/domain/window.py`, and it decides
+when somebody is **asked**. `AnswerTheCard` refuses on *whose evening it was* and *has it
+been answered*, neither of which is a clock: a player who opened the card at six days and
+twenty-three hours and tapped submit a minute later would otherwise be told their opinion was
+too late, and nothing is protected by that — nobody is docked for a card that lapsed, and
+§4's collapse already means only a rater's most recent answer about a person counts. The
+window is the prompt; it is not the permission, and the difference is pinned by a test rather
+than left to be re-derived.
+
+**Both edges run from `games`' `played_at`**, which is *the moment somebody said we played*
+and never the hour on court — this platform records no such hour. It is never earlier than
+the game, so the day-after rule holds conservatively. The cost of not anchoring the close to
+a settlement is that a game two sides argued over settles up to a day into its week and its
+card is drawn for six days rather than seven; the alternative is an argument over a score
+restarting somebody's week, which would make the card's life a property of the argument
+rather than of the evening.
+
+**Nothing else moves.** No rating crosses the wire, the collapse is untouched, the matcher
+still reads none of it, and the context still stores exactly the two tables §3 describes.

@@ -3,7 +3,10 @@
 **Two ports, and the interesting one is what neither of them can express.**
 
 ``SportsmanshipLedger`` is this module's own store, and it has no method that
-answers *what did somebody say about me*, or *what did I say about them*. That is
+answers *what did somebody say about me*, or *what did I say about them*. It
+answers only *which of these cards are closed*, which is a fact about an act and
+not about an opinion — the list read joins on it and the write path gates on it,
+and neither can learn a star from it. That is
 the same shape ``InterestLedger`` takes and for a stronger reason: an inbox there
 was merely a query nobody wanted, and here an individual rating reaching anybody
 is the failure the whole design is built to prevent. *No individual rating is
@@ -11,23 +14,26 @@ returned to anybody, on any route, in any shape* is a rule about routes only
 while a route could get one — so the port does not offer one, and a route that
 wanted to leak one would have to grow a read first.
 
-``SettledCourts`` is somebody else's, and it is one method wide. It asks
-``games`` a single question — *is this a game of mine that is over, and who else
-was on it* — and answers with the court or with nothing at all. What it does
-**not** borrow is a card, a Level or a handle: a card is what a searcher reads to
-decide about a game that might happen (``docs/adr/0141``), and this is a question
-about an evening that already did. The names on the card are the client's to
-draw from the games list it drew the card from.
+``SettledCourts`` is somebody else's, and it asks ``games`` one question at two
+arities — *which of my games are over, and who else was on each* — answering with
+courts, or with a court, or with nothing at all. The two are not two questions:
+the plural draws the list a player is offered and the singular is the gate on the
+act, and both are *is this a settled court of mine*. What it does **not** borrow
+is a card, a Level or a handle: a card is what a searcher reads to decide about a
+game that might happen (``docs/adr/0141``), and this is a question about an
+evening that already did. The names on the card are the client's to draw from the
+games list it drew the card from.
 
-**Absence has one spelling.** A game that does not exist, a game somebody else
-played and a game whose result has not settled are all ``None`` — one answer,
-because they have one remedy and because separating them would let a caller
-answer *is this id real* about four strangers' evening.
+**Absence has one spelling, at both arities.** A game that does not exist, a game
+somebody else played and a game whose result has not settled are all ``None`` from
+the singular and simply not in the plural's tuple — one answer, because they have
+one remedy and because separating them would let a caller answer *is this id real*
+about four strangers' evening.
 """
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Collection, Protocol, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant
@@ -46,6 +52,24 @@ class SettledCourts(Protocol):
     the score was were still on a court together for two hours, and how that went
     is exactly what this context is for.
     """
+
+    async def courts_of(
+        self, player_id: UUID, *, now: Instant
+    ) -> tuple[SettledCourt, ...]:
+        """Every settled court this player was on, in no promised order.
+
+        **The window is not applied here**, and that is the layering rather than
+        an omission: *has this evening finished* is ``games``' fact and *may I be
+        asked about it yet* is this context's rule, so the port answers the first
+        and ``window.py`` answers the second. A port that filtered on the card's
+        week would put this context's clock inside somebody else's answer, and the
+        day the week changed there would be two places to look.
+
+        **Order is the caller's to impose.** What comes back is a fold over
+        streams, and a promise about its order here would be a promise the
+        directory underneath does not make.
+        """
+        ...
 
     async def court_of(
         self, game_id: UUID, *, player_id: UUID, now: Instant
@@ -70,14 +94,26 @@ class SportsmanshipLedger(Protocol):
     has to make it.
     """
 
-    async def has_been_answered(self, *, game_id: UUID, rater_id: UUID) -> bool:
-        """Whether this player has already answered this game's card.
+    async def answered_among(
+        self, *, rater_id: UUID, game_ids: Collection[UUID]
+    ) -> frozenset[UUID]:
+        """Which of these games this player has already answered the card for.
 
-        **The whole of what closes a card.** It is true of the all-blank card
-        too, which is the point of storing the card apart from the stars on it:
-        an explicit *I am not rating anyone* is an answer, and an answer that
-        left no trace would be an invitation to come back and fill somebody in
-        later.
+        **The whole of what closes a card.** A game is in the answer for the
+        all-blank card too, which is the point of storing the card apart from the
+        stars on it: an explicit *I am not rating anyone* is an answer, and an
+        answer that left no trace would be an invitation to come back and fill
+        somebody in later.
+
+        **One method and not two.** The list read asks about a whole page of
+        courts and the write path asks about the one it is about to close, and
+        they are the same question — a singular spelling beside this one would be
+        a second read of the same table, and the first of the two to be changed
+        would win for whichever caller went through it.
+
+        **A set and not a mapping**, because there is nothing else about a closed
+        card a caller may have: not when it was answered, not how many people were
+        on it, and least of all what was said.
         """
         ...
 

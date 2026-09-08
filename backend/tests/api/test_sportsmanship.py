@@ -29,6 +29,11 @@ there is deliberately no route that would show it.
 
 **No individual rating crosses the wire, ever.** The route answers ``204`` with
 no body, and there is no route anywhere on the surface that returns one.
+
+And the list route beside it, which is the thing that actually puts a card in
+front of somebody: **the day after, for seven days, and gone once answered.**
+Every reason a card is not on it is spelled the same way — by not being there —
+which is why each of them is asserted against a list that is otherwise identical.
 """
 
 from __future__ import annotations
@@ -41,7 +46,11 @@ from sqlalchemy import select
 
 from app.api.dependencies import get_clock
 from app.kernel import Instant, instant
-from app.modules.games.domain.windows import PROPOSAL_WINDOW
+from app.modules.games.domain.windows import ACCEPTANCE_GRACE, PROPOSAL_WINDOW
+from app.modules.sportsmanship.domain.window import (
+    CARD_OPENS_AFTER,
+    CARD_STAYS_OPEN_FOR,
+)
 from app.modules.sportsmanship.infrastructure.card_model import (
     SportsmanshipCardORM,
     SportsmanshipRatingORM,
@@ -151,19 +160,52 @@ async def _games(client, token: str) -> list[dict]:
     return response.json()["games"]
 
 
+async def _the_game(client, token: str, game_id: str) -> dict:
+    """One game off the list, found by its id.
+
+    Found rather than assumed to be the only one: two of these tests arrange a
+    second game, and *the game* would silently become *the first game*.
+    """
+
+    (game,) = [
+        one for one in await _games(client, token) if one["game_id"] == game_id
+    ]
+    return game
+
+
 async def _a_settled_game(client, session_factory, candidate_source, searcher, clock):
     """A whole game, played and confirmed by the silence of everybody else."""
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     game_id = await _a_played_game(client, searcher, people)
     clock.move(PROPOSAL_WINDOW + timedelta(minutes=1))
-    (game,) = [
-        one
-        for one in await _games(client, searcher["token"])
-        if one["game_id"] == game_id
-    ]
+    game = await _the_game(client, searcher["token"], game_id)
     assert game["standing"] == "CONFIRMED", "the score should have confirmed itself"
     return game_id, people
+
+
+async def _waiting(client, token: str) -> list[dict]:
+    response = await client.get("/api/v1/sportsmanship", headers=world.auth(token))
+    assert response.status_code == 200, response.text
+    return response.json()["cards"]
+
+
+async def _somebody_on_the_other_side(client, searcher, people, game_id: str) -> str:
+    """A token that may *agree* with the searcher's score.
+
+    Only the other side can accept — a teammate agreeing with a teammate proves
+    nothing — so the opponent has to be found rather than guessed at.
+    """
+
+    game = await _the_game(client, searcher["token"], game_id)
+    seats = {seat["player_id"]: seat["side"] for seat in game["seats"]}
+    mine = seats[str(searcher["id"])]
+    tokens = {str(person["id"]): person["token"] for person in people.values()}
+    return next(
+        tokens[player_id]
+        for player_id, side in seats.items()
+        if side != mine and player_id in tokens
+    )
 
 
 async def _rate(client, token: str, game_id: str, ratings: list[dict]):
@@ -540,16 +582,244 @@ async def test_a_blank_does_not_withdraw_what_was_said_about_somebody_before(
     assert stored[people["bo"]["id"]] == 3
 
 
-async def test_no_route_on_the_surface_returns_an_individual_rating(client):
-    """**There is no read.** Not the subject's, not the rater's own, in no shape
-    — so the only sportsmanship path on the surface is the one that writes."""
+async def test_the_surface_has_two_paths_and_neither_answers_with_a_rating(client):
+    """**There is a read now, and it still returns no rating.** Not the
+    subject's, not the rater's own, in no shape.
+
+    The list route is the only read this context has ever grown, and what it
+    carries is a game id and the people on that court — an evening, not an
+    opinion of one. The claim is asserted against the emitted document rather
+    than against the handler, because the rule is about what a client can
+    generate a type for: a star reaching a response schema here is the failure,
+    whichever route grew it.
+    """
 
     spec = (await client.get("/openapi.json")).json()
     sportsmanship = {
-        f"{method.upper()} {path}"
+        f"{method.upper()} {path}": operation
         for path, operations in spec["paths"].items()
-        for method in operations
+        for method, operation in operations.items()
         if "sportsmanship" in path
     }
 
-    assert sportsmanship == {"POST /api/v1/sportsmanship/{game_id}"}
+    assert set(sportsmanship) == {
+        "GET /api/v1/sportsmanship",
+        "POST /api/v1/sportsmanship/{game_id}",
+    }
+    answered = {
+        name: _answered_with(operation, spec)
+        for name, operation in sportsmanship.items()
+    }
+    # The walk reaches something, so the claim below is about what it found and
+    # not about a resolver that quietly stopped at the first ``$ref``.
+    assert answered["GET /api/v1/sportsmanship"] == {"cards", "game_id", "players"}
+    for name, properties in answered.items():
+        assert "stars" not in properties, f"{name} answers with a rating"
+
+
+def _answered_with(operation: dict, spec: dict) -> set[str]:
+    """Every property name reachable from one operation's **responses**.
+
+    Request bodies are deliberately not walked: ``stars`` belongs on the way in
+    and nowhere on the way out.
+    """
+
+    seen: set[str] = set()
+    found: set[str] = set()
+
+    def walk(node: object) -> None:
+        if isinstance(node, list):
+            for one in node:
+                walk(one)
+            return
+        if not isinstance(node, dict):
+            return
+        reference = node.get("$ref")
+        if isinstance(reference, str):
+            if reference in seen:
+                return
+            seen.add(reference)
+            resolved: object = spec
+            for step in reference.removeprefix("#/").split("/"):
+                resolved = resolved[step]  # type: ignore[index]
+            walk(resolved)
+        found.update(node.get("properties", {}))
+        for key, value in node.items():
+            if key != "$ref":
+                walk(value)
+
+    walk(operation.get("responses", {}))
+    return found
+
+
+async def test_a_settled_game_waits_for_your_stars_with_everybody_else_on_it(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """The list a card is drawn from: one game, and the three people you may
+    rate — both opponents *and* your partner."""
+
+    game_id, people = await _a_settled_game(
+        client, session_factory, candidate_source, searcher, clock
+    )
+
+    (card,) = await _waiting(client, searcher["token"])
+
+    assert card["game_id"] == game_id
+    assert set(card["players"]) == {
+        str(person["id"]) for person in people.values()
+    }
+
+
+async def test_everybody_on_the_court_is_waiting_for_their_own_card(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """A card belongs to a rater and not to a game. Each of the four is asked,
+    and each is asked about the other three."""
+
+    game_id, people = await _a_settled_game(
+        client, session_factory, candidate_source, searcher, clock
+    )
+    everybody = {str(searcher["id"]): searcher["token"]} | {
+        str(person["id"]): person["token"] for person in people.values()
+    }
+
+    for player_id, token in everybody.items():
+        (card,) = await _waiting(client, token)
+        assert card["game_id"] == game_id
+        assert set(card["players"]) == set(everybody) - {player_id}
+
+
+async def test_answering_takes_the_card_off_the_list(
+    client, session_factory, candidate_source, searcher, clock
+):
+    game_id, people = await _a_settled_game(
+        client, session_factory, candidate_source, searcher, clock
+    )
+    answered = await _rate(
+        client,
+        searcher["token"],
+        game_id,
+        [{"player_id": str(people["ana"]["id"]), "stars": 5}],
+    )
+    assert answered.status_code == 204, answered.text
+
+    assert await _waiting(client, searcher["token"]) == []
+    # And only for the person who answered it.
+    assert len(await _waiting(client, people["bo"]["token"])) == 1
+
+
+async def test_the_all_blank_card_also_takes_it_off_the_list(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """*I am not rating anyone* is an answer, and the point of it is that the
+    card stops being asked — otherwise it would sit there for the week."""
+
+    game_id, _people = await _a_settled_game(
+        client, session_factory, candidate_source, searcher, clock
+    )
+    answered = await _rate(client, searcher["token"], game_id, [])
+    assert answered.status_code == 204, answered.text
+
+    assert await _waiting(client, searcher["token"]) == []
+
+
+async def test_a_game_still_awaiting_an_answer_is_not_asked_about(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """**Settled first.** A score on the table with its window still open is a
+    game somebody may yet counter, and there is no card for it."""
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    await _a_played_game(client, searcher, people)
+    clock.move(timedelta(hours=1))
+
+    assert await _waiting(client, searcher["token"]) == []
+
+
+async def test_a_game_settled_the_same_evening_is_not_asked_about_until_tomorrow(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """**Settled is not enough.** An explicit agreement settles a result in six
+    hours, and this is the one path that reaches *over, but not yet a day* — so
+    it is the case that tells the two conditions apart."""
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    game_id = await _a_played_game(client, searcher, people)
+    agreed = await client.post(
+        f"/api/v1/games/{game_id}/result/acceptance",
+        headers=world.auth(
+            await _somebody_on_the_other_side(client, searcher, people, game_id)
+        ),
+    )
+    assert agreed.status_code == 200, agreed.text
+    clock.move(ACCEPTANCE_GRACE + timedelta(minutes=1))
+    game = await _the_game(client, searcher["token"], game_id)
+    assert game["standing"] == "CONFIRMED", "the agreement should have settled it"
+
+    assert await _waiting(client, searcher["token"]) == []
+
+    # And the day after, it is there.
+    clock.move(CARD_OPENS_AFTER)
+    (card,) = await _waiting(client, searcher["token"])
+    assert card["game_id"] == game_id
+
+
+async def test_a_card_nobody_answered_is_gone_after_its_week(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """**And nothing swept it.** The expiry is a fold over the evening's own
+    clock, so the card is simply not drawn — there is no job, no row and no
+    record that it lapsed."""
+
+    game_id, _people = await _a_settled_game(
+        client, session_factory, candidate_source, searcher, clock
+    )
+    assert len(await _waiting(client, searcher["token"])) == 1
+
+    clock.move(CARD_STAYS_OPEN_FOR)
+
+    assert await _waiting(client, searcher["token"]) == []
+    # The game itself is untouched by the card expiring.
+    assert [one["game_id"] for one in await _games(client, searcher["token"])] == [
+        game_id
+    ]
+
+
+async def test_a_player_with_nothing_to_rate_gets_an_empty_list(client, searcher):
+    assert await _waiting(client, searcher["token"]) == []
+
+
+async def test_a_lapsed_card_is_off_the_list_and_still_answerable(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """**The week governs the prompt, not the permission**, and this is the one
+    place the difference is visible.
+
+    A card that expires from the list is not a card the platform refuses. The
+    refusals this route has are about *whose evening it was* and *has it been
+    answered*, and a clock is neither: somebody who opened the card at six days
+    and twenty-three hours and tapped submit a minute later would otherwise be
+    told their opinion was too late, which is the failure mode the answer-window
+    refusals were written to avoid. There is nothing to protect here either —
+    nobody is docked for a card that lapsed, and the collapse already means only
+    a rater's most recent answer about a person counts.
+
+    Pinned rather than left implicit, because the opposite reading — *expired
+    means refused* — is the one somebody tidying this up would reach for.
+    """
+
+    game_id, people = await _a_settled_game(
+        client, session_factory, candidate_source, searcher, clock
+    )
+    clock.move(CARD_STAYS_OPEN_FOR + timedelta(days=30))
+    assert await _waiting(client, searcher["token"]) == []
+
+    answered = await _rate(
+        client,
+        searcher["token"],
+        game_id,
+        [{"player_id": str(people["ana"]["id"]), "stars": 4}],
+    )
+
+    assert answered.status_code == 204, answered.text
+    assert [one.stars for one in await _stored_ratings(session_factory)] == [4]

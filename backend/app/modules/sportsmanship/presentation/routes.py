@@ -1,4 +1,4 @@
-"""The one sportsmanship route: answer the card for a game you played.
+"""The two sportsmanship routes: which cards are waiting, and answering one.
 
 **There is no route that reads a rating back.** Not the subject's, not the
 rater's own, not as a list, not as a count, not as *you rated Karol four stars in
@@ -32,8 +32,15 @@ from fastapi import APIRouter, status
 from app.core.exception_handlers import ErrorResponse
 from app.modules.sportsmanship.application.commands import AnswerTheCardCommand
 from app.modules.sportsmanship.domain.card import StarsGiven
-from app.modules.sportsmanship.presentation.dependencies import AnswerTheCardDep
-from app.modules.sportsmanship.presentation.schemas import AnswerTheCardRequest
+from app.modules.sportsmanship.presentation.dependencies import (
+    AnswerTheCardDep,
+    ReadTheOpenCardsDep,
+)
+from app.modules.sportsmanship.presentation.schemas import (
+    AnswerTheCardRequest,
+    OpenCardSchema,
+    OpenCardsResponse,
+)
 from app.modules.users.presentation.dependencies import CurrentUserDep
 
 router = APIRouter(prefix="/sportsmanship", tags=["sportsmanship"])
@@ -72,6 +79,53 @@ _REFUSALS: dict[int | str, dict[str, Any]] = {
         ),
     },
 }
+
+
+@router.get(
+    "",
+    response_model=OpenCardsResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "description": (
+                "The courts still waiting for your stars, **soonest to expire "
+                "first**. An empty list is the ordinary answer."
+            )
+        },
+    },
+    summary="Cards waiting for your stars",
+    description=(
+        "**A card appears the day after the game and stays for seven days.** "
+        "Not on the evening itself — an answer given ten minutes after losing "
+        "badly is not the answer this is for — and not for ever, because a card "
+        "nobody is obliged to answer can only accumulate.\n\n"
+        "**A game is on this list only once it is over**: the score is agreed, "
+        "or both sides put one up and neither gave way. A game nobody ever said "
+        "was played never appears at all — there is nobody to rate for an "
+        "evening that did not happen.\n\n"
+        "**Answering removes it, whatever you put on it.** Submitting closes the "
+        "card for ever, including the card you answered with everybody left "
+        "blank.\n\n"
+        "**Absence is the only reason given.** A game not yet a day old, one "
+        "whose week has run out and one you have already answered are all simply "
+        "not here — and none of them is something to draw differently.\n\n"
+        "**Ids only.** Join `game_id` against `/api/v1/games` for the handles, "
+        "the sport and the date; `players` is everybody else who was on that "
+        "court, in the line-up's own order.\n\n"
+        "**Ignoring all of this costs nothing.** There is no strand for rating, "
+        "no penalty, and nothing is recorded about a card that expired."
+    ),
+)
+async def read_the_open_cards(
+    user: CurrentUserDep,
+    use_case: ReadTheOpenCardsDep,
+) -> OpenCardsResponse:
+    return OpenCardsResponse(
+        cards=[
+            OpenCardSchema(game_id=court.game_id, players=list(court.others))
+            for court in await use_case.execute(user.id)
+        ]
+    )
 
 
 @router.post(

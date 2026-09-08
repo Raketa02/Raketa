@@ -22,6 +22,7 @@ from app.bootstrap.composition import (
     build_sportsmanship_ledger,
 )
 from app.modules.sportsmanship.application.answer_the_card import AnswerTheCard
+from app.modules.sportsmanship.application.read_the_open_cards import ReadTheOpenCards
 from app.modules.sportsmanship.domain.ports import (
     SettledCourts,
     SportsmanshipLedger,
@@ -56,3 +57,17 @@ def get_answer_the_card(
 
 
 AnswerTheCardDep = Annotated[AnswerTheCard, Depends(get_answer_the_card)]
+
+
+def get_read_the_open_cards(
+    clock: ClockDep,
+    courts: SettledCourtsDep,
+    ledger: SportsmanshipLedgerDep,
+) -> ReadTheOpenCards:
+    """The list read. **No unit of work**, because it writes nothing — a card
+    is not opened by being looked at and is not closed by being ignored."""
+
+    return ReadTheOpenCards(clock=clock, courts=courts, ledger=ledger)
+
+
+ReadTheOpenCardsDep = Annotated[ReadTheOpenCards, Depends(get_read_the_open_cards)]

@@ -19,6 +19,11 @@ notice: every game the HTTP test settles is confirmed.
 The file also pins the other half of the port's contract — that a game the caller
 did not play in is not findable through it at all, because the read asks *which
 games are mine* rather than *which game is this*.
+
+**Both arities are swept over the same five standings**, because they are one
+question and the narrowing has one home: a list that offered a ghost and a
+singular that refused one would be a screen showing a card the act behind it
+would not accept.
 """
 
 from __future__ import annotations
@@ -171,8 +176,53 @@ async def test_a_card_may_be_drawn_for_exactly_the_two_endings_that_happened(
         assert court.game_id == game.id
         assert court.rater_id == me
         assert set(court.others) == game.line_up.players - {me}
+        assert court.played_at == game.played_at
     else:
         assert court is None, f"{standing.value} should not be rateable"
+
+
+@pytest.mark.parametrize("standing", sorted(GameStanding, key=lambda one: one.value))
+async def test_the_list_offers_exactly_the_same_two_endings(standing: GameStanding):
+    """**One narrowing, two arities.** A list that offered an ending the act
+    refuses would draw a card nothing could answer."""
+
+    game, read_at = BUILDERS[standing]()
+    (me, *_rest) = sorted(game.line_up.players)
+    courts = GamesSettledCourts(Directory(games=(game,)))
+
+    found = await courts.courts_of(me, now=read_at)
+
+    if standing in MAY_BE_RATED:
+        (only,) = found
+        assert only.game_id == game.id
+        assert only.rater_id == me
+        assert set(only.others) == game.line_up.players - {me}
+        assert only.played_at == game.played_at
+    else:
+        assert found == ()
+
+
+async def test_the_list_carries_every_settled_court_of_theirs():
+    """**The whole record, not a page of it.** The card's week is applied by the
+    use case over what this answers, so a port that stopped at the first would
+    hide a card somebody still has time to answer."""
+
+    players = _four()
+    mine = tuple(_confirmed_for(players)[0] for _ in range(3))
+    read_at = _confirmed_for(players)[1]
+    somebody_elses, _ = _confirmed()
+    courts = GamesSettledCourts(Directory(games=mine + (somebody_elses,)))
+
+    found = await courts.courts_of(players[0], now=read_at)
+
+    assert {one.game_id for one in found} == {game.id for game in mine}
+
+
+async def test_a_player_on_nobodys_court_has_no_list_at_all():
+    game, read_at = _confirmed()
+    courts = GamesSettledCourts(Directory(games=(game,)))
+
+    assert await courts.courts_of(new_uuid(), now=read_at) == ()
 
 
 def test_the_two_that_may_be_rated_are_the_ones_the_constant_names():

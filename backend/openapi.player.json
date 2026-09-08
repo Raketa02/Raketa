@@ -2218,6 +2218,33 @@
         }
       }
     },
+    "/api/v1/sportsmanship": {
+      "get": {
+        "tags": [
+          "sportsmanship"
+        ],
+        "summary": "Cards waiting for your stars",
+        "description": "**A card appears the day after the game and stays for seven days.** Not on the evening itself \u2014 an answer given ten minutes after losing badly is not the answer this is for \u2014 and not for ever, because a card nobody is obliged to answer can only accumulate.\n\n**A game is on this list only once it is over**: the score is agreed, or both sides put one up and neither gave way. A game nobody ever said was played never appears at all \u2014 there is nobody to rate for an evening that did not happen.\n\n**Answering removes it, whatever you put on it.** Submitting closes the card for ever, including the card you answered with everybody left blank.\n\n**Absence is the only reason given.** A game not yet a day old, one whose week has run out and one you have already answered are all simply not here \u2014 and none of them is something to draw differently.\n\n**Ids only.** Join `game_id` against `/api/v1/games` for the handles, the sport and the date; `players` is everybody else who was on that court, in the line-up's own order.\n\n**Ignoring all of this costs nothing.** There is no strand for rating, no penalty, and nothing is recorded about a card that expired.",
+        "operationId": "read_the_open_cards_api_v1_sportsmanship_get",
+        "responses": {
+          "200": {
+            "description": "The courts still waiting for your stars, **soonest to expire first**. An empty list is the ordinary answer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenCardsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/sportsmanship/{game_id}": {
       "post": {
         "tags": [
@@ -4038,6 +4065,50 @@
         ],
         "title": "OnCourtVerdict",
         "description": "What the on-court check concluded about a photograph. **Two values.**\n\nThe third state \u2014 *nobody looked* \u2014 is the **absence** of one of these and\nnever a third value, which is ``docs/adr/0138``'s rule: a shield saying\n*checked and passed* cannot be drawn on a photograph nothing examined, and a\nvalue meaning *unknown* is a value somebody eventually draws a tick for.\n\n**The words are the ones a card already carries, and they are checked\nagainst it.** This is a second spelling of ``player_profile``'s\n``PhotoReviewDecision`` on purpose \u2014 this context imports no other context's\ndomain types \u2014 and a second spelling that drifts is worse than an import: a\nclient reading a search card and a record would get two words for one fact.\n``tests/unit/test_player_record_identity.py`` fails the build if the two\nvocabularies stop agreeing."
+      },
+      "OpenCardSchema": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id",
+            "description": "The game this card is about. Post the answer to `/api/v1/sportsmanship/{game_id}`, and join it against `/api/v1/games` for the handles, the sport and the date."
+          },
+          "players": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Everybody else who was on that court, in the line-up's own order \u2014 in doubles both opponents **and** your partner, in singles the one opponent. Any of them may be left blank when you answer."
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "players"
+        ],
+        "title": "OpenCardSchema",
+        "description": "One court still waiting for this player's stars.\n\n**Ids and nothing else.** What the people are called, which sport it was and\nwhen it happened all come from the games list this card is drawn beside \u2014\njoined on ``game_id``, which is the same join the client already makes to\ndraw the game. Repeating them here would be a second copy of an evening's\ndescription, and the day the two disagreed the card would name somebody the\ngame did not."
+      },
+      "OpenCardsResponse": {
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/OpenCardSchema"
+            },
+            "type": "array",
+            "title": "Cards",
+            "description": "The courts still waiting for your stars. A card appears the day after the game and stays for seven days; ignoring one costs nothing."
+          }
+        },
+        "type": "object",
+        "required": [
+          "cards"
+        ],
+        "title": "OpenCardsResponse",
+        "description": "Every card waiting for you, **soonest to expire first**.\n\nAn empty list is the ordinary answer and means nothing is waiting. It does\nnot distinguish *no games*, *not yet a day* and *already answered*: all three\nare simply not on the list, and none of them is something a client would draw\ndifferently.\n\n``cards`` is **required and never absent**, empty though it usually is: a\ndefault would emit it as optional and hand every client a list it has to\ncheck for existence before checking for length."
       },
       "OptimisedFor": {
         "type": "string",

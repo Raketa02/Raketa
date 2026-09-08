@@ -15,10 +15,10 @@ answer on both, and it is the shape the interest ledger already takes.
 
 from __future__ import annotations
 
-from typing import final
+from typing import Collection, final
 from uuid import UUID
 
-from sqlalchemy import delete, exists, select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,25 +37,32 @@ class SqlAlchemySportsmanshipLedger:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def has_been_answered(self, *, game_id: UUID, rater_id: UUID) -> bool:
-        """Whether this card is closed. **True of the all-blank card too.**
+    async def answered_among(
+        self, *, rater_id: UUID, game_ids: Collection[UUID]
+    ) -> frozenset[UUID]:
+        """Which of these cards are closed. **The all-blank card is one of them.**
 
         It asks the card table and never the ratings, which is the difference the
         two tables exist for: a card answered with everybody left blank has no
         ratings at all, and a read that looked for them would offer that player
         the card again for ever.
+
+        **An empty ask is answered without a query.** A player with no open card
+        is the common case on this route, and ``IN ()`` is a statement two
+        dialects disagree about for an answer that is known before either of them
+        sees it.
         """
 
-        return bool(
-            await self._session.scalar(
-                select(
-                    exists().where(
-                        SportsmanshipCardORM.game_id == game_id,
-                        SportsmanshipCardORM.rater_id == rater_id,
-                    )
-                )
+        wanted = list(game_ids)
+        if not wanted:
+            return frozenset()
+        found = await self._session.scalars(
+            select(SportsmanshipCardORM.game_id).where(
+                SportsmanshipCardORM.rater_id == rater_id,
+                SportsmanshipCardORM.game_id.in_(wanted),
             )
         )
+        return frozenset(found)
 
     async def record(self, card: SportsmanshipCard) -> None:
         """Close the card and stand its answers up. **The caller commits.**

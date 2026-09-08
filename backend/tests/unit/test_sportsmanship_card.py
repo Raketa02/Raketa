@@ -33,6 +33,10 @@ from app.modules.sportsmanship.domain.errors import (
 from datetime import datetime, timezone
 
 NOW = instant(datetime(2026, 9, 8, 19, 0, tzinfo=timezone.utc))
+#: The evening itself. Nothing in this file reads it — the card's window is
+#: ``window.py``'s and is asserted there — but a court carries when it
+#: happened, because both edges of that window run from it.
+PLAYED_AT = instant(datetime(2026, 9, 7, 19, 0, tzinfo=timezone.utc))
 
 
 def a_doubles_court() -> tuple[SettledCourt, tuple]:
@@ -41,7 +45,9 @@ def a_doubles_court() -> tuple[SettledCourt, tuple]:
 
     rater = uuid4()
     others = (uuid4(), uuid4(), uuid4())
-    return SettledCourt(game_id=uuid4(), rater_id=rater, others=others), others
+    return SettledCourt(
+        game_id=uuid4(), rater_id=rater, others=others, played_at=PLAYED_AT
+    ), others
 
 
 def test_a_card_carries_stars_for_the_other_players_on_the_court():
@@ -98,7 +104,9 @@ def test_a_card_with_nobody_on_it_is_still_an_answer():
 
 def test_a_singles_court_offers_the_one_opponent():
     rater, opponent = uuid4(), uuid4()
-    court = SettledCourt(game_id=uuid4(), rater_id=rater, others=(opponent,))
+    court = SettledCourt(
+        game_id=uuid4(), rater_id=rater, others=(opponent,), played_at=PLAYED_AT
+    )
 
     card = SportsmanshipCard.answered(
         court=court, given=[StarsGiven(subject_id=opponent, stars=4)], at=NOW
@@ -166,9 +174,13 @@ def test_a_court_that_offers_the_rater_themselves_is_a_broken_precondition():
     rater = uuid4()
 
     with pytest.raises(InvariantViolated):
-        SettledCourt(game_id=uuid4(), rater_id=rater, others=(rater,))
+        SettledCourt(
+            game_id=uuid4(), rater_id=rater, others=(rater,), played_at=PLAYED_AT
+        )
 
 
 def test_a_court_with_nobody_else_on_it_is_a_broken_precondition():
     with pytest.raises(InvariantViolated):
-        SettledCourt(game_id=uuid4(), rater_id=uuid4(), others=())
+        SettledCourt(
+            game_id=uuid4(), rater_id=uuid4(), others=(), played_at=PLAYED_AT
+        )

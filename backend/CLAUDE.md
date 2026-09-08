@@ -530,12 +530,28 @@ Rules to preserve:
   held by an `.importlinter` contract rather than by a test, because a Match Fit term
   reading a star average would look like every term beside it and nothing would go red;
   it is also why the reliability pill stays the counted-only number. And **no individual
-  rating reaches anybody in any shape**: the route answers `204`, the use case returns
+  rating reaches anybody in any shape**: the write answers `204`, the use case returns
   `None`, and `SportsmanshipLedger` has no method that answers *what did somebody say about
-  me* — so a route wanting to leak one has to grow a read first. It borrows one thing,
+  me* — only *which of these cards are closed*, which is a fact about an act. There is one
+  read here and it grew without touching that: `GET /api/v1/sportsmanship` lists the courts
+  **waiting** for somebody's stars, as a game id and the people on it, and an open card is
+  by definition one nobody has answered. It borrows one thing,
   `SettledCourts` over `games`' directory, whose adapter lives in **this** context the way
   `PlayerHandles`' lives in `games`; *settled* there is narrowed to **played and over**,
-  because a ghost has nobody to rate and an unscored game very much does.
+  because a ghost has nobody to rate and an unscored game very much does. **The card's two
+  clocks are domain and neither is configuration** (`domain/window.py`): it opens the day
+  after the game — an answer given ten minutes after losing badly is not the answer wanted —
+  and closes seven days later. Both edges run from `games`' `played_at`, which is *the moment
+  somebody said we played* and never the hour on court, because this platform records no such
+  hour; it is never earlier than the game, so the day-after rule holds conservatively. Anchoring
+  the close to a *settlement* instead would let an argument over the score restart somebody's
+  week, and the price is named rather than discovered: a game two sides argued over settles up
+  to a day into the week, so that one card is drawn for six days rather than seven. *Has it
+  settled* stays the port's separate gate. **Nothing sweeps an expired card** — the expiry
+  is a fold, because *not rating leaves no record of the omission* means there is no row for
+  a job to correct — and the window governs the **prompt** and not the permission: a card
+  that lapsed while somebody was typing is still answerable, which is the opposite of
+  refusing one of two identical taps.
 - **A record is read through a prior disclosure, and the refusal names nothing**
   ([ADR-0155](../docs/adr/0155-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)).
   `app/modules/player_record/` is the ninth context and the second that keeps **no record

@@ -1,9 +1,14 @@
-"""What crosses the wire. **One request shape, and no response shape at all.**
+"""What crosses the wire. **One request shape, and one that carries no answer.**
 
-There is no schema here for an answered card, because there is no route that
+There is no schema here for an *answered* card, because there is no route that
 returns one. That absence is the context's central rule expressed as the thing a
 client generates its types from: *no individual rating is returned to anybody, on
 any route, in any shape*, and the shape does not exist to be returned.
+
+What does come back is the list of cards still **waiting** — a game id and the
+people on that court, which is a fact about an evening and not about anybody's
+opinion of it. There is nowhere on it for a star to arrive later: an open card is
+by definition one nobody has answered.
 
 **A blank has one spelling and it is absence.** Somebody left blank is not in
 ``ratings``; there is no ``stars: null``, because two spellings of *nothing to
@@ -54,4 +59,50 @@ class AnswerTheCardRequest(BaseModel):
         description="The players you are rating. **Leave somebody out to leave "
         "them blank**, and send an empty list to answer the card without rating "
         "anybody — both are answers, and both close the card for ever.",
+    )
+
+
+class OpenCardSchema(BaseModel):
+    """One court still waiting for this player's stars.
+
+    **Ids and nothing else.** What the people are called, which sport it was and
+    when it happened all come from the games list this card is drawn beside —
+    joined on ``game_id``, which is the same join the client already makes to
+    draw the game. Repeating them here would be a second copy of an evening's
+    description, and the day the two disagreed the card would name somebody the
+    game did not.
+    """
+
+    game_id: UUID = Field(
+        ...,
+        description="The game this card is about. Post the answer to "
+        "`/api/v1/sportsmanship/{game_id}`, and join it against `/api/v1/games` "
+        "for the handles, the sport and the date.",
+    )
+    players: list[UUID] = Field(
+        ...,
+        description="Everybody else who was on that court, in the line-up's own "
+        "order — in doubles both opponents **and** your partner, in singles the "
+        "one opponent. Any of them may be left blank when you answer.",
+    )
+
+
+class OpenCardsResponse(BaseModel):
+    """Every card waiting for you, **soonest to expire first**.
+
+    An empty list is the ordinary answer and means nothing is waiting. It does
+    not distinguish *no games*, *not yet a day* and *already answered*: all three
+    are simply not on the list, and none of them is something a client would draw
+    differently.
+
+    ``cards`` is **required and never absent**, empty though it usually is: a
+    default would emit it as optional and hand every client a list it has to
+    check for existence before checking for length.
+    """
+
+    cards: list[OpenCardSchema] = Field(
+        ...,
+        description="The courts still waiting for your stars. A card appears the "
+        "day after the game and stays for seven days; ignoring one costs "
+        "nothing.",
     )
