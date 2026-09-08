@@ -2,13 +2,17 @@
  * A tab that names what belongs to it and admits it is not built.
  *
  * The whole test a placeholder has to pass is *can a player tell this from a bug* — so it
- * carries the tab's own title in the header and one sentence under it, and nothing else. No
- * spinner, no empty-state illustration, no *coming soon*: the first two would be a screen
- * pretending to be loading something, and the third is a promise nobody made.
+ * carries the tab's own title in the header and one sentence under it, and nothing else.
  *
- * The line is `tiny` in `muted` — the workhorse secondary text — because the sentence is
- * about the app rather than about the player, and a placeholder that shouted would be the
- * loudest thing in a tab that does nothing.
+ * **The shape of that sentence is
+ * [10.1](../../../../docs/design-system.md#101-screen-structure)'s empty-state rule**: one
+ * line of `tiny` in `muted`, present-tense, naming the act — no spinner, no illustration, no
+ * *coming soon*, and never an assertion that nothing is happening. The argument used to live
+ * here and it was promoted, because three built tabs are now writing the thing it argues
+ * about while this component loses half its callers to them
+ * ([#338](https://github.com/Raketa02/Raketa/issues/338) §9): an argument reachable only from
+ * a component two of its readers no longer import is one that gets re-invented. This file is
+ * a caller of the rule now rather than its home.
  *
  * `children` is what is *already* built on this tab, and there is exactly one today: the You
  * tab still carries the account panel, which is the only way out of a session and predates

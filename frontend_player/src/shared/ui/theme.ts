@@ -265,6 +265,27 @@ const font = {
  * `letterSpacing` and `lineHeight` are in POINTS, pre-converted from the prototype's em.
  */
 const type = {
+  /** DISPLAY SANS — 3.3, and the only sans role above `h1`.
+   *
+   *  The Now card's figure slot takes a WORD when a game has a day and no hour, and 1.4 is
+   *  categorical — numbers are monospaced always — so a weekday can never be `num.levelHero`.
+   *  The largest sans role was `h1` at 19, under half the 40pt figure on the card beside it in
+   *  a rail whose whole geometry is one card shape with three fillings: answering a TYPE
+   *  problem with a LAYOUT one gives a card that changes shape rather than content, which is
+   *  the first thing a reader notices paging one. 26 was DRAWN AND MEASURED on
+   *  `prototype/now-and-game-screen`; that it equals `num.levelLarge`'s size is a coincidence
+   *  of two ramps meeting, and nothing here is derived from that role.
+   *
+   *  **700 and not 600.** 3.2's *the display roles are 600* is the MONO column's rule and it
+   *  is a fact about what `fonts.ts` loads; `Archivo_700Bold` is loaded and is `h1`'s own
+   *  weight, so there is no synthetic bolding to inherit here.
+   *
+   *  Tracking continues 3.4's SANS ramp rather than borrowing the mono value it happens to
+   *  meet at this size: 15 -> -0.025em, 19 -> -0.030em, 26 -> -0.035em = -0.91pt. The line
+   *  height is the device's 30 and not the size, because *lineHeight equals the size* is a
+   *  rule about a 40pt level not growing its card, and a sans word has ascenders a mono
+   *  digit does not. */
+  display: { fontFamily: font.sans[700], fontSize: 26, letterSpacing: -0.91, lineHeight: 30 },
   h1: { fontFamily: font.sans[700], fontSize: 19, letterSpacing: -0.57, lineHeight: 24 },
   h2: { fontFamily: font.sans[700], fontSize: 15, letterSpacing: -0.38, lineHeight: 20 },
   /** The onboarding question itself. The prototype's 650 maps to 700. */
@@ -350,8 +371,9 @@ const radius = {
   card: 13,
   popover: 13,
   toast: 12,
-  /** The ⚡Play disc. Not the avatar rule — `round(30 x 0.33)` lands on 10 and the disc is
-   *  not a face; 11 is the prototype's measured value, kept (docs/design-system.md 10.2).
+  /** The ⚡Play disc. **There is no avatar rule here to be measured against** — see `avatar`
+   *  below. The disc is not a face and 11 is the prototype's measured value, kept
+   *  (docs/design-system.md 10.2).
    *  The active state's RING is this grown by `size.tabBar.ringGap + ringStroke` on every
    *  side, which is arithmetic the bar does rather than a second radius token. */
   fab: 11,
@@ -364,6 +386,14 @@ const radius = {
    *  squares of the deleted 6.7 are NOT being restored, and a cell that borrowed their
    *  radius would be the first step back toward a booking grid. */
   availabilityCell: 10,
+  /** **There is no avatar rule in this system, and this is not one.** The formula that
+   *  derived a face's corner from its box — `round(size x 0.33)` — went with 7.4's seat
+   *  avatar in the 2026-08-25 reset, and #338 refused to bring an avatar back: no Avatar
+   *  element, no avatar hue, no avatar radius rule, and `POSTER_HUES` stays `CourtPoster`'s
+   *  closed set unwidened. A face in a box is `CandidatePhoto`, which owns its 33 % share of
+   *  its OWN width one folder over, and a row's face is a photograph or a poster.
+   *  What is left here is a VALUE nothing draws — 4.2 keeps it named, because `court` below
+   *  is named for its role rather than borrowing this one and that argument needs its foil. */
   avatar: 9,
   /** The court's ground. A card at 13 is a surface a finger rests on; a court is a picture
    *  inside one, and 4.2's rule reads the other way for it — the smaller the surface, the
@@ -412,6 +442,12 @@ const size = {
   timeSquare: 32,
   meter: 5,
   bar: 4,
+  /** The 3pt bar that carries a semantic — 5.4's note, and 5.4 as amended, the challenge
+   *  row's urgency stripe. One number because there are now two drawings of it: the note
+   *  wears it as a `borderLeftWidth` on a card, the row draws it as a full-height View
+   *  beside its content and never becomes a Note. Two implementations of a 3 is exactly
+   *  what a token is for. */
+  semanticBar: 3,
   /** The run-of-form square — 7.13. Five of them plus four `space.xxs` gaps is 52pt, which
    *  fits the narrowest phone's third of a card with the block's label above it. It is a mark
    *  rather than a target: nothing in the record block is pressable, so 6.5's 44pt does not
@@ -687,12 +723,24 @@ const size = {
   sheetClose: 28,
   popoverWidth: 250,
   popoverArrow: 11,
+  /** The rail's page dots — 7.18, and Part 8's sizes before that. Five points resting; the
+   *  one you are on keeps the height and grows to fourteen, so the state has a SHAPE channel
+   *  and is never carried by tone alone (Part 13). Gap is `space.xxs`.
+   *
+   *  These two numbers did not move; what moved is what draws them. Part 8 had them as
+   *  decoration on a strip, in `coral`. A full-width card leaves the rail with no peek, so the
+   *  dots became the affordance — and the fill is `color.ink`, because 1.2's coral list closes
+   *  at five plus the Chats badge and a coral FILL there means *attend to this*, which a page
+   *  indicator is not. **Not pressable** — 7.9's own hitSlop arithmetic, one section over. */
   pagerDot: 5,
   pagerDotActive: 14,
   /** Horizontal page gutter, both sides. Content width = screen width - gutters. */
   gutter: space.lg,
-  /** The card rail's peek IS the affordance. A RATIO, never 268pt — on a 320pt phone
-   *  a fixed 268 leaves no peek at all. */
+  /** The PEEKING rail's card — 7.7's first geometry, where the peek IS the affordance. A
+   *  RATIO, never 268pt: on a 320pt phone a fixed 268 leaves no peek at all.
+   *
+   *  There is a second rail and it has no ratio, because its card is the content width
+   *  whole. What carries the affordance there is 7.18's dots. */
   railCardRatio: 0.74,
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */
   minTouch: 44,

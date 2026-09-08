@@ -38,6 +38,12 @@ export interface TagProps {
   /**
    * A 6pt square in a sport's identity colour. The dot is decoration — the label beside
    * it always says the same thing, so colour is never the only carrier.
+   *
+   * **The sport's, and only the sport's.** A caller reaching for it to carry urgency — the
+   * dot going amber as a clock runs down — is asking one token to mean two things, after
+   * which it means neither, and it would be colour restating a value the label has already
+   * rendered. Urgency is the **whole tag**: `warn` for a live window, `ok` for a settled
+   * one, with the word beside it (6.4, Part 13).
    */
   readonly dot?: string;
   /** Defaults to `label`. Set it when the word alone is cryptic out of context. */

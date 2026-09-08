@@ -54,15 +54,21 @@
  *
  * ## What is deliberately absent
  *
- * **No badge.** The one count this product has is the player's own outstanding yeses, and it
- * is drawn as a **sentence** on the deck's ending
- * ([6.3](../../../docs/design-system.md#63-segmented-control)'s segment carried it as
- * *Match me · 3* until that was struck for reading as a count of waiting cards).
+ * **No badge yet, and this is now a gap rather than a refusal.**
+ * [10.2](../../../docs/design-system.md#102-the-tab-bar) specifies one — on Chats, counting
+ * unanswered challenges addressed to you, `coralInk` filled with a white mark and the count on
+ * the column's own `accessibilityLabel` — and it is owed to the ticket that draws it
+ * ([#326](https://github.com/Raketa02/Raketa/issues/326)). This file draws none until then.
+ *
+ * **The argument that kept the bar bare survives as the test, and it still bites.** The one
+ * count this product had was the player's own outstanding yeses, drawn as a **sentence** on
+ * the deck's ending ([6.3](../../../docs/design-system.md#63-segmented-control)'s segment
+ * carried it as *Match me · 3* until that was struck for reading as a count of waiting cards).
  * It is **filtered by the sport on screen**, so that the number labels the deck it is about
  * ([#270](https://github.com/Raketa02/Raketa/issues/270)) — and the bar has no sport, so
- * promoting it here would put a number on permanent chrome that only means something beside a
- * control this bar does not draw, on a tab whose own rule is that it always opens somewhere
- * else.
+ * promoting *it* here would still put a number on permanent chrome that only means something
+ * beside a control this bar does not draw. What passes the test is a count filtered by
+ * nothing, on the tab it opens.
  */
 
 import Feather from '@expo/vector-icons/Feather';
