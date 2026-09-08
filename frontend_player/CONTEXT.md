@@ -597,6 +597,40 @@ not restated here; what follows is only what this client had to invent to draw t
   print one against. _Avoid_: "now" — the phone's now is exactly the value that must not be
   used.
 
+### The sportsmanship card
+
+Three client-only concepts, all in `features/sportsmanship/`. The domain terms — the card,
+stars, blank, settled court — are the **root glossary's** and are not restated here; the word
+**rating** is Skill rating's everywhere in this app, so nothing in this feature is spelled with
+it.
+
+- **The star draft** — what the player has said so far on one card, held as a player id to
+  their stars for exactly as long as the card is on screen. **Absence is blank**, which is what
+  makes _leave anybody blank_ representable without a sixth value on a five-point scale, and a
+  map keyed by person is what makes _two answers about one player_ unrepresentable rather than
+  validated. Pressing the star that already stands **clears the row** — a rule about what an
+  answer is, in `domain/stars.ts` and never in the drawing, because sending is final and a
+  finger that slipped is the one person _leave anybody blank_ has to be true for. _Avoid_:
+  spelling a blank as `0` or as a null, and "the ratings" for what is typed — nothing is a
+  rating until it is sent, and not even then by this app's vocabulary.
+- **The rated court** — the evening a card is about, as **this feature declares it**: a game
+  id, its sport, and who was on the court. `GET /sportsmanship` answers ids and nothing else on
+  purpose, so the words come from the games list the card is drawn beside, and `Game` satisfies
+  the shape structurally rather than the feature adopting another feature's entity. A card
+  whose court is not in the list is **dropped**, because there would be nobody to name.
+  _Avoid_: reading the games cache from this feature, and re-deriving the seven-day window on
+  this side — which cards are open is the server's answer and this client holds no clock it
+  could be right with.
+- **The star row, drawn** — five 44pt targets, flush, with a drawn 24pt pentagram inside each
+  ([6.13](docs/design-system.md#613-the-star-row)). `StarRow` is `shared/ui`'s: it has a touch
+  rule, a press state, a fill pair and three pinned ratios, which is a design-system object
+  whether or not a second feature draws it. Given is `ink` and blank a `muted` outline — the
+  run of form's own pair at 3,24:1, so it reads with no hue perception, plus a **shape**
+  difference the squares could not have — and each star is **its own accessibility element**
+  with only the standing one `selected`, because a listener has no row to count along. _Avoid_:
+  a zero star, half stars, and marking every filled star selected, which reads the row out as a
+  table.
+
 ### Data and errors
 
 - **Query key factory** — the per-feature object in `hooks/` defining every key, with

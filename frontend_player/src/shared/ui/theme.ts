@@ -554,6 +554,22 @@ const size = {
    *  surface, exactly as 6.11's is: a 23pt track is well under the 44pt minimum, and a
    *  `hitSlop` around it would leave the words beside it inert. */
   switch: { track: 40, height: 23, knob: 18, row: 44 },
+  /** The star row — 6.13. Five whole stars, and the two numbers are a target and a glyph.
+   *
+   *  `target` is 6.5's minimum reached BY GEOMETRY rather than by slop, the way 6.8's cell
+   *  and 6.11's row are: five stars is five adjacent targets, and horizontal `hitSlop` is
+   *  bounded by the neighbour, so a 24pt glyph with slop around it would be five targets
+   *  overlapping each other. Five of them is 220pt against the 266pt a card leaves on the
+   *  narrowest phone, so the row fits without a gap between the targets — and the gap is
+   *  deliberately absent for that reason as well: a dead 6pt strip between two stars is a
+   *  tap that answers nothing.
+   *
+   *  `glyph` is the drawing inside it. The star is GEOMETRY and not a glyph in a font
+   *  (`Star.tsx`), so it does not scale with Dynamic Type and does not vary by platform
+   *  font — the same decision 6.8's tick takes, and here it also settles a question a font
+   *  could not answer: Archivo ships no U+2605, and Feather has no filled counterpart to
+   *  its `star` (ADR-0135). */
+  star: { target: 44, glyph: 24 },
   /** The court — 7.12, and the drawn object whose numbers cannot be derived.
    *
    *  `space` is the drawing's own box and every coordinate below is in it. The 1,32 aspect

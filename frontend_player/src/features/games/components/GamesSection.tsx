@@ -19,6 +19,28 @@
  * **The row's sentence is the screen's sentence.** `standingLine` is called once and read twice,
  * so a player who reads a row, taps it, and finds a different deadline is not a state this can
  * reach.
+ *
+ * ## The stars sit above the rows, and this section only composes them
+ *
+ * A card asking how the other players were belongs *in the games list*
+ * ([#386](https://github.com/Raketa02/Raketa/issues/386)) — it is about one of these evenings,
+ * and a chore list of its own somewhere else is how a favour becomes a queue. But nothing
+ * about it is this feature's: the read, the words, the scale and the write are
+ * `features/sportsmanship/`'s, and what this section supplies is the one thing that route
+ * deliberately does not carry, which is **who the ids are**. `Game` satisfies `RatedCourt`
+ * structurally, so what crosses the seam is a shape that feature declared for itself rather
+ * than this feature's entity — the same seam the builder has with the challenge send.
+ *
+ * It draws **above** the rows because a card expires and a game does not, and it is handed
+ * every game rather than the settled ones: *which* evenings have a card open is the server's
+ * answer, and a filter here would be a second spelling of a window this client cannot see.
+ *
+ * **It sits under the same two conditions the rows do, and that is the join rather than a
+ * coupling.** No games means no courts, and a card with no court has nobody to name — so a
+ * failed or empty games read is a card list that could draw nothing whatever it contained, and
+ * placing the section here is what stops a request being made for an answer with no words. It
+ * is the one reason the read is not `NowScreen`'s own: composed a level up, it would fire on
+ * every launch and render nothing on most of them.
  */
 
 import { router } from 'expo-router';
@@ -26,6 +48,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { useCurrentUser } from '@/features/auth/types';
 import { sportLabel } from '@/features/onboarding/types';
+import { StarCards } from '@/features/sportsmanship/types';
 import { recoveryMessage } from '@/shared/errors';
 import { Note, PressableCard, theme } from '@/shared/ui';
 
@@ -63,6 +86,7 @@ export function GamesSection() {
 
   return (
     <View style={s.section}>
+      <StarCards courts={rows} />
       <Text style={s.heading}>{GAMES_HEADING}</Text>
       {rows.map((game) => (
         <GameRow key={game.gameId} game={game} playerId={me} />

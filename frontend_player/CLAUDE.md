@@ -45,8 +45,9 @@ answers either way, and the **profile commit**: every answer in one idempotent
 radius and the per-sport declaration that Play's search screen is drawn from, with an unkeyed
 `PUT` behind each of the three). `play` has its four screens and the sheet over them, below;
 `challenges` is the send: `POST /challenges`, `SH.propose`, and the two re-reads a refusal
-is followed by, below; and `games` is the result conversation — the list on Now, the screen a
-row pushes, and the entering, correcting, agreeing and disagreeing that close the loop, below.
+is followed by, below; `games` is the result conversation — the list on Now, the screen a
+row pushes, and the entering, correcting, agreeing and disagreeing that close the loop, below;
+and `sportsmanship` is the card in that list asking how the other players were, below.
 
 **The result conversation is one screen and eight states, and the state is derived**
 ([#314](https://github.com/Raketa02/Raketa/issues/314),
@@ -119,6 +120,61 @@ segment the way the builder shares Play's. Neither write is optimistic and neith
 `networkMode`: a standing is folded from the record and the clock, so the only client that can be
 right about what a game becomes is one that asks, and the app's own test — _does this act carry a
 deadline the player chose?_ — answers no for both, where the challenge send answers yes.
+
+**A card in that list asks how the other players were, and it is `features/sportsmanship/`**
+([#386](https://github.com/Raketa02/Raketa/issues/386),
+[ADR-0154](../docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)). **The
+word _rating_ is Skill rating's**, so everything in the feature is spelled **stars** or **the
+card**: a bare _rating_ on this platform is still the μ/σ a player holds in a sport, and these
+two things now stand one section apart on the same tab. A card carries **everybody else who was
+on that court** — in doubles both opponents _and your partner_, because the person who saw you
+play closest was on your own side of the net — each taking one to five whole stars, and there
+is no _side_ anywhere on it. **Two of the ticket's rules are unrepresentable rather than
+validated**: the scale is a five-member union, so `stars_are_one_to_five` cannot be earned, and
+a draft keyed by player id cannot hold two answers about one person, which is a refusal the
+backend spells out rather than collapsing. The third is the blank — **an absence and nothing
+else**, not a zero and not a null — which is why the row's value is optional and why `starsGiven`
+reads the draft **through the card's own list**, so stars for somebody who was not there are
+never assembled.
+
+**The window is the server's and this side never re-derives it.** A card appears the day after
+the game and stays seven days; one not yet a day old, one whose week has run out and one already
+answered are all simply **not on the list**, and _none of them is something to draw differently_.
+So the section draws exactly what it was handed — a second spelling of that window here would
+eventually disagree with the one the `POST` is judged against, and it would disagree silently.
+**The route answers ids and nothing else**, deliberately, so the words come from the games list
+the card is drawn beside: `GamesSection` composes `StarCards` above its own rows and hands down
+the courts it already holds. `RatedCourt` is declared in `sportsmanship` and satisfied
+structurally by `Game`, which is the seam the builder has with the challenge send — **the surface
+composes and the feature owns the act** — and a card whose game the list does not carry is
+dropped rather than drawn with ids in it.
+
+**Everything the press cannot be taken back from is said before it.** The contract's own
+instruction is _"there is no correction path — so ask before you send"_, and the card asks by
+**stating**: what a star does — _it won't stop you being matched with them_, above the rows
+rather than beside the button, because a player decides what a star means while they are
+tapping and **Pass and Block already exist and both mean something specific** — that anybody
+may be left blank, and that sending closes the card for good. A pre-send sheet was weighed and
+refused: `ProposeSheet` exists because a challenge reaches four other people and starts a
+window nobody can stop, where this reaches nobody and tells nobody. What stands in its place is
+a row that **clears when the star already standing is pressed again**, which is the one gesture
+that makes a mis-tap survivable and is a rule about what an answer is rather than about a
+drawing — so it lives in `domain/stars.ts` and not in 6.13. **Sending with everybody blank
+closes the card too**, so the button says `Send no stars` rather than `Send` over an empty
+body: an explicit _I am not rating anyone_ is an answer, and a player should be able to read
+which one they are about to give. The write is neither optimistic nor `networkMode`-overriding
+— the seven days run from the **game**, so a send held until the connection returns closes the
+same card — and it **invalidates on settled rather than on success**, because the one refusal
+that matters says the card was _already_ closed, which is a list this client is holding a stale
+copy of.
+
+**Ignoring a card costs nothing, and the feature is built so that nothing says otherwise.**
+There is no strand for rating, no penalty and nothing recorded about a card that expired — so
+there is no count of what is outstanding, no badge, no thanks and no second asking. It is also
+why the section is the one list in the app that draws **nothing at all on a failed read**:
+`GamesSection` beneath it draws a note, because a list of _your own games_ vanishing is
+indistinguishable from having none and must not be, and a coral note over an unasked-for favour
+is the app apologising for a chore it invented.
 
 **The shell is five tabs over one stack, and it remembers nothing.** `TabShell` mounts the
 `TabBar` once, below the navigator, and reads the active column off the current path —
@@ -866,8 +922,18 @@ thing to keep in step with a **pinned** geometry test, and importing them out of
 stayed**: `play/domain/socialTagOverlap` reads the row's four answers off a _candidate_, which
 is a search result and Play's alone, and hands the value down — so the union and the two words
 it draws (`socialTagChip`, `NO_TAGS_IN_COMMON`) sit in `shared/vocabulary` beside the nineteen
-labels, and `GameResult` went with the squares for `PLAY_INTENTS`' reason. The rest
-arrive with the features that need them. **Build outward from the structure below** rather than reaching
+labels, and `GameResult` went with the squares for `PLAY_INTENTS`' reason. **6.13's star row is
+the newest of them and the first control since the switch** — five 44pt targets, flush, with a
+drawn 24pt pentagram inside each, because there was nothing to type: **Archivo ships no
+U+2605**, exactly as it ships no U+2713, and
+[ADR-0135](../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md) fixed the icon
+family as Feather, which has _no filled counterparts_ — and a five-star row is precisely the
+case that limitation binds. Its fill pair is the run of form's, taken deliberately so that
+_tell two states of one mark apart_ has one answer in this system rather than two, and its
+three ratios on `surface` are derived in `starRow.test.ts` off the component's own table. It
+takes no rule of its own: it **reports every press with the value pressed**, exactly as 6.8's
+cell fires whether or not it is ticked, so whether a second press clears the row is the
+caller's. The rest arrive with the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 

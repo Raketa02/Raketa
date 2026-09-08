@@ -335,6 +335,29 @@ export function stubGames(
   );
 }
 
+export const SPORTSMANSHIP_PATH = '/api/v1/sportsmanship';
+
+/**
+ * The courts still waiting for this player's stars, as `GET /sportsmanship` answers — **ids
+ * and nothing else**, soonest to expire first.
+ *
+ * Defaulted to nothing, because an empty list is the ordinary answer and almost no suite is
+ * about one: a card appears the day after a game and stays a week, so most launches have none
+ * and the section renders nothing at all.
+ *
+ * A suite with cards calls this after `stubGate`, and has to `stubGames` the evenings behind
+ * them: the route carries ids, and everything a card *says* comes from the games list it is
+ * drawn beside.
+ */
+export function stubSportsmanship(
+  transport: Transport,
+  cards: readonly Wire['OpenCardSchema'][] = [],
+) {
+  transport.on('GET', SPORTSMANSHIP_PATH, () =>
+    json<Wire['OpenCardsResponse']>({ cards: [...cards] }),
+  );
+}
+
 export interface GateStub {
   readonly ratings?: readonly Wire['RatingResponse'][];
   /**
@@ -381,11 +404,19 @@ export const GATE_USER: Wire['UserResponse'] = {
  * The unfinished-run read is **one** request covering every sport. An empty list is the
  * answer for a player with nothing outstanding — a 200, not a 204 and not a failure.
  *
- * **`stubGames` is in here and it is not a gate read.** The gate's fourth destination is the
- * shell's root, the shell's root is the Now tab, and the Now tab draws a games list
- * ([#314](https://github.com/Raketa02/Raketa/issues/314)) — so every suite that lands in the app
- * makes that request whether or not it is about one. Defaulted to nothing, which draws no
- * section at all; a suite with games calls `stubGames` after this to replace it.
+ * **`stubGames` and `stubSportsmanship` are in here and neither is a gate read.** The gate's
+ * fourth destination is the shell's root, the shell's root is the Now tab, and the Now tab
+ * draws a games list ([#314](https://github.com/Raketa02/Raketa/issues/314)) with the cards
+ * waiting for this player's stars above it
+ * ([#386](https://github.com/Raketa02/Raketa/issues/386)) — so every suite that lands in the
+ * app makes the games read whether or not it is about one. Both are defaulted to nothing,
+ * which draws no section at all; a suite with games or cards calls the stub after this to
+ * replace it.
+ *
+ * **The cards read is conditional on the first, and deliberately.** A card carries ids and the
+ * words come from the games list it is drawn beside, so with no games there is nothing a card
+ * could say and `GET /sportsmanship` is never made — which is why it is stubbed here anyway
+ * rather than only where it is used: the moment a suite adds one game, the request appears.
  */
 export function stubGate(
   transport: Transport,
@@ -401,6 +432,7 @@ export function stubGate(
 
   stubRunsInProgress(transport, runs);
   stubGames(transport);
+  stubSportsmanship(transport);
 }
 
 /** Replace the gate's unfinished-run answer — what the server says *now*. */

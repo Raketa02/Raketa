@@ -86,7 +86,8 @@ and by the second part's photos step: `PhotoRow` with `PhotoTile`, `PhotoAddTile
 `PhotoPosterTile`, plus `CourtPoster`; and by its availability step: `AvailabilityGrid`
 with `Tick`; and by sign-up's age question: `TickBox`; and by Play: `TabBar`, `Switch`,
 `FitPill`, `BalanceBar`, `Court`, `Meter`, `Segment` and `Toast` with `ToastHost`; and ahead of
-the record sheet: `SocialTagRow` and `RunOfForm`. Import them from `@/shared/ui`.
+the record sheet: `SocialTagRow` and `RunOfForm`; and by the sportsmanship card: `StarRow` with
+`Star`. Import them from `@/shared/ui`.
 
 **The last two arrived by promotion rather than by being built here**, and the promotion is the
 interesting half ([#375](https://github.com/Raketa02/Raketa/issues/375)). Both were the
@@ -101,6 +102,23 @@ a search result and Play's alone, and hands the value down — so a second surfa
 and neither re-derives the other's. `RUN_OF_FORM_FILL` is exported for the same reason
 `BALANCE_INK` and `FIT_HIGH` are: the ratio a drawn object is held to is derived off the drawn
 object, never off the token it happens to use today.
+
+**`StarRow` is 6.13, and it is here for the reason `Tick` is rather than for a second
+caller's.** It is the sportsmanship card's alone today
+([#386](https://github.com/Raketa02/Raketa/issues/386)), and a control with a touch rule, a
+press state, a fill pair and three pinned contrast ratios is a design-system object whether or
+not two features draw it — the same standing `AvailabilityGrid`, `RadiusSlider` and `TickBox`
+have, each with one caller. `STAR_FILL` is exported for `RUN_OF_FORM_FILL`'s reason, and it is
+**that same pair**: `ink` given against `muted` blank, taken deliberately so that _tell two
+states of one mark apart_ has one answer in this system rather than two, with its three ratios
+re-derived on `surface` in `starRow.test.ts` because 2.5 states fixed pairs and a ground is
+half of one. The star is **drawn** rather than typed, which `Tick` already argued — geometry
+does not scale with Dynamic Type and does not vary by platform font — with one addition that is
+this component's own: **Archivo ships no U+2605** and ADR-0135 fixed the icon family as Feather,
+which has no filled counterparts, so a five-star row is precisely the case where there was
+nothing to type. What it deliberately does **not** own is what a second press means: it reports
+every press with the value pressed, exactly as 6.8's cell fires whether or not it is ticked, and
+clearing is a rule about what an answer is.
 
 **`Segment` is 6.3, specified since the document was locked and built only now.** Its own
 closing line is why it exists in that shape — _"nothing uses it today; it is specified so the
