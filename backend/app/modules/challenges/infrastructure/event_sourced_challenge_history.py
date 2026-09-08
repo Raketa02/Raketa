@@ -280,9 +280,14 @@ class EventSourcedChallengeHistory:
 
         **The two sets are computed against the same fold and the same instant**,
         so *seated* and *gone* cannot disagree about anybody: everybody live on
-        the court is seated, and everybody who ever answered and is not live has
-        gone. The member themselves is in neither, because a search never returns
-        its own searcher and a fill never re-invites the person pressing it.
+        the court is seated, and everybody the challenge has already asked and
+        does not still hold is gone. The member themselves is in neither, because
+        a search never returns its own searcher and a fill never re-invites the
+        person pressing it.
+
+        **The gone set is the aggregate's own ``already_asked_at``**, which is
+        ``answered`` *plus the clock*: a lapsed seat joins ``answered`` only when
+        the sweep records it, and this read is right either side of that.
         """
 
         events = await stream_of(self._session, self._codec, challenge_id)
@@ -308,7 +313,12 @@ class EventSourcedChallengeHistory:
                 and seat.player_id in live
                 and seat.player_id != member_id
             ),
-            answered_and_gone=frozenset(challenge.answered - live),
+            # **Off the clock as well as off the answers**
+            # (``Challenge.already_asked_at``): a seat whose day ran out is not
+            # in ``answered`` until a sweep has appended one, and this read must
+            # not depend on a loop having been past — otherwise the fill would
+            # offer back somebody the aggregate refuses the moment the loop runs.
+            answered_and_gone=challenge.already_asked_at(now) - live,
         )
 
 

@@ -200,6 +200,10 @@ class PairWithACourt:
             # runs here — so the read it would need is skipped rather than
             # answered emptily.
             for_a_newcomer=False,
+            # **No challenge to except**: this surface names none, and the
+            # open-challenge gate excludes everybody the searcher is
+            # arranging with, exactly as it always has.
+            completing_challenge_id=None,
         )
         try:
             scored = score_all(

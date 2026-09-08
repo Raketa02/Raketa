@@ -521,6 +521,78 @@ async def test_the_seats_route_grows_the_court_without_disturbing_who_is_in(
     assert all(seat["answer_by"] >= theirs["answer_by"] for seat in newly)
 
 
+async def test_the_mutual_born_four_is_completed_by_the_member_who_is_not_organiser(
+    client, session_factory, candidate_source, searcher
+):
+    """**The case ADR-0150 §1 was decided on, filled end to end.**
+
+    Two yeses meet, and a padel court opens with both of them on **side A** —
+    `LINE_UP_INCOMPLETE` from birth, no mode, no window, and an "organiser" who
+    is only whoever said yes second. The other one presses ⚡ and sends, and both
+    of the original seats keep their acceptance while the arrangement is free to
+    move them across the net: *an acceptance is to the game, not to the side.*
+
+    Without this the deciding case is exercised only as far as the search, and
+    the half of it that runs through `Challenge.invite` — where `_still_in` keeps
+    an answered seat and re-sides it — is never reached at all.
+    """
+
+    other = await world.a_searcher(client, name="bea")
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    await world.a_yes(
+        client, session_factory, candidate_source, sender=searcher, towards=other["id"]
+    )
+    # **The second yes mints, and its sender holds seat one** — so `other` is the
+    # organiser, in the only sense the aggregate means it, and `searcher` is the
+    # member who would otherwise be able to neither complete this court nor leave
+    # it. The fill below is therefore pressed by `searcher`.
+    back = await world.a_yes(
+        client, session_factory, candidate_source, sender=other, towards=searcher["id"]
+    )
+    assert back.json()["mutual"] is True
+    court = (
+        await client.get("/api/v1/challenges", headers=world.auth(other["token"]))
+    ).json()["challenges"][0]
+    challenge_id = court["challenge_id"]
+    assert court["organiser_id"] == str(other["id"])
+    assert [seat["side"] for seat in court["seats"]] == ["A", "A", "B", "B"]
+    assert {
+        seat["player_id"] for seat in court["seats"] if seat["player_id"]
+    } == {str(searcher["id"]), str(other["id"])}, "both of them on side A"
+
+    filled = await world.lineup(
+        client, searcher["token"], completing_challenge_id=challenge_id
+    )
+    assert filled.status_code == 200, filled.text
+    body = filled.json()
+    grown = await _fill(
+        client,
+        searcher["token"],
+        challenge_id,
+        body["search"]["search_id"],
+        _court_of(body["lineup"], searcher["id"]),
+    )
+
+    assert grown.status_code == 200, grown.text
+    seats = {
+        seat["player_id"]: seat
+        for seat in grown.json()["seats"]
+        if seat["player_id"]
+    }
+    assert seats[str(searcher["id"])]["answer"] == "ACCEPTED"
+    assert seats[str(other["id"])]["answer"] == "ACCEPTED"
+    assert seats[str(searcher["id"])]["answer_by"] is None, "no deadline was minted"
+    assert seats[str(other["id"])]["answer_by"] is None
+    newly = [
+        seat
+        for player_id, seat in seats.items()
+        if player_id not in {str(searcher["id"]), str(other["id"])}
+    ]
+    assert len(newly) == 2
+    assert all(seat["answer"] is None for seat in newly)
+    assert all(seat["answer_by"] is not None for seat in newly)
+
+
 async def test_the_fill_never_takes_somebody_out_of_a_court_they_are_in(
     client, session_factory, candidate_source, searcher
 ):

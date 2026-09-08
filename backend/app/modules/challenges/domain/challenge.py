@@ -364,7 +364,7 @@ class Challenge:
         )
         if not newly_invited:
             raise NobodyNewToInvite()
-        if self.answered & set(newly_invited):
+        if self.already_asked_at(occurred_at) & set(newly_invited):
             raise NobodyIsAskedTwice()
 
         deadline = answer_by(occurred_at)
@@ -429,6 +429,34 @@ class Challenge:
         """
 
         return self.standing_at(now) in ARRANGING
+
+    def already_asked_at(self, now: Instant) -> frozenset[UUID]:
+        """Everybody this challenge has put a question to and had closed.
+
+        **``answered`` plus the clock, and the clock half is the load-bearing
+        one.** ``answered`` is folded off the answer events, so a seat whose day
+        ran out is in it only once the sweep has appended a ``SeatLapsed`` — and
+        the sweep exists *for the record, not for correctness*. Reading the set
+        alone would make *may this person be asked again* depend on whether a
+        loop had been past, which is the one thing this whole context refuses:
+        a challenge reads the same at every instant either side of a sweep.
+
+        So it is derived here, once, and both readers take it: ``invite``'s
+        ``NobodyIsAskedTwice``, and the fill that keeps that refusal a backstop
+        by leaving these people out of its pool (``docs/adr/0150`` §4). Two
+        derivations would be two answers to *have they already been asked*, and
+        the one that drifted would be the one that let somebody be asked twice.
+
+        **It contains the people who accepted**, who are also still in the game —
+        both readers subtract who is live, and neither wants a second rule about
+        it here.
+        """
+
+        return self.answered | frozenset(
+            seat.player_id
+            for seat in self.seats
+            if seat.player_id is not None and seat.is_lapsed_at(now)
+        )
 
     def seat_of(self, player_id: UUID) -> Seat | None:
         """That player's seat on this court, or nothing if it is not theirs.

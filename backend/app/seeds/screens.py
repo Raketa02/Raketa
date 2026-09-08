@@ -742,6 +742,7 @@ async def _as_the_engine_would_fill(
         surface=SearchSurface.SHORTLIST,
         initiation=SearchInitiation.ENGINE,
         for_a_newcomer=searcher.is_new_at(now),
+        completing_challenge_id=None,
     )
     return run_the_pipeline(context, paths.engine).counts.excluded_by_gate
 

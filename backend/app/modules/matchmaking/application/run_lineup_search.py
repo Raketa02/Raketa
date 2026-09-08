@@ -49,7 +49,7 @@ from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scoring import MatchFit
 from app.engines.matchfit.v1 import seat
-from app.kernel import InvariantViolated, invariant
+from app.kernel import InvariantViolated, Sport, invariant
 from app.modules.blocks.domain.ports import BlockQuery
 from app.modules.matchmaking.application.commands import RunLineupSearchCommand
 from app.modules.matchmaking.application.outward_reads import (
@@ -157,6 +157,31 @@ class LineupAnswer:
 
 
 @final
+@dataclass(frozen=True, slots=True)
+class TheAsk:
+    """What one line-up is for, after the challenge — if any — has been read.
+
+    **The five things a fill and an ordinary ⚡ disagree about, resolved
+    together.** They all turn on one fact, so they are answered in one place and
+    read everywhere else: a use case that asked *was a challenge named* at each
+    of the five would be five chances to answer it differently, and the one that
+    drifted would be the one that quietly stopped exempting the gate.
+
+    ``mode_of`` is a function rather than a mode because the workbench resolves
+    it against the declaration it reads: passing a value would need a second read
+    of that declaration, and the two could disagree.
+    """
+
+    sport: Sport
+    locked_seats: tuple[UUID, ...]
+    mode_of: Callable[[PlayIntent], SearchMode]
+    #: The one challenge the open-challenge gate steps aside for, or nothing.
+    exempt_challenge_id: UUID | None
+    #: Everybody who has answered that challenge and left it. Empty otherwise.
+    excluding: frozenset[UUID]
+
+
+@final
 class RunLineupSearch:
     """The line-up, end to end."""
 
@@ -182,21 +207,17 @@ class RunLineupSearch:
         # **The challenge is read before anything else, because it is what the
         # search is *about*.** The sport, the mode and the locked seats are all
         # read off it (``docs/adr/0150`` §2), so a read that happened later would
-        # be a search already bound to facts a client sent.
-        court = await self._completing(command)
-        sport = invariant(
-            command.sport if court is None else court.sport,
-            "a line-up with neither a sport nor a challenge to read one from",
-        )
-        locked_seats = (
-            command.locked_seats if court is None else court.seated_ids
-        )
+        # be a search already bound to facts a client sent. From here on nothing
+        # asks *was a challenge named* again: ``asked`` is the resolved answer,
+        # and one place that resolves it is one place that can be wrong.
+        ask = await self._resolve(command)
+        sport = ask.sport
 
         with self._work.timed(stages, "read_searcher"):
             declared = await self._work.searcher_facts(
                 player_id=command.searcher_id,
                 sport=sport,
-                mode_of=self._mode_of(command, court),
+                mode_of=ask.mode_of,
             )
         await self._work.refuse_a_held_searcher(declared.player_id)
 
@@ -217,7 +238,7 @@ class RunLineupSearch:
         # from a challenge lands here too and needs no fifth value: a half-built
         # court always has somebody on it, so its locked seats are never empty.
         surface = (
-            SearchSurface.FILL_SEATS if locked_seats else SearchSurface.LINEUP
+            SearchSurface.FILL_SEATS if ask.locked_seats else SearchSurface.LINEUP
         )
         with self._work.timed(stages, "read_gates"):
             context = await self._work.bind(
@@ -228,9 +249,7 @@ class RunLineupSearch:
                 surface=surface,
                 initiation=SearchInitiation.HUMAN,
                 for_a_newcomer=for_a_newcomer,
-                completing_challenge_id=(
-                    None if court is None else court.challenge_id
-                ),
+                completing_challenge_id=ask.exempt_challenge_id,
             )
 
         with self._work.scoring(stages):
@@ -242,16 +261,14 @@ class RunLineupSearch:
                     # its own fill** (§4). They were released back into the deck
                     # the moment they declined or lapsed, and without this the
                     # send would refuse — after the player chose them.
-                    excluding=(
-                        frozenset() if court is None else court.answered_and_gone
-                    ),
+                    excluding=ask.excluding,
                 )
             except InvariantViolated as broken:
                 raise MatchmakingUnavailable(
                     f"the matcher refused to answer: {broken}"
                 ) from broken
 
-        locked = self._locked(pool, locked_seats)
+        locked = self._locked(pool, ask.locked_seats)
         guests = guests_for(sport)
         fenced = searcher_of(context)
         # **Minted here rather than at the record**, because it is what turnout
@@ -416,53 +433,76 @@ class RunLineupSearch:
                 if no_shared_slots(fenced, seating)
                 else None
             ),
-            optimised_for_group=bool(locked_seats),
+            optimised_for_group=bool(ask.locked_seats),
         )
 
-    async def _completing(
-        self, command: RunLineupSearchCommand
-    ) -> HalfBuiltCourt | None:
-        """The half-built court this fill names, or nothing at all.
+    async def _resolve(self, command: RunLineupSearchCommand) -> "TheAsk":
+        """What this line-up is actually for, resolved once. **One question.**
 
-        **Fails closed**, which is what the port declared and why it is its own
-        port: a read that stood down would run an ordinary ⚡ over a pool that
-        still excludes every person on the court, and hand the player a four of
-        strangers where their own line-up should have been.
+        A fill and an ordinary ⚡ differ in five places — the sport, the locked
+        seats, the mode, the gate's exemption and the pool's exclusion — and all
+        five turn on the **same** fact: whether a challenge was named. Asking it
+        five times would be five chances to answer it differently, and the one
+        that drifted would be the one that quietly stopped exempting the gate.
+        So it is asked here, and everything below reads the answer.
+
+        The read **fails closed**, which is what the port declared and why it is
+        its own port: a read that stood down would run an ordinary ⚡ over a pool
+        that still excludes every person on the court, and hand the player a four
+        of strangers where their own line-up should have been.
 
         The refusal for an id that answers nothing is a **conflict about the
         challenge**, and it names none of the three reasons — no such challenge,
         no seat of yours on it, nobody arranging it any more.
         """
 
-        if command.completing_challenge_id is None:
-            return None
         challenge_id = command.completing_challenge_id
-        found = await read_demand(
+        if challenge_id is None:
+            asked_for = invariant(
+                command.mode,
+                "a line-up that names no challenge and no mode",
+            )
+            return TheAsk(
+                sport=invariant(
+                    command.sport,
+                    "a line-up with neither a sport nor a challenge to read "
+                    "one from",
+                ),
+                locked_seats=command.locked_seats,
+                # A constant: which tab you are on, decided before anything was
+                # read at all.
+                mode_of=lambda _: asked_for,
+                exempt_challenge_id=None,
+                excluding=frozenset(),
+            )
+        court = await read_demand(
             HalfBuiltCourtQuery,
             lambda: self._courts.half_built_court(
                 challenge_id=challenge_id, member_id=command.searcher_id
             ),
         )
-        if found is None:
+        if court is None:
             raise TheChallengeIsNotYoursToFill(
                 "that challenge is not one of yours to fill"
             )
-        return found
+        return TheAsk(
+            sport=court.sport,
+            locked_seats=court.seated_ids,
+            mode_of=self._mode_of(court),
+            exempt_challenge_id=court.challenge_id,
+            excluding=court.answered_and_gone,
+        )
 
-    def _mode_of(
-        self, command: RunLineupSearchCommand, court: HalfBuiltCourt | None
-    ) -> Callable[[PlayIntent], SearchMode]:
-        """Which weight vector this search runs under. **Three answers, one read.**
+    def _mode_of(self, court: HalfBuiltCourt) -> Callable[[PlayIntent], SearchMode]:
+        """Which weight vector a fill runs under. **Two answers, one read.**
 
         A function rather than a value, for the workbench's own reason: the
         declaration a mode is chosen from is the declaration recorded beside it,
         and there is no second load for the two to disagree across.
 
-        *No challenge* — the request said, and a tab is a constant.
-
-        *A challenge born with a mode* — **it keeps it.** A competitive court must
-        not have its last seat filled by a for-fun search, and the mode is the
-        court's rather than the filler's.
+        *A challenge born with a mode* — **it keeps it.** A competitive court
+        must not have its last seat filled by a for-fun search, and the mode is
+        the court's rather than the filler's.
 
         *A challenge born without one* — deck-born, and every mutual-born court —
         resolves one from the **filler's** declared Play intent on the deck's own
@@ -470,12 +510,6 @@ class RunLineupSearch:
         appears anywhere**, and ADR-0100 keeps its silence.
         """
 
-        if court is None:
-            asked = invariant(
-                command.mode,
-                "a line-up that names no challenge and no mode",
-            )
-            return lambda _: asked
         inherited = court.mode
         if inherited is not None:
             return lambda _: inherited

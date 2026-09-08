@@ -925,6 +925,60 @@ def test_somebody_who_lapsed_is_not_asked_again_either():
         )
 
 
+def test_somebody_who_lapsed_is_not_asked_again_with_no_sweep_having_run():
+    """**The same refusal, and it must not wait for a loop.**
+
+    The test above sweeps first, so ``answered`` holds the lapsed player and the
+    refusal comes off the set. Nothing on this platform guarantees the sweep has
+    been past: a seat whose day ran out already reads as lapsed, its pair already
+    releases and the standing already folds — *the sweep exists for the record,
+    not for correctness*.
+
+    So the two runs have to reach the same answer. Reading ``answered`` alone
+    would let a fill re-invite somebody at 24 hours and refuse the identical fill
+    at 25 because a loop happened to tick in between — and it is
+    ``docs/adr/0150``'s fill that made this reachable, since ``invite`` had no
+    caller before it.
+    """
+
+    challenge = a_padel_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+    challenge.accept(BOB, occurred_at=at(2))
+    # No `challenge.lapse(...)`, deliberately: CAROL's day has simply run out.
+
+    with pytest.raises(NobodyIsAskedTwice):
+        challenge.invite(
+            (
+                SeatPlan(side=Side.A, player_id=ORGANISER),
+                SeatPlan(side=Side.A, player_id=ALICE),
+                SeatPlan(side=Side.B, player_id=BOB),
+                invited(CAROL, Side.B, 9),
+            ),
+            occurred_at=OUTSIDE,
+        )
+
+
+def test_who_has_already_been_asked_reads_the_same_either_side_of_a_sweep():
+    """The one derivation both readers take, asserted as one answer.
+
+    ``invite``'s refusal and the fill's own pool exclusion are two readers of
+    this set (``docs/adr/0150`` §4). Two derivations would be two answers to
+    *have they already been asked*, and the one that drifted would be the one
+    that let somebody be asked twice.
+    """
+
+    challenge = a_padel_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+    challenge.decline(BOB, occurred_at=at(2))
+    before = challenge.already_asked_at(OUTSIDE)
+
+    recorded = challenge.lapse(now=OUTSIDE)
+
+    assert recorded == 1, "CAROL's seat is the one with nothing in it"
+    assert before == challenge.already_asked_at(OUTSIDE)
+    assert before == frozenset({ALICE, BOB, CAROL})
+
+
 def test_a_plan_may_not_carry_an_invitation_for_somebody_already_in():
     """An origin means *this seat is being asked now*, and they are not."""
 

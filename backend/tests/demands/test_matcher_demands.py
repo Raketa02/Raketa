@@ -1328,6 +1328,45 @@ async def test_everybody_who_answered_and_left_is_named_apart_from_the_seated(
 
 
 @pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
+async def test_a_lapsed_invitee_is_gone_with_no_sweep_having_run(
+    implementation, session
+):
+    """**The demand that keeps the lapse loop out of correctness.**
+
+    ``Challenge.answered`` grows on the *events*, so a seat whose day ran out
+    joins it only once the sweep has appended a ``SeatLapsed`` — and the sweep
+    exists for the record, not for correctness. A read off that set alone would
+    let a fill offer back somebody the aggregate refuses the moment the loop
+    ticks, so the identical press would succeed at 48 hours and be refused at 49.
+
+    Nothing is swept here. The invitee's day has simply run out.
+    """
+
+    organiser, acceptor, silent = new_uuid(), new_uuid(), new_uuid()
+    sent_at = _long_enough_ago_to_have_lapsed()
+    challenge = await _sent(
+        session,
+        organiser=organiser,
+        invitees=(acceptor, silent),
+        sport=Sport.PADEL,
+        at=sent_at,
+    )
+    await _answers(
+        session, challenge, acceptor, yes=True, at=_just_after(sent_at, minutes=1)
+    )
+
+    court = await implementation.build(session).half_built_court(
+        challenge_id=challenge.id, member_id=organiser
+    )
+
+    assert court is not None
+    assert court.seated_ids == (acceptor,)
+    assert court.answered_and_gone == frozenset({silent}), (
+        "a seat past its window has left the court and must not be offered back"
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
 async def test_a_court_answers_nothing_to_a_stranger_an_absentee_or_an_ending(
     implementation, session
 ):

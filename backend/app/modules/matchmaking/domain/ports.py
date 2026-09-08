@@ -736,6 +736,27 @@ class HalfBuiltCourt:
     seated_ids: tuple[UUID, ...]
     answered_and_gone: frozenset[UUID]
 
+    def __post_init__(self) -> None:
+        """The two claims this shape makes, checked at the crossing.
+
+        **Stated here as well as on the provider's own row, and deliberately.**
+        The demand suite parameterises over *every* registered implementation of
+        this port, so a second one — or a translation that dropped a filter —
+        would otherwise hand the fill a court it could not seat and the failure
+        would arrive as ``locked_seat_not_available`` about nobody.
+        """
+
+        invariant(
+            not (set(self.seated_ids) & self.answered_and_gone),
+            f"somebody both seated on {self.challenge_id} and gone from it: "
+            f"{sorted(set(self.seated_ids) & self.answered_and_gone)}",
+        )
+        invariant(
+            bool(self.seated_ids),
+            f"a half-built court with nobody on it but the filler: "
+            f"{self.challenge_id}",
+        )
+
 
 @runtime_checkable
 class HalfBuiltCourtQuery(Protocol):

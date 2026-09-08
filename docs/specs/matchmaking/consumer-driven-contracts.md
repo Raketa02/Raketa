@@ -27,7 +27,7 @@ term is wired up. **An unwritten demand is satisfiable by accident.**
 
 ---
 
-## The five ports
+## The six ports
 
 One provider signs one contract. The split is by who supplies the fact, never by how fresh it
 has to be.
@@ -46,8 +46,20 @@ half, and two bounded reads merged by a caller is not a bounded read.
 | `AccountHoldQuery` | `cases` | One live boolean per player. Already standing from [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) |
 | `AtStakeQuery` | `rating` | What a counted win and a counted loss against one opponent would do to the searcher's Level |
 | `AccountStatusQuery` | `users` | The set of accounts that may not be shown. Gate 8, from [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) |
+| `HalfBuiltCourtQuery` | `challenges` | The one court a fill names: its sport, its mode, who is live on it besides the filler, and everybody it has already asked and does not still hold. From [ADR-0150](../../adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md) |
 
-**The last two are different, and the difference is stated rather than left to be noticed.**
+**The sixth is the one demand that is not a fact *about people*, and it arrived last**
+([#355](https://github.com/Raketa02/Raketa/issues/355), ADR-0150). Every port above answers
+about a **population** — these players' history, these accounts' state, this pair's Level — and
+this one answers about a single **challenge**, because a fill *names* the court it completes and
+reads the sport, the mode and the locked seats off it. It is a second port rather than a method
+on `MatchHistoryQuery` for one reason, and it is the reason this file exists to record: **the
+posture differs.** History fails soft, and a fill that could not read its own court would
+silently become an ordinary ⚡ over a pool that still excludes the very people it was meant to
+seat around.
+
+**The last two of the first five are different, and the difference is stated rather than left to
+be noticed.**
 `cases` **does not exist**; `player_score`, `challenges` and `games` do — the first over the
 other two (ADR-0140) — and between them the latter
 answer the whole of `MatchHistoryQuery` ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)).
@@ -226,6 +238,7 @@ tell them apart.
 | Open challenge between the pair | **Fails soft** | §7.5's *the matcher proposes, the backend disposes* re-verifies on the shortlist. It is embarrassment with a backstop, not a safety failure |
 | The strands (`PlayerScoreQuery`) | **Fails soft** — the reliability term stands down | Which is what it does for anybody with no record anyway, so a failure costs a term and never the search |
 | At stake (`AtStakeQuery`) | **Fails soft** — the block is not drawn | Derived rather than quoted: it is what the card already does for a pair with no Level between them |
+| The court a fill names (`HalfBuiltCourtQuery`, ADR-0150) | **The search refuses** | Not a gate, and closed anyway: the court *is* what the search is about, so standing down would run an ordinary ⚡ over a pool still excluding the people on it and hand the player a four of strangers |
 
 These are separate reads carried in one context object. Bundling them into one read would make
 the strictest fact's failure mode everybody's.

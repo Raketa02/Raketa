@@ -520,7 +520,7 @@ class SearchWorkbench:
         surface: SearchSurface,
         initiation: SearchInitiation,
         for_a_newcomer: bool,
-        completing_challenge_id: UUID | None = None,
+        completing_challenge_id: UUID | None,
     ) -> SearchContext:
         """Every live fact, resolved **once per search as a set**, never per row.
 
@@ -534,14 +534,18 @@ class SearchWorkbench:
         module's own too and is **durable**, so it fails like the record does.
 
         ``completing_challenge_id`` is the **one** challenge the open-challenge
-        gate steps aside for (``docs/adr/0150`` §3), and it is an argument rather
-        than a condition reconstructed here: a reader asking why this search can
-        see the people it is arranging with finds the answer in the call. The
+        gate steps aside for (``docs/adr/0150`` §3). It is **stated by every
+        caller and never defaulted**, which is ``standing_of``'s rule one context
+        over: a surface added later has to say which challenge it is exempting,
+        rather than inheriting an answer from a default nobody chose. It is an
+        argument rather than a condition reconstructed here: a reader asking why
+        this search can see the people it is arranging with finds the answer in
+        the call. The
         gate is not weakened and its meaning does not move — it still excludes
         everybody the searcher is arranging with, **except the people already
         sitting on the court this search exists to finish**, which is the same
-        rule read correctly. Every other surface passes nothing and gets the
-        gate it always had.
+        rule read correctly. The other three surfaces pass ``None`` and get the
+        gate they always had.
         """
 
         blocked = await live_block_set(self._blocks, searcher.player_id)
