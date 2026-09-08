@@ -215,8 +215,7 @@ export function CandidateCard({
         <PhotoPanel
           playerId={candidate.playerId}
           photoUrl={candidate.card.photoUrl}
-          level={candidate.card.level}
-          sportName={sportName}
+          rating={{ level: candidate.card.level, sportName }}
           onCourt={facts.onCourt}
         />
 

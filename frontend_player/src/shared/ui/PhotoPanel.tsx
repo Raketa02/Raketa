@@ -66,9 +66,11 @@
  *
  * The **Level reaches the spoken name already**, as the first figure of `levelRow` — it is
  * printed twice and said once, which is the whole of §10 holding while the drawing repeats. The
- * **Sport does not reach it at all, and that is deliberate**: it is the search's own sport,
- * identical on every row, and the screen's eyebrow has already said it. Twenty rows each
- * opening with *Tennis* is the noise §20.3's fixed order exists to prevent.
+ * **Sport does not reach it at all on a card, and that is deliberate**: it is the search's own
+ * sport, identical on every row, and the screen's eyebrow has already said it. Twenty rows each
+ * opening with *Tennis* is the noise §20.3's fixed order exists to prevent. On the record sheet
+ * it does reach the spoken name, because there it is the sport the panel resolved to and
+ * nothing else on the sheet has said it.
  *
  * The **mark reaches it, and it is the exception that proves the Sport's rule**: it is true of
  * one player and not of the next, so it is a fact rather than a constant, and §20.3 gives it a
@@ -91,16 +93,27 @@ export interface PhotoPanelProps {
   /** Omitted with `photo_id` when they have no photo, and on a link that has expired. */
   readonly photoUrl?: string;
   /**
-   * **What they published**, not what a term was computed against.
+   * **What they published**, and the sport it is published in — the two facts printed over the
+   * photograph, or **nothing at all**.
    *
-   * `player_card.level` and `level_fit.theirMu` are the same number today and are two fields.
-   * The panel takes the published one because it is a fact about the person and is there
-   * whatever fired: a panel printing the term's μ would go blank the day `LEVEL_FIT` stands
-   * down, and the panel is the card's identity rather than part of its argument.
+   * `level` is `player_card.level` and not `level_fit.theirMu`: they are the same number today
+   * and they are two fields, and a panel printing the term's μ would go blank the day
+   * `LEVEL_FIT` stands down. The panel is the composition's identity rather than part of its
+   * argument, so it is drawn whatever fired.
+   *
+   * `sportName` is the **surface's**, never the subject's: on a card it is the search's own
+   * sport, identical on every row; on the record sheet it is the sport the server resolved the
+   * skill panel to, which is the one thing on that panel a reader has been told nowhere else.
+   *
+   * **Absent together, and only on the record sheet.** Somebody rated in nothing has no
+   * resolved sport and therefore no Level to print — and *no Level* is the poster with nothing
+   * over it, never a nought. A candidate always holds a rating in the sport that returned them,
+   * so no card ever omits this.
    */
-  readonly level: number;
-  /** `sportLabel(origin.sport)`. **The screen's, never the card's** — see the module note. */
-  readonly sportName: string;
+  readonly rating?: {
+    readonly level: number;
+    readonly sportName: string;
+  };
   /**
    * Whether the photograph wears the ON COURT mark — one answer, read once by the surface, so
    * that the drawing and the spoken name cannot disagree about it.
@@ -123,8 +136,7 @@ export interface PhotoPanelProps {
 export function PhotoPanel({
   playerId,
   photoUrl,
-  level,
-  sportName,
+  rating,
   onCourt,
   size = 'card',
 }: PhotoPanelProps) {
@@ -144,12 +156,14 @@ export function PhotoPanel({
 
         {/* Its own block, so the two facts stay at the bottom whether or not the mark is
             above them: `space-between` over an absent first child would carry them up. */}
-        <View style={s.labels}>
-          <Text style={[s.level, LEVEL_ROLE[size]]}>{formatLevel(level)}</Text>
-          <Text style={s.sport} numberOfLines={1}>
-            {sportName}
-          </Text>
-        </View>
+        {rating === undefined ? null : (
+          <View style={s.labels}>
+            <Text style={[s.level, LEVEL_ROLE[size]]}>{formatLevel(rating.level)}</Text>
+            <Text style={s.sport} numberOfLines={1}>
+              {rating.sportName}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );

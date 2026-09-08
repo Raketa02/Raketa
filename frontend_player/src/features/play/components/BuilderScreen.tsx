@@ -170,6 +170,7 @@ import {
   type SendRefusal,
 } from '@/features/challenges/types';
 import { useProfileSurface } from '@/features/player_profile/types';
+import { PlayerRecordSheet, type RecordSubject } from '@/features/player_record/types';
 import { ShellScreen, landOnNow } from '@/features/shell/types';
 import { offlineMessage } from '@/shared/errors';
 import { useIsOnline } from '@/shared/lib/platform';
@@ -212,6 +213,7 @@ import {
   type Seating,
 } from '../domain/forecast';
 import { seatPlaces, withheldSeats, type CourtHalf } from '../domain/lineup';
+import { socialTagOverlap } from '../domain/socialTagOverlap';
 import { alreadyAsked } from '../domain/raisedPrompt';
 import type { UnfilledReason } from '../domain/vocabulary';
 import { sentWeekForOrigin } from '../domain/workingWeek';
@@ -390,15 +392,27 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const [refusal, setRefusal] = useState<SendRefusal | undefined>(undefined);
 
   /**
-   * **Whose Fit is being explained** — `SH.whyfit`, over the court rather than over a list.
+   * **Whose record is being read** — `SH.player`, over the court rather than over a list.
    *
-   * The row itself and not an id, for the reason the pool and the deck both hold one: the
-   * sheet takes `(candidate, envelope)` and reads no global state, so a screen holding an id
-   * would be looking the same row up again on every render of a sheet that is already holding
-   * it. Route-local with the seating and the refusal, and gone the moment the court pops.
+   * The seat itself and not an id, for the reason the pool and the deck both hold a row: the
+   * sheet reads no global state, so a screen holding an id would be looking the same seat up
+   * again on every render of a sheet that is already holding it. Route-local with the seating
+   * and the refusal, and gone the moment the court pops.
    *
-   * **Two routes reach it and neither is the other's fallback**: a name on the forecast card
-   * is the route, and a hold on the seat is a shortcut duplicating it.
+   * **It replaced the Fit sheet's own state rather than joining it** ([#384](https://github.com/Raketa02/Raketa/issues/384)):
+   * a face opens the person, and the pairing's arithmetic is a row inside what that opens.
+   */
+  const [reading, setReading] = useState<ReadRecord | undefined>(undefined);
+
+  /**
+   * **Whose Fit is being explained** — `SH.whyfit`, now reached only from the record's own row.
+   *
+   * The row itself and not an id, for the same reason: the sheet takes `(candidate, envelope)`
+   * and reads no global state.
+   *
+   * **One route reaches it.** The hold on the seat went with #285, and the face went with #384
+   * — what is left is a row that names what it opens, which is the only place the arithmetic of
+   * a *pairing* has ever belonged.
    */
   const [explaining, setExplaining] = useState<Candidate | undefined>(undefined);
 
@@ -852,7 +866,10 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           same hide as the latch — a modal sheet's Part 13 obligation is that the tree behind
           it says so, and here that tree holds a second control spelled with the sheet's own
           words. */}
-      <View style={s.root} {...behindOverlay(proposing || explained !== undefined || asking)}>
+      <View
+        style={s.root}
+        {...behindOverlay(proposing || explained !== undefined || reading !== undefined || asking)}
+      >
         <ShellScreen
           title={builderTitle({ seats, filled })}
           // **The gesture, drawn.** This screen is genuinely pushed — Find a game stays
@@ -1178,7 +1195,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                         name={yours.drawn}
                         strength={chosen.split.yourSide}
                         seated={yours.handles}
-                        onExplain={setExplaining}
+                        onOpenRecord={setReading}
                       />
                       <Text style={s.vs} accessibilityElementsHidden importantForAccessibility="no">
                         {VS_WORD}
@@ -1189,7 +1206,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                         strength={chosen.split.theirSide}
                         tone={balanceTone(chosen.forecast.pct)}
                         seated={theirs.handles}
-                        onExplain={setExplaining}
+                        onOpenRecord={setReading}
                       />
                     </View>
                   </Hairline>
@@ -1263,14 +1280,56 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
         />
       )}
 
+      {/* `SH.player`, over the court — **who this person is**, which is what a face is a picture
+          of. It reads no global state: the subject, the arrival sport, the distance, the
+          reader's own area and the pairing all arrive as props, which is what will let the chat
+          header and the game screen open the same sheet with none of the last three.
+
+          The **Fit row is present exactly where a pairing is** — the seat carries a candidate
+          only for somebody the origin search returned, so your own face and a withheld seat
+          offer none. Taking it hands the court over to `SH.whyfit`: one sheet at a time, rather
+          than a modal presented inside a modal's own window.
+
+          **No `returnFocusTo`**, on the pool's own precedent: up to four faces open the same
+          sheet, so there is no one control to return to, and a ref per face would be four refs
+          to keep in step with a list that changes on every swap. */}
+      {reading === undefined ? null : (
+        <PlayerRecordSheet
+          visible
+          onClose={() => setReading(undefined)}
+          subject={reading.subject}
+          {...(sport === undefined ? {} : { sport })}
+          {...(reading.candidate?.distanceKm === undefined
+            ? {}
+            : { distanceKm: reading.candidate.distanceKm })}
+          {...(record?.envelope.myAreaCode === undefined
+            ? {}
+            : { viewerAreaCode: record.envelope.myAreaCode })}
+          {...(reading.candidate === undefined
+            ? {}
+            : { tagOverlap: socialTagOverlap(reading.candidate) })}
+          {...(reading.candidate === undefined
+            ? {}
+            : {
+                pairing: {
+                  fit: Math.round(reading.candidate.fit),
+                  onExplain: () => {
+                    const pairing = reading.candidate;
+                    setReading(undefined);
+                    if (pairing !== undefined) setExplaining(pairing);
+                  },
+                },
+              })}
+        />
+      )}
+
       {/* `SH.whyfit`, over the court — the only place a **seated** player's Fit is explained,
           because the pool removes everybody already on the court from the one surface that
           explains a person. It reads `(candidate, envelope)` off the origin search record and
           nothing else, which is what lets one sheet serve all three of its entry points.
 
-          **No `returnFocusTo`**, on the pool's own precedent: up to four names and four seats
-          open the same sheet, so there is no one control to return to, and a ref per name
-          would be four refs to keep in step with a list that changes on every swap. */}
+          **One route reaches it now**, and it is the record's own row: the face opens the
+          person, and a pairing's arithmetic is a row inside what that opens. */}
       {explained === undefined ? null : (
         <WhyFitSheet
           visible
@@ -1306,6 +1365,21 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
       )}
     </>
   );
+}
+
+/**
+ * **A face that has been tapped** — whose record to open, and the pairing behind them if there
+ * is one.
+ *
+ * Narrower than the `SeatedHandle` it is read off, and narrower in the one way that matters: a
+ * face with no `subject` is not a control, so a state carrying an optional one would be a sheet
+ * that could be opened about nobody. What is dropped with it — the place, the name, the face —
+ * is what the *row* draws, and the sheet draws none of it.
+ */
+interface ReadRecord {
+  readonly subject: RecordSubject;
+  /** The row the origin search still holds for them. Absent is *no Fit row on the sheet*. */
+  readonly candidate?: Candidate;
 }
 
 /** A seat nobody has landed in yet — the one value the drawn court substitutes while filling. */
@@ -1360,7 +1434,7 @@ function toOccupant(
 /**
  * One half of the court as a **panel** — who is standing on it, and what it is worth.
  *
- * ## The face is what made the hold deletable
+ * ## The face is what made the hold deletable, and what it opens has since changed
  *
  * This was a column of words, and a seated player's Fit had a second way in: a long press on
  * the seat ([#285](https://github.com/Raketa02/Raketa/issues/285)). A gesture nothing
@@ -1368,6 +1442,17 @@ function toOccupant(
  * it was not — so what it needed was not a second route but a **better first one**. A picture
  * of the person is a target you can see, at the size the design system already asks of a
  * control, and `CourtSeat` and `CourtBuild` drop the gesture on the strength of it.
+ *
+ * **A face now opens the person rather than the pairing**
+ * ([#384](https://github.com/Raketa02/Raketa/issues/384)). Tapping a photograph and receiving a
+ * weights-and-contributions table was always slightly wrong: somebody tapping a picture of a
+ * person is asking *who is this*. The Fit breakdown is a row inside what opens, which puts a
+ * pairing fact behind a label naming a pairing.
+ *
+ * **And your own face is a control here for the first time**, because nothing served your row
+ * and there was therefore nothing behind it to open. It reads the ungated `/players/me/record`,
+ * so the one player this screen most exists for — somebody whose reliability number is holding
+ * them back — can look the number up and watch it lift.
  *
  * The photograph is `PlayerPhoto`'s photo-or-poster switch, so the face here and the face
  * in the seat are **one drawing of one id** — a second implementation of the poster hash is
@@ -1426,7 +1511,7 @@ function Side({
   strength,
   tone,
   seated,
-  onExplain,
+  onOpenRecord,
 }: {
   readonly heading: string;
   readonly name: string;
@@ -1434,7 +1519,7 @@ function Side({
   /** Absent on your own half, which is the neutral one — see the bed paragraph above. */
   readonly tone?: BalanceBarTone;
   readonly seated: readonly SeatedHandle[];
-  readonly onExplain: (candidate: Candidate) => void;
+  readonly onOpenRecord: (seat: ReadRecord) => void;
 }) {
   const bed = tone === undefined ? undefined : { backgroundColor: BALANCE_SOFT[tone] };
   const toned = tone === undefined ? undefined : { color: BALANCE_INK[tone] };
@@ -1450,7 +1535,8 @@ function Side({
       </Text>
 
       <View style={s.faces}>
-        {seated.map(({ place, name: who, face, candidate }, at) => {
+        {seated.map((seat, at) => {
+          const { place, name: who, face, subject } = seat;
           // `PlayerPhoto` hides itself, so a face carries no name of its own and the
           // button's label is the whole of what this control says.
           const drawn =
@@ -1462,7 +1548,7 @@ function Side({
               />
             );
 
-          return candidate === undefined ? (
+          return subject === undefined ? (
             <View key={at} style={s.faceTarget}>
               {drawn}
             </View>
@@ -1470,8 +1556,16 @@ function Side({
             <Pressable
               key={at}
               accessibilityRole="button"
-              accessibilityLabel={seatedNameLabel(place, { name: who, fit: candidate.fit })}
-              onPress={() => onExplain(candidate)}
+              accessibilityLabel={seatedNameLabel(place, {
+                name: who,
+                self: subject.kind === 'me',
+              })}
+              onPress={() =>
+                onOpenRecord({
+                  subject,
+                  ...(seat.candidate === undefined ? {} : { candidate: seat.candidate }),
+                })
+              }
               // 6.6: the photo tile's `.7`, on the box rather than on the picture — the box is
               // the control, and a face that dimmed inside a target that did not would say the
               // two are separate things.

@@ -45,6 +45,22 @@ export { toSport, toWireSport } from './mappers/onboardingMappers';
 export { sportColour, sportLabel } from './components/sportPresentation';
 
 /**
+ * The four Band names, and which of the four a served name refers to.
+ *
+ * Presentation the wire does not carry, decided here because onboarding drew the first Level
+ * bar. The **record sheet is the second**
+ * ([#384](https://github.com/Raketa02/Raketa/issues/384)) and it draws the same bar: the four
+ * labels beneath it and the key that highlights one of them are a fact about the *vocabulary*
+ * rather than about either screen, so a second table would be a second answer to a question
+ * this feature already owns — `sportLabel`'s own argument, one row down.
+ *
+ * **The edges are not here and must never be.** They are deliberately uneven, they were wrong
+ * once already, and they travel on the response; what a name maps to is which segment lights
+ * up, and a band this build has never heard of gets no colour rather than a guessed one.
+ */
+export { BAND_NAMES, bandPresentation, type BandPresentation } from './components/bandPresentation';
+
+/**
  * The entry gate. The *decision* is exported, never the redirect: where a player belongs
  * is this feature's rule, and which route expresses it is the routing layer's.
  */

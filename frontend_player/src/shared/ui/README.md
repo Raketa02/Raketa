@@ -86,17 +86,21 @@ and by the second part's photos step: `PhotoRow` with `PhotoTile`, `PhotoAddTile
 `PhotoPosterTile`, plus `CourtPoster`; and by its availability step: `AvailabilityGrid`
 with `Tick`; and by sign-up's age question: `TickBox`; and by Play: `TabBar`, `Switch`,
 `FitPill`, `BalanceBar`, `Court`, `Meter`, `Segment` and `Toast` with `ToastHost`; and ahead of
-the record sheet: `SocialTagRow` and `RunOfForm`; and by the sportsmanship card: `StarRow` with
-`Star`. Import them from `@/shared/ui`.
+the record sheet: `SocialTagRow`, `RunOfForm`, and `PhotoPanel` with `PlayerPhoto`, `OnCourtMark`
+and `courtPosterFor` under it; and by the sportsmanship card: `StarRow` with `Star`. Import them
+from `@/shared/ui`.
 
-**The last two arrived by promotion rather than by being built here**, and the promotion is the
-interesting half ([#375](https://github.com/Raketa02/Raketa/issues/375)). Both were the
-competitive candidate card's, and the record sheet draws both
-([#373](https://github.com/Raketa02/Raketa/issues/373)): copying either would be a second thing
-to keep in step — `RunOfForm`'s three contrast ratios are **pinned** in `recordSquares.test.ts`,
-and a second run of squares would be a second set of fills that test never sees — and importing
-them out of `features/play/` would point the arrow the wrong way for a feature that is not Play's
-sibling by accident. **What came down is the drawing and the shape it takes; what stayed is the
+**Six of those arrived by promotion rather than by being built here**, and the promotion is the
+interesting half ([#375](https://github.com/Raketa02/Raketa/issues/375),
+[#384](https://github.com/Raketa02/Raketa/issues/384)). Five were the competitive candidate
+card's and one was the profile photos step's, and the record sheet draws all six
+([#373](https://github.com/Raketa02/Raketa/issues/373)): copying any of them would be a second
+thing to keep in step — `RunOfForm`'s three contrast ratios are **pinned** in
+`recordSquares.test.ts` and `OnCourtMark`'s cap is derived per panel in `onCourtMarkFit.test.ts`,
+and a second copy of either would be values those tests never see — and importing them out of
+`features/play/` would point the arrow the wrong way for a feature that is not Play's sibling by
+accident. `PlayerPhoto` also **lost the word _candidate_ on the way down**: a candidate is Play's
+name for a row a search returned, and what the switch draws is a player. **What came down is the drawing and the shape it takes; what stayed is the
 rule.** `play/domain/socialTagOverlap` reads the row's four answers off a **candidate**, which is
 a search result and Play's alone, and hands the value down — so a second surface serves its own
 and neither re-derives the other's. `RUN_OF_FORM_FILL` is exported for the same reason

@@ -47,7 +47,48 @@ radius and the per-sport declaration that Play's search screen is drawn from, wi
 `challenges` is the send: `POST /challenges`, `SH.propose`, and the two re-reads a refusal
 is followed by, below; `games` is the result conversation — the list on Now, the screen a
 row pushes, and the entering, correcting, agreeing and disagreeing that close the loop, below;
-and `sportsmanship` is the card in that list asking how the other players were, below.
+`sportsmanship` is the card in that list asking how the other players were, below;
+and `player_record` is the sheet a face on the forecast card opens, below.
+
+**A face opens the person, and the pairing gets a row**
+([#384](https://github.com/Raketa02/Raketa/issues/384),
+[#373](https://github.com/Raketa02/Raketa/issues/373)). Tapping a photograph on the balance
+forecast used to open the **Fit breakdown** — the arithmetic of a _pairing_ — which answers a
+question nobody asked by tapping a picture of a person. `features/player_record/` is what it
+opens instead: the poster with the Level printed on it and the sport beneath, the on-court mark,
+the whole handle, `In your area · 4 km`, one pill per rated sport and the **reliability pill**;
+then the skill card — the three inseparable figures over 7.5's band bar and its likely-range
+bracket, and the run of five, which is **that sport's** and never padded. The Fit breakdown is
+not deleted: it moves behind a row inside the record that says what it is, **present only where
+a pairing is behind the entry point** — your own face carries no candidate row, so it offers
+none, and neither will a record opened later from a chat. It is a feature of its own rather than
+`play`'s because the second and third doors are other screens', and the sheet **reads no global
+state**: the subject, the arrival sport, the distance, the reader's own area and the pairing all
+arrive as props.
+
+**Your own face is a control for the first time**, because nothing served your row and there was
+nothing behind it to open. It reads `GET /players/me/record`, which is the **ungated** route —
+a block is between two people and a hold does not reach this screen — and the sheet retitles to
+_How others see you_ with the distance gone, because the reliability number has been deciding
+who you are offered to since you signed up and a penalty nobody can look up is a penalty nobody
+can fix. Whether it retitles is the server's `is_self` and never a comparison this client made;
+which route to ask is the court's own knowledge of which seat is yours.
+
+**The refusal is one line and nothing else, and there is no retry on it.** Never disclosed,
+blocked in either direction, held and no such player answer one code with one body, byte for
+byte — a response that named which would deliver a block to the one person a block is meant to
+be invisible to — so re-asking returns the refusal, and only a failure to _reach_ the platform
+gets a control. A **withheld** seat is the one face that is not a control at all: the court has
+already said the row is withheld, and a button that provably opens a refusal is the pool's own
+_a control that returns nothing is a control lying about being useful_. **The tags drawn are the
+record's own live list and the claim is the pairing's** (`domain/tagRow`): the engine's
+`matched[]` supplies the tint, a tag published since the search draws untinted, and _No tags in
+common_ is kept as the engine's claim and never invented — a candidate whose tag terms stood
+down carries none on its card, and a row read off the card would be hidden for somebody whose
+record plainly holds six. The **band is a key** and never derived from the Level, the pill's
+`SCORE_FLOOR` is the matcher's own `SCORE_MIN` so a player can watch the penalty lift at the
+number the engine acts on, and every absence is the field's own — no panel of noughts, and no
+sentence explaining a gap.
 
 **The result conversation is one screen and eight states, and the state is derived**
 ([#314](https://github.com/Raketa02/Raketa/issues/314),

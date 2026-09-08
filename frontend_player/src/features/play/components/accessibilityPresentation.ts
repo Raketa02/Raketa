@@ -436,37 +436,39 @@ export function clearSeatLabel(seat: {
 }
 
 /**
- * A seated handle on the forecast card — `Your side, Marek, why fit 78` (§20.4).
+ * A seated handle on the forecast card — `Your side, Marek, player record` (§20.4).
  *
- * **The one way in to `SH.whyfit` for somebody already seated**, and the reason it had to be
- * built: the pool is the surface that explains a person and `pickable` removes everybody
- * already on the court, so a seated player's Fit was unreachable — which ⚡ *Let the engine
- * fill the seats* turns from awkward into total, because that court is four people the
- * searcher never chose and never saw a card for (§20.4.1).
+ * **It names the record it opens, not the Fit.** A face is a picture of a *person*, and
+ * somebody tapping one is asking who they are; the pairing's arithmetic moves behind a row
+ * inside the record that says what it is
+ * ([#384](https://github.com/Raketa02/Raketa/issues/384)). A button that promised *why fit 78*
+ * and opened a photograph, a Level and a run of form would be the one kind of label that is
+ * worse than none.
  *
  * It opens with the **same place clause a seat's own spoken name opens with** — *your side*,
  * *your side, your partner*, *their side* — and takes `PLACE` rather than the heading the row
  * draws, for §1's reason: a formatter composes from a code, never from another surface's
  * message. The heading says *Your side* where the partner's own name says *Your side, your
- * partner*, which is §20.4's rule that the role disambiguates two seats on one half. That is also what hides the two side headings — each name
- * now names its own side, exactly as 7.12 hides the court's caption and side labels because
- * each seat does.
+ * partner*, which is §20.4's rule that the role disambiguates two seats on one half. That is
+ * also what hides the two side headings — each name now names its own side, exactly as 7.12
+ * hides the court's caption and side labels because each seat does.
  *
- * The clause is spelled here rather than lower-casing {@link whyFitSheetLabel}, on `PLACE` and
- * `SIDE`'s own precedent one block up: **two tables and not one lower-cased at the call site**
+ * **Your own face carries the sheet's other title**, because it opens the other view: *how
+ * others see you* is what that sheet is, and a listener who heard *player record* on their own
+ * seat would reasonably expect a settings screen.
+ *
+ * Both clauses are spelled here rather than lower-cased from the sheet's own titles, on `PLACE`
+ * and `SIDE`'s precedent one block up: **two tables and not one lower-cased at the call site**
  * — a transformation over a composed sentence is a rule that breaks on the first proper noun.
- *
- * **The figure is rounded, because this button names the sheet it opens.** `whyFitColumn`
- * writes the whole column against `Math.round(fit)` and the sheet's title and accessible name
- * are that number, so a served `78,4` announced whole here would promise *why fit 78,4* and
- * open *Why fit 78*. It is the one place a Fit is rounded outside that column, and it is
- * rounded *to* it — `signedFigure`'s own rule that a figure is rounded where it is printed.
  */
+const RECORD_CLAUSE = 'player record';
+const OWN_RECORD_CLAUSE = 'how others see you';
+
 export function seatedNameLabel(
   place: SeatPlace,
-  seated: { readonly name: string; readonly fit: number },
+  seated: { readonly name: string; readonly self: boolean },
 ): string {
-  return `${PLACE[place]}, ${seated.name}, why fit ${Math.round(seated.fit)}`;
+  return `${PLACE[place]}, ${seated.name}, ${seated.self ? OWN_RECORD_CLAUSE : RECORD_CLAUSE}`;
 }
 
 /**

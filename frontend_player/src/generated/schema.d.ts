@@ -3527,36 +3527,40 @@ export interface components {
         };
         /**
          * ReliabilityStrand
-         * @description The five strands a reliability reading is built from, read separately.
+         * @description The six strands a reliability reading is built from, read separately.
          *
          *     They are weighted **per mode** and the two vectors order people oppositely —
-         *     a candidate strong on *keeps plans* and weak on *sportsmanship* wins in
-         *     competitive and loses in for fun. A single blended score cannot express that,
-         *     which is the whole argument for the decomposition, and it is justified for
-         *     exactly as long as such a pair exists (``ranking-weights.md`` §6).
+         *     a candidate strong on *answers about results* and weak on *sportsmanship*
+         *     wins in competitive and loses in for fun. A single blended score cannot
+         *     express that, which is the whole argument for the decomposition, and it is
+         *     justified for exactly as long as such a pair exists (``ranking-weights.md``
+         *     §6).
          *
-         *     **The inversion narrowed when the sixth strand was struck, and it is watched
-         *     rather than assumed.** *Confirms results* carried it at 24/4 against
-         *     sportsmanship's 5/16; what is left is 18/7 against 15/17, which still flips
-         *     and is asserted in ``tests/unit/test_matchfit_terms.py``. The day no pair
-         *     inverts, the decomposition has stopped paying for itself and the argument for
-         *     it is due again.
+         *     **The inversion is watched rather than assumed, and it widened again.** It
+         *     was 24/4 against sportsmanship's 5/16 while *confirms results* was here; the
+         *     strike left 18/7 against 15/17, and *answers about results* restores the wide
+         *     pair at 24/4 against 5/16 (``docs/adr/0156``). It is asserted in
+         *     ``tests/unit/test_matchfit_terms.py``, and the day no pair inverts, the
+         *     decomposition has stopped paying for itself and the argument for it is due
+         *     again.
          *
-         *     **There were six, and *confirms results* was struck rather than deferred**
-         *     (``docs/adr/0137``, carried out by ``docs/adr/0140``). An unconfirmed result
-         *     is a fact about a **pair** and a strand is a verdict about a **person**, and
-         *     every denominator tried on it docked somebody ADR-0049 protects. A withdrawn
-         *     strand costs the term nothing by construction: a strand nobody publishes
-         *     stands down and the survivors renormalise inside the reading.
+         *     **The sixth name is not the one that was struck, and the difference is the
+         *     whole of ``docs/adr/0156``.** *Confirms results* asked whether a game reached
+         *     an agreed score, which is a fact about a **pair**, and every denominator
+         *     tried on it docked somebody ADR-0049 protects — both sides of an honest
+         *     disagreement included (``docs/adr/0137``). *Answers about results* asks
+         *     whether **this person** replied to a score put in front of them, and a
+         *     counter is as good an answer as an acceptance, so disagreeing costs nothing
+         *     and only silence is priced.
          *
-         *     **Three different blends of these five exist in this system and confusing
-         *     them is a live risk:** the published Player Score at 35/20/12/10/8, and these
-         *     two. The reliability *floor* reads the published one — the one deliberate
-         *     exception, because a penalty justified by a figure that exists nowhere a
-         *     human can look is unexplainable.
+         *     **Three different blends of these six exist in this system and confusing
+         *     them is a live risk:** the published Player Score at 35/20/15/12/10/8, and
+         *     these two. The reliability *floor* reads the published one — the one
+         *     deliberate exception, because a penalty justified by a figure that exists
+         *     nowhere a human can look is unexplainable.
          * @enum {string}
          */
-        ReliabilityStrand: "SHOWS_UP" | "ANSWERS_CHALLENGES" | "KEEPS_PLANS" | "SETTLES_UP" | "SPORTSMANSHIP";
+        ReliabilityStrand: "SHOWS_UP" | "ANSWERS_CHALLENGES" | "ANSWERS_RESULTS" | "KEEPS_PLANS" | "SETTLES_UP" | "SPORTSMANSHIP";
         /** ResultResponse */
         ResultResponse: {
             /** Mu */
@@ -4454,19 +4458,21 @@ export interface components {
             /**
              * @description Which strand this row is. **Key your copy off this code**, never off the row's position: a strand with nothing behind it is absent from the list entirely, so the rows you get are the rows this person has.
              *
-             *     Three of the five names have no provider on this platform today and never appear here. They are listed on the enum because the vocabulary is closed and shared with the Fit breakdown, not because they are coming.
+             *     Three of the six names have no provider on this platform today and never appear here. They are listed on the enum because the vocabulary is closed and shared with the Fit breakdown, not because they are coming.
              */
             strand: components["schemas"]["ReliabilityStrand"];
             /**
              * Good
-             * @description How many of those opportunities went the way the strand is named for — a game that was played, a challenge that got an answer.
+             * @description How many of those opportunities went the way the strand is named for — a game that was played, a challenge that got an answer, a score that got a reply.
              *
-             *     **A no is a good outcome on `ANSWERS_CHALLENGES`.** Turning somebody down inside your day *is* answering them; what that strand prices is silence.
+             *     **A no is a good outcome on `ANSWERS_CHALLENGES` and on `ANSWERS_RESULTS`.** Turning somebody down inside your day *is* answering them, and so is countering a score you believe is wrong; what both strands price is silence.
              */
             good: number;
             /**
              * Opportunities
-             * @description How many times this fell due. **An opportunity and never a total**: a game still awaiting its entry and a seat still inside its day are in neither half of this row, because publishing them either way would state a conclusion the clock has not reached.
+             * @description How many times this fell due. **An opportunity and never a total**: a game still awaiting its entry, a seat still inside its day and a score still inside its window are in neither half of this row, because publishing them either way would state a conclusion the clock has not reached.
+             *
+             *     **`ANSWERS_RESULTS` counts the last twelve months and the other rows count a career.** It is the one strand that forgets, so a player can work a bad month off it.
              *
              *     Never `0` — a row with nothing behind it is not drawn at all.
              */

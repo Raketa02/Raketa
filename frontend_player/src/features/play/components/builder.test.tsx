@@ -19,14 +19,22 @@
  *   the accessibility API.
  */
 
-import { AccessibilityInfo, StyleSheet, type ViewStyle } from 'react-native';
+import { AccessibilityInfo, StyleSheet, View, type ViewStyle } from 'react-native';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { onlineManager } from '@tanstack/react-query';
 
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
+import {
+  OWN_RECORD_TITLE,
+  RECORD_TITLE,
+  RECORD_UNAVAILABLE,
+  fitRowLabel,
+  recordCloseLabel,
+} from '@/features/player_record/types';
 import { BALANCE_SOFT, POSTER_LABEL, courtSeatCount, theme } from '@/shared/ui';
+import { NO_TAGS_IN_COMMON, socialTagChip } from '@/shared/vocabulary/socialTagPresentation';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
   PROFILE_SURFACE_SERVED,
@@ -348,9 +356,13 @@ const bedOf = (node: ReturnType<typeof screen.getByLabelText> | null): string | 
   return undefined;
 };
 
-/** The side panel's own button — `{side}, {name}, why fit {n}`, and every fixture's Fit is 78. */
+/** The side panel's own button — `{side}, {name}, player record`. */
 const named = (place: Parameters<typeof seatedNameLabel>[0], playerId: string) =>
-  screen.getByLabelText(seatedNameLabel(place, { name: NAMES[playerId] ?? '', fit: 78 }));
+  screen.getByLabelText(seatedNameLabel(place, { name: NAMES[playerId] ?? '', self: false }));
+
+/** Your own face, which opens the same sheet retitled. */
+const yourFace = (place: Parameters<typeof seatedNameLabel>[0]) =>
+  screen.getByLabelText(seatedNameLabel(place, { name: 'You', self: true }));
 
 /** `SH.whyfit`'s accessible name, which is deliberately not its visible `Why ✦ 78`. */
 const WHY_FIT = whyFitSheetLabel(78);
@@ -742,26 +754,85 @@ describe('what the court says about itself', () => {
 });
 
 /**
- * **Why is this person on my court?** — which had no answer anywhere in the product until
- * [#285](https://github.com/Raketa02/Raketa/issues/285).
+ * **Who is this person?** — which had no answer anywhere in the product until
+ * [#384](https://github.com/Raketa02/Raketa/issues/384).
  *
- * The pool is the one surface that explains a person and `pickable` **removes everybody already
- * seated** from it, so a seated player's Fit was unreachable — and ⚡ is what makes that matter,
- * because a court it built is four people the searcher never chose and never saw a card for.
+ * A face was a picture of a person that opened a weights-and-contributions table. It now opens
+ * the person, and the pairing's arithmetic is a row inside what opens — so the two gestures that
+ * used to give one answer twice give two different answers
+ * ([#285](https://github.com/Raketa02/Raketa/issues/285) deleted the hold; this deleted what was
+ * left of the duplication).
  *
- * What is asserted is the shape of the answer rather than the sheet's contents, which is
- * `whyFitSheet.test.tsx`'s: **the names row is the route**, the hold is a shortcut that
- * duplicates it, and neither exists where there is no breakdown behind the name.
+ * What is asserted here is the shape of the answer rather than the sheet's contents, and most
+ * of it is about something that must **not** happen: no button promising a Fit, no distance on
+ * your own record, no Fit row where there is no pairing, no claim about tags out of the app's
+ * own ignorance, and no retry on a refusal that would answer identically.
  */
-describe('why this person is on my court', () => {
-  it('opens SH.whyfit from a seated name, which is the route a listener can reach', async () => {
+describe('who this person is', () => {
+  const RECORD_OF = (playerId: string) => `/api/v1/players/${playerId}/record?sport=PADEL`;
+  const OWN_RECORD = '/api/v1/players/me/record?sport=PADEL';
+
+  function record(over: Partial<Wire['PlayerRecordResponse']> = {}): Wire['PlayerRecordResponse'] {
+    return {
+      is_self: false,
+      nickname: NAMES[C] ?? 'cyryl',
+      area_code: 'A+050612+0019938',
+      social_tags: ['PLAYS_TO_WIN'],
+      sports: [{ sport: 'PADEL', level: 2.71, band: 'Established' }],
+      skill: {
+        sport: 'PADEL',
+        level: 2.71,
+        band: 'Established',
+        confidence: 77,
+        counted_games: 21,
+        likely_range: { low: 2.55, high: 2.87 },
+        last_five: ['WIN', 'WIN', 'LOSS'],
+      },
+      reliability: {
+        player_score: 93,
+        strands: [{ strand: 'SHOWS_UP', good: 9, opportunities: 9, pct: 100 }],
+      },
+      ...over,
+    };
+  }
+
+  /** Every square drawn on screen, found by the one size only the run of form draws. */
+  function squares(): readonly ViewStyle[] {
+    return screen
+      .UNSAFE_getAllByType(View)
+      .map((box) => flatten(box.props.style))
+      .filter((style): style is ViewStyle => style?.width === theme.size.recordSquare);
+  }
+
+  async function openAFace() {
+    transport.on('GET', RECORD_OF(C), () => json(record()));
     await openTheBuilder();
     await pressFill();
     await screen.findByText('91%');
 
     fireEvent.press(named('YOUR_PARTNER', C));
+  }
 
-    expect(await screen.findByLabelText(WHY_FIT)).toBeTruthy();
+  it('opens the record on a tap, which is the gesture a listener can reach', async () => {
+    await openAFace();
+
+    expect(await screen.findByLabelText(recordCloseLabel(false))).toBeTruthy();
+    expect(screen.getByText(RECORD_TITLE)).toBeTruthy();
+    expect(await screen.findByText(NAMES[C] ?? '')).toBeTruthy();
+  });
+
+  /**
+   * **The face names the record it opens, and no longer names the Fit.** A button promising
+   * *why fit 78* that opened a photograph and a run of form would be the one kind of label that
+   * is worse than none.
+   */
+  it('says what it opens, and no face on the card announces a Fit', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    expect(screen.queryAllByLabelText(/why fit/i)).toHaveLength(0);
+    expect(screen.getAllByLabelText(/player record$/)).toHaveLength(3);
   });
 
   /**
@@ -770,39 +841,19 @@ describe('why this person is on my court', () => {
    * A `longPress` on a `Pressable` with no `onLongPress` is silently a no-op, so a hold that
    * quietly came back — or one that never left — would show no symptom anywhere else.
    */
-  it('opens nothing from a hold on the seat, because the row is the route', async () => {
+  it('opens nothing from a hold on the seat, because the face is the route', async () => {
     await openTheBuilder();
     await pressFill();
     await screen.findByText('91%');
 
     fireEvent(seat('YOUR_PARTNER', C), 'longPress');
 
-    expect(screen.queryByLabelText(WHY_FIT)).toBeNull();
+    expect(screen.queryByText(RECORD_TITLE)).toBeNull();
     // And the tap's own act did not fire underneath it either.
     expect(screen).toHavePathname('/play/builder');
   });
 
-  /**
-   * **The headings hide once the names are buttons.** Each one now opens with the side its
-   * row's key says, which is 7.12's rule for the court's own caption and side labels: a caption
-   * is hidden where every element under it names itself. They are still drawn.
-   */
-  /**
-   * **The face is what made the hold deletable** — the route is a control with a picture of
-   * the person on it rather than a gesture nothing advertises.
-   *
-   * Counted through the poster's own name, because every seeded card here has no `photo_url`:
-   * four seats and four row entries is eight posters, where before the row drew none.
-   */
-  it('draws a face beside every handle, which is what the row is a control over', async () => {
-    await openTheBuilder();
-    await pressFill();
-    await screen.findByText('91%');
-
-    expect(screen.getAllByLabelText(POSTER_LABEL, { includeHiddenElements: true })).toHaveLength(8);
-  });
-
-  it('hides the two side headings, because each name says its own side', async () => {
+  it('hides the two side headings, because each face says its own side', async () => {
     await openTheBuilder();
     await pressFill();
     await screen.findByText('91%');
@@ -814,11 +865,153 @@ describe('why this person is on my court', () => {
   });
 
   /**
-   * **A name is a button where there is a breakdown behind it and plain text where there is
-   * not** — never a button that opens an apology. Your own seat has no candidate row, because
-   * no route serves a searcher their own; a withheld row carries one field and no card.
+   * **The face is what made the hold deletable** — the route is a control with a picture of
+   * the person on it rather than a gesture nothing advertises.
+   *
+   * Counted through the poster's own name, because every seeded card here has no `photo_url`:
+   * four seats and four row entries is eight posters, where before the row drew none.
    */
-  it('draws no button for you or for a player the record no longer describes', async () => {
+  it('draws a face for every seat, which is what the row is a control over', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    expect(screen.getAllByLabelText(POSTER_LABEL, { includeHiddenElements: true })).toHaveLength(8);
+  });
+
+  /**
+   * **Your own face is a control for the first time.** It opens the ungated route, which is the
+   * one that answers a held player — the reader this screen most exists for — and the sheet
+   * retitles to the outside view rather than reading as a settings screen.
+   */
+  it('opens your own record retitled, and with no distance on it', async () => {
+    transport.on('GET', OWN_RECORD, () => json(record({ is_self: true, nickname: 'me_myself' })));
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    fireEvent.press(yourFace('YOUR_SIDE'));
+
+    expect(await screen.findByText(OWN_RECORD_TITLE)).toBeTruthy();
+    expect(screen.queryByText(RECORD_TITLE)).toBeNull();
+    // The distance every other seat's record prints. Zero kilometres from yourself is not a
+    // fact worth stating, so the line is dropped rather than drawn empty.
+    expect(screen.queryByText('4 km')).toBeNull();
+    expect(transport.requestsTo('GET', OWN_RECORD)).toHaveLength(1);
+  });
+
+  /**
+   * **A pairing fact appears only where a pairing is in hand.** Your own seat carries no
+   * candidate row, because no route serves a searcher their own — so the record opened from
+   * your own face offers nothing to explain, exactly as one opened later from a chat will not.
+   */
+  it('offers the Fit breakdown from a seated face and from nowhere without a pairing', async () => {
+    await openAFace();
+
+    fireEvent.press(await screen.findByLabelText(fitRowLabel(78)));
+
+    expect(await screen.findByLabelText(WHY_FIT)).toBeTruthy();
+  });
+
+  it('offers no Fit row on your own record', async () => {
+    transport.on('GET', OWN_RECORD, () => json(record({ is_self: true })));
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    fireEvent.press(yourFace('YOUR_SIDE'));
+    await screen.findByText(OWN_RECORD_TITLE);
+
+    expect(screen.queryByLabelText(fitRowLabel(78))).toBeNull();
+  });
+
+  /**
+   * **A run of three is drawn as three.** The gap where the other two would be is the honest
+   * statement, and it is at the end, where the newest results are not yet.
+   */
+  it('draws a short run short and never pads it', async () => {
+    await openAFace();
+    await screen.findByText(NAMES[C] ?? '');
+
+    expect(squares()).toHaveLength(3);
+  });
+
+  /**
+   * **The band is a key the server sent, never a number this client banded.** Served here as
+   * *Advanced* over a Level that sits in Established, so a client deriving one from the other
+   * would say the wrong word.
+   */
+  it('draws the band it was served rather than one derived from the Level', async () => {
+    transport.on('GET', RECORD_OF(C), () =>
+      json(
+        record({
+          skill: { ...record().skill!, band: 'Advanced' },
+          sports: [{ sport: 'PADEL', level: 2.71, band: 'Advanced' }],
+        }),
+      ),
+    );
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+    fireEvent.press(named('YOUR_PARTNER', C));
+
+    expect(await screen.findByLabelText(/Advanced/)).toBeTruthy();
+  });
+
+  /**
+   * **No overlap passed is not *nothing in common*.** This fixture's candidates carry no tag
+   * terms, so the engine made no comparison — the tags are drawn as facts about their owner and
+   * the amber claim is never written.
+   */
+  it('draws their tags untinted and claims nothing about common ground', async () => {
+    await openAFace();
+
+    expect(
+      await screen.findByText(socialTagChip({ id: 'PLAYS_TO_WIN', shared: false })),
+    ).toBeTruthy();
+    expect(screen.queryByText(NO_TAGS_IN_COMMON)).toBeNull();
+  });
+
+  /**
+   * **One line and nothing else**, whatever the cause. Never disclosed, blocked either way,
+   * held and no such player answer the same code with the same body, and a control offering to
+   * ask again would be offering to receive the same refusal.
+   */
+  it('draws one line for a record that cannot be opened, and no way to ask again', async () => {
+    transport.on('GET', RECORD_OF(C), () => errorResponse(404, 'record_unavailable'));
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    fireEvent.press(named('YOUR_PARTNER', C));
+
+    expect(await screen.findByText(RECORD_UNAVAILABLE)).toBeTruthy();
+    expect(screen.queryByLabelText(/try again/i)).toBeNull();
+    // The sheet is still up, and it is still the sheet: a refusal is not a screen of its own.
+    expect(screen.getByText(RECORD_TITLE)).toBeTruthy();
+  });
+
+  /** Nothing is read for a face nobody tapped: four faces, and no request until one is. */
+  it('reads nothing until a face is tapped', async () => {
+    transport.on('GET', RECORD_OF(C), () => json(record()));
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    expect(transport.requestsTo('GET', RECORD_OF(C))).toHaveLength(0);
+
+    fireEvent.press(named('YOUR_PARTNER', C));
+    await screen.findByText(NAMES[C] ?? '');
+
+    expect(transport.requestsTo('GET', RECORD_OF(C))).toHaveLength(1);
+  });
+
+  /**
+   * **A withheld seat keeps its face and is not a control.** The record route answers `404` for
+   * a row the product has since agreed not to show, and a face that opened an apology is what
+   * this rule has always refused.
+   */
+  it('draws no button for a player the record no longer describes', async () => {
     transport.on('POST', LINEUPS, () =>
       json(seatedFour({ candidates: [card(B), card(C), { withheld: true }] })),
     );
@@ -826,13 +1019,14 @@ describe('why this person is on my court', () => {
     await pressFill();
     await screen.findByLabelText(summary(4));
 
-    // The two the record still holds a row for.
+    // The two the record still holds a row for, and your own seat, which opens the other route.
     expect(named('YOUR_PARTNER', C)).toBeTruthy();
     expect(named('THEIR_SIDE', B)).toBeTruthy();
-    // And nobody else on the row: four seats, two ways in.
-    expect(screen.queryAllByLabelText(/why fit/)).toHaveLength(2);
-    // The other two are still **drawn** — a face that opens nothing is not a face that
-    // vanished, and a panel holds one box per seat rather than only the seats it can explain.
+    expect(yourFace('YOUR_SIDE')).toBeTruthy();
+    // Four seats, three ways in.
+    expect(screen.queryAllByLabelText(/player record$|how others see you$/)).toHaveLength(3);
+    // The withheld face is still **drawn** — a face that opens nothing is not a face that
+    // vanished, and a panel holds one box per seat rather than only the seats it can describe.
     // The withheld handle's `?` is `playerName`'s unknown, and it reaches the panel's own line
     // the way every handle does: joined into the side's name.
     // Two of them, and both are drawings: the bar's segment and the panel's own line.
@@ -841,8 +1035,6 @@ describe('why this person is on my court', () => {
         includeHiddenElements: true,
       }),
     ).toHaveLength(2);
-    // Once, and it is the You tab underneath: the card's own `You` is inside the joined name.
-    expect(screen.getAllByText('You')).toHaveLength(1);
   });
 
   /** The same rule on the shortcut: a seat with nothing behind it carries no gesture. */
@@ -856,11 +1048,43 @@ describe('why this person is on my court', () => {
 
     fireEvent(screen.getByLabelText(seatLabel('THEIR_SIDE', { kind: 'withheld' })), 'longPress');
 
-    expect(screen.queryByLabelText(WHY_FIT)).toBeNull();
+    expect(screen.queryByText(RECORD_TITLE)).toBeNull();
   });
 
-  /** The names row is unaffected in both modes: the route stays open while the shortcut shuts. */
-  it('keeps the names row a way in while the toggle is on', async () => {
+  /**
+   * **It opens tall and stays that size.** The header and the scroll are `BottomSheet`'s; what
+   * is this sheet's own is the standing height, so a skeleton three lines tall does not grow
+   * into most of the screen when the answer lands and read as two different surfaces.
+   */
+  it('opens at one height whether or not the record has landed yet', async () => {
+    transport.on('GET', RECORD_OF(C), () => json(record()));
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    fireEvent.press(named('YOUR_PARTNER', C));
+    const standing = tallestStanding();
+
+    await screen.findByText(NAMES[C] ?? '');
+
+    expect(standing).toBeGreaterThan(0);
+    expect(tallestStanding()).toBe(standing);
+  });
+
+  /** The sheet's body's own floor, found by the one style in the tree that carries a minimum. */
+  function tallestStanding(): number {
+    return Math.max(
+      0,
+      ...screen
+        .UNSAFE_getAllByType(View)
+        .map((box) => flatten(box.props.style)?.minHeight)
+        .filter((floor): floor is number => typeof floor === 'number'),
+    );
+  }
+
+  /** The faces are unaffected by the swap toggle: the route stays open while the shortcut shuts. */
+  it('keeps the faces a way in while the toggle is on', async () => {
+    transport.on('GET', RECORD_OF(C), () => json(record()));
     await openTheBuilder();
     await pressFill();
     await screen.findByText('91%');
@@ -868,7 +1092,7 @@ describe('why this person is on my court', () => {
     fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
     fireEvent.press(named('YOUR_PARTNER', C));
 
-    expect(await screen.findByLabelText(WHY_FIT)).toBeTruthy();
+    expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
   });
 });
 
