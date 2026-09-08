@@ -249,6 +249,13 @@ in August and 1 in November has said 1 — and, symmetrically, somebody who want
 angry rating can play the person again and revise it. Both follow from the key. The second
 is a feature and the first is the price of it.
 
+***Most recent* means most recently answered, not most recently played**, and the two can
+disagree. A card stays open for seven days, so somebody who answers Tuesday's card on Friday
+and Monday's card on Saturday has their opinion of Monday standing. This is the only place
+the key could surprise, and it is the right reading of the two: what the average is asking
+is *what does this person currently think*, and the answer to that is the last thing they
+said — not the last court they stood on.
+
 **The context is stored, and this repository now has two persistence styles.** A reader who
 learns *aggregates are event-sourced here* from `games` will find one that is not, and the
 docstrings on `card.py` and `card_model.py` carry the argument at the site rather than only

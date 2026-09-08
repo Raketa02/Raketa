@@ -75,26 +75,27 @@ class SqlAlchemySportsmanshipLedger:
         either way, so there is nothing here a caller could usefully do
         differently.
 
-        **The translation is safe because the card table has exactly one
-        constraint.** No foreign key, no check, no unique index beside the
-        primary key — so an integrity error on *that* flush has one cause and
-        cannot be a different failure wearing this refusal's name. The ratings
-        are flushed separately below, where a constraint breach would be this
-        platform's own bug and is left to raise.
+        **The translation is narrowed to the one row that can raise it**, and
+        that narrowing is what makes it honest. The card table has a single
+        constraint — no foreign key, no check, no unique index beside the primary
+        key — so a breach *of that row* has exactly one cause. A bare ``flush()``
+        would not say that, because it flushes everything the session happens to
+        be holding, and this refusal would then be free to land on somebody
+        else's failure. Flushing the card alone keeps the claim true whatever a
+        caller has pending.
         """
 
-        self._session.add(
-            SportsmanshipCardORM(
-                game_id=card.game_id,
-                rater_id=card.rater_id,
-                answered_at=card.answered_at,
-            )
+        answered = SportsmanshipCardORM(
+            game_id=card.game_id,
+            rater_id=card.rater_id,
+            answered_at=card.answered_at,
         )
+        self._session.add(answered)
         try:
             # Flushed before the ratings so the composite foreign key back to
             # the card resolves within this transaction rather than at its end —
             # and so the key's refusal arrives here, where it can be named.
-            await self._session.flush()
+            await self._session.flush([answered])
         except IntegrityError as clash:
             raise YouHaveAlreadyRatedThisGame() from clash
 
