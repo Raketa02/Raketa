@@ -127,6 +127,9 @@ from app.modules.matchmaking.domain.ports import (
     MatchHistoryQuery,
     PlayerScoreQuery,
 )
+from app.modules.matchmaking.application.fail_closed_gates import (
+    FailClosedGates,
+)
 from app.modules.matchmaking.application.roll_exposure import RollExposure
 from app.modules.matchmaking.domain.cards import (
     CardPhotoLinks,
@@ -251,6 +254,26 @@ from app.modules.rating.infrastructure.event_sourced_assessment_repository impor
 )
 from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
     EventSourcedSkillRatingRepository,
+)
+from app.modules.player_record.domain.ports import (
+    PriorDisclosure,
+    RecordGates,
+    RecordPhotoLink,
+    SubjectIdentitySource,
+)
+from app.modules.player_record.infrastructure.disclosures import (
+    ChallengesTheyShare,
+    GamesTheyPlayed,
+    SearchesThatShowedThem,
+)
+from app.modules.player_record.infrastructure.live_record_gates import (
+    LiveRecordGates,
+)
+from app.modules.player_record.infrastructure.presigned_record_photo import (
+    PresignedRecordPhoto,
+)
+from app.modules.player_record.infrastructure.subject_identities import (
+    ProfileAndAccountIdentity,
 )
 from app.modules.sportsmanship.domain.ports import (
     SettledCourts,
@@ -1068,6 +1091,92 @@ def build_card_photo_links(
     return PresignedCardPhotos(
         storage=storage, valid_for_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES
     )
+
+
+
+# --------------------------------------------------------------------------
+# The player record — one route out, and every port inward
+# --------------------------------------------------------------------------
+#
+# This context stores nothing (``docs/adr/0155``), so there is no repository
+# here and never will be: every builder below composes somebody else's published
+# port into a demand this one declared in its own words.
+
+
+def build_subject_identity_source(
+    *,
+    session: AsyncSession,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+    storage: PhotoStorage,
+) -> SubjectIdentitySource:
+    """Who a person is, from the two contexts that own the answer.
+
+    The same three providers ``build_player_card_source`` composes, asked about
+    one player rather than twenty — and built over their **own ports** for that
+    builder's reason: a walk over the profile streams written here would be a
+    second implementation of how a profile is folded.
+    """
+
+    return ProfileAndAccountIdentity(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=event_store, events=events
+        ),
+        photos=storage,
+    )
+
+
+def build_record_photo_link(
+    *, storage: PhotoStorage, settings: Settings
+) -> RecordPhotoLink:
+    """A record's photograph, addressed for one response.
+
+    **The window is read here**, from the one setting every photo link on this
+    platform is signed for, so a record, a card and ``GET /photos/{id}`` cannot
+    come to three answers about how long a link may live.
+    """
+
+    return PresignedRecordPhoto(
+        storage=storage, valid_for_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES
+    )
+
+
+def build_search_disclosure(session: AsyncSession) -> PriorDisclosure:
+    """*A search of mine returned them* — over the record that says so."""
+
+    return SearchesThatShowedThem(build_search_store(session))
+
+
+def build_challenge_disclosure(session: AsyncSession) -> PriorDisclosure:
+    """*We are both seated in a live challenge* — over ``challenges``' directory.
+
+    The strand that runs the other way from a search: a court is sent off the
+    organiser's search, so without this the person who was *asked* could not open
+    the record of the person who asked them.
+    """
+
+    return ChallengesTheyShare(build_challenge_directory(session))
+
+
+def build_game_disclosure(session: AsyncSession) -> PriorDisclosure:
+    """*We were on a court together* — over ``games``' directory."""
+
+    return GamesTheyPlayed(build_game_directory(session))
+
+
+def build_record_gates(
+    *, gates: FailClosedGates, holds: AccountHoldQuery
+) -> RecordGates:
+    """The four that fail closed, plus the reader's own hold.
+
+    The four are **not built here**: they are ``matchmaking``'s collaborator,
+    already assembled per request wherever a surface shows one player to another,
+    and this line composes rather than copies. A second spelling of a safety gate
+    is the defect the whole rule exists to prevent.
+    """
+
+    return LiveRecordGates(gates=gates, holds=holds)
 
 
 def build_absent_terms() -> frozenset[Term]:

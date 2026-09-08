@@ -2299,6 +2299,102 @@
           }
         }
       }
+    },
+    "/api/v1/players/me/record": {
+      "get": {
+        "tags": [
+          "player-record"
+        ],
+        "summary": "Your own record \u2014 how others see you",
+        "description": "**The same sheet everybody else is shown about you**, which is what makes it worth having: the numbers on it have been deciding who you are offered to since you signed up, and a penalty nobody can look up is a penalty nobody can fix.\n\n**Nothing gates it.** A block is between two people and the gender preference is mutual; neither has anything to say about somebody reading their own record, and a hold does not reach it either \u2014 this is the one screen a held player has for finding out how they appear.\n\n`is_self` is `true`. Read it rather than comparing ids.",
+        "operationId": "read_own_record_api_v1_players_me_record_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerRecordResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`record_unavailable` \u2014 this account has no record to draw: no handle, or no profile committed. The recovery is onboarding's second part, which `GET /users/me` already sends a cold launch into.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/players/{player_id}/record": {
+      "get": {
+        "tags": [
+          "player-record"
+        ],
+        "summary": "One player's record",
+        "description": "Who this person is, as of the moment you opened it.\n\n**Read through a prior disclosure, never about a person.** It opens for somebody a search of yours returned, somebody you share a live challenge or a game with, and yourself \u2014 and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.\n\n**Nothing expires.** A search record is kept for ever, so a sheet you could open this morning opens next year \u2014 any shorter window could only refuse a face the app is currently showing.\n\n**The gates are live.** A block placed since the search, a hold, an account that may not be shown and the mutual gender preference are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.\n\n**Asking about yourself is allowed** and answers `is_self: true` \u2014 the client is told rather than left to compare identifiers.",
+        "operationId": "read_player_record_api_v1_players__player_id__record_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerRecordResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`record_unavailable` \u2014 **one code for four causes, and the body is identical in all four.** You were never shown this person; one of you has blocked the other; the account is held or in a state that may not be shown; or there is no such player.\n\n**The indistinguishability is the feature.** A response that named which would deliver a block to the one person a block is meant to be invisible to, and a response that separated *never disclosed* from *no such player* would answer *is this id real* about a stranger. Draw one line \u2014 *This record isn't available.* \u2014 and do not branch on anything else here, because there is nothing else here.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3934,6 +4030,15 @@
         "title": "ModifierSchema",
         "description": "One modifier that fired, and what it was worth on this pairing."
       },
+      "OnCourtVerdict": {
+        "type": "string",
+        "enum": [
+          "allowed",
+          "flagged"
+        ],
+        "title": "OnCourtVerdict",
+        "description": "What the on-court check concluded about a photograph. **Two values.**\n\nThe third state \u2014 *nobody looked* \u2014 is the **absence** of one of these and\nnever a third value, which is ``docs/adr/0138``'s rule: a shield saying\n*checked and passed* cannot be drawn on a photograph nothing examined, and a\nvalue meaning *unknown* is a value somebody eventually draws a tick for.\n\n**The words are the ones a card already carries, and they are checked\nagainst it.** This is a second spelling of ``player_profile``'s\n``PhotoReviewDecision`` on purpose \u2014 this context imports no other context's\ndomain types \u2014 and a second spelling that drifts is worse than an import: a\nclient reading a search card and a record would get two words for one fact.\n``tests/unit/test_player_record_identity.py`` fails the build if the two\nvocabularies stop agreeing."
+      },
       "OptimisedFor": {
         "type": "string",
         "enum": [
@@ -4309,6 +4414,57 @@
         ],
         "title": "PlayerProfileResponse",
         "description": "A player's profile as it now stands.\n\nThe same body whether the commit created the profile or replayed an earlier\none, so a client that only wants its profile needs no branch on the status.\n\n**No gender value comes back out**, and that is a rule rather than an\noversight (``docs/adr/0096`` \u00a76): a preference crosses the wire *in*, on a\nsearch; no response shape carries a gender out and no card renders one.\nThis body is only ever the caller's own profile, so nothing here would leak\na third party's answer \u2014 the field is left off anyway, because the moment\none response shape carries it, *which* shapes may is a judgement call made\nper endpoint instead of a line nobody has to re-argue. Nothing reads it back\ntoday: onboarding sends it once, and there is no profile editor. When one\nexists, adding it here is an addition to this document and ADR-0096's\nticket's to make.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
+      },
+      "PlayerRecordResponse": {
+        "properties": {
+          "is_self": {
+            "type": "boolean",
+            "title": "Is Self",
+            "description": "Whether this is the reader's own record. **The server's answer, and the client never derives it** by comparing the id it asked about against its session \u2014 the sheet retitles to *How others see you*, drops the distance and shows a coarse band where a figure would be, and getting that wrong is most visible on the one screen it matters on.\n\n`true` on `/players/me/record` always, and on the parameterised route when a client asks about itself."
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "The whole handle. There is no name in this platform and **nothing may derive a familiar form from it** \u2014 every sentence naming somebody uses the whole handle or names nobody."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "The first photo \u2014 order is meaning in a photo list. **Omitted** when the player has no photograph, and the client draws the generated court poster rather than a placeholder."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "Short-lived signed URL that draws that photo. **Minted per response and stored nowhere** \u2014 this context stores nothing at all \u2014 so two reads of one record carry two links to one photograph.\n\n**You cannot sign one yourself.** `GET /photos/{photo_id}` signs only *your own* photos and refuses a stranger's id deliberately, so this is the only address this photograph has.\n\n**Present exactly when `photo_id` is.**"
+          },
+          "review": {
+            "$ref": "#/components/schemas/OnCourtVerdict",
+            "description": "What the on-court check concluded about `photo_id`, or **omitted** where this photograph has not been checked.\n\n**Omitted is not `allowed`, and only `allowed` earns a shield.** Three answers, not two: checked and passed, checked and flagged, and *nobody looked* \u2014 a photo that arrived while the reviewer could not be reached, or before the check existed at all. A client that drew a tick on the absence would be claiming a check happened on every photograph on the platform.\n\n**A fact about this photograph and not about the player**, present only beside `photo_id`. `flagged` blocks nothing \u2014 the photo is stored, it is shown, and the check is wrong sometimes. The evidence behind the verdict never crosses on any route."
+          },
+          "area_code": {
+            "type": "string",
+            "title": "Area Code",
+            "description": "Their coarse area, as a machine code. **An identifier and never a name** \u2014 nothing here can turn a coordinate into the name of a neighbourhood. What it licenses is the one comparison a client makes for itself: two players in the same square share a code, which is what *in your area* is drawn from."
+          },
+          "social_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Social Tags",
+            "description": "The Social tag ids they hold, in the vocabulary's own order. **Which of them the reader also holds is the client's own comparison** \u2014 the platform states no overlap here, so a record opened without a search behind it draws them untinted and claims nothing about common ground."
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_self",
+          "nickname",
+          "area_code",
+          "social_tags"
+        ],
+        "title": "PlayerRecordResponse",
+        "description": "Everything the platform will say about one person, to this reader.\n\n**Read through a prior disclosure and never about a person at large.** A\nrecord opens for somebody a search of yours returned, somebody you share an\nopen challenge or a game with, and yourself. Anybody else \u2014 and anybody a\nlive gate no longer admits \u2014 is `404`, in one shape that names nothing."
       },
       "PlayingStyleEvidence": {
         "properties": {

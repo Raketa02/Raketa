@@ -1,0 +1,327 @@
+"""``GET /api/v1/players/{id}/record`` and ``/players/me/record``.
+
+A player taps a face and is told who that person is. The rule the route runs on
+(``docs/adr/0155``): **a record is read through a prior disclosure, never about a
+person** — and the four fail-closed gates are re-evaluated live on every open,
+so a disclosure entitles a reader to ask and never to be answered.
+
+**The refusal is the thing most worth testing here**, and it is tested as a
+*sameness* rather than as four statuses: never disclosed, blocked, held and no
+such player produce the same bytes, because a response that named which would
+deliver a block to the one person a block is meant to be invisible to.
+
+Every assertion lands on HTTP, through the async client fixture: ASGI transport
+over in-memory SQLite, **no MinIO, no Redis and no sidecar**.
+"""
+
+from __future__ import annotations
+
+import json
+from uuid import UUID, uuid4
+
+import pytest
+
+from app.modules.matchmaking.presentation.dependencies import get_candidate_source
+from tests.api import matchmaking_world as world
+
+
+@pytest.fixture
+async def searcher(client):
+    return await world.a_searcher(client)
+
+
+async def a_search_that_showed(client, session_factory, candidate_source, searcher):
+    """One search of the reader's, and the one person it returned.
+
+    The disclosure this route is built on, made the way the platform makes one:
+    a real candidate in the index and a real search over it, so what entitles the
+    read is a row the platform wrote rather than a fixture's say-so.
+    """
+
+    subject = await world.a_candidate(
+        client, session_factory, "subject", mu=searcher["mu"]
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+    response = await world.search(client, searcher["token"])
+    assert response.status_code == 200, response.text
+    shown = [row["player_id"] for row in response.json()["candidates"]]
+    assert shown == [str(subject)], shown
+    return subject
+
+
+async def record_of(client, token: str, player_id: UUID):
+    return await client.get(
+        f"/api/v1/players/{player_id}/record", headers=world.auth(token)
+    )
+
+
+async def own_record(client, token: str):
+    return await client.get(
+        "/api/v1/players/me/record", headers=world.auth(token)
+    )
+
+
+def without_the_trace(response) -> str:
+    """One refusal's body, minus the one field that is per-request.
+
+    ``trace_id`` ties a client failure to a server log and is different on every
+    response by design. Everything else has to be identical, and comparing the
+    **text** rather than a parsed dictionary is deliberate: key order and
+    spelling are part of what a client sees.
+    """
+
+    body = json.loads(response.text)
+    assert body.pop("trace_id"), "a refusal with no trace is a refusal nobody can chase"
+    return json.dumps(body, sort_keys=False)
+
+
+# ---------------------------------------------------------------------------
+# What opens
+# ---------------------------------------------------------------------------
+
+
+async def test_a_search_that_showed_them_opens_their_record(
+    client, session_factory, candidate_source, searcher
+):
+    """The ordinary case, and the whole identity zone with it."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+
+    response = await record_of(client, searcher["token"], subject)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body == {
+        "is_self": False,
+        "nickname": "subject",
+        "area_code": "A+05151-000013",
+        "social_tags": list(world.COMPETITIVE_TAGS),
+    }
+    # The photograph's three fields are **omitted together** for a player with
+    # none, and never sent as nulls: the client draws the generated poster.
+    assert "photo_id" not in body and "photo_url" not in body
+    assert "review" not in body
+
+
+async def test_your_own_record_opens_with_nothing_behind_it(client, searcher):
+    """*How others see you* — the one record needing no prior disclosure, and the
+    one the client must not have to compare identifiers to recognise."""
+
+    response = await own_record(client, searcher["token"])
+
+    assert response.status_code == 200, response.text
+    assert response.json()["is_self"] is True
+    assert response.json()["nickname"] == "searcher"
+
+
+async def test_asking_about_yourself_by_id_is_still_your_own_record(
+    client, searcher
+):
+    response = await record_of(client, searcher["token"], searcher["id"])
+
+    assert response.status_code == 200, response.text
+    assert response.json()["is_self"] is True
+
+
+async def test_the_person_who_was_invited_can_open_the_organiser_s_record(
+    client, session_factory, candidate_source, searcher
+):
+    """**The strand a search cannot supply.** A court is sent off the organiser's
+    search, so the organiser has been shown the invitee and the invitee has been
+    shown nothing — and they are the person who most obviously needs to know who
+    they have just been asked to give up an evening to."""
+
+    people = {}
+    for name, latitude in (("ana", 51.52), ("bea", 51.53), ("caro", 51.54)):
+        player_id, token = await world.a_signed_in_candidate(
+            client, session_factory, name, mu=searcher["mu"], latitude=latitude
+        )
+        people[name] = {"id": player_id, "token": token}
+    await world.fold_the_log(session_factory, candidate_source)
+    built = await world.lineup(client, searcher["token"])
+    assert built.status_code == 200, built.text
+    body = built.json()
+    court = [
+        {
+            "side": seat["side"],
+            "player_id": seat.get("player_id", str(searcher["id"])),
+        }
+        for seat in body["lineup"]["seats"]
+    ]
+    sent = await client.post(
+        "/api/v1/challenges",
+        json={"search_id": body["search"]["search_id"], "court": court},
+        headers=world.auth(searcher["token"]),
+    )
+    assert sent.status_code == 201, sent.text
+    invitee = next(
+        person
+        for person in people.values()
+        if str(person["id"]) in {seat["player_id"] for seat in court}
+    )
+
+    response = await record_of(client, invitee["token"], searcher["id"])
+
+    assert response.status_code == 200, response.text
+    assert response.json()["nickname"] == "searcher"
+
+
+# ---------------------------------------------------------------------------
+# The one refusal
+# ---------------------------------------------------------------------------
+
+
+async def test_a_person_you_have_never_been_shown_is_refused(
+    client, session_factory, candidate_source, searcher
+):
+    """Without this the route is a player-enumeration endpoint, and a UUID being
+    hard to guess is not an authorization model."""
+
+    stranger, _ = await world.a_signed_in_candidate(
+        client, session_factory, "stranger", mu=searcher["mu"]
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    response = await record_of(client, searcher["token"], stranger)
+
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == "record_unavailable"
+
+
+async def test_a_block_in_either_direction_closes_a_record_a_search_opened(
+    client, session_factory, candidate_source, searcher
+):
+    """The disclosure stands for ever and the gates are live, which is the whole
+    reason they are re-run rather than recorded."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    assert (await record_of(client, searcher["token"], subject)).status_code == 200
+
+    blocked = await world.block_between(client, searcher["token"], subject)
+
+    assert blocked.status_code == 204, blocked.text
+    assert (await record_of(client, searcher["token"], subject)).status_code == 404
+
+
+async def test_a_gate_that_cannot_be_evaluated_excludes(
+    client, session_factory, candidate_source, searcher
+):
+    """A subject with no row in the partition the disclosure happened in has no
+    preference to read, so the mutual gender gate cannot be evaluated — and *a
+    gate that cannot be evaluated excludes*. This is the half of the partition
+    rule HTTP can see; which partition is chosen is pinned in
+    ``tests/unit/test_record_admission.py``."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    world.override(
+        client, get_candidate_source, lambda: world.an_empty_index(candidate_source)
+    )
+
+    response = await record_of(client, searcher["token"], subject)
+
+    assert response.status_code == 404, response.text
+
+
+async def test_the_four_refusals_are_byte_identical(
+    client, session_factory, candidate_source, searcher
+):
+    """**Asserted as a sameness, not as four statuses.**
+
+    Never disclosed, blocked, held and no such player. A payload naming which
+    would deliver a block to the one person the block was meant to be invisible
+    to; a payload separating *never disclosed* from *no such player* would answer
+    *is this id real* about a stranger.
+    """
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    stranger, _ = await world.a_signed_in_candidate(
+        client, session_factory, "stranger", mu=searcher["mu"]
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    never_disclosed = await record_of(client, searcher["token"], stranger)
+    no_such_player = await record_of(client, searcher["token"], uuid4())
+    # **The last two are refused about somebody the reader *was* shown**, so they
+    # come from the live gate rather than from the disclosure. Run against a
+    # stranger they would take the same path `never_disclosed` just took, and the
+    # sameness below would be a claim about three causes wearing four names.
+    world.hold_only(client, subject)
+    held = await record_of(client, searcher["token"], subject)
+    world.hold_only(client)
+    assert (
+        await record_of(client, searcher["token"], subject)
+    ).status_code == 200, "the hold, not the fixture, is what refused"
+    blocked_by = await world.block_between(client, searcher["token"], subject)
+    assert blocked_by.status_code == 204, blocked_by.text
+    blocked = await record_of(client, searcher["token"], subject)
+
+    refusals = (never_disclosed, no_such_player, blocked, held)
+    assert {one.status_code for one in refusals} == {404}
+    assert len({without_the_trace(one) for one in refusals}) == 1
+
+
+async def test_the_held_reader_is_refused_by_the_same_line(
+    client, session_factory, candidate_source, searcher
+):
+    """A hold points **both ways** (``docs/adr/0095``), so it reaches the route
+    that remembers what a search already showed — and it reaches it as this
+    route's one refusal rather than as a second thing to draw."""
+
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    world.hold_only(client, searcher["id"])
+
+    response = await record_of(client, searcher["token"], subject)
+
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == "record_unavailable"
+
+
+async def test_a_held_player_can_still_read_their_own_record(client, searcher):
+    """The one screen that tells somebody how they appear is the one a penalty
+    must not close: *a penalty nobody can look up is a penalty nobody can fix.*"""
+
+    world.hold_only(client, searcher["id"])
+
+    response = await own_record(client, searcher["token"])
+
+    assert response.status_code == 200, response.text
+
+
+async def test_an_account_that_may_not_be_shown_is_refused(
+    client, session_factory, candidate_source, searcher
+):
+    subject = await a_search_that_showed(
+        client, session_factory, candidate_source, searcher
+    )
+    world.may_not_show(client, subject)
+
+    response = await record_of(client, searcher["token"], subject)
+
+    assert response.status_code == 404, response.text
+
+
+async def test_a_record_needs_a_signed_in_reader(client, searcher):
+    assert (
+        await client.get(f"/api/v1/players/{searcher['id']}/record")
+    ).status_code == 401
+    assert (await client.get("/api/v1/players/me/record")).status_code == 401
+
+
+async def test_me_is_never_parsed_as_a_player_id(client, searcher):
+    """The route ordering, asserted rather than assumed: a parameterised segment
+    declared ahead of the literal one would answer the refusal to everybody
+    asking for their own record, and nothing else would look wrong."""
+
+    response = await own_record(client, searcher["token"])
+
+    assert response.status_code == 200, response.text

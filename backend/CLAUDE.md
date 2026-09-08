@@ -536,6 +536,35 @@ Rules to preserve:
   `SettledCourts` over `games`' directory, whose adapter lives in **this** context the way
   `PlayerHandles`' lives in `games`; *settled* there is narrowed to **played and over**,
   because a ghost has nobody to rate and an unscored game very much does.
+- **A record is read through a prior disclosure, and the refusal names nothing**
+  ([ADR-0155](../docs/adr/0155-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)).
+  `app/modules/player_record/` is the ninth context and the second that keeps **no record
+  at all** — no aggregate, no table, no migration, and a structural test that walks the
+  package for an ORM import and the migrations for a table named after it. What separates
+  it from `player_score` is that it also **enforces admission**, and that is the whole of
+  what it decides for itself. Five things are load-bearing. **A record opens on a prior
+  disclosure and never on a person**: you are the subject, a search of yours *returned*
+  them, or you share a live challenge or a game — otherwise a route taking a player id is
+  a player-enumeration endpoint, and a UUID being hard to guess is not an authorization
+  model. **Nothing expires**, because a search record is kept for ever (ADR-0104) and a
+  shorter window could only refuse a face the app is currently showing. **The four
+  fail-closed gates run live, in the partition of the disclosure** — never in the sport
+  the reader arrived from, since the gender gate reads a candidate index row and the index
+  is keyed by sport, so a subject rated only in squash has no padel row and *a gate that
+  cannot be evaluated excludes*; that is why `PriorDisclosure` answers in **sports** and
+  why the partitions are walked in the sport registry's own order rather than a set's
+  (ADR-0105). The reader's **own** hold refuses here too, because a hold points both ways
+  and would otherwise end at the one route that remembers what a search already showed —
+  while **your own record has no gates at all** and is a *second use case* rather than a
+  branch, so the screen that tells a player how they appear cannot be taken down by the
+  gate machinery. **The four refusals are one refusal, byte for byte** — never disclosed,
+  blocked either way, held and no such player are one `404` with one body, asserted as a
+  sameness rather than as four statuses. And **this context declares its own ports and its
+  own types**: it borrows nothing from another context's domain, held by an `.importlinter`
+  contract rather than a test, because an application layer importing `CardIdentity` would
+  read as sensible reuse in the diff and nothing would go red. The cost is a second
+  spelling of two words — `OnCourtVerdict` beside `PhotoReviewDecision` — and their
+  agreement is asserted, the way `games` asserts its two bounds against each other.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one
@@ -589,14 +618,17 @@ tests.
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Four registers, and they are four on purpose — one per kind of claim.**
-  `app/bootstrap/matcher_demands.py` holds the ports the *matcher* declares of contexts it
-  does not write; `games_demands.py`, `rating_demands.py` and `player_score_demands.py`
-  each hold the ports one *provider* publishes outward. Each register's exhaustiveness
-  assertion is about its own kind of claim and would stop meaning anything with another
-  kind in it — which is also the rule for the next one: **a new provider gets a new
-  register, not a row in somebody else's**, and the first person to add a row should not
-  have to guess which list it belongs in.
+  **Five registers, and they are five on purpose — one per kind of claim.**
+  `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
+  *consumer* declares of contexts it does not write; `games_demands.py`,
+  `rating_demands.py` and `player_score_demands.py` each hold the ports one *provider*
+  publishes outward. Each register's exhaustiveness assertion is about its own kind of
+  claim and would stop meaning anything with another kind in it — which is also the rule
+  for the next one: **a new provider or a new consumer gets a new register, not a row in
+  somebody else's**, and the first person to add a row should not have to guess which
+  list it belongs in. One port on the record's list has **three** implementations, which
+  is what the suite has to be parameterised over: *where has this reader been shown this
+  person* is a question three contexts each answer about themselves.
 - Async by default (`asyncio_mode = "auto"`) — no `@pytest.mark.asyncio`.
 
 ## Environment gotchas

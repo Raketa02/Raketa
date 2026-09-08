@@ -206,6 +206,11 @@ def test_the_walk_reaches_the_shortlist_and_not_only_the_error_envelope():
     assert "ErrorResponse" in reached
     assert "ShortlistResponse" in reached, "the search route is not in the walk"
     assert "PlayerCardSchema" in reached
+    # The player record describes **one person** rather than a pairing, which
+    # makes it the surface every forbidden fact is most plausibly added to next:
+    # a gender, an age or a *last seen* would each look like a helpful field on
+    # a sheet whose whole job is answering *who is this*.
+    assert "PlayerRecordResponse" in reached, "the record route is not in the walk"
     assert len(_properties()) > 50
 
 

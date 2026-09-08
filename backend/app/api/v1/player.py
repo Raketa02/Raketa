@@ -45,6 +45,9 @@ from app.modules.player_profile.presentation.profile_surface_routes import (
 from app.modules.player_profile.presentation.routes import (
     router as player_profile_router,
 )
+from app.modules.player_record.presentation.routes import (
+    router as player_record_router,
+)
 from app.modules.rating.presentation.routes import ratings_router
 from app.modules.rating.presentation.routes import router as assessments_router
 from app.modules.sportsmanship.presentation.routes import (
@@ -74,3 +77,4 @@ player_api_router.include_router(prompt_declines_router)
 player_api_router.include_router(challenges_router)
 player_api_router.include_router(games_router)
 player_api_router.include_router(sportsmanship_router)
+player_api_router.include_router(player_record_router)

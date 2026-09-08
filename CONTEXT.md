@@ -1470,6 +1470,45 @@ still means the μ/σ a player holds in a sport.
 - **Not rating costs nothing, and the omission is not recorded.** No strand, no obligation, no
   penalty, and nothing anywhere that says a card went unanswered.
 
+### Player record (`backend/app/modules/player_record/`)
+
+**What the platform will say about one person to one reader**, current at the moment the
+sheet is opened — and the context that decides whether it says anything at all
+([ADR-0155](docs/adr/0155-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)).
+It is `player_score`'s shape with a second job: **no aggregate, no table and no migration**,
+every fact read through the owning context's published port, and one rule of its own —
+**admission**.
+
+- **The player record** — a *person*, not a pairing. The Fit breakdown answers *why 77* about
+  two people; this answers *who is this* about one. It is a **route and not a card field**: a
+  card is recorded and frozen into a search kept for ever, and a record is live, about one
+  person, and read at most a few times a day.
+- **A disclosure** — the thing that entitles a reader to open a record. A search of theirs
+  that **returned** the subject, a **live challenge** they are both seated in, a **game** they
+  both played, or *being the subject*. **Nothing else, and nothing expires**: a search record
+  is kept for ever, so a shorter window could only refuse a face the app is currently showing.
+- **The disclosure's partition** — the sport a disclosure happened in. The four fail-closed
+  gates are re-run live on every open **in that sport's partition** and never in whichever
+  sport the reader arrived from, because the mutual gender gate reads an index row and the
+  index is keyed by sport. A subject rated only in squash has no padel row, and *a gate that
+  cannot be evaluated excludes*.
+
+**Invariants**
+- **A record is read through a prior disclosure, never about a person.** Otherwise a route
+  taking a player id is a player-enumeration endpoint, and a UUID being hard to guess is not
+  an authorization model.
+- **The four refusals are one refusal, byte for byte.** *Never disclosed*, *blocked either
+  way*, *held* and *no such player* answer with the same status and the same body. Naming the
+  gate delivers a block to the person it was meant to be invisible to; separating *never
+  disclosed* from *no such player* answers *is this id real* about a stranger.
+- **The gate runs before any provider is touched.** A read that fetched a stranger's handle
+  and photograph and *then* refused would have done the lookup the rule exists to prevent.
+- **The server says whether a record is the reader's own.** The client never derives it by
+  comparing identifiers, and the subject's id is not on the response for it to compare.
+- **This context declares its own ports and its own types.** It borrows no other context's
+  domain types, so a card's closed list does not reach the record by the back door.
+
+
 ## Cross-cutting concepts
 
 These are real and implemented; they apply across every context.

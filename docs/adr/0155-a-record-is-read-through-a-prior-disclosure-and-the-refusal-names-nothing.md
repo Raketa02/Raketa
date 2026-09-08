@@ -1,0 +1,217 @@
+# ADR-0155 — A record is read through a prior disclosure, and the refusal names nothing
+
+- **Status:** Accepted
+- **Date:** 2026-09-08
+
+## Context
+
+[#373](https://github.com/Raketa02/Raketa/issues/373) opens a surface this platform has
+never had: **tapping a face and being told who that person is.** Today that gesture opens
+the Fit breakdown — weights, contributions, a sub-total — which answers a question about a
+*pairing* to somebody who asked a question about a *person*.
+[#377](https://github.com/Raketa02/Raketa/issues/377) is the first ticket behind it, and
+what it decides is not the sheet's contents. It decides **who may open one, and what
+happens when they may not.**
+
+Four forces shape that, and only the first is about product.
+
+**A record is live and a card is recorded.** The obvious move is to widen `player_card` and
+let the sheet draw from the row the client already holds. ADR-0107's rule for admitting a
+field would allow most of what the sheet needs — every one of them is a fact about that
+person alone — but the card's *size* rule refuses it: a card is attached over the twenty
+rows that survived a search and **frozen into a record kept for ever** (ADR-0104), so the
+sheet's payload would be paid twenty times per search to be read at most three times and
+usually never. It also inverts ADR-0107's own economics, which chose one round trip
+because *"a batch profile route would … put a second request in front of* Why 78?". That
+argument is about a **list**. A sheet opened by a deliberate tap on one person is the case
+where a second request is correct: it is one player rather than twenty, it has a legitimate
+place to show progress, and it is not on the path to the screen.
+
+**A route that takes a player id and answers with a person is an enumeration endpoint.**
+Level, photograph, area, tags — for anybody in the city reachable by id. The fact that a
+UUID is hard to guess is not an authorization model, and `POST /forecasts` already settled
+the shape for a lighter payload than this one: *"unbounded, this would be a level lookup for
+any player in the city reachable by id; bounded, it tells you nothing the shortlist did not
+already show you."*
+
+**The gates that decide who may be introduced are live, and they are partitioned.**
+ADR-0095 reaches *every surface that shows one player to another*, and #374 has already
+made the four — a block either way, an account hold, an account state that may not be
+shown, and the mutual gender preference — one collaborator rather than a private step
+inside the search read-back. The half of it that matters here is that the gender gate reads
+the other side's preference off a **candidate index row**, and the index is keyed by sport
+(ADR-0112). Which partition the question is asked in therefore decides whether it can be
+answered at all.
+
+**A refusal is a disclosure.** ADR-0095 is explicit that *neither party is ever notified and
+the other side sees no trace anywhere in any response*, and ADR-0130 narrowed the search
+read-back's own withholding on the same grounds. A record route has four ways to say no, and
+three of them are facts about somebody else that the person asking is not entitled to.
+
+## Decision
+
+### 1. A new context, `player_record`, which stores nothing
+
+`app/modules/player_record/` — **no aggregate, no table, no migration.** It is
+`player_score`'s shape (ADR-0140 §1) with a second job: that context folds two records into
+arithmetic, and this one folds five into a description and **enforces admission**. A player
+record is derived from `users`, `player_profile`, `rating`, `games` and `player_score`, and
+it is not a sixth record.
+
+It is a new module rather than a widening of `matchmaking` because `matchmaking` owns *why
+these people*, and a description of one person is not that. The sport-pill read in
+particular would make the matcher a reader of every rated sport of every candidate — for a
+fact no term may score.
+
+### 2. Two routes, and the caller's is declared first
+
+> `GET /api/v1/players/me/record` — your own.
+> `GET /api/v1/players/{player_id}/record` — one player's.
+
+The ordering is load-bearing rather than tidy: a parameterised segment declared ahead of the
+literal one parses `me` as a player id and answers the refusal to everybody. It is the same
+ordering `players/me/profile` already relies on.
+
+**The response says whether the record is the caller's own**, and the client never derives
+it. A sheet titled *How others see you* draws a different screen — no distance, a coarse
+band where a figure would be — and a client deciding that by comparing the id it asked about
+against the one in its session is a client that gets it wrong exactly once, on the screen
+where being wrong is most visible. The subject's id is therefore **not on the response at
+all**: there is nothing there to compare.
+
+**Your own record is a second use case rather than a branch.** `ReadOwnRecord` names no
+admission collaborator, so the `/me` route does not depend on the gate machinery — which
+binds a candidate index and refuses when there is none. That is right for a sheet about a
+stranger and absurd for the one screen that tells a player how they appear. It also leaves
+no branch for anybody to delete: a use case that took an admission and skipped it when
+`reader == subject` is one refactor away from skipping it when it should not.
+
+**There is no `?sport=` yet.** The reader's arrival sport selects which sport the sheet is
+*about* and never who may be seen; nothing on this response is per sport today, so the
+parameter arrives with the skill card that needs it (#379).
+
+### 3. A record is read through a prior disclosure, never about a person
+
+Admitted when **any** of these holds, and never otherwise:
+
+1. `reader == subject`.
+2. A search of the reader's **returned** them.
+3. The pair share a **live challenge** or a **game**.
+
+**Nothing expires.** A search record is kept for ever (ADR-0104), so any window shorter than
+that could only misfire: it would refuse a face the app is *currently showing*, from a
+shortlist the reader can still open. There is no `since` on any read here and no age on any
+answer.
+
+The third strand is not a nicety. A court is sent off the **organiser's** search, so the
+organiser has been shown the invitee and the invitee has been shown nothing at all — and
+they are the person who most obviously needs to know who they have just been asked to give
+up an evening to.
+
+This is expressed as one port, `PriorDisclosure`, with **three implementations**. A fourth
+surface that introduces one player to another satisfies the same demand with a fourth row in
+the register, and this context never learns what it is.
+
+### 4. The gates are re-run live, in the partition of the disclosure
+
+The disclosure entitles a reader to **ask**; the four fail-closed gates decide, on every
+open. A block placed since the search refuses the record.
+
+**And they are evaluated in the partition the disclosure happened in, never in the reader's
+arrival sport.** The search that returned them has a sport, the challenge has a sport, and
+the self case has no gates. Without this rule, a subject rated only in squash and opened
+from a padel context has no index row, the gender gate cannot be evaluated, *a gate that
+cannot be evaluated excludes*, and the route refuses somebody the reader demonstrably just
+saw. This is why `PriorDisclosure` answers in **sports** rather than in booleans, and why
+the partitions are walked in the **sport registry's own order** — the answer does not depend
+on the order, but which database reads happen does, and a walk in hash order is a different
+sequence of reads on every process (ADR-0105).
+
+**The reader's own hold is refused here too.** The four answer about *subjects*; whether the
+person asking may be shown anybody at all is the surface's own entry rule, and a hold points
+both ways (ADR-0095). A hold that did not reach this route would be a hold ending at the one
+route that remembers what a search already showed.
+
+### 5. One refusal, and it names nothing
+
+Never disclosed, blocked either way, held, and no such player return **the same status and
+the same body, byte for byte**: `404`, `record_unavailable`, one fixed message, no
+`details`.
+
+A payload naming the gate delivers a block to the one person the block was meant to be
+invisible to. A payload separating *never disclosed* from *no such player* answers *is this
+id real* about a stranger. A `403` would say *there is somebody here you may not see*, which
+is already more than this refusal is allowed to say — so it is a `404`, and the client draws
+one line: *This record isn't available.*
+
+The indistinguishability is asserted **as a sameness** rather than as four statuses
+(`tests/api/test_player_record.py`), because four assertions about four codes all pass on
+the day somebody adds a fifth cause with a fifth message.
+
+**And the gate runs before any provider is touched.** A read that fetched a stranger's
+handle, photograph and area and *then* refused would have performed the lookup the whole rule
+exists to prevent.
+
+### 6. This context declares its own ports and its own types
+
+Four demands — `SubjectIdentitySource`, `RecordPhotoLink`, `PriorDisclosure`, `RecordGates`
+— each in this context's own vocabulary, satisfied by adapters that translate. The
+alternative was to reuse `matchmaking`'s `CardIdentity`, which carries three of the five
+fields this sheet's header needs, and it is refused: a record that borrowed a card's type
+would inherit a **card's closed list**, and the two surfaces have opposite constraints — a
+card is short because it is paid twenty times and kept for ever, and a record is long because
+it is one person read live.
+
+The cost is a second spelling of two strings — `OnCourtVerdict` beside
+`PhotoReviewDecision` — and it is paid deliberately, exactly as `games` pays it for
+`PlayedOutcome` beside `PairwiseOutcome`. What keeps it honest is that the agreement is
+**asserted**: a value added to either enum without the other turns the build red, because a
+client reading a card and a record must not be handed two words for one fact.
+
+The rule is held by an **import contract** rather than by a test, because nothing else could
+hold it: an application layer importing `CardIdentity` would look like sensible reuse in the
+diff, and no test would go red.
+
+### 7. `matchmaking` grows one read, and it is a question about a pair
+
+`SearchStore.sports_shown_in(searcher_id, player_id)` — every sport in whose partition this
+searcher was shown this person. Both ids are in the signature and neither is optional: a
+method taking a searcher alone would answer *everybody you have ever been shown*, which is a
+list this platform has no route for and no reason to assemble. The near-miss band is not
+readable through it, for the reason it is not readable through anything on that port — a
+player withheld from a search was shown to nobody and was disclosed by nothing.
+
+## Consequences
+
+**A record costs a second request, and that is the trade this ADR chose.** It is paid on a
+deliberate tap and never on the path to a screen, and it is the reason a shortlist did not
+get thirty percent heavier for a sheet most people never open.
+
+**Admission costs three reads and up to four gate evaluations.** One indexed query over the
+search record, and two directory folds; then one gate evaluation per disclosed partition
+until one admits, each of which is a profile load, three set reads over a single id and one
+index binding. In the overwhelming case there is one partition and the loop runs once. If
+that ever stops being affordable, the fix is a narrower disclosure read on the provider's
+side, not a cache of who may see whom — a cached permission is a stale block.
+
+**A refusal is deliberately unhelpful, and support will feel it.** *This record isn't
+available* is the whole of what anybody is told, including a player who typed nothing wrong
+and a developer reading their own logs. The `trace_id` is what ties a report to a server log;
+the response body will never say more.
+
+**A held player can read their own record and nobody else's.** That is a deliberate
+asymmetry: the sheet is the one screen that shows somebody how they appear, and *a penalty
+nobody can look up is a penalty nobody can fix.*
+
+**A pair whose challenge lapsed loses that strand.** The sender still holds the search that
+made it, so this is only visible for an invitee whose seat has ended — they can no longer
+open the record of the person who asked them. That is the correct reading of *share a live
+challenge*, and if it turns out to matter, the remedy is a fourth strand argued on its own
+terms rather than a widening of this one.
+
+**The context will grow, and every zone that arrives is a port and not a table.** The skill
+card, the metered rows, opponent variety and the sportsmanship figure are all somebody
+else's facts. The day this context grows a migration is the day it stopped being an
+assembler, and that should fail a build rather than pass a review, so
+`tests/unit/test_player_record_stores_nothing.py` walks the context for an import of the ORM
+and the migrations for a table named after it.
