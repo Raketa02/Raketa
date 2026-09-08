@@ -69,7 +69,6 @@ export { concernLine } from './components/concernPresentation';
 export {
   BALANCE_ROW_LABEL,
   CANDIDATE_ACTION_WORD,
-  CANDIDATE_POSTER_LABEL,
   DECK_ANSWER_WORDS,
   OVERLAP_ROW_LABEL,
   balanceRowValue,
@@ -166,11 +165,6 @@ export {
   type CandidateCardSocialProps,
 } from './components/candidate/CandidateCardSocial';
 export { DECK_CARD_DRAWS, DeckCard, type DeckCardProps } from './components/candidate/DeckCard';
-export {
-  CandidatePhoto,
-  type CandidatePhotoBox,
-  type CandidatePhotoProps,
-} from './components/candidate/CandidatePhoto';
 export { CardHead, type CardHeadProps } from './components/candidate/CardHead';
 
 export { FactRow, type FactRowProps } from './components/candidate/FactRow';

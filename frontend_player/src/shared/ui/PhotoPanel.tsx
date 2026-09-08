@@ -1,8 +1,10 @@
 /**
- * The competitive card's **photo panel** — the photograph with the facts that outrank it
- * printed on top ([#309](https://github.com/Raketa02/Raketa/issues/309)).
+ * The **photo panel** — the photograph with the facts that outrank it printed on top
+ * ([7.16](../../../docs/design-system.md#716-the-photo-panel),
+ * [#309](https://github.com/Raketa02/Raketa/issues/309)).
  *
- * It replaces a bare 74 × 92 thumbnail, and the replacement is a statement about the product:
+ * It replaced a bare 74 × 92 thumbnail on the competitive candidate card, and the replacement
+ * is a statement about the product:
  *
  * > **In this product your rating is your face; the photograph is scenery.**
  *
@@ -13,6 +15,22 @@
  * and it arrived as a label rather than as the designs' shield: `OnCourtMark` holds that
  * arithmetic, and the short version is that the panel is 74pt wide and the words are 51,19 of
  * them.
+ *
+ * ## Two sizes, and the larger one **re-derives** rather than scaling
+ *
+ * The record sheet's header is the second composition to draw one
+ * ([#384](https://github.com/Raketa02/Raketa/issues/384)), at `PHOTO_PANEL.record` — which is
+ * why this component came below both features with `PlayerPhoto` and `OnCourtMark`, on the
+ * same argument that moved the run of form and the Social tag row: `player_record` may not
+ * import `features/play/`, because Play is what opens the sheet.
+ *
+ * Every number here is arithmetic against the panel's **own** width — the corner is a third of
+ * it, and what the corner leaves at the mark's top edge is what the mark's cap is derived
+ * from — so the second size is a second derivation and never a multiplier. Two things differ
+ * with it and nothing else does: the box, and the Level's type role, which steps up to
+ * `num.levelLarge` because a 22pt figure inside a 112pt panel stops being the biggest thing on
+ * it. The pinned `photoScrim` and its worst-case 5,24:1 are unchanged at both, which is what
+ * makes one contrast row cover both sizes rather than two.
  *
  * ## Text over an arbitrary photograph, and the pin that makes it computable
  *
@@ -43,7 +61,7 @@
  *
  * §20.1 merges an actionless element into the nearest action above it, which here is the card
  * body — so the three labels are plain `Text` and **not** a hidden subtree, exactly as
- * `CardHead` and `FactRow` are. `CandidatePhoto` hides *itself* because it carries a name of
+ * `CardHead` and `FactRow` are. `PlayerPhoto` hides *itself* because it carries a name of
  * its own; labels that carry none merge by having nothing to merge.
  *
  * The **Level reaches the spoken name already**, as the first figure of `levelRow` — it is
@@ -62,10 +80,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { formatLevel } from '@/shared/formatting/ratingFormat';
-import { theme } from '@/shared/ui';
 
-import { CANDIDATE_PANEL, CandidatePhoto, candidatePhotoRadius } from './CandidatePhoto';
 import { OnCourtMark } from './OnCourtMark';
+import { PHOTO_PANEL, PlayerPhoto, playerPhotoRadius, type PhotoPanelSize } from './PlayerPhoto';
+import { theme } from './theme';
 
 export interface PhotoPanelProps {
   /** Whose face this is. The poster's whole input, and the reason it survives a reinstall. */
@@ -84,8 +102,8 @@ export interface PhotoPanelProps {
   /** `sportLabel(origin.sport)`. **The screen's, never the card's** — see the module note. */
   readonly sportName: string;
   /**
-   * Whether the photograph wears the ON COURT mark — `wearsOnCourtMark`'s answer, taken by
-   * `candidateFacts` so that the drawing and the spoken name read one value.
+   * Whether the photograph wears the ON COURT mark — one answer, read once by the surface, so
+   * that the drawing and the spoken name cannot disagree about it.
    *
    * A boolean and **not** the verdict, which is the whole of what keeps *checked and flagged*
    * and *nobody looked* indistinguishable: a component handed the code could branch on it a
@@ -93,12 +111,28 @@ export interface PhotoPanelProps {
    * somebody who is not looking at this screen.
    */
   readonly onCourt: boolean;
+  /**
+   * Which composition this panel is in — a card's, or the record sheet's header.
+   *
+   * Defaults to `card`, which is the shape that existed first and the one every candidate card
+   * draws. It is the panel's **whole** geometry and not a scale factor: see the module note.
+   */
+  readonly size?: PhotoPanelSize;
 }
 
-export function PhotoPanel({ playerId, photoUrl, level, sportName, onCourt }: PhotoPanelProps) {
+export function PhotoPanel({
+  playerId,
+  photoUrl,
+  level,
+  sportName,
+  onCourt,
+  size = 'card',
+}: PhotoPanelProps) {
+  const panel = PHOTO_PANEL[size];
+
   return (
-    <View style={s.panel}>
-      <CandidatePhoto playerId={playerId} photoUrl={photoUrl} box={{ kind: 'thumb' }} />
+    <View style={[s.panel, { ...panel, borderRadius: playerPhotoRadius(panel.width) }]}>
+      <PlayerPhoto playerId={playerId} photoUrl={photoUrl} box={{ kind: 'panel', size }} />
 
       {/* One flat pass, and not a gradient. A gradient would put the label somewhere on a ramp
           and hand back the unbounded set the pin exists to close: the worst case would depend
@@ -106,12 +140,12 @@ export function PhotoPanel({ playerId, photoUrl, level, sportName, onCourt }: Ph
       <View style={[StyleSheet.absoluteFill, s.scrim]} />
 
       <View style={[StyleSheet.absoluteFill, s.content]}>
-        {onCourt ? <OnCourtMark /> : null}
+        {onCourt ? <OnCourtMark size={size} /> : null}
 
         {/* Its own block, so the two facts stay at the bottom whether or not the mark is
             above them: `space-between` over an absent first child would carry them up. */}
         <View style={s.labels}>
-          <Text style={s.level}>{formatLevel(level)}</Text>
+          <Text style={[s.level, LEVEL_ROLE[size]]}>{formatLevel(level)}</Text>
           <Text style={s.sport} numberOfLines={1}>
             {sportName}
           </Text>
@@ -121,16 +155,24 @@ export function PhotoPanel({ playerId, photoUrl, level, sportName, onCourt }: Ph
   );
 }
 
+/**
+ * The Level's type role, per size — the one thing besides the box that the second size moves.
+ *
+ * *In this product your rating is your face*, so the Level is the biggest text on the panel at
+ * whichever size the panel is. 22pt reads as huge inside 74 and merely large inside 112, which
+ * would quietly demote the one fact the composition exists to lead with.
+ */
+const LEVEL_ROLE = StyleSheet.create({
+  card: theme.num.xl,
+  record: theme.num.levelLarge,
+});
+
 const s = StyleSheet.create({
   // The photograph, the scrim and the labels share one corner: the clip is the panel's, so
-  // whichever of the three is inside it takes the same radius. One owner, as `CandidatePhoto`
-  // already insisted for the ratio itself.
-  panel: {
-    width: CANDIDATE_PANEL.width,
-    height: CANDIDATE_PANEL.height,
-    borderRadius: candidatePhotoRadius(CANDIDATE_PANEL.width),
-    overflow: 'hidden',
-  },
+  // whichever of the three is inside it takes the same radius. One owner, as `PlayerPhoto`
+  // already insisted for the ratio itself. The box itself is applied at the call site above,
+  // because it is the one thing here that depends on which size is being drawn.
+  panel: { overflow: 'hidden' },
   scrim: { backgroundColor: theme.color.photoScrim },
   // The mark at the top and the two facts at the bottom, which is the layout #309 left room
   // for. One padding for all three: the mark's own top edge is what its cap is derived
@@ -139,7 +181,6 @@ const s = StyleSheet.create({
   content: { padding: theme.space.xs },
   labels: { flex: 1, justifyContent: 'flex-end' },
   level: {
-    ...theme.num.xl,
     ...theme.tabular,
     color: theme.color.surface,
     ...theme.shadow.textOnMedia,

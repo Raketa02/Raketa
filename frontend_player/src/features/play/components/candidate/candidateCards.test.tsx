@@ -16,9 +16,16 @@
 import { render, screen } from '@testing-library/react-native';
 import { Image, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
-import { courtPosterFor } from '@/features/player_profile/types';
 import { formatLevel, formatRange, formatSignedLevel } from '@/shared/formatting/ratingFormat';
-import { balanceShare, courtSeatCount, theme } from '@/shared/ui';
+import {
+  ON_COURT_CLAUSE,
+  ON_COURT_MARK,
+  PlayerPhoto,
+  balanceShare,
+  courtPosterFor,
+  courtSeatCount,
+  theme,
+} from '@/shared/ui';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Evidence, ScoredTerm } from '../../domain/evidence';
@@ -26,11 +33,8 @@ import type { Term } from '../../domain/vocabulary';
 import { toCandidate } from '../../mappers/candidateMappers';
 import type { Wire } from '@/test-support/transport';
 
-import { ON_COURT_CLAUSE, ON_COURT_MARK } from '../playerCardPresentation';
-
 import { COMPETITIVE_CARD_DRAWS, CandidateCard } from './CandidateCard';
 import { CandidateCardSocial, SOCIAL_CARD_DRAWS } from './CandidateCardSocial';
-import { CandidatePhoto } from './CandidatePhoto';
 import { DECK_CARD_DRAWS, DeckCard } from './DeckCard';
 
 const PLAYER = '9f2a1c44-0000-4000-8000-000000000001';
@@ -1026,13 +1030,15 @@ describe('the card’s border', () => {
 
 describe('the photograph', () => {
   it('is drawn from the minted URL', () => {
-    render(<CandidatePhoto playerId={PLAYER} photoUrl={PHOTO} box={{ kind: 'thumb' }} />);
+    render(
+      <PlayerPhoto playerId={PLAYER} photoUrl={PHOTO} box={{ kind: 'panel', size: 'card' }} />,
+    );
 
     expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: PHOTO });
   });
 
   it('falls back to the poster on the omitted id, and to that player’s own poster', () => {
-    render(<CandidatePhoto playerId={PLAYER} box={{ kind: 'media' }} />);
+    render(<PlayerPhoto playerId={PLAYER} box={{ kind: 'media' }} />);
 
     expect(screen.UNSAFE_queryByType(Image)).toBeNull();
     // Found only with the hidden elements included, which is the assertion: 6.9's sentence
@@ -1047,7 +1053,7 @@ describe('the photograph', () => {
   });
 
   it('takes a third of its own box as its corner, at every size', () => {
-    render(<CandidatePhoto playerId={PLAYER} box={{ kind: 'face', size: 46 }} />);
+    render(<PlayerPhoto playerId={PLAYER} box={{ kind: 'face', size: 46 }} />);
     const face = StyleSheet.flatten(screen.UNSAFE_getAllByType(View)[0]?.props.style as ViewStyle);
 
     expect(face.borderRadius).toBeCloseTo(46 * 0.33);

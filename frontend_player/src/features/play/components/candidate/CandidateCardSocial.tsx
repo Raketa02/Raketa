@@ -57,7 +57,7 @@
 
 import { StyleSheet, View } from 'react-native';
 
-import { Button, PressableCard, theme } from '@/shared/ui';
+import { Button, PlayerPhoto, PressableCard, theme } from '@/shared/ui';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Term } from '../../domain/vocabulary';
@@ -70,7 +70,6 @@ import {
   overlapRowValue,
 } from '../playerCardPresentation';
 
-import { CandidatePhoto } from './CandidatePhoto';
 import { CardHead } from './CardHead';
 import { FactRow } from './FactRow';
 import { ReasonLine } from './ReasonLine';
@@ -111,7 +110,7 @@ export function CandidateCardSocial({
   return (
     <PressableCard style={s.card} onPress={onWhyFit} accessibilityLabel={facts.label}>
       <View style={s.media}>
-        <CandidatePhoto
+        <PlayerPhoto
           playerId={candidate.playerId}
           photoUrl={candidate.card.photoUrl}
           box={{ kind: 'media' }}

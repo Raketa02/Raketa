@@ -3,7 +3,8 @@
  * on their next one, and after a reinstall.
  */
 
-import { COURT_POSTER_POSES, POSTER_HUES } from '@/shared/ui';
+import { COURT_POSTER_POSES } from './CourtPoster';
+import { POSTER_HUES } from './theme';
 
 import { COURT_POSTER_COUNT, courtPosterFor } from './courtPosterFraming';
 

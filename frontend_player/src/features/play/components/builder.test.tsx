@@ -26,7 +26,7 @@ import { onlineManager } from '@tanstack/react-query';
 
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
-import { BALANCE_SOFT, courtSeatCount, theme } from '@/shared/ui';
+import { BALANCE_SOFT, POSTER_LABEL, courtSeatCount, theme } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
   PROFILE_SURFACE_SERVED,
@@ -59,7 +59,6 @@ import {
 } from './accessibilityPresentation';
 import { courtEntryLabel } from './findAGamePresentation';
 import { balanceLabel, balanceWord } from './balancePresentation';
-import { CANDIDATE_POSTER_LABEL } from './playerCardPresentation';
 import {
   ALREADY_EVENEST,
   EVEN_IT_OUT_LABEL,
@@ -427,9 +426,7 @@ describe('arriving', () => {
   it('draws your own poster on a court nobody has answered for', async () => {
     await openTheBuilder();
 
-    expect(
-      screen.getAllByLabelText(CANDIDATE_POSTER_LABEL, { includeHiddenElements: true }),
-    ).toHaveLength(1);
+    expect(screen.getAllByLabelText(POSTER_LABEL, { includeHiddenElements: true })).toHaveLength(1);
   });
 
   it('offers both branches, and neither is drawn once the court is full', async () => {
@@ -802,9 +799,7 @@ describe('why this person is on my court', () => {
     await pressFill();
     await screen.findByText('91%');
 
-    expect(
-      screen.getAllByLabelText(CANDIDATE_POSTER_LABEL, { includeHiddenElements: true }),
-    ).toHaveLength(8);
+    expect(screen.getAllByLabelText(POSTER_LABEL, { includeHiddenElements: true })).toHaveLength(8);
   });
 
   it('hides the two side headings, because each name says its own side', async () => {

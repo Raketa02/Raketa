@@ -50,14 +50,40 @@
  * **Colour is not the signal.** The words carry it and the mint reinforces it, which is
  * [Part 13](../../../../../docs/design-system.md#part-13--accessibility)'s *never colour
  * alone* answered by the copy rather than by a second cue — and the spoken half is
- * `ON_COURT_CLAUSE`, in the card body's own name, because the panel announces nothing (§20.1).
+ * {@link ON_COURT_CLAUSE}, in the drawing surface's own name, because the panel announces
+ * nothing (§20.1).
  */
 
 import { StyleSheet, Text } from 'react-native';
 
-import { theme } from '@/shared/ui';
+import type { PhotoPanelSize } from './PlayerPhoto';
+import { theme } from './theme';
 
-import { ON_COURT_MARK } from '../playerCardPresentation';
+/**
+ * **The mark itself** — what the on-court check concluded, in two words.
+ *
+ * Sentence case here and capitalised by the panel, exactly as the Sport beneath it is: the
+ * capitals are a treatment the two labels share, and a string that arrived pre-shouted would
+ * be the one place in this system where a style decision is spelled into the copy.
+ *
+ * **There is no figure in it and none to put in it.** ADR-0133's clause survives ADR-0138
+ * untouched — the check's own confidence crosses on no route — so the mark says a thing
+ * happened and never how sure anybody was.
+ */
+export const ON_COURT_MARK = 'On court';
+
+/**
+ * `Photo checked: on court` — the mark, for a listener, and **it leads with the photograph**.
+ *
+ * The drawing can rely on where it sits: two words over somebody's picture, above their Level,
+ * are plainly about the picture. A clause in a run of sentences cannot, and *on court* alone
+ * arriving between a Level and a forecast is one comma away from **activity recency** — the
+ * one thing every card and every record on this platform refuses at every granularity.
+ *
+ * The panel announces nothing of its own (§20.1), so this is composed by whichever surface
+ * draws the panel — the candidate card's spoken body, and the record header's.
+ */
+export const ON_COURT_CLAUSE = 'Photo checked: on court';
 
 /**
  * How far the mark's words may grow, and **derived rather than chosen**.
@@ -73,19 +99,31 @@ import { ON_COURT_MARK } from '../playerCardPresentation';
  * stopped saying anything, where the Sport label under it survives its own ellipsis legibly
  * and is therefore left uncapped.
  *
- * **Kept here rather than in `theme.ts`, and the split is the same one `CANDIDATE_PANEL`
+ * **One per panel size, re-derived and never scaled.** The panel's corner is a third of its
+ * own width, so what is left for the words at the mark's own top edge is a different fraction
+ * of a different width at each size — 57,22 of 74 on a card and 78,45 of 112 on the record
+ * sheet. Multiplying the card's cap by the widths' ratio would be arithmetic over the wrong
+ * quantity; both come out of `largestStepThatFits` against the real Archivo advances, and a
+ * third size that arrives without a row here fails to compile.
+ *
+ * **Kept here rather than in `theme.ts`, and the split is the same one `PHOTO_PANEL`
  * already draws.** The tab bar's twin lives in `theme.ts` because the bar is a design-system
  * primitive and its cap is a fact about that primitive; this cap is a fact about *these two
- * words in this one composition*, and it changes when the copy changes. The rule the two sit
- * either side of is §1's: the design system holds drawn objects and control vocabulary, and a
- * candidate card is a composition that names a domain noun. A third surface picks by the same
- * question — *is the number about the primitive, or about what one screen put in it*.
+ * words in this one composition*, and it changes when the copy changes.
  */
-export const ON_COURT_MAX_SCALE = 1.1;
+export const ON_COURT_MAX_SCALE = {
+  card: 1.1,
+  record: 1.5,
+} as const satisfies Readonly<Record<PhotoPanelSize, number>>;
 
-export function OnCourtMark() {
+export interface OnCourtMarkProps {
+  /** Which panel it is standing in — the cap is that panel's, and never scaled from another's. */
+  readonly size: PhotoPanelSize;
+}
+
+export function OnCourtMark({ size }: OnCourtMarkProps) {
   return (
-    <Text style={s.mark} numberOfLines={1} maxFontSizeMultiplier={ON_COURT_MAX_SCALE}>
+    <Text style={s.mark} numberOfLines={1} maxFontSizeMultiplier={ON_COURT_MAX_SCALE[size]}>
       {ON_COURT_MARK}
     </Text>
   );

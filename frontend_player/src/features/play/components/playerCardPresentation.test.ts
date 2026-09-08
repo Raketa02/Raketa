@@ -27,8 +27,6 @@ import {
   lastFiveReading,
   levelRow,
   metaLine,
-  ON_COURT_CLAUSE,
-  ON_COURT_MARK,
   recordClauses,
   socialTagClauses,
   stakeClauses,
@@ -219,32 +217,6 @@ describe('the record block’s words', () => {
   it('says nothing for a block that is hidden, which is every block for a new player', () => {
     expect(recordClauses({})).toEqual([]);
     expect(recordClauses({ countedGames: 3 })).toEqual(['3 counted games']);
-  });
-});
-
-describe('the ON COURT mark’s words', () => {
-  it('carries no figure in either register', () => {
-    // ADR-0133's clause survives ADR-0138 untouched — the confidence never crosses on any
-    // route — so there is nothing here to print a number from and nothing here that prints
-    // one. Asserted on the strings, because the card beside them draws a Fit and a forecast
-    // and a *no percentages on the card* assertion would be about those instead.
-    expect(ON_COURT_MARK).not.toMatch(/\d/);
-    expect(ON_COURT_CLAUSE).not.toMatch(/\d/);
-  });
-
-  it('leads with the photograph when it is spoken, and not when it is drawn', () => {
-    // Two words over somebody's picture are plainly about the picture; a clause in a run of
-    // sentences is not, and *on court* between a Level and a forecast is one comma away from
-    // activity recency — which no card carries at any granularity.
-    expect(ON_COURT_MARK).toBe('On court');
-    expect(ON_COURT_CLAUSE.startsWith('Photo')).toBe(true);
-  });
-
-  it('is sentence case, because the capitals are the panel’s treatment', () => {
-    // The Sport beneath it is uppercased by the same style rather than by its own string.
-    // A pre-shouted constant would be the one place in this deck where a style decision is
-    // spelled into the copy.
-    expect(ON_COURT_MARK).not.toBe(ON_COURT_MARK.toUpperCase());
   });
 });
 

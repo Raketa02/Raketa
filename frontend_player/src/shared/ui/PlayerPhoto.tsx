@@ -1,5 +1,5 @@
 /**
- * A candidate's face — **the photograph, or the poster that stands in for it** — in whichever
+ * A player's face — **the photograph, or the poster that stands in for it** — in whichever
  * box the surface has for it.
  *
  * One component at three sizes, per
@@ -13,7 +13,18 @@
  *
  * **It is still that switch and nothing more.** The scrim, the Level and the Sport that turned
  * the first of the three boxes from a thumbnail into a panel are `PhotoPanel`'s: they are facts
- * about a candidate, and this component knows only about a picture.
+ * about a person, and this component knows only about a picture.
+ *
+ * ## Why it is `shared/ui` and named for a player rather than for a candidate
+ *
+ * It was `features/play/components/candidate/CandidatePhoto`, because a search result was the
+ * only thing in the app that had a face. The **record sheet's header draws the same switch**
+ * ([#384](https://github.com/Raketa02/Raketa/issues/384)) and `player_record` may not import
+ * `features/play/` — the arrow runs the other way, since Play is what opens the sheet — so the
+ * switch came below both, exactly as the run of form and the Social tag row did
+ * ([#375](https://github.com/Raketa02/Raketa/issues/375)). A *candidate* is Play's word for a
+ * row a search returned; what this draws is a **player**, which is the word that survives the
+ * move.
  *
  * ## The URL, and why the id is not here
  *
@@ -37,15 +48,25 @@
  * own merges into the nearest action above it*. A face has no action, and every surface that
  * draws one has a named ancestor that does — the card body, or the seat. So the box is hidden
  * on both platforms, which is the explicit half of that rule rather than an omission of it.
- * The poster's own sentence is still carried, for the reason `CANDIDATE_POSTER_LABEL` states.
+ * The poster's own sentence is still carried, for the reason `POSTER_LABEL` states.
  */
 
 import { Image, StyleSheet, View } from 'react-native';
 
-import { courtPosterFor } from '@/features/player_profile/types';
-import { CourtPoster, theme } from '@/shared/ui';
+import { CourtPoster } from './CourtPoster';
+import { courtPosterFor } from './courtPosterFraming';
+import { theme } from './theme';
 
-import { CANDIDATE_POSTER_LABEL } from '../playerCardPresentation';
+/**
+ * What a listener is told when the face is a **poster** rather than a photograph.
+ *
+ * It came here with the switch that decides between the two, from Play's own copy deck: the
+ * sentence is about the *drawing* — nobody should have to see a poster to know they are not
+ * looking at the player ([6.9](../../../docs/design-system.md#69-the-photo-tile-and-picker)) —
+ * and every surface that draws one owes it. The photograph carries none, because a photograph
+ * of somebody is not a fact this app is entitled to describe.
+ */
+export const POSTER_LABEL = 'A generated court poster, not a photograph';
 
 /**
  * The radius, as a share of the box's **own** width.
@@ -65,25 +86,38 @@ const RADIUS_RATIO = 0.33;
  * because what is owned is *a share of the box* and a caller handed `0.33` would have to know
  * what to do with it.
  */
-export function candidatePhotoRadius(size: number): number {
+export function playerPhotoRadius(size: number): number {
   return size * RADIUS_RATIO;
 }
 
+/** Which composition a photo panel is drawn for — see {@link PHOTO_PANEL}. */
+export type PhotoPanelSize = 'card' | 'record';
+
 /**
- * The competitive card's **panel**, in points — the one box whose dimensions are the card's
- * own rather than the caller's.
+ * The **panel**, in points — the one box whose dimensions are the composition's rather than
+ * the caller's, at each of the two sizes it is drawn at
+ * ([7.16](../../../docs/design-system.md#716-the-photo-panel)).
  *
  * It is here rather than in `theme.ts` for §1's reason: the design system holds drawn objects
- * and control vocabulary, and a candidate card is a composition that names a domain noun.
+ * and control vocabulary, and this is one drawn object's own geometry.
  *
  * **Exported, because it stopped being a thumbnail.**
  * [#309](https://github.com/Raketa02/Raketa/issues/309) turned the box into a panel with a
  * scrim, a Level and a Sport over it, and those overlays have to be clipped to exactly the
- * corner the photograph takes. `PhotoPanel` reads the two numbers from here rather than
- * restating them, which is the same *one owner* argument `candidatePhotoRadius` already makes
- * for the ratio: a second copy of `74` is two boxes the day either one moves.
+ * corner the photograph takes. `PhotoPanel` reads the numbers from here rather than restating
+ * them, which is the same *one owner* argument `playerPhotoRadius` already makes for the
+ * ratio: a second copy of `74` is two boxes the day either one moves.
+ *
+ * **`record` is a second size and not a scale.** Every number on this panel is arithmetic
+ * against its own width — the corner is a third of it, and what the corner leaves at the
+ * mark's own top edge is what `ON_COURT_MAX_SCALE` is derived from — so the larger panel
+ * **re-derives** rather than multiplying, and `onCourtMarkFit.test.ts` carries both cases.
+ * 4:5 at both, and both on the 4pt step the card's 74 x 92 is nearest to.
  */
-export const CANDIDATE_PANEL = { width: 74, height: 92 } as const;
+export const PHOTO_PANEL = {
+  card: { width: 74, height: 92 },
+  record: { width: 112, height: 140 },
+} as const satisfies Readonly<Record<PhotoPanelSize, { width: number; height: number }>>;
 
 /**
  * Which box this face is drawn in.
@@ -92,9 +126,9 @@ export const CANDIDATE_PANEL = { width: 74, height: 92 } as const;
  * seat's face is sized by the court that places it — the court owns the geometry and hands
  * nothing back — and the other two carry no number at all.
  */
-export type CandidatePhotoBox =
-  /** {@link CANDIDATE_PANEL} — the ground of the competitive card's photo panel. */
-  | { readonly kind: 'thumb' }
+export type PlayerPhotoBox =
+  /** {@link PHOTO_PANEL} — the ground of a photo panel, at whichever size it is drawn. */
+  | { readonly kind: 'panel'; readonly size: PhotoPanelSize }
   /**
    * Full-bleed, filling whatever slot the card gives it.
    *
@@ -106,15 +140,15 @@ export type CandidatePhotoBox =
   /** A face in a seat, at the size `Court` decided from its own width. */
   | { readonly kind: 'face'; readonly size: number };
 
-export interface CandidatePhotoProps {
+export interface PlayerPhotoProps {
   /** Whose face this is. The poster's whole input, and the reason it survives a reinstall. */
   readonly playerId: string;
   /** Omitted with `photo_id` when they have no photo, and on a link that has expired. */
   readonly photoUrl?: string;
-  readonly box: CandidatePhotoBox;
+  readonly box: PlayerPhotoBox;
 }
 
-export function CandidatePhoto({ playerId, photoUrl, box }: CandidatePhotoProps) {
+export function PlayerPhoto({ playerId, photoUrl, box }: PlayerPhotoProps) {
   const shape = geometry(box);
 
   return (
@@ -124,7 +158,7 @@ export function CandidatePhoto({ playerId, photoUrl, box }: CandidatePhotoProps)
       importantForAccessibility="no-hide-descendants"
     >
       {photoUrl === undefined ? (
-        <CourtPoster {...courtPosterFor(playerId)} accessibilityLabel={CANDIDATE_POSTER_LABEL} />
+        <CourtPoster {...courtPosterFor(playerId)} accessibilityLabel={POSTER_LABEL} />
       ) : (
         <Image source={{ uri: photoUrl }} style={s.image} />
       )}
@@ -133,14 +167,16 @@ export function CandidatePhoto({ playerId, photoUrl, box }: CandidatePhotoProps)
 }
 
 /** The box's own dimensions and its own corner — the whole of what the three sizes differ by. */
-function geometry(box: CandidatePhotoBox) {
+function geometry(box: PlayerPhotoBox) {
   switch (box.kind) {
-    case 'thumb':
-      return { ...CANDIDATE_PANEL, borderRadius: candidatePhotoRadius(CANDIDATE_PANEL.width) };
+    case 'panel': {
+      const panel = PHOTO_PANEL[box.size];
+      return { ...panel, borderRadius: playerPhotoRadius(panel.width) };
+    }
     case 'media':
       return { flex: 1 };
     case 'face':
-      return { width: box.size, height: box.size, borderRadius: candidatePhotoRadius(box.size) };
+      return { width: box.size, height: box.size, borderRadius: playerPhotoRadius(box.size) };
   }
 }
 

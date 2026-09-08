@@ -25,12 +25,17 @@
  * hopes. A poster is shown and never read: no engine, no term and no gate may take an input
  * from what this returns.
  *
- * ## It sits beside the copy, not in `domain/`
+ * ## It sits in `shared/ui`, beside the drawing it frames
  *
  * There is no rule here a profile could break. What a player id maps to is a fact about how
- * the poster is *drawn* — expressed in the design system's own vocabulary — which is the same
- * kind of thing as the label a tag id maps to, and it lives in the same layer for the same
- * reason. `domain/` holds what the product refuses and requires; this refuses nothing.
+ * the poster is *drawn* — expressed in the design system's own vocabulary — so it holds no
+ * domain rule and belongs to no feature. It began in `player_profile/components/`, because the
+ * photos step was the only surface that had met a poster; `PlayerPhoto` is the second and the
+ * **record sheet's header is the third**
+ * ([#384](https://github.com/Raketa02/Raketa/issues/384)), and a component below every feature
+ * cannot reach a function inside one. The design system's own contract — *one player id, one
+ * poster, forever* — is what makes this the design system's to keep, and it is why it moved
+ * rather than being re-exported through a third feature's barrel.
  *
  * ## The crops are gone, and the colour is what replaced them
  *
@@ -43,13 +48,8 @@
  * standing in for, and a fixed composition is what a window would have sliced.
  */
 
-import {
-  COURT_POSTER_POSES,
-  POSTER_HUES,
-  type CourtPosterLook,
-  type CourtPosterPose,
-  type PosterHue,
-} from '@/shared/ui';
+import { COURT_POSTER_POSES, type CourtPosterLook, type CourtPosterPose } from './CourtPoster';
+import { POSTER_HUES, type PosterHue } from './theme';
 
 /**
  * FNV-1a, 32-bit, over the id's code units.

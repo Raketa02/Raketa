@@ -210,55 +210,6 @@ export const CANDIDATE_ACTION_WORD: Readonly<Record<CandidateAction, string>> = 
 export const DECK_ANSWER_WORDS = { pass: 'Not today', accept: "🎾 Let's play" } as const;
 
 /**
- * What the generated poster says it is, on a card.
- *
- * [6.9](../../../../docs/design-system.md#69-the-photo-tile-and-picker) requires the sentence
- * of every poster it draws — *"nobody should have to see a poster to know they are not
- * looking at the player"* — and the profile step's own wording is second-person and about a
- * photo the reader could go and add, which is not this. Third-person, and it names no one:
- * the card body's label already says whose face this is standing in for.
- *
- * It is **unspoken on every surface that draws it today**, because §20.1 merges an actionless
- * element into the nearest action above it and the card body is that action. The sentence is
- * carried anyway rather than left blank, so a poster drawn somewhere with no such ancestor
- * cannot arrive silently claiming to be a photograph.
- */
-export const CANDIDATE_POSTER_LABEL = 'A generated court poster, not a photograph';
-
-/**
- * **The photo panel's one mark** — what the on-court check concluded, in two words
- * ([#313](https://github.com/Raketa02/Raketa/issues/313)).
- *
- * Sentence case here and capitalised by the panel, exactly as the Sport beneath it is: the
- * capitals are a treatment the two labels share, and a string that arrived pre-shouted would
- * be the one place in this deck where a style decision is spelled into the copy.
- *
- * **It is the whole of what the card says about the check.** There is no sentence explaining
- * what was looked for, no *verified*, and above all **no number**: every verdict is computed
- * from a confidence the platform keeps, and ADR-0133's clause that it never crosses on any
- * route is untouched by ADR-0138. *We are 38% sure this is a court* is a figure a player can
- * do nothing with, and there is nothing here to derive one from in any case — the code is all
- * that arrives.
- */
-export const ON_COURT_MARK = 'On court';
-
-/**
- * `Photo checked: on court` — the mark, for a listener, and **it leads with the photograph**.
- *
- * The drawing can rely on where it sits: two words over somebody's picture, above their Level,
- * are plainly about the picture. A clause in a run of sentences cannot, and *on court* alone
- * arriving between a Level and a forecast is one comma away from **activity recency** — the
- * one thing `PlayerCardSchema` refuses at every granularity, *"not a timestamp, not active
- * today, not a green dot"*. So the noun comes first and the verdict second, and the sentence
- * says what was checked rather than what anybody is doing.
- *
- * *Checked* is the register the drawing spends its colour on, which is [Part 13](../../../../docs/design-system.md#part-13--accessibility)
- * read in the one place the mint is worth nothing: a listener gets the word the tint stands
- * for, and gets it as a fact rather than as praise.
- */
-export const ON_COURT_CLAUSE = 'Photo checked: on court';
-
-/**
  * What the row contributes to the card's **spoken** name — nought, one or two clauses.
  *
  * Grouped rather than marked per tag — `shared/vocabulary/socialTagPresentation`'s

@@ -184,6 +184,7 @@ import {
   Card,
   Hairline,
   Note,
+  PlayerPhoto,
   Switch,
   behindOverlay,
   courtSeatCount,
@@ -249,7 +250,6 @@ import {
   forecastHeading,
   sideName,
 } from './builderPresentation';
-import { CandidatePhoto } from './candidate/CandidatePhoto';
 import { CourtBuild } from './court/CourtBuild';
 import { PromptSheet } from './PromptSheet';
 import type { CourtSeatOccupant } from './court/CourtSeat';
@@ -1369,7 +1369,7 @@ function toOccupant(
  * of the person is a target you can see, at the size the design system already asks of a
  * control, and `CourtSeat` and `CourtBuild` drop the gesture on the strength of it.
  *
- * The photograph is `CandidatePhoto`'s photo-or-poster switch, so the face here and the face
+ * The photograph is `PlayerPhoto`'s photo-or-poster switch, so the face here and the face
  * in the seat are **one drawing of one id** — a second implementation of the poster hash is
  * two faces for one person the day either one changes.
  *
@@ -1451,11 +1451,11 @@ function Side({
 
       <View style={s.faces}>
         {seated.map(({ place, name: who, face, candidate }, at) => {
-          // `CandidatePhoto` hides itself, so a face carries no name of its own and the
+          // `PlayerPhoto` hides itself, so a face carries no name of its own and the
           // button's label is the whole of what this control says.
           const drawn =
             face === undefined ? null : (
-              <CandidatePhoto
+              <PlayerPhoto
                 playerId={face.playerId}
                 {...(face.photoUrl === undefined ? {} : { photoUrl: face.photoUrl })}
                 box={{ kind: 'face', size: theme.size.minTouch }}

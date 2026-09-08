@@ -30,7 +30,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { CandidatePhoto, candidatePhotoRadius } from '../candidate/CandidatePhoto';
+import { PlayerPhoto, playerPhotoRadius } from '@/shared/ui';
 
 import { seatRing, type SeatRing } from './seatRing';
 
@@ -47,9 +47,9 @@ export type CourtFaceOccupant =
   | { readonly kind: 'player'; readonly playerId: string; readonly photoUrl?: string }
   | { readonly kind: 'empty' };
 
-/** The box, and its corner — `CandidatePhoto`'s share of its own width, at one owner. */
+/** The box, and its corner — `PlayerPhoto`'s share of its own width, at one owner. */
 export function seatBox(size: number) {
-  return { width: size, height: size, borderRadius: candidatePhotoRadius(size) };
+  return { width: size, height: size, borderRadius: playerPhotoRadius(size) };
 }
 
 export interface SeatFaceProps {
@@ -81,7 +81,7 @@ export function SeatFace({ size, occupant, ring, children }: SeatFaceProps) {
       {face === undefined ? (
         children
       ) : (
-        <CandidatePhoto
+        <PlayerPhoto
           playerId={face}
           photoUrl={occupant.kind === 'player' ? occupant.photoUrl : undefined}
           box={{ kind: 'face', size }}

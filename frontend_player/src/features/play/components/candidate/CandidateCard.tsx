@@ -102,7 +102,7 @@
 
 import { StyleSheet, View } from 'react-native';
 
-import { Button, FitPill, PressableCard, SocialTagRow, theme } from '@/shared/ui';
+import { Button, FitPill, PhotoPanel, PressableCard, SocialTagRow, theme } from '@/shared/ui';
 
 import { stakeOnACard } from '../../domain/atStake';
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
@@ -118,7 +118,6 @@ import { whyFitControlWord } from '../whyFitPresentation';
 
 import { HeadToHeadBand } from './HeadToHeadBand';
 import { IdentityRow } from './IdentityRow';
-import { PhotoPanel } from './PhotoPanel';
 import { ReasonLine } from './ReasonLine';
 import { RecordBlocks } from './RecordBlocks';
 import { StakeBoxes } from './StakeBoxes';

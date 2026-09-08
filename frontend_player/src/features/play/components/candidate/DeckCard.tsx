@@ -42,7 +42,7 @@
 import type { RefObject } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Button, theme } from '@/shared/ui';
+import { Button, PlayerPhoto, theme } from '@/shared/ui';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Term } from '../../domain/vocabulary';
@@ -57,7 +57,6 @@ import {
   overlapRowValue,
 } from '../playerCardPresentation';
 
-import { CandidatePhoto } from './CandidatePhoto';
 import { CardHead } from './CardHead';
 import { FactRow } from './FactRow';
 import { ReasonLine } from './ReasonLine';
@@ -143,7 +142,7 @@ export function DeckCard({
         onLongPress={onWhyFit}
       >
         <View style={s.media}>
-          <CandidatePhoto
+          <PlayerPhoto
             playerId={candidate.playerId}
             photoUrl={candidate.card.photoUrl}
             box={{ kind: 'media' }}

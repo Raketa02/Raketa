@@ -58,7 +58,6 @@ export { useSocialStepAdmission, type SocialStepAdmission } from './hooks/useSoc
  * that the *third copy* is the signal to move something, and there is no second copy. The
  * cross-feature import goes through this surface, which is what this file is for.
  */
-export { COURT_POSTER_COUNT, courtPosterFor } from './components/courtPosterFraming';
 
 /**
  * **The profile surface Play reads, and the two writes beside it.**

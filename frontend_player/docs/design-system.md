@@ -2199,15 +2199,16 @@ box is handed a pair or it is handed nothing.
 
 ## 7.15 The on-court mark
 
-Two words across the top of the competitive card's [photo panel](#a-players-photograph--the-third-generated-fill-and-the-one-nobody-generated)
-— **what the on-court check concluded about that photograph**, and the only thing this app
-ever says about another player's verdict.
+Two words across the top of a [photo panel](#716-the-photo-panel) — **what the on-court check
+concluded about that photograph**, and the only thing this app ever says about another player's
+verdict.
 
 ```
 words     ON COURT — type.tag 9,5 / 700, uppercased by the panel
 colour    mintSoft + textOnMedia          4,55:1 over the worst photograph
 placement centred, at the panel's own space.xs padding
-cap       maxFontSizeMultiplier 1,1, derived — onCourtMarkFit.test.ts
+cap       maxFontSizeMultiplier — 1,1 on a card panel, 1,5 on the record sheet's
+          both derived, neither scaled from the other — onCourtMarkFit.test.ts
 ```
 
 **Drawn on _checked and passed_ and on nothing else.** _Checked and flagged_ and _nobody
@@ -2253,7 +2254,10 @@ player._
 may neither be frozen nor grow without bound; `maxFontSizeMultiplier` is what
 [Part 13](#part-13--accessibility) leaves, and the number comes from the real Archivo Bold
 advance widths against the width the corner allows — the tab bar's mechanism
-([10.2](#102-the-tab-bar)), second instance. The **Sport** beneath it is deliberately left
+([10.2](#102-the-tab-bar)), second instance. **There is one cap per panel size and neither is
+scaled from the other**: the corner takes a third of each panel's own width, so it eats a
+different fraction of a different box — 57,22 of 74 on a card, 78,45 of 112 on the record
+sheet — and a cap multiplied by the widths' ratio would be arithmetic over the wrong quantity. The **Sport** beneath it is deliberately left
 uncapped: its cap would come out at 1,0, which is `allowFontScaling={false}` under another
 name, and _BADMINTO…_ still reads where _ON COU…_ has stopped saying anything.
 
@@ -2264,20 +2268,32 @@ comma away from activity recency.
 
 ## 7.16 The photo panel
 
-The competitive candidate card's identity: a photograph with the facts that outrank it printed
-on top ([#309](https://github.com/Raketa02/Raketa/issues/309)). It replaces a bare thumbnail,
-and the replacement is a statement about the product — _in this product your rating is your
-face, and the photograph is scenery._
+A photograph with the facts that outrank it printed on top
+([#309](https://github.com/Raketa02/Raketa/issues/309)). It replaced a bare thumbnail on the
+competitive candidate card, and the replacement is a statement about the product — _in this
+product your rating is your face, and the photograph is scenery._
 
 ```
-panel     74 x 92, radius = width x 0,33, overflow hidden
+panel     card   74 x 92    ← the candidate card's identity
+          record 112 x 140  ← the player record sheet's header
+          radius = that panel's own width x 0,33, overflow hidden
 ground    the photograph, or the generated poster ([6.9](#69-the-photo-tile-and-picker))
 scrim     photoScrim, one flat pass over the whole box
 padding   space.xs, and all three labels sit inside it
 mark      ON COURT at the top                    ← [7.15](#715-the-on-court-mark)
-level     num.xl, TABULAR, surface + textOnMedia ← the biggest text on the panel
+level     TABULAR, surface + textOnMedia          ← the biggest text on the panel
+          num.xl on a card, num.levelLarge on the record sheet's
 sport     type.tag uppercased, surface + textOnMedia, numberOfLines 1
 ```
+
+**Two sizes, and the second one re-derives rather than scaling.** Every number here is
+arithmetic against the panel's **own** width, so the larger panel is a second derivation and
+never a multiplier — the corner, what the corner leaves the mark, and therefore
+[7.15](#715-the-on-court-mark)'s cap. Exactly two things change with the size: the box, and the
+Level's type role, which steps up because a 22pt figure inside a 112pt panel stops being the
+biggest thing on it. The pinned `photoScrim` and its worst case are the same at both, which is
+what keeps [2.5](#a-players-photograph--the-third-generated-fill-and-the-one-nobody-generated)
+one row rather than two.
 
 **The Level is the treatment, and the size is the argument.** It is the largest thing on the
 card by a wide margin, which is what makes the panel identity rather than decoration: a reader
@@ -2298,7 +2314,7 @@ widest of the four sport names would ellipsize on every card in the app. `tag` i
 9,5 / 700 with no tracking, and the capitals are the caller's here rather than the role's.
 
 **One corner, and one owner for it.** The photograph, the scrim and the labels share the panel's
-clip rather than each carrying a radius — and the ratio is `candidatePhotoRadius`'s, the same
+clip rather than each carrying a radius — and the ratio is `playerPhotoRadius`'s, the same
 function the court seat uses, because a second `× 0,33` is two boxes the day either one moves.
 The corner is also what [7.15](#715-the-on-court-mark)'s cap is derived against.
 
@@ -2310,8 +2326,10 @@ the three ratios; nothing about them is restated here.
 **It announces nothing.** [§20.1](../../docs/specs/matchmaking/the-words.md) merges an
 actionless element into the nearest action above it, so the labels are plain `Text` and not a
 hidden subtree. The **Level** reaches the spoken name already as the first figure of the level
-row — printed twice and said once. The **Sport** does not reach it at all: it is the search's
-own sport, identical on every row, and the screen's eyebrow has said it once already.
+row — printed twice and said once. The **Sport** does not reach it at all on a card: it is the
+search's own sport, identical on every row, and the screen's eyebrow has said it once already.
+On the record sheet it does reach it, because there the sport is the one the panel resolved to
+and a reader has been told it nowhere else.
 
 ## 7.17 The head-to-head band
 
@@ -3094,6 +3112,7 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-09-08 | [Part 6](#part-6--controls)                                                                           | Part 6 ended at [6.12](#612-the-switch), and there was no specified control for an answer on a one-to-five scale — the sportsmanship card had a scale, a target rule and a fill pair with nowhere to be written down                                                                                                                           | **6.13 The star row** — five 44pt targets, flush, with a drawn 24pt pentagram inside each; `ink` fill given against a `muted` outline blank; one accessibility element per star and only the standing one `selected`; whether a second press clears is the caller's rule and not the row's                                                                                                                                                        | [#386](https://github.com/Raketa02/Raketa/issues/386) built the card that asks how the other players were, and it is a control rather than a data display: it takes an answer, it is pressed, and it has states. 15.1's first question — _is it one of the existing primitives?_ — is answered no by [6.11](#611-the-tick-box)'s own words, since a claim asserted once is not a value on a scale. It **adds no colour**: the pair is [7.13](#713-the-record-block)'s, taken deliberately so that _tell two states of one mark apart_ has one answer in this system rather than two                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-09-08 | [2.5](#25-contrast--computed)                                                                         | `ink on surface`, `muted on surface` and the `ink`-against-`muted` pair each stood as a row, and no drawn object on a card had been held to the last of them                                                                                                                                                                                   | The same three rows, naming the star row as well — **17,50** given, **5,40** blank, **3,24** apart                                                                                                                                                                                                                                                                                                                                                | No number moves. What changes is that a **graphical object** is now held to two of the rows that had only ever described text, and to a third that had one caller — the run of form, in a recessed box. A star is a mark and not a word, so 1.4.11's 3:1 is the floor all three have to clear on the card's own ground, and [`starRow.test.ts`](../src/shared/ui/starRow.test.ts) computes them off the component's table rather than asserting them, exactly as `recordSquares.test.ts` derives its own                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-09-08 | [`theme.ts`](../src/shared/ui/theme.ts)                                                               | No `size.star`                                                                                                                                                                                                                                                                                                                                 | `size.star = { target: 44, glyph: 24 }`, with the arithmetic that fixes both                                                                                                                                                                                                                                                                                                                                                                      | 15.3 permits a size step where a surface genuinely needs one and requires `theme.ts` and this document to change in the same commit. The target is 6.5's minimum reached by geometry, and the glyph is the drawing inside it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-09-08 | [7.15](#715-the-on-court-mark) · [7.16](#716-the-photo-panel)                                         | The panel had one size — 74 x 92, the competitive card's — and the mark one derived cap                                                                                                                                                                                                                                                        | A **second panel size**, `record` at 112 x 140, and a second derived cap beside it. The Level's role steps to `num.levelLarge` at that size; nothing else about the panel changes, and the components move to `shared/ui` as `PhotoPanel`, `PlayerPhoto` and `OnCourtMark`                                                                                                                                                                        | [#384](https://github.com/Raketa02/Raketa/issues/384) draws this panel in the player record sheet's header, which is a second feature — and `player_record` may not import `features/play/`, because Play is what opens the sheet. It is [7.13](#713-the-record-block)'s promotion again, one ticket later. **No value is scaled**: the corner is a third of each panel's own width, so what it leaves the mark is a different fraction of a different box, and both caps come out of `largestStepThatFits` against the real Archivo advances. The pinned `photoScrim` and its worst case are untouched, which is why [2.5](#25-contrast--computed) gains no row                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 # Part 17 — What the reset removed
 

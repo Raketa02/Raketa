@@ -20,6 +20,7 @@
  */
 
 import { playerName } from '@/shared/formatting/playerName';
+import { ON_COURT_CLAUSE } from '@/shared/ui';
 
 import type { AtStake, Candidate, SearchEnvelope } from '../../domain/candidate';
 import { isTagEvidence, type Evidence } from '../../domain/evidence';
@@ -32,7 +33,6 @@ import { balanceReading } from '../balancePresentation';
 import { concernLine } from '../concernPresentation';
 import { livenessLine } from '../livenessPresentation';
 import {
-  ON_COURT_CLAUSE,
   recordClauses,
   socialTagClauses,
   stakeClauses,

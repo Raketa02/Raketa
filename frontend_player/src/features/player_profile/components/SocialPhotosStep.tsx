@@ -77,6 +77,7 @@ import {
   PhotoPosterTile,
   PhotoRow,
   PhotoTile,
+  courtPosterFor,
   theme,
   type PhotoTileFoot,
 } from '@/shared/ui';
@@ -85,7 +86,6 @@ import { flaggedPositions, slotsLeft, type ProfilePhoto } from '../domain/photoC
 import { stepAfter } from '../domain/socialSteps';
 import { useProfilePhotos } from '../hooks/useProfilePhotos';
 
-import { courtPosterFor } from './courtPosterFraming';
 import { SocialStepLayout } from './SocialStepLayout';
 import { SOCIAL_STEP_PATH } from './socialStepRoutes';
 import { stepCopy } from './socialStepPresentation';
