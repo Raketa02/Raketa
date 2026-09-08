@@ -504,13 +504,14 @@ def _seat_card(card: CourtCard) -> dict[str, Any]:
             for term, reason in card.pairing.degraded_terms
         ],
         "concerns": [{"term": term} for term in card.pairing.concerns],
-        "forecast": {
+    }
+    if card.pairing.forecast is not None:
+        pairing["forecast"] = {
             "pct": card.pairing.forecast.pct,
             "sigma_group": card.pairing.forecast.sigma_group,
             "provisional": card.pairing.forecast.provisional,
             "assumption": card.pairing.forecast.assumption,
-        },
-    }
+        }
     if card.pairing.distance_km is not None:
         pairing["distance_km"] = card.pairing.distance_km
     if card.pairing.at_stake is not None:

@@ -33,7 +33,10 @@ from app.api.dependencies import (
     SettingsDep,
     UnitOfWorkDep,
 )
-from app.bootstrap.composition import build_court_pairing_query_over
+from app.bootstrap.composition import (
+    build_court_pairing_query_over,
+    build_court_pairing_workbench,
+)
 from app.modules.challenges.presentation.dependencies import (
     get_court_pairing_query,
 )
@@ -69,14 +72,17 @@ def draw_real_cards(client, candidate_source, exposure_ledger):
         settings: SettingsDep,
     ):
         return build_court_pairing_query_over(
-            session=db,
-            clock=clock,
-            unit_of_work=uow,
-            event_store=event_store,
-            events=events,
+            workbench=build_court_pairing_workbench(
+                session=db,
+                clock=clock,
+                unit_of_work=uow,
+                event_store=event_store,
+                events=events,
+                settings=settings,
+                exposure=exposure_ledger,
+                candidates=candidate_source,
+            ),
             settings=settings,
-            exposure=exposure_ledger,
-            candidates=candidate_source,
         )
 
     world.override(client, get_court_pairing_query, _pairings)
@@ -257,6 +263,35 @@ async def test_the_list_gains_a_handle_on_every_seat_and_nothing_else(
         "cy",
     }
     assert all("card" not in seat for seat in seats)
+
+
+async def test_the_forecast_is_the_courts_and_the_same_on_every_card(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """**One figure, because a forecast is a fact about the game.**
+
+    A doubles court seats the reader beside one person and across from two, and
+    a per-seat one-a-side figure would print *how even would a game against
+    them be* about the teammate. What crosses instead is the court as it stands,
+    read in the reader's direction — so every card carries the same number, and
+    it is the number the game would actually deliver.
+    """
+
+    draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+
+    body = (await _detail(client, people["ana"]["token"], challenge_id)).json()
+
+    forecasts = [
+        seat["card"]["pairing"]["forecast"]
+        for seat in body["seats"]
+        if "card" in seat
+    ]
+    assert len(forecasts) == 3
+    assert all(one == forecasts[0] for one in forecasts)
+    assert 0 <= forecasts[0]["pct"] <= 100
 
 
 # ---------------------------------------------------------------------------

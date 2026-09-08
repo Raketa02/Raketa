@@ -430,6 +430,13 @@ class CourtPairing:
     still deserialises, and this context validates it into its own closed union
     so the wire type stays exhaustive today.
 
+    **The forecast is the one field here that is not about the two of you.** It
+    is the whole court's, computed once and carried on every seat, because a
+    forecast is a fact about the **game** rather than about one person — the same
+    reading ``would_be_forecast`` takes, which is *what this candidate would
+    leave on court* and never a one-a-side figure. It rides in this block because
+    that is where ``docs/adr/0143`` §5 puts it.
+
     ``degraded_terms`` is ``(term, whose gap)`` pairs and **ships even though no
     *Why?* sheet is drawn over them**: without the renormalisation basis a Fit is
     uninterpretable — a 78 built on four terms and a 78 built on seven are
@@ -445,7 +452,12 @@ class CourtPairing:
     terms: tuple[Mapping[str, Any], ...]
     degraded_terms: tuple[tuple[str, str], ...]
     concerns: tuple[str, ...]
-    forecast: PairingForecast
+
+    #: What the court as it stands would leave on court, read in the reader's
+    #: direction. ``None`` where **no game can be arranged out of what is left**
+    #: — a side with nobody on it is not a side, and a court whose whole far side
+    #: has declined is one nothing can be forecast about.
+    forecast: PairingForecast | None = None
     distance_km: int | None = None
     at_stake: LevelDeltas | None = None
 
@@ -457,6 +469,26 @@ class CourtCard:
 
     person: CourtPerson
     pairing: CourtPairing
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class CourtSeat:
+    """One person the reader wants a card for, **and which side of the net.**
+
+    The side travels because a forecast is a claim about a **game**, and a game
+    needs two sides. Somebody beside you and somebody across from you produce
+    different arrangements of the same four people, and a read that only knew
+    *who* would have to price your partner as your opponent — which is what
+    *how even would a game against them be* says about a teammate.
+
+    It is ``beside_you`` rather than a ``Side``, because the answer is computed
+    for one reader and *which letter* is not a thing this question turns on:
+    ``challenges`` seats the organiser on ``A`` and the reader may be anywhere.
+    """
+
+    player_id: UUID
+    beside_you: bool
 
 
 class PairingAbsence(str, Enum):
@@ -538,13 +570,14 @@ class CourtPairingQuery(Protocol):
         reader_id: UUID,
         sport: Sport,
         mode: SearchMode | None,
-        court_ids: Collection[UUID],
+        court: Collection[CourtSeat],
     ) -> CourtCards:
         """A card per person on that court, computed **for the reader**.
 
-        ``court_ids`` is everybody the reader wants a card for and never includes
-        the reader themselves: a pairing with yourself is not a question, and
-        asking would refuse the whole court.
+        ``court`` is everybody the reader wants a card for, with which side of
+        the net each of them is on, and it never includes the reader themselves:
+        a pairing with yourself is not a question, and asking would refuse the
+        whole court.
 
         ``mode`` is the challenge's own, and ``None`` on one born of a mutual yes
         — where the surface it came from asked nobody to pick one. The

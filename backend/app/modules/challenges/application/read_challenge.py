@@ -45,6 +45,7 @@ from app.modules.challenges.domain.ports import (
     CourtCard,
     CourtCards,
     CourtPairingQuery,
+    CourtSeat,
     PlayerHandles,
 )
 from app.modules.challenges.domain.standing import ARRANGING, Standing
@@ -163,12 +164,20 @@ class ReadChallenge:
 
         **And never the reader themselves.** A pairing with yourself is not a
         question, and the whole read would refuse it.
+
+        **Each of them carries which side of the net they are on**, read against
+        the reader's own seat. A forecast is a claim about a game and a game
+        needs two sides, so a partner handed over as an opponent would price a
+        teammate under a sentence that says *against*.
         """
 
         if standing not in ARRANGING:
             return None
+        mine = next(
+            (seat.side for seat in challenge.seats if seat.holds(reader_id)), None
+        )
         court = tuple(
-            seat.player_id
+            CourtSeat(player_id=seat.player_id, beside_you=seat.side == mine)
             for seat in challenge.seats
             if seat.player_id is not None
             and seat.player_id != reader_id
@@ -178,5 +187,5 @@ class ReadChallenge:
             reader_id=reader_id,
             sport=challenge.sport,
             mode=challenge.mode,
-            court_ids=court,
+            court=court,
         )

@@ -42,6 +42,7 @@ from app.modules.challenges.domain.ports import (
     CourtCards,
     CourtPairing,
     CourtPerson,
+    CourtSeat,
     LevelDeltas,
     PairingAbsence,
     PairingForecast,
@@ -88,7 +89,7 @@ class ChallengeCourtCards:
         reader_id: UUID,
         sport: Sport,
         mode: SearchMode | None,
-        court_ids: Collection[UUID],
+        court: Collection[CourtSeat],
     ) -> CourtCards:
         try:
             seats = await self._pairing.execute(
@@ -96,7 +97,10 @@ class ChallengeCourtCards:
                     reader_id=reader_id,
                     sport=sport,
                     mode=mode,
-                    court_ids=tuple(court_ids),
+                    court_ids=tuple(seat.player_id for seat in court),
+                    partners=frozenset(
+                        seat.player_id for seat in court if seat.beside_you
+                    ),
                 )
             )
             links = await self._photos.links_over(_photographs(seats))
@@ -141,7 +145,7 @@ class NoCourtCanBePriced:
         reader_id: UUID,
         sport: Sport,
         mode: SearchMode | None,
-        court_ids: Collection[UUID],
+        court: Collection[CourtSeat],
     ) -> CourtCards:
         return CourtCards(absent=PairingAbsence.COULD_NOT_BE_READ)
 
@@ -199,15 +203,19 @@ def _card(seat: PairedSeat, photo_url: str | None) -> CourtCard:
                 for stood in scored.fit.degraded_terms
             ),
             concerns=tuple(term.value for term in scored.fit.concerns),
-            forecast=PairingForecast(
-                pct=seat.forecast.pct,
-                sigma_group=seat.forecast.sigma_group,
-                provisional=seat.forecast.provisional,
-                assumption=(
-                    None
-                    if seat.forecast.assumption is None
-                    else seat.forecast.assumption.value
-                ),
+            forecast=(
+                None
+                if seat.forecast is None
+                else PairingForecast(
+                    pct=seat.forecast.pct,
+                    sigma_group=seat.forecast.sigma_group,
+                    provisional=seat.forecast.provisional,
+                    assumption=(
+                        None
+                        if seat.forecast.assumption is None
+                        else seat.forecast.assumption.value
+                    ),
+                )
             ),
             # ``None`` and never a zero when the distance term stood down,
             # decided once on ``Scored`` so this screen and a shortlist cannot

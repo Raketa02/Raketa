@@ -3266,7 +3266,7 @@
             },
             "type": "array",
             "title": "Terms",
-            "description": "Every term that fired, **ranked by contribution**, each with the evidence behind it. The contributions sum to the Fit."
+            "description": "Every term that fired, **ranked by contribution**, each with the evidence behind it. The contributions sum to the Fit **before the modifiers** \u2014 see `contribution`, which is where that gap is explained rather than being two sentences that disagree."
           },
           "degraded_terms": {
             "items": {
@@ -3286,7 +3286,7 @@
           },
           "forecast": {
             "$ref": "#/components/schemas/CourtForecastSchema",
-            "description": "What a game between the two of you would leave on court"
+            "description": "What the court **as it stands** would leave on court, read in your direction \u2014 everybody still in, placed where they actually sit.\n\n**The same figure rides on every card**, because a forecast is a fact about the game rather than about one person. A seat still open reads as if whoever fills it matched the player already on that side, which is what `provisional` says.\n\n**Omitted where no game can be arranged out of what is left.** A side with nobody on it is not a side, so a court whose far side has all declined leaves nothing to forecast against \u2014 and an invented number would be worse than the absence."
           },
           "at_stake": {
             "$ref": "#/components/schemas/CourtAtStakeSchema",
@@ -3298,8 +3298,7 @@
           "fit",
           "terms",
           "degraded_terms",
-          "concerns",
-          "forecast"
+          "concerns"
         ],
         "title": "CourtPairingSchema",
         "description": "What this platform makes of you **against** this person.\n\n**Recomputed when the screen is opened, in your own direction** \u2014 never\ncopied at send and never replayed from the organiser's search\n(``docs/adr/0143`` \u00a73). That is the only shape under which *Match score for\nyou* is true: neither stored Fit is publishable, because one is the\norganiser's reading of the invitee and the other was scored with the\nsearcher's own reliability deliberately set to null."
@@ -3502,7 +3501,7 @@
           "contribution": {
             "type": "number",
             "title": "Contribution",
-            "description": "The weight times the value.\n\n**The contributions sum to the Fit before the reliability dock**, and `fit` above is the figure after it \u2014 the same number every other surface prints for this pairing. The dock itself is engine internals and is not drawn here, so the breakdown explains the pairing rather than reconstructing the total to the decimal."
+            "description": "The weight times the value.\n\n**The contributions sum to the Fit before the modifiers**, and `fit` above is the figure after them \u2014 the same number every other surface prints for this pairing. Those are the reliability dock and its neighbours, engine internals this screen does not draw, so the breakdown explains the pairing rather than reconstructing the total to the decimal."
           },
           "evidence": {
             "oneOf": [

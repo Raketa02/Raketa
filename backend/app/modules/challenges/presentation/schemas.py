@@ -389,11 +389,12 @@ class CourtScoredTermSchema(BaseModel):
         ...,
         description=(
             "The weight times the value.\n\n"
-            "**The contributions sum to the Fit before the reliability dock**, "
-            "and `fit` above is the figure after it — the same number every "
-            "other surface prints for this pairing. The dock itself is engine "
-            "internals and is not drawn here, so the breakdown explains the "
-            "pairing rather than reconstructing the total to the decimal."
+            "**The contributions sum to the Fit before the modifiers**, and "
+            "`fit` above is the figure after them — the same number every other "
+            "surface prints for this pairing. Those are the reliability dock and "
+            "its neighbours, engine internals this screen does not draw, so the "
+            "breakdown explains the pairing rather than reconstructing the total "
+            "to the decimal."
         ),
     )
     evidence: CourtEvidence
@@ -464,7 +465,9 @@ class CourtPairingSchema(BaseModel):
         ...,
         description=(
             "Every term that fired, **ranked by contribution**, each with the "
-            "evidence behind it. The contributions sum to the Fit."
+            "evidence behind it. The contributions sum to the Fit **before the "
+            "modifiers** — see `contribution`, which is where that gap is "
+            "explained rather than being two sentences that disagree."
         ),
     )
     degraded_terms: list[CourtDegradedTermSchema] = Field(
@@ -480,7 +483,19 @@ class CourtPairingSchema(BaseModel):
         description="Terms the platform is not comfortable about on this pairing.",
     )
     forecast: CourtForecastSchema = Field(
-        ..., description="What a game between the two of you would leave on court"
+        OMITTED,
+        description=(
+            "What the court **as it stands** would leave on court, read in your "
+            "direction — everybody still in, placed where they actually sit.\n\n"
+            "**The same figure rides on every card**, because a forecast is a "
+            "fact about the game rather than about one person. A seat still open "
+            "reads as if whoever fills it matched the player already on that "
+            "side, which is what `provisional` says.\n\n"
+            "**Omitted where no game can be arranged out of what is left.** A "
+            "side with nobody on it is not a side, so a court whose far side has "
+            "all declined leaves nothing to forecast against — and an invented "
+            "number would be worse than the absence."
+        ),
     )
     at_stake: CourtAtStakeSchema = Field(
         OMITTED,

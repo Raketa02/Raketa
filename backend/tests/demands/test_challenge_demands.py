@@ -37,7 +37,11 @@ from app.bootstrap.challenge_demands import (
 )
 from app.engines.matchfit.core import EvidenceKind, SearchMode
 from app.kernel import Sport
-from app.modules.challenges.domain.ports import CourtPairingQuery, PairingAbsence
+from app.modules.challenges.domain.ports import (
+    CourtPairingQuery,
+    CourtSeat,
+    PairingAbsence,
+)
 from app.shared.ids import new_uuid
 from tests.api import matchmaking_world as world
 
@@ -70,6 +74,20 @@ async def _a_court(client, session_factory, candidate_source, *names, **facts):
     ]
     await world.fold_the_log(session_factory, candidate_source)
     return ids
+
+
+def _across(*player_ids) -> tuple[CourtSeat, ...]:
+    """A court of people **on the other side of the net**, which is the default.
+
+    Singles has no other shape, and the side only reaches the forecast — so
+    every case here that is not about the forecast says *across* and means *the
+    ordinary one*.
+    """
+
+    return tuple(
+        CourtSeat(player_id=player_id, beside_you=False)
+        for player_id in player_ids
+    )
 
 
 def _kinds(card) -> set[str]:
@@ -168,7 +186,7 @@ async def test_a_card_comes_back_for_everybody_asked_about_and_nobody_else(
             reader_id=reader["id"],
             sport=world.SPORT,
             mode=SearchMode.COMPETITIVE,
-            court_ids=asked,
+            court=_across(*asked),
         )
 
     assert answer.absent is None
@@ -204,7 +222,7 @@ async def test_the_person_block_is_a_whole_handle_and_no_free_text(
             reader_id=reader["id"],
             sport=world.SPORT,
             mode=SearchMode.COMPETITIVE,
-            court_ids=[them],
+            court=_across(them),
         )
 
     person = answer.cards[0].person
@@ -239,13 +257,13 @@ async def test_the_pairing_is_computed_in_the_readers_own_direction(
             reader_id=reader["id"],
             sport=world.SPORT,
             mode=SearchMode.COMPETITIVE,
-            court_ids=[other["id"]],
+            court=_across(other["id"]),
         )
         theirs = await port.cards_for(
             reader_id=other["id"],
             sport=world.SPORT,
             mode=SearchMode.COMPETITIVE,
-            court_ids=[reader["id"]],
+            court=_across(reader["id"]),
         )
 
     assert _level_fit(mine.cards[0])["my_mu"] == pytest.approx(reader["mu"])
@@ -287,7 +305,7 @@ async def test_the_pairing_carries_its_own_renormalisation_basis(
             reader_id=reader["id"],
             sport=world.SPORT,
             mode=SearchMode.COMPETITIVE,
-            court_ids=[them],
+            court=_across(them),
         )
 
     pairing = answer.cards[0].pairing
@@ -307,6 +325,88 @@ async def test_the_pairing_carries_its_own_renormalisation_basis(
     )
     assert 0 <= pairing.forecast.pct <= 100
     assert EvidenceKind.LEVEL_FIT.value in _kinds(answer.cards[0])
+
+
+@pytest.mark.parametrize("implementation", registered(CourtPairingQuery))
+async def test_a_partner_is_not_priced_as_an_opponent(
+    implementation, client, session_factory, candidate_source, exposure_ledger
+):
+    """**A forecast is a claim about a game, and a game has two sides.**
+
+    The same four people arranged two ways are two different games, so the same
+    person beside you and across from you must not produce one number. A read
+    that only knew *who* would have to put everybody across the net — and then
+    print *how even would a game against them be* about a teammate.
+    """
+
+    reader = await world.a_searcher(client, "reader")
+    ada, bea = await _a_court(
+        client, session_factory, candidate_source, "ada", "bea", mu=reader["mu"]
+    )
+
+    async with session_factory() as session:
+        port = _port(implementation, session, candidate_source, exposure_ledger)
+        ada_beside = await port.cards_for(
+            reader_id=reader["id"],
+            sport=world.SPORT,
+            mode=SearchMode.COMPETITIVE,
+            court=(
+                CourtSeat(player_id=ada, beside_you=True),
+                CourtSeat(player_id=bea, beside_you=False),
+            ),
+        )
+        ada_across = await port.cards_for(
+            reader_id=reader["id"],
+            sport=world.SPORT,
+            mode=SearchMode.COMPETITIVE,
+            court=(
+                CourtSeat(player_id=ada, beside_you=False),
+                CourtSeat(player_id=bea, beside_you=True),
+            ),
+        )
+
+    # The cards themselves are unchanged — who somebody is and what you make of
+    # them does not depend on which side they sit.
+    beside_fits = {card.person.player_id: card.pairing.fit for card in ada_beside.cards}
+    across_fits = {card.person.player_id: card.pairing.fit for card in ada_across.cards}
+    assert beside_fits == across_fits
+    # **And the forecast is one figure carried on every card**, because it is
+    # about the game rather than about a seat.
+    assert len({card.pairing.forecast for card in ada_beside.cards}) == 1
+
+
+@pytest.mark.parametrize("implementation", registered(CourtPairingQuery))
+async def test_a_court_with_nobody_across_the_net_has_no_forecast(
+    implementation, client, session_factory, candidate_source, exposure_ledger
+):
+    """**A side with nobody on it is not a side.**
+
+    Reachable rather than theoretical: a doubles court whose far side has all
+    declined still stands while the organiser can refill it, and the reader and
+    their partner are left with nothing to be forecast against. An invented
+    number would be worse than an absence, and the rest of the card — who they
+    are, and what you make of them — is unaffected.
+    """
+
+    reader = await world.a_searcher(client, "reader")
+    (partner,) = await _a_court(
+        client, session_factory, candidate_source, "ada", mu=reader["mu"]
+    )
+
+    async with session_factory() as session:
+        answer = await _port(
+            implementation, session, candidate_source, exposure_ledger
+        ).cards_for(
+            reader_id=reader["id"],
+            sport=world.SPORT,
+            mode=SearchMode.COMPETITIVE,
+            court=(CourtSeat(player_id=partner, beside_you=True),),
+        )
+
+    assert answer.absent is None
+    assert answer.cards[0].pairing.forecast is None
+    assert answer.cards[0].pairing.terms
+    assert answer.cards[0].person.nickname == "ada"
 
 
 # ---------------------------------------------------------------------------
@@ -338,7 +438,7 @@ async def test_a_reader_with_no_rating_in_the_sport_has_nothing_to_compute(
             # Rated and declared in padel, challenged at tennis.
             sport=Sport.TENNIS,
             mode=SearchMode.COMPETITIVE,
-            court_ids=[them],
+            court=_across(them),
         )
 
     assert answer.absent is PairingAbsence.NOTHING_TO_COMPUTE
@@ -367,7 +467,7 @@ async def test_a_reader_with_no_profile_at_all_has_nothing_to_compute(
             reader_id=stranger,
             sport=world.SPORT,
             mode=SearchMode.COMPETITIVE,
-            court_ids=[reader["id"]],
+            court=_across(reader["id"]),
         )
 
     assert answer.absent is PairingAbsence.NOTHING_TO_COMPUTE
@@ -399,7 +499,7 @@ async def test_somebody_the_index_cannot_describe_is_absent_and_the_rest_answer(
             reader_id=reader["id"],
             sport=world.SPORT,
             mode=SearchMode.COMPETITIVE,
-            court_ids=[them, nobody],
+            court=_across(them, nobody),
         )
 
     assert answer.absent is None
@@ -427,7 +527,7 @@ async def test_an_empty_court_is_an_empty_answer_and_never_a_refusal(
             reader_id=reader["id"],
             sport=world.SPORT,
             mode=SearchMode.COMPETITIVE,
-            court_ids=[],
+            court=_across(),
         )
 
     assert answer == type(answer)()
@@ -457,7 +557,7 @@ async def test_what_is_at_stake_is_omitted_in_for_fun(
             reader_id=reader["id"],
             sport=world.SPORT,
             mode=SearchMode.FOR_FUN,
-            court_ids=[them],
+            court=_across(them),
         )
 
     assert for_fun.cards[0].pairing.at_stake is None

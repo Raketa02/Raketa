@@ -434,19 +434,15 @@ async def read_paths(
         read_challenge=ReadChallenge(
             challenges=challenges,
             handles=court_handles,
-            # **The run's own index and ledger**, for the reason every other
-            # seam here takes the caller's: the run ticks the index in process
-            # before it reads, and a pairing computed against a different one
-            # would be a card about a city this run never built.
+            # **The run's own workbench**, not a second one over the same
+            # session — which is what the stores above say about themselves and
+            # is truer of this one, since it holds four of them. It also carries
+            # the run's own index and ledger for the reason every other seam here
+            # takes the caller's: the run ticks the index in process before it
+            # reads, and a pairing computed against a different one would be a
+            # card about a city this run never built.
             pairings=build_court_pairing_query_over(
-                session=session,
-                clock=clock,
-                unit_of_work=uow,
-                event_store=event_store,
-                events=events,
-                settings=settings,
-                exposure=exposure,
-                candidates=candidates,
+                workbench=workbench, settings=settings
             ),
             clock=clock,
         ),

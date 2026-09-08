@@ -40,6 +40,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bootstrap.composition import (
     build_clock,
     build_court_pairing_query_over,
+    build_court_pairing_workbench,
     build_domain_event_store,
     build_event_publisher,
     build_unit_of_work,
@@ -92,14 +93,17 @@ CHALLENGE_IMPLEMENTATIONS: tuple[RegisteredPairing, ...] = (
         port=CourtPairingQuery,
         name="ChallengeCourtCards",
         build=lambda seams: build_court_pairing_query_over(
-            session=seams.session,
-            clock=build_clock(),
-            unit_of_work=build_unit_of_work(seams.session),
-            event_store=build_domain_event_store(seams.session),
-            events=build_event_publisher(seams.session),
+            workbench=build_court_pairing_workbench(
+                session=seams.session,
+                clock=build_clock(),
+                unit_of_work=build_unit_of_work(seams.session),
+                event_store=build_domain_event_store(seams.session),
+                events=build_event_publisher(seams.session),
+                settings=get_settings(),
+                exposure=seams.exposure,
+                candidates=seams.candidates,
+            ),
             settings=get_settings(),
-            exposure=seams.exposure,
-            candidates=seams.candidates,
         ),
     ),
 )

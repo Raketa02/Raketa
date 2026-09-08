@@ -539,18 +539,44 @@ def build_court_pairing_query(
     if candidates is None or store is None:
         return NoCourtCanBePriced()
     return build_court_pairing_query_over(
-        session=session,
-        clock=clock,
-        unit_of_work=unit_of_work,
-        event_store=event_store,
-        events=events,
+        workbench=build_court_pairing_workbench(
+            session=session,
+            clock=clock,
+            unit_of_work=unit_of_work,
+            event_store=event_store,
+            events=events,
+            settings=settings,
+            exposure=build_exposure_ledger(store),
+            candidates=candidates,
+        ),
         settings=settings,
-        exposure=build_exposure_ledger(store),
-        candidates=candidates,
     )
 
 
 def build_court_pairing_query_over(
+    *, workbench: SearchWorkbench, settings: Settings
+) -> CourtPairingQuery:
+    """The adapter itself, over a workbench the caller already holds.
+
+    **A workbench is taken rather than built, because a caller may already have
+    one.** A seed run assembles one for its searches and then reads a challenge
+    screen through it; building a second over the same session would be four
+    objects over one table, which is the thing ``app/seeds/paths.py`` says in as
+    many words about its own stores.
+    """
+
+    storage = build_photo_storage(settings)
+    return ChallengeCourtCards(
+        pairing=PairWithACourt(
+            workbench=workbench,
+            ruleset=build_ruleset(),
+            engine=build_match_fit_engine(),
+        ),
+        photos=build_card_photo_links(storage=storage, settings=settings),
+    )
+
+
+def build_court_pairing_workbench(
     *,
     session: AsyncSession,
     clock: Clock,
@@ -560,18 +586,20 @@ def build_court_pairing_query_over(
     settings: Settings,
     exposure: ExposureLedger,
     candidates: CandidateSource,
-) -> CourtPairingQuery:
-    """The assembly itself, over an index and a ledger the caller already holds.
+) -> SearchWorkbench:
+    """A workbench for a caller that holds no other reason to have one.
 
     The two seams a demands suite supplies for itself: the candidate index is the
     **process's** rather than the request's (``docs/adr/0112``), and the exposure
     ledger is Redis, which no test in this repository needs running.
+
+    Everything else is built from the session, because this caller shares none of
+    it with anything — which is exactly what makes it safe to build here and
+    exactly why a caller who *does* share passes their own workbench instead.
     """
 
     storage = build_photo_storage(settings)
-    return ChallengeCourtCards(
-        pairing=PairWithACourt(
-            workbench=SearchWorkbench(
+    return SearchWorkbench(
                 clock=clock,
                 ruleset=build_ruleset(),
                 searches=build_search_store(session),
@@ -600,16 +628,11 @@ def build_court_pairing_query_over(
                     events=events,
                     storage=storage,
                 ),
-                records=build_player_record_source(session),
-                absent_terms=build_absent_terms(),
-                # **Nothing is recorded and nothing is measured.** The meter
-                # reports the scoring stage of a *search*, and this is not one.
-                meter=None,
-            ),
-            ruleset=build_ruleset(),
-            engine=build_match_fit_engine(),
-        ),
-        photos=build_card_photo_links(storage=storage, settings=settings),
+        records=build_player_record_source(session),
+        absent_terms=build_absent_terms(),
+        # **Nothing is recorded and nothing is measured.** The meter reports the
+        # scoring stage of a *search*, and this is not one.
+        meter=None,
     )
 
 

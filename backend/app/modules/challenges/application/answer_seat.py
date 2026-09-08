@@ -34,7 +34,9 @@ allowed to tell.
 
 from __future__ import annotations
 
-from typing import final
+import logging
+from typing import Mapping, final
+from uuid import UUID
 
 from app.application.ports import UnitOfWork
 from app.kernel import Clock, Instant, instant
@@ -46,6 +48,8 @@ from app.modules.challenges.application.read_challenges import StandingChallenge
 from app.modules.challenges.domain.planned_game import PlannedGameOpening
 from app.modules.challenges.domain.ports import ChallengeRepository, PlayerHandles
 from app.modules.challenges.domain.standing import Standing
+
+logger = logging.getLogger(__name__)
 
 
 class _AnswerSeat:
@@ -98,18 +102,32 @@ class _AnswerSeat:
 
         The handles are read **after** the commit, because they are the one thing
         on the answer that is not part of it: a name that could not be looked up
-        must not roll back somebody's yes. One set read over this court, which is
-        the same question the list asks over many.
+        must not roll back somebody's yes.
+
+        **And it must not lose it either**, which is why the read cannot raise
+        from here. The answer is already committed at this line, so an exception
+        would hand the player a failure for an act that succeeded — and *the
+        reply is the redraw* means they would answer again, into a seat that has
+        already been answered. A handle nobody could look up is the same absence
+        as an account ``users`` no longer has: ``null`` on the wire, the seat
+        intact, and the screen naming a side instead.
         """
 
         await self._uow.commit()
-        handles = await self._handles.handles_of(
-            sorted(
-                seat.player_id
-                for seat in challenge.seats
-                if seat.player_id is not None
+        handles: Mapping[UUID, str] = {}
+        try:
+            handles = await self._handles.handles_of(
+                sorted(
+                    seat.player_id
+                    for seat in challenge.seats
+                    if seat.player_id is not None
+                )
             )
-        )
+        except Exception:
+            logger.warning(
+                "the court's handles could not be read after an answer",
+                exc_info=True,
+            )
         return StandingChallenge(
             challenge=challenge, standing=standing, read_at=at, handles=handles
         )

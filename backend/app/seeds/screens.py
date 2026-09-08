@@ -1739,7 +1739,11 @@ async def _refuse_a_challenge_screen_with_nobody_on_it(paths: ReadPaths) -> str:
         f"{card.person.level:.2f} in band {card.person.band}, Fit "
         f"{card.pairing.fit:.0f} over {len(card.pairing.terms)} term(s) with "
         f"{len(card.pairing.degraded_terms)} stood down, forecast "
-        f"{card.pairing.forecast.pct}%"
+        + (
+            "absent — no game can be arranged out of what is left of this court"
+            if card.pairing.forecast is None
+            else f"{card.pairing.forecast.pct}%"
+        )
     )
 
 

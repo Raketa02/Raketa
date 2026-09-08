@@ -1743,7 +1743,7 @@ export interface components {
             distance_km?: number;
             /**
              * Terms
-             * @description Every term that fired, **ranked by contribution**, each with the evidence behind it. The contributions sum to the Fit.
+             * @description Every term that fired, **ranked by contribution**, each with the evidence behind it. The contributions sum to the Fit **before the modifiers** — see `contribution`, which is where that gap is explained rather than being two sentences that disagree.
              */
             terms: components["schemas"]["CourtScoredTermSchema"][];
             /**
@@ -1756,8 +1756,14 @@ export interface components {
              * @description Terms the platform is not comfortable about on this pairing.
              */
             concerns: components["schemas"]["CourtConcernSchema"][];
-            /** @description What a game between the two of you would leave on court */
-            forecast: components["schemas"]["CourtForecastSchema"];
+            /**
+             * @description What the court **as it stands** would leave on court, read in your direction — everybody still in, placed where they actually sit.
+             *
+             *     **The same figure rides on every card**, because a forecast is a fact about the game rather than about one person. A seat still open reads as if whoever fills it matched the player already on that side, which is what `provisional` says.
+             *
+             *     **Omitted where no game can be arranged out of what is left.** A side with nobody on it is not a side, so a court whose far side has all declined leaves nothing to forecast against — and an invented number would be worse than the absence.
+             */
+            forecast?: components["schemas"]["CourtForecastSchema"];
             /**
              * @description What a counted game against this person would do to your Level — the rating engine's own update rule read forward.
              *
@@ -1937,7 +1943,7 @@ export interface components {
              * Contribution
              * @description The weight times the value.
              *
-             *     **The contributions sum to the Fit before the reliability dock**, and `fit` above is the figure after it — the same number every other surface prints for this pairing. The dock itself is engine internals and is not drawn here, so the breakdown explains the pairing rather than reconstructing the total to the decimal.
+             *     **The contributions sum to the Fit before the modifiers**, and `fit` above is the figure after them — the same number every other surface prints for this pairing. Those are the reliability dock and its neighbours, engine internals this screen does not draw, so the breakdown explains the pairing rather than reconstructing the total to the decimal.
              */
             contribution: number;
             /** Evidence */

@@ -97,7 +97,9 @@ def get_ephemeral_store() -> Redis | None:
     """The process's Redis pool, or nothing where it never came up.
 
     **``None`` rather than a raise**, which is the one place this differs from
-    the matcher's declaration of the same pool. A search that cannot read its
+    the matcher's declaration of the same pool — and the reason the alias below
+    is **not** called ``EphemeralStoreDep``, which is that declaration's name for
+    the opposite posture, one import away. A search that cannot read its
     ledgers is a search that cannot answer; this route answers regardless, and a
     store that is not there reaches the reader as *the pairing could not be
     read* (``docs/adr/0143`` §6) rather than as a failed screen. It stays a
@@ -110,7 +112,7 @@ def get_ephemeral_store() -> Redis | None:
         return None
 
 
-EphemeralStoreDep = Annotated[Redis | None, Depends(get_ephemeral_store)]
+StoreOrNothingDep = Annotated[Redis | None, Depends(get_ephemeral_store)]
 
 
 def get_court_pairing_query(
@@ -121,7 +123,7 @@ def get_court_pairing_query(
     event_store: DomainEventStoreDep,
     events: EventPublisherDep,
     settings: SettingsDep,
-    store: EphemeralStoreDep,
+    store: StoreOrNothingDep,
 ) -> CourtPairingQuery:
     """The matcher's answer about the people on one court, per request.
 

@@ -69,6 +69,7 @@ from app.modules.matchmaking.domain.fence import (
     slots_of,
 )
 from app.modules.matchmaking.domain.geography import distance_km as measure_distance
+from app.modules.matchmaking.domain.lineups import seats_per_side
 from app.modules.matchmaking.domain.measurements import overlap_of
 from app.modules.matchmaking.domain.search_context import SearchContext
 from app.modules.matchmaking.domain.searches import (
@@ -100,6 +101,11 @@ class PairWithACourtCommand:
     sport: Sport
     mode: SearchMode | None
     court_ids: tuple[UUID, ...]
+    #: The subset of ``court_ids`` sharing the reader's side of the net. At most
+    #: one in every sport this platform serves, and empty in singles. It exists
+    #: for the forecast alone: a game needs two sides, and a partner priced as an
+    #: opponent is *how even would a game against them be* said about a teammate.
+    partners: frozenset[UUID] = frozenset()
 
 
 @final
@@ -110,13 +116,16 @@ class PairedSeat:
     The forecast rides beside the card rather than on it because it has a third
     author again: the card is facts about them, the Fit is a reading of the two
     of them, and this is what the **game** would look like. It is
-    ``would_be_forecast``'s own question — *what would this pairing leave on
-    court* — asked one seat at a time, which is the granularity the card block is
-    drawn at.
+    ``would_be_forecast``'s own question — *what would this candidate leave on
+    court* — and, like that field, it is a claim about the whole line-up rather
+    than about one seat: the same figure rides on every card, because a forecast
+    is a fact about the game.
     """
 
     answered: AnsweredCandidate
-    forecast: Forecast
+    #: The whole court's forecast, carried on every seat. ``None`` where no game
+    #: can be arranged out of what is left of it.
+    forecast: Forecast | None
 
     @property
     def player_id(self) -> UUID:
@@ -201,43 +210,70 @@ class PairWithACourt:
                 f"the matcher refused to price the court: {broken}"
             ) from broken
         answered = await self._work.attach(scored, context)
+        forecast = self._forecast(answered, command, context)
         return tuple(
             sorted(
-                (
-                    PairedSeat(answered=row, forecast=self._forecast(row, context))
-                    for row in answered
-                ),
+                (PairedSeat(answered=row, forecast=forecast) for row in answered),
                 key=lambda seat: seat.player_id,
             )
         )
 
-    def _forecast(self, row: AnsweredCandidate, context: SearchContext) -> Forecast:
-        """What the two of them would leave on court, as a singles pairing.
+    def _forecast(
+        self,
+        answered: tuple[AnsweredCandidate, ...],
+        command: PairWithACourtCommand,
+        context: SearchContext,
+    ) -> Forecast | None:
+        """What the court as it stands would leave on court, in the reader's
+        direction — **one figure, carried on every card.**
 
-        **The fenced candidate is reused rather than re-fenced.** ``evidence.py``
-        states the principle the other way round — *overlap is a fact about a
-        pair where a calendar is a fact about a person* — and
+        A forecast is a claim about a **game**, so it is computed from the court
+        rather than from a seat: everybody still in, placed where they actually
+        sit. That is ``would_be_forecast``'s own reading — *what this candidate
+        would leave on court*, which is the whole line-up's number and never a
+        one-a-side one — and it is the reading the alternative fails at, because
+        pricing a doubles partner as an opponent prints *how even would a game
+        against them be* about a teammate.
+
+        **The fenced candidates are reused rather than re-fenced.**
+        ``evidence.py`` states the principle the other way round — *overlap is a
+        fact about a pair where a calendar is a fact about a person* — and
         ``_searcher_as_candidate`` already refuses to recompute a pair's combined
         uncertainty for the same reason: two chances to disagree about one
         number.
 
-        One seat a side, whatever the sport's court seats. The block is drawn per
-        person, and *how would a game against **you** go* is the question a
-        person answering an invitation is asking; a four-way figure would be one
-        answer printed four times.
+        ``None`` where **no game can be arranged out of what is left**. A side
+        with nobody on it is not a side, so a court whose far side has all
+        declined leaves the reader and their partner with nothing to be forecast
+        against — and a number invented for that is worse than an absence with a
+        reason. A seat still open on the far side is a different case and is
+        exactly what ``provisional`` is for: it reads as if the missing player
+        matched the one already there.
         """
 
+        seated = {
+            UUID(row.scored.player_id): Seated(
+                candidate=row.scored.fenced, fit=0.0, locked=True
+            )
+            for row in answered
+        }
+        partner = next(
+            (seated[one] for one in sorted(command.partners) if one in seated), None
+        )
+        opponents = tuple(
+            seated[player_id]
+            for player_id in sorted(seated)
+            if player_id not in command.partners
+        )
+        if not opponents:
+            return None
+        per_side = seats_per_side(command.sport)
         return arranged(
             searcher_of(context),
-            Arrangement(
-                partner=None,
-                opponents=(
-                    Seated(candidate=row.scored.fenced, fit=0.0, locked=True),
-                ),
-            ),
+            Arrangement(partner=partner, opponents=opponents[:per_side]),
             self._ruleset,
             combine_group_sigma,
-            seats_per_side=1,
+            seats_per_side=per_side,
         ).forecast
 
 
