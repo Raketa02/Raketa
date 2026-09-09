@@ -8,20 +8,18 @@
  * that make that producible — entering, correcting, agreeing and disagreeing — and the words
  * for the three ends a game can reach.
  *
- * **What is exported is what has a caller**, which is two components and nothing else. The
- * result argument's fold, the score's shape, the copy deck and both writes stay internal: they are
- * the feature, and the only things outside it are the surface Now composes and the screen a row
- * pushes.
+ * **What is exported is what has a caller.** The result argument's fold, the score's shape, the
+ * copy deck and both writes stay internal: they are the feature, and what leaves it is the screen
+ * a card pushes, the list Now is drawn from and the one sentence that card draws.
+ *
+ * **Now's rail is not here** ([#367](https://github.com/Raketa02/Raketa/issues/367)). `GamesSection`
+ * was this feature's while Now was a placeholder with a list under it; the rail that replaced it
+ * needs a **plan** beside every game, and ADR-0149 §1's arrow runs one way — so the composition is
+ * `features/plans`' and this feature still never learns a plan exists.
  */
 
 /**
- * **Your games, on the Now tab.** Composed by the shell under the tab's own line, exactly as
- * the You tab composes the play intents — the tab owns its citation and nothing drawn under it.
- */
-export { GamesSection } from './components/GamesSection';
-
-/**
- * One game, on the screen a row pushes — and most of it is the result argument.
+ * One game, on the screen a card pushes — and most of it is the result argument.
  *
  * The route validates its param and hands over a `gameId`; everything else on that screen is
  * derived from the one list this feature reads.
@@ -30,9 +28,10 @@ export { GameScreen, type GameScreenProps } from './components/GameScreen';
 
 /**
  * The route's own check on the id it is handed, because a route param is attacker-controlled and
- * this one becomes a path that appends a score to somebody's stream.
+ * this one becomes a path that appends a score to somebody's stream — and **where that route is**,
+ * for the feature that pushes it.
  */
-export { parseGameRouteParams, type GameRouteParams } from './schemas/routeParams';
+export { GAME_ROUTE, parseGameRouteParams, type GameRouteParams } from './schemas/routeParams';
 
 /**
  * **This feature's cache key**, crossed for the one act outside it that opens a game.
@@ -65,6 +64,25 @@ export { gameKeys } from './hooks/gameKeys';
  * yours having that id.
  */
 export { useGame } from './hooks/useGames';
+
+/**
+ * **Every game of yours, in one list** — for the feature that composes Now's rail over it.
+ *
+ * `useGame` is the lookup inside this same answer; the rail needs the whole of it, plus the read's
+ * own pending and error states, because a section that vanished on a failed read would be
+ * indistinguishable from a player with no games.
+ */
+export { useGames } from './hooks/useGames';
+
+/**
+ * **What a game is asking of you, in one sentence** — the card's gloss wherever the ladder has
+ * nothing to add.
+ *
+ * The same line the screen behind the card says, so a player who reads a card, taps it and finds
+ * a different deadline is not a state this can reach. What crosses is the sentence and not the
+ * fold: `resultArgument` and `GameStanding` stay this feature's.
+ */
+export { gameStandingLine } from './components/gamePresentation';
 
 /** What a game is, for the feature that draws a plan beside one. */
 export type { Game } from './domain/game';

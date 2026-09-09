@@ -20,6 +20,18 @@
  */
 
 /**
+ * **The Now tab's rail** — `YOUR GAMES · n`, one card, swipe
+ * ([#367](https://github.com/Raketa02/Raketa/issues/367)).
+ *
+ * Composed by the shell under the tab's own sentences, which it is handed: the tab owns its words
+ * and nothing that is drawn under them. The rail and the card are here rather than in
+ * `features/games` because a card needs **both halves** — the ladder that names it reads a plan,
+ * and ADR-0149 §1's arrow runs one way
+ * ([`the-loop-components.md`](../../../../docs/specs/the-loop/the-loop-components.md) §3.4).
+ */
+export { GamesRail, type GamesRailProps } from './components/GamesRail';
+
+/**
  * **The plan card, pinned under a room's header** — the three slot chips, and nothing else.
  *
  * Handed a game id and whether the account may write; it does the join over the two lists the app

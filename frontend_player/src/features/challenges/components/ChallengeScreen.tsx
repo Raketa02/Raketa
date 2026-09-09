@@ -69,7 +69,7 @@ import {
   forecastHeading,
   useFillChallengeSeats,
 } from '@/features/play/types';
-import { OPEN_THE_CHAT, useChatDoor } from '@/features/conversations/types';
+import { CONVERSATION_ROUTE, OPEN_THE_CHAT, useChatDoor } from '@/features/conversations/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { ShellScreen } from '@/features/shell/types';
 import { useCurrentUser } from '@/features/auth/types';
@@ -124,15 +124,6 @@ import { WithdrawSheet } from './WithdrawSheet';
  * reason, one tab over.
  */
 export const fillRoute = (challengeId: string) => `/chats/challenge/${challengeId}/fill` as const;
-
-/**
- * **The room this challenge opened.**
- *
- * Spelled as the row that draws it does, and reached with a conversation id rather than this
- * challenge's: they are different ids of different things, which is exactly why both segments
- * under `/chats` carry a static kind above them.
- */
-const CONVERSATION_ROUTE = '/chats/conversation/[conversationId]';
 
 export interface ChallengeScreenProps {
   /** Validated by `schemas/routeParams.ts` before it reaches here; the route does that. */

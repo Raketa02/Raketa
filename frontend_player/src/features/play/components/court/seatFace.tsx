@@ -28,7 +28,10 @@
  */
 
 import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { formatLevel } from '@/shared/formatting/ratingFormat';
+import { theme } from '@/shared/ui';
 
 import { CandidatePhoto, candidatePhotoRadius } from '../candidate/CandidatePhoto';
 
@@ -99,4 +102,107 @@ export function SeatFace({ size, occupant, ring, children }: SeatFaceProps) {
 const s = StyleSheet.create({
   // Only the empty seat centres anything: a face fills its box, and a plus stands in one.
   empty: { alignItems: 'center', justifyContent: 'center' },
+});
+
+// ---------------------------------------------------------------------------
+// The identifier under the face
+// ---------------------------------------------------------------------------
+
+/**
+ * How much of a handle a seat draws — **three characters, and the whole of the rule.**
+ *
+ * Exported so the test that pins it is testing the rule rather than a slice written twice.
+ */
+export const SEAT_NAME_LETTERS = 3;
+
+/** The drawn identifier: the handle's first three characters, and never a mark for the rest. */
+export function seatCaptionName(name: string): string {
+  return name.slice(0, SEAT_NAME_LETTERS);
+}
+
+export interface SeatCaptionProps {
+  /** The seat's face size. The caption hangs `space.xxs` below it. */
+  readonly size: number;
+  /** The **whole** handle. It is cut here and never by the caller — see the module note. */
+  readonly name: string;
+  /**
+   * The Skill level, where the record still holds one.
+   *
+   * Absent on an empty seat, on a withheld one whose card is gone with its handle, and on a
+   * **game's** seat, which carries a handle and nothing else about the person in it
+   * ([ADR-0141](../../../../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)).
+   */
+  readonly level?: number;
+}
+
+/**
+ * **The identifier under a face, and it is three letters** — 7.12's caption, drawn by all three
+ * courts that have one.
+ *
+ * It moved here from `CourtSeat` when Now's card drew the third court
+ * ([#367](https://github.com/Raketa02/Raketa/issues/367)). The rule and the geometry travel
+ * together on purpose: the three-character cut was already exported so a test could pin it, and
+ * the negative insets, the `tag` role and the media shadow are the half a second copy would have
+ * drifted on first.
+ *
+ * Sixty-four characters of handle in a 46pt seat is about four, so the visible label is not the
+ * name and cannot be: it draws the first three, **hard, with no ellipsis**, because an ellipsis
+ * spends one of four characters saying *there was more* on a caption whose whole job is telling
+ * four faces apart. **The sentence and the spoken name stay whole** — a truncation of a drawing
+ * invents nothing, which is the only thing
+ * [ADR-0107](../../../../../../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)
+ * forbids.
+ *
+ * **Hidden**, always: the seat around it already carries the whole handle and the level in its
+ * own name, so this is the same word cut short and the same figure.
+ */
+export function SeatCaption({ size, name, level }: SeatCaptionProps) {
+  return (
+    <View
+      style={[c.caption, { top: size + theme.space.xxs }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      {/* `clip` rather than `tail`: the cut is already made, so an ellipsis here could only
+          appear where a three-character word somehow overran, and it would be a mark nobody
+          could act on. `numberOfLines` stays, because Dynamic Type can still overrun. */}
+      <Text style={c.label} numberOfLines={1} ellipsizeMode="clip">
+        {seatCaptionName(name)}
+      </Text>
+      {level === undefined ? null : (
+        <Text style={c.level} numberOfLines={1}>
+          {formatLevel(level)}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+const c = StyleSheet.create({
+  // Wider than the face it sits under, because the name and the level share its one line —
+  // absolutely positioned, so the negative insets take room from nothing.
+  caption: {
+    position: 'absolute',
+    left: -theme.space.sm,
+    right: -theme.space.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.space.xxs,
+  },
+  label: {
+    ...theme.type.tag,
+    ...theme.shadow.textOnMedia,
+    color: theme.color.surface,
+    textAlign: 'center',
+  },
+  // Mono and tabular, because four of these are read down a court against each other — 1.4's
+  // whole reason for mono, and the comparison the side strengths above cannot answer.
+  level: {
+    ...theme.num.xs,
+    ...theme.tabular,
+    ...theme.shadow.textOnMedia,
+    color: theme.color.surface,
+    textAlign: 'center',
+  },
 });

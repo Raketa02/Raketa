@@ -30,15 +30,17 @@ export { TabShell } from './components/TabShell';
 export { ShellScreen, type ShellScreenProps } from './components/ShellScreen';
 
 /**
- * The three placeholder lines, read outside this feature by one thing: the test harness, which
+ * The two placeholder lines, read outside this feature by one thing: the test harness, which
  * asserts *the player is in the app* and needs to know what that looks like now that the landing
  * is the Now tab.
  *
- * `CHATS_COPY` is beside it for the same reason and one more: the Chats inbox's own suite asserts
- * the tab's sentences rather than string literals, because the wording is this file's to change
- * and the rules the sentences carry are not.
+ * `NOW_COPY` is what that harness actually reads since the rail replaced Now's placeholder
+ * ([#367](https://github.com/Raketa02/Raketa/issues/367)), and `CHATS_COPY` is beside them for the
+ * same reason and one more: each built tab's own suite asserts the tab's sentences rather than
+ * string literals, because the wording is this file's to change and the rules the sentences carry
+ * are not.
  */
-export { CHATS_COPY, PLACEHOLDER_COPY } from './components/shellCopy';
+export { CHATS_COPY, NOW_COPY, PLACEHOLDER_COPY } from './components/shellCopy';
 
 export { AroundScreen, NowScreen, YouScreen } from './components/tabScreens';
 

@@ -238,9 +238,13 @@ export {
   type CourtSeatProps,
 } from './components/court/CourtSeat';
 export {
+  SEAT_NAME_LETTERS,
+  SeatCaption,
   SeatFace,
   seatBox,
+  seatCaptionName,
   type CourtFaceOccupant,
+  type SeatCaptionProps,
   type SeatFaceProps,
 } from './components/court/seatFace';
 export { seatWho, type SeatWho } from './components/court/seatWho';

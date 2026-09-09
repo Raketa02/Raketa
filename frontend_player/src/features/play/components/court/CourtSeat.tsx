@@ -74,15 +74,13 @@
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { formatLevel } from '@/shared/formatting/ratingFormat';
-
 import { Plus, theme } from '@/shared/ui';
 
 import type { SeatPlace } from '../../domain/lineup';
 import type { UnfilledReason } from '../../domain/vocabulary';
 import { clearSeatLabel, seatLabel } from '../accessibilityPresentation';
 
-import { SeatFace, seatBox } from './seatFace';
+import { SeatCaption, SeatFace, seatBox } from './seatFace';
 import { seatWho } from './seatWho';
 
 /**
@@ -190,18 +188,6 @@ export interface CourtSeatProps {
    */
 }
 
-/**
- * How much of a handle a seat draws — **three characters, and the whole of the rule.**
- *
- * Exported so the test that pins it is testing the rule rather than a slice written twice.
- */
-export const SEAT_NAME_LETTERS = 3;
-
-/** The drawn identifier: the handle's first three characters, and never a mark for the rest. */
-export function seatCaptionName(name: string): string {
-  return name.slice(0, SEAT_NAME_LETTERS);
-}
-
 export function CourtSeat({ size, place, occupant, selected, onPress, onClear }: CourtSeatProps) {
   const who = seatWho(occupant);
   const box = seatBox(size);
@@ -233,27 +219,13 @@ export function CourtSeat({ size, place, occupant, selected, onPress, onClear }:
       </Pressable>
 
       {/* Under the face and outside the court's own box for this seat, which is the face and
-          nothing more. Hidden, because the seat's spoken name already carries both the whole
-          handle and the level — this is the same word cut short and the same figure. */}
-      <View
-        style={[s.caption, { top: size + theme.space.xxs }]}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        {/* `clip` rather than `tail`: the cut is already made, so an ellipsis here could only
-            appear where a three-character word somehow overran, and it would be a mark nobody
-            could act on. `numberOfLines` stays, because Dynamic Type can still overrun. */}
-        <Text style={s.label} numberOfLines={1} ellipsizeMode="clip">
-          {seatCaptionName(who.name)}
-        </Text>
-        {/* The Skill level, where the record still holds one. Absent on an empty seat, which
-            has nobody to have one, and on a withheld one, whose card is gone with its handle. */}
-        {who.level === undefined ? null : (
-          <Text style={s.level} numberOfLines={1}>
-            {formatLevel(who.level)}
-          </Text>
-        )}
-      </View>
+          nothing more. The cut, the geometry and the hiding are `SeatCaption`'s, shared with
+          the two courts that draw one without a seat around it. */}
+      <SeatCaption
+        size={size}
+        name={who.name}
+        {...(who.level === undefined ? {} : { level: who.level })}
+      />
 
       {onClear === undefined ? null : (
         <Pressable
@@ -283,32 +255,6 @@ export function CourtSeat({ size, place, occupant, selected, onPress, onClear }:
 const s = StyleSheet.create({
   // 6.6's photo-tile value, for both of this file's pressables.
   pressed: { opacity: 0.7 },
-  // Wider than the face it sits under, because the name and the level share its one line —
-  // absolutely positioned, so the negative insets take room from nothing.
-  caption: {
-    position: 'absolute',
-    left: -theme.space.sm,
-    right: -theme.space.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.space.xxs,
-  },
-  label: {
-    ...theme.type.tag,
-    ...theme.shadow.textOnMedia,
-    color: theme.color.surface,
-    textAlign: 'center',
-  },
-  // Mono and tabular, because four of these are read down a court against each other — 1.4's
-  // whole reason for mono, and the comparison the side strengths above cannot answer.
-  level: {
-    ...theme.num.xs,
-    ...theme.tabular,
-    ...theme.shadow.textOnMedia,
-    color: theme.color.surface,
-    textAlign: 'center',
-  },
   clear: {
     position: 'absolute',
     top: 0,

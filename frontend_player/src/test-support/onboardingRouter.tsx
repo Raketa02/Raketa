@@ -47,7 +47,7 @@ import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
-import { PLACEHOLDER_COPY } from '@/features/shell/types';
+import { NOW_COPY } from '@/features/shell/types';
 import { beginSession } from '@/shared/lib/auth';
 import {
   ImagePickingProvider,
@@ -66,11 +66,16 @@ import { json, type Transport, type Wire } from './transport';
  *
  * The gate's fourth destination is the shell's root, and the shell's root is the Now tab, so
  * every suite that asserts a launch, a finish or a commit landed in the app is asserting this
- * sentence. Taken from the shell's own copy rather than spelled here, because a placeholder is
- * exactly the kind of sentence that gets reworded and eight suites holding a string literal is
- * eight red tests for a wording change.
+ * sentence. Taken from the shell's own copy rather than spelled here, because this is exactly the
+ * kind of sentence that gets reworded and eight suites holding a string literal is eight red tests
+ * for a wording change.
+ *
+ * It was the tab's **placeholder** line until [#367](https://github.com/Raketa02/Raketa/issues/367)
+ * built the rail, and it is now the tab's **empty** line — which every one of these suites draws,
+ * because `stubGate` stubs the games list to nothing and a launch that arrives with no games is
+ * the state they are all asserting.
  */
-export const NOW_TAB_LINE = PLACEHOLDER_COPY.now.line;
+export const NOW_TAB_LINE = NOW_COPY.empty.line;
 
 export const ONBOARDING_ROUTES = {
   _layout: TestRoot,

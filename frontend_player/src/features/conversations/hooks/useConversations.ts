@@ -90,3 +90,23 @@ export function useChatDoor(challengeId: string): string | undefined {
 
   return data?.find((room) => room.challengeId === challengeId)?.conversationId;
 }
+
+/**
+ * **The same join, over a list** — every room this player holds, keyed by the challenge that
+ * opened it.
+ *
+ * A rail of games needs a door per card and a hook cannot be called in a loop, so the join runs
+ * **once at the surface** and each card is handed the answer for its own challenge. That is also
+ * what keeps [`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md)
+ * §3.4's rule true of the card: it is handed the game, the plan beside it and the address of the
+ * room, and reaches for nothing itself.
+ *
+ * It fails soft exactly as {@link useChatDoor} does, and for the same two reasons — a room opens
+ * on the first acceptance and is destroyed when the episode ends, so a missing entry is the
+ * ordinary state and never an error.
+ */
+export function useChatDoors(): ReadonlyMap<string, string> {
+  const { data } = useConversations();
+
+  return new Map((data ?? []).map((room) => [room.challengeId, room.conversationId]));
+}

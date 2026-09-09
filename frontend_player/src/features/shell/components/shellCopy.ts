@@ -1,5 +1,5 @@
 /**
- * What the three unbuilt tabs say, and what the Chats tab says.
+ * What the two unbuilt tabs say, and what the two built ones say.
  *
  * **These are citations, not filler.** Each placeholder line is one sentence naming what its
  * tab will be, plus that it is not built — and two of the three are decided elsewhere, so the
@@ -8,22 +8,23 @@
  *
  * | Tab | Where the line comes from |
  * | --- | --- |
- * | Now | The landing after onboarding, and the landing after a send |
  * | Around | Nothing decided: it states the tab's job and stops |
  * | You | [#226](https://github.com/Raketa02/Raketa/issues/226) — the grid, the radius and the declaration are exactly the three facts on the wire |
  *
- * **Play is not among them, and Chats has now left too.** Play's stub was replaced by the
- * screen itself ([#268](https://github.com/Raketa02/Raketa/issues/268)); Chats' line — *"a chat
- * opens when somebody accepts"* — was a citation of
+ * **Three tabs have left this table and none of them was deleted.** Play's stub was replaced by
+ * the screen itself ([#268](https://github.com/Raketa02/Raketa/issues/268)); Chats' line — *"a
+ * chat opens when somebody accepts"* — was a citation of
  * [#221](https://github.com/Raketa02/Raketa/issues/221), and `CHATS_COPY` below is that same
  * citation said properly on a tab that is built
- * ([#360](https://github.com/Raketa02/Raketa/issues/360)). Three tabs remain unbuilt, and
- * `PlaceholderTab` excludes the two that are not.
+ * ([#360](https://github.com/Raketa02/Raketa/issues/360)); and **Now's died with the rail**
+ * ([#367](https://github.com/Raketa02/Raketa/issues/367)), replaced by `NOW_COPY` below. Two tabs
+ * remain unbuilt, and `PlaceholderTab` excludes the three that are not.
  *
- * **Now deliberately never says "nothing is happening."** It is where a send lands, so a
- * placeholder asserting emptiness would be lying one tap after a challenge went out. Naming
- * the tab's job is true in both states, which is the test the line has to pass and the test
- * `shellCopy.test.ts` holds it to.
+ * **No sentence here may say "nothing is happening."** It began as Now's refusal — Now is where a
+ * send lands, so a placeholder asserting emptiness would be lying one tap after a challenge went
+ * out — and it now governs every empty state the shell writes, on both of the built tabs. Naming
+ * what a tab **is** is true in both states, which is the test each line has to pass and the test
+ * `shellCopy.test.ts` holds them to.
  *
  * The em dash is a dash and not a colon on purpose: *not built yet* is an aside about the
  * app, not a second clause of the sentence about the tab.
@@ -37,14 +38,10 @@ export interface PlaceholderCopy {
   readonly line: string;
 }
 
-/** The three tabs that ship unbuilt. Play and Chats are built and are not among them. */
-export type PlaceholderTab = Exclude<TabBarKey, 'play' | 'chats'>;
+/** The two tabs that ship unbuilt. Now, Play and Chats are built and are not among them. */
+export type PlaceholderTab = Exclude<TabBarKey, 'now' | 'play' | 'chats'>;
 
 export const PLACEHOLDER_COPY = {
-  now: {
-    title: 'Now',
-    line: 'What is happening today and next — not built yet',
-  },
   around: {
     title: 'Around',
     line: 'Players and courts near you — not built yet',
@@ -96,4 +93,35 @@ export const CHATS_COPY = {
    * answer away from a room, and the sentence has to be true of them too.
    */
   emptyConversations: 'The moment somebody accepts, the two of you can talk here.',
+} as const;
+
+/**
+ * **The Now tab's own sentences** — its title, and what it says when it holds no games
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22.7).
+ *
+ * `PLACEHOLDER_COPY.now` **died with the rail** ([#367](https://github.com/Raketa02/Raketa/issues/367)),
+ * and an empty Now would then have been a blank screen, which is worse than the citation it
+ * replaced. So there are two lines and they are here rather than in `features/plans` for §1's
+ * reason: the heading over the rail is that feature's because it names its own content, and these
+ * are about the **tab**.
+ *
+ * **The first says what Now is**, in the present tense and true whether or not anything is on it;
+ * **the second names the act**, which is 10.1's empty-state rule. Neither may assert that nothing
+ * is happening — Now's oldest refusal, and the one `shellCopy.test.ts` still holds every line in
+ * this file to.
+ *
+ * **The bolt is not drawn.** §22.7 writes the second line as `⚡ Play finds you one.`, and 10.2 is
+ * explicit that *"the ⚡ is `zap` and never the character"*: `U+26A1` carries
+ * `Emoji_Presentation=Yes`, so a bare one in a muted sentence renders as a colour emoji that this
+ * app's `color` has nothing to apply to. The tab's own drawn name is `Play`, and that is the word
+ * this sentence points at — the same deletion `FILL_THE_SEATS` already made one screen over.
+ */
+export const NOW_COPY = {
+  title: 'Now',
+  empty: {
+    line:
+      'Every game you arrange shows up here — what is agreed, what is today, and what still ' +
+      'needs a score.',
+    act: 'Play finds you one.',
+  },
 } as const;

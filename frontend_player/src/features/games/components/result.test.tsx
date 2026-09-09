@@ -175,13 +175,20 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
-/** Land in the app with these games, and open the first of them from the Now tab. */
+/**
+ * Land in the app with these games, and open the first of them from Now's rail.
+ *
+ * Matched on the card's **sport clause** rather than on the whole name: the rail's card is named
+ * for what the game is asking of the reader, so the tag that opens the sentence changes with every
+ * state this file walks ([#367](https://github.com/Raketa02/Raketa/issues/367)). The sport is the
+ * one part of that name every card carries, and it is what tells two games apart.
+ */
 async function openGame(served: Wire['GameSchema'], sport = 'Padel') {
   stubGames(transport, [served], READ_AT);
   await launchSignedIn();
 
-  const row = await screen.findByLabelText(new RegExp(`^${sport} · with `));
-  fireEvent.press(row);
+  const card = await screen.findByLabelText(new RegExp(`${sport}, `));
+  fireEvent.press(card);
   await waitFor(() => expect(screen).toHavePathname(`/games/${GAME_ID}`));
 }
 
@@ -206,28 +213,23 @@ const bodies = (path: string) => transport.requestsTo('POST', path).map((request
 const refusal = (code: string) =>
   new AppError('conflict', 'business-conflict', 'test failure', { code });
 
-describe('the list on the Now tab', () => {
+describe("the card on Now's rail", () => {
+  /**
+   * **The card's sentence is the screen's sentence**, still — the rail is `features/plans`' since
+   * [#367](https://github.com/Raketa02/Raketa/issues/367), but the gloss it draws under a game that
+   * is not being arranged is this feature's `gameStandingLine`, so a player who reads a card, taps
+   * it and finds a different deadline is the state one caller exists to prevent.
+   *
+   * What the empty rail draws is the rail's own suite's, and moved there with it.
+   */
   it('says what each game is asking, and the screen says the same sentence', async () => {
     const served = awaitingAnswer('B');
     stubGames(transport, [served], READ_AT);
     await launchSignedIn();
 
-    // The row's own sentence is the screen's: a player who reads a row, taps it and finds a
-    // different deadline is the state `standingLine` having one caller exists to prevent.
     const line = await screen.findByText(/If you say nothing for 23 hours/);
 
     expect(line).toBeTruthy();
-  });
-
-  /**
-   * Now *"deliberately never says nothing is happening"*, and a challenge whose line-up has not
-   * completed is not a game yet — so an empty list draws no section rather than an emptiness.
-   */
-  it('draws nothing at all when there are no games', async () => {
-    await launchSignedIn();
-    await screen.findByText(/not built yet/);
-
-    expect(screen.queryByText('Your games')).toBeNull();
   });
 });
 

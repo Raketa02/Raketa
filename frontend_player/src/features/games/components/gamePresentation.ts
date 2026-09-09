@@ -68,7 +68,7 @@ import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Game } from '../domain/game';
-import { othersOn, type ResultArgument } from '../domain/resultArgument';
+import { othersOn, resultArgument, type ResultArgument } from '../domain/resultArgument';
 import type { ScoreKey, ScoreProblem } from '../domain/score';
 import { scoreColumn, type GameKind, type Outcome } from '../domain/vocabulary';
 
@@ -77,14 +77,11 @@ import type { ScoreView } from './gameAccessibility';
 import { durationLeft, durationSince } from '@/shared/formatting/durations';
 
 // ---------------------------------------------------------------------------
-// The list
+// The head of the screen
 // ---------------------------------------------------------------------------
 
-/** The heading over the games on the Now tab. */
-export const GAMES_HEADING = 'Your games';
-
 /**
- * The eyebrow on a row and at the head of the screen: the sport, **who you played**, and how
+ * The eyebrow at the head of the screen: the sport, **who you played**, and how
  * long ago it was arranged.
  *
  * **A duration and never a date**, because this platform has no calendar to print one against —
@@ -134,6 +131,25 @@ function withWhom(others: readonly NamedPlayer[]): string {
  * different deadline.
  */
 export const NOT_YOURS_LINE = 'No game of yours has this address.';
+
+/**
+ * **The same sentence, for a surface that holds a game and not an argument** — the one thing
+ * this deck says outside its own feature.
+ *
+ * Now's card is `features/plans`' ([#367](https://github.com/Raketa02/Raketa/issues/367)) and the
+ * gloss it draws under an ended or argued game is this line: what the card adds for the four
+ * `AWAITING_ENTRY` rungs is written there, and for everything else the sentence already exists,
+ * has a test, and is the one the screen behind the card says. So what crosses the seam is the
+ * **sentence** rather than the fold and the deck — a surface that reached for `resultArgument`
+ * would be reading a `GameStanding` outside the one file allowed to
+ * ([`resultArgument.ts`](../domain/resultArgument.ts)).
+ *
+ * It takes the game rather than the pair because the instant is the game's: `readAt` travels on
+ * every row precisely so a screen holding one game does not have to be handed the list's fold.
+ */
+export function gameStandingLine(game: Game, playerId: string): string {
+  return standingLine(resultArgument(game, playerId), game.readAt);
+}
 
 export function standingLine(argument: ResultArgument, readAt: string): string {
   switch (argument.kind) {

@@ -61,6 +61,18 @@ export { parseConversationRouteParams, type ConversationRouteParams } from './sc
 export { OPEN_THE_CHAT } from './components/conversationPresentation';
 
 /**
+ * **Where that door goes**, spelled once for every surface that opens a room.
+ *
+ * Three features now push it — the challenge screen's half-built court, Now's card, and the row
+ * itself — and each of the first two had begun by re-spelling the path at the call site. That is
+ * the drift `GAME_ROUTE` was promoted out of a component to stop
+ * ([#367](https://github.com/Raketa02/Raketa/issues/367)): *a second spelling of it at the call
+ * site is how one of them goes stale.* Both segments under `/chats` carry a static kind above the
+ * id, because a challenge id and a conversation id are different ids of different things.
+ */
+export { CONVERSATION_ROUTE } from './components/ConversationRow';
+
+/**
  * **Where the chat door goes, from a challenge** — the client join ADR-0149 §3 settles.
  *
  * No route serves a challenge its conversation and ADR-0146 forbids one context holding the
@@ -68,7 +80,7 @@ export { OPEN_THE_CHAT } from './components/conversationPresentation';
  * **It fails soft**: no row is the ordinary state rather than an error, because a room opens on
  * the first acceptance and is destroyed when the episode ends.
  */
-export { useChatDoor } from './hooks/useConversations';
+export { useChatDoor, useChatDoors } from './hooks/useConversations';
 
 /**
  * **The rooms' query key**, exported for the one thing outside this feature that can change the

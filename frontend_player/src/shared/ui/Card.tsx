@@ -24,11 +24,22 @@ import { theme } from './theme';
 
 export interface CardProps {
   readonly children: ReactNode;
+  /**
+   * 5.1's pressed border, drawn on a card whose **control is inside it** rather than around it.
+   *
+   * Now's game card is the one such surface: it carries two actions — the body, which is the
+   * whole statement, and the ✉ beside it, which goes somewhere else — so it cannot be a
+   * `PressableCard` without swallowing the second into the first's one accessibility element
+   * ([#367](https://github.com/Raketa02/Raketa/issues/367)). What it still owes the player is the
+   * press *state*, and that is this: the same coral outline `PressableCard` draws, from the same
+   * table, so a second surface cannot draw a different one.
+   */
+  readonly pressed?: boolean;
   readonly style?: StyleProp<ViewStyle>;
 }
 
-export function Card({ children, style }: CardProps) {
-  return <View style={[s.card, style]}>{children}</View>;
+export function Card({ children, pressed = false, style }: CardProps) {
+  return <View style={[s.card, pressed ? s.pressed : undefined, style]}>{children}</View>;
 }
 
 export interface PressableCardProps extends CardProps {

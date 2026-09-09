@@ -49,8 +49,9 @@ refusal is followed by, and **the screen a challenge is answered on** — below;
 the room the first acceptance opens — the Chats tab's second section, and **the screen behind it**:
 the header, the stream, the composer and the quick chips, below; `plans` is the three slots that
 room fills in — the card pinned under its header, and the one place `where · day · hour` is an
-order, below; and `games` is the result argument — the list on Now, the screen a
-row pushes, and the entering, correcting, agreeing and disagreeing that close the loop, below.
+order — **and the Now rail over both of them**, the ladder that names a card and the nine cards it
+names, below; and `games` is the result argument — the screen a card pushes, and the entering,
+correcting, agreeing and disagreeing that close the loop, below.
 
 **The Chats tab is two sections, two contexts, two queries and two caches, and they are
 deliberately not merged** ([#363](https://github.com/Raketa02/Raketa/issues/363)). `CHALLENGES` is
@@ -267,13 +268,64 @@ column headed with a handle would charge a doubles score to one of them. Every h
 prototype's `✓` went the way the on-court mark's did — **Archivo ships no U+2713** — and the
 winner's row carries the word instead.
 
-**The list is a section on Now, composed the way You composes the play intents.** The tab keeps
-its own line and owns nothing drawn under it; the section renders **nothing at all** when there
-are no games, because _Now never says nothing is happening_ and a challenge whose line-up has not
-completed is not a game yet. A game is genuinely **pushed** over that list, which made it the
-first screen outside Play to take the shell's push transition and the first to need `shellTabs`
-to say which tab a segment is _inside_ — Now's root is `/`, so a screen over it cannot share its
-segment the way the builder shares Play's. Neither write is optimistic and neither overrides
+**Now stops being a placeholder, and what replaces it is a rail, a ladder and nine card states**
+([#367](https://github.com/Raketa02/Raketa/issues/367)). `PLACEHOLDER_COPY.now` is dead and
+`shellCopy.test.ts`'s _never says nothing is happening_ **moved with the copy rather than being
+deleted** — it was Now's refusal first. The tab keeps the shape it has always had: it owns its own
+sentences and nothing drawn under them, and the sentences are handed to `GamesRail`, which is
+`features/plans`' because a card needs a **plan** beside a **game** and ADR-0149 §1's arrow runs one
+way. **They are not gated on the read having landed**, and that is the point of how §22.7 worded
+them: _every game you arrange shows up here_ and _Play finds you one_ are true of a player with five
+games and of one with none, so there is nothing to hold them back for and holding them back would
+leave a blank screen. The bolt is not drawn, on 10.2's own rule.
+
+**The ladder is `domain/`, four rungs read in order, and the clock outranks the checklist** — _the
+agreed point has passed_ → Needs result, _the agreed day is today_ → Today, _all three slots
+filled_ → Game on, otherwise Planning. It is the single most drift-prone thing on the map: four card
+names, two tickets that each keyed a rule on it and one amendment already spent closing the hole
+between them, so it is one function every surface reads. The **agreed point** sits beside it — the
+agreed instant when day and hour are both recorded, the start of the following local day when only
+the day is, nothing when no day is, **later rather than earlier** so nobody is asked for a result
+before they could have played — and it is the server's field, never recomputed here. Everything
+folds against `GET /games`' own `read_at`, so **Now has one clock by construction** rather than by a
+rule anybody remembers: `GET /plans` deliberately carries none.
+
+**A rail, not a list.** `GamesSection` refused shelves in writing and a rail keeps that refusal by
+not being a list at all — a heading with a count, one card, a swipe, and nowhere to put a shelf. The
+card is 7.7's **paging** geometry at the content width, so it has **no peek**, which is what makes
+7.18's dots the affordance rather than decoration: they **track the scroll**, they are not
+pressable, and they say nothing, because the count is on the heading above them. The order is **the
+server's — newest arrangement first — and stable**, where a clock sort silently re-orders a player's
+cards between sessions; the cost is stated rather than hidden. **Endings keep a card for 24 h and
+then leave**, measured from the last instant the wire dates on the game, which is exact for one that
+never happened and early by at most one answer window for one that was played.
+
+**The card is tag · eyebrow · figure · line · gloss · court · footer, and every name is folded at
+read time** — no client state machine and no status column. The tag **is** the card's name and its
+dot is the **sport's**, with urgency carried by the whole pill; a standing this build cannot read
+draws **no tag**, because there is no name to say and the gap belongs in the line the standing
+_is_. The figure takes **three shapes** — the hour, the weekday when there is a day and no hour,
+nothing when there is no day — and the line takes whatever it did not, which is what keeps **the
+hour printed once**. The gloss is **one rule for three rungs**: the next unfilled slot in slot
+order, with _Needs result_ overriding it with the time left, so there is no fourth string to keep in
+step with the ladder — and everything that is not a rung already has a sentence, `features/games`'
+`gameStandingLine`, the same one the screen behind the card says. The court is 7.12 at `header`, and
+its seats are **generated posters plus 7.12's three-character caption** — the caption moved to
+`seatFace.tsx` when a third court needed one — with the unknown player's `?` for a seat `users` can
+no longer answer for.
+
+**The footer is a named door and the ✉, over 7.7's `marginTop: auto` hairline**, which is what
+aligns footers across cards of unequal height and the whole reason a rail can hold a 40pt figure
+beside none. **The button is a named door**: it carries the act's verb, it navigates, and it
+**never writes** — and the body goes wherever it goes, so the two are one action and one
+accessibility element whose name ends with that verb, which is why the drawn button is hidden. The
+✉ is the second element because it goes somewhere else, and it is drawn only where there is a room:
+the join fails soft, and an ending destroys a conversation rather than delisting it. **The ✉ is
+Feather `mail` and never the character**, on the bolt's own argument — Archivo ships no U+2709.
+A game is genuinely **pushed** over the rail, which made it the first screen outside Play to take
+the shell's push transition and the first to need `shellTabs` to say which tab a segment is
+_inside_ — Now's root is `/`, so a screen over it cannot share its segment the way the builder
+shares Play's. Neither write on the screen behind it is optimistic and neither overrides
 `networkMode`: a standing is folded from the record and the clock, so the only client that can be
 right about what a game becomes is one that asks, and the app's own test — _does this act carry a
 deadline the player chose?_ — answers no for both, where the challenge send answers yes.
@@ -290,11 +342,14 @@ Play leaves Play_. Both go through **one function**, `resetShellStack`: a flanki
 down one screen, `enterPlay` lays down two, and the second caller of `enterPlay` is the _Find
 a game_ segment, because re-entering the tab from inside it is arriving rather than going
 back. **A Play session ends exactly when the reset runs**, which is the definition the Play
-state ticket is owed. Four of the five tabs are **honest placeholders**: one sentence naming
-what the tab will be plus that it is not built, three of them citations of decisions taken
-elsewhere, and **Now never says "nothing is happening"** — it is where a send lands, so
-asserting emptiness would be a lie one tap after a challenge went out. `shellCopy.test.ts`
-holds that refusal. The **You** tab still carries the account panel, because signing out is
+state ticket is owed. **Two of the five tabs are honest placeholders** now that Now has a screen
+([#367](https://github.com/Raketa02/Raketa/issues/367)): one sentence naming what the tab will be
+plus that it is not built, one of them a citation of a decision taken elsewhere. **No sentence the
+shell writes says "nothing is happening"** — it began as Now's refusal, because Now is where a send
+lands and asserting emptiness would be a lie one tap after a challenge went out, and it now governs
+the two built tabs' empty states as well. `shellCopy.test.ts` holds that refusal, and it **moved
+with the copy** rather than being deleted when the placeholder it was written for died. The **You**
+tab still carries the account panel, because signing out is
 the only way back to the beginning and the shell arriving is what gave it a home. The bar's
 **transitions** follow the two moves: `none` by default, because a replace that slid in from
 the right would read as going deeper on the gesture whose meaning is that nothing was kept,
@@ -1160,7 +1215,11 @@ why `@expo/vector-icons` is **declared** in `package.json` rather than inherited
 `expo`: the app's primary navigation renders through it, and an SDK bump could move or drop
 it with no signal in this app's own manifest. Play's five arrivals join them — the **switch**
 (6.12), the **fit pill** (7.10), the **balance bar** (7.11), the **court** (7.12) and the
-availability grid's **diff variant** — and **none of them reclaims a deleted section number**,
+availability grid's **diff variant** — plus Now's one, the **rail's dots** (7.18), which are what a
+paging rail has **instead** of a peek rather than decoration hanging off one: they track the
+scroll, they are not pressable on 7.9's own `hitSlop` arithmetic, they carry the state in **width**
+as well as tone, and they say nothing at all, because the rail's count is on the heading above
+them. **None of them reclaims a deleted section number**,
 because a number in `docs/design-system.md` never moves: the fit badge and the balance bar
 went with their engines in the reset and come back at 7.10 and 7.11, leaving 7.1 and 7.2
 empty. With them, 9.2's **toast** is built: the queue, the live region and the dismiss,

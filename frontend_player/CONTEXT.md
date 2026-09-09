@@ -697,6 +697,56 @@ follows is only what this client had to invent to let a room fill one in
   _Avoid_: pre-empting it on the client — the platform has one opinion about _now_ and it is the
   server's.
 
+### Now
+
+Seven client-only concepts, all of them in `features/plans/` — the rail and its card are this
+feature's because a card needs a **plan** beside a **game** and ADR-0149 §1's arrow runs one way
+([`the-loop-components.md`](../docs/specs/the-loop/the-loop-components.md) §3.4). What follows is
+only what this client had to invent to draw what is happening today and next
+([#367](https://github.com/Raketa02/Raketa/issues/367)).
+
+- **The ladder** — the four rungs a game's card is named by, **read in order**, in
+  `domain/ladder.ts`: _the agreed point has passed_ → **Needs result**, _the agreed day is today_
+  → **Today**, _all three slots filled_ → **Game on**, otherwise **Planning**. The conditions
+  overlap on purpose and the order is what resolves them: **the clock outranks the checklist**
+  ([ADR-0145](../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md) §3),
+  so rungs 3 and 4 are reached only when the point has not passed and the day is not today.
+  _Avoid_: restating _and the moment still ahead_ as a condition of its own — the order already
+  says it — and reading any rung anywhere but here.
+- **The agreed point** — the moment a plan names: the agreed **instant** when the day and the hour
+  are both recorded, the **start of the following local day** when only the day is, and **nothing**
+  when no day is. **Later rather than earlier**, so nobody is asked for a result before they could
+  have played. It is the server's field and is never recomputed on this side. _Avoid_: deriving one
+  from the day and the hour here — that is a zone conversion, and a second answer to _when is this
+  game_ on one screen.
+- **The rail** — `YOUR GAMES · n`, **one card, swipe**. A rail rather than a list, because
+  _a game awaiting an entry, one awaiting an answer and one that never happened are one thing at
+  three moments of its life_ and a rail keeps that refusal by not being a list at all: there is
+  nowhere to put a shelf. The order is **the server's, newest arrangement first**, and it is
+  **stable** where a clock sort silently re-orders a player's cards between sessions. _Avoid_:
+  shelves, a re-sort, and calling it a list.
+- **The card name** — which of nine cards a game draws, folded at read time from the standing, the
+  slot count and the clock: the four rungs, **Confirm the result** (one name over four
+  `AWAITING_ANSWER` arms), **Counted**, **Uncounted**, **Never played**, and the named gap for a
+  standing this build cannot read. It is the **tag**, and its dot is the **sport's** — urgency is
+  the tag's own `warn`/`ok` variant, with the word beside it. _Avoid_: a status column, a client
+  state machine, and a sport dot on a card that names no sport.
+- **The figure and the line** — the card's one large slot and the row under it. The figure takes
+  **three shapes** — the hour, the **weekday** where there is a day and no hour, and **nothing**
+  where there is no day — and the line takes **whatever the figure did not**, which is what keeps
+  **the hour printed once**. _Avoid_: an absolute date, a countdown on either of them, and a second
+  figure slot for the word — the weekday is 3.3's `display`, which exists for exactly this.
+- **The gloss** — the one sentence the card adds: **the next unfilled slot in slot order**, or
+  _Nothing left to agree_ — with **Needs result overriding it** with the time left in the entry
+  window. One rule for three rungs, so there is no fourth string to keep in step with the ladder,
+  and the fuller account is the game screen's checklist. _Avoid_: a checklist on the card, listing
+  every unfilled slot, and restating the button.
+- **The named door** — the card's one control: it carries the **act's verb**, it **navigates**, and
+  it **never writes** — `Open` · `We played` · `Confirm the result`, one per rung, with the body
+  going wherever it goes and the **✉** beside it opening the room. An ending carries none: the app
+  does not name an act a state cannot take. _Avoid_: a second, quieter door behind the body, a
+  disabled control where a card offers nothing, and a door that writes.
+
 ### Data and errors
 
 - **Query key factory** — the per-feature object in `hooks/` defining every key, with

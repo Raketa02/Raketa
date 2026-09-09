@@ -31,7 +31,7 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { Game, Score } from '../domain/game';
+import type { Score } from '../domain/game';
 import type { ScoreDraft, ScoreKey } from '../domain/score';
 import type { GameSide } from '../domain/vocabulary';
 
@@ -39,7 +39,6 @@ import {
   ACCEPT_LABEL,
   COUNTER_LABEL,
   RUB_OUT_LABEL,
-  gameEyebrow,
   setLabel,
   setsCounted,
   spokenScore,
@@ -63,21 +62,6 @@ export interface ScoreView {
   /** The reader's side of the net. The flip into `a`/`b` happens inside, once. */
   readonly mine: GameSide;
   readonly sides: SpokenSides;
-}
-
-/**
- * A row in *Your games*: **the identifying facts, then what it is asking of you.**
- *
- * Identifying facts lead, which is §20.3's order and the reason it exists — a listener who has
- * heard enough interrupts and acts, and *what* they would be acting on has to come first.
- */
-export function gameRowLabel(
-  sportName: string,
-  game: Game,
-  playerId: string,
-  standing: string,
-): string {
-  return `${gameEyebrow(sportName, game, playerId)}. ${standing}`;
 }
 
 /**

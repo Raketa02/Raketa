@@ -85,8 +85,9 @@ Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `No
 and by the second part's photos step: `PhotoRow` with `PhotoTile`, `PhotoAddTile` and
 `PhotoPosterTile`, plus `CourtPoster`; and by its availability step: `AvailabilityGrid`
 with `Tick`; and by sign-up's age question: `TickBox`; and by Play: `TabBar`, `Switch`,
-`FitPill`, `BalanceBar`, `Court`, `Meter`, `Segment` and `Toast` with `ToastHost`. Import them
-from `@/shared/ui`.
+`FitPill`, `BalanceBar`, `Court`, `Meter`, `Segment` and `Toast` with `ToastHost`; and by the
+chat map: `TextField` (6.13, which auth's four boxes moved onto in the same commit) and
+`PagerDots` (7.18, Now's rail). Import them from `@/shared/ui`.
 
 **`Segment` is 6.3, specified since the document was locked and built only now.** Its own
 closing line is why it exists in that shape — _"nothing uses it today; it is specified so the

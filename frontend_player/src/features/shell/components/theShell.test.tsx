@@ -28,7 +28,7 @@ import { installTransport, json, type Transport, type Wire } from '@/test-suppor
 import { declarationOptionLabel } from '@/shared/vocabulary/playIntentPresentation';
 
 import { enterPlay } from './shellNavigation';
-import { PLACEHOLDER_COPY } from './shellCopy';
+import { NOW_COPY, PLACEHOLDER_COPY } from './shellCopy';
 
 /** One rating and a committed profile: the gate's fourth answer is *the app*. */
 const RATING: Wire['RatingResponse'] = {
@@ -75,7 +75,7 @@ afterEach(async () => {
 /** A player standing on the tab the entry gate lands them on. */
 async function launchIntoTheApp() {
   await launchSignedIn();
-  expect(await screen.findByText(PLACEHOLDER_COPY.now.line)).toBeTruthy();
+  expect(await screen.findByText(NOW_COPY.empty.line)).toBeTruthy();
 }
 
 /** Press one of the five columns by the name the bar gives it. */
@@ -192,7 +192,7 @@ describe('⚡Play', () => {
     // to be the last screen, it has Now underneath it.
     act(() => router.back());
 
-    expect(await screen.findByText(PLACEHOLDER_COPY.now.line)).toBeTruthy();
+    expect(await screen.findByText(NOW_COPY.empty.line)).toBeTruthy();
     expect(screen).toHavePathname('/');
   });
 

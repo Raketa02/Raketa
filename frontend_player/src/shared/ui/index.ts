@@ -68,6 +68,7 @@ export {
   type PhotoTileOptions,
   type PhotoTileProps,
 } from './PhotoTile';
+export { PagerDots, type PagerDotsProps } from './PagerDots';
 export { InfoMark, Popover, type InfoMarkProps, type PopoverProps } from './Popover';
 export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNavigator';
 export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
