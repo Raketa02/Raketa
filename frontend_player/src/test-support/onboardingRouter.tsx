@@ -403,6 +403,37 @@ export function stubConversations(
   );
 }
 
+/** The path one room answers on, for a suite that wants to open it. */
+export const conversationPath = (conversationId: string) =>
+  `${CONVERSATIONS_PATH}/${conversationId}`;
+
+/**
+ * **One room and its newest page**, as `GET /conversations/{id}` answers.
+ *
+ * `read_at` is one instant for the header and the page both, which is what the room's own clock
+ * questions are asked of — a suite that wants *the agreed day is today* to be true sets it here
+ * rather than mocking a clock.
+ */
+export function stubConversation(transport: Transport, room: Wire['ConversationResponse']) {
+  transport.on('GET', conversationPath(room.conversation_id), () => json(room));
+}
+
+/**
+ * **A page backward**, as `GET /conversations/{id}/entries` answers.
+ *
+ * The route is addressed without its query — the cursor is an argument to a route rather than a
+ * second route — so a suite asserting *which* cursor was asked for reads `transport.requests`.
+ */
+export function stubEntries(
+  transport: Transport,
+  conversationId: string,
+  entries: readonly (Wire['MessageSchema'] | Wire['SystemLineSchema'])[] = [],
+) {
+  transport.on('GET', `${conversationPath(conversationId)}/entries`, () =>
+    json<Wire['EntryPageResponse']>({ entries: [...entries] }),
+  );
+}
+
 export interface GateStub {
   readonly ratings?: readonly Wire['RatingResponse'][];
   /**

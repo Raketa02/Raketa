@@ -136,3 +136,89 @@ export function weekdayOf(day: string): Weekday | undefined {
 
   return ISO_WEEKDAYS[at.getUTCDay()];
 }
+
+/**
+ * **The one zone this platform arranges in.**
+ *
+ * A locale assumption rather than a constant to tune
+ * ([ADR-0144](../../../../../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)),
+ * and **its falsifier is the first shard whose players are somewhere else**. It is the same zone
+ * the plan's day and hour are recorded in, which is what lets a separator and a `DAY_RECORDED`
+ * line agree about which day Saturday is.
+ */
+export const PLATFORM_ZONE = 'Europe/Warsaw';
+
+/**
+ * The formatter behind {@link platformDay}, built once.
+ *
+ * **`formatToParts` rather than `format`**, because the parts are named and the layout is not: an
+ * `en-GB` date formats as `12/09/2026` and an `en-CA` one as `2026-09-12`, so a string assembled
+ * out of a locale's own order is a string that changes when somebody changes the locale. The
+ * parts are the same three whatever the locale does with them.
+ */
+const IN_THE_PLATFORM_ZONE = new Intl.DateTimeFormat('en-GB', {
+  timeZone: PLATFORM_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/**
+ * Which calendar day an instant falls on **in the platform's zone**, as `YYYY-MM-DD`.
+ *
+ * The one conversion the day separator needs, and the reason it is here rather than in a
+ * component: **a device zone would put two people in one room on two different days**
+ * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §3.3). A room
+ * lives at most a few days, so *was this today* is the one time-shaped fact worth drawing — and
+ * it is worth nothing at all if two phones disagree about it.
+ *
+ * It answers `undefined` for a value that is not an instant, which is the same nothing every
+ * other narrowing in this file answers with: there is no day to name and inventing one would be
+ * a claim about when something happened.
+ */
+export function platformDay(instant: string): string | undefined {
+  const at = new Date(instant);
+  if (Number.isNaN(at.getTime())) return undefined;
+
+  const parts = IN_THE_PLATFORM_ZONE.formatToParts(at);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((one) => one.type === type)?.value;
+
+  const [year, month, day] = [part('year'), part('month'), part('day')];
+
+  return year === undefined || month === undefined || day === undefined
+    ? undefined
+    : `${year}-${month}-${day}`;
+}
+
+/**
+ * When an entry happened — **the one field the two arms spell differently.**
+ *
+ * A message landed and a system line occurred, and both are the same fact for everything that
+ * orders or dates the stream. Read through one function so a reader of the union never has to
+ * remember which arm calls it what.
+ */
+export function entryMoment(entry: Entry): string {
+  return entry.kind === 'message' ? entry.sentAt : entry.occurredAt;
+}
+
+/**
+ * **The weekday to draw above an entry**, or nothing where it belongs under the separator that is
+ * already there.
+ *
+ * `previous` is the entry **before** it in the stream — older, whichever way the list is drawn.
+ * Absent means there is nothing before it in the page being held, and the separator is drawn: it
+ * labels the oldest day on screen, and paging backward moves it up onto whatever arrives.
+ *
+ * **There is no per-message timestamp anywhere and this is the whole of what replaces one.** A
+ * room lives days rather than months, so a clock beside every bubble is noise; what a reader
+ * wants is where one day stops and the next starts.
+ */
+export function separatorBefore(entry: Entry, previous: Entry | undefined): Weekday | undefined {
+  const day = platformDay(entryMoment(entry));
+  if (day === undefined) return undefined;
+
+  const before = previous === undefined ? undefined : platformDay(entryMoment(previous));
+
+  return before === day ? undefined : weekdayOf(day);
+}

@@ -69,6 +69,7 @@ import {
   forecastHeading,
   useFillChallengeSeats,
 } from '@/features/play/types';
+import { OPEN_THE_CHAT, useChatDoor } from '@/features/conversations/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { ShellScreen } from '@/features/shell/types';
 import { useCurrentUser } from '@/features/auth/types';
@@ -124,6 +125,15 @@ import { WithdrawSheet } from './WithdrawSheet';
  */
 export const fillRoute = (challengeId: string) => `/chats/challenge/${challengeId}/fill` as const;
 
+/**
+ * **The room this challenge opened.**
+ *
+ * Spelled as the row that draws it does, and reached with a conversation id rather than this
+ * challenge's: they are different ids of different things, which is exactly why both segments
+ * under `/chats` carry a static kind above them.
+ */
+const CONVERSATION_ROUTE = '/chats/conversation/[conversationId]';
+
 export interface ChallengeScreenProps {
   /** Validated by `schemas/routeParams.ts` before it reaches here; the route does that. */
   readonly challengeId: string;
@@ -174,6 +184,18 @@ function Arrangement({
   const fill = useFillChallengeSeats();
   const withdraw = useWithdrawChallenge();
   const online = useIsOnline();
+
+  /**
+   * **Where *Open the chat* goes**, or nothing — the client join ADR-0149 §3 settles, read here
+   * because this is the surface that draws the door.
+   *
+   * It fails soft by construction: a challenge nobody has answered has no room, and a room is
+   * destroyed when its episode ends, so the ordinary answer for both is **no door**. That is what
+   * keeps `LINE_UP_INCOMPLETE`'s arm honest — this standing always has a room, because it is
+   * reached by somebody accepting, and the absence is a list that has not landed yet rather than
+   * a state anybody has to explain.
+   */
+  const chat = useChatDoor(detail.challengeId);
 
   /**
    * Which of the two is in flight, so the pressed control is the one that goes busy.
@@ -335,8 +357,13 @@ function Arrangement({
              §1). `LINE_UP_INCOMPLETE` *is not a waiting room*: the people who are in are in,
              so what this arm offers is finishing the court rather than waiting for it.
 
-             ***Open the chat*** — the middle control — is the conversation's own door and is
-             drawn by the ticket that has a room to open. Until then this arm draws two. */
+             ***Open the chat*** is the middle one, and it is the conversation's own door: the
+             words are that feature's, so the three surfaces that draw one cannot say three
+             different things, and where it goes is a join over the player's rooms rather than a
+             field on this challenge (ADR-0149 §3). It is drawn only once that join answers —
+             **no door rather than a dead one** — which on this standing means once the list has
+             landed. It is `secondary` because there is one primary act on this screen and it is
+             finishing the court; opening a room you are already in is not it. */
               <View style={s.answers}>
                 {said}
                 {offline}
@@ -348,6 +375,20 @@ function Arrangement({
                   disabled={!online || withdraw.isPending}
                   onPress={fillTheSeats}
                 />
+
+                {chat === undefined ? null : (
+                  <Button
+                    label={OPEN_THE_CHAT}
+                    variant="secondary"
+                    disabled={fill.isPending || withdraw.isPending}
+                    onPress={() =>
+                      router.push({
+                        pathname: CONVERSATION_ROUTE,
+                        params: { conversationId: chat },
+                      })
+                    }
+                  />
+                )}
 
                 {/* A `View` around the button, because focus has to land on a **host element** this
                 component holds a ref to and `Button` is a component — `BottomSheet`'s own shape

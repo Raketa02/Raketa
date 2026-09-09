@@ -1,6 +1,6 @@
 /**
  * The screen header, per design-system 10.3 — eyebrow above, h1 below, an optional back
- * control and an optional right slot.
+ * control, an optional **lead** slot and an optional right slot.
  *
  * **The back control is opt-in and stays that way.** Most screens are somewhere a player
  * arrived at rather than walked into, and a header that drew a chevron by default would
@@ -24,6 +24,16 @@ import { theme } from './theme';
 export interface ScreenHeaderProps {
   readonly title: string;
   readonly eyebrow?: string;
+  /**
+   * Between the back control and the words — **whatever identifies what the title names.**
+   *
+   * The conversation is the first header with one: a room is named by the people in it, so their
+   * faces belong beside their handles rather than in the page under them, where the stream would
+   * scroll past them. It is a slot rather than a `faces` prop for `right`'s own reason — the
+   * header holds an arrangement and the screen holds what goes in it, and a header that knew what
+   * a face was would be the design system owning one, which #338 §5 refused by name.
+   */
+  readonly lead?: ReactNode;
   /** A segmented control, a close control — whatever the screen pins to the right. */
   readonly right?: ReactNode;
   readonly onBack?: () => void;
@@ -33,6 +43,7 @@ export interface ScreenHeaderProps {
 export function ScreenHeader({
   title,
   eyebrow,
+  lead,
   right,
   onBack,
   backLabel = 'Back',
@@ -51,6 +62,8 @@ export function ScreenHeader({
           <Text style={s.backMark}>{'‹'}</Text>
         </Pressable>
       ) : null}
+
+      {lead}
 
       <View style={s.titles}>
         {eyebrow !== undefined ? <Text style={s.eyebrow}>{eyebrow}</Text> : null}

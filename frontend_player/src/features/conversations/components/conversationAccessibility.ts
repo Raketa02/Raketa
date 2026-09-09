@@ -1,6 +1,7 @@
 /**
- * **What a conversation row announces** — written here, through the same mechanism the visible
- * words are, and never inlined in a component.
+ * **What a conversation announces** — the row in the tab, and every element of the room behind
+ * it. Written here, through the same mechanism the visible words are, and never inlined in a
+ * component.
  *
  * [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §24.2, on §20.1's one rule:
  *
@@ -40,3 +41,35 @@ export function conversationRowLabel(
 
   return said.join(', ');
 }
+
+/**
+ * **§20.1 gains its complement: a stream is navigated by its entries**
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §24.1).
+ *
+ * > **One accessibility element per action — and one per entry in an ordered stream.**
+ *
+ * §20.1 was written against a card and a grid, and a conversation's backlog has **no actions in
+ * it at all** — so the rule as written merges an entire history into one element a listener
+ * cannot move through. That is 6.8's own argument from the other side: *"21 buttons announce 21
+ * identical actions, where 21 checkboxes announce 21 answers."* A stream is navigated by entry,
+ * the way a grid is navigated by cell, and the complement is stated narrowly enough that it
+ * reaches nothing else on this map.
+ *
+ * **A bubble's name always names its author, even where the bubble does not.** The visible label
+ * is drawn only in a room of more than two, because side and ground disambiguate a pair — and
+ * *side and ground* is precisely what Part 13's **never colour as the only signal** refuses to
+ * let a listener depend on. The **whole handle**, never a familiar form (ADR-0107); *You* for the
+ * reader, which is `playerName`'s own arm and is right here because a bubble is addressed to the
+ * person reading it rather than being a third-person record of what happened.
+ */
+export function bubbleLabel(author: string, text: string): string {
+  return `${author}: ${text}`;
+}
+
+/**
+ * **The `Details` door names the destination rather than the screen** (§24.4).
+ *
+ * *Details* is a word about a screen, and every other door on this map is named by its act. The
+ * visible label is the design's and stays; this is what a listener arrives on.
+ */
+export const OPEN_THE_GAME = 'Open the game';

@@ -11,7 +11,13 @@ import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import type { SystemLine } from '../domain/entry';
 import type { ConversationMember } from '../domain/membership';
 
-import { conversationRowLine, entryLine, systemLineSentence } from './conversationPresentation';
+import {
+  OPEN_THE_CHAT,
+  QUICK_CHIP,
+  conversationRowLine,
+  entryLine,
+  systemLineSentence,
+} from './conversationPresentation';
 
 const TOMEK: ConversationMember = { playerId: 'tomek', nickname: 'tomek.p' };
 const OLA: ConversationMember = { playerId: 'ola', nickname: 'ola.k' };
@@ -170,7 +176,34 @@ describe('a room where nothing has happened yet', () => {
   /** The opening writes no line, so there is genuinely nothing there — and no sentence for it. */
   it('has no line at all, rather than one asserting that nothing has happened', () => {
     expect(
-      conversationRowLine({ conversationId: 'c1', sport: 'padel', members: MEMBERS }, 'one-line'),
+      conversationRowLine(
+        { conversationId: 'c1', challengeId: 'ch1', sport: 'padel', members: MEMBERS },
+        'one-line',
+      ),
     ).toBeUndefined();
+  });
+});
+
+describe('the quick chips', () => {
+  /**
+   * §22.4. **Each chip asks the question its slot is about and names nothing** — the prototype's
+   * three were a weekday, a part of day and one fixture venue, and *a chip naming Saturday is a
+   * chip that is wrong six days a week*.
+   */
+  it('asks a question per slot and names no day, no part of a day and no venue', () => {
+    expect(QUICK_CHIP.where).toBe('Where shall we play?');
+    expect(QUICK_CHIP.day).toBe('Which day works?');
+    expect(QUICK_CHIP.hour).toBe('What time?');
+    expect(QUICK_CHIP['on-my-way']).toBe('On my way');
+
+    const named = /monday|tuesday|wednesday|thursday|friday|saturday|sunday|morning|evening/i;
+    for (const words of Object.values(QUICK_CHIP)) expect(words).not.toMatch(named);
+  });
+});
+
+describe('the chat door', () => {
+  /** *The same words as every other chat door*, which is what one constant buys. */
+  it('is one sentence, owned here because what it opens is a conversation', () => {
+    expect(OPEN_THE_CHAT).toBe('Open the chat');
   });
 });

@@ -1,16 +1,22 @@
 /**
- * The conversation row's budget, and the one thing that makes it different from the challenge
- * row's.
+ * The conversation's two budgets — the row's, and the header's over the same face.
  *
- * The character it is measured in is `shared/formatting/handleList.ts`'s and is derived against
- * the real face there. What is checked here is this row's own furniture: the same face and the
- * same cluster, and **no trailing reserve**, because there is no stripe on a conversation row.
+ * The character both are measured in is `shared/formatting/handleList.ts`'s and is derived
+ * against the real face there. What is checked here is each surface's own furniture: the row
+ * keeps **no trailing reserve**, because there is no stripe on a conversation row; the header
+ * keeps one for the `Details` control on every room, drawn or not.
  */
 
 import { theme } from '@/shared/ui';
 import { NARROWEST_SCREEN } from '@/test-support/fontMetrics';
 
-import { FACE_OVERLAP, ROW_FACE, faceClusterWidth, handleBudget } from './conversationRowGeometry';
+import {
+  FACE_OVERLAP,
+  ROW_FACE,
+  faceClusterWidth,
+  handleBudget,
+  headerHandleBudget,
+} from './conversationGeometry';
 
 describe('the budget the row spends', () => {
   /**
@@ -53,5 +59,33 @@ describe('the cluster', () => {
     expect(faceClusterWidth(0)).toBe(0);
     expect(faceClusterWidth(1)).toBe(ROW_FACE);
     expect(faceClusterWidth(3)).toBeCloseTo(ROW_FACE * (1 + 2 * (1 - FACE_OVERLAP)), 5);
+  });
+});
+
+describe('the budget the header spends', () => {
+  /**
+   * The `Details` control is charged for on **every** room, drawn or not — so a header does not
+   * reflow its handles the moment a line-up completes and a game appears.
+   */
+  it('reserves the Details control whether or not there is a game to open', () => {
+    // The signature is the assertion: there is no *has a game* argument to reserve against, so
+    // the number cannot move when one appears. What is checked is that it is reserved at all —
+    // the header holds fewer characters than the row, over the same face and the same words.
+    expect(headerHandleBudget(NARROWEST_SCREEN, 1)).toBeLessThan(handleBudget(NARROWEST_SCREEN, 1));
+  });
+
+  it('shrinks as the room grows, because the same cluster is drawn beside the words', () => {
+    expect(headerHandleBudget(NARROWEST_SCREEN, 3)).toBeLessThan(
+      headerHandleBudget(NARROWEST_SCREEN, 1),
+    );
+  });
+
+  it('never goes under one character, because a header always names somebody', () => {
+    expect(headerHandleBudget(0, 3)).toBe(1);
+  });
+
+  /** One face size in this feature: a person is not two sizes two taps apart. */
+  it('draws the row’s own face', () => {
+    expect(ROW_FACE).toBe(38);
   });
 });

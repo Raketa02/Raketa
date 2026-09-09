@@ -9,7 +9,7 @@
  *
  * ## The conversation row holds the same three numbers, and they are spelled twice
  *
- * `conversations/components/conversationRowGeometry.ts` is the second copy of the face, the
+ * `conversations/components/conversationGeometry.ts` is the second copy of the face, the
  * overlap and the cluster, and this is the note that records it
  * ([#363](https://github.com/Raketa02/Raketa/issues/363)). **A third row is the signal to move
  * them**, which is `recoveryMessage.ts`'s own stated rule and the one

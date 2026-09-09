@@ -28,10 +28,47 @@ export {
 /**
  * **The screen a row opens** — mounted by `/chats/conversation/[conversationId]`.
  *
- * A landing today, and [#364](https://github.com/Raketa02/Raketa/issues/364)'s screen tomorrow.
- * See its own note for why it arrives with the row rather than after it.
+ * The header, the stream, the quick chips and the composer
+ * ([#364](https://github.com/Raketa02/Raketa/issues/364)). The plan card pinned under its header
+ * and the live channel behind it are [#366](https://github.com/Raketa02/Raketa/issues/366)'s and
+ * [#365](https://github.com/Raketa02/Raketa/issues/365)'s, and the screen's own note says where
+ * each goes.
  */
-export { ConversationScreen } from './components/ConversationScreen';
+export { ConversationScreen, type ConversationScreenProps } from './components/ConversationScreen';
+
+/**
+ * **The game behind a room** — mounted by `/chats/conversation/[conversationId]/details`.
+ *
+ * `GameScreen` at a second route with the join in front of it, which is ADR-0149 §5's shape and
+ * the reason the header's *Details* is a door rather than a drawn dead control.
+ */
+export {
+  ConversationGameDetails,
+  type ConversationGameDetailsProps,
+} from './components/ConversationGameDetails';
+
+/** Both routes' one param, validated before anything reads it. */
+export { parseConversationRouteParams, type ConversationRouteParams } from './schemas/routeParams';
+
+/**
+ * **The chat door's words, wherever it is drawn** — *"the same words as every other chat door"*.
+ *
+ * Exported because three surfaces outside this feature will draw one and the sentence is about a
+ * conversation: the challenge screen's half-built court is the first
+ * ([#362](https://github.com/Raketa02/Raketa/issues/362)), and the game screen's planning arms and
+ * Now's ✉ follow. One constant is what makes *the same words* true by construction.
+ */
+export { OPEN_THE_CHAT } from './components/conversationPresentation';
+
+/**
+ * **Where the chat door goes, from a challenge** — the client join ADR-0149 §3 settles.
+ *
+ * No route serves a challenge its conversation and ADR-0146 forbids one context holding the
+ * other's ids, so the surface reads *the player's rooms* and finds the one this challenge opened.
+ * **It fails soft**: no row is the ordinary state rather than an error, because a room opens on
+ * the first acceptance and is destroyed when the episode ends.
+ */
+export { useChatDoor } from './hooks/useConversations';
 
 /**
  * **The rooms' query key**, exported for the one thing outside this feature that can change the

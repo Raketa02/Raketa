@@ -60,7 +60,7 @@ import { memberName, othersIn } from '../domain/membership';
 
 import { conversationRowLabel } from './conversationAccessibility';
 import { conversationRowLine } from './conversationPresentation';
-import { FACE_OVERLAP, ROW_FACE, handleBudget } from './conversationRowGeometry';
+import { FACE_OVERLAP, ROW_FACE, handleBudget } from './conversationGeometry';
 
 /**
  * Where a row goes. Both segments under `/chats` carry a static kind above the id, because a

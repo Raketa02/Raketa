@@ -15,9 +15,14 @@
  *
  * **The label is a real `<Text>` bound to the input by `accessibilityLabel`, never a
  * placeholder.** A placeholder disappears the moment somebody types, which leaves a screen
- * reader — and anyone who looked away — with an unlabelled box. It is always drawn: a field
- * whose surroundings already name it — a composer under a conversation header — wants the
- * name without the drawing, and that prop arrives with the surface that needs one.
+ * reader — and anyone who looked away — with an unlabelled box.
+ *
+ * **`labelHidden` drops the drawing and keeps the name**, and it is the prop this component said
+ * would arrive with the surface that needed one: the composer sits under a header naming the
+ * people and the sport, with a `Send` beside it, so a `MESSAGE` label over it would be the one
+ * word on that screen nobody needs. A listener still gets it, because a listener has no header
+ * above the box and no button beside it to read the box off. **It is never a way to leave a field
+ * unnamed** — the name is required either way, and what this chooses is only whether it is drawn.
  *
  * **The reveal control belongs to the field, not to the screen that uses it.** A password box
  * that cannot be read back is the one place where a typo costs a whole form: the player
@@ -74,6 +79,10 @@ export interface TextFieldProps extends Omit<
 > {
   /** The drawn label, and the accessible name. */
   readonly label: string;
+  /**
+   * Draw the label or only speak it. See the module note — the name is required either way.
+   */
+  readonly labelHidden?: boolean;
   /** Shown under the field and announced. Absent when the field is fine. */
   readonly error?: string;
   /**
@@ -92,7 +101,7 @@ export interface TextFieldProps extends Omit<
 }
 
 export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
-  { label, error, reveal = false, growTo = 1, ...inputProps },
+  { label, labelHidden = false, error, reveal = false, growTo = 1, ...inputProps },
   ref,
 ) {
   const [focused, setFocused] = useState(false);
@@ -135,7 +144,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
       accessible={false}
       onPress={() => input.current?.focus()}
     >
-      <Text style={s.label}>{label}</Text>
+      {labelHidden ? null : <Text style={s.label}>{label}</Text>}
 
       {/* The border lives on the box rather than on the input, because the reveal control
           sits inside the same box and a border drawn around the input alone would cut it

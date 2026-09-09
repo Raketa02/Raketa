@@ -31,7 +31,7 @@
  * **This is the second copy of a section's shape, and it is recorded rather than extracted.**
  * `ChallengesSection` above it holds the same three conditional blocks, the same *has the list
  * landed and is the reader known* gate and the same three styles — and it is spelled again here
- * for the reason `conversationRowGeometry.ts` gives about the numbers: the only home a shared one
+ * for the reason `conversationGeometry.ts` gives about the numbers: the only home a shared one
  * could have is the **shell**, whose `types.ts` re-exports `TabShell` and therefore mounts both
  * features, and a `StyleSheet.create` reached through that cycle resolves to `undefined` at module
  * scope. **A third section is the signal to find one** — `recoveryMessage.ts`'s own rule

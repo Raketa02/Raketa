@@ -1,6 +1,6 @@
 /**
  * The wire boundary's three answers to something it cannot read, which are deliberately three
- * different answers.
+ * different answers — and the three fields the room carries that the row does not.
  *
  * A **sport** takes the whole row with it, a **code** degrades in place, and an **entry shape**
  * collapses into a state the wire already has. Each is stated here because each is a decision
@@ -9,7 +9,7 @@
 
 import type { Wire } from '@/test-support/transport';
 
-import { toConversations } from './conversationMappers';
+import { toConversationRoom, toConversations, toEntryPage, toMessage } from './conversationMappers';
 
 const ME = 'aaaaaaaa-0000-4000-8000-000000000001';
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -159,5 +159,114 @@ describe('what this build cannot read', () => {
   /** Structure is refused whole: the sport is what the row calls the room. */
   it('drops a room whose sport it cannot name', () => {
     expect(mapped({ sport: 'PICKLEBALL' as Wire['Sport'] })).toEqual([]);
+  });
+});
+
+describe('one room, opened', () => {
+  function opened(over: Partial<Wire['ConversationResponse']> = {}): Wire['ConversationResponse'] {
+    return {
+      read_at: '2026-09-08T12:00:00Z',
+      conversation_id: 'cccccccc-0000-4000-8000-000000000003',
+      challenge_id: 'dddddddd-0000-4000-8000-000000000004',
+      game_id: null,
+      sport: 'PADEL',
+      members: [member()],
+      entries: [],
+      ...over,
+    };
+  }
+
+  /** Three fields the row deliberately leaves off, each mapped by the screen that draws it. */
+  it('carries the instant it was folded and both ids', () => {
+    const room = toConversationRoom(
+      opened({ game_id: 'eeeeeeee-0000-4000-8000-000000000005' }),
+    )?.room;
+
+    expect(room?.readAt).toBe('2026-09-08T12:00:00Z');
+    expect(room?.challengeId).toBe('dddddddd-0000-4000-8000-000000000004');
+    expect(room?.gameId).toBe('eeeeeeee-0000-4000-8000-000000000005');
+  });
+
+  /** A room with no game is a room with no *Details*, and `null` collapses to absent. */
+  it('has no game where the wire says none', () => {
+    expect(toConversationRoom(opened())?.room.gameId).toBeUndefined();
+  });
+
+  /**
+   * The identifying fact is missing, so the record is refused whole — `challengeMappers`' and
+   * `gameMappers`' answer for the same field, and the screen says the one thing true of every
+   * cause it shares an answer with.
+   */
+  it('refuses the whole room where its sport is one this build cannot name', () => {
+    expect(toConversationRoom(opened({ sport: 'PICKLEBALL' as Wire['Sport'] }))).toBeUndefined();
+  });
+
+  it('maps the newest page beside the header, oldest first as it arrived', () => {
+    const said: Wire['MessageSchema'] = {
+      type: 'message',
+      seq: 4,
+      author_id: TOMEK,
+      sent_at: '2026-09-08T11:00:00Z',
+      text: 'six works',
+      client_message_id: 'client-4',
+    };
+
+    expect(toConversationRoom(opened({ entries: [said] }))?.entries).toEqual([
+      {
+        kind: 'message',
+        seq: 4,
+        authorId: TOMEK,
+        sentAt: '2026-09-08T11:00:00Z',
+        text: 'six works',
+        clientMessageId: 'client-4',
+      },
+    ]);
+  });
+});
+
+describe('a page backward', () => {
+  it('is the same narrowing with no header over it', () => {
+    const line: Wire['SystemLineSchema'] = {
+      type: 'system_line',
+      seq: 2,
+      code: 'SEAT_ACCEPTED',
+      occurred_at: '2026-09-08T10:00:00Z',
+      actor_id: TOMEK,
+      values: {},
+    };
+
+    expect(toEntryPage({ entries: [line] })).toEqual([
+      {
+        kind: 'system-line',
+        seq: 2,
+        code: 'SEAT_ACCEPTED',
+        occurredAt: '2026-09-08T10:00:00Z',
+        actorId: TOMEK,
+        values: {},
+      },
+    ]);
+  });
+});
+
+describe('the message a send answers with', () => {
+  /** The `seq` the server minted, and the id the optimistic bubble is reconciled on. */
+  it('carries the seq and the client id', () => {
+    expect(
+      toMessage({
+        type: 'message',
+        seq: 9,
+        author_id: ME,
+        sent_at: '2026-09-08T12:00:00Z',
+        text: 'on my way',
+        client_message_id: 'client-9',
+      }),
+    ).toEqual({
+      kind: 'message',
+      seq: 9,
+      authorId: ME,
+      sentAt: '2026-09-08T12:00:00Z',
+      text: 'on my way',
+      clientMessageId: 'client-9',
+    });
   });
 });

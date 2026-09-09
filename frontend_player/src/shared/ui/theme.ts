@@ -370,6 +370,7 @@ const radius = {
   cardDark: 15,
   card: 13,
   popover: 13,
+  bubble: 13,
   toast: 12,
   /** The ⚡Play disc. **There is no avatar rule here to be measured against** — see `avatar`
    *  below. The disc is not a face and 11 is the prototype's measured value, kept
@@ -414,6 +415,7 @@ const radius = {
   tag: 6,
   dot: 6,
   meter: 3,
+  bubbleTail: 3,
   bar: 2,
   /** The chip is the only true pill. Compute as height / 2. */
   pill: 999,
@@ -603,6 +605,19 @@ const size = {
    *  `type.rlValue` line per step, and the box's vertical padding is `(row - lineHeight) / 2`
    *  rather than a fourth number. */
   textField: { row: 42 },
+  /** The message bubble — the conversation's, and the one number this map's stream needed.
+   *
+   *  `maxShare` is how much of the stream's width one bubble may take, and it is a SHARE for
+   *  `railCardRatio`'s reason: the stream is as wide as the phone is, so a point value would be
+   *  a different sentence on every device. 0,78 is derived from both ends. The gap it leaves on
+   *  the far side is what says which side spoke — on the narrowest stream this app draws, a 320pt
+   *  column, that gap is 70pt, unmistakably a gap rather than a ragged edge. And what it holds is
+   *  a readable line: 78 % of a 345pt column is 269pt, which at `type.rlValue` is roughly 47
+   *  characters — inside the 45-to-75 band a column of prose is set in.
+   *
+   *  There is no height and no minimum. A bubble is as tall as what somebody typed, and a
+   *  one-character message drawn to a floor would be a box with a letter rattling in it. */
+  bubble: { maxShare: 0.78 },
   /** The court — 7.12, and the drawn object whose numbers cannot be derived.
    *
    *  `space` is the drawing's own box and every coordinate below is in it. The 1,32 aspect

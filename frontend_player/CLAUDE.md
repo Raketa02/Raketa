@@ -46,7 +46,8 @@ radius and the per-sport declaration that Play's search screen is drawn from, wi
 `PUT` behind each of the three). `play` has its four screens and the sheet over them, below;
 `challenges` is the send and the answer: `POST /challenges`, `SH.propose`, the two re-reads a
 refusal is followed by, and **the screen a challenge is answered on** — below; `conversations` is
-the room the first acceptance opens, read as the Chats tab's second section — below; and `games` is the result argument — the list on Now, the screen a
+the room the first acceptance opens — the Chats tab's second section, and **the screen behind it**:
+the header, the stream, the composer and the quick chips, below; and `games` is the result argument — the list on Now, the screen a
 row pushes, and the entering, correcting, agreeing and disagreeing that close the loop, below.
 
 **The Chats tab is two sections, two contexts, two queries and two caches, and they are
@@ -76,6 +77,50 @@ opposite of the challenge list above it and the reason nothing here has a shelf 
 rule — _drop whole names, never shorten one_ — moved to `shared/formatting/handleList.ts` beside
 `playerName()` when the second row kind arrived; **the face and the cluster did not**, and
 `challengeRowGeometry.ts` records the three homes that were tried and are wrong.
+
+**The room is a header, a stream, a composer and three questions**
+([#364](https://github.com/Raketa02/Raketa/issues/364)). The header is 10.3's with a new **lead**
+slot — a room is named by the people in it, so the faces sit beside the handles rather than in the
+page under them, where the stream would scroll them away — and its subtitle is **the sport and
+nothing else**, because the prototype's card-state tag is the twenty-state vocabulary leaking into
+the chat. **Details is drawn only where there is a game**: `game_id` is nullable, so a
+line-up-incomplete room has nothing for that door to open and draws none rather than a dead one,
+and the door's spoken name is _Open the game_ because _Details_ names a screen where every other
+door on this map names its act. **The stream is two components and never one with a branch** —
+ADR-0146 refused that shape on the wire and #338 §7 refuses it here for the same reason — sharing
+`conversationPresentation.ts`, which is the module the Chats row already renders its last entry
+through. **A bubble draws its author's whole handle only where the room has more than two
+members**, and that is a fact about the _room_, so it is a prop from the screen; the **spoken**
+name says the author every time, because in a pair what disambiguates is the side and the ground
+and _never colour alone_ refuses to let a listener depend on those. **There is no per-message
+timestamp** — a room lives days, so the one time-shaped fact worth drawing is which day — and the
+**day separator is computed on the platform zone**, since a device zone would put two people in
+one room on two different days. The stream **opens at its newest entry** (an inverted list, which
+is what makes that free) and **pages backward by cursor**: no offset and no `has_more`, because a
+gapless sequence makes `seq` 1 the beginning, and **no reader infers loss from a gap**. §24.1's
+complement is what makes the backlog navigable — _one accessibility element per action, and one
+per entry in an ordered stream_ — because a history with no actions in it would otherwise merge
+into one element.
+
+**The send is the one optimistic act on the whole loop, and `client_message_id` is why.** Every
+other act that reaches another person is pending never optimistic because it derives a standing
+several people read; a message cannot be _wrong_, so the bubble is on screen before the round trip
+and **the sender's own message never waits for a nudge**. It **pauses offline and resumes** — the
+app default, and deliberately not `challenges`' rule, because a message carries no deadline
+anybody chose — and the same key goes out on the resumed attempt, so a repeat answers `200` with
+the same `seq` and one send can never become two messages. The optimistic bubble is read out of
+the **mutation cache** rather than written into the query cache: a paused send outlives the screen
+that made it, and client state written into the copy every other reader treats as the server's is
+the second store this app does not have. A refusal **puts the words back in the box**, because the
+retry is the control that failed. **The quick chips post words and change nothing** — one per
+unfilled slot in slot order, plus _On my way_ only when the agreed day is today, which is what
+caps the row at three rather than four, and each asks the question its slot is about and names no
+weekday, no part of a day and no venue. The plan they are asked about arrives with
+[#366](https://github.com/Raketa02/Raketa/issues/366); until then the room has no plan **and no
+surface on which a slot could be filled**, which is the same state `GET /plans` spells by having
+no row at all. _**Open the chat**_ joined the challenge screen's half-built arm in the middle of
+grow · talk · end, and where it goes is a **client join over the player's own rooms** — ADR-0149
+§3's shape, failing soft, because no route serves a challenge its conversation.
 
 **The result argument is one screen and eight states, and the state is derived**
 ([#314](https://github.com/Raketa02/Raketa/issues/314),
@@ -1041,9 +1086,16 @@ lot: the app shipped four boxes on the two auth screens with no primitive under 
 until the chat map needed a field twice more. It is **one control in two shapes**, a single line
 capped by `maxLength` and one that grows an `rlValue` line at a time to a **cap the caller sets**,
 because neither growing surface has been drawn on a phone and a number here is written only for
-what a device drew. **Auth moved onto it in the same commit and `AuthField` is gone** — a
+what a device drew — five lines for the composer, which is the first caller to have needed one.
+**Auth moved onto it in the same commit and `AuthField` is gone** — a
 primitive introduced without moving its existing caller is a second implementation, not a shared
-one. The rest arrive with the features that need them. **Build outward from the structure below** rather than reaching
+one. Its `labelHidden` arrived with the composer exactly as 6.13 said it would: a box under a
+header naming the people and the sport, with `Send` beside it, wants **the name without the
+drawing**, and the name stays required either way because a listener has none of that around them.
+Beside it, 10.3 gained a **lead** slot for the conversation header's faces — `right`'s counterpart
+at the other end, and a slot rather than a `faces` prop because a header that knew what a face was
+would be the design system owning an avatar, which #338 §5 refused by name. The rest arrive with
+the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 

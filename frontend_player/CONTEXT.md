@@ -596,6 +596,43 @@ not restated here; what follows is only what this client had to invent to draw t
   print one against. _Avoid_: "now" — the phone's now is exactly the value that must not be
   used.
 
+### The room
+
+Five client-only concepts, all of them in `features/conversations/`. The domain terms —
+Conversation, Message, System line, Member — are the **root glossary's** and are not restated
+here; what follows is only what this client had to invent to draw the room
+([#364](https://github.com/Raketa02/Raketa/issues/364)).
+
+- **Stream entry** — what one row of the room draws: a recorded **Entry** the server has
+  answered for, or a **Sending message**, which is a message this phone has posted and the server
+  has not answered for yet. `streamOf` puts what is going out after what has landed and drops a
+  send the moment its message arrives, matched on `client_message_id` — so a resumed send can
+  never draw twice. A sending message carries **no moment**: the instant something happened is the
+  server's, and the phone's clock is the value the whole feature refuses. _Avoid_: "pending
+  message" (the send is the one act here that is _not_ pending), and giving one a `seq` — the
+  sequence is the server's and inventing a place in it is a claim, not a placeholder.
+- **The platform day** — which calendar day an instant falls on **in `Europe/Warsaw`**, the one
+  zone this platform arranges in. It is what the **day separator** is computed from, and the
+  reason is one sentence: a device zone would put two people in one room on two different days.
+  The same zone the plan's day and hour are recorded in, which is what lets a separator and a
+  `DAY_RECORDED` line agree about which day Saturday is. _Avoid_: the device's zone anywhere, and
+  a per-message clock — there is none, on purpose.
+- **The day separator** — the only time-shaped thing the stream draws, between entries on
+  different platform days. A room lives at most a few days, so the fact worth having is _was this
+  today_. _Avoid_: "timestamp".
+- **The quick chip** — one of at most three questions above the composer, **one per unfilled plan
+  slot in slot order plus _On my way_ when the agreed day is today**. A chip **posts words and
+  changes nothing**: filling the slot it asks about would record an agreement nobody had yet.
+  The conditional fallback is what caps the row at three; unconditional it would be exactly four.
+  _Avoid_: naming a weekday, a part of a day or a venue in one — a chip naming Saturday is wrong
+  six days a week.
+- **The chat door** — the way into a room from somewhere that is not the Chats list, drawn as
+  _Open the chat_. It is a **client join over `GET /conversations`** and it **fails soft**: no
+  route serves a challenge or a game its conversation, so the surface finds the row whose id
+  matches and draws nothing when there is none. The words live in `features/conversations` so the
+  three surfaces that draw one cannot say three different things. _Avoid_: a `conversation_id` on
+  anything but a conversation, and a disabled door — no door is the answer.
+
 ### Data and errors
 
 - **Query key factory** — the per-feature object in `hooks/` defining every key, with

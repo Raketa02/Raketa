@@ -1,6 +1,6 @@
 /**
- * **What a conversation says** — the seven system-line sentences, the section's name, and the
- * line a row draws.
+ * **What a conversation says** — the seven system-line sentences, the section's name, the line a
+ * row draws, and every word on the screen behind it.
  *
  * The words are the client's because a code is all that crosses
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §23,
@@ -60,6 +60,7 @@ import { dayName } from '@/shared/vocabulary/availabilityPresentation';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 
 import type { Conversation } from '../domain/conversation';
+import type { QuickChip } from '../domain/quickChips';
 import {
   departureOf,
   invitedCount,
@@ -219,16 +220,76 @@ export function conversationRowLine(
  */
 export const CONVERSATIONS_HEADING = 'Conversations';
 
-/** The screen a row opens — its title, and the whole of what this file owes it today. */
+/**
+ * What the screen is called **before it knows who is in it.**
+ *
+ * The header's real title is the handles, which is a fact off the read — so this is the word over
+ * the three states that have no room to name: the read is still coming, it failed, or no room of
+ * yours has that address. `ChallengeScreen` holds the same constant for the same three.
+ */
 export const CONVERSATION_SCREEN_TITLE = 'Conversation';
 
 /**
- * The landing a row needs in order to be a door, before the screen behind it exists.
+ * **One sentence for three states**, exactly as the challenge screen's is.
  *
- * 10.1's empty-state shape — one line of `tiny` in `muted`, present-tense, naming what belongs
- * here — held to the same two refusals every other line in this app is: it never promises a date
- * and it never says nothing is happening. What the screen becomes is
- * [#364](https://github.com/Raketa02/Raketa/issues/364)'s.
+ * `conversation_not_found` is one code for three cases — there is no such room, there is one and
+ * you are not in it, or it is past its end whether or not the sweep has run
+ * ([ADR-0153](../../../../../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)
+ * §5) — and a sport this build cannot name lands here too. They are deliberately not told apart:
+ * a `403` would answer *is this id real* about a stranger's evening, and there is nothing a
+ * player would do differently in any of the four.
  */
-export const CONVERSATION_SCREEN_NOT_BUILT =
-  'The room where you agree the day, the hour and the place — not built yet';
+export const NO_CONVERSATION_HERE = 'No conversation of yours has this address.';
+
+/**
+ * **The door to the game**, and the visible half of it is the design's word.
+ *
+ * Drawn only where there is a game: a `LINE_UP_INCOMPLETE` room has no game and no plan, so
+ * there is nothing to open and **no door is drawn rather than a dead one**. The spoken half is
+ * `conversationAccessibility.ts`', and the two differ on purpose.
+ */
+export const DETAILS = 'Details';
+
+/**
+ * **The chat door, wherever it is drawn** — *"the same words as every other chat door"*
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §24.5).
+ *
+ * It lives here rather than in the feature that draws it, because what it opens is a
+ * conversation and three surfaces will draw it: the challenge screen's half-built court is the
+ * first, and the game screen's planning arms and Now's ✉ are the other two. One constant is what
+ * makes *the same words* true by construction rather than by three people remembering.
+ */
+export const OPEN_THE_CHAT = 'Open the chat';
+
+/**
+ * The composer's name, and **it is spoken rather than drawn**.
+ *
+ * A field under a header naming the people and the sport, with `Send` beside it, does not need a
+ * word over it saying `MESSAGE` — but a listener arrives on the box itself with none of that
+ * around it, so the name is required and only the drawing is dropped
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §24.4, and 6.13's
+ * `labelHidden`).
+ */
+export const COMPOSER_LABEL = 'Message';
+
+/** The one control beside it. */
+export const SEND = 'Send';
+
+/**
+ * §22.4's four, keyed by the union — **so a chip with no words does not compile.**
+ *
+ * A `Record` rather than a function per code, which is §1's split read the other way: not one of
+ * these quotes a value, and that is the rule rather than a coincidence. **Each chip asks the
+ * question its slot is about and names nothing** — the prototype's three were a weekday, a part
+ * of day and one fixture venue, and *a chip naming Saturday is a chip that is wrong six days a
+ * week*.
+ *
+ * **A chip posts words and changes nothing** (ADR-0144): filling the slot it asks about would
+ * record an agreement nobody had yet.
+ */
+export const QUICK_CHIP: Readonly<Record<QuickChip, string>> = {
+  where: 'Where shall we play?',
+  day: 'Which day works?',
+  hour: 'What time?',
+  'on-my-way': 'On my way',
+};

@@ -33,6 +33,18 @@ import type { ConversationMember } from './membership';
 
 export interface Conversation {
   readonly conversationId: string;
+  /**
+   * The challenge whose first acceptance opened it.
+   *
+   * **Nothing on the row draws it, and that is not what it is for.** It is the id the *challenge*
+   * screen joins on to find its own door into the room: no route serves a challenge its
+   * conversation, ADR-0146 forbids one context knowing the other's ids, and
+   * [ADR-0149](../../../../../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
+   * §3 settles the shape for the same question one context over — **a client join over this list,
+   * failing soft.** Finding no room draws no door, which is the ordinary state rather than an
+   * error: a room opens on the first acceptance, so a challenge nobody has answered has none.
+   */
+  readonly challengeId: string;
   /** What they are arranging. The row's own identifying fact, beside the handles. */
   readonly sport: Sport;
   /** Who has agreed to be on this court **right now** — see `membership.ts`. */

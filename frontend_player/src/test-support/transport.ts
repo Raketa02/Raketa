@@ -124,8 +124,16 @@ export function neverResponds(): Responder {
   return () => new Promise<Response>(() => {});
 }
 
+/**
+ * How a route is addressed — **the method and the path, with any query string dropped.**
+ *
+ * A stub names a route the way the API does, and `?before_seq=12` is an argument to one rather
+ * than a second route. What was actually asked for is still on every `RecordedRequest.path`
+ * whole, so a suite that wants to assert a cursor reads it there.
+ */
 function keyOf(method: string, path: string): string {
-  return `${method.toUpperCase()} ${path}`;
+  const [route] = path.split('?');
+  return `${method.toUpperCase()} ${route ?? path}`;
 }
 
 /**

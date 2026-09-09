@@ -54,6 +54,8 @@ import {
 
 import { AppError } from '@/shared/errors';
 
+import { OPEN_THE_CHAT } from '@/features/conversations/types';
+
 import { challengeErrorMessage } from './challengeErrorMessage';
 import { standingLine } from './challengePresentation';
 import {
@@ -71,6 +73,7 @@ const DOROTA = 'dddddddd-0000-4000-8000-000000000004';
 
 const CHALLENGE_ID = 'aaaaaaaa-0000-4000-8000-000000000001';
 const LINEUP_ID = 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
+const ROOM_ID = 'f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5c';
 
 const READ_AT = '2026-09-08T12:00:00Z';
 
@@ -253,17 +256,38 @@ afterEach(async () => {
 async function openTheChallenge(
   answer: Wire['ChallengeDetailResponse'] = detail(),
   listed: Wire['ChallengeSchema'] = row(),
+  rooms: readonly Wire['ConversationRowSchema'][] = [],
 ) {
   stubChallenges(transport, [listed], READ_AT);
-  stubConversations(transport);
+  stubConversations(transport, rooms);
   transport.on('GET', DETAIL_PATH, () => json(answer));
 
   await launchSignedIn();
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
 
-  fireEvent.press(await screen.findByLabelText(/Padel/));
+  // A challenge row's name is `who, sport, line` and a conversation row's is `who, sport` — so
+  // the trailing separator is what tells the two sections' rows apart when both hold this pair.
+  fireEvent.press(await screen.findByLabelText(/, Padel, /));
   await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
+}
+
+/** The room this challenge's first acceptance opened, as `GET /conversations` lists it. */
+function conversationRow(
+  over: Partial<Wire['ConversationRowSchema']> = {},
+): Wire['ConversationRowSchema'] {
+  return {
+    conversation_id: ROOM_ID,
+    challenge_id: CHALLENGE_ID,
+    game_id: null,
+    sport: 'PADEL',
+    members: [
+      { player_id: ME, nickname: 'me_' },
+      { player_id: BEA, nickname: 'bea_k' },
+    ],
+    last_entry: null,
+    ...over,
+  };
 }
 
 /**
@@ -357,6 +381,66 @@ describe('the three controls', () => {
     expect(screen.getByRole('button', { name: FILL_THE_SEATS }).props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true }),
     );
+  });
+});
+
+describe('*Open the chat*', () => {
+  /**
+   * ADR-0149 §3: the door is a **client join** over the player's own rooms, because no route
+   * serves a challenge its conversation and ADR-0146 forbids `challenges` knowing this context
+   * exists. It fails soft, and the words are the conversation's so the three surfaces that draw
+   * one cannot say three different things.
+   */
+  it('is drawn between the fill and the withdraw once the join answers', async () => {
+    await openTheChallenge(detail(), row(), [conversationRow()]);
+
+    expect(await screen.findByRole('button', { name: OPEN_THE_CHAT })).toBeTruthy();
+  });
+
+  it('opens the room the first acceptance opened', async () => {
+    await openTheChallenge(detail(), row(), [conversationRow()]);
+
+    fireEvent.press(await screen.findByRole('button', { name: OPEN_THE_CHAT }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM_ID}`));
+  });
+
+  /**
+   * **No door rather than a dead one.** A room the join cannot find is the ordinary state
+   * rather than an error — a challenge nobody has answered has none, and a room is destroyed
+   * when its episode ends.
+   */
+  it('is not drawn where the join finds no room', async () => {
+    await openTheChallenge();
+
+    await screen.findByRole('button', { name: FILL_THE_SEATS });
+    expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
+  });
+
+  it('is not drawn to a reader who has left the court', async () => {
+    const left: Wire['SeatSchema'][] = [
+      { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
+      { side: 'A', player_id: ME, answer: 'DECLINED', nickname: 'me_' },
+      { side: 'B' },
+      { side: 'B' },
+    ];
+
+    await openTheChallenge(
+      detail({ organiser_id: BEA, seats: left }),
+      row({ organiser_id: BEA, seats: left }),
+      [conversationRow()],
+    );
+
+    await screen.findByText(
+      standingLine({
+        side: 'invitee',
+        standing: 'LINE_UP_INCOMPLETE',
+        accepted: 1,
+        open: 3,
+        ownAnswer: 'DECLINED',
+      }),
+    );
+    expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
   });
 });
 

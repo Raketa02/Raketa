@@ -24,12 +24,15 @@
  *
  * ## What is not mapped, and why that is the rule rather than an omission
  *
- * `read_at`, `challenge_id` and `game_id` all cross and none is mapped. `challengeMappers` states
- * the rule this follows — *"these fields are mapped by the ticket that draws them"* — and each has
- * a reader that is not this one: `read_at` earns its place on a list whose durations are folded
- * against it and **this row draws no clock at all**, and the two ids are the doors
- * [#364](https://github.com/Raketa02/Raketa/issues/364)'s header opens. A field mapped ahead of
- * its reader is a shape somebody has to keep true of a screen nobody has written.
+ * `challengeMappers` states the rule this follows — *"these fields are mapped by the ticket that
+ * draws them"* — and [#364](https://github.com/Raketa02/Raketa/issues/364) is that ticket for two
+ * of the three. **`challenge_id` is now mapped on the row**, because the challenge screen joins on
+ * it to find its own way into the room; **`game_id` is mapped on the room** and not on the row,
+ * because what it decides is whether the header draws *Details* and no row draws one. `read_at`
+ * stays off the row and is on the room: it earns its place wherever something is folded against
+ * an instant, and **a row draws no clock at all** while the room asks whether an agreed day is
+ * today. A field mapped ahead of its reader is a shape somebody has to keep true of a screen
+ * nobody has written.
  *
  * **An entry is mapped whole, and that is not the same call.** `sent_at`, `author_id` and
  * `client_message_id` have no reader on the row either — the row draws a message's text — but the
@@ -53,10 +56,13 @@ import type { components } from '@/generated/schema';
 import { toSport } from '@/features/onboarding/types';
 
 import type { Conversation } from '../domain/conversation';
-import { toSystemLineCode, type Entry } from '../domain/entry';
+import { toSystemLineCode, type Entry, type Message } from '../domain/entry';
 import type { ConversationMember } from '../domain/membership';
+import type { OpenConversation } from '../domain/room';
 
 type ConversationListResponse = components['schemas']['ConversationListResponse'];
+type ConversationResponse = components['schemas']['ConversationResponse'];
+type EntryPageResponse = components['schemas']['EntryPageResponse'];
 type ConversationRowSchema = components['schemas']['ConversationRowSchema'];
 type ConversationMemberSchema = components['schemas']['ConversationMemberSchema'];
 type MessageSchema = components['schemas']['MessageSchema'];
@@ -76,6 +82,7 @@ function toConversation(row: ConversationRowSchema): readonly Conversation[] {
   return [
     {
       conversationId: row.conversation_id,
+      challengeId: row.challenge_id,
       sport,
       members: row.members.map(toMember),
       ...(lastEntry === undefined ? {} : { lastEntry }),
@@ -92,16 +99,7 @@ function toMember(member: ConversationMemberSchema): ConversationMember {
 }
 
 function toEntry(entry: MessageSchema | SystemLineSchema): Entry | undefined {
-  if (entry.type === 'message') {
-    return {
-      kind: 'message',
-      seq: entry.seq,
-      authorId: entry.author_id,
-      sentAt: entry.sent_at,
-      text: entry.text,
-      clientMessageId: entry.client_message_id,
-    };
-  }
+  if (entry.type === 'message') return toMessage(entry);
 
   if (entry.type === 'system_line') {
     const code = toSystemLineCode(entry.code);
@@ -119,4 +117,64 @@ function toEntry(entry: MessageSchema | SystemLineSchema): Entry | undefined {
   // A third shape on a two-shape union. See the module note: the row draws no last entry, which
   // is a state the wire already has, rather than a sentence about this build's age.
   return undefined;
+}
+
+/**
+ * **One room and its newest page, or nothing where its sport is one this build cannot name.**
+ *
+ * The whole record is refused for the same reason a row is dropped for it: the sport is what the
+ * header calls the room, and a screen with a hole where its identifying fact goes is worse than
+ * the sentence a screen with no room draws. `challengeMappers` and `gameMappers` refuse the same
+ * field the same way, and the screen says the one thing true of every cause — *no conversation of
+ * yours has this address*.
+ *
+ * **The entries are narrowed one at a time and a shape this build has never seen is dropped**,
+ * which is this file's third way and is not the named gap a code with no words gets: an entry that
+ * is neither a message nor a system line has nothing at all to draw, where a system line with an
+ * unreadable code still has a slot and a sentence owed. Nothing counts what was dropped — **no
+ * reader may infer loss from a gap.**
+ */
+export function toConversationRoom(response: ConversationResponse): OpenConversation | undefined {
+  const sport = toSport(response.sport);
+  if (sport === undefined) return undefined;
+
+  return {
+    entries: response.entries.flatMap(toEntries),
+    room: {
+      conversationId: response.conversation_id,
+      challengeId: response.challenge_id,
+      ...(response.game_id == null ? {} : { gameId: response.game_id }),
+      readAt: response.read_at,
+      sport,
+      members: response.members.map(toMember),
+    },
+  };
+}
+
+/** A page backward — oldest first inside it, and no header on it at all. */
+export function toEntryPage(page: EntryPageResponse): readonly Entry[] {
+  return page.entries.flatMap(toEntries);
+}
+
+/**
+ * **One message, as the send answers with it** — the real `seq`, and the id it is reconciled on.
+ *
+ * The reply to a send is a `MessageSchema` and nothing else, so this is `toEntry`'s message arm
+ * with the union narrowed by the route rather than by a discriminator. A repeat answers with the
+ * message that already stands, which is why nothing here treats a second one as new.
+ */
+export function toMessage(message: MessageSchema): Message {
+  return {
+    kind: 'message',
+    seq: message.seq,
+    authorId: message.author_id,
+    sentAt: message.sent_at,
+    text: message.text,
+    clientMessageId: message.client_message_id,
+  };
+}
+
+function toEntries(entry: MessageSchema | SystemLineSchema): readonly Entry[] {
+  const mapped = toEntry(entry);
+  return mapped === undefined ? [] : [mapped];
 }

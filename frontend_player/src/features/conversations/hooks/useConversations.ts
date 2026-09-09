@@ -64,3 +64,29 @@ export function useConversationRows() {
     rows: playerId === undefined ? [] : (conversations.data ?? []),
   };
 }
+
+/**
+ * **The way into the room a challenge opened**, or nothing.
+ *
+ * A **client join over `GET /conversations`**, which is
+ * [ADR-0149](../../../../../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
+ * §3's answer to the same question one context over: *the chat door is a fact no route provides
+ * and the surface genuinely needs.* No route serves a challenge its conversation, and ADR-0146
+ * forbids `challenges` knowing that this context exists — so what crosses the seam is the address
+ * of a room rather than a field on a challenge.
+ *
+ * **It fails soft, and the absence is ordinary rather than an error.** A room opens on the *first
+ * acceptance*, so a challenge nobody has answered has none; a room is **destroyed** when the
+ * episode it was opened for ends, so a challenge that is over has none either. Both draw **no
+ * door**, which is what keeps a dead control off the screen.
+ *
+ * It costs nothing new on a warm cache — the Chats tab reads this list anyway — and on a cold one
+ * it costs a list the player was about to need. Stated plainly, as ADR-0149 states its own
+ * version: **a challenge screen reads a list belonging to a context it is forbidden to know
+ * about, and gets away with it because it reads that list as *the player's rooms*.**
+ */
+export function useChatDoor(challengeId: string): string | undefined {
+  const { data } = useConversations();
+
+  return data?.find((room) => room.challengeId === challengeId)?.conversationId;
+}
