@@ -34,10 +34,11 @@ from __future__ import annotations
 from dataclasses import fields
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
+from app.infrastructure.events.event_store_model import EventStoreORM
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.events import ConversationOpened
 from app.modules.conversations.infrastructure.conversation_model import (
@@ -142,6 +143,48 @@ class EventSourcedConversationRepository:
                 row.last_seq = conversation.last_seq
         # Deliberately no commit: the transaction boundary is the caller's.
         self._remember(conversation)
+
+    async def destroy(self, conversation_id: UUID) -> None:
+        """Delete the stream and the row. **Destroyed, not delisted.**
+
+        Two statements and no aggregate, deliberately: there is no event to
+        append and nothing to fold, because what this performs is the room
+        ceasing to exist rather than something happening in it. A
+        ``ConversationDestroyed`` on the stream it deletes would be a record of
+        the destruction inside the thing destroyed.
+
+        **The stream goes first.** A row with no stream is a room that folds to
+        nothing and reads as absent; a stream with no row is one every locked
+        read misses and nothing can ever sweep — so if only one of the two lands,
+        it must be this one.
+
+        **It leaves a hole in ``event_store.sequence_no``**, which the candidate
+        index's tail is built for: a gap is stepped over once the snapshot
+        horizon proves it permanent (``docs/adr/0110``), so a destruction costs
+        that projection a tick of lag and never a lost event. The outbox rows
+        these events were queued on carry their own payloads and are unaffected;
+        nothing subscribes to a conversation's own events.
+
+        **Idempotent**: deleting nothing is the state this asks for, and both
+        callers — the withdrawal and the sweep — can run beside themselves.
+        """
+
+        await self._session.execute(
+            delete(EventStoreORM).where(
+                EventStoreORM.aggregate_type == CONVERSATION_AGGREGATE,
+                EventStoreORM.aggregate_id == conversation_id,
+            )
+        )
+        await self._session.execute(
+            delete(ConversationORM).where(
+                ConversationORM.conversation_id == conversation_id
+            )
+        )
+        # Whatever version this request had seen is about to be a lie. Forgetting
+        # it means a room re-opened under the same id in this same request — which
+        # nothing does, and which is exactly why it must not silently half-work.
+        self._versions.pop(conversation_id, None)
+        # Deliberately no commit: the transaction boundary is the caller's.
 
     async def _folded(self, conversation_id: UUID) -> Conversation | None:
         stored = await self._event_store.load_stream(

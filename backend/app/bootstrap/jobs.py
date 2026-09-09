@@ -38,6 +38,7 @@ from app.bootstrap.composition import (
     build_challenge_repository,
     build_clock,
     build_container_memory_limit,
+    build_destroy_ended_conversations,
     build_domain_event_store,
     build_event_publisher,
     build_exposure_ledger,
@@ -146,6 +147,14 @@ CHALLENGE_LAPSE_JOB = "challenge-lapse"
 #: the next tick.
 RATING_CATCH_UP_JOB = "rating-catch-up"
 
+#: The conversation sweep. **The second job here that deletes anything**, and
+#: the only one that deletes an aggregate: *destroyed, not delisted*
+#: (``docs/adr/0142``, with its instant moved by ``docs/adr/0153``). Like the
+#: interest expiry it buys a table the size of what is live and nothing a player
+#: can see — every route already answers ``conversation_not_found`` past a room's
+#: end — but unlike it, what it removes is a stream rather than a row.
+CONVERSATION_SWEEP_JOB = "conversation-sweep"
+
 
 def build_scheduled_jobs(
     *,
@@ -190,6 +199,7 @@ def build_scheduled_jobs(
         or settings.INTEREST_EXPIRY_ENABLED
         or settings.CHALLENGE_LAPSE_ENABLED
         or settings.RATING_CATCH_UP_ENABLED
+        or settings.CONVERSATION_SWEEP_ENABLED
     ):
         if session_factory is None:
             # Loudly, rather than by registering nothing. *The sweep is off* and
@@ -235,6 +245,12 @@ def build_scheduled_jobs(
         if settings.RATING_CATCH_UP_ENABLED:
             jobs.append(
                 build_rating_catch_up_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.CONVERSATION_SWEEP_ENABLED:
+            jobs.append(
+                build_conversation_sweep_job(
                     session_factory=session_factory, settings=settings
                 )
             )
@@ -520,6 +536,55 @@ def build_rating_catch_up_job(
     return PeriodicJob(
         name=RATING_CATCH_UP_JOB,
         interval_seconds=settings.RATING_CATCH_UP_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_conversation_sweep_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Destroy every room whose episode is over. **Destroyed, not delisted.**
+
+    **Correctness does not depend on it running** (``docs/adr/0153`` §5). A room's
+    end is a fold over its own stream, so every route on it already answers
+    ``conversation_not_found`` past that instant and every list has already
+    dropped it. What the loop buys is that the destruction is **real** — the
+    entries stop existing rather than stopping being answered with — which is the
+    difference between a room that is over and a record with no end.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``):
+    destroying a room twice destroys it once, and two processes racing over the
+    same walk leave what one leaves. *N processes, N runs* costs a repeated fold.
+
+    **It holds no cursor**, because there is no position to lose: the walk is the
+    whole table and the decision is a fold, so a run that dies half way is
+    re-derived in full by the next tick.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            swept = await build_destroy_ended_conversations(
+                session, clock=clock
+            ).execute()
+        logger.info(
+            "conversation sweep finished",
+            extra={
+                "job": CONVERSATION_SWEEP_JOB,
+                # Both numbers, because *the loop is off* and *the loop is
+                # running and nothing has ended* have one symptom — rooms
+                # accumulating — and only one of them is somebody's problem.
+                "rooms": swept.walked,
+                "destroyed": swept.destroyed,
+            },
+        )
+
+    return PeriodicJob(
+        name=CONVERSATION_SWEEP_JOB,
+        interval_seconds=settings.CONVERSATION_SWEEP_INTERVAL_SECONDS,
         run=run,
     )
 

@@ -40,6 +40,7 @@ from app.core.config import get_settings
 from app.infrastructure.redis_client import get_redis, get_redis_subscriber
 from app.modules.conversations.infrastructure.redis_live_channel import channel_for
 from tests.api import matchmaking_world as world
+from tests.api.test_conversations import the_day_after_next
 from tests.unit.fake_redis import BrokenRedis
 
 #: Long enough for a couple of round trips through the in-memory app, short
@@ -117,6 +118,7 @@ async def a_room(client, session_factory, candidate_source, searcher, live_chann
         "challenge_id": challenge_id,
         "conversation_id": room["conversation_id"],
         "reader": people["ana"],
+        "live_channel": live_channel,
     }
 
 
@@ -425,6 +427,38 @@ async def test_a_non_member_is_refused_before_the_response_starts(
     )
 
     response = await _follow(client, a_room["conversation_id"], stranger)
+
+    assert response.status_code == 404, response.text
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json()["code"] == "conversation_not_found"
+
+
+async def test_a_room_past_its_end_is_refused_before_the_response_starts(
+    client, a_room, session_factory
+):
+    """``docs/adr/0153`` §5 — **every** route on an ended room answers the same
+    code, and the stream is a route.
+
+    It matters more here than anywhere else: the gate runs in a dependency, and a
+    stream that opened before it was checked would sit at `200
+    text/event-stream` waiting for nudges from a room that no longer exists.
+    """
+
+    for who in ("bo", "cy"):
+        declined = await client.post(
+            f"/api/v1/challenges/{a_room['challenge_id']}/decline",
+            headers=world.auth(a_room["people"][who]["token"]),
+        )
+        assert declined.status_code == 200, declined.text
+    await world.deliver_the_outbox(
+        session_factory, live_channel=a_room["live_channel"]
+    )
+
+    the_day_after_next(client)
+
+    response = await _follow(
+        client, a_room["conversation_id"], a_room["searcher"]["token"]
+    )
 
     assert response.status_code == 404, response.text
     assert response.headers["content-type"].startswith("application/json")

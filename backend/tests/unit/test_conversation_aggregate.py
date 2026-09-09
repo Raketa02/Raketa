@@ -283,6 +283,33 @@ def test_noting_the_game_writes_no_line_and_is_told_once():
     assert room.pull_events() == []
 
 
+def test_a_room_with_no_game_has_no_planned_at_and_one_with_a_game_keeps_it():
+    """``docs/adr/0153`` §2 — ``Game.planned_at`` **is**
+    ``GamePlanned.occurred_at``, and the telling that draws no line is where the
+    room's own end gets its anchor. It costs no new event and no new field on the
+    wire: the moment was already on the telling."""
+
+    room = _opened()
+    assert room.planned_at is None
+
+    room.note_game(game_id=uuid4(), occurred_at=_later(1))
+
+    assert room.planned_at == _later(1)
+    assert _replayed(room).planned_at == _later(1)
+
+
+def test_a_second_telling_of_the_game_does_not_move_the_anchor():
+    """The outbox is at-least-once, and a redelivery must not re-date a room's
+    end — which is the one thing that could make it move **later**."""
+
+    room = _opened()
+    room.note_game(game_id=uuid4(), occurred_at=_later(1))
+
+    room.note_game(game_id=uuid4(), occurred_at=_later(500))
+
+    assert room.planned_at == _later(1)
+
+
 # -- paging ----------------------------------------------------------------
 
 

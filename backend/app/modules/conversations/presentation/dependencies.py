@@ -163,10 +163,14 @@ ReadConversationsDep = Annotated[ReadConversations, Depends(get_read_conversatio
 
 
 def get_a_room_of_yours(
-    conversations: ConversationRepositoryDep, membership: MembershipDep
+    conversations: ConversationRepositoryDep,
+    membership: MembershipDep,
+    clock: ClockDep,
 ) -> ARoomOfYours:
     """Per request, because the repository it holds is."""
-    return build_a_room_of_yours(conversations=conversations, membership=membership)
+    return build_a_room_of_yours(
+        conversations=conversations, membership=membership, clock=clock
+    )
 
 
 ARoomOfYoursDep = Annotated[ARoomOfYours, Depends(get_a_room_of_yours)]

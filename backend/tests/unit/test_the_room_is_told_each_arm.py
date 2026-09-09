@@ -90,6 +90,12 @@ class _Rooms:
         conversation.pull_events()
         self.by_id[conversation.conversation_id] = conversation
 
+    async def destroy(self, conversation_id: UUID) -> None:
+        self.by_id.pop(conversation_id, None)
+
+    async def every_room(self) -> tuple[Conversation, ...]:
+        return tuple(self.by_id.values())
+
     # -- what a test asks it ------------------------------------------------
 
     @property
@@ -301,9 +307,9 @@ async def test_a_seat_leaving_is_one_code_with_the_answer_as_a_value(
 # -- the events that reach the room and draw nothing -----------------------
 
 
-async def test_the_send_and_the_withdrawal_and_the_argument_reach_nothing(rooms):
-    """Three of the refusals, driven rather than read off the table: the handler
-    has no arm for any of them, so a room is neither opened nor written."""
+async def test_the_send_and_the_argument_reach_nothing(rooms):
+    """Two of the refusals, driven rather than read off the table: the handler
+    has no arm for either, so a room is neither opened nor written."""
 
     tell = _teller(rooms)
     for event in (
@@ -316,12 +322,63 @@ async def test_the_send_and_the_withdrawal_and_the_argument_reach_nothing(rooms)
             seats=(),
             occurred_at=NOW,
         ),
-        ChallengeWithdrawn(challenge_id=CHALLENGE, occurred_at=NOW),
         ResultProposed(
             game_id=GAME, player_id=ANA, side="A", score="6-4", occurred_at=NOW
         ),
     ):
         await tell(event, _delivery())
+
+    assert rooms.by_id == {}
+
+
+# -- the withdrawal --------------------------------------------------------
+
+
+async def test_a_withdrawal_destroys_the_room_and_writes_no_line(rooms, nudges):
+    """``docs/adr/0153`` §2 — destroyed in the same act, and there is nobody left
+    to read a line."""
+
+    tell = _teller(rooms, nudges=nudges)
+    await tell(
+        SeatAccepted(challenge_id=CHALLENGE, player_id=ANA, occurred_at=NOW),
+        _delivery(),
+    )
+    assert len(rooms.by_id) == 1
+
+    await tell(
+        ChallengeWithdrawn(challenge_id=CHALLENGE, occurred_at=_at(5)), _delivery()
+    )
+
+    assert rooms.by_id == {}
+    # **No nudge**: a nudge says *the room is now this long*, and there is no
+    # room to be a length.
+    assert nudges.published == []
+
+
+async def test_a_withdrawal_of_a_challenge_with_no_room_does_nothing(rooms):
+    """A redelivery, a court withdrawn before anybody accepted, and a challenge
+    this context cannot be told about all want exactly nothing done."""
+
+    await _teller(rooms)(
+        ChallengeWithdrawn(challenge_id=CHALLENGE, occurred_at=NOW), _delivery()
+    )
+
+    assert rooms.by_id == {}
+
+
+async def test_a_redelivered_withdrawal_is_a_no_op(rooms):
+    """The outbox is at-least-once, and destroying a room that is already gone is
+    the state this asks for."""
+
+    tell = _teller(rooms)
+    await tell(
+        SeatAccepted(challenge_id=CHALLENGE, player_id=ANA, occurred_at=NOW),
+        _delivery(),
+    )
+    withdrawn = ChallengeWithdrawn(challenge_id=CHALLENGE, occurred_at=_at(5))
+
+    await tell(withdrawn, _delivery())
+    await tell(withdrawn, _delivery())
 
     assert rooms.by_id == {}
 
@@ -351,6 +408,40 @@ async def test_the_accept_first_order_leaves_the_room_knowing_its_game(rooms):
 
     assert rooms.only.game_id == GAME
     assert rooms.only.entries == ()
+
+
+async def test_both_orders_anchor_the_room_on_the_same_instant(rooms):
+    """``docs/adr/0153`` §2 — the room's end is dated from ``Game.planned_at``,
+    and the coin flip must not decide what that is.
+
+    The two orders reach ``planned_at`` by different routes: the accept-first one
+    reads the game off ``PlayedCourt.game_of`` and stamps it with the
+    **acceptance's** moment, the planned-first one takes ``GamePlanned``'s own.
+    They agree because every path that completes a line-up stamps both from one
+    ``now`` — which is a fact about ``challenges``, and therefore one this suite
+    has to assert rather than assume.
+    """
+
+    accept = SeatAccepted(challenge_id=CHALLENGE, player_id=ANA, occurred_at=NOW)
+    planned = GamePlanned(
+        game_id=GAME,
+        challenge_id=CHALLENGE,
+        sport=Sport.PADEL.value,
+        kind="COUNTED",
+        window=None,
+        seatings=(),
+        occurred_at=NOW,
+    )
+
+    accept_first = _Rooms()
+    await _teller(accept_first, _Games(game_for=CHALLENGE))(accept, _delivery())
+    await _teller(accept_first, _Games(game_for=CHALLENGE))(planned, _delivery())
+
+    planned_first = _Rooms()
+    await _teller(planned_first, _Games(game_for=CHALLENGE))(planned, _delivery())
+    await _teller(planned_first, _Games(game_for=CHALLENGE))(accept, _delivery())
+
+    assert accept_first.only.planned_at == planned_first.only.planned_at == NOW
 
 
 async def test_the_planned_first_order_reaches_exactly_the_same_room(rooms):

@@ -7,10 +7,12 @@ it exists (``docs/adr/0146``).
 
 Three things about it are load-bearing and none is obvious from the code alone.
 
-**Membership is nowhere in here.** It is derived from whichever record is
-currently arranging — the challenge's accepted seats until the line-up completes,
+**Membership is nowhere in here.** It is derived from whichever record the room
+is currently about — the challenge's accepted seats until the line-up completes,
 the game's frozen line-up after — and a roster stored on this aggregate would be
 the copy that decides who may read the messages and the first one to go wrong.
+*About*, and no longer *arranging*: a room outlives the arrangement now
+(``docs/adr/0153``), and the game it outlives it into is what still answers.
 That rule lives in ``application/membership.py`` because it reads two other
 contexts, and this aggregate holds only the two ids it is read against.
 
@@ -67,9 +69,17 @@ class Conversation:
     #: is in through ``challenges`` alone.
     challenge_id: UUID
     #: The game the line-up completed into, and ``None`` until it does. It is the
-    #: nullable half of *whichever record is currently arranging*, and it is what
-    #: a client draws a *Details* door from.
+    #: nullable half of *whichever record this room is about*, and it is what a
+    #: client draws a *Details* door from.
     game_id: UUID | None
+    #: The moment that game became a game, and ``None`` beside a ``None``
+    #: ``game_id``. It is ``GamePlanned.occurred_at``, which **is**
+    #: ``Game.planned_at`` (``docs/adr/0153`` §2) — carried on the telling this
+    #: room already receives, so the room's own end costs no new event, no new
+    #: field on the wire and no new telling. It is emphatically **not** the plan's
+    #: agreed point: a plan is editable by any member at any time, and an end
+    #: dated from it would be one two people could walk forward by tapping a chip.
+    planned_at: Instant | None
     sport: Sport
     opened_at: Instant
     #: Every entry, oldest first. A room is destroyed within days of the evening
@@ -162,6 +172,13 @@ class Conversation:
 
     def note_game(self, *, game_id: UUID, occurred_at: Instant) -> None:
         """The line-up completed. **Told, and drawn rather than announced.**
+
+        ``occurred_at`` is the moment the game became a game, and it is kept:
+        it is ``Game.planned_at``, which is what this room's own end is anchored
+        on (``docs/adr/0153`` §2). Every path that completes a line-up stamps the
+        acceptance and the game from one ``now``, so the opening's fallback
+        reading — ``PlayedCourt.game_of`` when ``GamePlanned`` lost the coin flip
+        — reaches the same instant this telling carries.
 
         Told a second time, this records nothing: the outbox is at-least-once and
         one arrangement is one game, so a second telling can only be a
@@ -303,6 +320,7 @@ class Conversation:
         room = cls.__new__(cls)
         room.version = 0
         room.game_id = None
+        room.planned_at = None
         room.entries = ()
         room._told_by = {}
         room._events = EventRecorder()
@@ -322,6 +340,7 @@ class Conversation:
             self.opened_at = instant(event.occurred_at)
         elif isinstance(event, GameNoted):
             self.game_id = event.game_id
+            self.planned_at = instant(event.occurred_at)
         elif isinstance(event, MessageSent):
             self.entries += (
                 Message(

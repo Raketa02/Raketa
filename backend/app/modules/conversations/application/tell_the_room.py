@@ -20,13 +20,20 @@ the strength of a system line, which is what makes that the right price here.
 **Every write here is idempotent**, because the outbox is at-least-once by
 construction. A room is opened at most once per challenge (the repository's
 locked ``for_challenge`` read); a line is written at most once per **outbox row**
-(``source_event_id`` on the aggregate); a game is noted at most once. A
-redelivery therefore lands the same state and records nothing, which is this
-repository's existing idempotency language applied to delivery rather than to a
-client.
+(``source_event_id`` on the aggregate); a game is noted at most once; and a room
+is destroyed at most once, because a room that is not there is the state the
+destruction asks for. A redelivery therefore lands the same state and records
+nothing, which is this repository's existing idempotency language applied to
+delivery rather than to a client.
 
 **What is refused, and why, is in ``telling.py``** — as a table, so the six the
 prose says publish nothing are named in one place a test can walk.
+
+**One arm writes nothing into the room and takes the room away.** A withdrawal
+**destroys** it (``docs/adr/0153`` §2), so the telling that draws the least is
+the one with the largest effect — which is why its row in ``telling.py`` reaches
+the room while refusing a line, and why a reader who took *refused* to mean *not
+delivered* would leave every withdrawn court a readable room for ever.
 
 **A line nudges the room and an opening does not**, which is the nudge's own
 shape rather than a rule about tellings (``docs/adr/0147`` §3). A frame says *the
@@ -68,6 +75,7 @@ from app.application.events import DeliveryContext
 from app.kernel import Instant, instant, minute_of_day
 from app.modules.challenges.domain.events import (
     ChallengeOpenedFromMutualInterest,
+    ChallengeWithdrawn,
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
@@ -168,6 +176,8 @@ class TellTheRoom:
                 },
                 context=context,
             )
+        elif isinstance(event, ChallengeWithdrawn):
+            await self._withdrawn(event)
         elif isinstance(event, GamePlanned):
             await self._note_game(event)
         elif isinstance(event, GamePlayed):
@@ -201,6 +211,17 @@ class TellTheRoom:
     async def _open(self, challenge_id: UUID, occurred_at: datetime) -> None:
         """Open the room, and **ask whether it is already about a game.**
 
+        **A destroyed room's challenge may open a new one, and that is the
+        intent.** A half-built court whose last departure ended its room can be
+        filled again later (``docs/adr/0150``), and the acceptance that follows
+        finds nothing and opens a fresh room — a new episode for a new
+        arrangement, rather than no room at all for a court people are actively
+        building. The cost is stated rather than hidden: **the old backlog does
+        not come back**, because it was destroyed rather than delisted, and the
+        member who accepted before the destruction returns to an empty room. A
+        *withdrawn* challenge cannot reach here at all — it is ``ENDED``, so
+        ``Challenge.invite`` refuses and no further acceptance exists to deliver.
+
         That second half is not belt and braces. The accept that fills the last
         seat writes ``SeatAccepted`` and ``GamePlanned`` in one transaction, and
         the outbox orders by ``(created_at, id)`` where ``created_at`` is
@@ -231,6 +252,38 @@ class TellTheRoom:
         if game_id is not None:
             opened.note_game(game_id=game_id, occurred_at=instant(occurred_at))
         await self._conversations.save(opened)
+
+    # -- being closed ------------------------------------------------------
+
+    async def _withdrawn(self, event: ChallengeWithdrawn) -> None:
+        """The organiser ended it. **The room is destroyed, and writes no line.**
+
+        ``docs/adr/0153`` §2. There is nobody left to read a line — the news is on
+        the challenge screen — and this is the only arm here whose whole effect is
+        that the room stops existing.
+
+        **No nudge, and that is not an omission.** A nudge says *the room is now
+        this long*, and there is no room to be a length; a phone with the screen
+        open finds ``conversation_not_found`` on its next fetch, which is the same
+        answer it would get from the sweep and from a room that never existed.
+
+        A room that is not there is a redelivery, a mutual whose challenge was
+        withdrawn before anybody accepted, or a challenge this context cannot be
+        told about — and all three want exactly nothing done.
+
+        **A destroyed room cannot be re-opened behind this**, and the reason is
+        the queue rather than a tombstone. An opening is a delivery of the
+        acceptance that preceded the withdrawal, and the outbox is drained in
+        ``(created_at, id)`` order — so a redelivered acceptance is fetched
+        before this row, not after it. A tombstone would be the alternative, and
+        it would be a stored fact about a thing whose whole point is that nothing
+        of it survives.
+        """
+
+        room = await self._conversations.for_challenge(event.challenge_id)
+        if room is None:
+            return
+        await self._conversations.destroy(room.conversation_id)
 
     # -- being told about the game ----------------------------------------
 

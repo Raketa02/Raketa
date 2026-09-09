@@ -49,7 +49,7 @@ class ConversationOpened:
     accepted from birth and there was never a moment with one person in the room.
 
     It carries the challenge and the sport and **no members**: membership is
-    derived from whichever record is currently arranging (``docs/adr/0146`` §7),
+    derived from whichever record the room is about (``docs/adr/0146`` §7),
     and a roster stored here would be the copy that decides who may read the
     messages and the first one to go wrong.
     """

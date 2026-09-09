@@ -431,6 +431,30 @@ class Settings(BaseSettings):
     RATING_CATCH_UP_ENABLED: bool = True
     RATING_CATCH_UP_INTERVAL_SECONDS: float = 60 * 60
 
+    # --- the conversation sweep (docs/adr/0153, docs/adr/0142)
+    #
+    # **Turning it off changes no rule a domain test could observe.** A room past
+    # its end answers `conversation_not_found` on every route and is gone from
+    # every list whether or not anything has swept it — the end is a fold over
+    # the room's own stream and is stored nowhere. What the loop buys is that the
+    # destruction is **real**: *destroyed, not delisted* means the entries stop
+    # existing rather than stopping being answered with, which is the whole
+    # difference between a room that is over and a record with no end.
+    #
+    # **`CONVERSATION_GRACE` itself is emphatically not here.** How long a room
+    # outlives the game it was opened for is behaviour a domain test can observe
+    # — and an environment that could select it would be an environment that
+    # decides how long two people keep each other — so it lives in
+    # `conversations/domain/lifetime.py` beside the derivation that reads it.
+    # Only this cadence is a setting.
+    #
+    # Hourly, and the number is chosen against what being late costs: nothing a
+    # player can see, because the reads are already right, so this is purely how
+    # long a dead room's rows sit in the table. Finer would buy a tidier database
+    # and pay for it in a walk that folds every live room's stream.
+    CONVERSATION_SWEEP_ENABLED: bool = True
+    CONVERSATION_SWEEP_INTERVAL_SECONDS: float = 60 * 60
+
     # --- the two scale triggers (docs/adr/0092, scale-posture.md §4)
     #
     # **The instruments are configuration; the thresholds are not.** How often

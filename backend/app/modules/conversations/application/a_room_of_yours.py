@@ -4,10 +4,18 @@ Three use cases needed the identical five lines — load, refuse if absent, deri
 membership, refuse if the reader is not in it — and the third copy is where a
 refusal quietly becomes two different refusals.
 
-**One refusal for two cases.** No such room, and a room that is not yours, answer
-identically. Separating them would tell a caller whether a stranger's
-conversation id is real, one probe at a time — ``challenge_not_found``'s argument
-verbatim (``docs/adr/0148`` §9), and the reason there is no 403 anywhere here.
+**One refusal for three cases.** No such room, a room that is not yours, and a
+room past its end, answer identically. Separating them would tell a caller
+whether a stranger's conversation id is real, one probe at a time —
+``challenge_not_found``'s argument verbatim (``docs/adr/0148`` §9), and the
+reason there is no 403 anywhere here. The third arrived with
+``docs/adr/0153`` §5 and needed no new code: *never existed*, *destroyed* and
+*past its end but not yet swept* are one answer for one reason.
+
+**The end is read here rather than in a sweep**, and that is the whole of the
+lifetime's correctness. The sweep makes the destruction real; this makes the
+answer right, whether or not the sweep has ever run — the same split
+``challenges``' ``lapse`` and ``entry_closes_at``'s own docstring both state.
 
 **Two doors, and the difference is the lock.** ``to_read`` serves a response;
 ``to_append`` takes the conversation row ``FOR UPDATE`` first, because that is
@@ -33,9 +41,11 @@ from dataclasses import dataclass
 from typing import final
 from uuid import UUID
 
+from app.kernel import Clock
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.errors import ConversationNotFound
+from app.modules.conversations.domain.lifetime import has_ended
 from app.modules.conversations.domain.ports import ConversationRepository
 
 
@@ -53,10 +63,15 @@ class ARoomOfYours:
     """One room, loaded for somebody who is in it."""
 
     def __init__(
-        self, *, conversations: ConversationRepository, membership: Membership
+        self,
+        *,
+        conversations: ConversationRepository,
+        membership: Membership,
+        clock: Clock,
     ) -> None:
         self._conversations = conversations
         self._membership = membership
+        self._clock = clock
 
     async def to_read(self, conversation_id: UUID, reader_id: UUID) -> ARoom:
         return await self._yours(
@@ -72,6 +87,12 @@ class ARoomOfYours:
 
     async def _yours(self, room: Conversation | None, reader_id: UUID) -> ARoom:
         if room is None:
+            raise ConversationNotFound()
+        # **Before membership, and it costs nothing to be there.** The end is a
+        # fold over the room's own stream, which is already in hand; membership
+        # is two reads into other contexts, and a room that is over is one
+        # nobody needs them for.
+        if has_ended(room, now=self._clock.now()):
             raise ConversationNotFound()
         members = await self._membership.of_one(room)
         if reader_id not in members:

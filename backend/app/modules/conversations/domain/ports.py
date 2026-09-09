@@ -71,6 +71,23 @@ class ConversationRepository(Protocol):
 
     async def save(self, conversation: Conversation) -> None: ...
 
+    async def destroy(self, conversation_id: UUID) -> None:
+        """Delete the room and its whole stream. **Destroyed, not delisted.**
+
+        ``docs/adr/0142``, with its instant moved by ``docs/adr/0153``. Two
+        callers: the withdrawal, which destroys the room in the same act, and the
+        sweep, which makes every other ending real.
+
+        **There is no sequence left to have a gap in**, which is what *destroyed*
+        buys over a flag: a deleted room cannot be inferred from a hole in a
+        neighbour's numbering, because nothing of it survives to be numbered
+        beside.
+
+        **Idempotent**, because both callers can run beside themselves: a room
+        that is not there is the state this asks for.
+        """
+        ...
+
 
 @runtime_checkable
 class ConversationDirectory(Protocol):
@@ -79,7 +96,13 @@ class ConversationDirectory(Protocol):
     async def for_challenges(
         self, challenge_ids: Collection[UUID]
     ) -> tuple[Conversation, ...]:
-        """Every live room opened by one of these challenges.
+        """Every room the store still holds that one of these challenges opened.
+
+        **Still holds, rather than still live**, and the difference is
+        ``docs/adr/0153`` §5: a room's end is a fold over its own stream, so it is
+        the caller that drops one past its end and the sweep that eventually
+        removes the row. A store that could answer *which of these are live*
+        would be the stored ``ends_at`` that record refuses.
 
         **One set read over the whole answer**, never one per challenge, which is
         the shape every set read in this codebase takes.
@@ -87,6 +110,26 @@ class ConversationDirectory(Protocol):
         The order is not part of the demand: the list is ordered by its last
         entry (``docs/adr/0148`` §11), which is a fold and belongs to the use
         case rather than to the store.
+        """
+        ...
+
+    async def every_room(self) -> tuple[Conversation, ...]:
+        """Every room that still stands. **The sweep's only store question.**
+
+        **It narrows on nothing, and it cannot.** A room's end is derived from
+        its own stream (``docs/adr/0153`` §5), so there is no column to filter on
+        and a store that could answer *which rooms have ended* would be the
+        stored ``ends_at`` that record refuses. The sweep folds each one and
+        decides.
+
+        What keeps that affordable is the thing being swept: a conversation is
+        **destroyed** rather than kept, so this table is the size of what is
+        live — the same argument ``docs/adr/0127``'s expiry loop makes about the
+        interest ledger, read one context over.
+
+        **Ordered, because a set is never the source of a traversal**
+        (``docs/adr/0105`` §1). Nothing downstream can observe it, which is why
+        the rule is stated on the traversal rather than on what is visible.
         """
         ...
 

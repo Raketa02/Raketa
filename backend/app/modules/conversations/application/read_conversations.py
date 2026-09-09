@@ -18,6 +18,12 @@ only instant it has.
 (``docs/adr/0148`` §10): a room is destroyed rather than delisted, so whether a row
 appears at all was decided against an instant.
 
+**A room past its end is dropped here and not by the sweep** (``docs/adr/0153``
+§5). The end is derived and the sweep exists to make the destruction real rather
+than to make the answer right, so the list drops a room the moment it is over —
+and a run of the sweep changes which rows the store returns and never which rows
+this answers with.
+
 **Three set reads for a whole list.** The rooms, then membership over two records,
 then the faces of everybody in any of them. Never one question per room.
 """
@@ -33,6 +39,7 @@ from app.modules.conversations.application.commands import ReadConversationsComm
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.entries import Entry, Message
+from app.modules.conversations.domain.lifetime import has_ended
 from app.modules.conversations.domain.ports import (
     ArrangingCourt,
     ConversationDirectory,
@@ -103,11 +110,16 @@ class ReadConversations:
         rooms = await self._directory.for_challenges(
             await self._arranging.accepted_by(command.reader_id)
         )
-        members = await self._membership.of(rooms)
+        # **Dropped before membership is asked**, exactly as ``ARoomOfYours``
+        # drops one: the end is a fold over the room's own stream and is already
+        # in hand, while membership is two reads into other contexts — and a room
+        # that is over is one nobody needs them for.
+        standing = tuple(room for room in rooms if not has_ended(room, now=now))
+        members = await self._membership.of(standing)
 
         mine = tuple(
             room
-            for room in rooms
+            for room in standing
             if command.reader_id in members.get(room.conversation_id, frozenset())
         )
         faces = await self._faces.faces_of(

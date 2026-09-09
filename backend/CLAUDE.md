@@ -256,14 +256,14 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Eleven jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Twelve jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
   (intent drift, availability staleness), which write no value anywhere — each raises a
   question into the prompt ledger and stops, and every threshold behind them is domain
   in `matchmaking/domain/prompts.py` while only the cadences are settings — and the
-  **interest expiry loop**, the only one that deletes anything. Turning that one off
+  **interest expiry loop**, the first of two that delete anything. Turning that one off
   changes no rule a domain test could observe (every ledger read is bounded by `now`,
   so a lapsed yes lifts nobody whether or not it has been swept); what it buys is a
   table the size of what is live, and the one figure a lapsed row could ever be asked
@@ -318,6 +318,20 @@ Rules to preserve:
   has recorded — the same cost profile as every other read in `games`. The **rule** it applies
   is `engines/racketskill/results.py` and is emphatically not configuration: an environment
   that could pick a K-factor is an environment that decides how a marketplace rates people.
+  The twelfth is the **conversation sweep**
+  ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)),
+  the second that deletes anything and the only one that deletes an **aggregate** — a room
+  and its whole stream, *destroyed, not delisted*. Correctness does not depend on it: a
+  room's end is a fold over its own stream, so every route on it answers
+  `conversation_not_found` past that instant and every list has already dropped it, whether
+  or not anything has swept. What it buys is that the destruction is **real**, which is the
+  whole difference between a room that is over and a record with no end. Like the lapse
+  loop its read names **candidates rather than conclusions**, and here it could not do
+  otherwise: a store that could answer *which rooms have ended* would be the stored
+  `ends_at` ADR-0153 §5 refuses. It leaves a hole in `event_store.sequence_no`, which the
+  candidate index's tail is built for — a gap is stepped over once the snapshot horizon
+  proves it permanent, so a destruction costs that projection a tick of lag and never an
+  event. `CONVERSATION_GRACE` is domain; only the cadence is a setting.
 - **The candidate index tails the log; the outbox delivers side effects**
   ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
   [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
@@ -557,8 +571,33 @@ Rules to preserve:
   ones that write nothing and why, because a builder reading only the event list would write
   a line for each. There is no *Game on* line. And **a refused line is not a refused
   telling**: `GamePlanned` reaches the room, draws nothing, and is where the room learns its
-  game. Not built here: the **destruction** ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
-  #359).
+  game — as does `ChallengeWithdrawn`, whose whole effect is that the room stops existing.
+  **A room is for the episode, and its end is derived**
+  ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)):
+  the earliest of `entry_closes_at(planned_at)`, `GamePlayed` plus `CONVERSATION_GRACE`, and
+  the challenge concluding without a game plus the same grace — with a withdrawal destroying
+  it in the same act. Both anchors are facts the room is **already told**, so it costs no new
+  event, no new field and no new telling, and the anchor is `Game.planned_at` and never the
+  plan's agreed point, which two people could walk forward by tapping a chip. There is no
+  `ends_at` column: the instant moves as the room is told things, so **past its end every
+  route answers `conversation_not_found` whether or not the sweep has run** — the sweep makes
+  the destruction real, not the answer right — and `ARoomOfYours` is the one seam that
+  decides it. `CONVERSATION_GRACE` is **48 h and belongs here, not to `games`**: there is no
+  interlock with `ENTRY_GRACE`, and its falsifier is written down with it.
+  Three things about the lifetime are worth holding separately from the rule.
+  **`conversations` imports `games`, and that arrow is the second one to run this way** —
+  `domain/lifetime.py` takes `entry_closes_at`, exactly as `plans` takes `PLAN_HORIZON`
+  (ADR-0148 §8); the reverse stays shut by `.importlinter`'s *No context knows the
+  Conversation exists*, and the import is why the derivation is a module rather than a method
+  on the aggregate, which is folded by a repository that knows nothing about entry windows.
+  **The destruction appends no event and that is not the ledgers' exemption** — it is the end
+  of an event-sourced aggregate rather than one that skips event sourcing, and a
+  `ConversationDestroyed` on the stream it deletes would be a record of the destruction
+  inside the thing destroyed. **And the unanchored arm leans on a coincidence of two 48-hour
+  numbers**: a departure only concludes a court while `ANSWER_WINDOW <= CONVERSATION_GRACE`,
+  so lengthening the first past the second would let a half-built court be destroyed while
+  somebody may still accept into it. It is stated in `lifetime.py` rather than checked,
+  because checking it would mean folding `challenges`' seats.
 - **A plan is the game's, and it is born by being used**
   ([ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md),
   [ADR-0145](../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md),

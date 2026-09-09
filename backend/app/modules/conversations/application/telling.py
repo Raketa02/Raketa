@@ -25,18 +25,22 @@ other people on the court, which is what a system line is for.
    announce a conclusion only when no arrangement of the seats could reach it* —
    and everybody having accepted is exactly such an arrangement. **So there is no
    *Game on* line.** ``ChallengeWithdrawn`` is refused because the withdrawal
-   destroys the room in the same act and there is nobody left to read it — a
-   reason that is **not yet true in this tree**, because the destruction is
-   ``docs/adr/0153``'s and is not built. The row says so where it is written.
+   destroys the room in the same act and there is nobody left to read it. That
+   reason is now true: the destruction is ``docs/adr/0153``'s and is built, and
+   the withdrawal is the one telling here whose whole effect is that the room
+   stops existing.
 3. **The argument belongs to somebody else.** The four result events are
    ``games``' and ``games`` has its own eight-arm conversation for them. One fact
    in one place.
 
-**A refused line is not a refused telling**, and here that is load-bearing.
-``GamePlanned`` still reaches the room and draws nothing, because ``GamePlayed``
-names a game and nothing else and the room's own end will be derived from
-``GamePlanned``'s moment (``docs/adr/0153`` §2). Dropping the delivery because
-nothing renders would drop the anchor with it.
+**A refused line is not a refused telling**, and here that is load-bearing
+twice. ``GamePlanned`` still reaches the room and draws nothing, because
+``GamePlayed`` names a game and nothing else and the room's own end is derived
+from ``GamePlanned``'s moment (``docs/adr/0153`` §2); dropping the delivery
+because nothing renders would drop the anchor with it. ``ChallengeWithdrawn``
+draws nothing and arrives for a stronger reason still — it is what **destroys**
+the room, so a refusal read as *do not deliver this* would leave every withdrawn
+court a readable room for ever.
 
 **On the count.** ``the-words.md`` §23.1 is headed *the six events that publish
 nothing* and its own table names **eight** of them, four of which it groups on
@@ -163,14 +167,13 @@ TELLINGS: tuple[Telling, ...] = (
     Telling(
         event=ChallengeWithdrawn,
         line=None,
-        reaches_the_room=False,
+        reaches_the_room=True,
         why_nothing=(
-            "the withdrawal destroys the room, so there is nobody left to read a "
-            "line and the news is on the challenge screen instead. **The "
-            "destruction is not built** (#359), so until it lands a withdrawn "
-            "challenge leaves a readable room behind — which is a reason to "
-            "build the sweep, not a reason to write a line nobody would be there "
-            "for"
+            "the withdrawal **destroys** the room in the same act, so there is "
+            "nobody left to read a line and the news is on the challenge screen "
+            "instead. It is the one telling here whose whole effect is that the "
+            "room stops existing, which is why it reaches the room while drawing "
+            "nothing"
         ),
     ),
     Telling(

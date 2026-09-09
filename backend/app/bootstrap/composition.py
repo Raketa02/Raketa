@@ -78,6 +78,9 @@ from app.modules.challenges.infrastructure.games_settled_game import (
 )
 from app.modules.games.application.open_planned_game import OpenPlannedGame
 from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
+from app.modules.conversations.application.destroy_ended_conversations import (
+    DestroyEndedConversations,
+)
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.application.tell_the_room import TellTheRoom
 from app.modules.conversations.domain.ports import (
@@ -1754,14 +1757,57 @@ def build_a_room_of_yours(
     *,
     conversations: ConversationRepository,
     membership: Membership,
+    clock: Clock,
 ) -> ARoomOfYours:
     """*This room, if you are in it* — the seam every act on one room shares.
 
     Built from the two collaborators rather than from a session, because both are
     already request-scoped and a second copy of either would be a second answer
     to *who is in this*.
+
+    **The clock is the third, and it is what makes the lifetime a read.** A room
+    past its end answers ``conversation_not_found`` whether or not the sweep has
+    run (``docs/adr/0153`` §5), and this is the one seam every act on one room
+    passes through — so there is a single place that answer is decided.
     """
-    return ARoomOfYours(conversations=conversations, membership=membership)
+    return ARoomOfYours(
+        conversations=conversations, membership=membership, clock=clock
+    )
+
+
+def build_destroy_ended_conversations(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> DestroyEndedConversations:
+    """The sweep, wired the way a request is. **Destroyed, not delisted.**
+
+    ``clock`` is **required and never defaulted**, like every other clock-taking
+    builder here. Its two callers want different answers and both are legitimate:
+    the job wants the wall clock, and a seed run wants the one declared instant
+    the rest of its fixture is dated against (``docs/adr/0029``, and
+    ``app/seeds/clock.py``'s own argument). A default would make one of those the
+    answer somebody inherited rather than the one they wrote.
+
+    The repository and the directory are **one pair over one session**, as every
+    other reader of the two is: the directory folds through the repository, so a
+    second one would be a second set of remembered stream versions.
+    """
+    resolved = runtime or get_event_runtime()
+    conversations = build_conversation_repository(
+        session=session,
+        event_store=build_domain_event_store(session, runtime=resolved),
+        events=build_event_publisher(session, runtime=resolved),
+    )
+    return DestroyEndedConversations(
+        directory=build_conversation_directory(
+            session=session, conversations=conversations
+        ),
+        conversations=conversations,
+        unit_of_work=build_unit_of_work(session),
+        clock=clock,
+    )
 
 
 def build_tell_the_room(

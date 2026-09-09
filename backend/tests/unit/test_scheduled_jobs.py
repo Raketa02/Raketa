@@ -25,6 +25,7 @@ from app.bootstrap.jobs import (
     CANDIDATE_INDEX_REFRESH_JOB,
     CANDIDATE_INDEX_TAIL_JOB,
     CHALLENGE_LAPSE_JOB,
+    CONVERSATION_SWEEP_JOB,
     RATING_CATCH_UP_JOB,
     EXPOSURE_ROLL_JOB,
     GRID_STALENESS_JOB,
@@ -174,6 +175,7 @@ def _nothing_but(**overrides):
             "INTEREST_EXPIRY_ENABLED": False,
             "CHALLENGE_LAPSE_ENABLED": False,
             "RATING_CATCH_UP_ENABLED": False,
+            "CONVERSATION_SWEEP_ENABLED": False,
             "SCALE_PRESSURE_ENABLED": False,
             **overrides,
         }
@@ -849,5 +851,62 @@ async def test_the_catch_up_runs_end_to_end_through_the_real_wiring(
         and record.ratings == 0
         and record.unrated_seats == 0
         and record.conflicts == 0
+        for record in caplog.records
+    )
+
+
+def test_the_conversation_sweep_is_registered_and_carries_the_configured_cadence():
+    """The cadence is a setting; **``CONVERSATION_GRACE`` is emphatically not.**
+
+    How often dead rooms are cleared out is a fact about the deployment. How long
+    a room outlives the game it was opened for is behaviour a domain test can
+    observe, and it lives in `conversations/domain/lifetime.py` (``docs/adr/0153``
+    §4).
+    """
+
+    settings = _nothing_but(
+        CONVERSATION_SWEEP_ENABLED=True, CONVERSATION_SWEEP_INTERVAL_SECONDS=900.0
+    )
+
+    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [job.name for job in jobs] == [CONVERSATION_SWEEP_JOB]
+    assert jobs[0].interval_seconds == 900.0
+
+
+def test_the_conversation_sweep_without_a_session_factory_refuses_to_be_registered():
+    """It walks the conversation table and deletes streams, so it joins the loud
+    branch: *the sweep is off* and *the sweep was enabled and silently dropped*
+    have one symptom — rooms accumulating — and only one is somebody's decision.
+    """
+
+    settings = _nothing_but(CONVERSATION_SWEEP_ENABLED=True)
+
+    with pytest.raises(ValueError, match="session factory"):
+        build_scheduled_jobs(session_factory=None, settings=settings)
+
+
+async def test_the_conversation_sweep_runs_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """A quiet run is logged as a quiet run, with both figures it exists for.
+
+    ``rooms`` is on that line beside ``destroyed`` because *the loop is off* and
+    *the loop is running and nothing has ended* both show up as rooms
+    accumulating, and only one of them is somebody's problem.
+    """
+
+    settings = _nothing_but(CONVERSATION_SWEEP_ENABLED=True)
+    (sweep,) = build_scheduled_jobs(
+        session_factory=session_factory, settings=settings
+    )
+
+    with caplog.at_level(logging.INFO):
+        await sweep.run_once()
+
+    assert any(
+        record.message == "conversation sweep finished"
+        and record.rooms == 0
+        and record.destroyed == 0
         for record in caplog.records
     )

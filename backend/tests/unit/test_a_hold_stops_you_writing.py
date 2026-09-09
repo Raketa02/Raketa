@@ -183,7 +183,9 @@ def _send(
 ) -> SendMessage:
     repository = conversations or _OneRoom(room)
     return SendMessage(
-        rooms=ARoomOfYours(conversations=repository, membership=membership),
+        rooms=ARoomOfYours(
+            conversations=repository, membership=membership, clock=_FrozenClock()
+        ),
         conversations=repository,
         holds=holds,
         # A hold refuses the send **before** anything is recorded, so the live
@@ -236,7 +238,9 @@ async def test_a_held_member_still_reads_the_room(room, membership):
     They still need to read what was said and reach the people in it."""
 
     read = ReadConversation(
-        rooms=ARoomOfYours(conversations=_OneRoom(room), membership=membership),
+        rooms=ARoomOfYours(
+            conversations=_OneRoom(room), membership=membership, clock=_FrozenClock()
+        ),
         faces=_Faces(),
         clock=_FrozenClock(),
     )
@@ -254,7 +258,9 @@ async def test_a_held_member_still_pages_backward(room, membership):
     second half."""
 
     entries = await ReadEntries(
-        rooms=ARoomOfYours(conversations=_OneRoom(room), membership=membership)
+        rooms=ARoomOfYours(
+            conversations=_OneRoom(room), membership=membership, clock=_FrozenClock()
+        )
     ).execute(
         ReadEntriesCommand(
             conversation_id=room.conversation_id,

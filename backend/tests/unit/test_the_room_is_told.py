@@ -132,6 +132,22 @@ def test_a_refused_line_is_not_a_refused_telling():
     assert GamePlanned in TOLD_ABOUT
 
 
+def test_the_withdrawal_draws_nothing_and_has_the_largest_effect_of_any_telling():
+    """``docs/adr/0153`` §2 — it **destroys** the room in the same act, so there
+    is nobody left to read a line and the news is on the challenge screen.
+
+    The telling that draws the least is the one that must not be dropped: a
+    refusal read as *do not deliver this* would leave every withdrawn court a
+    readable room for ever.
+    """
+
+    withdrawn = next(t for t in TELLINGS if t.event is ChallengeWithdrawn)
+
+    assert withdrawn.line is None
+    assert withdrawn.reaches_the_room
+    assert ChallengeWithdrawn in TOLD_ABOUT
+
+
 def test_the_result_argument_never_reaches_the_room_at_all():
     """Refused on **scope** — ``games`` has its own conversation for it — so
     unlike the two above, it is not even delivered."""

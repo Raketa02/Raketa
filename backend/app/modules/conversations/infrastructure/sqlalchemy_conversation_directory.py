@@ -18,7 +18,7 @@ list already folds an aggregate per row for the same reason.
 
 from __future__ import annotations
 
-from typing import Collection
+from typing import Collection, Iterable
 from uuid import UUID
 
 from sqlalchemy import select
@@ -54,12 +54,23 @@ class SqlAlchemyConversationDirectory:
             # the traversal rather than on what happens to be visible.
             .order_by(ConversationORM.opened_at, ConversationORM.conversation_id)
         )
-        rooms = []
-        for conversation_id in found.scalars().all():
-            room = await self._conversations.load(conversation_id)
-            if room is not None:
-                rooms.append(room)
-        return tuple(rooms)
+        return await self._folded(found.scalars().all())
+
+    async def every_room(self) -> tuple[Conversation, ...]:
+        """Every room the store still holds, oldest first.
+
+        **No narrowing, because there is nothing to narrow on**: a room's end is
+        derived from its own stream, so the sweep folds each one and decides.
+        What keeps the walk affordable is that a conversation is destroyed
+        rather than kept, so this table is the size of what is live.
+        """
+
+        found = await self._session.execute(
+            select(ConversationORM.conversation_id).order_by(
+                ConversationORM.opened_at, ConversationORM.conversation_id
+            )
+        )
+        return await self._folded(found.scalars().all())
 
     async def for_game(self, game_id: UUID) -> Conversation | None:
         """The room this game belongs to, **with its row locked**.
@@ -78,3 +89,11 @@ class SqlAlchemyConversationDirectory:
         if conversation_id is None:
             return None
         return await self._conversations.load(conversation_id)
+
+    async def _folded(self, ids: Iterable[UUID]) -> tuple[Conversation, ...]:
+        rooms = []
+        for conversation_id in ids:
+            room = await self._conversations.load(conversation_id)
+            if room is not None:
+                rooms.append(room)
+        return tuple(rooms)

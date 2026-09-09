@@ -307,6 +307,8 @@ serving HTTP.
 | `CHALLENGE_LAPSE_INTERVAL_SECONDS` | How often it runs. **Not `ANSWER_WINDOW`**, which is the promise the invitation makes and is domain. |
 | `RATING_CATCH_UP_ENABLED` | Enables the hourly rating catch-up, which moves a Level on every confirmed counted result. **The only job whose absence a player would notice** — nothing announces a confirmation, so this is the whole path a result has to a rating. |
 | `RATING_CATCH_UP_INTERVAL_SECONDS` | How often it runs. **Not the update rule**, which is `engines/racketskill/results.py` and is domain — an environment that could pick a K-factor decides how a marketplace rates people. |
+| `CONVERSATION_SWEEP_ENABLED` | Enables the hourly conversation sweep, which destroys every room whose episode is over. **Destroyed, not delisted** — turning it off changes no answer, because the end is derived and every route already refuses past it; what stops is the rows going away. |
+| `CONVERSATION_SWEEP_INTERVAL_SECONDS` | How often it runs. **Not `CONVERSATION_GRACE`**, which is how long a room outlives its game and is domain. |
 | `SCALE_PRESSURE_ENABLED` | Enables the scale-pressure probe — trigger 1's event-loop lag monitor, which also closes the fifteen-minute scoring window. |
 | `SCALE_PRESSURE_INTERVAL_SECONDS` | How often it ticks. The tick *is* the measurement: the probe records how much later than this the loop got back to it. **Not the trigger's 15-minute window and not its thresholds** — those are domain, in `matchmaking/domain/scale_triggers.py`. |
 | `GUNICORN_WORKERS` | How many workers this container runs. Read by `docker/api/startup.prod.sh` and by trigger 4's arithmetic, so the memory reading is about the fleet that exists. It selects no behaviour: it is a multiplier inside a log record. |
@@ -761,7 +763,7 @@ process and no second deployable.
   and dispatches to subscribed handlers. Its worker id is the lease its batches
   claim rows under.
 - **Scheduled jobs** (`PeriodicJob`) run because an interval elapsed.
-  `app/bootstrap/jobs.py` is the register, and ten jobs are in it today: the
+  `app/bootstrap/jobs.py` is the register, and twelve jobs are in it today: the
   **uncommitted-photo sweep**, which deletes every photo the object store has
   held for more than 24 hours that no committed profile currently names; the
   **photo re-review backfill**, which asks the reviewer about the photos nobody
@@ -771,21 +773,35 @@ process and no second deployable.
   intent drift and availability staleness — which write no value anywhere and each
   raise a standing question instead; the **interest expiry loop**, which removes
   every *Let's play* whose twenty-one days have passed; the **scale-pressure
-  probe**, whose work is measuring how late the event loop woke it; and the
+  probe**, whose work is measuring how late the event loop woke it; the
   **challenge lapse loop**, which writes down every answer window that passed with
-  nothing in it. Two of them take no database session: the roll, whose whole input
-  and output are in Redis, and the backfill, whose whole input and output are the
-  object store.
+  nothing in it; the **rating catch-up**, which is the whole path a confirmed
+  result has to a Level; and the **conversation sweep**, which destroys every room
+  whose episode is over. Two of them take no database session: the roll, whose
+  whole input and output are in Redis, and the backfill, whose whole input and
+  output are the object store.
 
-  The expiry loop is the only job here that deletes anything, and **correctness
-  does not depend on it running**: every read of the interest ledger is bounded by
-  `now`, so a lapsed yes lifts nobody and counts against nobody's cap whether or
-  not it has been swept. What the loop buys is a table the size of what is live,
-  and one figure that could not be bought later — *yeses that expired having never
-  lifted anybody*, `INTEREST_TTL`'s only day-one falsifier, which a lapsed row
-  leaves no trace to compute.
+  **Two of them delete things, and they delete different kinds of thing.** The
+  interest expiry loop removes a row; the conversation sweep removes an
+  aggregate — a room and its whole stream, *destroyed, not delisted*
+  ([ADR-0142](../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md),
+  with its instant moved by
+  [ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)).
+  **Correctness depends on neither.** Every read of the interest ledger is bounded
+  by `now`, so a lapsed yes lifts nobody and counts against nobody's cap whether
+  or not it has been swept; and a room's end is a fold over its own stream, so
+  every route on it answers `conversation_not_found` past that instant and every
+  list has already dropped it. What the expiry loop buys is a table the size of
+  what is live plus one figure that could not be bought later — *yeses that
+  expired having never lifted anybody*, `INTEREST_TTL`'s only day-one falsifier,
+  which a lapsed row leaves no trace to compute. What the sweep buys is that the
+  destruction is **real**, which is the whole difference between a room that is
+  over and a record with no end. `CONVERSATION_GRACE` is domain, in
+  `app/modules/conversations/domain/lifetime.py`; only
+  `CONVERSATION_SWEEP_INTERVAL_SECONDS` is configuration.
 
-  The lapse loop is the only job here that **appends a domain event**, and it is
+  The lapse loop is one of two jobs here that **append a domain event** — the
+  other is the rating catch-up — and it is
   the clearest case of a loop bought for the record rather than for correctness. A
   seat past its answer window already reads as lapsed, its pair already releases
   and its challenge already stands as `LAPSED`, because a standing is folded from

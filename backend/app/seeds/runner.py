@@ -1304,7 +1304,8 @@ def report(run_report: SeedReport) -> list[str]:
 
 
 def _room_lines(rooms: SeededRooms) -> list[str]:
-    """The rooms the delivery opened, and the one shape this fixture does not reach.
+    """The rooms the delivery opened, the ones the sweep took away, and the one
+    shape this fixture does not reach.
 
     **The gap is on the report rather than in a docstring**, on the rule the two
     relationship costs already follow: a fixture that quietly reached three of
@@ -1313,8 +1314,9 @@ def _room_lines(rooms: SeededRooms) -> list[str]:
     """
 
     return [
-        "The rooms, once the outbox was delivered:",
-        f"  {rooms.delivered} event(s) delivered · {rooms.said} message(s) said",
+        "The rooms, once the outbox was delivered and the ended ones swept:",
+        f"  {rooms.delivered} event(s) delivered · {rooms.said} message(s) said "
+        f"· {rooms.swept.destroyed} room(s) destroyed",
         *(f"  {line}" for line in rooms.rooms),
         "  not reached · a room carrying every system-line code. It needs a "
         "`SeatsInvited`, and nothing here performs a fill — which would cost a "

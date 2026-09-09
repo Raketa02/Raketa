@@ -21,9 +21,13 @@ message and the same ``seq``.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
+from app.api.dependencies import get_clock
 from tests.api import matchmaking_world as world
+from tests.unit.fake_event_store import FrozenClock
 
 
 @pytest.fixture
@@ -490,3 +494,161 @@ async def test_the_result_argument_writes_no_line_because_it_is_games(
     await world.deliver_the_outbox(session_factory)
 
     assert len(await _entries(client, row, a_room)) == before
+
+
+# -- the lifetime ----------------------------------------------------------
+
+#: Any uuid does; it is spelled rather than minted so the send below is the same
+#: send on every run.
+_A_CLIENT_MESSAGE_ID = "44444444-4444-4444-4444-444444444444"
+
+
+async def _decline(client, challenge_id: str, token: str) -> None:
+    answered = await client.post(
+        f"/api/v1/challenges/{challenge_id}/decline", headers=world.auth(token)
+    )
+    assert answered.status_code == 200, answered.text
+
+
+@pytest.fixture
+async def a_room_that_ends(client, session_factory, a_room):
+    """The same room, with its court declined to a standstill.
+
+    A departure is the last thing that happened to this arrangement, so the room
+    ends one ``CONVERSATION_GRACE`` after it (``docs/adr/0153`` §3) — the
+    unanchored case, reached over HTTP rather than described.
+    """
+
+    for who in ("bo", "cy"):
+        await _decline(client, a_room["challenge_id"], a_room["people"][who]["token"])
+    await world.deliver_the_outbox(session_factory)
+    rows = await _rooms(client, a_room["searcher"]["token"])
+    assert len(rows) == 1, rows
+    assert rows[0]["last_entry"]["code"] == "SEAT_LEFT"
+    return a_room
+
+
+def the_day_after_next(client) -> None:
+    """Move the clock past every grace in this file, and nothing else.
+
+    The room's end is derived from what it was told, so the only way to reach it
+    is to be somewhere later. It is the **API's** clock that moves, which is what
+    a real tomorrow moves — nothing in the database is rewritten, and the room
+    that was readable a line ago is the same room.
+
+    Shared with the stream suite, which needs the same instant against the same
+    grace: a second spelling of *later than 48 hours* is how two files start
+    disagreeing about which side of the boundary they are testing.
+    """
+
+    at = FrozenClock(at=datetime.now(timezone.utc) + timedelta(hours=49))
+    world.override(client, get_clock, lambda: at)
+
+
+async def test_a_room_past_its_end_is_gone_from_the_list(client, a_room_that_ends):
+    """``docs/adr/0153`` §5 — *destroyed, not delisted*, and the read is the
+    truth whether or not a sweep has run."""
+
+    token = a_room_that_ends["searcher"]["token"]
+    assert len(await _rooms(client, token)) == 1
+
+    the_day_after_next(client)
+
+    assert await _rooms(client, token) == []
+
+
+@pytest.mark.parametrize("route", ["", "/entries"])
+async def test_every_read_on_an_ended_room_answers_not_found(
+    client, a_room_that_ends, route
+):
+    """``docs/adr/0153`` §5 — **one code for three cases**: never existed,
+    destroyed, and past its end but not yet swept."""
+
+    conversation_id = a_room_that_ends["room"]["conversation_id"]
+    token = a_room_that_ends["searcher"]["token"]
+    the_day_after_next(client)
+
+    response = await client.get(
+        f"/api/v1/conversations/{conversation_id}{route}", headers=world.auth(token)
+    )
+
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == "conversation_not_found"
+
+
+async def test_nobody_can_say_anything_in_a_room_past_its_end(
+    client, a_room_that_ends
+):
+    """The send is gated by the same seam every read is, so there is one place
+    the answer is decided."""
+
+    conversation_id = a_room_that_ends["room"]["conversation_id"]
+    token = a_room_that_ends["searcher"]["token"]
+    the_day_after_next(client)
+
+    said = await _say(
+        client, conversation_id, token, "still there?", _A_CLIENT_MESSAGE_ID
+    )
+
+    assert said.status_code == 404, said.text
+    assert said.json()["code"] == "conversation_not_found"
+
+
+async def test_the_room_stands_right_up_to_its_end(client, a_room_that_ends):
+    """The grace is not a rounding: a room a day after the departure is a room
+    two people can still be in."""
+
+    conversation_id = a_room_that_ends["room"]["conversation_id"]
+    token = a_room_that_ends["searcher"]["token"]
+
+    response = await client.get(
+        f"/api/v1/conversations/{conversation_id}", headers=world.auth(token)
+    )
+
+    assert response.status_code == 200, response.text
+
+
+# -- the withdrawal --------------------------------------------------------
+
+
+async def test_a_withdrawal_destroys_the_room_in_the_same_act(
+    client, session_factory, a_room_that_ends
+):
+    """``docs/adr/0153`` §2 — the withdrawal destroys it and writes no line,
+    because there is nobody left to read one. The news is on the challenge
+    screen."""
+
+    token = a_room_that_ends["searcher"]["token"]
+    conversation_id = a_room_that_ends["room"]["conversation_id"]
+
+    withdrawn = await client.post(
+        f"/api/v1/challenges/{a_room_that_ends['challenge_id']}/withdrawal",
+        headers=world.auth(token),
+    )
+    assert withdrawn.status_code == 200, withdrawn.text
+    await world.deliver_the_outbox(session_factory)
+
+    assert await _rooms(client, token) == []
+    gone = await client.get(
+        f"/api/v1/conversations/{conversation_id}", headers=world.auth(token)
+    )
+    assert gone.status_code == 404, gone.text
+    assert gone.json()["code"] == "conversation_not_found"
+
+
+async def test_a_withdrawn_room_is_gone_for_everybody_who_was_in_it(
+    client, session_factory, a_room_that_ends
+):
+    """It is destroyed rather than hidden from the organiser: the member who
+    accepted loses the room too, and reads the news on the challenge."""
+
+    ana = a_room_that_ends["people"]["ana"]["token"]
+    assert len(await _rooms(client, ana)) == 1
+
+    await client.post(
+        f"/api/v1/challenges/{a_room_that_ends['challenge_id']}/withdrawal",
+        headers=world.auth(a_room_that_ends["searcher"]["token"]),
+    )
+    await world.deliver_the_outbox(session_factory)
+
+    assert await _rooms(client, ana) == []
