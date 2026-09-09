@@ -28,11 +28,17 @@
 
 import { theme } from '@/shared/ui';
 
+import { LIST_SEPARATOR, sentenceList } from './sentenceList';
+
 /**
  * What separates two handles in a list of them — structure rather than voice, so the rule that
  * charges for it and the line that draws it cannot disagree about its width.
+ *
+ * **The platform's own list separator**, named again here because this file *charges* for it:
+ * `charactersThatFit` spends its width out of a budget, which is a question nothing else asks.
+ * Two spellings of `', '` would be two answers to what a line costs.
  */
-export const HANDLE_SEPARATOR = ', ';
+export const HANDLE_SEPARATOR = LIST_SEPARATOR;
 
 /**
  * The handles a row **speaks** — commas, and a final *and*.
@@ -47,14 +53,14 @@ export const HANDLE_SEPARATOR = ', ';
  * list inside a `cardTitle` where a conjunction would read as somebody's handle, and it drops
  * whole names with a `+2` counter. This one **never truncates**: §20.4 is *"the visible label
  * truncates, the spoken one never does"*, so every handle is here whether or not the row drew it.
+ *
+ * **The join is `sentenceList`'s and this is its name for handles**, which is the whole of what
+ * this function is once the rule was promoted on its third caller: two accessibility decks read
+ * *the handles, spoken* rather than *a list, joined*, and that name is what tells the reader at
+ * either call site which of this file's two functions they are looking at.
  */
 export function spokenHandles(names: readonly string[]): string {
-  if (names.length <= 1) return names.join('');
-
-  const said = [...names];
-  const last = said.pop();
-
-  return `${said.join(HANDLE_SEPARATOR)} and ${last}`;
+  return sentenceList(names);
 }
 
 /**

@@ -76,6 +76,28 @@ import type { GameSide, Outcome } from './vocabulary';
 export type ResultAct = 'enter' | 'correct' | 'accept' | 'counter';
 
 /**
+ * **What an entry arm leads with** — the plan while it is being agreed, the score once the moment
+ * is here.
+ *
+ * `AWAITING_ENTRY` is one standing and
+ * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5.2 lands two
+ * different cards on two different things inside it: *Planning* and *Game on* arrive at **the
+ * Planning arm**, and *Today* and *Needs result* arrive at **the score grid**. What tells them
+ * apart is the four-rung ladder, which reads a **plan** — and this feature may never learn one
+ * exists (ADR-0149 §1). So the fold happens in `features/plans`, where the ladder lives and where
+ * [`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §3.3 says
+ * *"every surface reads it — the rail, the card, the gloss, and the game screen's arm"*, and what
+ * crosses is **this** — a word about what the screen leads with, in this feature's own vocabulary
+ * rather than a rung in somebody else's.
+ *
+ * **It changes what leads and never what is offered.** *We played* is available in every entry arm
+ * — `standing_of` gates entry on `entry_closes_at` and on nothing else, so four people can arrange
+ * a game at six and play it at eight without ever filling a slot — so on the plan lead the grid is
+ * a press away rather than absent.
+ */
+export type EntryLead = 'the-plan' | 'the-score';
+
+/**
  * The three acts that open a grid. **At most one of them is ever offered at once**, which is
  * what lets {@link editingAct} read the answer off {@link actsOffered} instead of restating it.
  */

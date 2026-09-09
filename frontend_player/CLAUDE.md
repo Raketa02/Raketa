@@ -330,6 +330,56 @@ shares Play's. Neither write on the screen behind it is optimistic and neither o
 right about what a game becomes is one that asks, and the app's own test — _does this act carry a
 deadline the player chose?_ — answers no for both, where the challenge send answers yes.
 
+**One screen shows a game whatever state it is in, and the plan arrives on it as a child**
+([#368](https://github.com/Raketa02/Raketa/issues/368),
+[ADR-0149](../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md) §2).
+**Grown, not replaced**: `GameScreen` was already a state-keyed detail surface with ten arms, and a
+hand-off in the middle of one standing's life would give a player two different screens for the
+same game depending which day they tapped it. What it grew is **one `ReactNode`** and **one word**,
+and **`features/games` still never learns a plan exists**: no `Plan`, no ladder, no rung, and
+`eslint.config.mjs` refuses the import. `GameScreenWithPlan` is the one place that holds both
+halves — it does the join, folds the arm and fills the slot — and **both routes mount it
+unchanged**, so a composition spelled at two call sites cannot drift at one of them.
+
+**`AWAITING_ENTRY` is one standing over two landings, and that is the arm.** §5.2 lands _Planning_
+and _Game on_ on **the plan** and _Today_ and _Needs result_ on **the score grid**, so the grid is
+the screen on the two arms the moment has reached and **one press away** on the two it has not —
+the press being `We played`, one word in `shared/vocabulary/theActsWords.ts` that the Now card's
+door reads too — shared rather than either feature's, because the two reach each other at load time
+and a word read across that seam mid-evaluation reads a half-built module. The word that crosses back into that feature is `EntryLead`, in its own
+vocabulary rather than a rung in somebody else's, and it is **derived from the card's own door**
+(`entryLeadOf`) so the two tables cannot disagree about where a button goes — _the verb names what
+you arrive at_. **_We played_ is available on every entry arm**, not only the two that lead with it,
+because `standing_of` gates entry on `entry_closes_at` alone: four people can arrange a game at six
+and play it at eight without filling a slot. The cancel follows from the same fact — a grid that
+_is_ the screen has nothing behind it to go back to.
+
+**The child is the plan read rather than edited** — `Tag`s and never `Chip`s, one accessibility
+element, with §22.2's **inverted** panel over it: it stops explaining an absence and names one,
+because a player seeing _Zabłocie Sport · Saturday · 18:00_ inside an app may reasonably assume the
+app did something about it. **The checklist is three lines, capped, in one order**, and its third is
+**cited, not written** — `worthLine`, the whole of what survives ADR-0143 §8's refusal — so the
+screen defers its own copy of that sentence on the entry arm rather than printing it twice. What the
+arm changes is **the screen around the child and nothing inside it**: §22.6 settles that _the rungs
+differ by the clock and not by the arrangement_, so the checklist is one rule on all four and no arm
+reaches the child at all. **A plan arm asks for nothing, so nothing on it wears the one accent** —
+the chat door is 6.1 `secondary` on every arm, because an accent in the scroller beside a quieter
+control in the pinned slot inverts what pinning is for, and the coral comes back where
+`Send this score` is pinned. **_Open the chat_ is always drawn, whichever door you came in by** — arriving
+from Now it is the point and arriving from _Details_ it is the way back, so drawing it conditionally
+on the route would make the surface depend on its door; it fails soft on the room being gone and on
+nothing else. **One component, two routes** — `/games/[gameId]` and
+`/chats/conversation/[conversationId]/details` — so each lights its own column and _back_ is correct
+by construction, with **no `from` parameter** and `tabForPathname` still pure. Eight corrections to
+the details design are **absences** rather than sentences and each is a record read out in
+`GamePlan`'s own note — _part of day_ is not a slot, the lock button and its coral outline are
+deleted, the slots are tags, _Sun 9_ is a date this app does not have, _60 min_ is a duration nothing
+holds, and _COMPETITIVE_ is a search's mode rather than a game's kind — as is **press and hold for
+the full record**, and as are the **pairing forecast and the player rows**, upheld with an argument
+of their own: a forecast helps you decide whether to play somebody, and on this screen you already
+have. The reversal is filed as [#346](https://github.com/Raketa02/Raketa/issues/346) rather than
+taken.
+
 **The shell is five tabs over one stack, and it remembers nothing.** `TabShell` mounts the
 `TabBar` once, below the navigator, and reads the active column off the current path —
 `tabForPathname`, by the **first** segment, so ⚡Play stays lit for every screen inside Play.

@@ -10,14 +10,23 @@
 import type { Plan } from '../domain/slots';
 
 import {
+  EVERYBODY_SAID_YES,
+  NOTHING_IS_LEFT_TO_AGREE,
   NOT_AGREED_YET,
+  PLAN_PANEL,
+  PLAN_SPOKEN_LEAD,
   QUICK_CHIP,
   SAVING,
+  SLOT_IN_A_SENTENCE,
   SLOT_NAME,
+  STILL_TO_AGREE,
+  checklistLines,
   dayChipLabel,
   dayChipName,
+  planTagsName,
   slotChipLabel,
   slotChipName,
+  slotsStillToAgree,
 } from './planPresentation';
 
 const GAME = '11111111-0000-4000-8000-000000000001';
@@ -92,5 +101,92 @@ describe('the quick chips', () => {
 
     const named = /monday|tuesday|wednesday|thursday|friday|saturday|sunday|morning|evening/i;
     for (const words of Object.values(QUICK_CHIP)) expect(words).not.toMatch(named);
+  });
+});
+
+describe('the panel over the plan', () => {
+  /**
+   * §5.4's fourth correction. The design's *No clock time yet — on purpose* explains an absence
+   * and goes away once somebody fills the slot; this one **names** one and is true of a complete
+   * plan, which is the whole of ADR-0145 §6's inversion.
+   */
+  it('names an absence rather than explaining one', () => {
+    expect(PLAN_PANEL.title).toBe('Agreed between you — nothing is booked');
+    expect(PLAN_PANEL.body).toMatch(/does not hold courts/);
+    expect(`${PLAN_PANEL.title} ${PLAN_PANEL.body}`).not.toMatch(/on purpose|no clock time/i);
+  });
+});
+
+describe('what is still to agree', () => {
+  /** §22.6's two worked examples, in slot order and joined the platform's one way. */
+  it('is the unfilled slots in slot order, with a final and', () => {
+    expect(slotsStillToAgree(plan({ day: '2026-09-13' }))).toBe(
+      `${SLOT_IN_A_SENTENCE.where} and ${SLOT_IN_A_SENTENCE.hour}`,
+    );
+    expect(slotsStillToAgree(plan())).toBe('where, the day and the hour');
+  });
+
+  /** *No plan* and *nothing agreed* are one state here too. */
+  it('reads a missing plan exactly as an empty one', () => {
+    expect(slotsStillToAgree(undefined)).toBe(slotsStillToAgree(plan()));
+  });
+});
+
+describe('the checklist', () => {
+  const WORTH = 'This one counts, so an agreed score becomes part of your record.';
+
+  const full = plan({ place: 'Zabłocie Sport', day: '2026-09-13', hour: '18:00' });
+
+  /** Three lines, capped, in one order: what is true now, what is left, what it moves. */
+  it('is three lines in one order', () => {
+    expect(checklistLines(plan({ place: 'Zabłocie Sport' }), WORTH)).toEqual([
+      EVERYBODY_SAID_YES,
+      `${STILL_TO_AGREE}: the day and the hour.`,
+      WORTH,
+    ]);
+  });
+
+  /**
+   * The whole list is printed here and only here, which is what lets the card's gloss name the
+   * next slot alone and stay four words.
+   */
+  it('prints the whole list where the gloss prints one', () => {
+    expect(checklistLines(undefined, WORTH)[1]).toBe(
+      `${STILL_TO_AGREE}: where, the day and the hour.`,
+    );
+  });
+
+  it('says nothing is left once all three are filled', () => {
+    expect(checklistLines(full, WORTH)[1]).toBe(NOTHING_IS_LEFT_TO_AGREE);
+  });
+
+  /**
+   * The third line is `worthLine`'s, cited rather than written — so a `GameKind` this build
+   * cannot read drops it and the other two stand, which is §3's rule for a fact that keys no
+   * total.
+   */
+  it('drops the third line rather than writing one when there is no worth to cite', () => {
+    expect(checklistLines(full, undefined)).toEqual([EVERYBODY_SAID_YES, NOTHING_IS_LEFT_TO_AGREE]);
+  });
+
+  /** The first line is the same three words on every rung: the rungs differ by the clock. */
+  it('says the same first line whatever is agreed', () => {
+    expect(checklistLines(undefined, WORTH)[0]).toBe(EVERYBODY_SAID_YES);
+    expect(checklistLines(full, WORTH)[0]).toBe(EVERYBODY_SAID_YES);
+  });
+});
+
+describe('the read-only plan’s spoken name', () => {
+  /** §24.5's own spelling, and the place whole — §20.4's half the drawn tag cannot keep. */
+  it('names each slot and then what it holds', () => {
+    expect(
+      planTagsName(plan({ place: 'Zabłocie Sport, court 3', day: '2026-09-13', hour: '18:00' })),
+    ).toBe(`${PLAN_SPOKEN_LEAD} Where, Zabłocie Sport, court 3. Day, Sunday. Hour, 18:00.`);
+  });
+
+  it('says an unfilled slot is not agreed yet rather than reading its drawn label twice', () => {
+    expect(planTagsName(plan({ hour: '18:00' }))).toBe(
+      `${PLAN_SPOKEN_LEAD} ${SLOT_NAME.where}, ${NOT_AGREED_YET}. ${SLOT_NAME.day}, ${NOT_AGREED_YET}. ${SLOT_NAME.hour}, 18:00.`,
+    );
   });
 });

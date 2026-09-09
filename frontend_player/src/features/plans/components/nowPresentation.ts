@@ -51,12 +51,13 @@ import { gameStandingLine, type Game } from '@/features/games/types';
 import { durationLeft } from '@/shared/formatting/durations';
 import { placeWithoutTheCourt } from '@/shared/formatting/placeName';
 import type { TagVariant } from '@/shared/ui';
+import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 
 import type { GameCardName, GameDoor } from '../domain/gameCard';
 import { isRung } from '../domain/ladder';
-import { unfilledSlots, type Plan, type PlanSlot } from '../domain/slots';
+import { unfilledSlots, type Plan } from '../domain/slots';
 
-import { dayChipName } from './planPresentation';
+import { SLOT_IN_A_SENTENCE, STILL_TO_AGREE, dayChipName } from './planPresentation';
 
 // ---------------------------------------------------------------------------
 // The rail
@@ -216,22 +217,12 @@ function joinLine(plan: Plan | undefined, place: (written: string) => string): s
 // ---------------------------------------------------------------------------
 
 /**
- * The slots as a sentence names them — §22.6's three, and **not** the chip's three.
+ * The gloss where the checklist is empty. Said on *Game on*, and on *Today* once it is.
  *
- * `Where` labels a control; `where` is a word in a sentence, and *the day* and *the hour* carry
- * the article a list of them needs. Two tables rather than one because the two registers are
- * genuinely different, which is the same reason `SLOT_SHEET_TITLE` is not `SLOT_NAME` either.
+ * **Not the checklist's sentence**, which is `NOTHING_IS_LEFT_TO_AGREE` and ends in a full stop:
+ * a card's gloss is a label under a figure and the screen's is a line of prose, and §22.6 spells
+ * the two differently on purpose.
  */
-export const SLOT_IN_A_SENTENCE: Readonly<Record<PlanSlot, string>> = {
-  where: 'where',
-  day: 'the day',
-  hour: 'the hour',
-};
-
-/** The gloss's lead, and the whole of what it adds: which slot is next. */
-export const STILL_TO_AGREE = 'Still to agree';
-
-/** The gloss where the checklist is empty. Said on *Game on*, and on *Today* once it is. */
 export const NOTHING_LEFT_TO_AGREE = 'Nothing left to agree';
 
 /**
@@ -280,11 +271,19 @@ export interface CardFacts {
  * Each carries its act's **verb**, navigates, and never writes: *the grid is the screen*, so the
  * verb names what you arrive at and the standing guarantees you arrive there.
  */
-export const DOOR_LABEL: Readonly<Record<GameDoor, string>> = {
+const DOOR_LABEL: Readonly<Record<GameDoor, string>> = {
   open: 'Open',
-  'we-played': 'We played',
+  // *One act, one spelling* (§22.7). The screen behind this card draws the same verb on the arm
+  // that leads with its plan, so the word is `shared/vocabulary/theActsWords.ts`' rather than
+  // either feature's — the two of them reach each other at load time, and a word read across that
+  // seam while a module is being evaluated reads a half-built one.
+  'we-played': WE_PLAYED,
   confirm: 'Confirm the result',
 };
+
+export function doorLabel(door: GameDoor): string {
+  return DOOR_LABEL[door];
+}
 
 // ---------------------------------------------------------------------------
 // What a card announces
@@ -331,7 +330,7 @@ export function gameCardLabel({
     figure?.value,
     line,
     cardGloss(name, { game, plan, playerId }),
-    door === undefined ? undefined : DOOR_LABEL[door],
+    door === undefined ? undefined : doorLabel(door),
   ]
     .filter((part): part is string => part !== undefined)
     .join('. ');

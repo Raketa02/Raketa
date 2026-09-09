@@ -12,9 +12,11 @@
  * room is read for its `game_id` and the game screen is handed one. That read is already in the
  * cache: it is the same query the screen behind this one is mounted on.
  *
- * **Nothing about the game screen is this ticket's.** What is here is the destination the header's
- * *Details* needs in order not to be a dead control; the three plan arms it grows are
- * [#368](https://github.com/Raketa02/Raketa/issues/368)'s, on the screen this renders.
+ * **What is mounted is `GameScreenWithPlan`**, which is `GameScreen` with its plan composed into
+ * it: `features/games` may not learn a plan exists, so the screen takes a slot and one component
+ * in `features/plans` does the join, folds the arm and fills it
+ * ([#368](https://github.com/Raketa02/Raketa/issues/368), ADR-0149 §2). It is the same component
+ * the Now route mounts, and it is told nothing about which door mounted it.
  *
  * A room with no game has no door to reach this through, so arriving here at all means a link or
  * a stale route — and it draws `RoomAbsent`, the same nothing the room screen draws, for the same
@@ -25,7 +27,7 @@
 import { useEffect } from 'react';
 import { router } from 'expo-router';
 
-import { GameScreen } from '@/features/games/types';
+import { GameScreenWithPlan } from '@/features/plans/types';
 
 import { useConversation } from '../hooks/useConversation';
 import { roomIsGone } from '../domain/roomGone';
@@ -49,5 +51,5 @@ export function ConversationGameDetails({ conversationId }: ConversationGameDeta
 
   if (gameId === undefined) return <RoomAbsent arriving={isPending} error={error} />;
 
-  return <GameScreen gameId={gameId} />;
+  return <GameScreenWithPlan gameId={gameId} />;
 }

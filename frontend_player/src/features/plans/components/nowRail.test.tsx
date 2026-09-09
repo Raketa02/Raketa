@@ -28,7 +28,9 @@ import {
 } from '@/test-support/onboardingRouter';
 import { installTransport, type Transport, type Wire } from '@/test-support/transport';
 
-import { CARD_TAG, DOOR_LABEL, NOTHING_LEFT_TO_AGREE, gamesHeading } from './nowPresentation';
+import { GAME_DOORS } from '../domain/gameCard';
+
+import { CARD_TAG, NOTHING_LEFT_TO_AGREE, doorLabel, gamesHeading } from './nowPresentation';
 
 const ME = GATE_USER.id;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -215,7 +217,7 @@ describe('every door in the table', () => {
   it('opens the game from the named door', async () => {
     await landOnNow();
 
-    fireEvent.press(await door(DOOR_LABEL.open));
+    fireEvent.press(await door(doorLabel('open')));
     await openTheGame();
   });
 
@@ -238,7 +240,7 @@ describe('every door in the table', () => {
   it('draws no ✉ where there is no room to open', async () => {
     await landOnNow({ room: false });
 
-    await door(DOOR_LABEL.open);
+    await door(doorLabel('open'));
     expect(screen.queryByLabelText('Open the chat')).toBeNull();
   });
 
@@ -247,7 +249,7 @@ describe('every door in the table', () => {
       plans: [plan({ day: '2026-09-12', hour: '08:00', agreed_point: '2026-09-12T06:00:00Z' })],
     });
 
-    expect(await door(DOOR_LABEL['we-played'])).toBeTruthy();
+    expect(await door(doorLabel('we-played'))).toBeTruthy();
   });
 
   /** *Counted* offers nothing: the app does not name an act a state cannot take. */
@@ -257,7 +259,7 @@ describe('every door in the table', () => {
     });
 
     expect(await screen.findByText(CARD_TAG.counted!.label)).toBeTruthy();
-    for (const verb of Object.values(DOOR_LABEL)) {
+    for (const verb of GAME_DOORS.map(doorLabel)) {
       expect(screen.queryByText(verb, { includeHiddenElements: true })).toBeNull();
     }
   });

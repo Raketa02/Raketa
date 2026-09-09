@@ -10,14 +10,13 @@
 
 import type { Game } from '@/features/games/types';
 
-import { GAME_CARD_NAMES } from '../domain/gameCard';
+import { GAME_CARD_NAMES, GAME_DOORS } from '../domain/gameCard';
 
 import {
   CARD_TAG,
-  DOOR_LABEL,
+  doorLabel,
   GAMES_HEADING,
   NOTHING_LEFT_TO_AGREE,
-  STILL_TO_AGREE,
   cardEyebrow,
   cardFigure,
   cardGloss,
@@ -26,6 +25,7 @@ import {
   gameCardLabel,
   gamesHeading,
 } from './nowPresentation';
+import { STILL_TO_AGREE } from './planPresentation';
 import type { Plan } from '../domain/slots';
 
 const GAME_ID = '11111111-0000-4000-8000-000000000001';
@@ -213,6 +213,6 @@ describe('what the card announces', () => {
     });
 
     expect(said).toBe('Counted. Padel, singles. Agreed.');
-    for (const verb of Object.values(DOOR_LABEL)) expect(said).not.toContain(verb);
+    for (const door of GAME_DOORS) expect(said).not.toContain(doorLabel(door));
   });
 });

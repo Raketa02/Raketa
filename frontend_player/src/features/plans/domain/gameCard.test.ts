@@ -3,12 +3,13 @@
  *
  * The four rungs are `ladder.test.ts`'s and are not re-asserted here; what is asserted is the
  * seam — that a standing other than `AWAITING_ENTRY` never reaches the ladder at all, that every
- * name has exactly the door §5.2's table gives it, and that an ending leaves after a day.
+ * name has exactly the door §5.2's table gives it, that the game screen's entry arm lands where
+ * that door promises, and that an ending leaves after a day.
  */
 
 import type { Game } from '@/features/games/types';
 
-import { GAME_CARD_NAMES, belongsOnTheRail, doorOf, gameCardName } from './gameCard';
+import { GAME_CARD_NAMES, belongsOnTheRail, doorOf, entryLeadOf, gameCardName } from './gameCard';
 import type { Plan } from './slots';
 
 const GAME_ID = '11111111-0000-4000-8000-000000000001';
@@ -129,5 +130,40 @@ describe('how long an ending keeps a card', () => {
         game({ standing: 'UNSCORED', playedAt: undefined, entryClosesAt: undefined }),
       ),
     ).toBe(true);
+  });
+});
+
+describe('what the game screen’s entry arm leads with', () => {
+  /**
+   * §5.2 lands *Planning* and *Game on* on the plan and *Today* and *Needs result* on the score
+   * grid — and *the verb names what you arrive at*, so this is read off the card's own door rather
+   * than written beside it. Two tables would be two opinions about where one button goes.
+   */
+  it('is the plan while the moment is still ahead', () => {
+    expect(entryLeadOf(undefined, READ_AT)).toBe('the-plan');
+    expect(
+      entryLeadOf(plan({ place: 'Zabłocie Sport', day: '2026-09-19', hour: '18:00' }), READ_AT),
+    ).toBe('the-plan');
+  });
+
+  it('is the score on the agreed day, and once the agreed point has passed', () => {
+    expect(entryLeadOf(plan({ day: '2026-09-12' }), READ_AT)).toBe('the-score');
+    expect(entryLeadOf(plan({ agreedPoint: '2026-09-11T18:00:00Z' }), READ_AT)).toBe('the-score');
+  });
+
+  /** It cannot disagree with the card, because it is derived from it. */
+  it('agrees with the door the card carries, on every rung', () => {
+    const rungs = [
+      undefined,
+      plan({ place: 'Zabłocie Sport', day: '2026-09-19', hour: '18:00' }),
+      plan({ day: '2026-09-12' }),
+      plan({ agreedPoint: '2026-09-11T18:00:00Z' }),
+    ];
+
+    for (const one of rungs) {
+      const expected = doorOf(gameCardName(game(), one)) === 'we-played' ? 'the-score' : 'the-plan';
+
+      expect(entryLeadOf(one, READ_AT)).toBe(expected);
+    }
   });
 });

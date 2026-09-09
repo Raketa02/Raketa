@@ -64,6 +64,7 @@
 
 import { counted } from '@/shared/formatting/counted';
 import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
+import { sentenceList } from '@/shared/formatting/sentenceList';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -108,14 +109,13 @@ export function gameEyebrow(sportName: string, game: Game, playerId: string): st
  * it**, which is the stale-link case rather than a game.
  *
  * `counted()` is not reached for: nothing here is counted, and the join is a list of names in
- * the court's own order. The last comma is an *and* because this is prose and not a legend.
+ * the court's own order. The last comma is an *and* because this is prose and not a legend — and
+ * that join is `sentenceList`'s, which is the platform's one spelling of it (§22.6).
  */
 function withWhom(others: readonly NamedPlayer[]): string {
   const names = others.map(playerName);
-  if (names.length === 0) return '';
-  const last = names[names.length - 1] ?? '';
-  const rest = names.slice(0, -1);
-  return rest.length === 0 ? ` · with ${last}` : ` · with ${rest.join(', ')} and ${last}`;
+
+  return names.length === 0 ? '' : ` · with ${sentenceList(names)}`;
 }
 
 // ---------------------------------------------------------------------------

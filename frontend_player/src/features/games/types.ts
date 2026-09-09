@@ -84,5 +84,36 @@ export { useGames } from './hooks/useGames';
  */
 export { gameStandingLine } from './components/gamePresentation';
 
+/**
+ * **What this evening is worth, in one sentence** — cited by the surface that draws the plan.
+ *
+ * The game screen's checklist is *what is true now, what is still to agree, what it moves*, and
+ * the third line is **cited rather than written**
+ * ([`the-loop-screens.md`](../../../../docs/specs/the-loop/the-loop-screens.md) §5.3): it is the
+ * whole of what survives ADR-0143 §8's refusal of a forecast block there, and it is already built
+ * and tested here. A second sentence about what a game is worth, written in the feature that draws
+ * the plan, would be that feature's opinion about a fact this one owns.
+ *
+ * What crosses is the sentence and not the `GameKind` vocabulary: an absent kind is a clause
+ * dropped, and the caller hands the answer down without reading a code.
+ */
+export { worthLine } from './components/gamePresentation';
+
+/**
+ * **What an entry arm leads with**, and the verb of the door that reaches its grid.
+ *
+ * `AWAITING_ENTRY` is one standing over two landings — *Planning* and *Game on* arrive at the plan,
+ * *Today* and *Needs result* at the score grid — and the ladder that tells them apart reads a plan,
+ * which this feature may never learn about. So the fold is `features/plans`' and what crosses back
+ * is a word in **this** feature's vocabulary
+ * ([`the-loop-components.md`](../../../../docs/specs/the-loop/the-loop-components.md) §3.3,
+ * [`the-loop-screens.md`](../../../../docs/specs/the-loop/the-loop-screens.md) §5.2).
+ *
+ * The verb both of those doors carry is `shared/vocabulary/theActsWords.ts`', not this feature's:
+ * two features name that one act, and a word read across this seam at module-evaluation time reads
+ * a half-built module (`theActsWords.ts` says why).
+ */
+export type { EntryLead } from './domain/resultArgument';
+
 /** What a game is, for the feature that draws a plan beside one. */
 export type { Game } from './domain/game';

@@ -19,11 +19,13 @@ import { AppError } from '@/shared/errors';
 import type { ResultArgument } from '../domain/resultArgument';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
+import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 import {
   GAMES_PATH,
   GATE_USER,
   launchSignedIn,
   stubGames,
+  stubPlans,
   stubGate,
 } from '@/test-support/onboardingRouter';
 import {
@@ -192,6 +194,56 @@ async function openGame(served: Wire['GameSchema'], sport = 'Padel') {
   await waitFor(() => expect(screen).toHavePathname(`/games/${GAME_ID}`));
 }
 
+/**
+ * The same walk, and then the press that reveals the grid.
+ *
+ * **An entry arm with nothing agreed leads with the plan**, so the grid is one press away rather
+ * than the screen ([#368](https://github.com/Raketa02/Raketa/issues/368),
+ * `the-loop-screens.md` §5.2). Nothing in this file stubs a plan, so every `AWAITING_ENTRY` game
+ * it walks arrives on the Planning arm — and the press is `We played`, the same verb the card's
+ * own door carries. It is a second helper rather than a branch inside the first, so every
+ * assertion below says which arm it is standing on.
+ */
+async function openTheGrid(served: Wire['GameSchema'], sport = 'Padel') {
+  await openGame(served, sport);
+
+  fireEvent.press(screen.getByText(WE_PLAYED));
+}
+
+/**
+ * **The grid closes only where something is behind it**, which is the two entry landings §5.2
+ * names: on the plan lead it opened over the plan, so `Leave it as it is` puts it back; on the
+ * score lead it *is* the screen, so there is nothing to go back to and no cancel is drawn. Both
+ * halves are asserted here because the footer is this screen's, and the fold that chooses between
+ * them is `features/plans`' (`gamePlan.test.tsx`).
+ */
+describe('the grid on an entry arm', () => {
+  it('offers a way back where it opened over the plan', async () => {
+    await openTheGrid(game());
+
+    expect(screen.getByText(ENTER_LABEL)).toBeTruthy();
+    expect(screen.getByText(CANCEL_LABEL)).toBeTruthy();
+  });
+
+  it('is the screen itself once the agreed point has passed, so nothing closes it', async () => {
+    // The agreed point is behind the fold, which is the rung that lands a card on the grid.
+    stubPlans(transport, [
+      {
+        game_id: GAME_ID,
+        place: 'Zabłocie Sport',
+        day: '2026-09-04',
+        hour: '20:00',
+        agreed_point: '2026-09-04T18:00:00Z',
+      },
+    ]);
+    await openGame(game());
+
+    expect(screen.getByText(ENTER_LABEL)).toBeTruthy();
+    expect(screen.queryByText(WE_PLAYED)).toBeNull();
+    expect(screen.queryByText(CANCEL_LABEL)).toBeNull();
+  });
+});
+
 /** Press one value key on the pad, into whichever cell the caret is on. */
 function type(figure: string) {
   fireEvent.press(screen.getByLabelText(figure));
@@ -249,7 +301,7 @@ describe('entering a result', () => {
 
   it('sends the score absolutely, with no act named on it', async () => {
     transport.on('POST', RESULT_PATH, () => json(game()));
-    await openGame(game());
+    await openTheGrid(game());
 
     fillIn(
       [
@@ -266,7 +318,7 @@ describe('entering a result', () => {
   });
 
   it('refuses a level set with a sentence rather than a closed control', async () => {
-    await openGame(game());
+    await openTheGrid(game());
 
     fillIn([['6', '6']], ['You', 'Them']);
     fireEvent.press(screen.getByText(ENTER_LABEL));
@@ -276,7 +328,7 @@ describe('entering a result', () => {
   });
 
   it('refuses a score that names nobody, which is the invariant and not a sanity check', async () => {
-    await openGame(game());
+    await openTheGrid(game());
 
     fillIn(
       [
@@ -444,7 +496,7 @@ describe('the score-entry instrument, which is the prototype’s', () => {
    */
   it('counts past its own ceiling rather than refusing a real evening', async () => {
     transport.on('POST', RESULT_PATH, () => json(game()));
-    await openGame(game());
+    await openTheGrid(game());
 
     fillIn(
       [
@@ -478,7 +530,7 @@ describe('the score-entry instrument, which is the prototype’s', () => {
   });
 
   it('moves the caret across the row and then down, so a score is four taps', async () => {
-    await openGame(game());
+    await openTheGrid(game());
 
     type('6');
 
@@ -491,7 +543,7 @@ describe('the score-entry instrument, which is the prototype’s', () => {
   });
 
   it('draws the sport’s own grid, in the sport’s own word for a row', async () => {
-    await openGame(game({ sport: 'SQUASH' }), 'Squash');
+    await openTheGrid(game({ sport: 'SQUASH' }), 'Squash');
 
     expect(screen.getByLabelText('Game 5, You, empty')).toBeTruthy();
     expect(screen.queryByLabelText('Set 1, You, empty')).toBeNull();
@@ -613,7 +665,7 @@ describe('what the aggregate refuses, on screen', () => {
     ['a_score_must_name_a_winner', 400],
   ])('says what happened when it refuses with %s', async (code, status) => {
     transport.on('POST', RESULT_PATH, () => errorResponse(status, code));
-    await openGame(game());
+    await openTheGrid(game());
 
     fillIn([['6', '4']], ['You', 'Them']);
     fireEvent.press(screen.getByText(ENTER_LABEL));

@@ -22,7 +22,7 @@
  * exists to stop.
  */
 
-import type { Game } from '@/features/games/types';
+import type { EntryLead, Game } from '@/features/games/types';
 
 import { RUNGS, rungOf } from './ladder';
 import type { Plan } from './slots';
@@ -60,7 +60,13 @@ export type GameCardName = (typeof GAME_CARD_NAMES)[number];
  * body still opens the game, and a control offering an act that state cannot take would be the
  * app naming a thing it cannot do.
  */
-export type GameDoor = 'open' | 'we-played' | 'confirm';
+export const GAME_DOORS = ['open', 'we-played', 'confirm'] as const;
+
+/**
+ * **The named door in a card's footer**, derived from the list above rather than declared beside
+ * it — `SPORTS` → `Sport`'s own shape, so a fourth door cannot exist in one and not the other.
+ */
+export type GameDoor = (typeof GAME_DOORS)[number];
 
 /** How long an ended game keeps its card — **24 h, and #335's number one tab over.** */
 export const ENDED_CARD_SHELF_LIFE_MS = 24 * 60 * 60 * 1000;
@@ -107,6 +113,25 @@ const DOOR: Readonly<Record<GameCardName, GameDoor | undefined>> = {
 
 export function doorOf(name: GameCardName): GameDoor | undefined {
   return DOOR[name];
+}
+
+/**
+ * **What the game screen's entry arm leads with** — the card's own door, read as a landing.
+ *
+ * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5.2 lands
+ * *Planning* and *Game on* on the plan and *Today* and *Needs result* on the score grid, and it
+ * says why the two tables cannot disagree: **the verb names what you arrive at.** So this is
+ * derived from {@link doorOf} rather than written beside it — a second `Record` over the four
+ * rungs is a second opinion about where a button goes, and the one that drifted would send a
+ * player to a screen that is not what its own button promised.
+ *
+ * It is here rather than in `features/games` because it reads the ladder, which reads a plan
+ * (ADR-0149 §1); what crosses back into that feature is the word and never the rung
+ * ([`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §3.3 —
+ * *"every surface reads it … and the game screen's arm"*).
+ */
+export function entryLeadOf(plan: Plan | undefined, readAt: string): EntryLead {
+  return doorOf(rungOf(plan, readAt)) === 'we-played' ? 'the-score' : 'the-plan';
 }
 
 /**

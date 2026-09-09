@@ -15,8 +15,8 @@
  * **This feature imports `features/games` and nothing imports it back from there.** ADR-0149 §1
  * fixes that arrow: the ladder and the Now card belong here because a card needs both halves, and
  * `features/games` never learns a plan exists. The read-only rendering the game screen composes is
- * [#368](https://github.com/Raketa02/Raketa/issues/368)'s and will be a second component here
- * rather than a flag on the card.
+ * `GamePlan`, a second component here rather than a flag on the card, and the screen receives it
+ * as a child that knows nothing about it.
  */
 
 /**
@@ -39,6 +39,20 @@ export { GamesRail, type GamesRailProps } from './components/GamesRail';
  * screen draws none rather than handing this an id it does not have.
  */
 export { RoomPlan, type RoomPlanProps } from './components/RoomPlan';
+
+/**
+ * **The game screen with its plan composed into it** — what both of that screen's two routes mount
+ * ([#368](https://github.com/Raketa02/Raketa/issues/368)).
+ *
+ * `GameScreen` stays `features/games`' and takes the plan as a **child**: that feature owns the
+ * frame, the court and the result arms, this one owns the three slots, and
+ * [ADR-0149](../../../../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
+ * §2 fixes it that way round — *neither type crosses*. This is the one place holding both halves,
+ * so it does the join, folds which act the entry arm leads with, and fills the slot. The read-only
+ * plan under it is a **second component here rather than a flag on the card**, on `CourtMini` and
+ * `CourtBuild`'s reasoning: one takes three mutations and three editors and the other takes none.
+ */
+export { GameScreenWithPlan, type GameScreenWithPlanProps } from './components/GameScreenWithPlan';
 
 /**
  * **One game's plan**, for a surface that reads what has been agreed without drawing the card.

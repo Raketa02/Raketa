@@ -84,9 +84,16 @@ export function useConversationRows() {
  * it costs a list the player was about to need. Stated plainly, as ADR-0149 states its own
  * version: **a challenge screen reads a list belonging to a context it is forbidden to know
  * about, and gets away with it because it reads that list as *the player's rooms*.**
+ *
+ * **An absent challenge is the same nothing as an unmatched one**, which is what the second caller
+ * needs: the game screen's plan block joins on the challenge its *game* names, and a games list
+ * that has not landed yet holds no challenge to join on. A hook cannot be called conditionally, so
+ * the alternative is a call site inventing an id that matches nothing — the same answer, spelled
+ * where it can go wrong.
  */
-export function useChatDoor(challengeId: string): string | undefined {
+export function useChatDoor(challengeId: string | undefined): string | undefined {
   const { data } = useConversations();
+  if (challengeId === undefined) return undefined;
 
   return data?.find((room) => room.challengeId === challengeId)?.conversationId;
 }

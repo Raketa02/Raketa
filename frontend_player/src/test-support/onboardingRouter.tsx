@@ -23,6 +23,7 @@ import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/ind
 import ChallengeFillRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/fill';
 import ChatsRoute from '@/app/(app)/(tabs)/chats';
 import ConversationRoute from '@/app/(app)/(tabs)/chats/conversation/[conversationId]';
+import ConversationGameRoute from '@/app/(app)/(tabs)/chats/conversation/[conversationId]/details';
 import GameRoute from '@/app/(app)/(tabs)/games/[gameId]';
 import NowRoute from '@/app/(app)/(tabs)/index';
 import BuilderRoute from '@/app/(app)/(tabs)/play/builder';
@@ -102,6 +103,10 @@ export const ONBOARDING_ROUTES = {
   // And a conversation beside it, under its own static segment for the same reason: two ids of
   // two different things cannot share one `/chats/[id]`.
   '(app)/(tabs)/chats/conversation/[conversationId]': ConversationRoute,
+  // The game screen, at its **second route** — one component and two addresses, so the Chats
+  // column stays lit behind the room's *Details* and *back* is correct in both directions
+  // ([#368](https://github.com/Raketa02/Raketa/issues/368), ADR-0149 §5).
+  '(app)/(tabs)/chats/conversation/[conversationId]/details': ConversationGameRoute,
   '(app)/(tabs)/you': YouRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,

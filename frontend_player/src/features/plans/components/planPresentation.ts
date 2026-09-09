@@ -5,10 +5,18 @@
  * The plan's sentences are this file's by **vocabulary owner** rather than by screen
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22, which assigns it
  * §22.2 **and** §22.4): what happened in a room is `conversationPresentation.ts`', the tab's own
- * sentences are the shell's, and everything about the plan is here — the three slots, drawn in the
- * room today and read on the game screen next
- * ([#368](https://github.com/Raketa02/Raketa/issues/368)), and the four questions the room asks
- * about them, which shipped with the composer because there was no plan feature yet.
+ * sentences are the shell's, and everything about the plan is here — the three slots, drawn as
+ * chips in the room and read as tags on the game screen
+ * ([#368](https://github.com/Raketa02/Raketa/issues/368)), the four questions the room asks about
+ * them, and the panel and the checklist the game screen draws around them.
+ *
+ * ## §22.6 is split across two decks and the slot names are why
+ *
+ * The **gloss** is `nowPresentation.ts`' because it is a card's line; the **checklist** is here
+ * because it is the plan's own fuller account and the game screen is where the plan is read. What
+ * they share is the sentence register of the three slot names, so `SLOT_IN_A_SENTENCE` moved here
+ * beside `SLOT_NAME` when the second reader arrived: two tables, one for a control and one for a
+ * sentence, sitting together where the difference between them is visible.
  *
  * ## A chip reads its value or its name, and never a word about the state it is in
  *
@@ -41,10 +49,18 @@
 
 import { weekdayOf } from '@/shared/date/platformZone';
 import { placeWithoutTheCourt } from '@/shared/formatting/placeName';
+import { sentenceList } from '@/shared/formatting/sentenceList';
 import { dayLabel, dayName } from '@/shared/vocabulary/availabilityPresentation';
 
 import type { QuickChip } from '../domain/quickChips';
-import { PLACE_CAP, slotValue, type Plan, type PlanSlot } from '../domain/slots';
+import {
+  PLACE_CAP,
+  PLAN_SLOTS,
+  slotValue,
+  unfilledSlots,
+  type Plan,
+  type PlanSlot,
+} from '../domain/slots';
 
 /**
  * §22.2's three, keyed by the union — **so a slot with no name does not compile.**
@@ -97,10 +113,22 @@ export function slotChipName(
 ): string {
   if (pending) return `${SLOT_NAME[slot]}: ${SAVING}`;
 
-  const value = slotValue(plan, slot);
-  if (value === undefined) return `${SLOT_NAME[slot]}: ${NOT_AGREED_YET}`;
+  return `${SLOT_NAME[slot]}: ${spokenSlotValue(plan, slot)}`;
+}
 
-  return `${SLOT_NAME[slot]}: ${slot === 'day' ? dayChipName(value) : value}`;
+/**
+ * **What one slot holds, said** — the value whole, and *not agreed yet* where there is none.
+ *
+ * The one place a slot's **spoken** value is spelled, read by the chip in the room and by the
+ * read-only tags on the game screen. The two differ in their punctuation and in nothing else, and
+ * a second copy of *the day is a weekday and the place is never shortened* is exactly the drift
+ * `slots.ts` exists to prevent one layer down.
+ */
+function spokenSlotValue(plan: Plan | undefined, slot: PlanSlot): string {
+  const value = slotValue(plan, slot);
+  if (value === undefined) return NOT_AGREED_YET;
+
+  return slot === 'day' ? dayChipName(value) : value;
 }
 
 /** What an unfilled slot is, said rather than drawn. The drawn half is the slot's own name. */
@@ -187,3 +215,138 @@ export const QUICK_CHIP: Readonly<Record<QuickChip, string>> = {
   hour: 'What time?',
   'on-my-way': 'On my way',
 };
+
+// ---------------------------------------------------------------------------
+// The panel over the plan, on the screen where it is read
+// ---------------------------------------------------------------------------
+
+/**
+ * **The panel, inverted** — §22.2, and the fourth of #368's eight corrections to the details
+ * design.
+ *
+ * The design drew *No clock time yet — on purpose*, which **explains an absence**: it is a note
+ * about a slot nobody has filled yet, and it goes away the moment somebody fills one. ADR-0145 §6
+ * turned it round, and the sentence it names is true of a **complete** plan and not of an empty
+ * one — a player looking at *Zabłocie Sport · Saturday · 18:00* inside an app may reasonably
+ * assume the app did something about it. It did not. So the panel names the absence rather than
+ * explaining one, and it is drawn whatever the three slots hold.
+ *
+ * **Drawn on the game screen and never in the room**, which is #366's own split: above a composer
+ * it would be permanent chrome, and one panel has one home.
+ *
+ * The second sentence is the whole of what a plan **is** on this platform: a note between the
+ * people on the court, changeable by any of them, with every change visible to all of them. It is
+ * the reason the slots are read-only here and the way to change one is the chat door beneath.
+ */
+export const PLAN_PANEL = {
+  title: 'Agreed between you — nothing is booked',
+  body: 'Raketa does not hold courts. This is the note you are keeping between you: anybody here can change any of it, and everybody sees who changed what.',
+} as const;
+
+// ---------------------------------------------------------------------------
+// The slots, in the register a sentence uses
+// ---------------------------------------------------------------------------
+
+/**
+ * The slots as a sentence names them — §22.6's three, and **not** the chip's three.
+ *
+ * `Where` labels a control; `where` is a word in a sentence, and *the day* and *the hour* carry
+ * the article a list of them needs. Two tables rather than one because the two registers are
+ * genuinely different, which is the same reason `SLOT_SHEET_TITLE` is not `SLOT_NAME` either.
+ *
+ * **It moved here from `nowPresentation.ts` when the checklist arrived**: the gloss names one slot
+ * and the checklist names all three, so a table living with either of them would be the other
+ * one's import — and this is the file that owns how a slot is spelled.
+ */
+export const SLOT_IN_A_SENTENCE: Readonly<Record<PlanSlot, string>> = {
+  where: 'where',
+  day: 'the day',
+  hour: 'the hour',
+};
+
+/** The lead the gloss and the checklist share. One phrase, so the card and the screen agree. */
+export const STILL_TO_AGREE = 'Still to agree';
+
+/**
+ * **What is still to agree, as a list** — the unfilled slots in slot order, joined §22.6's way.
+ *
+ * *`where and the hour`*, *`where, the day and the hour`*. **This is the one place the whole list
+ * is printed**, which is what lets the card's gloss name only the next one and stay four words.
+ *
+ * The empty string for a plan with nothing left, which is a state this never draws: the checklist
+ * picks the other sentence before it reaches here.
+ */
+export function slotsStillToAgree(plan: Plan | undefined): string {
+  return sentenceList(unfilledSlots(plan).map((slot) => SLOT_IN_A_SENTENCE[slot]));
+}
+
+// ---------------------------------------------------------------------------
+// The checklist — three lines, capped, in one order
+// ---------------------------------------------------------------------------
+
+/**
+ * **What is true now.** The same three words on all four rungs, because *the rungs differ by the
+ * clock and not by the arrangement* (§22.6).
+ *
+ * It is the line that explains why there is a plan on this screen at all: a challenge whose
+ * line-up is still incomplete has an open conversation and **no plan**, so a plan existing is
+ * itself the statement that every seat answered.
+ */
+export const EVERYBODY_SAID_YES = 'Everybody said yes.';
+
+/** The second line where the three slots are full. Never the gloss's shorter phrase. */
+export const NOTHING_IS_LEFT_TO_AGREE = 'Nothing is left to agree.';
+
+/**
+ * **The checklist — three lines, capped, in one order**: what is true now, what is still to agree,
+ * what it moves (§22.6, [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md)
+ * §5.3).
+ *
+ * **The third line is cited rather than written**, and the citation is the point: `worthLine` is
+ * `features/games`' built and tested sentence, and it is *the whole of what survives ADR-0143 §8's
+ * refusal* of a forecast block on this screen. Writing a fourth sentence about what a game is
+ * worth would be this deck's second opinion about a fact that feature owns — so the caller reads
+ * it from there and hands it over, and a `GameKind` this build cannot read drops the line and
+ * leaves the other two standing.
+ *
+ * **Capped at three** by there being exactly three: every line the design drew was about an owner,
+ * a booking or a part of the day, and ADR-0144 and ADR-0145 §2 deleted all three.
+ */
+export function checklistLines(
+  plan: Plan | undefined,
+  worth: string | undefined,
+): readonly string[] {
+  const list = slotsStillToAgree(plan);
+
+  return [
+    EVERYBODY_SAID_YES,
+    list === '' ? NOTHING_IS_LEFT_TO_AGREE : `${STILL_TO_AGREE}: ${list}.`,
+    worth,
+  ].filter((line): line is string => line !== undefined);
+}
+
+// ---------------------------------------------------------------------------
+// What the read-only plan announces
+// ---------------------------------------------------------------------------
+
+/** The lead of the plan's one spoken name, so a listener knows what the three values are. */
+export const PLAN_SPOKEN_LEAD = 'The plan.';
+
+/**
+ * **The three read-only tags as one accessibility element** — §24.5's own spelling:
+ * *`The plan. Where, Zabłocie Sport. Day, Saturday. Hour, 18:00.`*
+ *
+ * One element because they are **one fact in three parts with no action**, which is §20.1
+ * unchanged and the reason `Tag` was chosen over `Chip` for them in the first place. The chips in
+ * the room are three elements because each of them is a way to change something; nothing here is.
+ *
+ * **Each slot is named even where its value is drawn instead**, because a listener hears three
+ * values in a row and has nothing to attach them to — the same argument `slotChipName` makes one
+ * surface over, with a comma rather than a colon: this is prose and the chip's is a control's
+ * name. The place is spoken **whole**, comma and court and all (§20.4).
+ */
+export function planTagsName(plan: Plan | undefined): string {
+  const said = PLAN_SLOTS.map((slot) => `${SLOT_NAME[slot]}, ${spokenSlotValue(plan, slot)}.`);
+
+  return [PLAN_SPOKEN_LEAD, ...said].join(' ');
+}

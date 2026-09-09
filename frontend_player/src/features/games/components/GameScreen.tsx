@@ -53,6 +53,43 @@
  * what a game becomes is one that asks. And neither act carries a deadline the player chose — a
  * proposal's day starts whenever it lands, and an acceptance's grace runs from the score — so
  * both take the app's queue, and the sentence beside a paused control says it will resume.
+ *
+ * ## The plan arms are a slot, and this screen knows nothing about what fills it
+ *
+ * `ResultScreen` became `GameScreen` because one screen shows a game **whatever state it is in**
+ * ([#368](https://github.com/Raketa02/Raketa/issues/368),
+ * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5): the plan
+ * while it is being agreed, the score once it has been played. **Grown, not replaced** — a hand-off
+ * in the middle of one standing's life would give a player two different screens for the same game
+ * depending which day they tapped it.
+ *
+ * What grew is one `ReactNode`, rendered on the `awaiting-entry` arm and nowhere else.
+ * [ADR-0149](../../../../../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
+ * §2: *`games` owns the frame, the court and the result arms, and `plans` renders the three slots
+ * into it. **Neither type crosses.*** So there is no `Plan` here, no ladder, no rung and no import
+ * — `eslint.config.mjs` refuses one — and **the three arms §5.1 names are three readings of that
+ * one slot**, because §22.6 settles that *the rungs differ by the clock and not by the
+ * arrangement*.
+ *
+ * **Two routes mount this one component** — `/games/[gameId]` under Now and
+ * `/chats/conversation/[conversationId]/details` under Chats — so each lights its own column and
+ * *back* is correct in both directions by construction. It is **not told which**, and that is the
+ * point: a screen that knew its door would be a screen that could draw differently through one of
+ * them.
+ *
+ * ## Three plan arms, and the one word that tells them apart
+ *
+ * §5.2 lands two different cards on two different things inside one standing: *Planning* and *Game
+ * on* arrive at **the plan**, *Today* and *Needs result* at **the score grid**. The ladder that
+ * tells them apart reads a plan, so the fold is `features/plans`' and what arrives here is
+ * `EntryLead` — a word in this feature's own vocabulary rather than a rung in somebody else's.
+ *
+ * **It changes what leads and never what is offered.** *We played* is available on **every** entry
+ * arm, because `standing_of` gates entry on `entry_closes_at` and on nothing else: four people can
+ * arrange a game at six and play it at eight without ever filling a slot. So on the plan lead the
+ * grid is one press away rather than absent, and the press is named for what it arrives at.
+ * Strict one-action-per-state would buy a tidy table at the price of the app declining to hear the
+ * one fact the whole loop exists to collect.
  */
 
 import { useState, type ReactNode } from 'react';
@@ -63,6 +100,7 @@ import { useCurrentUser } from '@/features/auth/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { ShellScreen } from '@/features/shell/types';
 import { offlineMessage, recoveryMessage } from '@/shared/errors';
+import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 import { Button, Note, theme } from '@/shared/ui';
 
 import type { Game } from '../domain/game';
@@ -73,6 +111,7 @@ import {
   resultArgument,
   scoresOnTable,
   sideOf,
+  type EntryLead,
 } from '../domain/resultArgument';
 import { draftFrom, emptyDraft, readScore, sameScore, type ScoreDraft } from '../domain/score';
 import { useAcceptResult, useGame, useStateResult } from '../hooks/useGames';
@@ -109,9 +148,28 @@ import { ScoreTable } from './ScoreTable';
 export interface GameScreenProps {
   /** Validated by `schemas/routeParams.ts` before it reaches here; the route does that. */
   readonly gameId: string;
+  /**
+   * **The plan, drawn by whoever composed this screen** — a slot, and nothing about it is known
+   * here.
+   *
+   * `features/plans` fills it (ADR-0149 §2) and both surfaces that mount this screen hand the same
+   * child down. **Required, and it is a `ReactNode` rather than an optional one on purpose**: the
+   * entry arm hands its worth line to the checklist inside this slot, so a caller who left it out
+   * would take that sentence off the screen with it. A caller with genuinely nothing to render
+   * passes `null` and says so.
+   */
+  readonly plan: ReactNode;
+  /**
+   * **What the entry arm leads with**, folded from the plan by whoever composed this screen.
+   *
+   * Required for the same reason the slot is: there is no honest default, and a screen that
+   * guessed would open a score pad over a game six days away or bury the grid on the evening
+   * somebody is trying to record.
+   */
+  readonly entryLead: EntryLead;
 }
 
-export function GameScreen({ gameId }: GameScreenProps) {
+export function GameScreen({ gameId, plan, entryLead }: GameScreenProps) {
   const { game, isPending, error } = useGame(gameId);
   const me = useCurrentUser().data?.id;
 
@@ -131,13 +189,23 @@ export function GameScreen({ gameId }: GameScreenProps) {
     );
   }
 
-  return <Argument game={game} playerId={me} />;
+  return <Argument game={game} playerId={me} plan={plan} entryLead={entryLead} />;
 }
 
 /** No seat of this game is yours, so there is no court to describe and no side to draw from. */
 const EMPTY_COURT = { ours: 0, theirs: 0 } as const;
 
-function Argument({ game, playerId }: { readonly game: Game; readonly playerId: string }) {
+function Argument({
+  game,
+  playerId,
+  plan,
+  entryLead,
+}: {
+  readonly game: Game;
+  readonly playerId: string;
+  readonly plan: ReactNode;
+  readonly entryLead: EntryLead;
+}) {
   const argument = resultArgument(game, playerId);
   const state = useStateResult();
   const accept = useAcceptResult();
@@ -163,10 +231,20 @@ function Argument({ game, playerId }: { readonly game: Game; readonly playerId: 
   const eyebrow = gameEyebrow(sport, game, playerId);
 
   // Both rules are the domain's: which controls exist, and what a grid opened here would send.
+  const entryArm = argument.kind === 'awaiting-entry';
   const acts = actsOffered(argument);
   const act = editingAct(argument);
   const entering = act === 'enter';
-  const open = draft ?? (entering ? emptyDraft(game.sport) : undefined);
+  /**
+   * **The grid is the screen on the two arms that lead with the score, and a press away on the
+   * two that lead with the plan** — §5.2's two landings inside one standing.
+   *
+   * Where it *is* the screen there is nothing behind it, so it never closes and no cancel is
+   * drawn; where it opened over the plan there is, so `Leave it as it is` puts it back — which is
+   * the rule this screen already applies to a correction and a counter.
+   */
+  const gridIsTheScreen = entering && entryLead === 'the-score';
+  const open = draft ?? (gridIsTheScreen ? emptyDraft(game.sport) : undefined);
   // The two scores on the table, and every control hangs off one of them rather than off the
   // state's name: an agreement is with `theirs`, a correction is of `ours`, and a counter
   // answers `theirs` with a score of our own. Either may be absent and both may be.
@@ -208,9 +286,21 @@ function Argument({ game, playerId }: { readonly game: Game; readonly playerId: 
   }
 
   const body = resultBody(argument);
-  const worth = worthLine(game.kind);
+  /**
+   * **What this evening is worth — drawn here on every arm but the entry one.**
+   *
+   * On the entry arm it is the checklist's third line, *cited rather than written*
+   * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5.3), and
+   * the checklist is inside the slot. That is a statement about **where one sentence is printed**
+   * and not about what fills the slot: this screen still holds no plan, and what it is avoiding is
+   * printing `worthLine` twice in one view.
+   */
+  const worth = entryArm ? undefined : worthLine(game.kind);
   const outcome = argument.kind === 'confirmed' ? outcomeLine(argument.outcome) : undefined;
-  const clock = open === undefined ? clockLine(argument, game.readAt) : undefined;
+  // The entry window is the standing line's clause on all four entry arms, so the block never
+  // draws over one: a 40pt figure counting down to *recorded as one that never happened* is not
+  // what a game six days away is about, and on the two score-led arms the grid is over it anyway.
+  const clock = open === undefined && !entryArm ? clockLine(argument, game.readAt) : undefined;
   const sending = state.isPending && !state.isPaused;
   // Two mutations, one at a time by construction — the grid is either open or it is not — so one
   // sentence rather than two identical blocks that could never both be right.
@@ -243,7 +333,7 @@ function Argument({ game, playerId }: { readonly game: Game; readonly playerId: 
                 busy={sending}
                 busyLabel={SENDING_LABEL}
               />
-              {entering ? null : (
+              {gridIsTheScreen ? null : (
                 <Button
                   label={CANCEL_LABEL}
                   variant="secondary"
@@ -256,6 +346,18 @@ function Argument({ game, playerId }: { readonly game: Game; readonly playerId: 
             </>
           ) : (
             <>
+              {/* The plan leads, so the grid is behind a door named for what it arrives at —
+                  #336 §4's rule one surface over, and the same words the Now card's footer says.
+                  `secondary` because on this arm it is what is *available*, and what leads is the
+                  plan and the chat door beneath it. */}
+              {acts.includes('enter') ? (
+                <Button
+                  label={WE_PLAYED}
+                  variant="secondary"
+                  onPress={() => edit(emptyDraft(game.sport))}
+                />
+              ) : null}
+
               {/* Whether an agreement stands is the response's answer and `actsOffered`'s to
                   fold — `accept.isSuccess` only covers the round trip between the tap and the
                   list catching up, which is the echo and not the fact. */}
@@ -294,6 +396,13 @@ function Argument({ game, playerId }: { readonly game: Game; readonly playerId: 
       }
     >
       <Text style={s.line}>{standingLine(argument, game.readAt)}</Text>
+
+      {/* The plan, high on the page, because on two of the four entry arms it is what the player
+          came for. It is drawn on this arm alone: the four confirm arms and the three endings are
+          #314's, built and untouched, and a plan panel over a settled score would be an agreement
+          about an evening that has already happened. */}
+      {entryArm ? plan : null}
+
       {body === undefined ? null : <Text style={s.body}>{body}</Text>}
       {worth === undefined ? null : <Text style={s.body}>{worth}</Text>}
       {outcome === undefined ? null : <Text style={s.outcome}>{outcome}</Text>}

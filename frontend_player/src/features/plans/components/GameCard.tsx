@@ -60,12 +60,12 @@ import { ChatDoor } from './ChatDoor';
 import { GameCourt } from './GameCourt';
 import {
   CARD_TAG,
-  DOOR_LABEL,
   cardCourtSummary,
   cardEyebrow,
   cardFigure,
   cardGloss,
   cardLine,
+  doorLabel,
   gameCardLabel,
 } from './nowPresentation';
 
@@ -149,7 +149,7 @@ export function GameCard({ game, plan, playerId, conversationId, width }: GameCa
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
               >
-                <Button label={DOOR_LABEL[door]} size="sm" onPress={open} />
+                <Button label={doorLabel(door)} size="sm" onPress={open} />
               </View>
             )}
 

@@ -589,6 +589,22 @@ not restated here; what follows is only what this client had to invent to draw t
   ([ADR-0107](../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4), and the
   unknown player's `?` for a seat `users` can no longer answer for. _Avoid_: shortening one, and
   dropping a seat that has no handle — the court keeps its shape and loses a word.
+- **The plan slot** — the one `ReactNode` `GameScreen` grew when it stopped being only the result
+  argument ([#368](https://github.com/Raketa02/Raketa/issues/368)): a child the screen renders on
+  its **entry arm** and knows nothing about, filled by `features/plans`
+  ([ADR-0149](../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
+  §2). **Neither type crosses** — there is no Plan, no ladder and no rung in this feature, and
+  `eslint.config.mjs` refuses the import. _Avoid_: a second screen for a game that is being planned
+  (a hand-off mid-standing gives a player two screens for one game depending which day they tap
+  it), and passing the screen anything that says which of its two routes mounted it.
+- **The entry lead** — which of two things an `AWAITING_ENTRY` arm leads with: **the plan** while
+  the moment is still ahead, **the score** once it is here. One standing over two landings, which
+  is what §5.2 means by _Planning_ arriving at the Planning arm and _Today_ arriving at the score
+  grid. It is folded in `features/plans` — the ladder reads a plan — and **derived from the card's
+  own door**, so the two cannot disagree: _the verb names what you arrive at_. It changes **what
+  leads and never what is offered**: _We played_ is available on all four arms, one press away on
+  the two that do not lead with it. _Avoid_: a rung crossing into `features/games`, a second table
+  mapping rungs to landings, and reading it as a permission — entry is gated on the window alone.
 - **The read instant** — `read_at`, the moment every standing and deadline in the list was
   folded against. **Every duration on these screens is measured from it and never from the
   device clock**, so a countdown cannot drift out of agreement with the word printed beside it.
@@ -659,7 +675,7 @@ what this client had to invent to draw the room
 
 ### The plan
 
-Six client-only concepts, all of them in `features/plans/`. The domain terms — Plan, Slot, the
+Nine client-only concepts, all of them in `features/plans/`. The domain terms — Plan, Slot, the
 three recordings — are [ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)'s
 and are owed to the root glossary by [#332](https://github.com/Raketa02/Raketa/issues/332); what
 follows is only what this client had to invent to let a room fill one in
@@ -691,6 +707,25 @@ follows is only what this client had to invent to let a room fill one in
   four. The rule and the words are this feature's because both read the slot order; the **row** is
   the room's, because a chip is a message and the send is the composer's. _Avoid_: naming a
   weekday, a part of a day or a venue in one — a chip naming Saturday is wrong six days a week.
+- **The plan tags** — the same three slots **read** rather than edited, on the game screen: `Tag`s
+  and never `Chip`s, because _a control that cannot be operated must not offer the affordance of
+  one_ (ADR-0149 §4), and **one accessibility element**, because they are one fact in three parts
+  with no action. The way to change one is the chat door beneath them. _Avoid_: an `editable` prop
+  on the card — the two drawings share a slot vocabulary and no behaviour — and a dot on one of
+  these, which is the sport's and only the sport's.
+- **The checklist** — three lines, capped, in one order on the game screen's four entry arms:
+  **what is true now**, **what is still to agree** (the whole list, in slot order — the one place
+  it is printed, which is what lets the card's gloss name the next slot alone), and **what it
+  moves**, which is **cited rather than written**: `features/games`' own `worthLine`. The first
+  line is the same three words on every rung, because _the rungs differ by the clock and not by the
+  arrangement_. _Avoid_: a fourth line, a second sentence about what a game is worth, and a branch
+  per rung — §5.1's three plan arms are three readings of one composition.
+- **The composed game screen** — `GameScreenWithPlan`, the thing both of the game screen's routes
+  mount: the join over games and plans, the fold that says which act the entry arm leads with, and
+  the child that fills the screen's slot. It is here rather than in `features/games` because both
+  halves of it read a plan, and it is **one component rather than two lines in each route file**
+  because a composition spelled twice drifts at one of them. _Avoid_: composing it at a call site,
+  and giving it anything that says which of the two addresses mounted it.
 - **The past combination** — a day and an hour that together name a moment that has gone. It is
   refused **in written copy rather than by a disabled control**, because the two are filled in
   either order and either can be the second, so the sentence names **both** remedies and no value.
