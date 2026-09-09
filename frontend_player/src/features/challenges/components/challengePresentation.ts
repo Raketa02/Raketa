@@ -332,17 +332,15 @@ export const A_PAIR_HERE_IS_ALREADY_PLAYING =
 export const CHALLENGES_HEADING = 'Challenges';
 
 /**
- * The screen a row opens, until [#361](https://github.com/Raketa02/Raketa/issues/361) writes it.
+ * The screen a row opens — its title, and the whole of what this file owes it.
  *
- * A citation rather than filler, which is why it is here and not inlined in the route file: it
- * names what belongs on that screen and admits it is not drawn, which is the whole test a
- * placeholder has to pass — *can a player tell this from a bug*. Held to the same two refusals
- * as every other line in the app: no date is promised, and nothing is said to be empty.
+ * The screen itself is built ([#361](https://github.com/Raketa02/Raketa/issues/361)) and its own
+ * sentences live in `challengeDetailPresentation.ts`. What stays here is the title and §13's
+ * fourteen standing sentences, which that screen states **through `standingLine`** exactly as the
+ * row above it does: one challenge described twice in two files is how a row and the screen
+ * behind it start disagreeing about what happened.
  */
 export const CHALLENGE_SCREEN_TITLE = 'Challenge';
-
-export const CHALLENGE_SCREEN_NOT_BUILT =
-  'Who asked you, what the game is worth, and your answer — not built yet';
 
 /**
  * The handles this row names, as one line — **whole names, and a count of the ones dropped.**

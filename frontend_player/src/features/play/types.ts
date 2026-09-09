@@ -44,6 +44,29 @@ export type {
   TagPair,
 } from './domain/evidence';
 
+/**
+ * **The evidence vocabulary's own lists**, widened for the second feature that narrows a code
+ * against them.
+ *
+ * ADR-0106 holds that this vocabulary is *contract* — the codes cross and the client writes the
+ * words — and `challenges` now reads the same eight evidence variants off its own narrower
+ * schema (ADR-0143 §5). Narrowing a served code needs the list at **runtime**, so the types
+ * below are not enough on their own.
+ *
+ * They are widened rather than copied, and rather than moved to `shared/`: a second `TERMS`
+ * beside this one is the way an eighth term reaches one feature and not the other, while a move
+ * is a refactor of every file in this feature that [#361](https://github.com/Raketa02/Raketa/issues/361)
+ * did not ask for and `CLAUDE.md` warns against making on a second caller alone. The day a third
+ * feature reads them is the day that move is owed.
+ */
+export {
+  DEGRADED_REASONS,
+  FORECAST_ASSUMPTIONS,
+  LEVEL_DIRECTIONS,
+  SEARCH_MODES,
+  TERMS,
+} from './domain/vocabulary';
+
 export type {
   DegradedReason,
   ForecastAssumption,
@@ -72,10 +95,21 @@ export {
   CANDIDATE_POSTER_LABEL,
   DECK_ANSWER_WORDS,
   OVERLAP_ROW_LABEL,
+  /**
+   * **The Player Score's name and the stake's two clauses**, widened for the challenge screen.
+   *
+   * That screen draws the same figure under the same rule — the published one, omitted where the
+   * platform has watched nothing, never `0` — and speaks the same two stake clauses under
+   * `stakeOnACard`'s. Re-spelling either would put the denominator and the signed format in two
+   * places, and a listener would eventually hear one card's figure out of a hundred and
+   * another's out of nothing.
+   */
+  PLAYER_SCORE_BLOCK,
   balanceRowValue,
   levelRow,
   metaLine,
   overlapRowValue,
+  stakeClauses,
   type LevelRowFacts,
   type MetaLineFacts,
 } from './components/playerCardPresentation';
@@ -133,7 +167,12 @@ export {
   type PlayLiveRegion,
   type SeatOccupant,
 } from './components/accessibilityPresentation';
-export { balanceLabel, balanceTone, balanceWord } from './components/balancePresentation';
+export {
+  balanceLabel,
+  balanceReading,
+  balanceTone,
+  balanceWord,
+} from './components/balancePresentation';
 export {
   engineFillStatus,
   poolRankingStatus,
@@ -219,7 +258,47 @@ export {
   type SwapState,
 } from './domain/lineup';
 
-export type { Candidate, LikelyRange, PlayerCard, SearchEnvelope } from './domain/candidate';
+export type {
+  AtStake,
+  Candidate,
+  LikelyRange,
+  PlayerCard,
+  SearchEnvelope,
+} from './domain/candidate';
+
+/**
+ * **What a counted game would move, and the rule about when a card may print it** — widened to
+ * this surface's second reader.
+ *
+ * `AtStake` above and these two below cross for the challenge screen, which draws the same pair
+ * of figures under the same rule: *a win against one named person isn't a thing that exists
+ * until the other three seats are known*, so a doubles court draws neither box
+ * ([ADR-0143](../../../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)
+ * §5, which ships `at_stake` on `challenges`' own narrower schema and cites *the card's own rule
+ * unchanged*).
+ *
+ * They are widened rather than re-spelled on the third-caller rule `recoveryMessage` already
+ * states: a second `seats === 2` beside this one is the third answer to a question that has one,
+ * and the figures' format is `formatSignedLevel`'s either way. What `challenges` **does** spell
+ * for itself is its wire schema, because the backend spelled a second one there and a client
+ * mapping a narrower contract through a wider feature's mapper would be reading a shape it was
+ * not sent.
+ */
+export { stakeOnACard } from './domain/atStake';
+export { StakeBoxes, type StakeBoxesProps } from './components/candidate/StakeBoxes';
+
+/**
+ * **The two joins between a selection and its sentences**, widened to their second caller.
+ *
+ * `selectReasons` and `selectConcern` already cross this seam as rules, and they answer in
+ * `ScoredTerm`s rather than in words — so a second surface reading them either re-spells the
+ * `switch` that turns a selection into lines, or shares this. The arm a copy forgets is `hidden`,
+ * whose whole job is not printing the blank row the selection exists to prevent.
+ *
+ * `concernLines` takes the two lists rather than a `Candidate`, because the challenge screen's
+ * card holds a narrower pairing and no candidate at all.
+ */
+export { concernLines, reasonLines } from './components/candidate/candidateFacts';
 
 /**
  * A Play session: the working copy of the week and the line-up on it, and the one function

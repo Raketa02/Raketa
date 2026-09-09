@@ -1,5 +1,10 @@
 /**
- * Backend `code` → the sentence the send writes, over `recoveryMessage`'s fallback.
+ * Backend `code` → the sentence an act in this feature writes, over `recoveryMessage`'s fallback.
+ *
+ * It began as the send's alone and is now the feature's: the challenge screen's two answers write
+ * their refusals through it too ([#361](https://github.com/Raketa02/Raketa/issues/361)), which is
+ * what keeps *no new copy* true of that screen — an `account_held` is one fact with one remedy
+ * whether it refused a send or an acceptance.
  *
  * The shape is `features/play/components/playErrorMessage.ts`' and the reason is the same:
  * localization goes **code → message, never message → message**, and the fallback under the

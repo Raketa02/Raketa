@@ -41,6 +41,8 @@ import { httpRequest } from '@/shared/lib/http';
 type SendChallengeRequest = components['schemas']['SendChallengeRequest'];
 type SentChallengeResponse = components['schemas']['SentChallengeResponse'];
 type ChallengeListResponse = components['schemas']['ChallengeListResponse'];
+type ChallengeDetailResponse = components['schemas']['ChallengeDetailResponse'];
+type ChallengeSchema = components['schemas']['ChallengeSchema'];
 
 /**
  * Send it — **one act, everybody at once**, and a `201` with the id of the challenge that now
@@ -79,6 +81,74 @@ export function getChallenges({ signal }: Cancellable = {}): Promise<ChallengeLi
     path: '/api/v1/challenges',
     authenticated: true,
     signal,
+  });
+}
+
+/**
+ * **One challenge, richly** — the screen you answer on.
+ *
+ * The list tells you what you have been asked; this tells you who is asking and what this
+ * platform makes of playing them. **The pairing is computed when you open it, in your own
+ * direction** — nothing is copied at send and nothing is replayed from the organiser's search,
+ * which is why a challenge born of a mutual yes draws the same screen as one built from a
+ * shortlist ([ADR-0143](../../../../../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)).
+ *
+ * `404 challenge_not_found` is **one code for two cases** — it does not exist, or you are not on
+ * its court — because separating them would answer *is this id real* about a stranger's evening.
+ *
+ * It takes a `signal`, on this module's own asymmetry: a `GET` records nothing, so an abandoned
+ * one costs nobody a row.
+ */
+export function getChallenge(
+  challengeId: string,
+  { signal }: Cancellable = {},
+): Promise<ChallengeDetailResponse> {
+  return httpRequest<ChallengeDetailResponse>({
+    method: 'GET',
+    path: `/api/v1/challenges/${challengeId}`,
+    authenticated: true,
+    signal,
+  });
+}
+
+/**
+ * **Your yes**, and the challenge as it now stands.
+ *
+ * It matters on its own and is not conditional on the other seats: the conversation opens on the
+ * **first** acceptance and grows with each one, so there is no waiting room and no single moment
+ * where the game becomes real. **The seat is not in the path** because you hold at most one in
+ * any challenge, and nobody may answer for anybody else.
+ *
+ * **No `signal`, for the send's reason rather than the read's**: this records before it answers,
+ * and an accept that filled the last seat has opened a game and a conversation by the time a
+ * cancelled request would have been abandoned.
+ *
+ * The reply is `ChallengeSchema` — the list's shape, cards and all absent — which is the server's
+ * own derived standing and therefore **the redraw**.
+ */
+export function postAccept(challengeId: string): Promise<ChallengeSchema> {
+  return httpRequest<ChallengeSchema>({
+    method: 'POST',
+    path: `/api/v1/challenges/${challengeId}/accept`,
+    authenticated: true,
+  });
+}
+
+/**
+ * **Your no**, and the challenge as it now stands.
+ *
+ * It reopens exactly your seat and disturbs nothing else: the people who already agreed did
+ * nothing wrong and are still in the game. **Nobody is told you declined**, and no response
+ * anywhere names you as having done so.
+ *
+ * **Saying nothing is not this.** Silence past your day is a *lapse*, which is a different fact
+ * and is counted apart — the platform never files it as a judgement you made.
+ */
+export function postDecline(challengeId: string): Promise<ChallengeSchema> {
+  return httpRequest<ChallengeSchema>({
+    method: 'POST',
+    path: `/api/v1/challenges/${challengeId}/decline`,
+    authenticated: true,
   });
 }
 

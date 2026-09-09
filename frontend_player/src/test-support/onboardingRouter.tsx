@@ -19,6 +19,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import AroundRoute from '@/app/(app)/(tabs)/around';
+import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]';
 import ChatsRoute from '@/app/(app)/(tabs)/chats';
 import GameRoute from '@/app/(app)/(tabs)/games/[gameId]';
 import NowRoute from '@/app/(app)/(tabs)/index';
@@ -83,6 +84,9 @@ export const ONBOARDING_ROUTES = {
   // because the Now tab's root is the shell's own root and has no segment to nest under.
   '(app)/(tabs)/games/[gameId]': GameRoute,
   '(app)/(tabs)/chats': ChatsRoute,
+  // A challenge is pushed over the Chats tab, and the static `challenge` above the id is the
+  // decision that keeps a challenge id and a conversation id from sharing one segment.
+  '(app)/(tabs)/chats/challenge/[challengeId]': ChallengeRoute,
   '(app)/(tabs)/you': YouRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,

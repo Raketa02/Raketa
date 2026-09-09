@@ -44,8 +44,8 @@ answers either way, and the **profile commit**: every answer in one idempotent
 `POST /players/me/profile` — plus the **Profile surface**, the one read of the week, the
 radius and the per-sport declaration that Play's search screen is drawn from, with an unkeyed
 `PUT` behind each of the three). `play` has its four screens and the sheet over them, below;
-`challenges` is the send: `POST /challenges`, `SH.propose`, and the two re-reads a refusal
-is followed by, below; and `games` is the result argument — the list on Now, the screen a
+`challenges` is the send and the answer: `POST /challenges`, `SH.propose`, the two re-reads a
+refusal is followed by, and **the screen a challenge is answered on** — below; and `games` is the result argument — the list on Now, the screen a
 row pushes, and the entering, correcting, agreeing and disagreeing that close the loop, below.
 
 **The result argument is one screen and eight states, and the state is derived**
@@ -800,6 +800,77 @@ _wait_.** `networkMode: 'always'` is the mechanism — a challenge's answer wind
 send, so a tap deferred to the next reconnect carries a deadline nobody chose — and the closed
 button beside `offlineMessage('does-not-resume')` is the courtesy over it, which is Part 11's
 own split. `useIsOnline` is what the court reads for that, and it is the one caller.
+
+**The challenge screen is the second state-keyed surface, and it is keyed on a `Standing` rather
+than a `GameStanding`** ([#361](https://github.com/Raketa02/Raketa/issues/361),
+[ADR-0143](../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)).
+A challenge with no acceptance has no game to key a screen on, so there are two of these and not
+one. `domain/challengeDetail.ts`'s `challengeArm` folds six standings and two sides into four arms,
+and **the sentence, the card block and the controls are three readings of that one fold** — which
+is what discharges §2.4's _an affordance is never removed without the space saying what took it_
+**by construction** rather than by a rule a component remembers: there is no state in which the
+buttons are gone and the standing sentence has not changed. **`ON` has an arm and no door**, so a
+stale route resolves to a sentence rather than to a blank screen.
+
+**The two answers are gated on the seat and never on the side alone.** §2.1's table reads
+`AWAITING_ANSWERS · invitee → I'm in · Not this time`, and a padel four where one invitee has
+already accepted is **still** `AWAITING_ANSWERS` — that reader is an invitee in the standing that
+offers the buttons with an act already spent, which `POST /accept` answers `seat_already_answered`.
+So the predicate is _the reader holds a seat and nobody has answered for it_, and **neither button
+names a state the act cannot produce**. §13's sentence for that reader is still the one that
+assumes they have not answered, which is #339's amendment owed one row up and is filed as
+[#389](https://github.com/Raketa02/Raketa/issues/389) rather than invented in a build session.
+**`I'm in` replaces the design's _Accept — game on_**: accepting arranges nothing and draws
+_Planning_, so the phrase is false the moment it is tapped, and the label is the standing sentence
+in the first person.
+
+**Pending, never optimistic — and the reply is the redraw.** Both answer routes return
+`ChallengeSchema`, which _is_ the server's derived standing, so `redrawnFrom` folds it onto the
+detail the screen holds instead of refetching. **It keeps the card block**, which ADR-0143 §8
+settles in as many words — _nothing about accepting changes who those people are_ — and the arm
+drops it when the standing leaves the two that draw one, **by that rule and not by a round trip**.
+The merge joins seats by position and checks the occupant anyway: a card is a statement about a
+**person**, and one carried onto a seat somebody else now holds is the single mistake here nothing
+downstream could detect. **The neighbours are invalidated rather than patched** — an accept that
+fills the last seat opens a game and a conversation in caches the reply says nothing about — and it
+is `challengeKeys.list()` rather than `.all`, because `all` is a prefix that matches the detail
+entry too and would send the request the redraw exists to make unnecessary.
+
+**A stale tap is a re-read, not a toast, and there is no new copy for it.** `answerRefusal`'s four
+arms: the closed window and the already-answered seat both **re-read and redraw**, because both
+sentences they land on — _Your day ran out_, _You said no_ — are §13's and already tested;
+`challenge_not_found` **leaves the screen**, one code for two cases on purpose; anything else says
+what it says through this feature's own table. **Nothing in `challenges` is sent for you later**
+stays one line at one site: `CHALLENGE_MUTATION_OPTIONS` already covered the send and now covers
+the answers, on the restated test _is this act's meaning fixed by the moment it is tapped?_ Offline
+draws the shipped builder pattern exactly — **the pair greys out under one amber note**, not one
+per button, with no third value beside `does-not-resume`. And **the offer may expire under the
+finger, and it is let to**: the read sits at `staleTime: 0` with the app's focus refetch, because a
+pinned pool _is_ the record where a challenge's standing goes false against a clock while you look
+at it.
+
+**The card block is a fourth card over the same parts kit, and `challenges` spells its own
+schema.** Narrower than a `PlayerCard` by ADR-0143 §5 — no social tags, no run of form, no counted
+games, no photo verdict, no liveness, no inclusion reason — so `ChallengeCard` is a fourth
+composition rather than a `surface` prop on one of the three. It is drawn in `AWAITING_ANSWERS` and
+`LINE_UP_INCOMPLETE` and **per seat as well as per challenge**: somebody who declined or lapsed
+inside a court that is still open gets none, because _that person is a stranger to you once more
+the moment they leave_. **Four things the design draws that it does not** — no bio, which is a
+refusal ADR-0143 holds is **stronger** here than where it was written because an invitee was put in
+front of somebody without asking; **no _Why?_ affordance**, so the card is one accessibility element
+with no action of its own; **no countdown**, the deadline being stated from the response's own
+`read_at`; and the **Player Score as a segment that disappears** rather than a row reading
+`Score 0`. Its drawn set is `LEVEL_FIT · DISTANCE · RELIABILITY`, and **`PREDICTED_BALANCE` is
+deliberately not in it**: the court's forecast is the _screen's_ line drawn once, because the same
+figure rides on every card, so a balance row here would print it once per seat.
+
+**The evidence is mapped a second time, and that is the decision rather than the debt.** The wire
+carries `Court…` schemas beside Play's because the backend spelled a second, narrower contract, so
+a client mapping them through `candidateMappers` would be reading a shape it was not sent — and the
+two are free to diverge, which is the point. What is **not** duplicated is the vocabulary or the
+words: `challengeDetailMappers` narrows against Play's own lists and produces Play's own domain
+objects, so a term or an evidence variant added to the contract reaches both features at once and
+the only thing spelled twice is the field renaming, which is what a mapper is.
 
 **`SH.whyfit` is the one surface allowed to draw a term row, and the row count is derived.**
 One component taking `(candidate, envelope)` and reading no global state, which is what lets

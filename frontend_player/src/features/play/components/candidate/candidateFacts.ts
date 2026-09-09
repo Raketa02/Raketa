@@ -22,7 +22,7 @@
 import { playerName } from '@/shared/formatting/playerName';
 
 import type { AtStake, Candidate, SearchEnvelope } from '../../domain/candidate';
-import { isTagEvidence, type Evidence } from '../../domain/evidence';
+import { isTagEvidence, type Evidence, type ScoredTerm } from '../../domain/evidence';
 import { wearsOnCourtMark, type MarkablePhoto } from '../../domain/onCourtMark';
 import { selectConcern, selectReasons, type ReasonSelection } from '../../domain/reasonSelection';
 import type { SocialTagOverlap } from '../../domain/socialTagOverlap';
@@ -162,7 +162,7 @@ export function candidateFacts(input: CandidateFactsInput): CandidateFacts {
   const balance = drawn.includes('PREDICTED_BALANCE') ? balanceOf(candidate) : undefined;
   const meta = drawn.includes('DISTANCE') ? metaFactsOf(candidate, envelope) : undefined;
   const reasons = reasonLinesOf(candidate, drawn, socialTags);
-  const concerns = concernLinesOf(candidate);
+  const concerns = concernLines(candidate);
   const tagClauses = socialTags === undefined ? [] : socialTagClauses(socialTags);
 
   return {
@@ -261,7 +261,7 @@ function reasonLinesOf(
   drawn: readonly Term[],
   socialTags: SocialTagOverlap | undefined,
 ): readonly string[] {
-  return spoken(
+  return reasonLines(
     selectReasons({
       drawn,
       terms: candidate.terms,
@@ -305,8 +305,15 @@ function restatesTheTagRow(evidence: Evidence, row: SocialTagOverlap | undefined
   return evidence.matched.some((id) => drawn.has(id));
 }
 
-/** The selection, as the sentences it names. `hidden` is no line rather than an empty one. */
-function spoken(selection: ReasonSelection): readonly string[] {
+/**
+ * The selection, as the sentences it names. `hidden` is no line rather than an empty one.
+ *
+ * **Exported**, because the challenge screen's card draws reason lines off the same selection
+ * ([#361](https://github.com/Raketa02/Raketa02/issues/361)): a second copy of this `switch` is a
+ * second place for a selection arm to be forgotten, and the arm that would be forgotten is
+ * `hidden` — the one whose whole job is not printing a blank row.
+ */
+export function reasonLines(selection: ReasonSelection): readonly string[] {
   switch (selection.kind) {
     case 'terms':
       // `saysSomething` already dropped every row this can decline for, so nothing is lost
@@ -321,11 +328,22 @@ function spoken(selection: ReasonSelection): readonly string[] {
   }
 }
 
-/** The one concern a card draws, as a sentence. All of them are the why-fit sheet's. */
-function concernLinesOf(candidate: Candidate): readonly string[] {
+/**
+ * The one concern a card draws, as a sentence. All of them are the why-fit sheet's.
+ *
+ * Takes the two lists rather than a `Candidate`, so the challenge screen's card — which holds a
+ * narrower pairing and no candidate at all — reads the same rule. `saysSomething` is here rather
+ * than at the call sites because *can this evidence be written as a concern* is a fact about the
+ * copy, and a caller passing its own answer is a caller that can disagree with the sentence that
+ * gets drawn.
+ */
+export function concernLines(pairing: {
+  readonly terms: readonly ScoredTerm[];
+  readonly concerns: readonly Term[];
+}): readonly string[] {
   return selectConcern({
-    terms: candidate.terms,
-    concerns: candidate.concerns,
+    terms: pairing.terms,
+    concerns: pairing.concerns,
     saysSomething: (term) => term.evidence !== null && concernLine(term.evidence) !== undefined,
   }).flatMap((term) => (term.evidence === null ? [] : (concernLine(term.evidence) ?? [])));
 }

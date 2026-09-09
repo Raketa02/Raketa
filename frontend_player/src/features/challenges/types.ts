@@ -79,13 +79,21 @@ export { ChallengesSection, type ChallengesSectionProps } from './components/Cha
 export { useChallengesWaiting } from './hooks/useChallenges';
 
 /**
- * The screen a row opens, mounted by `/chats/challenge/[challengeId]`.
+ * **The screen a row opens, and the two answers on it** — mounted by
+ * `/chats/challenge/[challengeId]` ([#361](https://github.com/Raketa02/Raketa/issues/361)).
  *
- * A landing rather than the screen: what it becomes is
- * [#361](https://github.com/Raketa02/Raketa/issues/361)'s, and it is exported now because a row
- * that opens nothing is not a door.
+ * A state-keyed surface over the six standings and two sides. Everything under it stays
+ * internal: the read, the answer, the fold they are both keyed on and the words the screen
+ * writes are this feature's, and the only things a route needs are the screen and the check on
+ * the id it hands over.
  */
-export { ChallengeScreen } from './components/ChallengeScreen';
+export { ChallengeScreen, type ChallengeScreenProps } from './components/ChallengeScreen';
+
+/**
+ * The route's own check on the id it is handed, because a route param is attacker-controlled and
+ * this one becomes the path of a `POST` that accepts a game on somebody's behalf.
+ */
+export { parseChallengeRouteParams, type ChallengeRouteParams } from './schemas/routeParams';
 
 /**
  * The court a send carries — the shape the builder hands over, and the only type of this

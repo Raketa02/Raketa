@@ -15,7 +15,6 @@ import { STANDINGS, type ChallengeSide, type StandingFacts } from '../domain/sta
 
 import {
   CHALLENGES_HEADING,
-  CHALLENGE_SCREEN_NOT_BUILT,
   CHALLENGE_SCREEN_TITLE,
   MUTUAL_YES,
   NOBODY_IS_CONTACTED_YET,
@@ -265,14 +264,14 @@ describe('your own seat, on your own row', () => {
 });
 
 /**
- * The two placeholder-shaped lines this feature owns, held to the test every line in the app is.
+ * The lines this feature names a surface with, held to the test every line in the app is.
  *
  * `shellCopy.test.ts` makes the same two refusals of the tab's own sentences; these are here
  * because the vocabulary is the challenge's rather than the tab's, and a line that escaped both
  * files would be the one place *coming soon* could land.
  */
 describe('what this feature refuses to say', () => {
-  const LINES = [CHALLENGES_HEADING, CHALLENGE_SCREEN_TITLE, CHALLENGE_SCREEN_NOT_BUILT];
+  const LINES = [CHALLENGES_HEADING, CHALLENGE_SCREEN_TITLE];
 
   it('never says nothing is happening', () => {
     for (const line of LINES) {
@@ -285,9 +284,5 @@ describe('what this feature refuses to say', () => {
     for (const line of LINES) {
       expect(line).not.toMatch(/coming soon|soon|sorry|under construction/i);
     }
-  });
-
-  it('names what belongs on the screen it stands in for', () => {
-    expect(CHALLENGE_SCREEN_NOT_BUILT).toMatch(/not built yet$/);
   });
 });

@@ -33,3 +33,18 @@ export { GameScreen, type GameScreenProps } from './components/GameScreen';
  * this one becomes a path that appends a score to somebody's stream.
  */
 export { parseGameRouteParams, type GameRouteParams } from './schemas/routeParams';
+
+/**
+ * **This feature's cache key**, crossed for the one act outside it that opens a game.
+ *
+ * An accept that fills the last seat mints a game and a conversation in the same transaction, in
+ * caches that response says nothing about — so `challenges` invalidates `GET /games` and the row
+ * appears on Now without anybody refreshing it
+ * ([ADR-0143](../../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)).
+ *
+ * The **key** crosses and the query does not: a challenge answering hook has no business reading
+ * a game, and what it owes is the statement that this list is now out of date. That is the
+ * narrowest thing that can be said, and the alternative — spelling `['games']` at the call
+ * site — is the same coupling with nothing holding the two spellings equal.
+ */
+export { gameKeys } from './hooks/gameKeys';
