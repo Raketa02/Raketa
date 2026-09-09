@@ -59,6 +59,7 @@ import type { Challenge, ChallengeSeat } from '../domain/challenge';
 import { STANDINGS, type Standing } from '../domain/standing';
 
 type SendChallengeRequest = components['schemas']['SendChallengeRequest'];
+type FillSeatsRequest = components['schemas']['FillSeatsRequest'];
 type SeatChoiceSchema = components['schemas']['SeatChoiceSchema'];
 type ChallengeListResponse = components['schemas']['ChallengeListResponse'];
 
@@ -87,15 +88,37 @@ export function toSendChallengeRequest(send: {
   readonly searchId: string;
   readonly court: ProposedCourt;
 }): SendChallengeRequest {
-  return {
-    search_id: send.searchId,
-    court: send.court.map((playerId, at) => ({
-      side: sideAt(at, send.court.length),
-      // Omitted rather than `null` on an empty seat: the field is optional, and the two mean
-      // the same thing to the route.
-      ...(playerId === undefined ? {} : { player_id: playerId }),
-    })),
-  };
+  return { search_id: send.searchId, court: toSeatChoices(send.court) };
+}
+
+/**
+ * **The send's shape minus the mint** — the fill, on `POST /challenges/{id}/seats`.
+ *
+ * The challenge is in the path, so the body is the two things a fill has to say and the two the
+ * send says: the court as it will stand, and the search behind it. The seats are the send's own
+ * — the same list, the same order, the same side arithmetic — because *"an acceptance is to the
+ * game and not to the side"* and what crosses is the **whole** arrangement rather than the seats
+ * being filled ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md) §6).
+ *
+ * A second body shape with one field fewer, sharing `toSeatChoices`, rather than one function
+ * with an optional challenge: the two go to different routes and a caller that could send either
+ * would be one edit away from minting a second challenge where it meant to grow one.
+ */
+export function toFillSeatsRequest(fill: {
+  readonly searchId: string;
+  readonly court: ProposedCourt;
+}): FillSeatsRequest {
+  return { search_id: fill.searchId, court: toSeatChoices(fill.court) };
+}
+
+/** One entry per seat, the side derived from the position — see the module note. */
+function toSeatChoices(court: ProposedCourt): SeatChoiceSchema[] {
+  return court.map((playerId, at) => ({
+    side: sideAt(at, court.length),
+    // Omitted rather than `null` on an empty seat: the field is optional, and the two mean
+    // the same thing to the route.
+    ...(playerId === undefined ? {} : { player_id: playerId }),
+  }));
 }
 
 /**

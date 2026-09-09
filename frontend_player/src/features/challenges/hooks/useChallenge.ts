@@ -1,10 +1,12 @@
 /**
- * **The screen you answer on** — one challenge read richly, and the one act on it.
+ * **The screen you answer on** — one challenge read richly, and the acts on it.
  *
  * | | |
  * | --- | --- |
  * | `useChallenge` | `GET /challenges/{id}` — the arrangement, the people and the pairing |
  * | `useAnswerSeat` | `POST …/accept` and `…/decline` — **pending, never optimistic** |
+ * | `useInviteSeats` | `POST …/seats` — ⚡'s send, from the builder this screen pushes |
+ * | `useWithdrawChallenge` | `POST …/withdrawal` — the organiser's, and the only end a half-built court has |
  *
  * ## The offer may expire under the finger, and it is let to
  *
@@ -40,10 +42,12 @@
  * declare their cache effect* answered honestly, where a hand-assembled row would be this client
  * inventing a game the server has not described to it.
  *
- * The conversation has no cache to invalidate yet: `features/conversations/` arrives with
- * [#363](https://github.com/Raketa02/Raketa/issues/363) and
- * [#364](https://github.com/Raketa02/Raketa/issues/364), and the invalidation it will need is
- * this one line longer rather than a second mechanism.
+ * **And the conversation, which is the third**: the first acceptance opens a room and every
+ * later one grows it. `features/conversations/` arrived with
+ * [#363](https://github.com/Raketa02/Raketa/issues/363) and the invalidation it needed was the
+ * one line this file said it would be rather than a second mechanism — the withdraw below takes
+ * the same line in the opposite direction, because a destroyed room is a list that has changed
+ * for a reason no reply describes.
  *
  * ## The retry that is not written here, and why it is not
  *
@@ -58,12 +62,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
 
+import { conversationKeys } from '@/features/conversations/types';
 import { gameKeys } from '@/features/games/types';
 
 import type { AnsweredChallenge, ChallengeDetail } from '../domain/challengeDetail';
 import { redrawnFrom } from '../domain/challengeDetail';
 import { answerSeat, type AnswerSeatAsk } from '../use-cases/answerSeat';
+import { inviteSeats, type InviteSeatsAsk } from '../use-cases/inviteSeats';
 import { readChallenge } from '../use-cases/readChallenge';
+import { withdrawChallenge } from '../use-cases/withdrawChallenge';
 
 import { challengeKeys } from './challengeKeys';
 import { CHALLENGE_MUTATION_OPTIONS } from './challengeMutationOptions';
@@ -115,6 +122,69 @@ export function useAnswerSeat() {
       // trip instead of by ADR-0143 §8's rule.
       void client.invalidateQueries({ queryKey: challengeKeys.list() });
       void client.invalidateQueries({ queryKey: gameKeys.all });
+      // The room the **first** acceptance opens, and the one every later acceptance grows. It
+      // is a list this response says nothing about, so it is fetched rather than patched.
+      void client.invalidateQueries({ queryKey: conversationKeys.list() });
+    },
+  });
+}
+
+/**
+ * **⚡'s send** — the open seats offered, and the challenge as it now stands.
+ *
+ * `POST /challenges/{id}/seats`, called from the builder this screen pushed. It is the second
+ * act in the feature that reaches other people and it takes the first's posture whole: pending
+ * never optimistic, `CHALLENGE_MUTATION_OPTIONS` spread whole, and no `Idempotency-Key` — the
+ * open-challenge rule does not expire and a key does.
+ *
+ * **The detail is invalidated rather than redrawn, and that is the one place this differs from
+ * the two answers.** The reply is `ChallengeSchema` and carries no `read_at`, and what the
+ * challenge screen draws next is *"the new seats, their fresh deadlines, and a standing that may
+ * now be awaiting answers again"* — durations, all of them folded against an instant. Writing the
+ * reply in would state a fresh 24 hours against the moment the screen was **opened**, which is
+ * however long the builder session took ago. `redrawnFrom` refuses to move `readAt` for exactly
+ * that reason; here the honest answer is the read the screen is already mounted for, which
+ * `staleTime: 0` makes immediate.
+ */
+export function useInviteSeats() {
+  const client = useQueryClient();
+
+  return useMutation<AnsweredChallenge, AppError, InviteSeatsAsk>({
+    mutationFn: inviteSeats,
+    ...CHALLENGE_MUTATION_OPTIONS,
+    onSuccess: (_filled, ask) => {
+      void client.invalidateQueries({ queryKey: challengeKeys.detail(ask.challengeId) });
+      void client.invalidateQueries({ queryKey: challengeKeys.list() });
+    },
+  });
+}
+
+/**
+ * **The withdraw** — the one act on this screen that ends something rather than answering it.
+ *
+ * Pending, never optimistic: the route returns the challenge as it now stands at `WITHDRAWN`, so
+ * the screen redraws from the reply exactly as the two answers do, and `redrawnFrom` drops the
+ * card block by ADR-0143 §8's rule rather than by a round trip.
+ *
+ * **The conversation is gone, not delisted**, so the Chats list is **invalidated rather than
+ * patched** ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)):
+ * there is nothing in this reply about a room, and a client that removed the row itself would be
+ * asserting a deletion it was not told about. The same argument the accept above makes in the
+ * other direction.
+ */
+export function useWithdrawChallenge() {
+  const client = useQueryClient();
+
+  return useMutation<AnsweredChallenge, AppError, string>({
+    mutationFn: withdrawChallenge,
+    ...CHALLENGE_MUTATION_OPTIONS,
+    onSuccess: (withdrawn, challengeId) => {
+      client.setQueryData<ChallengeDetail | undefined>(challengeKeys.detail(challengeId), (held) =>
+        held === undefined ? held : redrawnFrom(held, withdrawn),
+      );
+
+      void client.invalidateQueries({ queryKey: challengeKeys.list() });
+      void client.invalidateQueries({ queryKey: conversationKeys.list() });
     },
   });
 }

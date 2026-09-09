@@ -91,17 +91,48 @@ type WireSplit = components['schemas']['SplitSchema'];
  * `availability_override` is **omitted, never sent as `null`**, and the caller states which it
  * is sending — the same decision `SearchAsk` makes, for #247's reason: an omitted override is
  * *use my profile grid* and an empty list is *I unticked every cell*.
+ *
+ * **And a fill names the challenge it completes and says nothing else about the court**
+ * ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
+ * §2). That is a second shape of one request rather than a second route — the same reading
+ * `locked_seats` already gets, *"a property of what you send rather than of where you send
+ * it"* — so it is a union here, and the three fields the route refuses beside it are unspellable
+ * rather than optional.
  */
-export interface LineupAsk {
-  readonly sport: Sport;
-  readonly mode: SearchMode;
-  /** The people already on the court, **in seat order**. Empty is ⚡ on an empty court. */
-  readonly lockedSeats: readonly SeatedPlayerId[];
+export type LineupAsk = {
   /** The improvised week, or `undefined` to fill against the grid the profile holds. */
   readonly sentWeek: readonly WeekCell[] | undefined;
-}
+} & (
+  | {
+      readonly sport: Sport;
+      readonly mode: SearchMode;
+      /** The people already on the court, **in seat order**. Empty is ⚡ on an empty court. */
+      readonly lockedSeats: readonly SeatedPlayerId[];
+      readonly completing?: undefined;
+    }
+  | {
+      /**
+       * The half-built court this fill completes — and **the whole of what it says about the
+       * court** (ADR-0150 §2).
+       *
+       * A union rather than three optional fields beside it, because the request refuses the
+       * other three here rather than making them optional: *a caller supplying one is offering a
+       * second place for a fact the challenge already holds, which is how somebody who is not in
+       * the challenge gets locked, or somebody who is gets forgotten.* Spelled as a union, that
+       * is a compile error rather than a `400`.
+       */
+      readonly completing: string;
+    }
+);
 
 export function toRunLineupRequest(ask: LineupAsk): RunLineupRequest {
+  // **Send the challenge and send nothing else about the court.** The sport, the kind of
+  // evening and the locked seats are all read off it server-side; `availability_override`
+  // stays sendable, because it is *this search's* week and says nothing about the challenge.
+  if (ask.completing !== undefined) {
+    return { completing_challenge_id: ask.completing, ...availabilityOverride(ask.sentWeek) };
+  }
+
   return {
     sport: toWireSport(ask.sport),
     mode: ask.mode,

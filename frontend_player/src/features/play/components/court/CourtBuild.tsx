@@ -1,7 +1,7 @@
 /**
  * The **interactive** court — the one you build a line-up on.
  *
- * *"`CourtBuild` owns the swap truth table, the selection ring, the clear badge and the two
+ * *"`CourtBuild` owns the swap truth table, the selection ring, the clear badge and the
  * guard toasts"*
  * ([`the-play-components.md`](../../../../../../docs/specs/matchmaking/the-play-components.md)
  * §4). Every number it draws is `Court`'s and every rule it applies is `domain/lineup`'s; what
@@ -23,17 +23,23 @@
  * effect: a seat left ringed under a toggle that is now off is a selection a player cannot
  * cancel, and re-enabling the toggle would restore a partner they had forgotten choosing.
  *
- * ## The two guard toasts are here because the refusals are
+ * ## The one guard toast is here because the refusal is
  *
  * A tap that resolves to `REFUSE` never reaches the screen — there is nothing for a screen to
  * do with it — so the sentence is raised here, through `seatGuardLine`, and the toast queue is
- * `shared/`'s single host ([9.3](../../../../../docs/design-system.md#93-layer-order)). Both
- * refusals belong to the **replacement** rather than to the trade: your own seat and an
- * accepted one are freely movable across the net, which is what *change sides, never seats*
- * means, and it is why the sentence names the toggle.
+ * `shared/`'s single host ([9.3](../../../../../docs/design-system.md#93-layer-order)). It
+ * belongs to the **replacement** rather than to the trade: your own seat is freely movable
+ * across the net, which is what *change sides, never seats* means, and it is why the sentence
+ * names the toggle.
  *
- * The clear badge draws no third refusal: `seatIsClearable` decides whether it exists at all,
- * so the × a player cannot use is never on screen to press.
+ * **The second toast is gone and the seat is silent instead**
+ * ([ADR-0150](../../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
+ * §8): an accepted seat is not a control, so it has no refusal to make and the truth table
+ * answers `NOTHING`. What draws the rule is the missing clear badge and the tap that does not
+ * answer, which is #324's *no copy, no pill, no disabled control* applied to a seat.
+ *
+ * The clear badge draws no third refusal either: `seatIsClearable` decides whether it exists at
+ * all, so the × a player cannot use is never on screen to press.
  *
  * ## There is no hold, and a seat does two things rather than three
  *
@@ -60,7 +66,6 @@ import { seatIsClearable, seatPlaces, tapSeat } from '../../domain/lineup';
 import { seatGuardLine } from '../courtPresentation';
 
 import { CourtSeat, type CourtSeatOccupant } from './CourtSeat';
-import { seatWho } from './seatWho';
 
 export interface CourtBuildProps {
   readonly sport: SportKey;
@@ -123,7 +128,12 @@ export function CourtBuild({
         setSelected(undefined);
         return onSwap(decision.from, decision.to);
       case 'REFUSE':
-        return showToast({ message: seatGuardLine(decision.guard, seatWho(occupant).name) });
+        return showToast({ message: seatGuardLine(decision.guard) });
+      // **An accepted seat is not a control**, so there is nothing to say and nothing to do
+      // (ADR-0150 §8). Named rather than a `default`, so a seventh arm on the truth table is a
+      // compile error here rather than a tap that silently stops working.
+      case 'NOTHING':
+        return;
     }
   }
 

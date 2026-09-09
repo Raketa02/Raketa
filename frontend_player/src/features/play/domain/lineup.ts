@@ -90,7 +90,7 @@ import type { SearchMode } from './vocabulary';
 import { sameWeek, type WorkingWeek } from './workingWeek';
 
 /**
- * What a search was run for — the three facts a line-up's validity is judged against.
+ * What a search was run for — the facts a line-up's validity is judged against.
  *
  * The week is in here because `POST /lineups` carries it as `availability_override`: a
  * shortlist composed against Tuesday evenings is not a shortlist against Saturday mornings,
@@ -99,7 +99,49 @@ import { sameWeek, type WorkingWeek } from './workingWeek';
 export interface PlayOrigin {
   readonly sport: Sport;
   readonly mode: SearchMode;
-  readonly week: WorkingWeek;
+  /**
+   * The week the search ran on — **absent where none was composed**, which is the legal value
+   * meaning *against the grid the profile holds*.
+   *
+   * Every search started on *Find a game* has one, because that screen is where a week is
+   * improvised. A fill that completes a challenge has none: there was no *Find a game* to
+   * improvise on, so the ask omits `availability_override` and the answer is the profile's own
+   * grid ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md) §7).
+   * It is **absent rather than empty** because an empty week is a real, different value — *I
+   * unticked every cell* — and #247 is what stopped the wire conflating the two.
+   */
+  readonly week?: WorkingWeek;
+  /**
+   * The half-built court this search exists to **finish** — absent on every search composed on
+   * *Find a game*.
+   *
+   * It is part of the origin rather than a flag on a screen because it is *what the search was
+   * run for*, in exactly the sense the other fields are: ADR-0150 §2 reads the sport, the mode
+   * and the locked seats off the challenge and **refuses all three beside it**, so the challenge
+   * is not one more thing sent alongside an ask — it *is* the ask. Everything downstream reads
+   * it off the record and nothing is passed a second time (`the-loop-components.md` §4.2: *no
+   * `from` parameter*).
+   */
+  readonly completing?: CompletingChallenge;
+}
+
+/**
+ * A challenge being completed, and **who on it has already said yes.**
+ *
+ * The two travel together because the second is only ever read about the first. `accepted` is
+ * derived once, from the detail the challenge screen is already holding at the moment ⚡ is
+ * pressed — a set the fill's own answer cannot state, because the people who accepted *"come
+ * back as ordinary candidate rows"* and an ordinary row says nothing about a challenge.
+ *
+ * It is what makes `BuildSeat.accepted` true for the first time: an accepted seat is not a
+ * control — no clear badge, no press, no pool — and swapping is the only thing that works on
+ * it, which **draws** *an acceptance is to the game, not to the side* rather than writing it
+ * (ADR-0150 §8).
+ */
+export interface CompletingChallenge {
+  readonly challengeId: string;
+  /** Player ids that answered `ACCEPTED`. Never the whole court: an empty seat has said nothing. */
+  readonly accepted: readonly SeatedPlayerId[];
 }
 
 /**
@@ -180,9 +222,20 @@ export interface Lineup {
  */
 export const isDoubles = (seats: number) => seats > 2;
 
-/** Whether two searches were run for the same thing. The week compares as a set. */
+/**
+ * Whether two searches were run for the same thing. The week compares as a **set**.
+ *
+ * **A composed week is never the same origin as an uncomposed one**, and that is the reading
+ * the optional field could otherwise get wrong: *absent* is *the profile's grid, whatever it
+ * says today*, and `[]` is *every cell unticked* — two answers that a `?? []` would collapse
+ * into one, silently, in the function the whole orphan model rests on.
+ */
 export function sameOrigin(one: PlayOrigin, other: PlayOrigin): boolean {
-  return one.sport === other.sport && one.mode === other.mode && sameWeek(one.week, other.week);
+  if (one.sport !== other.sport || one.mode !== other.mode) return false;
+  // Two fills of two different courts are two origins, whatever else they agree about.
+  if (one.completing?.challengeId !== other.completing?.challengeId) return false;
+  if (one.week === undefined || other.week === undefined) return one.week === other.week;
+  return sameWeek(one.week, other.week);
 }
 
 /**
@@ -454,6 +507,23 @@ export function courtHalfOf(place: SeatPlace): CourtHalf {
 export type SeatGuard = 'SEAT_IS_YOURS' | 'ALREADY_ACCEPTED';
 
 /**
+ * The guards a tap **says something about** — which is one of the two, and the other one is
+ * ADR-0150 §8.
+ *
+ * *"An accepted seat is not a control. No clear badge, no press, no pool — swapping is the only
+ * thing that works on it, which **draws** an acceptance is to the game, not to the side rather
+ * than writing it."* The source documentation asks for a named refusal — *"{Name} already
+ * accepted — they keep their place"* — and it is **never written**, because #324's *no copy, no
+ * pill, no disabled control* is the rule it loses to: a seat that answers with a sentence is a
+ * control that refuses, and a seat that does not answer is not a control at all.
+ *
+ * `Exclude` rather than a second literal union, so a third guard added to {@link SeatGuard}
+ * still fails `pnpm typecheck` at the table that writes the sentences — which is the property
+ * that made that table a `Record` in the first place.
+ */
+export type SpokenSeatGuard = Exclude<SeatGuard, 'ALREADY_ACCEPTED'>;
+
+/**
  * **The lock**, and the one place either half of it is written.
  *
  * Two reasons and one rule rather than a special case beside a rule. Your own seat is not
@@ -497,7 +567,15 @@ export type SeatTap =
   | { readonly kind: 'SELECT'; readonly seat: number }
   | { readonly kind: 'DESELECT' }
   | { readonly kind: 'SWAP'; readonly from: number; readonly to: number }
-  | { readonly kind: 'REFUSE'; readonly guard: SeatGuard; readonly seat: number };
+  | { readonly kind: 'REFUSE'; readonly guard: SpokenSeatGuard; readonly seat: number }
+  /**
+   * **Nothing at all** — an accepted seat, outside swap mode.
+   *
+   * Not a refusal: a refusal is something a control says, and ADR-0150 §8 is that this seat is
+   * not a control. It is an arm rather than a `REFUSE` the screen declines to draw, because a
+   * guard with no sentence is copy waiting to be written back in by the next reader.
+   */
+  | { readonly kind: 'NOTHING' };
 
 /** The court's interaction state, which is the swap toggle and the seat waiting for a partner. */
 export interface SwapState {
@@ -512,7 +590,7 @@ export interface SwapState {
  * ```
  * empty                     open the pool against this seat   (either mode)
  * swap off · yours          refuse: turn the toggle on to change sides
- * swap off · accepted       refuse: they keep their place
+ * swap off · accepted       nothing — this seat is not a control
  * swap off · anybody else   open the pool against this seat
  * swap on  · nothing held   select
  * swap on  · this seat      deselect
@@ -522,11 +600,13 @@ export interface SwapState {
  * **An empty seat is tested first, in both modes.** There is nothing in it to trade, and a
  * player in swap mode tapping a hole means the obvious thing.
  *
- * **The two guards belong to the replacement and not to the trade.** Swapping is *change
- * sides, never seats*: your own seat and an accepted one are both freely movable across the
- * net, and it is only being replaced that they refuse. That is why the toast names the toggle
- * — the thing it refuses is available one switch away. The refusal reads `seatLock` rather
- * than re-testing what it holds, so a third locked seat gains its refusal for free.
+ * **Both locks belong to the replacement and not to the trade.** Swapping is *change sides,
+ * never seats*: your own seat and an accepted one are both freely movable across the net, and it
+ * is only being replaced that they hold. **They differ in what they say about it.** Your own
+ * seat refuses out loud, and the toast names the toggle, because the thing it refuses is
+ * available one switch away. An accepted seat says **nothing**: ADR-0150 §8 is that it is not a
+ * control, so it has no refusal to make — *no clear badge, no press, no pool*, and the drawing
+ * carries the rule rather than a sentence beside it.
  *
  * The seat is passed rather than looked up, so this is total: a court draws its own seats, and
  * an index it could not produce is not a state to write a branch for.
@@ -536,8 +616,9 @@ export function tapSeat(state: SwapState, index: number, seat: BuildSeat): SeatT
 
   if (!state.swapping) {
     const guard = seatLock(seat);
-    return guard === undefined
-      ? { kind: 'OPEN_POOL', seat: index }
+    if (guard === undefined) return { kind: 'OPEN_POOL', seat: index };
+    return guard === 'ALREADY_ACCEPTED'
+      ? { kind: 'NOTHING' }
       : { kind: 'REFUSE', guard, seat: index };
   }
 

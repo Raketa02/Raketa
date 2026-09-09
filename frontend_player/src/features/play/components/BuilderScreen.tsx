@@ -164,6 +164,7 @@ import {
   challengeErrorMessage,
   openChallengeLine,
   sendRefusal,
+  useInviteSeats,
   useOpenPair,
   useSendChallenge,
   type ProposedCourt,
@@ -171,7 +172,7 @@ import {
 } from '@/features/challenges/types';
 import { useProfileSurface } from '@/features/player_profile/types';
 import { ShellScreen, landOnNow } from '@/features/shell/types';
-import { offlineMessage } from '@/shared/errors';
+import { offlineMessage, type AppError } from '@/shared/errors';
 import { useIsOnline } from '@/shared/lib/platform';
 import { showToast } from '@/shared/store/toast.store';
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
@@ -340,6 +341,16 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const fill = useFillSeats();
   const send = useSendChallenge();
   /**
+   * **The same act on a court that already stands** — `POST /challenges/{id}/seats`, the send's
+   * shape minus the mint.
+   *
+   * Both are mounted and exactly one is ever used, decided by whether the origin names a
+   * challenge: a hook mounted conditionally is not a hook, and the alternative — a second screen
+   * component — is the fork `the-loop-components.md` §4.2 refuses by putting *one screen at two
+   * routes*.
+   */
+  const invite = useInviteSeats();
+  /**
    * The remedy for `line_up_no_longer_sendable`, and **the pool's own act borrowed rather than
    * copied**: it writes the whole record back under the key this screen is already subscribed
    * to, so a marked seat appears from one cache write and nothing here holds a second answer.
@@ -427,6 +438,20 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const members = lineup?.seats ?? [];
 
   /**
+   * **The half-built court this builder is completing**, or nothing on Play's own route.
+   *
+   * Read off the **record's origin** and not off a route param: the challenge is what the search
+   * was run for, so it is already stamped on the answer this screen is drawing, and a second
+   * spelling arriving down the route would be one more thing that can disagree with it. That is
+   * `the-loop-components.md` §4.2's *no `from` parameter* discharged by the model rather than by
+   * a rule — the route under `/chats/…` carries the challenge id because a path has to say what
+   * it is looking at, and this screen never reads it.
+   */
+  const completing = origin?.completing;
+  /** Who on this court has already said yes. Their seats are not controls (ADR-0150 §8). */
+  const accepted = new Set(completing?.accepted ?? []);
+
+  /**
    * The ask, or the absence of one — **the one place *is there a forecast to fetch* is
    * decided.**
    *
@@ -474,6 +499,8 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const filled = seatsFilled(seated);
   const open = seats - filled;
   const places = seatPlaces(seated.map(toBuildSeat));
+  /** See the control's own note: absent on a court somebody has accepted, never disabled. */
+  const mayStartOver = lineup !== undefined && completing === undefined;
 
   /**
    * A seated player the live gates no longer admit — a **set difference**, derived here and
@@ -579,11 +606,18 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
         );
 
   const occupants: readonly CourtSeatOccupant[] = drawn.map((seat, at) =>
-    toOccupant(seat, { self, rows, unfilled: shortfall?.get(at) ?? null }),
+    toOccupant(seat, { self, rows, accepted, unfilled: shortfall?.get(at) ?? null }),
   );
 
-  /** Everybody about to be asked: the court minus you, in seat order. Nobody invites themselves. */
-  const invitees = seatedIds(seated);
+  /**
+   * Everybody about to be asked: the court minus you, in seat order. Nobody invites themselves.
+   *
+   * **And minus anybody who has already said yes**, on a court that is being completed: they are
+   * not being asked, they answered weeks ago, and a pre-send sheet listing them under *Who you're
+   * asking* would be naming an act this route refuses to take — an accepted player may not be
+   * removed, and they are not being invited either.
+   */
+  const invitees = seatedIds(seated).filter((playerId) => !accepted.has(playerId));
 
   /**
    * The second of the two re-reads, asked **only** once the pair rule has fired.
@@ -605,8 +639,13 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
    * origin was asked under — sent unless it can be shown to be the profile's own grid, which is
    * the one case an omitted override already means. Unprovable is *sent*: a fill that quietly
    * ran on a different week from the search above it would be the two disagreeing silently.
+   *
+   * **An origin with no week of its own sends none**, which is the same sentence read from the
+   * other end: a challenge fill composed no week, so the one it ran on *is* the profile's grid
+   * and an omitted override is what says so (ADR-0150 §7).
    */
-  const sentWeek = origin === undefined ? undefined : sentWeekForOrigin(origin.week, profile?.week);
+  const sentWeek =
+    origin?.week === undefined ? undefined : sentWeekForOrigin(origin.week, profile?.week);
 
   /**
    * The fill's wait — the second of Play's two, and the one with a **stagger over its floor**.
@@ -718,15 +757,23 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   function fillTheSeats() {
     if (origin === undefined) return;
     fill.mutate(
-      {
-        origin,
-        lockedSeats: members,
-        sentWeek,
-        // The profile's own week may not have landed, and that is stated rather than replaced
-        // with an empty one: the prompt that would have quoted it is dropped instead of drawn
-        // against a grid nobody holds (`use-cases/fillSeats`).
-        quotes: { sportName: sportLabel(origin.sport), profileWeek: profile?.week },
-      },
+      // **A fill names the challenge it completes and says nothing else about the court**
+      // (ADR-0150 §2): the sport, the kind of evening and the locked seats are all read off it,
+      // and the people who accepted are its locked seats. So a second ⚡ on this court re-seats
+      // around the same people rather than around whoever the first one found, which is the
+      // request's own shape rather than a rule this screen applies.
+      completing !== undefined
+        ? { kind: 'challenge', completing, sport: origin.sport }
+        : {
+            kind: 'search',
+            origin,
+            lockedSeats: members,
+            sentWeek,
+            // The profile's own week may not have landed, and that is stated rather than
+            // replaced with an empty one: the prompt that would have quoted it is dropped
+            // instead of drawn against a grid nobody holds (`use-cases/fillSeats`).
+            quotes: { sportName: sportLabel(origin.sport), profileWeek: profile?.week },
+          },
       {
         onSuccess: ({ record: answer }) => {
           // The origin moves now, because the answer's own candidates are what the seats
@@ -763,8 +810,35 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
     setRefusal(undefined);
     reread.reset();
 
+    const court = courtWithYou(seated, self) satisfies ProposedCourt;
+    const onError = (error: AppError) => {
+      const next = sendRefusal(error);
+      setRefusal(next);
+      startTheReRead(next);
+    };
+
+    // **The court that already stands is grown, and the one that does not is minted.** Two
+    // routes, one press, and the branch is the origin's — see `completing`.
+    if (completing !== undefined) {
+      invite.mutate(
+        { challengeId: completing.challengeId, searchId: originSearchId, court },
+        {
+          // **The send pops back to the challenge screen**, which is the surface that draws the
+          // result: the new seats, their fresh deadlines, and a standing that may now be awaiting
+          // answers again. Nothing here resets the shell stack — `landOnNow`'s *"there is nothing
+          // left to be behind: the court is gone"* is false when the thing behind is the
+          // challenge you were completing (ADR-0150 §7). There is no toast for the same reason:
+          // the confirmation is a screen that states what happened rather than a sentence
+          // standing in for one, which is the whole of why the send's own toast interrupts.
+          onSuccess: () => router.back(),
+          onError,
+        },
+      );
+      return;
+    }
+
     send.mutate(
-      { searchId: originSearchId, court: courtWithYou(seated, self) satisfies ProposedCourt },
+      { searchId: originSearchId, court },
       {
         onSuccess: () => {
           // The stack goes first and the sentence second, in that order and not the other:
@@ -774,11 +848,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           landOnNow();
           showToast({ message: CHALLENGE_SENT, tone: 'ok', politeness: 'interrupting' });
         },
-        onError: (error) => {
-          const next = sendRefusal(error);
-          setRefusal(next);
-          startTheReRead(next);
-        },
+        onError,
       },
     );
   }
@@ -891,7 +961,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                   <Button
                     label={SEND_CHALLENGE_LABEL}
                     size="lg"
-                    busy={send.isPending}
+                    busy={send.isPending || invite.isPending}
                     busyLabel={SENDING_LABEL}
                     disabled={!online || self === undefined}
                     onPress={() => setProposing(true)}
@@ -1206,7 +1276,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                       the figure, where it says what the control would buy, and a row that lost
                       a button on one state would move the other one under the player's thumb.
                       *Start over* was beneath the card and read as a way off the screen. */}
-                  {arrangements.length < 2 && lineup === undefined ? null : (
+                  {arrangements.length < 2 && !mayStartOver ? null : (
                     <Hairline>
                       <View style={s.acts}>
                         {arrangements.length < 2 ? null : (
@@ -1220,7 +1290,13 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                             }}
                           />
                         )}
-                        {lineup === undefined ? null : (
+                        {/* ***Start over* is absent on a court somebody has accepted** — not
+                            disabled, and not redefined to mean *empty it to these two*, which
+                            would be a second meaning for one label (ADR-0150 §8). The two acts
+                            it sits beside both operate on a court nobody has committed to, and
+                            this one is not: discarding the line-up here would leave a court the
+                            player cannot rebuild and a challenge they cannot end. */}
+                        {mayStartOver ? (
                           <Button
                             label={START_OVER_LABEL}
                             variant="secondary"
@@ -1229,7 +1305,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                               setSeating(undefined);
                             }}
                           />
-                        )}
+                        ) : null}
                       </View>
                     </Hairline>
                   )}
@@ -1294,14 +1370,21 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           }}
           returnFocusTo={sendControl}
           invitees={invitees.map((playerId) => namedPlayer(rows.get(playerId)?.card.nickname))}
-          lineUp={
-            // *"Nothing opens until they accept"* is false for doubles: the first acceptance
-            // opens the chat, and the number the sentence quotes is the answers still owed —
-            // which is the invitees, because the organiser's own seat is accepted from birth.
-            seats > 2
-              ? { kind: 'doubles', sportName, stillNeeded: invitees.length }
-              : { kind: 'singles' }
-          }
+          // *"Nothing opens until they accept"* is false for doubles: the first acceptance
+          // opens the chat, and the number the sentence quotes is the answers still owed —
+          // which is the invitees, because the organiser's own seat is accepted from birth.
+          //
+          // **And no closer at all on a court that is being completed**, where both sentences
+          // are false: somebody has already accepted, so the chat is open and the screen behind
+          // this one says so in its own standing line.
+          {...(completing !== undefined
+            ? {}
+            : {
+                lineUp:
+                  seats > 2
+                    ? ({ kind: 'doubles', sportName, stillNeeded: invitees.length } as const)
+                    : ({ kind: 'singles' } as const),
+              })}
         />
       )}
     </>
@@ -1332,6 +1415,8 @@ function toOccupant(
     readonly self: string | undefined;
     readonly rows: ReadonlyMap<string, Candidate>;
     readonly unfilled: UnfilledReason | null;
+    /** Who has already said yes to the challenge this builder is completing. Empty in Play. */
+    readonly accepted: ReadonlySet<string>;
   },
 ): CourtSeatOccupant {
   if (seat.kind === 'you') {
@@ -1343,10 +1428,13 @@ function toOccupant(
   return {
     kind: 'player',
     playerId: seat.playerId,
-    // A hand-seated player has accepted nothing, and nothing else can seat one today: opening
-    // the builder from an accepted challenge is out of scope, so the lock that would fire here
-    // has no producer and the truth table keeps its arm for the day it does.
-    accepted: false,
+    // **An accepted seat is not a control**: no clear badge, no press, no pool — and swapping is
+    // the only thing that works on it, which *draws* `an acceptance is to the game, not to the
+    // side` rather than writing it (ADR-0150 §8). The flag has been on `BuildSeat` since it was
+    // written and this is its first producer; `seatLock` and the truth table over it needed no
+    // change at all. A hand-seated player in Play has accepted nothing, so the set is empty
+    // there and every seat answers as it always did.
+    accepted: court.accepted.has(seat.playerId),
     ...(row === undefined
       ? {}
       : {

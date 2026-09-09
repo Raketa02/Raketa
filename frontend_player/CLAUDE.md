@@ -834,7 +834,7 @@ own split. `useIsOnline` is what the court reads for that, and it is the one cal
 than a `GameStanding`** ([#361](https://github.com/Raketa02/Raketa/issues/361),
 [ADR-0143](../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)).
 A challenge with no acceptance has no game to key a screen on, so there are two of these and not
-one. `domain/challengeDetail.ts`'s `challengeArm` folds six standings and two sides into four arms,
+one. `domain/challengeDetail.ts`'s `challengeArm` folds six standings and two sides into five arms,
 and **the sentence, the card block and the controls are three readings of that one fold** — which
 is what discharges §2.4's _an affordance is never removed without the space saying what took it_
 **by construction** rather than by a rule a component remembers: there is no state in which the
@@ -865,18 +865,93 @@ fills the last seat opens a game and a conversation in caches the reply says not
 is `challengeKeys.list()` rather than `.all`, because `all` is a prefix that matches the detail
 entry too and would send the request the redraw exists to make unnecessary.
 
-**A stale tap is a re-read, not a toast, and there is no new copy for it.** `answerRefusal`'s four
-arms: the closed window and the already-answered seat both **re-read and redraw**, because both
-sentences they land on — _Your day ran out_, _You said no_ — are §13's and already tested;
-`challenge_not_found` **leaves the screen**, one code for two cases on purpose; anything else says
-what it says through this feature's own table. **Nothing in `challenges` is sent for you later**
-stays one line at one site: `CHALLENGE_MUTATION_OPTIONS` already covered the send and now covers
-the answers, on the restated test _is this act's meaning fixed by the moment it is tapped?_ Offline
-draws the shipped builder pattern exactly — **the pair greys out under one amber note**, not one
-per button, with no third value beside `does-not-resume`. And **the offer may expire under the
-finger, and it is let to**: the read sits at `staleTime: 0` with the app's focus refetch, because a
-pinned pool _is_ the record where a challenge's standing goes false against a clock while you look
-at it.
+**A stale tap is a re-read, not a toast, and there is no new copy for it.** `actRefusal` — named
+for the **acts** rather than for the answers, because there are four of them and they refuse the
+same three ways — re-reads on every code that means _this challenge is not what the screen thought
+it was_: the closed window, the already-answered seat, a withdraw on a court that has some other
+end, a withdraw offered to a side the reader is not on, a fill by somebody who has left, and a
+challenge that ended under the builder. Every sentence they land on — _Your day ran out_, _You said
+no_, _You withdrew this_ — is §13's and already tested; `challenge_not_found` **leaves the screen**,
+one code for two cases on purpose; anything else says what it says through this feature's own
+table. **Nothing in `challenges` is sent for you later** stays one line at one site:
+`CHALLENGE_MUTATION_OPTIONS` covers the send, the two answers, the fill's send and the withdraw, on
+the restated test _is this act's meaning fixed by the moment it is tapped?_ Offline draws the
+shipped builder pattern exactly — **the controls grey out under one amber note**, not one per
+button, with no third value beside `does-not-resume`. And **the offer may expire under the finger,
+and it is let to**: the read sits at `staleTime: 0` with the app's focus refetch, because a pinned
+pool _is_ the record where a challenge's standing goes false against a clock while you look at it.
+
+**A half-built court is grown by any live member and ended by the organiser alone**
+([#362](https://github.com/Raketa02/Raketa/issues/362),
+[ADR-0150](../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)).
+`LINE_UP_INCOMPLETE` _is not a waiting room_, so its arm is **grow · talk · end** — and the two
+permissions differ because the acts do: the commonest half-built court is born of two mutual yeses,
+whose "organiser" is only whoever said yes second, and making that tiebreak the only person who can
+finish a padel four would leave the other looking at a court they can neither complete nor leave.
+_Open the chat_ is the conversation's door and arrives with the ticket that has a room to open.
+**⚡ runs the fill and pushes a builder holding a full court and a fresh search**, which is _Find a
+game_'s own shape and is what dissolves the _which search_ question: the builder needs neither a
+stale `search_id` nor a reconstructed line-up, and _Pick players myself_ works on the first screen
+instead of after a mandatory ⚡. **Nothing outbound happens on the press** — the send is a separate
+press, on that screen, and it **pops back here**. The ⚡ is **not drawn**, and that is 10.2's own
+rule rather than an omission: _the ⚡ is `zap` and never the character_, `Button` has no slot for a
+glyph, and §24.3's _decorative and hidden_ is discharged by there being nothing to hide.
+
+**The reader who has left such a court is not a live member, and their row stays anyway.** They get
+§13.1's sentence about their **own seat** — _You said no. They are still filling the court._ — and
+nothing to press, because the fold reads the seat rather than the side alone. The row is not
+filtered away instead: the pair rule holds them for the whole of `LINE_UP_INCOMPLETE`, so a lapsed
+invitee is unreachable in every sport until this challenge ends, and a vanished row would take the
+only available explanation with it.
+
+**The builder is `features/play`'s existing screen at a second route, and nothing about it is
+forked.** `/chats/challenge/[challengeId]/fill` lights the Chats column for free and makes _back_
+correct by construction, which is ADR-0149 §9's shape reused — **no `from` parameter**, because the
+challenge is stamped on `PlayOrigin` by the fill that minted the record, and the screen reads it
+there. It **borrows `playSession`**: one store, one definition of a line-up, no fork of
+`domain/lineup.ts`. Its **working week is undefined**, already the legal value meaning _fill against
+the profile's grid_, since there was no _Find a game_ on which to improvise one — and `PlayOrigin.week`
+became optional for it, with `sameOrigin` refusing to collapse _nobody composed a week_ into _somebody
+cleared theirs_. One sentence in that store moved and the important half did not: a session **begins**
+when the shell lays the Play stack down **or when a challenge is re-entered from Chats**, and it
+still **ends in exactly one place**. Nothing in the flow calls `resetShellStack` — `landOnNow`'s
+_there is nothing left to be behind_ is false where the thing behind is the challenge you were
+completing, and it is the surface that draws the result.
+
+**The fill names the challenge and says nothing else about the court**, which is a second shape of
+one request rather than a second route: `sport`, `mode` and `locked_seats` are read off the
+challenge and **refused** beside it, so `LineupAsk` is a union and all three are unspellable rather
+than optional. The record it mints is stamped with the mode **the engine resolved**, read off the
+envelope, because a mutual-born challenge has none of its own — and a line-up answer carrying no
+mode is refused rather than bound to one this client invented. It carries **no prompts**: the four
+are about the searcher's own _Find a game_ values, this journey composes none of them, and a
+dismissal spends the offer for thirty days on the one surface that cannot honour it. The pool it
+opens draws **no ladder** for the same class of reason — taking a rung mints a search that does not
+complete the challenge, so the gate would exclude the very people sitting on the court.
+
+**An accepted seat is not a control, and `BuildSeat.accepted` finally has a producer.** No clear
+badge, no press, no pool — swapping is the only thing that works on it, which **draws** _an
+acceptance is to the game, not to the side_ rather than writing it. The truth table gained a
+`NOTHING` arm and `courtPresentation` **lost a sentence**: _{Name} already accepted — they keep
+their place_ was copy for a state nothing could reach, and the ticket that made it reachable decided
+the other way, on #324's _no copy, no pill, no disabled control_. **_Start over_ is absent** on such
+a court — not disabled, and not redefined to mean _empty it to these two_, which would be a second
+meaning for one label. The send is `POST /challenges/{id}/seats`, the send's shape minus the mint,
+and the pre-send sheet lists **only the people being asked**: somebody who accepted is not an
+invitee and may not be removed. Its cache effect is an **invalidation rather than a redraw**, which
+is the one place it differs from the two answers — the reply carries no `read_at`, and the fresh
+deadlines it creates would otherwise be stated against the instant the screen was opened.
+
+**The withdraw is the second irreversible act in this app that reaches other people, and it takes
+the first one's shape.** `WithdrawSheet` is `SH.propose`'s: a real modal with hidden siblings and
+Android back, a title naming the **moment** rather than the act, a dismissal named by what it does,
+and **focus landing on the title rather than on the first action** — that action is the destructive
+one, and landing focus there would make the worst outcome the cheapest to trigger. Its second body
+line is what earns it: the conversation is **destroyed, not delisted**, so the Chats list is
+**invalidated rather than patched** and what people wrote is gone. It is pending never optimistic,
+it fails offline like every other act here, and the visible control says `Withdraw` while its
+accessible name says `Withdraw this challenge` — 6.9's _names which photo it removes_, one surface
+over.
 
 **The card block is a fourth card over the same parts kit, and `challenges` spells its own
 schema.** Narrower than a `PlayerCard` by ADR-0143 §5 — no social tags, no run of form, no counted

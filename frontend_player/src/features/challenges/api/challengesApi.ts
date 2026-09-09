@@ -43,6 +43,7 @@ type SentChallengeResponse = components['schemas']['SentChallengeResponse'];
 type ChallengeListResponse = components['schemas']['ChallengeListResponse'];
 type ChallengeDetailResponse = components['schemas']['ChallengeDetailResponse'];
 type ChallengeSchema = components['schemas']['ChallengeSchema'];
+type FillSeatsRequest = components['schemas']['FillSeatsRequest'];
 
 /**
  * Send it — **one act, everybody at once**, and a `201` with the id of the challenge that now
@@ -148,6 +149,58 @@ export function postDecline(challengeId: string): Promise<ChallengeSchema> {
   return httpRequest<ChallengeSchema>({
     method: 'POST',
     path: `/api/v1/challenges/${challengeId}/decline`,
+    authenticated: true,
+  });
+}
+
+/**
+ * **The open seats, offered to the people you just built a line-up around** — and the court as
+ * it now stands.
+ *
+ * *"The send's shape minus the mint"*: the challenge is in the path, so what is left is the two
+ * things a fill has to say. Everything else about the game is already on the challenge — the
+ * sport, the kind of evening, and the **window**, which is stamped when a challenge is sent and
+ * never again ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md) §6).
+ *
+ * **Any live member may do this; only the organiser may withdraw.** Growing a court and ending
+ * one are different acts, and a challenge born of two mutual yeses has an organiser who is only
+ * whoever said yes second.
+ *
+ * **The whole court goes, not the new seats.** An acceptance is to the game and not to the side,
+ * so somebody already in may be moved across the net and may never be taken out.
+ *
+ * **No `signal`**, on this module's own asymmetry: it records before it answers, and each newly
+ * seated player's own day is dated from the moment it lands.
+ */
+export function postSeats(challengeId: string, body: FillSeatsRequest): Promise<ChallengeSchema> {
+  return httpRequest<ChallengeSchema>({
+    method: 'POST',
+    path: `/api/v1/challenges/${challengeId}/seats`,
+    body,
+    authenticated: true,
+  });
+}
+
+/**
+ * **The exit for a line-up nobody is going to complete**, and the only one.
+ *
+ * `LINE_UP_INCOMPLETE` and nowhere else; whole-challenge, and it never removes one person;
+ * irreversible, with no route back — asking the same people again is a **new** challenge
+ * ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)).
+ * Nobody who was still deciding is charged a lapse for it, and it is the only thing that
+ * releases somebody who let their day run out.
+ *
+ * **A noun and not a verb**, because what this creates is the withdrawal — the one thing in this
+ * context a fold of the seats could never produce. The reply is `ChallengeSchema` at `WITHDRAWN`,
+ * which is the server's own derived standing and therefore the redraw.
+ *
+ * **No `signal`**, for the send's reason rather than the read's: it destroys the conversation in
+ * the same transaction, so a cancelled one has already deleted what people wrote.
+ */
+export function postWithdrawal(challengeId: string): Promise<ChallengeSchema> {
+  return httpRequest<ChallengeSchema>({
+    method: 'POST',
+    path: `/api/v1/challenges/${challengeId}/withdrawal`,
     authenticated: true,
   });
 }

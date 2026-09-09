@@ -85,7 +85,19 @@ export function TabShell() {
             ([#360](https://github.com/Raketa02/Raketa/issues/360)). It needs no `INSIDE_A_TAB`
             entry, because everything under `/chats/…` already shares that tab's first segment
             — which is the whole reason both of this map's dynamic ids live under it. */}
-        <Stack.Screen name="chats/challenge/[challengeId]" options={{ animation: 'default' }} />
+        <Stack.Screen
+          name="chats/challenge/[challengeId]/index"
+          options={{ animation: 'default' }}
+        />
+        {/* And so is the builder reached from one: `features/play`'s own screen at a **second
+            route** under the challenge it completes, pushed exactly as its first route is
+            ([ADR-0150](../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
+            §7). Nothing in that flow calls the reset — the send **pops back** to the challenge,
+            which is the surface that draws the result. */}
+        <Stack.Screen
+          name="chats/challenge/[challengeId]/fill"
+          options={{ animation: 'default' }}
+        />
       </Stack>
       <TabBar
         active={tabForPathname(pathname)}

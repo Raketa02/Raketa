@@ -46,6 +46,32 @@ describe('an origin', () => {
     expect(sameOrigin(ORIGIN, { ...ORIGIN, mode: 'FOR_FUN' })).toBe(false);
     expect(sameOrigin(ORIGIN, { ...ORIGIN, week: [TUESDAY_EVENING] })).toBe(false);
   });
+
+  /**
+   * **A composed week is never the same origin as an uncomposed one.** Absent is *the profile's
+   * grid, whatever it says today* — a challenge fill, which improvises no week — and `[]` is
+   * *every cell unticked*. A `?? []` anywhere in here would collapse the two silently, in the
+   * function the whole orphan model rests on.
+   */
+  it('tells a week nobody composed apart from a week somebody cleared', () => {
+    const uncomposed = { sport: ORIGIN.sport, mode: ORIGIN.mode };
+
+    expect(sameOrigin(uncomposed, { ...ORIGIN, week: [] })).toBe(false);
+    expect(sameOrigin(uncomposed, uncomposed)).toBe(true);
+  });
+
+  /** Two fills of two different courts are two origins, whatever else they agree about. */
+  it('differs on the challenge it completes', () => {
+    const finishing = { ...ORIGIN, completing: { challengeId: 'c1', accepted: ['player-a'] } };
+
+    expect(
+      sameOrigin(finishing, { ...finishing, completing: { challengeId: 'c2', accepted: [] } }),
+    ).toBe(false);
+    expect(sameOrigin(finishing, ORIGIN)).toBe(false);
+    expect(
+      sameOrigin(finishing, { ...finishing, completing: { challengeId: 'c1', accepted: [] } }),
+    ).toBe(true);
+  });
 });
 
 describe('where a line-up stands', () => {
@@ -293,10 +319,19 @@ describe('a tap on a seat', () => {
     });
   });
 
-  it('refuses somebody who already accepted, because they keep their place', () => {
-    expect(tapSeat(RESTING, 3, seated(true))).toEqual({
-      kind: 'REFUSE',
-      guard: 'ALREADY_ACCEPTED',
+  /**
+   * ADR-0150 §8: **an accepted seat is not a control** — no clear badge, no press, no pool. So
+   * the tap is not refused, it is unanswered: a refusal is something a control says, and the
+   * named sentence the source documentation asked for is never written.
+   */
+  it('says nothing at all about somebody who already accepted', () => {
+    expect(tapSeat(RESTING, 3, seated(true))).toEqual({ kind: 'NOTHING' });
+  });
+
+  /** And swapping still works on them, which is what draws *an acceptance is to the game*. */
+  it('still lets an accepted seat be selected for a trade', () => {
+    expect(tapSeat({ swapping: true, selected: undefined }, 3, seated(true))).toEqual({
+      kind: 'SELECT',
       seat: 3,
     });
   });

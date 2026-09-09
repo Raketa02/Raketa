@@ -90,6 +90,17 @@ export { useChallengesWaiting } from './hooks/useChallenges';
 export { ChallengeScreen, type ChallengeScreenProps } from './components/ChallengeScreen';
 
 /**
+ * **The fill's send** — `POST /challenges/{id}/seats`, called from the builder this screen
+ * pushed ([#362](https://github.com/Raketa02/Raketa/issues/362)).
+ *
+ * It crosses the seam for `useSendChallenge`'s own reason and is the same seam read a second
+ * time: *the one action in this tab that reaches another person* is this feature's, wherever the
+ * control that carries it out is drawn. The builder calls it and pops back; everything it says
+ * and everything a refusal costs stay here.
+ */
+export { useInviteSeats } from './hooks/useChallenge';
+
+/**
  * The route's own check on the id it is handed, because a route param is attacker-controlled and
  * this one becomes the path of a `POST` that accepts a game on somebody's behalf.
  */

@@ -126,6 +126,22 @@ describe('the two asks', () => {
     });
   });
 
+  /**
+   * **A fill names the challenge it completes and says nothing else about the court**
+   * ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
+   * §2). The sport, the mode and the locked seats are read off the challenge and **refused**
+   * beside it, and none of the three is spellable on this ask — so this asserts what a caller
+   * could otherwise have sent by accident.
+   */
+  it('names the challenge and nothing else about the court', () => {
+    const body = toRunLineupRequest({ completing: 'c1', sentWeek: undefined });
+
+    expect(body).toEqual({ completing_challenge_id: 'c1' });
+    expect('sport' in body).toBe(false);
+    expect('mode' in body).toBe(false);
+    expect('locked_seats' in body).toBe(false);
+  });
+
   /** An **empty** week is a cleared week and a legal ask — the absence #247 stopped conflating. */
   it('sends a cleared week rather than dropping it', () => {
     const body = toRunLineupRequest({

@@ -5,6 +5,7 @@
  * | | |
  * | --- | --- |
  * | `useFillSeats` | ⚡ — a **mutation**, because `POST /lineups` mints a search and records it |
+ * | `useFillChallengeSeats` | the same ⚡ pressed on a challenge screen, which also **begins the Play session** |
  * | `useForecast` | a **query**, because `POST /forecasts` records nothing and is a pure function of `(search_id, the set of players)` |
  * | `useSearchRecord` | **no request at all** — the record was written by the act that minted it |
  *
@@ -38,13 +39,19 @@
  * `unreadable`, and the builder says so rather than acting as though the line-up were current.
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
 
 import { courtSeating, seatedIds, type Arrangement } from '../domain/forecast';
 import type { SearchRecord } from '../domain/lineup';
-import { fillSeats, type FillSeatsAsk, type FillSeatsOutcome } from '../use-cases/fillSeats';
+import { usePlaySession } from '../store/playSession.store';
+import {
+  fillSeats,
+  type FillSeatsAsk,
+  type FillSeatsOutcome,
+  type FinishTheCourtSomebodyBuilt,
+} from '../use-cases/fillSeats';
 import { forecastLineup, type ForecastAsk } from '../use-cases/forecastLineup';
 
 import { RANKED_LIST_QUERY_OPTIONS, searchKeys } from './searchKeys';
@@ -66,20 +73,70 @@ export function useFillSeats() {
 
   return useMutation<FillSeatsOutcome, AppError, FillSeatsAsk>({
     mutationFn: fillSeats,
-    onSuccess: ({ record }) => {
-      client.setQueryData<SearchRecord>(searchKeys.detail(record.searchId), record);
+    onSuccess: ({ record }) => writeTheAnswerIn(client, record),
+  });
+}
 
-      // **And the forecast, which the fill already answered.** A line-up carries every
-      // arrangement with its own forecast, so asking `POST /forecasts` about the four it just
-      // seated would be Part 7's *"immediately refetch what you were just handed"* — a second
-      // request for an answer already in memory, and a beat of an empty forecast card in front
-      // of a court that is complete.
-      client.setQueryData<readonly Arrangement[]>(
-        searchKeys.forecast(record.searchId, seatedIds(courtSeating(record.court))),
-        record.court.arrangements,
-      );
+/**
+ * **⚡ Fill the seats**, pressed on a challenge — the act `features/challenges/` owns the
+ * control for.
+ *
+ * *"The control is `challenges`' and the act is `play`'s"*
+ * ([`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §4.2):
+ * the challenge screen owns the label and the placement and calls this, which is what keeps one
+ * definition of a line-up and no fork of `domain/lineup.ts`.
+ *
+ * It does the two things `useFillSeats` does and **one more that is the whole difference**: it
+ * begins a Play session on the answer and seats the line-up into it, so the builder it is about
+ * to be pushed onto reads a court out of the same store every other Play screen reads one out
+ * of. The caller's own `onSuccess` runs after this one, which is what lets the push be the
+ * screen's while the seating stays the act's.
+ *
+ * **The line-up is committed on the response here and on the last seat landing there**, and
+ * that is not an inconsistency: the builder's ⚡ fills a court the player is already looking at,
+ * so the seats arrive one at a time behind `SeatingWait`; this one is pressed on a screen the
+ * player is about to leave, so there is no court on screen for a beat to be about.
+ *
+ * **`networkMode: 'always'`**, which is `challenges`' posture and not Play's, because the
+ * control is on that screen: every act there fails offline and none is sent for you later. It
+ * buys something this route needs on its own too — a paused fill resuming on reconnect would
+ * push a builder onto whatever screen the player had walked to.
+ */
+export function useFillChallengeSeats() {
+  const client = useQueryClient();
+  const enterOnAChallenge = usePlaySession((state) => state.enterOnAChallenge);
+  const seatAll = usePlaySession((state) => state.seatAll);
+
+  return useMutation<FillSeatsOutcome, AppError, FinishTheCourtSomebodyBuilt>({
+    mutationFn: fillSeats,
+    networkMode: 'always',
+    onSuccess: ({ record }) => {
+      writeTheAnswerIn(client, record);
+      enterOnAChallenge();
+      seatAll(record.searchId, seatedIds(courtSeating(record.court)));
     },
   });
+}
+
+/**
+ * A fill's **cache effect, which is the whole answer under a new id** — Part 7's *"mutations
+ * declare their cache effect"*, written once because both fills have the same one.
+ *
+ * The fill mints its own search, so the record it wrote is the origin the line-up is about to be
+ * bound to.
+ */
+function writeTheAnswerIn(client: QueryClient, record: FillSeatsOutcome['record']): void {
+  client.setQueryData<SearchRecord>(searchKeys.detail(record.searchId), record);
+
+  // **And the forecast, which the fill already answered.** A line-up carries every
+  // arrangement with its own forecast, so asking `POST /forecasts` about the four it just
+  // seated would be Part 7's *"immediately refetch what you were just handed"* — a second
+  // request for an answer already in memory, and a beat of an empty forecast card in front
+  // of a court that is complete.
+  client.setQueryData<readonly Arrangement[]>(
+    searchKeys.forecast(record.searchId, seatedIds(courtSeating(record.court))),
+    record.court.arrangements,
+  );
 }
 
 /**

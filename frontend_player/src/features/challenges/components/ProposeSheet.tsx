@@ -22,7 +22,9 @@
  * ## Two closers, because *nothing opens until they accept* is false for doubles
  *
  * The first acceptance opens the chat, so a doubles sheet promising that nothing opens would be
- * describing a different product. `proposeClosing` holds both.
+ * describing a different product. `proposeClosing` holds both — and **neither is drawn on a court
+ * that is being completed**, where the first acceptance has already happened and the chat is
+ * already open. See `lineUp`.
  *
  * ## The handles are whole, one per line
  *
@@ -68,8 +70,16 @@ export interface ProposeSheetProps {
   /**
    * Which closer the sheet ends on. It is the court's shape and the number of answers it needs,
    * both of which are the caller's facts — the sheet knows nothing about sports or seats.
+   *
+   * **Absent on a court that is being completed**, and that is a deletion rather than a third
+   * sentence. Both closers are about what a **first** acceptance opens — *nothing opens until
+   * they accept*, *the first person to say yes is in, and you can start talking then* — and a
+   * `LINE_UP_INCOMPLETE` court has already had one: people are in, and the chat is open. The
+   * screen behind this sheet says so in its own standing line, so a closer here would be the
+   * app contradicting itself two lines apart. §14's `{window}` obligation was discharged the
+   * same way, for the same reason: a sentence with nothing true to say is not rewritten.
    */
-  readonly lineUp: Parameters<typeof proposeClosing>[0];
+  readonly lineUp?: Parameters<typeof proposeClosing>[0];
   /**
    * The control the sheet was opened from. Focus returns there on close.
    *
@@ -113,7 +123,7 @@ export function ProposeSheet({
       {/* The one fact the player cannot recover from, and the whole of what this sheet owes. */}
       <Note variant="amber">{NOBODY_IS_CONTACTED_YET}</Note>
 
-      <Text style={s.closing}>{proposeClosing(lineUp)}</Text>
+      {lineUp === undefined ? null : <Text style={s.closing}>{proposeClosing(lineUp)}</Text>}
 
       <View style={s.action}>
         <Button label={SEND_CHALLENGE_LABEL} size="lg" onPress={onSend} />

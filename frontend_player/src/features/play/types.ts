@@ -360,6 +360,23 @@ export { WhyFitSheet, type WhyFitSheetProps } from './components/whyfit/WhyFitSh
  * and a Query key ([#271](https://github.com/Raketa02/Raketa/issues/271)).
  */
 export { BuilderScreen, type BuilderScreenProps } from './components/BuilderScreen';
+
+/**
+ * **⚡ Fill the seats, pressed on a challenge** — the act, where `features/challenges/` owns the
+ * control ([`the-loop-components.md`](../../../../docs/specs/the-loop/the-loop-components.md)
+ * §4.2).
+ *
+ * It is this feature's because a fill is a search: it mints one, records it, and binds a line-up
+ * to it. It borrows `playSession` rather than handing back a line-up of its own, so there is one
+ * store and one definition of a line-up and **no fork of `domain/lineup.ts`** — which is the
+ * whole reason the builder it pushes needs nothing passed to it.
+ *
+ * `CompletingChallenge` crosses with it because the challenge screen is the only surface that can
+ * state one: who has already said yes is a fact about a court, and the fill's own answer returns
+ * those people as ordinary candidate rows that say nothing about a challenge.
+ */
+export { useFillChallengeSeats } from './hooks/useBuilder';
+export type { CompletingChallenge } from './domain/lineup';
 export {
   parseBuilderRouteParams,
   parsePoolRouteParams,

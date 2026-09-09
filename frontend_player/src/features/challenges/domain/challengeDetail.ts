@@ -208,10 +208,14 @@ export interface ChallengeDetail {
 /**
  * What this screen is, for this reader — **the state it is keyed on.**
  *
- * Four arms over six standings and two sides, because what the screen branches on is not the
+ * Five arms over six standings and two sides, because what the screen branches on is not the
  * standing: it is *is there a sentence*, *is there a card block*, and *is there anything to
  * press*. The sentence rides on the arm as `StandingFacts` so that the one fold answers all
  * three and a component cannot arrive at a different reading of the same challenge.
+ *
+ * That is also how §2.4's *"an affordance is never removed without the space saying what took
+ * it"* is discharged **by construction**: the controls and the sentence come out of one fold, so
+ * there is no state in which the buttons are gone and the standing has not changed.
  */
 export type ChallengeArm =
   /**
@@ -230,11 +234,32 @@ export type ChallengeArm =
    * **Still being arranged, and there is nothing here for you to press** — the card block, and
    * the standing sentence over it.
    *
-   * The organiser waiting on answers, an invitee whose own answer is already given, and every
-   * member of a court that is still filling. The last of those gains three controls with
-   * [#362](https://github.com/Raketa02/Raketa/issues/362); this arm is where they will hang.
+   * The organiser waiting on answers, and an invitee whose own answer is already given. A court
+   * that is still **filling** left this arm with [#362](https://github.com/Raketa02/Raketa/issues/362):
+   * it draws the same card block and the same sentence and three controls besides, which is a
+   * different reading of the fold and therefore a different arm.
    */
   | { readonly kind: 'arranging'; readonly facts: StandingFacts }
+  /**
+   * **A half-built court, and the three things a live member does about one** — grow · talk ·
+   * end, in that order ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)).
+   *
+   * *"`LINE_UP_INCOMPLETE` is not a waiting room"*: the people who are in are in, and a
+   * conversation between them is already open. **Any live member may complete the line-up and
+   * only the organiser may end it**, because growing a court and ending one are different acts —
+   * and a mutual-born pair decides that on its own, since making an arbitrary tiebreak the only
+   * person who can finish a padel four would leave the other looking at a court they can neither
+   * complete nor leave.
+   *
+   * The reader who has **left** such a court is not here: they are `stated`, on §13.1's own
+   * sentences, because the pair rule still binds them and the row that explains it must stay.
+   */
+  | {
+      readonly kind: 'filling';
+      readonly facts: StandingFacts;
+      /** Whether the withdraw is drawn. The organiser's, and nobody else's (ADR-0142). */
+      readonly mayEnd: boolean;
+    }
   /**
    * **The sentence alone** — every ending, `ON`, and the reader who has left a court that has
    * not.
@@ -267,14 +292,35 @@ export function challengeArm(detail: ChallengeDetail, playerId: string): Challen
 
   if (facts.standing === 'AWAITING_ANSWERS') return { kind: 'arranging', facts };
 
-  // The one reading §2.5 had to close: a court still filling draws a card block for the people
-  // still in it, and the sentence alone for the reader who left.
+  // The one reading §2.5 had to close: a court still filling draws a card block, three controls
+  // and the sentence for the people still in it, and the sentence alone for the reader who left.
   if (facts.standing === 'LINE_UP_INCOMPLETE') {
     const left = seat?.answer === 'DECLINED' || seat?.answer === 'LAPSED';
-    return { kind: left ? 'stated' : 'arranging', facts };
+    if (left) return { kind: 'stated', facts };
+    return { kind: 'filling', facts, mayEnd: facts.side === 'organiser' };
   }
 
   return { kind: 'stated', facts };
+}
+
+/**
+ * **Who on this court has already said yes** — the seats a fill may never take out, and the ones
+ * that are not controls on the builder it pushes (ADR-0150 §8).
+ *
+ * Read here rather than off the fill's own answer, because the answer cannot say it: the people
+ * who accepted *"come back as ordinary candidate rows"*, and an ordinary row says nothing about
+ * a challenge. It is a fact about the court, and this is the read that holds the court.
+ *
+ * **In seat order and without the reader**, which is the order and the membership the request
+ * wants: your own seat is the thing the court is composed around rather than something anybody
+ * is completing, and it is `courtWithYou`'s to put back at the send.
+ */
+export function acceptedPlayers(detail: ChallengeDetail, playerId: string): readonly string[] {
+  return detail.seats.flatMap((seat) =>
+    seat.playerId === undefined || seat.playerId === playerId || seat.answer !== 'ACCEPTED'
+      ? []
+      : [seat.playerId],
+  );
 }
 
 /**

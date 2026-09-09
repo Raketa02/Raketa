@@ -9,7 +9,7 @@
  */
 
 import type { ChallengeDetail, DetailSeat, SeatCard } from './challengeDetail';
-import { challengeArm, redrawnFrom, seatsAwaiting } from './challengeDetail';
+import { acceptedPlayers, challengeArm, redrawnFrom, seatsAwaiting } from './challengeDetail';
 import { STANDINGS, type Standing } from './standing';
 
 const ME = 'me';
@@ -110,7 +110,7 @@ describe('the card block', () => {
         detail(standing, [{ playerId: BEA, answer: 'ACCEPTED' }, { playerId: ME }], BEA),
         ME,
       );
-      return arm.kind === 'answer' || arm.kind === 'arranging';
+      return arm.kind === 'answer' || arm.kind === 'arranging' || arm.kind === 'filling';
     });
 
     expect(drawing).toEqual(['AWAITING_ANSWERS', 'LINE_UP_INCOMPLETE']);
@@ -153,7 +153,61 @@ describe('the card block', () => {
       ME,
     );
 
-    expect(arm.kind).toBe('arranging');
+    expect(arm.kind).toBe('filling');
+  });
+});
+
+/**
+ * **Grow · talk · end**, and the two permissions are different
+ * ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
+ * §1): any live member may complete the line-up, and only the organiser may end it.
+ */
+describe('a half-built court', () => {
+  const HALF_BUILT: readonly DetailSeat[] = [
+    { playerId: BEA, answer: 'ACCEPTED' },
+    { playerId: ME, answer: 'ACCEPTED', card: A_CARD },
+    { playerId: CYRYL, answer: 'DECLINED' },
+    {},
+  ];
+
+  it('lets any live member fill it, and only the organiser end it', () => {
+    const invitee = challengeArm(detail('LINE_UP_INCOMPLETE', HALF_BUILT, BEA), ME);
+    const organiser = challengeArm(detail('LINE_UP_INCOMPLETE', HALF_BUILT, ME), ME);
+
+    expect(invitee).toEqual({ kind: 'filling', facts: expect.anything(), mayEnd: false });
+    expect(organiser).toEqual({ kind: 'filling', facts: expect.anything(), mayEnd: true });
+  });
+
+  /**
+   * The pair rule still binds a reader who left, so the row stays — and what they get is the
+   * sentence and nothing to press. Not even the fill: they are not a live member.
+   */
+  it('offers the reader who has left nothing to press', () => {
+    const arm = challengeArm(
+      detail(
+        'LINE_UP_INCOMPLETE',
+        [{ playerId: BEA, answer: 'ACCEPTED' }, { playerId: ME, answer: 'LAPSED' }, {}, {}],
+        BEA,
+      ),
+      ME,
+    );
+
+    expect(arm.kind).toBe('stated');
+  });
+
+  /**
+   * **Who the fill may never take out** — read here because the fill's own answer cannot say
+   * it: the people who accepted come back as ordinary candidate rows, and an ordinary row says
+   * nothing about a challenge.
+   */
+  it('names who has already said yes, without the reader and in seat order', () => {
+    expect(acceptedPlayers(detail('LINE_UP_INCOMPLETE', HALF_BUILT, BEA), ME)).toEqual([BEA]);
+  });
+
+  it('names nobody on a court where only the reader has accepted', () => {
+    const alone: readonly DetailSeat[] = [{ playerId: ME, answer: 'ACCEPTED' }, {}];
+
+    expect(acceptedPlayers(detail('LINE_UP_INCOMPLETE', alone, ME), ME)).toEqual([]);
   });
 });
 

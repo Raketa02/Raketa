@@ -19,7 +19,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import AroundRoute from '@/app/(app)/(tabs)/around';
-import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]';
+import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/index';
+import ChallengeFillRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/fill';
 import ChatsRoute from '@/app/(app)/(tabs)/chats';
 import ConversationRoute from '@/app/(app)/(tabs)/chats/conversation/[conversationId]';
 import GameRoute from '@/app/(app)/(tabs)/games/[gameId]';
@@ -87,7 +88,10 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/chats': ChatsRoute,
   // A challenge is pushed over the Chats tab, and the static `challenge` above the id is the
   // decision that keeps a challenge id and a conversation id from sharing one segment.
-  '(app)/(tabs)/chats/challenge/[challengeId]': ChallengeRoute,
+  '(app)/(tabs)/chats/challenge/[challengeId]/index': ChallengeRoute,
+  // The builder, at its **second route** — `features/play`'s own screen under the challenge it
+  // is completing, so the Chats column stays lit and *back* is correct by construction.
+  '(app)/(tabs)/chats/challenge/[challengeId]/fill': ChallengeFillRoute,
   // And a conversation beside it, under its own static segment for the same reason: two ids of
   // two different things cannot share one `/chats/[id]`.
   '(app)/(tabs)/chats/conversation/[conversationId]': ConversationRoute,

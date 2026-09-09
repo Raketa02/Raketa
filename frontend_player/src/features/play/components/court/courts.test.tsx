@@ -256,15 +256,29 @@ describe('a tap on a seat', () => {
     );
   });
 
-  it('refuses somebody who already accepted, and names them', () => {
+  /**
+   * ADR-0150 §8: **an accepted seat is not a control** — no clear badge, no press, no pool, and
+   * therefore nothing said. The named refusal the source documentation asked for is never
+   * written, because #324's *no copy, no pill, no disabled control* is the rule it loses to: a
+   * seat that answers with a sentence is a control that refuses.
+   */
+  it('says nothing at all about somebody who already accepted', () => {
     const { openPool } = build([YOU, PARTNER, ACCEPTED, EMPTY]);
 
     fireEvent.press(screen.getByLabelText('Their side, ana, level 3,10'));
 
     expect(openPool).not.toHaveBeenCalled();
-    expect(useToastQueue.getState().queue[0]?.message).toBe(
-      'ana already accepted — they keep their place',
-    );
+    expect(useToastQueue.getState().queue).toEqual([]);
+  });
+
+  /** And swapping still works on them, which is what **draws** the rule instead of writing it. */
+  it('still trades an accepted seat across the net', () => {
+    const { swap } = build([YOU, PARTNER, ACCEPTED, EMPTY], true);
+
+    fireEvent.press(screen.getByLabelText('Their side, ana, level 3,10'));
+    fireEvent.press(screen.getByLabelText('Your side, you'));
+
+    expect(swap).toHaveBeenCalledWith(2, 0);
   });
 
   it('selects and then trades once the toggle is on', () => {

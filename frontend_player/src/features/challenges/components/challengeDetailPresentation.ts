@@ -4,8 +4,14 @@
  * §13's fourteen standing sentences are `challengePresentation.ts`' and are read from here
  * unchanged: this screen states the standing exactly as the row above it does, which is what
  * stops a row and the screen behind it describing one challenge two ways. What is added here is
- * the copy the screen itself brought — the two answers, the identity row, the two absences, and
- * the one spoken name §24.3 specifies.
+ * the copy the screen itself brought — the two answers, the three controls a half-built court
+ * carries, the withdraw's own sheet, the identity row, the two absences, and the one spoken name
+ * §24.3 specifies.
+ *
+ * The split against `challengePresentation.ts` is the one §22 states: that file is the **shared**
+ * deck — §13, §14 and §21, read by the inbox row as well as by this screen — and this one is the
+ * surface's, holding what no other surface says. `SH.propose`'s strings live there because the
+ * court draws that sheet; the withdraw's live here because nothing but this screen draws it.
  *
  * ## The two answers name no state the act cannot produce
  *
@@ -71,6 +77,72 @@ export const NOT_THIS_TIME = 'Not this time';
  * this id real* about a stranger's evening.
  */
 export const NO_CHALLENGE_HERE = 'No challenge of yours has this address.';
+
+// ---------------------------------------------------------------------------
+// A half-built court: grow · talk · end
+// ---------------------------------------------------------------------------
+
+/**
+ * **The fill**, and it is the builder's own act under the challenge screen's own label
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22.7).
+ *
+ * §24.3 spells it `⚡ Fill the seats` with *"the ⚡ decorative and hidden, which is the tab bar's
+ * own precedent."* **The bolt is not drawn**, and that is the precedent read whole rather than
+ * half: [10.2](../../../../docs/design-system.md#102-the-tab-bar) is explicit that *"the ⚡ is
+ * `zap` and never the character"* — `U+26A1` carries `Emoji_Presentation=Yes`, so a bare
+ * `<Text>⚡</Text>` requests colour-emoji presentation and a `color` style has nothing to apply
+ * to. What the bar draws instead is a Feather glyph, and `Button` has no slot for one; adding it
+ * is a design-system change this ticket does not make. So the visible label and the spoken name
+ * are the same words, and §24.3's *hidden* is discharged by there being no glyph to hide.
+ */
+export const FILL_THE_SEATS = 'Fill the seats';
+
+/**
+ * **The end**, and the only one a half-built line-up has
+ * ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)).
+ *
+ * The word is the record's own: not *cancel* or *call off*, which belong to the plan, and not
+ * *stand down*, which the root `CONTEXT.md` owns platform-wide for a term that cannot be
+ * evaluated. The **visible** control says `Withdraw`; its accessible name says what it withdraws
+ * (§24.3), and that is `challengeAccessibility.ts`'.
+ */
+export const WITHDRAW = 'Withdraw';
+
+/** The withdraw while it is in flight, on the control that carries it out. §22.3. */
+export const WITHDRAWING = 'Withdrawing…';
+
+/**
+ * `SH.propose`'s shape, a second time — **the title names the moment rather than the act.**
+ *
+ * So the act is named exactly once, by {@link WITHDRAW_THE_CHALLENGE} on the control that carries
+ * it out. Focus lands here on the way in and **not** on the first action, because that action is
+ * the destructive one and landing focus there would make the worst outcome the cheapest to
+ * trigger (§20.6).
+ */
+export const WITHDRAW_SHEET_TITLE = 'Before you withdraw';
+
+/**
+ * The three bodies, in order — and **the second one is what earns the sheet.**
+ *
+ * ADR-0142 chose **destroyed, not delisted**: *"on a platform where standings are derived and
+ * nothing else is deleted, this is the one place deletion is the honest implementation"* — so a
+ * confirmation that did not say so would be hiding the only consequence the player cannot undo.
+ *
+ * **It says nothing about the pair rule releasing.** That is a fact about what becomes possible
+ * afterwards, and a confirmation is not the place to sell a consequence
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22.3).
+ */
+export const WITHDRAW_SHEET_BODY = [
+  'Everybody who accepted loses this court.',
+  'The conversation goes with it, and what people wrote is deleted.',
+  'This cannot be undone.',
+] as const;
+
+/** The act, on the sheet that confirms it. §22.3. */
+export const WITHDRAW_THE_CHALLENGE = 'Withdraw the challenge';
+
+/** The sheet's dismissal, **named by what it does** — never just *Close*. §22.3. */
+export const WITHDRAW_SHEET_CLOSE_LABEL = 'Keep it open';
 
 /** What a Player Score is out of, spelled rather than assumed — and spoken, never drawn. */
 const PLAYER_SCORE_DENOMINATOR = 100;

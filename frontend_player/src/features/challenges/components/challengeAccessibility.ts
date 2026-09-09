@@ -40,3 +40,18 @@ export function challengeRowLabel(
 ): string {
   return `${spokenHandles(handles)}, ${sportName}, ${line}`;
 }
+
+/**
+ * **The withdraw's accessible name says what it withdraws** (§24.3).
+ *
+ * The visible control is one word, because the screen it sits on is about one challenge and the
+ * space around it says which. A listener has no such space: they arrive on a button by moving to
+ * it, and *Withdraw* alone in a run of controls is a verb with no object. It is
+ * [6.9](../../../../docs/design-system.md)'s rule — *"names which photo it removes"* — applied
+ * one surface over, and it is the one place on this screen where the two registers differ.
+ *
+ * It names the **challenge** rather than the people on it, which is what the act does: a
+ * withdraw is whole-challenge and never removes one person, so a name that listed handles would
+ * describe an act this route refuses.
+ */
+export const WITHDRAW_CHALLENGE_NAME = 'Withdraw this challenge';

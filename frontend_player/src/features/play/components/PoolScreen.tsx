@@ -280,7 +280,14 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
 
   const ladder = poolLadder({
     rows: record?.candidates.length ?? 0,
-    offers: record?.envelope.rungOffers ?? null,
+    // **A pool over a challenge fill has no ladder**, and `null` is already this argument's
+    // value for *this answer carries no offers*. Taking a rung is `POST /searches` citing the
+    // offer, and that search does not complete a challenge — so the open-challenge gate would
+    // exclude the very people sitting on the court, and the first seat taken off the widened
+    // list would start a **new** line-up without them (`playSession.seat`'s own rule: a seat
+    // from a different search never mixes two). A widening that quietly drops the people who
+    // already said yes is not a remedy; on this court the remedies are ⚡ and another seat.
+    offers: origin?.completing === undefined ? (record?.envelope.rungOffers ?? null) : null,
   });
 
   const sportName = sport === undefined ? undefined : sportLabel(sport);
@@ -294,7 +301,8 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
    * from the list it widens would be the two disagreeing silently — and it is ⚡'s own
    * derivation, on the screen that takes the other branch.
    */
-  const sentWeek = origin === undefined ? undefined : sentWeekForOrigin(origin.week, profile?.week);
+  const sentWeek =
+    origin?.week === undefined ? undefined : sentWeekForOrigin(origin.week, profile?.week);
 
   /**
    * Re-read the arrival record, **once**.
