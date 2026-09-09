@@ -24,10 +24,14 @@
  *
  * `conversation_not_found` is answered by **leaving the screen** rather than by a sentence: the
  * room is gone, there is no retry that changes it, and a client holding a cursor into a destroyed
- * conversation leaves — `challenge_not_found`'s own arm, verbatim (§3.7). `account_held` is
- * [#365](https://github.com/Raketa02/Raketa/issues/365)'s: a hold greys the composer and the chips
- * behind one pre-emptive note, and the fallback sentence in the meantime says something true
- * about a `403` rather than nothing.
+ * conversation leaves — `challenge_not_found`'s own arm, verbatim (§3.7).
+ *
+ * **`account_held` never reaches this table**, and that is a decision rather than a gap
+ * ([#365](https://github.com/Raketa02/Raketa/issues/365)). A hold is a fact about the **account**
+ * rather than about the message that met it, so the screen folds it into `liveState` and draws
+ * §22.5's amber note above the strip, with the composer and every chip greyed under it — *you are
+ * never told off for having tapped*. A coral sentence beside the control as well would say one fact
+ * twice, in the register the hold is deliberately not in.
  */
 
 import { codeMessage, type AppError } from '@/shared/errors';

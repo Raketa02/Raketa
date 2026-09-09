@@ -47,6 +47,17 @@
  * into it rather than counted into it: at a larger text setting fewer lines fit, which is the
  * right way round for a strip that must not grow until it has eaten the screen behind it.
  *
+ * **`disabled` is greyed, and it is the one thing 6.13 said not to build** — amended
+ * ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-09-09,
+ * [#365](https://github.com/Raketa02/Raketa/issues/365)). That section refused a disabled
+ * appearance because the case it had in mind was **busy**: `editable={false}` is how a form waits
+ * for a submit, the button beside it already carries the busy word, and greying the boxes there
+ * would say *refused* about something that is not. A held account **is** refused, so the sentence
+ * that argued against the appearance is the argument for it here — and the condition it comes with
+ * is the one #324 attaches to every greyed control: it may only be drawn where a note above it has
+ * already said why. A field greyed with nothing above it is the dead end, whatever the prop is
+ * called.
+ *
  * **Both platforms, and one of them needs telling.** Android draws font padding above and
  * below every line, so a line box is taller than `lineHeight` and the count below would grow
  * the box a line early; it also centres a multiline value where iOS tops it. Both fixes are
@@ -98,10 +109,27 @@ export interface TextFieldProps extends Omit<
    * that never grows.
    */
   readonly growTo?: number;
+  /**
+   * Not editable, greyed, and not a caret target — **for a refusal, never for busy.**
+   *
+   * `editable={false}` on its own is the busy shape and leaves the box looking ordinary, which
+   * is right while a submit is in flight. This is the other case: the act itself is refused, and
+   * the greying is this system's word for it. It may only be drawn under a note that has already
+   * said why — see the module note.
+   */
+  readonly disabled?: boolean;
 }
 
 export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
-  { label, labelHidden = false, error, reveal = false, growTo = 1, ...inputProps },
+  {
+    label,
+    labelHidden = false,
+    error,
+    reveal = false,
+    growTo = 1,
+    disabled = false,
+    ...inputProps
+  },
   ref,
 ) {
   const [focused, setFocused] = useState(false);
@@ -138,10 +166,14 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
 
   return (
     <Pressable
-      style={s.field}
+      style={[s.field, disabled ? s.disabled : undefined]}
       // Not an element of its own: the input inside it already carries the name and the
       // role, and a button wrapped around a text box would be announced before it.
       accessible={false}
+      // The whole field is the caret target (6.5), so a refused field has to refuse the press
+      // as well as the keystroke — otherwise the keyboard comes up over a box nothing can be
+      // typed into.
+      disabled={disabled}
       onPress={() => input.current?.focus()}
     >
       {labelHidden ? null : <Text style={s.label}>{label}</Text>}
@@ -164,6 +196,14 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
         <TextInput
           ref={holdInput}
           {...inputProps}
+          // After the spread, because `disabled` is the stronger statement: a caller that
+          // passes both means the refusal.
+          editable={disabled ? false : inputProps.editable}
+          // Announced as well as drawn — `editable={false}` greys nothing and says nothing, and
+          // Part 13 does not let the opacity carry it alone. Present only when true: unlike
+          // 6.2's chip there is no second state here for *no answer* to be confused with, so a
+          // field saying `disabled: false` would add a word to every box in the app for nobody.
+          accessibilityState={disabled ? { disabled: true } : inputProps.accessibilityState}
           secureTextEntry={masked}
           accessibilityLabel={label}
           multiline={grows}
@@ -251,6 +291,9 @@ const s = StyleSheet.create({
   boxError: {
     borderColor: theme.color.red,
   },
+  // 6.1's disabled row, on the whole field rather than on the box: the label and the message
+  // are part of the control (6.5), so greying half of it would read as a drawing error.
+  disabled: { opacity: 0.4 },
   input: {
     ...theme.type.rlValue,
     color: theme.color.ink,

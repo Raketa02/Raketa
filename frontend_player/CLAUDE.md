@@ -122,6 +122,36 @@ no row at all. _**Open the chat**_ joined the challenge screen's half-built arm 
 grow · talk · end, and where it goes is a **client join over the player's own rooms** — ADR-0149
 §3's shape, failing soft, because no route serves a challenge its conversation.
 
+**The room stays current on its own, and the whole live layer is a nudge, a fold and a sentence**
+([#365](https://github.com/Raketa02/Raketa/issues/365),
+[ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)).
+`shared/lib/platform/liveStream.ts` is the app's **third port** and the only importer of
+`react-native-sse` — beside the two native ones, on the second of their two arguments: a transport
+cannot be driven from a test either, so its fake sits with theirs and every state is drivable. **It
+owns the route as well as the transport**, because a port taking an arbitrary path would be a
+generic SSE client and the one thing that buys is the second stream ADR-0147's _never build_ list
+forbids. **What crosses upward is the room and never the number**: the frame's `last_seq` is read to
+know a frame is a nudge and dropped there, so nothing above can page from it — _fetch from your own
+high-water mark_ stops being a rule anybody keeps and becomes one this app cannot express. The nudge
+**invalidates** and the Query cache stays the single copy; the Chats list is deliberately **not**
+invalidated with it, because a nudge is not an act the player took and the list sits mounted under
+the room. **`liveState` is `domain/`** — a three-way _live · not live · held_ — and the placement is
+load-bearing: _only in the foreground, and only after a connect attempt has failed_ is exactly the
+pair of conditions a component drops quietly, and `closed` is a status of its own so a stream shut on
+the way to the background is never news. **Not live is one amber line above the composer and never a
+disabled one**: a send is an ordinary `POST` over a channel that is unidirectional by construction,
+the fact has two parts, and only a sentence carries two. Players meet it **routinely and briefly**,
+because the stream closes at the token's `exp` — so every attempt mints a fresh credential and a
+`401` goes through the app's own single-flight rotation, once per channel, which is the whole of why
+`shared/lib/http` grew a `streamAttempt` rather than the port growing a second `Authorization`
+header. **Held is the other way round**: the composer, the quick chips and #366's three slot chips
+grey out behind **one** pre-emptive note, reading is never blocked, and a hold never removes the
+room. It is **unreachable in this build and that is written down where the next person will find
+it** — nothing on this platform can open a case, so the only producer is the `account_held` refusal
+and the pre-emptive half is bought with one tap; `domain/liveState.ts` says so, and component tests
+are what drive the arm. 6.2 and 6.13 each gained a `disabled` state for it, under one condition:
+**only where a note above has already said why.**
+
 **The result argument is one screen and eight states, and the state is derived**
 ([#314](https://github.com/Raketa02/Raketa/issues/314),
 [ADR-0137](../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). **A result is the
@@ -314,12 +344,15 @@ commit re-validates every rule a picker enforced, and re-sending the identical b
 fail identically.
 
 `src/shared/lib/platform/` owns everything the app knows about the device: the Query
-focus and online wirings, and two **platform ports** — `LocationPort` over `expo-location`
-and `ImagePickingPort` over `expo-image-picker`. Each is the only importer of its native
-module, for the reason `shared/lib/auth` is the only importer of the keychain, plus one
-more: a native module has no JS implementation underneath it, so a feature that imports
-one cannot be tested at all. Hand-written fakes live in `src/test-support/platform.ts`, and
-a screen reaches either through `useLocation()` / `useImagePicking()` — contexts whose
+focus and online wirings, and three **platform ports** — `LocationPort` over `expo-location`,
+`ImagePickingPort` over `expo-image-picker` and `LiveStreamPort` over `react-native-sse`. Each
+is the only importer of its module, for the reason `shared/lib/auth` is the only importer of
+the keychain, plus one more: a native module has no JS implementation underneath it, so a
+feature that imports one cannot be tested at all — and **the third one is here on that second
+argument alone**, because its far side is a socket rather than a native module and a screen
+that opened one is a screen no suite can put in front of a severed stream. Hand-written fakes
+live in `src/test-support/platform.ts`, and a screen reaches each through `useLocation()` /
+`useImagePicking()` / `useLiveStream()` — contexts whose
 default is the device, so only a test ever supplies anything else. Beside them sit the two
 lifecycle wirings and `useOnForeground`, the app's one answer to _did we just come back_.
 **Location is foreground only** — nothing asks for, checks or starts a background one — and
@@ -332,7 +365,13 @@ mapping and the single-flight 401 rotation — a second copy of any of those is 
 networking path the module exists to prevent. `httpUpload` also reads the local `file://`
 URI a picker hands back, because `fetch` is what this module is allowed to touch, and it
 reports **stages rather than bytes**: React Native's `fetch` cannot say how much of a body
-has gone out, and buying that would mean a second transport.
+has gone out, and buying that would mean a second transport. It also **authorises the one read
+that is not a `fetch`**: `streamAttempt` mints the URL, the correlation id and the
+`Authorization` header for one attempt at the live channel and `rotateStreamCredential` puts it
+through the same single-flight rotation, so the third port forwards a bag it never reads rather
+than becoming the second place a bearer header is built. A **fresh bag per attempt** is the
+load-bearing half — the server closes that stream at the token's `exp`, so a channel that
+captured its headers would reconnect for ever with the credential that had just expired.
 
 **Play begins as a copy deck, and `challenges` beside it.** Nothing the matcher sends is
 prose: what crosses is a `Term`, a `LivenessReason`, an `UnfilledReason`, a `Prompt`, a
@@ -1176,7 +1215,9 @@ asserting it renders correctly.
   mobile client "needs" is a design error — it belongs behind the backend.
 - **Run a build or release** (`eas build|submit|update`, `expo publish`). _(hook-enforced)_
 - **Create or edit a real `.env*` file.** Edit `.env.example`. _(hook-enforced)_
-- **Import from `src/generated/` outside a feature's `api/` or `mappers/` layer.**
+- **Import from `src/generated/` outside a feature's `api/` or `mappers/` layer** — with one
+  file's exemption, `shared/lib/platform/liveStream.ts`, which is the live channel's `api/`
+  layer and has no feature to live in (ADR-0147 §7).
 - **Hand-write a type that mirrors a backend response.** Regenerate with `pnpm gen:api`.
 - **Put business rules in screens or hooks.** Rules live in `domain/` + `use-cases/`.
 - **Call `fetch` outside `src/shared/lib/http`,** or add a second networking path.
@@ -1227,13 +1268,18 @@ Rules to preserve:
 - **`src/shared/lib/auth` is the single chokepoint for credentials.** No feature, screen or
   hook imports `expo-secure-store`. One module owning the keychain is what makes token
   lifetime auditable.
-- **Each platform port is the single chokepoint for its native capability.** Only
-  `platform/location.ts` may import `expo-location` and only `platform/imagePicking.ts`
-  may import `expo-image-picker` — one file each, not the platform directory, so a module
+- **Each platform port is the single chokepoint for its capability.** Only
+  `platform/location.ts` may import `expo-location`, only `platform/imagePicking.ts`
+  may import `expo-image-picker`, and only `platform/liveStream.ts` may import
+  `react-native-sse` — one file each, not the platform directory, so a module
   of ports cannot become a device bucket. Nothing else: not a feature, not a screen, not a
-  test. Depend on `LocationPort` / `ImagePickingPort` and drive the fakes in
-  `src/test-support/platform.ts`. ESLint enforces it and `pnpm test:boundaries` proves the
-  rule still fires.
+  test. Depend on `LocationPort` / `ImagePickingPort` / `LiveStreamPort` and drive the fakes in
+  `src/test-support/platform.ts`. ESLint enforces all three and `pnpm test:boundaries` proves the
+  rules still fire. `platform/liveStream.ts` is also **the one file outside `api/` and
+  `mappers/` that may read `src/generated/`**: ADR-0147 §7 requires the live envelope to be
+  the generated type and a stream body is not a response model, so it is that route's `api/`
+  layer with nowhere else to live — the exemption is one file and two bans wide, and
+  `pnpm test:boundaries` asserts both.
 - **`src/shared/lib/http` is the only place `fetch` is configured** — and the only place the
   401 → refresh → retry rotation lives.
 - **`shared/` never imports a feature,** and a feature never deep-imports another — go

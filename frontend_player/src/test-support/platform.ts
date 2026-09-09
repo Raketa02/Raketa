@@ -1,10 +1,11 @@
 /**
- * Hand-written fakes for the two platform ports.
+ * Hand-written fakes for the three platform ports.
  *
  * Beside `transport.ts` and for the same reason: a test states what the world outside the
  * app does, and everything inside it runs for real. The socket is one such edge; the OS
  * permission dialog and the photo picker are two more, and neither can be driven from a
- * test at all — a native module has no JS implementation underneath it.
+ * test at all — a native module has no JS implementation underneath it. The **live
+ * channel** is the socket again, in its long-lived shape.
  *
  * These are **fakes, not mocks**: they behave like the thing they replace rather than
  * recording that they were called. A test sets what the player will answer and what the
@@ -28,14 +29,22 @@
  *   not consult one either. On iOS the system picker opens without any grant at all, and
  *   a fake that refused would prove a screen handles a refusal the phone never makes. A
  *   test that wants an empty pick says so with `library: []`.
- * - **Neither port ever rejects**, because neither real one does.
+ * - **Neither permission port ever rejects**, because neither real one does.
+ * - **A live channel opens saying `connecting` and says nothing more on its own.** The real
+ *   one reports `live` when a socket answers and `lost` when one fails, and neither is
+ *   something a test should have to wait for — so every transition after the first is the
+ *   suite's to drive, and *not live on a cold open* is the default rather than a case
+ *   somebody has to remember to set up. See `fakeLiveStream`.
  *
  * Not app code — nothing under `src/` outside tests imports this, so Metro never bundles
  * it.
  */
 
 import type {
+  FollowLive,
   ImagePickingPort,
+  LiveStreamPort,
+  LiveStreamStatus,
   LocationFix,
   LocationPort,
   PermissionState,
@@ -204,6 +213,90 @@ export function fakeImagePicking(
       }
 
       return held.slice(0, limit);
+    },
+  };
+
+  return fake;
+}
+
+/**
+ * A live channel a test decides the fate of.
+ *
+ * The only fake here whose *far side* is a socket rather than a native module, which changes
+ * one thing about how it is used: a suite that does not stub this port still gets a fake
+ * rather than the device, because the device implementation would open a real connection.
+ * See `onboardingRouter`'s `WithPorts`.
+ */
+export interface FakeLiveStream extends LiveStreamPort {
+  /** The rooms being followed right now, in the order they were opened. */
+  readonly following: readonly string[];
+  /**
+   * Every room ever followed, including a second follow of one already open.
+   *
+   * *One stream per open conversation, and never a second for the Chats list* is a claim about
+   * counts, and a list of the rooms currently open cannot see a stream opened twice and
+   * closed once.
+   */
+  readonly opened: readonly string[];
+  /** Say the channel answered. */
+  connect: (conversationId: string) => void;
+  /** Say the attempt failed, the channel was severed, or there is nothing to connect over. */
+  lose: (conversationId: string) => void;
+  /** Say the app went to the background and the channel was closed deliberately. */
+  background: (conversationId: string) => void;
+  /** Deliver a nudge — *this room moved*, which is the whole of what one says. */
+  nudge: (conversationId: string) => void;
+}
+
+/**
+ * A channel that opens, reports `connecting`, and then does exactly what a test tells it.
+ *
+ * Nothing happens on its own, which is the point: every state this port can be in is one a
+ * screen draws differently, and a fake that connected by itself would make *live* the only
+ * one a suite could reach without fighting a timer.
+ */
+export function fakeLiveStream(): FakeLiveStream {
+  /** Per room: how to report, and how many follows are open. Kept after the last close. */
+  const rooms = new Map<string, FollowLive[]>();
+  const opened: string[] = [];
+
+  function tell(conversationId: string, status: LiveStreamStatus): void {
+    for (const ask of rooms.get(conversationId) ?? []) ask.onStatus(status);
+  }
+
+  const fake: FakeLiveStream = {
+    get following() {
+      return [...rooms].flatMap(([room, asks]) => asks.map(() => room));
+    },
+    get opened() {
+      return opened;
+    },
+
+    follow: (ask) => {
+      opened.push(ask.conversationId);
+      const asks = rooms.get(ask.conversationId) ?? [];
+      asks.push(ask);
+      rooms.set(ask.conversationId, asks);
+
+      // The real port says this synchronously, from inside `follow`: a room that has just
+      // opened is connecting, and *not live* is not drawn about it.
+      ask.onStatus('connecting');
+
+      return () => {
+        const open = rooms.get(ask.conversationId) ?? [];
+        rooms.set(
+          ask.conversationId,
+          open.filter((one) => one !== ask),
+        );
+      };
+    },
+
+    connect: (conversationId) => tell(conversationId, 'live'),
+    lose: (conversationId) => tell(conversationId, 'lost'),
+    background: (conversationId) => tell(conversationId, 'closed'),
+
+    nudge: (conversationId) => {
+      for (const ask of rooms.get(conversationId) ?? []) ask.onNudge({ conversationId });
     },
   };
 

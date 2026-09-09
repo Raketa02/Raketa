@@ -598,10 +598,11 @@ not restated here; what follows is only what this client had to invent to draw t
 
 ### The room
 
-Five client-only concepts, all of them in `features/conversations/`. The domain terms —
-Conversation, Message, System line, Member — are the **root glossary's** and are not restated
-here; what follows is only what this client had to invent to draw the room
-([#364](https://github.com/Raketa02/Raketa/issues/364)).
+Eight client-only concepts, all of them in `features/conversations/` and
+`shared/lib/platform/`. The domain terms — Conversation, Message, System line, Member — are the
+**root glossary's** and are not restated here; what follows is only what this client had to
+invent to draw the room ([#364](https://github.com/Raketa02/Raketa/issues/364)) and to keep it
+current ([#365](https://github.com/Raketa02/Raketa/issues/365)).
 
 - **Stream entry** — what one row of the room draws: a recorded **Entry** the server has
   answered for, or a **Sending message**, which is a message this phone has posted and the server
@@ -632,6 +633,29 @@ here; what follows is only what this client had to invent to draw the room
   matches and draws nothing when there is none. The words live in `features/conversations` so the
   three surfaces that draw one cannot say three different things. _Avoid_: a `conversation_id` on
   anything but a conversation, and a disabled door — no door is the answer.
+- **The live channel** — the one long-lived connection this app opens: `LiveStreamPort` over
+  Server-Sent Events, held for as long as a room is on screen in the foreground, and **never one
+  per row of a list**. It is a **platform port** like the position and the photo library, on the
+  same second argument: a transport cannot be driven from a test either. _Avoid_: "socket" or
+  "websocket" in this app's prose — the channel is unidirectional by construction and that is a
+  decision, not an implementation detail.
+- **The nudge** — one frame off that channel, and the whole of what it says is _this room moved_.
+  The wire carries `{ v, conversation_id, last_seq }`; **the number stops at the port**, because
+  the answer to a nudge is a re-read from the client's **own** high-water mark and a number handed
+  up is a number somebody eventually pages from. _Avoid_: "event" or "push" for one, treating a
+  missing frame as a gap to detect, and any arithmetic on `last_seq` above the port.
+- **Live state** — the three-way _live · not live · held_ a room draws about itself, folded in
+  `domain/liveState.ts` from the channel's standing and the account's. **Live is the absence of a
+  claim** rather than a claim: an open channel, one still connecting and one deliberately closed
+  behind a backgrounded app are one answer, because in all three the honest thing to draw is
+  nothing. _Avoid_: a _Live_ badge, a connection indicator, and reading the port's status directly
+  in a component — _only in the foreground, and only after a connect attempt has failed_ is the
+  pair of conditions that gets dropped there.
+- **Held** — the account cannot write anywhere another player sees it, and can always read. On this
+  screen that greys the composer and every chip behind **one** pre-emptive note. It reaches the
+  client only as the `account_held` refusal — no read serves it — and **nothing in this build can
+  open a case**, which is a named exception recorded in `domain/liveState.ts`. _Avoid_: "suspended"
+  or "banned", a note per control, and hiding the room.
 
 ### Data and errors
 
@@ -692,13 +716,15 @@ here; what follows is only what this client had to invent to draw the room
 ### Platform and delivery
 
 - **Platform port** — a narrow TypeScript interface in `shared/lib/platform/` over one
-  native capability, with exactly two implementations: the real one that imports the
-  native module, and a fake in `src/test-support/platform.ts`. Two exist —
-  `LocationPort` and `ImagePickingPort` — and each is **the only importer of its module**,
-  the way `shared/lib/auth` is the only importer of the keychain. The reason is not
-  tidiness: a native module has no JS underneath it, so a feature that imports one is a
-  feature no test can drive. _Avoid_: "device module", "native service" — a module holding
-  both capabilities is the utils bucket this app bans, and a capability is one file.
+  capability the app cannot run in a test, with exactly two implementations: the real one that
+  imports the module, and a fake in `src/test-support/platform.ts`. Three exist —
+  `LocationPort`, `ImagePickingPort` and `LiveStreamPort` — and each is **the only importer of
+  its module**, the way `shared/lib/auth` is the only importer of the keychain. The reason is
+  not tidiness: a native module has no JS underneath it, so a feature that imports one is a
+  feature no test can drive — and **the third one is a socket rather than a native module**,
+  here on that argument alone, which is why _platform_ and not _native_ is the word. _Avoid_:
+  "device module", "native service" — a module holding several capabilities is the utils bucket
+  this app bans, and a capability is one file.
 - **Permission state** — the four answers a platform port gives about a capability:
   `undetermined | granted | denied | blocked`. **Denied and blocked are different
   refusals** — denied can be asked again at the moment the player understands why; blocked

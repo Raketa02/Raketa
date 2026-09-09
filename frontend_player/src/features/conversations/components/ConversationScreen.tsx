@@ -30,22 +30,43 @@
  * **A paused send draws nothing extra and that is deliberate.** It resumes on its own, so the
  * *does-not-resume* sentence would be false and the *resumes* one is written about a **read** —
  * *this will load as soon as you're back*. The honest signal is the bubble, which is already
- * there; the sentence a room owes about being out of touch is the *not live* line, and that is
- * [#365](https://github.com/Raketa02/Raketa/issues/365)'s, above this composer, with a stream
- * behind it that knows whether it failed to connect.
+ * there; the sentence a room owes about being out of touch is the *not live* line below.
+ *
+ * ## One line above the composer, and it is folded rather than checked
+ *
+ * The room stays current on its own — `useLiveConversation` follows it and a nudge invalidates the
+ * read — and **says so honestly when it cannot**. What decides which of the three things it says
+ * is `domain/liveState.ts` and not this file, because both of the conditions on *not live* are
+ * ones a component drops quietly: it is drawn **only in the foreground** and **only after a
+ * connect attempt has failed**, never on a cold open
+ * ([ADR-0147](../../../../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
+ * §8).
+ *
+ * **The composer is not disabled by it**, and that is the load-bearing half: a send is an ordinary
+ * authenticated `POST` over a channel that is unidirectional by construction, so writing is
+ * unaffected and closing the control would state something false about the half that works. The
+ * fact has **two parts** — what you send still goes, and what they send arrives when this
+ * reconnects — and only a sentence carries two.
+ *
+ * **Held is the other way round**: the account may read and may not write (ADR-0148 §9), so the
+ * composer, every quick chip and — when [#366](https://github.com/Raketa02/Raketa/issues/366)
+ * lands — the three slot chips all grey out behind **one** pre-emptive note. One note for all of
+ * them, because it is one fact about the account and saying it five times on one screen is the
+ * failure §1.6 names about counts. A greyed text field is acceptable **only** because that note is
+ * above it and arrives first; absent the note it would be exactly the dead end #324 refused.
+ *
+ * **A hold never removes the room**, and it never removes a control's explanation either: the
+ * `account_held` refusal draws as the amber note rather than as a coral one, so the player is told
+ * what their account is rather than told off for having tapped.
  *
  * ## What is not here yet, named rather than left to be noticed
  *
- * The **plan card** is pinned under this header and is
- * [#366](https://github.com/Raketa02/Raketa/issues/366)'s — three slot chips from
+ * The **plan card** is pinned under this header and is #366's — three slot chips from
  * `features/plans`, rendered into this screen as a child, with neither feature importing the
  * other. Until it lands the room has no plan **and no surface on which a slot could be filled**,
  * so `quickChips` is asked about `undefined`, which is `GET /plans`' own spelling for a game
  * nothing has been agreed on: three questions and no *On my way*. The day that read exists the
- * screen hands one down and nothing else changes.
- *
- * The **live channel** is #365's, and until it lands what another member said arrives on the
- * app's own focus refetch.
+ * screen hands one down, and the `held` fold below is what those three chips will be greyed from.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -57,6 +78,7 @@ import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { playerName } from '@/shared/formatting/playerName';
 import { Note, theme } from '@/shared/ui';
 
+import { liveState, writeStanding } from '../domain/liveState';
 import { memberNamed, type ConversationMember } from '../domain/membership';
 import { quickChips } from '../domain/quickChips';
 import { namesItsAuthors, type OpenConversation } from '../domain/room';
@@ -69,12 +91,13 @@ import {
   type StreamEntry,
 } from '../domain/stream';
 import { useConversation, useSendMessage, useSendingMessages } from '../hooks/useConversation';
+import { useLiveConversation } from '../hooks/useLiveConversation';
 
 import { Bubble } from './Bubble';
 import { Composer } from './Composer';
 import { ConversationHeader } from './ConversationHeader';
 import { conversationErrorMessage } from './conversationErrorMessage';
-import { systemLineSentence } from './conversationPresentation';
+import { LIVE_NOTE, systemLineSentence } from './conversationPresentation';
 import { DaySeparator } from './DaySeparator';
 import { QuickChips } from './QuickChips';
 import { RoomAbsent } from './RoomAbsent';
@@ -148,6 +171,19 @@ function Room({
   const sending = useSendingMessages(room.conversationId, playerId);
 
   /**
+   * **What the room says about itself** — one fold, read once, over the channel and the account.
+   *
+   * The channel is followed for as long as this component is mounted, which is *one stream per
+   * open conversation* by construction: there is nowhere else in the app that calls this, and the
+   * Chats list one screen up deliberately has none. It is followed from **here** rather than from
+   * the screen above, so the channel exists exactly while there is a room to keep current — a
+   * nudge arriving during the first read would invalidate a query that is already in flight.
+   */
+  const channel = useLiveConversation(room.conversationId);
+  const state = liveState(channel, writeStanding(send.error));
+  const held = state === 'held';
+
+  /**
    * What is in the box.
    *
    * Route-local, because it is a fact about a press nobody has made yet: leaving the screen
@@ -165,7 +201,16 @@ function Room({
   const shown = useMemo(() => [...streamOf(entries, sending)].reverse(), [entries, sending]);
 
   const showAuthors = namesItsAuthors(room.members);
-  const refused = send.error;
+
+  /**
+   * The coral note's own refusal, and **a hold is not one of them.**
+   *
+   * `account_held` has a sentence already — the amber note below, which says what the account is
+   * rather than what this tap did — so drawing both would say one fact twice and in two registers.
+   * Every other code the send can be refused with is a thing about *this message*, and it keeps
+   * the note beside the control that failed.
+   */
+  const sendRefusal = held ? null : send.error;
 
   function post(text: string): void {
     if (!mayPost(text)) return;
@@ -222,17 +267,37 @@ function Room({
         onEndReachedThreshold={0.4}
       />
 
-      {refused === null ? null : (
+      {sendRefusal === null ? null : (
         <View style={s.refusal}>
           <Note variant="coral" accessibilityRole="alert">
-            {conversationErrorMessage(refused)}
+            {conversationErrorMessage(sendRefusal)}
           </Note>
         </View>
       )}
 
-      <QuickChips chips={quickChips(undefined, room.readAt)} onPost={post} />
+      {/* Above every control it is about — the chips as well as the composer — because it is one
+          fact about the screen rather than one per control, and because a greyed field is only
+          acceptable where the sentence explaining it arrives first. `amber` on 1.3's reading:
+          *watch this — reversible, not yet wrong*.
 
-      <Composer text={draft} onChange={setDraft} onSend={() => post(draft)} />
+          **Only the hold is announced, and the split is what the player just did.** A hold arrives
+          here as the answer to a send somebody pressed — no read serves it, so there is nothing to
+          be pre-emptive with on the first tap — and a listener who got silence for their press
+          would have the dead end this note exists to prevent. *Not live* is the opposite: it is a
+          standing fact about the channel that goes true and false on its own roughly every quarter
+          of an hour, and `alert` there would interrupt a player four times an hour to say nothing
+          they need to act on. */}
+      {state === 'live' ? null : (
+        <View style={s.standing}>
+          <Note variant="amber" accessibilityRole={held ? 'alert' : undefined}>
+            {LIVE_NOTE[state]}
+          </Note>
+        </View>
+      )}
+
+      <QuickChips chips={quickChips(undefined, room.readAt)} onPost={post} refused={held} />
+
+      <Composer text={draft} onChange={setDraft} onSend={() => post(draft)} refused={held} />
     </KeyboardAvoidingView>
   );
 }
@@ -317,4 +382,5 @@ const s = StyleSheet.create({
   stream: { paddingHorizontal: theme.size.gutter, paddingVertical: theme.space.sm },
   row: { gap: theme.space.xs, paddingBottom: theme.space.xs },
   refusal: { paddingHorizontal: theme.size.gutter, paddingBottom: theme.space.xs },
+  standing: { paddingHorizontal: theme.size.gutter, paddingBottom: theme.space.xs },
 });

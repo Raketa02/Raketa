@@ -15,6 +15,12 @@
  * They scroll horizontally rather than wrapping: three questions at `type.chip` fit a phone
  * comfortably, and a row that wrapped to two lines would push the composer up by a line on a
  * screen where a keyboard is already taking half of it.
+ *
+ * **A held account greys them rather than losing them**, because a chip is a message and a hold
+ * stops you writing anywhere another player sees it (ADR-0148 §9). Greyed and not removed: the row
+ * is what says the room still has three questions in it, and the note above the strip is what says
+ * why none of them can be asked — one note for every refused control on the screen, never one per
+ * chip.
  */
 
 import { ScrollView, StyleSheet } from 'react-native';
@@ -29,9 +35,11 @@ export interface QuickChipsProps {
   readonly chips: readonly QuickChip[];
   /** What pressing one does — post its words. It is the composer's own send, pre-filled. */
   readonly onPost: (words: string) => void;
+  /** The account may not write here. Every chip greys; the screen owns the one note. */
+  readonly refused?: boolean;
 }
 
-export function QuickChips({ chips, onPost }: QuickChipsProps) {
+export function QuickChips({ chips, onPost, refused = false }: QuickChipsProps) {
   if (chips.length === 0) return null;
 
   return (
@@ -42,7 +50,12 @@ export function QuickChips({ chips, onPost }: QuickChipsProps) {
       keyboardShouldPersistTaps="handled"
     >
       {chips.map((chip) => (
-        <Chip key={chip} label={QUICK_CHIP[chip]} onPress={() => onPost(QUICK_CHIP[chip])} />
+        <Chip
+          key={chip}
+          label={QUICK_CHIP[chip]}
+          disabled={refused}
+          onPress={() => onPost(QUICK_CHIP[chip])}
+        />
       ))}
     </ScrollView>
   );

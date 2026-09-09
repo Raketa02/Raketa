@@ -11,7 +11,11 @@ paths:
 1. **Single-flight refresh.** One `refreshPromise`; every concurrent 401 awaits the same one.
    Ten parallel refreshes rotate each other out and log the user out at random.
 2. **Retry an authenticated request exactly once.** The retry carries a flag saying refresh
-   was attempted; a second 401 terminates the session instead of looping forever.
+   was attempted; a second 401 terminates the session instead of looping forever. **The live
+   channel is the one act that rotates without being allowed to end a session** — it is a latency
+   optimisation over an authoritative read path running on the same screen, and that path is what
+   may act on a refusal — so `rotateStreamCredential` rotates once per channel and then stops
+   attempting rather than calling `abandon` (`shared/lib/http/httpClient.ts`, ADR-0147 §6).
 3. **Rejected ≠ unreachable.** A refresh the auth server _rejects_ clears credentials and
    caches. A refresh that _times out_ preserves them — losing signal in a lift is not a
    logout.

@@ -23,6 +23,18 @@
  * than this file's: the control that closes and the act that refuses are two readers of one
  * question, and two copies of it is how one stops agreeing with the other.
  *
+ * ## The one other thing that closes it is the account, and it greys the box as well
+ *
+ * A **held** account may read here and may not write (ADR-0148 §9), so both halves of the strip
+ * refuse and the field is greyed rather than merely `editable={false}` — the busy shape would say
+ * *waiting* about something that is not going to happen. It is only acceptable because the note
+ * above it has already said why, which is the condition 6.13's amendment attaches to the prop and
+ * the whole of why the screen puts the note above this strip rather than beside the control.
+ *
+ * **Not live does not close it.** Sends are ordinary authenticated `POST`s over a channel that is
+ * unidirectional by construction, so writing is unaffected — and disabling the composer would
+ * state something false about the half that still works (§3.6).
+ *
  * ## The strip is not a screen action
  *
  * It is `paper` rather than 10.1's pinned CTA slot: the composer is part of the room, sitting
@@ -54,9 +66,11 @@ export interface ComposerProps {
   readonly text: string;
   readonly onChange: (text: string) => void;
   readonly onSend: () => void;
+  /** The account may not write here. Both halves refuse, and the screen owns the note. */
+  readonly refused?: boolean;
 }
 
-export function Composer({ text, onChange, onSend }: ComposerProps) {
+export function Composer({ text, onChange, onSend, refused = false }: ComposerProps) {
   return (
     <View style={s.strip}>
       <View style={s.field}>
@@ -66,10 +80,11 @@ export function Composer({ text, onChange, onSend }: ComposerProps) {
           growTo={COMPOSER_LINES}
           value={text}
           onChangeText={onChange}
+          disabled={refused}
         />
       </View>
 
-      <Button label={SEND} disabled={!mayPost(text)} onPress={onSend} />
+      <Button label={SEND} disabled={refused || !mayPost(text)} onPress={onSend} />
     </View>
   );
 }

@@ -78,6 +78,17 @@ const imagePickerImport = {
     'in a test — a native module has no JS implementation a test could drive.',
 };
 
+const liveStreamImport = {
+  group: ['react-native-sse'],
+  message:
+    'Only src/shared/lib/platform/liveStream.ts may import react-native-sse. A transport ' +
+    'cannot be driven from a test, so a screen that opened its own stream is a screen no ' +
+    'suite can put in front of a severed one — and one file owning the app’s only ' +
+    'long-lived connection is what keeps close-on-background and reconnect-with-a-fresh-token ' +
+    'in one place. Use the LiveStreamPort from @/shared/lib/platform, and fakeLiveStream() ' +
+    'from src/test-support/platform.ts in a test. See docs/adr/0147.',
+};
+
 const observabilityVendorImports = {
   group: ['@sentry/*', 'posthog-*', '@amplitude/*', 'mixpanel-*'],
   message:
@@ -112,6 +123,7 @@ const CORE_PATTERNS = [
   secureStoreImport,
   locationImport,
   imagePickerImport,
+  liveStreamImport,
   observabilityVendorImports,
 ];
 
@@ -296,6 +308,22 @@ export default [
     // Likewise: the photo library, and not the position.
     files: ['src/shared/lib/platform/imagePicking.ts'],
     rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(imagePickerImport)) },
+  },
+  {
+    // The live channel — and it is exempt from **two** bans, which no other file is.
+    //
+    // `react-native-sse` for the reason above: one file owns the transport. And
+    // `src/generated/` because ADR-0147 §7 requires the client to read the live envelope as the
+    // GENERATED type rather than as a hand-written mirror of it, and a stream body is not a
+    // response model — so the operation's own `200` generates as `unknown` and the frame is
+    // parsed against `LiveNudgeSchema` by name. The wire boundary's rule is that transport types
+    // stay out of components, hooks and domain; the module that reads the socket is the api/
+    // layer of this one route, and it has nowhere else to be, because a feature's api/ may not
+    // import the transport.
+    files: ['src/shared/lib/platform/liveStream.ts'],
+    rules: {
+      'no-restricted-imports': restrict(sharedPatternsExcept(liveStreamImport, generatedImports)),
+    },
   },
   {
     // The single place fetch is configured.

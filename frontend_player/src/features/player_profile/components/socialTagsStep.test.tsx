@@ -294,14 +294,20 @@ describe('a selected tag', () => {
     // somebody.
     await reachTheTagsStep();
 
+    // `disabled: false` beside it since #365 gave 6.2 a disabled state: this step never draws
+    // one — it refuses a seventh tag out loud rather than by greying twelve — and a chip that
+    // announced nothing about it would leave *not refused* indistinguishable from *no answer*,
+    // which is `selected`'s own argument one property over.
     expect(screen.getByLabelText('Plays to win').props.accessibilityState).toEqual({
       selected: false,
+      disabled: false,
     });
 
     press('Plays to win');
 
     await waitFor(() =>
       expect(screen.getByLabelText('Plays to win').props.accessibilityState).toEqual({
+        disabled: false,
         selected: true,
       }),
     );

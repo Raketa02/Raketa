@@ -22,9 +22,17 @@
  *
  * 6.2's **small chip is not built**: nothing needs one, and its 10pt label is a size Part
  * 3.3 carries no role for. It arrives with the first screen that wants it, together with
- * the type role — theme and document in one commit (Part 15.3). There is no **disabled**
- * chip either, because 6.2 specifies none: the step that needed this control refuses a
- * seventh tag out loud rather than by greying the other twelve.
+ * the type role — theme and document in one commit (Part 15.3).
+ *
+ * **The disabled chip arrived late and only where a chip is genuinely refused**
+ * ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-09-09,
+ * [#365](https://github.com/Raketa02/Raketa/issues/365)). It is not the tag picker's answer to a
+ * seventh tag — that step refuses out loud rather than by greying the other twelve, and 6.2's
+ * original sentence about it stands. What it is for is a control the **account** may not use: a
+ * held account cannot post, and a quick chip that looked pressable and did nothing would be
+ * exactly the dead end 6.1 forbids. It is `opacity: .4` and not pressable, 6.1's own disabled
+ * row rather than a second value, and it may only be drawn where a note above the row has
+ * already said why — which is the condition the amendment attaches to it.
  */
 
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -45,6 +53,15 @@ export interface ChipProps {
   readonly dot?: string;
   /** Fires on every press, selected or not. The chip reports; the caller decides. */
   readonly onPress: () => void;
+  /**
+   * Drawn at `opacity: .4`, not pressable, and announced as disabled.
+   *
+   * **Only where the act itself is refused**, and only under a note that has already said so:
+   * greying a control is this system's word for *you may not*, and a screen that greys without
+   * explaining is the dead end 6.1 and #324 both refuse. It is never *busy* and never a ceiling
+   * on a selection — a count is refused in words.
+   */
+  readonly disabled?: boolean;
   /** Drawn ink-filled and announced as selected. Owned by the caller. */
   readonly selected?: boolean;
   /** Defaults to `label`. Set it when the word alone is cryptic out of context. */
@@ -58,6 +75,7 @@ export function Chip({
   onPress,
   dot,
   selected = false,
+  disabled = false,
   accessibilityLabel,
   accessibilityHint,
   style,
@@ -69,7 +87,8 @@ export function Chip({
       accessibilityHint={accessibilityHint}
       // Always present, never omitted when false: a chip that announced nothing while
       // unselected would leave "not chosen" indistinguishable from "not a choice".
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
       onPress={onPress}
       // 27 + 9 + 9 = 45. The visual stays small and the target grows (6.5); the 3pt of
       // horizontal slop is what a 6pt gap between neighbours allows.
@@ -80,6 +99,7 @@ export function Chip({
         s.chip,
         selected ? s.selected : undefined,
         pressed ? s.pressed : undefined,
+        disabled ? s.disabled : undefined,
         style,
       ]}
     >
@@ -121,6 +141,8 @@ const s = StyleSheet.create({
   // an identity rather than a state, so it does not invert with the pill under it.
   dot: { width: theme.size.sportDot, height: theme.size.sportDot },
   pressed: { opacity: 0.7 },
+  // 6.1's disabled row, not a second value: this app has one word for *you may not*.
+  disabled: { opacity: 0.4 },
   label: { ...theme.type.chip, color: theme.color.ink },
   // `surface` is the app's one white; there is no separate `white` token, deliberately.
   labelSelected: { color: theme.color.surface },

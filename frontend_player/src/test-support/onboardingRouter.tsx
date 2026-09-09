@@ -51,8 +51,10 @@ import { PLACEHOLDER_COPY } from '@/features/shell/types';
 import { beginSession } from '@/shared/lib/auth';
 import {
   ImagePickingProvider,
+  LiveStreamProvider,
   LocationProvider,
   type ImagePickingPort,
+  type LiveStreamPort,
   type LocationPort,
 } from '@/shared/lib/platform';
 import { queryClient } from '@/shared/lib/query-client';
@@ -162,6 +164,31 @@ export function resetLocation(): void {
 }
 
 /**
+ * The live channel this tree follows a room over — and **the one port whose default is a fake.**
+ *
+ * The other two stand in front of native modules jest has already mocked into something inert, so
+ * leaving them unset costs a suite nothing but a device it did not describe. This one stands in
+ * front of a **socket**: unset, the real port would mint an `Authorization` header and open an
+ * `XMLHttpRequest` at the API host in every suite that lands on a room, which is a connection no
+ * test asked for and the one edge `installTransport` does not cover.
+ *
+ * So `WithPorts` always provides one. A suite that says nothing gets a channel that reports
+ * `connecting` and stays there, which is *not live is never drawn on a cold open* — the right
+ * default, and the state every room test that is about something else wants.
+ */
+let liveStream: LiveStreamPort | undefined;
+
+/** Run the tree against this live channel. Call before `launchSignedIn`. */
+export function stubLiveStream(port: LiveStreamPort): void {
+  liveStream = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetLiveStream(): void {
+  liveStream = undefined;
+}
+
+/**
  * The providers the real root layout composes, without the bootstrap sequence — fonts, the
  * splash screen and config validation are the launch path's business and have their own
  * tests.
@@ -184,17 +211,22 @@ function TestRoot() {
 }
 
 /**
- * The two ports, wrapped only where a suite said what they are.
+ * The three ports, wrapped where a suite said what they are — and the live channel always.
  *
- * Composed here rather than in `TestRoot` so adding a third port is one entry rather than a
- * fourth level of nesting and a second conditional.
+ * Composed here rather than in `TestRoot` so adding a port is one entry rather than another
+ * level of nesting and another conditional. The live channel's default is a fake rather than
+ * the device, for the reason `stubLiveStream` states.
  */
 function WithPorts({ children }: { readonly children: ReactNode }) {
+  const withLive = (
+    <LiveStreamProvider port={liveStream ?? SILENT_CHANNEL}>{children}</LiveStreamProvider>
+  );
+
   const withLocation =
     location === undefined ? (
-      children
+      withLive
     ) : (
-      <LocationProvider port={location}>{children}</LocationProvider>
+      <LocationProvider port={location}>{withLive}</LocationProvider>
     );
 
   return imagePicking === undefined ? (
@@ -203,6 +235,24 @@ function WithPorts({ children }: { readonly children: ReactNode }) {
     <ImagePickingProvider port={imagePicking}>{withLocation}</ImagePickingProvider>
   );
 }
+
+/**
+ * The channel a suite that said nothing gets: it opens, reports `connecting`, and never moves.
+ *
+ * **Not `fakeLiveStream()`**, deliberately. It is one instance for the whole process — a fresh
+ * port per render would be a fresh subscription, so the effect that follows a room would tear
+ * down and re-open on every re-render — and a fake holds state, which shared across the process
+ * would mean one suite reading another's follows out of `opened`. This holds none: a suite that
+ * wants to drive a channel says so with `stubLiveStream(fakeLiveStream())` and gets its own.
+ */
+const SILENT_CHANNEL: LiveStreamPort = {
+  follow: ({ onStatus }) => {
+    // Synchronously, exactly as the device port does: a room that has just opened is connecting,
+    // and *not live* is never drawn about one.
+    onStatus('connecting');
+    return () => {};
+  },
+};
 
 /** The four sports the backend serves, as the registry route answers. */
 export const SPORTS_SERVED: Wire['SportsResponse'] = {

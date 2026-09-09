@@ -60,6 +60,7 @@ import { dayName } from '@/shared/vocabulary/availabilityPresentation';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 
 import type { Conversation } from '../domain/conversation';
+import type { LiveState } from '../domain/liveState';
 import type { QuickChip } from '../domain/quickChips';
 import {
   departureOf,
@@ -292,4 +293,36 @@ export const QUICK_CHIP: Readonly<Record<QuickChip, string>> = {
   day: 'Which day works?',
   hour: 'What time?',
   'on-my-way': 'On my way',
+};
+
+/**
+ * **The two states the room says something about itself in** — §22.5, keyed by the union, so a
+ * fourth state does not compile without words and `live` cannot be given any.
+ *
+ * `live` is deliberately absent from the key: it is the absence of a claim rather than a claim,
+ * and a `Record` over the whole union would invite somebody to fill it in with *Live* — which is
+ * a badge saying that everything is normal, on a screen where normal is what nothing is drawn
+ * about.
+ *
+ * **Not live says two things because two things are true.** Sends are ordinary authenticated
+ * `POST`s and the channel is unidirectional by construction, so *writing is unaffected and only
+ * reading has stopped being live* — and only a sentence carries two parts, which is the whole
+ * argument against the dot Part 13 refuses anyway. Players see this **routinely and briefly**:
+ * the stream closes at the access token's `exp`, so a reconnect runs roughly every fifteen
+ * minutes in production, which is the dividend
+ * [ADR-0147](../../../../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
+ * §6 named.
+ *
+ * **Held names the fact and promises nothing**, because there is no appeal surface in this build
+ * and a sentence offering one would be a promise nobody made. It is ADR-0130's register: state
+ * the class of problem, name nobody, grade nothing. **This app has never drawn a hold** — these
+ * are the first words it has for one — and nothing says how a hold ends, because nothing in this
+ * build can end one.
+ *
+ * **One note for every refused control on the screen**, never one per control: it is one fact
+ * about the account, and saying it five times is the failure §1.6 names about counts.
+ */
+export const LIVE_NOTE: Readonly<Record<Exclude<LiveState, 'live'>, string>> = {
+  'not-live': 'Not live — you can still send, and anything you missed arrives when it reconnects.',
+  held: 'Your account is on hold. You can read here, but not write.',
 };

@@ -4,12 +4,18 @@
 #
 #   bash scripts/test-import-boundaries.sh      # or: pnpm test:boundaries
 #
-# Four modules may be imported from exactly one place, or from nowhere at all:
+# Five modules may be imported from exactly one place, or from nowhere at all:
 #
 #   expo-secure-store                            → src/shared/lib/auth
 #   @react-native-async-storage/async-storage    → nowhere; it is unencrypted
-#   expo-location                                → src/shared/lib/platform
-#   expo-image-picker                            → src/shared/lib/platform
+#   expo-location                                → platform/location.ts
+#   expo-image-picker                            → platform/imagePicking.ts
+#   react-native-sse                             → platform/liveStream.ts
+#
+# And one is banned everywhere *except* a feature's api/ and mappers/ layers, plus the
+# one file above that is an api/ layer without a feature to live in:
+#
+#   @/generated/**                               → api/, mappers/, platform/liveStream.ts
 #
 # Each ban was added to a tree that already satisfied it, so not one of them has
 # ever been seen to fail — and a rule that has never fired is indistinguishable
@@ -109,7 +115,13 @@ OBSERVABILITY='src/shared/lib/observability/placeholder.ts'
 # banned here as it is in a feature.
 LOCATION_PORT='src/shared/lib/platform/location.ts'
 PICKING_PORT='src/shared/lib/platform/imagePicking.ts'
+LIVE_PORT='src/shared/lib/platform/liveStream.ts'
 OTHER_PLATFORM_FILE='src/shared/lib/platform/appState.ts'
+
+# Where a generated wire type is legitimately read: the two layers of a feature, and the
+# one file outside a feature that is an api/ layer — the live channel, whose frame ADR-0147
+# §7 requires to be the generated type.
+WIRE_LAYER='src/features/onboarding/api/placeholder.ts'
 
 echo "the keychain — expo-secure-store belongs to src/shared/lib/auth"
 expect_blocked expo-secure-store "$FEATURE" 'src/shared/lib/auth'
@@ -150,7 +162,31 @@ expect_blocked expo-image-picker "$AUTH" 'src/shared/lib/platform'
 expect_blocked expo-image-picker "$OBSERVABILITY" 'src/shared/lib/platform'
 expect_blocked expo-image-picker "$OTHER_PLATFORM_FILE" 'src/shared/lib/platform'
 expect_blocked expo-image-picker "$LOCATION_PORT" 'src/shared/lib/platform'
+expect_blocked expo-image-picker "$LIVE_PORT" 'src/shared/lib/platform'
 expect_allowed expo-image-picker "$PICKING_PORT"
+
+echo
+echo "the live channel — react-native-sse belongs to platform/liveStream.ts"
+expect_blocked react-native-sse "$FEATURE" 'liveStream.ts'
+expect_blocked react-native-sse "$SCREEN" 'liveStream.ts'
+expect_blocked react-native-sse "$TEST" 'liveStream.ts'
+expect_blocked react-native-sse "$SUPPORT" 'liveStream.ts'
+expect_blocked react-native-sse "$AUTH" 'liveStream.ts'
+# One file wide, again: the two native ports beside it may not open a socket either.
+expect_blocked react-native-sse "$LOCATION_PORT" 'liveStream.ts'
+expect_blocked react-native-sse "$OTHER_PLATFORM_FILE" 'liveStream.ts'
+expect_allowed react-native-sse "$LIVE_PORT"
+
+echo
+echo "generated wire types — api/ and mappers/, plus the live channel's frame"
+expect_blocked @/generated/schema "$FEATURE" "api/ or mappers/"
+expect_blocked @/generated/schema "$SCREEN" "api/ or mappers/"
+expect_blocked @/generated/schema "$LOCATION_PORT" "api/ or mappers/"
+expect_blocked @/generated/schema "$OTHER_PLATFORM_FILE" "api/ or mappers/"
+expect_allowed @/generated/schema "$WIRE_LAYER"
+# The one file outside a feature that reads one, and it is exempt from a second ban as well —
+# which is exactly the shape the `sharedPatternsExcept` subtraction exists to keep honest.
+expect_allowed @/generated/schema "$LIVE_PORT"
 
 echo
 printf '%s passed, %s failed\n' "$pass" "$fail"
