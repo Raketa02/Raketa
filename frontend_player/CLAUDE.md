@@ -192,7 +192,12 @@ take: the game id comes off the read the screen mounts and `held` off the fold b
 would have been a render prop over a route that had joined the room itself — three props and a
 second join to avoid one import through a public surface the room already makes to `features/games`
 for its _Details_ door. The same read answers the quick chips, which is the `undefined` #364 left
-them holding. **The platform zone left `conversations`** for `shared/date/platformZone.ts` on the
+them holding — **and the chips' rule and words moved here with it**, because §22.4 is the plan's
+vocabulary by `the-words.md` §22's own assignment and the rule reads the slot order. #364 declared
+its own `PlanSlot` and its own order to make do with no plan feature to put them in, and a second
+spelling of _where · day · hour_ is exactly what this ticket says `domain/slots.ts` must be the one
+place of. **The row stayed in the room**: a chip is a message, and the send it goes out on is the
+composer's. **The platform zone left `conversations`** for `shared/date/platformZone.ts` on the
 third-caller rule, and unlike the tables promoted before it a second copy would be two answers to
 _which day is it in Warsaw_ on one screen; #335's _shorter value, not a second line_ moved to
 `shared/formatting/placeName.ts` beside them, because the `Where` chip is the third surface that

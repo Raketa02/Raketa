@@ -38,7 +38,9 @@ import { mapErrorResponse } from '@/shared/errors';
 
 import { conversationErrorMessage } from './conversationErrorMessage';
 import { systemLineSentence } from './conversationPresentation';
-import { DETAILS, QUICK_CHIP, SEND } from './conversationPresentation';
+import { QUICK_CHIP } from '@/features/plans/types';
+
+import { DETAILS, SEND } from './conversationPresentation';
 import { OPEN_THE_GAME } from './conversationAccessibility';
 
 const ME = GATE_USER.id;

@@ -1,11 +1,14 @@
 /**
- * **What the plan card says** — §22.2, and every word on the three surfaces that edit it.
+ * **What the plan says** — §22.2's three slots and §22.4's four quick chips, and every word on the
+ * surfaces that edit them.
  *
  * The plan's sentences are this file's by **vocabulary owner** rather than by screen
- * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22): what happened in a
- * room is `conversationPresentation.ts`', the tab's own sentences are the shell's, and the three
- * slots are here — drawn in the room today and read on the game screen next
- * ([#368](https://github.com/Raketa02/Raketa/issues/368)).
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22, which assigns it
+ * §22.2 **and** §22.4): what happened in a room is `conversationPresentation.ts`', the tab's own
+ * sentences are the shell's, and everything about the plan is here — the three slots, drawn in the
+ * room today and read on the game screen next
+ * ([#368](https://github.com/Raketa02/Raketa/issues/368)), and the four questions the room asks
+ * about them, which shipped with the composer because there was no plan feature yet.
  *
  * ## A chip reads its value or its name, and never a word about the state it is in
  *
@@ -40,6 +43,7 @@ import { weekdayOf } from '@/shared/date/platformZone';
 import { placeWithoutTheCourt } from '@/shared/formatting/placeName';
 import { dayLabel, dayName } from '@/shared/vocabulary/availabilityPresentation';
 
+import type { QuickChip } from '../domain/quickChips';
 import { PLACE_CAP, slotValue, type Plan, type PlanSlot } from '../domain/slots';
 
 /**
@@ -164,3 +168,22 @@ export const PLACE_TOO_LONG = `That is longer than ${PLACE_CAP} characters. Shor
  */
 export const NO_DAY_LEFT_TO_SET =
   'There is no day left to agree. All that is left is to say you played.';
+
+/**
+ * §22.4's four, keyed by the union — **so a chip with no words does not compile.**
+ *
+ * A `Record` rather than a function per code, which is §1's split read the other way: not one of
+ * these quotes a value, and that is the rule rather than a coincidence. **Each chip asks the
+ * question its slot is about and names nothing** — the prototype's three were a weekday, a part
+ * of day and one fixture venue, and *a chip naming Saturday is a chip that is wrong six days a
+ * week*.
+ *
+ * **A chip posts words and changes nothing** (ADR-0144): filling the slot it asks about would
+ * record an agreement nobody had yet.
+ */
+export const QUICK_CHIP: Readonly<Record<QuickChip, string>> = {
+  where: 'Where shall we play?',
+  day: 'Which day works?',
+  hour: 'What time?',
+  'on-my-way': 'On my way',
+};

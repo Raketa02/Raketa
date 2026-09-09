@@ -37,5 +37,17 @@ export { RoomPlan, type RoomPlanProps } from './components/RoomPlan';
  */
 export { usePlan } from './hooks/usePlans';
 
+/**
+ * **The questions the room still has to ask**, and the words for them.
+ *
+ * §22.4 is the plan's vocabulary by [`the-words.md`](../../../../docs/specs/matchmaking/the-words.md)
+ * §22's own assignment, and the rule reads the slot order, so both are here — while the row that
+ * draws them stays `features/conversations`', because a quick chip **posts a message** and the send
+ * is the room's. *A chip posts words and changes nothing*: filling the slot it asks about would
+ * record an agreement nobody had yet, which is the one thing the card must not do.
+ */
+export { quickChips, type QuickChip } from './domain/quickChips';
+export { QUICK_CHIP } from './components/planPresentation';
+
 /** What a plan is: three slots and the moment they name. */
 export type { Plan, PlanSlot } from './domain/slots';

@@ -598,8 +598,10 @@ not restated here; what follows is only what this client had to invent to draw t
 
 ### The room
 
-Eight client-only concepts, in `features/conversations/`, `shared/lib/platform/` and — for the
-one of them two features now read — `shared/date/`. The domain terms — Conversation, Message,
+Seven client-only concepts, in `features/conversations/`, `shared/lib/platform/` and — for the
+one of them two features now read — `shared/date/`. **The quick chip is not among them**: the
+questions are about the plan's slots and the words are §22.4's, so both are `features/plans`' and
+only the row that draws them is the room's. The domain terms — Conversation, Message,
 System line, Member — are the **root glossary's** and are not restated here; what follows is only
 what this client had to invent to draw the room
 ([#364](https://github.com/Raketa02/Raketa/issues/364)) and to keep it current
@@ -625,12 +627,6 @@ what this client had to invent to draw the room
 - **The day separator** — the only time-shaped thing the stream draws, between entries on
   different platform days. A room lives at most a few days, so the fact worth having is _was this
   today_. _Avoid_: "timestamp".
-- **The quick chip** — one of at most three questions above the composer, **one per unfilled plan
-  slot in slot order plus _On my way_ when the agreed day is today**. A chip **posts words and
-  changes nothing**: filling the slot it asks about would record an agreement nobody had yet.
-  The conditional fallback is what caps the row at three; unconditional it would be exactly four.
-  _Avoid_: naming a weekday, a part of a day or a venue in one — a chip naming Saturday is wrong
-  six days a week.
 - **The chat door** — the way into a room from somewhere that is not the Chats list, drawn as
   _Open the chat_. It is a **client join over `GET /conversations`** and it **fails soft**: no
   route serves a challenge or a game its conversation, so the surface finds the row whose id
@@ -663,7 +659,7 @@ what this client had to invent to draw the room
 
 ### The plan
 
-Five client-only concepts, all of them in `features/plans/`. The domain terms — Plan, Slot, the
+Six client-only concepts, all of them in `features/plans/`. The domain terms — Plan, Slot, the
 three recordings — are [ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)'s
 and are owed to the root glossary by [#332](https://github.com/Raketa02/Raketa/issues/332); what
 follows is only what this client had to invent to let a room fill one in
@@ -688,6 +684,13 @@ follows is only what this client had to invent to let a room fill one in
   because it is read. It goes **busy with the value it already had** while its write is going out.
   _Avoid_: "lock", a locked border, a `locked by everybody` pill and a complete state — filling the
   third slot **is** the lock and there is nothing left to draw about one.
+- **The quick chip** — one of at most three questions above the room's composer, **one per
+  unfilled plan slot in slot order plus _On my way_ when the agreed day is today**. A chip **posts
+  words and changes nothing**: filling the slot it asks about would record an agreement nobody had
+  yet. The conditional fallback is what caps the row at three; unconditional it would be exactly
+  four. The rule and the words are this feature's because both read the slot order; the **row** is
+  the room's, because a chip is a message and the send is the composer's. _Avoid_: naming a
+  weekday, a part of a day or a venue in one — a chip naming Saturday is wrong six days a week.
 - **The past combination** — a day and an hour that together name a moment that has gone. It is
   refused **in written copy rather than by a disabled control**, because the two are filled in
   either order and either can be the second, so the sentence names **both** remedies and no value.

@@ -89,14 +89,13 @@ import { FlatList, KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { useCurrentUser } from '@/features/auth/types';
-import { RoomPlan, usePlan } from '@/features/plans/types';
+import { quickChips, RoomPlan, usePlan } from '@/features/plans/types';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { playerName } from '@/shared/formatting/playerName';
 import { Note, theme } from '@/shared/ui';
 
 import { liveState, writeStanding } from '../domain/liveState';
 import { memberNamed, type ConversationMember } from '../domain/membership';
-import { quickChips } from '../domain/quickChips';
 import { namesItsAuthors, type OpenConversation } from '../domain/room';
 import { roomIsGone } from '../domain/roomGone';
 import {

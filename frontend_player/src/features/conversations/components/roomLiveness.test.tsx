@@ -37,7 +37,9 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-import { LIVE_NOTE, QUICK_CHIP, SEND } from './conversationPresentation';
+import { QUICK_CHIP } from '@/features/plans/types';
+
+import { LIVE_NOTE, SEND } from './conversationPresentation';
 
 const ME = GATE_USER.id;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';

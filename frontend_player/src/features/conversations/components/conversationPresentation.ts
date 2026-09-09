@@ -6,8 +6,10 @@
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §23,
  * [ADR-0146](../../../../../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md)).
  * §22 assigns this file §23 by **vocabulary owner** rather than by screen: the tab's own
- * sentences are the shell's, the plan's are `planPresentation.ts`'s, and what happened in a room
- * is this feature's.
+ * sentences are the shell's, the plan's are `planPresentation.ts`'s — **including §22.4's quick
+ * chips**, which lived here until there was a `features/plans` to hold them
+ * ([#366](https://github.com/Raketa02/Raketa/issues/366)) — and what happened in a room is this
+ * feature's.
  *
  * ## One module, two surfaces, and the difference is a prop
  *
@@ -63,7 +65,6 @@ import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 
 import type { Conversation } from '../domain/conversation';
 import type { LiveState } from '../domain/liveState';
-import type { QuickChip } from '../domain/quickChips';
 import {
   departureOf,
   invitedCount,
@@ -259,25 +260,6 @@ export const COMPOSER_LABEL = 'Message';
 
 /** The one control beside it. */
 export const SEND = 'Send';
-
-/**
- * §22.4's four, keyed by the union — **so a chip with no words does not compile.**
- *
- * A `Record` rather than a function per code, which is §1's split read the other way: not one of
- * these quotes a value, and that is the rule rather than a coincidence. **Each chip asks the
- * question its slot is about and names nothing** — the prototype's three were a weekday, a part
- * of day and one fixture venue, and *a chip naming Saturday is a chip that is wrong six days a
- * week*.
- *
- * **A chip posts words and changes nothing** (ADR-0144): filling the slot it asks about would
- * record an agreement nobody had yet.
- */
-export const QUICK_CHIP: Readonly<Record<QuickChip, string>> = {
-  where: 'Where shall we play?',
-  day: 'Which day works?',
-  hour: 'What time?',
-  'on-my-way': 'On my way',
-};
 
 /**
  * **The two states the room says something about itself in** — §22.5, keyed by the union, so a

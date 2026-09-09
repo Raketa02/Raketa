@@ -41,6 +41,7 @@ import { HOURS_OFFERED } from '../domain/slots';
 import { planErrorMessage } from './planErrorMessage';
 import {
   NO_DAY_LEFT_TO_SET,
+  QUICK_CHIP,
   RECORD_PLACE,
   SAVING,
   SLOT_NAME,
@@ -401,7 +402,11 @@ describe('a held account', () => {
 });
 
 describe('the quick chips beside it', () => {
-  /** One chip per unfilled slot, in slot order — and the plan is what says which are unfilled. */
+  /**
+   * One chip per unfilled slot, in slot order — and the plan is what says which are unfilled.
+   * The rule and the words are this feature's; the row that draws them is the room's, because a
+   * chip is a message and the send is the composer's.
+   */
   it('ask only about the slots that are still empty', async () => {
     await openTheRoom({ agreed: plan({ place: 'Zabłocie Sport', hour: '18:00:00' }) });
 
@@ -409,9 +414,9 @@ describe('the quick chips beside it', () => {
     // and narrows the moment it does, so the card reading its values is what says it has.
     await waitFor(() => expect(screen.getByLabelText('Where: Zabłocie Sport')).toBeTruthy());
 
-    expect(screen.getByText('Which day works?')).toBeTruthy();
-    expect(screen.queryByText('Where shall we play?')).toBeNull();
-    expect(screen.queryByText('What time?')).toBeNull();
+    expect(screen.getByText(QUICK_CHIP.day)).toBeTruthy();
+    expect(screen.queryByText(QUICK_CHIP.where)).toBeNull();
+    expect(screen.queryByText(QUICK_CHIP.hour)).toBeNull();
   });
 });
 

@@ -13,7 +13,6 @@ import type { ConversationMember } from '../domain/membership';
 
 import {
   OPEN_THE_CHAT,
-  QUICK_CHIP,
   conversationRowLine,
   entryLine,
   systemLineSentence,
@@ -181,23 +180,6 @@ describe('a room where nothing has happened yet', () => {
         'one-line',
       ),
     ).toBeUndefined();
-  });
-});
-
-describe('the quick chips', () => {
-  /**
-   * §22.4. **Each chip asks the question its slot is about and names nothing** — the prototype's
-   * three were a weekday, a part of day and one fixture venue, and *a chip naming Saturday is a
-   * chip that is wrong six days a week*.
-   */
-  it('asks a question per slot and names no day, no part of a day and no venue', () => {
-    expect(QUICK_CHIP.where).toBe('Where shall we play?');
-    expect(QUICK_CHIP.day).toBe('Which day works?');
-    expect(QUICK_CHIP.hour).toBe('What time?');
-    expect(QUICK_CHIP['on-my-way']).toBe('On my way');
-
-    const named = /monday|tuesday|wednesday|thursday|friday|saturday|sunday|morning|evening/i;
-    for (const words of Object.values(QUICK_CHIP)) expect(words).not.toMatch(named);
   });
 });
 
