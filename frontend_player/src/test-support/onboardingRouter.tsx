@@ -397,6 +397,32 @@ export function stubGames(
   );
 }
 
+export const PLANS_PATH = '/api/v1/plans';
+
+/**
+ * Your plans, as `GET /plans` answers — **one row per game somebody has agreed something about.**
+ *
+ * There is **no `read_at` on this envelope**, deliberately: a plan folds nothing against the clock,
+ * so a suite that wants *today* to be a particular day sets `stubGames`' instant instead — the card
+ * is folded against the game list's, which is what keeps every clock on a surface the same one.
+ *
+ * Stubbed on every launch beside the games and the rooms, for the reason those two are: the plan
+ * card is pinned in every room that has a game, so a suite that opens one would otherwise fail at
+ * the socket with a name that points at `fetch` rather than at the card
+ * ([#366](https://github.com/Raketa02/Raketa/issues/366)).
+ *
+ * Defaulted to nothing, which is not an empty plan but **no plan** — *a plan is born by being
+ * used*, so a game nobody has arranged anything on has no row here at all and the card draws three
+ * empty slots.
+ */
+export function stubPlans(transport: Transport, plans: readonly Wire['PlanSchema'][] = []) {
+  transport.on('GET', PLANS_PATH, () => json<Wire['PlanListResponse']>({ plans: [...plans] }));
+}
+
+/** The path one game's slot answers on, for a suite that wants to record one. */
+export const planSlotPath = (gameId: string, slot: 'place' | 'day' | 'hour') =>
+  `${PLANS_PATH}/${gameId}/${slot}`;
+
 /** The path `GET /challenges` answers on, for a suite that wants to say what is in the list. */
 export const CHALLENGES_PATH = '/api/v1/challenges';
 
@@ -530,12 +556,13 @@ export const GATE_USER: Wire['UserResponse'] = {
  * The unfinished-run read is **one** request covering every sport. An empty list is the
  * answer for a player with nothing outstanding — a 200, not a 204 and not a failure.
  *
- * **`stubGames` and `stubConversations` are in here and neither is a gate read.** The gate's
- * fourth destination is the shell's root, the shell's root is the Now tab, and the Now tab draws
- * a games list ([#314](https://github.com/Raketa02/Raketa/issues/314)) — so every suite that lands
- * in the app makes that request whether or not it is about one. The rooms are one step further
- * out: only the Chats screen reads them, but a suite that walks to that tab for any reason would
- * otherwise fail at the socket. Both are defaulted to nothing, and a suite with either calls the
+ * **`stubGames`, `stubPlans` and `stubConversations` are in here and none of them is a gate read.**
+ * The gate's fourth destination is the shell's root, the shell's root is the Now tab, and the Now
+ * tab draws a games list ([#314](https://github.com/Raketa02/Raketa/issues/314)) — so every suite
+ * that lands in the app makes that request whether or not it is about one. The rooms are one step
+ * further out: only the Chats screen reads them, but a suite that walks to that tab for any reason
+ * would otherwise fail at the socket, and the plan card pinned in every room with a game reads a
+ * third list on the way. All three are defaulted to nothing, and a suite with any of them calls the
  * stub again afterwards to replace it.
  */
 export function stubGate(
@@ -552,6 +579,7 @@ export function stubGate(
 
   stubRunsInProgress(transport, runs);
   stubGames(transport);
+  stubPlans(transport);
   stubChallenges(transport);
   stubConversations(transport);
 }

@@ -79,6 +79,47 @@ describe('what a chip announces', () => {
   });
 });
 
+/**
+ * **Busy and disabled are one dim and two facts**, which is 6.1's own shape and the reason a busy
+ * chip swaps its label: the two mean opposite things, and greying is all either of them does.
+ */
+describe('a chip with a press on its way', () => {
+  it('draws and announces the busy word rather than the value', () => {
+    render(<Chip label="Saturday" busy busyLabel="Saving…" onPress={jest.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Saving…' })).toBeTruthy();
+    expect(screen.queryByText('Saturday')).toBeNull();
+  });
+
+  it('takes no press, so one write cannot become two', () => {
+    const pressed = jest.fn();
+    render(<Chip label="Saturday" busy busyLabel="Saving…" onPress={pressed} />);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Saving…' }));
+
+    expect(pressed).not.toHaveBeenCalled();
+  });
+
+  /** The dim is the sighted half of the same fact, never the whole of it (Part 13). */
+  it('is announced as busy as well as dimmed, and drops the pressed appearance with it', () => {
+    render(<Chip label="Saturday" busy busyLabel="Saving…" onPress={jest.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Saving…' }).props.accessibilityState.busy).toBe(
+      true,
+    );
+    expect(drawn(false).opacity).toBe(0.4);
+    expect(drawn(true).opacity).toBe(0.4);
+  });
+
+  it('leaves an ordinary chip saying nothing about being busy', () => {
+    render(<Chip label="Saturday" onPress={jest.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Saturday' }).props.accessibilityState.busy).toBe(
+      false,
+    );
+  });
+});
+
 describe('what a finger meets', () => {
   it('reaches the 44pt minimum although the chip is drawn at 27', () => {
     render(<Chip label="Doubles" onPress={jest.fn()} />);

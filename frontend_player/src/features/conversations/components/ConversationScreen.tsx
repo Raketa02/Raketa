@@ -49,24 +49,39 @@
  * reconnects — and only a sentence carries two.
  *
  * **Held is the other way round**: the account may read and may not write (ADR-0148 §9), so the
- * composer, every quick chip and — when [#366](https://github.com/Raketa02/Raketa/issues/366)
- * lands — the three slot chips all grey out behind **one** pre-emptive note. One note for all of
- * them, because it is one fact about the account and saying it five times on one screen is the
- * failure §1.6 names about counts. A greyed text field is acceptable **only** because that note is
- * above it and arrives first; absent the note it would be exactly the dead end #324 refused.
+ * composer, every quick chip and the plan's three slot chips all grey out behind **one**
+ * pre-emptive note. One note for all of them, because it is one fact about the account and saying
+ * it five times on one screen is the failure §1.6 names about counts. A greyed text field is
+ * acceptable **only** because that note is above it and arrives first; absent the note it would be
+ * exactly the dead end #324 refused.
  *
  * **A hold never removes the room**, and it never removes a control's explanation either: the
  * `account_held` refusal draws as the amber note rather than as a coral one, so the player is told
  * what their account is rather than told off for having tapped.
  *
- * ## What is not here yet, named rather than left to be noticed
+ * ## The plan card is pinned under the header, and this feature imports the one that draws it
  *
- * The **plan card** is pinned under this header and is #366's — three slot chips from
- * `features/plans`, rendered into this screen as a child, with neither feature importing the
- * other. Until it lands the room has no plan **and no surface on which a slot could be filled**,
- * so `quickChips` is asked about `undefined`, which is `GET /plans`' own spelling for a game
- * nothing has been agreed on: three questions and no *On my way*. The day that read exists the
- * screen hands one down, and the `held` fold below is what those three chips will be greyed from.
+ * Three slot chips from `features/plans` ([#366](https://github.com/Raketa02/Raketa/issues/366)),
+ * pinned rather than emitted into the stream: every chat opens at its newest entry, so a card in
+ * the scroll is a card you have to hunt for — and the plan is the thing the room exists to fill.
+ *
+ * **#364 anticipated a slot the route would fill and that shape was not taken**, which is recorded
+ * here rather than left to be re-derived. Two facts about the room reach the card and neither is
+ * knowable outside this component: which game the room completed into, which comes off the read
+ * this screen mounts, and whether the account is **held**, which is the fold below. A slot filled
+ * from the route would therefore have had to be a render prop taking a boolean, over a route that
+ * had joined the room itself to find the game id — three props and a second join to avoid one
+ * import through a feature's public surface, which this feature already makes to `features/games`
+ * for the *Details* door.
+ *
+ * **The arrow that matters is a different one and is untouched.** ADR-0149 §1 fixes
+ * `features/plans` → `features/games` and refuses the reverse; nothing anywhere refuses a room
+ * composing the card that edits its own plan, and `plans` learns nothing about a conversation.
+ *
+ * The same read answers the quick chips: *one chip per unfilled slot, in slot order, plus `On my
+ * way` when the agreed day is today*. A room whose line-up has not completed has **no game and no
+ * plan**, which is `GET /plans`' own spelling for a game nothing has been agreed on — three
+ * questions, no *On my way*, and no card at all.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -74,6 +89,7 @@ import { FlatList, KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { useCurrentUser } from '@/features/auth/types';
+import { RoomPlan, usePlan } from '@/features/plans/types';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { playerName } from '@/shared/formatting/playerName';
 import { Note, theme } from '@/shared/ui';
@@ -171,6 +187,13 @@ function Room({
   const sending = useSendingMessages(room.conversationId, playerId);
 
   /**
+   * What has been agreed — read here for the **quick chips**, which ask about the slots that are
+   * still empty. The card below reads it again through its own join, and that is one query and
+   * one cache: `GET /plans` is a list, and both readers are looking up the same row in it.
+   */
+  const { plan } = usePlan(room.gameId);
+
+  /**
    * **What the room says about itself** — one fold, read once, over the channel and the account.
    *
    * The channel is followed for as long as this component is mounted, which is *one stream per
@@ -245,6 +268,12 @@ function Room({
         }
       />
 
+      {/* Pinned under the header rather than emitted into the stream, which is the whole of
+          §3.2's finding: the chat opens at its newest entry, so a card in the scroll is the first
+          thing off-screen. A room with no game has no plan and draws none — the same nothing the
+          header's absent *Details* draws, from the same field. */}
+      {room.gameId === undefined ? null : <RoomPlan gameId={room.gameId} refused={held} />}
+
       <FlatList
         // Named so a suite can scroll it: paging backward is a fact about what reaching the end
         // of this list asks for, and there is no other way to reach it from outside.
@@ -295,7 +324,7 @@ function Room({
         </View>
       )}
 
-      <QuickChips chips={quickChips(undefined, room.readAt)} onPost={post} refused={held} />
+      <QuickChips chips={quickChips(plan, room.readAt)} onPost={post} refused={held} />
 
       <Composer text={draft} onChange={setDraft} onSend={() => post(draft)} refused={held} />
     </KeyboardAvoidingView>

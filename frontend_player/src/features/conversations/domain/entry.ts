@@ -38,8 +38,15 @@
  * is a **calendar** date rather than an instant, so which weekday it is cannot depend on where the
  * phone is — which is the same thing the day separator needs from the platform zone, arrived at
  * from the other end. Two people in one room read one weekday, by construction.
+ *
+ * **Both conversions left this file** for `shared/date/platformZone.ts`
+ * ([#366](https://github.com/Raketa02/Raketa/issues/366)): the plan's day row is the third caller,
+ * and unlike the tables that were promoted before them a second copy of this one would put two
+ * surfaces of one screen on two different days. What stayed is {@link separatorBefore}, which is a
+ * rule about a **stream** and belongs to the feature that draws one.
  */
 
+import { platformDay, weekdayOf } from '@/shared/date/platformZone';
 import type { Weekday } from '@/shared/vocabulary/week';
 
 /** The seven a system line can be. §23, and a code outside them is one this build cannot read. */
@@ -116,109 +123,6 @@ export function departureOf(values: EntryValues): Departure | undefined {
 export function invitedCount(values: EntryValues): number | undefined {
   const count = Number(values.count);
   return values.count !== undefined && Number.isInteger(count) && count > 0 ? count : undefined;
-}
-
-/** ISO weekday numbering, off `Date`'s Sunday-first `getUTCDay`. */
-const ISO_WEEKDAYS: readonly Weekday[] = [7, 1, 2, 3, 4, 5, 6];
-
-/**
- * Which weekday a recorded day falls on, or nothing where the value is not a calendar date.
- *
- * Read at UTC because the value **has no time in it**: `2026-09-12` names a square on a calendar,
- * and parsing it as an instant in the device's zone is what would let one room read Saturday on
- * one phone and Friday on another. See the module note.
- */
-export function weekdayOf(day: string): Weekday | undefined {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return undefined;
-
-  const at = new Date(`${day}T00:00:00Z`);
-  if (Number.isNaN(at.getTime())) return undefined;
-
-  return ISO_WEEKDAYS[at.getUTCDay()];
-}
-
-/**
- * **The one zone this platform arranges in**, named rather than computed with.
- *
- * A locale assumption rather than a constant to tune
- * ([ADR-0144](../../../../../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)),
- * and **its falsifier is the first shard whose players are somewhere else**. It is the same zone
- * the plan's day and hour are recorded in, which is what lets a separator and a `DAY_RECORDED`
- * line agree about which day Saturday is.
- *
- * **Nothing passes it to a formatter**, and {@link platformOffset} below is why. It is here so
- * the assumption has a name a reader can search for and so the two halves of it — *this zone*,
- * and *these two offsets* — sit in one file rather than one being implied by the other.
- */
-export const PLATFORM_ZONE = 'Europe/Warsaw';
-
-/**
- * **Poland's two offsets, and the rule that picks one.**
- *
- * `Intl.DateTimeFormat` with a `timeZone` is the obvious way to do this and it is **refused for
- * the reason `shared/formatting/ratingFormat.ts` already records**: *"Hermes ships without the
- * full ICU data unless it is explicitly built in"*, so a zone-aware formatter can silently fall
- * back — and what it would fall back to here is the **device's** day, which is precisely the
- * failure the platform zone exists to prevent. A wrong number that announces itself is
- * survivable; this one would not, and Node's full ICU means no test in this repository could
- * see it.
- *
- * So the conversion is arithmetic. `Europe/Warsaw` is **CET all winter and CEST all summer**, and
- * the changeover is the EU's single rule rather than a national one: summer time runs from 01:00
- * UTC on the **last Sunday in March** to 01:00 UTC on the **last Sunday in October**, for every
- * member state at the same instant.
- *
- * **Two falsifiers, and neither is hypothetical.** The first is ADR-0144's own — *the first shard
- * whose players are somewhere else* — and the second is the EU abolishing seasonal changes, which
- * has been proposed and not enacted. Either one makes this table wrong rather than imprecise,
- * which is why it is one function with a name that says what it is about.
- */
-const HOUR = 60 * 60 * 1000;
-const CET = HOUR;
-const CEST = 2 * HOUR;
-
-/** The last Sunday of a month, at 01:00 UTC — the instant the EU changes its clocks. */
-function lastSundayAtOneUtc(year: number, month: number): number {
-  const lastDay = new Date(Date.UTC(year, month + 1, 0));
-
-  return Date.UTC(year, month, lastDay.getUTCDate() - lastDay.getUTCDay(), 1);
-}
-
-/** How far ahead of UTC the platform's zone is at this instant. */
-function platformOffset(at: number): number {
-  const year = new Date(at).getUTCFullYear();
-  const summerBegins = lastSundayAtOneUtc(year, 2);
-  const summerEnds = lastSundayAtOneUtc(year, 9);
-
-  return at >= summerBegins && at < summerEnds ? CEST : CET;
-}
-
-/**
- * Which calendar day an instant falls on **in the platform's zone**, as `YYYY-MM-DD`.
- *
- * The one conversion the day separator needs, and the reason it is here rather than in a
- * component: **a device zone would put two people in one room on two different days**
- * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §3.3). A room
- * lives at most a few days, so *was this today* is the one time-shaped fact worth drawing — and
- * it is worth nothing at all if two phones disagree about it.
- *
- * It answers `undefined` for a value that is not an instant, which is the same nothing every
- * other narrowing in this file answers with: there is no day to name and inventing one would be
- * a claim about when something happened.
- *
- * The conversion is arithmetic rather than `Intl` — see {@link platformOffset} above for why that
- * is a decision and not a shortcut.
- */
-export function platformDay(instant: string): string | undefined {
-  const at = Date.parse(instant);
-  if (Number.isNaN(at)) return undefined;
-
-  // The wall clock in Warsaw, read as though it were UTC — which is what turns an instant into a
-  // square on a calendar, and the one step that must not consult the device.
-  const wall = new Date(at + platformOffset(at));
-  const pad = (value: number) => String(value).padStart(2, '0');
-
-  return `${wall.getUTCFullYear()}-${pad(wall.getUTCMonth() + 1)}-${pad(wall.getUTCDate())}`;
 }
 
 /**

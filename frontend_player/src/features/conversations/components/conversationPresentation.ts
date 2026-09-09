@@ -54,7 +54,9 @@
  * standing to be true. Six events publish nothing at all and §23.1 names each with its reason.
  */
 
+import { weekdayOf } from '@/shared/date/platformZone';
 import { counted } from '@/shared/formatting/counted';
+import { placeWithoutTheCourt } from '@/shared/formatting/placeName';
 import { playerName } from '@/shared/formatting/playerName';
 import { dayName } from '@/shared/vocabulary/availabilityPresentation';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
@@ -65,7 +67,6 @@ import type { QuickChip } from '../domain/quickChips';
 import {
   departureOf,
   invitedCount,
-  weekdayOf,
   type Entry,
   type EntryValues,
   type SystemLine,
@@ -131,23 +132,6 @@ const SYSTEM_LINE: Readonly<Record<SystemLineCode, (facts: SystemLineFacts) => s
   HOUR_RECORDED: ({ name, values }) =>
     values.value === undefined ? OUT_OF_DATE_GAP : `${name} set the time · ${values.value}`,
 };
-
-/**
- * **The place, without the court** — the shorter value #335 chose over a second line.
- *
- * `Zabłocie Sport, court 3` is long because the value is long, and a venue's name is the half that
- * identifies it. The cut is at the **first comma, whatever follows it** — this reads no meaning
- * out of the value and never claims the tail was a court. That is affordable because nothing is
- * lost by it: the whole value is spoken in the row's accessible name, and it is on the screen
- * behind the row. A place with no comma in it is already the shorter value and is drawn whole.
- *
- * **Never applied to a handle** — §15 refuses that outright — which is why this takes a place and
- * not a string.
- */
-function placeWithoutTheCourt(place: string): string {
-  const [named] = place.split(',');
-  return named === undefined || named.trim() === '' ? place : named.trim();
-}
 
 /**
  * One system line, as a sentence — the stream's and the row's, keyed by code.

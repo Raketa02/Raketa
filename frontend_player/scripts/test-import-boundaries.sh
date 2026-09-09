@@ -17,6 +17,17 @@
 #
 #   @/generated/**                               → api/, mappers/, platform/liveStream.ts
 #
+# One more is banned in **one feature only**, and it is the one rule here that is about
+# two features rather than about a module:
+#
+#   @/features/plans                             → never from features/games
+#
+# ADR-0149 §1: `features/plans` may import `features/games` and never the reverse, which
+# keeps ADR-0145 §4's clause — *"`games` importing the Plan"* — checkable on this side of
+# the wire. That record says so in as many words: *"a grep, not a judgement"*. This is
+# where the grep is proved still to fire, in both directions, because a one-way edge that
+# has quietly become a wall is as wrong as one that has become a door.
+#
 # Each ban was added to a tree that already satisfied it, so not one of them has
 # ever been seen to fail — and a rule that has never fired is indistinguishable
 # from one that cannot. A renamed directory, a `files` glob that stops matching,
@@ -123,6 +134,13 @@ OTHER_PLATFORM_FILE='src/shared/lib/platform/appState.ts'
 # §7 requires to be the generated type.
 WIRE_LAYER='src/features/onboarding/api/placeholder.ts'
 
+# The one-way edge's four sides: the three layers of `features/games` the ban has to reach,
+# and the feature on the permitted side of it.
+GAMES_SCREEN='src/features/games/components/Placeholder.tsx'
+GAMES_WIRE='src/features/games/mappers/placeholder.ts'
+GAMES_DOMAIN='src/features/games/domain/placeholder.ts'
+PLANS_SCREEN='src/features/plans/components/Placeholder.tsx'
+
 echo "the keychain — expo-secure-store belongs to src/shared/lib/auth"
 expect_blocked expo-secure-store "$FEATURE" 'src/shared/lib/auth'
 expect_blocked expo-secure-store "$SCREEN" 'src/shared/lib/auth'
@@ -187,6 +205,24 @@ expect_allowed @/generated/schema "$WIRE_LAYER"
 # The one file outside a feature that reads one, and it is exempt from a second ban as well —
 # which is exactly the shape the `sharedPatternsExcept` subtraction exists to keep honest.
 expect_allowed @/generated/schema "$LIVE_PORT"
+
+echo
+echo "the one-way edge — features/games may never import features/plans"
+# Every layer of the feature, because the ban is three blocks: flat config replaces a rule
+# rather than adding to it, so the wire layer and the pure layers each restate the baseline
+# block they shadow. A ban that reached only `components/` would be a ban a mapper walks past.
+expect_blocked @/features/plans "$GAMES_SCREEN" 'ADR-0149'
+expect_blocked @/features/plans "$GAMES_WIRE" 'ADR-0149'
+expect_blocked @/features/plans "$GAMES_DOMAIN" 'ADR-0149'
+# The other direction is the sanctioned one, and it is asserted so that a later hand at this
+# file cannot "tidy" the ban into a symmetric wall — which would delete the composition
+# ADR-0149 chose over a second read.
+expect_allowed @/features/games/types "$PLANS_SCREEN"
+# And the two exemptions the games blocks shadow are still exemptions: a re-listed block
+# that dropped either would be silent, and this is the only place it would show.
+expect_allowed @/generated/schema "$GAMES_WIRE"
+expect_blocked @/generated/schema "$GAMES_SCREEN" "api/ or mappers/"
+expect_blocked react-native "$GAMES_DOMAIN" 'pure TypeScript'
 
 echo
 printf '%s passed, %s failed\n' "$pass" "$fail"

@@ -109,6 +109,28 @@ const featureImportsFromShared = {
     'src/shared/ must never import a feature — that reverses the dependency arrow and couples every future feature to this one. See docs/architecture.md Part 1.',
 };
 
+/**
+ * `features/games` never learns a plan exists — the one **one-way** edge between two features.
+ *
+ * [ADR-0145](../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md) §4
+ * made *"`games` importing the Plan"* the **checkable** statement of ADR-0137's scoping, and
+ * [ADR-0149](../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
+ * §1 carried it onto the client: `features/plans` may import `features/games`, and *"if
+ * `features/games` ever imports `features/plans`, the clause is broken — a grep, not a
+ * judgement."* This is that grep, and `pnpm test:boundaries` is what proves it still fires.
+ *
+ * It is one direction and not a wall: the card is composed at the **surface**, so the plan
+ * renders **into** the game screen as a child and neither type crosses.
+ */
+const planImportFromGames = {
+  group: ['@/features/plans', '@/features/plans/**', '**/features/plans/**', '../../plans/**'],
+  message:
+    'features/games must never import features/plans. A plan is composed at the surface and ' +
+    'renders into the game screen as a child, so games never learns a plan exists — that is ' +
+    'the client half of ADR-0145 §4, kept checkable by ADR-0149 §1. The arrow runs the other ' +
+    'way: features/plans may import features/games.',
+};
+
 const asyncStoragePath = {
   // Tokens belong in the OS keychain, not in JS-readable storage.
   name: '@react-native-async-storage/async-storage',
@@ -125,6 +147,34 @@ const CORE_PATTERNS = [
   imagePickerImport,
   liveStreamImport,
   observabilityVendorImports,
+];
+
+/**
+ * The two layers that stay pure TypeScript, as constants rather than as an inline literal.
+ *
+ * Named because a second block now needs exactly this set plus one ban — `features/games`' own —
+ * and a re-listing there is how the exemptions above go quietly out of date, which is the failure
+ * `sharedPatternsExcept` was written against one section down.
+ */
+const PURE_PATTERNS = [
+  ...CORE_PATTERNS,
+  generatedImports,
+  {
+    group: ['expo', 'expo-*', 'react-native', 'react-native-*', '@tanstack/*'],
+    message:
+      'domain/ and use-cases/ must stay pure TypeScript — no React Native, Expo, or data-fetching library. That purity is what makes them testable without a renderer.',
+  },
+];
+
+const PURE_PATHS = [
+  asyncStoragePath,
+  { name: 'react', message: 'domain/ and use-cases/ must stay pure TypeScript.' },
+  { name: 'react-native', message: 'domain/ and use-cases/ must stay pure TypeScript.' },
+  {
+    name: 'zustand',
+    message:
+      'State lives in store/ or hooks/, not in a domain rule. domain/ is pure functions over plain data.',
+  },
 ];
 
 const restrict = (patterns, paths = [asyncStoragePath]) => ['error', { patterns, paths }];
@@ -255,32 +305,7 @@ export default [
   // --- domain/ and use-cases/ are pure: no React, no RN, no Expo, no wire -----
   {
     files: ['src/features/*/domain/**', 'src/features/*/use-cases/**'],
-    rules: {
-      'no-restricted-imports': restrict(
-        [
-          ...CORE_PATTERNS,
-          generatedImports,
-          {
-            group: ['expo', 'expo-*', 'react-native', 'react-native-*', '@tanstack/*'],
-            message:
-              'domain/ and use-cases/ must stay pure TypeScript — no React Native, Expo, or data-fetching library. That purity is what makes them testable without a renderer.',
-          },
-        ],
-        [
-          asyncStoragePath,
-          { name: 'react', message: 'domain/ and use-cases/ must stay pure TypeScript.' },
-          {
-            name: 'react-native',
-            message: 'domain/ and use-cases/ must stay pure TypeScript.',
-          },
-          {
-            name: 'zustand',
-            message:
-              'State lives in store/ or hooks/, not in a domain rule. domain/ is pure functions over plain data.',
-          },
-        ],
-      ),
-    },
+    rules: { 'no-restricted-imports': restrict(PURE_PATTERNS, PURE_PATHS) },
   },
 
   // --- shared/ is beneath every feature and may not reach back up -------------
@@ -358,6 +383,32 @@ export default [
     // value for the first time.
     files: ['app.config.ts'],
     rules: { 'no-restricted-syntax': 'off' },
+  },
+
+  // --- the one one-way edge between two features ------------------------------
+  //
+  // `features/plans` may import `features/games`; `features/games` may never import
+  // `features/plans` (ADR-0149 §1, keeping ADR-0145 §4's clause checkable on this side of the
+  // wire). It is **three blocks and not one**, because flat config replaces a rule rather than
+  // adding to it: a single `src/features/games/**` block would put the wire-type ban back over
+  // that feature's own api/ and mappers/, and would drop the purity ban from its domain/. Each
+  // block therefore restates the baseline block it shadows — by its constant, never by hand —
+  // with this one ban added.
+  {
+    files: ['src/features/games/**'],
+    rules: {
+      'no-restricted-imports': restrict([...CORE_PATTERNS, generatedImports, planImportFromGames]),
+    },
+  },
+  {
+    files: ['src/features/games/api/**', 'src/features/games/mappers/**'],
+    rules: { 'no-restricted-imports': restrict([...CORE_PATTERNS, planImportFromGames]) },
+  },
+  {
+    files: ['src/features/games/domain/**', 'src/features/games/use-cases/**'],
+    rules: {
+      'no-restricted-imports': restrict([...PURE_PATTERNS, planImportFromGames], PURE_PATHS),
+    },
   },
 
   // --- tests may describe the wire, because that is what makes drift fail ------

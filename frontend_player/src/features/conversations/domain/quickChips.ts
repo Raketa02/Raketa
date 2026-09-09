@@ -40,7 +40,7 @@
  * this build has no surface on which a slot can be filled.
  */
 
-import { platformDay } from './entry';
+import { platformDay } from '@/shared/date/platformZone';
 
 /**
  * The three slots a plan has.

@@ -47,7 +47,9 @@ radius and the per-sport declaration that Play's search screen is drawn from, wi
 `challenges` is the send and the answer: `POST /challenges`, `SH.propose`, the two re-reads a
 refusal is followed by, and **the screen a challenge is answered on** — below; `conversations` is
 the room the first acceptance opens — the Chats tab's second section, and **the screen behind it**:
-the header, the stream, the composer and the quick chips, below; and `games` is the result argument — the list on Now, the screen a
+the header, the stream, the composer and the quick chips, below; `plans` is the three slots that
+room fills in — the card pinned under its header, and the one place `where · day · hour` is an
+order, below; and `games` is the result argument — the list on Now, the screen a
 row pushes, and the entering, correcting, agreeing and disagreeing that close the loop, below.
 
 **The Chats tab is two sections, two contexts, two queries and two caches, and they are
@@ -151,6 +153,50 @@ it** — nothing on this platform can open a case, so the only producer is the `
 and the pre-emptive half is bought with one tap; `domain/liveState.ts` says so, and component tests
 are what drive the arm. 6.2 and 6.13 each gained a `disabled` state for it, under one condition:
 **only where a note above has already said why.**
+
+**The plan card is pinned under the room's header, and it is the three chips and nothing else**
+([#366](https://github.com/Raketa02/Raketa/issues/366),
+[ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)). **Pinned**,
+because a chat opens at its newest entry, so a card in the scroll is the first thing off-screen;
+**chips alone**, because the panel that explains them is the game screen's — one panel, one home.
+`domain/slots.ts` is the one place `where · day · hour` is an order, and the order is of decreasing
+negotiability. **There is no lock**: filling the third slot is the lock, the _Lock it in_ button
+existed to unlock ownership and booking and both are out of scope, and `locked by everybody` is a
+phrase the data cannot support, since no assent is recorded anywhere and a slot is set by whoever
+tapped last. **Two grids and neither is a rule this client invented** — the day row is today + 6
+clamped to `planned_at + PLAN_HORIZON`, so it **shrinks as the week runs out** and inside the entry
+grace draws **no chips at all** with the refusal sentence beneath them, and the hour row is the
+thirty-five half hours between 06:00 and 23:00; both numbers are the server's, which refuses
+`the_day_is_past_the_horizon` and `the_hour_is_not_offered`, and _the grid a client draws is a
+convention, and this refusal is what makes it true._ **A past combination is refused in written
+copy rather than by a disabled control**, because the day and the hour are filled in either order
+and either can be the second — so the sentence names **both** remedies, names no value, and is
+drawn under the row with both chips above it. **Nothing here is optimistic**: a slot change writes a
+line other people read, so the chip goes **busy with the value it already had** and the new one is
+drawn only once the server has answered — which is why 6.2 grew 6.1's `busy`, label swap included,
+since this system greys for _you may not_ and for _on its way_ alike and only a word tells them
+apart. **The line arrives through the stream like any other entry**, on the same nudge every other
+member's copy of it arrives on, so nothing in `plans` invalidates the room. **Any member may fill
+or change any slot, any number of times** — the line is the friction, there is no rate limit, and
+**a slot is never emptied**, so every editor opens on whatever is there and none of them offers a
+way to clear one. **The card is folded against `GET /games`' `read_at`** and never against the
+phone: `GET /plans` deliberately carries none, because a plan folds nothing against the clock, and
+_today_ and the horizon coming off one read is what makes `today + 6` and `planned_at + 7`
+comparable at all. **`features/plans` may import `features/games` and never the reverse**
+([ADR-0149](../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md) §1) —
+the client half of ADR-0145 §4's clause, and _a grep rather than a judgement_: `eslint.config.mjs`
+refuses the import in three blocks, one per baseline block it shadows, and `pnpm test:boundaries`
+drives all three plus the two exemptions they could silently have dropped. The room composes the
+card, which is the shape #364 anticipated as a slot the route would fill and this ticket did not
+take: the game id comes off the read the screen mounts and `held` off the fold below it, so a slot
+would have been a render prop over a route that had joined the room itself — three props and a
+second join to avoid one import through a public surface the room already makes to `features/games`
+for its _Details_ door. The same read answers the quick chips, which is the `undefined` #364 left
+them holding. **The platform zone left `conversations`** for `shared/date/platformZone.ts` on the
+third-caller rule, and unlike the tables promoted before it a second copy would be two answers to
+_which day is it in Warsaw_ on one screen; #335's _shorter value, not a second line_ moved to
+`shared/formatting/placeName.ts` beside them, because the `Where` chip is the third surface that
+rule governs.
 
 **The result argument is one screen and eight states, and the state is derived**
 ([#314](https://github.com/Raketa02/Raketa/issues/314),

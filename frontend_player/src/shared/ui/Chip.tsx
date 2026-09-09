@@ -24,6 +24,17 @@
  * 3.3 carries no role for. It arrives with the first screen that wants it, together with
  * the type role — theme and document in one commit (Part 15.3).
  *
+ * **`busy` is 6.1's shape on 6.2's pill, and it arrived with the plan card**
+ * ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-09-09,
+ * [#366](https://github.com/Raketa02/Raketa/issues/366)). A slot chip takes a mutation, *pending,
+ * never optimistic* is that map's rule for everything that reaches another person, and a chip that
+ * looked pressable while its write was going out would take a second press this app would send.
+ * It blocks the press, announces `busy` and dims — the same three things 6.1's button does — and
+ * **it swaps the label the way that button does too**, which is what keeps it distinguishable from
+ * the greyed-out `disabled` beside it: the two mean opposite things and 6.1's own answer to
+ * telling them apart is the word, not a second opacity. The word is the caller's, because a chip's
+ * label is a value rather than a verb and only the surface knows what it is about to become.
+ *
  * **The disabled chip arrived late and only where a chip is genuinely refused**
  * ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-09-09,
  * [#365](https://github.com/Raketa02/Raketa/issues/365)). It is not the tag picker's answer to a
@@ -58,10 +69,20 @@ export interface ChipProps {
    *
    * **Only where the act itself is refused**, and only under a note that has already said so:
    * greying a control is this system's word for *you may not*, and a screen that greys without
-   * explaining is the dead end 6.1 and #324 both refuse. It is never *busy* and never a ceiling
-   * on a selection — a count is refused in words.
+   * explaining is the dead end 6.1 and #324 both refuse. It is never *busy* — {@link busy} is —
+   * and never a ceiling on a selection, which is refused in words.
    */
   readonly disabled?: boolean;
+  /**
+   * A press is on its way. Blocks the press, announces `busy`, and swaps the label.
+   *
+   * **A busy chip is not a disabled one**, which is 6.1's sentence: they dim identically and are
+   * told apart by the word, so {@link busyLabel} is required in practice — a `busy` chip with no
+   * word is a greyed chip saying *you may not* about something that is merely under way.
+   */
+  readonly busy?: boolean;
+  /** What the chip reads while it is busy. Defaults to the label, which is rarely what is meant. */
+  readonly busyLabel?: string;
   /** Drawn ink-filled and announced as selected. Owned by the caller. */
   readonly selected?: boolean;
   /** Defaults to `label`. Set it when the word alone is cryptic out of context. */
@@ -76,19 +97,27 @@ export function Chip({
   dot,
   selected = false,
   disabled = false,
+  busy = false,
+  busyLabel,
   accessibilityLabel,
   accessibilityHint,
   style,
 }: ChipProps) {
+  const blocked = disabled || busy;
+  // The accessible name follows what is drawn, exactly as 6.1's does: a chip reading "Saving…"
+  // while it announces "Saturday" hands two different apps to two different players. A caller
+  // that names the chip itself owns both halves and is left alone.
+  const shown = busy ? (busyLabel ?? label) : label;
+
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityLabel={accessibilityLabel ?? shown}
       accessibilityHint={accessibilityHint}
       // Always present, never omitted when false: a chip that announced nothing while
       // unselected would leave "not chosen" indistinguishable from "not a choice".
-      accessibilityState={{ selected, disabled }}
-      disabled={disabled}
+      accessibilityState={{ selected, disabled: blocked, busy }}
+      disabled={blocked}
       onPress={onPress}
       // 27 + 9 + 9 = 45. The visual stays small and the target grows (6.5); the 3pt of
       // horizontal slop is what a 6pt gap between neighbours allows.
@@ -98,8 +127,8 @@ export function Chip({
       style={({ pressed }) => [
         s.chip,
         selected ? s.selected : undefined,
-        pressed ? s.pressed : undefined,
-        disabled ? s.disabled : undefined,
+        pressed && !blocked ? s.pressed : undefined,
+        blocked ? s.disabled : undefined,
         style,
       ]}
     >
@@ -110,7 +139,7 @@ export function Chip({
           importantForAccessibility="no"
         />
       )}
-      <Text style={[s.label, selected ? s.labelSelected : undefined]}>{label}</Text>
+      <Text style={[s.label, selected ? s.labelSelected : undefined]}>{shown}</Text>
     </Pressable>
   );
 }
@@ -141,7 +170,8 @@ const s = StyleSheet.create({
   // an identity rather than a state, so it does not invert with the pill under it.
   dot: { width: theme.size.sportDot, height: theme.size.sportDot },
   pressed: { opacity: 0.7 },
-  // 6.1's disabled row, not a second value: this app has one word for *you may not*.
+  // 6.1's blocked row, not a second value: this app has one dim for *you may not* and for *on its
+  // way*, and the label is what tells them apart.
   disabled: { opacity: 0.4 },
   label: { ...theme.type.chip, color: theme.color.ink },
   // `surface` is the app's one white; there is no separate `white` token, deliberately.

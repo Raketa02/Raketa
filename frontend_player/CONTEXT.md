@@ -598,11 +598,12 @@ not restated here; what follows is only what this client had to invent to draw t
 
 ### The room
 
-Eight client-only concepts, all of them in `features/conversations/` and
-`shared/lib/platform/`. The domain terms — Conversation, Message, System line, Member — are the
-**root glossary's** and are not restated here; what follows is only what this client had to
-invent to draw the room ([#364](https://github.com/Raketa02/Raketa/issues/364)) and to keep it
-current ([#365](https://github.com/Raketa02/Raketa/issues/365)).
+Eight client-only concepts, in `features/conversations/`, `shared/lib/platform/` and — for the
+one of them two features now read — `shared/date/`. The domain terms — Conversation, Message,
+System line, Member — are the **root glossary's** and are not restated here; what follows is only
+what this client had to invent to draw the room
+([#364](https://github.com/Raketa02/Raketa/issues/364)) and to keep it current
+([#365](https://github.com/Raketa02/Raketa/issues/365)).
 
 - **Stream entry** — what one row of the room draws: a recorded **Entry** the server has
   answered for, or a **Sending message**, which is a message this phone has posted and the server
@@ -616,8 +617,11 @@ current ([#365](https://github.com/Raketa02/Raketa/issues/365)).
   zone this platform arranges in. It is what the **day separator** is computed from, and the
   reason is one sentence: a device zone would put two people in one room on two different days.
   The same zone the plan's day and hour are recorded in, which is what lets a separator and a
-  `DAY_RECORDED` line agree about which day Saturday is. _Avoid_: the device's zone anywhere, and
-  a per-message clock — there is none, on purpose.
+  `DAY_RECORDED` line agree about which day Saturday is — and it is why the conversion is
+  `shared/date/platformZone.ts`' rather than a feature's: the plan's day row is its third caller,
+  and two implementations would put two surfaces of one screen on two different days. _Avoid_: the
+  device's zone anywhere, a per-message clock — there is none, on purpose — and `Intl` with a
+  `timeZone`, which can silently fall back to exactly the device day this exists to refuse.
 - **The day separator** — the only time-shaped thing the stream draws, between entries on
   different platform days. A room lives at most a few days, so the fact worth having is _was this
   today_. _Avoid_: "timestamp".
@@ -656,6 +660,39 @@ current ([#365](https://github.com/Raketa02/Raketa/issues/365)).
   client only as the `account_held` refusal — no read serves it — and **nothing in this build can
   open a case**, which is a named exception recorded in `domain/liveState.ts`. _Avoid_: "suspended"
   or "banned", a note per control, and hiding the room.
+
+### The plan
+
+Five client-only concepts, all of them in `features/plans/`. The domain terms — Plan, Slot, the
+three recordings — are [ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)'s
+and are owed to the root glossary by [#332](https://github.com/Raketa02/Raketa/issues/332); what
+follows is only what this client had to invent to let a room fill one in
+([#366](https://github.com/Raketa02/Raketa/issues/366)).
+
+- **The slot order** — `where · day · hour`, spelled once in `domain/slots.ts` and read by the
+  card, by the quick chips one feature over and by the game screen's checklist. It is the order
+  people discuss them in and of **decreasing negotiability**, and it is what _in slot order_ means
+  everywhere that phrase appears. _Avoid_: a second spelling of it, and _part of day_ — that was
+  the source's second slot and it is not one.
+- **The day row** — the days a plan may still name: **today + 6, clamped to
+  `planned_at + PLAN_HORIZON`**, so it shrinks as the week runs out and is **empty** inside the
+  entry grace. Both instants come off `GET /games`' `read_at`, which is what makes the two
+  comparable. _Avoid_: a calendar, a date picker, and "expired" — the row shrinking is not a
+  deadline passing.
+- **The hour row** — the thirty-five half hours between 06:00 and 23:00. _Bounded chips the
+  platform offered, never a free instant_: the grid is a convention and
+  `the_hour_is_not_offered` is what makes it true. _Avoid_: a wheel, a free-text time, and
+  narrowing the row once an hour is set — a plan is never unmade.
+- **The slot chip** — a pressable pill reading **its value or its name**, and the only surface in
+  the app that edits a plan. `Chip` here because the plan is edited; `Tag` on the game screen
+  because it is read. It goes **busy with the value it already had** while its write is going out.
+  _Avoid_: "lock", a locked border, a `locked by everybody` pill and a complete state — filling the
+  third slot **is** the lock and there is nothing left to draw about one.
+- **The past combination** — a day and an hour that together name a moment that has gone. It is
+  refused **in written copy rather than by a disabled control**, because the two are filled in
+  either order and either can be the second, so the sentence names **both** remedies and no value.
+  _Avoid_: pre-empting it on the client — the platform has one opinion about _now_ and it is the
+  server's.
 
 ### Data and errors
 

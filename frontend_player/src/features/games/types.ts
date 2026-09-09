@@ -48,3 +48,23 @@ export { parseGameRouteParams, type GameRouteParams } from './schemas/routeParam
  * site — is the same coupling with nothing holding the two spellings equal.
  */
 export { gameKeys } from './hooks/gameKeys';
+
+/**
+ * **One game, out of the list this feature reads** — for the one feature allowed to ask.
+ *
+ * `features/plans` composes a plan beside a game and needs both halves to draw anything: the
+ * horizon a day row is clamped to is `planned_at + PLAN_HORIZON`, and the instant *today* is read
+ * against is the list's own `read_at`, so the two have to come off one fold
+ * ([ADR-0149](../../../../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
+ * §1). **The arrow runs one way**: `plans` may import this feature and this feature never learns a
+ * plan exists, which is the client half of ADR-0145 §4's clause and a grep rather than a
+ * judgement — `eslint.config.mjs` refuses the import in the other direction.
+ *
+ * There is no `GET /games/{id}`, so this is a lookup inside one list rather than a read of its
+ * own: `undefined` covers the list not having landed, the read having failed, and no game of
+ * yours having that id.
+ */
+export { useGame } from './hooks/useGames';
+
+/** What a game is, for the feature that draws a plan beside one. */
+export type { Game } from './domain/game';
