@@ -10,7 +10,8 @@
  * this table when the tab was built ([#360](https://github.com/Raketa02/Raketa/issues/360)), and
  * the tab's real sentences took its place here: an empty state that may not assert nothing is
  * happening is the same rule the placeholder was held to, on a screen where a send genuinely
- * lands one tap later.
+ * lands one tap later. `CONVERSATIONS`' own line joined them with the section that draws it
+ * ([#363](https://github.com/Raketa02/Raketa/issues/363)), under the identical two refusals.
  */
 
 import { TAB_BAR_TABS, type TabBarKey } from '@/shared/ui';
@@ -23,6 +24,7 @@ const LINES = [
   CHATS_COPY.panel.title,
   CHATS_COPY.panel.body,
   CHATS_COPY.emptyChallenges,
+  CHATS_COPY.emptyConversations,
 ];
 
 describe('what the placeholders say', () => {
@@ -55,6 +57,19 @@ describe('what the placeholders say', () => {
     expect(PLACEHOLDER_COPY.now.line).toBe('What is happening today and next — not built yet');
     expect(PLACEHOLDER_COPY.around.line).toBe('Players and courts near you — not built yet');
     expect(PLACEHOLDER_COPY.you.line).toBe('Your profile, your radius, your week — not built yet');
+  });
+});
+
+describe("what each of the tab's two empty lines points at", () => {
+  /**
+   * They are one screen apart and are filled by two different acts, so neither may be the other's
+   * sentence: a challenge lands in the first when it is sent or received, and a room opens in the
+   * second only when somebody **accepts**.
+   */
+  it('names the act that fills its own section, in the present tense', () => {
+    expect(CHATS_COPY.emptyChallenges).toMatch(/challenges/i);
+    expect(CHATS_COPY.emptyConversations).toMatch(/accepts/i);
+    expect(CHATS_COPY.emptyConversations).not.toBe(CHATS_COPY.emptyChallenges);
   });
 });
 

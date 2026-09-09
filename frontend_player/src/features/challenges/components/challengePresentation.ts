@@ -66,7 +66,7 @@ import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 
 import { standingFactsFor, type Challenge } from '../domain/challenge';
-import { HANDLE_SEPARATOR, yourAnswerBy } from '../domain/challengeInbox';
+import { yourAnswerBy } from '../domain/challengeInbox';
 import type { StandingFacts } from '../domain/standing';
 
 export function standingLine(facts: StandingFacts): string {
@@ -314,7 +314,7 @@ export const A_PAIR_HERE_IS_ALREADY_PLAYING =
   'Two people on this court already have a game between them.';
 
 // ---------------------------------------------------------------------------
-// The Chats inbox: the section's name, the handles a row names, and its one line
+// The Chats inbox: the section's name, and the row's one line
 // ---------------------------------------------------------------------------
 
 /**
@@ -341,24 +341,6 @@ export const CHALLENGES_HEADING = 'Challenges';
  * behind it start disagreeing about what happened.
  */
 export const CHALLENGE_SCREEN_TITLE = 'Challenge';
-
-/**
- * The handles this row names, as one line — **whole names, and a count of the ones dropped.**
- *
- * How many fit is `namesThatFit`'s, because it is a rule; what the line looks like is here. The
- * counter says how many people are on that court and not on this line, and it is a bare `+2`
- * rather than a sentence: it sits inside a name list at `cardTitle`, where a clause would read
- * as somebody's handle.
- *
- * **Whoever is dropped is whole on the screen behind the row**, and whole in the row's spoken
- * name — §15's rule is against *inventing* a familiar form, and this invents nothing.
- */
-export function handleLine(names: readonly string[], shown: number): string {
-  const drawn = names.slice(0, shown);
-  const hidden = names.length - drawn.length;
-
-  return hidden === 0 ? drawn.join(HANDLE_SEPARATOR) : `${drawn.join(HANDLE_SEPARATOR)} +${hidden}`;
-}
 
 /**
  * **The row's one line, and it has two sources** — chosen by *is this mine to clear*.

@@ -1,60 +1,22 @@
 /**
- * `WIDEST_HANDLE_EM`, derived rather than chosen — and the budget it feeds.
+ * The budget the challenge row spends, and the cluster it spends it around.
  *
- * The handle line gives way by **dropping whole names**, which needs an answer to *how many
- * characters fit* on a screen no module can measure. Pick that by eye and it is a guess that
- * fails on one handle, on one phone, as an ellipsis inside somebody's nickname that nobody who
- * built the row will ever see. So it is **measured**: this file reads the advance widths out of
- * the Archivo Bold that ships in the bundle and checks that no character a handle can be
- * written in is wider than the share the row budgets for.
+ * The **character** the budget is measured in is `shared/formatting/handleList.ts`'s and is
+ * derived against the real face there; what is checked here is that this row's own furniture —
+ * the gutters, the card's padding, the faces and the urgency stripe — leaves a column a real
+ * handle line fits in on the narrowest phone.
  *
- * **What makes it go red:** an Archivo release that redraws the letters, a different type role
- * on the handle line, or a repertoire that grows a wider character. Every one of those is a real
- * change to the answer, and none of them announces itself at 13pt.
- *
- * Font metrics come from `test-support/fontMetrics.ts`, which is where the tab bar's `cmap`
- * walk moved when a second surface needed the same measurement.
+ * Font metrics come from `test-support/fontMetrics.ts`, which is where the tab bar's `cmap` walk
+ * moved when a second surface needed the same measurement.
  */
 
 import { theme } from '@/shared/ui';
 import { NARROWEST_SCREEN, readFace, widthOf } from '@/test-support/fontMetrics';
 
-import {
-  FACE_OVERLAP,
-  ROW_FACE,
-  WIDEST_HANDLE_EM,
-  faceClusterWidth,
-  handleBudget,
-} from './challengeRowGeometry';
+import { FACE_OVERLAP, ROW_FACE, faceClusterWidth, handleBudget } from './challengeRowGeometry';
 
 /** The face the handle line is drawn in, built from the role's own family rather than named. */
 const archivoBold = readFace(`@expo-google-fonts/archivo/${theme.type.cardTitle.fontFamily}.ttf`);
-
-/**
- * Everything a nickname can be written in: printable ASCII, and the nine Polish letters this
- * platform's own players write their handles with.
- */
-const REPERTOIRE = [
-  ...Array.from({ length: 0x7f - 0x20 }, (_, at) => String.fromCodePoint(0x20 + at)),
-  ...'ĄĆĘŁŃÓŚŹŻąćęłńóśźż',
-];
-
-describe('the widest character a handle may contain', () => {
-  it('is drawn by the face the line is actually set in', () => {
-    for (const character of REPERTOIRE) {
-      expect(archivoBold.draws(character.codePointAt(0) ?? 0)).toBe(true);
-    }
-  });
-
-  it('is inside the share the budget spends per character', () => {
-    const size = theme.type.cardTitle.fontSize;
-    const widest = Math.max(...REPERTOIRE.map((c) => widthOf(archivoBold, c, size)));
-
-    expect(widest / size).toBeLessThanOrEqual(WIDEST_HANDLE_EM);
-    // And not wildly under it, or the budget is throwing away room it could have spent.
-    expect(widest / size).toBeGreaterThan(WIDEST_HANDLE_EM - 0.05);
-  });
-});
 
 describe('the budget the row spends', () => {
   it('holds a real handle line at the narrowest phone', () => {
@@ -76,6 +38,25 @@ describe('the budget the row spends', () => {
 
   it('shrinks as the cluster grows, because the faces are drawn beside the words', () => {
     expect(handleBudget(NARROWEST_SCREEN, 3)).toBeLessThan(handleBudget(NARROWEST_SCREEN, 1));
+  });
+
+  /**
+   * The stripe is charged for on every row in the section, including the ones that draw none —
+   * so the list holds all its handles to one rule rather than measuring itself per row.
+   */
+  it('reserves the stripe whether or not this row draws one', () => {
+    const withoutTheStripe =
+      NARROWEST_SCREEN -
+      2 * theme.size.gutter -
+      2 * theme.space.md -
+      faceClusterWidth(1) -
+      theme.space.md;
+    const spent = withoutTheStripe - theme.space.md - theme.size.semanticBar;
+
+    expect(handleBudget(NARROWEST_SCREEN, 1)).toBeLessThan(
+      Math.floor(withoutTheStripe / theme.type.cardTitle.fontSize),
+    );
+    expect(spent).toBeLessThan(withoutTheStripe);
   });
 });
 

@@ -19,12 +19,18 @@
  * is §20.4's *"the visible label truncates, the spoken one never does"* one surface over — and
  * here it is stronger, because what the eye loses is whole names rather than characters.
  *
+ * **They are joined with a final *and***, which is §22.6's join for a list in a sentence and what
+ * §24.2 spells the conversation row beside this one with. A one-handle row is unchanged by it —
+ * `Ewa M., squash, 21 h left to answer` is exactly what §24.2 gives for this row — and a listener
+ * moving between the tab's two sections hears one dialect
+ * ([#363](https://github.com/Raketa02/Raketa/issues/363)).
+ *
  * **The identifying facts lead.** Who and what sport, then what the row is asking of you: a
  * listener who has heard enough interrupts and acts, and *what* they would be acting on has to
  * come first.
  */
 
-import { HANDLE_SEPARATOR } from '../domain/challengeInbox';
+import { spokenHandles } from '@/shared/formatting/handleList';
 
 /** A row under `CHALLENGES`: who, which sport, and the row's own line. */
 export function challengeRowLabel(
@@ -32,5 +38,5 @@ export function challengeRowLabel(
   sportName: string,
   line: string,
 ): string {
-  return `${handles.join(HANDLE_SEPARATOR)}, ${sportName}, ${line}`;
+  return `${spokenHandles(handles)}, ${sportName}, ${line}`;
 }

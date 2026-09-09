@@ -1,31 +1,45 @@
 /**
  * The challenge row's own numbers, and the one piece of arithmetic they exist for.
  *
- * It is here rather than in `theme.ts` on `CANDIDATE_PANEL`'s precedent: the design system
- * holds drawn objects and control vocabulary, and a challenge row is a composition that names a
- * domain noun ([`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md)
+ * It is here rather than in `theme.ts` on `CANDIDATE_PANEL`'s precedent: the design system holds
+ * drawn objects and control vocabulary, and a challenge row is a composition that names a domain
+ * noun ([`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md)
  * §0). What the system does own is what the row *borrows* — 5.4's semantic bar, `CandidatePhoto`'s
  * 33 % corner, and the type roles.
  *
- * ## The handle line's budget, and why it is measured in characters
+ * ## The conversation row holds the same three numbers, and they are spelled twice
  *
- * §15 refuses to shorten a nickname, so a list of them gives way by dropping whole names — and
- * *which* names fit is a question about width, on a screen this module cannot measure. React
- * Native will happily tail-truncate a `Text`, and where it lands is inside a handle.
+ * `conversations/components/conversationRowGeometry.ts` is the second copy of the face, the
+ * overlap and the cluster, and this is the note that records it
+ * ([#363](https://github.com/Raketa02/Raketa/issues/363)). **A third row is the signal to move
+ * them**, which is `recoveryMessage.ts`'s own stated rule and the one
+ * [`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §5 follows
+ * when it names exactly one promotion for this whole map.
  *
- * So the budget is computed from the screen's own width and spent in **characters at the widest
- * character a handle may contain**, which in Archivo Bold is `@` at a shade over one em. That is
- * deliberately conservative: dropping a name that would have fitted keeps §15's rule and puts
- * the dropped name whole on the screen behind the row, where letting the ellipsis land inside a
- * handle breaks it outright.
+ * **The three homes that were tried and are wrong are worth naming.** `theme.ts` is refused above.
+ * The **shell**, which owns the tab and both its empty lines, cannot hold them: `shell/types.ts`
+ * re-exports `TabShell`, which mounts `challenges`, so a row reading a number out of it at module
+ * scope is a cycle that resolves to `undefined` at `StyleSheet.create` time — found by running the
+ * suite, not by reading. And `shared/ui/` would say the design system owns a row's face, which
+ * [#338](https://github.com/Raketa02/Raketa/issues/338) §5 refused in as many words when it
+ * refused the avatar. What **did** move is the part that is genuinely about handles rather than
+ * about this row: §15's list rule and the measured character budget are
+ * `shared/formatting/handleList.ts`'s, beside `playerName()`.
+ *
+ * ## The handle line's budget
+ *
+ * §15 refuses to shorten a nickname, so a list of them gives way by dropping whole names — the
+ * rule is `handleList.ts`'s, and what this module owes it is **how much room the words actually
+ * have**. Everything to the left and right of that column is reserved at its **widest**: the
+ * cluster at the number of faces the row will draw, the two gaps, and the urgency stripe — which
+ * is reserved **even on the rows that do not draw one**, so that every row in the section holds
+ * its handles to the same rule and the list does not measure itself differently per row.
  *
  * **It is a function of the device rather than a constant**, because a constant would have to be
  * the narrowest phone's and would then spend a 430pt screen's extra 110 points on nothing.
- * `challengeRowGeometry.test.ts` derives `WIDEST_HANDLE_EM` from the real face in the bundle, so
- * an Archivo release that redraws the letters goes red rather than truncating on somebody's
- * phone — the arrangement `tabBarLabelCap.test.ts` and `onCourtMarkFit.test.ts` already use.
  */
 
+import { charactersThatFit } from '@/shared/formatting/handleList';
 import { theme } from '@/shared/ui';
 
 /**
@@ -49,27 +63,12 @@ export const ROW_FACE = 38;
  */
 export const FACE_OVERLAP = 0.38;
 
-/**
- * The widest character a handle may contain, as a share of the type role's size.
- *
- * Archivo Bold's `@` is 1,0010 em and is the widest glyph in the repertoire a nickname can be
- * written in; this rounds up. Derived rather than chosen — see the module note and the test.
- */
-export const WIDEST_HANDLE_EM = 1.01;
-
 /** How wide the cluster of faces is, for however many the row draws. */
 export function faceClusterWidth(faces: number): number {
   return faces <= 0 ? 0 : ROW_FACE * (1 + (faces - 1) * (1 - FACE_OVERLAP));
 }
 
-/**
- * How many characters of handle the row's text column can hold, on this screen.
- *
- * Everything to the left and right of that column is reserved at its **widest**: the cluster at
- * the number of faces the row will draw, the two gaps, and the urgency stripe — which is
- * reserved even on the rows that do not draw one, so that every row in the section holds its
- * handles to the same rule and the list does not measure itself differently per row.
- */
+/** How many characters of handle the row's text column can hold, on this screen. */
 export function handleBudget(screenWidth: number, faces: number): number {
   const column =
     screenWidth -
@@ -80,5 +79,5 @@ export function handleBudget(screenWidth: number, faces: number): number {
     theme.space.md -
     theme.size.semanticBar;
 
-  return Math.max(Math.floor(column / (theme.type.cardTitle.fontSize * WIDEST_HANDLE_EM)), 1);
+  return charactersThatFit(column);
 }

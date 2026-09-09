@@ -45,8 +45,37 @@ answers either way, and the **profile commit**: every answer in one idempotent
 radius and the per-sport declaration that Play's search screen is drawn from, with an unkeyed
 `PUT` behind each of the three). `play` has its four screens and the sheet over them, below;
 `challenges` is the send and the answer: `POST /challenges`, `SH.propose`, the two re-reads a
-refusal is followed by, and **the screen a challenge is answered on** — below; and `games` is the result argument — the list on Now, the screen a
+refusal is followed by, and **the screen a challenge is answered on** — below; `conversations` is
+the room the first acceptance opens, read as the Chats tab's second section — below; and `games` is the result argument — the list on Now, the screen a
 row pushes, and the entering, correcting, agreeing and disagreeing that close the loop, below.
+
+**The Chats tab is two sections, two contexts, two queries and two caches, and they are
+deliberately not merged** ([#363](https://github.com/Raketa02/Raketa/issues/363)). `CHALLENGES` is
+the **obligation** and `CONVERSATIONS` is the **rooms**, so a `LINE_UP_INCOMPLETE` challenge you
+accepted draws a row in **both** — §13's own sentence asserts both facts in one breath, and drawing
+it only under `CHALLENGES` would make it the waiting room #221 says it is not. That falls out of
+the composition rather than being arranged anywhere: neither section knows the other exists.
+**There is no pill and no standing on a conversation row** — ADR-0148 §6's _the last line is what a
+pill would have said_ is a product argument as well as a wire one, and the only pill this client
+could now draw would be joined off the games cache, which is the cross-feature read
+[ADR-0009](../docs/adr/0009-feature-first-clean-architecture-frontends.md) refuses. **The last
+entry renders through the module the stream will use**, keyed by the seven system-line codes
+(`the-words.md` §23) with `{name}` filled from the members the row already holds and never from
+`values`, so a corrected handle fixes the whole backlog. **What the row does differently is a prop
+rather than a fork**: `LineRoom` says how much room the surface has, and it is what turns #335's
+_the fix is a shorter value, not a second line_ into something a copy deck can act on — a place
+line drops its court on one line and prints it in the stream. **The row asks for it twice**, and
+that is §20.4 — _the visible label truncates, the spoken one never does_ — so the eye gets the
+short place and every listener gets the whole value, beside every handle whole and joined with
+§22.6's final _and_, which the challenge row above now speaks too. A line whose **code** this build
+cannot read and one whose **values** it cannot read draw the same named gap, because a system line
+**is** the whole of the slot a row draws it in. A **room whose membership is still growing draws
+the members it has**, never the court it will become; **only live rooms are listed, because there
+are only live rooms** — a conversation is destroyed rather than delisted (ADR-0153), which is the
+opposite of the challenge list above it and the reason nothing here has a shelf life. §15's list
+rule — _drop whole names, never shorten one_ — moved to `shared/formatting/handleList.ts` beside
+`playerName()` when the second row kind arrived; **the face and the cluster did not**, and
+`challengeRowGeometry.ts` records the three homes that were tried and are wrong.
 
 **The result argument is one screen and eight states, and the state is derived**
 ([#314](https://github.com/Raketa02/Raketa/issues/314),

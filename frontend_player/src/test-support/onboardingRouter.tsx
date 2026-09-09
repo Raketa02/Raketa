@@ -21,6 +21,7 @@ import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import AroundRoute from '@/app/(app)/(tabs)/around';
 import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]';
 import ChatsRoute from '@/app/(app)/(tabs)/chats';
+import ConversationRoute from '@/app/(app)/(tabs)/chats/conversation/[conversationId]';
 import GameRoute from '@/app/(app)/(tabs)/games/[gameId]';
 import NowRoute from '@/app/(app)/(tabs)/index';
 import BuilderRoute from '@/app/(app)/(tabs)/play/builder';
@@ -87,6 +88,9 @@ export const ONBOARDING_ROUTES = {
   // A challenge is pushed over the Chats tab, and the static `challenge` above the id is the
   // decision that keeps a challenge id and a conversation id from sharing one segment.
   '(app)/(tabs)/chats/challenge/[challengeId]': ChallengeRoute,
+  // And a conversation beside it, under its own static segment for the same reason: two ids of
+  // two different things cannot share one `/chats/[id]`.
+  '(app)/(tabs)/chats/conversation/[conversationId]': ConversationRoute,
   '(app)/(tabs)/you': YouRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,
@@ -366,6 +370,35 @@ export function stubChallenges(
   );
 }
 
+/** The path `GET /conversations` answers on, for a suite that wants to say what rooms exist. */
+export const CONVERSATIONS_PATH = '/api/v1/conversations';
+
+/**
+ * Your rooms, as `GET /conversations` answers — **every one you are a member of, newest first.**
+ *
+ * Stubbed on every launch beside the challenge list, though for a weaker reason than that one's:
+ * the shell does not read this, the **Chats screen** does, and a suite that walks to the tab for
+ * any reason at all would otherwise fail at the socket with a name that points at `fetch` rather
+ * than at the section ([#363](https://github.com/Raketa02/Raketa/issues/363)).
+ *
+ * `read_at` is on the envelope and is deliberately not mapped — no row here draws a clock — so it
+ * is a constant rather than a parameter.
+ *
+ * Defaulted to nothing, exactly as the other two lists are: an empty list draws a section with one
+ * line in it, which is what a player who has agreed to play nothing yet should see.
+ */
+export function stubConversations(
+  transport: Transport,
+  conversations: readonly Wire['ConversationRowSchema'][] = [],
+) {
+  transport.on('GET', CONVERSATIONS_PATH, () =>
+    json<Wire['ConversationListResponse']>({
+      read_at: '2026-09-05T09:00:00Z',
+      conversations: [...conversations],
+    }),
+  );
+}
+
 export interface GateStub {
   readonly ratings?: readonly Wire['RatingResponse'][];
   /**
@@ -412,11 +445,13 @@ export const GATE_USER: Wire['UserResponse'] = {
  * The unfinished-run read is **one** request covering every sport. An empty list is the
  * answer for a player with nothing outstanding — a 200, not a 204 and not a failure.
  *
- * **`stubGames` is in here and it is not a gate read.** The gate's fourth destination is the
- * shell's root, the shell's root is the Now tab, and the Now tab draws a games list
- * ([#314](https://github.com/Raketa02/Raketa/issues/314)) — so every suite that lands in the app
- * makes that request whether or not it is about one. Defaulted to nothing, which draws no
- * section at all; a suite with games calls `stubGames` after this to replace it.
+ * **`stubGames` and `stubConversations` are in here and neither is a gate read.** The gate's
+ * fourth destination is the shell's root, the shell's root is the Now tab, and the Now tab draws
+ * a games list ([#314](https://github.com/Raketa02/Raketa/issues/314)) — so every suite that lands
+ * in the app makes that request whether or not it is about one. The rooms are one step further
+ * out: only the Chats screen reads them, but a suite that walks to that tab for any reason would
+ * otherwise fail at the socket. Both are defaulted to nothing, and a suite with either calls the
+ * stub again afterwards to replace it.
  */
 export function stubGate(
   transport: Transport,
@@ -433,6 +468,7 @@ export function stubGate(
   stubRunsInProgress(transport, runs);
   stubGames(transport);
   stubChallenges(transport);
+  stubConversations(transport);
 }
 
 /** Replace the gate's unfinished-run answer — what the server says *now*. */

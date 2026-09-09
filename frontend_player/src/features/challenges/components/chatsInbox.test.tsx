@@ -274,9 +274,11 @@ describe('the row', () => {
 
     await openChats([four]);
 
-    // Every handle is whole for the ear; the eye loses whole names and never characters.
+    // Every handle is whole for the ear; the eye loses whole names and never characters. The
+    // spoken list joins with a final *and*, which is §22.6's join and what §24.2 spells the
+    // conversation row beside this one with ([#363](https://github.com/Raketa02/Raketa/issues/363)).
     const row = await screen.findByLabelText(
-      /^ewa\.magdalena\.wisniewska, tomek\.przybylski, ola\.kowalczyk, Padel/,
+      /^ewa\.magdalena\.wisniewska, tomek\.przybylski and ola\.kowalczyk, Padel/,
     );
 
     expect(row).toBeTruthy();

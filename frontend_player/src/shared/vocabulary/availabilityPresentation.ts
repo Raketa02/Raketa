@@ -6,6 +6,10 @@
  * under are decoration to assistive technology
  * ([6.8](../../../docs/design-system.md#68-the-availability-grid)).
  *
+ * **The full day is drawn outside the grid too.** A conversation's plan lines name a weekday in
+ * a sentence, so `dayName` is exported beside the grid's own two — the same table, not a fourth
+ * list of names ([#363](https://github.com/Raketa02/Raketa/issues/363)).
+ *
  * It was `player_profile/components/availabilityPresentation.ts` while the grid was the only
  * thing that named a day. Play is the **third** caller — an availability-overlap reason line
  * names the next shared cell, *next Tue evening* — so the tables are promoted rather than
@@ -52,6 +56,19 @@ const DAY_PART_HEAD: Readonly<Record<DayPart, string>> = {
 
 export function dayLabel(day: Weekday): string {
   return DAY_SHORT[day];
+}
+
+/**
+ * The day **whole** — *Saturday*.
+ *
+ * Drawn where a day is a fact in a sentence rather than a column in a grid: a conversation's
+ * *{name} set the day · {value}* names one, and the plan card's filled day slot is the same word
+ * ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §22.2, §23). It reads the
+ * table {@link cellLabel} already spells rather than a third list of names, which is this file's
+ * whole reason for existing.
+ */
+export function dayName(day: Weekday): string {
+  return DAY_NAME[day];
 }
 
 export function dayPartHead(part: DayPart): string {

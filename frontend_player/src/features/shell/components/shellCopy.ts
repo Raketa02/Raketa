@@ -75,8 +75,10 @@ export const PLACEHOLDER_COPY = {
  * inherited for the same reason — a send lands here now, so *nothing here yet* can be false one
  * tap after it is drawn. It is one present-tense line naming the act, which is 10.1's
  * empty-state rule, and `shellCopy.test.ts` holds it to that exactly as it holds the three
- * placeholders. `CONVERSATIONS` gains its own line beside this one with the section that draws
- * it ([#363](https://github.com/Raketa02/Raketa/issues/363)).
+ * placeholders. **Both sections have their line now**
+ * ([#363](https://github.com/Raketa02/Raketa/issues/363)), and each points at the act that fills
+ * its own list: one at sending or being sent a challenge, the other at the acceptance that opens
+ * a room.
  */
 export const CHATS_COPY = {
   title: 'Chats',
@@ -88,4 +90,10 @@ export const CHATS_COPY = {
   },
   /** `CHALLENGES` holds nothing. The line names the act, in the present tense, on both sides. */
   emptyChallenges: 'Challenges you send and challenges sent to you land here.',
+  /**
+   * `CONVERSATIONS` holds nothing — and the act it names is somebody **accepting**, which is the
+   * one thing that opens a room. Not *no chats yet*: a player with an outstanding challenge is one
+   * answer away from a room, and the sentence has to be true of them too.
+   */
+  emptyConversations: 'The moment somebody accepts, the two of you can talk here.',
 } as const;

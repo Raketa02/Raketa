@@ -32,6 +32,15 @@
  * drawn at two corners — the drift having **one owner** exists to prevent. #361's card block is
  * the third caller that would make the promotion worth its cost.
  *
+ * ## The words are `shared/`'s and the numbers are not
+ *
+ * §15's list rule — *drop whole names, never shorten one* — went to
+ * `shared/formatting/handleList.ts` beside `playerName()` when the conversation row became the
+ * **second** kind of Chats row ([#363](https://github.com/Raketa02/Raketa/issues/363)): naming
+ * a person already lives there, and naming several of them is the plural of it. The **numbers**
+ * did not follow, and `challengeRowGeometry.ts` carries the three homes that were tried and are
+ * wrong.
+ *
  * ## The stripe is presence, never magnitude
  *
  * `amber`, full height, and drawn on exactly the rows whose line is a duration — so there is
@@ -52,14 +61,15 @@ import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
 import { CandidatePhoto } from '@/features/play/types';
+import { handleLine } from '@/shared/formatting/handleList';
 import { playerName } from '@/shared/formatting/playerName';
 import { PressableCard, theme } from '@/shared/ui';
 
 import { seatName, type Challenge } from '../domain/challenge';
-import { namesThatFit, othersOn } from '../domain/challengeInbox';
+import { othersOn } from '../domain/challengeInbox';
 
 import { challengeRowLabel } from './challengeAccessibility';
-import { challengeRowLine, handleLine, rowHasAClockOfYours } from './challengePresentation';
+import { challengeRowLine, rowHasAClockOfYours } from './challengePresentation';
 import { FACE_OVERLAP, ROW_FACE, handleBudget } from './challengeRowGeometry';
 
 /**
@@ -80,7 +90,6 @@ export function ChallengeRow({ challenge, playerId }: ChallengeRowProps) {
 
   const others = othersOn(challenge, playerId);
   const handles = others.map((seat) => playerName(seatName(seat)));
-  const shown = namesThatFit(handles, handleBudget(width, others.length));
 
   const sport = sportLabel(challenge.sport);
   const line = challengeRowLine(challenge, playerId);
@@ -103,7 +112,7 @@ export function ChallengeRow({ challenge, playerId }: ChallengeRowProps) {
 
       <View style={s.body}>
         <Text style={s.handles} numberOfLines={1}>
-          {handleLine(handles, shown)}
+          {handleLine(handles, handleBudget(width, others.length))}
         </Text>
         <Text style={s.line} numberOfLines={1}>
           {sport} · {line}
