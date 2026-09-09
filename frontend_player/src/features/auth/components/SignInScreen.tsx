@@ -16,17 +16,10 @@
 
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { Button, TextField, theme } from '@/shared/ui';
 
 import { useSignIn } from '../hooks/useAuthActions';
@@ -60,7 +53,7 @@ export function SignInScreen() {
         style={s.flex}
         // The keyboard covers the submit button on iOS otherwise; Android's
         // windowSoftInputMode already handles it and would double-inset.
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={KEYBOARD_AVOIDANCE}
       >
         <ScrollView
           contentContainerStyle={s.content}

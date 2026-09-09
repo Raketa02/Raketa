@@ -33,7 +33,9 @@
  * union is for.
  */
 
-import type { Entry } from './entry';
+import type { Weekday } from '@/shared/vocabulary/week';
+
+import { separatorBefore, type Entry } from './entry';
 
 /** One message this phone has sent and the server has not yet answered for. */
 export interface SendingMessage {
@@ -87,4 +89,38 @@ export function newClientMessageId(): string {
     // above, and the variant, which is one of 8, 9, a, b.
     return (placeholder === 'x' ? digit : (digit % 4) + 8).toString(16);
   });
+}
+
+/**
+ * **Is there anything to send** — whitespace-only is empty, which is the server's own trim read
+ * one step early.
+ *
+ * A rule rather than a `disabled={…}` expression, and the difference matters because there are
+ * two readers: the control that closes and the act that refuses. Two copies of *is this
+ * sendable* is exactly how one of them stops agreeing with the other.
+ *
+ * It is **the one refusal this client can prevent without guessing**. The other — a message past
+ * the cap — is a number deliberately not on the wire, so nothing here may pre-empt it.
+ */
+export function mayPost(text: string): boolean {
+  return text.trim() !== '';
+}
+
+/**
+ * **The weekday to draw above a row of the stream**, or nothing.
+ *
+ * `separatorBefore`'s rule over this file's own union, so the third arm is answered once here
+ * rather than guarded twice in a component: **a message still going out has no recorded moment**,
+ * so it draws no separator and supplies none to the row after it.
+ */
+export function separatorAbove(
+  entry: StreamEntry,
+  older: StreamEntry | undefined,
+): Weekday | undefined {
+  return entry.kind === 'sending' ? undefined : separatorBefore(entry, recorded(older));
+}
+
+/** The entry, or nothing where it is a send the server has not answered for. */
+function recorded(entry: StreamEntry | undefined): Entry | undefined {
+  return entry === undefined || entry.kind === 'sending' ? undefined : entry;
 }

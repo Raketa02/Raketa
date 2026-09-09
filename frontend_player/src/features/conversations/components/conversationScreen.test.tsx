@@ -26,8 +26,17 @@ import {
   stubEntries,
   stubGate,
 } from '@/test-support/onboardingRouter';
-import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
+import {
+  errorResponse,
+  installTransport,
+  json,
+  type Transport,
+  type Wire,
+} from '@/test-support/transport';
 
+import { mapErrorResponse } from '@/shared/errors';
+
+import { conversationErrorMessage } from './conversationErrorMessage';
 import { systemLineSentence } from './conversationPresentation';
 import { DETAILS, QUICK_CHIP, SEND } from './conversationPresentation';
 import { OPEN_THE_GAME } from './conversationAccessibility';
@@ -335,6 +344,72 @@ describe('the composer', () => {
     expect(sent.client_message_id).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
     );
+  });
+});
+
+describe('a refused send', () => {
+  /**
+   * The words go back in the box, because the retry is the control that failed — and the sentence
+   * is this feature's, since the length cap is deliberately not on the wire and so cannot be
+   * pre-empted by a `maxLength`.
+   */
+  it('puts the words back and says what was wrong with them', async () => {
+    await openTheRoom();
+
+    transport.on('POST', `${conversationPath(ROOM)}/messages`, () =>
+      errorResponse(400, 'message_is_too_long'),
+    );
+
+    const box = await screen.findByLabelText('Message');
+    fireEvent.changeText(box, 'a very long message');
+    fireEvent.press(screen.getByRole('button', { name: SEND }));
+
+    // Built the way the app builds one — through the error mapper — so the sentence under test
+    // is the one a real 400 on this route produces.
+    const refused = mapErrorResponse(400, {
+      code: 'message_is_too_long',
+      message: 'too long',
+      trace_id: 't',
+      details: null,
+    });
+
+    expect(await screen.findByText(conversationErrorMessage(refused))).toBeTruthy();
+    expect(screen.getByLabelText('Message').props.value).toBe('a very long message');
+    expect(screen.queryByLabelText('You: a very long message')).toBeNull();
+  });
+
+  /**
+   * §3.7: **a client holding a cursor into a destroyed conversation leaves the screen.** One code
+   * for three cases, and there is no retry that changes any of them.
+   */
+  it('leaves the screen when the room has gone', async () => {
+    await openTheRoom();
+    await screen.findByLabelText('Message');
+
+    transport.on('POST', `${conversationPath(ROOM)}/messages`, () =>
+      errorResponse(404, 'conversation_not_found'),
+    );
+
+    fireEvent.changeText(screen.getByLabelText('Message'), 'anyone there?');
+    fireEvent.press(screen.getByRole('button', { name: SEND }));
+
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+  });
+
+  it('leaves the screen when the read finds the room has gone', async () => {
+    stubConversations(transport, [listed()]);
+    transport.on('GET', conversationPath(ROOM), () => errorResponse(404, 'conversation_not_found'));
+    stubEntries(transport, ROOM);
+
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText(/^Chats/));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+
+    fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
+
+    // It gets as far as the route and comes straight back, rather than sitting on a sentence
+    // about a room that is not there.
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
   });
 });
 

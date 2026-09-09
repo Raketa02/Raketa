@@ -48,33 +48,36 @@
  * app's own focus refetch.
  */
 
-import { useMemo, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { FlatList, KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { useCurrentUser } from '@/features/auth/types';
-import { recoveryMessage } from '@/shared/errors';
+import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { playerName } from '@/shared/formatting/playerName';
 import { Note, theme } from '@/shared/ui';
 
-import { separatorBefore } from '../domain/entry';
 import { memberNamed, type ConversationMember } from '../domain/membership';
 import { quickChips } from '../domain/quickChips';
 import { namesItsAuthors, type OpenConversation } from '../domain/room';
-import { newClientMessageId, streamOf, type StreamEntry } from '../domain/stream';
+import { roomIsGone } from '../domain/roomGone';
+import {
+  mayPost,
+  newClientMessageId,
+  separatorAbove,
+  streamOf,
+  type StreamEntry,
+} from '../domain/stream';
 import { useConversation, useSendMessage, useSendingMessages } from '../hooks/useConversation';
 
 import { Bubble } from './Bubble';
 import { Composer } from './Composer';
 import { ConversationHeader } from './ConversationHeader';
 import { conversationErrorMessage } from './conversationErrorMessage';
-import {
-  CONVERSATION_SCREEN_TITLE,
-  NO_CONVERSATION_HERE,
-  systemLineSentence,
-} from './conversationPresentation';
+import { systemLineSentence } from './conversationPresentation';
 import { DaySeparator } from './DaySeparator';
 import { QuickChips } from './QuickChips';
+import { RoomAbsent } from './RoomAbsent';
 import { SystemLine } from './SystemLine';
 
 /**
@@ -98,23 +101,24 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
     useConversation(conversationId);
   const me = useCurrentUser().data?.id;
 
+  /**
+   * **A room that is gone takes the screen with it**, and this is the read that finds out.
+   *
+   * The room can be destroyed while the reader is looking at it — a withdraw does it in the same
+   * act — so what discovers it is the app's own focus refetch rather than the read this screen
+   * mounted on. In an effect because it is a **navigation**, and a router call made during a
+   * render is a side effect in the one place React does not allow one.
+   */
+  useEffect(() => {
+    if (roomIsGone(error)) router.back();
+  }, [error]);
+
   if (data === undefined || me === undefined) {
     // **Who the reader is counts as still coming**, exactly as it does on the challenge screen:
     // drawn while `useCurrentUser` is in flight, the terminal sentence says no room of yours has
     // this address about a room that is on screen a frame later.
-    const arriving = isPending || (me === undefined && error === null);
-
     return (
-      <View style={s.screen}>
-        <ConversationChrome />
-        {arriving ? null : error !== null ? (
-          <Note variant="coral" accessibilityRole="alert">
-            {recoveryMessage(error)}
-          </Note>
-        ) : (
-          <Text style={s.line}>{NO_CONVERSATION_HERE}</Text>
-        )}
-      </View>
+      <RoomAbsent arriving={isPending || (me === undefined && error === null)} error={error} />
     );
   }
 
@@ -126,17 +130,6 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
         if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
       }}
     />
-  );
-}
-
-/** The header over the three states that have no room to name. See `CONVERSATION_SCREEN_TITLE`. */
-function ConversationChrome() {
-  return (
-    <View style={s.chrome}>
-      <Text accessibilityRole="header" style={s.chromeTitle}>
-        {CONVERSATION_SCREEN_TITLE}
-      </Text>
-    </View>
   );
 }
 
@@ -175,20 +168,26 @@ function Room({
   const refused = send.error;
 
   function post(text: string): void {
-    if (text.trim() === '') return;
+    if (!mayPost(text)) return;
 
     send.reset();
     setDraft('');
     send.mutate(
       { conversationId: room.conversationId, text, clientMessageId: newClientMessageId() },
-      // The words go back in the box, because the retry is the control that failed and there is
-      // nothing to retry with if the message is gone.
-      { onError: () => setDraft(text) },
+      {
+        // The words go back in the box, because the retry is the control that failed and there
+        // is nothing to retry with if the message is gone. A room that has gone is the one
+        // refusal with nothing to retry at all, and it takes the screen with it.
+        onError: (failed) => {
+          if (roomIsGone(failed)) router.back();
+          else setDraft(text);
+        },
+      },
     );
   }
 
   return (
-    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={s.screen} behavior={KEYBOARD_AVOIDANCE}>
       <ConversationHeader
         room={room}
         playerId={playerId}
@@ -259,12 +258,7 @@ function StreamRow({
   readonly playerId: string;
   readonly showAuthors: boolean;
 }) {
-  // A message still going out has no recorded moment, so it draws no separator and never
-  // supplies one — `domain/stream.ts` on why nothing invents a *when*.
-  const day =
-    entry.kind === 'sending'
-      ? undefined
-      : separatorBefore(entry, older === undefined || older.kind === 'sending' ? undefined : older);
+  const day = separatorAbove(entry, older);
 
   return (
     <View style={s.row}>
@@ -304,21 +298,23 @@ function authorName(
 /**
  * What identifies a row.
  *
- * `(conversation_id, seq)` identifies a recorded entry and a message has no id of its own, so
- * within one room the `seq` is it. A send that has not landed has no `seq` at all and is keyed by
- * the id it will be reconciled on — which is also what keeps the list from remounting the row
- * when the real message replaces it under a different key.
+ * A system line is keyed by its `seq`, which is the whole of its identity within one room —
+ * `(conversation_id, seq)`, and a room is what this list is.
+ *
+ * **A message is keyed by `client_message_id` whether or not it has landed**, and that is the
+ * half worth stating: keyed by `seq` once the server answered, the row would be mounted under
+ * one key while it was going out and another the moment it arrived, so the bubble a player is
+ * looking at would be torn down and rebuilt at the instant nothing about it changed. One key
+ * across the reconciliation is what makes *the bubble becomes the real one without moving* true
+ * of the list as well as of the data.
  */
 function keyOf(entry: StreamEntry): string {
-  return entry.kind === 'sending' ? entry.clientMessageId : `seq-${entry.seq}`;
+  return entry.kind === 'system-line' ? `seq-${entry.seq}` : entry.clientMessageId;
 }
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
-  chrome: { paddingHorizontal: theme.size.gutter, paddingVertical: theme.space.md },
-  chromeTitle: { ...theme.type.h1, color: theme.color.ink },
   stream: { paddingHorizontal: theme.size.gutter, paddingVertical: theme.space.sm },
   row: { gap: theme.space.xs, paddingBottom: theme.space.xs },
   refusal: { paddingHorizontal: theme.size.gutter, paddingBottom: theme.space.xs },
-  line: { ...theme.type.tiny, color: theme.color.muted, paddingHorizontal: theme.size.gutter },
 });

@@ -19,9 +19,9 @@
  * message is one the sender believes they sent whole, in front of other people*. What is refused
  * comes back as a code, and the sentence for it is `conversationErrorMessage`'s.
  *
- * **Send is closed on an empty box and on nothing else.** Whitespace-only is empty, which is the
- * server's own trim read one step early — the one refusal this client can prevent without
- * guessing at a number it was not told.
+ * **Send is closed on an empty box and on nothing else**, and the rule is `mayPost`'s rather
+ * than this file's: the control that closes and the act that refuses are two readers of one
+ * question, and two copies of it is how one stops agreeing with the other.
  *
  * ## The strip is not a screen action
  *
@@ -33,6 +33,8 @@
 import { StyleSheet, View } from 'react-native';
 
 import { Button, TextField, theme } from '@/shared/ui';
+
+import { mayPost } from '../domain/stream';
 
 import { COMPOSER_LABEL, SEND } from './conversationPresentation';
 
@@ -67,7 +69,7 @@ export function Composer({ text, onChange, onSend }: ComposerProps) {
         />
       </View>
 
-      <Button label={SEND} disabled={text.trim() === ''} onPress={onSend} />
+      <Button label={SEND} disabled={!mayPost(text)} onPress={onSend} />
     </View>
   );
 }

@@ -35,6 +35,15 @@ export interface ConversationPage {
   readonly room?: ConversationRoom;
   /** The page itself, oldest first inside it. */
   readonly entries: readonly Entry[];
+  /**
+   * The oldest `seq` this page **carried**, which is not always the oldest one it mapped.
+   *
+   * An entry shape this build has never seen is dropped at the wire boundary, so a page of
+   * nothing but those maps to `[]` — and a cursor read off the mapped list would say the backlog
+   * had ended when it had not. This is read off the response, so where the next ask starts is
+   * always what the server sent.
+   */
+  readonly oldest?: number;
 }
 
 export interface ConversationPageAsk extends Cancellable {
@@ -49,10 +58,20 @@ export async function readConversation({
   signal,
 }: ConversationPageAsk): Promise<ConversationPage> {
   if (beforeSeq === undefined) {
-    const opened = toConversationRoom(await getConversation(conversationId, { signal }));
+    const answer = await getConversation(conversationId, { signal });
+    const opened = toConversationRoom(answer);
 
-    return opened === undefined ? { entries: [] } : opened;
+    return { ...(opened ?? { entries: [] }), ...oldestOf(answer.entries) };
   }
 
-  return { entries: toEntryPage(await getEntries({ conversationId, beforeSeq, signal })) };
+  const page = await getEntries({ conversationId, beforeSeq, signal });
+
+  return { entries: toEntryPage(page), ...oldestOf(page.entries) };
+}
+
+/** The first `seq` on the wire's own page — see {@link ConversationPage.oldest}. */
+function oldestOf(entries: readonly { readonly seq: number }[]): { oldest?: number } {
+  const oldest = entries[0]?.seq;
+
+  return oldest === undefined ? {} : { oldest };
 }

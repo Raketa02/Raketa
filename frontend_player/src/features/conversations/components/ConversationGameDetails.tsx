@@ -17,19 +17,20 @@
  * [#368](https://github.com/Raketa02/Raketa/issues/368)'s, on the screen this renders.
  *
  * A room with no game has no door to reach this through, so arriving here at all means a link or
- * a stale route — and it draws the sentence a room that is not yours draws, for the same reason
- * the room screen does: there is nothing a player would do differently.
+ * a stale route — and it draws `RoomAbsent`, the same nothing the room screen draws, for the same
+ * reason: there is nothing a player would do differently, and both doors under this address land
+ * on one read.
  */
 
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { router } from 'expo-router';
 
 import { GameScreen } from '@/features/games/types';
-import { recoveryMessage } from '@/shared/errors';
-import { Note, theme } from '@/shared/ui';
 
 import { useConversation } from '../hooks/useConversation';
+import { roomIsGone } from '../domain/roomGone';
 
-import { NO_CONVERSATION_HERE } from './conversationPresentation';
+import { RoomAbsent } from './RoomAbsent';
 
 export interface ConversationGameDetailsProps {
   /** Validated by `schemas/routeParams.ts` before it reaches here; the route does that. */
@@ -40,24 +41,13 @@ export function ConversationGameDetails({ conversationId }: ConversationGameDeta
   const { data, isPending, error } = useConversation(conversationId);
   const gameId = data?.room.gameId;
 
-  if (gameId === undefined) {
-    return (
-      <View style={s.screen}>
-        {isPending ? null : error !== null ? (
-          <Note variant="coral" accessibilityRole="alert">
-            {recoveryMessage(error)}
-          </Note>
-        ) : (
-          <Text style={s.line}>{NO_CONVERSATION_HERE}</Text>
-        )}
-      </View>
-    );
-  }
+  // A room that has gone takes this screen with it too — the door and what is behind it are one
+  // read, so they answer a destroyed room the same way. §3.7.
+  useEffect(() => {
+    if (roomIsGone(error)) router.back();
+  }, [error]);
+
+  if (gameId === undefined) return <RoomAbsent arriving={isPending} error={error} />;
 
   return <GameScreen gameId={gameId} />;
 }
-
-const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: theme.color.paper, padding: theme.size.gutter },
-  line: { ...theme.type.tiny, color: theme.color.muted },
-});

@@ -138,30 +138,60 @@ export function weekdayOf(day: string): Weekday | undefined {
 }
 
 /**
- * **The one zone this platform arranges in.**
+ * **The one zone this platform arranges in**, named rather than computed with.
  *
  * A locale assumption rather than a constant to tune
  * ([ADR-0144](../../../../../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)),
  * and **its falsifier is the first shard whose players are somewhere else**. It is the same zone
  * the plan's day and hour are recorded in, which is what lets a separator and a `DAY_RECORDED`
  * line agree about which day Saturday is.
+ *
+ * **Nothing passes it to a formatter**, and {@link platformOffset} below is why. It is here so
+ * the assumption has a name a reader can search for and so the two halves of it — *this zone*,
+ * and *these two offsets* — sit in one file rather than one being implied by the other.
  */
 export const PLATFORM_ZONE = 'Europe/Warsaw';
 
 /**
- * The formatter behind {@link platformDay}, built once.
+ * **Poland's two offsets, and the rule that picks one.**
  *
- * **`formatToParts` rather than `format`**, because the parts are named and the layout is not: an
- * `en-GB` date formats as `12/09/2026` and an `en-CA` one as `2026-09-12`, so a string assembled
- * out of a locale's own order is a string that changes when somebody changes the locale. The
- * parts are the same three whatever the locale does with them.
+ * `Intl.DateTimeFormat` with a `timeZone` is the obvious way to do this and it is **refused for
+ * the reason `shared/formatting/ratingFormat.ts` already records**: *"Hermes ships without the
+ * full ICU data unless it is explicitly built in"*, so a zone-aware formatter can silently fall
+ * back — and what it would fall back to here is the **device's** day, which is precisely the
+ * failure the platform zone exists to prevent. A wrong number that announces itself is
+ * survivable; this one would not, and Node's full ICU means no test in this repository could
+ * see it.
+ *
+ * So the conversion is arithmetic. `Europe/Warsaw` is **CET all winter and CEST all summer**, and
+ * the changeover is the EU's single rule rather than a national one: summer time runs from 01:00
+ * UTC on the **last Sunday in March** to 01:00 UTC on the **last Sunday in October**, for every
+ * member state at the same instant.
+ *
+ * **Two falsifiers, and neither is hypothetical.** The first is ADR-0144's own — *the first shard
+ * whose players are somewhere else* — and the second is the EU abolishing seasonal changes, which
+ * has been proposed and not enacted. Either one makes this table wrong rather than imprecise,
+ * which is why it is one function with a name that says what it is about.
  */
-const IN_THE_PLATFORM_ZONE = new Intl.DateTimeFormat('en-GB', {
-  timeZone: PLATFORM_ZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
+const HOUR = 60 * 60 * 1000;
+const CET = HOUR;
+const CEST = 2 * HOUR;
+
+/** The last Sunday of a month, at 01:00 UTC — the instant the EU changes its clocks. */
+function lastSundayAtOneUtc(year: number, month: number): number {
+  const lastDay = new Date(Date.UTC(year, month + 1, 0));
+
+  return Date.UTC(year, month, lastDay.getUTCDate() - lastDay.getUTCDay(), 1);
+}
+
+/** How far ahead of UTC the platform's zone is at this instant. */
+function platformOffset(at: number): number {
+  const year = new Date(at).getUTCFullYear();
+  const summerBegins = lastSundayAtOneUtc(year, 2);
+  const summerEnds = lastSundayAtOneUtc(year, 9);
+
+  return at >= summerBegins && at < summerEnds ? CEST : CET;
+}
 
 /**
  * Which calendar day an instant falls on **in the platform's zone**, as `YYYY-MM-DD`.
@@ -175,20 +205,20 @@ const IN_THE_PLATFORM_ZONE = new Intl.DateTimeFormat('en-GB', {
  * It answers `undefined` for a value that is not an instant, which is the same nothing every
  * other narrowing in this file answers with: there is no day to name and inventing one would be
  * a claim about when something happened.
+ *
+ * The conversion is arithmetic rather than `Intl` — see {@link platformOffset} above for why that
+ * is a decision and not a shortcut.
  */
 export function platformDay(instant: string): string | undefined {
-  const at = new Date(instant);
-  if (Number.isNaN(at.getTime())) return undefined;
+  const at = Date.parse(instant);
+  if (Number.isNaN(at)) return undefined;
 
-  const parts = IN_THE_PLATFORM_ZONE.formatToParts(at);
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((one) => one.type === type)?.value;
+  // The wall clock in Warsaw, read as though it were UTC — which is what turns an instant into a
+  // square on a calendar, and the one step that must not consult the device.
+  const wall = new Date(at + platformOffset(at));
+  const pad = (value: number) => String(value).padStart(2, '0');
 
-  const [year, month, day] = [part('year'), part('month'), part('day')];
-
-  return year === undefined || month === undefined || day === undefined
-    ? undefined
-    : `${year}-${month}-${day}`;
+  return `${wall.getUTCFullYear()}-${pad(wall.getUTCMonth() + 1)}-${pad(wall.getUTCDate())}`;
 }
 
 /**

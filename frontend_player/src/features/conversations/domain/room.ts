@@ -74,13 +74,16 @@ export interface OpenConversation {
 /**
  * The `seq` to page backward from, or nothing where the beginning is already held.
  *
- * `entries` is oldest first, so the cursor is the first one's — *give me what is before this*.
- * Nothing to page from at all is a room whose page came back empty, which is a room where
- * nothing has happened yet.
+ * **It takes the oldest `seq` the page carried rather than the oldest entry the page mapped**,
+ * and that is the whole of why it takes a number. An entry shape this build has never seen is
+ * dropped at the mapper, so a page of nothing but those maps to `[]` — and a cursor read off the
+ * mapped list would then say *there is nothing before this*, ending a backlog that is still
+ * there. What decides where the next ask starts is what the **server** sent.
+ *
+ * Nothing to page from at all is a page that really was empty, which is a room where nothing has
+ * happened yet.
  */
-export function earlierThan(entries: readonly Entry[]): number | undefined {
-  const oldest = entries[0]?.seq;
-
+export function earlierThan(oldest: number | undefined): number | undefined {
   return oldest === undefined || oldest <= 1 ? undefined : oldest;
 }
 

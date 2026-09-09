@@ -103,7 +103,7 @@ export function useConversation(conversationId: string) {
         signal,
       }),
     initialPageParam: undefined,
-    getNextPageParam: (lastPage) => earlierThan(lastPage.entries),
+    getNextPageParam: (lastPage) => earlierThan(lastPage.oldest),
     select: folded,
   });
 }

@@ -4,6 +4,14 @@
 
 import { quickChips } from './quickChips';
 
+const DEVICE_ZONE = process.env.TZ;
+
+// Restored here rather than at the end of the test that moves it: a failing expectation would
+// otherwise leak a zone into every suite after this one, and those are the suites about days.
+afterEach(() => {
+  process.env.TZ = DEVICE_ZONE;
+});
+
 /** 09:00 UTC on the 12th is the 12th in Warsaw, whatever the phone thinks. */
 const READ_AT = '2026-09-12T09:00:00Z';
 
@@ -36,7 +44,6 @@ describe('the fallback', () => {
       process.env.TZ = zone;
       return quickChips({ day: '2026-09-12' }, '2026-09-12T21:00:00Z');
     });
-    process.env.TZ = 'UTC';
 
     for (const chips of read) expect(chips).toContain('on-my-way');
   });

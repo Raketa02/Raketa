@@ -4,6 +4,10 @@
  * Each is a place a build can be **wrong** rather than merely wordless: a code, a departure and a
  * count are closed vocabularies an older phone may not know, and a recorded day is a value whose
  * reading must not depend on where the phone is.
+ *
+ * **The device's zone is restored in `afterEach` rather than at the end of the test that moves
+ * it**, because a failing expectation would otherwise leak a zone into every suite after it — and
+ * the ones it would break are the ones about days.
  */
 
 import {
@@ -17,6 +21,12 @@ import {
   SYSTEM_LINE_CODES,
   type Entry,
 } from './entry';
+
+const DEVICE_ZONE = process.env.TZ;
+
+afterEach(() => {
+  process.env.TZ = DEVICE_ZONE;
+});
 
 describe('the code', () => {
   it('reads all seven, and nothing else', () => {
@@ -67,7 +77,6 @@ describe('which weekday a recorded day is', () => {
       process.env.TZ = zone;
       return weekdayOf('2026-09-12');
     });
-    process.env.TZ = 'UTC';
 
     expect(new Set(read)).toEqual(new Set([6]));
   });
@@ -88,15 +97,48 @@ describe('which day an instant falls on', () => {
       process.env.TZ = zone;
       return platformDay('2026-09-12T21:30:00Z');
     });
-    process.env.TZ = 'UTC';
 
     expect(new Set(read)).toEqual(new Set(['2026-09-12']));
   });
 
-  /** 23:30 UTC is already the 13th in Warsaw, which is the whole point of converting. */
-  it("rolls over on the platform's own midnight", () => {
+  /** 22:00 UTC is already the 13th in Warsaw, which is the whole point of converting. */
+  it("rolls over on the platform's own midnight, in summer", () => {
     expect(platformDay('2026-09-12T21:59:00Z')).toBe('2026-09-12');
     expect(platformDay('2026-09-12T22:01:00Z')).toBe('2026-09-13');
+  });
+
+  /** CET, so midnight in Warsaw is 23:00 UTC — one hour earlier than it is in September. */
+  it('rolls over an hour earlier in winter', () => {
+    expect(platformDay('2026-01-12T22:59:00Z')).toBe('2026-01-12');
+    expect(platformDay('2026-01-12T23:01:00Z')).toBe('2026-01-13');
+  });
+
+  /**
+   * The EU's own rule, and the one thing about this arithmetic that is not a constant: summer
+   * time runs from 01:00 UTC on the last Sunday in March to 01:00 UTC on the last Sunday in
+   * October. 2026 puts those on the 29th and the 25th.
+   */
+  it('changes over on the last Sunday of March and of October, at 01:00 UTC', () => {
+    // A minute before the spring change it is still CET, so 00:59 UTC is 01:59 and the same day.
+    expect(platformDay('2026-03-29T00:59:00Z')).toBe('2026-03-29');
+    expect(platformDay('2026-03-28T23:30:00Z')).toBe('2026-03-29');
+    // A minute after it is CEST, so 22:30 UTC has already become the next day.
+    expect(platformDay('2026-03-29T22:30:00Z')).toBe('2026-03-30');
+
+    // And back: 22:30 UTC on the day of the autumn change is still the same day under CET.
+    expect(platformDay('2026-10-25T22:30:00Z')).toBe('2026-10-25');
+    expect(platformDay('2026-10-24T22:30:00Z')).toBe('2026-10-25');
+  });
+
+  /** Every year the app will run in, so a leap year or a five-Sunday March cannot move it. */
+  it('finds the last Sunday of the month in every year it is asked about', () => {
+    for (let year = 2024; year <= 2035; year += 1) {
+      // The last instant of CET and the first of CEST, an hour apart across the change.
+      expect(platformDay(`${year}-06-15T21:30:00Z`)).toBe(`${year}-06-15`);
+      expect(platformDay(`${year}-06-15T22:30:00Z`)).toBe(`${year}-06-16`);
+      expect(platformDay(`${year}-12-15T22:30:00Z`)).toBe(`${year}-12-15`);
+      expect(platformDay(`${year}-12-15T23:30:00Z`)).toBe(`${year}-12-16`);
+    }
   });
 
   it('answers nothing for a value that is not an instant', () => {

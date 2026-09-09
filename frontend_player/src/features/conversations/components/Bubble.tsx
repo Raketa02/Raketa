@@ -19,6 +19,14 @@
  * the prototype's universal first name appears in fourteen of its twenty-two templates and is a
  * word the person never gave the platform.
  *
+ * **The reader's own bubbles carry no label, which is one condition more than the spec states**
+ * and is worth naming rather than leaving as an accident. The label exists to say **which of
+ * several other people** spoke, and the reader's own side is never the ambiguous one. Drawn, it
+ * would have to be either the reader's handle — which disagrees with the *You* the same bubble is
+ * announced as, so the eye and the ear would name one person two ways — or the word *You*, which
+ * is not a handle and repeats what the side and the ground already say. Neither is worth a line
+ * of type above every message somebody sent.
+ *
  * ## The spoken name always names the author, even where the label does not
  *
  * §24.4, and the reason is Part 13's: the visible label is dropped in a pair because **the side
@@ -105,8 +113,9 @@ const s = StyleSheet.create({
   textMine: { ...theme.type.rlLabel, color: theme.color.surface },
   textTheirs: { ...theme.type.rlLabel, color: theme.color.ink },
   // `flab` labels a control and `eyebrow` labels a region you are reading, which is what a run
-  // of somebody's messages is.
+  // of somebody's messages is — so the on-dark half takes `onDarkEyebrow`, the token named for
+  // exactly this role at exactly this ratio, rather than `line`, which bounds a thing.
   author: { ...theme.type.eyebrow, textTransform: 'uppercase' },
-  authorMine: { color: theme.color.line },
+  authorMine: { color: theme.color.onDarkEyebrow },
   authorTheirs: { color: theme.color.muted },
 });
