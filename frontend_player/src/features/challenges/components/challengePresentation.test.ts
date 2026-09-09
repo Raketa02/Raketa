@@ -11,15 +11,18 @@
 
 import type { NamedPlayer } from '@/shared/formatting/playerName';
 
-import { STANDINGS, type ChallengeSide } from '../domain/standing';
+import { STANDINGS, type ChallengeSide, type StandingFacts } from '../domain/standing';
 
 import {
+  CHALLENGES_HEADING,
+  CHALLENGE_SCREEN_NOT_BUILT,
+  CHALLENGE_SCREEN_TITLE,
   MUTUAL_YES,
   NOBODY_IS_CONTACTED_YET,
   answerWindowLine,
   proposeClosing,
   standingLine,
-  type StandingFacts,
+  yourAnswerWindowLine,
 } from './challengePresentation';
 
 /** The other player, as a person rather than as a string — ADR-0107's rule, held by a type. */
@@ -33,6 +36,7 @@ function facts(side: ChallengeSide): readonly StandingFacts[] {
     { side, standing: 'LINE_UP_INCOMPLETE', accepted: 2, open: 1 },
     { side, standing: 'DECLINED', player: SOMEBODY },
     { side, standing: 'LAPSED', player: SOMEBODY },
+    { side, standing: 'WITHDRAWN', player: SOMEBODY },
   ];
 }
 
@@ -163,5 +167,127 @@ describe('what the pre-send sheet closes with', () => {
     expect(proposeClosing({ kind: 'doubles', sportName: 'Padel', stillNeeded: 2 })).toBe(
       'Padel is doubles — you need 2 more. The first person to say yes is in, and you can start talking then.',
     );
+  });
+});
+
+describe('an invitee who has left a challenge that has not', () => {
+  // §13.1. A padel four where one declines and two accept is `LINE_UP_INCOMPLETE` for the
+  // player who declined too, and the sentence keyed on `(standing, side)` alone is false in
+  // both of its clauses for them.
+  it('tells them what they did, and that the court is still being filled', () => {
+    expect(
+      standingLine({
+        side: 'invitee',
+        standing: 'LINE_UP_INCOMPLETE',
+        accepted: 2,
+        open: 2,
+        ownAnswer: 'DECLINED',
+      }),
+    ).toBe('You said no. They are still filling the court.');
+
+    expect(
+      standingLine({
+        side: 'invitee',
+        standing: 'LINE_UP_INCOMPLETE',
+        accepted: 2,
+        open: 2,
+        ownAnswer: 'LAPSED',
+      }),
+    ).toBe('Your day ran out. They are still filling the court.');
+  });
+
+  it('never tells them how many are in, because that court is no longer theirs to be told', () => {
+    for (const ownAnswer of ['DECLINED', 'LAPSED'] as const) {
+      const line = standingLine({
+        side: 'invitee',
+        standing: 'LINE_UP_INCOMPLETE',
+        accepted: 2,
+        open: 2,
+        ownAnswer,
+      });
+
+      expect(line).not.toMatch(/\d/);
+      expect(line).not.toMatch(/you're in/i);
+    }
+  });
+
+  it('still says *You’re in* to the invitee who is', () => {
+    expect(
+      standingLine({
+        side: 'invitee',
+        standing: 'LINE_UP_INCOMPLETE',
+        accepted: 2,
+        open: 1,
+        ownAnswer: 'ACCEPTED',
+      }),
+    ).toBe("You're in. 1 seat open, and the chat is already open");
+  });
+});
+
+describe('a withdrawal is neither a decline nor a lapse', () => {
+  it('names the act with the record’s own word, and says what it closed', () => {
+    expect(standingLine({ side: 'organiser', standing: 'WITHDRAWN', player: SOMEBODY })).toBe(
+      'You withdrew this',
+    );
+    expect(standingLine({ side: 'invitee', standing: 'WITHDRAWN', player: SOMEBODY })).toBe(
+      'niepokonany withdrew this — that court is closed',
+    );
+  });
+
+  it('borrows neither the plan’s word nor the platform’s', () => {
+    for (const side of ['organiser', 'invitee'] as const) {
+      const line = standingLine({ side, standing: 'WITHDRAWN', player: SOMEBODY });
+      expect(line).not.toMatch(/cancel|called? off|stood down|stand down/i);
+    }
+  });
+
+  it('tells an invitee who never answered the same as one who accepted', () => {
+    // Separating them would say who else was on the court.
+    expect(standingLine({ side: 'invitee', standing: 'WITHDRAWN', player: SOMEBODY })).toBe(
+      standingLine({ side: 'invitee', standing: 'WITHDRAWN', player: SOMEBODY }),
+    );
+  });
+});
+
+describe('your own seat, on your own row', () => {
+  // §14's fourth sentence. `{name} · {duration} left` is the organiser's, listing each seat and
+  // its own clock; naming yourself on your own row would be the app telling you who you are.
+  it('states the time left and names nobody', () => {
+    expect(yourAnswerWindowLine('21 hours')).toBe('21 hours left to answer');
+  });
+
+  it('is not the sentence that names a seat', () => {
+    expect(yourAnswerWindowLine('21 hours')).not.toBe(
+      answerWindowLine({ player: SOMEBODY, duration: '21 hours' }),
+    );
+    expect(yourAnswerWindowLine('21 hours')).not.toMatch(/·/);
+  });
+});
+
+/**
+ * The two placeholder-shaped lines this feature owns, held to the test every line in the app is.
+ *
+ * `shellCopy.test.ts` makes the same two refusals of the tab's own sentences; these are here
+ * because the vocabulary is the challenge's rather than the tab's, and a line that escaped both
+ * files would be the one place *coming soon* could land.
+ */
+describe('what this feature refuses to say', () => {
+  const LINES = [CHALLENGES_HEADING, CHALLENGE_SCREEN_TITLE, CHALLENGE_SCREEN_NOT_BUILT];
+
+  it('never says nothing is happening', () => {
+    for (const line of LINES) {
+      expect(line).not.toMatch(/nothing/i);
+      expect(line).not.toMatch(/empty/i);
+    }
+  });
+
+  it('never promises a date, and never apologises', () => {
+    for (const line of LINES) {
+      expect(line).not.toMatch(/coming soon|soon|sorry|under construction/i);
+    }
+  });
+
+  it('names what belongs on the screen it stands in for', () => {
+    expect(CHALLENGE_SCREEN_NOT_BUILT).toMatch(/not built yet$/);
   });
 });

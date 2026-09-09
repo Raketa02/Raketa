@@ -21,9 +21,23 @@
  * `head` for the em square, `cmap` format 4 for character → glyph, `hmtx` for the advance.
  * Nothing here kerns: RN lays a label out with no kerning pairs applied at these sizes, and a
  * measurement that kerned would be smaller than the drawing rather than safer than it.
+ *
+ * **The width every derived cap is computed at is here too**, on the same argument: it was
+ * declared identically in four suites, each with its own comment saying it is not a token, and
+ * four copies of a fact about the device population drift the same silent way two copies of a
+ * luminance formula do.
  */
 
 import { readFileSync } from 'node:fs';
+
+/**
+ * The narrowest phone the app supports, in points — iPhone SE / iPhone 8.
+ *
+ * Every cap this app derives is computed against it, because a cap that fits the widest phone
+ * is not a cap. **Not a token**: it is a fact about the device population rather than a value
+ * any component reads, and `theme.ts` holds only what components read.
+ */
+export const NARROWEST_SCREEN = 320;
 
 export interface Face {
   readonly unitsPerEm: number;

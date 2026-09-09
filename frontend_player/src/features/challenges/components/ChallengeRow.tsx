@@ -1,0 +1,139 @@
+/**
+ * One row under `CHALLENGES` — **face(s) · the whole handle(s) · the sport · one line · the
+ * stripe**, and the whole of it is the door.
+ *
+ * Fully clickable and comfortably past 44pt by its own geometry: a 38pt face inside the card's
+ * `space.md` padding is 62 before anything else is drawn, so there is no `hitSlop` here
+ * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §1.2).
+ *
+ * ## The face is a photograph or a poster, and there is no monogram
+ *
+ * #338 §5 refused the avatar outright — no element, no hue, no radius rule — because
+ * `CandidatePhoto` already **is** the photograph-or-poster switch, a poster is a fact about an
+ * id ([ADR-0134](../../../../../docs/adr/0134-the-poster-draws-a-player-and-no-value-is-invented.md)),
+ * and initials are a derived familiar form ADR-0107 refuses. The cost is stated there: this row
+ * loses the six coloured initial tiles `chat_tab.png` draws.
+ *
+ * **On this surface it is always the poster, and that is the contract rather than a shortcut.**
+ * `GET /challenges` borrows a handle and nothing else about a person — *"a Level, a band, an
+ * area and a photograph are a card's, and a card is drawn on the detail read alone"*
+ * ([ADR-0143](../../../../../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)).
+ * So no `photoUrl` is passed, and `CandidatePhoto` falls back exactly as it does for a player
+ * who has no photograph.
+ *
+ * **It is reached through `features/play`'s public surface rather than copied**, and that is a
+ * tension worth stating rather than glossing.
+ * [`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §4.3
+ * says the parts kit's smallest members are shared *"through `shared/`"* — but §5, which is the
+ * authoritative list of what moves, names **one** promotion and it is `courtPosterFor()`.
+ * `CandidatePhoto` cannot follow it without dragging `CANDIDATE_PANEL`, whose own docstring
+ * argues it belongs to the card rather than to the system. So the row imports the component,
+ * because the alternative today is a second box with a second `× 0.33` in it and one person
+ * drawn at two corners — the drift having **one owner** exists to prevent. #361's card block is
+ * the third caller that would make the promotion worth its cost.
+ *
+ * ## The stripe is presence, never magnitude
+ *
+ * `amber`, full height, and drawn on exactly the rows whose line is a duration — so there is
+ * **none on the organiser's row**, where the clock is live but is not theirs to clear. It is
+ * `size.semanticBar`, which is 5.4's note bar at one owner, and it is **hidden from the
+ * accessibility tree** because the sentence beside it already carries the fact. A bar encoding
+ * how much time is left would be a second spelling of the duration, which is the exact failure
+ * the design commits with *"lapses Tomorrow · 17:00 17:00"*.
+ *
+ * Coral is refused: [1.2](../../../../docs/design-system.md#12-one-accent-used-sparingly) lists
+ * six coral uses and says *nothing else*, the tab badge holds the sixth, and a coral stripe on
+ * every row with a live clock is coral on most of a section at once. 1.3 reads amber as *watch
+ * this — reversible, not yet wrong*, which is exactly a live answer window.
+ */
+
+import { router } from 'expo-router';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+
+import { sportLabel } from '@/features/onboarding/types';
+import { CandidatePhoto } from '@/features/play/types';
+import { playerName } from '@/shared/formatting/playerName';
+import { PressableCard, theme } from '@/shared/ui';
+
+import { seatName, type Challenge } from '../domain/challenge';
+import { namesThatFit, othersOn } from '../domain/challengeInbox';
+
+import { challengeRowLabel } from './challengeAccessibility';
+import { challengeRowLine, handleLine, rowHasAClockOfYours } from './challengePresentation';
+import { FACE_OVERLAP, ROW_FACE, handleBudget } from './challengeRowGeometry';
+
+/**
+ * Where a row goes. Both segments under `/chats` carry a static kind above the id, because a
+ * challenge id and a conversation id are different ids of different things and `/chats/[id]`
+ * for both is one segment a router cannot resolve and a reader cannot read.
+ */
+export const CHALLENGE_ROUTE = '/chats/challenge/[challengeId]';
+
+export interface ChallengeRowProps {
+  readonly challenge: Challenge;
+  /** The reader. Every rule on this row is about *their* seat, so it is never derived here. */
+  readonly playerId: string;
+}
+
+export function ChallengeRow({ challenge, playerId }: ChallengeRowProps) {
+  const { width } = useWindowDimensions();
+
+  const others = othersOn(challenge, playerId);
+  const handles = others.map((seat) => playerName(seatName(seat)));
+  const shown = namesThatFit(handles, handleBudget(width, others.length));
+
+  const sport = sportLabel(challenge.sport);
+  const line = challengeRowLine(challenge, playerId);
+
+  return (
+    <PressableCard
+      accessibilityLabel={challengeRowLabel(handles, sport, line)}
+      onPress={() =>
+        router.push({ pathname: CHALLENGE_ROUTE, params: { challengeId: challenge.challengeId } })
+      }
+      style={s.row}
+    >
+      <View style={s.faces}>
+        {others.map((seat, at) => (
+          <View key={seat.playerId} style={at === 0 ? undefined : s.behind}>
+            <CandidatePhoto playerId={seat.playerId} box={{ kind: 'face', size: ROW_FACE }} />
+          </View>
+        ))}
+      </View>
+
+      <View style={s.body}>
+        <Text style={s.handles} numberOfLines={1}>
+          {handleLine(handles, shown)}
+        </Text>
+        <Text style={s.line} numberOfLines={1}>
+          {sport} · {line}
+        </Text>
+      </View>
+
+      {rowHasAClockOfYours(challenge, playerId) ? (
+        <View
+          style={s.stripe}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      ) : null}
+    </PressableCard>
+  );
+}
+
+const s = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
+  faces: { flexDirection: 'row' },
+  // Each face after the first is pulled back over the one before it, so a doubles court reads
+  // as a group rather than as three separate people the row happens to list.
+  behind: { marginLeft: -ROW_FACE * FACE_OVERLAP },
+  body: { flex: 1, gap: theme.space.xxs },
+  handles: { ...theme.type.cardTitle, color: theme.color.ink },
+  line: { ...theme.type.tiny, color: theme.color.muted },
+  stripe: {
+    width: theme.size.semanticBar,
+    alignSelf: 'stretch',
+    borderRadius: theme.radius.bar,
+    backgroundColor: theme.color.amber,
+  },
+});

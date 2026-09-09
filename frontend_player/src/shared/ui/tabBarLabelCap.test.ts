@@ -28,18 +28,15 @@
  * one `cmap` walk, on `contrast.ts`'s argument for the luminance formula.
  */
 
-import { largestStepThatFits, readFace, widthOf } from '@/test-support/fontMetrics';
+import {
+  NARROWEST_SCREEN,
+  largestStepThatFits,
+  readFace,
+  widthOf,
+} from '@/test-support/fontMetrics';
 
 import { TAB_BAR_TABS } from './TabBar';
 import { theme } from './theme';
-
-/**
- * The narrowest phone the app supports, in points — iPhone SE / iPhone 8, and the width
- * `profileControlGeometry.test.ts` decides the other three drawn controls at.
- *
- * Not a token: it is a fact about the device population, not a value any component reads.
- */
-const NARROWEST_SCREEN = 320;
 
 /**
  * The bar is equal columns edge to edge — no gutter, unlike every scrolling screen — so a

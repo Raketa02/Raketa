@@ -15,13 +15,17 @@
  * It **floors**. A deadline is a promise, and 23 h 50 m stated as *24 hours* is wrong in the
  * one direction that costs somebody their turn.
  *
- * It is here rather than in `shared/formatting` on that file's own rule: `answerWindowLine` in
- * `challenges` takes its duration as a **string from the caller** and has no producer, so this
- * is the first implementation rather than the third copy. It moves the day a second surface
- * asks for one.
+ * **It moved here on the day it predicted.** It was written in `features/games/components/`
+ * saying *"this is the first implementation rather than the third copy — it moves the day a
+ * second surface asks for one"*, and the Chats inbox is that surface: a challenge row whose
+ * line is *{duration} left to answer* folds its own seat's `answer_by` against
+ * `ChallengeListResponse.read_at`, which is `GameListResponse`'s field verbatim for
+ * `GameListResponse`'s reason ([ADR-0143](../../../../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md) §7).
+ * Two contexts folding the same arithmetic is what the promotion prevents — and the alternative
+ * was `challenges` reaching through `games/types.ts` for a formatter that is about neither.
  */
 
-import { counted } from '@/shared/formatting/counted';
+import { counted } from './counted';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;

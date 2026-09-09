@@ -26,18 +26,37 @@
  *
  * ## Coming back, only what has a reader
  *
- * `ChallengeSchema` carries the sport, the mode, the window and the deadlines, and nothing
- * draws any of them yet: the one reader today is the pair rule's naming
- * (`domain/challenge.ts`). Mapping the rest would be a DTO nobody is checking — the argument
- * `fillSeats` made about the prompts a line-up raises, right up until those prompts gained a
- * reader and stopped being a list nothing read
- * ([#287](https://github.com/Raketa02/Raketa/issues/287)). Which is the shape of the answer
- * here too: these fields are mapped by the ticket that draws them.
+ * `ChallengeSchema` carried fields nothing drew, and *"these fields are mapped by the ticket
+ * that draws them"* was the rule. The Chats inbox is that ticket
+ * ([#360](https://github.com/Raketa02/Raketa/issues/360)): the row prints a sport, sorts on
+ * `opened_at`, names a person from a seat's `nickname` and folds a duration from that seat's
+ * `answer_by` — so those four arrive, and `mode` and `window` stay unmapped, because still
+ * nothing draws them.
+ *
+ * **`read_at` is copied onto each challenge**, exactly as `gameMappers` copies
+ * `GameListResponse`'s: it is one instant for the whole list, and carrying it per row is what
+ * makes it impossible for a component to render a countdown against a clock the standing beside
+ * it never saw (ADR-0143 §7).
+ *
+ * ## `null` is *this response said nothing*, and it collapses to absent
+ *
+ * Every optional on this wire arrives as `T | null | undefined` and every one becomes
+ * `undefined` here, so no screen has two spellings of one absence to branch on.
+ *
+ * ## Two codes are narrowed, and they are narrowed differently
+ *
+ * A **standing** this build cannot read becomes `undefined` and the challenge stays: the code
+ * *is* the whole line, so `the-words.md` §3 owes it a named gap rather than a drop. A **sport**
+ * it cannot read takes the whole challenge with it, which is `gameMappers`' own rule for the
+ * same field: the sport is what the row calls the game, and a challenge this app cannot name
+ * the sport of is a row with a hole where the identifying fact goes.
  */
 
 import type { components } from '@/generated/schema';
+import { toSport } from '@/features/onboarding/types';
 
 import type { Challenge, ChallengeSeat } from '../domain/challenge';
+import { STANDINGS, type Standing } from '../domain/standing';
 
 type SendChallengeRequest = components['schemas']['SendChallengeRequest'];
 type SeatChoiceSchema = components['schemas']['SeatChoiceSchema'];
@@ -79,19 +98,47 @@ export function toSendChallengeRequest(send: {
   };
 }
 
-/** Your challenges, newest first — the list a refused send re-reads to find a name. */
+/**
+ * The standing, or nothing where the server sent a code this build has no words for.
+ *
+ * A membership test against `domain/standing.ts`'s own list rather than a third table beside
+ * `ENDED` and `STILL_BEING_ARRANGED`: those two are **rules** keyed by the union, and this is
+ * only asking whether the union contains a value. The `Exact` assertion in `wireVocabulary.ts`
+ * holds the two unions equal at **build** time; a phone running last month's binary against
+ * this month's server is the case it cannot cover, and `the-words.md` §3 is written for exactly
+ * that phone.
+ */
+function toStanding(wire: Standing): Standing | undefined {
+  return STANDINGS.some((known) => known === wire) ? wire : undefined;
+}
+
+/** Your challenges, newest first — the inbox's list, and the one a refused send re-reads. */
 export function toChallenges(response: ChallengeListResponse): readonly Challenge[] {
-  return response.challenges.map((one) => ({
-    challengeId: one.challenge_id,
-    organiserId: one.organiser_id,
-    standing: one.standing,
-    seats: one.seats.map(toSeat),
-  }));
+  return response.challenges.flatMap((one) => {
+    const sport = toSport(one.sport);
+    if (sport === undefined) return [];
+
+    const standing = toStanding(one.standing);
+
+    return [
+      {
+        challengeId: one.challenge_id,
+        organiserId: one.organiser_id,
+        ...(standing === undefined ? {} : { standing }),
+        sport,
+        openedAt: one.opened_at,
+        readAt: response.read_at,
+        seats: one.seats.map(toSeat),
+      },
+    ];
+  });
 }
 
 function toSeat(seat: components['schemas']['SeatSchema']): ChallengeSeat {
   return {
     ...(seat.player_id == null ? {} : { playerId: seat.player_id }),
     ...(seat.answer == null ? {} : { answer: seat.answer }),
+    ...(seat.nickname == null ? {} : { nickname: seat.nickname }),
+    ...(seat.answer_by == null ? {} : { answerBy: seat.answer_by }),
   };
 }

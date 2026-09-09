@@ -21,6 +21,20 @@
  * a copy of it in a store would be a second answer, free to disagree with the router after
  * a deep link, a redirect, or the hardware back button.
  *
+ * ## The shell now holds one query, and that is the honest price of a badge
+ *
+ * #227's finding was that *"the shell remembers nothing"*, and it is **amended rather than
+ * quietly contradicted** ([#326](https://github.com/Raketa02/Raketa/issues/326) §7): the bar
+ * carries a count of unanswered challenges addressed to you, and a count on permanent chrome
+ * has to come from somewhere. It is mounted **here** rather than read by the bar, because
+ * `shared/ui` importing a feature hook would invert the dependency and give a drawn object a
+ * network call — so the shell reads and the bar takes a number.
+ *
+ * It shares `challengeKeys.list()` with the Chats screen's own section, and TanStack dedupes
+ * the two mounts to one request. Reading the cache only was rejected: it would leave the badge
+ * blank on a cold start until the player visited Chats, making the count a reward for having
+ * already looked, which inverts its job.
+ *
  * ## The transition says which of the two moves happened
  *
  * A `Stack`'s default is the push transition, and the shell's ordinary move is a **replace** —
@@ -35,6 +49,7 @@
 import { Stack, usePathname } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
+import { useChallengesWaiting } from '@/features/challenges/types';
 import { TabBar, theme } from '@/shared/ui';
 
 import { tabForPathname } from '../domain/shellTabs';
@@ -43,6 +58,7 @@ import { openTab } from './shellNavigation';
 
 export function TabShell() {
   const pathname = usePathname();
+  const challengesWaiting = useChallengesWaiting();
 
   return (
     <View style={s.shell}>
@@ -64,8 +80,18 @@ export function TabShell() {
             ([#314](https://github.com/Raketa02/Raketa/issues/314)). It is the first exception
             outside Play, which is why `shellTabs` had to say which tab it is inside. */}
         <Stack.Screen name="games/[gameId]" options={{ animation: 'default' }} />
+        {/* And so is a challenge: it is pushed over the Chats inbox, the list stays underneath,
+            and backing out returns to the row it was tapped from
+            ([#360](https://github.com/Raketa02/Raketa/issues/360)). It needs no `INSIDE_A_TAB`
+            entry, because everything under `/chats/…` already shares that tab's first segment
+            — which is the whole reason both of this map's dynamic ids live under it. */}
+        <Stack.Screen name="chats/challenge/[challengeId]" options={{ animation: 'default' }} />
       </Stack>
-      <TabBar active={tabForPathname(pathname)} onPress={openTab} />
+      <TabBar
+        active={tabForPathname(pathname)}
+        onPress={openTab}
+        challengesWaiting={challengesWaiting}
+      />
     </View>
   );
 }

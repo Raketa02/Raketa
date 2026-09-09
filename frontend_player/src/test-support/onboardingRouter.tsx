@@ -335,6 +335,33 @@ export function stubGames(
   );
 }
 
+/** The path `GET /challenges` answers on, for a suite that wants to say what is in the list. */
+export const CHALLENGES_PATH = '/api/v1/challenges';
+
+/**
+ * Your challenges, as `GET /challenges` answers — **sent and received in one list.**
+ *
+ * Stubbed on every launch because the **shell** reads it now: the tab bar carries a count of
+ * unanswered challenges addressed to you, so a route left unstubbed is a failure at the socket
+ * on every app-level suite, named after `fetch` rather than after the bar
+ * ([#360](https://github.com/Raketa02/Raketa/issues/360)).
+ *
+ * `read_at` is the instant every standing and deadline in it was folded against — a suite that
+ * wants a countdown to say a particular thing sets it here rather than mocking a clock.
+ *
+ * Defaulted to nothing, exactly as the games list is: an empty list draws no badge and a section
+ * with one line in it, which is what a player with nothing outstanding should see.
+ */
+export function stubChallenges(
+  transport: Transport,
+  challenges: readonly Wire['ChallengeSchema'][] = [],
+  readAt = '2026-09-05T09:00:00Z',
+) {
+  transport.on('GET', CHALLENGES_PATH, () =>
+    json<Wire['ChallengeListResponse']>({ read_at: readAt, challenges: [...challenges] }),
+  );
+}
+
 export interface GateStub {
   readonly ratings?: readonly Wire['RatingResponse'][];
   /**
@@ -401,6 +428,7 @@ export function stubGate(
 
   stubRunsInProgress(transport, runs);
   stubGames(transport);
+  stubChallenges(transport);
 }
 
 /** Replace the gate's unfinished-run answer — what the server says *now*. */

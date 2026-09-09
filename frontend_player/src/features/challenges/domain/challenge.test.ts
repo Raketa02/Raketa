@@ -7,15 +7,23 @@
  */
 
 import type { Challenge, ChallengeSeat } from './challenge';
-import { challengeStands, pairAlreadyPlaying, playersStillIn } from './challenge';
-import { STANDINGS, type Standing } from './standing';
+import { challengeStands, pairAlreadyPlaying, playersStillIn, standingFactsFor } from './challenge';
+import { STANDINGS, type SeatAnswer, type Standing } from './standing';
 
 const ME = 'me';
 const BEA = 'bea';
 const CYRYL = 'cyryl';
 
 function challenge(standing: Standing, seats: readonly ChallengeSeat[]): Challenge {
-  return { challengeId: 'c1', organiserId: ME, standing, seats };
+  return {
+    challengeId: 'c1',
+    organiserId: ME,
+    standing,
+    sport: 'padel',
+    openedAt: '2026-09-05T09:00:00Z',
+    readAt: '2026-09-05T12:00:00Z',
+    seats,
+  };
 }
 
 /** A live singles game between the two of us: my seat accepted from birth, theirs waiting. */
@@ -25,7 +33,7 @@ const WAITING_ON_BEA = challenge('AWAITING_ANSWERS', [
 ]);
 
 describe('which challenges still hold a pair', () => {
-  it('counts the three live standings and neither of the two endings', () => {
+  it('counts the three live standings and none of the three endings', () => {
     const stands = STANDINGS.filter((standing) => challengeStands(challenge(standing, [])));
 
     expect(stands).toEqual(['AWAITING_ANSWERS', 'ON', 'LINE_UP_INCOMPLETE']);
@@ -104,5 +112,76 @@ describe('who on this court you already have a game with', () => {
     ]);
 
     expect(pairAlreadyPlaying([over], [BEA])).toBeUndefined();
+  });
+});
+
+/**
+ * The fold every sentence is keyed on. Three claims, each of which has been wrong somewhere:
+ * the count is of **open seats**, an invitee who has left reads their own seat rather than
+ * their side, and a standing this build cannot read folds to nothing so the row can draw the
+ * gap instead of a sentence about a code nobody here understands.
+ */
+describe('what a standing says to a reader', () => {
+  const named = (playerId: string, nickname: string, answer?: SeatAnswer): ChallengeSeat => ({
+    playerId,
+    nickname,
+    ...(answer === undefined ? {} : { answer }),
+  });
+
+  /** A padel four of mine: Bea accepted, Cyryl declined, one seat was never filled. */
+  const halfBuilt = challenge('LINE_UP_INCOMPLETE', [
+    named(ME, 'me.p', 'ACCEPTED'),
+    named(BEA, 'bea.k', 'ACCEPTED'),
+    named(CYRYL, 'cyryl.w', 'DECLINED'),
+    {},
+  ]);
+
+  it('reads the side off the organiser seat and never off a field', () => {
+    expect(standingFactsFor(halfBuilt, ME)?.side).toBe('organiser');
+    expect(standingFactsFor(halfBuilt, BEA)?.side).toBe('invitee');
+  });
+
+  it('counts seats nobody has accepted, never seats still to answer', () => {
+    const facts = standingFactsFor(halfBuilt, BEA);
+
+    // Cyryl's, which a decline reopened, and the one nobody was ever put in.
+    expect(facts).toMatchObject({ standing: 'LINE_UP_INCOMPLETE', accepted: 2, open: 2 });
+  });
+
+  it('carries the reader\u2019s own seat, which is the third reading of an invitee', () => {
+    expect(standingFactsFor(halfBuilt, CYRYL)).toMatchObject({
+      side: 'invitee',
+      ownAnswer: 'DECLINED',
+    });
+    expect(standingFactsFor(halfBuilt, BEA)).toMatchObject({ ownAnswer: 'ACCEPTED' });
+  });
+
+  it('names the first person in court order to have given the answer that ended it', () => {
+    const declined = challenge('DECLINED', [
+      named(ME, 'me.p', 'ACCEPTED'),
+      named(BEA, 'bea.k', 'DECLINED'),
+    ]);
+
+    expect(standingFactsFor(declined, ME)).toMatchObject({
+      standing: 'DECLINED',
+      player: { kind: 'player', nickname: 'bea.k' },
+    });
+  });
+
+  it('names the organiser on a withdrawal, and nobody at all when users has lost them', () => {
+    const withdrawn = challenge('WITHDRAWN', [named(ME, 'me.p'), named(BEA, 'bea.k')]);
+
+    expect(standingFactsFor(withdrawn, BEA)).toMatchObject({
+      player: { kind: 'player', nickname: 'me.p' },
+    });
+
+    const nameless: Challenge = { ...withdrawn, seats: [{ playerId: ME }, { playerId: BEA }] };
+    expect(standingFactsFor(nameless, BEA)).toMatchObject({ player: { kind: 'unknown' } });
+  });
+
+  it('folds to nothing on a standing it has no words for, so the row draws the gap', () => {
+    const unreadable: Challenge = { ...halfBuilt, standing: undefined };
+
+    expect(standingFactsFor(unreadable, ME)).toBeUndefined();
   });
 });

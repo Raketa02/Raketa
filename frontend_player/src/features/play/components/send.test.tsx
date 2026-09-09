@@ -204,6 +204,7 @@ const readBack = (live: readonly Wire['CandidateSchema'][]): Wire['ShortlistResp
 
 /** One open challenge of the reader's own, holding one of the people on this court. */
 const myChallengeWith = (playerId: string): Wire['ChallengeListResponse'] => ({
+  read_at: '2026-08-31T10:00:00Z',
   challenges: [
     {
       challenge_id: '22222222-0000-4000-8000-000000000002',
@@ -511,18 +512,23 @@ describe('a refused send', () => {
     await openAFullCourt();
     refuse('open_challenge_stands');
     transport.on('GET', CHALLENGES, () => json(myChallengeWith(C)));
+    // The shell reads this list too, for the tab bar's badge, so what is asserted is the read
+    // **this refusal** adds rather than the total — one request, and never one per seat.
+    const before = transport.requestsTo('GET', CHALLENGES).length;
 
     await pressSend();
 
     expect(await screen.findByText(openChallengeLine('cyryl'))).toBeTruthy();
-    expect(transport.requestsTo('GET', CHALLENGES)).toHaveLength(1);
+    expect(transport.requestsTo('GET', CHALLENGES).length - before).toBe(1);
   });
 
   /** The pair can be between two invitees, and that game is not this player's to read. */
   it('names nobody when the game in the way is not one of the organiser’s', async () => {
     await openAFullCourt();
     refuse('open_challenge_stands');
-    transport.on('GET', CHALLENGES, () => json<Wire['ChallengeListResponse']>({ challenges: [] }));
+    transport.on('GET', CHALLENGES, () =>
+      json<Wire['ChallengeListResponse']>({ read_at: '2026-08-31T10:00:00Z', challenges: [] }),
+    );
 
     await pressSend();
 
@@ -552,6 +558,7 @@ describe('a refused send', () => {
   it('reads nothing for a refusal that is about neither the gates nor the pair', async () => {
     await openAFullCourt();
     refuse('court_origin_not_found');
+    const before = transport.requestsTo('GET', CHALLENGES).length;
 
     await pressSend();
 
@@ -559,7 +566,8 @@ describe('a refused send', () => {
       await screen.findByText(challengeErrorMessage(refusalError('court_origin_not_found'))),
     ).toBeTruthy();
     expect(transport.requestsTo('GET', `${SEARCHES}/${LINEUP_ID}`)).toHaveLength(0);
-    expect(transport.requestsTo('GET', CHALLENGES)).toHaveLength(0);
+    // Again a delta: the badge's own read is the shell's and is not this screen's to suppress.
+    expect(transport.requestsTo('GET', CHALLENGES).length).toBe(before);
   });
 });
 

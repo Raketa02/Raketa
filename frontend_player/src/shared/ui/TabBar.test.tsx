@@ -28,10 +28,10 @@ const METRICS: Metrics = {
   insets: { top: 47, left: 0, right: 0, bottom: 34 },
 };
 
-function renderBar(active: TabBarKey, onPress = jest.fn()) {
+function renderBar(active: TabBarKey, onPress = jest.fn(), challengesWaiting?: number) {
   return render(
     <SafeAreaProvider initialMetrics={METRICS}>
-      <TabBar active={active} onPress={onPress} />
+      <TabBar active={active} onPress={onPress} challengesWaiting={challengesWaiting} />
     </SafeAreaProvider>,
   );
 }
@@ -41,9 +41,23 @@ function drawn(): ViewStyle[] {
   return screen.UNSAFE_queryAllByType(View).map((node) => StyleSheet.flatten(node.props.style));
 }
 
-/** The one absolutely-positioned thing in the bar, if it is there at all. */
+/**
+ * The active ring, if it is there at all.
+ *
+ * Found by its stroke rather than by *the one absolutely-positioned thing*, which it stopped
+ * being when the badge arrived: both are out of the layout, and for the same reason.
+ */
 function ring(): ViewStyle | undefined {
-  return drawn().find((style) => style.position === 'absolute');
+  return drawn().find(
+    (style) => style.position === 'absolute' && style.borderColor === theme.color.coral,
+  );
+}
+
+/** The Chats badge, if the bar was handed a count. */
+function badge(): ViewStyle | undefined {
+  return drawn().find(
+    (style) => style.position === 'absolute' && style.backgroundColor === theme.color.coralInk,
+  );
 }
 
 function disc(): ViewStyle {
@@ -296,5 +310,64 @@ describe('Dynamic Type', () => {
       fontFamily: theme.type.tag.fontFamily,
       fontSize: theme.type.tag.fontSize,
     });
+  });
+});
+
+/**
+ * The badge is a **change to the label at least as much as to the drawing**, so both halves are
+ * asserted — and the three states that draw nothing are asserted to draw nothing, because a
+ * count that flickered onto permanent chrome would say something is waiting when nothing is.
+ */
+describe('the Chats badge', () => {
+  it('draws nothing at all when the bar is handed no count', () => {
+    renderBar('now');
+
+    expect(badge()).toBeUndefined();
+    expect(screen.getByLabelText('Chats')).toBeTruthy();
+  });
+
+  it('draws a coralInk mark on Chats, and speaks the count in that column’s own name', () => {
+    renderBar('now', jest.fn(), 3);
+
+    expect(badge()).toMatchObject({
+      position: 'absolute',
+      backgroundColor: theme.color.coralInk,
+      height: theme.size.tabBar.badge,
+      minWidth: theme.size.tabBar.badge,
+      borderRadius: theme.radius.pill,
+    });
+    expect(screen.getByLabelText('Chats, 3 challenges waiting')).toBeTruthy();
+  });
+
+  it('hardcodes no plural', () => {
+    renderBar('now', jest.fn(), 1);
+
+    expect(screen.getByLabelText('Chats, 1 challenge waiting')).toBeTruthy();
+  });
+
+  it('prints the digit in white, which is 5.89 on that fill and not 3.89 on coral', () => {
+    renderBar('now', jest.fn(), 2);
+
+    // Queried through the tree rather than by text: the mark is hidden from the accessibility
+    // tree on purpose — the count is on the column's own name — so it is not a text node a
+    // reader can reach, which is exactly the assertion the suite next door makes.
+    const mark = screen.UNSAFE_getAllByType(Text).find((node) => node.props.children === 2);
+
+    expect(StyleSheet.flatten(mark?.props.style).color).toBe(theme.color.surface);
+  });
+
+  it('badges no other column, whatever it is handed', () => {
+    renderBar('now', jest.fn(), 4);
+
+    for (const tab of TAB_BAR_TABS) {
+      if (tab.key === 'chats') continue;
+      expect(screen.getByLabelText(tab.label)).toBeTruthy();
+    }
+  });
+
+  it('leaves the bar’s height alone, because the mark is out of the layout', () => {
+    renderBar('now', jest.fn(), 9);
+
+    expect(badge()?.position).toBe('absolute');
   });
 });

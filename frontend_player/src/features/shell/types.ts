@@ -30,13 +30,27 @@ export { TabShell } from './components/TabShell';
 export { ShellScreen, type ShellScreenProps } from './components/ShellScreen';
 
 /**
- * The four lines, read outside this feature by one thing: the test harness, which asserts
- * *the player is in the app* and needs to know what that looks like now that the landing is
- * the Now tab.
+ * The three placeholder lines, read outside this feature by one thing: the test harness, which
+ * asserts *the player is in the app* and needs to know what that looks like now that the landing
+ * is the Now tab.
+ *
+ * `CHATS_COPY` is beside it for the same reason and one more: the Chats inbox's own suite asserts
+ * the tab's sentences rather than string literals, because the wording is this file's to change
+ * and the rules the sentences carry are not.
  */
-export { PLACEHOLDER_COPY } from './components/shellCopy';
+export { CHATS_COPY, PLACEHOLDER_COPY } from './components/shellCopy';
 
-export { AroundScreen, ChatsScreen, NowScreen, YouScreen } from './components/tabScreens';
+export { AroundScreen, NowScreen, YouScreen } from './components/tabScreens';
+
+/**
+ * The Chats tab — **a screen rather than a placeholder**
+ * ([#360](https://github.com/Raketa02/Raketa/issues/360)).
+ *
+ * It is the shell's for the reason the Now and You tabs are: a tab owns its own sentences and
+ * composes other features' sections under them. It has a file of its own because it is no
+ * longer thin.
+ */
+export { ChatsScreen } from './components/ChatsScreen';
 
 /**
  * ⚡Play's own door, from inside Play.

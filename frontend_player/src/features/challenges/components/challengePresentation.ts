@@ -1,5 +1,5 @@
 /**
- * What a challenge says — five standings read from two sides, and the three sentences about
+ * What a challenge says — six standings read from two sides, and the four sentences about
  * its deadlines.
  *
  * The words are the client's because the code is all that crosses
@@ -32,6 +32,27 @@
  * The `answers challenges` strand needs the denominator, so a lapse that read as a refusal in
  * copy would be a fact quietly restated as a different one.
  *
+ * **`WITHDRAWN` is neither**, and its word is the record's own
+ * ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)).
+ * Not *cancel* or *call off*, which are the plan's; not *stand down*, which the root
+ * `CONTEXT.md` owns platform-wide for a term that cannot be evaluated. **The invitee who never
+ * answered is told the same as the one who accepted** — separating them would say who else was
+ * on the court.
+ *
+ * ## The third reading: an invitee who has left a challenge that has not
+ *
+ * A padel four where one declines and two accept is `LINE_UP_INCOMPLETE`, and the player who
+ * declined still holds a seat — so `GET /challenges` still returns it to them. Keyed on
+ * `(standing, side)` alone they would read *"You're in"*, which is false in both clauses. So
+ * the invitee's sentence reads **the reader's own seat**, not only their side
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §13.1).
+ *
+ * The row is not filtered away instead, because the pair rule still binds the reader: a lapsed
+ * invitee is unreachable in every sport until this challenge ends, and a row that vanished
+ * would take the only available explanation with it. **Neither sentence says how many are in** —
+ * they have left, so who is on that court is no longer theirs to be told, and `{m}` is a count
+ * of open seats, which is a fact about the arrangement rather than about anybody in it.
+ *
  * ## An unknown standing
  *
  * There is no arm for one, deliberately: a standing this build cannot read never reaches
@@ -40,37 +61,13 @@
  */
 
 import { counted } from '@/shared/formatting/counted';
+import { durationLeft } from '@/shared/formatting/durations';
 import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
+import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 
-import type { ChallengeSide } from '../domain/standing';
-
-/**
- * One standing, with the payload its sentence quotes.
- *
- * A discriminated input rather than `(standing, side, counts)`: three of the five quote a
- * figure or a name, two quote nothing, and a flat signature would let a caller pass a count
- * that belongs to a different standing.
- *
- * **A person is a `NamedPlayer`, never a string.** Two of these sentences name somebody, and
- * ADR-0107's *the whole handle or nobody* is a rule about what may be written — a `name:
- * string` parameter would let a caller shorten a handle on the way in and leave the rule
- * documented rather than held.
- */
-export type StandingFacts = { readonly side: ChallengeSide } & (
-  | { readonly standing: 'AWAITING_ANSWERS'; readonly awaiting: number }
-  | { readonly standing: 'ON' }
-  | {
-      readonly standing: 'LINE_UP_INCOMPLETE';
-      readonly accepted: number;
-      /**
-       * Seats with nobody in them — **never a count of who has yet to answer**, which in this
-       * standing is nobody by construction.
-       */
-      readonly open: number;
-    }
-  | { readonly standing: 'DECLINED'; readonly player: NamedPlayer }
-  | { readonly standing: 'LAPSED'; readonly player: NamedPlayer }
-);
+import { standingFactsFor, type Challenge } from '../domain/challenge';
+import { HANDLE_SEPARATOR, yourAnswerBy } from '../domain/challengeInbox';
+import type { StandingFacts } from '../domain/standing';
 
 export function standingLine(facts: StandingFacts): string {
   const organiser = facts.side === 'organiser';
@@ -84,9 +81,14 @@ export function standingLine(facts: StandingFacts): string {
       return organiser ? "Everybody's in" : "You're in — everybody's in";
     case 'LINE_UP_INCOMPLETE': {
       const open = counted(facts.open, 'seat open', 'seats open');
-      return organiser
-        ? `${facts.accepted} in, ${open} — the chat is already open`
-        : `You're in. ${open}, and the chat is already open`;
+      if (organiser) return `${facts.accepted} in, ${open} — the chat is already open`;
+
+      // §13.1. `They are still filling the court` and never a count: a reader who has left is
+      // not told who is on it.
+      if (facts.ownAnswer === 'DECLINED') return 'You said no. They are still filling the court.';
+      if (facts.ownAnswer === 'LAPSED')
+        return 'Your day ran out. They are still filling the court.';
+      return `You're in. ${open}, and the chat is already open`;
     }
     case 'DECLINED':
       return organiser
@@ -96,6 +98,10 @@ export function standingLine(facts: StandingFacts): string {
       return organiser
         ? `${playerName(facts.player)}'s day ran out — that seat is open again`
         : 'Your day ran out';
+    case 'WITHDRAWN':
+      return organiser
+        ? 'You withdrew this'
+        : `${playerName(facts.player)} withdrew this — that court is closed`;
   }
 }
 
@@ -149,6 +155,27 @@ export function answerWindowLine(seat: {
   readonly duration: string;
 }): string {
   return `${playerName(seat.player)} · ${seat.duration} left`;
+}
+
+/**
+ * **Your own seat, on your own row** — §14's fourth sentence, and the newest of the four.
+ *
+ * The screen that needed it is new. `{name} · {duration} left` names somebody else and is the
+ * **organiser's** sentence, listing each seat and its own clock; until the Chats inbox there
+ * was no surface that showed you *your* challenge, so nobody had written the sentence for your
+ * own seat. **Naming yourself on your own row would be the app telling you who you are.**
+ *
+ * It is the row's line whenever the challenge is yours to answer and unanswered — the badge's
+ * own predicate, reused, so the badge, the sort and the line cannot disagree
+ * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §1.2).
+ *
+ * `duration` is already formatted, for {@link answerWindowLine}'s reason: how long is left is
+ * read off `answer_by` against the list's `read_at`, and a copy deck is not where a clock is
+ * read. **Draw the clock, never obey it** — this sentence gates no control, and the buttons on
+ * the screen behind the row are drawn from the standing the platform sent.
+ */
+export function yourAnswerWindowLine(duration: string): string {
+  return `${duration} left to answer`;
 }
 
 /**
@@ -285,3 +312,88 @@ export function openChallengeLine(name: string): string {
  */
 export const A_PAIR_HERE_IS_ALREADY_PLAYING =
   'Two people on this court already have a game between them.';
+
+// ---------------------------------------------------------------------------
+// The Chats inbox: the section's name, the handles a row names, and its one line
+// ---------------------------------------------------------------------------
+
+/**
+ * The section's own name, and **it carries no count**.
+ *
+ * `Challenges for you` had to widen: a challenge you *sent* belongs in this list and is drawn
+ * nowhere else in the app. Widening breaks the number — `CHALLENGES FOR YOU · 1` agrees exactly
+ * with the tab badge, which counts only what is addressed to you — so the count goes and the
+ * badge stays the only number on the screen
+ * ([#326](https://github.com/Raketa02/Raketa/issues/326) §6).
+ *
+ * Stored as a word rather than as `CHALLENGES`: the heading is uppercased by 3.3's `eyebrow`
+ * role, and a listener should hear a section name rather than a shout.
+ */
+export const CHALLENGES_HEADING = 'Challenges';
+
+/**
+ * The screen a row opens, until [#361](https://github.com/Raketa02/Raketa/issues/361) writes it.
+ *
+ * A citation rather than filler, which is why it is here and not inlined in the route file: it
+ * names what belongs on that screen and admits it is not drawn, which is the whole test a
+ * placeholder has to pass — *can a player tell this from a bug*. Held to the same two refusals
+ * as every other line in the app: no date is promised, and nothing is said to be empty.
+ */
+export const CHALLENGE_SCREEN_TITLE = 'Challenge';
+
+export const CHALLENGE_SCREEN_NOT_BUILT =
+  'Who asked you, what the game is worth, and your answer — not built yet';
+
+/**
+ * The handles this row names, as one line — **whole names, and a count of the ones dropped.**
+ *
+ * How many fit is `namesThatFit`'s, because it is a rule; what the line looks like is here. The
+ * counter says how many people are on that court and not on this line, and it is a bare `+2`
+ * rather than a sentence: it sits inside a name list at `cardTitle`, where a clause would read
+ * as somebody's handle.
+ *
+ * **Whoever is dropped is whole on the screen behind the row**, and whole in the row's spoken
+ * name — §15's rule is against *inventing* a familiar form, and this invents nothing.
+ */
+export function handleLine(names: readonly string[], shown: number): string {
+  const drawn = names.slice(0, shown);
+  const hidden = names.length - drawn.length;
+
+  return hidden === 0 ? drawn.join(HANDLE_SEPARATOR) : `${drawn.join(HANDLE_SEPARATOR)} +${hidden}`;
+}
+
+/**
+ * **The row's one line, and it has two sources** — chosen by *is this mine to clear*.
+ *
+ * The time you have left when it is, and §13's standing sentence otherwise
+ * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §1.2). The
+ * choice is the badge's own predicate, so the badge, the sort and this line agree by
+ * construction rather than by three implementations remembering the same rule.
+ *
+ * **The duration folds against the response's `read_at` and never against this phone's clock.**
+ * A countdown taken from `Date.now()` drifts out of agreement with the standing the same
+ * response folded, which is the one failure that field exists to prevent.
+ *
+ * A standing this build cannot read draws §3's named gap, because on this row the code **is**
+ * the whole line — there is nothing else in the slot for a shorter list to leave behind.
+ */
+export function challengeRowLine(challenge: Challenge, playerId: string): string {
+  const answerBy = yourAnswerBy(challenge, playerId);
+  if (answerBy !== undefined) {
+    return yourAnswerWindowLine(durationLeft(answerBy, challenge.readAt));
+  }
+
+  const facts = standingFactsFor(challenge, playerId);
+  return facts === undefined ? OUT_OF_DATE_GAP : standingLine(facts);
+}
+
+/**
+ * Whether this row draws the urgency stripe — **presence, never magnitude.**
+ *
+ * Exactly the rows whose line is a duration, which is the same predicate again. There is no
+ * stripe on the organiser's row: the clock there is live but it is not theirs to clear, and the
+ * stripe marks what the badge counts.
+ */
+export function rowHasAClockOfYours(challenge: Challenge, playerId: string): boolean {
+  return yourAnswerBy(challenge, playerId) !== undefined;
+}

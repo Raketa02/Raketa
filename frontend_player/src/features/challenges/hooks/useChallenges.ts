@@ -1,10 +1,29 @@
 /**
- * The send, and the one read a refused send makes.
+ * The send, and the three readings of the one list this feature reads.
  *
  * | | |
  * | --- | --- |
  * | `useSendChallenge` | `POST /challenges` — **pending, never optimistic**, and the one act in the app that fails offline rather than pausing |
- * | `useOpenPair` | `GET /challenges` — asked **only after** `open_challenge_stands`, to name the pair the refusal would not |
+ * | `useChallengeInbox` | `GET /challenges` — the Chats tab's `CHALLENGES` section, filtered and ordered |
+ * | `useChallengesWaiting` | the same list, counted — the one number on the tab bar |
+ * | `useOpenPair` | the same list again, asked **only after** `open_challenge_stands`, to name the pair the refusal would not |
+ *
+ * ## Three readers, one key, one request
+ *
+ * The shell mounts the count and the Chats screen mounts the section, and TanStack dedupes both
+ * mounts to one fetch of `challengeKeys.list()`. **The badge reads no cache-only entry**: that
+ * would leave it blank on a cold start until the player visited Chats, making a count a reward
+ * for having already looked ([#326](https://github.com/Raketa02/Raketa/issues/326) §7).
+ *
+ * `staleTime: 0` is the one override, and it is the same one this file already made for the
+ * pair's name. The badge is chrome that is continuously on screen, so thirty seconds of
+ * staleness is a number lying about what the player owes; and the app's own focus refetch —
+ * already wired from `AppState` — **is** the once-a-day player's case, which is what makes the
+ * count current when they open the app rather than current from the last time they did.
+ *
+ * **Zeroing is by invalidation, never optimistic.** An optimistic decrement would have to be
+ * rolled back on the failure this map classifies as *paused, not failed*, and a badge that
+ * ticks down and back up is a worse lie than one that lags by a request.
  *
  * ## Pending, not optimistic — and the *or* dissolves rather than being chosen between
  *
@@ -29,7 +48,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
 
+import { useCurrentUser } from '@/features/auth/types';
+
 import { pairAlreadyPlaying, type Challenge } from '../domain/challenge';
+import { challengeInbox, challengesWaiting } from '../domain/challengeInbox';
 import { readChallenges } from '../use-cases/readChallenges';
 import { sendChallenge, type SendAsk, type SentChallenge } from '../use-cases/sendChallenge';
 
@@ -63,13 +85,8 @@ export function useSendChallenge() {
  * **Who on this court you already have a game with** — `undefined` until there is an answer, and
  * `undefined` again when the game in the way is not one of yours.
  *
- * `enabled` is the refusal, and it is the whole reason this is a query with a switch rather than
- * a read the screen makes on arrival: a court is built, looked at and sent from without anybody
- * needing to know what else the organiser has open, and asking on every visit would be a request
- * per builder session to answer a question almost none of them ask.
- *
- * The invitees are **not** in the key. This is one list either way, and keying it per court would
- * mint an entry per line-up for one answer — the derivation over it is free.
+ * `enabled` is the refusal, and it is the whole reason this reading is switched off by default
+ * where the other two are always on — see {@link useChallengeList}.
  *
  * **It answers a player id and never a name.** Turning one into words needs the handle, which is
  * the *court's* to read off the search it was built from — this feature has never seen a
@@ -81,25 +98,83 @@ export function useSendChallenge() {
  * been stated.
  */
 export function useOpenPair(invitees: readonly string[], enabled: boolean): string | undefined {
-  const { data } = useQuery<readonly Challenge[], AppError>({
+  const { data } = useChallengeList(enabled);
+
+  return data === undefined ? undefined : pairAlreadyPlaying(data, invitees);
+}
+
+/**
+ * **Your challenges, right now** — the one read, at the one posture its three readers share.
+ *
+ * `enabled` is `useOpenPair`'s refusal, and it is the whole reason that reading is a query with
+ * a switch rather than a read the builder makes on arrival: a court is built, looked at and
+ * sent from without anybody needing to know what else the organiser has open, and asking on
+ * every visit would be a request per builder session to answer a question almost none of them
+ * ask. The other two readers are always on.
+ *
+ * The invitees are **not** in the key. This is one list either way, and keying it per court
+ * would mint an entry per line-up for one answer — the derivations over it are free.
+ *
+ * **Never served from stale cache**, which is the one thing none of the three can afford. The
+ * app-wide default is thirty seconds and it is right for almost everything, but: the pair's
+ * name is read *after a refusal*, and the second refusal of a session would land inside that
+ * window and name whoever the first one named — the wrong person, in the one sentence in the
+ * feature that says somebody's handle out loud. And the badge is a count on permanent chrome,
+ * where thirty seconds of staleness is the number saying something is waiting when it is not.
+ *
+ * Zero rather than an invalidation at each call site, because the two are the same instruction
+ * and only one of them is stated where the read is.
+ */
+function useChallengeList(enabled = true) {
+  return useQuery<readonly Challenge[], AppError>({
     queryKey: challengeKeys.list(),
     queryFn: ({ signal }) => readChallenges({ signal }),
     enabled,
-    /**
-     * **Never served from cache**, which is the one thing this read cannot afford.
-     *
-     * The app-wide default is thirty seconds, and it is right for almost everything — but this
-     * list is read *after a refusal*, to name a person, and the second refusal of a session
-     * would land inside that window and name whoever the first one named. A challenge answered
-     * in between would make that the **wrong** person, in the one sentence in the feature that
-     * says somebody's handle out loud.
-     *
-     * Zero rather than an invalidation at the refusal, because the two are the same instruction
-     * and only one of them is stated where the read is: an `invalidateQueries` on the far side
-     * is a rule the next caller of this hook does not inherit.
-     */
     staleTime: 0,
   });
+}
 
-  return data === undefined ? undefined : pairAlreadyPlaying(data, invitees);
+/**
+ * The Chats tab's `CHALLENGES` section — the query, with its rows already filtered and ordered.
+ *
+ * The order is the domain's and is applied here rather than in the section, so the badge above
+ * and the list below are two readings of one rule rather than two rules that agree today.
+ *
+ * `rows` is empty until there is both a list and a reader. Who the reader is comes from
+ * `useCurrentUser`, exactly as the Now tab's games list picks its own seat out of a court:
+ * no route serves a player their own id, and every rule here is about *your* seat.
+ */
+export function useChallengeInbox() {
+  const challenges = useChallengeList();
+  const playerId = useCurrentUser().data?.id;
+
+  return {
+    ...challenges,
+    playerId,
+    rows:
+      challenges.data === undefined || playerId === undefined
+        ? []
+        : challengeInbox(challenges.data, playerId),
+  };
+}
+
+/**
+ * **Unanswered challenges addressed to you** — the tab bar's one number, or nothing at all.
+ *
+ * `undefined` covers zero, in flight and refused, and the three are deliberately not told
+ * apart: they draw the identical absence, because a spinner or a `?` on permanent chrome is
+ * anxiety with no act behind it. Zero is folded in with them here rather than at the bar, so
+ * the bar takes *a count to draw* rather than a number it has to decide about.
+ *
+ * It counts nothing until the reader is known, which is the same rule as the section's: every
+ * clause of the predicate is about *your* seat.
+ */
+export function useChallengesWaiting(): number | undefined {
+  const { data } = useChallengeList();
+  const me = useCurrentUser().data?.id;
+
+  if (data === undefined || me === undefined) return undefined;
+
+  const waiting = challengesWaiting(data, me);
+  return waiting === 0 ? undefined : waiting;
 }

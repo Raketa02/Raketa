@@ -113,10 +113,9 @@ describe('what a player lands on', () => {
   });
 });
 
-describe('the four placeholders', () => {
+describe('the placeholders', () => {
   it.each([
     ['Around', PLACEHOLDER_COPY.around],
-    ['Chats', PLACEHOLDER_COPY.chats],
     ['You', PLACEHOLDER_COPY.you],
   ])('says what belongs on %s rather than apologising', async (label, copy) => {
     await launchIntoTheApp();

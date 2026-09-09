@@ -4,13 +4,22 @@
  * It begins as the words a challenge says, because the copy deck was settled before the send
  * was built ([#262](https://github.com/Raketa02/Raketa/issues/262)) and a standing's sentence
  * belongs to the context that owns a challenge rather than to the tab that starts one. The
- * The **send** landed with [#274](https://github.com/Raketa02/Raketa/issues/274) and is the
- * rest of it: `SH.propose`, the mutation behind it, the rule that says which source a refusal
- * sends the court off to re-read, and the sentences all three write. The list has a route and
- * a use-case and no screen yet — the one caller today is the naming a refused send needs.
+ * **send** landed with [#274](https://github.com/Raketa02/Raketa/issues/274) and is the rest of
+ * it: `SH.propose`, the mutation behind it, the rule that says which source a refusal sends the
+ * court off to re-read, and the sentences all three write.
+ *
+ * **The list finally has a surface** ([#360](https://github.com/Raketa02/Raketa/issues/360)):
+ * `GET /challenges` had exactly one reader — the naming a refused send needs — and now has
+ * three, because the Chats tab draws it and the tab bar counts it. So two things cross this
+ * seam that did not: the section the shell composes, and the number the bar is handed.
  */
 
-export { STANDINGS, type ChallengeSide, type Standing } from './domain/standing';
+export {
+  STANDINGS,
+  type ChallengeSide,
+  type Standing,
+  type StandingFacts,
+} from './domain/standing';
 export {
   A_PAIR_HERE_IS_ALREADY_PLAYING,
   CHALLENGE_SENT,
@@ -25,7 +34,6 @@ export {
   openChallengeLine,
   proposeClosing,
   standingLine,
-  type StandingFacts,
 } from './components/challengePresentation';
 export { challengeErrorMessage } from './components/challengeErrorMessage';
 
@@ -54,6 +62,30 @@ export { sendRefusal, type SendRefusal } from './domain/sendRefusal';
  * caller it will ever have is an act of this feature's.
  */
 export { useOpenPair, useSendChallenge } from './hooks/useChallenges';
+
+/**
+ * **The Chats tab's `CHALLENGES` section**, and the one number the tab bar draws.
+ *
+ * The section is composed by the shell under the tab's own words, exactly as `GamesSection` is
+ * composed on Now: the tab owns its citation and nothing that is drawn under it. It is handed
+ * the empty line because that sentence is about the *screen* rather than about a challenge.
+ *
+ * The count is a **hook and not a component**, because `shared/ui` may not import a feature: a
+ * bar that read this hook would invert the dependency and give *"the drawn object only"* a
+ * network call ([#326](https://github.com/Raketa02/Raketa/issues/326) §10). The shell mounts it
+ * and passes a number.
+ */
+export { ChallengesSection, type ChallengesSectionProps } from './components/ChallengesSection';
+export { useChallengesWaiting } from './hooks/useChallenges';
+
+/**
+ * The screen a row opens, mounted by `/chats/challenge/[challengeId]`.
+ *
+ * A landing rather than the screen: what it becomes is
+ * [#361](https://github.com/Raketa02/Raketa/issues/361)'s, and it is exported now because a row
+ * that opens nothing is not a door.
+ */
+export { ChallengeScreen } from './components/ChallengeScreen';
 
 /**
  * The court a send carries — the shape the builder hands over, and the only type of this

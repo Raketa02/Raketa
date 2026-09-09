@@ -1,14 +1,17 @@
 /**
- * One screen per tab — **four of them**, each as thin as the tab behind it is empty.
+ * One screen per tab — **three of them**, each as thin as the tab behind it is empty.
  *
- * Four named components rather than one taking a `tab` prop: a route file's whole job is to
- * say which screen a path is, and `<AroundScreen />` says it where `<TabScreen tab="around"
- * />` makes the route file hold the answer as data. One of the four is not a placeholder in
- * the same way, and that is the other reason — You still carries the account panel.
+ * Named components rather than one taking a `tab` prop: a route file's whole job is to say
+ * which screen a path is, and `<AroundScreen />` says it where `<TabScreen tab="around" />`
+ * makes the route file hold the answer as data. One of the three is not a placeholder in the
+ * same way, and that is the other reason — You still carries the account panel.
  *
- * **Play is not here at all any more.** Its stub was a fifth entry until
- * [#268](https://github.com/Raketa02/Raketa/issues/268) built the screen; the route now names
- * `features/play`'s own, which is what the file tree should say about a tab that exists.
+ * **Play is not here, and Chats has left too.** Play's stub was an entry until
+ * [#268](https://github.com/Raketa02/Raketa/issues/268) built the screen, and Chats' until
+ * [#360](https://github.com/Raketa02/Raketa/issues/360) built the inbox; both routes now name a
+ * real screen, which is what the file tree should say about a tab that exists. `ChatsScreen` is
+ * still the shell's, because the Chats tab is a composition of other features' sections and the
+ * tab's own words — which is what this file's remaining entries are too.
  */
 
 import { AccountPanel } from '@/features/auth/types';
@@ -38,10 +41,6 @@ export function NowScreen() {
 
 export function AroundScreen() {
   return <PlaceholderScreen copy={PLACEHOLDER_COPY.around} />;
-}
-
-export function ChatsScreen() {
-  return <PlaceholderScreen copy={PLACEHOLDER_COPY.chats} />;
 }
 
 /**

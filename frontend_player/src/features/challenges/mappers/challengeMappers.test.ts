@@ -11,6 +11,9 @@ import type { Wire } from '@/test-support/transport';
 import { toChallenges, toSendChallengeRequest } from './challengeMappers';
 
 const SEARCH = 'search-1';
+/** The instant the whole list was folded against — every duration on a row is read from it. */
+const READ_AT = '2026-09-01T12:00:00Z';
+
 const ME = 'me';
 const BEA = 'bea';
 const CYRYL = 'cyryl';
@@ -61,6 +64,7 @@ describe('the court a send carries', () => {
 describe('the challenges coming back', () => {
   it('reads a seat’s occupant and answer, and leaves an empty seat empty', () => {
     const response: Wire['ChallengeListResponse'] = {
+      read_at: READ_AT,
       challenges: [
         {
           challenge_id: 'c1',
@@ -71,8 +75,8 @@ describe('the challenges coming back', () => {
           seats: [
             { side: 'A', player_id: ME, answer: 'ACCEPTED' },
             { side: 'A', player_id: BEA, answer: 'ACCEPTED' },
-            { side: 'B', player_id: CYRYL, answer: 'DECLINED' },
-            { side: 'B', player_id: null, answer: null, answer_by: null },
+            { side: 'B', player_id: CYRYL, answer: 'DECLINED', nickname: 'cyryl.k' },
+            { side: 'B', player_id: null, answer: null, answer_by: null, nickname: null },
           ],
         },
       ],
@@ -83,10 +87,13 @@ describe('the challenges coming back', () => {
         challengeId: 'c1',
         organiserId: ME,
         standing: 'LINE_UP_INCOMPLETE',
+        sport: 'padel',
+        openedAt: '2026-09-01T10:00:00Z',
+        readAt: READ_AT,
         seats: [
           { playerId: ME, answer: 'ACCEPTED' },
           { playerId: BEA, answer: 'ACCEPTED' },
-          { playerId: CYRYL, answer: 'DECLINED' },
+          { playerId: CYRYL, answer: 'DECLINED', nickname: 'cyryl.k' },
           {},
         ],
       },
@@ -96,6 +103,7 @@ describe('the challenges coming back', () => {
   /** A seat nobody has answered carries no answer at all — *awaiting* is the absence of one. */
   it('leaves an unanswered seat without an answer', () => {
     const response: Wire['ChallengeListResponse'] = {
+      read_at: READ_AT,
       challenges: [
         {
           challenge_id: 'c2',
@@ -111,6 +119,53 @@ describe('the challenges coming back', () => {
       ],
     };
 
-    expect(toChallenges(response)[0]?.seats[1]).toEqual({ playerId: BEA });
+    expect(toChallenges(response)[0]?.seats[1]).toEqual({
+      playerId: BEA,
+      answerBy: '2026-09-02T10:00:00Z',
+    });
+  });
+
+  /**
+   * A standing the app has no words for keeps its challenge, because the code **is** the whole
+   * line: `the-words.md` §3 owes it a named gap on the row rather than a shorter list.
+   */
+  it('drops a standing it cannot read and keeps the challenge', () => {
+    const response = {
+      read_at: READ_AT,
+      challenges: [
+        {
+          challenge_id: 'c3',
+          sport: 'SQUASH',
+          organiser_id: ME,
+          standing: 'ABANDONED_BY_THE_MOON',
+          opened_at: '2026-09-01T10:00:00Z',
+          seats: [{ side: 'A', player_id: ME, answer: 'ACCEPTED' }],
+        },
+      ],
+    } as unknown as Wire['ChallengeListResponse'];
+
+    const [challenge] = toChallenges(response);
+
+    expect(challenge?.challengeId).toBe('c3');
+    expect(challenge?.standing).toBeUndefined();
+  });
+
+  /** A sport takes the whole row with it: it is what the row calls the game. */
+  it('drops a challenge whose sport it cannot read', () => {
+    const response = {
+      read_at: READ_AT,
+      challenges: [
+        {
+          challenge_id: 'c4',
+          sport: 'PICKLEBALL',
+          organiser_id: ME,
+          standing: 'ON',
+          opened_at: '2026-09-01T10:00:00Z',
+          seats: [{ side: 'A', player_id: ME, answer: 'ACCEPTED' }],
+        },
+      ],
+    } as unknown as Wire['ChallengeListResponse'];
+
+    expect(toChallenges(response)).toEqual([]);
   });
 });

@@ -731,6 +731,29 @@ const size = {
     ringGap: 2,
     ringStroke: 2,
     labelMaxScale: 1.7,
+    /** The Chats badge — 10.2, and the one badge the bar carries.
+     *
+     *  **18, and it is the digit's own box rounded to the grid.** The count is mono and tabular
+     *  (1.4: numbers are monospaced always), and the smallest mono role is `num.xs`, whose line
+     *  box is 17 — the same borrowing 7.10's fit pill already made, for 15.3's reason: a
+     *  seventh size step for one mark is what that section says not to add. Eighteen is 17 on
+     *  the 3pt grid, and it is a MINIMUM width rather than a diameter, because the badge has no
+     *  cap: a two-digit count spreads it into a lozenge at `radius.pill` and the digits stay
+     *  tabular, so 1 -> 2 does not reflow the column.
+     *
+     *  `badgeRise` is how far it stands above the 16pt icon box, and it is **not a new number**:
+     *  it is the 4 the active ring already takes out of the bar's own 6pt top padding, leaving
+     *  the same 2pt of clearance to the hairline. The bar's height never changes — a bar that
+     *  grew on arriving somewhere would move the four things that did not change in order to
+     *  announce the one that did.
+     *
+     *  Everything else is borrowed rather than invented: `coralInk` fill and a white mark at
+     *  5,89, which is 6.1 `primary`'s treatment and the correction the Play disc three columns
+     *  away already took once; the horizontal padding and the overlap over the icon are
+     *  `space.xxs`. **No device has drawn this**, and `tabBadgeFit.test.ts` is what holds the
+     *  arithmetic that a device would otherwise have to. */
+    badge: 18,
+    badgeRise: 4,
   },
   grabber: { width: 36, height: 4 },
   sheetClose: 28,

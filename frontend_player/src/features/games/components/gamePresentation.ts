@@ -74,7 +74,7 @@ import { scoreColumn, type GameKind, type Outcome } from '../domain/vocabulary';
 
 import type { ScoreView } from './gameAccessibility';
 
-import { durationLeft, durationSince } from './durations';
+import { durationLeft, durationSince } from '@/shared/formatting/durations';
 
 // ---------------------------------------------------------------------------
 // The list
