@@ -49,14 +49,28 @@ class MutualChallengeMinting(Protocol):
     async def open_from_mutual_interest(
         self, *, sport: Sport, player_id: UUID, other_player_id: UUID
     ) -> UUID | None:
-        """The challenge that now stands between them, or ``None``.
+        """**The game these two have**, or ``None`` when there is none to name.
 
-        **``None`` is an ordinary answer and never an error.** The other context
-        re-verifies the same safety gates the send does — a *Let's play* may cite
-        a search from a month ago, because a search record never expires — and it
-        refuses by minting nothing. There is nobody to refuse to: the yes was the
-        player's own act and stands either way, and a raise here would roll it
-        back.
+        Not *what this call minted* (``docs/adr/0154`` §1). A repeat tap on a
+        pair whose mutual already minted a game that is not finished with is
+        answered with **that** game: the other context is holding them on it and
+        has its id in hand, and throwing that away is what left a pair told *you
+        both said yes* with nothing behind it.
+
+        **``None`` is an ordinary answer and never an error**, and it covers two
+        unrelated things on purpose (§3). The other context re-verifies the same
+        safety gates the send does — a *Let's play* may cite a search from a
+        month ago, because a search record never expires — and it refuses by
+        minting nothing; and a pair with a game still being **arranged**, a send
+        or this mutual's own half-built doubles court, is refused too. Either
+        way there is nobody to refuse to: the yes was the player's own act and
+        stands regardless, and a raise here would roll it back.
+
+        **The fold is why this may be published at all.** An absence that meant
+        only *a gate refused* would say something about the other person that
+        ``docs/adr/0095`` guarantees leaves no trace anywhere in any response. A
+        caller that narrowed it — by giving the still-being-arranged case an id,
+        which is one read away — would have to stop publishing it.
 
         ``player_id`` is the one whose yes arrived **second**. They hold the
         court's first seat, which is what the other context means by *organiser*

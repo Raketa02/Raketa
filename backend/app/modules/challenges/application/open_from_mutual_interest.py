@@ -44,12 +44,21 @@ rather than an omission (``docs/adr/0152`` §5): a send is somebody deliberately
 choosing a court, and holding them on an unplayed game would put back the block
 #343 argued out.
 
-**Its whole observable is that no challenge exists afterwards.** There is no
-organiser standing at a screen and no press to refuse, so a refusal here has
-nowhere to go and nothing to say: the yes stands, the mutual is still a mutual,
-and the game simply is not opened. That is also why this returns ``None`` rather
-than raising — a raise would roll back the yes, which was somebody's own act and
-is not the thing being refused.
+**A refusal writes nothing, and that is still its whole effect on the log.**
+There is no organiser standing at a screen and no press to refuse: the yes
+stands, the mutual is still a mutual, and no challenge is opened. That is why
+this returns ``None`` rather than raising — a raise would roll back the yes,
+which was somebody's own act and is not the thing being refused.
+
+**But a refusal is no longer silence** (``docs/adr/0154``). What this answers
+with is *the game these two have*, not *what this call minted*: a repeat tap
+held by the idempotence key is answered with the game that key is holding it on,
+because the id is already in the guard's hand and discarding it is what left a
+pair told *you both said yes* with nothing behind it. ``None`` is kept for the
+two cases where there is nothing to name — a game still being **arranged**, and
+a gate that refused or could not be read — and those are folded on purpose:
+an absence that meant only *a gate refused* would be the trace ``docs/adr/0095``
+guarantees a block never leaves.
 
 **It does not commit.** The mint and the yes that caused it are one transaction
 (``docs/adr/0003``'s outbox is deliberately not used here), so the transaction
@@ -69,7 +78,7 @@ from __future__ import annotations
 from typing import final
 from uuid import UUID
 
-from app.kernel import Clock, Instant, instant
+from app.kernel import Clock, instant
 from app.modules.challenges.application.completed_line_up import hand_over
 from app.modules.challenges.application.commands import (
     OpenFromMutualInterestCommand,
@@ -109,7 +118,20 @@ class OpenChallengeFromMutualInterest:
         self._planned_games = planned_games
 
     async def execute(self, command: OpenFromMutualInterestCommand) -> UUID | None:
-        """The challenge's id, or ``None`` when nothing was minted."""
+        """**The game these two have**, or ``None`` when there is none to name.
+
+        Not *what this call minted* (``docs/adr/0154`` §1). A repeat tap on a
+        pair whose mutual has already minted an unfinished game is answered with
+        **that** game, because the guard is holding them on it and has its id in
+        its hand — and discarding it is what left the pair told *you both said
+        yes* with nothing behind it.
+
+        ``None`` covers two unrelated things and may not be narrowed to one
+        (§3): the pair have a game **still being arranged**, and a gate
+        **refused or could not be read**. The first is innocent and already on
+        their own inbox; the second is what 0095 says leaves no trace anywhere
+        in any response. Folding them is why this may cross the wire at all.
+        """
 
         at = instant(self._clock.now())
         pair = frozenset({command.player_id, command.other_player_id})
@@ -135,16 +157,53 @@ class OpenChallengeFromMutualInterest:
             sport=command.sport,
             now=at,
         )
-        if not await self._all_finished_with(minted, at=at):
-            # **One mutual mints one game.** *Let's play* is a tap that costs
-            # nothing and ``express_interest`` mints on the **mutual** rather
-            # than on whether this tap wrote a row — deliberately, because a
-            # repeat tap is the one occasion the platform ever gets to retry a
-            # mint a gate refused. So the second tap has to be refused here, and
-            # it is refused until the game the first one minted is finished
-            # with: settled, ghost included. A refused mint writes nothing, so
-            # the retry still works.
-            return None
+        if minted:
+            # **Nothing minted is nothing to ask about**, which is what this
+            # branch is: with no id to ask about the read is not made at all.
+            # Asking would let an outage in ``games`` refuse every first mint on
+            # the platform — two people with nothing between them held apart by
+            # a fact about a game neither of them has.
+            try:
+                settled = await self._settled_games.settled_among(minted, now=at)
+            except Exception:
+                # **A read that cannot answer means *no*, and it may not
+                # escape.** This runs inside ``express_interest``'s transaction
+                # and a raise would roll back the player's yes — somebody's own
+                # act, and not the thing being refused. So it fails closed
+                # exactly as an unevaluable safety gate does: no game, ``None``,
+                # silently, and **nothing named** — a game cannot be named out
+                # of a fact this call does not have.
+                #
+                # **Failing closed is only defensible because a repeat tap
+                # retries** (``docs/adr/0152`` §6). The mint hanging off the
+                # mutual rather than off *did this tap write a row* is what
+                # turns a transient read failure into a delay instead of a game
+                # two people never get, and that property is therefore not
+                # available to be traded away for simplicity later.
+                #
+                # It catches broadly for ``CourtSafety._read``'s reason: a
+                # provider that raises and a provider that answers something
+                # malformed are the same event to a guard — it could not be
+                # evaluated — and narrowing this to what today's adapter happens
+                # to raise would let the next one fail open.
+                return None
+            unfinished = tuple(one for one in minted if one not in settled)
+            if unfinished:
+                # **One mutual mints one game.** *Let's play* is a tap that
+                # costs nothing and ``express_interest`` mints on the **mutual**
+                # rather than on whether this tap wrote a row — deliberately,
+                # because a repeat tap is the one occasion the platform ever
+                # gets to retry a mint a gate refused. So the second tap has to
+                # be refused here, and it is refused until the game the first
+                # one minted is finished with: settled, ghost included. A
+                # refused mint writes nothing, so the retry still works.
+                #
+                # **And it is answered with the game it is holding them on**
+                # (``docs/adr/0154`` §1). The newest, which is the one this pair
+                # would mean by *our game*; there is one unless a restore or a
+                # race left two, and the port orders so that *newest* is a fact
+                # rather than set iteration order.
+                return unfinished[0]
 
         challenge = Challenge.opened_from_mutual_interest(
             challenge_id=new_uuid(),
@@ -161,39 +220,3 @@ class OpenChallengeFromMutualInterest:
             # path takes it from here.
             await hand_over(challenge, at=at, games=self._planned_games)
         return challenge.id
-
-    async def _all_finished_with(
-        self, minted: frozenset[UUID], *, at: Instant
-    ) -> bool:
-        """Whether every game these two already minted here has settled.
-
-        **A read that cannot answer means *no*, and it may not escape.** The mint
-        runs inside ``express_interest``'s transaction, and a raise would roll
-        back the player's yes — which is somebody's own act and is not the thing
-        being refused. So this fails closed exactly as an unevaluable safety gate
-        does: no game, ``None``, silently.
-
-        **Failing closed is only defensible because a repeat tap retries**
-        (``docs/adr/0152`` §6). The mint hanging off the mutual rather than off
-        *did this tap write a row* is what turns a transient read failure into a
-        delay instead of a game two people never get, and that property is
-        therefore not available to be traded away for simplicity later.
-
-        It catches broadly for ``CourtSafety._read``'s reason: a provider that
-        raises and a provider that answers something malformed are the same
-        event to a guard — it could not be evaluated — and narrowing this to what
-        today's adapter happens to raise would let the next one fail open.
-        """
-
-        if not minted:
-            # **Nothing minted is nothing to ask about**, and the read is not
-            # made. Asking would let an outage in ``games`` refuse every first
-            # mint on the platform — two people with nothing between them held
-            # apart by a fact about a game neither of them has.
-            return True
-
-        try:
-            settled = await self._settled_games.settled_among(minted, now=at)
-        except Exception:
-            return False
-        return minted <= settled

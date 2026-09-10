@@ -2780,6 +2780,15 @@ export interface components {
              * @description `true` when they had already said *Let's play* to you for this sport. **A mutual is told to both sides.** A one-sided yes is told to nobody, ever.
              */
             mutual: boolean;
+            /**
+             * Challenge Id
+             * @description **The game the two of you have**, when there is one — the challenge this tap opened, or the one an earlier mutual between you opened that is not finished with.
+             *
+             *     **`null` is one answer covering two causes, and it does not say which.** You may already have a game *being arranged* together, or the platform may have declined to open one. That distinction does not cross this wire and will not — so a client that reported the absence as a state of its own would be reporting the second, which is a fact about the other person no refusal here is allowed to disclose.
+             *
+             *     `mutual` is unaffected either way: it is what the two yeses say.
+             */
+            challenge_id: string | null;
             /** @description Where this sport now stands against its cap, after this tap. */
             outstanding: components["schemas"]["OutstandingSchema"];
         };

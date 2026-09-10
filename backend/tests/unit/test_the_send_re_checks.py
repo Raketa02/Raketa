@@ -510,6 +510,12 @@ async def test_a_repeat_tap_on_the_same_mutual_mints_nothing(session_factory):
     What refuses it is the mint's own idempotence key — *this mutual has already
     minted a game and it is not finished with* — and every bound on that key is
     in ``test_a_mutual_mints_again.py``.
+
+    **The refusal now answers with the game it is refusing over** (``docs/adr/
+    0154`` §1), so *mints nothing* is asserted against the **log** rather than
+    read off a ``None``. That distinction is the point: an id coming back must
+    never be mistaken for an id having been created, and the two facts are
+    checked apart here for exactly that reason.
     """
 
     async with session_factory() as session:
@@ -529,7 +535,14 @@ async def test_a_repeat_tap_on_the_same_mutual_mints_nothing(session_factory):
         await session.commit()
 
         assert first is not None
-        assert again is None
+        # Nothing new was minted: the log still holds the one challenge, and
+        # what came back is that one rather than a second.
+        assert await build_open_challenge_query(
+            session
+        ).mutual_born_challenges_that_became_games(
+            ALICE, BOB, sport=Sport.TENNIS, now=SENT_AT
+        ) == (first,)
+        assert again == first
 
 
 async def test_a_repeat_tap_retries_a_mint_a_gate_refused(session_factory):

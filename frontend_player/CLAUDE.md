@@ -840,6 +840,21 @@ description and the count of the player's own outgoing yeses, both already on th
 card in flight is **route-local**; the ids answered are held **inside the deal**, so a deal
 replaced mid-flight cannot leave a stale id behind — by construction, never synchronised.
 
+**A mutual now says whether there is a game, and its silence says nothing else**
+([ADR-0154](../docs/adr/0154-a-mutual-names-the-game-it-has-and-names-nothing-when-it-has-none.md),
+[#370](https://github.com/Raketa02/Raketa/issues/370)). The tap answers with the challenge the
+two of them have — the one it just opened, or the one an earlier mutual opened that nobody has
+finished with — which is what ended a player being told _you both said yes_ and left looking for
+a game nobody mentioned. `mutualChallengeToast` names **Chats** and calls the thing nothing at all: a mutual-born court
+is `ON` in singles and a side short in doubles, so _your game is on_ and _your game_ are both
+wrong for half the sports, while _they are in your Chats now_ is true either way. There is no
+deep link because a toast carries no action here and the row is already the door. **`challengeId: null` keeps the older sentence exactly**, down to the
+wording it had before the field existed: it is one answer covering _the pair already have a game
+being arranged_ and _a gate refused_, the wire does not say which and will not, and drawing the
+absence as a state of its own would hand the sender the second — the trace ADR-0095 guarantees a
+block never leaves anywhere in any response. `deckPresentation.test.ts` asserts that sentence
+**verbatim** and bans the words that would turn it into a report.
+
 **And the deal itself is held, because a second deal is not a second copy of the first.** It was
 a `useMutation`, so it died with the route, and the entry deal was an effect guarded by a ref,
 which died with it too — so every return to Match me and every return to a chip already dealt

@@ -51,6 +51,8 @@
  * editor for it — the relaxation ladder is the pool's and a deal is offered no rungs at all.
  */
 
+import { type ToastTone } from '@/shared/store/toast.store';
+
 import { counted } from '@/shared/formatting/counted';
 
 /** The screen's title, and the segment's own word for it. */
@@ -134,12 +136,55 @@ export function interestToast(name: string): string {
 }
 
 /**
- * A mutual. **Told to both sides**, and then the product stops.
+ * A mutual the platform opened **no game for**, and the sentence it had before it could.
  *
- * *"Arranging the game is theirs"* — the challenge belongs to `matches`, which is out of
- * scope — and **there is no notification**: nothing in this repository can push anything, so
- * the sentence says how the other person finds out rather than implying they have been told.
+ * **There is no notification**: nothing in this repository can push anything, so the sentence
+ * says how the other person finds out rather than implying they have been told.
+ *
+ * **It must not say why there is no game, and it must not say that there is none**
+ * ([ADR-0154](../../../../../docs/adr/0154-a-mutual-names-the-game-it-has-and-names-nothing-when-it-has-none.md)
+ * §3, §5). A missing `challenge_id` is one answer covering two causes — the pair already have
+ * a game *being arranged*, or a gate refused — and which of those it is deliberately does not
+ * cross the wire. Drawing the absence as a state of its own would hand the sender the second
+ * one, which is the trace ADR-0095 guarantees a block never leaves. So this is kept **exactly**
+ * as it read before the field existed: it is a true sentence about a mutual, and it promises
+ * no game.
  */
 export function mutualToast(name: string): string {
   return `You both said yes — ${name} sees it the next time they open Raketa`;
+}
+
+/**
+ * A mutual the platform **has a game for**, which is the ordinary one.
+ *
+ * The tap answers with the challenge these two now have — the one it just opened, or the one
+ * an earlier mutual opened that is not finished with — so the screen can stop leaving a player
+ * to wonder where it went (ADR-0154 §1).
+ *
+ * **It names Chats and calls the thing nothing at all.** A mutual-born singles court is `ON`
+ * from birth, and a doubles one is a side short — *"a half-built court is not a game the pair
+ * have, it is a game they are still making"* — so both *your game is on* and *your game* are
+ * wrong for half the sports. What is true either way is that the two of them now share a row
+ * and a room in that tab, and that is the whole of what this says. There is no deep link
+ * because a toast carries no action here; the row is the door, and it is already there.
+ */
+export function mutualChallengeToast(name: string): string {
+  return `You both said yes — ${name} is in your Chats now`;
+}
+
+/**
+ * Which of the three a yes earned, decided **here** rather than at the press.
+ *
+ * The screen holds the answer and this module holds the sentences, so choosing between them
+ * belongs here — a branch at the call site would be a fourth place that has to know a mutual
+ * without a game keeps the older words. It takes the answer's own shape, so a fourth arm
+ * arrives as a field rather than as another nested conditional.
+ */
+export function yesToast(
+  name: string,
+  said: { readonly mutual: boolean; readonly challengeId: string | null },
+): { readonly message: string; readonly tone: ToastTone } {
+  if (!said.mutual) return { message: interestToast(name), tone: 'base' };
+  if (said.challengeId === null) return { message: mutualToast(name), tone: 'ok' };
+  return { message: mutualChallengeToast(name), tone: 'ok' };
 }

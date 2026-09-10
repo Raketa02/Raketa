@@ -414,6 +414,22 @@ Rules to preserve:
   floor.py`, with the reason printed; the newcomer and zero-exposure lifts reorder and
   never admit. All three numbers are ruleset rows and only the sweep's cadence is a
   setting.
+  **And the tap says whether a game came of it**
+  ([ADR-0154](../docs/adr/0154-a-mutual-names-the-game-it-has-and-names-nothing-when-it-has-none.md),
+  #370). `MutualChallengeMinting` kept `UUID | None` and **moved its meaning** — from *what
+  this call minted* to *the game these two have*, so a repeat tap held by 0152's idempotence
+  guard is answered with the game that guard is holding it on rather than with silence. The
+  ids were already in the guard's hand; `express_interest` was discarding them, which is the
+  whole of what #370 was. It rides out on `ExpressedInterestResponse.challenge_id`, additive
+  and nullable, and `mutual` does not move: reporting it `false` because a gate refused would
+  say something about the other person no refusal may. **`None` covers two unrelated causes
+  and may not be narrowed to one** — a game still being *arranged* (a send, or this mutual's
+  own half-built doubles court), and a gate that refused or could not be read — which is
+  ADR-0130's *a withholding is stated, the gate is not named* applied one route over. Giving
+  the first case an id, which is one port read away, would make absence mean *a gate refused
+  about one of you* and the field would have to go; §3 of the record is where that is
+  written down. `mutual_born_challenges_that_became_games` answers **newest first** for it, so
+  the row named to a player is not set iteration order (ADR-0105).
 - **The deck reads a declaration, and a pass is a statement about my deck**
   ([ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md),
   `the-two-contracts.md` §6). `POST /api/v1/deck` takes **the sport and the week this one

@@ -1147,9 +1147,10 @@ where, money, results or the conversation itself belongs here.
   ([ADR-0154](docs/adr/0154-a-mutual-names-the-game-it-has-and-names-nothing-when-it-has-none.md)).
   The mint answers with **the challenge this mutual has open** — minted by this tap, or by an
   earlier one and not yet finished with — so a repeat tap points at the game the first one made
-  instead of saying nothing. It answers **nothing** when the two are already arranging something
-  else and when a gate refused, and those two are folded on purpose: an absence covering one
-  innocent cause and one withheld one is publishable, and an absence that meant only *a gate
+  instead of saying nothing. It answers **nothing** when the two already have a game **being
+  arranged** — a send, or this mutual's own half-built doubles court, since *being arranged* is
+  the condition and not *whose* — and when a gate refused; and those two are folded on purpose:
+  an absence covering one innocent cause and one withheld one is publishable, and an absence that meant only *a gate
   refused* would be the trace a **Block** is guaranteed never to leave. So *no game here* may be
   said and *why* may not — the same rule a **withheld** row is stated under
   ([ADR-0130](docs/adr/0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md)). **`mutual`

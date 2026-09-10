@@ -56,6 +56,7 @@ import {
   SEEN_EVERYBODY_TITLE,
   WIDEN_IN_YOU,
   interestToast,
+  mutualChallengeToast,
   mutualToast,
   outgoingYeses,
   passedToast,
@@ -210,7 +211,11 @@ function deal({
   };
 }
 
-function expressed(mutual: boolean, outstanding = 3): Wire['ExpressedInterestResponse'] {
+function expressed(
+  mutual: boolean,
+  outstanding = 3,
+  challengeId: string | null = null,
+): Wire['ExpressedInterestResponse'] {
   return {
     interest: {
       player_id: 'aaaaaaaa-0000-4000-8000-000000000001',
@@ -219,6 +224,7 @@ function expressed(mutual: boolean, outstanding = 3): Wire['ExpressedInterestRes
       expires_at: '2026-09-08T18:00:00Z',
     },
     mutual,
+    challenge_id: challengeId,
     outstanding: { sport: 'PADEL', outstanding, cap: 10 },
   };
 }
@@ -580,12 +586,28 @@ describe('yes and no', () => {
    * first. The sentence comes off the **response** rather than off the press, which is why
    * the two arms are two runs — a client cannot know which it was until the answer lands.
    */
-  it('tells a mutual to both sides', async () => {
+  it('tells a mutual to both sides, and says nothing about a game it was not given', async () => {
     transport.on('POST', INTEREST, () => json(expressed(true)));
     await openDeck();
     fireEvent.press(await screen.findByLabelText("Let's play, Marek Z."));
 
     await waitFor(() => expect(toasts()).toEqual([mutualToast('Marek Z.')]));
+  });
+
+  /**
+   * The other arm, and the reason the field exists (ADR-0154). A mutual that opened a game —
+   * or landed on one an earlier mutual opened and nobody has finished with — says where it
+   * is, instead of leaving a player told *you both said yes* and looking for a game nobody
+   * mentioned.
+   */
+  it('says where the game is when the tap came back with one', async () => {
+    transport.on('POST', INTEREST, () =>
+      json(expressed(true, 3, 'cccccccc-0000-4000-8000-00000000000c')),
+    );
+    await openDeck();
+    fireEvent.press(await screen.findByLabelText("Let's play, Marek Z."));
+
+    await waitFor(() => expect(toasts()).toEqual([mutualChallengeToast('Marek Z.')]));
   });
 
   it('names the person a pass was about', async () => {

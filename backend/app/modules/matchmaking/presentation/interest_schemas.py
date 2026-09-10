@@ -116,6 +116,22 @@ class ExpressedInterestResponse(BaseModel):
             "to nobody, ever."
         ),
     )
+    challenge_id: UUID | None = Field(
+        ...,
+        description=(
+            "**The game the two of you have**, when there is one — the "
+            "challenge this tap opened, or the one an earlier mutual between "
+            "you opened that is not finished with.\n\n"
+            "**`null` is one answer covering two causes, and it does not say "
+            "which.** You may already have a game *being arranged* together, or "
+            "the platform may have declined to open one. That distinction does "
+            "not cross this wire and will not — so a client that reported the "
+            "absence as a state of its own would be reporting the second, which "
+            "is a fact about the other person no refusal here is allowed to "
+            "disclose.\n\n"
+            "`mutual` is unaffected either way: it is what the two yeses say."
+        ),
+    )
     outstanding: OutstandingSchema = Field(
         ...,
         description=(

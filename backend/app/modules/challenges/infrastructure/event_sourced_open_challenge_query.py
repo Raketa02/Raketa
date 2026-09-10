@@ -93,8 +93,9 @@ class EventSourcedOpenChallengeQuery:
         *,
         sport: Sport,
         now: Instant,
-    ) -> frozenset[UUID]:
-        """The mutual-born challenges between these two that reached ``ON``.
+    ) -> tuple[UUID, ...]:
+        """The mutual-born challenges between these two that reached ``ON``,
+        newest first.
 
         **The same two statements, folded on a different question.** It reads the
         streams both of them are seated in and keeps the ones that are a mutual
@@ -108,15 +109,21 @@ class EventSourcedOpenChallengeQuery:
         invited into. A later invitee sharing a mutual-born court with one of
         these two is **not** a mutual between them, and holding the mint on that
         would be this guard reaching back outside its own key.
+
+        **The order is the port's, not the log's** (``docs/adr/0154`` §4). The
+        first row is the one a repeat tap is answered with, so it is sorted here
+        rather than left to the order two statements happened to return — with
+        the id breaking a tie, because two challenges opened in the same instant
+        must not order on whichever stream was yielded first.
         """
 
         pair = frozenset({one_player, other_player})
         if len(pair) < 2:
-            return frozenset()
+            return ()
 
         streams = await streams_seating(self._session, self._codec, pair)
-        minted: set[UUID] = set()
-        for challenge_id, events in streams.items():
+        minted: list[Challenge] = []
+        for events in streams.values():
             opening = events[0]
             if not isinstance(opening, ChallengeOpenedFromMutualInterest):
                 continue
@@ -126,5 +133,10 @@ class EventSourcedOpenChallengeQuery:
             if challenge.sport is not sport:
                 continue
             if challenge.has_become_a_game_at(now):
-                minted.add(challenge_id)
-        return frozenset(minted)
+                minted.append(challenge)
+        return tuple(
+            challenge.id
+            for challenge in sorted(
+                minted, key=lambda one: (one.opened_at, one.id), reverse=True
+            )
+        )

@@ -228,12 +228,16 @@ async def test_the_hold_is_on_the_sport_the_mutual_was_in(session_factory):
     it after everything has finished.
     """
 
-    assert await _tap(session_factory) is not None
+    first = await _tap(session_factory)
+    assert first is not None
 
     a_day_on = instant(MINTED_AT + timedelta(days=1))
 
-    assert await _tap(session_factory, at=a_day_on) is None
-    assert await _tap(session_factory, sport=Sport.PADEL, at=a_day_on) is not None
+    # Tennis is still held, and now says what by: the game it already minted.
+    assert await _tap(session_factory, at=a_day_on) == first
+    # Padel was never this mutual's to hold, and mints its own.
+    padel = await _tap(session_factory, sport=Sport.PADEL, at=a_day_on)
+    assert padel is not None and padel != first
 
 
 async def test_a_mutual_born_challenge_holds_nobody_a_year_on(session_factory):
@@ -257,12 +261,17 @@ async def test_a_mutual_born_challenge_holds_nobody_a_year_on(session_factory):
 # ---------------------------------------------------------------------------
 
 
-async def test_an_unsettled_game_refuses_the_second_mint(session_factory):
-    """One mutual mints one game, for as long as that game is unfinished.
+async def test_an_unsettled_game_answers_with_the_game_they_already_have(
+    session_factory,
+):
+    """One mutual mints one game — and **says which one** (``docs/adr/0154``).
 
-    The refusal is a **``None``**, never a raise: there is no organiser at a
-    screen and no press to refuse, so the yes stands, the mutual is still a
-    mutual and the game simply is not opened.
+    The refusal is still a refusal: nothing is minted, no second result window
+    opens, and there is no raise, because there is no organiser at a screen and
+    no press to refuse. What changes is that the answer is no longer silence.
+    The guard is holding these two on a game they already have, it has that
+    game's id in its hand, and discarding it is what left the pair told *you
+    both said yes* with nothing behind it.
     """
 
     first = await _tap(session_factory)
@@ -274,7 +283,30 @@ async def test_an_unsettled_game_refuses_the_second_mint(session_factory):
         is GameStanding.AWAITING_ENTRY
     )
 
-    assert await _tap(session_factory, at=a_day_on) is None
+    assert await _tap(session_factory, at=a_day_on) == first
+
+
+async def test_the_answer_to_a_repeat_tap_is_not_a_second_mint(session_factory):
+    """The claim above, from the side that would make it a catastrophe.
+
+    Answering with an id must not be mistaken for having produced one. A second
+    challenge here is a second game and a second result window between the same
+    two people, which is the whole of what 0152's guard exists to prevent — so
+    the log is asked directly rather than inferred from the answer.
+    """
+
+    first = await _tap(session_factory)
+    assert first is not None
+
+    a_day_on = instant(MINTED_AT + timedelta(days=1))
+    assert await _tap(session_factory, at=a_day_on) == first
+
+    async with session_factory() as session:
+        assert await build_open_challenge_query(
+            session
+        ).mutual_born_challenges_that_became_games(
+            ALICE, BOB, sport=Sport.TENNIS, now=a_day_on
+        ) == (first,)
 
 
 async def test_a_played_game_holds_the_pair_until_its_result_settles(
@@ -298,7 +330,7 @@ async def test_a_played_game_holds_the_pair_until_its_result_settles(
         is GameStanding.AWAITING_ANSWER
     )
 
-    assert await _tap(session_factory, at=just_after) is None
+    assert await _tap(session_factory, at=just_after) == first
 
 
 async def test_a_half_built_doubles_mutual_holds_the_pair(session_factory):

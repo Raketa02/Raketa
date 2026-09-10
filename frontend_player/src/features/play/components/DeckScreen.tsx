@@ -142,10 +142,9 @@ import {
   NO_RATED_SPORT_LINE,
   SEEN_EVERYBODY_TITLE,
   WIDEN_IN_YOU,
-  interestToast,
-  mutualToast,
   outgoingYeses,
   passedToast,
+  yesToast,
 } from './deckPresentation';
 import { playErrorMessage } from './playErrorMessage';
 import { poolDescription } from './searchPresentation';
@@ -344,11 +343,10 @@ export function DeckScreen() {
     }
 
     yes.mutate(card, {
-      onSuccess: ({ mutual }) =>
-        showToast({
-          message: mutual ? mutualToast(name) : interestToast(name),
-          tone: mutual ? 'ok' : 'base',
-        }),
+      // **Three sentences, and the third is not a third state.** Which one is the copy
+      // module's to decide (ADR-0154 §3, §5) — a mutual that named a game says where it is,
+      // and one that named none keeps the words a mutual had before the field existed.
+      onSuccess: (said) => showToast(yesToast(name, said)),
       onError: () => cardReturned(card.searchId, card.playerId),
     });
   };

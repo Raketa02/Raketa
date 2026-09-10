@@ -170,6 +170,7 @@ def _expressed(expressed: ExpressedInterest) -> ExpressedInterestResponse:
         interest=_row(expressed.interest),
         mutual=expressed.mutual,
         outstanding=_count(expressed.outstanding),
+        challenge_id=expressed.challenge_id,
     )
 
 

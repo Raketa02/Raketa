@@ -32,7 +32,7 @@ mint and the settlement, a repeat tap reports a mutual and opens nothing.
 through it:
 
 1. it **minted** a challenge and returns its id;
-2. `open_pairs_among` says the two are **already arranging something else** — `None`;
+2. `open_pairs_among` says the two are **already arranging a game** — `None`;
 3. the mutual's **own earlier challenge is not finished with** — `None`;
 4. a safety gate **refused, or could not be read** — `None`.
 
@@ -84,10 +84,17 @@ This is the mint's own bookkeeping answering about its own act, which is what 01
 answer to a repeat performance of an idempotent act is **the thing the first performance
 produced** — not silence.
 
-### 2. It names the mutual's own challenge and never somebody's send
+### 2. The pair rule's refusal answers nothing, whatever it is refusing over
 
-Case 2 — the two are already arranging something else — answers `None`, and that is a decision
-rather than a limitation of the read.
+Case 2 — `open_pairs_among` says the two already have a game **being arranged** — answers
+`None`, and that is a decision rather than a limitation of the read.
+
+**It covers a court this mutual itself minted, and that is the case worth naming.** A
+**doubles** mutual mints a `LINE_UP_INCOMPLETE` court with a side still to fill; it never
+becomes a game, so the idempotence guard is silent about it and the pair rule is what holds the
+pair (0152 §4). A second tap there is refused over the mutual's *own* half-built court and
+still answers nothing. That is not an oversight in the sentence above — *being arranged* is the
+condition, not *whose*.
 
 It could be otherwise. `ChallengeHistoryQuery.open_challenges_with` returns `SharedChallenge`
 rows carrying `challenge_id`, so the id exists one port over. It is not taken, for three
@@ -100,15 +107,19 @@ reasons that compound:
 - **A send is not this mutual's doing.** *Let's play* pointing at a court somebody deliberately
   chose would conflate two acts the product has kept apart everywhere else, and it would put
   the matcher's answer in the business of narrating the challenge context's inbox.
-- **Nothing is hidden from them.** A challenge they are arranging is already on their own inbox
-  and their own Now. The player is not being kept from a fact; they are being told, by this
-  route, only about what this route did.
+- **Nothing is hidden from them.** A challenge still being *arranged* — a send, or a
+  mutual-born doubles court a side short — is already on their own inbox and their own Now,
+  carrying the accept it is waiting for. The player is not being kept from a fact; they are
+  being told, by this route, only about what this route did. **That is what makes the doubles
+  case above sit here rather than under §1**: a half-built court is not a game the pair have,
+  it is a game they are still making.
 
 ### 3. Absence covers two unrelated causes, and that is what makes it publishable
 
-Under §2 the answer is `None` when the pair are **already arranging something else** or when a
-gate **refused or could not be read**. One of those is wholly innocent and already visible to
-the player on two other screens. The other is the one 0095 says leaves no trace.
+Under §2 the answer is `None` when the pair have a game **still being arranged** — a send, or
+this mutual's own half-built doubles court — or when a gate **refused or could not be read**.
+The first is wholly innocent and already visible to the player on two other screens. The second
+is the one 0095 says leaves no trace.
 
 **The fold is the safety property, not an artefact of it.** 0130 could publish `withheld: true`
 because four causes arrived as one statement; this field crosses on the same grounds and on no
@@ -117,8 +128,9 @@ row and attributes the withholding to that person, while this says only *no game
 you here*.
 
 **This is the constraint on every future change to this field, and it is why it is a numbered
-paragraph.** If a later change gave case 2 a challenge id — the obvious tidy-up, and §2 is one
-port read away from it — absence would mean *a gate refused about one of you* and nothing else.
+paragraph.** If a later change gave the still-being-arranged case a challenge id — the obvious tidy-up, and
+§2 is one port read away from it — absence would mean *a gate refused about one of you* and
+nothing else.
 At that moment the field becomes exactly the trace 0095 forbids, and **the field must go, or
 the case must be folded back in.** A reader who takes §2 for conservatism and removes it will
 have re-created the leak this record exists to avoid.
@@ -134,7 +146,10 @@ available.
 So `mutual_born_challenges_that_became_games` answers `tuple[UUID, ...]`, **newest first**, the
 same shape and the same reason as `pairwise_counterparts`. Ordering becomes part of the demand
 rather than a property today's adapter happens to have, and the mint names the first unfinished
-row. The guard's `minted <= settled` reads over the tuple unchanged in meaning.
+row. The guard's subset test goes with it: `minted <= settled` was the honest expression of
+*is every one of them finished with*, and what replaces it — filtering `minted` down to the rows
+`settled` does not contain — answers *which ones are not*, in the order the tuple carries. The
+guard is the same question; it now keeps the answer instead of discarding it.
 
 Determinism is [ADR-0105](0105-determinism-is-a-set-iteration-problem-in-python.md)'s subject
 and this is the ordinary case of it: an answer a player sees may not depend on set iteration
@@ -145,9 +160,13 @@ order.
 `ExpressedInterestResponse` gains `challenge_id: UUID | None` — *the game the two of you now
 have, when there is one.*
 
-**An id rather than a boolean**, because it is the same read and strictly more product: the
-player gets a door to the game rather than a fact about it, and a singles mutual is `ON` from
-birth so the game is there to be opened the moment the sentence appears.
+**An id rather than a boolean**, because the wire should name the thing it is talking about and
+the read is the same either way. **What the client does with it today is choose a sentence**, and
+that is worth stating plainly rather than dressing up: a toast on this screen carries no action,
+so there is no door to open from it, and the door that exists is the Chats row the challenge
+already draws. The id is on the wire so that the surface which does want to navigate — the
+*Let's play* screen of §6, whenever something renders it — does not have to ask for a second
+field first.
 
 **It teaches the matcher's contract no new word.** `mutual_challenge.py` already says *"the
 challenge that now stands between them"*; the matcher carries an opaque id and still never
@@ -155,9 +174,11 @@ learns what a Challenge is.
 
 The client's sentence splits. Today's *"You both said yes — {name} sees it the next time they
 open Raketa"* is kept **exactly** for the absent case: it is a true sentence about a mutual and
-it promises no game. When the id is present the sentence says the game is there and the row is
-a door to it. **The absent case must not be rendered as a distinct negative state** — no *no
-game was opened*, no empty slot where a door goes — which is §3 arriving at the screen.
+it promises no game. When the id is present the sentence says where the two of them now are —
+**and names no kind of thing**, because a mutual-born court is `ON` in singles and a side short
+in doubles, so *your game* is wrong for half the sports on §2's own reasoning. **The absent case
+must not be rendered as a distinct negative state** — no *no game was opened*, no empty slot
+where a door goes — which is §3 arriving at the screen.
 
 ### 6. `GET /interest`'s mutual list is not given it, and the reason is that it is not lying
 
@@ -200,8 +221,10 @@ implying a game, because the thing beside it now answers that question directly.
   return type carrying the same one field — was refused as a type invented to make a sentence
   unmissable, but the trade is real and it is recorded here rather than defended.
 - **`mutual_born_challenges_that_became_games` answers a tuple where a set said what it
-  meant.** A set was the honest shape for a subset test; ordering is now demanded of every
-  adapter and asserted in its tests, bought for §4's edge case. The guard reads no differently.
+  meant.** A set was the honest shape for a subset test, and the subset test is gone with it:
+  the guard now filters rather than compares, because it needs the rows that are *not* settled
+  and not merely whether any are. Ordering is demanded of every adapter and asserted in its
+  tests, bought for §4's edge case.
 - **Every mint now has a caller that uses its answer**, which is a constraint on future
   refusals: a fifth way through `execute` has to decide what it answers with, and §3 says it
   may not be a fifth distinguishable one.
@@ -209,4 +232,7 @@ implying a game, because the thing beside it now answers that question directly.
   commit, per [ADR-0006](0006-backend-owns-api-contract.md). `openapi.dev.json` is untouched.
 - **`local` is the only environment that runs**, so no live data is affected and there is no
   backfill. On any future restore the field is answered from the streams as they stand.
-- **#370's list half is filed rather than fixed**, by §6, and the ticket says so.
+- **#370's list half is filed rather than fixed**, by §6. That is a claim about this record and
+  not about the tracker: nothing has been written on the ticket, and a reader who finds #370's
+  first candidate direction — *the Let's play screen distinguishes a mutual with a game from one
+  without* — will read it as still open unless somebody says otherwise there.

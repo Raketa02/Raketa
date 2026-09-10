@@ -149,7 +149,11 @@ def a_tennis_challenge(*, organiser=ORGANISER, invitee=ALICE) -> Challenge:
 
 
 def a_mutual_born_challenge(
-    *, sport: Sport = Sport.TENNIS, organiser=ORGANISER, other=ALICE
+    *,
+    sport: Sport = Sport.TENNIS,
+    organiser=ORGANISER,
+    other=ALICE,
+    opened_at: Instant = SENT_AT,
 ) -> Challenge:
     """Two yeses that met. **``ON`` at birth in a singles sport, half a game in
     a doubles one** — which is the difference these tests turn on.
@@ -164,7 +168,7 @@ def a_mutual_born_challenge(
         sport=sport,
         organiser_id=organiser,
         other_player_id=other,
-        occurred_at=SENT_AT,
+        occurred_at=opened_at,
     )
 
 
@@ -408,7 +412,7 @@ async def test_a_sent_challenge_is_not_something_a_mutual_minted(session_factory
         )
         assert await query.mutual_born_challenges_that_became_games(
             ORGANISER, ALICE, sport=Sport.TENNIS, now=INSIDE
-        ) == frozenset()
+        ) == ()
 
 
 async def test_a_mutual_born_game_comes_back_keyed_by_its_challenge(
@@ -429,7 +433,7 @@ async def test_a_mutual_born_game_comes_back_keyed_by_its_challenge(
             session
         ).mutual_born_challenges_that_became_games(
             ORGANISER, ALICE, sport=Sport.TENNIS, now=INSIDE
-        ) == frozenset({challenge.id})
+        ) == (challenge.id,)
 
 
 async def test_it_answers_about_the_sport_it_was_asked_about(session_factory):
@@ -447,7 +451,7 @@ async def test_it_answers_about_the_sport_it_was_asked_about(session_factory):
 
         assert await query.mutual_born_challenges_that_became_games(
             ORGANISER, ALICE, sport=Sport.PADEL, now=INSIDE
-        ) == frozenset()
+        ) == ()
 
 
 async def test_a_half_built_mutual_born_court_has_minted_no_game(session_factory):
@@ -465,7 +469,7 @@ async def test_a_half_built_mutual_born_court_has_minted_no_game(session_factory
 
         assert await query.mutual_born_challenges_that_became_games(
             ORGANISER, ALICE, sport=Sport.PADEL, now=INSIDE
-        ) == frozenset()
+        ) == ()
         assert await query.open_pairs_among(
             [ORGANISER, ALICE], now=INSIDE
         ) == frozenset({frozenset({ORGANISER, ALICE})})
@@ -492,10 +496,10 @@ async def test_a_later_invitee_is_not_somebody_the_mutual_was_between(
 
         assert await query.mutual_born_challenges_that_became_games(
             ORGANISER, ALICE, sport=Sport.PADEL, now=at(3)
-        ) == frozenset({challenge.id})
+        ) == (challenge.id,)
         assert await query.mutual_born_challenges_that_became_games(
             ORGANISER, BOB, sport=Sport.PADEL, now=at(3)
-        ) == frozenset()
+        ) == ()
 
 
 async def test_a_mutual_born_court_with_answers_owed_has_minted_nothing(
@@ -521,7 +525,7 @@ async def test_a_mutual_born_court_with_answers_owed_has_minted_nothing(
 
         assert await query.mutual_born_challenges_that_became_games(
             ORGANISER, ALICE, sport=Sport.PADEL, now=at(3)
-        ) == frozenset()
+        ) == ()
 
 
 async def test_it_holds_no_pair_a_year_on(session_factory):
@@ -544,10 +548,10 @@ async def test_it_holds_no_pair_a_year_on(session_factory):
 
         assert await query.mutual_born_challenges_that_became_games(
             ORGANISER, ALICE, sport=Sport.TENNIS, now=a_year_on
-        ) == frozenset({challenge.id})
+        ) == (challenge.id,)
         assert await query.mutual_born_challenges_that_became_games(
             ORGANISER, ALICE, sport=Sport.PADEL, now=a_year_on
-        ) == frozenset()
+        ) == ()
         assert await query.open_pairs_among(
             [ORGANISER, ALICE], now=a_year_on
         ) == frozenset()
@@ -995,3 +999,30 @@ async def test_a_challenge_that_lapsed_no_longer_stands_in_the_way(session_facto
         await session.commit()
 
         assert await _repository(session).load(challenge_id) is not None
+
+
+async def test_two_mutual_born_games_come_back_newest_first(session_factory):
+    """**Ordered, because one of them is going to be named to a player.**
+
+    ``docs/adr/0154`` §4: the mint answers a repeat tap with the game the mutual
+    already has, so it has to pick one — and a ``frozenset`` has nothing to pick
+    *by*. A ``min()`` over uuids would be deterministic and meaningless, which is
+    the worst of the options.
+
+    0152's guard makes a second one impossible while the first is unfinished, so
+    this is a state the platform does not reach on its own. A restore, a clock
+    moving backwards or two taps racing does reach it, and the answer a player is
+    shown may not be **set iteration order**
+    (``docs/adr/0105``). So the order is part of the demand rather than a
+    property today's adapter happens to have.
+    """
+
+    async with session_factory() as session:
+        older = await _record(session, a_mutual_born_challenge(opened_at=at(0)))
+        newer = await _record(session, a_mutual_born_challenge(opened_at=at(5)))
+
+        assert await build_open_challenge_query(
+            session
+        ).mutual_born_challenges_that_became_games(
+            ORGANISER, ALICE, sport=Sport.TENNIS, now=at(6)
+        ) == (newer.id, older.id)

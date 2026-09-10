@@ -50,7 +50,7 @@ the other person that no refusal is allowed to say.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import final
 from uuid import UUID
@@ -94,6 +94,13 @@ class ExpressedInterest:
     outstanding: OutstandingCount
     mutual: bool
     created: bool
+    #: **The game the two of them have**, when there is one to name
+    #: (``docs/adr/0154``). The challenge this tap minted, or the one an earlier
+    #: tap minted that is not finished with — and ``None`` when the pair have a
+    #: game still being *arranged* or a gate refused, which are **one answer on
+    #: purpose** and may not be told apart. It has no default: a mutual that
+    #: forgot to say is the silence this record exists to end.
+    challenge_id: UUID | None
 
 
 @final
@@ -163,10 +170,17 @@ class ExpressInterest:
         # the only occasion the platform ever gets to try again, and the other
         # context refuses a second one on the pair rule anyway.
         if answer.mutual:
-            await self._challenges.open_from_mutual_interest(
-                sport=yes.sport,
-                player_id=yes.from_player_id,
-                other_player_id=yes.to_player_id,
+            # **And what it answers with is carried back** (``docs/adr/0154``).
+            # The mint knows whether these two now have a game and which one it
+            # is; discarding that is what told a pair *you both said yes* and
+            # left them looking for a game nobody had mentioned.
+            answer = replace(
+                answer,
+                challenge_id=await self._challenges.open_from_mutual_interest(
+                    sport=yes.sport,
+                    player_id=yes.from_player_id,
+                    other_player_id=yes.to_player_id,
+                ),
             )
         # **One commit, whichever branch ran** — the yes and the game it opened
         # are one transaction, or neither happened.
@@ -212,6 +226,10 @@ class ExpressInterest:
             outstanding=await self._counted(yes.from_player_id, yes.sport, now),
             mutual=theirs is not None,
             created=created,
+            # **Nothing is named from here.** Whether these two have a game is
+            # the other context's answer and it is not asked until
+            # :meth:`execute`, beside the commit it shares a transaction with.
+            challenge_id=None,
         )
 
     async def _counted(

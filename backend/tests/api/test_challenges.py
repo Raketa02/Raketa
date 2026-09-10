@@ -437,6 +437,10 @@ async def test_a_mutual_yes_opens_a_game_immediately(
     mine = await _challenges(client, searcher["token"])
     theirs = await _challenges(client, other["token"])
     assert len(mine) == 1
+    # **The tap names the game it opened** (``docs/adr/0154`` §5). The player who
+    # closed the loop gets a door to it rather than a sentence about it, and the
+    # id is the one both of their inboxes are about.
+    assert back.json()["challenge_id"] == mine[0]["challenge_id"]
     assert [one["challenge_id"] for one in mine] == [
         one["challenge_id"] for one in theirs
     ]
@@ -486,6 +490,7 @@ async def test_a_block_between_two_stale_yeses_mints_nothing(
 
     assert back.status_code in (200, 201), back.text
     assert back.json()["mutual"] is True, "the yes still landed"
+    assert back.json()["challenge_id"] is None, "there is no game to name"
     assert await _challenges(client, other["token"]) == []
     assert await _challenges(client, searcher["token"]) == []
 
@@ -515,6 +520,7 @@ async def test_a_gate_that_cannot_be_read_costs_the_game_and_never_the_yes(
 
     assert back.status_code in (200, 201), back.text
     assert back.json()["mutual"] is True, "the yes stands, and it is still mutual"
+    assert back.json()["challenge_id"] is None, "there is no game to name"
     listed = (await world.read_interest(client, other["token"])).json()
     assert [row["player_id"] for row in listed["mutual"]] == [str(searcher["id"])]
 
@@ -835,3 +841,48 @@ async def test_a_court_everybody_turned_down_is_dated_by_the_seats(
     deadlines = [seat["answer_by"] for seat in row["seats"] if seat["answer_by"]]
     assert deadlines
     assert all(ended < datetime.fromisoformat(one) for one in deadlines)
+
+
+async def test_a_refused_mint_and_an_innocent_one_name_the_same_nothing(
+    client, session_factory, candidate_source, searcher
+):
+    """**The fold is the safety property** (``docs/adr/0154`` §3).
+
+    A pair already arranging a game and a pair a gate refused reach the wire as
+    the same ``challenge_id: null``. That is not a coincidence to be tidied up
+    later: if absence ever meant *a gate refused about one of you* and nothing
+    else, it would be the trace ``docs/adr/0095`` guarantees a block never leaves
+    anywhere in any response, and the field would have to go.
+
+    Here the innocent cause is this mutual's **own** half-built court. A padel
+    mutual is `LINE_UP_INCOMPLETE` with a side still to fill, so the pair rule
+    holds the second tap — over a court these two made themselves — and the
+    answer is still nothing, because a half-built court is not a game they have
+    but one they are still making.
+    """
+
+    other = await world.a_searcher(client, name="bea")
+    await world.fold_the_log(session_factory, candidate_source)
+    await world.a_yes(
+        client, session_factory, candidate_source, sender=searcher, towards=other["id"]
+    )
+    # **One search, cited twice.** It has to be taken before the mutual: once
+    # these two are arranging a court they leave each other's deck, so a search
+    # run afterwards would not show them and the origin could not resolve. A
+    # search record never expires, which is what makes the second tap reachable
+    # at all — and is the same property the stale-block test turns on.
+    origin = (await world.search(client, other["token"])).json()["search"]["search_id"]
+
+    opened = await world.express_interest(
+        client, other["token"], player_id=searcher["id"], search_id=origin
+    )
+    assert opened.json()["challenge_id"] is not None
+
+    again = await world.express_interest(
+        client, other["token"], player_id=searcher["id"], search_id=origin
+    )
+
+    assert again.status_code in (200, 201), again.text
+    assert again.json()["mutual"] is True, "the mutual is still what the rows say"
+    assert again.json()["challenge_id"] is None
+    assert len(await _challenges(client, other["token"])) == 1, "no second court"

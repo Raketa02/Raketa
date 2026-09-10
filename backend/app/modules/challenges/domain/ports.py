@@ -206,9 +206,9 @@ class OpenChallengeQuery(Protocol):
         *,
         sport: Sport,
         now: Instant,
-    ) -> frozenset[UUID]:
+    ) -> tuple[UUID, ...]:
         """Every mutual-born challenge between these two, in this sport, that
-        completed into a game — by id.
+        completed into a game — by id, **newest first**.
 
         **The mutual mint's idempotence key, and nobody else's read.** *Let's
         play* is a tap that costs nothing, ``express_interest`` mints on the
@@ -256,6 +256,20 @@ class OpenChallengeQuery(Protocol):
         two people and always will; the bulk shape next door exists to answer a
         send's six pairs on one court. A method that took a collection and was
         only ever called with two would be inviting somebody to pass three.
+
+        **Ordered, because one of these is named to a player** (``docs/adr/0154``
+        §4). The mint answers a repeat tap with the game the mutual already has,
+        so it takes the first unfinished row — and a set has nothing to take a
+        *first* of. The guard above makes a second row impossible while the first
+        is unfinished, so in practice there is one; a restore, a clock moving
+        backwards or two taps racing reach two, and what a player is then shown
+        may not be set iteration order (``docs/adr/0105``). It was a
+        ``frozenset`` while its only reader was a subset test, which is the
+        honest shape for that question and the wrong one for this.
+
+        Ties break on the id, so two challenges opened in the same instant order
+        the same way on every read rather than on whichever the log yielded
+        first.
         """
         ...
 

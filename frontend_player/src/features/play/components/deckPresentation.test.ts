@@ -13,6 +13,7 @@ import {
   MATCH_ME_TITLE,
   WIDEN_IN_YOU,
   interestToast,
+  mutualChallengeToast,
   mutualToast,
   outgoingYeses,
   passedToast,
@@ -26,6 +27,7 @@ const EVERY_SENTENCE = [
   passedToast('Marek Z.'),
   interestToast('Marek Z.'),
   mutualToast('Marek Z.'),
+  mutualChallengeToast('Marek Z.'),
 ];
 
 describe('the segment', () => {
@@ -104,9 +106,9 @@ describe('the empty states', () => {
   });
 });
 
-describe('the three toasts', () => {
+describe('the four toasts', () => {
   it('names the whole handle and never a familiar form', () => {
-    for (const sentence of [passedToast, interestToast, mutualToast]) {
+    for (const sentence of [passedToast, interestToast, mutualToast, mutualChallengeToast]) {
       expect(sentence('Marek Z.')).toContain('Marek Z.');
     }
   });
@@ -130,5 +132,41 @@ describe('what the deck never says', () => {
     for (const sentence of EVERY_SENTENCE) {
       expect(sentence).not.toMatch(/show them again|undo|start over/i);
     }
+  });
+});
+
+describe('a mutual with a game, and a mutual without one', () => {
+  /**
+   * ADR-0154. The tap now answers with the game these two have, when there is one — so the
+   * mutual that opened a game and the mutual that did not stopped being the same sentence.
+   */
+
+  it('says where to go when the tap named a challenge, and calls it no kind of thing', () => {
+    const said = mutualChallengeToast('Marek Z.');
+
+    expect(said).toMatch(/both said yes/);
+    expect(said).toContain('Marek Z.');
+    expect(said).toMatch(/Chats/);
+    // A singles mutual is `ON` and a doubles one is a side short, so the noun would be wrong
+    // for half the sports: *a half-built court is not a game the pair have, it is a game they
+    // are still making* (ADR-0154 §2).
+    expect(said).not.toMatch(/\bgame\b|\bcourt\b/i);
+  });
+
+  it('keeps the older sentence exactly where no game was named', () => {
+    expect(mutualToast('Marek Z.')).toBe(
+      'You both said yes — Marek Z. sees it the next time they open Raketa',
+    );
+  });
+
+  it('never draws the absence as a state of its own', () => {
+    /**
+     * §3 and §5: a missing `challenge_id` is **one answer covering two causes** — the pair
+     * already have a game being arranged, or a gate refused — and which it is does not cross
+     * the wire. A sentence that said *no game was opened* would turn the second into
+     * something the sender could read about the other person, which ADR-0095 guarantees
+     * leaves no trace anywhere in any response.
+     */
+    expect(mutualToast('Marek Z.')).not.toMatch(/no game|not opened|couldn|unable|failed|yet/i);
   });
 });

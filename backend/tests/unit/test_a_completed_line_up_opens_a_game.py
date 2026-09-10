@@ -47,7 +47,10 @@ class _NoOpenChallenges:
     async def mutual_born_challenges_that_became_games(
         self, one_player, other_player, *, sport, now
     ):
-        return frozenset()
+        # A **tuple**, because the port answers newest-first since
+        # ``docs/adr/0154`` §4 — a double that kept the old set would still
+        # satisfy every caller here and quietly stop standing for the contract.
+        return ()
 
 
 class _NothingToSettle:
