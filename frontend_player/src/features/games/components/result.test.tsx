@@ -12,7 +12,8 @@
  * is the deck's to change and the rules are not.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { router } from 'expo-router';
 
 import { AppError } from '@/shared/errors';
 
@@ -175,14 +176,23 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
-/** Land in the app with these games, and open the first of them from the Now tab. */
-async function openGame(served: Wire['GameSchema'], sport = 'Padel') {
+/**
+ * Land in the app with these games, and open one.
+ *
+ * **The push is direct, because there is no longer a door.** The games list came off the Now
+ * tab with the rest of the placeholder's furniture — Now is not built, and the two sections
+ * standing in for it were taken off rather than out — so nothing a player can tap reaches this
+ * route today. The screen and its route are unchanged, which is what this suite is about; when
+ * the real flow gives it a door, this helper presses that instead.
+ */
+async function openGame(served: Wire['GameSchema']) {
   stubGames(transport, [served], READ_AT);
   await launchSignedIn();
 
-  const row = await screen.findByLabelText(new RegExp(`^${sport} · with `));
-  fireEvent.press(row);
-  await waitFor(() => expect(screen).toHavePathname(`/games/${GAME_ID}`));
+  act(() => {
+    router.push({ pathname: '/games/[gameId]', params: { gameId: served.game_id } });
+  });
+  await waitFor(() => expect(screen).toHavePathname(`/games/${served.game_id}`));
 }
 
 /** Press one value key on the pad, into whichever cell the caret is on. */
@@ -206,24 +216,41 @@ const bodies = (path: string) => transport.requestsTo('POST', path).map((request
 const refusal = (code: string) =>
   new AppError('conflict', 'business-conflict', 'test failure', { code });
 
-describe('the list on the Now tab', () => {
-  it('says what each game is asking, and the screen says the same sentence', async () => {
-    const served = awaitingAnswer('B');
-    stubGames(transport, [served], READ_AT);
-    await launchSignedIn();
+/**
+ * **The games list is composed on no screen, so there is no walk to it.**
+ *
+ * Two assertions stood here — that a row says what its game is asking, and that an empty list
+ * draws no section rather than an emptiness — and both were reached by landing on the Now tab.
+ * That tab carries its own line and nothing else now: it is not built, and the list was
+ * standing in for it. `GamesSection` is not deleted, and neither is anything under it; what is
+ * gone is the composition, so a suite that lands in the app and looks for a heading is
+ * asserting a screen nobody assembles.
+ *
+ * **Neither property is lost, and it is worth saying where each went.** *The row's sentence is
+ * the screen's* is a fact about `standingLine` having one caller rather than about a walk, and
+ * it is covered where that function is — `gamePresentation.test.ts`, which is also the file
+ * that would fail if a second spelling appeared. *An empty list draws nothing* is
+ * `GamesSection`'s own early return, over a heading only it draws.
+ *
+ * When a flow composes the list again, the walk comes back here rather than being invented
+ * somewhere else — which is the whole reason this note is a note and not a deletion.
+ */
 
-    // The row's own sentence is the screen's: a player who reads a row, taps it and finds a
-    // different deadline is the state `standingLine` having one caller exists to prevent.
-    const line = await screen.findByText(/If you say nothing for 23 hours/);
+describe('the screen this route resolves to', () => {
+  it('is reachable by its own address, with no door anywhere in the app', async () => {
+    await openGame(awaitingAnswer('B'));
 
-    expect(line).toBeTruthy();
+    // The row that used to say this is gone; the screen still says it, which is the half that
+    // matters to a player who arrives here from wherever the future flow sends them.
+    expect(await screen.findByText(/If you say nothing for 23 hours/)).toBeTruthy();
   });
 
   /**
-   * Now *"deliberately never says nothing is happening"*, and a challenge whose line-up has not
-   * completed is not a game yet — so an empty list draws no section rather than an emptiness.
+   * Now *"deliberately never says nothing is happening"* — and it now says nothing else
+   * either, because the list that was standing in for it came off the tab.
    */
-  it('draws nothing at all when there are no games', async () => {
+  it('is not on the Now tab, which carries only its own line', async () => {
+    stubGames(transport, [awaitingAnswer('B')], READ_AT);
     await launchSignedIn();
     await screen.findByText(/not built yet/);
 
@@ -489,7 +516,7 @@ describe('the score-entry instrument, which is the prototype’s', () => {
   });
 
   it('draws the sport’s own grid, in the sport’s own word for a row', async () => {
-    await openGame(game({ sport: 'SQUASH' }), 'Squash');
+    await openGame(game({ sport: 'SQUASH' }));
 
     expect(screen.getByLabelText('Game 5, You, empty')).toBeTruthy();
     expect(screen.queryByLabelText('Set 1, You, empty')).toBeNull();

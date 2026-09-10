@@ -15,16 +15,19 @@
  */
 
 /**
- * **Your games, on the Now tab.** Composed by the shell under the tab's own line, exactly as
- * the You tab composes the play intents — the tab owns its citation and nothing drawn under it.
+ * **Your games.** Composed by nothing today: it was the Now tab's, under that tab's own line
+ * and exactly the way You composes the play intents, until Now went back to carrying only its
+ * line. It is exported and unreferenced on purpose — built, tested and waiting for the flow
+ * that will own it.
  */
 export { GamesSection } from './components/GamesSection';
 
 /**
- * The result conversation, on the screen a row pushes.
+ * The result conversation, on the screen a row used to push.
  *
  * The route validates its param and hands over a `gameId`; everything else on that screen is
- * derived from the one list this feature reads.
+ * derived from the one list this feature reads. **Nothing in the app pushes it today** — the
+ * list that did is composed nowhere — so the route resolves and no control reaches it.
  */
 export { ResultScreen, type ResultScreenProps } from './components/ResultScreen';
 

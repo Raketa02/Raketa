@@ -11,11 +11,17 @@
  * server's list and nothing on this side re-derives it, and ignoring a card costs nothing, so
  * there is nothing anywhere that counts what a player has not answered.
  *
+ * **Every walk opens a game**, because the card is drawn at the end of the **result screen**
+ * rather than above the games list on Now. That is the one structural thing this suite says
+ * about where the card lives, and it says it twice: every test reaches the card through a row,
+ * and one asserts that the Now tab does not so much as **ask** for the list any more.
+ *
  * It asserts against the **copy deck** rather than against strings, because the wording is the
  * deck's to change and the rules are not.
  */
 
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { router } from 'expo-router';
 import { onlineManager } from '@tanstack/react-query';
 
 import { AppError, offlineMessage } from '@/shared/errors';
@@ -143,14 +149,34 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
-/** Land on the Now tab with these evenings and these cards waiting. */
+/**
+ * Land in the app with these evenings and these cards waiting, and **open one game** — the
+ * card is drawn at the end of the result screen, so getting to it is a tap on a row rather
+ * than an arrival.
+ *
+ * `opening` defaults to the first game, and is passed only where the point is that this
+ * screen draws *its own* card and not somebody else's.
+ *
+ * **The push is direct, because there is no longer a door.** The games list came off the Now
+ * tab with the rest of that placeholder's furniture, so nothing a player can tap reaches this
+ * route today — which is what the Now assertion below is about, and why every other test here
+ * arrives by pushing.
+ */
 async function land(
   games: readonly Wire['GameSchema'][],
   cards: readonly Wire['OpenCardSchema'][],
+  opening: Wire['GameSchema'] | undefined = games[0],
 ) {
   stubGames(transport, games, READ_AT);
   stubSportsmanship(transport, cards);
   await launchSignedIn();
+
+  if (opening === undefined) return;
+
+  act(() => {
+    router.push({ pathname: '/games/[gameId]', params: { gameId: opening.game_id } });
+  });
+  await waitFor(() => expect(screen).toHavePathname(`/games/${opening.game_id}`));
 }
 
 /** Press one star on one person's row. */
@@ -160,7 +186,10 @@ function give(stars: number, subject: StarSubject) {
 
 const answers = () => transport.requestsTo('POST', ANSWER_PATH).map((request) => request.body);
 
-describe('the card in the games list', () => {
+/** Every ask for the open-card list. Its **absence** is what the Now tab is asserted on. */
+const cardReads = () => transport.requestsTo('GET', SPORTSMANSHIP_PATH);
+
+describe('the card at the end of the result screen', () => {
   it('asks about everybody else on the court, partner included', async () => {
     await land([DOUBLES], [DOUBLES_CARD]);
 
@@ -213,31 +242,47 @@ describe('the card in the games list', () => {
   it('draws no card for a settled game the server did not name', async () => {
     await land([DOUBLES], []);
 
-    await screen.findByText('Your games');
+    // The read is what is waited on rather than a sentence: the point is that the list was
+    // asked and answered with nothing, not that some other element happened to render first.
+    await waitFor(() => expect(cardReads()).toHaveLength(1));
     expect(screen.queryByText(STARS_HEADING)).toBeNull();
   });
 
-  it('draws nothing at all when nothing is waiting, and never says so', async () => {
-    await land([], []);
-
-    await screen.findByText(/not built yet/);
-    expect(screen.queryByText(STARS_HEADING)).toBeNull();
-  });
-
-  it('keeps the served order, which is soonest to expire first', async () => {
-    // The games list is newest arrangement first and the cards are not — expiry runs from the
-    // evening — so the two orders genuinely disagree, and this one is the server's.
-    await land([DOUBLES, SINGLES], [SINGLES_CARD, DOUBLES_CARD]);
+  /**
+   * The list read answers about **every** court still waiting, and this screen is about one.
+   * Drawing another evening's card here would put the wrong people under the wrong score,
+   * which is the one way the join can be wrong and still render something.
+   */
+  it('draws this evening’s card and never another one’s', async () => {
+    await land([DOUBLES, SINGLES], [SINGLES_CARD, DOUBLES_CARD], SINGLES);
     await screen.findByText(STARS_HEADING);
 
     const drawn = screen
       .getAllByLabelText(/^Send /)
       .map((one) => String(one.props.accessibilityLabel));
 
-    expect(drawn).toEqual([
-      submitName(submitLabel(0), 'Squash', [TOMEK]),
-      submitName(submitLabel(0), 'Padel', EVERYBODY),
-    ]);
+    expect(drawn).toEqual([submitName(submitLabel(0), 'Squash', [TOMEK])]);
+  });
+
+  /**
+   * **Now no longer carries it**, which is the cost of moving the card to the evening it is
+   * about: the tab that used to surface one says nothing, and a player who never re-opens a
+   * settled game never sees it. Asserted rather than left to a docstring, because a card
+   * quietly reappearing above the games list is exactly the regression this move makes easy.
+   */
+  it('is nowhere on the Now tab, which no longer surfaces it at all', async () => {
+    stubGames(transport, [DOUBLES], READ_AT);
+    stubSportsmanship(transport, [DOUBLES_CARD]);
+    await launchSignedIn();
+
+    // Now carries its own line and nothing else: the games list went off the tab with the
+    // card, because that tab is not built and both were standing in for it.
+    await screen.findByText(/not built yet/);
+    expect(screen.queryByText(STARS_HEADING)).toBeNull();
+    // **Not even asked for.** The heading being absent would also be true of a read that
+    // happened and returned nothing; what this asserts is that the tab has stopped carrying
+    // the question at all, which is the half a stray composition would put back.
+    expect(cardReads()).toHaveLength(0);
   });
 });
 
@@ -310,8 +355,10 @@ describe('answering it', () => {
     fireEvent.press(screen.getByLabelText(submitName(submitLabel(1), 'Padel', EVERYBODY)));
 
     await waitFor(() => expect(screen.queryByText(STARS_HEADING)).toBeNull());
-    // The evening itself is untouched: a card is a question about a game, never the game.
-    expect(screen.getByText('Your games')).toBeTruthy();
+    // The evening itself is untouched — the screen the card was drawn on is still the screen
+    // this player is on. A card is a question **about** a game and never the game, so closing
+    // one takes nothing away and moves nobody.
+    expect(screen).toHavePathname(`/games/${GAME}`);
   });
 
   it('says the card is closed when it was already answered, and does not pretend otherwise', async () => {

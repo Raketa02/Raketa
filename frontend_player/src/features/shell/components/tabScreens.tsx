@@ -12,7 +12,6 @@
  */
 
 import { AccountPanel } from '@/features/auth/types';
-import { GamesSection } from '@/features/games/types';
 import { PlayIntentsSection } from '@/features/player_profile/types';
 
 import { PlaceholderScreen } from './PlaceholderScreen';
@@ -21,19 +20,22 @@ import { PLACEHOLDER_COPY } from './shellCopy';
 /**
  * The landing, after onboarding and after a send. Never says nothing is happening.
  *
- * **The games list is the first thing built on it** ([#314](https://github.com/Raketa02/Raketa/issues/314)),
- * composed under the tab's own line the way `PlayIntentsSection` is on You: a game is *what is
- * happening today and next*, and the result conversation had no door without one. The line above
- * it stays exactly as it is — what Now becomes is still mostly owed — and the section draws
- * nothing at all when there are no games, because asserting emptiness is the one thing this tab
- * has refused to do since it was built.
+ * **It carries nothing but its own line, and that is current rather than permanent.** A games
+ * list was composed here while the result conversation had no other door
+ * ([#314](https://github.com/Raketa02/Raketa/issues/314)), and the card asking how the other
+ * players were sat above it ([#386](https://github.com/Raketa02/Raketa/issues/386)). Both are
+ * off the tab now: **Now is not built**, and the two sections were standing in for a screen
+ * whose shape has not been decided — *what is happening today and next* is a different thing
+ * from a list of every game you have ever played.
+ *
+ * **Neither is deleted, and that is the point of taking them off rather than out.**
+ * `GamesSection`, `ResultScreen` and the card at the foot of it are built, tested and
+ * unreferenced, waiting for the flow that will own them. What that costs today is that the
+ * result conversation has **no door in the app at all** — its route still resolves, so the
+ * suites that walk it push it directly, and nothing a player can tap reaches it.
  */
 export function NowScreen() {
-  return (
-    <PlaceholderScreen copy={PLACEHOLDER_COPY.now}>
-      <GamesSection />
-    </PlaceholderScreen>
-  );
+  return <PlaceholderScreen copy={PLACEHOLDER_COPY.now} />;
 }
 
 export function AroundScreen() {

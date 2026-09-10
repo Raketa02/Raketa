@@ -406,17 +406,16 @@ export const GATE_USER: Wire['UserResponse'] = {
  *
  * **`stubGames` and `stubSportsmanship` are in here and neither is a gate read.** The gate's
  * fourth destination is the shell's root, the shell's root is the Now tab, and the Now tab
- * draws a games list ([#314](https://github.com/Raketa02/Raketa/issues/314)) with the cards
- * waiting for this player's stars above it
- * ([#386](https://github.com/Raketa02/Raketa/issues/386)) — so every suite that lands in the
- * app makes the games read whether or not it is about one. Both are defaulted to nothing,
- * which draws no section at all; a suite with games or cards calls the stub after this to
+ * draws a games list ([#314](https://github.com/Raketa02/Raketa/issues/314)) — so every suite
+ * that lands in the app makes the games read whether or not it is about one. It is defaulted
+ * to nothing, which draws no section at all; a suite with games calls the stub after this to
  * replace it.
  *
- * **The cards read is conditional on the first, and deliberately.** A card carries ids and the
- * words come from the games list it is drawn beside, so with no games there is nothing a card
- * could say and `GET /sportsmanship` is never made — which is why it is stubbed here anyway
- * rather than only where it is used: the moment a suite adds one game, the request appears.
+ * **The cards read is not made on that tab at all**, and it is still stubbed here. The card
+ * asking how the other players were is drawn at the end of the **result screen**, one push in,
+ * so landing in the app never asks for the list — but a suite that opens a game does, and
+ * every one of those lands through here first. Defaulted to nothing for the reason the games
+ * list is: a suite that is not about a card should not have to know one exists.
  */
 export function stubGate(
   transport: Transport,

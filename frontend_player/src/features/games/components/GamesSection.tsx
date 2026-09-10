@@ -1,10 +1,13 @@
 /**
- * **Your games, on the Now tab** — the one way into the result conversation.
+ * **Your games** — a list of every game you have been on the court for.
  *
- * It is a section composed under a placeholder rather than the Now tab being built, which is
- * exactly what the You tab already does with `PlayIntentsSection`: the tab owns its citation and
- * nothing that is drawn under it. The line above it still says what Now becomes, because two
- * thirds of that is still owed.
+ * **It is composed on no screen today.** It was a section under the Now tab's placeholder line,
+ * exactly the way the You tab composes `PlayIntentsSection` — and it came off, because Now is
+ * not built and a list of every game you have ever played is not *what is happening today and
+ * next*. Nothing here is deleted: the section, the row and the screen a row pushes are built and
+ * tested, and the flow that owns them will compose this rather than write it again.
+ *
+ * Everything below still holds, and is why it is worth keeping whole.
  *
  * **One list and not several.** A game awaiting an entry, one awaiting an answer and one that
  * never happened are one thing at three moments of its life, and shelving them here would make
@@ -20,27 +23,19 @@
  * so a player who reads a row, taps it, and finds a different deadline is not a state this can
  * reach.
  *
- * ## The stars sit above the rows, and this section only composes them
+ * ## The stars are not here, and that is a decision rather than an omission
  *
- * A card asking how the other players were belongs *in the games list*
- * ([#386](https://github.com/Raketa02/Raketa/issues/386)) — it is about one of these evenings,
- * and a chore list of its own somewhere else is how a favour becomes a queue. But nothing
- * about it is this feature's: the read, the words, the scale and the write are
- * `features/sportsmanship/`'s, and what this section supplies is the one thing that route
- * deliberately does not carry, which is **who the ids are**. `Game` satisfies `RatedCourt`
- * structurally, so what crosses the seam is a shape that feature declared for itself rather
- * than this feature's entity — the same seam the builder has with the challenge send.
+ * A card asking how the other players were used to be drawn above these rows
+ * ([#386](https://github.com/Raketa02/Raketa/issues/386)), on the argument that it is about one
+ * of these evenings and a chore list of its own somewhere else is how a favour becomes a queue.
+ * It is asked at the end of the **result screen** now: the moment a player has to think about
+ * how an evening went is the moment they are looking at what came of it, and a row in a list is
+ * not that moment.
  *
- * It draws **above** the rows because a card expires and a game does not, and it is handed
- * every game rather than the settled ones: *which* evenings have a card open is the server's
- * answer, and a filter here would be a second spelling of a window this client cannot see.
- *
- * **It sits under the same two conditions the rows do, and that is the join rather than a
- * coupling.** No games means no courts, and a card with no court has nobody to name — so a
- * failed or empty games read is a card list that could draw nothing whatever it contained, and
- * placing the section here is what stops a request being made for an answer with no words. It
- * is the one reason the read is not `NowScreen`'s own: composed a level up, it would fire on
- * every launch and render nothing on most of them.
+ * **What that costs is that nothing surfaces the card any more**, and it is worth naming here
+ * rather than only where the card lives: this tab no longer mentions it, so a player who never
+ * re-opens a settled game never sees one. It is a fair trade only because ignoring a card
+ * costs nothing and always did — there is no strand for it, no obligation and no penalty.
  */
 
 import { router } from 'expo-router';
@@ -48,7 +43,6 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { useCurrentUser } from '@/features/auth/types';
 import { sportLabel } from '@/features/onboarding/types';
-import { StarCards } from '@/features/sportsmanship/types';
 import { recoveryMessage } from '@/shared/errors';
 import { Note, PressableCard, theme } from '@/shared/ui';
 
@@ -86,7 +80,6 @@ export function GamesSection() {
 
   return (
     <View style={s.section}>
-      <StarCards courts={rows} />
       <Text style={s.heading}>{GAMES_HEADING}</Text>
       {rows.map((game) => (
         <GameRow key={game.gameId} game={game} playerId={me} />

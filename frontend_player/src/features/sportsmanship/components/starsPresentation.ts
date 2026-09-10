@@ -54,7 +54,7 @@ import type { StarSubject } from '../domain/card';
 // ---------------------------------------------------------------------------
 
 /**
- * The heading over the cards, above *Your games* on the Now tab.
+ * The heading over the card, at the foot of the result screen.
  *
  * A question rather than a chore's name: *Rate your opponents* is an instruction to somebody
  * under no obligation, and the whole design rests on this staying a favour.

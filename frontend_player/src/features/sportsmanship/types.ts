@@ -17,7 +17,8 @@
  * backend, with its own routes, its own refusals and its own vocabulary, and none of it is
  * about what a game *is*. What crosses the seam is one component and the shape it needs, which
  * is the same seam `play` has with the challenge send: the surface composes, the feature owns
- * the act.
+ * the act. That the one surface composing it is now `games`' own result screen changes nothing
+ * about the seam — it changes which screen holds the court.
  *
  * **What is exported is what has a caller** — one component and the type of its one prop. The
  * scale, the draft, the join, the copy deck, the read and the write all stay internal: they are
@@ -25,11 +26,12 @@
  */
 
 /**
- * **The cards still waiting for your stars**, drawn in the games list on the Now tab.
+ * **The card still waiting for your stars**, drawn at the end of the result screen.
  *
- * Renders nothing at all when nothing is waiting, which is most of the time.
+ * Renders nothing at all when nothing is waiting, which is most of the time: a card opens the
+ * day after the game, only once the score has settled, and closes a week later.
  */
-export { StarCards, type StarCardsProps } from './components/StarCards';
+export { StarCardSection, type StarCardSectionProps } from './components/StarCardSection';
 
 /**
  * The evening a card is about, as this feature needs it — a game, its sport, and who was on

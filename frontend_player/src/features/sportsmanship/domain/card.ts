@@ -17,6 +17,15 @@
  * `play` already has with the challenge send — **the surface composes, the feature owns the
  * act.**
  *
+ * ## One evening, because the card is asked where the evening is read
+ *
+ * The card used to be drawn over the whole games list, so the join took a list of cards against
+ * a list of courts and kept whatever matched. It is asked at the end of the **result screen**
+ * now — the screen is about one game, so the join is about one game, and what it answers is a
+ * card or nothing. The list read behind it is unchanged: `GET /sportsmanship` still answers
+ * every court still waiting, and this picks the one the screen is on rather than asking the
+ * server a question it has no route for.
+ *
  * ## The window is the server's, and it is never re-derived here
  *
  * A card appears the day after the game and stays for seven days; a game already answered, one
@@ -73,22 +82,22 @@ export interface CardOnACourt {
 }
 
 /**
- * The cards that can be drawn, **in the order they were served** — soonest to expire first.
+ * This court's card, or nothing — which is the ordinary answer.
  *
- * A card whose game is not on the list is dropped rather than drawn with ids in it. That is a
- * real state and not a defensive one: a game whose sport or whose court this build cannot read
- * is refused whole by the games mapper, and a card over it would have nobody to name.
+ * **Nothing** covers all four absences, and they are one thing to a reader: the game is not a
+ * day old yet, its week has run out, it was answered already, or the result has not settled.
+ * Every one of them is *not on the server's list*, and none of them is re-derived here — a
+ * second spelling of that window on this side is one that would eventually disagree with the
+ * one the `POST` is judged against, and it would disagree silently.
  */
-export function cardsOnCourts(
+export function cardOnCourt(
   cards: readonly OpenCard[],
-  courts: readonly RatedCourt[],
-): readonly CardOnACourt[] {
-  return cards.flatMap((card) => {
-    const court = courts.find((one) => one.gameId === card.gameId);
-    if (court === undefined) return [];
+  court: RatedCourt,
+): CardOnACourt | undefined {
+  const card = cards.find((one) => one.gameId === court.gameId);
+  if (card === undefined) return undefined;
 
-    return [{ card, court, subjects: card.players.map((playerId) => named(playerId, court)) }];
-  });
+  return { card, court, subjects: card.players.map((playerId) => named(playerId, court)) };
 }
 
 function named(playerId: string, court: RatedCourt): StarSubject {
