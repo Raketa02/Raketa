@@ -1143,6 +1143,18 @@ where, money, results or the conversation itself belongs here.
   tennis game minted from a mutual no longer refuses a padel one — the permanence that survived on
   this path when the pair rule was released, and the reason it is now the mutual's *own* question
   rather than a borrowed one.
+- **A mutual names the game it has, and names nothing when it has none**
+  ([ADR-0154](docs/adr/0154-a-mutual-names-the-game-it-has-and-names-nothing-when-it-has-none.md)).
+  The mint answers with **the challenge this mutual has open** — minted by this tap, or by an
+  earlier one and not yet finished with — so a repeat tap points at the game the first one made
+  instead of saying nothing. It answers **nothing** when the two are already arranging something
+  else and when a gate refused, and those two are folded on purpose: an absence covering one
+  innocent cause and one withheld one is publishable, and an absence that meant only *a gate
+  refused* would be the trace a **Block** is guaranteed never to leave. So *no game here* may be
+  said and *why* may not — the same rule a **withheld** row is stated under
+  ([ADR-0130](docs/adr/0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md)). **`mutual`
+  itself does not move**: it is what the two rows say, and reporting it false because a gate
+  refused would tell the sender something about the other person no refusal may say.
 - **No day, part of day, hour or place is ever attached.** The challenge carries a **Window**
   derived from the grid, and the players agree the hour themselves once a court can exist.
 - **A late answer is refused.** Past your own answer window the seat already reads as lapsed and
