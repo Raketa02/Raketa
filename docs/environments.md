@@ -310,9 +310,10 @@ The day a domain is registered, this is a configuration task rather than a redes
    rather than a wildcard — or an explicit empty list, which is what it is today, because no
    browser client exists and the mobile app sends no `Origin` header.
 
-   **Do not maintain this list by reading it.** `make taskdef` boots
-   `backend/deploy/ecs/taskdef.json` through the real settings object and names whatever it
-   does not supply; that check, and not this paragraph, is what CI enforces. The paragraph is
+   **Do not maintain this list by reading it.** `make taskdef` builds the settings object
+   out of `backend/deploy/ecs/taskdef.json` and names whatever it does not supply — and
+   checks the container's stop deadline against the application's own drain while it is
+   there; that check, and not this paragraph, is what CI enforces. The paragraph is
    here because a checklist a human follows should say what is coming — it went eleven days
    out of date once, and the check is what makes that recoverable rather than invisible.
 4. **Set the player app's variables**: `EXPO_PUBLIC_ENV` and `EXPO_PUBLIC_API_URL`
@@ -336,4 +337,4 @@ The day a domain is registered, this is a configuration task rather than a redes
 | The backend's settings, profile and refusals in detail | `backend/README.md`, `backend/CONTEXT.md` |
 | The player app's config, app identity and badge | `frontend_player/README.md`, `frontend_player/docs/architecture.md` Part 14 |
 | What each variable is, per app | each app's `.env.example` |
-| Whether the deployment artifact supplies them | `make taskdef` — [`check-taskdef-boots.sh`](../.github/scripts/check-taskdef-boots.sh) |
+| Whether the deployment artifact supplies them | `make taskdef` — [`check-taskdef.sh`](../.github/scripts/check-taskdef.sh) |

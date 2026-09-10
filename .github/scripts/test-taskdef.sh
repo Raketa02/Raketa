@@ -1,20 +1,24 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# Test suite for the task-definition boot check.
+# Test suite for the task-definition check.
 #
-#   bash .github/scripts/test-taskdef-boots.sh     # or: make test-taskdef
+#   bash .github/scripts/test-taskdef.sh     # or: make test-taskdef
 #
-# check-taskdef-boots.sh was added in the same commit that made the task
-# definition satisfy it, so on the committed tree it has never been seen to
+# Each of check-taskdef.sh's rules was added in the same commit that made the
+# task definition satisfy it, so on the committed tree neither has been seen to
 # fail — the same reason test-poetry-pin-drift.sh, test-contract-drift.sh and
 # .claude/hooks/test-hooks.sh exist. This drives it against each shape of
 # disagreement it claims to catch and asserts it goes red.
 #
-# The case that matters most is `a new refusal the task definition has not caught
-# up with`: it perturbs config.py rather than the task definition, and a check
-# that had hard-coded its list of required variables would stay green through it.
-# That is the claim the whole design rests on — the required set is derived by
-# executing the authority, not copied out of it (#341).
+# Two cases matter more than the rest, and both perturb the **application**
+# rather than the task definition — a check that had copied out its own list or
+# its own number would stay green through either:
+#
+#   * a new refusal in config.py that the task definition does not satisfy (#341)
+#   * a --graceful-timeout in startup.prod.sh raised past the kill deadline (#345)
+#
+# That is the claim the whole design rests on: both rules are derived by
+# executing the application, not restated from it.
 #
 # Every case perturbs a real file in place and restores the original bytes on
 # exit — including on failure or interrupt — so it is safe to run on a dirty
@@ -23,10 +27,11 @@
 set -uo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-CHECK="$ROOT/.github/scripts/check-taskdef-boots.sh"
+CHECK="$ROOT/.github/scripts/check-taskdef.sh"
 CI_YML="$ROOT/.github/workflows/ci.yml"
 TASKDEF="$ROOT/backend/deploy/ecs/taskdef.json"
 CONFIG="$ROOT/backend/app/core/config.py"
+STARTUP="$ROOT/backend/docker/api/startup.prod.sh"
 
 pass=0
 fail=0
@@ -54,16 +59,18 @@ expect_says() { # <needle> <name>
   fi
 }
 
-for f in "$CHECK" "$CI_YML" "$TASKDEF" "$CONFIG"; do
+for f in "$CHECK" "$CI_YML" "$TASKDEF" "$CONFIG" "$STARTUP"; do
   [ -f "$f" ] || { echo "missing: $f" >&2; exit 2; }
 done
 
 TMP=$(mktemp -d) || exit 2
 cp "$TASKDEF" "$TMP/taskdef.json"
 cp "$CONFIG" "$TMP/config.py"
+cp "$STARTUP" "$TMP/startup.prod.sh"
 restore() {
   cp "$TMP/taskdef.json" "$TASKDEF"
   cp "$TMP/config.py" "$CONFIG"
+  cp "$TMP/startup.prod.sh" "$STARTUP"
 }
 trap 'restore; rm -rf "$TMP"' EXIT INT TERM
 
@@ -71,27 +78,37 @@ trap 'restore; rm -rf "$TMP"' EXIT INT TERM
 # a variable is dropped by deleting its line. Asserted rather than assumed: a
 # reformatted task definition would otherwise silently stop being perturbed, and
 # every case below would "pass" by testing nothing.
-drop() { # <variable>
-  if ! grep -q "\"$1\"" "$TASKDEF"; then
-    printf '  FAIL  fixture: %s no longer names %s\n' "$TASKDEF" "$1"
-    printf '        every case below would run against an unperturbed tree.\n'
-    exit 2
-  fi
-  sed -i.bak "/\"$1\"/d" "$TASKDEF" && rm -f "$TASKDEF.bak"
-  # Deleting the last entry of an array leaves a trailing comma behind it.
+# Deleting a line from a JSON array leaves a trailing comma behind whatever was
+# last. Written once because both perturbations below delete a line, and a second
+# copy is a second thing to keep in step.
+reflow() {
   python3 - "$TASKDEF" <<'PY'
 import json, re, sys
 path = sys.argv[1]
 text = open(path, encoding="utf-8").read()
-text = re.sub(r",(\s*[\]}])", r"\1", text)
-open(path, "w", encoding="utf-8").write(text)
+open(path, "w", encoding="utf-8").write(re.sub(r",(\s*[\]}])", r"\1", text))
 json.load(open(path, encoding="utf-8"))
 PY
 }
 
+# A fixture miss stops the run rather than counting one failure and going on:
+# every case after it would test an unperturbed tree and report green.
+require_line() { # <needle>
+  grep -q "$1" "$TASKDEF" && return 0
+  printf '  FAIL  fixture: %s no longer contains %s\n' "$TASKDEF" "$1"
+  printf '        every case below would run against an unperturbed tree.\n'
+  exit 2
+}
+
+drop() { # <variable>
+  require_line "\"$1\""
+  sed -i.bak "/\"$1\"/d" "$TASKDEF" && rm -f "$TASKDEF.bak"
+  reflow
+}
+
 # ---------------------------------------------------------------------------
 echo
-echo "check-taskdef-boots.sh — the committed tree"
+echo "check-taskdef.sh — the committed tree"
 
 expect_exit 0 "the task definition as committed boots"
 
@@ -172,6 +189,44 @@ restore
 
 # ---------------------------------------------------------------------------
 echo
+echo "the container's kill deadline against the application's drain"
+
+# The #345 shape. `stopTimeout` unset does not mean "no deadline": Fargate
+# supplies 30, which is exactly gunicorn's graceful timeout, so the agent's
+# SIGKILL lands on the same second the master would have force-killed its
+# stragglers. Removing the key must read as the dead heat it is.
+drop stopTimeout
+expect_exit 1 "an unset stopTimeout is a dead heat, not an absent deadline"
+expect_says "stopTimeout" "the failure names the setting"
+expect_says "30" "the failure names the default it would inherit"
+restore
+
+# The half the ticket argues against: raising the graceful timeout to meet a
+# drain window rather than moving the deadline. Nothing in the task definition
+# is touched here — a check that only read that file would sail through it.
+sed -i.bak 's/--graceful-timeout 30/--graceful-timeout 60/' "$STARTUP" && rm -f "$STARTUP.bak"
+expect_exit 1 "a graceful timeout raised past the kill deadline is caught"
+expect_says "60" "the failure names the application's own number"
+restore
+
+# Fargate's documented ceiling. RegisterTaskDefinition rejects this at deploy
+# time, which is a slow way to find out.
+sed -i.bak 's/"stopTimeout": [0-9]*/"stopTimeout": 200/' "$TASKDEF" && rm -f "$TASKDEF.bak"
+expect_exit 1 "a stopTimeout past Fargate's 120-second ceiling is caught"
+expect_says "120" "the failure names the ceiling"
+restore
+
+# The entrypoint documents this flag in a paragraph directly above it, so the
+# number is read from live lines only. A false red here would be the check
+# quoting its own documentation back as configuration.
+printf '%s\n' '# --graceful-timeout 90 would be wrong, and this line is not configuration' >> "$STARTUP"
+expect_exit 0 "a comment mentioning the flag is not read as the flag"
+restore
+
+expect_exit 0 "the tree is restored between cases"
+
+# ---------------------------------------------------------------------------
+echo
 echo "the check refuses rather than passing when it cannot run"
 
 # A check that cannot find or read its subject must not report success.
@@ -183,6 +238,29 @@ printf '%s' '{"containerDefinitions": []}' > "$TASKDEF"
 expect_exit 2 "a task definition with no containers is a usage error, not a pass"
 restore
 
+# The half that reads the *application*. If the flag moves or the entrypoint is
+# rewritten, the check has lost the number it compares against — and the one
+# thing it must not do then is report that the deadline is fine.
+sed -i.bak 's/--graceful-timeout 30 \\//' "$STARTUP" && rm -f "$STARTUP.bak"
+expect_exit 2 "an entrypoint with no --graceful-timeout is a usage error, not a pass"
+expect_says "graceful-timeout" "the failure says which number it could not find"
+restore
+
+# Two live invocations with different numbers: which one the container gets
+# depends on which gunicorn runs, and the check must not pick one.
+printf '%s\n' 'exec gunicorn app.main:app --graceful-timeout 45' >> "$STARTUP"
+expect_exit 2 "two different --graceful-timeout values are a usage error, not a pass"
+expect_says "more than once" "the failure says why it will not guess"
+restore
+
+# The drain rule is about the process this repository builds. A task definition
+# whose containers all carry somebody else's image gives the check nothing to
+# hold to gunicorn's number, and it says so rather than asserting anyway.
+sed -i.bak 's|"image": "__IMAGE__"|"image": "public.ecr.aws/somebody/else:1"|' "$TASKDEF" && rm -f "$TASKDEF.bak"
+expect_exit 2 "a task definition this repository does not build is a usage error, not a pass"
+expect_says "__IMAGE__" "the failure names the marker it looked for"
+restore
+
 expect_exit 0 "the tree is restored between cases"
 
 # ---------------------------------------------------------------------------
@@ -190,16 +268,16 @@ echo
 echo "CI wiring"
 
 # The reason this suite exists at all: a check CI does not run is not a gate.
-if grep -q 'check-taskdef-boots.sh' "$CI_YML"; then
+if grep -q 'check-taskdef.sh' "$CI_YML"; then
   ok "ci.yml runs the check"
 else
-  bad "ci.yml runs the check" "no step invokes check-taskdef-boots.sh"
+  bad "ci.yml runs the check" "no step invokes check-taskdef.sh"
 fi
 
-if grep -q 'test-taskdef-boots.sh' "$CI_YML"; then
+if grep -q 'test-taskdef.sh' "$CI_YML"; then
   ok "ci.yml runs this suite"
 else
-  bad "ci.yml runs this suite" "no step invokes test-taskdef-boots.sh"
+  bad "ci.yml runs this suite" "no step invokes test-taskdef.sh"
 fi
 
 # ---------------------------------------------------------------------------

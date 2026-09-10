@@ -116,18 +116,19 @@ poetry-pin:        ## verify every pinned Poetry can read backend/poetry.lock
 test-poetry-pin:   ## verify the poetry pin check still fires
 	bash .github/scripts/test-poetry-pin-drift.sh
 
-# The ECS task definition supplies a set of variables; app/core/config.py refuses
-# to start without another set; nothing compared them, and they disagreed for
-# eleven days (#341). This boots the committed artifact through the real settings
-# object rather than diffing two lists of names — there is no list of required
-# variables anywhere in the check, which is what keeps it from becoming a fourth
-# copy of the fact it exists to police. Cross-app because the artifact is in
-# backend/ and the gate is in .github/.
-taskdef:           ## verify backend/deploy/ecs/taskdef.json can start a container
-	bash .github/scripts/check-taskdef-boots.sh
+# The ECS task definition describes a container; app/core/config.py and
+# docker/api/startup.prod.sh are what actually runs in it. Nothing compared them,
+# and only `local` runs, so nothing ever exercised the artifact: it could not have
+# started at all (#341), and its kill deadline was a dead heat with the drain it
+# was meant to outlive (#345). This exercises the application rather than
+# describing it — neither rule holds a list or a number of its own, which is what
+# keeps the check from becoming one more copy of the fact it polices.
+# Cross-app because the artifact is in backend/ and the gate is in .github/.
+taskdef:           ## verify backend/deploy/ecs/taskdef.json agrees with the app it runs
+	bash .github/scripts/check-taskdef.sh
 
-test-taskdef:      ## verify the task-definition boot check still fires
-	bash .github/scripts/test-taskdef-boots.sh
+test-taskdef:      ## verify both of the task-definition check's rules still fire
+	bash .github/scripts/test-taskdef.sh
 
 # ----------------------------------------------------------------------------
 # AFK agent loop (sandbuket). See tools/afk/README.md.

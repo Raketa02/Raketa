@@ -176,7 +176,7 @@ Rule 6's scheme rule was already stated over `DEPLOYED` and is where the name ca
 **And the disagreement is now checkable, which is the part rule 4 could not reach.** Rule 4
 put the refusals on the settings object so every construction path sees them; nothing
 constructed the *production* settings object, because only `local` runs. `make taskdef`
-(`.github/scripts/check-taskdef-boots.sh`) boots the committed task definition through the
+(`.github/scripts/check-taskdef.sh`) boots the committed task definition through the
 real `Settings` and fails naming whatever it does not supply — deriving the required set by
 executing this rule rather than by restating it, so the next refusal added here is enforced
 against the deployment artifact without anybody remembering to.

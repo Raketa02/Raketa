@@ -184,6 +184,34 @@ make ecr-push
 make ecs-deploy
 ```
 
+## 4b. Shutdown: which number leads
+
+Three deadlines govern a rolling deploy, and **gunicorn's `--graceful-timeout` is the
+one that leads.** It is in
+[`../../docker/api/startup.prod.sh`](../../docker/api/startup.prod.sh) and it is **30
+seconds**: how long the application gives itself, after SIGTERM, to finish what it is
+serving. Everything else is chosen to outlive it.
+
+| Setting | Where | Today | Why |
+| --- | --- | --- | --- |
+| `--graceful-timeout` | `docker/api/startup.prod.sh` | **30** | **Leads.** An SSE stream ([ADR-0147](../../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)) lives until its access token expires, so a deploy severs open streams rather than waiting them out. That is the intended trade — the client reconnects, and the nudge design means a severed stream costs latency, never data. |
+| `stopTimeout` | `deploy/ecs/taskdef.json` | **40** | Follows. When the ECS agent stops asking and sends SIGKILL. The ten-second margin covers what the gunicorn master does *after* its graceful window closes — force-kill stragglers, reap them, exit — so the container exits on its own rather than being killed. It is a ceiling, not a wait: a healthy stop still finishes at about 30s. |
+| `deregistration_delay` | the ALB target group — **not in this repository** | unset here | Follows, and is [#372](https://github.com/Raketa02/Raketa/issues/372). A long drain does not help a connection that has already been closed, and it delays the deploy for every other request in the process, so it is lowered to meet the graceful timeout rather than the timeout raised to meet it. |
+
+**Do not raise the graceful timeout to meet a drain window.** That is the wrong direction
+for the reason in the third row.
+
+`stopTimeout` was unset before [#345](https://github.com/Raketa02/Raketa/issues/345),
+which is not the same as unbounded: Fargate supplies **30** when the key is absent —
+exactly the graceful timeout — so the agent's SIGKILL landed on the same second the
+master would have force-killed its own stragglers. Fargate accepts 2–120 and rejects
+anything outside it at `RegisterTaskDefinition`.
+
+**The first two rows are a build gate, not a convention.** `make taskdef` reads the flag
+out of the entrypoint and the integer out of the task definition and fails if the
+deadline does not strictly outlive the drain, so changing one without the other cannot
+merge. The third row has nothing in this repository to check.
+
 ## 5. Smoke testing the deploy
 
 ```bash

@@ -1,18 +1,28 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# The ECS task definition can start a container.
+# The ECS task definition agrees with the application it runs.
 #
-#   bash .github/scripts/check-taskdef-boots.sh
+#   bash .github/scripts/check-taskdef.sh
 #
-# backend/deploy/ecs/taskdef.json supplies a list of environment variables and
-# secrets to a container running APP_ENV=production. app/core/config.py refuses
-# to start on configuration that is dangerous rather than merely wrong. Nothing
-# compared the two, so the two disagreed: the committed task definition supplied
-# no REDIS_URL, no PHOTO_STORAGE_SECRET_KEY and no ALLOW_ORIGINS, and a deploy of
-# it would have registered a revision whose tasks died on startup (#341).
+# Two questions, both about the same disagreement — a deployment artifact that
+# only `local` ever exercises, drifting away from the application it describes.
 #
-#   exit 0  every container definition in the file boots
-#   exit 1  one does not — the report names the variable
+# **Would the container start?** backend/deploy/ecs/taskdef.json supplies
+# environment variables and secrets to a container running APP_ENV=production,
+# and app/core/config.py refuses to start on configuration that is dangerous
+# rather than merely wrong. Nothing compared the two, so the two disagreed: the
+# committed file supplied no REDIS_URL, no PHOTO_STORAGE_SECRET_KEY and no
+# ALLOW_ORIGINS, and a deploy of it would have registered a revision whose tasks
+# died on startup (#341).
+#
+# **Would the container be killed mid-shutdown?** `stopTimeout` was unset, which
+# is not the same as unbounded — Fargate supplies 30, exactly gunicorn's
+# --graceful-timeout, so the agent's SIGKILL landed on the same second the
+# master would have force-killed its own stragglers (#345). Nothing related the
+# two numbers, and they live in different files.
+#
+#   exit 0  every container definition starts, and outlives its own drain
+#   exit 1  one does not — the report names the variable or the number
 #   exit 2  the check could not run
 #
 # **It executes the authority rather than restating it.** There is no list of
@@ -30,7 +40,7 @@
 # demands. It cannot say the values behind those ARNs are right, and it creates,
 # reads and provisions nothing in AWS.
 #
-# Tested by .github/scripts/test-taskdef-boots.sh (`make test-taskdef`).
+# Tested by .github/scripts/test-taskdef.sh (`make test-taskdef`).
 # A check that has never once failed is indistinguishable from one that cannot.
 # ---------------------------------------------------------------------------
 set -uo pipefail
@@ -43,14 +53,14 @@ TASKDEF="backend/deploy/ecs/taskdef.json"
 cd "$ROOT/backend" || exit 2
 
 echo
-echo "Booting $TASKDEF through app/core/config.py:"
+echo "Checking $TASKDEF against the application it runs:"
 
 # No settings are supplied here, deliberately — unlike every other check in this
 # family, which pins the environment it needs. The whole question is what the
 # task definition alone is enough for, so anything this line added would be a
 # variable the file does not have to supply. The module scrubs the inherited
 # environment for the same reason.
-poetry run python -m scripts.taskdef_boot
+poetry run python -m scripts.taskdef
 status=$?
 
 if [ "$status" = 0 ]; then
@@ -68,34 +78,34 @@ fi
 
 if [ "$status" != 1 ]; then
   echo >&2
-  echo "Could not run the task-definition boot check (exit $status)." >&2
+  echo "Could not run the task-definition check (exit $status)." >&2
   echo "It needs the backend installed — 'poetry install' in backend/." >&2
   exit 2
 fi
 
 # ---------------------------------------------------------------------------
-# It cannot boot. Say what to do about it — a failure that does not tell you how
+# They disagree. Say what to do about it — a failure that does not tell you how
 # to fix it is one that gets worked around.
 # ---------------------------------------------------------------------------
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
-  echo "::error title=Task definition cannot boot::backend/deploy/ecs/taskdef.json does not supply everything app/core/config.py demands. See the job log for the variable."
+  # One annotation for both rules. GitHub renders this above the diff, and a
+  # title naming only the boot half would send a reader chasing a variable on a
+  # run that failed over a timeout.
+  echo "::error title=Task definition disagrees with the application::backend/deploy/ecs/taskdef.json does not match what backend/ actually runs — either a variable app/core/config.py demands and it does not supply, or a stopTimeout that does not outlive docker/api/startup.prod.sh's --graceful-timeout. See the job log."
 fi
 
 cat >&2 <<EOF
-  Fix — one of two edits, and the report above says which:
+  The report above says which edit fixes it. Whichever it is, the two files
+  move together: $TASKDEF is the deployment artifact and
+  backend/app/core/config.py and backend/docker/api/startup.prod.sh are the
+  application it has to agree with. No real ARN, credential or secret belongs
+  in this repository — <AWS_ACCOUNT_ID> and <SECRET_SUFFIX> are substituted at
+  deploy time.
 
-    * The task definition is missing a variable. Add it to $TASKDEF:
-      to 'secrets' if it carries a credential, following the templated
-      shape of the entries already there — <AWS_ACCOUNT_ID> and
-      <SECRET_SUFFIX> are substituted at deploy time, and no real ARN
-      or secret belongs in this repository. To 'environment' if it does
-      not, with its value committed.
-
-    * A refusal in backend/app/core/config.py is new, and the deployment
-      artifacts have not caught up. Then this is the check working: the
-      same commit that adds a refusal supplies the variable here, names
-      it in the checklist in docs/environments.md, and adds it to the
-      Secrets Manager payload in backend/docs/deployment/aws-ecs.md.
+  If a refusal or a timeout in the application is what changed, this is the
+  check working: the same commit updates the artifact, the checklist in
+  docs/environments.md, and the Secrets Manager payload in
+  backend/docs/deployment/aws-ecs.md.
 
 ────────────────────────────────────────────────────────────────────────────
 EOF

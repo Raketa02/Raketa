@@ -15,6 +15,7 @@
       "name": "api",
       "image": "__IMAGE__",
       "essential": true,
+      "stopTimeout": 40,
       "portMappings": [
         { "containerPort": 8000, "protocol": "tcp" }
       ],

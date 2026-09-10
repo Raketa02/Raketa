@@ -201,15 +201,17 @@ jobs:
       - name: Ruleset diff
         working-directory: ${{ github.workspace }}
         run: bash .github/scripts/check-ruleset-diff.sh
-      # The deployment artifact, booted through the real settings object. Only
-      # `local` runs, so nothing else in this pipeline ever constructs the
-      # production configuration — which is how backend/deploy/ecs/taskdef.json
-      # came to supply eleven variables and demand fourteen (#341). It asserts
-      # presence and not the values behind the secret ARNs, reads nothing from
-      # AWS, and needs no credentials.
-      - name: Task definition boots
+      # The deployment artifact, exercised against the application rather than
+      # described. Only `local` runs, so nothing else in this pipeline ever
+      # constructs the production configuration or reads the entrypoint's own
+      # numbers — which is how backend/deploy/ecs/taskdef.json came to supply
+      # eleven variables and demand fourteen (#341), and to carry a kill deadline
+      # that was a dead heat with the drain it had to outlive (#345). It asserts
+      # presence and deadlines, never the values behind the secret ARNs, reads
+      # nothing from AWS, and needs no credentials.
+      - name: Task definition agrees with the app
         working-directory: ${{ github.workspace }}
-        run: bash .github/scripts/check-taskdef-boots.sh
+        run: bash .github/scripts/check-taskdef.sh
       # Last, and for the reason test-hooks.sh and test-contract-drift.sh exist:
       # the three purity gates above were all added to a tree that already
       # satisfied them, so none of them has ever been seen to fail. This drives
@@ -239,13 +241,14 @@ jobs:
       - name: Ruleset-diff check still fires
         working-directory: ${{ github.workspace }}
         run: bash .github/scripts/test-ruleset-diff.sh
-      # It drops each variable from the task definition in turn, and then — the
-      # case the design rests on — adds a refusal to config.py and asserts the
-      # check goes red without anything in .github/ being edited. A check that
-      # had copied out its own list of required variables would stay green there.
-      - name: Task-definition boot check still fires
+      # It drops each variable from the task definition in turn, moves the kill
+      # deadline, and then — the two cases the design rests on — perturbs the
+      # *application* instead: a new refusal in config.py, and a --graceful-timeout
+      # raised past the deadline. A check that had copied out its own list or its
+      # own number would stay green through either.
+      - name: Task-definition check still fires
         working-directory: ${{ github.workspace }}
-        run: bash .github/scripts/test-taskdef-boots.sh
+        run: bash .github/scripts/test-taskdef.sh
 
   player:
     name: Player app — lint, typecheck, test

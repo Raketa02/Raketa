@@ -88,18 +88,25 @@ the hooks themselves, `make gen-api`.
   ([`.github/scripts/check-ruleset-diff.sh`](.github/scripts/check-ruleset-diff.sh),
   `make ruleset-diff`, proven still to fire by `make test-ruleset-diff`; the whole build is
   written up in [`docs/specs/matchmaking/the-ruleset-gate.md`](docs/specs/matchmaking/the-ruleset-gate.md)).
-- **The deployment artifact boots, and a gate is what says so.**
-  `backend/deploy/ecs/taskdef.json` supplies a container's variables;
-  `backend/app/core/config.py` refuses to start without others. Nothing compared the two,
-  so for eleven days the committed task definition could not have started a container at
-  all — it selected `production` and supplied no `REDIS_URL`, no `PHOTO_STORAGE_SECRET_KEY`
-  and no `ALLOW_ORIGINS` (#341). `make taskdef` boots the artifact through the real
-  settings object and names whatever it does not supply. **There is no list of required
-  variables in the check**, deliberately: a list would be a fourth copy of the fact that
-  had already disagreed in three places. Only `local` runs, so this gate is the one thing
-  in the pipeline that ever constructs the production configuration — and it asserts
-  presence, never the values behind the secret ARNs, and reads nothing from AWS
-  ([`.github/scripts/check-taskdef-boots.sh`](.github/scripts/check-taskdef-boots.sh),
+- **The deployment artifact agrees with the application, and a gate is what says so.**
+  `backend/deploy/ecs/taskdef.json` describes a container; `backend/app/core/config.py`
+  and `backend/docker/api/startup.prod.sh` are what actually runs in it. Nothing compared
+  them, and only `local` runs, so nothing ever exercised the artifact. `make taskdef` asks
+  it two questions, both by **executing** the application rather than restating it — and
+  **neither rule holds a list or a number of its own**, because a copy is how the
+  disagreement started.
+  - **Would it start?** The settings object is built out of exactly what the file
+    supplies, and its refusals are the verdict. For eleven days the answer was no: the
+    file selected `production` and supplied no `REDIS_URL`, no `PHOTO_STORAGE_SECRET_KEY`
+    and no `ALLOW_ORIGINS` (#341).
+  - **Would it be killed mid-shutdown?** `stopTimeout` is read against gunicorn's
+    `--graceful-timeout`, which is **the number that leads**. Unset is not unbounded —
+    Fargate supplies 30, exactly the graceful timeout, so SIGKILL landed on the second the
+    master would have force-killed its own stragglers (#345). Change one, change the
+    other; a longer drain never fixes a connection already closed.
+
+  It asserts presence and deadlines, never the values behind the secret ARNs, and reads
+  nothing from AWS ([`.github/scripts/check-taskdef.sh`](.github/scripts/check-taskdef.sh),
   `make taskdef`, proven still to fire by `make test-taskdef`).
 - **One session changes one app.** A `PreToolUse` hook blocks writes that cross an app
   boundary. A block is information — surface it, don't route around it. See
