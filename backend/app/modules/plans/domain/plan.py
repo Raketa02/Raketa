@@ -1,11 +1,11 @@
-"""The Plan aggregate — one game's three slots, event-sourced.
+"""The Plan aggregate — one game's three slots and its lock, event-sourced.
 
 **Where and when these people are meeting.** It is *one game's*, identified by
 that game's id, and it sits between the two contexts either side of it:
 ``challenges`` ends at *everybody has answered* and ``games`` begins at *played*,
 and this belongs to neither (``docs/adr/0144``).
 
-Four things about it are load-bearing and none is obvious from the code alone.
+Five things about it are load-bearing and none is obvious from the code alone.
 
 **It is born by being used.** There is no opening event, no record at birth and
 no subscriber to ``GamePlanned``: ``unwritten`` is what a game with nothing
@@ -36,11 +36,22 @@ moved under somebody who has already read it, and that is accepted: the
 alternative is a proposal each person accepts, which is the negotiation this card
 exists not to be.
 
+**The count and the lock are two facts, and locking freezes nothing**
+(``docs/adr/0155``). ADR-0144 folded them together — *filling the third slot is
+the lock* — and this aggregate now keeps them apart: ``slot_count == SLOTS`` says
+a plan is one everybody *could* agree, and ``is_locked`` says somebody did. After
+a lock any member may still move a slot, and each move writes its own line
+exactly as it did before; there is no un-agreeing to fear, only re-agreeing
+(``docs/adr/0145`` §5). There is no ``unlock``, for the same reason there is no
+clearing event: the lock is a thing that happened.
+
 **Who may write at all is not decided here.** *Is this player on this game's
 court, and is that game still open to planning* is one question asked of
 ``games`` through one port, and the two refusals it produces belong to the use
-case that asks it. What this aggregate refuses is about the **values** — a day
-past the horizon, an hour nobody offered, a moment that has gone.
+case that asks it. What this aggregate refuses is what it can see: the **values**
+— a day past the horizon, an hour nobody offered, a moment that has gone — and,
+since ``docs/adr/0155``, **its own state**, because a lock is guarded on how far
+along the plan is and nothing outside can answer that.
 """
 
 from __future__ import annotations
@@ -51,12 +62,16 @@ from datetime import time as wall_time
 from typing import Iterable
 from uuid import UUID
 
-from app.kernel import Instant, MinuteOfDay, minute_of_day
-from app.modules.plans.domain.errors import ThatMomentHasAlreadyPassed
+from app.kernel import Instant, MinuteOfDay, instant, minute_of_day
+from app.modules.plans.domain.errors import (
+    ThatMomentHasAlreadyPassed,
+    ThePlanIsNotComplete,
+)
 from app.modules.plans.domain.events import (
     DayRecorded,
     HourRecorded,
     PlaceRecorded,
+    PlanLocked,
 )
 from app.modules.plans.domain.slots import (
     Place,
@@ -68,9 +83,11 @@ from app.modules.plans.domain.slots import (
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
 
-#: How many slots there are. Spelled once, because *filling the third is the
-#: lock* and there is no lock — so the only thing this number is ever used for is
-#: saying how far along a plan is.
+#: How many slots there are. Spelled once, and it says **how far along a plan
+#: is** and nothing more: a plan with all three filled is one everybody *could*
+#: agree, which is not the same fact as somebody having agreed it
+#: (``docs/adr/0155``). It is what ``lock`` is guarded on and never what
+#: ``is_locked`` reads.
 SLOTS = 3
 
 
@@ -82,6 +99,10 @@ class Plan:
     place: Place | None
     day: date | None
     hour: MinuteOfDay | None
+    #: When somebody agreed the plan, or ``None`` while nobody has. **Folded,
+    #: never a column** — like every other value here it is read off the stream,
+    #: and it is the one thing on this aggregate that is not a slot.
+    locked_at: Instant | None = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -116,6 +137,19 @@ class Plan:
 
         return agreed_point(day=self.day, hour=self.hour)
 
+    @property
+    def is_locked(self) -> bool:
+        """Whether somebody has agreed this plan.
+
+        **Explicitly not ``slot_count == SLOTS``**, and that distinction is the
+        whole of ``docs/adr/0155``: a complete plan is one everybody *could*
+        agree, and nobody has until somebody says so. Reading the count here
+        would put ADR-0144's folded-together version of the two facts back, in
+        the one property that would then be believed.
+        """
+
+        return self.locked_at is not None
+
     def pull_events(self) -> list[DomainEvent]:
         return self._events.pull()
 
@@ -134,11 +168,13 @@ class Plan:
 
     @classmethod
     def from_history(cls, events: Iterable[DomainEvent]) -> "Plan":
-        """Rebuild from the stream. **Any of the three may be the first event.**
+        """Rebuild from the stream. **Any of the four may be the first event.**
 
         There is no opening event to construct from, so the game id is read off
-        whichever recording happens to be first — every one of the three carries
-        it, because every one of them can be a birth.
+        whichever event happens to be first — every one of them carries it, and
+        each of the three recordings can be a birth. A lock cannot be one, but it
+        is read as though it could: the fold's job is to make a stream readable,
+        not to re-decide what may be in it.
         """
 
         plan: Plan | None = None
@@ -230,6 +266,39 @@ class Plan:
             )
         )
 
+    # -- the act ----------------------------------------------------------
+
+    def lock(self, *, by: UUID, occurred_at: Instant) -> None:
+        """*We are agreed.* **An act with an actor and a moment.**
+
+        ``docs/adr/0155``. It carries no value, because the value is the three
+        slots and they are already recorded — a copy here would be the first
+        thing to disagree with the slot beside it after a later move.
+
+        **The two answers are deliberately different shapes.** A plan that is
+        already locked records nothing: the same act twice lands the same state,
+        which is this repository's idempotency language applied to an act rather
+        than to a value, and the first lock's moment is the one that stands. A
+        plan that is **not complete** raises, because a silent no-op there would
+        leave a client believing it had agreed one.
+
+        **It freezes nothing.** No slot write consults ``locked_at`` — not here
+        and nowhere else — so a locked plan is edited exactly as an unlocked one
+        is, and the room's line trail is the whole of the friction.
+        """
+
+        if self.is_locked:
+            return
+        if self.slot_count < SLOTS:
+            raise ThePlanIsNotComplete()
+        self._record_that(
+            PlanLocked(
+                game_id=self.game_id,
+                locked_by=by,
+                occurred_at=occurred_at,
+            )
+        )
+
     # -- the refusal both halves make -------------------------------------
 
     @staticmethod
@@ -257,7 +326,15 @@ class Plan:
         self._events.record(event)
 
     def _apply(self, event: DomainEvent) -> None:
-        """Fold one event. **All three are values and none is a conclusion.**"""
+        """Fold one event. **Three are values, one is an act, none is a
+        conclusion.**
+
+        **The fold re-runs no refusal.** A stream whose lock precedes its third
+        slot cannot be produced by ``lock()`` and would be a bug upstream;
+        replaying it loudly would make the plan unreadable — the four people on
+        the court would lose the arrangement they can see — rather than making
+        the bug visible to anybody who could fix it.
+        """
 
         if isinstance(event, PlaceRecorded):
             # Folded through the value object, so a stored place meets the same
@@ -268,18 +345,20 @@ class Plan:
             self.day = date.fromisoformat(event.day)
         elif isinstance(event, HourRecorded):
             self.hour = minute_of_day(event.minute_of_day)
+        elif isinstance(event, PlanLocked):
+            self.locked_at = instant(event.occurred_at)
         self.version += 1
 
 
 def _game_of(event: DomainEvent) -> UUID:
-    """Which game a recording is about.
+    """Which game an event is about.
 
-    Spelled as a walk over the three rather than as an attribute read, so a
-    fourth event added without a game id on it is a red test rather than an
+    Spelled as a walk over the four rather than as an attribute read, so a fifth
+    event added without a game id on it is a red test rather than an
     ``AttributeError`` in a fold.
     """
 
-    if isinstance(event, (PlaceRecorded, DayRecorded, HourRecorded)):
+    if isinstance(event, (PlaceRecorded, DayRecorded, HourRecorded, PlanLocked)):
         return event.game_id
     raise ValueError(f"not a plan event: {type(event).__name__}")
 

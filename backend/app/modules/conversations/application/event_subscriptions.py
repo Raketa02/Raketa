@@ -54,10 +54,11 @@ def subscribe_conversation_handlers(dispatcher: EventDispatcher) -> None:
 def subscribe_the_room_teller(dispatcher: EventDispatcher, teller: TellTheRoom) -> None:
     """Subscribe one teller to everything this room is told about.
 
-    **Told is a longer list than drawn.** Two of the seven write no line and are
-    subscribed anyway: the mutual opening *is* the opening, and the planned game
-    is where the room learns which game it is about. ``telling.py`` is the table,
-    and it is the only place either list is written.
+    **Told is a longer list than drawn.** Three events write no line and are
+    subscribed anyway: the mutual opening *is* the opening, the planned game is
+    where the room learns which game it is about, and the withdrawal is what
+    destroys the room. ``telling.py`` is the table, and it is the only place
+    either list is written.
     """
 
     for event_cls in TOLD_ABOUT:

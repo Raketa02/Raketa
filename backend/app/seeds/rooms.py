@@ -55,7 +55,9 @@ fixture that quietly reached three would read as having reached four:
 The fourth, **a room carrying every system-line code**, is
 ``app/seeds/loop.py``'s: three codes need a court that grew or shrank after its
 room opened and one needs a game played inside the grace, and that layer sends
-the courts and the game for them. It is asserted there rather than here, beside
+the courts and the game for them. The Plan's four are ``app/seeds/plans.py``'s,
+and one of those — the **lock** — has a single producer, so the claim is what
+holds that row in place. It is asserted there rather than here, beside
 the rows that reach it.
 """
 

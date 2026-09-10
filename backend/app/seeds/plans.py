@@ -20,6 +20,14 @@ that appears in ``GET /games`` and nowhere in ``GET /plans``. It is seeded by
 arranging a game and then deliberately writing nothing on it, which is the only
 way that state exists.
 
+**The complete one is also agreed, because the count and the lock are two facts**
+(``docs/adr/0155``). A locked plan is a state of its own and the only place its
+system line comes from, so the three-slot row locks and the other three cannot.
+**Complete and *not yet* agreed is drawn elsewhere and not lost** — it is
+``app/seeds/loop.py``'s *needs result* rung, which is at three slots and unlocked
+— because there are four slot counts and four games, and a fifth row at three
+slots would break the *four states, not four rows* claim below.
+
 **It writes in the present, unlike the played history.** A game arranged an hour
 ago is a game with eight days left to be played in, which is what makes its slots
 writable and its day row non-empty. The played history is the one layer that
@@ -64,12 +72,18 @@ from app.bootstrap.composition import (
 from app.core.config import Settings
 from app.kernel import Instant, Sport
 from app.modules.plans.application.commands import (
+    LockThePlanCommand,
     ReadPlansCommand,
     SetDayCommand,
     SetHourCommand,
     SetPlaceCommand,
 )
-from app.modules.plans.application.record_a_slot import SetDay, SetHour, SetPlace
+from app.modules.plans.application.record_a_slot import (
+    LockThePlan,
+    SetDay,
+    SetHour,
+    SetPlace,
+)
 from app.modules.plans.domain.plan import SLOTS, Plan
 from app.modules.plans.domain.slots import local_day
 from app.seeds.clock import FixedClock
@@ -87,6 +101,7 @@ from app.seeds.paths import (
     the_ephemeral_store,
     tick_the_tail_to_catch_up,
 )
+from app.seeds.rooms import deliver_everything_told
 
 #: How far ahead a seeded plan puts its day. **Two days**, which is inside the
 #: horizon with room to spare and far enough that the agreed moment is still
@@ -121,18 +136,31 @@ class ArrangedGame:
     empty to complete. It is a count rather than three optional values because
     the order is the record's and a fixture must not be able to choose a
     different one.
+
+    ``locked`` is a **second declaration and not a fourth slot** (``docs/adr/0155``).
+    A complete plan is one everybody *could* agree; this says somebody did, and it
+    is refused below on anything short of three, exactly as the aggregate refuses
+    it.
     """
 
     sport: str
     side_a: tuple[str, ...]
     side_b: tuple[str, ...]
     slots: int
+    locked: bool = False
 
     def __post_init__(self) -> None:
         if not 0 <= self.slots <= SLOTS:
             raise ValueError(
                 f"a plan at {self.slots} of {SLOTS} slots: there are three, and "
                 f"filling the third is the whole of the completion."
+            )
+        if self.locked and self.slots < SLOTS:
+            raise ValueError(
+                f"a plan declared locked at {self.slots} of {SLOTS} slots. "
+                f"Locking is an act and not a count, but it is guarded on the "
+                f"count: `the_plan_is_not_complete` is what the write path would "
+                f"answer, and a fixture must not ask for a state it refuses."
             )
 
     @property
@@ -171,15 +199,23 @@ ARRANGED_GAMES: tuple[ArrangedGame, ...] = (
     ),
     ArrangedGame(
         sport=Sport.TENNIS.value,
-        side_a=("cohort-a-12",),
-        side_b=("cohort-a-06",),
-        slots=2,
-    ),
-    ArrangedGame(
-        sport=Sport.TENNIS.value,
         side_a=("cohort-a-06",),
         side_b=("cohort-c-00",),
+        slots=2,
+    ),
+    # **The complete one is organised by ``cohort-a-12``, and that is not
+    # arbitrary.** It is the row that locks, and a lock is a system line —
+    # ``app/seeds/loop.py`` refuses a code no **readable** room carries, and the
+    # rooms it can read are the ones ``app/seeds/rooms.py`` reads as, which is
+    # the played history's players. ``cohort-a-06`` organises a court here and is
+    # in none of those games, so a lock on its room would be written, delivered,
+    # and invisible to the claim that demands it.
+    ArrangedGame(
+        sport=Sport.TENNIS.value,
+        side_a=("cohort-a-12",),
+        side_b=("cohort-a-06",),
         slots=3,
+        locked=True,
     ),
 )
 
@@ -234,6 +270,7 @@ async def write_the_plans(
                 declared: await _arrange(paths, declared, cohort)
                 for declared in ARRANGED_GAMES
             }
+            await _tell_the_rooms_first(session, session_factory)
             await _fill_the_slots(session, games, cohort, paths=paths, now=now)
 
     # **Re-read after the writes**, because what is asserted is what a screen
@@ -290,6 +327,35 @@ async def _arrange(
 # ---------------------------------------------------------------------------
 
 
+async def _tell_the_rooms_first(
+    session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Drain the outbox, so that the next write has a room to write into.
+
+    **A plan line is hung on a room through its game**, which the room learns
+    from ``GamePlanned`` — so every line this layer causes depends on an earlier
+    event having been delivered. The outbox orders by ``(created_at, id)`` and
+    ``created_at`` is transaction-start time: on SQLite that is **one second**, so
+    an arrangement and the slot writes that follow it tie and the tie-break is a
+    minted uuid (``docs/adr/0097``). Without the barrier every line here is a coin
+    flip on the database ``tests/unit/test_seed_runner.py`` runs the whole seed
+    against — and it was losing some of them, silently, because the same three
+    codes are also written by ``app/seeds/loop.py``, which does hold this barrier.
+
+    ``PLAN_LOCKED`` is what made that visible: it has **one** producer, so a
+    coin flip is a missing code rather than a thinner room.
+
+    It is ``app/seeds/loop.py``'s barrier, written here for its own reason rather
+    than shared, and the commit first is that layer's rule too: SQLite locks the
+    **file**, so a delivery on its own session cannot write while this one holds a
+    transaction open. The commit writes nothing and lets go.
+    """
+
+    await session.commit()
+    await deliver_everything_told(session_factory)
+
+
 async def _fill_the_slots(
     session: AsyncSession,
     games: dict[ArrangedGame, UUID],
@@ -312,6 +378,7 @@ async def _fill_the_slots(
             ),
             day=agreed_day,
             hour=AGREED_HOUR,
+            lock=declared.locked,
             now=now,
         )
 
@@ -325,12 +392,13 @@ async def agree_up_to(
     day: date,
     hour: wall_time,
     now: Instant,
+    lock: bool = False,
 ) -> None:
     """Write one plan up to ``slots``, in ADR-0144's own order — *where · day · hour*.
 
-    **Through the three use cases a request runs**, so a seeded plan has the
-    event stream and the outbox rows a real one has — which is what puts the
-    three system lines in the room the acceptances already opened.
+    **Through the use cases a request runs**, so a seeded plan has the event
+    stream and the outbox rows a real one has — which is what puts its system
+    lines in the room the acceptances already opened.
 
     **The writer alternates between the two people on the court**, because *any
     member may fill or change any slot* is the rule the card is built on and a
@@ -344,11 +412,16 @@ async def agree_up_to(
     the same either way, and a second copy of them is a second opinion about
     which order a plan is written in.
 
-    **One repository per call, and it matters that it is one.** The three writes
-    are three appends to **one** stream and the repository is what remembers the
-    version it last saw; three repositories would be three answers to *what have
-    I read*, and the second append would expect version 0 of a stream it had never
-    loaded. Two plans are two streams, so a fresh trio per game is right.
+    **One repository per call, and it matters that it is one.** The writes are
+    appends to **one** stream and the repository is what remembers the version it
+    last saw; a repository each would be as many answers to *what have I read*,
+    and the second append would expect version 0 of a stream it had never loaded.
+    Two plans are two streams, so a fresh set per game is right.
+
+    **``lock`` is an act and comes last**, after the third slot, because that is
+    the only order the aggregate accepts (``docs/adr/0155``). It defaults to
+    ``False`` so the caller that walks a card's rungs asks for it deliberately,
+    and it re-runs safely: locking a plan that is already locked records nothing.
     """
 
     clock = FixedClock(at=now)
@@ -374,6 +447,10 @@ async def agree_up_to(
         await SetHour(
             plans=plans, court=court, holds=holds, uow=uow, clock=clock
         ).execute(SetHourCommand(game_id=game_id, player_id=one, hour=hour))
+    if lock:
+        await LockThePlan(
+            plans=plans, court=court, holds=holds, uow=uow, clock=clock
+        ).execute(LockThePlanCommand(game_id=game_id, player_id=other))
 
 
 def _the_agreed_day(now: Instant) -> date:
@@ -457,13 +534,27 @@ def _refuse_a_card_state_nobody_can_draw(
                     "`GET /plans` — a row of three nulls is a state this "
                     "platform cannot produce."
                     if declared.slots == 0
-                    else "The three slot writes go through the routes a player "
+                    else "The slot writes go through the routes a player "
                     "presses, so a count that has moved is a refusal one of them "
                     "answered with."
                 )
             )
+        if plan is not None and plan.is_locked != declared.locked:
+            raise SeedPlanMissing(
+                f"the game against '{declared.side_b[0]}' was declared "
+                + ("locked" if declared.locked else "unlocked")
+                + " and its plan draws "
+                + ("locked" if plan.is_locked else "unlocked")
+                + ". **The count and the lock are two facts** "
+                "(`docs/adr/0155`): a complete plan is one everybody *could* "
+                "agree, and the lock is the act that says somebody did — so a "
+                "row that has moved is a refusal `PUT /plans/{game_id}/lock` "
+                "answered with, and the state it leaves undrawable is the "
+                "`PLAN_LOCKED` line."
+            )
         lines.append(_line_for(declared, plan))
     _refuse_a_run_that_reached_the_same_state_four_times(games)
+    _refuse_a_run_where_nobody_agreed_anything(games)
     return tuple(lines)
 
 
@@ -485,6 +576,26 @@ def _refuse_a_run_that_reached_the_same_state_four_times(
         )
 
 
+def _refuse_a_run_where_nobody_agreed_anything(
+    games: dict[ArrangedGame, UUID],
+) -> None:
+    """*Somebody agreed one of these plans.*
+
+    The `PLAN_LOCKED` system line has exactly one producer in this fixture, and
+    ``app/seeds/loop.py`` refuses a code no standing room carries — so a table
+    edited back to four unlocked rows would fail two layers later, with a message
+    about a room. This is the same failure said where it was caused.
+    """
+
+    if not any(declared.locked for declared in games):
+        raise SeedPlanMissing(
+            "no arranged plan is declared locked, so *the plan was agreed* is a "
+            "state no card can be opened on and `PLAN_LOCKED` is a sentence in "
+            "`the-words.md` §23 nothing draws. The complete row is the one that "
+            "locks; locking is refused on anything short of three slots."
+        )
+
+
 def _line_for(declared: ArrangedGame, plan: Plan | None) -> str:
     """One row of the report, in the words a developer needs."""
 
@@ -500,6 +611,11 @@ def _line_for(declared: ArrangedGame, plan: Plan | None) -> str:
         + (f" · where {plan.place.value}" if plan.place else "")
         + (f" · {plan.day.isoformat()}" if plan.day else "")
         + (f" · agreed {plan.agreed_point.isoformat()}" if plan.agreed_point else "")
+        + (
+            f" · locked {plan.locked_at.isoformat()}"
+            if plan.locked_at is not None
+            else ""
+        )
     )
 
 
@@ -518,7 +634,7 @@ def costs(seeded: SeededPlans) -> tuple[str, ...]:
         f"is neither played nor a ghost — so no counterpart tally, no "
         f"`counted_games` and no run of form moves because they exist. What does "
         f"move is `answers challenges`: four more invitations were answered.",
-        "the **held** arm of the three slot writes is unreachable here, and that "
+        "the **held** arm of the four plan writes is unreachable here, and that "
         "is named rather than missed: nothing on this platform can open a case, "
         "so the hold query's only registered implementation is the null object "
         "and `account_held` is a state component tests drive.",

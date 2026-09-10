@@ -42,6 +42,7 @@ from app.modules.plans.domain.events import (
     DayRecorded,
     HourRecorded,
     PlaceRecorded,
+    PlanLocked,
 )
 
 NOW = instant(datetime(2026, 9, 8, 18, 0, tzinfo=timezone.utc))
@@ -67,6 +68,7 @@ EVERY_PUBLISHED_EVENT = (
     PlaceRecorded,
     DayRecorded,
     HourRecorded,
+    PlanLocked,
 )
 
 WRITES_NOTHING = tuple(
@@ -168,27 +170,47 @@ def test_a_seat_leaving_is_one_code_told_by_two_events():
 
 
 def test_every_plan_event_writes_a_line_and_each_writes_its_own():
-    """``the-words.md`` §23 — three codes, and the Plan is the one context on
+    """``the-words.md`` §23 — four codes, and the Plan is the one context on
     this table where every event it publishes draws a line.
 
     The inverse of the seat-leaving rule above, and deliberately: a lapse and a
     decline do the same thing to a line-up and *are* two facts, so they share a
     code and differ in a value; three slots are three different facts, so they
-    are three codes.
+    are three codes — and the lock is a fourth fact again.
     """
 
     lines = {
         telling.event: telling.line
         for telling in TELLINGS
-        if telling.event in (PlaceRecorded, DayRecorded, HourRecorded)
+        if telling.event
+        in (PlaceRecorded, DayRecorded, HourRecorded, PlanLocked)
     }
 
     assert lines == {
         PlaceRecorded: SystemLineCode.PLACE_RECORDED,
         DayRecorded: SystemLineCode.DAY_RECORDED,
         HourRecorded: SystemLineCode.HOUR_RECORDED,
+        PlanLocked: SystemLineCode.PLAN_LOCKED,
     }
     assert all(event in TOLD_ABOUT for event in lines)
+
+
+def test_the_lock_draws_a_line_where_the_completed_line_up_draws_none():
+    """``docs/adr/0155`` — the two are on opposite sides of ``docs/adr/0142``
+    §3's test, and this is where that is asserted.
+
+    ``GamePlanned`` announces a conclusion **the seats already reach**, so it
+    writes nothing. A lock is a fact nobody wrote down: no arrangement of the
+    three slots says *these people have agreed*, so the event is the only place
+    it is true rather than a second one.
+    """
+
+    locked = next(t for t in TELLINGS if t.event is PlanLocked)
+    planned = next(t for t in TELLINGS if t.event is GamePlanned)
+
+    assert locked.line is SystemLineCode.PLAN_LOCKED
+    assert locked.reaches_the_room
+    assert planned.line is None
 
 
 def test_there_is_no_code_for_a_slot_being_changed():
@@ -203,7 +225,21 @@ def test_there_is_no_code_for_a_slot_being_changed():
     codes = {code.value for code in SystemLineCode}
 
     assert not any("CHANGED" in code or "MOVED" in code for code in codes)
-    assert len(codes) == 7
+    assert len(codes) == 8
+
+
+def test_there_is_no_code_for_a_plan_being_unlocked():
+    """``docs/adr/0155`` — there is no unlock and no ``PlanUnlocked``, for the
+    same reason there is no clearing event: the lock is a thing that happened.
+
+    A later slot move keeps the lock and writes its **own** line, so the room
+    already has a truthful record of the re-agreeing without a code that would
+    have to mean *never mind*.
+    """
+
+    codes = {code.value for code in SystemLineCode}
+
+    assert not any("UNLOCK" in code for code in codes)
 
 
 # -- membership ------------------------------------------------------------

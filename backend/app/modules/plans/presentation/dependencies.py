@@ -35,7 +35,12 @@ from app.bootstrap.composition import (
 )
 from app.modules.games.domain.ports import PlanningCourt
 from app.modules.plans.application.read_plans import ReadPlans
-from app.modules.plans.application.record_a_slot import SetDay, SetHour, SetPlace
+from app.modules.plans.application.record_a_slot import (
+    LockThePlan,
+    SetDay,
+    SetHour,
+    SetPlace,
+)
 from app.modules.plans.domain.ports import AccountHoldQuery, PlanRepository
 
 
@@ -114,3 +119,16 @@ def get_set_hour(
 
 
 SetHourDep = Annotated[SetHour, Depends(get_set_hour)]
+
+
+def get_lock_the_plan(
+    plans: PlanRepositoryDep,
+    court: PlanningCourtDep,
+    holds: PlanHoldQueryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> LockThePlan:
+    return LockThePlan(plans=plans, court=court, holds=holds, uow=uow, clock=clock)
+
+
+LockThePlanDep = Annotated[LockThePlan, Depends(get_lock_the_plan)]

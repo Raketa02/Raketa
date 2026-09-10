@@ -1,4 +1,4 @@
-"""The four plan routes: read yours, and set each of the three slots.
+"""The five plan routes: read yours, set each of the three slots, and agree it.
 
 **One route per slot, because ADR-0144 has three events** and *setting a slot and
 moving one are the same event told with two sentences*. A single
@@ -8,7 +8,9 @@ which keys were present.
 
 **``PUT``, because a slot is a value that is set rather than a thing that
 happens.** The same value twice lands the same state and records nothing, which
-is what the verb already promises.
+is what the verb already promises. **The lock takes the same verb for the same
+promise about an act**: locking a plan that is already locked lands the same
+state and records nothing (``docs/adr/0155``).
 
 **There is no route that creates a plan and none that destroys one.** A plan is
 born by being used — the first slot write is its birth — and it is never unmade:
@@ -16,9 +18,13 @@ there is no cancellation, because ``games`` opens one game per arrangement for
 ever and nobody turning up is a game that ghosts rather than a plan that was
 withdrawn.
 
-**There is no lock.** Filling the third slot *is* the lock (``docs/adr/0144``), so
-there is no route to call and nothing to guard: §5.3's *a four cannot be locked
-by two* refuses a state that cannot be reached.
+**The lock is an act, and it freezes nothing** (``docs/adr/0155``). ADR-0144
+refused it because the only thing it did — ownership, and a booking — was out of
+scope; it has a destination now, and the destination is a **system line in the
+room**, so every member sees that the plan was agreed rather than merely
+completed. What it is not: it is not the slot count under another name, it does
+not freeze a slot, and there is no route that undoes it. Any member may still
+move any slot afterwards, and each move writes its own line as it always did.
 
 **There is no per-game plan read.** ``GET /plans`` is the only one, and it is a
 list beside ``GET /games`` rather than a field on it: the plan cannot ride on
@@ -35,6 +41,7 @@ from fastapi import APIRouter, status
 
 from app.core.exception_handlers import ErrorResponse
 from app.modules.plans.application.commands import (
+    LockThePlanCommand,
     ReadPlansCommand,
     SetDayCommand,
     SetHourCommand,
@@ -43,6 +50,7 @@ from app.modules.plans.application.commands import (
 from app.modules.plans.domain.plan import Plan
 from app.modules.plans.domain.slots import as_wall_time
 from app.modules.plans.presentation.dependencies import (
+    LockThePlanDep,
     ReadPlansDep,
     SetDayDep,
     SetHourDep,
@@ -59,21 +67,25 @@ from app.modules.users.presentation.dependencies import CurrentUserDep
 
 router = APIRouter(prefix="/plans", tags=["plans"])
 
-#: `plan_is_history`, spelled once because two of the three routes have to say it
-#: **inside a 409 that also carries a moment that has gone**. A response code
-#: carries one description and a client reads it whole, so the two cannot be two
-#: entries — one would silently overwrite the other, and the refusal that
-#: disappeared would be the one nothing in the contract mentioned.
+#: `plan_is_history`, spelled once because three of the four write routes have to
+#: say it **inside a 409 that also carries something else** — a moment that has
+#: gone, for two of the slots, and a plan that is not complete, for the lock. A
+#: response code carries one description and a client reads it whole, so the two
+#: cannot be two entries — one would silently overwrite the other, and the
+#: refusal that disappeared would be the one nothing in the contract mentioned.
 _THE_GAME_IS_OVER = (
     "`plan_is_history` — the game left its entry window, so its slots are "
-    "frozen. **That is the only thing that freezes them**, and it is not a "
-    "lock: once *we played* can no longer be said, the plan is a note about an "
-    "evening that is over."
+    "frozen. **That is the only thing that freezes them, and locking is not "
+    "it**: a locked plan is still fully editable by any member. Once *we "
+    "played* can no longer be said, the plan is a note about an evening that "
+    "is over."
 )
 
-#: What every slot write refuses, and it is the same list on all three because
+#: What every write here refuses, and it is the same list on all four because
 #: the refusals are about **the game** rather than about what was sent — the
-#: port's one question, and the hold.
+#: port's one question, and the hold. The lock takes it whole: *a hold refuses a
+#: lock exactly as it refuses a slot write*, because both write a line other
+#: people read.
 _REFUSALS: dict[int | str, dict[str, Any]] = {
     status.HTTP_403_FORBIDDEN: {
         "model": ErrorResponse,
@@ -118,6 +130,32 @@ _A_MOMENT_THAT_HAS_GONE: dict[int | str, dict[str, Any]] = {
             "name a moment that has gone. **Raised when the second of the two is "
             "filled, in either order**, and it names neither: the platform has "
             "no opinion about which one is wrong, so change whichever you meant."
+        ),
+    },
+}
+
+#: The 409 the **lock** answers with, and like `_A_MOMENT_THAT_HAS_GONE` it
+#: carries both codes rather than one. A mapping has one entry per status, so
+#: `plan_is_history` is repeated here rather than assumed — one of the two would
+#: otherwise silently overwrite the other, and the refusal that disappeared would
+#: be the one nothing in the contract mentioned.
+#:
+#: **The two are the same status for opposite reasons**: one is a plan there is
+#: nothing left to agree about, the other a plan there is not yet enough to agree
+#: on. Both are the state of the plan rather than anything that was sent, which
+#: is why neither is a `400`.
+_A_PLAN_THAT_CANNOT_BE_AGREED: dict[int | str, dict[str, Any]] = {
+    status.HTTP_409_CONFLICT: {
+        "model": ErrorResponse,
+        "description": (
+            _THE_GAME_IS_OVER
+            + "\n\n"
+            + "`the_plan_is_not_complete` — a slot is still empty. **A refusal "
+            "and not a silent `200`**, which is deliberately the opposite shape "
+            "from locking a plan that is already locked: a no-op here would "
+            "leave you believing you had agreed one. It is a conflict rather "
+            "than a `400` because the request carried nothing at all — what is "
+            "wrong is the state of the plan."
         ),
     },
 }
@@ -293,6 +331,48 @@ async def set_hour(
     )
 
 
+@router.put(
+    "/{game_id}/lock",
+    response_model=PlanSchema,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {"description": "The plan as it now stands."},
+        **_REFUSALS,
+        **_A_PLAN_THAT_CANNOT_BE_AGREED,
+    },
+    summary="Agree the plan",
+    description=(
+        "**We are agreed.** Any member may lock, once all three slots are "
+        "set — and locking is an **act** rather than a fourth slot: a complete "
+        "plan is one everybody *could* agree, and this says somebody did. It "
+        "writes a system line into the room, which is the whole of what it "
+        "does.\n\n"
+        "**It takes no body.** The value is the three slots and they are already "
+        "recorded; sending one back would be the second place that fact is "
+        "true.\n\n"
+        "**A locked plan is not a frozen one.** Any member may still move any "
+        "slot afterwards, the plan stays locked, and every move writes its own "
+        "line — there is no un-agreeing to fear, only re-agreeing. **The game "
+        "leaving its entry window is still the only thing that freezes a "
+        "slot.**\n\n"
+        "**There is no unlock**, for the same reason a slot is never emptied: "
+        "the lock is a thing that happened.\n\n"
+        "**Locking a plan that is already locked answers `200` and records "
+        "nothing**, and the first lock's `locked_at` is the one that stands."
+    ),
+)
+async def lock_the_plan(
+    game_id: UUID,
+    user: CurrentUserDep,
+    use_case: LockThePlanDep,
+) -> PlanSchema:
+    return _plan(
+        await use_case.execute(
+            LockThePlanCommand(game_id=game_id, player_id=user.id)
+        )
+    )
+
+
 def _plan(plan: Plan) -> PlanSchema:
     """One plan, as its own court reads it.
 
@@ -311,4 +391,5 @@ def _plan(plan: Plan) -> PlanSchema:
         day=plan.day,
         hour=as_wall_time(plan.hour) if plan.hour is not None else None,
         agreed_point=plan.agreed_point,
+        locked_at=plan.locked_at,
     )

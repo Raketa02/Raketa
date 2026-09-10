@@ -1,6 +1,7 @@
-"""The Plan aggregate and its three slots — the rules a seam further out cannot see.
+"""The Plan aggregate, its three slots and its lock — the rules a seam further out
+cannot see.
 
-Four families here, and each is a rule that would otherwise only be true by
+Five families here, and each is a rule that would otherwise only be true by
 accident.
 
 **Born by being used**, so the birth is the first recording and there is no
@@ -18,6 +19,11 @@ the hour grid, and the one refusal both halves of a moment can raise.
 **The agreed point is defined whenever a day is**, coarsened later and never
 earlier, which is the amendment ADR-0145 §3 made to ADR-0144 and the one value
 two other tickets each keyed a rule on.
+
+**The count and the lock are two facts** (ADR-0155). A complete plan is one
+everybody *could* agree; agreeing is an act with an actor and a moment, it
+freezes nothing, and there is no un-agreeing. The two shapes here are deliberate
+opposites: a **second** lock records nothing, and an **incomplete** one raises.
 """
 
 from __future__ import annotations
@@ -34,11 +40,13 @@ from app.modules.plans.domain.errors import (
     TheHourIsNotOffered,
     ThePlaceIsEmpty,
     ThePlaceIsTooLong,
+    ThePlanIsNotComplete,
 )
 from app.modules.plans.domain.events import (
     DayRecorded,
     HourRecorded,
     PlaceRecorded,
+    PlanLocked,
 )
 from app.modules.plans.domain.plan import SLOTS, Plan
 from app.modules.plans.domain.slots import (
@@ -216,17 +224,35 @@ def test_any_member_may_fill_or_change_any_slot_any_number_of_times():
 def test_a_plan_has_no_way_to_empty_a_slot_or_to_be_unmade():
     """``docs/adr/0144`` — a slot may be changed but never emptied, and a plan is
     never unmade. There is no cancellation, because ``games`` opens one game per
-    arrangement for ever."""
+    arrangement for ever.
+
+    ``lock`` left this set with ``docs/adr/0155`` and **``unlock`` took its
+    place**: the lock is a thing that happened, so there is no un-happening of it
+    for the same reason there is no clearing event.
+    """
 
     methods = {name for name in dir(Plan) if not name.startswith("__")}
-    forbidden = {"clear", "empty", "unset", "cancel", "unmake", "withdraw", "lock"}
+    forbidden = {
+        "clear",
+        "empty",
+        "unset",
+        "cancel",
+        "unmake",
+        "withdraw",
+        "unlock",
+    }
 
     assert methods & forbidden == set()
 
 
-def test_filling_the_third_slot_is_the_lock_and_there_is_no_lock():
-    """``docs/adr/0144`` — the slot count is derived and nothing announces the
-    third; §5.3's *Lock it in* is not shipped and its guard cannot be reached."""
+def test_the_third_slot_completes_a_plan_and_does_not_lock_it():
+    """``docs/adr/0155`` — **the count and the lock are two facts.** ADR-0144
+    folded them together; a complete plan is one everybody *could* agree, and
+    agreeing is a separate act with an actor and a moment.
+
+    So the third recording still announces nothing, exactly as ADR-0144 said —
+    what changed is that there is now something else to announce.
+    """
 
     plan = _plan()
 
@@ -237,6 +263,8 @@ def test_filling_the_third_slot_is_the_lock_and_there_is_no_lock():
     plan.record_hour(hour=time(18, 0), by=ANA, occurred_at=_at(hours=2))
 
     assert plan.slot_count == SLOTS
+    assert plan.is_locked is False
+    assert plan.locked_at is None
     assert [type(one).__name__ for one in plan.pull_events()] == [
         "PlaceRecorded",
         "DayRecorded",
@@ -468,6 +496,176 @@ def test_planned_at_is_never_written_by_a_plan():
     assert all(
         not hasattr(one, "planned_at") for one in plan.pull_events()
     )
+
+
+# ---------------------------------------------------------------------------
+# The lock — an act, and not the third slot under another name
+# ---------------------------------------------------------------------------
+
+
+def _complete(plan: "Plan") -> "Plan":
+    plan.record_place(place="Zabłocie Sport", by=ANA, occurred_at=_at())
+    plan.record_day(
+        day=date(2026, 9, 12), by=BO, planned_at=PLANNED_AT, occurred_at=_at(hours=1)
+    )
+    plan.record_hour(hour=time(18, 0), by=ANA, occurred_at=_at(hours=2))
+    plan.pull_events()
+    return plan
+
+
+def test_locking_records_who_and_when_and_carries_no_value():
+    """``docs/adr/0155`` — the value is the three slots and they are already
+    recorded. Repeating one here would be the second place it is true, and the
+    first thing to disagree with the slot beside it after a later move."""
+
+    plan = _complete(_plan())
+
+    plan.lock(by=BO, occurred_at=_at(hours=3))
+    (recorded,) = plan.pull_events()
+
+    assert isinstance(recorded, PlanLocked)
+    assert recorded.game_id == plan.game_id
+    assert recorded.locked_by == BO
+    assert recorded.occurred_at == _at(hours=3)
+    assert set(vars(recorded)) == {"game_id", "locked_by", "occurred_at"}
+    assert plan.is_locked is True
+    assert plan.locked_at == _at(hours=3)
+
+
+@pytest.mark.parametrize(
+    "fill",
+    [
+        pytest.param((), id="nothing"),
+        pytest.param(("place",), id="place"),
+        pytest.param(("day",), id="day"),
+        pytest.param(("hour",), id="hour"),
+        pytest.param(("place", "day"), id="place-and-day"),
+        pytest.param(("place", "hour"), id="place-and-hour"),
+        pytest.param(("day", "hour"), id="day-and-hour"),
+    ],
+)
+def test_an_incomplete_plan_refuses_the_lock_rather_than_doing_nothing(fill):
+    """**A refusal and not a silent no-op**, which is the opposite shape from the
+    second lock below. An incomplete plan that answered `200` would leave a
+    client believing it had locked one — where a repeat lock lands exactly the
+    state its caller asked for."""
+
+    plan = _plan()
+    if "place" in fill:
+        plan.record_place(place="Zabłocie Sport", by=ANA, occurred_at=_at())
+    if "day" in fill:
+        plan.record_day(
+            day=date(2026, 9, 12),
+            by=ANA,
+            planned_at=PLANNED_AT,
+            occurred_at=_at(hours=1),
+        )
+    if "hour" in fill:
+        plan.record_hour(hour=time(18, 0), by=ANA, occurred_at=_at(hours=2))
+    plan.pull_events()
+
+    with pytest.raises(ThePlanIsNotComplete):
+        plan.lock(by=BO, occurred_at=_at(hours=3))
+
+    assert plan.slot_count < SLOTS
+    assert plan.is_locked is False
+    assert plan.pull_events() == []
+
+
+def test_locking_an_already_locked_plan_records_nothing():
+    """This repository's idempotency language, applied to an **act** rather than
+    to a value: the same act twice lands the same state and records nothing the
+    second time. It is not a refusal, and the first lock's moment stands."""
+
+    plan = _complete(_plan())
+    plan.lock(by=ANA, occurred_at=_at(hours=3))
+    plan.pull_events()
+
+    plan.lock(by=BO, occurred_at=_at(hours=4))
+
+    assert plan.pull_events() == []
+    assert plan.locked_at == _at(hours=3)
+
+
+def test_a_locked_plan_is_not_a_frozen_one_and_a_move_keeps_the_lock():
+    """``docs/adr/0155`` — **locking freezes nothing.** ADR-0145 §5's *there is
+    no un-agreeing to fear, only re-agreeing, and any member may do that at any
+    time* stands, so a slot moved after a lock writes its own line and the plan
+    stays locked. The line trail is the friction, as it already is."""
+
+    plan = _complete(_plan())
+    plan.lock(by=ANA, occurred_at=_at(hours=3))
+    plan.pull_events()
+
+    plan.record_hour(hour=time(19, 0), by=BO, occurred_at=_at(hours=4))
+
+    assert [type(one) for one in plan.pull_events()] == [HourRecorded]
+    assert plan.hour == 19 * 60
+    assert plan.is_locked is True
+    assert plan.locked_at == _at(hours=3)
+
+
+def test_being_locked_is_not_the_slot_count_under_another_name():
+    """The distinction **is** ``docs/adr/0155``: a complete plan is one everybody
+    *could* agree, and nobody has until somebody says so."""
+
+    complete = _complete(_plan())
+    assert complete.slot_count == SLOTS and complete.is_locked is False
+
+    complete.lock(by=ANA, occurred_at=_at(hours=3))
+    assert complete.is_locked is True
+
+
+def test_a_locked_plan_folds_back_locked():
+    """The fold **re-runs no refusal.** A stream whose lock precedes its third
+    slot cannot be produced by ``lock()`` and would be a bug upstream; replaying
+    it loudly would make the plan unreadable rather than visible."""
+
+    game_id = new_uuid()
+    folded = Plan.from_history(
+        [
+            PlaceRecorded(
+                game_id=game_id,
+                place="Zabłocie Sport",
+                recorded_by=ANA,
+                occurred_at=_at(),
+            ),
+            DayRecorded(
+                game_id=game_id,
+                day="2026-09-12",
+                recorded_by=BO,
+                occurred_at=_at(hours=1),
+            ),
+            HourRecorded(
+                game_id=game_id,
+                minute_of_day=18 * 60,
+                recorded_by=ANA,
+                occurred_at=_at(hours=2),
+            ),
+            PlanLocked(
+                game_id=game_id, locked_by=BO, occurred_at=_at(hours=3)
+            ),
+        ]
+    )
+
+    assert folded.is_locked is True
+    assert folded.locked_at == _at(hours=3)
+    assert folded.version == 4
+    assert folded.pull_events() == []
+
+
+def test_the_lock_may_be_the_first_event_a_plan_is_folded_from():
+    """``_game_of`` walks all four, so a stream this aggregate cannot produce is
+    still read rather than met with an ``AttributeError`` in a fold."""
+
+    game_id = new_uuid()
+    folded = Plan.from_history(
+        [PlanLocked(game_id=game_id, locked_by=ANA, occurred_at=_at())]
+    )
+
+    assert folded.game_id == game_id
+    assert folded.is_locked is True
+    assert folded.slot_count == 0
 
 
 # ---------------------------------------------------------------------------

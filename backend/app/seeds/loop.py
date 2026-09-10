@@ -21,7 +21,9 @@ claim: **every state the loop's five screens draw is in this database**
 - **The six challenge standings, on both sides.** Five were somewhere in the
   eleven or the inboxes already; ``LAPSED`` was reachable only by *waiting*, which
   a fixture cannot do, so it is written on a clock three days old.
-- **The room's seven system-line codes.** Three come from the Plan's slot writes.
+- **The room's eight system-line codes.** Four come from the Plan — three slot
+  writes and the **lock**, which is an act rather than a slot and comes from the
+  one arranged plan declared agreed (``docs/adr/0155``).
   ``GAME_PLAYED`` was written and then **swept**, because a room outlives *we
   played* by forty-eight hours and every played evening here is older than that.
   ``SEAT_ACCEPTED`` and ``SEAT_LEFT`` need a court where somebody accepts after
@@ -1411,7 +1413,7 @@ async def _refuse_a_reader_who_left_and_is_told_they_are_in(
 
 
 # ---------------------------------------------------------------------------
-# The room: seven codes, and every one of them in a room that still stands
+# The room: every code, and every one of them in a room that still stands
 # ---------------------------------------------------------------------------
 
 
@@ -1451,9 +1453,11 @@ async def _refuse_a_system_line_no_room_carries(
             f"{sorted(carried)}. A code nothing draws is a sentence in "
             f"`the-words.md` §23 that no developer can look at. The rows that "
             f"reach the membership three are `THE_COURT_SOMEBODY_LEFT` and the "
-            f"fill in `app/seeds/loop.py`; the Plan's three are "
-            f"`app/seeds/plans.py`; `GAME_PLAYED` needs a game played inside "
-            f"`CONVERSATION_GRACE`, which is `RAIL_GAMES`."
+            f"fill in `app/seeds/loop.py`; the Plan's four are "
+            f"`app/seeds/plans.py` — and `PLAN_LOCKED` is the one of those four "
+            f"that is an act rather than a slot, so it comes from the row "
+            f"declared `locked=True` and from nothing else; `GAME_PLAYED` needs "
+            f"a game played inside `CONVERSATION_GRACE`, which is `RAIL_GAMES`."
         )
     return (
         f"lines · all {len(carried)} system-line code(s) are carried by a room "
@@ -1510,6 +1514,6 @@ def costs(seeded: SeededLoop) -> tuple[str, ...]:
         "that is carried forward rather than quietly dropped: nothing on this "
         "platform can open a case, so a hold is a state component tests drive and "
         "no screen here can be developed against one. It is the map's one stated "
-        "exception (`app/seeds/plans.py` says the same of the three slot writes) "
+        "exception (`app/seeds/plans.py` says the same of the plan's own writes) "
         "and it goes when something can open a case.",
     )

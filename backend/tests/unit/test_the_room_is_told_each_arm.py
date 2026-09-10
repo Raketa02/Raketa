@@ -1,9 +1,15 @@
 """``TellTheRoom``, arm by arm — **including the two no API test can reach.**
 
-The API suite drives four of the seven tellings through real requests: the first
-acceptance, a later one, a decline, a completed line-up and *we played*. Two are
-left, and they are the two most worth a test — a **fill** (``SeatsInvited``) and
-a **mutual-born opening**, each of which is the only place its rule is expressed.
+The API suite drives most of the tellings through real requests: the first
+acceptance, a later one, a decline, a completed line-up, *we played*, the three
+slot writes and the lock. Two are left, and they are the two most worth a test —
+a **fill** (``SeatsInvited``) and a **mutual-born opening**, each of which is the
+only place its rule is expressed.
+
+The lock is driven here as well, on top of its API test, for the one thing that
+is a property of the arm rather than of the route: it is the **only** plan line
+with no values at all, and a value invented for it would be the second place the
+slots are true (``docs/adr/0155``).
 
 And one thing no request can exercise at all: **the order the outbox delivers a
 transaction's own events in.** ``created_at`` is ``func.now()`` — transaction-start
@@ -42,6 +48,7 @@ from app.modules.conversations.domain.entries import (
     SystemLineCode,
 )
 from app.modules.games.domain.events import GamePlanned, GamePlayed, ResultProposed
+from app.modules.plans.domain.events import PlanLocked
 
 NOW = datetime(2026, 9, 8, 18, 0, tzinfo=timezone.utc)
 CHALLENGE = uuid4()
@@ -488,6 +495,51 @@ async def test_we_played_finds_the_room_through_the_game_it_was_told_about(rooms
     (line,) = rooms.lines
     assert line.code is SystemLineCode.GAME_PLAYED
     assert line.actor_id == ANA
+
+
+# -- the plan --------------------------------------------------------------
+
+
+async def test_the_lock_writes_the_one_plan_line_that_carries_no_value(rooms):
+    """``docs/adr/0155`` — the value is the three slots and they are already
+    recorded, so this line carries **who and when** and nothing else.
+
+    Found through the game like the three slot lines, and for the same reason:
+    a plan exists only for a game, so the room is the one whose line-up
+    completed into it.
+    """
+
+    tell = _teller(rooms, _Games(game_for=CHALLENGE))
+    await tell(
+        SeatAccepted(challenge_id=CHALLENGE, player_id=ANA, occurred_at=NOW),
+        _delivery(),
+    )
+
+    await tell(
+        PlanLocked(game_id=GAME, locked_by=BO, occurred_at=_at(1)),
+        _delivery(),
+    )
+
+    (line,) = rooms.lines
+    assert line.code is SystemLineCode.PLAN_LOCKED
+    assert line.actor_id == BO
+    assert line.values == {}
+
+
+async def test_a_lock_with_no_room_to_write_it_in_is_a_safe_drop(rooms):
+    """The slot arm's reasoning exactly: a plan cannot be written before its game
+    exists, so by the time this arrives the room either knows its game or was
+    never opened at all. There is nothing to hang the line on and nothing to
+    retry."""
+
+    tell = _teller(rooms)
+
+    await tell(
+        PlanLocked(game_id=GAME, locked_by=BO, occurred_at=NOW),
+        _delivery(),
+    )
+
+    assert rooms.by_id == {}
 
 
 # -- redelivery ------------------------------------------------------------

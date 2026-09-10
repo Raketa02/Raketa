@@ -1,6 +1,9 @@
 # ADR-0144 — A plan is the game's, and the third slot is the lock
 
-- **Status:** Accepted
+- **Status:** Accepted — **its *There is no lock* section superseded by
+  [ADR-0155](0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)**, and
+  nothing else in this record. The title is left as it stands rather than renamed, because the
+  file is linked from a dozen others.
 - **Date:** 2026-09-07
 - **Extends [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)**, which drew the
   line this record stands on: `games`' subject is *everybody accepted* to *there is nothing more
@@ -72,6 +75,18 @@ game screen draws as *the plan empty*. This context has no opening event of its 
 to `GamePlanned` and no outbox hop.
 
 ### There is no lock. Filling the third slot is the lock
+
+> **Superseded by [ADR-0155](0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md).**
+> The lock now has a destination this record did not have: it posts a **system line into the
+> room**, so every member sees that the plan was agreed rather than merely completed — a fact no
+> arrangement of the three slots reaches, because nobody wrote it down. **The count and the lock
+> become two facts**; the argument below, that a locked *state* is a border colour its own data
+> cannot support, is what ADR-0155 answers by making the lock an **act** with an actor and a
+> moment rather than a state. Everything else in this record stands, including the two
+> consequences below. **§5.3's guard is still not implemented, and half of its reason survives**:
+> there is a lock to guard now, but there is still no plan before the line-up completes, so a four
+> still cannot be locked by two. §5.3's second sentence is still deleted — the lock is posted at
+> the room and not at an owner.
 
 **We will not ship §5.3's *Lock it in*.** With ownership and booking out of scope, the only thing
 the lock did is gone, and what remains of the prototype's locked state is a border colour, a

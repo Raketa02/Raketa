@@ -1,6 +1,6 @@
 """The plan wire shapes — **a note between people, and never a booking.**
 
-Four rules decide everything below.
+Five rules decide everything below.
 
 **A slot carries its value and nothing else** (``docs/adr/0148`` §8). No
 ``set_by``, no ``set_at``. Every change writes a system line naming who and what,
@@ -8,6 +8,12 @@ and *those lines are this context's history* — so attribution on a slot would 
 the second place one fact is true, in a record whose own decision is that it
 stores nothing it can derive. The game screen draws the plan read-only and never
 needed it.
+
+**``locked_at`` is not a violation of that rule**, because it is not on a slot.
+The lock is an **act** rather than a value (``docs/adr/0155``), and its moment is
+the only thing a client draws it by — there is no locked *state* to send, since a
+locked plan is not a frozen one and nothing else about it changes. Who locked it
+is still on the line in the room, exactly like every other attribution here.
 
 **The agreed point is derived and sent.** It is a timezone conversion the client
 must not redo, and it is present the moment a *day* is recorded — the agreed
@@ -103,6 +109,23 @@ class PlanSchema(BaseModel):
             "Coarsened **later, never earlier**, so nobody is asked for a result "
             "before they could have played. It is sent because it is a timezone "
             "conversion the client must not redo."
+        ),
+    )
+    locked_at: datetime | None = Field(
+        None,
+        description=(
+            "The moment somebody agreed this plan, or `null` while nobody "
+            "has.\n\n"
+            "**A locked plan is not a frozen one.** Any member may still move "
+            "any slot afterwards, and each move writes its own system line — "
+            "there is no un-agreeing to fear, only re-agreeing. The plan stays "
+            "locked and the line trail is the friction, as it already is for "
+            "every change.\n\n"
+            "**There is no unlock**, and this never returns to `null`. The lock "
+            "is a thing that happened.\n\n"
+            "**It is not the slot count under another name**: a plan with all "
+            "three slots filled is one everybody *could* agree, and this says "
+            "somebody did."
         ),
     )
 

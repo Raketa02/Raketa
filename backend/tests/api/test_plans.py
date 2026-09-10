@@ -1,10 +1,10 @@
-"""The four plan routes, end to end over HTTP — and the thing they sit between.
+"""The five plan routes, end to end over HTTP — and the thing they sit between.
 
 The whole reachable path in one file: a searcher builds a court, sends it,
 everybody accepts, a game exists — and only then is there anything to plan. That
 ordering is the point of this file rather than a set-up cost.
 
-Five things are asserted here and nowhere else:
+Six things are asserted here and nowhere else:
 
 **A plan is born by being used.** There is no route that creates one and none
 that destroys one; a game with nothing agreed is simply absent from the list, and
@@ -14,13 +14,17 @@ the first slot write is the birth.
 outside that is indistinguishable from a write that changed something — which is
 the whole idea — so it is asserted through the room the lines land in.
 
-**The three slot codes reach the conversation**, through the outbox, written by a
+**The four plan codes reach the conversation**, through the outbox, written by a
 context that does not know this one exists.
 
 **Bounded chips the platform offered, never a free instant.** The horizon, the
 grid and the moment that has gone, each refused server-side.
 
 **A plan carries no ``read_at``**, so Now has one clock by construction.
+
+**The count and the lock are two facts** (``docs/adr/0155``). Completing the
+three slots agrees nothing; locking is an act, it writes its own line, it freezes
+nothing, and there is no unlock.
 """
 
 from __future__ import annotations
@@ -168,6 +172,7 @@ async def test_the_first_slot_write_is_the_birth_and_answers_the_whole_plan(
         "day": None,
         "hour": None,
         "agreed_point": None,
+        "locked_at": None,
     }
     assert await _plans(client, searcher["token"]) == [written.json()]
 
@@ -175,7 +180,11 @@ async def test_the_first_slot_write_is_the_birth_and_answers_the_whole_plan(
 async def test_there_is_no_route_that_creates_or_destroys_a_plan(app):
     """A plan is born by being used and **is never unmade** — nobody turns up and
     the game ghosts, which is the record this platform keeps instead of a
-    cancellation."""
+    cancellation.
+
+    ``lock`` arrived with ``docs/adr/0155`` and ``unlock`` did not: the lock is a
+    thing that happened, so it has a route and its undoing has none.
+    """
 
     plan_routes = {
         (route.path, method)
@@ -185,10 +194,11 @@ async def test_there_is_no_route_that_creates_or_destroys_a_plan(app):
     }
 
     assert {method for _, method in plan_routes} == {"GET", "PUT"}
+    assert any(path.endswith("/lock") for path, _ in plan_routes)
     assert not any(
         segment in path
         for path, _ in plan_routes
-        for segment in ("lock", "cancel", "clear")
+        for segment in ("unlock", "cancel", "clear")
     )
 
 
@@ -642,3 +652,231 @@ async def test_saying_you_played_freezes_the_slots(
     assert frozen.status_code == 409, frozen.text
     assert frozen.json()["code"] == "plan_is_history"
     assert (await _plans(client, searcher["token"]))[0]["place"] == "Zabłocie Sport"
+
+
+# ---------------------------------------------------------------------------
+# The lock — an act, and not the third slot under another name
+# ---------------------------------------------------------------------------
+
+
+async def _a_complete_plan(client, session_factory, candidate_source, searcher):
+    """A game whose three slots are all filled, and nobody has agreed it yet."""
+
+    people, game = await _an_arranged_game(
+        client, session_factory, candidate_source, searcher
+    )
+    for path, body in (
+        ("place", {"place": "Zabłocie Sport"}),
+        ("day", {"day": _a_plannable_day(game)}),
+        ("hour", {"hour": "18:00"}),
+    ):
+        written = await client.put(
+            f"/api/v1/plans/{game['game_id']}/{path}",
+            json=body,
+            headers=world.auth(searcher["token"]),
+        )
+        assert written.status_code == 200, written.text
+        await world.deliver_the_outbox(session_factory)
+    return people, game
+
+
+async def _lock(client, game_id: str, token: str):
+    return await client.put(
+        f"/api/v1/plans/{game_id}/lock", headers=world.auth(token)
+    )
+
+
+async def test_a_complete_plan_is_not_a_locked_one(
+    client, session_factory, candidate_source, searcher
+):
+    """``docs/adr/0155`` — **the count and the lock are two facts.** Filling the
+    third slot leaves ``locked_at`` null, because a complete plan is one
+    everybody *could* agree and nobody has yet."""
+
+    _, game = await _a_complete_plan(
+        client, session_factory, candidate_source, searcher
+    )
+
+    (plan,) = await _plans(client, searcher["token"])
+
+    assert plan["place"] and plan["day"] and plan["hour"]
+    assert plan["locked_at"] is None
+
+
+async def test_locking_answers_the_plan_carrying_the_moment_it_was_agreed(
+    client, session_factory, candidate_source, searcher
+):
+    people, game = await _a_complete_plan(
+        client, session_factory, candidate_source, searcher
+    )
+
+    locked = await _lock(client, game["game_id"], people["ana"]["token"])
+
+    assert locked.status_code == 200, locked.text
+    body = locked.json()
+    assert body["locked_at"] is not None
+    assert body["place"] == "Zabłocie Sport"
+    assert await _plans(client, searcher["token"]) == [body]
+
+
+async def test_an_incomplete_plan_refuses_the_lock(
+    client, session_factory, candidate_source, searcher
+):
+    """A **conflict** and not a bad request: the body carried nothing at all, so
+    there is no field to be wrong — what is wrong is the state of the plan.
+
+    And a refusal rather than a silent `200`, which is the opposite shape from a
+    second lock: a no-op here would leave a client believing it had agreed one.
+    """
+
+    _, game = await _an_arranged_game(
+        client, session_factory, candidate_source, searcher
+    )
+    await client.put(
+        f"/api/v1/plans/{game['game_id']}/place",
+        json={"place": "Zabłocie Sport"},
+        headers=world.auth(searcher["token"]),
+    )
+
+    refused = await _lock(client, game["game_id"], searcher["token"])
+
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "the_plan_is_not_complete"
+    assert (await _plans(client, searcher["token"]))[0]["locked_at"] is None
+
+
+async def test_the_lock_writes_the_one_plan_line_that_carries_no_value(
+    client, session_factory, candidate_source, searcher
+):
+    """``the-words.md`` §23 — ``{name} locked the plan``, filled from membership
+    like every other line. The three slots are the value and the room already has
+    a line for each of them."""
+
+    people, game = await _a_complete_plan(
+        client, session_factory, candidate_source, searcher
+    )
+
+    locked = await _lock(client, game["game_id"], people["bo"]["token"])
+    assert locked.status_code == 200, locked.text
+    await world.deliver_the_outbox(session_factory)
+
+    lines = await _system_lines(client, searcher["token"])
+
+    assert lines[-1]["code"] == "PLAN_LOCKED"
+    assert lines[-1]["actor_id"] == str(people["bo"]["id"])
+    assert lines[-1]["values"] == {}
+
+
+async def test_locking_an_already_locked_plan_answers_two_hundred_and_says_nothing(
+    client, session_factory, candidate_source, searcher
+):
+    """This repository's idempotency language applied to an **act**: the same act
+    twice lands the same state and records nothing. It is not a refusal, and the
+    first lock's moment is the one that stands."""
+
+    people, game = await _a_complete_plan(
+        client, session_factory, candidate_source, searcher
+    )
+
+    first = await _lock(client, game["game_id"], searcher["token"])
+    await world.deliver_the_outbox(session_factory)
+    again = await _lock(client, game["game_id"], people["ana"]["token"])
+    await world.deliver_the_outbox(session_factory)
+
+    assert first.status_code == again.status_code == 200
+    assert first.json()["locked_at"] == again.json()["locked_at"]
+    lines = await _system_lines(client, searcher["token"])
+    assert [one["code"] for one in lines].count("PLAN_LOCKED") == 1
+
+
+async def test_a_locked_plan_is_not_a_frozen_one(
+    client, session_factory, candidate_source, searcher
+):
+    """``docs/adr/0155`` — locking freezes nothing, and ADR-0145 §5 stands:
+    *there is no un-agreeing to fear, only re-agreeing, and any member may do
+    that at any time*.
+
+    The plan stays locked and the move writes its own line; **the line trail is
+    the friction**, as it already is for every slot change.
+    """
+
+    people, game = await _a_complete_plan(
+        client, session_factory, candidate_source, searcher
+    )
+    locked = await _lock(client, game["game_id"], searcher["token"])
+    await world.deliver_the_outbox(session_factory)
+
+    moved = await client.put(
+        f"/api/v1/plans/{game['game_id']}/hour",
+        json={"hour": "19:00"},
+        headers=world.auth(people["ana"]["token"]),
+    )
+    await world.deliver_the_outbox(session_factory)
+
+    assert moved.status_code == 200, moved.text
+    assert moved.json()["hour"] == "19:00:00"
+    assert moved.json()["locked_at"] == locked.json()["locked_at"]
+    lines = await _system_lines(client, searcher["token"])
+    assert [one["code"] for one in lines[-2:]] == ["PLAN_LOCKED", "HOUR_RECORDED"]
+
+
+async def test_somebody_who_was_not_on_the_court_cannot_lock_and_is_told_nothing(
+    client, session_factory, candidate_source, searcher
+):
+    """The gate first, and it is the slot writes' gate exactly — **one code for
+    two cases**, because a 403 would answer *is this id real* about four
+    strangers' evening."""
+
+    _, game = await _a_complete_plan(
+        client, session_factory, candidate_source, searcher
+    )
+    _, stranger = await world.a_signed_in_candidate(
+        client, session_factory, "stranger", mu=searcher["mu"]
+    )
+
+    refused = await _lock(client, game["game_id"], stranger)
+
+    assert refused.status_code == 404, refused.text
+    assert refused.json()["code"] == "plan_not_found"
+
+
+async def test_a_held_account_may_not_lock(
+    client, session_factory, candidate_source, searcher
+):
+    """``docs/adr/0148`` §9 — **a hold refuses a lock exactly as it refuses a
+    slot write**, because a lock writes a line other people read. It refuses no
+    read: the plan is still there to look at."""
+
+    _, game = await _a_complete_plan(
+        client, session_factory, candidate_source, searcher
+    )
+    world.hold_everybody_planning(client)
+
+    refused = await _lock(client, game["game_id"], searcher["token"])
+
+    assert refused.status_code == 403, refused.text
+    assert refused.json()["code"] == "account_held"
+    assert (await _plans(client, searcher["token"]))[0]["locked_at"] is None
+
+
+async def test_a_game_that_is_history_refuses_the_lock(
+    client, session_factory, candidate_source, searcher
+):
+    """The freeze reaches the lock as it reaches the three slots: once *we
+    played* has been said, there is nothing left to agree."""
+
+    _, game = await _a_complete_plan(
+        client, session_factory, candidate_source, searcher
+    )
+    played = await client.post(
+        f"/api/v1/games/{game['game_id']}/result",
+        json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
+        headers=world.auth(searcher["token"]),
+    )
+    assert played.status_code == 200, played.text
+
+    refused = await _lock(client, game["game_id"], searcher["token"])
+
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "plan_is_history"
+

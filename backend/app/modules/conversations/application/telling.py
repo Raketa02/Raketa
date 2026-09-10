@@ -7,10 +7,12 @@ for each; most of them are refused, and this is where the refusal and its reason
 live so that ``tests/unit/test_the_room_is_told.py`` can name every one.
 
 **Three contexts publish into this table and none of them knows it exists.**
-``challenges``, ``games`` and now ``plans``, and the Plan's three rows are the
-only ones on the list where **every** event of a context draws a line: it has
-exactly three events and all three are somebody writing something down for the
-other people on the court, which is what a system line is for.
+``challenges``, ``games`` and now ``plans``, and the Plan's rows are the only
+ones on the list where **every** event of a context draws a line: it has exactly
+four events and every one of them is somebody doing something the other people on
+the court would want to know, which is what a system line is for. Three of them
+are somebody writing something down; the fourth is somebody agreeing what was
+written (``docs/adr/0155``).
 
 **Three different rules do the refusing.**
 
@@ -29,6 +31,13 @@ other people on the court, which is what a system line is for.
    reason is now true: the destruction is ``docs/adr/0153``'s and is built, and
    the withdrawal is the one telling here whose whole effect is that the room
    stops existing.
+
+   **``PlanLocked`` is what that test looks like from the other side.** No
+   arrangement of the three slots reaches *these people have agreed* — nobody
+   wrote it down — so the event is the only place the fact is true rather than a
+   second one, and it draws a line. There is still no *plan complete* line, and
+   the two are not the same news: a complete plan is one everybody *could* agree
+   (``docs/adr/0155``).
 3. **The argument belongs to somebody else.** The four result events are
    ``games``' and ``games`` has its own eight-arm conversation for them. One fact
    in one place.
@@ -77,6 +86,7 @@ from app.modules.plans.domain.events import (
     DayRecorded,
     HourRecorded,
     PlaceRecorded,
+    PlanLocked,
 )
 
 
@@ -140,6 +150,11 @@ TELLINGS: tuple[Telling, ...] = (
     Telling(
         event=HourRecorded,
         line=SystemLineCode.HOUR_RECORDED,
+        reaches_the_room=True,
+    ),
+    Telling(
+        event=PlanLocked,
+        line=SystemLineCode.PLAN_LOCKED,
         reaches_the_room=True,
     ),
     Telling(

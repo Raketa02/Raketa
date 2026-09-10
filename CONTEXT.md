@@ -1325,7 +1325,10 @@ Nothing about when, where, money or the result belongs here — it is **told** a
 
 Settled by [ADR-0144](docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md) and
 [ADR-0145](docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md), named by
-[ADR-0146](docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md).
+[ADR-0146](docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md), and given a
+**Lock** by
+[ADR-0155](docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md),
+which supersedes ADR-0144's *There is no lock* and nothing else in it.
 
 **Where and when these people are meeting.** It is **one game's**, identified by that game's id,
 and it is **born by being used** — no record at birth, no opening event, and *no plan* is what a
@@ -1349,8 +1352,15 @@ The word will one day collide with Around's *plans*. It is taken anyway, on this
   day and the hour are both recorded; the **start of the following local day** when only the day
   is; nothing at all when no day is. Later rather than earlier, so nobody is asked for a result
   before they could have played.
-- **Slot count** — how many of the three are filled. Derived. **Filling the third is the lock**,
-  and there is no lock.
+- **Slot count** — how many of the three are filled. Derived. It says **how far along a plan
+  is** and nothing more: three filled is a plan everybody *could* agree, which is not the same
+  fact as somebody having agreed it.
+- **Lock** — somebody agreed the plan. An **act**, with an actor and a moment, and it is
+  **not the slot count under another name** (ADR-0155). It is the one fact here no arrangement
+  of the three slots reaches, because nobody wrote it down — which is why it may announce
+  itself where a completed plan may not. **It freezes nothing**: any member may still move any
+  slot afterwards, the plan stays locked, and the move writes its own line. **There is no
+  unlock**, for the same reason a slot is never emptied — the lock is a thing that happened.
 
 **Invariants**
 
@@ -1365,7 +1375,11 @@ The word will one day collide with Around's *plans*. It is taken anyway, on this
 - **One platform zone**, recorded as a locale assumption rather than a constant to tune. Its
   falsifier is the first shard whose players are somewhere else.
 - **The game leaving its entry window is the only thing that freezes the slots**, read through one
-  port asking one question.
+  port asking one question. **Locking is not a second freeze**, and there is no third.
+- **Locking an already-locked plan records nothing.** The same act twice lands the same state,
+  and the first lock's moment is the one that stands. **Locking an incomplete plan is refused**
+  — the two shapes differ deliberately, because a silent no-op there would leave somebody
+  believing they had agreed a plan.
 
 ### Player Score (`backend/app/modules/player_score/`)
 

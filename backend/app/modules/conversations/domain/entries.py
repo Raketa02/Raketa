@@ -48,7 +48,7 @@ MESSAGE_LENGTH_CAP = 1000
 
 @final
 class SystemLineCode(str, Enum):
-    """The codes a system line may carry. **Seven, and the Plan brought three.**
+    """The codes a system line may carry. **Eight, and the Plan brought four.**
 
     ``the-words.md`` §23 holds the sentence each one renders; nothing in this
     module knows any of them, which is the point.
@@ -59,12 +59,18 @@ class SystemLineCode(str, Enum):
     still not a decline** — the two facts stay apart in the value rather than in
     a second code, which is ``the-words.md`` §13's rule holding one layer down.
 
-    **The Plan's three are the opposite rule applied to the opposite case.**
+    **The Plan's slot codes are the opposite rule applied to the opposite case.**
     Setting a slot and moving one are **the same fact told twice**
-    (``docs/adr/0144``), so there is no value telling them apart and no fourth
+    (``docs/adr/0144``), so there is no value telling them apart and no separate
     code for a change — where a lapse and a decline do the same thing to a
     line-up and *are* two facts. A reader of a plan line cannot tell whether it
     was the first, and has no reason to.
+
+    **``PLAN_LOCKED`` is the Plan's fourth and it is not a fourth slot.** It is
+    an act rather than a value (``docs/adr/0155``), which is why it is the one
+    plan code that carries no ``values`` at all: the three slots are the value
+    and the room already has a line for each. There is no unlocked code, because
+    the lock freezes nothing and a later move writes its own line.
     """
 
     SEAT_ACCEPTED = "SEAT_ACCEPTED"
@@ -74,6 +80,7 @@ class SystemLineCode(str, Enum):
     PLACE_RECORDED = "PLACE_RECORDED"
     DAY_RECORDED = "DAY_RECORDED"
     HOUR_RECORDED = "HOUR_RECORDED"
+    PLAN_LOCKED = "PLAN_LOCKED"
 
 
 @final

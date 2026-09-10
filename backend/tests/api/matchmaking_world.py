@@ -655,6 +655,19 @@ def hold_everybody(client) -> None:
     override(client, get_account_hold_query, HoldingEverybody)
 
 
+def hold_everybody_planning(client) -> None:
+    """The same hold, on the **plans** context's own declaration of the port.
+
+    Each context declares when its adapter is built, so a hold driven through
+    ``matchmaking``'s dependency reaches no plan route at all. One helper per
+    declaration is the honest shape: the stand-in is shared, the seam is not.
+    """
+
+    from app.modules.plans.presentation.dependencies import get_plan_hold_query
+
+    override(client, get_plan_hold_query, HoldingEverybody)
+
+
 def hold_only(client, *player_ids) -> None:
     """A hold on these players and **nobody else** — the reader included out.
 

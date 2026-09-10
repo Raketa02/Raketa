@@ -1712,11 +1712,22 @@ hour are filled in either order and either one can be the second:
 **It names both remedies** because the platform has no opinion about which is wrong, and it names
 no value, because the sentence is true whichever pair produced it.
 
-**There is no lock, so there is nothing to word.** ADR-0144 deleted *Lock it in*, the locked
-border, and `locked by everybody` — a phrase the prototype's own data cannot support, since no
-assent is recorded anywhere and a slot is set by whoever tapped last. **§5.3's guard
-(*a four cannot be locked by two*) has no sentence either**, because the state it refuses is
-unreachable: there is no lock, and there is no plan before the line-up completes.
+**There is a lock, and it is an act rather than a state**
+([ADR-0155](../../adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md),
+superseding ADR-0144's *There is no lock*). What it does is post **a system line into the room** —
+§23's `{name} locked the plan` — so the wording that belongs to it is that sentence and nothing
+else. There is deliberately **no locked-state copy on the card here**: what a card says about an
+agreed plan is #397's, and the backend sends `locked_at` and no adjective.
+
+**`locked by everybody` stays deleted.** It is a phrase the prototype's own data cannot support —
+no assent is recorded per person, and a lock is one person saying *we are agreed*, not four. And
+**there is no *unlock* to word**, because the lock is a thing that happened: any member may still
+move a slot, the plan stays locked, and the move writes its own line.
+
+**§5.3's guard (*a four cannot be locked by two*) still has no sentence**, and one half of its
+reason survives: there is a lock now, but there is still no plan before the line-up completes, so
+the state it refuses stays unreachable. What *is* refusable is a lock on a plan with a slot still
+empty, and that is a code — `the_plan_is_not_complete` — rather than copy here.
 
 **And *"whoever books becomes the owner"* is deleted rather than rewritten.** Decision 3 said the
 sentence would be rewritten; ADR-0144 found it has no moment left to be posted at. A sentence with
@@ -1889,10 +1900,26 @@ correction reaches the whole backlog for free.
 | a place recorded | `plans` | `{name} set the place · {value}` |
 | a day recorded | `plans` | `{name} set the day · {value}` |
 | an hour recorded | `plans` | `{name} set the time · {value}` |
+| the plan was locked | `plans` · `PlanLocked` | `{name} locked the plan` |
 
-**Seven codes, and the leave code is one with the answer as a value** — #221's *"that seat is open
+**Eight codes, and the leave code is one with the answer as a value** — #221's *"that seat is open
 again"* is the same news either way, and the two facts stay apart in the value rather than in a
 second code. **A lapse is still not a decline**, which is §13's rule holding one layer down.
+
+**The lock is the one plan code that carries no value at all**
+([ADR-0155](../../adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)). The
+three slots *are* the value and the room already holds a line for each of them, so a value here
+would be the second place they are true and the first thing to disagree with the slot line above it
+after a later move. `{name}` is filled from membership like every other line — the event carries
+`locked_by` and no name.
+
+**It is an act and not a fourth slot, and it is not the slot count under another name.** A complete
+plan is one everybody *could* agree; this says somebody did. There is no *plan complete* line and
+never will be — that is a conclusion the record already implies, which is the same test
+[ADR-0142](../../adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md) §3
+applies to `GamePlanned` — while *these people have agreed* is reachable from no arrangement of the
+three slots, because nobody wrote it down. **There is no unlocked code**: the lock freezes nothing,
+and a slot moved afterwards keeps it and writes its own line.
 
 **Setting a slot and moving one are one code told twice**, separated by the fold rather than by a
 second class. ADR-0144: *"unlike a lapse and a decline, which do the same thing to the line-up and

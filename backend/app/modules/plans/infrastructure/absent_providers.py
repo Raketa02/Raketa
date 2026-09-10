@@ -15,7 +15,7 @@ ships, four lines in the composition root change to the same adapter.
 **The empty answer is measured rather than stubbed.** Nobody can be held because
 nothing on this platform can hold anybody — there is no case, no route and no
 record — which is why this is a fact rather than a placeholder, and why the held
-arm of the three slot writes is currently unreachable by ``make seed``. That is
+arm of the four plan writes is currently unreachable by ``make seed``. That is
 stated where the next person will find it rather than left to be discovered.
 """
 

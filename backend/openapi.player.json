@@ -2917,7 +2917,7 @@
             }
           },
           "409": {
-            "description": "`plan_is_history` \u2014 the game left its entry window, so its slots are frozen. **That is the only thing that freezes them**, and it is not a lock: once *we played* can no longer be said, the plan is a note about an evening that is over.",
+            "description": "`plan_is_history` \u2014 the game left its entry window, so its slots are frozen. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3016,7 +3016,7 @@
             }
           },
           "409": {
-            "description": "`plan_is_history` \u2014 the game left its entry window, so its slots are frozen. **That is the only thing that freezes them**, and it is not a lock: once *we played* can no longer be said, the plan is a note about an evening that is over.\n\n`that_moment_has_already_passed` \u2014 the day and the hour together name a moment that has gone. **Raised when the second of the two is filled, in either order**, and it names neither: the platform has no opinion about which one is wrong, so change whichever you meant.",
+            "description": "`plan_is_history` \u2014 the game left its entry window, so its slots are frozen. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.\n\n`that_moment_has_already_passed` \u2014 the day and the hour together name a moment that has gone. **Raised when the second of the two is filled, in either order**, and it names neither: the platform has no opinion about which one is wrong, so change whichever you meant.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3115,7 +3115,86 @@
             }
           },
           "409": {
-            "description": "`plan_is_history` \u2014 the game left its entry window, so its slots are frozen. **That is the only thing that freezes them**, and it is not a lock: once *we played* can no longer be said, the plan is a note about an evening that is over.\n\n`that_moment_has_already_passed` \u2014 the day and the hour together name a moment that has gone. **Raised when the second of the two is filled, in either order**, and it names neither: the platform has no opinion about which one is wrong, so change whichever you meant.",
+            "description": "`plan_is_history` \u2014 the game left its entry window, so its slots are frozen. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.\n\n`that_moment_has_already_passed` \u2014 the day and the hour together name a moment that has gone. **Raised when the second of the two is filled, in either order**, and it names neither: the platform has no opinion about which one is wrong, so change whichever you meant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{game_id}/lock": {
+      "put": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Agree the plan",
+        "description": "**We are agreed.** Any member may lock, once all three slots are set \u2014 and locking is an **act** rather than a fourth slot: a complete plan is one everybody *could* agree, and this says somebody did. It writes a system line into the room, which is the whole of what it does.\n\n**It takes no body.** The value is the three slots and they are already recorded; sending one back would be the second place that fact is true.\n\n**A locked plan is not a frozen one.** Any member may still move any slot afterwards, the plan stays locked, and every move writes its own line \u2014 there is no un-agreeing to fear, only re-agreeing. **The game leaving its entry window is still the only thing that freezes a slot.**\n\n**There is no unlock**, for the same reason a slot is never emptied: the lock is a thing that happened.\n\n**Locking a plan that is already locked answers `200` and records nothing**, and the first lock's `locked_at` is the one that stands.",
+        "operationId": "lock_the_plan_api_v1_plans__game_id__lock_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The plan as it now stands.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanSchema"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`account_held` \u2014 your account is under a live hold. **A hold stops you writing anywhere another player sees it, and never stops you reading**: `GET /plans` stays open to you, because a hold must not erase an arrangement other people are already inside.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`plan_not_found` \u2014 **one code for two cases**: there is no game with that id, or there is one and you were not on its court. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`plan_is_history` \u2014 the game left its entry window, so its slots are frozen. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.\n\n`the_plan_is_not_complete` \u2014 a slot is still empty. **A refusal and not a silent `200`**, which is deliberately the opposite shape from locking a plan that is already locked: a no-op here would leave you believing you had agreed one. It is a conflict rather than a `400` because the request carried nothing at all \u2014 what is wrong is the state of the plan.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6161,6 +6240,19 @@
             ],
             "title": "Agreed Point",
             "description": "The moment this plan names, **derived and never stored**. The agreed instant when the day and the hour are both recorded; the **start of the following local day** when only the day is; `null` when no day is.\n\nCoarsened **later, never earlier**, so nobody is asked for a result before they could have played. It is sent because it is a timezone conversion the client must not redo."
+          },
+          "locked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked At",
+            "description": "The moment somebody agreed this plan, or `null` while nobody has.\n\n**A locked plan is not a frozen one.** Any member may still move any slot afterwards, and each move writes its own system line \u2014 there is no un-agreeing to fear, only re-agreeing. The plan stays locked and the line trail is the friction, as it already is for every change.\n\n**There is no unlock**, and this never returns to `null`. The lock is a thing that happened.\n\n**It is not the slot count under another name**: a plan with all three slots filled is one everybody *could* agree, and this says somebody did."
           }
         },
         "type": "object",
@@ -8138,7 +8230,7 @@
           "code": {
             "type": "string",
             "title": "Code",
-            "description": "What happened, as a machine code the client renders a sentence from. Seven: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`** and **`HOUR_RECORDED`**.\n\n**A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news either way \u2014 and a lapse is still not a decline, which is what `values.departure` keeps apart.\n\n**A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.\n\n**There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping \u2014 drawn, not announced."
+            "description": "What happened, as a machine code the client renders a sentence from. Eight: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**.\n\n**A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news either way \u2014 and a lapse is still not a decline, which is what `values.departure` keeps apart.\n\n**A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.\n\n**`PLAN_LOCKED` is the Plan's fourth and it carries no values at all.** The three slots are the value and the room already holds a line for each. It is an act rather than a slot \u2014 a complete plan is one everybody *could* agree, and this says somebody did \u2014 and there is no unlocked code, because a slot moved afterwards keeps the lock and writes its own line.\n\n**There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping \u2014 drawn, not announced."
           },
           "occurred_at": {
             "type": "string",

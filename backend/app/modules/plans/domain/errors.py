@@ -20,10 +20,15 @@ order and either one can be the second. It names both remedies and no value:
 ``the-words.md`` §22.2's *"That moment has already passed — change the day or the
 hour"*, and the platform has no opinion about which of the two is the wrong one.
 
-**Nothing here empties a slot, unmakes a plan or cancels a game**, because there
-is no act that does any of those (``docs/adr/0144``). A refusal exists for
-something somebody can ask for; these are not asks with answers, they are asks
-with no route.
+**A plan that is not complete yet.** One refusal, and it is the shape the *act*
+takes where the three above are about a value. It is a **conflict** rather than a
+bad request: the body carried nothing at all, and what is wrong is the state of
+the plan (``docs/adr/0155``).
+
+**Nothing here empties a slot, unmakes a plan, unlocks one or cancels a game**,
+because there is no act that does any of those (``docs/adr/0144``,
+``docs/adr/0155``). A refusal exists for something somebody can ask for; these
+are not asks with answers, they are asks with no route.
 """
 
 from __future__ import annotations
@@ -56,10 +61,15 @@ class PlanNotFound(NotFoundError):
 class PlanIsHistory(ConflictError):
     """The game left its entry window, so the slots are frozen.
 
-    **The only thing that freezes them** (``docs/adr/0144``), and it is not a
-    lock: once the game can no longer be said to have happened, the plan is
-    history. A write that went through would edit a note about an evening that is
-    over, in a room where nobody is arranging anything any more.
+    **The only thing that freezes them** (``docs/adr/0144``), and **the lock is
+    not it** (``docs/adr/0155``): a locked plan stays editable by every member,
+    and this is the one state that does not. Once the game can no longer be said
+    to have happened, the plan is history — a write that went through would edit
+    a note about an evening that is over, in a room where nobody is arranging
+    anything any more.
+
+    It refuses the lock as it refuses a slot write: past that point there is
+    nothing left to agree.
     """
 
     code = "plan_is_history"
@@ -134,3 +144,23 @@ class ThatMomentHasAlreadyPassed(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("That moment has already passed.")
+
+
+class ThePlanIsNotComplete(ConflictError):
+    """A lock asked for on a plan with a slot still empty.
+
+    **A refusal and not a silent no-op**, which is deliberately the opposite
+    shape from locking a plan that is already locked (``docs/adr/0155``). A
+    second lock lands exactly the state its caller asked for and so records
+    nothing; an incomplete plan does not, and answering `200` would leave a
+    client believing it had agreed one.
+
+    **A conflict rather than a bad request.** Nothing was sent — the body carried
+    nothing at all — so there is no field to be wrong; what is wrong is the state
+    of the plan the act was aimed at.
+    """
+
+    code = "the_plan_is_not_complete"
+
+    def __init__(self) -> None:
+        super().__init__("Set all three before locking the plan.")

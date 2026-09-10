@@ -1,7 +1,8 @@
-"""The Plan context's domain events — **three, and there are no others.**
+"""The Plan context's domain events — **three recordings and one act.**
 
-``docs/adr/0144``. A place recorded, a day recorded, an hour recorded, each
-carrying the value, the player and the moment.
+``docs/adr/0144`` and ``docs/adr/0155``. A place recorded, a day recorded, an
+hour recorded — each carrying the value, the player and the moment — and, beside
+them, a plan **locked**.
 
 **Setting a slot and moving one are the same event told with two sentences**,
 separated by the fold rather than by a second class. Unlike a lapse and a
@@ -14,15 +15,23 @@ at birth, there is no subscriber to ``GamePlanned``, and *no plan* is what a gam
 with nothing agreed draws. The first recording is the birth, and the aggregate id
 is the game's.
 
-**There is no completion event, no clearing event and no cancellation.** The
-third recording *is* the completion, and a line announcing it would be a
-conclusion the record already implies — ``challenges``' rule and ``games``'
-identical one. A slot is never emptied and a plan is never unmade: nobody turns
-up, and the game ghosts at ``NEVER_PLAYED``.
+**There is still no completion event, and ``PlanLocked`` is emphatically not
+one** — the distinction is the whole of ``docs/adr/0155``. The third recording
+*is* the completion, and an event announcing it would be a conclusion the record
+already implies. A lock is the opposite kind of fact: **nobody wrote it down**,
+so no arrangement of the three slots reaches it, which is exactly the test
+``docs/adr/0142`` §3 makes an event pass before it may announce anything. The
+count says a plan *could* be agreed; the lock says somebody agreed it.
+
+**There is no clearing event, no cancellation and no unlock.** A slot is never
+emptied and a plan is never unmade: nobody turns up, and the game ghosts at
+``NEVER_PLAYED``. There is no ``PlanUnlocked`` for the same reason there is no
+clearing event — the lock is a thing that happened, and a later move re-agrees it
+rather than un-agreeing it (``docs/adr/0145`` §5).
 
 **Nothing derived is here.** Not the slot count, not the agreed point. Both are
-folded from these three, which is what *stores nothing it can derive* means in a
-context whose whole record is three facts.
+folded from the three recordings, which is what *stores nothing it can derive*
+means in a context whose whole record is four facts.
 
 Events carry **primitive** fields, so their wire format survives any later
 refactor of the Python types: a player as a ``str`` uuid, a local date as its
@@ -80,4 +89,22 @@ class HourRecorded:
     occurred_at: datetime
 
 
-__all__ = ["DayRecorded", "HourRecorded", "PlaceRecorded"]
+@dataclass(frozen=True)
+class PlanLocked:
+    """Somebody agreed the plan. **An act, and it carries no value.**
+
+    ``docs/adr/0155``. The value is the three slots and they are already
+    recorded; repeating one here would be the second place it is true, and the
+    first thing to disagree with the slot beside it after a later move.
+
+    **It freezes nothing.** Any member may still move a slot afterwards, and each
+    move writes its own event exactly as it did before — so this is a fact about
+    a moment rather than a state the aggregate then enforces.
+    """
+
+    game_id: UUID
+    locked_by: UUID
+    occurred_at: datetime
+
+
+__all__ = ["DayRecorded", "HourRecorded", "PlaceRecorded", "PlanLocked"]

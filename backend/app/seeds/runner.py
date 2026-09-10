@@ -1191,8 +1191,10 @@ async def run(settings: Settings | None = None) -> SeedReport:
         # **After the relationships and before the delivery.** A plan needs a
         # game still inside its entry window and every other layer's games are
         # played, so this one arranges four more and stops — and it has to run
-        # before the outbox is drained, so that the three system lines it writes
-        # reach the rooms in the same pass everything else does.
+        # before the outbox is drained, so that the four system lines it writes
+        # reach the rooms in the same pass everything else does. It holds a
+        # delivery barrier of its own as well, because a plan line is hung on a
+        # room *through its game* and that is an earlier event.
         plans = await write_the_plans(
             session_factory, settings=settings, now=now
         )

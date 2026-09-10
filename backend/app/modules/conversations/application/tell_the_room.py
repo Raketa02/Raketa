@@ -102,6 +102,7 @@ from app.modules.plans.domain.events import (
     DayRecorded,
     HourRecorded,
     PlaceRecorded,
+    PlanLocked,
 )
 from app.modules.plans.domain.slots import as_wall_time
 from app.shared.domain import DomainEvent
@@ -184,6 +185,8 @@ class TellTheRoom:
             await self._said_they_played(event, context)
         elif isinstance(event, (PlaceRecorded, DayRecorded, HourRecorded)):
             await self._a_slot_was_recorded(event, context)
+        elif isinstance(event, PlanLocked):
+            await self._the_plan_was_locked(event, context)
 
     # -- opening ----------------------------------------------------------
 
@@ -353,6 +356,34 @@ class TellTheRoom:
             code=line_for(event),
             actor_id=event.recorded_by,
             values={VALUE: _slot_value(event)},
+            source_event_id=context.event_id,
+            occurred_at=instant(event.occurred_at),
+        )
+
+    async def _the_plan_was_locked(
+        self, event: PlanLocked, context: DeliveryContext
+    ) -> None:
+        """Somebody agreed the plan. **One line, and it carries no value.**
+
+        ``docs/adr/0155``. The value is the three slots and the room already has
+        a line for each of them, so a value here would be the second place they
+        are true and the first thing to disagree with the slot line above it
+        after a later move. It is the only plan line with an empty ``values``.
+
+        Found through the game and dropped safely when there is no room, on the
+        slot arm's reasoning exactly — a plan cannot be locked before its game
+        exists, so by the time this arrives the room either knows its game or was
+        never opened at all.
+        """
+
+        room = await self._directory.for_game(event.game_id)
+        if room is None:
+            return
+        await self._write_line(
+            room,
+            code=line_for(event),
+            actor_id=event.locked_by,
+            values={},
             source_event_id=context.event_id,
             occurred_at=instant(event.occurred_at),
         )
