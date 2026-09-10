@@ -595,7 +595,7 @@ export interface paths {
          *
          *     **Send `completing_challenge_id` to finish a half-built court**, and send nothing else about it: the sport, the kind of evening and the locked seats are read off that challenge. **Any live member may fill it** — only the withdraw is the organiser's. The people who accepted come back as ordinary rows so the builder can draw them, everybody who has already answered that challenge is out of its own pool, and the window is never re-stamped.
          *
-         *     **A lapsed invitee is unreachable in every sport until that challenge ends**, and the withdraw is the only thing that ends it. Somebody who let your invitation run out is neither a candidate for this fill nor for any other search of yours, in any sport, while the court still stands.
+         *     **Somebody who let your invitation run out is out of that court's own pool, and out of nothing else.** Nobody is asked twice on one challenge, so they are not a candidate for this fill for as long as that court stands. Every **other** search of yours reaches them immediately, in any sport: their seat reopened and the open-challenge rule released them with it, because that rule holds the people still arranging a game and they are not one of them.
          *
          *     **A seated card shows the same number the shortlist showed.** Nothing is re-scored when somebody sits down.
          */
@@ -895,7 +895,7 @@ export interface paths {
          *
          *     **Everything is re-checked here**, in one transaction, exactly as a send is: the four fail-closed gates over the whole court, and the open-challenge rule with **this** challenge excepted and no other. The fill either happens whole or writes nothing.
          *
-         *     **A lapsed invitee is unreachable in every sport until this challenge ends**, and the withdrawal is the only thing that ends it. Somebody who let your invitation run out is not a candidate for this fill, and not for any other search of yours in any sport, while this court stands.
+         *     **Somebody who let your invitation run out is out of this court's own pool, and out of nothing else.** Nobody is asked twice on one challenge, so they are not a candidate for this fill for as long as this court stands — and asking them again is a **new** challenge rather than a seat on this one. Every **other** search of yours reaches them immediately, in any sport: their seat reopened and the open-challenge rule released them with it.
          */
         post: operations["fill_seats_api_v1_challenges__challenge_id__seats_post"];
         delete?: never;
@@ -925,7 +925,7 @@ export interface paths {
          *
          *     **Nobody who was still deciding is charged a lapse for it.** An invitation whose challenge stopped existing is neither answered nor unanswered, and it leaves the record that prices silence.
          *
-         *     **This is the only thing that releases somebody who let their day run out.** A lapsed invitee is unreachable in every sport for as long as this court stands: their seat reopened, but the pair the challenge holds does not, and they are excluded from the fill that would replace them and from every other search of yours. Ending the challenge is what releases them, and asking them again is a **new** challenge.
+         *     **What this releases is the people who accepted.** A half-built four held its pair for the life of the database — whoever agreed was unreachable in every sport, with nobody holding an exit — and this is that exit. Somebody who let their day run out needed none: their seat reopened and the open-challenge rule released them with it, so every search has reached them since. What they are out of is this court's own pool, for as long as it stands, and asking them again is a **new** challenge.
          *
          *     **A noun and not a verb**, because what this creates is the withdrawal — the one thing in this context that a fold of the seats could never produce.
          */

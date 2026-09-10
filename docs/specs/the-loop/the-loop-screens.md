@@ -527,18 +527,16 @@ sentences out of scope, and #337 had already amended two of §13's rows.
 **Why they are drawn no card block is §2.2's**, not this section's: the rule is the reader's and
 spans both live standings, so it is argued once where the card block is defined.
 
-> **The paragraph below is wrong about the pair, and correcting it is
-> [#393](https://github.com/Raketa02/Raketa/issues/393)'s.** The pair **releases** the moment a seat
-> leaves — `open_pairs_among` folds `players_in_it_at`, which drops any seat that is `is_open_at` —
-> so *a lapsed invitee is unreachable in every sport until this challenge ends* over-reads ADR-0150
-> §4, whose mechanism is this challenge's own fill pool. **The conclusion survives**: the row stays
-> because `GET /challenges` is *every challenge you hold a seat in*, which is the reason §13.1's own
-> scenario gives.
-
-**The row stays rather than being filtered**, because the pair rule still binds the reader: ADR-0142
-holds a pair for the whole of `LINE_UP_INCOMPLETE`, and ADR-0150 §4 records the consequence —
-*a lapsed invitee is unreachable in every sport until this challenge ends*. A row that vanished
+**The row stays rather than being filtered**, because `GET /challenges` is *every challenge you
+hold a seat in* and a departed seat is still a seat — which is the reason
+[`the-words.md`](../matchmaking/the-words.md) §13.1 gives for the same row. A row that vanished
 would take the only available explanation with it.
+
+**And emphatically not because the pair rule still binds them** ([#393](https://github.com/Raketa02/Raketa/issues/393)).
+It does not: the pair **releases the moment a seat leaves**. `open_pairs_among` folds
+`players_in_it_at`, which keeps only seats that are `is_live_at`, so a departed invitee can be
+challenged again immediately, in any sport, by anybody. What keeps them out of **this** challenge is
+`already_asked_at` feeding `NobodyIsAskedTwice` — per aggregate, and not the pair rule at all.
 
 ### 2.6 The withdraw
 

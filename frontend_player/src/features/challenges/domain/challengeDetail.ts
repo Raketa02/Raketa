@@ -262,7 +262,9 @@ export type ChallengeArm =
    * complete nor leave.
    *
    * The reader who has **left** such a court is not here: they are `stated`, on §13.1's own
-   * sentences, because the pair rule still binds them and the row that explains it must stay.
+   * sentences. The row that explains it must stay because a departed seat is still a seat — **not
+   * because the pair rule still binds them**, which it does not
+   * ([#393](https://github.com/Raketa02/Raketa/issues/393)).
    */
   | {
       readonly kind: 'filling';

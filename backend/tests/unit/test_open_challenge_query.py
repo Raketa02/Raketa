@@ -57,6 +57,7 @@ from app.modules.challenges.domain.errors import (
 )
 from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.challenges.domain.seats import SeatPlan, Side
+from app.modules.challenges.domain.standing import Standing
 from app.modules.player_profile.domain.availability import Window
 from app.shared.ids import new_uuid
 from tests.unit.challenge_world import StubOrigins, a_safe_court
@@ -580,6 +581,94 @@ async def test_a_half_built_court_still_stands_between_its_pair(session_factory)
 
         pairs = await build_open_challenge_query(session).open_pairs_among(
             [ORGANISER, ALICE], now=INSIDE
+        )
+
+        assert pairs == frozenset({frozenset({ORGANISER, ALICE})})
+
+
+def a_padel_four_one_acceptance_on_it() -> Challenge:
+    """A padel four with one invitee in and two who never answered.
+
+    The acceptance is what makes it interesting: an accepted seat cannot leave, so
+    the court goes on standing as `LINE_UP_INCOMPLETE` however long the other two
+    take — which is the only way a **standing** court can hold a departed seat.
+    """
+
+    challenge = Challenge.sent(
+        challenge_id=new_uuid(),
+        sport=Sport.PADEL,
+        mode=SearchMode.FOR_FUN,
+        window=Window.ANY,
+        organiser_id=ORGANISER,
+        arrangement=a_padel_court(ORGANISER, ALICE, BOB, CAROL),
+        occurred_at=SENT_AT,
+    )
+    challenge.accept(ALICE, occurred_at=at(1))
+    return challenge
+
+
+async def test_a_half_built_court_releases_the_pair_of_a_seat_that_left(
+    session_factory,
+):
+    """**The case no test reached**, and the one ADR-0150 §4 turned out to be wrong
+    about ([#393](https://github.com/Raketa02/Raketa/issues/393)).
+
+    Two tests sat either side of it. `test_a_declined_seat_releases_its_pairs` and
+    `test_a_lapsed_pair_releases_with_no_sweep_having_run` use **singles** courts,
+    which have *ended* by the time they assert — so they prove the release via the
+    challenge ending rather than via the seat leaving. The test immediately above
+    asserts the invitee who **accepted** on a court that still stands. Neither
+    reaches *a standing court with a departed seat on it*, which is exactly what §4
+    claimed held a pair *"in every sport until this challenge ends"*.
+
+    It does not. The court goes on standing because one invitee is in, and the one
+    whose day ran out is released the moment it did — **with no sweep having been
+    past**, which is the whole point of folding the clock. What still excludes them
+    is ``already_asked_at`` feeding ``NobodyIsAskedTwice``: this challenge's own
+    pool, per aggregate, and not the pair rule.
+    """
+
+    async with session_factory() as session:
+        # ALICE is in, so the court goes on standing without the other two, whose
+        # day runs out unanswered and unswept.
+        challenge = await _record(session, a_padel_four_one_acceptance_on_it())
+
+        assert challenge.standing_at(OUTSIDE) is Standing.LINE_UP_INCOMPLETE
+
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ORGANISER, ALICE, BOB, CAROL], now=OUTSIDE
+        )
+
+        # The accepted invitee, and nobody else. Not the two whose day ran out.
+        assert pairs == frozenset({frozenset({ORGANISER, ALICE})})
+        assert frozenset({ORGANISER, BOB}) not in pairs
+        assert frozenset({ORGANISER, CAROL}) not in pairs
+
+        # And this is what does hold them, one challenge wide.
+        assert {BOB, CAROL} <= challenge.already_asked_at(OUTSIDE)
+
+
+async def test_a_declining_seat_releases_its_pair_on_a_court_that_still_stands(
+    session_factory,
+):
+    """The same, for the other way a seat leaves. A decline and a lapse do the same
+    thing to the line-up and are different facts; the pair rule reads neither —
+    it reads ``is_live_at``, which both of them fail."""
+
+    async with session_factory() as session:
+        challenge = a_padel_four_one_acceptance_on_it()
+        challenge.decline(BOB, occurred_at=at(2))
+        challenge.decline(CAROL, occurred_at=at(2))
+        await _record(session, challenge)
+
+        # Read **after** its own last event. A decline is not folded against the
+        # clock, so an earlier instant would pass and would be asserting a court
+        # that had not happened yet.
+        answered = at(3)
+        assert challenge.standing_at(answered) is Standing.LINE_UP_INCOMPLETE
+
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ORGANISER, ALICE, BOB, CAROL], now=answered
         )
 
         assert pairs == frozenset({frozenset({ORGANISER, ALICE})})

@@ -498,8 +498,11 @@ Rules to preserve:
   resolved from the filler's declared Play intent** on the deck's own rule, and the **window
   is never re-stamped**, so a mutual-born challenge stays window-less for life. The cost is
   recorded rather than softened, on the port and on the two routes that meet it: **a lapsed
-  invitee is unreachable in every sport until that challenge ends**, and the withdraw is the
-  only thing that ends it. `HalfBuiltCourtQuery` is the **sixth** matcher demand and the only
+  invitee is out of that challenge's own pool for as long as it stands** — `already_asked_at`
+  feeding `NobodyIsAskedTwice`, per aggregate, and asking them again is a **new** challenge. It is
+  **not** the pair rule and reaches no other search: that rule holds the people still arranging
+  a game, and a seat that left is not one of them (#393, which retracted ADR-0150 §4's *every
+  sport*). `HalfBuiltCourtQuery` is the **sixth** matcher demand and the only
   one whose posture is `CLOSED` without being a gate: a fill that cannot read the court it
   names would silently become an ordinary ⚡ over a pool that still excludes the very people
   it was meant to seat around.

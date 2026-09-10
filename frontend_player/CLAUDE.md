@@ -1143,9 +1143,10 @@ glyph, and §24.3's _decorative and hidden_ is discharged by there being nothing
 **The reader who has left such a court is not a live member, and their row stays anyway.** They get
 §13.1's sentence about their **own seat** — _You said no. They are still filling the court._ — and
 nothing to press, because the fold reads the seat rather than the side alone. The row is not
-filtered away instead: the pair rule holds them for the whole of `LINE_UP_INCOMPLETE`, so a lapsed
-invitee is unreachable in every sport until this challenge ends, and a vanished row would take the
-only available explanation with it.
+filtered away instead: `GET /challenges` is _every challenge you hold a seat in_ and a departed seat
+is still a seat, and a vanished row would take the only available explanation with it. **Not because
+the pair rule holds them — it released them the moment they left** (#393); what keeps them out of
+_this_ court is `already_asked_at`, per aggregate.
 
 **The builder is `features/play`'s existing screen at a second route, and nothing about it is
 forked.** `/chats/challenge/[challengeId]/fill` lights the Chats column for free and makes _back_

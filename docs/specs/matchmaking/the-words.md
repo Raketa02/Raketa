@@ -784,10 +784,14 @@ seats open, and the chat is already open"*, which is false in both clauses.
 | `DECLINED` | `You said no. They are still filling the court.` |
 | `LAPSED` | `Your day ran out. They are still filling the court.` |
 
-**The row is not filtered away instead**, because the pair rule still binds the reader: ADR-0142
-holds a pair for the whole of `LINE_UP_INCOMPLETE`, and ADR-0150 §4 records the consequence — *a
-lapsed invitee is unreachable in every sport until this challenge ends*. A row that vanished
-would take the only available explanation with it.
+**The row is not filtered away instead**, because `GET /challenges` is *every challenge you hold a
+seat in* and a departed seat is still a seat — which is the reason the scenario above already gives.
+A row that vanished would take the only available explanation with it.
+
+**And not because the pair rule still binds them** ([#393](https://github.com/Raketa02/Raketa/issues/393)).
+It does not: the pair **releases the moment a seat leaves**, so a departed invitee is reachable again
+at once, in any sport, by anybody. What keeps them out of **this** challenge is `already_asked_at`
+feeding `NobodyIsAskedTwice`, which is per aggregate and is not the pair rule.
 
 **Neither sentence says how many are in**, and that is deliberate: they have left, so who is on
 that court is no longer theirs to be told. `{m}` is the count of **open seats**, which is a fact

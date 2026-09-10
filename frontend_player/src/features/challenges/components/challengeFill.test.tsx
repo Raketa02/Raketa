@@ -338,8 +338,9 @@ describe('the three controls', () => {
 
   /**
    * §13.1: the invitee sentence reads the reader's **own seat**, not only their side — and the
-   * row is not filtered away, because the pair rule still binds them and a vanished row would
-   * take the only available explanation with it.
+   * row is not filtered away, because a departed seat is still a seat and a vanished row would
+   * take the only available explanation with it. (**Not the pair rule**, which released them —
+   * [#393](https://github.com/Raketa02/Raketa/issues/393).)
    */
   it('gives a reader who has left the sentence about their own seat and nothing to press', async () => {
     const left: Wire['SeatSchema'][] = [

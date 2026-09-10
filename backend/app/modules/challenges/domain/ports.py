@@ -1006,13 +1006,24 @@ class ChallengeHistoryQuery(Protocol):
         of live challenges rather than a history of them, and one open challenge
         per pair is a rule this context enforces on the way in.
 
-        **Somebody who *lapsed* is out of this answer and is not free**, and the
-        asymmetry is the cost ``docs/adr/0150`` §4 records rather than softens.
-        Their seat reopened, so they leave this read — but the challenge they
-        never answered still stands, and the fill that would replace them
-        excludes everybody who has answered it. A lapsed invitee is therefore
-        unreachable in **every sport** until that challenge ends, and the
-        organiser's withdraw is the only thing that ends it.
+        **Somebody who *lapsed* is out of this answer, and that is them being
+        free rather than the opposite** ([#393](https://github.com/Raketa02/Raketa/issues/393)).
+        Their seat reopened, so they leave this read — and leaving this read *is*
+        the pair releasing, because this read is the pair rule. Every search
+        reaches them from that moment, in any sport.
+
+        **What they are still out of is one pool, and it is not this one.** The
+        challenge they never answered still stands, and the fill that would
+        replace them excludes everybody who has answered it — ``already_asked_at``
+        feeding ``NobodyIsAskedTwice``, *per aggregate*. So they cannot be put
+        back on **that** court for as long as it stands, and asking them again is
+        a new challenge.
+
+        ``docs/adr/0150`` §4 drew the wider conclusion — *unreachable in every
+        sport* — from that narrower fact, and its amendment retracts it. This
+        paragraph stated the premise correctly and then contradicted it, which is
+        how the claim survived being written next to the mechanism that refutes
+        it.
         """
         ...
 

@@ -47,9 +47,11 @@
  * the invitee's sentence reads **the reader's own seat**, not only their side
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §13.1).
  *
- * The row is not filtered away instead, because the pair rule still binds the reader: a lapsed
- * invitee is unreachable in every sport until this challenge ends, and a row that vanished
- * would take the only available explanation with it. **Neither sentence says how many are in** —
+ * The row is not filtered away instead, because `GET /challenges` is *every challenge you hold a
+ * seat in* and a departed seat is still a seat — and a row that vanished would take the only
+ * available explanation with it. **Not because the pair rule still binds them**: it releases the
+ * moment a seat leaves, and what keeps them out of *this* court is `already_asked_at`, per
+ * aggregate ([#393](https://github.com/Raketa02/Raketa/issues/393)). **Neither sentence says how many are in** —
  * they have left, so who is on that court is no longer theirs to be told, and `{m}` is a count
  * of open seats, which is a fact about the arrangement rather than about anybody in it.
  *

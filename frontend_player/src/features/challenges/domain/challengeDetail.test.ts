@@ -226,8 +226,9 @@ describe('a half-built court', () => {
   });
 
   /**
-   * The pair rule still binds a reader who left, so the row stays — and what they get is the
-   * sentence and nothing to press. Not even the fill: they are not a live member.
+   * A departed seat is still a seat, so the row stays — and what they get is the sentence and
+   * nothing to press. Not even the fill: they are not a live member. (**The pair rule does not
+   * hold them**; it released them when they left — [#393](https://github.com/Raketa02/Raketa/issues/393).)
    */
   it('offers the reader who has left nothing to press', () => {
     const arm = challengeArm(
