@@ -61,15 +61,21 @@ export function countedRows(strands: readonly StrandRow[]): readonly StrandRow[]
   return strands.filter((row) => row.strand !== 'SPORTSMANSHIP');
 }
 
-/** What the share means at its top, and the number a division past it is drawn as. */
+/** What the share means at its top. */
 const WIDEST = 100;
 
 /**
- * The share, out of a hundred, unrounded and capped at the top — see the module note.
+ * The share, out of a hundred and unrounded.
  *
- * `gamesPlayed` is never nought: the whole field is **omitted** where no counted game has ever
+ * **There is no cap any more, and its removal is the point.** The denominator was a count of
+ * *games*, which is only divisible in singles: a doubles evening put three people on the court
+ * and published `3 of 1`, so this clamped at a hundred and drew a full bar over a pair that read
+ * as nonsense. The wire now counts **times on a court**, the backend refuses a pair where the
+ * numerator exceeds it, and a clamp here would only hide the next such defect.
+ *
+ * `timesOnCourt` is never nought: the whole field is **omitted** where no counted game has ever
  * been recorded, which is the absence this sheet spells everywhere and never a `0 of 0`.
  */
 export function varietyShare(variety: OpponentVariety): number {
-  return Math.min((variety.distinctOpponents / variety.gamesPlayed) * WIDEST, WIDEST);
+  return (variety.distinctOpponents / variety.timesOnCourt) * WIDEST;
 }

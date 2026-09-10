@@ -23,12 +23,27 @@
  *
  * ## Fill, and what a listener gets instead of it
  *
- * A win is `ink` and a loss is `muted`: 3,24:1 between them and 14,57 / 4,49 against the
- * recessed ground they are drawn on, all three clearing
- * [1.4.11](../../../docs/design-system.md#25-contrast--computed)'s 3:1 for a graphical object,
- * and the difference is **lightness** rather than hue — so the run survives being read in one
- * colour. The three ratios are derived in `recordSquares.test.ts`, off `RUN_OF_FORM_FILL`
- * rather than off the theme, so repainting a square here goes red.
+ * A win is `mint` and a loss is `muted`: 3,39 and 4,49 against the recessed ground they are
+ * drawn on, so neither square can be mistaken for the **gap** at the end of a short run —
+ * which is the ratio that keeps the run's *length* readable, and the run's length is its
+ * whole statement.
+ *
+ * **The pair is now a hue step, and that is a change from the lightness step it was.** It was
+ * `ink` against `muted`: 3,24:1 apart, clearing
+ * [1.4.11](../../../docs/design-system.md#25-contrast--computed)'s 3:1 for a graphical object
+ * by luminance alone, so the row survived being read in one colour. Green against grey is
+ * **1,33:1**, and no green in this palette can do better — `mint` sits mid-luminance, so it
+ * cannot be 3:1 from both a light ground and a partner that is also 3:1 from that ground; the
+ * only fills that can are one near-black and one mid-grey, which is the pair that just left.
+ *
+ * So the sighted half of [Part 13](../../../docs/design-system.md#part-13--accessibility)'s
+ * *never colour alone* now rests on hue, and a reader who cannot separate green from slate
+ * reads five squares of one colour. The **count is still spoken** — *3 of the last 5 won* —
+ * so nothing is lost to a listener. The cheap way back, if that matters more than the green:
+ * draw the loss as a **hollow** square, which is a shape cue and costs no geometry.
+ *
+ * The ratios are derived in `recordSquares.test.ts`, off `RUN_OF_FORM_FILL` rather than off
+ * the theme, so repainting a square here goes red.
  *
  * It does not survive being read aloud, which is the half
  * [Part 13](../../../docs/design-system.md#part-13--accessibility) is about: the squares carry
@@ -61,7 +76,7 @@ import { theme } from './theme';
  * object.
  */
 export const RUN_OF_FORM_FILL: Readonly<Record<GameResult, string>> = {
-  WIN: theme.color.ink,
+  WIN: theme.color.mint,
   LOSS: theme.color.muted,
 };
 

@@ -151,7 +151,7 @@ function toStrandRow(served: ReliabilitySchema['strands'][number]): readonly Str
 function variety(served: OpponentVarietySchema): OpponentVariety {
   return {
     distinctOpponents: served.distinct_opponents,
-    gamesPlayed: served.games_played,
+    timesOnCourt: served.times_on_court,
   };
 }
 

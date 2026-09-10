@@ -128,40 +128,65 @@ export function sportPill(sportName: string, level: number): string {
 }
 
 /**
- * `Player Score 93` — the pill, and `Player Score 93 out of 100` for a listener.
+ * **The three record blocks' names**, and the one of them a listener needs a scale with.
+ *
+ * They are 7.13's own words, spelled here rather than imported from `features/play/`: the
+ * competitive card draws the same three blocks about the same three facts, and a feature may
+ * not deep-import another's copy. What is shared between the two surfaces is the **box** and
+ * never the words in it — `shared/ui`'s `StatBox` — which is the same split `RunOfForm` takes
+ * with `lastFiveReading`.
  *
  * The scale is spelled in the spoken register because Fit is already the other hundred on the
- * screen this sheet opens over, and a bare figure in a run of clauses could be either.
+ * screen this sheet opens over, and a bare figure in a run of clauses could be either. Drawn,
+ * it needs none: the figure sits under a box named *Player Score*, where nothing else could be
+ * out of a hundred.
  */
-export const PLAYER_SCORE_NAME = 'Player Score';
+export const PLAYER_SCORE_BLOCK = 'Player reliability';
+export const LAST_FIVE_BLOCK = 'Last 5';
+export const COUNTED_BLOCK = 'Counted';
 const PLAYER_SCORE_DENOMINATOR = 100;
 
-export function scorePill(score: number): string {
-  return `${PLAYER_SCORE_NAME} ${score}`;
-}
-
+/**
+ * **The block says *Player reliability* and the glossary still says *Player Score*.**
+ *
+ * That is a divergence on purpose and it is worth knowing which way round it runs. The domain
+ * term is the platform's — the ruleset prices it, the matcher acts on it, `CONTEXT.md` owns the
+ * word — and nothing here renames any of that. What changed is the **label over the figure**,
+ * because *Score* beside a Level, a band and a run of form is the fourth number on one card a
+ * reader could take for a rating, and *reliability* is the one word that says what it is not.
+ *
+ * It is spelled once, here, so the drawn label and the spoken one cannot come apart.
+ */
 export function scorePillLabel(score: number): string {
-  return `${scorePill(score)} out of ${PLAYER_SCORE_DENOMINATOR}`;
+  return `${PLAYER_SCORE_BLOCK} ${score} out of ${PLAYER_SCORE_DENOMINATOR}`;
 }
 
 /**
- * `PADEL · 2,75 · 77 % sure · 21 counted` — **one text run and not three boxes.**
+ * `PADEL · 2,75 · 77 % sure` — **one text run, and the count is no longer in it.**
  *
- * The three figures are inseparable by design: a confident-looking number built on three games
- * must not read like one built on forty. Three boxes is how one of them ends up conditionally
- * hidden, and the one that would go is the one that makes the other two honest.
+ * It read `· 21 counted` as a fourth clause, on the argument that the three figures are
+ * inseparable — *a confident-looking number built on three games must not read like one built
+ * on forty* — and that three boxes is how one of them ends up conditionally hidden.
+ *
+ * **The count keeps that job and gets a better place for it.** It is now `COUNTED_BLOCK`, one
+ * of 7.13's three, drawn a few points below this line and **never conditional**: `counted_games`
+ * is a measured figure the wire always sends beside a Level, so the block that would have gone
+ * missing cannot. What the argument was actually protecting is *the count is drawn wherever the
+ * Level is*, and that is now structural rather than a rule this string obeys.
+ *
+ * Printing it in both places was weighed and refused. The two are inches apart in one card, so
+ * a reader meets `21 counted` twice in two registers — which is the double announcement §20.1
+ * spends the whole sheet avoiding in the spoken half, made visible.
  */
 export function skillHeadline(facts: {
   readonly sportName: string;
   readonly level: number;
   readonly confidence: number;
-  readonly countedGames: number;
 }): string {
   return [
     facts.sportName.toUpperCase(),
     formatLevel(facts.level),
     `${formatPercent(facts.confidence)} sure`,
-    `${facts.countedGames} counted`,
   ].join(' · ');
 }
 
@@ -201,7 +226,6 @@ export interface HeaderFacts {
   readonly identity: string;
   /** One `sportPill` string per rated sport, in the registry's order. */
   readonly sports: readonly string[];
-  readonly playerScore?: number;
 }
 
 export function recordHeaderLabel(facts: HeaderFacts): string {
@@ -210,7 +234,6 @@ export function recordHeaderLabel(facts: HeaderFacts): string {
     ...(facts.onCourt ? [ON_COURT_CLAUSE] : []),
     ...(facts.identity === '' ? [] : [facts.identity]),
     ...(facts.sports.length === 0 ? [] : [facts.sports.join(', ')]),
-    ...(facts.playerScore === undefined ? [] : [scorePillLabel(facts.playerScore)]),
   ]);
 }
 
@@ -227,9 +250,7 @@ export interface SkillCardFacts {
   /** The band's published name, as the server spelled it. */
   readonly band: string;
   readonly confidence: number;
-  readonly countedGames: number;
   readonly likelyRange: { readonly low: number; readonly high: number };
-  readonly lastFive?: readonly GameResult[];
 }
 
 export function skillCardLabel(facts: SkillCardFacts): string {
@@ -237,30 +258,45 @@ export function skillCardLabel(facts: SkillCardFacts): string {
     facts.sportName,
     `Level ${formatLevel(facts.level)}, ${facts.band}`,
     `${formatPercent(facts.confidence)} sure`,
-    countedGamesReading(facts.countedGames),
     likelyRangeLine(facts.likelyRange),
-    ...(facts.lastFive === undefined || facts.lastFive.length === 0
-      ? []
-      : [lastFiveReading(facts.lastFive)]),
   ]);
 }
 
 /**
- * **The record card's heading, which is the rule it enforces rather than a label on it.**
+ * **The block row, as one element** — nought to three clauses, in the order they are drawn.
  *
- * Every row beneath it is a ratio the platform observed. What other players *said* is not here
- * and will not be — an opinion under this title would make the title false — so sportsmanship
- * stands one block down under a heading naming its own author, and
- * [`countedRows`](../domain/recordCard.ts) is what keeps the promise rather than trusting a
- * remote service to keep it.
+ * There is no argument for a different order here, unlike the candidate card's spoken body: the
+ * three are the same register and the row reads left to right. A block that is hidden says
+ * nothing, which is *hidden, never blank* read in the register a reader cannot see.
  *
- * Drawn in caps at the eyebrow's 9,5pt, which is *a label for a region you are reading*, and
- * **spoken in the sentence case below**: a listener meets a run of capitals as emphasis or, on
- * some engines, as letters. It is `skillHeadline`'s split, one card lower.
+ * **It is its own element rather than a clause of the card above it**, because the card above
+ * it is about **one sport** and the Player Score is about the whole person. Folding the row into
+ * `skillCardLabel` would announce a reliability figure inside a sentence that opened with
+ * *Tennis*.
  */
-export const RECORD_CARD_TITLE = 'The record — counted by the system, not written by people';
+export interface RecordBlockFacts {
+  readonly playerScore?: number;
+  readonly lastFive?: readonly GameResult[];
+  readonly countedGames?: number;
+}
 
-export const RECORD_CARD_TITLE_DRAWN = RECORD_CARD_TITLE.toUpperCase();
+export function recordBlocksLabel(facts: RecordBlockFacts): string {
+  return sentences([
+    ...(facts.playerScore === undefined ? [] : [scorePillLabel(facts.playerScore)]),
+    ...(facts.lastFive === undefined || facts.lastFive.length === 0
+      ? []
+      : [lastFiveReading(facts.lastFive)]),
+    ...(facts.countedGames === undefined ? [] : [countedGamesReading(facts.countedGames)]),
+  ]);
+}
+
+// **The card carries no heading, and losing it was the point.** It read *The record — counted
+// by the system, not written by people*, and that sentence was a promise about **authorship**:
+// it is why `countedRows` drops the sportsmanship strand, and why what other players said stood
+// outside the card in a block of its own. The rating belongs on the record, so the heading went
+// rather than the row — a title claiming nobody wrote any of this, over a star average people
+// wrote, is worse than no title. What it was carrying is now on {@link SPORTSMANSHIP_LABEL},
+// the one row that has an author.
 
 /**
  * **What each strand is called on screen**, keyed off the served code and never off the row's
@@ -312,11 +348,39 @@ function strandReading(row: StrandRow): string {
 
 export const VARIETY_LABEL = 'Opponent variety';
 
+/**
+ * **The one row on this card people wrote, and the label says so.**
+ *
+ * *by players* is what survives of the card's own heading. Every row above it is counted by
+ * the platform and none of them needs an author; this one does, and naming it here costs three
+ * words where a heading over the whole card cost the truth of every row under it.
+ *
+ * **Not *by opponents***, which `the-decisions.md` struck by name: *"which stopped being true
+ * when partners started rating"*. The card asks about everybody who was on the court, partner
+ * included — the person who saw you play closest was on your own side of the net — so a label
+ * naming opponents would describe the one seat the figure does **not** rest on alone.
+ */
+export const SPORTSMANSHIP_LABEL = 'Sportsmanship, by players';
+
+/**
+ * What the row prints on the right — `4,7 / 5 · 17 players` for a reader, one word for the
+ * subject.
+ *
+ * The two arms are the wire's, folded at the boundary from `is_self`, so this switches on what
+ * it was handed and compares nothing. The band takes **no tone**: `scoreTone` is this sheet's
+ * one ladder and it belongs to the Player Score, so a coarse three-step painted in the same
+ * three colours would offer itself as a second score on the screen a held player opens to find
+ * out what is holding them back.
+ */
+export function opinionValue(opinion: Opinion): string {
+  return opinion.kind === 'band' ? OPINION_BAND_NAME[opinion.band] : opinionFigure(opinion);
+}
+
 /** The two halves, computed once so the drawn row and the spoken one cannot disagree. */
 function varietyParts(variety: OpponentVariety): readonly [string, string] {
   return [
     formatPercent(varietyShare(variety)),
-    rawPair(variety.distinctOpponents, variety.gamesPlayed),
+    rawPair(variety.distinctOpponents, variety.timesOnCourt),
   ];
 }
 
@@ -349,30 +413,25 @@ export interface RecordCardFacts {
   /** The rows the card actually drew, in the order it drew them. */
   readonly rows: readonly StrandRow[];
   readonly variety?: OpponentVariety;
-}
-
-export function recordCardLabel(facts: RecordCardFacts): string {
-  return sentences([
-    RECORD_CARD_TITLE,
-    ...facts.rows.map(strandReading),
-    ...(facts.variety === undefined ? [] : [varietyReading(facts.variety)]),
-  ]);
+  readonly opinion?: Opinion;
 }
 
 /**
- * **The second block's heading, which names an author rather than a subject.**
+ * **The card, as one element** — every row it drew, and nothing about a heading it no longer
+ * has.
  *
- * *What opponents said* is the whole reason this figure is not a row on the card above: that
- * card is headed *counted by the system, not written by people*, and a number people typed
- * beneath it would make the title false. Two headings, no lie — and the heading is the cheaper
- * half of the pair, which is what makes keeping the promise affordable.
- *
- * Drawn in caps at the eyebrow's 9,5pt and spoken in the sentence case below, which is
- * `RECORD_CARD_TITLE`'s own split one block up.
+ * The sportsmanship clause carries `WRITTEN_BY_PLAYERS` behind it, which is the contract's own
+ * instruction and the half a listener cannot get from the row's label: *by players* says who
+ * wrote it, and the sentence says that a low one acts on nobody. It is spoken only where the row
+ * is drawn, because a promise about a figure nobody was shown is a sentence about nothing.
  */
-export const OPINION_CARD_TITLE = 'What opponents said';
-
-export const OPINION_CARD_TITLE_DRAWN = OPINION_CARD_TITLE.toUpperCase();
+export function recordCardLabel(facts: RecordCardFacts): string {
+  return sentences([
+    ...facts.rows.map(strandReading),
+    ...(facts.variety === undefined ? [] : [varietyReading(facts.variety)]),
+    ...(facts.opinion === undefined ? [] : [opinionReading(facts.opinion)]),
+  ]);
+}
 
 /**
  * The scale, printed beside the figure: `4,7` alone says nothing about what five would be.
@@ -418,32 +477,23 @@ export const OPINION_BAND_NAME: Readonly<Record<OpinionBand, string>> = {
 };
 
 /**
- * **Why the subject gets a word where a reader gets a figure**, said on the block rather than
- * left to be noticed.
+ * **The two sentences under the card are gone, and this is what they said** (#384).
  *
- * Somebody reads other people's records all day and then opens their own: the difference is
- * visible, and *the platform is holding something back about me* is the wrong reading of it. The
- * right one is that the coarseness protects whoever answered — an average beside a count is a
- * subtraction that names each new rating, and the subject knows who they played.
+ * `BAND_HAS_NO_COUNT` — *A band and no count, so no single answer can be worked out of it* —
+ * explained to the subject why their own record is coarser than the ones they read all day.
+ * `WRITTEN_BY_PLAYERS` — *Written by other players. It is not in the Player Score, and it hides
+ * nobody and holds nobody back* — is asked for **by name** by `the-words.md` wherever the star
+ * figure is drawn beside the reliability figure, and both of its halves were load-bearing:
+ * naming the score says where the average is *not* counted, and the second half says a low one
+ * acts on nobody.
+ *
+ * **They are removed by decision and the cost is real.** The row's label still names its author
+ * — *Sportsmanship, by players* — which is the half a reader can infer; what is no longer said
+ * anywhere on this sheet is that a low average **costs nothing**. A reader may now take a
+ * `2,0 / 5` for a penalty the platform issued, and the subject is left to notice on their own
+ * that their own record is coarser than everybody else's. If either reading turns out to
+ * matter, the sentences are here and go back on the block rather than being rewritten.
  */
-export const BAND_HAS_NO_COUNT =
-  'A band and no count, so no single answer can be worked out of it.';
-
-/**
- * **Who wrote it, and that it does not act** — the contract's own instruction, which is written
- * for exactly this case: *say so if you draw it beside the pill*.
- *
- * Both halves are load-bearing and the second one is the half that is easy to leave out. Naming
- * the Player Score says where the figure is **not counted**; it does not say what the reader
- * actually wants to know, which is that a low one **hides nobody and holds nobody back**. That
- * is the sentence a held player opening their own record to find out what is holding them back
- * must not have to guess at — and the one a reader of somebody else's needs before treating a
- * `3,0` as a warning the platform issued.
- *
- * It is one sentence for both arms and takes no pronoun, because *they* and *you* are the only
- * difference and a second spelling of a promise is how the two eventually make different ones.
- */
-export const WRITTEN_BY_PLAYERS = `Written by other players. It is not in the ${PLAYER_SCORE_NAME}, and it hides nobody and holds nobody back.`;
 
 /**
  * **The answer as a listener meets it** — clauses, where the block draws a separator and a
@@ -455,20 +505,25 @@ export const WRITTEN_BY_PLAYERS = `Written by other players. It is not in the ${
  */
 function opinionClauses(opinion: Opinion): readonly string[] {
   return opinion.kind === 'band'
-    ? [`${OPINION_BAND_NAME[opinion.band]}.`, BAND_HAS_NO_COUNT]
+    ? [`${OPINION_BAND_NAME[opinion.band]}.`]
     : [`${formatStars(opinion.average)} out of ${STAR_SCALE}, ${ratersReading(opinion.raters)}.`];
 }
 
 /**
- * **The block, as one element** — the heading, the answer, and who wrote it.
+ * **The row as a listener meets it** — its label, then its answer.
  *
- * Assembled from sentences that carry their own full stops, which is `fitRowLabel`'s shape
- * rather than the clause list every other label on this sheet is: two of the three parts are
- * prose the block also draws, and a spoken copy that punctuated them differently would be a
- * second wording of the same sentence.
+ * It reads as a clause in the card's own sentence rather than as a block of its own, which is
+ * what moving the figure onto the card made it. `WRITTEN_BY_PLAYERS` follows it in
+ * {@link recordCardLabel} rather than being folded in here, because it is one promise about the
+ * row and not part of the answer.
  */
-export function opinionCardLabel(opinion: Opinion): string {
-  return [`${OPINION_CARD_TITLE}.`, ...opinionClauses(opinion), WRITTEN_BY_PLAYERS].join(' ');
+function opinionReading(opinion: Opinion): string {
+  // The clause carries its own full stop — it was a block's prose before it was a row's —
+  // and `sentences` punctuates what it is handed, so it is dropped here rather than leaving
+  // the reading with two.
+  const said = opinionClauses(opinion).join(' ').replace(/\.$/, '');
+
+  return `${SPORTSMANSHIP_LABEL}, ${said}`;
 }
 
 /**
@@ -501,30 +556,31 @@ export function socialTagsLabel(row: SocialTagOverlap): string {
 }
 
 /**
- * **The one row on this sheet that is about the two of you rather than about them.**
+ * **The one control on this sheet, and the one thing on it about the two of you.**
  *
  * The Fit breakdown is not deleted — the number in the pill has no other account anywhere in
  * the app, and deleting its only explanation leaves a figure on screen that nothing answers
- * for. It moves behind a row that says what it is, so a pairing fact sits behind a label naming
- * a pairing rather than behind a photograph.
+ * for. It sits under the sport pills now rather than in a card at the foot of the sheet: it is
+ * the sheet's only action, and an action a reader has to scroll past four zones to find is one
+ * most readers never find.
  *
- * The visible title carries the ✦ and the spoken one does not, which is §20.6's one exception
- * arriving here for the reason it exists: a glyph is doing work in the visible name.
+ * **It is named for what it opens, and it carries the figure it opens an account of.** *Why ✦
+ * 78* put a glyph in the control's own name and made that name a question; *Player fit 78* is
+ * the fact and the number, which is what a reader is deciding whether to ask about.
  *
- * **The figure is rounded here, because this is where it is printed.** `whyFitColumn` writes the
- * whole breakdown against `Math.round(fit)` and the sheet's own title and accessible name are
- * that number, so a served `78,4` shown whole on this row would promise *why fit 78,4* and open
- * *Why fit 78*. Rounding at the call site instead would be a rule each of the three entry points
- * had to remember — `signedFigure`'s own rule that a figure is rounded where it is printed.
+ * **The figure is rounded here, because this is where it is printed.** `whyFitColumn` writes
+ * the whole breakdown against `Math.round(fit)`, so a served `78,4` shown whole on this control
+ * would promise *Player fit 78,4* and open a sheet titled 78. Rounding at the call site instead
+ * would be a rule each entry point had to remember — `signedFigure`'s own rule that a figure is
+ * rounded where it is printed.
+ *
+ * The visible name and the spoken one are the same string, which is §20.6's flat rule: there is
+ * no glyph doing work in it any more, so the one exception no longer applies.
  */
-export function fitRowTitle(fit: number): string {
-  return `Why ✦ ${Math.round(fit)}`;
-}
-
-export const FIT_ROW_BODY = 'How you two were scored against each other — not a fact about them.';
+export const FIT_ROW_NAME = 'Player fit';
 
 export function fitRowLabel(fit: number): string {
-  return `Why fit ${Math.round(fit)}. ${FIT_ROW_BODY}`;
+  return `${FIT_ROW_NAME} ${Math.round(fit)}`;
 }
 
 /**

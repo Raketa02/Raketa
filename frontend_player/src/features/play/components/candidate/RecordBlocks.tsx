@@ -38,7 +38,7 @@
  * `lastFiveReading`'s and is composed into the card's spoken name beside the other two blocks.
  */
 
-import { RunOfForm } from '@/shared/ui';
+import { RunOfForm, StatBox, StatFigure, StatRow } from '@/shared/ui';
 
 import {
   COUNTED_BLOCK,
@@ -46,8 +46,6 @@ import {
   PLAYER_SCORE_BLOCK,
   type RecordBlockFacts,
 } from '../playerCardPresentation';
-
-import { StatBox, StatFigure, StatRow } from './StatBox';
 
 export interface RecordBlocksProps {
   /**

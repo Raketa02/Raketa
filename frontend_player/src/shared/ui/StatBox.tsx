@@ -1,13 +1,28 @@
 /**
- * One recessed box on the competitive card — a name, and the fact under it
+ * One recessed box — a name, and the fact under it
  * ([#312](https://github.com/Raketa02/Raketa/issues/312)).
  *
- * The shape [7.13](../../../../../docs/design-system.md#713-the-record-block) and
- * [7.14](../../../../../docs/design-system.md#714-the-stake-box) share. Three of them across
+ * The shape [7.13](../../../docs/design-system.md#713-the-record-block) and
+ * [7.14](../../../docs/design-system.md#714-the-stake-box) share. Three of them across
  * the card are the record; two are what is at stake. They are one component because they are
  * one object: a `paper2` box with a `rlLabel` over a figure, and the two rows differ in what
  * the figure is and in nothing else. Written twice, the second copy is where the padding stops
  * matching.
+ *
+ * ## Why this is `shared/ui` and not the candidate card's own component
+ *
+ * It was the competitive card's, beside `RecordBlocks` and `StakeBoxes`. The player record
+ * sheet draws the **same three record blocks** under its level bar, and `player_record` may not
+ * import `features/play/` — Play is what opens the sheet. That is the promotion `RunOfForm`,
+ * `PhotoPanel` and `OnCourtMark` each made for this same sheet, and it is made here for the
+ * stronger of the two reasons: not that two files use it, but that the padding, the ground and
+ * the two type steps are **one specified shape**, and a second copy is where a box on one
+ * surface starts sitting a pixel off a box on the other.
+ *
+ * **What is shared is the box and never which boxes.** Each surface owns its own placer —
+ * `play`'s `RecordBlocks` and `StakeBoxes`, `player_record`'s `RecordBlocks` — because *which
+ * of the three are drawn at all* is a question about that surface's absences, and the two do
+ * not answer it the same way.
  *
  * ## Why a box at all, when the card already has `FactRow`
  *
@@ -18,24 +33,25 @@
  * record figures would stop reading as one thing.
  *
  * **The ground is the argument, not decoration.** `paper2` is this system's recessed surface
- * inside a card ([6.8](../../../../../docs/design-system.md#68-the-availability-grid)'s
+ * inside a card ([6.8](../../../docs/design-system.md#68-the-availability-grid)'s
  * unticked cell, `DeclarationStanding`'s line), and recessing is what keeps *Player Score 74*
  * from reading as a second rating beside the Level printed hugely on the panel: it is what the
  * platform watched, held apart from what the player published. `muted` on `paper2` is 4,49 and
- * [2.5](../../../../../docs/design-system.md#25-contrast--computed) licenses it **at 11pt and
+ * [2.5](../../../docs/design-system.md#25-contrast--computed) licenses it **at 11pt and
  * above**, which `rlLabel`'s 11,5 clears; the figure is `ink` at 14,57.
  *
  * ## It announces nothing
  *
- * §20.1 merges an actionless element into the nearest action above it, which here is the card
- * body — so the label and the figure are plain `Text`, exactly as `FactRow`'s are, and every
- * box drawn is a clause of `candidateCardLabel` instead. That is the rule the Social tag row
- * shipped with, read on a box: *do not draw one the label does not speak*.
+ * §20.1 merges an actionless element into the nearest action above it — the card body on one
+ * surface, the block row's own element on the other — so the label and the figure are plain
+ * `Text`, exactly as `FactRow`'s are, and every box drawn is a clause of `candidateCardLabel`
+ * or of `recordBlocksLabel` instead. That is the rule the Social tag row shipped with, read on
+ * a box: *do not draw one the label does not speak*.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
 
-import { theme } from '@/shared/ui';
+import { theme } from './theme';
 
 import type { ReactNode } from 'react';
 

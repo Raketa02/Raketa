@@ -221,9 +221,9 @@ describe('what the platform watched', () => {
  */
 describe('how widely they spread their games', () => {
   it('carries the raw pair, and never a share computed at the boundary', () => {
-    const served = response({ variety: { distinct_opponents: 14, games_played: 20 } });
+    const served = response({ variety: { distinct_opponents: 14, times_on_court: 20 } });
 
-    expect(toPlayerRecord(served).variety).toEqual({ distinctOpponents: 14, gamesPlayed: 20 });
+    expect(toPlayerRecord(served).variety).toEqual({ distinctOpponents: 14, timesOnCourt: 20 });
   });
 
   it('is absent where no counted game was ever recorded, and never `0 of 0`', () => {

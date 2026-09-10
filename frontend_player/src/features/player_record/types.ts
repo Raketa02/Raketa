@@ -47,18 +47,17 @@ export { playerRecordKeys } from './hooks/playerRecordKeys';
  * and the three band words that are the two things it draws instead of each other.
  */
 export {
-  BAND_HAS_NO_COUNT,
   IN_YOUR_AREA,
   OPINION_BAND_NAME,
-  OPINION_CARD_TITLE_DRAWN,
   OWN_RECORD_TITLE,
   YOU_MARK,
-  RECORD_CARD_TITLE_DRAWN,
   RECORD_TITLE,
-  PLAYER_SCORE_NAME,
-  RECORD_UNAVAILABLE,
-  STRAND_NAME,
+  FIT_ROW_NAME,
   fitRowLabel,
+  PLAYER_SCORE_BLOCK,
+  RECORD_UNAVAILABLE,
+  SPORTSMANSHIP_LABEL,
+  STRAND_NAME,
   opinionFigure,
   recordCloseLabel,
   strandFraction,

@@ -1,8 +1,16 @@
 /**
  * **The record's header** — the photograph with the Level on it, and who this is beside it.
  *
- * A `PhotoPanel` at record size and a column: the whole handle, the identity line, one pill per
- * rated sport, and the reliability pill.
+ * A `PhotoPanel` at record size and a column: the whole handle, the identity line, and one pill
+ * per rated sport.
+ *
+ * ## The reliability pill left, and it is now a block under the level bar
+ *
+ * It was a `Tag` here, tinted by `scoreTone`. It is `RecordBlocks`' first box now — 7.13's own
+ * shape, the same one the competitive card draws the same figure in — which is what a reader
+ * arriving from a shortlist has already met it as. The move takes the **tint** with it: a
+ * block's figure is `ink`, and the ladder stays on the metered rows below, where a bar lifting
+ * is the thing a held player opened this sheet to watch.
  *
  * ## The panel is the same drawn object the candidate card carries
  *
@@ -33,29 +41,27 @@
  * somebody they are in their own area — and `identityLine` reads `isSelf` for exactly that
  * reason, rather than leaving two call sites to remember one condition.
  *
- * ## One element, and the pills merge into it
+ * ## One element, and the pills merge into it — but the button does not
  *
- * §20.1: everything with no action of its own merges into the nearest action above it. There is
- * no action here at all, so the whole header is one element and `recordHeaderLabel` is what it
- * says — identifying facts first, in the order they are drawn.
+ * §20.1: everything with no action of its own merges into the nearest action above it. The
+ * panel, the handle, the identity line and the pills have none, so they are one element and
+ * `recordHeaderLabel` is what it says — identifying facts first, in the order they are drawn.
+ *
+ * **`Player fit` is an action and therefore its own element**, which is the same rule read the
+ * other way. It sits under the pills rather than at the foot of the sheet: it is the sheet's
+ * only control, and one a reader has to scroll past four zones to reach is one most readers
+ * never reach.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
-import { PhotoPanel, Tag, theme } from '@/shared/ui';
+import { PhotoPanel, theme } from '@/shared/ui';
 
 import type { PlayerRecord } from '../domain/playerRecord';
-import { scoreTone } from '../domain/scoreTone';
 
 import { SportPills } from './SportPills';
-import {
-  identityLine,
-  recordHandle,
-  recordHeaderLabel,
-  scorePill,
-  sportPill,
-} from './recordPresentation';
+import { identityLine, recordHandle, recordHeaderLabel, sportPill } from './recordPresentation';
 
 export interface RecordHeaderProps {
   readonly record: PlayerRecord;
@@ -65,22 +71,24 @@ export interface RecordHeaderProps {
   readonly distanceKm?: number;
   /** The reader's own coarse area, for the one comparison this line is allowed to make. */
   readonly viewerAreaCode?: string;
+  /**
+   * What *Player fit* opens. Absent where no pairing is behind the entry point — your own
+   * record, a chat, the games list — and the button is then not drawn at all.
+   */
+  readonly onExplainFit?: () => void;
+  /** The Fit the engine published for the two of them, printed on that control. */
+  readonly fit?: number;
 }
 
-/**
- * The three tones a Player Score is drawn in, as `Tag` variants.
- *
- * The pill adds no colour: `ok`, `base` and `bad` are the palette's existing semantics, and the
- * figure is printed inside the pill so nothing rests on the tint
- * ([Part 13](../../../../docs/design-system.md#part-13--accessibility)).
- */
-const SCORE_VARIANT = { good: 'ok', neutral: 'base', poor: 'bad' } as const;
-
-export function RecordHeader({ record, playerId, distanceKm, viewerAreaCode }: RecordHeaderProps) {
+export function RecordHeader({
+  record,
+  playerId,
+  distanceKm,
+  viewerAreaCode,
+  onExplainFit,
+  fit,
+}: RecordHeaderProps) {
   const handle = recordHandle(record.nickname, record.isSelf);
-  // The figure and the rows beneath it are one fact, so the pill is drawn exactly when the card
-  // under it is — see `Reliability`.
-  const playerScore = record.reliability?.playerScore;
   const identity = identityLine({
     areaCode: record.areaCode,
     isSelf: record.isSelf,
@@ -97,7 +105,6 @@ export function RecordHeader({ record, playerId, distanceKm, viewerAreaCode }: R
         onCourt: record.onCourt,
         identity,
         sports: record.sports.map(({ sport, level }) => sportPill(sportLabel(sport), level)),
-        ...(playerScore === undefined ? {} : { playerScore }),
       })}
     >
       {/* The Level and the Sport are the resolved panel's, so somebody rated in nothing draws
@@ -122,13 +129,11 @@ export function RecordHeader({ record, playerId, distanceKm, viewerAreaCode }: R
 
         {identity === '' ? null : <Text style={s.identity}>{identity}</Text>}
 
-        <SportPills sports={record.sports} />
-
-        {playerScore === undefined ? null : (
-          <View style={s.score}>
-            <Tag label={scorePill(playerScore)} variant={SCORE_VARIANT[scoreTone(playerScore)]} />
-          </View>
-        )}
+        <SportPills
+          sports={record.sports}
+          {...(onExplainFit === undefined ? {} : { onExplainFit })}
+          {...(fit === undefined ? {} : { fit })}
+        />
       </View>
     </View>
   );
@@ -141,7 +146,4 @@ const s = StyleSheet.create({
   column: { flex: 1, gap: theme.space.xs },
   handle: { ...theme.type.h1, color: theme.color.ink },
   identity: { ...theme.type.tiny, color: theme.color.muted },
-  // Pushed right, which is where a figure about the whole person belongs on a header whose
-  // left half is one sport's.
-  score: { alignSelf: 'flex-end' },
 });

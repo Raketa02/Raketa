@@ -1,11 +1,20 @@
 /**
- * **The record** — everything the platform has watched this person do, under the rule it
- * enforces ([#385](https://github.com/Raketa02/Raketa/issues/385)).
+ * **The record** — everything anybody has to say about this person, counted or written
+ * ([#385](https://github.com/Raketa02/Raketa/issues/385)).
  *
- * Three metered rows and one printed pair. The heading is *counted by the system, not written
- * by people*, and it is a promise about **authorship** rather than a title: what other players
- * said stands one block down under a heading naming its own author, and the row that would
- * break this one is dropped in `countedRows` rather than trusted not to arrive.
+ * Three metered rows, one printed pair, and what other players said.
+ *
+ * ## It has no heading, and losing it is what let the rating in
+ *
+ * The card was headed *counted by the system, not written by people* — a promise about
+ * **authorship**, which is why the sportsmanship figure stood outside it in a block of its own
+ * and why `countedRows` still drops the strand of that name. The rating belongs on the record,
+ * so the heading went rather than the row: a title claiming nobody wrote any of this, over a
+ * star average people wrote, is worse than no title at all.
+ *
+ * What the heading carried that mattered is now on the row that needs it. *Sportsmanship, by
+ * players* names its own author, where every row above it plainly has none — and the sentence
+ * under the card says the thing the label cannot, which is that a low one acts on nobody.
  *
  * ## The card is the pill's account, and the pill is the matcher's own number
  *
@@ -41,13 +50,14 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Card, Row, theme } from '@/shared/ui';
 
-import type { OpponentVariety, Reliability } from '../domain/playerRecord';
+import type { Opinion, OpponentVariety, Reliability } from '../domain/playerRecord';
 import { countedRows } from '../domain/recordCard';
 
 import { StrandMeterRow } from './StrandMeterRow';
 import {
-  RECORD_CARD_TITLE_DRAWN,
+  SPORTSMANSHIP_LABEL,
   VARIETY_LABEL,
+  opinionValue,
   recordCardLabel,
   varietyValue,
 } from './recordPresentation';
@@ -57,14 +67,24 @@ export interface RecordCardProps {
   readonly reliability?: Reliability;
   /** A different absence: no counted game has ever been recorded. */
   readonly variety?: OpponentVariety;
+  /**
+   * What other players said — **a third absence, asking a third question.**
+   *
+   * Most people have not been rated, and rating is a favour nothing records the omission of, so
+   * this is missing far more often than the rows above it. Which arm it is — a figure for a
+   * reader, a band for the subject — is folded at the wire boundary from `is_self`, so the row
+   * draws what it was handed and compares nothing.
+   */
+  readonly opinion?: Opinion;
 }
 
-export function RecordCard({ reliability, variety }: RecordCardProps) {
+export function RecordCard({ reliability, variety, opinion }: RecordCardProps) {
   const rows = reliability === undefined ? [] : countedRows(reliability.strands);
+  const drawn = rows.length > 0;
 
   // Nothing to say is said by not being here — the same spelling every absence takes on this
   // sheet, and the one that keeps a newcomer's record reading as new rather than as poor.
-  if (rows.length === 0 && variety === undefined) return null;
+  if (!drawn && variety === undefined && opinion === undefined) return null;
 
   return (
     <Card>
@@ -73,10 +93,9 @@ export function RecordCard({ reliability, variety }: RecordCardProps) {
         accessibilityLabel={recordCardLabel({
           rows,
           ...(variety === undefined ? {} : { variety }),
+          ...(opinion === undefined ? {} : { opinion }),
         })}
       >
-        <Text style={s.title}>{RECORD_CARD_TITLE_DRAWN}</Text>
-
         {rows.map((row, at) => (
           <StrandMeterRow key={row.strand} row={row} divided={at > 0} />
         ))}
@@ -85,7 +104,19 @@ export function RecordCard({ reliability, variety }: RecordCardProps) {
           <Row
             label={VARIETY_LABEL}
             value={<Text style={s.figure}>{varietyValue(variety)}</Text>}
-            divided={rows.length > 0}
+            divided={drawn}
+          />
+        )}
+
+        {/* Last, because it is the one row here people wrote and the label says so. It carries
+            no bar for the variety row's reason and no tone for its own: `scoreTone` belongs to
+            the Player Score, and a three-step band in those three colours would read as a
+            second score on the screen a held player opens to find out what holds them back. */}
+        {opinion === undefined ? null : (
+          <Row
+            label={SPORTSMANSHIP_LABEL}
+            value={<Text style={s.figure}>{opinionValue(opinion)}</Text>}
+            divided={drawn || variety !== undefined}
           />
         )}
       </View>
@@ -94,8 +125,5 @@ export function RecordCard({ reliability, variety }: RecordCardProps) {
 }
 
 const s = StyleSheet.create({
-  // The eyebrow labels a region you are reading, which is what this heading is; `flab` is for a
-  // control you are about to operate and there is none on this card.
-  title: { ...theme.type.eyebrow, color: theme.color.muted, marginBottom: theme.space.xs },
   figure: { ...theme.num.xs, ...theme.tabular, color: theme.color.ink },
 });

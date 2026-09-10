@@ -1,13 +1,16 @@
 /**
- * **The skill card** — a Level, how sure the platform is, what that rests on, the full scale
- * with their band on it, the likely range, and the run of five.
+ * **The skill card** — a Level, how sure the platform is, the full scale with their band on it,
+ * and the likely range.
  *
- * ## The three headline figures are one text run
+ * ## The headline is one text run, and the count left it for a block
  *
- * `PADEL · 2,75 · 77 % sure · 21 counted`. They are inseparable by design — a confident-looking
- * number built on three games must not read like one built on forty — and three boxes is how
- * one of them ends up conditionally hidden. The one that would go is the one that makes the
- * other two honest.
+ * `PADEL · 2,75 · 77 % sure`. It read `· 21 counted` as a fourth clause, on the argument that
+ * the count is what makes the other two honest — a confident-looking number built on three games
+ * must not read like one built on forty — and that a box is how it ends up conditionally hidden.
+ * The count now sits in `RecordBlocks` immediately under this card, where it is **never**
+ * conditional: `counted_games` is measured and the wire always sends it beside a Level, so what
+ * the argument protected is now structural instead of a rule a string obeys. See
+ * `skillHeadline`.
  *
  * ## The band is a key and the scale is the bar's
  *
@@ -27,13 +30,15 @@
  * The bar takes an `accessibilityLabel` because it is normally its own element; here it is not,
  * so the card carries the whole reading and the bar is drawn and hidden. The bracket reaches a
  * listener as `Likely 2,47–3,03` in that reading rather than as a drawn object announcing
- * itself, and the run of five reaches it as one clause counting the squares.
+ * itself. The run of five and the count are **not** in this reading: they are the block row's
+ * below, which is its own element because the Player Score beside them is about the whole
+ * person and this card is about one sport.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
 
 import { BAND_NAMES, bandPresentation, sportLabel } from '@/features/onboarding/types';
-import { Card, LevelBar, RunOfForm, theme } from '@/shared/ui';
+import { Card, LevelBar, theme } from '@/shared/ui';
 
 import type { SkillPanel } from '../domain/playerRecord';
 
@@ -67,15 +72,6 @@ export function SkillCard({ skill }: SkillCardProps) {
             accessibilityLabel={likelyRangeLine(skill.likelyRange)}
           />
         </View>
-
-        {/* Never padded: three squares means three counted results, and the gap at the end —
-            where the newest results are not yet — is the honest statement. An empty run draws
-            nothing rather than an empty row of the run's own height. */}
-        {skill.lastFive === undefined || skill.lastFive.length === 0 ? null : (
-          <View style={s.run}>
-            <RunOfForm results={skill.lastFive} />
-          </View>
-        )}
       </View>
     </Card>
   );
@@ -83,7 +79,7 @@ export function SkillCard({ skill }: SkillCardProps) {
 
 const s = StyleSheet.create({
   headline: { ...theme.type.rlValue, ...theme.tabular, color: theme.color.ink },
-  // The bar's own three rows are tall; it needs air above it and the run needs air below.
+  // The bar's own three rows are tall, so it needs air above it. Nothing follows it inside the
+  // card any more: the block row is the sheet's next child and carries the body's own gap.
   bar: { marginTop: theme.space.md },
-  run: { marginTop: theme.space.md },
 });

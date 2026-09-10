@@ -142,13 +142,18 @@ export interface OpponentVariety {
    */
   readonly distinctOpponents: number;
   /**
-   * How many **counted games** they were on the court for.
+   * How many **times they were on a court with somebody**, across their counted games.
    *
-   * **Not the skill panel's `countedGames`, and the two will differ on one response.** That one
-   * is what a Level rests on — confirmed results, in one sport, that the rating folded. This is
-   * how much they have played, across every sport. Two honest numbers, two questions.
+   * **A count of seats opposite and never of games**, which is the correction rather than a
+   * preference: a doubles evening puts three people on the court, so a game-denominated pair
+   * published `3 of 1` — a fraction whose numerator exceeds its denominator, drawable only by
+   * clamping a share that had gone over a hundred. Counting encounters makes both halves the
+   * same kind of thing, and `distinctOpponents` can never exceed it.
+   *
+   * **Not the skill panel's `countedGames`.** That one is what a Level rests on — confirmed
+   * results, in one sport, that the rating folded. This counts people met, across every sport.
    */
-  readonly gamesPlayed: number;
+  readonly timesOnCourt: number;
 }
 
 /**

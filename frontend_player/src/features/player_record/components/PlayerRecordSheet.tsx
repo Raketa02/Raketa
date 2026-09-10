@@ -50,21 +50,24 @@
  * action than tapping a face should feel like — and it opens at a **standing height** so the
  * skeleton and the record are the same size and the panel does not jump when the answer lands.
  *
- * ## Five regions, five elements
+ * ## Six regions, six elements
  *
  * There is no interactive element inside it other than the pairing row, so every group merges
  * into the nearest heading (§20.1) and `recordPresentation` writes what each of them says. The
  * counted card and *What opponents said* are two of them for a reason that is not layout: one
- * is headed with a promise about **authorship**, and the other is what would break it. Focus
- * lands on the **title** on the way in, which is `BottomSheet`'s flat rule for every sheet —
- * and there is **no `returnFocusTo`**: up to four faces open this from one card, so there is no
- * one control to return to.
+ * is headed with a promise about **authorship**, and the other is what would break it. The
+ * **block row** is a sixth for a reason that is not layout either: the skill card above it is
+ * about one sport and the Player Score in it is about the whole person, so folding the two into
+ * one element would announce a reliability figure inside a sentence that opened with *Tennis*.
+ * Focus lands on the **title** on the way in, which is `BottomSheet`'s flat rule for every sheet
+ * — and there is **no `returnFocusTo`**: up to four faces open this from one card, so there is
+ * no one control to return to.
  */
 
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { codeMessage, type AppError } from '@/shared/errors';
-import { BottomSheet, Note, Button, PressableCard, SocialTagRow, theme } from '@/shared/ui';
+import { BottomSheet, Note, Button, SocialTagRow, theme } from '@/shared/ui';
 import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -72,18 +75,15 @@ import type { PlayerRecord, RecordSubject } from '../domain/playerRecord';
 import { recordTagRow } from '../domain/tagRow';
 import { usePlayerRecord } from '../hooks/usePlayerRecord';
 
-import { OpinionCard } from './OpinionCard';
+import { RecordBlocks } from './RecordBlocks';
 import { RecordCard } from './RecordCard';
 import { RecordHeader } from './RecordHeader';
 import { SkillCard } from './SkillCard';
 import {
-  FIT_ROW_BODY,
   READING_RECORD_LABEL,
   RECORD_UNAVAILABLE,
   RECORD_UNAVAILABLE_CODE,
   RETRY_RECORD_LABEL,
-  fitRowLabel,
-  fitRowTitle,
   recordCloseLabel,
   recordTitle,
   socialTagsLabel,
@@ -242,35 +242,41 @@ function Filled({
         playerId={playerId}
         {...(distanceKm === undefined ? {} : { distanceKm })}
         {...(viewerAreaCode === undefined ? {} : { viewerAreaCode })}
+        {...(pairing === undefined ? {} : { onExplainFit: pairing.onExplain, fit: pairing.fit })}
       />
 
       {/* Absent where they hold no rating at all — the pills speak instead, and there is no
           panel of noughts to mistake for a bad record. */}
       {record.skill === undefined ? null : <SkillCard skill={record.skill} />}
 
-      {/* Two absences that do not move together, handed down separately and drawn as whatever
-          survives them: a newcomer's record is a short sheet rather than an empty card. */}
+      {/* 7.13's three blocks, under the band bar. **A row of the sheet rather than a footer on
+          the card above it**, and the reason is an absence: two of the three are that sport's
+          and the Player Score is the whole person's, so a block nested in a card drawn only
+          when a Level resolves would take a ghosted newcomer's one figure down with the sport.
+          The row draws nothing at all when it has none of the three. */}
+      <RecordBlocks
+        {...(record.reliability === undefined
+          ? {}
+          : { playerScore: record.reliability.playerScore })}
+        {...(record.skill?.lastFive === undefined ? {} : { lastFive: record.skill.lastFive })}
+        {...(record.skill === undefined ? {} : { countedGames: record.skill.countedGames })}
+      />
+
+      {/* Three absences that do not move together, handed down separately and drawn as
+          whatever survives them: a newcomer's record is a short sheet rather than an empty
+          card. What other players said is a row on it now rather than a block under it — the
+          card's heading promised *counted by the system, not written by people*, and the
+          heading is what went. */}
       <RecordCard
         {...(record.reliability === undefined ? {} : { reliability: record.reliability })}
         {...(record.variety === undefined ? {} : { variety: record.variety })}
+        {...(record.opinion === undefined ? {} : { opinion: record.opinion })}
       />
-
-      {/* Outside the card above and under a heading of its own, because that card promises
-          *counted by the system, not written by people* and this is the one thing here people
-          wrote. A fourth absence, asking a fourth question: most people have not been rated. */}
-      <OpinionCard {...(record.opinion === undefined ? {} : { opinion: record.opinion })} />
 
       {tagsLabel === '' ? null : (
         <View accessible accessibilityLabel={tagsLabel}>
           <SocialTagRow row={tags} />
         </View>
-      )}
-
-      {pairing === undefined ? null : (
-        <PressableCard onPress={pairing.onExplain} accessibilityLabel={fitRowLabel(pairing.fit)}>
-          <Text style={s.fitTitle}>{fitRowTitle(pairing.fit)}</Text>
-          <Text style={s.fitBody}>{FIT_ROW_BODY}</Text>
-        </PressableCard>
       )}
     </>
   );
@@ -282,6 +288,4 @@ const s = StyleSheet.create({
   body: { minHeight: STANDING_HEIGHT, gap: theme.space.sm },
   refusal: { ...theme.type.tiny, color: theme.color.muted },
   failure: { gap: theme.space.sm },
-  fitTitle: { ...theme.type.cardTitle, color: theme.color.ink },
-  fitBody: { ...theme.type.tiny, color: theme.color.muted, marginTop: theme.space.xxs },
 });

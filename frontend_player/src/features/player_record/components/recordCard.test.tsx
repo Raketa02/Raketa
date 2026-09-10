@@ -1,11 +1,13 @@
 /**
- * The record card, and the two claims a build session could quietly undo.
+ * The record card, and the three claims a build session could quietly undo.
  *
- * **One tone rule, read twice.** The pill in the header and every bar under it are drawn from
- * the same ladder, so the screen can never show a green bar under a red pill for one ratio.
- * That defect has no symptom anywhere else — both halves look reasonable on their own — so it
- * is asserted here, at **both** boundaries and from **both** sides, over the two drawings
- * together rather than over the rule they share.
+ * **One tone rule, and now exactly one drawing of it.** The ladder tinted two things — the
+ * header's pill and every bar under it — and the assertion was that two independently drawn
+ * things agreed. The pill went when the Player Score became a 7.13 block, whose figure is `ink`
+ * by specification, so what is left is the bars at the ladder's own boundaries **and the claim
+ * that the block draws no tone at all**. That second half is the one worth pinning: tinting the
+ * block back is the obvious-looking improvement, and it would offer a coarse three-step colour
+ * as a second score on the one screen a held player opens to find out what holds them back.
  *
  * **And a card with nothing to say is not drawn.** *We have not seen enough* and *they are bad
  * at this* are different facts, and the whole sheet is built so a newcomer's record reads as
@@ -17,36 +19,26 @@ import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { METER_TONE_FILL, theme, type MeterTone } from '@/shared/ui';
 
-import type { PlayerRecord, StrandRow } from '../domain/playerRecord';
+import type { StrandRow } from '../domain/playerRecord';
 import { SCORE_FLOOR, SCORE_STRONG } from '../domain/scoreTone';
 
+import { RecordBlocks } from './RecordBlocks';
 import { RecordCard } from './RecordCard';
-import { RecordHeader } from './RecordHeader';
 import {
-  RECORD_CARD_TITLE_DRAWN,
+  COUNTED_BLOCK,
+  LAST_FIVE_BLOCK,
+  PLAYER_SCORE_BLOCK,
+  VARIETY_LABEL,
   recordCardLabel,
-  scorePill,
   strandFraction,
   varietyValue,
 } from './recordPresentation';
-
-const PLAYER = '9f2a1c44-0000-4000-8000-000000000001';
 
 const row = (over: Partial<StrandRow> = {}): StrandRow => ({
   strand: 'SHOWS_UP',
   good: 9,
   opportunities: 9,
   pct: 100,
-  ...over,
-});
-
-const record = (over: Partial<PlayerRecord> = {}): PlayerRecord => ({
-  isSelf: false,
-  nickname: 'cyryl',
-  onCourt: false,
-  areaCode: 'A+050612+0019938',
-  socialTags: [],
-  sports: [],
   ...over,
 });
 
@@ -59,11 +51,12 @@ const grounds = (): readonly string[] =>
     .filter((fill): fill is string => typeof fill === 'string');
 
 /**
- * The three tones as the **pill** draws them — its `Tag` variants' own grounds. Written out
- * here rather than imported, because the point of the test is that two independently drawn
- * things agree: reading both off one table would assert nothing.
+ * The three grounds the ladder is capable of painting, whichever surface paints them. Written
+ * out here rather than imported from `Meter`, because the point of the two tests below is that
+ * one drawing uses exactly one of them and the other uses **none**: reading the table off the
+ * component under test would assert nothing in either direction.
  */
-const PILL_GROUND: Readonly<Record<MeterTone, string>> = {
+const TONE_GROUND: Readonly<Record<MeterTone, string>> = {
   good: theme.color.mintSoft,
   neutral: theme.color.line2,
   poor: theme.color.redSoft,
@@ -80,35 +73,92 @@ function toneOf(drawn: readonly string[], table: Readonly<Record<MeterTone, stri
   return found[0];
 }
 
-function pillTone(playerScore: number): MeterTone {
-  render(
-    <RecordHeader
-      record={record({ reliability: { playerScore, strands: [row()] } })}
-      playerId={PLAYER}
-    />,
-  );
-  return toneOf(grounds(), PILL_GROUND);
-}
-
 function barTone(pct: number): MeterTone {
   render(<RecordCard reliability={{ playerScore: pct, strands: [row({ pct })] }} />);
   return toneOf(grounds(), METER_TONE_FILL);
 }
 
-describe('one tone rule, read by the pill and by the bars', () => {
+describe('one tone rule, drawn by the bars', () => {
   /**
    * The lower step is not a drawing decision: it is where the matcher starts holding somebody
-   * back. A bar that turned red a point after the pill did would tell a player their penalty had
-   * not begun on the day it had — on the one screen built so they can watch it lift.
+   * back. A bar that turned red a point after the ladder said so would tell a player their
+   * penalty had not begun on the day it had — on the one screen built so they can watch it lift.
    */
   it.each([
     [SCORE_FLOOR - 1, 'poor'],
     [SCORE_FLOOR, 'neutral'],
     [SCORE_STRONG - 1, 'neutral'],
     [SCORE_STRONG, 'good'],
-  ] as const)('draws %i as %s in both places', (figure, expected) => {
-    expect(pillTone(figure)).toBe(expected);
+  ] as const)('draws %i as %s', (figure, expected) => {
     expect(barTone(figure)).toBe(expected);
+  });
+
+  /**
+   * **The block is the ladder's non-consumer, and that is deliberate.** 7.13 fixes a block's
+   * figure at `ink` on `paper2`, and the sheet's one ladder belongs to the number the matcher
+   * acts on as it is *accounted for* — the rows below — rather than to the headline figure. A
+   * three-step colour on the block would read as a second score beside the strands that explain
+   * the first, so this asserts the absence at every step of the ladder rather than at one.
+   */
+  it.each([SCORE_FLOOR - 1, SCORE_FLOOR, SCORE_STRONG - 1, SCORE_STRONG] as const)(
+    'draws %i in the block with no tone at all',
+    (figure) => {
+      render(<RecordBlocks playerScore={figure} />);
+
+      const painted = grounds();
+      for (const tone of ['good', 'neutral', 'poor'] as const) {
+        expect(painted).not.toContain(TONE_GROUND[tone]);
+      }
+    },
+  );
+});
+
+/**
+ * **The block row's three absences, which do not move together.**
+ *
+ * The row sits outside the skill card precisely so they need not: two of the three come off
+ * `skill` and the Player Score comes off `reliability`, which is folded from games and
+ * challenges that have no sport in them. A player who has been ghosted on and holds no rating
+ * at all has a Player Score and no skill panel — and a block nested inside a card drawn only
+ * when a Level resolves would take their one figure down with the sport.
+ */
+describe('the record blocks', () => {
+  it('draws the figure a player has, without the two they have not', () => {
+    render(<RecordBlocks playerScore={91} />);
+
+    expect(screen.getByText(PLAYER_SCORE_BLOCK)).toBeTruthy();
+    expect(screen.getByText('91')).toBeTruthy();
+    expect(screen.queryByText(LAST_FIVE_BLOCK)).toBeNull();
+    expect(screen.queryByText(COUNTED_BLOCK)).toBeNull();
+  });
+
+  /**
+   * A count with no Player Score is the other half of the same independence: somebody whose
+   * games were all played and scored, and for whom nothing has ever *fallen due*.
+   */
+  it('draws a count with no score beside it', () => {
+    render(<RecordBlocks countedGames={5} lastFive={['WIN', 'LOSS']} />);
+
+    expect(screen.getByText(COUNTED_BLOCK)).toBeTruthy();
+    expect(screen.queryByText(PLAYER_SCORE_BLOCK)).toBeNull();
+  });
+
+  /**
+   * **No row, rather than a row of noughts** — the sheet's one spelling for every absence on
+   * it, read on the newcomer this fixture is: nothing arranged, nothing counted, nothing said.
+   */
+  it('draws nothing at all where the platform watched none of the three', () => {
+    render(<RecordBlocks />);
+
+    expect(screen.toJSON()).toBeNull();
+  });
+
+  /** An empty run is no run, exactly as it is at the mapper and in the spoken label. */
+  it('draws no run box for a run of nothing', () => {
+    render(<RecordBlocks countedGames={0} lastFive={[]} />);
+
+    expect(screen.queryByText(LAST_FIVE_BLOCK)).toBeNull();
+    expect(screen.getByText(COUNTED_BLOCK)).toBeTruthy();
   });
 });
 
@@ -116,7 +166,6 @@ describe('the record card', () => {
   it('draws one row for a player with one', () => {
     render(<RecordCard reliability={{ playerScore: 100, strands: [row()] }} />);
 
-    expect(screen.getByText(RECORD_CARD_TITLE_DRAWN)).toBeTruthy();
     expect(screen.getByText(strandFraction(row()))).toBeTruthy();
   });
 
@@ -128,7 +177,9 @@ describe('the record card', () => {
   it('draws nothing at all for a player with no publishable strand', () => {
     render(<RecordCard />);
 
-    expect(screen.queryByText(RECORD_CARD_TITLE_DRAWN)).toBeNull();
+    // Not *an empty card* — no card. The heading it used to be recognised by is gone, so the
+    // assertion is the tree itself rather than the absence of a word.
+    expect(screen.toJSON()).toBeNull();
   });
 
   /**
@@ -138,26 +189,27 @@ describe('the record card', () => {
    * that carries no bar.
    */
   it('draws the variety row alone where that is the only half there is', () => {
-    render(<RecordCard variety={{ distinctOpponents: 14, gamesPlayed: 20 }} />);
+    render(<RecordCard variety={{ distinctOpponents: 14, timesOnCourt: 20 }} />);
 
-    expect(screen.getByText(RECORD_CARD_TITLE_DRAWN)).toBeTruthy();
-    expect(screen.getByText(varietyValue({ distinctOpponents: 14, gamesPlayed: 20 }))).toBeTruthy();
+    expect(screen.getByText(VARIETY_LABEL)).toBeTruthy();
+    expect(
+      screen.getByText(varietyValue({ distinctOpponents: 14, timesOnCourt: 20 })),
+    ).toBeTruthy();
   });
 
   /**
-   * **A build too old to name any strand keeps the figure and loses the rows.** The pill is the
+   * **A build too old to name any strand keeps the figure and loses the rows.** The block is the
    * number the matcher acts on and it is still correct; hiding a true figure because a *label*
    * was missing would take the one actionable fact off the one screen built to show it. So the
-   * card goes and the pill stays, which is a shorter sheet rather than a wrong one — the same
+   * card goes and the block stays, which is a shorter sheet rather than a wrong one — the same
    * answer the mapper gives one layer down.
    */
-  it('keeps the pill when every row is a code this build cannot name', () => {
-    const reliability = { playerScore: 93, strands: [] };
-    render(<RecordHeader record={record({ reliability })} playerId={PLAYER} />);
-    expect(screen.getByText(scorePill(93))).toBeTruthy();
+  it('keeps the block when every row is a code this build cannot name', () => {
+    render(<RecordBlocks playerScore={93} />);
+    expect(screen.getByText('93')).toBeTruthy();
 
-    render(<RecordCard reliability={reliability} />);
-    expect(screen.queryByText(RECORD_CARD_TITLE_DRAWN)).toBeNull();
+    render(<RecordCard reliability={{ playerScore: 93, strands: [] }} />);
+    expect(screen.toJSON()).toBeNull();
   });
 
   /**

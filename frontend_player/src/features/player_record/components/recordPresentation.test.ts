@@ -11,27 +11,23 @@ import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 import type { StrandRow } from '../domain/playerRecord';
 
 import {
-  BAND_HAS_NO_COUNT,
   IN_YOUR_AREA,
+  FIT_ROW_NAME,
+  fitRowLabel,
   OPINION_BAND_NAME,
-  OPINION_CARD_TITLE,
-  OPINION_CARD_TITLE_DRAWN,
   OWN_RECORD_TITLE,
-  RECORD_CARD_TITLE,
-  RECORD_CARD_TITLE_DRAWN,
   RECORD_TITLE,
   STRAND_NAME,
-  WRITTEN_BY_PLAYERS,
   YOU_MARK,
-  fitRowLabel,
-  fitRowTitle,
   identityLine,
   lastFiveReading,
-  opinionCardLabel,
+  SPORTSMANSHIP_LABEL,
+  opinionValue,
   opinionFigure,
   recordCloseLabel,
   recordCardLabel,
   recordHandle,
+  recordBlocksLabel,
   recordHeaderLabel,
   skillCardLabel,
   skillHeadline,
@@ -98,11 +94,25 @@ describe('the sheet’s two titles', () => {
   });
 });
 
-describe('the skill card’s three inseparable figures', () => {
-  it('is one run, in one order, with the counted figure beside the confidence', () => {
-    expect(
-      skillHeadline({ sportName: 'Padel', level: 2.75, confidence: 77, countedGames: 21 }),
-    ).toBe('PADEL · 2,75 · 77% sure · 21 counted');
+describe('the skill card’s headline, and what left it', () => {
+  it('is one run, in one order, and the count is no longer in it', () => {
+    expect(skillHeadline({ sportName: 'Padel', level: 2.75, confidence: 77 })).toBe(
+      'PADEL · 2,75 · 77% sure',
+    );
+  });
+
+  /**
+   * **The count is drawn once on this sheet, and this is the assertion that keeps it that way.**
+   * It moved into `COUNTED_BLOCK` a few points below the headline, and a build session restoring
+   * `· 21 counted` here would put one figure in two registers inches apart — the double
+   * announcement §20.1 spends the whole sheet avoiding, made visible.
+   */
+  it('never says the counted figure twice', () => {
+    const headline = skillHeadline({ sportName: 'Padel', level: 2.75, confidence: 77 });
+
+    expect(headline).not.toContain('21');
+    expect(headline).not.toContain('counted');
+    expect(recordBlocksLabel({ countedGames: 21 })).toBe('21 counted games');
   });
 
   it('says a run of three is out of three, because the gap is the honest statement', () => {
@@ -110,20 +120,53 @@ describe('the skill card’s three inseparable figures', () => {
     expect(lastFiveReading(['WIN', 'WIN', 'LOSS', 'WIN', 'WIN'])).toBe('4 of the last 5 won');
   });
 
-  it('leaves the run out of the spoken card entirely where there is none', () => {
-    const facts = {
-      sportName: 'Padel',
-      level: 2.75,
-      band: 'Established',
-      confidence: 77,
-      countedGames: 21,
-      likelyRange: { low: 2.47, high: 3.03 },
-    };
+  /**
+   * **The spoken card is one sport's, and the block row beside it is not.** The run and the
+   * count went with the drawing, which leaves this label the four facts that are genuinely about
+   * the resolved Sport — and stops a reliability figure being announced inside a sentence that
+   * opened with *Padel*.
+   */
+  it('speaks the Level, the certainty and the range, and neither of the two that left', () => {
+    expect(
+      skillCardLabel({
+        sportName: 'Padel',
+        level: 2.75,
+        band: 'Established',
+        confidence: 77,
+        likelyRange: { low: 2.47, high: 3.03 },
+      }),
+    ).toBe('Padel. Level 2,75, Established. 77% sure. Likely 2,47 – 3,03');
+  });
+});
 
-    expect(skillCardLabel(facts)).toBe(
-      'Padel. Level 2,75, Established. 77% sure. 21 counted games. Likely 2,47 – 3,03',
+/**
+ * **The three blocks, as one element** — and the three absences that do not move together.
+ *
+ * A player with a Player Score and no rating at all is the case the row exists outside the skill
+ * card for: they draw one box, and it is the one figure the matcher acts on.
+ */
+describe('the record blocks, as one element', () => {
+  it('reads left to right, and spells the scale the figure alone could not', () => {
+    expect(
+      recordBlocksLabel({ playerScore: 91, lastFive: ['WIN', 'WIN', 'LOSS'], countedGames: 5 }),
+    ).toBe('Player reliability 91 out of 100. 2 of the last 3 won. 5 counted games');
+  });
+
+  it('says nothing at all about a block it did not draw', () => {
+    expect(recordBlocksLabel({ playerScore: 91 })).toBe('Player reliability 91 out of 100');
+    expect(recordBlocksLabel({ countedGames: 1 })).toBe('1 counted game');
+    expect(recordBlocksLabel({})).toBe('');
+  });
+
+  /**
+   * An empty run and an omitted one are one absence, exactly as they are at the mapper and in
+   * the drawing: a run's length is a claim, so nought squares is nothing to say rather than
+   * *0 of the last 0 won*.
+   */
+  it('treats an empty run as no run', () => {
+    expect(recordBlocksLabel({ playerScore: 91, lastFive: [] })).toBe(
+      recordBlocksLabel({ playerScore: 91 }),
     );
-    expect(skillCardLabel({ ...facts, lastFive: [] })).toBe(skillCardLabel(facts));
   });
 });
 
@@ -135,11 +178,8 @@ describe('the header, as one element', () => {
         onCourt: true,
         identity: 'In your area · 4 km',
         sports: ['Padel 2,75'],
-        playerScore: 93,
       }),
-    ).toBe(
-      'bea_k. Photo checked: on court. In your area · 4 km. Padel 2,75. Player Score 93 out of 100',
-    );
+    ).toBe('bea_k. Photo checked: on court. In your area · 4 km. Padel 2,75');
 
     expect(recordHeaderLabel({ handle: 'bea_k', onCourt: false, identity: '', sports: [] })).toBe(
       'bea_k',
@@ -186,12 +226,20 @@ describe('the Social tag row’s three silences', () => {
   });
 });
 
-describe('the pairing row', () => {
-  /** The visible name carries the ✦ and the spoken one must not — §20.6's one exception. */
-  it('keeps the glyph out of what is spoken', () => {
-    expect(fitRowTitle(78)).toContain('✦');
-    expect(fitRowLabel(78)).not.toContain('✦');
-    expect(fitRowLabel(78).startsWith('Why fit 78')).toBe(true);
+describe('the pairing control', () => {
+  /**
+   * **The visible name and the spoken one are one string now**, which is §20.6's flat rule
+   * rather than its one exception. The name was `Why ✦ 78`: a glyph doing work, and a figure
+   * that moved the control's own name every time the pairing was rescored. The figure lives on
+   * the sheet the button opens, which is where a reader who wants it is going anyway.
+   */
+  it('names what it opens, carries no glyph, and rounds where it prints', () => {
+    expect(FIT_ROW_NAME).toBe('Player fit');
+    expect(FIT_ROW_NAME).not.toContain('✦');
+    // Rounded here because here is where it is printed: a served 78,4 must not promise a
+    // figure the sheet it opens does not draw.
+    expect(fitRowLabel(78.4)).toBe('Player fit 78');
+    expect(fitRowLabel(77.5)).toBe('Player fit 78');
   });
 });
 
@@ -209,13 +257,17 @@ describe('the record card', () => {
   });
 
   /**
-   * **The heading is the rule, not a label.** It is the sentence the whole card is answerable
-   * for, so it is asserted rather than left to whoever edits the file next — and it is spoken
-   * in sentence case, because a run of capitals reaches some engines as letters.
+   * **The card has no heading, and the row that needed one carries it.**
+   *
+   * It read *counted by the system, not written by people* — a promise about authorship, and
+   * the reason the star average stood outside the card. The rating belongs on the record, so
+   * the heading went; what it was carrying is now three words on the one row that has an
+   * author, where every row above it plainly has none.
    */
-  it('is headed with the rule it enforces, drawn in caps and spoken in words', () => {
-    expect(RECORD_CARD_TITLE).toBe('The record — counted by the system, not written by people');
-    expect(RECORD_CARD_TITLE_DRAWN).toBe(RECORD_CARD_TITLE.toUpperCase());
+  it('names its author on the row rather than over the card', () => {
+    // **Not *by opponents***: the card asks about everybody on the court, partner included,
+    // and `the-decisions.md` struck that wording by name for exactly that reason.
+    expect(SPORTSMANSHIP_LABEL).toBe('Sportsmanship, by players');
   });
 
   /**
@@ -244,11 +296,11 @@ describe('the record card', () => {
    * percentage.
    */
   it('prints variety as a percentage and its raw pair, never one of the two', () => {
-    expect(varietyValue({ distinctOpponents: 14, gamesPlayed: 20 })).toBe('70% · 14 of 20');
+    expect(varietyValue({ distinctOpponents: 14, timesOnCourt: 20 })).toBe('70% · 14 of 20');
   });
 
   it('writes the share as a whole percentage, through the app’s one formatter', () => {
-    expect(varietyValue({ distinctOpponents: 2, gamesPlayed: 3 })).toBe('67% · 2 of 3');
+    expect(varietyValue({ distinctOpponents: 2, timesOnCourt: 3 })).toBe('67% · 2 of 3');
   });
 
   /**
@@ -259,17 +311,33 @@ describe('the record card', () => {
     expect(
       recordCardLabel({
         rows: [row(), row({ strand: 'ANSWERS_RESULTS', good: 8, opportunities: 10, pct: 80 })],
-        variety: { distinctOpponents: 14, gamesPlayed: 20 },
+        variety: { distinctOpponents: 14, timesOnCourt: 20 },
       }),
-    ).toBe(
-      `${RECORD_CARD_TITLE}. Shows up, 9 of 9. Answers about results, 8 of 10. ` +
-        'Opponent variety, 70%, 14 of 20',
-    );
+    ).toBe('Shows up, 9 of 9. Answers about results, 8 of 10. Opponent variety, 70%, 14 of 20');
   });
 
   /** A card with one row is one clause. Nothing is spoken as absent. */
   it('says nothing about a row it was not given', () => {
-    expect(recordCardLabel({ rows: [row()] })).toBe(`${RECORD_CARD_TITLE}. Shows up, 9 of 9`);
+    expect(recordCardLabel({ rows: [row()] })).toBe('Shows up, 9 of 9');
+  });
+
+  /**
+   * **The card speaks the rows it drew and nothing about authorship beyond the row's label.**
+   *
+   * It used to close on `WRITTEN_BY_PLAYERS` — *it is not in the Player Score, and it hides
+   * nobody and holds nobody back* — which the contract asks for by name wherever the star
+   * figure is drawn beside the reliability figure. That sentence was removed with its drawn
+   * copy, so a listener now gets exactly what a reader gets, which is the point of pinning it
+   * here: the two registers said different things for as long as one carried the promise.
+   */
+  it('speaks the rating as a row, and makes no promise about it', () => {
+    const spoken = recordCardLabel({
+      rows: [row()],
+      opinion: { kind: 'figure', average: 4.7, raters: 17 },
+    });
+
+    expect(spoken).toBe(`Shows up, 9 of 9. ${SPORTSMANSHIP_LABEL}, 4,7 out of 5, 17 players`);
+    expect(spoken).not.toContain('holds nobody back');
   });
 });
 
@@ -281,11 +349,6 @@ describe('the record card', () => {
  * exists to prevent. Both are asserted here, because both are a sentence rather than a rule.
  */
 describe('what opponents said', () => {
-  it('is headed for its author, drawn in caps and spoken in words', () => {
-    expect(OPINION_CARD_TITLE).toBe('What opponents said');
-    expect(OPINION_CARD_TITLE_DRAWN).toBe(OPINION_CARD_TITLE.toUpperCase());
-  });
-
   /**
    * **The count is never separable from the figure.** `4,7 / 5 · 17 players` and
    * `3,0 / 5 · 1 player` are the same field, and the second one has to visibly read as one
@@ -309,27 +372,12 @@ describe('what opponents said', () => {
   });
 
   /**
-   * **The contract's own instruction, discharged in words** — *the matcher does not read it, and
-   * you should say so if you draw it beside the pill*. Naming the Player Score is only where the
-   * figure is not counted; the half a reader needs is that a low one acts on nobody, and it is
-   * asserted here rather than left to whoever edits the file next.
-   */
-  it('says both halves: who wrote it, and that it acts on nobody', () => {
-    expect(WRITTEN_BY_PLAYERS).toBe(
-      'Written by other players. It is not in the Player Score, and it hides nobody and holds ' +
-        'nobody back.',
-    );
-  });
-
-  /**
    * **The block names its own author**, which is what keeps the card above answerable for
    * *counted by the system, not written by people* — and it says the matcher never reads it,
    * because it is drawn on the same sheet as the pill that the matcher does read.
    */
-  it('reaches a listener as the heading, the figure and who wrote it', () => {
-    expect(opinionCardLabel({ kind: 'figure', average: 4.7, raters: 17 })).toBe(
-      `${OPINION_CARD_TITLE}. 4,7 out of 5, 17 players. ${WRITTEN_BY_PLAYERS}`,
-    );
+  it('draws the figure and its count, and never one without the other', () => {
+    expect(opinionValue({ kind: 'figure', average: 4.7, raters: 17 })).toBe('4,7 / 5 · 17 players');
   });
 
   /**
@@ -337,10 +385,13 @@ describe('what opponents said', () => {
    * average beside a published count is a subtraction that names each new rating, and the
    * subject knows who they played.
    */
-  it('speaks a band with no number in it at all', () => {
-    const spoken = opinionCardLabel({ kind: 'band', band: 'GOOD' });
+  it('draws a band with no number in it at all', () => {
+    const drawn = opinionValue({ kind: 'band', band: 'GOOD' });
 
-    expect(spoken).toBe(`${OPINION_CARD_TITLE}. Good. ${BAND_HAS_NO_COUNT} ${WRITTEN_BY_PLAYERS}`);
-    expect(spoken).not.toMatch(/\d/);
+    expect(drawn).toBe('Good');
+    expect(drawn).not.toMatch(/\d/);
+    expect(recordCardLabel({ rows: [], opinion: { kind: 'band', band: 'GOOD' } })).toBe(
+      `${SPORTSMANSHIP_LABEL}, Good`,
+    );
   });
 });

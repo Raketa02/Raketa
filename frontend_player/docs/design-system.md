@@ -281,50 +281,52 @@ for text**, and the audit did not catch it.
 
 ## 2.5 Contrast — computed
 
-| Pair                                                                           | Ratio     | WCAG                                |
-| ------------------------------------------------------------------------------ | --------- | ----------------------------------- |
-| ink on paper                                                                   | 15.65     | AAA                                 |
-| ink on surface (and a given star)                                              | 17.50     | AAA                                 |
-| white on night                                                                 | 13.29     | AAA                                 |
-| ink on volt                                                                    | 13.96     | AAA                                 |
-| white + `textOnMedia` on the squash court ground                               | 13.03     | AAA                                 |
-| white + `textOnMedia` on the padel court ground                                | 12.87     | AAA                                 |
-| white + `textOnMedia` on the badminton court ground                            | 12.80     | AAA                                 |
-| white + `textOnMedia` on the tennis court ground                               | 12.29     | AAA                                 |
-| volt on night                                                                  | 10.60     | AAA                                 |
-| white on night2 / info                                                         | 9.86      | AAA                                 |
-| info on infoSoft                                                               | 8.63      | AAA                                 |
-| white on dark-card `tiny` (white @ .68)                                        | 6.97      | AAA                                 |
-| white on red                                                                   | 5.90      | AA                                  |
-| white on coralInk                                                              | 5.89      | AA                                  |
-| white on mintInk                                                               | 5.84      | AA                                  |
-| white on amber                                                                 | 5.70      | AA                                  |
-| muted on surface (and a blank star's outline)                                  | 5.40      | AA                                  |
-| white + `textOnMedia` on a photograph, under `photoScrim`                      | 5.24      | AA                                  |
-| coralInk on coralSoft                                                          | 5.11      | AA                                  |
-| mintInk on mintSoft                                                            | 5.08      | AA                                  |
-| red on redSoft                                                                 | 5.06      | AA                                  |
-| amber on amberSoft                                                             | 5.04      | AA                                  |
-| white on band ink (all four)                                                   | 5.05–5.13 | AA                                  |
-| muted on paper                                                                 | 4.83      | AA                                  |
-| white on dark-card `eyebrow` (white @ .52)                                     | 4.74      | AA                                  |
-| white + `textOnMedia` on a poster hue's light stop                             | 4.60–4.65 | AA                                  |
-| band ink on paper (all four)                                                   | 4.51–4.59 | AA                                  |
-| mintSoft + `textOnMedia` on a photograph, under `photoScrim`                   | 4.55      | AA — the ON COURT mark              |
-| muted on line2                                                                 | 4.62      | AA                                  |
-| muted on paper2                                                                | 4.49      | AA — used at 11pt+ only             |
-| ink on paper2 (the record block's figure, and a won square)                    | 14.57     | AAA                                 |
-| a won square on a lost one, and a given star on a blank one (`ink` on `muted`) | 3.24      | ≥3:1, meets **1.4.11**              |
-| **ink on coral**                                                               | **4.50**  | AA — the only dark-on-coral pairing |
-| coral on paper (marks: level mark, progress fill)                              | 3.48      | ≥3:1, meets **1.4.11**              |
-| mint on surface (mint-bordered fills)                                          | 4.07      | ≥3:1, meets **1.4.11**              |
-| voltStroke on surface (the marked card's border)                               | 4.01      | ≥3:1, meets **1.4.11**              |
-| voltStroke on paper                                                            | 3.58      | ≥3:1, meets **1.4.11**              |
-| voltStroke on `line` (the border it replaces)                                  | 3.07      | ≥3:1, meets **1.4.11**              |
-| `ink` on a poster hue's dark stop                                              | 3.09–3.12 | ≥3:1, meets **1.4.11**              |
-| `night` on `line2` (a `neutral` meter fill in its track)                       | 11.36     | ≥3:1, meets **1.4.11**              |
-| `red` on `line2` (a `poor` meter fill)                                         | 5.04      | ≥3:1, meets **1.4.11**              |
-| `mint` on `line2` (a `good` meter fill)                                        | 3.48      | ≥3:1, meets **1.4.11**              |
+| Pair                                                         | Ratio     | WCAG                                              |
+| ------------------------------------------------------------ | --------- | ------------------------------------------------- |
+| ink on paper                                                 | 15.65     | AAA                                               |
+| ink on surface (and a given star)                            | 17.50     | AAA                                               |
+| white on night                                               | 13.29     | AAA                                               |
+| ink on volt                                                  | 13.96     | AAA                                               |
+| white + `textOnMedia` on the squash court ground             | 13.03     | AAA                                               |
+| white + `textOnMedia` on the padel court ground              | 12.87     | AAA                                               |
+| white + `textOnMedia` on the badminton court ground          | 12.80     | AAA                                               |
+| white + `textOnMedia` on the tennis court ground             | 12.29     | AAA                                               |
+| volt on night                                                | 10.60     | AAA                                               |
+| white on night2 / info                                       | 9.86      | AAA                                               |
+| info on infoSoft                                             | 8.63      | AAA                                               |
+| white on dark-card `tiny` (white @ .68)                      | 6.97      | AAA                                               |
+| white on red                                                 | 5.90      | AA                                                |
+| white on coralInk                                            | 5.89      | AA                                                |
+| white on mintInk                                             | 5.84      | AA                                                |
+| white on amber                                               | 5.70      | AA                                                |
+| muted on surface (and a blank star's outline)                | 5.40      | AA                                                |
+| white + `textOnMedia` on a photograph, under `photoScrim`    | 5.24      | AA                                                |
+| coralInk on coralSoft                                        | 5.11      | AA                                                |
+| mintInk on mintSoft                                          | 5.08      | AA                                                |
+| red on redSoft                                               | 5.06      | AA                                                |
+| amber on amberSoft                                           | 5.04      | AA                                                |
+| white on band ink (all four)                                 | 5.05–5.13 | AA                                                |
+| muted on paper                                               | 4.83      | AA                                                |
+| white on dark-card `eyebrow` (white @ .52)                   | 4.74      | AA                                                |
+| white + `textOnMedia` on a poster hue's light stop           | 4.60–4.65 | AA                                                |
+| band ink on paper (all four)                                 | 4.51–4.59 | AA                                                |
+| mintSoft + `textOnMedia` on a photograph, under `photoScrim` | 4.55      | AA — the ON COURT mark                            |
+| muted on line2                                               | 4.62      | AA                                                |
+| muted on paper2                                              | 4.49      | AA — used at 11pt+ only                           |
+| ink on paper2 (the record block's figure)                    | 14.57     | AAA                                               |
+| a given star on a blank one (`ink` on `muted`)               | 3.24      | ≥3:1, meets **1.4.11**                            |
+| a won square on paper2 (`mint`)                              | 3.39      | ≥3:1, meets **1.4.11**                            |
+| **a won square on a lost one (`mint` on `muted`)**           | **1.33**  | **below 3:1 — see [7.13](#713-the-record-block)** |
+| **ink on coral**                                             | **4.50**  | AA — the only dark-on-coral pairing               |
+| coral on paper (marks: level mark, progress fill)            | 3.48      | ≥3:1, meets **1.4.11**                            |
+| mint on surface (mint-bordered fills)                        | 4.07      | ≥3:1, meets **1.4.11**                            |
+| voltStroke on surface (the marked card's border)             | 4.01      | ≥3:1, meets **1.4.11**                            |
+| voltStroke on paper                                          | 3.58      | ≥3:1, meets **1.4.11**                            |
+| voltStroke on `line` (the border it replaces)                | 3.07      | ≥3:1, meets **1.4.11**                            |
+| `ink` on a poster hue's dark stop                            | 3.09–3.12 | ≥3:1, meets **1.4.11**                            |
+| `night` on `line2` (a `neutral` meter fill in its track)     | 11.36     | ≥3:1, meets **1.4.11**                            |
+| `red` on `line2` (a `poor` meter fill)                       | 5.04      | ≥3:1, meets **1.4.11**                            |
+| `mint` on `line2` (a `good` meter fill)                      | 3.48      | ≥3:1, meets **1.4.11**                            |
 
 Deliberately absent: _white on coral_ (3.89) and _white on mint_ (4.07) — see Rule C.
 
@@ -1634,8 +1636,16 @@ inside it. The message beneath carries the state as words, so nothing rests on t
 
 ## 6.12 The switch
 
-A mode a player turns on and off — the swap toggle on the interactive court is the first,
-and the pattern is _a setting that can be flipped back_.
+A mode a player turns on and off, and the pattern is _a setting that can be flipped back_.
+
+**It is specified, and since 2026-09-09 it is unbuilt.** The interactive court's swap toggle
+was its first consumer and its only one. A tap on a seat meant _replace this player_ with the
+switch off and _trade these two_ with it on; the forecast card's names row became a face per
+seated player, which took the first meaning off the court, and a seat with one meaning has no
+mode to select between. The section stays because the decision stands — the role, the row as
+the touch surface and the knob's two values are settled, and re-deciding them for the next
+mode a player can flip back would be a second answer to a question this system has already
+answered once.
 
 ```
 row     height 44, control + words together — THE TOUCH SURFACE
@@ -1661,7 +1671,7 @@ it inert.
 shape [Part 13](#part-13--accessibility) asks for, and it is what lets the two fills be the
 inversion [6.8](#68-the-availability-grid) already uses rather than a second on-colour. Mint
 was refused for the fill: [2.2](#22-accent-and-semantics) means _settled, safe, covered_ by
-it, and a swap mode being on is not a settled thing.
+it, and a mode being on is not a settled thing.
 
 **The knob takes the value that reads on the bed it is standing on.** The prototype drew a
 white knob at both ends of the travel, and against its unchecked `line` track that is
@@ -1941,16 +1951,45 @@ contains no text.
 
 ## 7.10 The fit pill
 
-Fit, on a card. One shape, one threshold, drawn on four surfaces — the competitive card, the
-social card, the deck card, and the head of the why-fit sheet.
+Fit, on a card. One shape, one threshold, drawn on five surfaces — the competitive card, the
+social card, the deck card, the head of the why-fit sheet, and the player record's one control.
 
 ```
 pill    height 26, radius.fit 7, padding 0 × 9, row, gap 3
 base    background night · label #fff        13,29:1
 hi      background coral · label ink          4,50:1   ← Rule C
+label   inlineTitle, OPTIONAL, before the glyph — the record sheet's alone
 glyph   ✦, drawn and never spoken
-number  num.xs, mono, TABULAR
+number  num.xs, mono, TABULAR, ROUNDED — Math.round, once, here
 ```
+
+**The figure is rounded by the pill, and the threshold reads the rounded one.** Fit crosses the
+wire with its decimals on, and drawn as served `✦ 78,42131` is five characters of precision
+nobody can act on, in a 26pt pill on twenty scrolling rows — while the control beside it on the
+same card has always drawn `Why 78?` from `Math.round`, so one number appeared twice in two
+spellings. Rounding here rather than at each of the five call sites is the same argument the
+component itself is: a pill that printed whatever it was handed left every caller to remember,
+and one of them already did it by hand. The step is compared against the **printed** figure, so
+a card cannot draw `hi` beside an 89 because 89,6 crossed a line the reader cannot see — which
+is [Part 13](#part-13--accessibility)'s _never colour alone_ in the one direction the word
+cannot rescue, since here the word **is** the number.
+
+**The optional label is what makes the fifth surface possible** (#384). On the four that came
+first the pill sits inside something that has already said what the number is — a card whose
+body names it, a sheet whose title is it. On the record sheet it is a **control**, alone under
+the sport pills, and a bare `✦ 80` in a header is a number with no noun. So it takes a word and
+the word goes first: `Player fit ✦ 80`, which is the order the accessible name uses.
+
+**It stays one component.** Everything that makes this pill legal is in it — the two fills, the
+90 step, Rule C's `ink`-on-coral, the tabular figure — and a copy with a word in it would be a
+second place for all four to be true. The step is still the **pill's**: a pairing at 90 or
+better draws coral on the record exactly as it does on a card, which is what makes the control
+recognisable as the same object the reader already met on their shortlist.
+
+**Pressability is the caller's and never the pill's.** The pill is a drawing with no accessible
+name of its own (§20.3); the record sheet wraps it in a target with `hit.btn` and an opacity
+pressed state, which is [5.1](#51-the-card)'s answer for a control whose fill already means
+something else.
 
 **This is not the deleted 7.1 returning under its old number.**
 [Part 17](#part-17--what-the-reset-removed) removed the fit badge because the Match Fit engine
@@ -2173,15 +2212,20 @@ because the summary already names the Sport and each seat names its own side.
 
 ## 7.13 The record block
 
-Three boxes across the competitive candidate card — **what the platform has watched this
-person do**, held apart from what they published about themselves.
+Three boxes — **what the platform has watched this person do**, held apart from what they
+published about themselves. Drawn across the competitive candidate card, and across the
+**player record sheet** under its level bar
+([#384](https://github.com/Raketa02/Raketa/issues/384)): the same three facts under the same
+three names, because a reader who has just closed a shortlist and tapped a face must not meet
+them twice in two shapes. `StatBox` is `shared/ui`'s for that reason, like `RunOfForm` inside
+it; each surface owns only _which_ of the three it draws.
 
 ```
 box       flex 1, paper2, radius.note 10, padding 6 x 9, gap 3
 label     rlLabel 11,5 / 400, muted            4,49:1 on paper2 (AA at 11pt+)
 figure    num.s 14, mono, TABULAR, ink        14,57:1
 square    8 x 8, radius.recordSquare 2, gap 3
-          won  ink      14,57 on paper2 · 3,24 against a loss
+          won  mint      3,39 on paper2 · 1,33 against a loss  (!)
           lost muted     4,49 on paper2
 ```
 
@@ -2203,17 +2247,38 @@ blank_ the reason list, the meta line and the sort row already take.
 square per counted-and-agreed result, oldest to newest, left-aligned — so three results are three
 squares and a gap, and a fourth square in some neutral fill would claim a game nobody played.
 
+**On the record sheet the row is a sibling of the skill card and never a footer on it**, and the
+reason is an absence rather than a layout. Two of the three come off that sport's rating and
+_Player Score_ comes off the whole person, so a block nested in a card drawn only when a Level
+resolves would take a player's one reliability figure down with the sport. The figure there is
+`ink` like every other block figure: the sheet's one tone ladder belongs to the metered rows that
+_account for_ that number, and a three-step colour on the block would offer itself as a second
+score on the one screen a held player opens to find out what is holding them back.
+
 **The run is one drawn object and the block only places it.** `RunOfForm` is a `shared/ui`
 component, because the player record sheet draws the same run for a resolved sport — a second copy
 would be a second set of fills the pinned test below never sees. It pads nothing and caps nothing:
 what it is handed is what it draws, and how many results a surface was served is that surface's
 own question.
 
-**Won and lost are a lightness step, not two hues.** `ink` against `muted` is 3,24:1, clearing
-[1.4.11](#25-contrast--computed)'s 3:1 for a graphical object, and both clear it against the
-block's ground — so the run is legible to somebody who can tell no two hues apart, which is the
-sighted half of [Part 13](#part-13--accessibility)'s _never colour alone_. The three ratios are
-derived in `recordSquares.test.ts` and copied into 2.5, never the other way round.
+**Won and lost were a lightness step and are now a hue one, and the cost is recorded rather
+than hidden.** The pair was `ink` against `muted` — 3,24:1, clearing
+[1.4.11](#25-contrast--computed)'s 3:1 for a graphical object by luminance alone, so the run was
+legible to somebody who can tell no two hues apart. It is now `mint` against `muted`: **1,33:1**,
+which does not clear it.
+
+No green in this palette can. A fill has to be 3:1 from the block's light ground _and_ 3:1 from a
+partner that is also 3:1 from that ground, and the only pairs that satisfy both are one
+near-black and one mid-grey — a green dark enough to qualify reads as black. `mint` sits
+mid-luminance and `mintInk` lower still, at 1,08 against `muted`.
+
+So the sighted half of [Part 13](#part-13--accessibility)'s _never colour alone_ is **not
+discharged by this row**; the spoken clause still carries it for a listener. What is preserved is
+each square against the ground — 3,39 and 4,49 — which is the ratio that keeps a loss from
+reading as the **gap** at the end of a short run, and the run's length is its whole statement.
+The way back, if the green costs more than it buys, is a **hollow** loss square: a shape cue at
+no geometric cost. The ratios are derived in `recordSquares.test.ts` and copied into 2.5, never
+the other way round.
 
 **The listener's half is a count and not five elements.** A square carries no word, so the row
 reaches a screen reader as one clause — _3 of the last 5 won_, against the run's **own** length —
@@ -3165,6 +3230,8 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-09-08 | [`theme.ts`](../src/shared/ui/theme.ts)                                                               | No `size.star`                                                                                                                                                                                                                                                                                                                                 | `size.star = { target: 44, glyph: 24 }`, with the arithmetic that fixes both                                                                                                                                                                                                                                                                                                                                                                      | 15.3 permits a size step where a surface genuinely needs one and requires `theme.ts` and this document to change in the same commit. The target is 6.5's minimum reached by geometry, and the glyph is the drawing inside it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-09-08 | [7.15](#715-the-on-court-mark) · [7.16](#716-the-photo-panel)                                         | The panel had one size — 74 x 92, the competitive card's — and the mark one derived cap                                                                                                                                                                                                                                                        | A **second panel size**, `record` at 112 x 140, and a second derived cap beside it. The Level's role steps to `num.levelLarge` at that size; nothing else about the panel changes, and the components move to `shared/ui` as `PhotoPanel`, `PlayerPhoto` and `OnCourtMark`                                                                                                                                                                        | [#384](https://github.com/Raketa02/Raketa/issues/384) draws this panel in the player record sheet's header, which is a second feature — and `player_record` may not import `features/play/`, because Play is what opens the sheet. It is [7.13](#713-the-record-block)'s promotion again, one ticket later. **No value is scaled**: the corner is a third of each panel's own width, so what it leaves the mark is a different fraction of a different box, and both caps come out of `largestStepThatFits` against the real Archivo advances. The pinned `photoScrim` and its worst case are untouched, which is why [2.5](#25-contrast--computed) gains no row                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-09-08 | [7.3](#73-meter-and-bar) · [2.5](#25-contrast--computed)                                              | The meter had one fill, `night`, and 2.5 held no pair for it — nothing had drawn a meter anywhere but the why-fit sheet, where one fill is the whole vocabulary                                                                                                                                                                                | `Meter` takes a **`tone`** — `good` · `neutral` · `poor`, drawn `mint` · `night` · `red`, defaulting to the fill it already had. 2.5 gains the three track pairings and a short section stating the bound the three are told apart by                                                                                                                                                                                                             | [#385](https://github.com/Raketa02/Raketa/issues/385)'s record card stacks three metered rows in one column, and the tone is the third cue on each — behind the bar's own length and the raw fraction printed beside it. It invents no colour, which is [15.2](#152-adding-a-colour)'s own licence, and it takes **no ladder**: where a figure turns poor is the caller's rule, read once so that a bar and the reliability pill above it cannot disagree about one ratio. The new 2.5 section exists because three stacked fills cannot take the pairwise 3:1 rows the run of form gets — the arithmetic makes the third fill darker than black, so the pair bound is stated in `L*` and derived in `meterTone.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-09-09 | [6.12](#612-the-switch)                                                                               | The switch was introduced for the interactive court's **swap toggle**, and that toggle was its one consumer                                                                                                                                                                                                                                    | The section is unchanged and **unbuilt**: the toggle is removed, and 6.12 keeps its role, its 44pt row and its two knob values with nothing drawing them                                                                                                                                                                                                                                                                                          | A tap on a seat meant _replace this player_ or _trade these two_ depending on the switch, and the mode existed only to tell those two apart. The forecast card's names row now draws a **face per seated player** — a 44pt control opening that person's record — so the court stopped being where a player goes to act on somebody, a seat kept one meaning, and the mode had nothing left to select between. What replaced the switch's description is one line of the screen's own copy above the court. The section is not deleted, because [Part 17](#part-17--what-the-reset-removed) deletes a section when the **feature** it specifies is gone, and a mode a player can flip back is a control this system will be asked for again                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-09-09 | [7.10](#710-the-fit-pill)                                                                             | The pill drew the number **as served**, and Fit crosses the wire with its decimals on                                                                                                                                                                                                                                                          | `Math.round`, once, inside the pill — for the drawn figure and for the 90 step both                                                                                                                                                                                                                                                                                                                                                               | `✦ 78,42131` in a 26pt pill on twenty scrolling rows is precision nobody can act on, and the card's own _Why 78?_ control has rounded since it was built — one number, twice, in two spellings. Rounding at the five call sites was the alternative, and the record sheet was already doing it by hand, which is the argument for a component rather than against one. The **step reads the printed figure** so a pill cannot draw `hi` beside an 89: Part 13's _never colour alone_ has no rescue where the word is the number                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 # Part 17 — What the reset removed
 
