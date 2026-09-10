@@ -99,7 +99,7 @@ import { GAP_WORD, SIDE_HEADINGS, sideName } from './builderPresentation';
 import { CourtMini } from './court/CourtMini';
 import type { CourtFaceOccupant } from './court/seatFace';
 import { handlesOn } from './court/seatedHandles';
-import { POOL_COURT_LABEL, awaitingBalanceLine, poolSeatedLine } from './poolPresentation';
+import { POOL_COURT_LABEL, poolSeatedLine } from './poolPresentation';
 
 export interface PoolHeaderProps {
   readonly sport: SportKey;
@@ -166,15 +166,27 @@ export function PoolHeader({
             ...(read === undefined ? {} : { pct: read.forecast.pct }),
           })}
         >
-          {/* Hidden: the element around it already says the sentence `Court` would announce. */}
-          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          {/* Hidden: the element around it already says the sentence `Court` would announce,
+              and the Sport under the picture is the first word of that sentence.
+
+              **The Sport is under the court and no longer on it.** 7.12's caption is a band
+              inside the drawing, over a gradient, and at `size.court.header` it lands across
+              the near baseline of a court that now has four faces on it. Out here it is the
+              same eyebrow, centred on the same width, with the picture left to be a picture —
+              and the shadow goes with the band, because there is no image behind it to
+              separate the word from. */}
+          <View
+            style={s.court}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
             <CourtMini
               sport={sport}
               width={theme.size.court.header}
               summary={courtSummaryLabel({ sportName, filled, seats })}
-              caption={sportName}
               seats={seated.map((seat) => faceOf(seat, { rows, self }))}
             />
+            <Text style={s.sport}>{sportName}</Text>
           </View>
 
           {/* The count alone. **The handles are in the band**, on the two segment labels, and
@@ -199,13 +211,19 @@ export function PoolHeader({
         <Button label={POOL_COURT_LABEL} variant="onDark" size="sm" onPress={onCourt} />
       </View>
 
-      <Hairline variant="onDark">
-        {read === undefined || tone === undefined ? (
-          <Text style={s.body}>{awaitingBalanceLine(seats)}</Text>
-        ) : (
+      {/* **The reading, or nothing at all.** A sentence stood here promising the figure that
+          would appear once somebody was across the net — *Add somebody to their side and a
+          running balance appears here.* It is gone: the act it described is the whole of what
+          this screen is for and the list beneath is already offering it, so the line was a
+          caption on an absence, printed under a court whose own empty seats say the same
+          thing. The rule the header keeps is the one it always had — the block is drawn when
+          there is a reading and not drawn when there is not, which is the *hidden, never
+          blank* discipline every absence on these screens takes. */}
+      {read === undefined || tone === undefined ? null : (
+        <Hairline variant="onDark">
           <Reading arrangement={read} tone={tone} sides={{ yours, theirs }} />
-        )}
-      </Hairline>
+        </Hairline>
+      )}
     </DarkCard>
   );
 }
@@ -321,6 +339,14 @@ const s = StyleSheet.create({
   /** `flex: 1` so the *Court* control keeps its width and the names take what is left. */
   claim: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   who: { flex: 1, gap: theme.space.xxs },
+  /** The picture and its one word, as one column — the word centred on the court's width. */
+  court: { alignItems: 'center', gap: theme.space.xxs },
+  sport: {
+    ...theme.type.eyebrow,
+    color: theme.color.onDarkTiny,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
   count: { ...theme.type.cardTitle, color: theme.color.surface },
   figure: { ...theme.num.l, ...theme.tabular, color: theme.color.surface },
   split: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },

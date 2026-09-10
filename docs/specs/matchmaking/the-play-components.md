@@ -72,12 +72,12 @@ Applied to §G3's eight:
 | The court's ground, chrome and seat coordinates | **design system** — §4 |
 | The balance bar | **design system** — §6 |
 | The fit pill | **design system** |
-| The switch behind the swap toggle | **design system** |
+| The switch behind the swap toggle | **design system** — 6.12 is specified and, since 2026-09-09, unbuilt |
 | The availability grid's diff variant | **design system**, as a variant on 6.8 — §2 |
 | The toast's queue, live region and dismiss | **design system** — 9.2 is specified and unbuilt |
 | The three candidate cards | `features/play/` — §3 |
 | `CourtMini`, `CourtBuild` and the seat | `features/play/` — §4 |
-| The forecast card, the pool header, the searching state, the swap-toggle row | `features/play/` |
+| The forecast card, the pool header, the searching state | `features/play/` |
 | `CandidatePhoto` | `features/play/` — §4, §9 |
 
 ---
@@ -139,9 +139,25 @@ either a sentence or nothing beneath it, takes **two flags to say which** — wh
 section's own `surface === …` arriving one component down. The kit is what the three still
 share, not what they are made to share.
 
+**And 2026-09-09 widened it once more: the competitive card argues nothing.** Its reason lines
+and its concern line are gone, so `ReasonLine` is the other two cards' component now. Every
+figure it draws is untouched — the panel, the pill, the band, the record blocks, the stake
+boxes, the tag row — and what went is the prose beneath the pill, because the case for one
+person is `SH.whyfit`'s and every row carries a button named after that sheet. The rule behind
+it is [`the-words.md`](the-words.md) §5a, and `candidateFacts` says it in one input: `argues`,
+which stops the lines being composed rather than filtering them to nothing, so the spoken name
+cannot carry a sentence the reader has no way to see.
+
+**Two other things left these screens the same day**, both for the same reason — a caption on
+something the surface already shows. The pool header's *Add somebody to their side and a
+running balance appears here* is gone, under a court that draws its own empty seats and above
+a list whose every row offers exactly that act; and the Sport moved **out of** the mini court's
+7.12 caption band to a centred eyebrow beneath the picture, which leaves the drawing to be a
+drawing. `Court`'s caption is untouched and now has no caller.
+
 ```
 features/play/components/candidate/
-  CandidateCard.tsx          competitive · pool     panel-left, one band
+  CandidateCard.tsx          competitive · pool     panel-left, one band, no prose
   CandidateCardSocial.tsx    for fun · pool         media-top
   DeckCard.tsx               the deck               media-top, floats
   CandidatePhoto.tsx         photo-or-poster in a box            ← §4, §9
@@ -243,8 +259,18 @@ testable through itself: hand it two children, assert two positions, per sport.
 
 **`CourtMini` and `CourtBuild` stay two components**, on §3's own reasoning — read-only
 avatars and interactive seats are *different children*, not a flag on one component.
-`CourtBuild` owns the swap truth table, the selection ring, the clear badge and the two guard
-toasts; `CourtMini` owns nothing but its avatars.
+`CourtBuild` owns the swap truth table, the selection ring and the clear badge; `CourtMini`
+owns nothing but its avatars.
+
+**The swap-toggle row and the two guard toasts are gone** (2026-09-09). The toggle was a
+`switch` above the court and the only reason a tap on a seat had two meanings — *replace this
+player* off, *trade these two* on. The forecast card's names row draws a **face per seated
+player** now, each opening that person's record, so the court stopped being where a player
+acts on somebody: the seat kept one meaning, the mode had nothing to select between, and both
+refusals went with it, because they refused a **replacement** and a tap replaces nobody. What
+a seat does is said once as a line of the screen's copy above the court, and replacing
+somebody is the clear badge and then the hole it leaves. 6.12 keeps its section and loses its
+one consumer.
 
 **The court owns geometry and knows nothing about players; the seat owns its label, its ring,
 its badge and its taps.** That is the seam, and it is what makes §5 a question the seat can

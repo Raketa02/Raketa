@@ -90,12 +90,7 @@ export {
   inclusionLine,
   livenessLine,
 } from './components/livenessPresentation';
-export {
-  WITHHELD_SEAT_LINE,
-  groupReasonLine,
-  seatGuardLine,
-  unfilledSeatLine,
-} from './components/courtPresentation';
+export { WITHHELD_SEAT_LINE, unfilledSeatLine } from './components/courtPresentation';
 export {
   PROMPT_CLOSER,
   REFRESH_YOUR_TIMES_BODY,
@@ -114,7 +109,6 @@ export {
 export {
   CANDIDATE_ACTIONS,
   PLAY_LIVE_REGIONS,
-  SWAP_TOGGLE_LABEL,
   availabilityDiffCellLabel,
   candidateActionLabel,
   candidateCardLabel,
@@ -207,10 +201,8 @@ export {
   seatPlaces,
   tapSeat,
   type BuildSeat,
-  type SeatGuard,
   type SeatPlace,
   type SeatTap,
-  type SwapState,
 } from './domain/lineup';
 
 export type { Candidate, LikelyRange, PlayerCard, SearchEnvelope } from './domain/candidate';
@@ -345,6 +337,7 @@ export {
   PICK_PLAYERS_LABEL,
   PROVISIONAL_WORD,
   START_OVER_LABEL,
+  SWAP_HINT,
   builderTitle,
   fillSeatsLabel,
   forecastHeading,

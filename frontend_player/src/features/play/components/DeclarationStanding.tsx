@@ -68,6 +68,7 @@
  * to carry a refusal in wording alone.
  */
 
+import { usePathname } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { sportColour } from '@/features/onboarding/types';
@@ -120,6 +121,7 @@ export function DeclarationStanding({
   declaredOn,
 }: DeclarationStandingProps) {
   const declare = useDeclarePlayIntent();
+  const here = usePathname();
   const standing = declarationLine({ intent, mode, sportName });
 
   return (
@@ -169,7 +171,10 @@ export function DeclarationStanding({
               declare.mutate({ sport, intent: standing.updatesTo, surface: declaredOn });
               return;
             }
-            openTab('you');
+            // Where the player is, because the shell declines a press that would land on
+            // the screen already on — and this row is only ever drawn inside Play, so the
+            // answer is always *somewhere else* and the press is always a move.
+            openTab('you', here);
           }}
         />
       </View>

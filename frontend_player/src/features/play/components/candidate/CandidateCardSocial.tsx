@@ -93,6 +93,8 @@ export interface CandidateCardSocialProps {
   readonly envelope: SearchEnvelope;
   readonly action: CandidateAction;
   readonly onAction: () => void;
+  /** Dead where there is no seat left to add anybody to — `CandidateCard`'s prop, same rule. */
+  readonly actionDisabled?: boolean;
   /** The body's own action — *Why 78?*. */
   readonly onWhyFit: () => void;
 }
@@ -102,6 +104,7 @@ export function CandidateCardSocial({
   envelope,
   action,
   onAction,
+  actionDisabled = false,
   onWhyFit,
 }: CandidateCardSocialProps) {
   const facts = candidateFacts({ candidate, envelope, drawn: SOCIAL_CARD_DRAWS });
@@ -144,6 +147,7 @@ export function CandidateCardSocial({
           label={CANDIDATE_ACTION_WORD[action]}
           accessibilityLabel={candidateActionLabel(action, facts.name)}
           onPress={onAction}
+          disabled={actionDisabled}
           size="sm"
           style={s.action}
         />

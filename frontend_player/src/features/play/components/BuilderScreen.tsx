@@ -78,6 +78,31 @@
  * who is beside you, so the seats move and it is the same game — nothing is said, and nothing
  * needs to be (`domain/forecast`'s selection rule).
  *
+ * ## A swap is no longer a mode, and the toggle it needed is gone
+ *
+ * It was a `switch` in a card over the court (6.12's first and only consumer), because a tap
+ * on an occupied seat meant two things: *replace this player* with it off, *trade these two*
+ * with it on. What made the second meaning need a control was that the first one existed.
+ *
+ * **The forecast card is what removed the first.** Its side rows draw every seated player as
+ * their own face and handle — a 44pt control opening that person's record — so the court's
+ * seats stopped being the place a player goes to find out about somebody or to act on them.
+ * A seat with one meaning needs no mode to disambiguate it, so it trades, always, and what
+ * was the switch's description is now a line of copy above the graphic (`SWAP_HINT`).
+ *
+ * **Replacing somebody is the clear badge and then the hole it leaves** — two taps where there
+ * was one, on exactly the seats a replacement was ever allowed against, and *Pick players
+ * myself* still opens the pool without touching the court at all. Both refusals went with the
+ * mode, because there is no replacement left on a tap to refuse (`domain/lineup`).
+ *
+ * ## The card no longer says why these four
+ *
+ * `GroupReason` had a row of its own under the names — *the four of you share the most slots*
+ * and two others. It is gone, and the copy went with it rather than staying as a table nothing
+ * renders: read under two side strengths, a signed gap, an evenness percentage and four faces,
+ * a sentence naming what the engine went looking for is a caption on an answer the reader has
+ * already been given four views of. The code is still parsed; only the sentence is gone.
+ *
  * ## What the forecast card draws, and the one thing it still refuses
  *
  * **The two side strengths, the gap between them, and a two-segment bar.** Every one of those
@@ -186,7 +211,6 @@ import {
   Hairline,
   Note,
   PlayerPhoto,
-  Switch,
   behindOverlay,
   courtSeatCount,
   theme,
@@ -223,7 +247,6 @@ import { usePlaySession } from '../store/playSession.store';
 
 import {
   PLAY_LIVE_REGIONS,
-  SWAP_TOGGLE_LABEL,
   courtSummaryLabel,
   provisionalForecastAnnouncement,
   seatedNameLabel,
@@ -244,7 +267,7 @@ import {
   RETRY_FORECAST_LABEL,
   SIDE_HEADINGS,
   START_OVER_LABEL,
-  SWAP_TOGGLE_DESCRIPTION,
+  SWAP_HINT,
   VS_WORD,
   builderEyebrow,
   builderTitle,
@@ -256,12 +279,7 @@ import { CourtBuild } from './court/CourtBuild';
 import { PromptSheet } from './PromptSheet';
 import type { CourtSeatOccupant } from './court/CourtSeat';
 import { handlesOn, type SeatedHandle } from './court/seatedHandles';
-import {
-  WITHHELD_SEAT_LINE,
-  groupReasonLine,
-  optimisedForLine,
-  unfilledSeatLine,
-} from './courtPresentation';
+import { WITHHELD_SEAT_LINE, optimisedForLine, unfilledSeatLine } from './courtPresentation';
 import { useHeldWait } from './heldWait';
 import { playErrorMessage } from './playErrorMessage';
 import { SeatingWait } from './SeatingWait';
@@ -360,7 +378,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
    * says*, which is what lets an answer land without this screen writing a seating down.
    */
   const [seating, setSeating] = useState<Seating | undefined>(undefined);
-  const [swapping, setSwapping] = useState(false);
 
   /**
    * **The court ⚡ answered with, while it is still landing on screen.**
@@ -510,17 +527,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
     ),
   );
   const shortfall = record?.court === undefined ? undefined : shortfallBySeat(record.court);
-
-  /**
-   * Why the engine seated these four — **and `undefined` covers two different silences.**
-   *
-   * A hand-seated court has no `groupReason` at all, and one of the five codes has no sentence
-   * (`courtPresentation`'s `GROUP`). Both draw nothing, and neither is a case this screen
-   * decides: the first is the response's own absence, the second is a copy decision held where
-   * the other four sentences are.
-   */
-  const whyThisFour =
-    record?.court?.groupReason == null ? undefined : groupReasonLine(record.court.groupReason);
 
   const rows = new Map((record?.candidates ?? []).map((row) => [row.playerId, row]));
 
@@ -963,16 +969,12 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                 </Note>
               )}
 
-              {filled > 1 && !filling ? (
-                <Card>
-                  <Switch
-                    label={SWAP_TOGGLE_LABEL}
-                    description={SWAP_TOGGLE_DESCRIPTION[swapping ? 'on' : 'off']}
-                    checked={swapping}
-                    onChange={setSwapping}
-                  />
-                </Card>
-              ) : null}
+              {/* **What a seat does, above the seat that does it.** It stood in a card as a
+                  `switch`'s description while a swap was a mode; the mode is gone and a tap
+                  always trades, so what is left is the capability rather than a control. Drawn
+                  on the toggle's own gate — one other person on the court, and not mid-fill —
+                  because there is nothing to trade with until there is somebody to trade. */}
+              {filled > 1 && !filling ? <Text style={s.swapHint}>{SWAP_HINT}</Text> : null}
 
               {/* `pointerEvents` and not a prop on the court: while the engine is seating it
                   there is nothing on it to operate, and a seat that opened the pool mid-fill
@@ -989,7 +991,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                   width={theme.size.court.build}
                   summary={courtSummaryLabel({ sportName, filled: seatsFilled(drawn), seats })}
                   seats={occupants}
-                  swapping={swapping}
                   onOpenPool={openPool}
                   onSwap={(from, to) => setSeating(swapSeats(seated, from, to))}
                   onClear={(at) => {
@@ -1210,12 +1211,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                       />
                     </View>
                   </Hairline>
-
-                  {whyThisFour === undefined ? null : (
-                    <Hairline>
-                      <Text style={s.body}>{whyThisFour}</Text>
-                    </Hairline>
-                  )}
 
                   {/* **The two acts on this four, side by side** — re-arrange them, or empty
                       the court. *Even it out* is drawn shut rather than replaced by a sentence
@@ -1671,6 +1666,16 @@ const s = StyleSheet.create({
   acts: { flexDirection: 'row', gap: theme.space.xs },
   failure: { gap: theme.space.sm },
   body: { ...theme.type.tiny, color: theme.color.ink },
+  /**
+   * The swap line, and the one sentence on this screen that is centred.
+   *
+   * Every other `body` here is a statement about something beside it — a shortfall under the
+   * seat it is about, a caveat under the figure it qualifies — and a left edge is what ties
+   * each of them to what it describes. This one is about **the whole graphic below it**, has
+   * no single thing to sit against, and reads as a caption on the court rather than a note in
+   * the column. `muted` for the same reason: it is an instruction the player needs once.
+   */
+  swapHint: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
   eyebrow: { ...theme.type.eyebrow, color: theme.color.muted },
   figure: { ...theme.num.xl, ...theme.tabular },
   word: { ...theme.type.cardTitle, color: theme.color.ink },

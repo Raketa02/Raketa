@@ -86,17 +86,24 @@ export const PICK_PLAYERS_LABEL = 'Pick players myself';
  * is a different answer and not a quicker one.
  */
 /**
- * What the swap toggle's row says under its own label, in both states.
+ * **What a seat does, said above the court** — the one sentence that replaced the toggle.
  *
- * The label is `SWAP_TOGGLE_LABEL` and the state is the `switch` role's, so neither is
- * repeated here — §20.2's *prefer the role that carries the state*. What the line adds is what
- * a **tap** will now do, which is the thing the truth table changes and the control cannot
- * announce.
+ * Swapping was a mode: a `switch` in a card over the court, two descriptions under it, and a
+ * tap on a seat that meant *replace* or *trade* depending on which way it was thrown. The
+ * mode is gone and a seat trades, always (`domain/lineup`'s truth table), so what was a
+ * control's description becomes a **capability line** — the screen's own statement of what
+ * the graphic beneath it will do.
+ *
+ * It is one string and not two because there is no longer a state for a second one to
+ * describe. It is drawn only where a trade is possible at all — one other person on the court
+ * — for the reason the toggle was: a sentence advertising an act nobody can perform yet is a
+ * sentence that teaches the wrong thing.
+ *
+ * **It is announced.** The court's summary element names the Sport and the seats filled and
+ * every seat names its own place; none of them says what pressing one does, and this is the
+ * only place that fact is written. It was the toggle's job, and the toggle announced itself.
  */
-export const SWAP_TOGGLE_DESCRIPTION: Readonly<Record<'on' | 'off', string>> = {
-  on: 'Tap two seats to trade places. Nobody leaves the court.',
-  off: 'Tap a seat to swap that player for somebody else.',
-};
+export const SWAP_HINT = 'Tap a seat to swap players and propose your game layout';
 
 /**
  * The two halves of the court, as the forecast card's own rows label them.

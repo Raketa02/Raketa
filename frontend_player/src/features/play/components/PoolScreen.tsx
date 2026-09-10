@@ -125,7 +125,7 @@ import { playerName } from '@/shared/formatting/playerName';
 import { Button, Chip, Note, behindOverlay, courtSeatCount, theme } from '@/shared/ui';
 
 import type { Candidate, RelaxedAsk, RungOffer } from '../domain/candidate';
-import { arrangementFor, seatOccupant, seatingToDraw } from '../domain/forecast';
+import { arrangementFor, seatOccupant, seatingToDraw, seatsFilled } from '../domain/forecast';
 import { poolLadder } from '../domain/poolLadder';
 import { bestMatchId, orderPool, pickable, poolSortRow } from '../domain/poolOrder';
 import { alreadyAsked } from '../domain/raisedPrompt';
@@ -258,6 +258,22 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
    * the membership through the arrangements, and both hold the same two.
    */
   const replacing = seatOccupant(seated, pending);
+
+  /**
+   * **Nowhere left to put anybody** — and therefore the state every *Add to the court* on this
+   * screen is drawn dead in.
+   *
+   * The pool does not close on a full court and should not: the rows are still worth reading,
+   * the ladder is still worth taking, and the way back is the header's own control. What it
+   * must not do is offer an act it cannot carry out — an add against a court with four people
+   * on it either silently does nothing or quietly evicts somebody, and both are worse than a
+   * control that says no by being dim.
+   *
+   * **A visit against an occupied seat is exempt**, because there the add *is* the seat: it
+   * unseats whoever is in it and puts this person there, so a full court is the ordinary case
+   * rather than the blocked one (`add`, below).
+   */
+  const noSeatLeft = replacing === undefined && seatsFilled(seated) >= seats;
 
   // Two readings of the same rows, and the **served** order is the input to both: `orderPool`
   // pins off it, and `bestMatchId`'s tie-break is *the row the server served first*, which is
@@ -550,6 +566,7 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
                     bestMatch={candidate.playerId === bestMatch}
                     action="ADD_TO_COURT"
                     onAction={() => add(candidate)}
+                    actionDisabled={noSeatLeft}
                     onWhyFit={() => setExplaining(candidate)}
                   />
                 ) : (
@@ -559,6 +576,7 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
                     envelope={record.envelope}
                     action="ADD_TO_COURT"
                     onAction={() => add(candidate)}
+                    actionDisabled={noSeatLeft}
                     onWhyFit={() => setExplaining(candidate)}
                   />
                 ),

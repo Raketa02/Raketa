@@ -159,13 +159,42 @@ render different things.
 
 | Surface | Draws | So it drops |
 | --- | --- | --- |
-| `CandidateCard` (competitive) | the photo panel's Level, one head-to-head band — both levels, the bar and the forecast — the Social tag row's **matched** tags, and the record block's **Player Score** | `LEVEL_FIT`, `PREDICTED_BALANCE`, `RELIABILITY`, and `PLAYING_STYLE` / `SOCIAL_VIBE` **only where they matched something** |
+| `CandidateCard` (competitive) | the photo panel's Level, one head-to-head band — both levels, the bar and the forecast — the Social tag row's **matched** tags, and the record block's **Player Score** | **every reason line, and the concern** — it argues nothing at all since 2026-09-09 (§5a). The set below is what it renders a value for, and therefore what it **states as a clause**: `LEVEL_FIT`, `PREDICTED_BALANCE`, `RELIABILITY` |
 | `CandidateCardSocial` (for fun) | Level row, You overlap row, meta line's km — **no tag row** | `LEVEL_FIT`, `AVAILABILITY_OVERLAP`, `DISTANCE` |
 | `DeckCard` | Level row, Predicted balance row, You overlap row, meta line's km — **no tag row** | `LEVEL_FIT`, `PREDICTED_BALANCE`, `AVAILABILITY_OVERLAP`, `DISTANCE` |
 | `SH.whyfit` | everything, on purpose | **nothing** — #233 §7: a summary block would break §10 *"on the one screen whose job is showing values"* |
 
 **The filter is declared beside each card as the set of terms that surface draws**, so the
 rule is checked against the component rather than remembered.
+
+### 5a. The competitive card stopped arguing, so its filter has nothing to filter
+
+**On 2026-09-09 `CandidateCard` lost its reason lines and its concern line.** Everything it
+**measures** is untouched — the photo panel, the fit pill, the head-to-head band with both
+levels and the forecast over its bar, the record blocks, the stake boxes, the tag row. What
+went is the prose beneath the pill: *4 km away*, *They're here to compete too*, *3 slots you
+both ticked · next Tue evening*, and the amber concern under them.
+
+The reason is §10's own, read against a list rather than against a card: twenty rows each
+carrying three sentences is a screen a player scrolls past. The case for one person is
+`SH.whyfit`'s, and every row has carried a control named after that sheet since #309 — *Why
+78?*, which is a button and not a gesture. **The argument moved; it was not deleted.**
+
+**The set is unchanged**, and that is deliberate. `COMPETITIVE_CARD_DRAWS` is still
+`['LEVEL_FIT', 'PREDICTED_BALANCE', 'RELIABILITY']`, because *Draws* is a claim about which
+values the surface renders and the surface renders all three. What the set no longer does on
+this card is filter sentences; what it still does is decide **clauses** — §20.1 makes a card
+state every value whose own drawing announces nothing, and that rule is untouched.
+
+**The lines are not composed rather than composed and dropped.** A filtered list still has
+survivors and survivors reach the spoken name; a card that argues nothing must speak no
+argument, because §20.3's licence is that the card is *spoken in a different order than it is
+drawn* and never in different **content**. `candidateFacts` takes `argues: false` for that,
+and the two registers stay one card.
+
+The other two surfaces are untouched: the social and deck cards have no sheet behind them, so
+their sentences are the only place their terms could be said, and `SH.whyfit` still filters
+nothing at all.
 
 **The competitive card's set survived its own redraw unchanged**
 ([#309](https://github.com/Raketa02/Raketa/issues/309)). A two-`Side` row, a bare bar and a
@@ -621,6 +650,14 @@ deliberately does not carry.
 
 **And the court seat's sheet explains the pairing's Fit, never the `G` that seated them**
 (#233 §9). No sentence here appears inside `SH.whyfit`.
+
+**Nothing draws any of the five, as of 2026-09-09.** Three of them had a row of their own
+under the forecast card's names and two were deliberate silences; the row is gone. Read
+underneath two side strengths, a signed gap, an evenness percentage and a face per seated
+player, a sentence naming what the engine went looking for is a caption on an answer the
+reader has already been given four views of — the same objection the two silences were for,
+arriving for the other three. The **code** is unchanged, still served and still parsed; the
+table above is what a client would write if it drew them again, and it stays for that.
 
 ## 12. The four prompts
 
@@ -1103,9 +1140,16 @@ argument follows. This is the one recorded divergence from visual order in the f
 it exists because §10 is titled *Why this person is on the list* — dropping the reason lines
 to satisfy a word count would delete what the card is for.
 
+**The competitive card has no argument to put last** (2026-09-09, §5a). Its reason and concern
+sentences are gone from the drawing and therefore from this name: the divergence above is a
+licence to reorder, never to say something the reader cannot see, so the card body's label
+ends at the tags. Its `{n}` is a **whole number** for the same reason — the pill draws
+`Math.round`, and a listener hearing *Fit 78,42131 out of 100* beside a reader seeing `✦ 78`
+would be the two registers on two numbers. The social and deck cards keep every clause below.
+
 | | |
 | --- | --- |
-| **Card body** | `button`. `{name}. Fit {n} out of 100. {level} · {band} · likely {low}–{high}. {mark}. {In your area · }{km} km. {record}. {stake}. {tags}. {reason}. {reason}. {reason}. {reason}. {concern}.` |
+| **Card body** | `button`. `{name}. Fit {n} out of 100. {level} · {band} · likely {low}–{high}. {mark}. {In your area · }{km} km. {record}. {stake}. {tags}. {reason}. {reason}. {reason}. {reason}. {concern}.` — the competitive card stops after `{tags}` |
 | **_Why 78?_** | `button`. `Why {name} fits {n}` — the visible label is `Why {n}?`, and two cards on one screen can carry the same Fit, so this one names its subject for the reason the primary does. **Not** the sheet's own name (§20.6): that string is the answer's, and this is the question. |
 | **Primary button** | `button`. `Add {name} to the court` · `Challenge {name}` — the visible label is *Add to the court* / *Challenge*, which announces identically on twenty cards. Naming the subject is [6.9](../../../frontend_player/docs/design-system.md#69-the-photo-tile-and-picker)'s remove control, whose label *"names which photo it removes"*. |
 
@@ -1252,12 +1296,24 @@ empty seat all lose their numbers.
 | **Seat, empty** | `button`. `{side}, empty{. UnfilledReason}` — §11's sentence when the engine has one, nothing when the seat was never filled |
 | **Seat, selected for a swap** | the above, plus `accessibilityState={{ selected: true }}` |
 | **Clear badge** | `button`. `Remove {name} from {side}` |
-| **Swap toggle** | `switch`. `Swap players`, `checked` |
 | **Balance bar** | `image`. §B9's balance word and its figure — the word is the point, since the bar is a colour |
 | **Seated name, on the forecast card** | `button`. `{side}, {name}, why fit {n}` — the way in to `SH.whyfit` for somebody already seated |
 
 `{side}` is *your side* / *their side*, and in doubles the partner seat says *your side, your
 partner*.
+
+**The swap toggle is gone, and its row with it** (2026-09-09). It was `switch`. `Swap players`,
+`checked` — the one control in this contract that carried `checked` on a mode. A tap on a seat
+meant *replace this player* with it off and *trade these two* with it on; the forecast card's
+names row became a **face per seated player**, which took the first meaning off the court, so
+the seat kept one and there was no mode left to announce. What a seat does is now said once,
+above the court, as ordinary drawn text the screen owns — *not* a name on any element here,
+because no element on this court has an action that word describes.
+
+**Neither guard toast survived it.** *That seat is yours — turn on Swap players to change
+sides* and *{name} already accepted — they keep their place* both refused a **replacement**,
+and a tap replaces nobody now. §21's two sentences are unaffected: they are about a line-up
+going out of date, not about a tap.
 
 **The holding ring is struck rather than announced**
 ([#278](https://github.com/Raketa02/Raketa/issues/278)). The sentence that stood here gave the
@@ -1301,11 +1357,13 @@ spoken name; and a withheld row carries one field and no card, so there is no br
 draw. A name is a button where there is something behind it and plain text where there is not —
 never a button that opens an apology.
 
-**While the swap toggle is on, the hold does nothing, and says nothing.** A tap is *select* then
-*trade*, so a hold on a seat mid-trade is most likely a slow tap, and answering hesitation with
-a modal punishes the one two-step interaction on the screen. No sentence is owed because nothing
-advertises the gesture — the same reason the clear badge draws no refusal, *"the × a player
-cannot use is never on screen to press."* The names row is unaffected in either mode.
+**The hold does nothing, and says nothing.** A tap on a seat is *select* then *trade*, so a
+hold on one mid-trade is most likely a slow tap, and answering hesitation with a modal punishes
+the one two-step interaction on the screen. No sentence is owed because nothing advertises the
+gesture — the same reason the clear badge draws no refusal, *"the × a player cannot use is
+never on screen to press."* The names row is unaffected. *(This paragraph said "while the swap
+toggle is on" until 2026-09-09, when the toggle went and select-then-trade stopped being one
+mode of two.)*
 
 **The 9,5pt seat label does not earn `allowFontScaling={false}`.** Part 13 permits the escape
 only *"inside the level bar's drawn geometry"*, and §15 already ruled the court's case the

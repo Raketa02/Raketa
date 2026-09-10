@@ -39,8 +39,6 @@ import { counted } from '@/shared/formatting/counted';
 import type { RelaxedAsk } from '../domain/candidate';
 import type { Window } from '../domain/vocabulary';
 
-import { SIDE } from './accessibilityPresentation';
-import { isDoubles } from '../domain/lineup';
 import { windowLabel } from './searchPresentation';
 
 /** The screen's title. It says what the player is here to do, and the court says the rest. */
@@ -215,29 +213,22 @@ export function poolSeatedLine(court: { readonly filled: number; readonly seats:
   return `${court.filled} of ${court.seats} seated`;
 }
 
-/**
- * What stands where the reading will be, **until there is a game to read**.
+/*
+ * **`awaitingBalanceLine` stood here** — *Add somebody to their side and a running balance
+ * appears here*, in two court shapes, promising the figure that would arrive once the far
+ * half had somebody in it.
  *
- * The engine serves a forecast from the first person added and gets there by assuming an empty
- * seat matches the player opposite, so a figure drawn over a one-sided court is the assumption
- * talking. What the card says instead is the act that would make it a reading — and the sentence
- * is written for the **shape of the court on screen** (`theirSideSeated` is the rule it
- * promises against).
+ * It is removed (2026-09-09), and the header draws nothing where a reading has not landed.
+ * The act it named is the entire purpose of the screen it sat on: a list of people with an
+ * *Add to the court* on every row is directly beneath it, and the court above it draws its own
+ * empty seats. A sentence explaining the absence, under a picture of the absence, over a list
+ * offering to end it, was the screen saying one thing three times — and *hidden, never blank*
+ * is the discipline every other absence on these screens already takes.
  *
- * **It is *their side*, not the prototype's *far side*, and the words are `SIDE`'s.** This app
- * has one spelling of that half — the one `clearSeatLabel` puts mid-sentence — and writing a
- * second one here is how the two drift apart with nothing to catch it. *Far* would have been
- * true of both Sports this branch can reach, since only padel and badminton have four seats;
- * it is refused for the vocabulary rather than for the geometry.
- *
- * A singles court takes its own sentence rather than bending that one: there is no side to
- * fill, because the second seat **is** the opponent. That branch is also the whole of squash,
- * which has two seats — so nothing this function says is ever read against a court with no net.
+ * The rule it promised against, `theirSideSeated`, is untouched: the reading is still gated on
+ * somebody being across the net rather than on a full court, because a forecast over a
+ * one-sided court is the engine's empty-seat assumption talking.
  */
-export function awaitingBalanceLine(seats: number): string {
-  const act = isDoubles(seats) ? `Add somebody to ${SIDE.theirs}` : 'Add your opponent';
-  return `${act} and a running balance appears here.`;
-}
 
 /**
  * The control back to the court — **the pool's only way back**.

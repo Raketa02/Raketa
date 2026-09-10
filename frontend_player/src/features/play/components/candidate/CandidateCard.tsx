@@ -11,6 +11,23 @@
  * on it, its own identity row, and a band; the social and deck cards are media-top with fact
  * rows, and neither is touched.
  *
+ * ## The figures stay, the sentences go, and the sheet is where the case is made
+ *
+ * On 2026-09-09 the card lost its **reason lines** and its **concern line** — the three
+ * sentences under the fit pill, and the amber one beneath them.
+ *
+ * **Nothing measured left with them.** The photograph, the handle, the Level they published,
+ * `✦ {fit}`, the head-to-head band with both levels and the forecast over its bar, what the
+ * platform has watched them do, what a counted game would move and the tags they published are
+ * all still here. What went is the **prose**: *4 km away*, *They're here to compete too*, *3
+ * slots you both ticked* — a paragraph per row, in a list of twenty, restating in words the
+ * argument that `SH.whyfit` sets out properly one control away.
+ *
+ * So the card **states** and the sheet **argues**, which is a division the two already had —
+ * `whyFitControlWord` has always drawn *Why 78?* on every row, and the sheet behind it prints
+ * each term with its weight and its own sentence. What changed is that the card stopped
+ * making a second, shorter case beside it.
+ *
  * ## It takes `(candidate, envelope)` and reads no global state
  *
  * That is [#233](https://github.com/Raketa02/Raketa/issues/233)'s fix for the why-fit sheet
@@ -29,31 +46,32 @@
  *
  * The band prints **both levels** and draws the **forecast**, and the record block prints a
  * **Player Score** — so `LEVEL_FIT`, `PREDICTED_BALANCE` and `RELIABILITY` are this card's
- * drawn set and none of the three appears as a reason line. The third arrived with the block
+ * drawn set. The third arrived with the block
  * ([#312](https://github.com/Raketa02/Raketa/issues/312)), which is exactly what
  * [`the-words.md`](../../../../../../docs/specs/matchmaking/the-words.md) §5 booked when it
  * wrote *"`RELIABILITY` joins them the day the Player Score block prints and not before"*.
  *
- * **The set is unconditional and the block is not**, and the two read off different fields: the
- * block prints `player_card.player_score`, the **published** figure, where the filtered sentence
- * is written over `ReliabilityEvidence.score`, the engine's. They are the same number by
- * ADR-0140 and they are two reads, deliberately — *"taking the card's figure off the engine's
- * record would make what a player is shown a consequence of whatever the reliability term
- * happens to carry"*. In one request they answer together, so a fired term without a published
- * score is not a state the contract produces; if it ever were, the card would state the fact
- * nought times, and the fix would be the second read rather than a fallback that borrows the
- * engine's number.
+ * **The set now decides clauses and no longer filters sentences**, because there are no
+ * sentences to filter: `argues: false` stops the reason and concern lines being composed at
+ * all. The set is still exactly what it always was — *the terms this card renders a value for*
+ * — and it still keeps the **spoken** name honest, since a term drawn as a row must be stated
+ * as a clause and a term drawn nowhere must not.
  *
- * `DISTANCE` is not in the set — this card draws no distance row, which is why a reason line
- * on it can never come up empty, and the block did not touch that: the surviving set is one
- * term smaller and `DISTANCE` never stands down.
+ * **Not composed rather than composed and dropped** is the load-bearing half. A filtered list
+ * still has survivors, and survivors reach the label; a card that argues nothing must speak no
+ * argument, because §20.3 lets the spoken order differ from the drawn one and never the
+ * content.
+ *
+ * **The set is unconditional and the block is not**, and the two read off different fields: the
+ * block prints `player_card.player_score`, the **published** figure, where the engine's is
+ * `ReliabilityEvidence.score`. They are the same number by ADR-0140 and they are two reads,
+ * deliberately — *"taking the card's figure off the engine's record would make what a player is
+ * shown a consequence of whatever the reliability term happens to carry"*.
  *
  * **The Level is printed twice**, hugely on the panel and again on the right of the band. That
  * is the designs' choice and it is accepted: the panel's is the card's **identity** — what this
  * person published, drawn whatever fired — and the band's is one side of a **comparison**
- * computed against the other. §10 forbids a reason line restating a value the card renders, and
- * that rule is about the two registers rather than about the pixel count: the fact is **said
- * once**, in `levelRow`, and the reason line for it is filtered off exactly as before.
+ * computed against the other. The fact is **said once**, in `levelRow`.
  *
  * ## Two borders were asked for. One is drawn, and the other is still refused
  *
@@ -118,7 +136,6 @@ import { whyFitControlWord } from '../whyFitPresentation';
 
 import { HeadToHeadBand } from './HeadToHeadBand';
 import { IdentityRow } from './IdentityRow';
-import { ReasonLine } from './ReasonLine';
 import { RecordBlocks } from './RecordBlocks';
 import { StakeBoxes } from './StakeBoxes';
 import { candidateFacts, evidenceOf } from './candidateFacts';
@@ -156,6 +173,20 @@ export interface CandidateCardProps {
   /** What the primary button does. A code, so a third surface gains a word or does not build. */
   readonly action: CandidateAction;
   readonly onAction: () => void;
+  /**
+   * Whether the primary control is **dead** — drawn, named, and refusing the press.
+   *
+   * The one state it covers today is a **court with no seat left**, and that is deliberately
+   * not the name: whether there is anywhere for this person to go is the screen's arithmetic
+   * over a line-up this component has never seen, and a card that took `courtIsFull` would be
+   * a row reasoning about a court. It takes the **conclusion**.
+   *
+   * Disabled and not hidden. A control that vanishes from twenty rows at once leaves a list
+   * that has silently changed shape, with nothing saying why; `Button`'s disabled state dims
+   * it and sets `accessibilityState.disabled`, so both registers get the same answer and the
+   * row stays the row it was.
+   */
+  readonly actionDisabled?: boolean;
   /** The body's own action, and now a button as well — *Why 78?*. */
   readonly onWhyFit: () => void;
   /**
@@ -176,6 +207,7 @@ export function CandidateCard({
   seats,
   action,
   onAction,
+  actionDisabled = false,
   onWhyFit,
   bestMatch = false,
 }: CandidateCardProps) {
@@ -194,6 +226,9 @@ export function CandidateCard({
     // The panel is this card's alone, so the two fields behind the ON COURT mark are handed
     // over here and declined by the other two cards — `record`'s shape, for `record`'s reason.
     photo: candidate.card,
+    // This card states and does not argue — see the module note. Not a filter that happens to
+    // empty: the lines are not composed at all, so nothing can leak into the spoken name.
+    argues: false,
   });
   const levelFit = evidenceOf(candidate, 'level_fit');
   const balance = evidenceOf(candidate, 'predicted_balance');
@@ -222,18 +257,11 @@ export function CandidateCard({
         <View style={s.column}>
           <IdentityRow name={facts.name} tag={tag} />
 
-          {/* On its own row, under the name. The designs' *"2,95 · 0,24 above you"* beside it
-              is struck: the band below prints the gap as two figures over a bar, and the sheet
-              behind *Why 78?* is what explains the number the pill carries. */}
+          {/* On its own row, under the name — and the last thing in this column. The designs'
+              *"2,95 · 0,24 above you"* beside it is struck because the band below prints that
+              pair; the three reason sentences that used to follow it are struck because the
+              sheet behind *Why 78?* is what explains the number the pill carries. */}
           <FitPill fit={candidate.fit} />
-
-          {facts.reasons.map((line, at) => (
-            <ReasonLine key={`reason-${at}`} line={line} />
-          ))}
-
-          {facts.concerns.map((line, at) => (
-            <ReasonLine key={`concern-${at}`} line={line} variant="concern" />
-          ))}
         </View>
       </View>
 
@@ -266,6 +294,7 @@ export function CandidateCard({
           label={CANDIDATE_ACTION_WORD[action]}
           accessibilityLabel={candidateActionLabel(action, facts.name)}
           onPress={onAction}
+          disabled={actionDisabled}
           size="sm"
         />
       </View>

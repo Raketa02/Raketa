@@ -36,9 +36,8 @@
  * `accessibilityState` offers only `{disabled, selected, checked, busy, expanded}` — **no
  * `pressed`**, which §E6 asks for three times. *Prefer the role that carries the state; where
  * no role carries it, the label carries it; never style alone.* A seat selected for a swap is
- * therefore `selected`, and no name here restates a state a role already announces: the swap
- * toggle is *Swap players* and not *Swap players, on*, and a grid cell names its slot and lets
- * `checked` say the rest.
+ * therefore `selected` and its name says nothing about being held, and a grid cell names its
+ * slot and lets `checked` say the rest.
  *
  * ## What is *not* here
  *
@@ -100,9 +99,15 @@ const FIT_DENOMINATOR = 100;
  * [7.10](../../../../docs/design-system.md#710-the-fit-pill)'s reason: Part 17 records that
  * the deleted fit badge's threshold *"named a scale the deleted engine defined"*, so a number
  * on this platform says what it is out of.
+ *
+ * **Rounded, because the pill is.** Fit arrives with its decimals on and `FitPill` makes it a
+ * whole number to draw it; a listener hearing *Fit 78,42131 out of 100* beside a reader seeing
+ * `✦ 78` would be the two registers on two numbers, which is the one thing §20.3's *spoken in
+ * a different order than it is drawn* does not license. `whyFitControlWord` rounds for the
+ * same reason and always has.
  */
 export function fitSentence(fit: number): string {
-  return `Fit ${fit} out of ${FIT_DENOMINATOR}`;
+  return `Fit ${Math.round(fit)} out of ${FIT_DENOMINATOR}`;
 }
 
 /** Everything the card draws about its subject, as the card already holds it. */
@@ -562,15 +567,6 @@ export function poolHeaderLabel(
 }
 
 /**
- * The swap toggle — a `switch`, named by what it does.
- *
- * `checked` carries the state, so the name does not: §20.2's *prefer the role that carries the
- * state*, which is 6.8's own argument about its column heads read on a control instead of a
- * grid.
- */
-export const SWAP_TOGGLE_LABEL = 'Swap players';
-
-/**
  * `SH.whyfit`'s accessible name — **not** its visible title (§20.6).
  *
  * The title draws `Why ✦ {score}`, and the ✦ must not be spoken. It is the one place in the
@@ -582,9 +578,12 @@ export const SWAP_TOGGLE_LABEL = 'Swap players';
  * is where focus lands on the way *in* — **the title, not the first action**, one rule for all
  * of them, because `SH.propose`'s first action is *send* and landing focus there by default
  * would make the worst outcome the cheapest to trigger.
+ *
+ * Rounded, with `whyFitTitle` and for its reason: the sheet is opened by a control that has
+ * always named a whole number, and it must not announce a different one.
  */
 export function whyFitSheetLabel(fit: number): string {
-  return `Why fit ${fit}`;
+  return `Why fit ${Math.round(fit)}`;
 }
 
 /**

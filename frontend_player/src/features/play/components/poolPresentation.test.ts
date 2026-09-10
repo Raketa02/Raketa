@@ -8,7 +8,6 @@
  */
 
 import {
-  awaitingBalanceLine,
   poolLadderTitle,
   poolSeatedLine,
   rungCount,
@@ -148,22 +147,5 @@ describe('the header', () => {
     expect(poolSeatedLine({ filled: 4, seats: 4 })).toBe('4 of 4 seated');
     expect(poolSeatedLine({ filled: 1, seats: 2 })).toBe('1 of 2 seated');
     expect(poolSeatedLine({ filled: 2, seats: 2 })).toBe('2 of 2 seated');
-  });
-
-  it('promises the balance against the half that is actually empty', () => {
-    expect(awaitingBalanceLine(4)).toBe(
-      'Add somebody to their side and a running balance appears here.',
-    );
-    expect(awaitingBalanceLine(2)).toBe('Add your opponent and a running balance appears here.');
-  });
-
-  /**
-   * *Their side* rather than the prototype's *far side*, and the words are `SIDE`'s: this app
-   * has one spelling of that half, and a second one written out here is how the two drift with
-   * nothing to catch it. Both Sports this branch can reach do have a far side — only padel and
-   * badminton have four seats — so the refusal is about the vocabulary, not the geometry.
-   */
-  it('never says far side, in either court shape', () => {
-    for (const seats of [2, 4]) expect(awaitingBalanceLine(seats)).not.toMatch(/far side/i);
   });
 });

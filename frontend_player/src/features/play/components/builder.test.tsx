@@ -20,6 +20,7 @@
  */
 
 import { AccessibilityInfo, StyleSheet, View, type ViewStyle } from 'react-native';
+import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { onlineManager } from '@tanstack/react-query';
@@ -27,14 +28,12 @@ import { onlineManager } from '@tanstack/react-query';
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
 import {
-  BAND_HAS_NO_COUNT,
   IN_YOUR_AREA,
   OPINION_BAND_NAME,
-  OPINION_CARD_TITLE_DRAWN,
+  SPORTSMANSHIP_LABEL,
   OWN_RECORD_TITLE,
-  PLAYER_SCORE_NAME,
+  PLAYER_SCORE_BLOCK,
   YOU_MARK,
-  RECORD_CARD_TITLE_DRAWN,
   RECORD_TITLE,
   RECORD_UNAVAILABLE,
   STRAND_NAME,
@@ -74,7 +73,6 @@ import {
   seatedNameLabel,
   splitRowLabel,
   whyFitSheetLabel,
-  SWAP_TOGGLE_LABEL,
 } from './accessibilityPresentation';
 import { courtEntryLabel } from './findAGamePresentation';
 import { balanceLabel, balanceWord } from './balancePresentation';
@@ -86,6 +84,7 @@ import {
   RETRY_FORECAST_LABEL,
   SIDE_HEADINGS,
   START_OVER_LABEL,
+  SWAP_HINT,
   arrangedYourWayLine,
   fillSeatsLabel,
   sideName,
@@ -110,6 +109,8 @@ const RADIUS = '/api/v1/players/me/search-radius';
 
 const SEARCH_ID = 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
 const LINEUP_ID = 'a1b2c3d4-0000-4000-8000-00000000000f';
+/** A second press of *Build a doubles* mints a second record, and this is its id. */
+const SECOND_SEARCH = 'b2c3d4e5-1111-4111-8111-111111111111';
 const ME = 'aaaaaaaa-0000-4000-8000-000000000000';
 const B = 'bbbbbbbb-0000-4000-8000-000000000001';
 const C = 'cccccccc-0000-4000-8000-000000000002';
@@ -452,6 +453,65 @@ describe('arriving', () => {
     expect(screen.getAllByLabelText(POSTER_LABEL, { includeHiddenElements: true })).toHaveLength(1);
   });
 
+  /**
+   * **The one sentence that says what a seat does**, and the gate it inherited from the toggle
+   * it replaced.
+   *
+   * A swap was a `switch` in a card above the court, drawn only once somebody was there to
+   * trade with. The control is gone and a tap always trades, so the line is a statement of the
+   * capability rather than a description of a mode — and it keeps the gate, because a court
+   * seating nobody but you has no two seats to trade.
+   */
+  it('says what a seat does only once there is somebody to trade with', async () => {
+    await openTheBuilder();
+
+    expect(screen.queryByText(SWAP_HINT)).toBeNull();
+
+    await pressFill();
+    await screen.findByText('91%');
+
+    expect(screen.getByText(SWAP_HINT)).toBeTruthy();
+  });
+
+  /**
+   * **A build is a new build, and the court it opens is empty.**
+   *
+   * Every press of *Build a doubles* mints a search of its own, and the line-up is bound to
+   * the search it was composed under (`domain/lineup`'s origin key). Popping back to Find a
+   * game is not a reset — the shell's stack is untouched, so `endPlaySession` never runs and
+   * the session survives on purpose, which is what lets a player go back for their week and
+   * return to the four they were building.
+   *
+   * What must not survive is a line-up whose origin the **new** search replaced. The builder
+   * read the line-up's own origin ahead of the search it was opened on, so a second build
+   * re-opened the first one's court: four faces from a search this screen was not asked
+   * about, under a forecast for a game nobody had just searched for.
+   */
+  it('opens on an empty court when Find a game builds a second time', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+    expect(screen.getByLabelText(summary(4))).toBeTruthy();
+
+    // Back for another look at the week, and out again. A pop, so nothing is reset.
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+
+    // The second search is a second record, with an id of its own — which is the whole of
+    // what makes the first one's line-up stale.
+    transport.on('POST', SEARCHES, () => json({ ...shortlist(), search: envelope(SECOND_SEARCH) }));
+    fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('padel'))));
+    await screen.findByText(POOL_RANKING);
+    act(() => jest.advanceTimersByTime(searchingFloorMs({ kind: 'pool' })));
+    await waitFor(() => expect(screen).toHavePathname('/play/builder'));
+
+    // One seat filled, and it is yours. Not four, and not the four from before.
+    expect(await screen.findByLabelText(summary(1))).toBeTruthy();
+    expect(screen.getAllByLabelText(/empty$/)).toHaveLength(3);
+    expect(screen.queryByText('91%')).toBeNull();
+    expect(usePlaySession.getState().lineup).toBeUndefined();
+  });
+
   it('offers both branches, and neither is drawn once the court is full', async () => {
     await openTheBuilder();
 
@@ -544,15 +604,15 @@ describe('the forecast', () => {
   });
 
   /**
-   * **A swap is a selection.** Every arrangement crossed with the fill, so trading two seats
-   * moves the figure with no request behind it.
+   * **A swap is a selection, and it needs no mode.** Every arrangement crossed with the fill,
+   * so trading two seats moves the figure with no request behind it — and the two presses are
+   * the whole gesture now that a seat trades without a toggle being thrown first.
    */
   it('moves the figure on a swap without asking the server anything', async () => {
     await openTheBuilder();
     await pressFill();
     await screen.findByText('91%');
 
-    fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
     fireEvent.press(seat('YOUR_PARTNER', C));
     fireEvent.press(seat('THEIR_SIDE', B));
 
@@ -566,7 +626,6 @@ describe('the forecast', () => {
     await pressFill();
     await screen.findByText('91%');
 
-    fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
     fireEvent.press(seat('YOUR_PARTNER', C));
     fireEvent.press(seat('THEIR_SIDE', B));
 
@@ -602,7 +661,6 @@ describe('the forecast', () => {
     await pressFill();
     await screen.findByText('91%');
 
-    fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
     fireEvent.press(seat('YOUR_PARTNER', C));
     fireEvent.press(seat('THEIR_SIDE', B));
 
@@ -807,7 +865,7 @@ describe('who this person is', () => {
           { strand: 'ANSWERS_RESULTS', good: 8, opportunities: 10, pct: 80 },
         ],
       },
-      variety: { distinct_opponents: 14, games_played: 20 },
+      variety: { distinct_opponents: 14, times_on_court: 20 },
       sportsmanship: { average: 4.7, raters: 17 },
       ...over,
     };
@@ -943,7 +1001,7 @@ describe('who this person is', () => {
     expect(await screen.findByLabelText(WHY_FIT)).toBeTruthy();
   });
 
-  it('offers no Fit row on your own record', async () => {
+  it('offers no Fit control on your own record', async () => {
     transport.on('GET', OWN_RECORD, () => json(record({ is_self: true })));
     await openTheBuilder();
     await pressFill();
@@ -951,7 +1009,7 @@ describe('who this person is', () => {
 
     fireEvent.press(yourFace('YOUR_SIDE'));
     // The record, not the title: the title is drawn while the sheet is still filling, and a
-    // skeleton offers no Fit row either.
+    // skeleton offers no Fit control either.
     await screen.findByText(`${NAMES[C] ?? ''} ${YOU_MARK}`);
 
     expect(screen.queryByLabelText(fitRowLabel(78))).toBeNull();
@@ -966,25 +1024,26 @@ describe('who this person is', () => {
     await openAFace();
     await screen.findByText(NAMES[C] ?? '');
 
-    expect(screen.getByText(RECORD_CARD_TITLE_DRAWN)).toBeTruthy();
     for (const strand of ['SHOWS_UP', 'ANSWERS_CHALLENGES', 'ANSWERS_RESULTS'] as const) {
       expect(screen.getByText(STRAND_NAME[strand])).toBeTruthy();
     }
     expect(screen.getByText(strandFraction({ good: 8, opportunities: 10 }))).toBeTruthy();
     // The share **and** the pair: a bare `70%` would break the rule the card just made.
-    expect(screen.getByText(varietyValue({ distinctOpponents: 14, gamesPlayed: 20 }))).toBeTruthy();
+    expect(
+      screen.getByText(varietyValue({ distinctOpponents: 14, timesOnCourt: 20 })),
+    ).toBeTruthy();
   });
 
   /**
-   * **What other players said stands outside the counted card**, under a heading naming its own
-   * author — because that card's heading is a promise about authorship and this is the one thing
-   * on the sheet people wrote ([#387](https://github.com/Raketa02/Raketa/issues/387)).
+   * **What other players said is a row on the counted card**, and the label is what names its
+   * author now that the card has no heading to
+   * ([#387](https://github.com/Raketa02/Raketa/issues/387)).
    */
-  it('draws the average and the count of raters, in a block of its own', async () => {
+  it('draws the average and the count of raters, as a row naming its author', async () => {
     await openAFace();
     await screen.findByText(NAMES[C] ?? '');
 
-    expect(screen.getByText(OPINION_CARD_TITLE_DRAWN)).toBeTruthy();
+    expect(screen.getByText(SPORTSMANSHIP_LABEL)).toBeTruthy();
     expect(screen.getByText(opinionFigure({ average: 4.7, raters: 17 }))).toBeTruthy();
   });
 
@@ -1006,7 +1065,6 @@ describe('who this person is', () => {
     await screen.findByText(`me_myself ${YOU_MARK}`);
 
     expect(screen.getByText(OPINION_BAND_NAME.GOOD)).toBeTruthy();
-    expect(screen.getByText(BAND_HAS_NO_COUNT)).toBeTruthy();
     // Neither half on its own either: the average is what a subtraction starts from, and the
     // count is what makes each new answer name itself.
     expect(screen.queryByText(opinionFigure({ average: 4.7, raters: 17 }))).toBeNull();
@@ -1024,7 +1082,7 @@ describe('who this person is', () => {
    * record of counted games may have been rated by nobody. Both blocks go, and so does every
    * sentence either of them would have said about a Player Score that is not on the sheet.
    */
-  it('draws no record card, no opinion and no Player Score, for somebody nothing has fallen due for', async () => {
+  it('draws no record card, no opinion and no reliability block, for somebody nothing has fallen due for', async () => {
     transport.on('GET', RECORD_OF(C), () => {
       const {
         reliability: _reliability,
@@ -1041,9 +1099,9 @@ describe('who this person is', () => {
     fireEvent.press(named('YOUR_PARTNER', C));
     await screen.findByText(NAMES[C] ?? '');
 
-    expect(screen.queryByText(RECORD_CARD_TITLE_DRAWN)).toBeNull();
-    expect(screen.queryByText(OPINION_CARD_TITLE_DRAWN)).toBeNull();
-    expect(screen.queryByText(new RegExp(PLAYER_SCORE_NAME))).toBeNull();
+    expect(screen.queryByText(STRAND_NAME.SHOWS_UP)).toBeNull();
+    expect(screen.queryByText(SPORTSMANSHIP_LABEL)).toBeNull();
+    expect(screen.queryByText(new RegExp(PLAYER_SCORE_BLOCK))).toBeNull();
   });
 
   /**
@@ -1203,14 +1261,13 @@ describe('who this person is', () => {
     );
   }
 
-  /** The faces are unaffected by the swap toggle: the route stays open while the shortcut shuts. */
-  it('keeps the faces a way in while the toggle is on', async () => {
+  /** The faces are a route of their own: a seat that now trades has taken nothing off the card. */
+  it('keeps the faces a way in, beside a court whose seats trade', async () => {
     transport.on('GET', RECORD_OF(C), () => json(record()));
     await openTheBuilder();
     await pressFill();
     await screen.findByText('91%');
 
-    fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
     fireEvent.press(named('YOUR_PARTNER', C));
 
     expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
@@ -1341,10 +1398,10 @@ describe('the fill', () => {
 
     // The court is there, under the wait rather than behind it.
     expect(drawn(1)).toBeTruthy();
-    // And nothing about a four that is still arriving: no forecast, no swap toggle, and
-    // neither of the two ways of filling a court that is being filled.
+    // And nothing about a four that is still arriving: no forecast, no line offering a swap
+    // on a court mid-fill, and neither of the two ways of filling a court being filled.
     expect(screen.queryByText('91%')).toBeNull();
-    expect(screen.queryByLabelText(SWAP_TOGGLE_LABEL)).toBeNull();
+    expect(screen.queryByText(SWAP_HINT)).toBeNull();
     expect(screen.queryByLabelText(fillSeatsLabel({ seats: 4, filled: 1 }))).toBeNull();
     expect(screen.queryByLabelText(PICK_PLAYERS_LABEL)).toBeNull();
 
@@ -1483,7 +1540,6 @@ describe('the forecast card', () => {
     expect(screen.getByText(ALREADY_EVENEST)).toBeTruthy();
     expect(screen.getByLabelText(EVEN_IT_OUT_LABEL).props.accessibilityState?.disabled).toBe(true);
 
-    fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
     fireEvent.press(seat('YOUR_PARTNER', C));
     fireEvent.press(seat('THEIR_SIDE', B));
 
@@ -1513,7 +1569,6 @@ describe('the forecast card', () => {
     await screen.findByText('91%');
     const saidBefore = spoken().length;
 
-    fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
     fireEvent.press(seat('THEIR_SIDE', B));
     fireEvent.press(seat('THEIR_SIDE', D));
 

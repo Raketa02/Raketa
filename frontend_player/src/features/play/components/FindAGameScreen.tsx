@@ -233,6 +233,7 @@ export function FindAGameScreen() {
   // search over the same one (#287).
   const asked = usePlaySession((state) => state.askedQuestions);
   const recordAsked = usePlaySession((state) => state.recordAsked);
+  const discardLineup = usePlaySession((state) => state.discardLineup);
 
   /**
    * The radius the player is looking at, **before it is the profile's** — and only until then.
@@ -430,10 +431,34 @@ export function FindAGameScreen() {
     recordAsked(askedSport, answeredPrompt);
   }, [askedSport, answeredPrompt, recordAsked]);
 
+  /**
+   * **A build opens on an empty court, and the discard is what makes that true.**
+   *
+   * A line-up belongs to the search it was composed under — `domain/lineup`'s origin key, and
+   * `playSession`'s own rule that *"a seat taken from a different search starts a new line-up
+   * rather than mixing two"*. This is that rule at the moment the origin moves: the press
+   * minted a record of its own, so whatever was seated under the last one is orphaned, and a
+   * court still drawing it would be four faces from a search this screen was not asked about.
+   *
+   * **Coming back here does not discard anything**, and that is the reason it is written here
+   * rather than on the builder's unmount or on this screen's mount. Popping back for another
+   * look at the week is not an act on the line-up — the shell's stack is untouched, so the
+   * session survives on purpose and the four are still there on the way forward. What ends
+   * them is **asking for a new game**, which is exactly this press.
+   *
+   * It is not the origin guard's `ask`. That confirm exists because changing the sport, the
+   * mode or the week would destroy a line-up **silently**, as a side effect of an unrelated
+   * edit; here the player pressed *Build*, watched a search run and landed on a court. The act
+   * is its own announcement.
+   *
+   * Inside the push's own guard rather than beside it, so a search whose prompt was answered
+   * *back to the week* takes nothing with it: nothing is discarded until somebody is going.
+   */
   useEffect(() => {
     if (minted === undefined || latched || !mayGoOn) return;
+    discardLineup();
     router.push({ pathname: BUILDER_ROUTE, params: { search: minted } });
-  }, [minted, latched, mayGoOn]);
+  }, [minted, latched, mayGoOn, discardLineup]);
 
   /**
    * The comparison, made **once** and read twice.
@@ -530,8 +555,17 @@ export function FindAGameScreen() {
 
               **It is the whole of the screen under the chips while it is up** — see the module
               note. Everything below is gated on `searchable`, so the two intent controls never
-              co-occur ([#293](https://github.com/Raketa02/Raketa/issues/293)). */}
-          {standing.kind === 'undeclared' && sportName !== undefined ? (
+              co-occur ([#293](https://github.com/Raketa02/Raketa/issues/293)).
+
+              **It waits for the profile read, and that is a fix rather than a nicety.**
+              `findAGameStanding` is handed `profile?.playIntents ?? {}`, so *the read has not
+              landed* and *this player has never declared* arrive at it as the same empty map —
+              and the standing it answers with is `undeclared`. Drawn ungated, that put the
+              question in front of every player on every cold open, for as long as the read
+              took, including players who declared months ago. The form below has always been
+              gated on the same read; the two conditions are one condition and are written as
+              one here so they cannot drift apart again. */}
+          {profileSurface.isSuccess && standing.kind === 'undeclared' && sportName !== undefined ? (
             <DeclarationInterstitial
               sport={standing.sport}
               sportName={sportName}
