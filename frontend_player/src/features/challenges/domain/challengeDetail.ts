@@ -25,6 +25,13 @@
  * leave* — and neither does your own seat, because a pairing with yourself is not a question.
  * That half is the wire's alone: it omits `card`, and this file counts nobody.
  *
+ * **And one level down again, per reader — this file's own** (#392,
+ * [ADR-0143](../../../../../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)'s
+ * 2026-09-10 amendment). A reader whose **own** seat has left is drawn no card block in either
+ * live standing: the card is what a reader answers against, and the pair has released those
+ * people. `hasLeft` is that question, and it is the one level the wire does **not** enforce —
+ * the server still builds their court, which is [#394](https://github.com/Raketa02/Raketa/issues/394).
+ *
  * ## The two answers are gated on the **seat**, never on the standing alone
  *
  * §2.1's table offers `I'm in · Not this time` to the `AWAITING_ANSWERS` invitee **who has not
@@ -54,7 +61,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import type { AtStake, Forecast, LikelyRange, ScoredTerm, Term } from '@/features/play/types';
 
 import { ownSeat, seatName, standingFactsFor, type ChallengeSeat } from './challenge';
-import type { Standing, StandingFacts } from './standing';
+import type { SeatAnswer, Standing, StandingFacts } from './standing';
 
 /**
  * Who one person on this court is — **a closed list with two permanent gaps.**
@@ -236,7 +243,8 @@ export type ChallengeArm =
    * **Still being arranged, and there is nothing here for you to press** — the card block, and
    * the standing sentence over it.
    *
-   * The organiser waiting on answers, and an invitee whose own answer is already given. A court
+   * The organiser waiting on answers, and an invitee who has **accepted** and is still in it —
+   * an invitee who has *left* is drawn the sentence alone instead (#392). A court
    * that is still **filling** left this arm with [#362](https://github.com/Raketa02/Raketa/issues/362):
    * it draws the same card block and the same sentence and three controls besides, which is a
    * different reading of the fold and therefore a different arm.
@@ -264,7 +272,7 @@ export type ChallengeArm =
     }
   /**
    * **The sentence alone** — every ending, `ON`, and the reader who has left a court that has
-   * not.
+   * not, **in either live standing** (#392).
    *
    * `ON` is here because #324 gave the **card** to the game's own standing the moment a game
    * exists — not because nothing reaches it. A completed line-up keeps its row while it is news
@@ -273,6 +281,35 @@ export type ChallengeArm =
    * which §3.4 refused, so the row is what makes this arm reachable (§2.1, #390).
    */
   | { readonly kind: 'stated'; readonly facts: StandingFacts };
+
+/**
+ * **Has this reader left a challenge that has not?** — asked of the reader's own seat, and the
+ * one question both live standings ask before drawing a card block (#392).
+ *
+ * An **accepted** seat has not left: they are still on the court and the pair still holds them,
+ * which is why they keep their cards in both standings. `undefined` is the reader holding **no
+ * seat** — not an empty seat, which *is* a seat and keeps its place — and the route 404s that
+ * rather than serving a stranger's challenge.
+ *
+ * It reads the answer **the wire sent**, so a seat past its window whose lapse has not been
+ * swept is not *left* here yet and keeps the answering arm. That is deliberate: deriving the
+ * lapse would mean this side reading the clock, which `challenge.ts` refuses in writing, and
+ * §2.4 already rules the expired offer acceptable — *the offer may expire under the finger and
+ * is let to*.
+ *
+ * **A `Record` keyed by the union rather than a disjunction**, for `challenge.ts`'s `ENDED`
+ * reason: a fourth `SeatAnswer` fails `pnpm typecheck` here rather than quietly counting as
+ * *not left*, which is the exact class of miss this rule was written to close.
+ */
+const LEFT: Readonly<Record<SeatAnswer, boolean>> = {
+  ACCEPTED: false,
+  DECLINED: true,
+  LAPSED: true,
+};
+
+function hasLeft(seat: ChallengeSeat | undefined): boolean {
+  return seat?.answer === undefined ? false : LEFT[seat.answer];
+}
 
 export function challengeArm(detail: ChallengeDetail, playerId: string): ChallengeArm {
   // `ChallengeDetail` is a `Challenge` with cards on its seats, so every rule already written
@@ -294,13 +331,17 @@ export function challengeArm(detail: ChallengeDetail, playerId: string): Challen
     };
   }
 
-  if (facts.standing === 'AWAITING_ANSWERS') return { kind: 'arranging', facts };
+  // #392: a reader with no answer left to give is drawn no card, and this standing holds while
+  // *anybody* is awaiting — so it reaches the same question `LINE_UP_INCOMPLETE` asks below.
+  if (facts.standing === 'AWAITING_ANSWERS') {
+    if (hasLeft(seat)) return { kind: 'stated', facts };
+    return { kind: 'arranging', facts };
+  }
 
   // The one reading §2.5 had to close: a court still filling draws a card block, three controls
   // and the sentence for the people still in it, and the sentence alone for the reader who left.
   if (facts.standing === 'LINE_UP_INCOMPLETE') {
-    const left = seat?.answer === 'DECLINED' || seat?.answer === 'LAPSED';
-    if (left) return { kind: 'stated', facts };
+    if (hasLeft(seat)) return { kind: 'stated', facts };
     return { kind: 'filling', facts, mayEnd: facts.side === 'organiser' };
   }
 

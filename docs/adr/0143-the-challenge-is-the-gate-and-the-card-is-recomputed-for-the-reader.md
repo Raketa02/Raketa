@@ -344,3 +344,63 @@ be wrong for a reason that is otherwise one comment deep in `shortlist.py`.
   history — which is the bound ADR-0141 objected to losing.
 - The client change is a separate session and a separate commit, with `make gen-api` between
   them, as the contract invariant requires.
+
+## Amendment — 2026-09-10: the card is the reader's decision aid, and a reader who has left is drawn none
+
+§8 stated the card block's lifetime at two levels — per challenge, then per seat — and both hold.
+**It needed a third, per reader**, and the case it missed was found by
+[#392](https://github.com/Raketa02/Raketa/issues/392): `standing_of` returns `AWAITING_ANSWERS`
+while **any** seat is awaiting, so a padel four sits in that standing with the reader's own answer
+already given, and §8's rules let them be drawn a full court of cards. The client drew one there
+and, for the same reader, none in `LINE_UP_INCOMPLETE` — the same person, released by the same
+rule, drawn two ways.
+
+> **A reader whose own seat has left — declined or lapsed — is drawn no card block, in either
+> live standing.**
+
+**Two reasons, and the second is the stronger.** The card exists to price somebody you are about to
+say `I'm in` or `Not this time` about, so a reader who has left has nothing for it to do. And the
+pair **releases the moment a seat leaves**, which makes those people strangers to this reader once
+more — and a live as-of-now card of a stranger is exactly what ADR-0141 called *a directory with
+extra steps*. The release is the backend's own behaviour and not an inference from this record:
+`open_pairs_among` folds `players_in_it_at`, which keeps only seats that are `is_live_at`, and
+`Seat.is_open_at` is *declined, or lapsed by the clock*. §8 asserts the same thing but cites
+ADR-0142 and the **client's** `domain/challenge.ts`, so the server evidence is written here rather
+than borrowed.
+
+**§8's own test is the objection, and it is met rather than dodged.** *"A card is part of an
+arrangement being decided, and it stops when the deciding does"* — and in `AWAITING_ANSWERS` the
+arrangement **is** still being decided, so read at the level §8 wrote it, that clause argues for
+drawing this reader a card. What answers it is that the clause is about the wrong subject's
+deciding: **this reader's part in it is over.** They cannot change the arrangement, cannot be asked
+again, and have been released from the pair by leaving. The arrangement continues without them, and
+a card is not a report on an arrangement — it is the thing you answer against.
+
+**An accepted reader keeps their card.** They have no answer left either, so the two reasons
+disagree here, and the pair decides it: they are still on the court and it still holds them. The
+predicate is *has this reader left*, never *has this reader answered*.
+
+**This is not a second gate against the reader, and §2 is untouched.** *The challenge is the gate,
+and nothing is re-evaluated against the reader* is about **permission** — holding a seat is the
+whole of it, decided once, and this amendment does not add a check there. What it settles is what
+the card block is **for**, which is a question about the block and not about access. §8's closing
+*nothing is re-gated against the reader* is narrowed to that reading; anybody who holds a seat can
+still read the challenge and everything else on it.
+
+**The enforcement belongs on the server, and the client is defence in depth.** The style is the
+argument, and it is the server's own: `ReadChallenge._court` says the per-seat rule is enforced
+*"by not putting them in the question — so there is no card computed, no photograph signed and
+nothing to leak."* §8 states the rule; that docstring is where it says how, and it is quoted from
+there rather than from here. A reader who has left is owed that, and
+today the server still computes their cards and signs the URLs; the client merely declines to draw
+them. The server half is filed as
+[#394](https://github.com/Raketa02/Raketa/issues/394) and cites this amendment.
+
+**One gap is stated rather than closed.** Both sides read the answer the wire sends, so a seat past
+its window whose lapse has not been swept is not *left* yet and still draws a card. Deriving the
+lapse client-side would give that side a second clock, which its own domain module refuses; the
+sweep closes it.
+
+**Cost named:** a reader who has left keeps the arrangement and the handles and loses the numbers,
+so the screen tells them what happened and no longer prices the people it happened with. That is
+the intent, and §8's `DECLINED`/`LAPSED` bullet already pays the same price one standing later.

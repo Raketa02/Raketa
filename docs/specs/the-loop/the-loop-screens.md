@@ -285,7 +285,7 @@ nothing on the wire carries a side.
 | --- | --- | --- | --- |
 | `AWAITING_ANSWERS` · invitee, unanswered | §13 *They're waiting on you* | **yes** | **`I'm in`** · **`Not this time`** |
 | `AWAITING_ANSWERS` · invitee, accepted | §13.2 *You're in. Waiting on {n} answers…* | **yes** | none |
-| `AWAITING_ANSWERS` · invitee, declined / lapsed | §13.2's **two sentences** — *You said no…* / *Your day ran out…* | **yes** | none |
+| `AWAITING_ANSWERS` · invitee, declined / lapsed | §13.2's **two sentences** — *You said no…* / *Your day ran out…* | no | none |
 | `AWAITING_ANSWERS` · organiser | §13 *Waiting on {n} answers* | **yes** | none |
 | `LINE_UP_INCOMPLETE` · member | §13 *{n} in, {m} seats open…* / *You're in. {m} seats open…* | **yes** | **⚡ Fill the seats** · **Open the chat** · **Withdraw** *(organiser only)* |
 | `LINE_UP_INCOMPLETE` · reader who left | §13's **two new sentences** — §2.5 | no | none |
@@ -305,10 +305,8 @@ build — `challengeArm` gates them on *the reader holds a seat and nobody has a
 sentence, now [`the-words.md`](../matchmaking/the-words.md) §13.2's three readings. **Singles
 reaches none of it:** the only invitee accepting takes the challenge to `ON`.
 
-> **The `Card block` column is unchanged here, and is an open question.** A declined or lapsed
-> reader is drawn a card block in this standing and none in `LINE_UP_INCOMPLETE` (§2.5). Whether
-> that difference is right is [#392](https://github.com/Raketa02/Raketa/issues/392)'s to settle,
-> not this section's.
+The `Card block` column reads `no` for the two who have **left**, which is §2.2's third level —
+**per reader** — and is settled there rather than in this table.
 
 **`ON` has an arm, and the inbox row is what reaches it.** An `ON` challenge **keeps its row in
 `CHALLENGES` while it is news** — §1.1's *every one that ended in the last 24 h*, with the
@@ -345,6 +343,42 @@ every act is on the surface behind it — Accept and Decline included.
 challenge** (ADR-0143 §8). The pair releases when a seat leaves, so a person who declined or lapsed
 inside a still-open `LINE_UP_INCOMPLETE` gets no card either — *"that person is a stranger to you
 once more the moment they leave."*
+
+> **And a third level: per reader.** A reader whose **own** seat has **left** — declined or
+> lapsed — is drawn no card block, in **either** live standing.
+
+**The card is what a reader answers against.** It exists to price a person you are about to say
+`I'm in` or `Not this time` about, so a reader who has already answered has nothing for it to do —
+and drawing them a live, as-of-now valuation of those people serves no purpose this screen can
+name. That is the rule; the pair supplies the second reason and is the stronger one, because the
+pair **releases the moment a seat leaves**, so those people are strangers to this reader once
+more and a live card of a stranger is ADR-0141's *"a directory with extra steps."*
+
+**An accepted reader keeps their card**, and that is the one case the two reasons disagree about.
+They have no answer left either — but they are still on the court and the pair still holds them,
+which is the distinction this rule turns on, and it is what `LINE_UP_INCOMPLETE` has always done.
+Settled on the pair rather than on the decision: *has this reader left*, never *has this reader
+answered*.
+
+**Recorded as an amendment on ADR-0143**, because §2 of that record is *the challenge is the gate,
+and nothing is re-evaluated against the reader* — a permission decided once by the seat you hold.
+This is not a permission gate; it is what the card block is **for**. The amendment says so, and
+names the server half.
+
+**The wire still sends these cards, and stopping that is
+[#392](https://github.com/Raketa02/Raketa/issues/392)'s server half —
+[#394](https://github.com/Raketa02/Raketa/issues/394).** ADR-0143 §8 states the per-seat rule and
+the server's own `ReadChallenge._court` says how it is enforced — *"by not putting them in the
+question — so there is no card computed, no photograph signed and nothing to leak"* — and a reader
+who has left is owed the same: a client that declines to draw a signed
+photograph URL has still been handed it. Both halves, and neither is redundant.
+
+**One gap is stated rather than closed.** This reads the answer **the wire sent**, so a seat past
+its window whose lapse has not been swept is not *left* yet and keeps the answering arm — card
+block and both buttons. §2.4 already rules that acceptable, on *draw the clock, never obey it*; the
+alternative is this side deriving a lapse from `answer_by` against `read_at`, which the client's
+own `features/challenges/domain/challenge.ts` refuses in writing — *"the clock is not read here, and
+that is deliberate"*. The sweep closes it.
 
 What it draws, from `challenges`' own narrower schema:
 
@@ -478,6 +512,17 @@ sentences out of scope, and #337 had already amended two of §13's rows.
 
 > **The invitee sentence reads the reader's own seat, not only their side.** §13's
 > `LINE_UP_INCOMPLETE` row gains two sentences for the reader who has left — [`the-words.md`](../matchmaking/the-words.md) §13.
+
+**Why they are drawn no card block is §2.2's**, not this section's: the rule is the reader's and
+spans both live standings, so it is argued once where the card block is defined.
+
+> **The paragraph below is wrong about the pair, and correcting it is
+> [#393](https://github.com/Raketa02/Raketa/issues/393)'s.** The pair **releases** the moment a seat
+> leaves — `open_pairs_among` folds `players_in_it_at`, which drops any seat that is `is_open_at` —
+> so *a lapsed invitee is unreachable in every sport until this challenge ends* over-reads ADR-0150
+> §4, whose mechanism is this challenge's own fill pool. **The conclusion survives**: the row stays
+> because `GET /challenges` is *every challenge you hold a seat in*, which is the reason §13.1's own
+> scenario gives.
 
 **The row stays rather than being filtered**, because the pair rule still binds the reader: ADR-0142
 holds a pair for the whole of `LINE_UP_INCOMPLETE`, and ADR-0150 §4 records the consequence —

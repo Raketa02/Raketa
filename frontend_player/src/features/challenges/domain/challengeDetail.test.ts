@@ -138,6 +138,53 @@ describe('the card block', () => {
     expect(arm.kind).toBe('stated');
   });
 
+  /**
+   * **The same, one standing up** — #392. `standing_of` holds `AWAITING_ANSWERS` while *any*
+   * seat is awaiting, so a reader who has answered sits in it with nothing left to answer; and
+   * the card block is what a reader answers *against*, so there is nothing for it to do. Both
+   * live standings ask one question of the reader's own seat.
+   */
+  it('is not drawn for a reader who has left while somebody else still has not answered', () => {
+    for (const mine of ['DECLINED', 'LAPSED'] as const) {
+      const arm = challengeArm(
+        detail(
+          'AWAITING_ANSWERS',
+          [
+            { playerId: BEA, answer: 'ACCEPTED' },
+            { playerId: CYRYL },
+            { playerId: ME, answer: mine },
+          ],
+          BEA,
+        ),
+        ME,
+      );
+
+      expect(arm.kind).toBe('stated');
+    }
+  });
+
+  /**
+   * The one case the two arguments for this rule disagree about, and the precedent settles it:
+   * an accepted reader is still on the court and the pair has not released, so they keep the
+   * card — exactly as they do in `LINE_UP_INCOMPLETE`.
+   */
+  it('is still drawn for a reader who accepted and is still in it', () => {
+    const arm = challengeArm(
+      detail(
+        'AWAITING_ANSWERS',
+        [
+          { playerId: BEA, answer: 'ACCEPTED' },
+          { playerId: CYRYL },
+          { playerId: ME, answer: 'ACCEPTED' },
+        ],
+        BEA,
+      ),
+      ME,
+    );
+
+    expect(arm.kind).toBe('arranging');
+  });
+
   it('is drawn for a member who is still in one', () => {
     const arm = challengeArm(
       detail(
