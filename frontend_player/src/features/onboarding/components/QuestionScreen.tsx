@@ -54,6 +54,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { offlineMessage } from '@/shared/errors';
+import { useHardwareBack } from '@/shared/lib/platform';
 import {
   behindOverlay,
   Button,
@@ -326,6 +327,21 @@ export function QuestionScreen({ assessmentId, sport, at: openAt }: QuestionScre
   const end = outstandingPosition(step);
   const goBack = at > 1 ? () => setMovedTo(at - 1) : undefined;
   const goForward = () => setMovedTo(at + 1 >= end ? undefined : at + 1);
+
+  /**
+   * **The device's back is that control, and the header's comment is why.**
+   *
+   * *Back through the run, never out of it.* Every screen in onboarding `replace`s, so the
+   * group holds one history entry and an unclaimed press pops through it to the screen the
+   * part began on — which is both controls bypassed at once, and the boundary
+   * [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md) says back
+   * never crosses. On question one there is nowhere behind, so the press is claimed and
+   * nothing happens: `questionNavigation`'s floor has already said that by drawing no control.
+   *
+   * **It is not the close control.** The way out is a confirm with two doors, and answering a
+   * gesture with a modal would make the cheapest thing on the screen the one that interrupts.
+   */
+  useHardwareBack(() => goBack?.());
   /**
    * Where forward leads from the last answer of a **stopped** run: the review, because
    * there is no question past it.

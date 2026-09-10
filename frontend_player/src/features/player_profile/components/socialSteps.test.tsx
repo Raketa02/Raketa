@@ -25,6 +25,11 @@ import {
   stubProfileOptions,
 } from '@/test-support/onboardingRouter';
 import { fakeLocation } from '@/test-support/platform';
+import {
+  pressHardwareBack,
+  stopWatchingHardwareBack,
+  watchHardwareBack,
+} from '@/test-support/hardwareBack';
 import { installTransport, type Transport, type Wire } from '@/test-support/transport';
 
 import { useProfileDraft } from '../store/profileDraft.store';
@@ -486,5 +491,50 @@ describe('killing the app mid-part', () => {
     // the way through are gone with the process that held them.
     expect(await screen.findByLabelText('Pick 2 tags to continue')).toBeTruthy();
     expect(screen.getByLabelText('Plays to win').props.accessibilityState?.selected).toBe(false);
+  });
+});
+
+/**
+ * **The device's back button, which is Android's and not the app's** — and which walked out
+ * of the part until 2026-09-10.
+ *
+ * Every step of this part `replace`s, so the group holds **one** history entry and the thing
+ * under it is whatever was on screen before the part began: welcome, one push behind the
+ * sport picker. Unclaimed, the system back popped to exactly there — past the step's own back
+ * control, out of the part, and into a screen from which the only way back in is to rate
+ * another sport. [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)
+ * forbids that in as many words: *"Back and forward move freely inside each part and never
+ * cross between them."*
+ *
+ * **The platform half is not on this side of the boundary.** `pressHardwareBack` replays the
+ * press through what the app subscribed, in Android's own reverse order, and answers whether
+ * anything claimed it. The pop that follows an unclaimed press is the activity's, and no test
+ * here can perform it — so *claimed* is what these assert, and it is the whole of what the app
+ * controls.
+ */
+describe("the device's own back button", () => {
+  beforeEach(watchHardwareBack);
+  afterEach(stopWatchingHardwareBack);
+
+  it('walks back a step, exactly as the control in the header does', async () => {
+    await enterTheSocialSteps();
+    await continueFromTheFirstStep();
+
+    expect(pressHardwareBack()).toBe(true);
+
+    await waitFor(() => expect(screen).toHavePathname(STEPS[0]!.path));
+    // And the walk is a walk, not a restart: what was answered on the way through is still
+    // answered, which is the same draft the header's own back control comes back to.
+    expect(screen.getByLabelText('Plays to win').props.accessibilityState?.selected).toBe(true);
+  });
+
+  it('is claimed and refused on the first step, which draws no back at all', async () => {
+    await enterTheSocialSteps();
+
+    expect(pressHardwareBack()).toBe(true);
+
+    // Still here. `stepBefore` says there is nothing behind step one, and the press does what
+    // the missing control says rather than something louder.
+    await waitFor(() => expect(screen).toHavePathname(STEPS[0]!.path));
   });
 });

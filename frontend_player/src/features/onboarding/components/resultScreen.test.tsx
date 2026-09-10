@@ -19,6 +19,11 @@ import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/sh
 import { queryClient } from '@/shared/lib/query-client';
 import { theme } from '@/shared/ui';
 import {
+  pressHardwareBack,
+  stopWatchingHardwareBack,
+  watchHardwareBack,
+} from '@/test-support/hardwareBack';
+import {
   launchSignedIn,
   runInProgress,
   stubGate as stubGateWith,
@@ -494,5 +499,32 @@ describe('nothing rests on colour', () => {
       ),
     ).toBeTruthy();
     expect(theme.color.onDarkTiny).not.toBe(theme.color.muted);
+  });
+});
+
+/**
+ * **The device's back button, on a rating a run has already produced.**
+ *
+ * Every screen in onboarding is reached by `replace`, so the group holds one history entry
+ * and Android's back popped straight through it to the screen the part began on — welcome,
+ * one push behind the sport picker, from which the only way forward is to rate a sport
+ * again. [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md): *"Back
+ * and forward move freely inside each part and never cross between them."*
+ *
+ * Neither screen draws a back control, so the press is claimed and nothing happens — the same
+ * answer the missing control already gives. `pressHardwareBack` replays the press through
+ * what the app subscribed and reports whether anything claimed it; the pop that follows an
+ * unclaimed press is the activity's, and no test here can perform it.
+ */
+describe("the device's own back button", () => {
+  beforeEach(watchHardwareBack);
+  afterEach(stopWatchingHardwareBack);
+
+  it('is claimed and refused, leaving the result where the run put it', async () => {
+    await arriveAtTheResult();
+
+    expect(pressHardwareBack()).toBe(true);
+
+    expect(screen).toHavePathname(`/result/${ASSESSMENT_ID}`);
   });
 });

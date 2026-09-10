@@ -81,6 +81,7 @@ import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { EvidenceTrail } from './EvidenceTrail';
 import { OnboardingChrome } from './OnboardingChrome';
+import { useHardwareBack } from '@/shared/lib/platform';
 import { BAND_NAMES, bandPresentation, ratingStatusLabel } from './bandPresentation';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { passEyebrow } from './passEyebrow';
@@ -156,6 +157,18 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
   const assessment = useAssessment(assessmentId);
   const pass = useOnboardingPass((state) => state.pass);
   const position = positionOf(pass, sport);
+  /**
+   * **The device's back is claimed and refused, because this screen draws none.**
+   *
+   * Every screen in onboarding is reached by `replace`, so the group holds one entry per push
+   * — and the push behind this one is the welcome screen, from which the only way forward is
+   * to rate a sport again. An unclaimed press popped to exactly there.
+   * [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md): *"Back and
+   * forward move freely inside each part and never cross between them."* A press that does
+   * nothing is what the missing back control has already said.
+   */
+  useHardwareBack(() => {});
+
   /**
    * Leaving this sport, in one place — the same hook the question screen calls.
    *

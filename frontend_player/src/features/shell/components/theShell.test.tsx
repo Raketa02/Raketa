@@ -258,10 +258,60 @@ describe('a Play session ends exactly when the shell lays a stack down', () => {
   it('clears it on the way back in too, so ⚡ opens on a week seeded from the profile', async () => {
     // AC-2 lands a returning player on Find a game. A line-up that survived would sit
     // invisible behind a screen whose week no longer matches the search it was built on.
+    //
+    // **Read on a player who actually left**, which is what *returning* means. This walked
+    // out and back through one press of Play on Find a game until 2026-09-10 — and that
+    // press is not a return, it is a player who never went anywhere (see below).
     await launchIntoTheApp();
     pressTab('Play');
     await waitFor(() => expect(screen).toHavePathname('/play'));
     halfwayThroughBuildingOne();
+    pressTab('Chats');
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    halfwayThroughBuildingOne();
+
+    pressTab('Play');
+
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    expect(usePlaySession.getState().lineup).toBeUndefined();
+  });
+
+  /**
+   * **A tab you are already at the start of is not a place to be sent to.**
+   *
+   * Every press of the bar laid the stack down again, so a player tapping Play on Find a game
+   * got the screen rebuilt underneath them: the session ended, the working week went back to
+   * the profile's, and whatever they had ticked was gone — a reload with no cause, on the
+   * gesture people press twice when a screen is slow.
+   *
+   * The rule the reset is for is *pressing a tab goes to that tab's start*, and a player
+   * already standing on it is already there. Nothing about leaving changes: the press still
+   * resets from anywhere else in Play, which is the test below this one.
+   */
+  it('does nothing at all when the tab pressed is the one already on screen', async () => {
+    await launchIntoTheApp();
+    pressTab('Play');
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    halfwayThroughBuildingOne();
+
+    pressTab('Play');
+
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    // The session the player is in the middle of is still the session they are in.
+    expect(usePlaySession.getState().week).toEqual([
+      { day: 2, part: 'evening' },
+      { day: 6, part: 'morning' },
+    ]);
+    expect(usePlaySession.getState().lineup?.seats).toEqual(['player-a', 'player-b']);
+  });
+
+  it('still lays the stack down again from anywhere else inside the tab', async () => {
+    await launchIntoTheApp();
+    pressTab('Play');
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    halfwayThroughBuildingOne();
+    act(() => router.push('/play/deck'));
+    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
 
     pressTab('Play');
 

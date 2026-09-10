@@ -21,6 +21,11 @@
  * a copy of it in a store would be a second answer, free to disagree with the router after
  * a deep link, a redirect, or the hardware back button.
  *
+ * **The same path decides whether a press is a move at all.** `openTab` takes it and declines
+ * the one case where the tab pressed is the screen already on — which used to lay the stack
+ * down again and rebuild Find a game underneath the player. It is handed the value the lit
+ * column is drawn from rather than a second read of its own, for the reason above.
+ *
  * ## The transition says which of the two moves happened
  *
  * A `Stack`'s default is the push transition, and the shell's ordinary move is a **replace** —
@@ -65,7 +70,7 @@ export function TabShell() {
             outside Play, which is why `shellTabs` had to say which tab it is inside. */}
         <Stack.Screen name="games/[gameId]" options={{ animation: 'default' }} />
       </Stack>
-      <TabBar active={tabForPathname(pathname)} onPress={openTab} />
+      <TabBar active={tabForPathname(pathname)} onPress={(tab) => openTab(tab, pathname)} />
     </View>
   );
 }

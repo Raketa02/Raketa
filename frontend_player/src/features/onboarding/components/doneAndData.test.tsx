@@ -10,12 +10,17 @@
  * the only way to assert a requirement whose whole purpose is that two numbers line up.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 
 import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
+import {
+  pressHardwareBack,
+  stopWatchingHardwareBack,
+  watchHardwareBack,
+} from '@/test-support/hardwareBack';
 import {
   launchSignedIn,
   NOW_TAB_LINE,
@@ -659,5 +664,51 @@ describe('a second pass in the same process', () => {
     // already shown — which is the summary they must not be sent back to.
     await waitFor(() => expect(screen).toHavePathname('/'));
     expect(screen.queryByText('Your ratings')).toBeNull();
+  });
+});
+
+/**
+ * **The device's back button, on the screens between the two parts.**
+ *
+ * Every screen in onboarding is reached by `replace`, so the group holds one history entry
+ * and Android's back popped straight through it to the screen the part began on — welcome,
+ * one push behind the sport picker, from which the only way forward is to rate a sport
+ * again. [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md): *"Back
+ * and forward move freely inside each part and never cross between them."*
+ *
+ * Neither screen draws a back control, so the press is claimed and nothing happens — the same
+ * answer the missing control already gives.
+ *
+ * **This walk is the one that can watch the pop**, which is why it asserts the pathname rather
+ * than the claim. It reaches `/done` through a real push (welcome → the sport picker) and then
+ * a `replace`, so the group holds two entries and the navigator's own handler will happily pop
+ * one: before the screen claimed the press, this test landed on `/welcome`. The suites whose
+ * screens are reached by a redirect have one entry and nothing to pop, so they assert that the
+ * app claimed it instead — the two halves of one contract, each read where it is visible.
+ */
+describe("the device's own back button", () => {
+  beforeEach(watchHardwareBack);
+  afterEach(stopWatchingHardwareBack);
+
+  it('is claimed and refused on the ratings screen between the parts', async () => {
+    await rateBothSports();
+
+    expect(pressHardwareBack()).toBe(true);
+    // Let anything the press started land. Unclaimed, this is where the navigator popped to
+    // welcome — one push behind the sport picker, and the ratings just earned off screen.
+    await act(async () => {});
+
+    expect(screen).toHavePathname('/done');
+  });
+
+  it('is claimed and refused on the last screen before the app', async () => {
+    await rateBothSports();
+    fireEvent.press(await screen.findByLabelText('Continue'));
+    await waitFor(() => expect(screen).toHavePathname('/data'));
+
+    expect(pressHardwareBack()).toBe(true);
+    await act(async () => {});
+
+    expect(screen).toHavePathname('/data');
   });
 });
