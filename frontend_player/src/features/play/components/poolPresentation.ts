@@ -44,12 +44,16 @@ import { windowLabel } from './searchPresentation';
 /**
  * The screen's title. It says what the player is here to do, and the court says the rest.
  *
- * **It was dropped for a day** in favour of `searchFacts` — `Padel · doubles · for fun`
- * promoted out of the eyebrow — on the argument that a list of people with an *Add to the
- * court* on every row says *pick players* for itself. What that missed is the screen next
- * door: the court made the same promotion, so two screens carried one heading, which named the
- * **search** on both and the **screen** on neither. A title's first job is telling you which of
- * two you are on.
+ * **It was dropped for a day** in favour of `Padel · doubles · for fun`, promoted out of the
+ * eyebrow — on the argument that a list of people with an *Add to the court* on every row says
+ * *pick players* for itself. What that missed is the screen next door: the court made the same
+ * promotion, so two screens carried one heading, which named the **search** on both and the
+ * **screen** on neither. A title's first job is telling you which of two you are on.
+ *
+ * **And it is now the header's only line.** That eyebrow came back over this title and read as
+ * a caption on what the card below already draws — the Sport under the court, the seats
+ * counted, and both of them in that card's own spoken name — so it is deleted rather than kept
+ * as a third arrangement of two lines.
  *
  * Sentence case, like every other screen name in this app — *Your court photos*, *Check your
  * answers*, *Your starting ratings*. A capitalised *Players* would make this the one Title

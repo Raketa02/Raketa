@@ -366,9 +366,8 @@ export const NO_RATED_SPORT_LINE =
  * **The control names the game rather than the furniture.** It was the builder's title
  * outright — *Build the four* against *Set up the match* — and those two are one sentence in
  * two registers: one counts seats and the other names an occasion, so the pair only reads as a
- * pair to somebody who has seen both. *Doubles* and *singles* are the sport's own words, they
- * are already what `searchFacts` prints one screen on, and they differ by one word rather than
- * by all of them.
+ * pair to somebody who has seen both. *Doubles* and *singles* are the sport's own words, and
+ * they differ by one word rather than by all of them.
  *
  * **And the builder now carries these same two words as its own title**, which is why this
  * reads `builderTitle` rather than repeating the pair. **The control names the screen it

@@ -59,7 +59,7 @@ import {
   splitRowLabel,
 } from './accessibilityPresentation';
 import { balanceLabel, balanceWord } from './balancePresentation';
-import { PICK_PLAYERS_LABEL, PROVISIONAL_WORD, searchFacts } from './builderPresentation';
+import { PICK_PLAYERS_LABEL, PROVISIONAL_WORD } from './builderPresentation';
 import { levelRow } from './playerCardPresentation';
 import {
   POOL_COURT_LABEL,
@@ -361,9 +361,21 @@ describe('arriving', () => {
     );
 
     fireEvent.press(screen.getByLabelText(addLabel(B)));
-    // The eyebrow is written from the origin's sport and mode, neither of which crosses on a
-    // read-back: a record rebuilt from the response alone would have lost both.
-    expect(screen.getByText('Padel · doubles · for fun')).toBeTruthy();
+    // The Sport under the court is written from the **origin**, which does not cross on a
+    // read-back: a record rebuilt from the response alone would have no name to put there.
+    //
+    // It is half of what this used to assert. The origin's other field, the mode, was drawn in
+    // an eyebrow reading `Padel · doubles · for fun`, and that line is gone from both of Play's
+    // inner screens — so the mode survives on the record and in the bodies the court sends,
+    // and is no longer anything a player can see here.
+    // Picked out by its register, as the test below does: the screens under this one name the
+    // Sport too, and the uppercased eyebrow is the pool's own caption and nothing else's.
+    const captions = screen
+      .getAllByText(sportLabel('padel'), { includeHiddenElements: true })
+      .map((node) => StyleSheet.flatten(node.props.style as TextStyle))
+      .filter((style) => style?.textTransform === 'uppercase');
+
+    expect(captions).toHaveLength(1);
   });
 });
 
@@ -403,27 +415,24 @@ const crossedForecast = (full = false): Wire['ForecastResponse'] => ({
 
 describe('the header', () => {
   /**
-   * **The screen is named for what it is here to do, over the facts it was searched under.**
+   * **The screen is named for what it is here to do, and by one line only.**
    *
-   * The pair was tried the other way round for a day — the facts promoted to the title and
-   * *Pick players* dropped — and it put this screen and the court it is pushed over under one
-   * heading, which named the search on both and the screen on neither. A title's first job is
-   * telling you which of two you are on.
+   * Two arrangements were tried and both are gone. `Padel · doubles · for fun` promoted into
+   * the title put this screen and the court it is pushed over under **one heading**, naming
+   * the search on both and the screen on neither — a title's first job is telling you which of
+   * two you are on. Kept as 10.3's eyebrow over the title instead, it read as a caption on
+   * what the header card below already draws: the Sport under the court, the seats counted,
+   * and both of them in that card's own spoken name.
    */
-  it('is named for what it is here to do, with the search facts above it', async () => {
+  it('is named for what it is here to do, and carries nothing above that name', async () => {
     await openThePool();
 
     expect(screen.getByRole('header', { name: POOL_TITLE })).toBeTruthy();
     // The court underneath is called something else, which is the whole of the reversal.
     expect(screen.queryByRole('header', { name: 'Build a doubles' })).toBeNull();
-    // Drawn here too — and more than once on the stack, because the court underneath is still
-    // mounted and carries the same eyebrow. That the two share this line is the point; what
-    // they must not share is the heading, which the assertion above is about.
-    expect(
-      screen.getAllByText(searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' }), {
-        includeHiddenElements: true,
-      }).length,
-    ).toBeGreaterThan(0);
+    // The Sport survives on the header card, under the court — asserted in the test below
+    // this one — and nothing draws the three facts as a line any more.
+    expect(screen.queryByText(/^Padel · /, { includeHiddenElements: true })).toBeNull();
   });
 
   /**

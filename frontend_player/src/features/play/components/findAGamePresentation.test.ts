@@ -93,7 +93,7 @@ describe('the closed control', () => {
 describe('the way onto the court', () => {
   /**
    * Every sentence on the card branches on the seat count, so a squash court is never told to
-   * build a four — the same rule `searchFacts` is written against, read off the same helper
+   * build a four — the same rule `builderTitle` is written against, read off the same helper
    * rather than off a second `seats > 2`. The title names the **game**, which is one word
    * apart across the two shapes where *Build the four* against *Set up the match* was all of
    * them.

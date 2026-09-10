@@ -136,7 +136,6 @@ import { useReadSearchBack, useTakeRung } from '../hooks/usePool';
 import { usePlaySession } from '../store/playSession.store';
 
 import { rungOfferLabel } from './accessibilityPresentation';
-import { searchFacts } from './builderPresentation';
 import { CandidateCard } from './candidate/CandidateCard';
 import { CandidateCardSocial } from './candidate/CandidateCardSocial';
 import { useHeldWait } from './heldWait';
@@ -442,21 +441,18 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
           along with the screen. */}
       <View style={s.root} {...behindOverlay(latched || explaining !== undefined || asking)}>
         <ShellScreen
-          /* **What this screen is for**, over the three facts the search ran under. The pair
-             was tried the other way round for a day — the facts promoted to the title and this
-             name dropped — and it made the court and the pool two screens under one heading,
-             which named the search on both and the screen on neither. */
+          /* **What this screen is for**, and nothing above it. The pair was tried both ways
+             round: the facts promoted to the title with this name dropped, which put the court
+             and the pool under one heading; and the facts kept as 10.3's eyebrow over it,
+             which read as a caption saying what the header card below already draws — the
+             Sport under the court, the seats counted, and both of them in that card's own
+             spoken name. */
           title={POOL_TITLE}
           // The court is underneath — this screen **pops** back onto it, which is already how
           // the row's own *back to the court* control returns and why the pending replacement
           // needs no clearing rule. The chevron is that same `back`, one level up the screen
           // rather than inside a card.
           onBack={router.back}
-          eyebrow={
-            sportName === undefined || origin === undefined
-              ? undefined
-              : searchFacts({ sportName, seats, mode: origin.mode })
-          }
         >
           {record === undefined || sportName === undefined ? (
             <Note title={POOL_NO_RECORD_TITLE}>

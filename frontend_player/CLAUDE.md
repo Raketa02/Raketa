@@ -814,14 +814,17 @@ refetches, because the rule against that is about orderings and a count has none
 why the tab bar carries no badge.
 
 **⚡Play's third screen is the builder, and a swap on it is a selection rather than a
-request.** **It is called _Build a doubles_ or _Build a singles_**, over `Padel · doubles · for
-fun` as 10.3's eyebrow — the same two words as the control on Find a game that opened it,
-because the control names the screen it opens. It said _Build the four_ / _Set up the match_
-before, which is one sentence in two registers and a word about a Sport a squash court must
-never be told, with a third wording — _Complete the …_ — that named the state of the court
-rather than the screen. Then it had **no title at all** for a day, the eyebrow promoted into
-its place; that is reversed, because the pool one screen on made the same promotion and the two
-came out under one heading, naming the search on both and the screen on neither. A court whose
+request.** **It is called _Build a doubles_ or _Build a singles_, and its header draws nothing
+else** — the same two words as the control on Find a game that opened it, because the control
+names the screen it opens. Three wordings and two arrangements were tried to get there. _Build
+the four_ / _Set up the match_ is one sentence in two registers and a word about a Sport a
+squash court must never be told, with a third — _Complete the …_ — naming the state of the
+court rather than the screen. Then the title was dropped and `Padel · doubles · for fun`
+promoted into it, which put this screen and the pool under **one heading**. Then that line came
+back as 10.3's eyebrow over the restored title, and read as the title said twice: _doubles_ in
+both lines, the Sport already on the court in the picture and in its spoken summary. So it is
+deleted, and **the cost is one word** — `for fun` against `competitive` is now stated on
+neither of Play's inner screens, though the two draw different candidate cards. A court whose
 search cannot be read is called something honest instead of a shape it is guessing at. The
 chevron beside it is `ink` now, because it is the one control in that header and it was drawn
 in the eyebrow's own grey. A finished search is pushed onto it — _"where a completed search goes"_, which #268
@@ -884,10 +887,12 @@ than a player with missing facts — a withheld row carries one field and no car
 name and no level to read out — and it says the fact and never the cause.
 
 **⚡Play's fourth screen is the pool, and the relaxation ladder is on it and on no other.**
-**It is called _Pick players_**, over the same three facts the court draws — the pair the court
-has, in the same two registers. It was dropped for a day on the argument that a list of people
-with an _Add to the court_ on every row says _pick players_ for itself; what that missed is the
-screen next door, which had promoted the same line, so the two came out under one heading.
+**It is called _Pick players_ and its header draws nothing else**, which is the court's own
+walk one screen on: the name was dropped for a day on the argument that a list of people with
+an _Add to the court_ on every row says _pick players_ for itself — what that missed is the
+screen next door, which had promoted the same line, so the two came out under one heading — and
+the eyebrow that came back over it read as a caption on what the header card below already
+draws.
 Every thin-result state in the specs pointed the player at a settings screen — _widen the
 radius in You_ — because the prototype had no offer to point at. It is struck: pointing
 somebody at a settings screen while a **one-tap widening with a true count** sits on the same

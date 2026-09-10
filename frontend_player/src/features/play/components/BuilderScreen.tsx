@@ -272,7 +272,6 @@ import {
   USE_MATCHMAKING_LABEL,
   UNREADABLE_SEARCH_TITLE,
   builderTitle,
-  searchFacts,
   forecastHeading,
   sideName,
 } from './builderPresentation';
@@ -880,19 +879,17 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
         <ShellScreen
           /* **The game this screen is here to build**, in the same two words as the control
              that opened it — the control names the screen it opens (`builderPresentation`).
-             The three facts sit above it as 10.3's eyebrow: the line says what was searched
-             for and the title says what the screen is for, and each was tried alone before
-             the pair. Where the record cannot be read there is no shape to name, so the
-             fallback is a name rather than a court shape the screen is guessing at. */
+
+             **And nothing above it.** `Padel · doubles · for fun` stood there as 10.3's
+             eyebrow and read as the title said twice: *doubles* is in both lines, the Sport is
+             on the court below in the picture and in its spoken summary, and what was left
+             over was one word of mode. Where the record cannot be read there is no shape to
+             name, so the fallback is a name rather than a court shape the screen is guessing
+             at. */
           title={
             sportName === undefined || origin === undefined
               ? UNREADABLE_SEARCH_TITLE
               : builderTitle(seats)
-          }
-          eyebrow={
-            sportName === undefined || origin === undefined
-              ? undefined
-              : searchFacts({ sportName, seats, mode: origin.mode })
           }
           // **The gesture, drawn.** This screen is genuinely pushed — Find a game stays
           // underneath it — so the platform's own back already lands here, and 10.3's chevron

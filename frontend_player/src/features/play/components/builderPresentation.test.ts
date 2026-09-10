@@ -14,7 +14,6 @@ import {
   USE_MATCHMAKING_LABEL,
   builderTitle,
   forecastHeading,
-  searchFacts,
   sideName,
 } from './builderPresentation';
 
@@ -69,31 +68,15 @@ describe('what the court is called', () => {
   });
 });
 
-/**
- * The three facts, drawn as the **eyebrow** on the court and on the pool.
+/*
+ * **`searchFacts` had a block here** — `Padel · doubles · for fun`, asserted in both orders and
+ * in both registers before it was deleted.
  *
- * They were promoted to the title on both for a day, which left two screens under one heading
- * — the search named on both and the screen on neither.
+ * As a **title** it put the court and the pool under one heading; as an **eyebrow** over the
+ * titles that replaced it, it read as those titles said twice. What it took with it is one
+ * word, the mode, which is now stated on neither screen — recorded in `builderPresentation`
+ * beside the deletion rather than only here.
  */
-describe('the line above it', () => {
-  it('prints the sport, the shape and the mode, in that order', () => {
-    expect(searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' })).toBe(
-      'Padel · doubles · for fun',
-    );
-    expect(searchFacts({ sportName: 'Tennis', seats: 2, mode: 'COMPETITIVE' })).toBe(
-      'Tennis · singles · competitive',
-    );
-  });
-
-  it('states the shape and never acts on it, which is what keeps it an eyebrow', () => {
-    // A region label, not a control's name: the verb belongs to the title above the court and
-    // to the button on Find a game, and this line only says what was searched for.
-    for (const seats of [2, 4]) {
-      const line = searchFacts({ sportName: 'Padel', seats, mode: 'FOR_FUN' });
-      expect(line).not.toMatch(/build|set up|complete|pick/i);
-    }
-  });
-});
 
 /**
  * ⚡'s label, which names the act rather than the machinery or the scope.

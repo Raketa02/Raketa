@@ -87,7 +87,6 @@ import {
   SWAP_HINT,
   USE_MATCHMAKING_LABEL,
   arrangedYourWayLine,
-  searchFacts,
   sideName,
 } from './builderPresentation';
 import { WITHHELD_SEAT_LINE, optimisedForLine, unfilledSeatLine } from './courtPresentation';
@@ -415,30 +414,26 @@ async function pressFill() {
 
 describe('arriving', () => {
   /**
-   * **The screen is named for what it is here to do, over the facts it was searched under.**
+   * **The screen is named for what it is here to do, and by one line only.**
    *
-   * Both halves were tried alone. The h1 said *Build the four* / *Set up the match*, which is
-   * one sentence in two registers and a word about a Sport a squash court must never be told;
-   * then the h1 was dropped and the facts promoted, which left this screen and the pool under
-   * one heading that named the search on both and the screen on neither.
+   * Three arrangements were tried. The h1 said *Build the four* / *Set up the match*, which is
+   * one sentence in two registers and a word about a Sport a squash court must never be told.
+   * Then the h1 was dropped and `Padel · doubles · for fun` promoted into its place, which put
+   * this screen and the pool under one heading — the search named on both, the screen on
+   * neither. Then that line came back as the eyebrow **over** this title, and read as the title
+   * said twice.
    *
    * What it says is the **same two words as the control that opened it** — the control names
    * the screen it opens — so a player who pressed *Build a doubles* lands on *Build a doubles*.
    */
-  it('is named for the game it builds, with the search facts above it', async () => {
+  it('is named for the game it builds, and carries nothing above that name', async () => {
     await openTheBuilder();
 
     expect(await screen.findByRole('header', { name: 'Build a doubles' })).toBeTruthy();
-    expect(
-      screen.getByText(searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' })),
-    ).toBeTruthy();
-    // The eyebrow labels the region; the title names the screen. Only one of them is the header.
-    expect(
-      screen.queryByRole('header', {
-        name: searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' }),
-      }),
-    ).toBeNull();
-    // And none of the three wordings this replaced.
+    // `Padel · doubles · for fun` stood over it as 10.3's eyebrow and read as the title said
+    // twice — *doubles* in both lines, and the Sport already on the court below.
+    expect(screen.queryByText(/^Padel · /)).toBeNull();
+    // And none of the three wordings the title itself replaced.
     for (const struck of ['Build the four', 'Set up the match', 'Complete the four']) {
       expect(screen.queryByText(struck)).toBeNull();
     }

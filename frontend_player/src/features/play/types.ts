@@ -339,8 +339,8 @@ export {
   START_OVER_LABEL,
   SWAP_HINT,
   USE_MATCHMAKING_LABEL,
+  builderTitle,
   forecastHeading,
-  searchFacts,
 } from './components/builderPresentation';
 
 /**

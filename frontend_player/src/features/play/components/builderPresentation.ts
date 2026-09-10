@@ -34,9 +34,7 @@
  * its rule is about *Match Fit* and *Match score*, and neither word is here.
  */
 
-import { modeWord } from './searchPresentation';
 import { isDoubles, type CourtHalf } from '../domain/lineup';
-import type { SearchMode } from '../domain/vocabulary';
 
 /**
  * The screen's title — **the game it is here to build**, in the sport's own two words.
@@ -72,21 +70,25 @@ export function builderTitle(seats: number): string {
   return isDoubles(seats) ? 'Build a doubles' : 'Build a singles';
 }
 
-/**
- * `Padel · doubles · for fun` — **the three facts the search was run under**, drawn as the
- * eyebrow on both of Play's inner screens.
+/*
+ * **`searchFacts` stood here** — `Padel · doubles · for fun`, the three facts the search was
+ * run under — and it is deleted rather than left with no caller.
  *
- * The name says what the string **is** rather than which register a screen draws it in, which
- * is what let one function serve the court and the pool while the two disagreed about that.
+ * It was tried in both registers on both of Play's inner screens, and neither worked. As the
+ * **title** it put the court and the pool under one heading, naming the search on both and the
+ * screen on neither. As the **eyebrow** over the titles that replaced it, it read as those
+ * titles said twice: *doubles* is in `Build a doubles`, and the Sport is on the court itself —
+ * drawn in the picture, printed under the pool's own court, and spoken in both of their
+ * summaries.
+ *
+ * **What went with it is one word: the mode.** `for fun` against `competitive` is now stated
+ * on neither screen, and it is not invisible — the two draw different candidate cards, and the
+ * competitive one prints a head-to-head band the social one has no room for — but it is no
+ * longer *said*. That is the cost of the removal, recorded here rather than discovered.
+ *
+ * `modeWord` and `SearchMode` leave this file's imports with it. Both have other callers;
+ * nothing about either moved.
  */
-export function searchFacts(court: {
-  readonly sportName: string;
-  readonly seats: number;
-  readonly mode: SearchMode;
-}): string {
-  const shape = isDoubles(court.seats) ? 'doubles' : 'singles';
-  return `${court.sportName} · ${shape} · ${modeWord(court.mode)}`;
-}
 
 /**
  * What the builder is called when it cannot read the search it was opened on.
