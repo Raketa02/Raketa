@@ -150,6 +150,7 @@ export function toChallenges(response: ChallengeListResponse): readonly Challeng
         ...(standing === undefined ? {} : { standing }),
         sport,
         openedAt: one.opened_at,
+        ...(one.ended_at == null ? {} : { endedAt: one.ended_at }),
         readAt: response.read_at,
         seats: one.seats.map(toSeat),
       },

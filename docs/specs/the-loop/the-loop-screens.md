@@ -153,6 +153,17 @@ open again* says the pair rule has released and you may send again, which
 made possible for the first time. News has a shelf life; nothing is lost and nothing lies, because
 the list still holds them.
 
+**The instant it is subtracted from is on the wire, and one standing here is not on the list**
+([#388](https://github.com/Raketa02/Raketa/issues/388), [#395](https://github.com/Raketa02/Raketa/issues/395)).
+`ChallengeSchema.ended_at` dates the three standings the contract calls endings — exactly for a
+lapse and a withdrawal, and as an **upper bound** for a decline, since nothing records the instant
+somebody said no. This paragraph's rule was written before that field existed and the client had
+been approximating it off the latest `answer_by` on the court, which dated a withdrawal not at all
+and so kept that row for ever. **`ON` is the standing that is news to this screen and not an
+ending** — a completed line-up is exactly when two people have a game, which is the opposite of
+nothing being left, so the contract serves it no instant — and it is dated here off the court's own
+deadlines, which for a court where everybody accepted inside their day bounds the last acceptance.
+
 **This 24 h is not the conversation's, and it did not travel with it.** A row here and §4.1's
 ended card are **shelf lives on an inbox**, where the record survives and only the row departs,
 while a conversation's end **destroys an aggregate** — so moving that lifetime left both of these

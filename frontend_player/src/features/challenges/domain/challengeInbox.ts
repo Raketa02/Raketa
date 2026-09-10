@@ -24,28 +24,33 @@
  * **actionable news** — *{name} said no — that seat is open again* says the pair rule has
  * released and you may send again — so it keeps its place and then leaves.
  *
- * **The wire dates no ending, and this is the honest approximation of one.** There is no
- * `ended_at` on `ChallengeSchema`: what a court carries is when it opened and, per seat, when
- * that seat's answer stopped being wanted. A decline can only be given while a seat's day is
- * still running and a lapse *is* that day running out, so **the latest `answer_by` on the court
- * is the last instant the wire can prove this challenge was still being arranged** — exact for
- * a lapse, and generous by at most one answer window for a decline. Generous is the right
- * direction: the harm is a player never seeing that a seat reopened, not seeing it a day
- * longer than intended.
+ * **The wire dates the ending, and the row subtracts it**
+ * ([#388](https://github.com/Raketa02/Raketa/issues/388)). `ended_at` is served on the three
+ * standings that are endings — exact for a lapse, whose deadline *is* the instant it passed,
+ * exact for a withdrawal, which carries the moment somebody decided, and an **upper bound** for
+ * a decline, because nothing anywhere records when a person said no. Late rather than early is
+ * the right direction: the harm is a player never seeing that a seat reopened, not seeing it a
+ * day longer than intended.
  *
- * **`ON` is an ending here too.** Everybody is in, nothing about the arrangement can change
- * again, and the game itself lives in Now and in the room the first acceptance opened — so
- * *Everybody's in* is news like the other three, and it keeps a row for as long as news is
- * worth keeping. Its last acceptance is undated like every other ending, and bounded the same
- * way.
+ * **What that replaced, and what it fixed.** This used to derive an ending from the latest
+ * `answer_by` on the court, which is the most the deadlines can prove. It was right about a
+ * lapse and generous about a decline — but a withdrawal is taken on a court where every clock
+ * has already stopped ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)),
+ * so the deadlines said **nothing at all** about when it happened and such a row was kept
+ * indefinitely. Over time that row was the archive §1.1 exists to prevent.
  *
- * **A withdrawal is dated by nothing, so a withdrawn row is kept.** It is taken on a court
- * where every clock has already stopped ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)),
- * so the deadlines say nothing at all about when it happened, and dropping it on that evidence
- * would be the client calling a piece of news old when it does not know. The clean fix is one
- * field on the contract and one subtraction here, and it is filed as
- * [#388](https://github.com/Raketa02/Raketa/issues/388); until it exists, this is stated rather
- * than guessed at.
+ * **`ON` is news here too, and it is the one row the wire does not date.** Everybody is in,
+ * nothing about the arrangement can change again, and the game itself lives in Now and in the
+ * room the first acceptance opened — so *Everybody's in* is news like the three endings and
+ * keeps a row for as long as news is worth keeping. But `ON` is not an **ending**, and
+ * `ChallengeSchema.ended_at` says so by being `null` on it: a completed line-up is exactly when
+ * two people have a game, which is the opposite of nothing being left. That is the distinction
+ * `STILL_BEING_ARRANGED` below is drawn on, one standing wide, and it is why the field is absent
+ * here by decision rather than by omission. So the deadline reading survives, scoped to that one
+ * standing: every seat accepted means every seat that was asked answered inside its own day, so
+ * the latest `answer_by` on the court is an upper bound on the last acceptance — and a
+ * mutual-born challenge, `ON` from birth with no deadline anywhere, falls back to when it
+ * opened, which is exact.
  */
 
 import { ownSeat, type Challenge, type ChallengeSeat } from './challenge';
@@ -91,16 +96,34 @@ export function challengesWaiting(challenges: readonly Challenge[], playerId: st
 }
 
 /**
- * The last instant the wire can prove this challenge was still being arranged, or nothing.
+ * **When this challenge stopped being arranged** — which is when its row became news, and what
+ * the shelf life is measured from. Nothing where the app cannot say.
+ *
+ * The inverse of `STILL_BEING_ARRANGED` below, dated: two answers, and which one a standing gets
+ * is decided by the contract rather than here. The three endings carry `ended_at`; `ON` stopped
+ * being arranged when the line-up completed, which the wire does not date, so it is bounded by
+ * the court's own deadlines. See the module note for both.
+ *
+ * It is keyed on the **standing** and never on whether the field happens to be there, so a
+ * contract that stopped serving an ending's instant shows up as a row that will not leave
+ * rather than as a silent fall back onto the deadlines it was written to replace.
+ *
+ * `undefined` therefore means one thing where it used to mean two: **the contract claimed an
+ * ending and dated none.** That is a broken promise, not a gap in the wire's vocabulary.
+ */
+export function stoppedBeingArrangedAt(challenge: Challenge): string | undefined {
+  if (challenge.standing === 'ON') return completedNoEarlierThan(challenge);
+  return challenge.endedAt;
+}
+
+/**
+ * The last instant the wire can prove a completed line-up completed.
  *
  * The latest deadline on the court, falling back to the moment it opened for a court where
  * nobody was asked — a mutual-born challenge, whose seats are accepted from birth and carry no
- * `answer_by` at all. `undefined` for a withdrawal, which the deadlines do not date. See the
- * module note.
+ * `answer_by` at all, and which is therefore `ON` the instant it exists.
  */
-export function endedNoEarlierThan(challenge: Challenge): string | undefined {
-  if (challenge.standing === 'WITHDRAWN') return undefined;
-
+function completedNoEarlierThan(challenge: Challenge): string {
   return challenge.seats.reduce<string>(
     (latest, seat) =>
       seat.answerBy !== undefined && Date.parse(seat.answerBy) > Date.parse(latest)
@@ -135,19 +158,21 @@ const STILL_BEING_ARRANGED: Readonly<Record<Standing, boolean>> = {
 };
 
 /**
- * Whether this row belongs on the inbox at all: still being arranged, or ended recently.
+ * Whether this row belongs on the inbox at all: still being arranged, or its news still fresh.
  *
- * An undated ending stays. A standing this build cannot read stays too — it is drawn as the
- * out-of-date gap, and a row the app cannot describe is not a row it may decide is finished.
+ * Two rows stay whatever their age, and it is one rule read twice: **a row the app cannot
+ * describe or cannot date is not a row it may decide is finished.** A standing this build cannot
+ * read is drawn as the out-of-date gap and keeps its place; so does an ending the contract
+ * claimed and did not date.
  */
 export function belongsOnTheInbox(challenge: Challenge): boolean {
   if (challenge.standing === undefined) return true;
   if (STILL_BEING_ARRANGED[challenge.standing]) return true;
 
-  const ended = endedNoEarlierThan(challenge);
-  if (ended === undefined) return true;
+  const stoppedAt = stoppedBeingArrangedAt(challenge);
+  if (stoppedAt === undefined) return true;
 
-  return Date.parse(challenge.readAt) - Date.parse(ended) < ENDED_ROW_SHELF_LIFE_MS;
+  return Date.parse(challenge.readAt) - Date.parse(stoppedAt) < ENDED_ROW_SHELF_LIFE_MS;
 }
 
 /**

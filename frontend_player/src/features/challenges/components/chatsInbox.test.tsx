@@ -147,6 +147,7 @@ describe('what the section holds', () => {
   it('keeps an ended challenge, in place, while it is still news', async () => {
     const justDeclined = mySend({
       standing: 'DECLINED',
+      ended_at: at(-1),
       seats: [
         { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
         { side: 'B', player_id: TOMEK, answer: 'DECLINED', answer_by: at(-1), nickname: 'tomek.p' },
@@ -172,6 +173,10 @@ describe('what the section holds', () => {
     const longGone = mySend({
       standing: 'DECLINED',
       opened_at: at(-100),
+      // **The row leaves because the wire dates the ending** (#388) rather than because the
+      // deadlines let it be guessed at. Without this it would be an ending the app cannot date,
+      // which it keeps.
+      ended_at: at(-99),
       seats: [
         { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
         {

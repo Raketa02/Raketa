@@ -150,6 +150,42 @@ describe('the challenges coming back', () => {
     expect(challenge?.standing).toBeUndefined();
   });
 
+  /**
+   * `null` and a missing key are the same absence to this mapper, which is every nullable field
+   * on this list's own rule — and the domain field is absent either way, so no reader can
+   * subtract a nothing from a clock.
+   */
+  it('carries an ending’s instant, and carries no field where nothing ended', () => {
+    const response: Wire['ChallengeListResponse'] = {
+      read_at: READ_AT,
+      challenges: [
+        {
+          challenge_id: 'c5',
+          sport: 'TENNIS',
+          organiser_id: ME,
+          standing: 'WITHDRAWN',
+          opened_at: '2026-09-01T10:00:00Z',
+          ended_at: '2026-09-03T09:00:00Z',
+          seats: [{ side: 'A', player_id: ME, answer: 'ACCEPTED' }],
+        },
+        {
+          challenge_id: 'c6',
+          sport: 'TENNIS',
+          organiser_id: ME,
+          standing: 'AWAITING_ANSWERS',
+          opened_at: '2026-09-01T10:00:00Z',
+          ended_at: null,
+          seats: [{ side: 'A', player_id: ME, answer: 'ACCEPTED' }],
+        },
+      ],
+    };
+
+    const [withdrawn, standing] = toChallenges(response);
+
+    expect(withdrawn?.endedAt).toBe('2026-09-03T09:00:00Z');
+    expect(standing).not.toHaveProperty('endedAt');
+  });
+
   /** A sport takes the whole row with it: it is what the row calls the game. */
   it('drops a challenge whose sport it cannot read', () => {
     const response = {

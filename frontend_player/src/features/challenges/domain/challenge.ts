@@ -85,6 +85,20 @@ export interface Challenge {
   readonly standing?: Standing;
   readonly sport: Sport;
   readonly openedAt: string;
+  /**
+   * When it ended — **absent because it has not, or because this standing is not one the
+   * contract calls an ending** ([#388](https://github.com/Raketa02/Raketa/issues/388)).
+   *
+   * Served on `DECLINED`, `LAPSED` and `WITHDRAWN`: exact for the last two, and an upper bound
+   * for a decline, because nothing records the instant somebody said no. It is **not** on `ON`,
+   * which the contract holds is not an ending at all — a completed line-up produced a game,
+   * which is the opposite of nothing being left.
+   *
+   * Its one reader is the inbox's shelf life, and `domain/challengeInbox.ts` is where all of
+   * that is argued rather than here: what the row needs is *when did this row's news happen*,
+   * which is this field for three standings and the court's own deadlines for the fourth.
+   */
+  readonly endedAt?: string;
   /** The instant the whole list was folded against. Every duration on the row is read from it. */
   readonly readAt: string;
   /** The court in its fixed order, empty seats included. */

@@ -6,9 +6,11 @@
  * `yoursToClear` which of two sentences to print. If those ever stop being one function, the
  * badge says 1 and the list shows the waiting row fourth.
  *
- * The shelf life is asserted against what the wire actually dates, which is not the ending —
- * see the module note. What is pinned here is the direction of the approximation: a row is
- * never dropped early, and a withdrawal, which nothing dates, is never dropped at all.
+ * The shelf life is asserted against **the instant the wire now serves**
+ * ([#388](https://github.com/Raketa02/Raketa/issues/388)), and the row that proves the
+ * difference is the withdrawal: undated, it was kept for ever, and here it leaves. What is
+ * still pinned is the direction — a row is never dropped early, and one the app cannot date is
+ * never dropped at all.
  */
 
 import type { Challenge, ChallengeSeat } from './challenge';
@@ -17,7 +19,7 @@ import {
   belongsOnTheInbox,
   challengeInbox,
   challengesWaiting,
-  endedNoEarlierThan,
+  stoppedBeingArrangedAt,
   yoursToClear,
 } from './challengeInbox';
 import type { Standing } from './standing';
@@ -89,32 +91,46 @@ describe('is this one mine to clear', () => {
   });
 });
 
-describe('what the wire dates about an ending', () => {
-  it('takes the latest deadline on the court, which is exactly when a lapse happened', () => {
-    const lapsed = challenge({ standing: 'LAPSED', openedAt: at(-78) }, [
-      { playerId: EWA, answer: 'ACCEPTED' },
-      { playerId: ME, answer: 'LAPSED', answerBy: at(-30) },
-    ]);
+describe('when a challenge stopped being arranged', () => {
+  it('takes the instant the wire serves, on all three of the endings it dates', () => {
+    for (const standing of ['DECLINED', 'LAPSED', 'WITHDRAWN'] as const) {
+      const ended = challenge({ standing, openedAt: at(-78), endedAt: at(-30) }, [
+        { playerId: EWA, answer: 'ACCEPTED' },
+        // A deadline the old approximation would have taken instead, and later than the
+        // ending — so reading the court rather than the field is visible here.
+        { playerId: ME, answer: 'LAPSED', answerBy: at(-2) },
+      ]);
 
-    expect(endedNoEarlierThan(lapsed)).toBe(at(-30));
+      expect(stoppedBeingArrangedAt(ended)).toBe(at(-30));
+    }
   });
 
-  it('falls back to the moment it opened on a court where nobody was asked', () => {
-    const mutual = challenge({ standing: 'DECLINED' }, [
+  it('dates a completed line-up off the court, because the contract does not call it an ending', () => {
+    const completed = challenge({ standing: 'ON', openedAt: at(-78) }, [
       { playerId: EWA, answer: 'ACCEPTED' },
-      { playerId: ME, answer: 'DECLINED' },
+      { playerId: ME, answer: 'ACCEPTED', answerBy: at(-30) },
     ]);
 
-    expect(endedNoEarlierThan(mutual)).toBe(mutual.openedAt);
+    expect(completed.endedAt).toBeUndefined();
+    expect(stoppedBeingArrangedAt(completed)).toBe(at(-30));
   });
 
-  it('dates a withdrawal by nothing, because every clock on that court had stopped', () => {
-    const withdrawn = challenge({ standing: 'WITHDRAWN' }, [
+  it('falls back to the moment it opened on a completed court where nobody was asked', () => {
+    const mutual = challenge({ standing: 'ON' }, [
       { playerId: EWA, answer: 'ACCEPTED' },
-      { playerId: ME, answer: 'ACCEPTED', answerBy: at(-40) },
+      { playerId: ME, answer: 'ACCEPTED' },
     ]);
 
-    expect(endedNoEarlierThan(withdrawn)).toBeUndefined();
+    expect(stoppedBeingArrangedAt(mutual)).toBe(mutual.openedAt);
+  });
+
+  it('says nothing where the contract claimed an ending and dated none', () => {
+    const undated = challenge({ standing: 'DECLINED' }, [
+      { playerId: EWA, answer: 'ACCEPTED' },
+      { playerId: ME, answer: 'DECLINED', answerBy: at(-2) },
+    ]);
+
+    expect(stoppedBeingArrangedAt(undated)).toBeUndefined();
   });
 });
 
@@ -145,8 +161,8 @@ describe('what the inbox still holds', () => {
     expect(belongsOnTheInbox(longCompleted)).toBe(false);
   });
 
-  it('keeps an ending the wire dates inside the shelf life', () => {
-    const justLapsed = challenge({ standing: 'LAPSED', openedAt: at(-49) }, [
+  it('keeps an ending inside the shelf life', () => {
+    const justLapsed = challenge({ standing: 'LAPSED', openedAt: at(-49), endedAt: at(-1) }, [
       { playerId: ME, answer: 'LAPSED', answerBy: at(-1) },
     ]);
 
@@ -155,23 +171,55 @@ describe('what the inbox still holds', () => {
 
   it('lets it go once the shelf life has passed, so an inbox is not an archive', () => {
     const hours = ENDED_ROW_SHELF_LIFE_MS / HOUR;
-    const old = challenge({ standing: 'DECLINED', openedAt: at(-hours - 1) }, [
-      { playerId: ME, answer: 'DECLINED', answerBy: at(-hours - 1) },
-    ]);
+    const old = challenge(
+      { standing: 'DECLINED', openedAt: at(-hours - 2), endedAt: at(-hours - 1) },
+      [{ playerId: ME, answer: 'DECLINED', answerBy: at(-hours - 1) }],
+    );
 
     expect(belongsOnTheInbox(old)).toBe(false);
   });
 
-  it('keeps a withdrawal, because dropping it would call news old on no evidence', () => {
-    const withdrawn = challenge({ standing: 'WITHDRAWN', openedAt: at(-500) }, [
+  /**
+   * **The row this ticket existed for.** Nothing dated a withdrawal, so it was kept — one
+   * opened five hundred hours ago among this week's news — and over time that row was the
+   * archive §1.1 exists to prevent. [#388](https://github.com/Raketa02/Raketa/issues/388) put
+   * the instant on the wire, and the whole of the fix on this side is subtracting it.
+   */
+  it('lets a withdrawal go, which is what #388 made possible', () => {
+    const withdrawn = challenge({ standing: 'WITHDRAWN', openedAt: at(-500), endedAt: at(-499) }, [
       { playerId: ME, answer: 'ACCEPTED', answerBy: at(-490) },
     ]);
 
-    expect(belongsOnTheInbox(withdrawn)).toBe(true);
+    expect(belongsOnTheInbox(withdrawn)).toBe(false);
+  });
+
+  it('keeps a withdrawal that has just happened, in its place among the rest', () => {
+    const justWithdrawn = challenge(
+      { standing: 'WITHDRAWN', openedAt: at(-500), endedAt: at(-2) },
+      [{ playerId: ME, answer: 'ACCEPTED', answerBy: at(-490) }],
+    );
+
+    expect(belongsOnTheInbox(justWithdrawn)).toBe(true);
   });
 
   it('keeps a standing it cannot read, because it may not decide an unnamed thing is over', () => {
     expect(belongsOnTheInbox(challenge({ standing: undefined, openedAt: at(-500) }))).toBe(true);
+  });
+
+  /**
+   * The `undefined` branch's remaining purpose, and it is a narrower one than it had. It used
+   * to cover a withdrawal, which was undatable by design; now it covers only a contract that
+   * claimed an ending and dated none — a broken promise rather than a gap in the wire. The row
+   * stays for the same reason an unreadable standing does: **a row the app cannot date is not a
+   * row it may decide is finished.**
+   */
+  it('keeps an ending the wire failed to date, however long ago it opened', () => {
+    const undated = challenge({ standing: 'LAPSED', openedAt: at(-500) }, [
+      { playerId: ME, answer: 'LAPSED', answerBy: at(-490) },
+    ]);
+
+    expect(undated.endedAt).toBeUndefined();
+    expect(belongsOnTheInbox(undated)).toBe(true);
   });
 });
 
