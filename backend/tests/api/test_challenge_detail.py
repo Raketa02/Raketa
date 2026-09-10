@@ -299,6 +299,85 @@ async def test_a_seat_that_left_a_still_open_court_draws_no_card_and_the_others_
     assert "card" in _seat_of(body, people["cy"]["id"])
 
 
+async def test_the_reader_who_left_is_drawn_no_card_block_at_all(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """**The same rule, asked about the reader** ([#394](https://github.com/Raketa02/Raketa/issues/394)).
+
+    The test above reads that court as somebody who **accepted**. This reads it as
+    the person who declined, on a court that is still being filled — and they were
+    being handed a card per remaining player, signed photograph URL included, for
+    people the pair rule had already released.
+
+    **No `pairing_absence` either.** The absence here is the same one an ended
+    standing produces — there is no card block on this read — and not
+    `COULD_NOT_BE_READ`, which means somebody's outage.
+    """
+
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+    await _answer(client, people["ana"]["token"], challenge_id, "accept")
+    await _answer(client, people["cy"]["token"], challenge_id, "accept")
+    await _answer(client, people["bo"]["token"], challenge_id, "decline")
+
+    response = await _detail(client, people["bo"]["token"], challenge_id)
+    body = response.json()
+
+    assert body["standing"] == "LINE_UP_INCOMPLETE"
+    assert "pairing_absence" not in body
+    assert all("card" not in seat for seat in body["seats"])
+    # The whole point of enforcing this by not asking: no signature was minted,
+    # so there is none anywhere in the document to have leaked.
+    assert "photo_url" not in response.text
+
+
+async def test_the_reader_who_left_keeps_the_arrangement_and_every_handle(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """**Only the card goes.** The row and the screen still have to be readable:
+    §13's sentences for a departed reader quote nobody, and the arrangement is how
+    they find out the court is still standing without them."""
+
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+    await _answer(client, people["ana"]["token"], challenge_id, "accept")
+    await _answer(client, people["bo"]["token"], challenge_id, "decline")
+
+    body = (await _detail(client, people["bo"]["token"], challenge_id)).json()
+
+    assert len(body["seats"]) == 4
+    assert _seat_of(body, searcher["id"])["nickname"] == "searcher"
+    assert _seat_of(body, people["ana"]["id"])["nickname"] == "ana"
+    mine = _seat_of(body, people["bo"]["id"])
+    assert mine["answer"] == "DECLINED"
+    assert mine["nickname"] == "bo"
+
+
+async def test_a_reader_who_left_an_awaiting_court_is_drawn_none_either(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """`standing_of` holds `AWAITING_ANSWERS` while **any** seat is awaiting, so a
+    padel four sits there with this reader's answer already given — and that is the
+    arm the client was drawing a card block on until #392. Both live standings ask
+    the one question of the reader's own seat."""
+
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = await _send(client, searcher["token"], search_id, court)
+    await _answer(client, people["bo"]["token"], challenge_id, "decline")
+
+    body = (await _detail(client, people["bo"]["token"], challenge_id)).json()
+
+    assert body["standing"] == "AWAITING_ANSWERS"
+    assert "pairing_absence" not in body
+    assert all("card" not in seat for seat in body["seats"])
+
+
 # ---------------------------------------------------------------------------
 # The three absences, and the refusal — §2 and §6
 # ---------------------------------------------------------------------------

@@ -391,15 +391,28 @@ still read the challenge and everything else on it.
 argument, and it is the server's own: `ReadChallenge._court` says the per-seat rule is enforced
 *"by not putting them in the question — so there is no card computed, no photograph signed and
 nothing to leak."* §8 states the rule; that docstring is where it says how, and it is quoted from
-there rather than from here. A reader who has left is owed that, and
-today the server still computes their cards and signs the URLs; the client merely declines to draw
-them. The server half is filed as
-[#394](https://github.com/Raketa02/Raketa/issues/394) and cites this amendment.
+there rather than from here. A reader who has left is owed that, and both halves have now shipped:
+the client declines to draw the block ([#392](https://github.com/Raketa02/Raketa/issues/392)), and
+`_court` **returns no court at all** where the reader's own seat is not live
+([#394](https://github.com/Raketa02/Raketa/issues/394)) — so there is no card computed and no
+photograph signed, which is the only shape under which there is nothing to leak. It is the same
+`is_live_at` that predicate already applied to everybody else, asked of the reader's own seat.
 
-**One gap is stated rather than closed.** Both sides read the answer the wire sends, so a seat past
-its window whose lapse has not been swept is not *left* yet and still draws a card. Deriving the
-lapse client-side would give that side a second clock, which its own domain module refuses; the
-sweep closes it.
+**No new absence names it, and that is deliberate.** Returning nothing produces the shape an ended
+standing already produces: `pairing_absence` is omitted and no seat carries a card. A
+`PairingAbsence` for this would have to be `COULD_NOT_BE_READ`, which means somebody's outage and
+would be a lie about a reader who simply left.
+
+**One gap is stated rather than closed, and #394 changed its shape rather than removing it.** The
+two sides no longer agree about a seat whose window has passed with **no sweep having been past**:
+the server folds the clock and treats that reader as gone, while the client reads `answer`, which is
+still `null`, and draws them the answering arm. So what such a reader sees is the arm with an empty
+card region and no absence sentence — `ChallengeScreen` draws one only where the wire sends a code —
+and a button that the window's own refusal answers.
+
+That is the right way round, and it is strictly better than what it replaced: **the leak closes on
+the clock and the cosmetic gap does not leak anything.** Deriving the lapse client-side would give
+that side a second clock, which its own domain module refuses; the sweep closes it.
 
 **Cost named:** a reader who has left keeps the arrangement and the handles and loses the numbers,
 so the screen tells them what happened and no longer prices the people it happened with. That is

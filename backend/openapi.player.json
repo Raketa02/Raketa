@@ -3634,7 +3634,7 @@
           "seats"
         ],
         "title": "ChallengeDetailResponse",
-        "description": "One challenge, richly \u2014 the arrangement, the people and the pairing.\n\n**Its own ``read_at``**, because it is its own fold against its own instant:\nthe standing, every seat's deadline and which seats are still in were all\nread against this one moment.\n\n**The card block is drawn while the arrangement is being decided and at no\nother time** (``docs/adr/0143`` \u00a78) \u2014 one rule stated on the two standings\nthat draw one, so a standing added later is silent by default. `DECLINED` and\n`LAPSED` draw the arrangement and the handles alone; `ON` draws neither,\nbecause the game's own screen owns it the moment a game exists.\n\n**Nothing here is re-gated against who is reading** (\u00a72). The four\nfail-closed gates ran over every pair of this court when it was minted, and a\ncard that vanished from behind two buttons that still work would be the one\ndisclosure a safety gate may never make."
+        "description": "One challenge, richly \u2014 the arrangement, the people and the pairing.\n\n**Its own ``read_at``**, because it is its own fold against its own instant:\nthe standing, every seat's deadline and which seats are still in were all\nread against this one moment.\n\n**The card block is drawn while the arrangement is being decided and at no\nother time** (``docs/adr/0143`` \u00a78) \u2014 one rule stated on the two standings\nthat draw one, so a standing added later is silent by default. `DECLINED` and\n`LAPSED` draw the arrangement and the handles alone; `ON` draws neither,\nbecause the game's own screen owns it the moment a game exists.\n\n**Nothing here is re-gated against who is reading** (\u00a72). The four\nfail-closed gates ran over every pair of this court when it was minted, and a\ncard that vanished from behind two buttons that still work would be the one\ndisclosure a safety gate may never make.\n\n**A reader who has left is a different question and is not that** (\u00a78's\namendment, on [#394](https://github.com/Raketa02/Raketa/issues/394)). The card\nblock is a **decision aid**, so a reader with no answer left to give is drawn\nnone \u2014 which settles what the block is *for* rather than who may read a\nchallenge. They still get the arrangement, every seat and every handle, and\nthe buttons are drawn from the standing as they always were."
       },
       "ChallengeListResponse": {
         "properties": {
@@ -4903,7 +4903,7 @@
           },
           "card": {
             "$ref": "#/components/schemas/SeatCardSchema",
-            "description": "Who this person is and what you make of them, drawn only while the arrangement is still being decided and only for somebody still in it. Omitted on your own seat, on an empty one, on a seat that declined or lapsed, and on every seat when `pairing_absence` says there is no pairing to draw."
+            "description": "Who this person is and what you make of them, drawn only while the arrangement is still being decided and only for somebody still in it. Omitted on your own seat, on an empty one, on a seat that declined or lapsed, on **every** seat when you yourself have declined or lapsed, and on every seat when `pairing_absence` says there is no pairing to draw.\n\n**Having answered is not having left.** A reader who **accepted** keeps their cards: they have no answer left to give either, and they are still on the court."
           }
         },
         "type": "object",
@@ -4911,7 +4911,7 @@
           "side"
         ],
         "title": "DetailSeatSchema",
-        "description": "One seat on the detail read \u2014 the list's seat, and a card where one is drawn.\n\n**The card is per seat as well as per challenge** (``docs/adr/0143`` \u00a78).\nSomebody who declined or lapsed inside a still-open court gets none: the pair\nreleases the moment a seat leaves, and *that person is a stranger to you once\nmore.* Their seat stays and keeps its handle, because the standing sentences\nname them.\n\n**Your own seat never carries one either.** A pairing with yourself is not a\nquestion."
+        "description": "One seat on the detail read \u2014 the list's seat, and a card where one is drawn.\n\n**The card is per seat as well as per challenge** (``docs/adr/0143`` \u00a78).\nSomebody who declined or lapsed inside a still-open court gets none: the pair\nreleases the moment a seat leaves, and *that person is a stranger to you once\nmore.* Their seat stays and keeps its handle, because the standing sentences\nname them.\n\n**Your own seat never carries one either.** A pairing with yourself is not a\nquestion.\n\n**And a reader who has left is drawn none at all**\n([#394](https://github.com/Raketa02/Raketa/issues/394)). The rule above is\nasked about the reader as well as about the court: their seat has left, so\neverybody still arranging is a stranger to them once more. It is the whole\ncard block that goes rather than one seat's card, and it goes without a\n`pairing_absence` \u2014 the same absence an ended standing produces."
       },
       "DistanceEvidence": {
         "properties": {

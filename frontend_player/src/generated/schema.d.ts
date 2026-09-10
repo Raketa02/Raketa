@@ -1590,6 +1590,13 @@ export interface components {
          *     fail-closed gates ran over every pair of this court when it was minted, and a
          *     card that vanished from behind two buttons that still work would be the one
          *     disclosure a safety gate may never make.
+         *
+         *     **A reader who has left is a different question and is not that** (§8's
+         *     amendment, on [#394](https://github.com/Raketa02/Raketa/issues/394)). The card
+         *     block is a **decision aid**, so a reader with no answer left to give is drawn
+         *     none — which settles what the block is *for* rather than who may read a
+         *     challenge. They still get the arrangement, every seat and every handle, and
+         *     the buttons are drawn from the standing as they always were.
          */
         ChallengeDetailResponse: {
             /**
@@ -2617,6 +2624,13 @@ export interface components {
          *
          *     **Your own seat never carries one either.** A pairing with yourself is not a
          *     question.
+         *
+         *     **And a reader who has left is drawn none at all**
+         *     ([#394](https://github.com/Raketa02/Raketa/issues/394)). The rule above is
+         *     asked about the reader as well as about the court: their seat has left, so
+         *     everybody still arranging is a stranger to them once more. It is the whole
+         *     card block that goes rather than one seat's card, and it goes without a
+         *     `pairing_absence` — the same absence an ended standing produces.
          */
         DetailSeatSchema: {
             side: components["schemas"]["app__modules__challenges__domain__seats__Side"];
@@ -2641,7 +2655,11 @@ export interface components {
              *     **A handle is the whole of what a challenge borrows about a person here.** A Level, a band, an area and a photograph are a card's, and a card is drawn on the detail read alone.
              */
             nickname?: string | null;
-            /** @description Who this person is and what you make of them, drawn only while the arrangement is still being decided and only for somebody still in it. Omitted on your own seat, on an empty one, on a seat that declined or lapsed, and on every seat when `pairing_absence` says there is no pairing to draw. */
+            /**
+             * @description Who this person is and what you make of them, drawn only while the arrangement is still being decided and only for somebody still in it. Omitted on your own seat, on an empty one, on a seat that declined or lapsed, on **every** seat when you yourself have declined or lapsed, and on every seat when `pairing_absence` says there is no pairing to draw.
+             *
+             *     **Having answered is not having left.** A reader who **accepted** keeps their cards: they have no answer left to give either, and they are still on the court.
+             */
             card?: components["schemas"]["SeatCardSchema"];
         };
         /**

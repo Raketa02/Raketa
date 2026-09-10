@@ -155,12 +155,34 @@ class ReadChallenge:
         reader_id: UUID,
         now: Instant,
     ) -> CourtCards | None:
-        """The cards, or ``None`` where this standing draws none.
+        """The cards, or ``None`` where this read draws none.
 
         **Nobody who has left is asked about.** A declined or lapsed seat inside
         a still-open court gets no card, and the way that is enforced is by not
         putting them in the question — so there is no card computed, no
         photograph signed and nothing to leak.
+
+        **The reader is one of those people**
+        ([#394](https://github.com/Raketa02/Raketa/issues/394)). A reader whose
+        own seat has left draws no court at all, on the sentence above read about
+        them instead of about the court: the pair releases the moment a seat
+        leaves, so everybody still arranging is a stranger to them once more, and
+        a live card of a stranger is ``docs/adr/0141``'s *directory with extra
+        steps*. It is the same ``is_live_at`` the comprehension below already
+        applies to everybody else, and it is asked of the reader's own seat —
+        which is already in hand here, because the sides are read against it.
+
+        **The predicate is *has this reader left* and never *has this reader
+        answered*** (``docs/adr/0143``'s amendment, on #392). A reader who
+        **accepted** has no answer left to give either, and they are still on the
+        court and still held by the pair, so they keep their cards. That is the
+        one case the two reasons for this rule disagree about.
+
+        **Returning ``None`` is the whole of it, and no new absence is needed.**
+        It is the shape an ended standing already produces: the route omits
+        ``pairing_absence`` when there is no court, and ``card_for`` answers
+        nothing for every seat. A ``PairingAbsence`` here would have to be
+        ``COULD_NOT_BE_READ``, which means somebody's outage and would be a lie.
 
         **And never the reader themselves.** A pairing with yourself is not a
         question, and the whole read would refuse it.
@@ -173,11 +195,14 @@ class ReadChallenge:
 
         if standing not in ARRANGING:
             return None
-        mine = next(
-            (seat.side for seat in challenge.seats if seat.holds(reader_id)), None
-        )
+        mine = next((seat for seat in challenge.seats if seat.holds(reader_id)), None)
+        # ``_yours`` has already refused a reader with no seat here, so the first
+        # arm is unreachable rather than a case — and a read is the wrong place to
+        # raise from, so it answers the same way the second does.
+        if mine is None or not mine.is_live_at(now):
+            return None
         court = tuple(
-            CourtSeat(player_id=seat.player_id, beside_you=seat.side == mine)
+            CourtSeat(player_id=seat.player_id, beside_you=seat.side == mine.side)
             for seat in challenge.seats
             if seat.player_id is not None
             and seat.player_id != reader_id
