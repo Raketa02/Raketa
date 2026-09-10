@@ -25,7 +25,7 @@ line-up after (`docs/adr/0146` §7) — and a stored roster would be the copy th
 decides who may read the messages.
 
 Revision ID: 0020_conversation
-Revises: 0019_the_searchers_own_area
+Revises: 0019_searcher_area
 Create Date: 2026-09-08
 
 The revision id is short because `alembic_version.version_num` is `VARCHAR(32)`:
@@ -39,7 +39,7 @@ from alembic import op
 from sqlalchemy_utils.types.uuid import UUIDType
 
 revision = "0020_conversation"
-down_revision = "0019_the_searchers_own_area"
+down_revision = "0019_searcher_area"
 branch_labels = None
 depends_on = None
 
