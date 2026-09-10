@@ -882,6 +882,12 @@ than a player with missing facts — a withheld row carries one field and no car
 name and no level to read out — and it says the fact and never the cause.
 
 **⚡Play's fourth screen is the pool, and the relaxation ladder is on it and on no other.**
+**It has no title of its own either**: _Pick players_ stood as an h1 over an eyebrow already
+reading `Padel · doubles · for fun`, which is the furniture named over the facts and a claim
+the list underneath makes for itself on every row — so the line is promoted exactly as it is on
+the court, and the old title keeps the one state that has no facts to promote. The two screens
+therefore carry the same heading, which is accepted because they carry the same **search**: one
+is pushed over the other and they are two views of one answer.
 Every thin-result state in the specs pointed the player at a settings screen — _widen the
 radius in You_ — because the prototype had no offer to point at. It is struck: pointing
 somebody at a settings screen while a **one-tap widening with a true count** sits on the same

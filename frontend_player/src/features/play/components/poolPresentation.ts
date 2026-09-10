@@ -41,7 +41,20 @@ import type { Window } from '../domain/vocabulary';
 
 import { windowLabel } from './searchPresentation';
 
-/** The screen's title. It says what the player is here to do, and the court says the rest. */
+/**
+ * What the screen is called when it cannot read the search it was opened on.
+ *
+ * **It was the title outright**, over an eyebrow already reading `Padel · doubles · for fun` —
+ * and that is one fact said twice with the smaller line carrying it: the three facts name the
+ * Sport, the shape and the mode, where *Pick players* names the furniture and repeats what the
+ * list underneath is plainly for. So the eyebrow is promoted to the title, exactly as it was on
+ * the court one screen back (`builderPresentation`), and this string keeps the one state that
+ * has no facts to promote.
+ *
+ * It is not `POOL_NO_RECORD_TITLE`: that sentence is the note's, it is the whole of what went
+ * wrong, and a header repeating it would say one thing twice on a screen whose body is that one
+ * note. What a screen with nothing to show is still called is what it is **for**.
+ */
 export const POOL_TITLE = 'Pick players';
 
 /**

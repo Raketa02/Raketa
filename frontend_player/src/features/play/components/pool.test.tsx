@@ -59,7 +59,7 @@ import {
   splitRowLabel,
 } from './accessibilityPresentation';
 import { balanceLabel, balanceWord } from './balancePresentation';
-import { PICK_PLAYERS_LABEL, PROVISIONAL_WORD } from './builderPresentation';
+import { PICK_PLAYERS_LABEL, PROVISIONAL_WORD, searchFacts } from './builderPresentation';
 import { levelRow } from './playerCardPresentation';
 import {
   POOL_COURT_LABEL,
@@ -254,7 +254,9 @@ async function openThePool() {
   await waitFor(() => expect(screen).toHavePathname('/play/builder'));
   fireEvent.press(await screen.findByLabelText(PICK_PLAYERS_LABEL));
   await waitFor(() => expect(screen).toHavePathname('/play/pool'));
-  await screen.findByText(POOL_TITLE);
+  // Settled on the pool's **own** control rather than on its title: the title is the three
+  // facts the search ran under now, which is the same string the court underneath still draws.
+  await screen.findByLabelText(POOL_COURT_LABEL);
 }
 
 /**
@@ -302,7 +304,9 @@ async function openTheSinglesPool(
   await waitFor(() => expect(screen).toHavePathname('/play/builder'));
   fireEvent.press(await screen.findByLabelText(PICK_PLAYERS_LABEL));
   await waitFor(() => expect(screen).toHavePathname('/play/pool'));
-  await screen.findByText(POOL_TITLE);
+  // Settled on the pool's **own** control rather than on its title: the title is the three
+  // facts the search ran under now, which is the same string the court underneath still draws.
+  await screen.findByLabelText(POOL_COURT_LABEL);
 }
 
 const addLabel = (playerId: string) => `Add ${NAMES[playerId]} to the court`;
@@ -399,6 +403,24 @@ const crossedForecast = (full = false): Wire['ForecastResponse'] => ({
 
 describe('the header', () => {
   /**
+   * **The screen is called what it was searched under, and by nothing else.**
+   *
+   * *Pick players* stood as an h1 over an eyebrow already reading `Padel · doubles · for fun` —
+   * the furniture named over the facts, and a claim the list underneath makes for itself on
+   * every row. The eyebrow is the title now, exactly as it is on the court one screen back.
+   */
+  it('is titled by the three facts it was searched under, and carries no second heading', async () => {
+    await openThePool();
+
+    expect(
+      screen.getByRole('header', {
+        name: searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' }),
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByText(POOL_TITLE)).toBeNull();
+  });
+
+  /**
    * **The Sport is under the picture, not on it.**
    *
    * [7.12](../../../../docs/design-system.md#712-the-court)'s caption is a band *inside* the
@@ -415,7 +437,7 @@ describe('the header', () => {
     // which opens with the Sport — so the word is drawn for a reader and merged for a listener
     // (§20.1). Moving it out of the drawing did not change which of the two it is.
     const shown = { includeHiddenElements: true };
-    await screen.findByText(POOL_TITLE);
+    await screen.findByLabelText(POOL_COURT_LABEL);
     // The screens under this one are still mounted and name the Sport too, so the header's own
     // word is picked out by the register it is in: an uppercased eyebrow, which is the caption's
     // and nothing else's on this stack.

@@ -442,17 +442,22 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
           along with the screen. */}
       <View style={s.root} {...behindOverlay(latched || explaining !== undefined || asking)}>
         <ShellScreen
-          title={POOL_TITLE}
+          /* **The screen's name is the three facts it was searched under**, promoted out of the
+             eyebrow when the h1 over it was removed: *Pick players* named the furniture and
+             repeated what a list of people with an *Add to the court* on every row is plainly
+             for. Where the record cannot be read there are no facts to promote, and the
+             fallback is what the screen is **for** rather than the note's own sentence said
+             twice (`poolPresentation`). */
+          title={
+            sportName === undefined || origin === undefined
+              ? POOL_TITLE
+              : searchFacts({ sportName, seats, mode: origin.mode })
+          }
           // The court is underneath — this screen **pops** back onto it, which is already how
           // the row's own *back to the court* control returns and why the pending replacement
           // needs no clearing rule. The chevron is that same `back`, one level up the screen
           // rather than inside a card.
           onBack={router.back}
-          eyebrow={
-            sportName === undefined || origin === undefined
-              ? undefined
-              : searchFacts({ sportName, seats, mode: origin.mode })
-          }
         >
           {record === undefined || sportName === undefined ? (
             <Note title={POOL_NO_RECORD_TITLE}>
