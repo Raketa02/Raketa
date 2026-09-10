@@ -683,8 +683,9 @@ Rules to preserve:
   `ENTRY_GRACE` is the argument and two numbers whose relationship is the argument must not
   be separated; and **`games` may not import the Plan**, which is ADR-0145 §4's *"beside
   that context without being let into it"* made checkable — `.importlinter` holds it.
-- **The live channel carries a nudge, and nothing else is on the wire**
-  ([ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)).
+- **The live channel carries a nudge and a typing frame, and nothing else is on the wire**
+  ([ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md),
+  [ADR-0156](../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)).
   `GET /conversations/{id}/stream` is the platform's **first real-time surface**, and it is
   Server-Sent Events on FastAPI's own `EventSourceResponse` — **zero new dependencies**,
   against a WebSocket path that starts with one and whose absence fails *silently*, since
@@ -712,6 +713,29 @@ Rules to preserve:
   exception — which needed `app/api/streaming.py`, a dated shim for a framework bug that
   drops a stream's item type on every `include_router`. The hole that remains is named: the
   checks cover the *declaration*, and nothing proves the emission.
+  **The second frame is presence, and a heartbeat is the only honest shape for it**
+  ([ADR-0156](../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)).
+  `POST /conversations/{id}/typing` is a `204` gated exactly like the send — membership, then the
+  hold, because an indicator is drawn on other people's screens — and there is deliberately no
+  *stopped*: every way a client can vanish is a way a *stopped* fails to arrive, and each of them
+  would leave a room saying somebody is typing for ever. **The TTL is the correctness mechanism and
+  the only one**: `TYPING_TTL` sits above `TYPING_CADENCE` in `conversations/domain/live.py` with
+  the ordering asserted at import, and the roster for a room is whatever has not expired. The store
+  is Redis and **never Postgres** — a durable row would be the one fact here that outlives the room
+  — with an index set beside the per-typist keys so a read is one keyed lookup and never a scan;
+  that index is a **hint**, since a member is reported only if their own key is alive. **The frame
+  moves no sequence**, which is the invariant: the heartbeat loads the room `to_read`, so the
+  `FOR UPDATE` that mints a gapless `seq` is not taken by the act of typing, and it carries
+  `player_ids` sorted by the sender with **the reader filtered out on the way out**. **The kind is
+  the SSE `event:` name** — `nudge` and `typing` — so an unknown frame is dropped by the transport
+  rather than by a branch, and `LIVE_CHANNEL_VERSION` **does not bump**. Naming an event costs the
+  declaration back and it is bought back: the framework reads any `ServerSentEvent` as *this route
+  builds its own frames*, so `app/api/streaming.py` reads the narrowed `data` off `LiveFrame`
+  instead — without it, adding this would have deleted `LiveNudgeSchema` from `components.schemas`.
+  And **this pair does *not* fail in opposite directions**: the roster read fails soft like the
+  heartbeat, because it is a courtesy read on the **command** client — the one with a two-second
+  deadline, asked once a second by every open stream — and failing it loud would let a merely slow
+  store close every healthy stream on the platform.
 - **A Player Score is what the platform watched, and two strands is what it can see**
   ([ADR-0140](../docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
   `app/modules/player_score/` is the seventh context and the first that **keeps no record at

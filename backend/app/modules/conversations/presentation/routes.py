@@ -1,7 +1,7 @@
 """The conversation routes: list your rooms, open one, page back, say something,
-and follow it live.
+say you are typing, and follow it live.
 
-**Five routes, and membership is the gate on every one of them**
+**Six routes, and membership is the gate on every one of them**
 (``docs/adr/0148`` §2). The four fail-closed safety gates ran over every pair of
 the court in the send's own transaction; **nothing is re-evaluated against the
 reader**, because telling a reader that something changed about somebody else on
@@ -22,7 +22,8 @@ acceptance, through the outbox, by a context that does not know this one exists
 (``docs/adr/0146`` §5) — so there is no ``POST /conversations`` and there will
 not be one.
 
-**The fifth route is one-directional and carries no content** (``docs/adr/0147``).
+**The fifth route is one-directional and carries no content** (``docs/adr/0147``,
+amended by ``docs/adr/0156``).
 ``/stream`` is Server-Sent Events on the framework's own ``EventSourceResponse``
 — zero new dependencies, against a WebSocket path that starts with one and whose
 absence fails *silently*, since this server is pinned without the standard extra
@@ -32,9 +33,22 @@ second write path with a second place to authorise and a second place to
 validate, and the only thing it adds is a capability we would then write a rule
 forbidding.
 
+**The sixth route is a heartbeat, and it is an ordinary ``POST``**
+(``docs/adr/0156``). ``/typing`` is gated exactly as the send is — membership,
+then the hold — because a typing indicator is seen by other players and a hold is
+about reach. It appends nothing, locks nothing and answers ``204``, and it is
+deliberately a request rather than a message on a socket: presence is exactly the
+feature whose *obvious* home is the bidirectional channel the paragraph above
+refuses, and keeping it here is what leaves that argument standing.
+
 **There is no second stream for the Chats list, and there will not be one.** One
 stream per open conversation is the entire live surface; the list is an ordinary
 read on ordinary caching.
+
+**And presence stops at *is somebody typing right now*.** No read receipts, no
+`seen_at`, no online, no last-seen — ``docs/adr/0156`` §7 refuses all four by
+name, and the shape here is what keeps that cheap to hold: nothing is stored, so
+there is nothing for a later feature to read.
 """
 
 from __future__ import annotations
@@ -51,6 +65,7 @@ from app.modules.conversations.application.commands import (
     ReadConversationCommand,
     ReadConversationsCommand,
     ReadEntriesCommand,
+    RecordTypingCommand,
     SendMessageCommand,
 )
 from app.modules.conversations.application.read_conversation import (
@@ -58,7 +73,12 @@ from app.modules.conversations.application.read_conversation import (
 )
 from app.modules.conversations.application.read_conversations import ConversationRow
 from app.modules.conversations.domain.entries import Entry, Message
-from app.modules.conversations.domain.live import Nudge
+from app.modules.conversations.domain.live import (
+    TYPING_CADENCE,
+    TYPING_TTL,
+    Nudge,
+    Typing,
+)
 from app.modules.conversations.domain.paging import (
     PAGE_LIMIT_CAP,
     PAGE_LIMIT_DEFAULT,
@@ -70,15 +90,20 @@ from app.modules.conversations.presentation.dependencies import (
     ReadConversationDep,
     ReadConversationsDep,
     ReadEntriesDep,
+    RecordTypingDep,
     SendMessageDep,
 )
 from app.modules.conversations.presentation.schemas import (
+    NUDGE_EVENT,
+    TYPING_EVENT,
     ConversationListResponse,
     ConversationMemberSchema,
     ConversationResponse,
     ConversationRowSchema,
     EntryPageResponse,
+    LiveFrame,
     LiveNudgeSchema,
+    LiveTypingSchema,
     MessageSchema,
     SendMessageRequest,
     SystemLineSchema,
@@ -322,6 +347,60 @@ async def send_message(
     return _message(message)
 
 
+@router.post(
+    "/{conversation_id}/typing",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "description": (
+                "Recorded. Also the answer when you were already recorded as "
+                "typing — the heartbeat is idempotent and re-posting it is the "
+                "cheapest thing this route does."
+            ),
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "model": ErrorResponse,
+            "description": (
+                "`account_held` — your account is under a live hold. **A hold "
+                "stops you writing anywhere another player sees it**, and an "
+                "indicator in somebody else's room is somewhere another player "
+                "sees it. Every read on this context stays open to you."
+            ),
+        },
+        **_NOT_FOUND,
+    },
+    summary="Say you are typing",
+    description=(
+        "**A heartbeat, not a state.** Post this while somebody is typing and "
+        f"stop posting when they stop — about every "
+        f"{int(TYPING_CADENCE.total_seconds())} seconds. There is deliberately "
+        "no *stopped* call, because a *stopped* that never arrives — the app is "
+        "killed, the phone loses signal, the request is dropped — would leave a "
+        "room with an indicator nothing could ever clear.\n\n"
+        f"**What clears it is the server's own {int(TYPING_TTL.total_seconds())}"
+        "-second expiry**, so the failure mode is the indicator vanishing rather "
+        "than sticking. Keep the cadence under that expiry or your own indicator "
+        "flickers on people who are still typing.\n\n"
+        "**It records nothing durable and moves no sequence.** The room's "
+        "`last_seq` is exactly what it was, however many of these you post — a "
+        "typing frame is not an entry, and nothing here appends, locks or "
+        "commits.\n\n"
+        "**No rate limit, and none is planned.** Writing the same key repeatedly "
+        "is idempotent and cheap, and the expiry is what bounds it.\n\n"
+        "**It carries no body.** What is being typed is nobody's business until "
+        "it is sent."
+    ),
+)
+async def record_typing(
+    conversation_id: UUID,
+    user: CurrentUserDep,
+    use_case: RecordTypingDep,
+) -> None:
+    await use_case.execute(
+        RecordTypingCommand(conversation_id=conversation_id, player_id=user.id)
+    )
+
+
 @router.get(
     "/{conversation_id}/stream",
     response_class=EventSourceResponse,
@@ -329,24 +408,44 @@ async def send_message(
     responses={
         status.HTTP_200_OK: {
             "description": (
-                "An open `text/event-stream`. Every frame is a `LiveNudgeSchema` "
-                "and nothing else."
+                "An open `text/event-stream`. Two named events ride it: "
+                f"`{NUDGE_EVENT}` carries a `LiveNudgeSchema` and "
+                f"`{TYPING_EVENT}` carries a `LiveTypingSchema`. **Subscribe per "
+                "name**; a name you do not know is not yours to render."
             )
         },
         **_NOT_FOUND_AS_JSON,
     },
     summary="Follow a conversation",
     description=(
-        "**A nudge, and nothing else on the wire.** Every frame is "
-        "`{ v, conversation_id, last_seq }`. On receiving one, fetch from "
-        "**your own** high-water mark through `GET /conversations/{id}/entries` "
-        "— never from `last_seq`.\n\n"
+        f"**Two named events, and you subscribe per name.** `{NUDGE_EVENT}` says "
+        f"the room moved; `{TYPING_EVENT}` says somebody is typing. The "
+        "kind is on the SSE `event:` field rather than inside the JSON, so an "
+        "event name you have never heard of is ignored by construction — which "
+        "is what makes a third one, one day, additive for a phone that shipped "
+        "today.\n\n"
+        f"**A `{NUDGE_EVENT}` is `{{ v, conversation_id, last_seq }}` and "
+        "nothing else.** On receiving one, fetch from **your own** high-water "
+        "mark through `GET /conversations/{id}/entries` — never from "
+        "`last_seq`.\n\n"
+        f"**A `{TYPING_EVENT}` is `{{ v, conversation_id, player_ids }}`, and it "
+        "moves no cursor of any kind.** It is not an entry, carries no `seq`, "
+        "and the room's `last_seq` is unaffected by it. It arrives when the "
+        "answer changes and not on a timer, **you are never in it**, and an "
+        "empty `player_ids` is how an indicator goes away. There is no *stopped* "
+        "signal anywhere: the server reports whoever's heartbeat has not "
+        f"expired, so a killed app clears within "
+        f"{int(TYPING_TTL.total_seconds())} seconds by doing nothing at all."
+        "\n\n"
+        f"**`v` does not move for the new event.** A client that listens only "
+        f"for `{NUDGE_EVENT}` is entirely unaffected by this addition, which is "
+        "why the envelope version says `1` on both.\n\n"
         "**A dropped frame costs nothing.** Because you fetch from your own "
         "cursor and not from the frame's number, the *next* nudge repairs "
         "whatever the lost one would have said. There is nothing to detect and "
         "nothing to reconcile.\n\n"
-        "**One frame arrives the moment the stream opens**, carrying the room's "
-        "current `last_seq`. That is what makes resume correct without "
+        f"**One `{NUDGE_EVENT}` arrives the moment the stream opens**, carrying "
+        "the room's current `last_seq`. That is what makes resume correct without "
         "`Last-Event-ID` being load-bearing, and it is how a client that has "
         "been away catches up in one step.\n\n"
         "**The stream closes when your access token expires** — about every "
@@ -367,7 +466,7 @@ async def follow_conversation(
     opening: OpeningNudgeDep,
     caller: AuthenticatedSessionDep,
     use_case: FollowConversationDep,
-) -> AsyncIterator[LiveNudgeSchema]:
+) -> AsyncIterator[LiveFrame]:
     """The live channel.
 
     **Membership ran in ``OpeningNudgeDep``, before this generator existed** —
@@ -376,17 +475,24 @@ async def follow_conversation(
 
     **The frames go out through the declared model, and the hole that remains is
     ``docs/adr/0147`` §7's, named rather than closed.** The checks cover the
-    *declaration*: `make openapi` publishes `LiveNudgeSchema` and the client
-    generates its type from it. **Nothing proves the emission.** What narrows it
-    is that the framework validates and serialises each yielded item against that
-    model on the way out — so a frame that did not match would raise here rather
-    than ship — but a stream body is not a response model, nothing type-checks
-    this route against its own annotation, and the residual risk is affordable
-    only because the shape is three fields wide.
+    *declaration*: `make openapi` publishes both envelopes off ``LiveFrame.data``
+    and the client generates its types from them. **Nothing proves the
+    emission.** What narrows it is that pydantic validates every frame as it is
+    constructed here — so a payload that is neither envelope raises rather than
+    shipping — but a stream body is not a response model, nothing type-checks
+    this route against its own annotation, and **no artifact anywhere carries the
+    event names** — the SSE item schema's ``event`` is a bare string the
+    framework writes, so a client reads them from the description
+    (``docs/adr/0156`` §5). What is checked is that this route emits one of
+    exactly two: ``LiveFrame.event`` is a closed set, so a third kind is added in
+    one place rather than spelled correctly here. The residual risk is affordable
+    because both shapes are three fields wide.
     """
 
-    async for nudge in use_case.follow(opening, until=caller.expires_at):
-        yield _nudge(nudge)
+    async for frame in use_case.follow(
+        opening, reader_id=caller.user.id, until=caller.expires_at
+    ):
+        yield _frame(frame)
 
 
 # ---------------------------------------------------------------------------
@@ -395,11 +501,31 @@ async def follow_conversation(
 # ---------------------------------------------------------------------------
 
 
-def _nudge(nudge: Nudge) -> LiveNudgeSchema:
-    return LiveNudgeSchema(
-        v=nudge.v,
-        conversation_id=nudge.conversation_id,
-        last_seq=nudge.last_seq,
+def _frame(frame: Nudge | Typing) -> LiveFrame:
+    """One live frame, named. **The kind is the event and never a field.**
+
+    ``docs/adr/0156`` §5: a client subscribes per event name, so a frame it does
+    not know is dropped by the transport rather than by a branch — which is the
+    property a discriminator inside the JSON would have handed back to whoever
+    wrote the branch.
+    """
+
+    if isinstance(frame, Nudge):
+        return LiveFrame(
+            event=NUDGE_EVENT,
+            data=LiveNudgeSchema(
+                v=frame.v,
+                conversation_id=frame.conversation_id,
+                last_seq=frame.last_seq,
+            ),
+        )
+    return LiveFrame(
+        event=TYPING_EVENT,
+        data=LiveTypingSchema(
+            v=frame.v,
+            conversation_id=frame.conversation_id,
+            player_ids=list(frame.player_ids),
+        ),
     )
 
 

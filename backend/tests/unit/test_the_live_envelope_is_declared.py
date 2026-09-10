@@ -38,28 +38,79 @@ def test_the_live_envelope_is_declared_on_the_route_and_generated():
     spec, stream = _the_stream_operation()
 
     frame = stream["responses"]["200"]["content"]["text/event-stream"]["itemSchema"]
-    assert frame["properties"]["data"]["contentSchema"] == {
-        "$ref": "#/components/schemas/LiveNudgeSchema"
-    }
+    assert frame["properties"]["data"]["contentSchema"]["anyOf"] == [
+        {"$ref": "#/components/schemas/LiveNudgeSchema"},
+        {"$ref": "#/components/schemas/LiveTypingSchema"},
+    ]
     assert set(spec["components"]["schemas"]["LiveNudgeSchema"]["properties"]) == {
         "v",
         "conversation_id",
         "last_seq",
     }
+    assert set(spec["components"]["schemas"]["LiveTypingSchema"]["properties"]) == {
+        "v",
+        "conversation_id",
+        "player_ids",
+    }
 
 
-def test_the_frame_is_three_fields_and_the_document_says_so():
-    """**The whole live contract**, read back off the artifact a client reads.
+def test_both_envelopes_survive_the_route_naming_its_own_events():
+    """The half of the shim `docs/adr/0156` §5 needed, asserted for its own sake.
 
-    A fourth field here would be a widening of the one shape no check watches
-    behaviourally, which is exactly what `docs/adr/0147` §3 chose this envelope to
-    make unaffordable.
+    Naming an event means yielding a `ServerSentEvent`, and the framework reads
+    any of those as *this route builds its own frames* and declares nothing about
+    them. Without `_declared_payload`, adding the typing event would have deleted
+    **`LiveNudgeSchema`** from `components.schemas` — a contract change nobody
+    asked for, arriving at a shipped client as a deletion.
     """
 
     spec, _ = _the_stream_operation()
 
-    envelope = spec["components"]["schemas"]["LiveNudgeSchema"]
-    assert envelope["required"] == ["v", "conversation_id", "last_seq"]
+    assert "LiveNudgeSchema" in spec["components"]["schemas"]
+    assert "LiveTypingSchema" in spec["components"]["schemas"]
+
+
+def test_each_frame_is_three_fields_and_the_document_says_so():
+    """**Two frames, three fields each**, read back off the artifact a client reads.
+
+    A fourth field on either would be a widening of the one shape no check
+    watches behaviourally, which is exactly what `docs/adr/0147` §3 chose this
+    envelope to make unaffordable — and `docs/adr/0156` kept, by giving the
+    second frame its own shape rather than a field on this one.
+
+    **The typing frame's missing fourth field is `last_seq`, and its absence is
+    the ticket's own invariant** (`docs/adr/0156` §4): a typing frame is not an
+    entry and may not carry, or move, a sequence.
+    """
+
+    spec, _ = _the_stream_operation()
+
+    schemas = spec["components"]["schemas"]
+    assert schemas["LiveNudgeSchema"]["required"] == [
+        "v",
+        "conversation_id",
+        "last_seq",
+    ]
+    assert schemas["LiveTypingSchema"]["required"] == [
+        "v",
+        "conversation_id",
+        "player_ids",
+    ]
+
+
+def test_the_typing_route_answers_no_content_and_takes_no_body():
+    """A heartbeat records nothing and says nothing back (`docs/adr/0156`).
+
+    **And it takes no body at all** — what is being typed is nobody's business
+    until it is sent, and a request shape here is the field that would one day
+    carry it.
+    """
+
+    spec, _ = _the_stream_operation()
+
+    typing = spec["paths"][STREAM.replace("/stream", "/typing")]["post"]
+    assert set(typing["responses"]) == {"204", "403", "404", "422"}
+    assert "requestBody" not in typing
 
 
 def test_the_refusal_on_the_stream_is_json_and_not_an_event_stream():

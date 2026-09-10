@@ -2547,13 +2547,75 @@
         }
       }
     },
+    "/api/v1/conversations/{conversation_id}/typing": {
+      "post": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Say you are typing",
+        "description": "**A heartbeat, not a state.** Post this while somebody is typing and stop posting when they stop \u2014 about every 3 seconds. There is deliberately no *stopped* call, because a *stopped* that never arrives \u2014 the app is killed, the phone loses signal, the request is dropped \u2014 would leave a room with an indicator nothing could ever clear.\n\n**What clears it is the server's own 5-second expiry**, so the failure mode is the indicator vanishing rather than sticking. Keep the cadence under that expiry or your own indicator flickers on people who are still typing.\n\n**It records nothing durable and moves no sequence.** The room's `last_seq` is exactly what it was, however many of these you post \u2014 a typing frame is not an entry, and nothing here appends, locks or commits.\n\n**No rate limit, and none is planned.** Writing the same key repeatedly is idempotent and cheap, and the expiry is what bounds it.\n\n**It carries no body.** What is being typed is nobody's business until it is sent.",
+        "operationId": "record_typing_api_v1_conversations__conversation_id__typing_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Recorded. Also the answer when you were already recorded as typing \u2014 the heartbeat is idempotent and re-posting it is the cheapest thing this route does."
+          },
+          "403": {
+            "description": "`account_held` \u2014 your account is under a live hold. **A hold stops you writing anywhere another player sees it**, and an indicator in somebody else's room is somewhere another player sees it. Every read on this context stays open to you.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`conversation_not_found` \u2014 **one code for two cases**: there is no room with that id, or there is one and you are not in it. They are not told apart on purpose, because a 403 would answer *is this id real* about a stranger's evening.\n\nLeave the screen. There is no retry that changes this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/conversations/{conversation_id}/stream": {
       "get": {
         "tags": [
           "conversations"
         ],
         "summary": "Follow a conversation",
-        "description": "**A nudge, and nothing else on the wire.** Every frame is `{ v, conversation_id, last_seq }`. On receiving one, fetch from **your own** high-water mark through `GET /conversations/{id}/entries` \u2014 never from `last_seq`.\n\n**A dropped frame costs nothing.** Because you fetch from your own cursor and not from the frame's number, the *next* nudge repairs whatever the lost one would have said. There is nothing to detect and nothing to reconcile.\n\n**One frame arrives the moment the stream opens**, carrying the room's current `last_seq`. That is what makes resume correct without `Last-Event-ID` being load-bearing, and it is how a client that has been away catches up in one step.\n\n**The stream closes when your access token expires** \u2014 about every fifteen minutes. Reconnect with a fresh one through your ordinary refresh path; the token travels in the `Authorization` header, never a query string.\n\n**A closed stream means the room is not live, and nothing more.** It closes on token expiry, on a deploy, and when this server's own subscriber cannot be reached \u2014 deliberately, so that a chat which is not live *looks* not-live instead of looking up to date. Every read on this context keeps working throughout; only the latency changes.\n\n**Close it when the app backgrounds and re-open on foreground.** iOS severs a backgrounded app's connections, and re-opening is the same code path as any other reconnect.",
+        "description": "**Two named events, and you subscribe per name.** `nudge` says the room moved; `typing` says somebody is typing. The kind is on the SSE `event:` field rather than inside the JSON, so an event name you have never heard of is ignored by construction \u2014 which is what makes a third one, one day, additive for a phone that shipped today.\n\n**A `nudge` is `{ v, conversation_id, last_seq }` and nothing else.** On receiving one, fetch from **your own** high-water mark through `GET /conversations/{id}/entries` \u2014 never from `last_seq`.\n\n**A `typing` is `{ v, conversation_id, player_ids }`, and it moves no cursor of any kind.** It is not an entry, carries no `seq`, and the room's `last_seq` is unaffected by it. It arrives when the answer changes and not on a timer, **you are never in it**, and an empty `player_ids` is how an indicator goes away. There is no *stopped* signal anywhere: the server reports whoever's heartbeat has not expired, so a killed app clears within 5 seconds by doing nothing at all.\n\n**`v` does not move for the new event.** A client that listens only for `nudge` is entirely unaffected by this addition, which is why the envelope version says `1` on both.\n\n**A dropped frame costs nothing.** Because you fetch from your own cursor and not from the frame's number, the *next* nudge repairs whatever the lost one would have said. There is nothing to detect and nothing to reconcile.\n\n**One `nudge` arrives the moment the stream opens**, carrying the room's current `last_seq`. That is what makes resume correct without `Last-Event-ID` being load-bearing, and it is how a client that has been away catches up in one step.\n\n**The stream closes when your access token expires** \u2014 about every fifteen minutes. Reconnect with a fresh one through your ordinary refresh path; the token travels in the `Authorization` header, never a query string.\n\n**A closed stream means the room is not live, and nothing more.** It closes on token expiry, on a deploy, and when this server's own subscriber cannot be reached \u2014 deliberately, so that a chat which is not live *looks* not-live instead of looking up to date. Every read on this context keeps working throughout; only the latency changes.\n\n**Close it when the app backgrounds and re-open on foreground.** iOS severs a backgrounded app's connections, and re-opening is the same code path as any other reconnect.",
         "operationId": "follow_conversation_api_v1_conversations__conversation_id__stream_get",
         "security": [
           {
@@ -2574,7 +2636,7 @@
         ],
         "responses": {
           "200": {
-            "description": "An open `text/event-stream`. Every frame is a `LiveNudgeSchema` and nothing else.",
+            "description": "An open `text/event-stream`. Two named events ride it: `nudge` carries a `LiveNudgeSchema` and `typing` carries a `LiveTypingSchema`. **Subscribe per name**; a name you do not know is not yours to render.",
             "content": {
               "text/event-stream": {
                 "itemSchema": {
@@ -2584,7 +2646,15 @@
                       "type": "string",
                       "contentMediaType": "application/json",
                       "contentSchema": {
-                        "$ref": "#/components/schemas/LiveNudgeSchema"
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/LiveNudgeSchema"
+                          },
+                          {
+                            "$ref": "#/components/schemas/LiveTypingSchema"
+                          }
+                        ],
+                        "title": "Streamitem Follow Conversation Api V1 Conversations  Conversation Id  Stream Get"
                       }
                     },
                     "event": {
@@ -5864,6 +5934,38 @@
         ],
         "title": "LiveNudgeSchema",
         "description": "**The whole live contract: a nudge, and nothing else on the wire.**\n\n``docs/adr/0147`` \u00a73. One of these is written into\n``GET /conversations/{id}/stream`` whenever the room moves, and one is\nwritten the moment the stream opens carrying the room's current `last_seq`.\n\n**It carries no content, ever.** Not a message, not a system line, not a plan\nslot. On receiving one, fetch from **your own** high-water mark through the\nordinary read path \u2014 never from `last_seq`. That is what makes a dropped\nframe free: the next nudge repairs it, because your cursor is yours.\n\n**Which also means there is nothing here to render.** Whether the UI may draw\nsomething it did not read from the authenticated read path stops being a rule\nanybody keeps and becomes a thing this shape cannot express.\n\n**The declaration is generated and the emission is not, and that hole is\nnamed** (``docs/adr/0147`` \u00a77). `make openapi` publishes this model into\n`components.schemas`, the client generates **this type** from it, and the\ndrift and freshness checks cover the declaration. The *operation's* 200 comes\nout of `openapi-typescript` as `unknown`, because a stream body is an\n`itemSchema` that generator has no shape for \u2014 so the client's live port\nparses each frame as this type by name, which is still generated and still\nnever hand-written. **What no check covers is the emission** \u2014 a stream body is\nnot a response model, and nothing type-checks the route against its own\nannotation. The mitigation is structural rather than hoped for: the route\ndeclares this model as its stream item, so the framework validates and\nserialises every frame **through this model** before it reaches the wire. The\nhole is narrowed, not closed, and the residual risk is that of a shape three\nfields wide."
+      },
+      "LiveTypingSchema": {
+        "properties": {
+          "v": {
+            "type": "integer",
+            "title": "V",
+            "description": "The envelope version, **the same `1` a nudge carries and unbumped by this frame's arrival**. A named event an installed client does not listen for never reaches it, so nothing about the shape it parses has changed."
+          },
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id",
+            "description": "The room this is about \u2014 the room this stream is for"
+          },
+          "player_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Player Ids",
+            "description": "Who is typing **right now**, never including you. A list because a group chat has more than one possible typist; draw one indicator either way. **Empty means nobody is**, which is how an indicator goes away."
+          }
+        },
+        "type": "object",
+        "required": [
+          "v",
+          "conversation_id",
+          "player_ids"
+        ],
+        "title": "LiveTypingSchema",
+        "description": "**Somebody is typing**, and it is the second frame on the wire.\n\n``docs/adr/0156``. It arrives when the answer changes and not on a tick, so a\nroom where nobody is typing produces nothing at all.\n\n**It carries no `last_seq` and moves no sequence.** A typing frame is not an\nentry: nothing was appended, nothing was locked, and the gapless allocator\nbehind `seq` was never asked for a number. A client must not advance any\ncursor on one, and there is nothing here it could advance it to.\n\n**It carries no name.** Fill handles from the membership you are already\nholding, exactly as every system line does \u2014 which is why a corrected\nnickname fixes the indicator without a frame being re-sent.\n\n**An empty list is the clear**, and it is the only clear there is: nobody\nsends *stopped*, and the server reports whoever's heartbeat has not expired.\nA room whose last typist's app was killed reports nobody within seconds,\nthrough the same field and with nothing special about it."
       },
       "LivenessReason": {
         "type": "string",

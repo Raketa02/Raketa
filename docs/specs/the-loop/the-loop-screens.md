@@ -771,11 +771,12 @@ open and the day not today, or at most two open on the day plus the fallback.
 day and one fixture venue — and §5.1's part of day is deleted. Each chip asks the question its slot
 is about; the sentences are [`the-words.md`](../matchmaking/the-words.md) §22.4.
 
-### 3.6 Not live, and held — the two states the records made reachable
+### 3.6 Not live, held, and somebody is typing — the three states the records made reachable
 
-**Both were decided as rules and left undecided as screens.** ADR-0147 §8 made *not live*
-reachable and honest; ADR-0148 §9 made *held* reachable inside a conversation. The map's
-*Not yet specified* handed both here, as two lines rather than a ticket. They are two lines.
+**All three were decided as rules and left undecided as screens.** ADR-0147 §8 made *not live*
+reachable and honest; ADR-0148 §9 made *held* reachable inside a conversation; ADR-0156 built the
+typing indicator and left the drawing here. The map's *Not yet specified* handed the first two
+here, as two lines rather than a ticket, and the third joins them.
 
 #### Not live
 
@@ -821,6 +822,44 @@ five times on one screen is the failure §1.6 names about counts. The sentence i
 **A hold never removes the room.** It sits beside ADR-0143 §7's forward-looking block without
 contradicting it — that one is about a pair, this one is about a person — and a hold that erased an
 arrangement other people are already inside would be the blast radius pointed the wrong way.
+
+#### Somebody is typing
+
+**The only presence this product has** (ADR-0156), and it is narrow on purpose: inside a room, about
+people who have already agreed to play, true for the five seconds somebody's finger is actually
+moving. There is no online, no last-seen and no read receipt anywhere on this map, and none is
+coming.
+
+> **One line below the last entry and above the composer, `muted`, present only while the `typing`
+> frame's `player_ids` is non-empty.**
+
+- **It sits in the stream, not in the header.** It is a fact about *now* in a room being read from
+  the bottom, and a header is where the facts that outlast the screen live. It scrolls with the
+  backlog and takes the place a next bubble would.
+- **It is a sentence and never a bare dot.** Part 13's *never colour as the only signal* refuses the
+  three-dot animation on its own, and the sentence is what a listener gets — see
+  [`the-words.md`](../matchmaking/the-words.md) §24.6 for the wording and the plural.
+- **The names come from the members you are already holding**, exactly as every system line does.
+  The frame carries `player_ids` and nothing else, so a corrected handle fixes the indicator for
+  free.
+- **Never you.** The server filters the reader out of their own room's frame, so the composer can
+  never draw an indicator for the person using it. The client does not need a second guard and must
+  not add one.
+- **It goes away on its own, and that is the design.** No *stopped* is sent by anybody: the server
+  reports whoever's heartbeat has not expired, so a killed app, a lost signal and a dropped request
+  all clear the line within seconds. **The client keeps no timer**, because the frame carrying an
+  empty list *is* the clear.
+- **`muted`**, not `amber`. Nothing here is a state anybody needs to act on — it is the least
+  important thing on the screen, and the one directly above it is the *not live* line, which is not.
+
+**The client's own half is a heartbeat and nothing more.** Post `/typing` every ~3 s while the
+composer has focus and the text is changing, and **stop posting when it stops** — there is no call
+that says *stopped* and adding one is not available. The cadence must stay under the server's
+five-second expiry or the other side's indicator flickers on somebody who never paused.
+
+**A held player still sees it and cannot cause it.** The heartbeat is on the send's side of ADR-0148
+§9 — an indicator is drawn on other people's screens, which is reach — so it is refused with the
+same `account_held` the composer is, and the greyed composer above already says why.
 
 ### 3.7 A conversation that has ended
 

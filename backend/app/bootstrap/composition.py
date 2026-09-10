@@ -91,16 +91,29 @@ from app.modules.conversations.domain.ports import (
     MemberFaces,
     PlayedCourt,
 )
-from app.modules.conversations.domain.live import NudgePublisher, NudgeSubscriber
+from app.modules.conversations.domain.live import (
+    NudgePublisher,
+    NudgeSubscriber,
+    TypingHeartbeat,
+    TypingRoster,
+)
 from app.modules.conversations.application.follow_conversation import (
     FollowConversation,
 )
 from app.modules.conversations.infrastructure.fail_soft_nudges import (
     FailSoftNudgePublisher,
 )
+from app.modules.conversations.infrastructure.fail_soft_typing import (
+    FailSoftTypingHeartbeat,
+    FailSoftTypingRoster,
+)
 from app.modules.conversations.infrastructure.redis_live_channel import (
     RedisNudgePublisher,
     RedisNudgeSubscriber,
+)
+from app.modules.conversations.infrastructure.redis_typing_presence import (
+    RedisTypingHeartbeat,
+    RedisTypingRoster,
 )
 from app.modules.conversations.infrastructure.absent_providers import (
     NobodyIsFollowing,
@@ -1895,16 +1908,59 @@ def build_nudge_subscriber(client: Redis) -> NudgeSubscriber:
     return RedisNudgeSubscriber(client)
 
 
+def build_typing_heartbeat(client: Redis) -> TypingHeartbeat:
+    """*This player is typing* — **wrapped, always**, and on the command client.
+
+    Wrapped for ``build_nudge_publisher``'s reason and a stronger version of it:
+    a nudge that is lost costs a room its liveness, and a heartbeat that is lost
+    costs one second of a courtesy. An unwrapped one would make that a discipline
+    at a call site instead of a property of the type.
+
+    On the pool every command path draws from, bounded at both ends. Nothing here
+    subscribes to anything (``docs/adr/0156`` §3): presence is written to the
+    store and read back off it, and it never touches the bus.
+    """
+
+    return FailSoftTypingHeartbeat(RedisTypingHeartbeat(client))
+
+
+def build_typing_roster(client: Redis) -> TypingRoster:
+    """*Who is typing in this room* — **wrapped too, and that is the departure.**
+
+    The nudge ports fail in opposite directions and this pair does not
+    (``docs/adr/0156`` §6). A subscription **is** the room's liveness, so it fails
+    loud and the stream closes; a roster is a courtesy asked once a second by
+    every open conversation screen, on the client with a two-second read
+    deadline — so failing it loud would let a merely slow store close every
+    healthy stream on the platform. It reports nobody typing instead, which is
+    what a quiet room reports.
+
+    **One wrapper per stream, and that is load-bearing rather than incidental.**
+    It complains on the transition into failure rather than on every read, and it
+    is this builder's per-request lifetime that makes *once per stream per
+    outage* the shape of that.
+    """
+
+    return FailSoftTypingRoster(RedisTypingRoster(client))
+
+
 def build_follow_conversation(
     *,
     rooms: ARoomOfYours,
     nudges: NudgeSubscriber,
+    typists: TypingRoster,
 ) -> FollowConversation:
     """*Follow this room until the token that opened it expires.*
 
-    Built from the two collaborators rather than a session, for
+    Built from the collaborators rather than a session, for
     ``build_a_room_of_yours``' reason: the gate is a read like every other read
     on this context, and the stream that follows it touches no database at all.
+
+    **Three collaborators and two stores.** The subscription is the bus's and the
+    roster is the ephemeral store's, on two different clients for two different
+    reasons — see the two builders above.
     """
 
-    return FollowConversation(rooms=rooms, nudges=nudges, clock=build_clock())
+    return FollowConversation(
+        rooms=rooms, nudges=nudges, typists=typists, clock=build_clock()
+    )

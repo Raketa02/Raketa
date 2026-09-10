@@ -1301,6 +1301,17 @@ Nothing about when, where, money or the result belongs here — it is **told** a
   ([ADR-0110](docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md) —
   *two subscriptions, two guarantees*). **No reader may infer loss from a gap** — the promise is
   the server's, and nothing is permitted to depend on it.
+- **Typing** — *somebody is typing in this room, right now*, and the whole of the presence this
+  product has
+  ([ADR-0156](docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)).
+  A **heartbeat and never a state**: a client says it while somebody types and stops saying it when
+  they stop, and there is deliberately no *stopped* — every way an app can vanish is a way a
+  *stopped* fails to arrive, and each of them would leave a room saying somebody is typing for ever.
+  **A short expiry is what clears it**, which makes the failure mode the indicator *vanishing*
+  rather than sticking. It is **not an entry**: it moves no Sequence number, is stored nowhere, and
+  is gone within seconds of the last keystroke. _Avoid_: reading it as *online*, as *last seen*, or
+  as evidence of anything — there is no *who stopped*, no *since when*, and no way to ask about a
+  moment other than this one.
 - **Lifetime** — a conversation lasts as long as the **episode** it was opened for, and is then
   **destroyed, not delisted**. It ends at the earliest of: the entry window closing, so *we played*
   can no longer be said; a grace after somebody says they played; a grace after the challenge ends
@@ -1320,6 +1331,10 @@ Nothing about when, where, money or the result belongs here — it is **told** a
   place to be true, and it is not a sentence in the backlog.
 - **No sentence is ever stored.** A rewritten line rewrites the whole history, which is what a
   stored string could not do.
+- **Presence stops at *is somebody typing right now*.** There are no read receipts, no `seen_at`,
+  no online and no last-seen, and each is refused on the same property: nothing about Typing is
+  stored anywhere, so there is nothing here for one of them to be built out of
+  ([ADR-0156](docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)).
 
 ### Plan (`backend/app/modules/plans/`)
 

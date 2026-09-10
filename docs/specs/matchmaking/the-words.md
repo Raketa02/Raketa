@@ -1780,16 +1780,29 @@ which never reaches the four-chip cap* — three unfilled slots plus an uncondit
 **exactly** four, and *On my way* on a Monday for a Saturday game is nonsense besides. Conditional,
 the maximum is three.
 
-### 22.5 Not live, and held
+### 22.5 Not live, held, and somebody is typing
 
-**Two states the records made reachable and left as rules.** ADR-0147 §8 made *not live* honest —
-*"a chat that is not live looks not-live"* — and ADR-0148 §9 made *held* reachable inside a
-conversation. Each gets one sentence, in a `Note` above the composer.
+**Three states the records made reachable and left as rules.** ADR-0147 §8 made *not live* honest —
+*"a chat that is not live looks not-live"* — ADR-0148 §9 made *held* reachable inside a
+conversation, and ADR-0156 built the typing indicator. Each gets one sentence; the first two sit in
+a `Note` above the composer and the third sits in the stream (§24.6).
 
 | State | The sentence |
 | --- | --- |
 | not live | `Not live — you can still send, and anything you missed arrives when it reconnects.` |
 | held | `Your account is on hold. You can read here, but not write.` |
+| typing, one | `{name} is typing…` |
+| typing, more | `{name} and {name} are typing…` · `{n} people are typing…` |
+
+**The typing sentences name people and never a count of one**, because the client already holds the
+handles the frame's `player_ids` point at and a name is what the room is about. Three or more
+collapses to a count on §19's rule rather than growing a list — a room is four people at most, so
+the collapse is reached only in a doubles court where everybody is typing at once, and *4 people are
+typing…* is the honest end of that. **The whole handle, never a first name** (ADR-0107), and the
+ellipsis is a character rather than three dots so a screen reader does not read *dot dot dot*.
+
+**It is never about you.** The server filters the reader out of their own room's frame, so there is
+no *you are typing* sentence to write and no state in which one could be reached.
 
 **Not live says two things because two things are true**, and only a sentence carries both: sends
 are ordinary authenticated `POST`s and the channel is unidirectional by construction, so writing is
@@ -2074,7 +2087,33 @@ and not two — while the ✉ goes somewhere else and is therefore its own eleme
 **The three read-only plan tags are one element** because they are one fact in three parts with no
 action: §20.1 unchanged, and the reason `Tag` was chosen over `Chip` for them in the first place.
 
-### 24.6 Cited, not written
+### 24.6 The typing indicator, and why it is polite
+
+**The first live region on this map that is not the matchmaking tab's**, so it is stated here rather
+than as a fourth row in §20.9 — that table is a closed list about *that* feature, and this is a
+different screen with a different reader.
+
+| Element | Role | Announces |
+| --- | --- | --- |
+| The typing line | `text`, `accessibilityLiveRegion="polite"` | §22.5's sentence, whole — `Ewa M. is typing…` |
+| The three-dot animation beside it | — | **hidden.** It is decoration for the same fact, and announcing both is §1.6's count problem in two spellings |
+
+**Polite, and this is the one place that word is load-bearing rather than inherited.** A listener in
+a conversation is being read *messages*, one entry at a time, and an assertive region interrupts —
+so the loudest thing on the screen would be the least important fact on it, delivered on top of
+somebody's actual words. §20.10's argument about a toast landing mid-card is the same argument with
+more at stake: a toast interrupts a card, and this would interrupt a person.
+
+**It announces on change and not on a heartbeat**, which the wire already guarantees: a `typing`
+frame arrives when the answer changes, so re-rendering the same sentence — and re-announcing it
+every three seconds for as long as somebody types — is a thing the client cannot accidentally do.
+
+**And it announces nothing when it goes away.** An empty `player_ids` removes the region's content;
+a listener is not told *Ewa M. stopped typing*, because nobody said that and the platform does not
+know it. What it knows is that nothing has been heard for five seconds, which is not a sentence
+anybody needs.
+
+### 24.7 Cited, not written
 
 | | Where it already is |
 | --- | --- |

@@ -24,6 +24,15 @@
 - Settles [#333](https://github.com/Raketa02/Raketa/issues/333) on the map
   [#321](https://github.com/Raketa02/Raketa/issues/321).
 
+> **One sentence of Decision 3 superseded 2026-09-10 by
+> [ADR-0156](0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md):
+> the channel carries a nudge **and a typing frame**, and nothing else.** The second event is
+> named on the SSE `event:` field, so a client that listens only for `nudge` is untouched and
+> `LIVE_CHANNEL_VERSION` does not move. **Everything else in this record stands exactly as
+> written** — the cursor rule, the gapless sequence, the token deadline, the fail-soft publisher
+> and the fail-loud subscriber — and the new frame is emphatically outside the sequence: it is not
+> an entry, takes no lock, and never asks the allocator for a number.
+
 > **Amended 2026-09-08 by [#342](https://github.com/Raketa02/Raketa/issues/342): the subscriber's
 > own client is the shared module's, and `REDIS_TIMEOUT_SECONDS` no longer exists.** Decision 5
 > gives the subscriber its own Redis client because that constant was passed as both timeouts;

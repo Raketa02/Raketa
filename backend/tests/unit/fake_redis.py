@@ -13,10 +13,15 @@ at all*.
 **A deliberate subset, and it stays one.** It implements exactly the commands
 the adapters issue and nothing more, so a new command in an adapter is an
 `AttributeError` here rather than a silent divergence. The semantics it does
-model are three: **expiry**, against a clock a test moves rather than the host's;
-**`HINCRBY` creating the field it increments**; and **pub/sub delivering only to
-whoever is subscribed at the moment of the publish**, which is at-most-once and
-is exactly what makes a dropped frame a thing a test can drive.
+model are four: **expiry**, against a clock a test moves rather than the host's;
+**`HINCRBY` creating the field it increments**; **`SADD` creating the set it adds
+to**; and **pub/sub delivering only to whoever is subscribed at the moment of the
+publish**, which is at-most-once and is exactly what makes a dropped frame a
+thing a test can drive.
+
+Expiry is the one a presence test drives directly (`docs/adr/0156`): a typing
+heartbeat is cleared by nothing but its key running out, so *the app was killed*
+is spelled here as `advance` and asserted rather than waited for.
 
 What it deliberately does not model is everything else Redis does. It is not a
 proof the adapters work against a real server; `make up` is where that is
@@ -90,6 +95,18 @@ class FakeRedis:
     async def hgetall(self, name: str) -> dict[str, str]:
         return {key: str(value) for key, value in self._read_hash(name).items()}
 
+    async def sadd(self, name: str, *values: Any) -> int:
+        members = self._set(name)
+        added = 0
+        for value in values:
+            if str(value) not in members:
+                members.add(str(value))
+                added += 1
+        return added
+
+    async def smembers(self, name: str) -> set[str]:
+        return set(self._values[name]) if self._live(name) else set()
+
     async def expire(self, name: str, seconds: int) -> bool:
         if not self._live(name):
             return False
@@ -161,6 +178,11 @@ class FakeRedis:
             return False
         return key in self._values
 
+    def _set(self, name: str) -> set[str]:
+        if not self._live(name):
+            self._values[name] = set()
+        return self._values[name]
+
     def _hash(self, name: str) -> dict[str, Any]:
         if not self._live(name):
             self._values[name] = {}
@@ -230,6 +252,14 @@ class FakePipeline:
 
     def expire(self, name: str, seconds: int) -> "FakePipeline":
         self._queued.append(("expire", (name, seconds), {}))
+        return self
+
+    def sadd(self, name: str, *values: Any) -> "FakePipeline":
+        self._queued.append(("sadd", (name, *values), {}))
+        return self
+
+    def set(self, name: str, value: Any, ex: int | None = None) -> "FakePipeline":
+        self._queued.append(("set", (name, value), {"ex": ex}))
         return self
 
     async def execute(self) -> list[Any]:

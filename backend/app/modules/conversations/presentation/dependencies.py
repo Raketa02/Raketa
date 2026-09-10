@@ -51,6 +51,8 @@ from app.bootstrap.composition import (
     build_membership,
     build_nudge_publisher,
     build_nudge_subscriber,
+    build_typing_heartbeat,
+    build_typing_roster,
 )
 from app.infrastructure.redis_client import get_redis, get_redis_subscriber
 from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
@@ -59,6 +61,7 @@ from app.modules.conversations.application.follow_conversation import (
     FollowConversation,
 )
 from app.modules.conversations.application.membership import Membership
+from app.modules.conversations.application.record_typing import RecordTyping
 from app.modules.conversations.application.read_conversation import ReadConversation
 from app.modules.conversations.application.read_conversations import (
     ReadConversations,
@@ -69,6 +72,8 @@ from app.modules.conversations.domain.live import (
     Nudge,
     NudgePublisher,
     NudgeSubscriber,
+    TypingHeartbeat,
+    TypingRoster,
 )
 from app.modules.conversations.domain.ports import (
     ArrangingCourt,
@@ -208,6 +213,48 @@ def get_nudge_subscriber(store: SubscriberStoreDep) -> NudgeSubscriber:
 NudgeSubscriberDep = Annotated[NudgeSubscriber, Depends(get_nudge_subscriber)]
 
 
+def get_typing_heartbeat(store: EphemeralStoreDep) -> TypingHeartbeat:
+    return build_typing_heartbeat(store)
+
+
+TypingHeartbeatDep = Annotated[TypingHeartbeat, Depends(get_typing_heartbeat)]
+
+
+def get_typing_roster(store: EphemeralStoreDep) -> TypingRoster:
+    """**On the command client, not the subscriber's**, though a stream holds it.
+
+    The bus's subscription is the one thing that cannot live on the bounded pool
+    (``docs/adr/0147`` §5); a roster read is an ordinary command that happens to
+    be issued from a long-lived request, and it wants the deadline every other
+    command has.
+    """
+
+    return build_typing_roster(store)
+
+
+TypingRosterDep = Annotated[TypingRoster, Depends(get_typing_roster)]
+
+
+def get_record_typing(
+    db: DbSession,
+    rooms: ARoomOfYoursDep,
+    typing: TypingHeartbeatDep,
+) -> RecordTyping:
+    """**No unit of work and no repository.**
+
+    A heartbeat appends nothing, so there is no transaction to commit and no
+    aggregate to save — the only database work is the gate's own read, which
+    ``ARoomOfYours`` already owns.
+    """
+
+    return RecordTyping(
+        rooms=rooms, holds=build_conversation_hold_query(db), typing=typing
+    )
+
+
+RecordTypingDep = Annotated[RecordTyping, Depends(get_record_typing)]
+
+
 def get_send_message(
     db: DbSession,
     rooms: ARoomOfYoursDep,
@@ -232,8 +279,9 @@ SendMessageDep = Annotated[SendMessage, Depends(get_send_message)]
 def get_follow_conversation(
     rooms: ARoomOfYoursDep,
     nudges: NudgeSubscriberDep,
+    typists: TypingRosterDep,
 ) -> FollowConversation:
-    return build_follow_conversation(rooms=rooms, nudges=nudges)
+    return build_follow_conversation(rooms=rooms, nudges=nudges, typists=typists)
 
 
 FollowConversationDep = Annotated[

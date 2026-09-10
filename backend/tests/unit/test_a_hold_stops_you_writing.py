@@ -13,11 +13,13 @@ true answer is *nobody*, so a test that went through the app would be asserting
 the null object. What is under test is the rule, and the rule lives in the use
 cases.
 
-**It refuses the send and all three slot writes**, and this file covers all four
-— because ADR-0148 §9 states them in one breath and the way that sentence goes
-wrong is by half of it being implemented. A slot change writes a system line into
-a room other people are in, so it is reach in exactly the sense a message is; the
-plan **read** is ungated for exactly the reason the conversation reads are.
+**It refuses the send, all three slot writes and the typing heartbeat**, and this
+file covers all five — because ADR-0148 §9 states them in one breath and the way
+that sentence goes wrong is by half of it being implemented. A slot change writes
+a system line into a room other people are in, so it is reach in exactly the
+sense a message is; a typing indicator is drawn on other people's screens, which
+is the same sense again (``docs/adr/0156``); and the plan **read** is ungated for
+exactly the reason the conversation reads are.
 """
 
 from __future__ import annotations
@@ -32,12 +34,14 @@ from app.kernel import Sport, instant
 from app.modules.conversations.application.commands import (
     ReadConversationCommand,
     ReadEntriesCommand,
+    RecordTypingCommand,
     SendMessageCommand,
 )
 from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.application.read_conversation import ReadConversation
 from app.modules.conversations.application.read_entries import ReadEntries
+from app.modules.conversations.application.record_typing import RecordTyping
 from app.modules.conversations.application.send_message import SendMessage
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.errors import ConversationNotFound
@@ -231,6 +235,102 @@ async def test_a_held_member_writes_nothing_at_all(room, membership):
 
     assert conversations.saved == []
     assert len(room.entries) == 1
+
+
+class _Heartbeats:
+    """The ephemeral store, recording every heartbeat it was told about."""
+
+    def __init__(self) -> None:
+        self.written: list[tuple[UUID, UUID]] = []
+
+    async def typed(self, *, conversation_id: UUID, player_id: UUID) -> None:
+        self.written.append((conversation_id, player_id))
+
+
+def _typing(room: Conversation, membership: Membership, holds) -> tuple:
+    store = _Heartbeats()
+    return (
+        RecordTyping(
+            rooms=ARoomOfYours(
+                conversations=_OneRoom(room),
+                membership=membership,
+                clock=_FrozenClock(),
+            ),
+            holds=holds,
+            typing=store,
+        ),
+        store,
+    )
+
+
+async def test_a_held_member_cannot_say_they_are_typing(room, membership):
+    """**An indicator is drawn on somebody else's screen, so it is reach.**
+
+    ``docs/adr/0156``: the heartbeat is on the send's side of ADR-0148 §9 and not
+    on the reads' side, and it is refused with the same code for the same reason.
+    """
+
+    typing, store = _typing(room, membership, _HoldOn(HELD))
+
+    with pytest.raises(AccountHeld) as refused:
+        await typing.execute(
+            RecordTypingCommand(conversation_id=room.conversation_id, player_id=HELD)
+        )
+
+    assert refused.value.code == "account_held"
+    assert store.written == []
+
+
+async def test_a_member_who_is_not_held_says_they_are_typing(room, membership):
+    """The other arm, so the refusal above is the hold and not the wiring."""
+
+    typing, store = _typing(room, membership, _HoldOn())
+
+    await typing.execute(
+        RecordTypingCommand(conversation_id=room.conversation_id, player_id=HELD)
+    )
+
+    assert store.written == [(room.conversation_id, HELD)]
+
+
+async def test_a_stranger_is_refused_before_the_hold_is_consulted(room, membership):
+    """**Membership first**, exactly as the send does it.
+
+    Telling a stranger their account is held would be an answer about a room they
+    may not know exists.
+    """
+
+    typing, store = _typing(room, membership, _HoldOn(A_STRANGER))
+
+    with pytest.raises(ConversationNotFound):
+        await typing.execute(
+            RecordTypingCommand(
+                conversation_id=room.conversation_id, player_id=A_STRANGER
+            )
+        )
+
+    assert store.written == []
+
+
+async def test_a_heartbeat_appends_nothing_and_moves_no_sequence(room, membership):
+    """``docs/adr/0156`` §4's invariant, at the use case that could break it.
+
+    A typing frame is not an entry: the room is loaded **to read**, so no row is
+    locked and no sequence is minted, and the room a hundred heartbeats later is
+    exactly the length it was.
+    """
+
+    typing, _ = _typing(room, membership, _HoldOn())
+    before = room.last_seq
+
+    for _ in range(100):
+        await typing.execute(
+            RecordTypingCommand(conversation_id=room.conversation_id, player_id=HELD)
+        )
+
+    assert room.last_seq == before
+    assert len(room.entries) == 1
+    assert room.pull_events() == []
 
 
 async def test_a_held_member_still_reads_the_room(room, membership):

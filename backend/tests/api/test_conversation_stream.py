@@ -24,6 +24,13 @@ response starts.
 
 **A Redis outage takes nothing else down.** `/health` is about the process, and
 sign-in and the send keep working.
+
+**And presence rides the same stream as a second named event** (`docs/adr/0156`):
+a typing frame reaches a follower, carries no `last_seq`, leaves the room's own
+`last_seq` exactly where it was, and is invisible to a client following only
+`nudge`. **The killed app is asserted for its own sake** — no *stopped* is sent
+by anybody, the heartbeat's key expires, and the indicator goes away because
+nothing kept it alive.
 """
 
 from __future__ import annotations
@@ -35,9 +42,10 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.bootstrap.composition import build_token_service
+from app.bootstrap.composition import build_token_service, build_typing_roster
 from app.core.config import get_settings
 from app.infrastructure.redis_client import get_redis, get_redis_subscriber
+from app.modules.conversations.domain.live import TYPING_CHECK, TYPING_TTL
 from app.modules.conversations.infrastructure.redis_live_channel import channel_for
 from tests.api import matchmaking_world as world
 from tests.api.test_conversations import the_day_after_next
@@ -159,13 +167,45 @@ def _expires_at(token: str) -> datetime:
 
 
 def _frames(body: str) -> list[dict]:
-    """Every `data:` line of an SSE body, decoded."""
+    """Every `data:` line of an SSE body, decoded. **Both kinds.**"""
 
     return [
         json.loads(line[len("data:") :].strip())
         for line in body.splitlines()
         if line.startswith("data:")
     ]
+
+
+def _named(body: str) -> list[tuple[str, dict]]:
+    """Every frame with the `event:` name it rode under.
+
+    **The name is the kind** (`docs/adr/0156` §5), so a test that read only the
+    `data:` lines would be asserting the half of the contract a client does not
+    dispatch on.
+    """
+
+    named: list[tuple[str, dict]] = []
+    event: str | None = None
+    for line in body.splitlines():
+        if line.startswith("event:"):
+            event = line[len("event:") :].strip()
+        elif line.startswith("data:"):
+            named.append((event or "message", json.loads(line[len("data:") :].strip())))
+            event = None
+    return named
+
+
+def _of_kind(body: str, kind: str) -> list[dict]:
+    """What a client subscribed to exactly one event name would see."""
+
+    return [frame for name, frame in _named(body) if name == kind]
+
+
+async def _type(client, conversation_id: str, token: str):
+    return await client.post(
+        f"/api/v1/conversations/{conversation_id}/typing",
+        headers=world.auth(token),
+    )
 
 
 async def _follow(client, conversation_id: str, token: str):
@@ -219,10 +259,10 @@ async def test_the_frame_carries_no_content_at_all(client, a_room):
 # -- what nudges -----------------------------------------------------------
 
 
-async def _while_following(
-    client, a_room, act, live_channel, *, seconds=A_SHORT_LIFE_SECONDS
-):
-    """Open a stream, do something to the room, and collect what arrived.
+async def _while_following_body(
+    client, a_room, act, live_channel, *, seconds=A_SHORT_LIFE_SECONDS, who=None
+) -> str:
+    """Open a stream, do something to the room, and return the whole SSE body.
 
     **It waits for the subscription rather than sleeping at it.** A nudge
     published to a channel nobody is on is delivered to nobody — real pub/sub,
@@ -231,14 +271,23 @@ async def _while_following(
     sleep is a guess that goes flaky on a loaded machine.
     """
 
-    token = _a_token_expiring_in(seconds, a_room["reader"]["id"])
+    follower = who or a_room["reader"]
+    token = _a_token_expiring_in(seconds, follower["id"])
     channel = channel_for(UUID(a_room["conversation_id"]))
     following = asyncio.create_task(_follow(client, a_room["conversation_id"], token))
     while live_channel.subscribers_on(channel) == 0:
         assert not following.done(), "the stream ended before it subscribed"
         await asyncio.sleep(0.01)
     await act()
-    return _frames((await asyncio.wait_for(following, timeout=30)).text)
+    return (await asyncio.wait_for(following, timeout=30)).text
+
+
+async def _while_following(
+    client, a_room, act, live_channel, *, seconds=A_SHORT_LIFE_SECONDS
+):
+    return _frames(
+        await _while_following_body(client, a_room, act, live_channel, seconds=seconds)
+    )
 
 
 async def test_a_message_from_another_member_nudges_the_room(
@@ -492,3 +541,252 @@ async def test_a_redis_outage_takes_neither_health_nor_sign_in_nor_the_send(
         client, a_room["conversation_id"], a_room["searcher"]["token"], "still here"
     )
     assert said.status_code == 200, said.text
+
+
+# -- presence --------------------------------------------------------------
+#
+# `docs/adr/0156`. **The second named event**, and the one rule that governs all
+# of it: nothing here is durable, nothing here moves a sequence, and the only
+# thing that clears an indicator is a key running out.
+
+#: Long enough for a roster check or two inside one stream, short enough that the
+#: suite is still waiting for seconds. It is longer than `A_SHORT_LIFE_SECONDS`
+#: because `TYPING_CHECK` is a whole second and `exp` is stamped as a whole one,
+#: so a nominal two would be a stream that sometimes closes before it has asked.
+A_LONGER_LIFE_SECONDS = 4
+
+#: What the expiry needs: a check while somebody types, a killed app, and a check
+#: after the key has gone. **The waiting is the store's clock moving, not five
+#: real seconds** — that is what `FakeRedis.advance` is for.
+LONG_ENOUGH_TO_EXPIRE_SECONDS = 6
+
+
+async def test_a_typing_heartbeat_reaches_a_follower_under_its_own_event_name(
+    client, a_room, live_channel
+):
+    """**Two named events on one stream** (`docs/adr/0156` §5).
+
+    The kind is the `event:` field and not a discriminator inside the JSON, so a
+    client subscribes per name and a frame it has never heard of is ignored by
+    the transport rather than by a branch somebody wrote.
+    """
+
+    async def _somebody_types():
+        typed = await _type(
+            client, a_room["conversation_id"], a_room["searcher"]["token"]
+        )
+        assert typed.status_code == 204, typed.text
+        await asyncio.sleep(TYPING_CHECK.total_seconds() * 1.5)
+
+    body = await _while_following_body(
+        client, a_room, _somebody_types, live_channel, seconds=A_LONGER_LIFE_SECONDS
+    )
+
+    assert _of_kind(body, "typing")[0] == {
+        "v": 1,
+        "conversation_id": a_room["conversation_id"],
+        "player_ids": [str(a_room["searcher"]["id"])],
+    }
+
+
+async def test_a_typing_frame_carries_no_sequence_and_moves_none(
+    client, a_room, live_channel
+):
+    """**The single most important invariant in this feature** (§4).
+
+    A typing frame is not an entry. It carries no `last_seq`, and the room's own
+    high-water mark is exactly where it was after any number of heartbeats — so
+    a client that keyed anything on the sequence cannot be moved by somebody
+    resting a finger on a keyboard.
+    """
+
+    async def _types_a_lot():
+        for _ in range(5):
+            typed = await _type(
+                client, a_room["conversation_id"], a_room["searcher"]["token"]
+            )
+            assert typed.status_code == 204, typed.text
+        await asyncio.sleep(TYPING_CHECK.total_seconds() * 1.5)
+
+    body = await _while_following_body(
+        client, a_room, _types_a_lot, live_channel, seconds=A_LONGER_LIFE_SECONDS
+    )
+
+    typing = _of_kind(body, "typing")
+    assert typing, "no typing frame arrived at all"
+    for frame in typing:
+        assert set(frame) == {"v", "conversation_id", "player_ids"}
+
+    # **The room is exactly as long as it was.** The opening nudge said 1 and the
+    # read path still says 1; no second nudge went out, because nothing landed.
+    assert [frame["last_seq"] for frame in _of_kind(body, "nudge")] == [1]
+    held = await client.get(
+        f"/api/v1/conversations/{a_room['conversation_id']}",
+        headers=world.auth(a_room["reader"]["token"]),
+    )
+    assert held.json()["entries"][-1]["seq"] == 1
+
+
+async def test_a_client_following_only_nudge_is_unaffected(
+    client, a_room, live_channel
+):
+    """**The envelope version does not bump, because nothing it names moved.**
+
+    An installed client subscribes to `nudge` and never hears the new name. What
+    it sees while somebody types is exactly what it saw before this existed,
+    which is why telling every shipped phone that `v` had changed would have been
+    a lie about its own parser.
+    """
+
+    async def _types_then_says_something():
+        typed = await _type(
+            client, a_room["conversation_id"], a_room["searcher"]["token"]
+        )
+        assert typed.status_code == 204, typed.text
+        await asyncio.sleep(TYPING_CHECK.total_seconds() * 1.5)
+        said = await _say(
+            client, a_room["conversation_id"], a_room["searcher"]["token"], "seven?"
+        )
+        assert said.status_code == 200, said.text
+
+    body = await _while_following_body(
+        client,
+        a_room,
+        _types_then_says_something,
+        live_channel,
+        seconds=A_LONGER_LIFE_SECONDS,
+    )
+
+    assert _of_kind(body, "typing"), "the typing frames are meant to be there"
+    assert [frame["last_seq"] for frame in _of_kind(body, "nudge")] == [1, 2]
+    assert all(frame["v"] == 1 for _, frame in _named(body))
+
+
+async def test_the_expiry_clears_the_indicator_with_no_stopped_signal_at_all(
+    client, a_room, live_channel
+):
+    """**The killed-app case, and the whole reason the shape is a heartbeat.**
+
+    Nobody sends *stopped* — there is no such call — and nothing here pretends
+    the app said goodbye. The heartbeat's key simply runs out, and the next
+    roster check finds nobody. A design where a *stopped* cleared the indicator
+    would leave this room showing somebody typing for ever.
+    """
+
+    async def _types_and_is_killed():
+        typed = await _type(
+            client, a_room["conversation_id"], a_room["searcher"]["token"]
+        )
+        assert typed.status_code == 204, typed.text
+        await asyncio.sleep(TYPING_CHECK.total_seconds() * 1.5)
+        # The phone goes away. No request is made, nothing is told, and the only
+        # thing that happens is that time passes.
+        live_channel.advance(TYPING_TTL.total_seconds() + 1)
+        await asyncio.sleep(TYPING_CHECK.total_seconds() * 1.5)
+
+    body = await _while_following_body(
+        client,
+        a_room,
+        _types_and_is_killed,
+        live_channel,
+        seconds=LONG_ENOUGH_TO_EXPIRE_SECONDS,
+    )
+
+    assert [frame["player_ids"] for frame in _of_kind(body, "typing")] == [
+        [str(a_room["searcher"]["id"])],
+        [],
+    ]
+
+
+async def test_your_own_typing_is_never_echoed_back_to_you(
+    client, a_room, live_channel
+):
+    """Or the composer draws an indicator for the person using it (§4)."""
+
+    async def _the_reader_types():
+        typed = await _type(
+            client, a_room["conversation_id"], a_room["reader"]["token"]
+        )
+        assert typed.status_code == 204, typed.text
+        await asyncio.sleep(TYPING_CHECK.total_seconds() * 2.5)
+
+    body = await _while_following_body(
+        client, a_room, _the_reader_types, live_channel, seconds=A_LONGER_LIFE_SECONDS
+    )
+
+    assert _of_kind(body, "typing") == []
+    # **And it is a filter on the way out, not a refusal on the way in.** The
+    # heartbeat was recorded — it is the reader's own stream that drops them, so
+    # everybody else in the room sees it.
+    roster = await build_typing_roster(live_channel).who_is_typing(
+        UUID(a_room["conversation_id"])
+    )
+    assert roster == frozenset({a_room["reader"]["id"]})
+
+
+async def test_a_non_member_cannot_say_they_are_typing(client, a_room, session_factory):
+    """The send's own arm, verbatim: one code for *no such room* and *not yours*."""
+
+    _, stranger = await world.a_signed_in_candidate(
+        client, session_factory, "typist", mu=0.0
+    )
+
+    refused = await _type(client, a_room["conversation_id"], stranger)
+
+    assert refused.status_code == 404, refused.text
+    assert refused.json()["code"] == "conversation_not_found"
+
+
+async def test_a_room_past_its_end_refuses_the_heartbeat(
+    client, a_room, session_factory
+):
+    """`docs/adr/0153` §5 — **every** route on an ended room answers the same
+    code, and this is a route."""
+
+    for who in ("bo", "cy"):
+        declined = await client.post(
+            f"/api/v1/challenges/{a_room['challenge_id']}/decline",
+            headers=world.auth(a_room["people"][who]["token"]),
+        )
+        assert declined.status_code == 200, declined.text
+    await world.deliver_the_outbox(session_factory, live_channel=a_room["live_channel"])
+    the_day_after_next(client)
+
+    refused = await _type(
+        client, a_room["conversation_id"], a_room["searcher"]["token"]
+    )
+
+    assert refused.status_code == 404, refused.text
+    assert refused.json()["code"] == "conversation_not_found"
+
+
+async def test_an_ephemeral_store_that_is_gone_costs_the_indicator_and_nothing_else(
+    client, app, a_room, live_channel
+):
+    """**Redis absent: the app runs, the stream works, nobody is ever typing.**
+
+    This is the one place the new pair does *not* mirror the nudge ports'
+    asymmetry, and `docs/adr/0156` §6 argues it: a subscription **is** the room's
+    liveness, so it closes the stream, while a roster is a courtesy read on the
+    client with a two-second deadline, asked once a second by every open
+    conversation screen. Failing it loud would let a merely slow store close
+    every healthy stream on the platform — a flap invented to report that nobody
+    is typing.
+    """
+
+    app.dependency_overrides[get_redis] = lambda: BrokenRedis()
+
+    typed = await _type(client, a_room["conversation_id"], a_room["searcher"]["token"])
+    assert typed.status_code == 204, typed.text
+
+    async def _wait_for_a_check():
+        await asyncio.sleep(TYPING_CHECK.total_seconds() * 2.5)
+
+    body = await _while_following_body(
+        client, a_room, _wait_for_a_check, live_channel, seconds=A_LONGER_LIFE_SECONDS
+    )
+
+    assert _of_kind(body, "nudge") == [
+        {"v": 1, "conversation_id": a_room["conversation_id"], "last_seq": 1}
+    ]
+    assert _of_kind(body, "typing") == []

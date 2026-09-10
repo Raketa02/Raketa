@@ -17,7 +17,13 @@ full moderation story is out of scope beyond the block.
 *No activity recency, at any granularity* — not a timestamp, not *active today*,
 not a green dot. That is row three of the Liveness table, and Liveness reaches a
 screen the one way it is sanctioned to: as a reason **code**. *"Last seen 2 hours
-ago"* is a presence indicator, and this product does not have one.
+ago"* is a presence indicator, and **the one this product now has says nothing of
+the kind**: ``docs/adr/0156`` built a typing indicator inside a conversation, for
+people who have already agreed to play, about the five seconds somebody's finger
+is on a keyboard — nothing stored, nothing that outlives the moment, and nothing
+about anybody a searcher is deciding on. This row refuses **a stranger's activity
+recency on a card**, which is a different fact with a different subject, and it
+refuses it exactly as written.
 
 **A photo id in the record, and a URL on the response.** Photos are served
 through short-lived presigned links and a search record is kept forever, so a URL

@@ -31,9 +31,10 @@ poster, which needs nothing from the wire.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Final, Literal, Union
 from uuid import UUID
 
+from fastapi.sse import ServerSentEvent
 from pydantic import BaseModel, Field
 
 from app.kernel import Sport
@@ -329,6 +330,103 @@ class LiveNudgeSchema(BaseModel):
             "opened on a freshly-opened room genuinely reports."
         ),
     )
+
+
+class LiveTypingSchema(BaseModel):
+    """**Somebody is typing**, and it is the second frame on the wire.
+
+    ``docs/adr/0156``. It arrives when the answer changes and not on a tick, so a
+    room where nobody is typing produces nothing at all.
+
+    **It carries no `last_seq` and moves no sequence.** A typing frame is not an
+    entry: nothing was appended, nothing was locked, and the gapless allocator
+    behind `seq` was never asked for a number. A client must not advance any
+    cursor on one, and there is nothing here it could advance it to.
+
+    **It carries no name.** Fill handles from the membership you are already
+    holding, exactly as every system line does — which is why a corrected
+    nickname fixes the indicator without a frame being re-sent.
+
+    **An empty list is the clear**, and it is the only clear there is: nobody
+    sends *stopped*, and the server reports whoever's heartbeat has not expired.
+    A room whose last typist's app was killed reports nobody within seconds,
+    through the same field and with nothing special about it.
+    """
+
+    v: int = Field(
+        ...,
+        description=(
+            "The envelope version, **the same `1` a nudge carries and unbumped "
+            "by this frame's arrival**. A named event an installed client does "
+            "not listen for never reaches it, so nothing about the shape it "
+            "parses has changed."
+        ),
+    )
+    conversation_id: UUID = Field(
+        ..., description="The room this is about — the room this stream is for"
+    )
+    player_ids: list[UUID] = Field(
+        ...,
+        description=(
+            "Who is typing **right now**, never including you. A list because a "
+            "group chat has more than one possible typist; draw one indicator "
+            "either way. **Empty means nobody is**, which is how an indicator "
+            "goes away."
+        ),
+    )
+
+
+#: The SSE `event:` name a nudge rides under. **Subscribe per name.**
+#:
+#: The kind is on the event field rather than inside the JSON deliberately
+#: (``docs/adr/0156`` §5): a client subscribes to the names it knows, so a frame
+#: it has never heard of is ignored **by construction** rather than by a branch
+#: somebody wrote — which is what makes a third frame, one day, additive for
+#: every phone already in the world.
+#:
+#: ``Final`` so the constant carries its *literal* type: that is what lets
+#: ``LiveFrame.event`` be a closed set and mypy check the two call sites that
+#: build a frame. The names reach no generated artifact — the SSE item schema's
+#: ``event`` is a bare string the framework writes — so this is the only place
+#: they are checked at all.
+NUDGE_EVENT: Final = "nudge"
+
+#: The SSE `event:` name a typing frame rides under.
+TYPING_EVENT: Final = "typing"
+
+
+class LiveFrame(ServerSentEvent):
+    """One frame on the stream: **a named event, and one of two payloads.**
+
+    **This class is the declaration.** ``fastapi``'s own ``ServerSentEvent``
+    carries ``data: Any``, which documents a stream as an opaque string and
+    leaves the client with nothing to generate from; narrowing ``data`` here is
+    what puts both envelopes into ``components.schemas`` and what makes ADR-0006
+    true of a live event rather than aspirational (``app/api/streaming.py``
+    reads this annotation).
+
+    **It is also the check on the way out.** A frame is validated by pydantic
+    when the route constructs one, so a payload that is neither envelope raises
+    here rather than shipping. That is the same narrowing ``docs/adr/0147`` §7
+    described and it moved one step: the framework skips its own stream-item
+    validation for a ``ServerSentEvent``, because a route yielding these is
+    taken to be choosing its own frames. What remains uncovered is unchanged —
+    nothing proves *which* events this route emits, only that whatever it emits
+    is one of these two shapes.
+    """
+
+    data: LiveNudgeSchema | LiveTypingSchema
+    #: **A closed set, so the names are checked somewhere.** The base class types
+    #: this ``str | None``, and the route's own docstring concedes that nothing
+    #: proves which names are emitted; narrowing it here is the cheapest half of
+    #: that hole to close — a third frame kind has to be added in one place
+    #: rather than spelled correctly at a call site.
+    event: Literal["nudge", "typing"]
+    #: **Narrowed to nothing.** The base class offers `raw_data` as a way to put
+    #: a pre-formatted string on the wire without going through `data`, which is
+    #: exactly the door round the declaration above. Closing it here is what lets
+    #: this class claim that every frame is one of two envelopes.
+    raw_data: None = None
 
 
 class SendMessageRequest(BaseModel):

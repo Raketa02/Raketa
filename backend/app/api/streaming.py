@@ -37,6 +37,23 @@ about one response, and it buys no check on the way out. Writing the
 mirror of a backend response is the thing ADR-0006 exists to forbid, and it would
 rot the first time the envelope gained a field.
 
+**A route that names its own frames still declares its payload, and that is
+the second half of this file** (``docs/adr/0156`` §5). A stream carrying two
+kinds has to name them, and the SSE ``event:`` field is where a name goes — which
+means yielding ``ServerSentEvent`` rather than a bare model, and the framework
+treats **any** ``ServerSentEvent`` as *this route is building its own frames* and
+declares nothing about them. So a subclass that narrows ``data`` is read for its
+``data`` annotation instead, and the document carries that as the frame's
+``contentSchema`` exactly as it carries a plain item's. Without this, adding the
+second event would have quietly deleted the **first** one's schema from
+``components`` — a contract change nobody asked for, arriving as a deletion.
+
+**What is not restored on that path is the check on the way out.** The framework
+skips ``stream_item_field`` for a ``ServerSentEvent``, so the field set here is
+the declaration only; the validation moves to where the frame is **constructed**,
+since a narrowed ``data`` is a pydantic field like any other. Same guarantee,
+one step earlier, and neither of them proves which event names are emitted.
+
 **Applied to the finished application, once**, rather than by pushing a custom
 route class down three routers: the routes an app serves and the routes its
 document is generated from are the same objects, so one pass over
@@ -51,6 +68,8 @@ quietly losing a schema.
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi._compat import lenient_issubclass
@@ -79,10 +98,10 @@ def restore_stream_item_types(app: FastAPI) -> tuple[str, ...]:
             # Either the framework found it — a route that has never been
             # included — or this has already run.
             continue
-        item = get_stream_item_type(get_typed_return_annotation(route.endpoint))
-        if item is None or lenient_issubclass(item, ServerSentEvent):
-            # A route that builds its own frames says so in its annotation, and
-            # is deliberately outside the declared-model path.
+        item = _declared_payload(
+            get_stream_item_type(get_typed_return_annotation(route.endpoint))
+        )
+        if item is None:
             continue
         route.stream_item_type = item
         route.stream_item_field = create_model_field(
@@ -96,3 +115,32 @@ def restore_stream_item_types(app: FastAPI) -> tuple[str, ...]:
         route.app = request_response(route.get_route_handler())
         repaired.append(route.path)
     return tuple(repaired)
+
+
+def _declared_payload(item: Any | None) -> Any | None:
+    """What this stream's ``data`` is, or ``None`` if it declares nothing.
+
+    Two shapes reach here and the second is why this function exists.
+
+    A route yielding a **plain model** yields that model *as* the payload, so the
+    item is the payload.
+
+    A route yielding a **``ServerSentEvent``** is naming its own frames, which is
+    the only way to set the SSE ``event:`` field. The base class carries
+    ``data: Any`` and declares nothing — but a **subclass that narrows ``data``**
+    is a declaration, and it is the one the client generates from. Reading it
+    here rather than in the route is what keeps *the envelope is declared and
+    generated* (ADR-0006) true of a stream that has more than one kind of frame
+    on it.
+    """
+
+    if item is None:
+        return None
+    if not lenient_issubclass(item, ServerSentEvent):
+        return item
+    if item is ServerSentEvent:
+        # The base class. `data: Any` is not a declaration, and documenting it
+        # as one would put `{}` in the contract where a schema belongs.
+        return None
+    payload = item.model_fields["data"].annotation
+    return None if payload is Any else payload

@@ -1,4 +1,4 @@
-"""What a caller asks this context for. **Five, and every one carries a reader.**
+"""What a caller asks this context for. **Six, and every one carries a reader.**
 
 Membership is the gate on every route, so the reader is not context a use case
 picks up from somewhere — it is an argument, and a command with no reader on it
@@ -70,3 +70,22 @@ class SendMessageCommand:
     author_id: UUID
     client_message_id: UUID
     text: str
+
+
+@dataclass(frozen=True, slots=True)
+class RecordTypingCommand:
+    """*I am typing in this room, as of now.*
+
+    **A heartbeat and not a state change** (``docs/adr/0156``). There is no
+    ``typing: bool`` on it and there is no companion command that says *stopped*:
+    a client sends this while somebody types and stops sending when they stop,
+    and what clears the indicator is the store's TTL. A flag would make *stopped*
+    a message that can fail to arrive, and every way an app can vanish is a way
+    it fails to arrive.
+
+    **It carries no text and never will.** What is being typed is nobody's
+    business until it is sent.
+    """
+
+    conversation_id: UUID
+    player_id: UUID
