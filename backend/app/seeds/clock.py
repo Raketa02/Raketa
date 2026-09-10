@@ -69,6 +69,23 @@ def days_before(now: Instant, days: int) -> FixedClock:
     return FixedClock(at=instant(now - timedelta(days=days)))
 
 
+def hours_before(now: Instant, hours: int) -> FixedClock:
+    """A clock stopped ``hours`` before ``now``. **Backdating, at the finer unit.**
+
+    :func:`days_before` is the unit the population is written in — a profile's age
+    is compared against a window measured in days, and nothing there needs an
+    hour. The loop's own states do: a result is confirmed six hours after the
+    score was proposed and an ended game keeps its card for twenty-four, so *this
+    evening* and *yesterday evening* are two different cards and a day apart is
+    too coarse to name either.
+
+    The same function of the run's own *now* rather than of a calendar instant,
+    and for :func:`days_before`'s reason.
+    """
+
+    return FixedClock(at=instant(now - timedelta(hours=hours)))
+
+
 def age_in_days(now: Instant, then: Instant) -> int:
     """How old something committed at ``then`` is. **Whole days, floored.**
 

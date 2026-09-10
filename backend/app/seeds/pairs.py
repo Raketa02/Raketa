@@ -1506,10 +1506,18 @@ async def _the_fill_reaches_the_court(
             trace_id=TRACE_ID,
         )
     )
+    # **The seats still in it, and not every seat that holds somebody.** A
+    # half-built court may carry a seat that answered and left — the pair
+    # releases the moment they do, and ``docs/adr/0150`` keeps them out of the
+    # fill by name: *nobody who has answered that challenge is a candidate for
+    # its own fill*. On a court at ``LINE_UP_INCOMPLETE`` nobody is deciding, so
+    # every live seat but the organiser's is an accepted one.
     expected = frozenset(
         seat.player_id
         for seat in challenge.seats
-        if seat.player_id is not None and seat.player_id != member_id
+        if seat.player_id is not None
+        and seat.player_id != member_id
+        and seat.is_accepted()
     )
     # The searcher's own seat is one of these, so it is dropped: what this
     # asserts is who was seated **beside** them, which is the pool's answer.

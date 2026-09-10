@@ -26,13 +26,14 @@ nothing and the room does not grow by fifty every run. That is the same move
 every layer here makes and the reason none of them needs a probe.
 
 **The third thing it does is destroy**, and that is what a fixture can show and
-a test cannot: the played history is written in the past, every one of its games
-was played at least ``PLAYED_AT_LEAST_DAYS_AGO`` ago, and ``CONVERSATION_GRACE``
-is forty-eight hours — so **every room the played history opened has ended**
-(``docs/adr/0153``). The run sweeps in process, exactly as it delivers in
-process, and then reads the list again: what the report prints is a count of
-rooms that stopped existing beside a count of rooms that did not, which is the
-only way *destroyed, not delisted* is visible on a laptop.
+a test cannot: the played history is written in the past and ``CONVERSATION_GRACE``
+is forty-eight hours, so **every room it opened has ended** (``docs/adr/0153``) —
+while the game ``app/seeds/loop.py`` has played *this evening* keeps its room, and
+that pair of facts is the lifetime rather than an accident of the population. The
+run sweeps in process, exactly as it delivers in process, and then reads the list
+again: what the report prints is a count of rooms that stopped existing beside a
+count of rooms that did not, which is the only way *destroyed, not delisted* is
+visible on a laptop.
 
 **Three of the four room shapes are reached and the fourth is named**, because a
 fixture that quietly reached three would read as having reached four:
@@ -51,11 +52,11 @@ fixture that quietly reached three would read as having reached four:
   rather than as her;
 - **a room long enough to page backward through** — this layer's own messages.
 
-The fourth, **a room containing every system-line code**, needs a
-``SeatsInvited`` and nothing on this fixture performs a fill. Reaching it would
-cost a real ⚡ search run as a member of a half-built court, which seats somebody
-new — and that moves the gate histogram ``screens.py`` asserts. It is stated here
-rather than half-built, and it is the one screen state this layer does not reach.
+The fourth, **a room carrying every system-line code**, is
+``app/seeds/loop.py``'s: three codes need a court that grew or shrank after its
+room opened and one needs a game played inside the grace, and that layer sends
+the courts and the game for them. It is asserted there rather than here, beside
+the rows that reach it.
 """
 
 from __future__ import annotations
@@ -87,6 +88,7 @@ from app.core.config import Settings
 from app.kernel import Instant
 from app.modules.conversations.application.commands import (
     ReadConversationsCommand,
+    ReadEntriesCommand,
     SendMessageCommand,
 )
 from app.modules.conversations.application.destroy_ended_conversations import (
@@ -96,16 +98,17 @@ from app.modules.conversations.application.read_conversations import (
     ConversationRow,
     ReadConversations,
 )
+from app.modules.conversations.application.read_entries import ReadEntries
 from app.modules.conversations.application.send_message import SendMessage
-from app.modules.conversations.domain.entries import SystemLine, SystemLineCode
+from app.modules.conversations.domain.entries import (
+    Entry,
+    SystemLine,
+    SystemLineCode,
+)
 from app.modules.conversations.domain.lifetime import CONVERSATION_GRACE
 from app.modules.conversations.domain.paging import PAGE_LIMIT_DEFAULT
 from app.seeds.clock import FixedClock
-from app.seeds.cohort import (
-    PLAYED_AT_LEAST_DAYS_AGO,
-    PLAYED_GAMES,
-    SEED_EMAIL_DOMAIN,
-)
+from app.seeds.cohort import PLAYED_GAMES, SEED_EMAIL_DOMAIN
 from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
 
 #: How many entries the pageable room carries. **One page and a little**, so the
@@ -230,7 +233,7 @@ async def open_the_rooms(
     delivered = await deliver_everything_told(session_factory)
 
     async with session_factory() as session:
-        rooms = await _every_room_in_the_database(session, settings=settings, now=now)
+        rooms = await every_room_in_the_database(session, settings=settings, now=now)
         said = await _say_a_page_and_a_bit(
             session,
             settings=settings,
@@ -244,13 +247,13 @@ async def open_the_rooms(
     # **Re-read after the writes**, because what is asserted is what a screen
     # would draw and not what this function believes it wrote.
     async with session_factory() as session:
-        rooms = await _every_room_in_the_database(session, settings=settings, now=now)
+        rooms = await every_room_in_the_database(session, settings=settings, now=now)
         lines = [
             _refuse_a_database_with_no_rooms_in_it(rooms),
             _refuse_a_court_that_stopped_growing(rooms),
             _refuse_a_pair_with_no_room_of_their_own(rooms),
             _refuse_a_room_too_short_to_page(rooms),
-            _refuse_a_room_that_outlived_its_game(swept, rooms),
+            _refuse_a_room_that_outlived_its_game(swept, rooms, now=now),
         ]
     return SeededRooms(
         delivered=delivered, rooms=tuple(lines), said=said, swept=swept
@@ -278,7 +281,7 @@ async def _destroy_what_has_ended(
         ).execute()
 
 
-async def _every_room_in_the_database(
+async def every_room_in_the_database(
     session: AsyncSession, *, settings: Settings, now: Instant
 ) -> tuple[ConversationRow, ...]:
     """Every room, read as somebody who is in it. **Never off the table.**
@@ -308,6 +311,63 @@ async def _every_room_in_the_database(
     # Sorted, because a mapping's iteration order is the order the claims
     # traverse in and a fixture's answer may not depend on it.
     return tuple(found[key] for key in sorted(found))
+
+
+async def read_the_entries(
+    session: AsyncSession,
+    *,
+    room: ConversationRow,
+    settings: Settings,
+    now: Instant,
+) -> tuple[Entry, ...]:
+    """One room's whole stream, read as somebody who is in it, **by paging back**.
+
+    **The newest page and then the page before it**, which is exactly what a
+    client does: the room opens at the newest entry and walks backward as somebody
+    scrolls (``docs/adr/0147``). A caller that read only the first page would be
+    asking *what does this room open on* — and the one room this fixture fills past
+    a page holds fifty messages above the lines that were written before them, so
+    that question and *what is in this room* have different answers.
+
+    The cursor is the sequence and it is gapless, so ``seq`` 1 is the beginning and
+    the walk ends when a page comes back empty. There is no ``has_more`` to read
+    and deliberately none.
+
+    Here rather than in ``app/seeds/loop.py``, beside the walk it belongs to: the
+    reader has to be a member — membership is the gate on every route this context
+    has — and *which member* is a question this module already answers for the
+    list read.
+    """
+
+    reader = room.members[0].player_id
+    conversations = build_conversation_repository(
+        session=session,
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    )
+    entries = ReadEntries(
+        rooms=build_a_room_of_yours(
+            conversations=conversations,
+            membership=build_membership(session),
+            clock=FixedClock(at=now),
+        )
+    )
+    walked: list[Entry] = []
+    cursor: int | None = None
+    while True:
+        page = await entries.execute(
+            ReadEntriesCommand(
+                conversation_id=room.conversation_id,
+                reader_id=reader,
+                before_seq=cursor,
+                limit=PAGE_LIMIT_DEFAULT,
+            )
+        )
+        if not page:
+            return tuple(walked)
+        walked = [*page, *walked]
+        cursor = page[0].seq
+
 
 
 # ---------------------------------------------------------------------------
@@ -463,53 +523,58 @@ def _refuse_a_pair_with_no_room_of_their_own(
 
 
 def _refuse_a_room_that_outlived_its_game(
-    swept: SweptRooms, rooms: Sequence[ConversationRow]
+    swept: SweptRooms, rooms: Sequence[ConversationRow], *, now: Instant
 ) -> str:
-    """*No room that was told* we played *is still standing.*
+    """*No room that was told* we played *more than a grace ago is still standing.*
 
-    **The claim is the absence, not the deletion**, and that is what makes it
-    idempotent. A second ``make seed`` has nothing left to destroy — the first
-    run already did it, and the outbox does not redeliver — so a fixture that
-    asserted *this run destroyed something* would pass once and fail for ever
-    after. What survives every run is the **state**: every game the played
-    history records was played at least ``PLAYED_AT_LEAST_DAYS_AGO`` ago,
-    ``CONVERSATION_GRACE`` is forty-eight hours, and a room that has been told
-    *we played* is therefore over (``docs/adr/0153``).
+    **The claim is the lifetime, not the absence.** It used to be *no room
+    anywhere carries* ``GAME_PLAYED``, which was true only because every game in
+    this fixture had been played days ago — a property of the population rather
+    than of the rule, and it went red the day ``app/seeds/loop.py`` seeded a game
+    played **this** evening, which is exactly the room the seventh system-line code
+    needs. What survives is the rule itself: a room outlives *we played* by
+    ``CONVERSATION_GRACE`` and not a moment longer (``docs/adr/0153``), so what is
+    refused is a room still carrying that entry from **before** the grace.
 
     It is read off ``last_entry``, which is enough: *we played* is the last thing
     that ever happens in a room — the result argument is ``games``' own
-    conversation and draws no line here — so a room still carrying that entry is
-    a room that outlived its episode.
+    conversation and draws no line here — so a room still carrying that entry is a
+    room whose episode ended when the entry did.
 
-    **What stops an absence claim being vacuous is the claim beside it.** On its
-    own this would pass a database in which the played history never opened a
-    room at all — so it is paired with
-    :func:`_refuse_a_pair_with_no_room_of_their_own`, which demands a **standing**
-    two-member room whose line-up completed. The two layers build a game the same
-    way, down to the sport: a challenge, every seat accepted, a room on the first
-    acceptance. If rooms open for one they open for the other, and the only thing
-    that differs between the pair is that somebody said they played.
+    **It is idempotent because it is a claim about state.** A second ``make seed``
+    has nothing left to destroy — the first run already did it, and the outbox does
+    not redeliver — so a fixture that asserted *this run destroyed something* would
+    pass once and fail for ever after.
 
-    **A live room is required beside it** for the same reason read one layer up:
-    an ended room is only legible next to one that is not, and a Chats tab that
-    is empty on every screen proves nothing about when a room ends.
+    **What stops it being vacuous is the claim beside it.** On its own this would
+    pass a database in which the played history never opened a room at all — so it
+    is paired with :func:`_refuse_a_pair_with_no_room_of_their_own`, which demands
+    a **standing** two-member room whose line-up completed. **A live room is
+    required beside it** for the same reason: an ended room is only legible next to
+    one that is not, and a Chats tab that is empty on every screen proves nothing
+    about when a room ends.
 
     **There is deliberately no before-and-after count.** The list read already
-    drops a room past its end, so the same read on either side of the sweep
-    returns the same rows — which is not a bug to work around but the rule
-    itself: the sweep changes the table and never the answer
-    (``docs/adr/0153`` §5). What the run destroyed is on the report because it is
-    the only place that difference is visible at all.
+    drops a room past its end, so the same read on either side of the sweep returns
+    the same rows — which is not a bug to work around but the rule itself: the sweep
+    changes the table and never the answer (``docs/adr/0153`` §5). What the run
+    destroyed is on the report because it is the only place that difference is
+    visible at all.
     """
 
-    outlived = [room for room in rooms if _code_of(room) == THE_PLAYED_CODE]
+    outlived = [
+        room
+        for room in rooms
+        if _code_of(room) == THE_PLAYED_CODE
+        and isinstance(room.last_entry, SystemLine)
+        and now - room.last_entry.occurred_at > CONVERSATION_GRACE
+    ]
     if outlived:
         raise SeedRoomMissing(
             f"{len(outlived)} room(s) still stand whose last entry is "
-            f"{THE_PLAYED_CODE}. Every game the played history records was "
-            f"played at least {PLAYED_AT_LEAST_DAYS_AGO} day(s) ago and a room "
-            f"outlives *we played* by {CONVERSATION_GRACE}, so each of these is "
-            f"past its end — either the sweep did not run or the lifetime no "
+            f"{THE_PLAYED_CODE} from more than {CONVERSATION_GRACE} ago. A room "
+            f"outlives *we played* by that grace and no longer, so each of these "
+            f"is past its end — either the sweep did not run or the lifetime no "
             f"longer reaches it."
         )
     if not rooms:
@@ -519,11 +584,12 @@ def _refuse_a_room_that_outlived_its_game(
             f"a live one, and a Chats tab that is empty on every screen proves "
             f"nothing about when a room ends."
         )
+    told = len([room for room in rooms if _code_of(room) == THE_PLAYED_CODE])
     return (
         f"ended · {swept.destroyed} of {swept.walked} room(s) destroyed this "
-        f"run, {len(rooms)} standing, and no room anywhere still carries "
-        f"{THE_PLAYED_CODE} — the played evenings are gone and the arrangements "
-        f"are not"
+        f"run, {len(rooms)} standing, and the {told} still carrying "
+        f"{THE_PLAYED_CODE} were all told so inside {CONVERSATION_GRACE} — the "
+        f"played evenings are gone and this evening's is not"
     )
 
 

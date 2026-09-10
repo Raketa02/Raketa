@@ -30,9 +30,25 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from app.bootstrap.composition import build_clock, build_nudge_publisher
+from app.api.dependencies import (
+    ClockDep,
+    DbSession,
+    DomainEventStoreDep,
+    EventPublisherDep,
+    SettingsDep,
+    UnitOfWorkDep,
+)
+from app.bootstrap.composition import (
+    build_clock,
+    build_court_pairing_query_over,
+    build_court_pairing_workbench,
+    build_nudge_publisher,
+)
 from app.bootstrap.events import build_event_runtime
 from app.kernel import Sport
+from app.modules.challenges.presentation.dependencies import (
+    get_court_pairing_query,
+)
 from app.modules.conversations.infrastructure.absent_providers import (
     NobodyIsFollowing,
 )
@@ -530,6 +546,51 @@ def override(client, dependency, factory) -> None:
     """
 
     client._transport.app.dependency_overrides[dependency] = factory  # noqa: SLF001
+
+
+def draw_real_cards(client, candidate_source, exposure_ledger) -> None:
+    """Wire the **real** pairing query over this test's own index and ledger.
+
+    The production declaration reaches for the process's candidate index and for
+    the Redis pool, and neither exists under ``ASGITransport``. That default is
+    the right one for this suite — it is what makes *the pairing could not be
+    read* the production path rather than a simulation — and the wrong one for
+    any test about a card actually being drawn.
+
+    What is wired instead is the **same assembly the route builds**, declared
+    with its own dependencies so the session is still the request's, over the two
+    seams ``app/bootstrap/challenge_demands.py`` names: the process's index and
+    an exposure ledger that needs no server.
+
+    **Here rather than in one test module**, because two files now want a
+    challenge screen with a pairing on it — the file that asserts the card block
+    and the one that walks the whole loop — and a second copy of this wiring is a
+    second opinion about which seams a challenge screen is built over.
+    """
+
+    def _pairings(
+        db: DbSession,
+        clock: ClockDep,
+        uow: UnitOfWorkDep,
+        event_store: DomainEventStoreDep,
+        events: EventPublisherDep,
+        settings: SettingsDep,
+    ):
+        return build_court_pairing_query_over(
+            workbench=build_court_pairing_workbench(
+                session=db,
+                clock=clock,
+                unit_of_work=uow,
+                event_store=event_store,
+                events=events,
+                settings=settings,
+                exposure=exposure_ledger,
+                candidates=candidate_source,
+            ),
+            settings=settings,
+        )
+
+    override(client, get_court_pairing_query, _pairings)
 
 
 def rewind_the_index(source, by: timedelta) -> None:

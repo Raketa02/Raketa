@@ -71,7 +71,7 @@ from app.modules.plans.application.commands import (
 )
 from app.modules.plans.application.record_a_slot import SetDay, SetHour, SetPlace
 from app.modules.plans.domain.plan import SLOTS, Plan
-from app.modules.plans.domain.slots import PLATFORM_ZONE
+from app.modules.plans.domain.slots import local_day
 from app.seeds.clock import FixedClock
 from app.seeds.cohort import COHORT, Cohort
 from app.seeds.games import (
@@ -298,7 +298,35 @@ async def _fill_the_slots(
     paths: ReadPaths,
     now: Instant,
 ) -> None:
-    """Write each plan up to its declared slot count, in ADR-0144's own order.
+    """Write each plan up to its declared slot count, in ADR-0144's own order."""
+
+    agreed_day = _the_agreed_day(now)
+    for declared, game_id in games.items():
+        await agree_up_to(
+            session,
+            game_id=game_id,
+            slots=declared.slots,
+            between=(
+                player_of(paths, cohort, declared.organiser),
+                player_of(paths, cohort, declared.side_b[0]),
+            ),
+            day=agreed_day,
+            hour=AGREED_HOUR,
+            now=now,
+        )
+
+
+async def agree_up_to(
+    session: AsyncSession,
+    *,
+    game_id: UUID,
+    slots: int,
+    between: tuple[UUID, UUID],
+    day: date,
+    hour: wall_time,
+    now: Instant,
+) -> None:
+    """Write one plan up to ``slots``, in ADR-0144's own order — *where · day · hour*.
 
     **Through the three use cases a request runs**, so a seeded plan has the
     event stream and the outbox rows a real one has — which is what puts the
@@ -308,6 +336,19 @@ async def _fill_the_slots(
     member may fill or change any slot* is the rule the card is built on and a
     plan every slot of which was written by the organiser would draw one side of
     it.
+
+    **One wiring, two callers.** This layer's four plans walk the card from empty
+    to complete, and ``app/seeds/loop.py`` writes two more on a **backdated**
+    clock to reach the two rungs a plan agreed for *today* and one agreed for
+    *yesterday* draw. The three use cases and the one-repository rule below are
+    the same either way, and a second copy of them is a second opinion about
+    which order a plan is written in.
+
+    **One repository per call, and it matters that it is one.** The three writes
+    are three appends to **one** stream and the repository is what remembers the
+    version it last saw; three repositories would be three answers to *what have
+    I read*, and the second append would expect version 0 of a stream it had never
+    loaded. Two plans are two streams, so a fresh trio per game is right.
     """
 
     clock = FixedClock(at=now)
@@ -318,47 +359,33 @@ async def _fill_the_slots(
     court = build_planning_court(session)
     holds = build_plan_hold_query(session)
     uow = build_unit_of_work(session)
-    # **One repository for all three writes**, because it remembers the stream
-    # versions it has loaded: three over one session would be three answers to
-    # *what version have I seen*, and the second append would expect version 0 of
-    # a stream it had never read.
-    place = SetPlace(plans=plans, court=court, holds=holds, uow=uow, clock=clock)
-    day = SetDay(plans=plans, court=court, holds=holds, uow=uow, clock=clock)
-    hour = SetHour(plans=plans, court=court, holds=holds, uow=uow, clock=clock)
-    agreed_day = _the_agreed_day(now)
-
-    for declared, game_id in games.items():
-        organiser = player_of(paths, cohort, declared.organiser)
-        opponent = player_of(paths, cohort, declared.side_b[0])
-        if declared.slots >= 1:
-            await place.execute(
-                SetPlaceCommand(
-                    game_id=game_id, player_id=organiser, place=THE_PLACE
-                )
-            )
-        if declared.slots >= 2:
-            await day.execute(
-                SetDayCommand(
-                    game_id=game_id, player_id=opponent, day=agreed_day
-                )
-            )
-        if declared.slots >= 3:
-            await hour.execute(
-                SetHourCommand(
-                    game_id=game_id, player_id=organiser, hour=AGREED_HOUR
-                )
-            )
+    one, other = between
+    if slots >= 1:
+        await SetPlace(
+            plans=plans, court=court, holds=holds, uow=uow, clock=clock
+        ).execute(
+            SetPlaceCommand(game_id=game_id, player_id=one, place=THE_PLACE)
+        )
+    if slots >= 2:
+        await SetDay(
+            plans=plans, court=court, holds=holds, uow=uow, clock=clock
+        ).execute(SetDayCommand(game_id=game_id, player_id=other, day=day))
+    if slots >= 3:
+        await SetHour(
+            plans=plans, court=court, holds=holds, uow=uow, clock=clock
+        ).execute(SetHourCommand(game_id=game_id, player_id=one, hour=hour))
 
 
 def _the_agreed_day(now: Instant) -> date:
     """The local day a seeded plan names.
 
-    Read in the platform zone, because that is the zone the plan itself converts
-    through — a day computed off the UTC date would be the wrong day for two
-    hours of every evening.
+    Through the domain's own ``local_day``, because that is the conversion the
+    plan itself makes — a day taken off the UTC date would be the wrong day for
+    two hours of every evening, and a second spelling of the conversion is a
+    second answer to *what day is it*.
     """
 
-    return now.astimezone(PLATFORM_ZONE).date() + timedelta(days=DAYS_AHEAD)
+    return local_day(now) + timedelta(days=DAYS_AHEAD)
 
 
 # ---------------------------------------------------------------------------

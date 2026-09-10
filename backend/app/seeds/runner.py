@@ -178,6 +178,12 @@ from app.seeds.cohort import (
 )
 from app.seeds.games import SeededGames, write_the_played_history
 from app.seeds.guard import refuse_unless_seedable
+from app.seeds.loop import (
+    SeededLoop,
+    assert_the_loop,
+    costs as loop_costs,
+    write_the_loop,
+)
 from app.seeds.pairs import SeededPairs, write_the_relationships
 from app.seeds.photos import (
     SEED_IMAGE_MEDIA_TYPE,
@@ -1106,6 +1112,11 @@ class SeedReport:
     #: The four arranged-and-never-played games, and the plans on them.
     #: ``None`` on the same callers and for the same reason as the two above.
     plans: SeededPlans | None = None
+    #: The loop's own states — a game at every moment of its life, the two courts
+    #: sent for the ends they reach, and the fill — with the claims read back off
+    #: the screens they are for. ``None`` on the same callers and for the same
+    #: reason as the layers above.
+    loop: SeededLoop | None = None
     #: The rooms the seeded acceptances earned, once the outbox was delivered.
     #: ``None`` on the callers that drive the populations without the layers
     #: above them, exactly as the two above are.
@@ -1185,6 +1196,13 @@ async def run(settings: Settings | None = None) -> SeedReport:
         plans = await write_the_plans(
             session_factory, settings=settings, now=now
         )
+        # **After the plans and before the delivery**, on the plans layer's own
+        # reason twice over: the cards this layer reaches are the ones no other
+        # layer draws, and the lines it writes have to reach their rooms in the
+        # same pass everything else's do.
+        written = await write_the_loop(
+            session_factory, settings=settings, now=now
+        )
         # **After every layer that writes and before the screens.** A room is
         # *told* through the outbox by contexts that do not know it exists
         # (``docs/adr/0146`` §5), so nothing above this line opened one — the
@@ -1194,6 +1212,16 @@ async def run(settings: Settings | None = None) -> SeedReport:
         # the real path has a poller in front of it.
         rooms = await open_the_rooms(
             session_factory, settings=settings, now=now
+        )
+        # **After the rooms, because half its claims are about them.** A room is
+        # told through the outbox and an ended one is destroyed by a sweep, so a
+        # claim about which lines a standing room carries has to be made on the
+        # far side of both.
+        loop = SeededLoop(
+            written=written,
+            claims=await assert_the_loop(
+                session_factory, settings=settings, now=now
+            ),
         )
         screens = await assert_the_screens(
             session_factory,
@@ -1212,6 +1240,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             played=played,
             plans=plans,
             rooms=rooms,
+            loop=loop,
             photographs=photographs,
         )
     finally:
@@ -1281,6 +1310,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *_plan_lines(run_report.plans)])
     if run_report.rooms is not None:
         lines.extend(["", *_room_lines(run_report.rooms)])
+    if run_report.loop is not None:
+        lines.extend(["", *_loop_lines(run_report.loop)])
     if run_report.screens:
         lines.extend(["", "The screens, read as the protagonist:"])
         lines.extend(f"  {line}" for line in run_report.screens)
@@ -1288,6 +1319,7 @@ def report(run_report: SeedReport) -> list[str]:
     costs = list(run_report.pairs.costs if run_report.pairs else ())
     costs.extend(run_report.played.costs if run_report.played else ())
     costs.extend(plan_costs(run_report.plans) if run_report.plans else ())
+    costs.extend(loop_costs(run_report.loop) if run_report.loop else ())
     if not run_report.photographs:
         costs.append(
             "the object store did not answer, so this run seeded no "
@@ -1301,6 +1333,23 @@ def report(run_report: SeedReport) -> list[str]:
         lines.append("")
         lines.extend(f"Cost: {cost}" for cost in costs)
     return lines
+
+
+def _loop_lines(loop: SeededLoop) -> list[str]:
+    """What the loop's own layer wrote, and what the screens then drew.
+
+    **Written and claimed in one block**, unlike every other layer: the two halves
+    run either side of the delivery — the rooms have to be told before a line can
+    be read back — and printing them apart would put the claims a screenful away
+    from the rows that reach them.
+    """
+
+    return [
+        "The loop's own states — a game at every moment of its life:",
+        *(f"  {line}" for line in loop.written.games),
+        *(f"  {line}" for line in loop.written.courts),
+        *(f"  {line}" for line in loop.claims),
+    ]
 
 
 def _room_lines(rooms: SeededRooms) -> list[str]:

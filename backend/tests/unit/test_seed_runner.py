@@ -249,6 +249,7 @@ def test_the_walk_has_something_to_walk():
         "cohort.py",
         "games.py",
         "guard.py",
+        "loop.py",
         "pairs.py",
         "paths.py",
         "photos.py",

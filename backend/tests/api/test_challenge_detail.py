@@ -25,67 +25,12 @@ from __future__ import annotations
 
 import pytest
 
-from app.api.dependencies import (
-    ClockDep,
-    DbSession,
-    DomainEventStoreDep,
-    EventPublisherDep,
-    SettingsDep,
-    UnitOfWorkDep,
-)
-from app.bootstrap.composition import (
-    build_court_pairing_query_over,
-    build_court_pairing_workbench,
-)
-from app.modules.challenges.presentation.dependencies import (
-    get_court_pairing_query,
-)
 from tests.api import matchmaking_world as world
 
 
 @pytest.fixture
 async def searcher(client):
     return await world.a_searcher(client)
-
-
-def draw_real_cards(client, candidate_source, exposure_ledger):
-    """Wire the **real** pairing query over the test's own index and ledger.
-
-    The production declaration reaches for the process's candidate index and for
-    the Redis pool, and neither exists under ``ASGITransport``. That default is
-    the right one for this suite — it is what makes the *could not be read* case
-    below the production path rather than a simulation — and the wrong one for
-    every case about a card actually being drawn.
-
-    What is wired instead is the **same assembly the route builds**, declared
-    with its own dependencies so the session is still the request's, over the two
-    seams ``app/bootstrap/challenge_demands.py`` names: the process's index and
-    an exposure ledger that needs no server.
-    """
-
-    def _pairings(
-        db: DbSession,
-        clock: ClockDep,
-        uow: UnitOfWorkDep,
-        event_store: DomainEventStoreDep,
-        events: EventPublisherDep,
-        settings: SettingsDep,
-    ):
-        return build_court_pairing_query_over(
-            workbench=build_court_pairing_workbench(
-                session=db,
-                clock=clock,
-                unit_of_work=uow,
-                event_store=event_store,
-                events=events,
-                settings=settings,
-                exposure=exposure_ledger,
-                candidates=candidate_source,
-            ),
-            settings=settings,
-        )
-
-    world.override(client, get_court_pairing_query, _pairings)
 
 
 async def _a_city(client, session_factory, candidate_source, mu: float) -> dict:
@@ -189,7 +134,7 @@ async def test_an_invitee_reads_who_is_asking_and_what_the_platform_makes_of_it(
     reader's own seat, because a pairing with yourself is not a question.
     """
 
-    draw_real_cards(client, candidate_source, exposure_ledger)
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     search_id, court = await _a_court(client, searcher)
     challenge_id = await _send(client, searcher["token"], search_id, court)
@@ -220,7 +165,7 @@ async def test_the_answer_is_folded_against_one_instant_the_response_names(
     rendered against the one beside it.
     """
 
-    draw_real_cards(client, candidate_source, exposure_ledger)
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     search_id, court = await _a_court(client, searcher)
     challenge_id = await _send(client, searcher["token"], search_id, court)
@@ -277,7 +222,7 @@ async def test_the_forecast_is_the_courts_and_the_same_on_every_card(
     it is the number the game would actually deliver.
     """
 
-    draw_real_cards(client, candidate_source, exposure_ledger)
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     search_id, court = await _a_court(client, searcher)
     challenge_id = await _send(client, searcher["token"], search_id, court)
@@ -309,7 +254,7 @@ async def test_a_challenge_that_ended_draws_the_arrangement_and_the_handles_alon
     them.
     """
 
-    draw_real_cards(client, candidate_source, exposure_ledger)
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     search_id, court = await _a_court(client, searcher)
     challenge_id = await _send(client, searcher["token"], search_id, court)
@@ -335,7 +280,7 @@ async def test_a_seat_that_left_a_still_open_court_draws_no_card_and_the_others_
     both.
     """
 
-    draw_real_cards(client, candidate_source, exposure_ledger)
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     search_id, court = await _a_court(client, searcher)
     challenge_id = await _send(client, searcher["token"], search_id, court)
@@ -371,7 +316,7 @@ async def test_a_reader_with_nothing_declared_still_answers_their_challenge(
     *you have not finished setting up* into *you cannot answer your challenge*.
     """
 
-    draw_real_cards(client, candidate_source, exposure_ledger)
+    world.draw_real_cards(client, candidate_source, exposure_ledger)
     people = await _an_undeclared_city(
         client, session_factory, candidate_source, searcher["mu"]
     )

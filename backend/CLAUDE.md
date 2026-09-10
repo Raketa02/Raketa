@@ -192,6 +192,31 @@ Rules to preserve:
   the **cache** — and the deal that earned the pass's origin key leaves the protagonist's
   deck a day short (ADR-0131). This is the only place the seed writes `challenges` and
   `blocks`, and it writes them through their own use cases like everything else.
+- **The last layer is the loop's own states, and it is the one that tells as it
+  writes** (`app/seeds/loop.py`). Everything above it seeds the *Play* screens and the
+  two layers before it reach a game arranged and a plan half agreed; this reaches
+  everything between *the plan is complete* and *the score moved a Level*, plus the
+  three challenge endings no other layer arrives at. Four things about it are
+  load-bearing. **A card is folded and not declared**: the nine names the Now rail draws
+  live in the client's `features/plans/domain/gameCard.ts`, and the claim here re-derives
+  each one off `GET /games` and `GET /plans` as the player whose rail it is — so a card
+  name that stops being reachable fails on a seed run rather than on somebody's phone.
+  **Two of the nine are stated absences, and the arithmetic is the argument**:
+  `uncounted` needs both proposal windows closed, which is a day after the entry and
+  exactly when an ended card leaves the rail, so that state reaches the game screen
+  through *Details* and never the rail; and `unreadable` is the client's gap for a
+  standing this build has no word for, which a fixture cannot produce without inventing
+  an event. **It is the one layer that cannot leave the delivery to the end**: a
+  membership line is written only where a room already existed and a slot or played line
+  is hung on a room *through its game*, so every line it seeds depends on an earlier
+  event having been delivered — and the outbox orders by a `created_at` that is one
+  **second** granular on SQLite, which is the database `make check` runs the whole seed
+  against. So it drains between writes, and two batches are two orders nobody has to
+  guess. And **its fill seats exactly one member and they say no**: a yes could complete
+  the line-up of the very court `pairs.py` asserts is still half built, and a mutual
+  mints again only once the last one it minted is finished with (ADR-0152) — so the cost
+  of `SEATS_INVITED` is a `PREVIOUS_DECLINE` on one pair rather than somebody else's
+  fixture.
 - **Photo bytes live behind `PhotoStorage`, and the re-encode behind
   `ImageTranscoder`** ([ADR-0091](../docs/adr/0091-photo-storage-behind-a-port.md)).
   One S3-compatible adapter serves MinIO locally and S3 deployed — same class, different

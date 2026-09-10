@@ -75,6 +75,7 @@ from app.bootstrap.composition import (
     build_player_score_query,
     build_prompt_decline_ledger,
     build_prompt_ledger,
+    build_read_plans,
     build_ruleset,
     build_search_store,
     build_skill_rating_repository,
@@ -94,6 +95,7 @@ from app.modules.challenges.application.commands import (
     SeatChoice,
     SendChallengeCommand,
 )
+from app.modules.challenges.application.fill_seats import FillSeats
 from app.modules.challenges.application.read_challenge import ReadChallenge
 from app.modules.challenges.application.read_challenges import ReadChallenges
 from app.modules.challenges.application.send_challenge import SendChallenge
@@ -121,6 +123,7 @@ from app.modules.matchmaking.domain.passes import PassLedger
 from app.modules.matchmaking.domain.ports import MatchHistoryQuery
 from app.modules.matchmaking.domain.relaxation import Rung
 from app.modules.matchmaking.domain.searches import SearchRecord
+from app.modules.plans.application.read_plans import ReadPlans
 from app.modules.player_profile.domain.ports import PhotoStorage
 from app.seeds.catalog import PROTAGONISTS
 from app.seeds.clock import FixedClock
@@ -180,6 +183,11 @@ class ReadPaths:
     #: same reason the two answers are: a state a screen has to draw is reached
     #: through the use case a request runs, never written into the log.
     withdraw: WithdrawChallenge
+    #: *Fill the seats* — the send's shape minus the mint (``docs/adr/0150``).
+    #: Here because a court that has been **grown** is a state no other act
+    #: reaches: the room learns ``SEATS_INVITED`` from a fill and from nothing
+    #: else, and half of this mechanism was written and unreachable until #362.
+    fill: FillSeats
     read_challenges: ReadChallenges
     #: The detail read, and **the only surface in this fixture that costs the
     #: matcher a whole scoring pass** (``docs/adr/0143``). It is here so the run
@@ -195,6 +203,11 @@ class ReadPaths:
     state_result: StateResult
     accept_result: AcceptResult
     read_games: ReadGames
+    #: *Every plan for the games you are on the court of.* Beside the games read
+    #: because a card is folded from the two of them and from one instant: the
+    #: standing is ``GET /games``' and the slots are this one's, and ``GET /plans``
+    #: carries no instant at all so that a rail has one clock by construction.
+    read_plans: ReadPlans
     history: MatchHistoryQuery
     #: What ``games`` publishes outward — the pairwise history familiarity reads,
     #: the counted-game count and the run of form. Held beside ``history``
@@ -432,6 +445,18 @@ async def read_paths(
         decline=DeclineSeat(
             challenges=challenges, handles=court_handles, uow=uow, clock=clock
         ),
+        # **The send's three extra reads, built the same way here as there**, so
+        # a fill and a send cannot come to two answers about who may share a
+        # court — which is the whole of what a fill re-verifies.
+        fill=FillSeats(
+            challenges=challenges,
+            handles=court_handles,
+            open_challenges=build_open_challenge_query(session),
+            origins=build_origin_search_query(session),
+            safety=build_court_safety(session),
+            uow=uow,
+            clock=clock,
+        ),
         withdraw=WithdrawChallenge(
             challenges=challenges, handles=court_handles, uow=uow, clock=clock
         ),
@@ -440,6 +465,7 @@ async def read_paths(
         read_games=ReadGames(
             games=build_game_directory(session), handles=handles, clock=clock
         ),
+        read_plans=build_read_plans(session, clock=clock),
         read_challenges=ReadChallenges(
             directory=build_challenge_directory(session),
             handles=court_handles,
