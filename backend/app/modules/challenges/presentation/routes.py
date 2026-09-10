@@ -582,6 +582,7 @@ def _challenge(one: StandingChallenge) -> ChallengeSchema:
         organiser_id=challenge.organiser_id,
         standing=one.standing,
         opened_at=challenge.opened_at,
+        ended_at=one.ended_at,
         seats=[
             SeatSchema(
                 side=seat.side,

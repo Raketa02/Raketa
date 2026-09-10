@@ -83,6 +83,36 @@ class StandingChallenge:
     read_at: Instant
     handles: Mapping[UUID, str]
 
+    @property
+    def ended_at(self) -> Instant | None:
+        """When it ended, or ``None`` because it has not
+        ([#388](https://github.com/Raketa02/Raketa/issues/388)).
+
+        **A property and not a fourth field**, which is the one place this type
+        departs from carrying what it was handed — and the reason is the same one
+        that put ``read_at`` on it. The ending instant is a fold of exactly
+        ``challenge`` and ``read_at``, both already here, so deriving it makes it
+        impossible for a caller to pass one folded against a different instant
+        from the ``standing`` beside it. ``standing`` is a field because one
+        caller has already folded it: an answer writes, then reads the standing
+        its own act produced, and hands it over rather than asking twice.
+
+        **The inbox's shelf life is the whole of its readership.** *An ended
+        challenge keeps its row, in place, and it leaves 24 h after the challenge
+        ended* — one subtraction, ``read_at − ended_at``, and both ends of it are
+        served from this one fold so the client never dates an ending off its own
+        clock.
+
+        **So it rides on the four acts as well as on the list**, because this type
+        does: an answer, a fill and a withdraw all reply with the court as it now
+        stands, and *the reply is the redraw*. A challenge and its standing are one
+        answer whether the caller just changed something or only asked, and when it
+        ended is part of that answer. The **detail** read is the one that does not
+        get it — it is its own schema, and a field with no reader there is a cost.
+        """
+
+        return self.challenge.ended_at(self.read_at)
+
     @classmethod
     def folded(
         cls, challenge: Challenge, *, now: Instant, handles: Mapping[UUID, str]

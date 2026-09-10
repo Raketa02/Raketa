@@ -86,6 +86,7 @@ from app.modules.challenges.domain.standing import (
     ARRANGING,
     ENDED,
     Standing,
+    ended_at_of,
     standing_of,
 )
 from app.modules.player_profile.domain.availability import Window
@@ -1323,6 +1324,230 @@ def test_a_withdrawal_replays_into_itself():
     challenge.withdraw(ORGANISER, occurred_at=at(4))
 
     assert replayed(challenge) == challenge
+
+
+# ---------------------------------------------------------------------------
+# When it ended — the second half of the same fold
+# ---------------------------------------------------------------------------
+
+
+def a_staggered_padel_court() -> Challenge:
+    """A padel four holding two different deadlines, with nobody in it yet.
+
+    ALICE was asked at the send; the other two were asked by a fill six hours
+    later, so ``answer_by`` differs across the court. That is the only way one
+    challenge holds two — a seat filled later starts its own day and cannot
+    inherit a deadline from a send it was not part of (``answer_window.py``) —
+    and it is what makes *which deadline ended it* a question with an answer.
+    """
+
+    challenge = a_padel_challenge(invitees=(ALICE,))
+    challenge.invite(
+        (
+            SeatPlan(side=Side.A, player_id=ORGANISER),
+            SeatPlan(side=Side.A, player_id=ALICE),
+            invited(BOB, Side.B, 2),
+            invited(CAROL, Side.B, 3),
+        ),
+        by=ORGANISER,
+        occurred_at=at(6),
+    )
+    return challenge
+
+
+def test_a_challenge_that_still_stands_is_dated_by_nothing():
+    """``None`` on the three standings that are not endings, and the absence is
+    the answer rather than a gap: *this challenge has not ended.*"""
+
+    awaiting = a_padel_challenge()
+    assert awaiting.standing_at(at(1)) is Standing.AWAITING_ANSWERS
+    assert awaiting.ended_at(at(1)) is None
+
+    half_built = a_court_nobody_will_finish()
+    assert half_built.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+    assert half_built.ended_at(INSIDE) is None
+
+    on = a_tennis_challenge()
+    on.accept(ALICE, occurred_at=at(1))
+    assert on.standing_at(at(2)) is Standing.ON
+    assert on.ended_at(at(2)) is None
+
+
+def test_a_lapse_is_dated_by_the_deadline_that_passed_and_needs_no_sweep():
+    """**Exact, and the wire could always have said so.** The lapse *is* the
+    window closing, so the instant is already on the seat — which is why this
+    ending needs nothing recorded and no loop to have run."""
+
+    challenge = a_tennis_challenge()
+    deadline = challenge.seat_of(ALICE).answer_by
+
+    assert challenge.standing_at(OUTSIDE) is Standing.LAPSED
+    assert challenge.ended_at(OUTSIDE) == deadline
+    assert deadline == instant(SENT_AT + ANSWER_WINDOW)
+    assert challenge.ended_at(OUTSIDE) != challenge.updated_at
+
+
+def test_a_lapsed_court_ends_on_the_last_of_its_deadlines_and_not_the_first():
+    """A court whose seats were invited on different days ended when the **last**
+    of them ran out.
+
+    The stagger comes from a fill, which is the only way one court holds two
+    deadlines: ``answer_by`` is dated when *that* seat was invited, so a seat
+    filled later starts its own day (``answer_window.py``).
+    """
+
+    challenge = a_staggered_padel_court()
+    first = challenge.seat_of(ALICE).answer_by
+    last = challenge.seat_of(BOB).answer_by
+
+    assert challenge.standing_at(at(55)) is Standing.LAPSED
+    assert challenge.ended_at(at(55)) == last
+    assert first < last
+    assert challenge.ended_at(at(55)) != challenge.updated_at
+
+
+def test_a_decline_is_dated_by_the_tighter_of_the_two_bounds_it_has():
+    """**An upper bound, and the schema says so.**
+
+    Nothing records *when* somebody declined: dating an answer is the history
+    walk's job and deliberately not the fold's — an answer happened to the court
+    as it stood then, and ``event_sourced_challenge_history.py`` is where that
+    walk lives. So the fold uses the two facts it does hold, and here the
+    stream's own instant is the tighter one and is exact, because the decline is
+    the last thing that happened to it.
+    """
+
+    challenge = a_tennis_challenge()
+    challenge.decline(ALICE, occurred_at=at(5))
+
+    assert challenge.standing_at(at(6)) is Standing.DECLINED
+    assert challenge.ended_at(at(6)) == at(5)
+    assert at(5) < challenge.seat_of(ALICE).answer_by
+
+
+def test_the_ending_instant_does_not_move_when_the_sweep_runs():
+    """**The sweep buys a record and not a reading**, and this is a reading it
+    must not touch (``lapse_expired_seats.py``).
+
+    It is also the decline bound's other branch. A court somebody declined can
+    hold a seat that ran out unanswered, so a sweep may append a ``SeatLapsed``
+    to it weeks later and move ``updated_at``; the declining seat's own deadline
+    is the smaller of the two and holds the answer still.
+    """
+
+    challenge = a_padel_challenge(invitees=(ALICE, BOB))
+    challenge.decline(ALICE, occurred_at=at(5))
+    ended = challenge.seat_of(BOB).answer_by
+
+    assert challenge.standing_at(at(49)) is Standing.DECLINED
+    assert challenge.ended_at(at(49)) == ended
+
+    assert challenge.lapse(now=at(60)) == 1
+    assert challenge.updated_at == at(60)
+    assert challenge.ended_at(at(61)) == ended
+
+
+def test_a_declined_court_ends_when_its_last_seat_leaves_not_when_the_no_arrived():
+    """**The standing says which ending it was. It does not say when.**
+
+    A no outranks silence whatever order the two arrived in
+    (:func:`_how_it_ended`), so a court can read ``DECLINED`` and have gone on
+    standing for two days after the no — until the last seat still deciding ran
+    out. Dating the whole challenge from the decline would retire the row while
+    the court was still live.
+    """
+
+    challenge = a_staggered_padel_court()
+    challenge.decline(BOB, occurred_at=at(7))
+    last = challenge.seat_of(CAROL).answer_by
+
+    assert challenge.standing_at(at(55)) is Standing.DECLINED
+    assert challenge.ended_at(at(55)) == last
+    assert challenge.ended_at(at(55)) > at(7)
+
+
+def test_a_withdrawal_is_dated_by_the_act_and_not_by_what_happened_after_it():
+    """**Exact**, because it is the one ending a recorded decision puts there and
+    the decision carries its own instant (``docs/adr/0142``).
+
+    And it is emphatically **not** the last thing that happened to the stream. A
+    withdraw is legal only in ``LINE_UP_INCOMPLETE``, which is reached while a
+    seat's day has already run out with nothing in it and nothing having swept
+    it — so a sweep can append a ``SeatLapsed`` *after* a legal withdrawal, and
+    does here. ``event_sourced_challenge_history.py`` writes the same
+    reachability down for its own denominator's sake.
+    """
+
+    challenge = a_padel_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+    challenge.decline(BOB, occurred_at=at(2))
+    assert challenge.standing_at(at(49)) is Standing.LINE_UP_INCOMPLETE
+
+    challenge.withdraw(ORGANISER, occurred_at=at(49))
+
+    assert challenge.ended_at(at(50)) == at(49)
+    assert challenge.ended_at(at(50)) != challenge.opened_at
+
+    assert challenge.lapse(now=at(60)) == 1
+    assert challenge.updated_at == at(60)
+    assert challenge.ended_at(at(61)) == at(49)
+
+
+def test_the_withdrawal_instant_survives_a_replay():
+    """It is folded off the event and stored nowhere else, so the rebuilt
+    aggregate answers what the live one did — the shape ``opened_at`` already
+    has, and the reason ``withdrawn`` stopped being a bare ``bool``."""
+
+    challenge = a_court_nobody_will_finish()
+    challenge.withdraw(ORGANISER, occurred_at=at(4))
+
+    assert replayed(challenge).ended_at(at(5)) == at(4)
+
+
+def test_every_court_that_has_ended_can_say_when_and_every_one_that_stands_cannot():
+    """**A total function over every arrangement**, on the exemption test's own
+    machinery below and for a related reason: the two halves of one fold have to
+    agree about every court this context can hold, and a standing whose instant
+    raises inside a read is worse than one that has none.
+
+    It reaches the two edges nothing above can get to through the aggregate: a
+    court whose non-organiser seats are all empty, which folds to ``LAPSED``
+    with nobody to have departed, and a seat carrying no deadline.
+    """
+
+    updated = at(70)
+    for sport in (Sport.TENNIS, Sport.PADEL):
+        for seats in _every_arrangement_of(sport):
+            standing = standing_of(
+                seats, organiser_id=ORGANISER, now=INSIDE, withdrawn=False
+            )
+            ended = ended_at_of(
+                seats,
+                organiser_id=ORGANISER,
+                now=INSIDE,
+                updated_at=updated,
+                withdrawn_at=None,
+            )
+
+            assert (ended is not None) == (standing in ENDED), (standing, seats)
+
+
+def test_a_withdrawal_is_dated_by_the_act_whatever_the_seats_say():
+    """The one ending no arrangement of the seats reaches is also the one whose
+    instant no arrangement of the seats can argue with."""
+
+    for sport in (Sport.TENNIS, Sport.PADEL):
+        for seats in _every_arrangement_of(sport):
+            assert (
+                ended_at_of(
+                    seats,
+                    organiser_id=ORGANISER,
+                    now=INSIDE,
+                    updated_at=at(70),
+                    withdrawn_at=at(30),
+                )
+                == at(30)
+            ), seats
 
 
 # ---------------------------------------------------------------------------

@@ -18,6 +18,15 @@ a second place for the fact to be true; it is the only place.
 
 *Challenge sent* and *Challenge for you* are **not** two standings. They are one
 standing read from two sides, which is why nothing here takes a reader.
+
+**And when it became that**, for the three that are endings
+([#388](https://github.com/Raketa02/Raketa/issues/388)). :func:`ended_at_of` is
+the same fold's second half and lives beside it rather than in a module of its
+own, because *which ending was this* and *when did it happen* are one question
+asked twice — the first is :func:`_how_it_ended` and the second reads the same
+seats. Derived, never stored, for the reason above and one more: an ending
+instant is the only thing on a challenge a client subtracts from its own clock,
+so a stored copy would go stale in the one place staleness is visible.
 """
 
 from __future__ import annotations
@@ -26,7 +35,7 @@ from enum import Enum
 from typing import Iterable, final
 from uuid import UUID
 
-from app.kernel import Instant
+from app.kernel import Instant, invariant
 from app.modules.challenges.domain.seats import Seat, SeatAnswer
 
 
@@ -178,3 +187,95 @@ def _how_it_ended(seats: tuple[Seat, ...]) -> Standing:
     if any(seat.answer is SeatAnswer.DECLINED for seat in seats):
         return Standing.DECLINED
     return Standing.LAPSED
+
+
+def ended_at_of(
+    seats: Iterable[Seat],
+    *,
+    organiser_id: UUID,
+    now: Instant,
+    updated_at: Instant,
+    withdrawn_at: Instant | None,
+) -> Instant | None:
+    """**When** this challenge ended, or ``None`` because it has not.
+
+    It takes ``now`` and folds the standing itself rather than being handed one,
+    so the two halves of the answer cannot be read against two instants: a
+    caller holding one reading of the clock gets both from it, and there is no
+    parameter through which a standing folded a second earlier could arrive.
+
+    **The ending is the last departure, and not the ending's own name.** A no
+    outranks silence whatever order the two arrived in (:func:`_how_it_ended`),
+    so a ``DECLINED`` court may have gone on standing for two days *after* the
+    no — until the last seat still deciding ran out. What ended it is the latest
+    instant at which one of the people asked left, whichever kind of leaving
+    each of theirs was; dating the challenge from the decline alone would retire
+    the row while the court was still live.
+
+    **Two of the three are exact and the third is an upper bound.** A lapse *is*
+    a deadline passing, so the instant is on the seat already, recorded or not;
+    a withdrawal is a decision somebody took and the decision carries its own
+    moment. Nothing anywhere holds **when somebody declined** — dating an answer
+    is the history walk's job and deliberately not the fold's, because an answer
+    happened to the court *as it stood then*
+    (``event_sourced_challenge_history.py``) — so a decline is bounded by the two
+    facts this fold does hold, and the bound is late rather than early. That is
+    the safe direction for the reader it has: a row that outstays its shelf life
+    is news gone stale, and one retired early is a player never learning a seat
+    reopened.
+    """
+
+    seats = tuple(seats)
+    standing = standing_of(
+        seats,
+        organiser_id=organiser_id,
+        now=now,
+        withdrawn=withdrawn_at is not None,
+    )
+    if standing not in ENDED:
+        return None
+    if standing is Standing.WITHDRAWN:
+        return withdrawn_at
+    return max(
+        (
+            _left_at(seat, updated_at=updated_at)
+            for seat in seats
+            if seat.player_id is not None
+            and not seat.holds(organiser_id)
+            and seat.is_open_at(now)
+        ),
+        # **A court with nobody to have departed.** The organiser alone among
+        # empty seats folds to ``LAPSED``, and the aggregate cannot reach it — a
+        # send needs an invitee and a fill needs somebody new — but hand-built
+        # seats can, and a read is the wrong place to raise from. The last thing
+        # that happened to the stream is the honest upper bound.
+        default=updated_at,
+    )
+
+
+def _left_at(seat: Seat, *, updated_at: Instant) -> Instant:
+    """When the person in this open seat left it.
+
+    **Every way an occupied seat opens carries a deadline**, so there is always
+    one to read: a decline and a lapse are both answers to something somebody was
+    asked, and ``Seat`` refuses a seated player holding neither an acceptance nor
+    a day. For a lapse the deadline *is* the answer — the window closing is the
+    leaving, which is why no sweep needs to have run.
+
+    **A decline takes the smaller of the deadline and the stream's own instant.**
+    Either alone is an upper bound and neither dominates: a court answered and
+    then left alone is dated by the stream, and one a sweep appended a lapse to
+    weeks later is dated by the deadline — which is what stops this reading
+    moving when a loop runs.
+
+    **Not a method on ``Seat``**, though it reads only a seat's fields. Which two
+    facts bound a decline is the *fold's* policy and one of them is the
+    challenge's — a seat that took ``updated_at`` would be a value object
+    reading its container, and the next reader would take it for a fact the seat
+    holds.
+    """
+
+    deadline = invariant(seat.answer_by, f"an open seat with no deadline: {seat!r}")
+    if seat.answer is SeatAnswer.DECLINED:
+        return min(deadline, updated_at)
+    return deadline

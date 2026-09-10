@@ -23,8 +23,9 @@ rather than one a phone derived.
 matchmaking surface's own distinction applied deliberately rather than by
 default: *``null`` means the field applies and the answer is a measured nothing.*
 An empty seat has no occupant, a seat nobody has answered has no answer, the
-organiser's seat has no deadline and a mutual-born challenge was proposed from no
-grid — four measured nothings, and not four absences.
+organiser's seat has no deadline, a mutual-born challenge was proposed from no
+grid and a challenge that still stands has not ended — five measured nothings,
+and not five absences.
 """
 
 from __future__ import annotations
@@ -249,6 +250,39 @@ class ChallengeSchema(BaseModel):
         ),
     )
     opened_at: datetime
+    ended_at: datetime | None = Field(
+        default=None,
+        description=(
+            "When this challenge ended. ``null`` on the three standings that are "
+            "not endings, and that is the whole of what the absence means: "
+            "*this challenge has not ended*.\n\n"
+            "**It is what a shelf life is subtracted from** — an ended row keeps "
+            "its place for a day and then goes, which is `read_at` minus this "
+            "and nothing else. **Not `read_at`**, which means the opposite: the "
+            "instant every standing and deadline here was folded against.\n\n"
+            "**The ending is the last departure, not the ending's own name.** A "
+            "refusal outranks silence whatever order the two arrived in, so a "
+            "`DECLINED` court may have gone on standing for days after the no — "
+            "until the last seat still deciding ran out. This is when that "
+            "happened.\n\n"
+            "**A departure is dated exactly unless it was a decline**, and that "
+            "is the whole of the precision here:\n\n"
+            "- **A lapse is exact.** It *is* a deadline passing, so the instant "
+            "is on the seat already and no sweep needs to have run.\n"
+            "- **A withdrawal is exact.** A decision somebody took, carrying its "
+            "own moment.\n"
+            "- **A decline is an upper bound**, at or before which that person "
+            "left. Nothing records when somebody said no, so it is bounded by "
+            "the tighter of the two facts that are recorded: that seat's own "
+            "deadline, and the last thing that happened to the challenge.\n\n"
+            "So `LAPSED` and `WITHDRAWN` are always exact, and `DECLINED` is "
+            "exact whenever the seat that left **last** was one that ran out — "
+            "which a mixed court often is — and a bound otherwise. The bound is "
+            "late rather than early, which is the safe direction for a shelf "
+            "life: a row that outstays it is news gone stale, and one retired "
+            "early is somebody never learning a seat reopened."
+        ),
+    )
     seats: list[SeatSchema] = Field(
         ...,
         description=(

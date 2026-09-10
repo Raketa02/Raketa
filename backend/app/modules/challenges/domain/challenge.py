@@ -81,6 +81,7 @@ from app.modules.challenges.domain.standing import (
     ARRANGING,
     ENDED,
     Standing,
+    ended_at_of,
     standing_of,
 )
 from app.modules.player_profile.domain.availability import Window
@@ -111,13 +112,24 @@ class Challenge:
     answered: frozenset[UUID]
     opened_at: Instant
     updated_at: Instant
-    #: Whether the organiser has ended it. **The one thing about a challenge that
-    #: is not in its seats** — a decision somebody took, folded off
-    #: ``ChallengeWithdrawn`` and read by ``standing_at`` before anything else.
-    #: A ``bool`` and not an instant, because it is folded exactly as an answer
-    #: is: the moment it happened is the event's, and a second copy on the
-    #: aggregate would be a moment two readers could disagree about.
-    withdrawn: bool = False
+    #: When the organiser ended it, or ``None`` because they have not. **The one
+    #: thing about a challenge that is not in its seats** — a decision somebody
+    #: took, folded off ``ChallengeWithdrawn`` and read by ``standing_at`` before
+    #: anything else.
+    #:
+    #: **An instant and no longer a bare ``bool``**
+    #: ([#388](https://github.com/Raketa02/Raketa/issues/388)). It was a ``bool``
+    #: on the argument that a moment belongs to the event and a copy here would
+    #: be one two readers could disagree about — but this is ``opened_at``'s
+    #: shape exactly, folded off one event's ``occurred_at`` and stored nowhere,
+    #: so there is no second copy and nothing to disagree. What made the bare
+    #: ``bool`` cost something is that ``updated_at`` is not the withdrawal: a
+    #: withdraw is legal only in ``LINE_UP_INCOMPLETE``, which is reached while a
+    #: seat's day has already run out unanswered and unswept, so a sweep may
+    #: append a ``SeatLapsed`` **after** the act. Dating the ending from the
+    #: stream's last event would have moved a client's shelf life when a loop
+    #: ran, which is the one thing that loop must never do.
+    withdrawn_at: Instant | None = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -403,7 +415,28 @@ class Challenge:
             self.seats,
             organiser_id=self.organiser_id,
             now=now,
-            withdrawn=self.withdrawn,
+            withdrawn=self.withdrawn_at is not None,
+        )
+
+    def ended_at(self, now: Instant) -> Instant | None:
+        """When it ended, or ``None`` because it has not. **Derived too.**
+
+        The same fold's other half, and it takes the same ``now`` so that a
+        caller with one reading of the clock cannot get a standing from one
+        instant and an ending from another.
+
+        **Two of the three endings are exact and the decline is an upper bound**,
+        which ``standing.py`` explains and the wire repeats — a field documented
+        as an instant while serving a bound is how a later reader invents
+        exactness that was never there.
+        """
+
+        return ended_at_of(
+            self.seats,
+            organiser_id=self.organiser_id,
+            now=now,
+            updated_at=self.updated_at,
+            withdrawn_at=self.withdrawn_at,
         )
 
     def has_become_a_game_at(self, now: Instant) -> bool:
@@ -529,7 +562,7 @@ class Challenge:
         challenge.version = 0
         challenge.seats = ()
         challenge.answered = frozenset()
-        challenge.withdrawn = False
+        challenge.withdrawn_at = None
         challenge._events = EventRecorder()
         return challenge
 
@@ -578,7 +611,7 @@ class Challenge:
             # The seats are left exactly as they were, which is the point: the
             # person who accepted still accepted, and a withdraw that emptied
             # their seat would be the organiser removing them.
-            self.withdrawn = True
+            self.withdrawn_at = instant(event.occurred_at)
             self._touch(event.occurred_at)
             return
         raise TypeError(f"Unsupported challenge event {event!r}")

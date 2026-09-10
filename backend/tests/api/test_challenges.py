@@ -24,6 +24,8 @@ anything about anybody else.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import pytest
 
 from app.api.dependencies import (
@@ -728,3 +730,108 @@ async def test_a_stranger_cannot_withdraw_and_is_told_nothing_exists(
 
     assert refused.status_code == 404
     assert refused.json()["code"] == "challenge_not_found"
+
+
+# ---------------------------------------------------------------------------
+# When it ended — what a shelf life is subtracted from
+# ---------------------------------------------------------------------------
+
+
+async def test_a_row_that_still_stands_says_so_by_saying_nothing(
+    client, session_factory, candidate_source, searcher
+):
+    """``ended_at`` is ``null`` on the three standings that are not endings, and
+    it is **in** the row.
+
+    Every nullable field on this list is a measured nothing rather than an
+    absence, so a client reads one key and never two — *this challenge has not
+    ended* is the answer, not the lack of one.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    await _send(client, searcher["token"], search_id, court)
+
+    (row,) = await _challenges(client, searcher["token"])
+
+    assert row["standing"] == "AWAITING_ANSWERS"
+    assert "ended_at" in row
+    assert row["ended_at"] is None
+
+
+async def test_an_ended_row_carries_the_instant_its_shelf_life_is_measured_from(
+    client, session_factory, candidate_source, searcher
+):
+    """*An ended challenge keeps its row, in place, and it leaves 24 h after the
+    challenge ended* (`the-loop-screens.md` §1.1) — one subtraction,
+    ``read_at − ended_at``, and until #388 the field it subtracts did not exist.
+
+    **A withdrawal is dated by the act and not by a deadline.** The client used
+    to derive an ending from the latest ``answer_by`` on the court, which for a
+    withdrawal says nothing at all — so such a row was kept indefinitely. Every
+    deadline here is still two days out, and the instant served is neither of
+    them.
+    """
+
+    challenge_id, people = await _a_court_nobody_will_finish(
+        client, session_factory, candidate_source, searcher
+    )
+    await client.post(
+        f"/api/v1/challenges/{challenge_id}/withdrawal",
+        headers=world.auth(searcher["token"]),
+    )
+
+    response = await client.get(
+        "/api/v1/challenges", headers=world.auth(people["ana"]["token"])
+    )
+    body = response.json()
+    (row,) = body["challenges"]
+
+    assert row["standing"] == "WITHDRAWN"
+    ended = datetime.fromisoformat(row["ended_at"])
+    assert datetime.fromisoformat(row["opened_at"]) <= ended
+    assert ended <= datetime.fromisoformat(body["read_at"])
+    deadlines = [seat["answer_by"] for seat in row["seats"] if seat["answer_by"]]
+    assert deadlines
+    assert all(ended < datetime.fromisoformat(one) for one in deadlines)
+
+
+async def test_a_court_everybody_turned_down_is_dated_by_the_seats(
+    client, session_factory, candidate_source, searcher
+):
+    """The other way an ending arrives at this route: not an act on the challenge
+    but the last person asked leaving it.
+
+    A decline is the one departure the wire cannot date exactly, and the bound is
+    the tighter of that seat's own deadline and the last thing that happened here.
+    **This route cannot pin which**, because it has no clock to move; what it can
+    show is that the answer is neither of the two instants the client used to have
+    to guess from — it is inside the request rather than two days out at a
+    deadline. The arithmetic is pinned in ``tests/unit/test_challenge_aggregate.py``.
+    """
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = (
+        await _send(client, searcher["token"], search_id, court)
+    ).json()["challenge_id"]
+    for name in ("ana", "bo", "cy"):
+        refused = await client.post(
+            f"/api/v1/challenges/{challenge_id}/decline",
+            headers=world.auth(people[name]["token"]),
+        )
+        assert refused.status_code == 200, refused.text
+
+    response = await client.get(
+        "/api/v1/challenges", headers=world.auth(searcher["token"])
+    )
+    body = response.json()
+    (row,) = body["challenges"]
+
+    assert row["standing"] == "DECLINED"
+    ended = datetime.fromisoformat(row["ended_at"])
+    assert datetime.fromisoformat(row["opened_at"]) <= ended
+    assert ended <= datetime.fromisoformat(body["read_at"])
+    deadlines = [seat["answer_by"] for seat in row["seats"] if seat["answer_by"]]
+    assert deadlines
+    assert all(ended < datetime.fromisoformat(one) for one in deadlines)
