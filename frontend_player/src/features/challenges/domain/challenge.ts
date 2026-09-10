@@ -167,7 +167,7 @@ export function ownSeat(challenge: Challenge, playerId: string): ChallengeSeat |
  * `OUT_OF_DATE_GAP` in its place, which is `the-words.md` §3's named gap rather than a shorter
  * list.
  *
- * Two of the readings are worth stating, because both were wrong somewhere before they were
+ * Three of the readings are worth stating, because each was wrong somewhere before it was
  * written down:
  *
  * - **`open` counts seats nobody has accepted**, never seats still to answer. At the rung that
@@ -177,6 +177,10 @@ export function ownSeat(challenge: Challenge, playerId: string): ChallengeSeat |
  * - **The invitee's sentence reads their own seat**, not only their side (§13.1). A padel four
  *   where one declines and two accept is `LINE_UP_INCOMPLETE` for the player who declined too,
  *   and *"You're in"* is false for them in both clauses.
+ * - **And it reads it on `AWAITING_ANSWERS` too** (§13.2,
+ *   [#389](https://github.com/Raketa02/Raketa/issues/389)). That standing holds while *any* seat
+ *   is awaiting, so the reader's own answer may already be given, and *"They're waiting on you"*
+ *   was drawn for somebody who had already spoken.
  *
  * **Who a sentence names is read off the seats in court order**, and it is always the whole
  * handle or nobody: a seat `users` can no longer answer for is `unknown`, which draws `?`
@@ -189,14 +193,24 @@ export function standingFactsFor(
   if (challenge.standing === undefined) return undefined;
 
   const side: ChallengeSide = challenge.organiserId === playerId ? 'organiser' : 'invitee';
+  // What the reader's own seat says. Both **live** standings key an invitee's sentence on it
+  // (§13.1, §13.2) and the four endings never do, so it is read once here rather than twice
+  // below. Absence means opposite things on the two — see `StandingFacts`.
+  const ownAnswer = ownSeat(challenge, playerId)?.answer;
 
   switch (challenge.standing) {
     case 'AWAITING_ANSWERS':
-      return { side, standing: 'AWAITING_ANSWERS', awaiting: countAwaiting(challenge) };
+      // This standing holds while *anybody* is awaiting, so the reader's own answer may already
+      // be given — which is the whole of #389.
+      return {
+        side,
+        standing: 'AWAITING_ANSWERS',
+        awaiting: countAwaiting(challenge),
+        ...(ownAnswer === undefined ? {} : { ownAnswer }),
+      };
     case 'ON':
       return { side, standing: 'ON' };
-    case 'LINE_UP_INCOMPLETE': {
-      const ownAnswer = ownSeat(challenge, playerId)?.answer;
+    case 'LINE_UP_INCOMPLETE':
       return {
         side,
         standing: 'LINE_UP_INCOMPLETE',
@@ -206,7 +220,6 @@ export function standingFactsFor(
         open: challenge.seats.filter((seat) => seat.answer !== 'ACCEPTED').length,
         ...(ownAnswer === undefined ? {} : { ownAnswer }),
       };
-    }
     case 'DECLINED':
       return { side, standing: 'DECLINED', player: whoAnswered(challenge, 'DECLINED') };
     case 'LAPSED':

@@ -53,6 +53,16 @@
  * they have left, so who is on that court is no longer theirs to be told, and `{m}` is a count
  * of open seats, which is a fact about the arrangement rather than about anybody in it.
  *
+ * **The same reading is owed one row up, and `AWAITING_ANSWERS` now has it too**
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §13.2,
+ * [#389](https://github.com/Raketa02/Raketa/issues/389)). `standing_of` holds that standing while
+ * *any* seat is awaiting, so a padel four sits in it with the reader's own answer already given —
+ * and *"They're waiting on you"* was told to somebody who had already spoken. Three readings, on
+ * the same field and by the same rule as above: **the reader who is in** is told what is left and
+ * that the room is open, which is #221's refusal of the waiting room a second time; **the two who
+ * have left** are told that it continues and nothing about its shape. Singles reaches none of it —
+ * the only invitee accepting takes the challenge to `ON`.
+ *
  * ## An unknown standing
  *
  * There is no arm for one, deliberately: a standing this build cannot read never reaches
@@ -73,10 +83,26 @@ export function standingLine(facts: StandingFacts): string {
   const organiser = facts.side === 'organiser';
 
   switch (facts.standing) {
-    case 'AWAITING_ANSWERS':
-      return organiser
-        ? `Waiting on ${counted(facts.awaiting, 'answer', 'answers')}`
-        : "They're waiting on you";
+    case 'AWAITING_ANSWERS': {
+      const waiting = `Waiting on ${counted(facts.awaiting, 'answer', 'answers')}`;
+      if (organiser) return waiting;
+
+      // §13.2. The two who have left are told that it continues and nothing about its shape —
+      // §13.1's rule, and `They` is the people still on the court in both places.
+      if (facts.ownAnswer === 'DECLINED') return 'You said no. They are still waiting on answers.';
+      if (facts.ownAnswer === 'LAPSED')
+        return 'Your day ran out. They are still waiting on answers.';
+
+      // The reader who is in gets §13's `LINE_UP_INCOMPLETE` shape with one clause swapped, and
+      // the clause is the organiser's own sentence — so both sides print one `awaiting` and
+      // cannot disagree about it. The chat opened on the first acceptance, which is theirs or
+      // earlier, and saying so is #221's refusal of the waiting room.
+      if (facts.ownAnswer === 'ACCEPTED') {
+        return `You're in. ${waiting}, and the chat is already open`;
+      }
+
+      return "They're waiting on you";
+    }
     case 'ON':
       return organiser ? "Everybody's in" : "You're in — everybody's in";
     case 'LINE_UP_INCOMPLETE': {
@@ -336,7 +362,7 @@ export const CHALLENGES_HEADING = 'Challenges';
  *
  * The screen itself is built ([#361](https://github.com/Raketa02/Raketa/issues/361)) and its own
  * sentences live in `challengeDetailPresentation.ts`. What stays here is the title and §13's
- * fourteen standing sentences, which that screen states **through `standingLine`** exactly as the
+ * seventeen standing sentences, which that screen states **through `standingLine`** exactly as the
  * row above it does: one challenge described twice in two files is how a row and the screen
  * behind it start disagreeing about what happened.
  */

@@ -78,7 +78,26 @@ export type SeatAnswer = (typeof SEAT_ANSWERS)[number];
  * *"still to answer"* in the one standing where nothing ever is.
  */
 export type StandingFacts = { readonly side: ChallengeSide } & (
-  | { readonly standing: 'AWAITING_ANSWERS'; readonly awaiting: number }
+  | {
+      readonly standing: 'AWAITING_ANSWERS';
+      readonly awaiting: number;
+      /**
+       * What the **reader's own seat** says, where the reader is an invitee who has answered.
+       *
+       * `standing_of` returns this standing while **any** seat is awaiting, so a padel four can
+       * be here with the reader's own answer already given — and the sentence keyed on
+       * `(standing, side)` alone told them they were the holdup ([#389](https://github.com/Raketa02/Raketa/issues/389)).
+       * Ignored on the organiser's own row: their seat is accepted from birth and they are the
+       * one waiting.
+       *
+       * > **Absence means the opposite of what it means on `LINE_UP_INCOMPLETE`.** There an
+       * > absent answer is a reader who is **in**; here it is a reader who has **not spoken**.
+       * > The field is the same fact from the same seat, and the polarity belongs to the
+       * > standing rather than to the field — which is why one name serves both and why this
+       * > note exists. What *is* the same in both: **absent draws the sentence that shipped.**
+       */
+      readonly ownAnswer?: SeatAnswer;
+    }
   | { readonly standing: 'ON' }
   | {
       readonly standing: 'LINE_UP_INCOMPLETE';

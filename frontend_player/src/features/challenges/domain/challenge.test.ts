@@ -156,6 +156,46 @@ describe('what a standing says to a reader', () => {
     expect(standingFactsFor(halfBuilt, BEA)).toMatchObject({ ownAnswer: 'ACCEPTED' });
   });
 
+  /**
+   * #389. The same third reading is owed one row up: `standing_of` returns `AWAITING_ANSWERS`
+   * while **any** seat is awaiting, so a padel four can be in it with the reader's own answer
+   * already given — accepted, or given and then released.
+   */
+  it('carries the reader’s own seat while somebody else is still deciding', () => {
+    // Ola has not answered, which is what keeps this in `AWAITING_ANSWERS`.
+    const stillDeciding = (mine?: SeatAnswer) =>
+      challenge('AWAITING_ANSWERS', [
+        named(ME, 'me.p', 'ACCEPTED'),
+        named(BEA, 'bea.k', mine),
+        named(CYRYL, 'cyryl.w'),
+      ]);
+
+    expect(standingFactsFor(stillDeciding('ACCEPTED'), BEA)).toMatchObject({
+      standing: 'AWAITING_ANSWERS',
+      side: 'invitee',
+      ownAnswer: 'ACCEPTED',
+    });
+    expect(standingFactsFor(stillDeciding('DECLINED'), BEA)).toMatchObject({
+      ownAnswer: 'DECLINED',
+    });
+    expect(standingFactsFor(stillDeciding('LAPSED'), BEA)).toMatchObject({ ownAnswer: 'LAPSED' });
+  });
+
+  /**
+   * **Absence means the opposite thing here**, and the field is the same one: on
+   * `LINE_UP_INCOMPLETE` an absent answer is a reader who is in, and here it is a reader who
+   * has not spoken. What is the same is the rule — absent draws the sentence that shipped.
+   */
+  it('leaves the reader’s own seat off entirely when they have not answered', () => {
+    const asked = challenge('AWAITING_ANSWERS', [
+      named(ME, 'me.p', 'ACCEPTED'),
+      named(BEA, 'bea.k'),
+      named(CYRYL, 'cyryl.w'),
+    ]);
+
+    expect(standingFactsFor(asked, BEA)).not.toHaveProperty('ownAnswer');
+  });
+
   it('names the first person in court order to have given the answer that ended it', () => {
     const declined = challenge('DECLINED', [
       named(ME, 'me.p', 'ACCEPTED'),

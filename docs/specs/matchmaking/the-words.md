@@ -716,7 +716,7 @@ out of visual context, and never the decline button's own words, which would off
 the same choice twice. §20.6 puts focus on the title on the way in, which is what makes the
 question heard before either answer is offered.
 
-## 13. A challenge's standing — six codes, fourteen sentences
+## 13. A challenge's standing — six codes, seventeen sentences
 
 #221: *"**Challenge sent** and **Challenge for you** are one standing read from two sides, not
 two states."* So the code is one and the sentence is two, keyed by `(standing, side)`, with
@@ -729,6 +729,11 @@ side derived from whether the reader holds the organiser seat.
 > ([ADR-0142](../../adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)),
 > and the invitee column gains a third reading for somebody who has left. Rewriting the rest was
 > ruled out of scope by [#331](https://github.com/Raketa02/Raketa/issues/331) and none of it moves.
+
+> **And once more by [#389](https://github.com/Raketa02/Raketa/issues/389), which found that third
+> reading owed one row up too.** The invitee's `AWAITING_ANSWERS` sentence assumed the reader had
+> not answered, and in doubles one has — §13.2. Every sentence above is untouched by that as well,
+> and #331's ruling still binds anything §13.2 does not name.
 
 | Standing | To the organiser | To an invitee |
 | --- | --- | --- |
@@ -787,6 +792,61 @@ would take the only available explanation with it.
 **Neither sentence says how many are in**, and that is deliberate: they have left, so who is on
 that court is no longer theirs to be told. `{m}` is the count of **open seats**, which is a fact
 about the arrangement rather than about anybody in it.
+
+### 13.2 The same reading, one row up — an invitee who has answered a challenge still awaiting others
+
+**Three sentences, added by [#389](https://github.com/Raketa02/Raketa/issues/389), because the
+invitee sentence above assumes the reader has not answered and in doubles one has.**
+
+A padel four: the organiser invites three, **you accept**, two have not answered. `standing_of`
+returns `AWAITING_ANSWERS` while **any** seat is awaiting — *"Awaiting outranks line-up incomplete
+deliberately"* — so the standing is right, the side is right, and *"They're waiting on you"* is
+about somebody who has already spoken. A reader who **declined** reaches it too: their seat is open
+and therefore not live, while another invitee's awaiting seat holds the standing, and
+`GET /challenges` returns every challenge you hold a seat in. **Singles cannot reach any of it** —
+the only invitee accepting takes the challenge to `ON`.
+
+**The lapsed reading waits on the sweep, and that is stated rather than hidden.** A seat past its
+window *"reads as lapsed whether or not anything has swept it"* for the **standing**, but the wire
+sends the seat's `answer` as it is stored — so between the deadline and the sweep the reader's own
+answer is still absent, and they are drawn the unanswered sentence. §13.1 has the identical gap for
+the identical reason, so the two are consistent; what closes it is the sweep, and neither section
+re-derives a lapse on the client. **The client does not read the clock** — that is
+[`challenge.ts`](../../../frontend_player/src/features/challenges/domain/challenge.ts)'s standing
+refusal, and a sentence is not a good enough reason to break it.
+
+> **The invitee sentence reads the reader's own seat, not only their side** — §13.1's rule, owed on
+> the row above it.
+
+| The reader's own seat | The sentence |
+| --- | --- |
+| *no answer yet* | `They're waiting on you` — unchanged, and the one case it was always true of |
+| `ACCEPTED` | `You're in. Waiting on {n} answers, and the chat is already open` |
+| `DECLINED` | `You said no. They are still waiting on answers.` |
+| `LAPSED` | `Your day ran out. They are still waiting on answers.` |
+
+**The first clause is the reader's own fact and the tail is the challenge's.** That is why
+`You said no.` and `Your day ran out.` are §13's own words rather than new ones, and why only the
+tail differs from §13.1's: what changed between the two standings is not what the reader did, it is
+what is still happening without them. *They are still filling the court* would be false here —
+nobody is filling anything while an answer is owed.
+
+**`{n}` is the organiser's own sentence, embedded.** The accepted reader's line is §13's
+`LINE_UP_INCOMPLETE` invitee shape with one clause swapped, and the clause is `Waiting on {n}
+answers` verbatim — read from the same `awaiting` count the organiser's row prints, so **the two
+sides cannot disagree about the number**.
+
+**The chat clause is #221's refusal, not decoration.** The room opens on the first acceptance, so an
+invitee who has accepted always has one — theirs opened it or an earlier one did. An accepted reader
+told only that somebody is being waited on is exactly the waiting room #221 says this is not.
+
+**Neither of the two who have left hears a count**, for §13.1's reason unchanged. A count of
+outstanding answers is not a count of who is in, and it still tells somebody off the court what
+shape it is in.
+
+**The organiser has no split**, and that is not an omission: their seat is accepted from birth, so
+`Waiting on {n} answers` covers every case they can reach. The asymmetry is the whole of why the
+invitee needed a third reading and they did not.
 
 **Six, not twenty.** The twenty card states are *"a presentation vocabulary spanning money,
 booking and results this context does not own"*, and an unknown standing takes §3's gap

@@ -1,17 +1,24 @@
 /**
  * What a challenge says.
  *
- * Four things are asserted rather than the wording. One code reads as **two sentences**, one
+ * Five things are asserted rather than the wording. One code reads as **two sentences**, one
  * per side; `LINE_UP_INCOMPLETE` never reads as a waiting room, because the chat is already
  * open; that same line counts **open seats** and not answers, because at that rung there are
- * none outstanding and the figure it used to quote could only ever be zero; and **a lapse is
+ * none outstanding and the figure it used to quote could only ever be zero; **a lapse is
  * not a decline**, because the `answers challenges` strand needs the denominator and copy that
- * blurred them would restate one fact as another.
+ * blurred them would restate one fact as another; and on the two live standings the invitee's
+ * sentence reads **the reader's own seat and not only their side** (§13.1, §13.2) — the claim
+ * most easily undone, because the side is the obvious key and it is wrong in doubles.
  */
 
 import type { NamedPlayer } from '@/shared/formatting/playerName';
 
-import { STANDINGS, type ChallengeSide, type StandingFacts } from '../domain/standing';
+import {
+  STANDINGS,
+  type ChallengeSide,
+  type SeatAnswer,
+  type StandingFacts,
+} from '../domain/standing';
 
 import {
   CHALLENGES_HEADING,
@@ -61,6 +68,74 @@ describe('one standing, two sides', () => {
     expect(standingLine({ side: 'organiser', standing: 'AWAITING_ANSWERS', awaiting: 1 })).toBe(
       'Waiting on 1 answer',
     );
+  });
+});
+
+/**
+ * §13.2 — one row, **four readings, three of them new** (#389).
+ *
+ * `They're waiting on you` assumes the reader has not answered, and in doubles one has:
+ * `standing_of` returns `AWAITING_ANSWERS` while **any** seat is awaiting, so an invitee who
+ * accepted, declined or lapsed sits in this standing being told they are the holdup. Singles
+ * cannot reach it — the only invitee accepting takes the challenge to `ON`.
+ */
+describe('an invitee who has already answered is not the wait', () => {
+  const invitee = (ownAnswer?: SeatAnswer): StandingFacts => ({
+    side: 'invitee',
+    standing: 'AWAITING_ANSWERS',
+    awaiting: 2,
+    ...(ownAnswer === undefined ? {} : { ownAnswer }),
+  });
+
+  it('still tells the one who has not answered that they are the wait', () => {
+    expect(standingLine(invitee())).toBe("They're waiting on you");
+  });
+
+  /**
+   * The shape is §13's `LINE_UP_INCOMPLETE` invitee sentence with one clause swapped, and the
+   * clause is the organiser's own sentence: both sides print the same `awaiting`, so the two
+   * cannot disagree about the number. **The chat clause is #221's refusal** — the room opened
+   * on the first acceptance, so an accepted reader told only *waiting* is the waiting room it
+   * forbids.
+   */
+  it('tells the one who is in that they are in, what is left, and that the room is open', () => {
+    expect(standingLine(invitee('ACCEPTED'))).toBe(
+      "You're in. Waiting on 2 answers, and the chat is already open",
+    );
+  });
+
+  it('keeps its own first clause for each of the two who have left', () => {
+    expect(standingLine(invitee('DECLINED'))).toBe(
+      'You said no. They are still waiting on answers.',
+    );
+    expect(standingLine(invitee('LAPSED'))).toBe(
+      'Your day ran out. They are still waiting on answers.',
+    );
+  });
+
+  /**
+   * §13.1's rule, transferred: *they have left, so who is on that court is no longer theirs to
+   * be told.* A count of outstanding answers is not a count of who is in, and it still leaks
+   * the court's shape to somebody off it.
+   */
+  it('tells neither of them how many answers are outstanding', () => {
+    for (const answer of ['DECLINED', 'LAPSED'] as const) {
+      expect(standingLine(invitee(answer))).not.toMatch(/\d/);
+    }
+  });
+
+  /** The organiser's seat is accepted from birth, so there is no split to make on their side. */
+  it('says one thing to the organiser however the reader’s seat reads', () => {
+    for (const answer of [undefined, 'ACCEPTED', 'DECLINED', 'LAPSED'] as const) {
+      const facts: StandingFacts = {
+        side: 'organiser',
+        standing: 'AWAITING_ANSWERS',
+        awaiting: 2,
+        ...(answer === undefined ? {} : { ownAnswer: answer }),
+      };
+
+      expect(standingLine(facts)).toBe('Waiting on 2 answers');
+    }
   });
 });
 

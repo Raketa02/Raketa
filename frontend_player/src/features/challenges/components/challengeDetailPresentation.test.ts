@@ -1,7 +1,7 @@
 /**
  * The challenge screen's own sentences — **the ones no other surface writes.**
  *
- * §13's fourteen standing sentences are `challengePresentation.test.ts`' and are not re-asserted
+ * §13's seventeen standing sentences are `challengePresentation.test.ts`' and are not re-asserted
  * here. What is asserted is the copy this screen added: the two answers, the segment that
  * disappears, and the two absences that must never collapse into one.
  */

@@ -27,10 +27,12 @@
  *
  * ## The two answers are gated on the **seat**, never on the standing alone
  *
- * §2.1's table reads `AWAITING_ANSWERS · invitee → I'm in · Not this time`, and the side alone
- * is not enough to key it on. A padel four where one invitee has already accepted is **still**
- * `AWAITING_ANSWERS` — `standing_of` yields it while *any* seat is awaiting — so that reader is
- * an invitee in the standing that offers the buttons, with an act that is already spent:
+ * §2.1's table offers `I'm in · Not this time` to the `AWAITING_ANSWERS` invitee **who has not
+ * answered**, and the side alone is not enough to key that on — the table is split per reading
+ * for exactly this reason ([#389](https://github.com/Raketa02/Raketa/issues/389)). A padel four
+ * where one invitee has already accepted is **still** `AWAITING_ANSWERS` — `standing_of` yields it
+ * while *any* seat is awaiting — so that reader is an invitee in the standing that offers the
+ * buttons, with an act that is already spent:
  * `POST /accept` answers `seat_already_answered`, which
  * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §2.4 files
  * under *the two-devices case*. **Neither button may name a state the act cannot produce**, so
@@ -41,7 +43,7 @@
  * as a consequence of one rule rather than as a fourth arm, because an arm for it would be a
  * screen nobody can reach with a sentence nobody has read.
  *
- * **The sentence is `standingLine`'s and is not re-keyed here.** §13's fourteen sentences are
+ * **The sentence is `standingLine`'s and is not re-keyed here.** §13's seventeen sentences are
  * settled and [#331](https://github.com/Raketa02/Raketa/issues/331) ruled rewriting them out of
  * scope; what this fold adds is which *controls* exist, which is the question §13 never
  * answered.

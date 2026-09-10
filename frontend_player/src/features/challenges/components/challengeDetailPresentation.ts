@@ -1,7 +1,7 @@
 /**
  * What the challenge screen says — **the sentences no other surface writes.**
  *
- * §13's fourteen standing sentences are `challengePresentation.ts`' and are read from here
+ * §13's seventeen standing sentences are `challengePresentation.ts`' and are read from here
  * unchanged: this screen states the standing exactly as the row above it does, which is what
  * stops a row and the screen behind it describing one challenge two ways. What is added here is
  * the copy the screen itself brought — the two answers, the three controls a half-built court

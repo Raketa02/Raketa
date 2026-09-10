@@ -283,7 +283,9 @@ nothing on the wire carries a side.
 
 | Standing · reader | The sentence | Card block | Controls, in order |
 | --- | --- | --- | --- |
-| `AWAITING_ANSWERS` · invitee | §13 *They're waiting on you* | **yes** | **`I'm in`** · **`Not this time`** |
+| `AWAITING_ANSWERS` · invitee, unanswered | §13 *They're waiting on you* | **yes** | **`I'm in`** · **`Not this time`** |
+| `AWAITING_ANSWERS` · invitee, accepted | §13.2 *You're in. Waiting on {n} answers…* | **yes** | none |
+| `AWAITING_ANSWERS` · invitee, declined / lapsed | §13.2's **two sentences** — *You said no…* / *Your day ran out…* | **yes** | none |
 | `AWAITING_ANSWERS` · organiser | §13 *Waiting on {n} answers* | **yes** | none |
 | `LINE_UP_INCOMPLETE` · member | §13 *{n} in, {m} seats open…* / *You're in. {m} seats open…* | **yes** | **⚡ Fill the seats** · **Open the chat** · **Withdraw** *(organiser only)* |
 | `LINE_UP_INCOMPLETE` · reader who left | §13's **two new sentences** — §2.5 | no | none |
@@ -291,6 +293,22 @@ nothing on the wire carries a side.
 | `LAPSED` · both | §13 *{name}'s day ran out…* / *Your day ran out* | no | none |
 | `WITHDRAWN` · both | §13 *You withdrew this* / *{name} withdrew this — that court is closed* | no | none |
 | `ON` · both | §13 *Everybody's in* / *You're in — everybody's in* | no | none |
+
+**`AWAITING_ANSWERS` is three rows for the invitee, because the side alone cannot key it.**
+`standing_of` holds this standing while **any** seat is awaiting, so a padel four sits in it with
+the reader's own answer already given — accepted, or given and then released. This section used to
+offer `I'm in · Not this time` to every invitee in it and to send them all §13's *They're waiting on
+you*, and both were false for a reader who had already spoken
+([#389](https://github.com/Raketa02/Raketa/issues/389)). The **controls** were already right in the
+build — `challengeArm` gates them on *the reader holds a seat and nobody has answered for it*, so
+`POST /accept`'s `seat_already_answered` is unreachable by tapping — and what was left was the
+sentence, now [`the-words.md`](../matchmaking/the-words.md) §13.2's three readings. **Singles
+reaches none of it:** the only invitee accepting takes the challenge to `ON`.
+
+> **The `Card block` column is unchanged here, and is an open question.** A declined or lapsed
+> reader is drawn a card block in this standing and none in `LINE_UP_INCOMPLETE` (§2.5). Whether
+> that difference is right is [#392](https://github.com/Raketa02/Raketa/issues/392)'s to settle,
+> not this section's.
 
 **`ON` has an arm, and the inbox row is what reaches it.** An `ON` challenge **keeps its row in
 `CHALLENGES` while it is news** — §1.1's *every one that ended in the last 24 h*, with the
