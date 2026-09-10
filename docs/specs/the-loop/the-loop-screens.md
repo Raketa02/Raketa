@@ -626,14 +626,23 @@ order, the order people discuss them in and of decreasing negotiability.
 | **Day** | `Day` | the weekday | **seven chips, today + 6**, clamped to `planned_at + PLAN_HORIZON` and shrinking as the week runs out |
 | **Hour** | `Hour` | the clock time | **30-minute steps, 06:00–23:00**, validated server-side |
 
-**Any member may fill or change any slot, any number of times.** There is no lock and no rate
-limit — **the line is the friction**, and every change writes a system line naming who and what. **A
-slot is never emptied and a plan is never unmade.**
+**Any member may fill or change any slot, any number of times, and a lock does not stop that.**
+There is no rate limit — **the line is the friction**, and every change writes a system line naming
+who and what. **A slot is never emptied and a plan is never unmade.**
 
-**There is no *Lock it in* button, no locked border and no `locked by everybody` pill.** ADR-0144:
-filling the third slot **is** the lock; §5.3's button existed to unlock ownership and booking and
-Decision 3 deleted both; and the pill is a phrase the prototype's own data cannot support, since no
-assent is recorded anywhere and a slot is set by whoever tapped last.
+**There is a lock, and it is an act rather than a state**
+([ADR-0155](../../adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md),
+superseding ADR-0144's *there is no lock*). Once all three slots are set, any member may agree the
+plan — `PUT /plans/{game_id}/lock` — and the whole of what that does is post `{name} locked the
+plan` into the room, so the other three see the arrangement was agreed rather than merely
+completed. **The count and the lock are two facts**: three filled slots is a plan everybody *could*
+agree, and this says somebody did. The backend sends `locked_at` and no adjective.
+
+**It freezes nothing, and there is no unlock.** Any member may still move any slot afterwards; the
+plan stays locked and the move writes its own line. **`locked by everybody` stays deleted** — a
+phrase the prototype's own data cannot support, since assent is recorded per act and not per
+person, and a lock is one person saying *we are agreed* rather than four. §5.3's *a four cannot be
+locked by two* is still unreachable, because there is no plan before the line-up completes.
 
 **A combination already in the past is refused when the second of the two slots is filled**, in
 written copy rather than by a disabled control, because the day and the hour are filled in either

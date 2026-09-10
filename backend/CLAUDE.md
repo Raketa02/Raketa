@@ -648,16 +648,26 @@ Rules to preserve:
   [ADR-0148](../docs/adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md)).
   `app/modules/plans/` is the ninth context and the third event-sourced racket-sport one; it
   adds **no table and no migration**, because the streams live in `event_store` beside
-  everybody else's. Six things about it are load-bearing.
+  everybody else's. Seven things about it are load-bearing.
   **Its aggregate id is the game's**, so *one plan per game for ever* is a fact about the
   store rather than a rule a caller keeps — and it is the one context here whose reads need
   no payload match: *this game's plan* is a stream read and *these games' plans* is an `IN`.
   **Nothing is written at birth**: there is no opening event, no subscriber to `GamePlanned`
   and no outbox hop, so *no plan* is what a game with nothing agreed draws and the first
-  slot write is the birth. **Three events and no fourth** — a place, a day and an hour
-  recorded — because *setting a slot and moving one are the same event told with two
+  slot write is the birth. **Three slot events and no fourth slot** — a place, a day and an
+  hour recorded — because *setting a slot and moving one are the same event told with two
   sentences*; there is no completion event (the third recording **is** the completion), no
-  clearing event and no cancel. **Nothing derived is stored**: not the slot count, not the
+  clearing event and no cancel. **Beside them is a fourth event that is an act rather than a
+  slot** — `PlanLocked`, from
+  [ADR-0155](../docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md),
+  which supersedes ADR-0144's *there is no lock* and nothing else in it. **The count and the
+  lock are two facts**: a complete plan is one everybody *could* agree, and `is_locked` is
+  `locked_at is not None` and deliberately not `slot_count == SLOTS`. It announces itself where
+  a completed plan may not — no arrangement of the three slots reaches *these people have
+  agreed*, which is ADR-0142 §3's test and the one `GamePlanned` fails — and its whole
+  destination is a **system line in the room**. It **freezes nothing** (a slot moved afterwards
+  keeps the lock and writes its own line) and there is **no unlock**, for the same reason there
+  is no clearing event. **Nothing derived is stored**: not the slot count, not the
   agreed point, and `planned_at` is never written — it keeps meaning *when it became a
   game*, and the plan writes to `games` at no point at all. **The game leaving
   `AWAITING_ENTRY` is the only thing that freezes the slots**, read through *one port asking

@@ -59,7 +59,7 @@ from app.shared.domain.errors import AccountHeld
 
 
 class _RecordASlot:
-    """What all three acts share: the gate, the hold, the load and the commit."""
+    """What all four acts share: the gate, the hold, the load and the commit."""
 
     def __init__(
         self,

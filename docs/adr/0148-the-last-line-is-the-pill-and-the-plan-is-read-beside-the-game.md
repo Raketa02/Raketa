@@ -8,6 +8,11 @@
   shapes ride one JSON list, and what each one carries.
 - **Extends [ADR-0144](0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)** into the
   contract: three slots, three events, no lock — and therefore three routes and no lock route.
+  *(Its **no lock** half is amended by
+  [ADR-0155](0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md): there is a
+  fourth event and a fourth write route, and the lock is an **act** rather than a slot. Everything
+  this record decides about the three slots — §8's shape, `agreed_point`, and *a slot carries its
+  value and nothing else* — is untouched; `locked_at` is not on a slot.)*
 - **Cites [ADR-0145](0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md)**, whose
   scoping of ADR-0137 is **checkable** — *"`games` importing the Plan is what breaks it"* — which
   is the constraint §7 is built around rather than a nicety it observes.
@@ -32,7 +37,9 @@ ticket's own items had gone stale in the interval:
 
 - It asks **what a refused lock says**. ADR-0144 answered that there is no lock — *filling the
   third slot is the lock* — and that §5.3's guard *"is not implemented because it cannot be
-  reached"*. There is no refusal to word.
+  reached"*. There is no refusal to word. *(ADR-0155 gave the lock a destination and therefore a
+  refusal after all: `the_plan_is_not_complete`, a 409. §5.3's own guard stays unreachable —
+  there is still no plan before the line-up completes.)*
 - It asks where a conversation row's **state pill** reads its standing from, correctly insisting it
   is *"a derived standing, never a stored status"*. Reading one at all turns out to be the
   problem — see §6.
@@ -167,7 +174,14 @@ surfaces rather than two shapes for one fact.
 
 The list is ordered and lifetimed like its owner, and it carries **no `read_at`** — see §10.
 
-### 8. Three writes, one per slot; no lock; two refusals
+### 8. Three writes, one per slot; two refusals
+
+> **Amended by [ADR-0155](0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md).**
+> This heading read *no lock*. There is a fourth write route, `PUT /plans/{game_id}/lock`, and it
+> is not a slot: it takes no body, answers the same `PlanSchema`, and adds one refusal —
+> `the_plan_is_not_complete`, a 409 — to the two below. **Nothing else here moves.** *A slot
+> carries its value and nothing else* is a rule about slots, and `locked_at` is on the plan
+> rather than on one of them.
 
 `PUT /plans/{game_id}/place`, `/day`, `/hour`, because ADR-0144 has exactly three events and
 *setting a slot and moving one are the same event told with two sentences*.
