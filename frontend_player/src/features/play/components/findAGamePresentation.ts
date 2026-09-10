@@ -46,6 +46,8 @@ import type { PlayIntent, SearchMode } from '../domain/vocabulary';
 
 import { isDoubles } from '../domain/lineup';
 
+import { builderTitle } from './builderPresentation';
+
 /** The screen's own title, and the one ⚡ opens on. */
 export const FIND_A_GAME_TITLE = 'Find a game';
 
@@ -368,13 +370,15 @@ export const NO_RATED_SPORT_LINE =
  * are already what `searchFacts` prints one screen on, and they differ by one word rather than
  * by all of them.
  *
- * **The builder has since lost its own title entirely**, which finishes the argument rather
- * than reopening it: over a line already saying `Padel · doubles · for fun`, a second heading
- * had a verb and no fact. What survives here is this control's own wording — the reason a
- * squash court is never told to build a four — and it is untouched by that.
+ * **And the builder now carries these same two words as its own title**, which is why this
+ * reads `builderTitle` rather than repeating the pair. **The control names the screen it
+ * opens** — `whyFitControlWord`'s rule and its reason — so a button promising *Build a
+ * doubles* cannot land somebody on a heading that says something else. What is decided here is
+ * still this control's own question, *what does pressing this do*; what it no longer does is
+ * hold a second copy of the answer.
  */
 export function courtEntryTitle(seats: number): string {
-  return isDoubles(seats) ? 'Build a doubles' : 'Build a singles';
+  return builderTitle(seats);
 }
 
 /**

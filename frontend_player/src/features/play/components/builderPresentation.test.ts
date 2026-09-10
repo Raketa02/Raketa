@@ -7,9 +7,12 @@
  * recorded reversal and the other is a state the fixtures do not reach.
  */
 
+import { courtEntryTitle } from './findAGamePresentation';
+
 import {
   SIDE_HEADINGS,
   USE_MATCHMAKING_LABEL,
+  builderTitle,
   forecastHeading,
   searchFacts,
   sideName,
@@ -43,14 +46,36 @@ describe('naming one half of the court', () => {
 });
 
 /**
- * **The screen's name is the search's own three facts**, and it stopped having a second one.
+ * **The court's name, and the control that opens it, are one string.**
  *
- * The h1 over this line said *Build the four* — which re-states the shape the line already
- * carries and adds a verb for the furniture — or *Complete the four* once anybody was seated.
- * Both are gone with the heading, so the words themselves are what is asserted here rather
- * than a constant that could be renamed under a passing test.
+ * `builderTitle` is the screen's; `courtEntryTitle` reads it, because the control names the
+ * screen it opens. Asserted as words rather than through the constant, so a reword has to
+ * come here and be read.
  */
 describe('what the court is called', () => {
+  it('names the game the sport plays, in the sport’s own two words', () => {
+    expect(builderTitle(4)).toBe('Build a doubles');
+    expect(builderTitle(2)).toBe('Build a singles');
+  });
+
+  it('is what the control on Find a game promises, so the press keeps its word', () => {
+    for (const seats of [2, 4]) expect(courtEntryTitle(seats)).toBe(builderTitle(seats));
+  });
+
+  it('says nothing about how full the court is', () => {
+    // *Complete the four* named the state of the court, which is the one thing on the screen
+    // a player can already see — and it moved the heading under them as they filled seats.
+    for (const seats of [2, 4]) expect(builderTitle(seats)).not.toMatch(/complete/i);
+  });
+});
+
+/**
+ * The three facts, drawn as the **eyebrow** on the court and on the pool.
+ *
+ * They were promoted to the title on both for a day, which left two screens under one heading
+ * — the search named on both and the screen on neither.
+ */
+describe('the line above it', () => {
   it('prints the sport, the shape and the mode, in that order', () => {
     expect(searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' })).toBe(
       'Padel · doubles · for fun',
@@ -60,12 +85,12 @@ describe('what the court is called', () => {
     );
   });
 
-  it('says the shape once, and never as a verb', () => {
-    // The line the removed h1 duplicated: *doubles* is in here, and *build*, *set up* and
-    // *complete* are nowhere.
+  it('states the shape and never acts on it, which is what keeps it an eyebrow', () => {
+    // A region label, not a control's name: the verb belongs to the title above the court and
+    // to the button on Find a game, and this line only says what was searched for.
     for (const seats of [2, 4]) {
       const line = searchFacts({ sportName: 'Padel', seats, mode: 'FOR_FUN' });
-      expect(line).not.toMatch(/build|set up|complete/i);
+      expect(line).not.toMatch(/build|set up|complete|pick/i);
     }
   });
 });

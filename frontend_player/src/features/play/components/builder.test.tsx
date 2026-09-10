@@ -415,38 +415,46 @@ async function pressFill() {
 
 describe('arriving', () => {
   /**
-   * **The screen is called what it was searched under, and by nothing else.**
+   * **The screen is named for what it is here to do, over the facts it was searched under.**
    *
-   * It carried an h1 — *Build the four*, *Set up the match*, and *Complete* either of them the
-   * moment somebody was seated — over an eyebrow already naming the Sport, the shape and the
-   * mode. Two lines, one fact, and the smaller one carrying more of it. The eyebrow is the
-   * title now and the h1 is gone, which is also what puts the chevron beside the only line
-   * left rather than between two.
+   * Both halves were tried alone. The h1 said *Build the four* / *Set up the match*, which is
+   * one sentence in two registers and a word about a Sport a squash court must never be told;
+   * then the h1 was dropped and the facts promoted, which left this screen and the pool under
+   * one heading that named the search on both and the screen on neither.
+   *
+   * What it says is the **same two words as the control that opened it** — the control names
+   * the screen it opens — so a player who pressed *Build a doubles* lands on *Build a doubles*.
    */
-  it('is titled by the three facts it was searched under, and carries no second heading', async () => {
+  it('is named for the game it builds, with the search facts above it', async () => {
     await openTheBuilder();
 
+    expect(await screen.findByRole('header', { name: 'Build a doubles' })).toBeTruthy();
     expect(
-      await screen.findByRole('header', {
+      screen.getByText(searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' })),
+    ).toBeTruthy();
+    // The eyebrow labels the region; the title names the screen. Only one of them is the header.
+    expect(
+      screen.queryByRole('header', {
         name: searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' }),
       }),
-    ).toBeTruthy();
+    ).toBeNull();
+    // And none of the three wordings this replaced.
     for (const struck of ['Build the four', 'Set up the match', 'Complete the four']) {
       expect(screen.queryByText(struck)).toBeNull();
     }
   });
 
-  /** The same, once somebody is seated: there is no *Complete the …* heading to arrive. */
-  it('keeps that one title when the court has people on it', async () => {
+  /**
+   * **It does not move as the court fills.** The old third wording — *Complete the four* — put
+   * the screen's name on the state of the court, which is the one thing on it a player can
+   * already see.
+   */
+  it('keeps that title when the court has people on it', async () => {
     await openTheBuilder();
     await pressFill();
     await screen.findByText('91%');
 
-    expect(
-      screen.getByRole('header', {
-        name: searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' }),
-      }),
-    ).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Build a doubles' })).toBeTruthy();
     expect(screen.queryByText(/^Complete the /)).toBeNull();
   });
 

@@ -38,31 +38,46 @@ import { modeWord } from './searchPresentation';
 import { isDoubles, type CourtHalf } from '../domain/lineup';
 import type { SearchMode } from '../domain/vocabulary';
 
-/*
- * **`builderTitle` stood here, and the screen has no title of its own any more.**
+/**
+ * The screen's title — **the game it is here to build**, in the sport's own two words.
  *
- * It said one of four things — *Build the four*, *Set up the match*, and *Complete* either of
- * them the moment somebody was seated — and the argument for the pair was real: `locked_seats`
- * are people the fill seats **around**, so a title still saying *build* would describe an empty
- * court the player can see is not empty.
+ * ## What it says, and the two wordings it is not
  *
- * What it never had was anything to say that the line above it did not. `Padel · doubles · for
- * fun` names the Sport, the shape and the mode; *Build the four* re-states the shape and adds a
- * verb for the furniture. Two lines, one fact, and the smaller one carrying more of it — so the
- * eyebrow is promoted to the title and the h1 that stood under it is gone.
+ * It said *Build the four* / *Set up the match*, with *Complete the …* the moment anybody was
+ * seated. Three problems in one line: the pair was one sentence in two registers — one counts
+ * seats, the other names an occasion — so it only read as a pair to somebody who had seen both;
+ * *the four* is a word about a Sport that a squash court must never be told; and the third
+ * wording put the screen's name on the state of the court, which is the one thing on it a
+ * player can already see.
  *
- * `searchFacts` below is that line, and it is a **title** on the builder and an **eyebrow** on
- * the pool. Both are true of the same string: the pool is here to *pick players* and says so,
- * where the builder is the court those three facts describe and has nothing else to be called.
- * The name says what the string is rather than which register a screen draws it in, which is
- * what makes one function serve both.
+ * Then it had **no title at all** for a day, with `searchFacts` promoted into its place. That
+ * is reversed here and the reason is worth keeping: the pool one screen on made the same
+ * promotion, and two screens carrying `Padel · doubles · for fun` as their heading is a
+ * heading that tells a player nothing about which of the two they are on. The line is honest
+ * and it is not a name.
+ *
+ * ## It is the same string the control that opens this screen carries
+ *
+ * `courtEntryTitle` reads this function, and that is a relationship rather than a coincidence:
+ * **the control names the screen it opens**, which is `whyFitControlWord`'s rule and its
+ * reason. A button promising *Build a doubles* that lands somebody on a screen called
+ * something else is the drift one shared string cannot have.
+ *
+ * **It does not branch on how full the court is.** The old third wording was right that a
+ * court with three faces on it is not being *built* from nothing — and the eyebrow above says
+ * what the search was, the court below shows who is in it, and a heading that moved under a
+ * player as they filled seats was naming the state rather than the screen.
  */
+export function builderTitle(seats: number): string {
+  return isDoubles(seats) ? 'Build a doubles' : 'Build a singles';
+}
 
 /**
- * `Padel · doubles · for fun` — **the three facts the search was run under**, and the whole of
- * what the builder is called.
+ * `Padel · doubles · for fun` — **the three facts the search was run under**, drawn as the
+ * eyebrow on both of Play's inner screens.
  *
- * Drawn as the builder's title and as the pool's eyebrow; see the note above.
+ * The name says what the string **is** rather than which register a screen draws it in, which
+ * is what let one function serve the court and the pool while the two disagreed about that.
  */
 export function searchFacts(court: {
   readonly sportName: string;
@@ -76,10 +91,11 @@ export function searchFacts(court: {
 /**
  * What the builder is called when it cannot read the search it was opened on.
  *
- * There are no three facts in that state — no Sport, no shape and no mode — so the promotion
- * above has nothing to promote, and a screen still needs a name. It is not `NO_RECORD_TITLE`:
- * that sentence is the note's, it is the whole of what went wrong, and a header repeating it
- * would say one thing twice on a screen whose body is that one note.
+ * There is no shape to name in that state — no Sport, no seat count and no mode — so
+ * `builderTitle` has nothing to branch on, and `isDoubles(0)` answering *singles* would be the
+ * screen claiming a court shape it does not know. It is not `NO_RECORD_TITLE` either: that
+ * sentence is the note's, it is the whole of what went wrong, and a header repeating it would
+ * say one thing twice on a screen whose body is that one note.
  */
 export const UNREADABLE_SEARCH_TITLE = 'Your line-up';
 

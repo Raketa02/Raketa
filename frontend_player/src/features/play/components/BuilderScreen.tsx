@@ -271,6 +271,7 @@ import {
   VS_WORD,
   USE_MATCHMAKING_LABEL,
   UNREADABLE_SEARCH_TITLE,
+  builderTitle,
   searchFacts,
   forecastHeading,
   sideName,
@@ -877,14 +878,20 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
         {...behindOverlay(proposing || explained !== undefined || reading !== undefined || asking)}
       >
         <ShellScreen
-          /* **The screen's name is the three facts it was searched under**, promoted out of
-             the eyebrow when the h1 over it was removed: `Build the four` re-stated the shape
-             this line already carries and added a verb for the furniture. Where the record
-             cannot be read there are no facts to promote, and the fallback is a name rather
-             than the note's own sentence said twice (`builderPresentation`). */
+          /* **The game this screen is here to build**, in the same two words as the control
+             that opened it — the control names the screen it opens (`builderPresentation`).
+             The three facts sit above it as 10.3's eyebrow: the line says what was searched
+             for and the title says what the screen is for, and each was tried alone before
+             the pair. Where the record cannot be read there is no shape to name, so the
+             fallback is a name rather than a court shape the screen is guessing at. */
           title={
             sportName === undefined || origin === undefined
               ? UNREADABLE_SEARCH_TITLE
+              : builderTitle(seats)
+          }
+          eyebrow={
+            sportName === undefined || origin === undefined
+              ? undefined
               : searchFacts({ sportName, seats, mode: origin.mode })
           }
           // **The gesture, drawn.** This screen is genuinely pushed — Find a game stays

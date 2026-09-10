@@ -403,21 +403,27 @@ const crossedForecast = (full = false): Wire['ForecastResponse'] => ({
 
 describe('the header', () => {
   /**
-   * **The screen is called what it was searched under, and by nothing else.**
+   * **The screen is named for what it is here to do, over the facts it was searched under.**
    *
-   * *Pick players* stood as an h1 over an eyebrow already reading `Padel · doubles · for fun` —
-   * the furniture named over the facts, and a claim the list underneath makes for itself on
-   * every row. The eyebrow is the title now, exactly as it is on the court one screen back.
+   * The pair was tried the other way round for a day — the facts promoted to the title and
+   * *Pick players* dropped — and it put this screen and the court it is pushed over under one
+   * heading, which named the search on both and the screen on neither. A title's first job is
+   * telling you which of two you are on.
    */
-  it('is titled by the three facts it was searched under, and carries no second heading', async () => {
+  it('is named for what it is here to do, with the search facts above it', async () => {
     await openThePool();
 
+    expect(screen.getByRole('header', { name: POOL_TITLE })).toBeTruthy();
+    // The court underneath is called something else, which is the whole of the reversal.
+    expect(screen.queryByRole('header', { name: 'Build a doubles' })).toBeNull();
+    // Drawn here too — and more than once on the stack, because the court underneath is still
+    // mounted and carries the same eyebrow. That the two share this line is the point; what
+    // they must not share is the heading, which the assertion above is about.
     expect(
-      screen.getByRole('header', {
-        name: searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' }),
-      }),
-    ).toBeTruthy();
-    expect(screen.queryByText(POOL_TITLE)).toBeNull();
+      screen.getAllByText(searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' }), {
+        includeHiddenElements: true,
+      }).length,
+    ).toBeGreaterThan(0);
   });
 
   /**

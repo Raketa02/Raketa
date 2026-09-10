@@ -814,15 +814,17 @@ refetches, because the rule against that is about orderings and a count has none
 why the tab bar carries no badge.
 
 **⚡Play's third screen is the builder, and a swap on it is a selection rather than a
-request.** **It has no title of its own**: `Padel · doubles · for fun` was an eyebrow under an
-h1 saying _Build the four_ — or _Set up the match_, or _Complete_ either of them once somebody
-was seated — and the h1 re-stated the shape the line already carried and added a verb for the
-furniture. Two lines, one fact, and the smaller one carrying more of it, so the line is
-promoted to the title and the heading is gone. What is left on a court whose search cannot be
-read is a name rather than the note's own sentence said twice. It is also what puts 10.3's
-chevron beside the only line there is rather than between two — and the chevron is `ink` now,
-because it is the one control in that header and it was drawn in the eyebrow's own grey. A
-finished search is pushed onto it — _"where a completed search goes"_, which #268
+request.** **It is called _Build a doubles_ or _Build a singles_**, over `Padel · doubles · for
+fun` as 10.3's eyebrow — the same two words as the control on Find a game that opened it,
+because the control names the screen it opens. It said _Build the four_ / _Set up the match_
+before, which is one sentence in two registers and a word about a Sport a squash court must
+never be told, with a third wording — _Complete the …_ — that named the state of the court
+rather than the screen. Then it had **no title at all** for a day, the eyebrow promoted into
+its place; that is reversed, because the pool one screen on made the same promotion and the two
+came out under one heading, naming the search on both and the screen on neither. A court whose
+search cannot be read is called something honest instead of a shape it is guessing at. The
+chevron beside it is `ink` now, because it is the one control in that header and it was drawn
+in the eyebrow's own grey. A finished search is pushed onto it — _"where a completed search goes"_, which #268
 and #269 both declined to decide — and the push happens **when the latch lifts** rather than
 when the response lands, because the wait is over the screen that launched it and the court is
 what it lifts onto. Three branches fill the court and **two of them are one request**: ⚡ is
@@ -882,12 +884,10 @@ than a player with missing facts — a withheld row carries one field and no car
 name and no level to read out — and it says the fact and never the cause.
 
 **⚡Play's fourth screen is the pool, and the relaxation ladder is on it and on no other.**
-**It has no title of its own either**: _Pick players_ stood as an h1 over an eyebrow already
-reading `Padel · doubles · for fun`, which is the furniture named over the facts and a claim
-the list underneath makes for itself on every row — so the line is promoted exactly as it is on
-the court, and the old title keeps the one state that has no facts to promote. The two screens
-therefore carry the same heading, which is accepted because they carry the same **search**: one
-is pushed over the other and they are two views of one answer.
+**It is called _Pick players_**, over the same three facts the court draws — the pair the court
+has, in the same two registers. It was dropped for a day on the argument that a list of people
+with an _Add to the court_ on every row says _pick players_ for itself; what that missed is the
+screen next door, which had promoted the same line, so the two came out under one heading.
 Every thin-result state in the specs pointed the player at a settings screen — _widen the
 radius in You_ — because the prototype had no offer to point at. It is struck: pointing
 somebody at a settings screen while a **one-tap widening with a true count** sits on the same
