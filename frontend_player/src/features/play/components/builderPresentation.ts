@@ -38,24 +38,33 @@ import { modeWord } from './searchPresentation';
 import { isDoubles, type CourtHalf } from '../domain/lineup';
 import type { SearchMode } from '../domain/vocabulary';
 
-/**
- * The screen's title.
+/*
+ * **`builderTitle` stood here, and the screen has no title of its own any more.**
  *
- * *Complete* rather than *Build* the moment somebody is already seated, because that is what
- * the screen is then for: `locked_seats` are people the fill will seat **around**, and a title
- * still saying *build* would describe an empty court the player can see is not empty.
+ * It said one of four things — *Build the four*, *Set up the match*, and *Complete* either of
+ * them the moment somebody was seated — and the argument for the pair was real: `locked_seats`
+ * are people the fill seats **around**, so a title still saying *build* would describe an empty
+ * court the player can see is not empty.
+ *
+ * What it never had was anything to say that the line above it did not. `Padel · doubles · for
+ * fun` names the Sport, the shape and the mode; *Build the four* re-states the shape and adds a
+ * verb for the furniture. Two lines, one fact, and the smaller one carrying more of it — so the
+ * eyebrow is promoted to the title and the h1 that stood under it is gone.
+ *
+ * `searchFacts` below is that line, and it is a **title** on the builder and an **eyebrow** on
+ * the pool. Both are true of the same string: the pool is here to *pick players* and says so,
+ * where the builder is the court those three facts describe and has nothing else to be called.
+ * The name says what the string is rather than which register a screen draws it in, which is
+ * what makes one function serve both.
  */
-export function builderTitle(court: { readonly seats: number; readonly filled: number }): string {
-  const noun = isDoubles(court.seats) ? 'four' : 'match';
-  return court.filled > 1
-    ? `Complete the ${noun}`
-    : isDoubles(court.seats)
-      ? 'Build the four'
-      : 'Set up the match';
-}
 
-/** `Padel · doubles · for fun` — the three facts the search was run under. */
-export function builderEyebrow(court: {
+/**
+ * `Padel · doubles · for fun` — **the three facts the search was run under**, and the whole of
+ * what the builder is called.
+ *
+ * Drawn as the builder's title and as the pool's eyebrow; see the note above.
+ */
+export function searchFacts(court: {
   readonly sportName: string;
   readonly seats: number;
   readonly mode: SearchMode;
@@ -65,15 +74,29 @@ export function builderEyebrow(court: {
 }
 
 /**
- * ⚡'s label, and it names **what is left** rather than the whole court.
+ * What the builder is called when it cannot read the search it was opened on.
  *
- * *The seats* on an untouched court and *the rest* the moment anybody is seated: the engine
- * fills around `locked_seats` and never over them, so a control offering to fill *the seats*
- * beside three faces would be offering to do something the request cannot ask for.
+ * There are no three facts in that state — no Sport, no shape and no mode — so the promotion
+ * above has nothing to promote, and a screen still needs a name. It is not `NO_RECORD_TITLE`:
+ * that sentence is the note's, it is the whole of what went wrong, and a header repeating it
+ * would say one thing twice on a screen whose body is that one note.
  */
-export function fillSeatsLabel(court: { readonly seats: number; readonly filled: number }): string {
-  return court.filled > 1 ? 'Let the engine fill the rest' : 'Let the engine fill the seats';
-}
+export const UNREADABLE_SEARCH_TITLE = 'Your line-up';
+
+/**
+ * ⚡'s label — **the act, named once**.
+ *
+ * It was a pair, *Let the engine fill the seats* and *Let the engine fill the rest*, and the
+ * branch was earned: the engine fills around `locked_seats` and never over them, so a control
+ * offering *the seats* beside three faces was offering something the request cannot ask for.
+ *
+ * **Naming the act instead of the scope dissolves the branch.** *Use Matchmaking* is true of an
+ * empty court and of one with three people on it, so there is nothing left for a second string
+ * to correct — and the word is the platform's own for what the button reaches
+ * (`docs/specs/matchmaking/`), where *let the engine* named the machinery and left a player to
+ * work out what it would do.
+ */
+export const USE_MATCHMAKING_LABEL = 'Use Matchmaking';
 
 /** The other branch, and the screen that owns widening. */
 export const PICK_PLAYERS_LABEL = 'Pick players myself';

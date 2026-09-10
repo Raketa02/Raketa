@@ -136,7 +136,7 @@ import { useReadSearchBack, useTakeRung } from '../hooks/usePool';
 import { usePlaySession } from '../store/playSession.store';
 
 import { rungOfferLabel } from './accessibilityPresentation';
-import { builderEyebrow } from './builderPresentation';
+import { searchFacts } from './builderPresentation';
 import { CandidateCard } from './candidate/CandidateCard';
 import { CandidateCardSocial } from './candidate/CandidateCardSocial';
 import { useHeldWait } from './heldWait';
@@ -451,7 +451,7 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
           eyebrow={
             sportName === undefined || origin === undefined
               ? undefined
-              : builderEyebrow({ sportName, seats, mode: origin.mode })
+              : searchFacts({ sportName, seats, mode: origin.mode })
           }
         >
           {record === undefined || sportName === undefined ? (

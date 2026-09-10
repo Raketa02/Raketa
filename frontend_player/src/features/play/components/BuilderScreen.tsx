@@ -269,9 +269,9 @@ import {
   START_OVER_LABEL,
   SWAP_HINT,
   VS_WORD,
-  builderEyebrow,
-  builderTitle,
-  fillSeatsLabel,
+  USE_MATCHMAKING_LABEL,
+  UNREADABLE_SEARCH_TITLE,
+  searchFacts,
   forecastHeading,
   sideName,
 } from './builderPresentation';
@@ -877,7 +877,16 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
         {...behindOverlay(proposing || explained !== undefined || reading !== undefined || asking)}
       >
         <ShellScreen
-          title={builderTitle({ seats, filled })}
+          /* **The screen's name is the three facts it was searched under**, promoted out of
+             the eyebrow when the h1 over it was removed: `Build the four` re-stated the shape
+             this line already carries and added a verb for the furniture. Where the record
+             cannot be read there are no facts to promote, and the fallback is a name rather
+             than the note's own sentence said twice (`builderPresentation`). */
+          title={
+            sportName === undefined || origin === undefined
+              ? UNREADABLE_SEARCH_TITLE
+              : searchFacts({ sportName, seats, mode: origin.mode })
+          }
           // **The gesture, drawn.** This screen is genuinely pushed — Find a game stays
           // underneath it — so the platform's own back already lands here, and 10.3's chevron
           // is opt-in for exactly the screens that can say where it goes. It adds no
@@ -885,11 +894,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           // without knowing the gesture exists. The session is untouched either way — only
           // `enterPlay` ends one, and going back is not entering.
           onBack={router.back}
-          eyebrow={
-            sportName === undefined || origin === undefined
-              ? undefined
-              : builderEyebrow({ sportName, seats, mode: origin.mode })
-          }
           action={
             origin === undefined || filling ? undefined : open === 0 ? (
               /* **The court, once full.** The two ways to fill it are gone, because there is
@@ -938,7 +942,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                     component. It is where the prompt sheet hands focus back. */}
                 <View ref={fillControl}>
                   <Button
-                    label={fillSeatsLabel({ seats, filled })}
+                    label={USE_MATCHMAKING_LABEL}
                     size="lg"
                     busy={fill.isPending}
                     busyLabel={FILLING_LABEL}

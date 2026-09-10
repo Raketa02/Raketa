@@ -85,8 +85,9 @@ import {
   SIDE_HEADINGS,
   START_OVER_LABEL,
   SWAP_HINT,
+  USE_MATCHMAKING_LABEL,
   arrangedYourWayLine,
-  fillSeatsLabel,
+  searchFacts,
   sideName,
 } from './builderPresentation';
 import { WITHHELD_SEAT_LINE, optimisedForLine, unfilledSeatLine } from './courtPresentation';
@@ -401,8 +402,8 @@ async function openTheBuilder() {
 }
 
 /** ⚡, and the fill's own floor — `650 plus 550 a seat`, spent before the court is reachable. */
-async function pressFill(filled = 1) {
-  fireEvent.press(screen.getByLabelText(fillSeatsLabel({ seats: 4, filled })));
+async function pressFill() {
+  fireEvent.press(screen.getByLabelText(USE_MATCHMAKING_LABEL));
   await screen.findByText(ENGINE_FILL);
   // The floor is the **court's** seat count, not the answer's: it is how long the fill's
   // presentation runs, and a court is four seats whether or not four people sat down.
@@ -413,6 +414,42 @@ async function pressFill(filled = 1) {
 }
 
 describe('arriving', () => {
+  /**
+   * **The screen is called what it was searched under, and by nothing else.**
+   *
+   * It carried an h1 — *Build the four*, *Set up the match*, and *Complete* either of them the
+   * moment somebody was seated — over an eyebrow already naming the Sport, the shape and the
+   * mode. Two lines, one fact, and the smaller one carrying more of it. The eyebrow is the
+   * title now and the h1 is gone, which is also what puts the chevron beside the only line
+   * left rather than between two.
+   */
+  it('is titled by the three facts it was searched under, and carries no second heading', async () => {
+    await openTheBuilder();
+
+    expect(
+      await screen.findByRole('header', {
+        name: searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' }),
+      }),
+    ).toBeTruthy();
+    for (const struck of ['Build the four', 'Set up the match', 'Complete the four']) {
+      expect(screen.queryByText(struck)).toBeNull();
+    }
+  });
+
+  /** The same, once somebody is seated: there is no *Complete the …* heading to arrive. */
+  it('keeps that one title when the court has people on it', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    expect(
+      screen.getByRole('header', {
+        name: searchFacts({ sportName: 'Padel', seats: 4, mode: 'FOR_FUN' }),
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/^Complete the /)).toBeNull();
+  });
+
   /**
    * **The gesture, drawn.** This screen is pushed and Find a game stays underneath it, so the
    * platform's own back already lands there — 10.3's chevron is opt-in for exactly the screens
@@ -515,7 +552,7 @@ describe('arriving', () => {
   it('offers both branches, and neither is drawn once the court is full', async () => {
     await openTheBuilder();
 
-    expect(screen.getByLabelText(fillSeatsLabel({ seats: 4, filled: 1 }))).toBeTruthy();
+    expect(screen.getByLabelText(USE_MATCHMAKING_LABEL)).toBeTruthy();
     expect(screen.getByLabelText(PICK_PLAYERS_LABEL)).toBeTruthy();
 
     await pressFill();
@@ -554,8 +591,10 @@ describe('⚡ — the engine fills the seats', () => {
     act(() => usePlaySession.getState().seat(SEARCH_ID, B));
 
     await waitFor(() => expect(transport.requestsTo('POST', FORECASTS)).toHaveLength(1));
-    // *Fill the rest*, because the engine fills around `locked_seats` and never over them.
-    await pressFill(2);
+    // The same control and the same words on a court with somebody on it: the engine fills
+    // around `locked_seats` and never over them, and *Use Matchmaking* names the act rather
+    // than the scope — which is why there is no longer a second label for this case.
+    await pressFill();
 
     expect(transport.requestsTo('POST', LINEUPS)[0]?.body).toEqual({
       sport: 'PADEL',
@@ -580,7 +619,7 @@ describe('⚡ — the engine fills the seats', () => {
   it('prints the pool the fill read, and only once there is a response', async () => {
     await openTheBuilder();
 
-    fireEvent.press(screen.getByLabelText(fillSeatsLabel({ seats: 4, filled: 1 })));
+    fireEvent.press(screen.getByLabelText(USE_MATCHMAKING_LABEL));
     await screen.findByText(ENGINE_FILL);
 
     expect(await screen.findByText('7 in range')).toBeTruthy();
@@ -1285,21 +1324,21 @@ describe('when it fails', () => {
     transport.on('POST', LINEUPS, () => errorResponse(409, 'locked_seat_not_available'));
     await openTheBuilder();
 
-    fireEvent.press(screen.getByLabelText(fillSeatsLabel({ seats: 4, filled: 1 })));
+    fireEvent.press(screen.getByLabelText(USE_MATCHMAKING_LABEL));
 
     expect(
       await screen.findByText(playErrorMessage(refusal('locked_seat_not_available'))),
     ).toBeTruthy();
     // One attempt, and the control that failed is still there to be pressed again.
     expect(transport.requestsTo('POST', LINEUPS)).toHaveLength(1);
-    expect(screen.getByLabelText(fillSeatsLabel({ seats: 4, filled: 1 }))).toBeTruthy();
+    expect(screen.getByLabelText(USE_MATCHMAKING_LABEL)).toBeTruthy();
   });
 
   it('takes the wait down on a refusal rather than holding it over one', async () => {
     transport.on('POST', LINEUPS, () => errorResponse(503, 'matchmaking_unavailable'));
     await openTheBuilder();
 
-    fireEvent.press(screen.getByLabelText(fillSeatsLabel({ seats: 4, filled: 1 })));
+    fireEvent.press(screen.getByLabelText(USE_MATCHMAKING_LABEL));
 
     // A refusal has nothing to hold for: the sentence and the retry are already on the screen
     // underneath, and a latch over them would bury both.
@@ -1328,7 +1367,7 @@ describe('when it fails', () => {
     await openTheBuilder();
     act(() => onlineManager.setOnline(false));
 
-    fireEvent.press(screen.getByLabelText(fillSeatsLabel({ seats: 4, filled: 1 })));
+    fireEvent.press(screen.getByLabelText(USE_MATCHMAKING_LABEL));
 
     expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
     expect(screen.queryByText(ENGINE_FILL)).toBeNull();
@@ -1361,7 +1400,7 @@ describe('the fill', () => {
    * not come back.
    */
   async function fillLands() {
-    fireEvent.press(screen.getByLabelText(fillSeatsLabel({ seats: 4, filled: 1 })));
+    fireEvent.press(screen.getByLabelText(USE_MATCHMAKING_LABEL));
     await screen.findByText(ENGINE_FILL);
     await screen.findByText(ENGINE_FILL_COUNT);
   }
@@ -1402,7 +1441,7 @@ describe('the fill', () => {
     // on a court mid-fill, and neither of the two ways of filling a court being filled.
     expect(screen.queryByText('91%')).toBeNull();
     expect(screen.queryByText(SWAP_HINT)).toBeNull();
-    expect(screen.queryByLabelText(fillSeatsLabel({ seats: 4, filled: 1 }))).toBeNull();
+    expect(screen.queryByLabelText(USE_MATCHMAKING_LABEL)).toBeNull();
     expect(screen.queryByLabelText(PICK_PLAYERS_LABEL)).toBeNull();
 
     act(() =>
@@ -1683,7 +1722,7 @@ describe('singles', () => {
     await waitFor(() => expect(screen).toHavePathname('/play/builder'));
     await screen.findByLabelText(tennisCourt(1));
 
-    fireEvent.press(screen.getByLabelText(fillSeatsLabel({ seats: TENNIS_SEATS, filled: 1 })));
+    fireEvent.press(screen.getByLabelText(USE_MATCHMAKING_LABEL));
     await screen.findByText(TENNIS_FILL);
     act(() =>
       jest.advanceTimersByTime(
@@ -1739,7 +1778,7 @@ describe('the question ⚡ raised', () => {
     raising([{ prompt: 'KEEP_THIS_RADIUS', radius_km: 22 }]);
     await openTheBuilder();
 
-    fireEvent.press(screen.getByLabelText(fillSeatsLabel({ seats: 4, filled: 1 })));
+    fireEvent.press(screen.getByLabelText(USE_MATCHMAKING_LABEL));
     await screen.findByText(ENGINE_FILL);
     await waitFor(() => expect(transport.requestsTo('POST', LINEUPS)).toHaveLength(1));
 

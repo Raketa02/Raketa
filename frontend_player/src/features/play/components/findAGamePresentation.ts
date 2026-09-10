@@ -361,13 +361,17 @@ export const NO_RATED_SPORT_LINE =
  * `isDoubles` is `domain/lineup`'s, for the reason recorded there — *four* is a word
  * about a Sport, and a squash court must never be told to build one.
  *
- * **The title names the game rather than the furniture.** It was `builderTitle`'s outright —
- * *Build the four* against *Set up the match* — and those two are one sentence in two
- * registers: one counts seats and the other names an occasion, so the pair only reads as a
+ * **The control names the game rather than the furniture.** It was the builder's title
+ * outright — *Build the four* against *Set up the match* — and those two are one sentence in
+ * two registers: one counts seats and the other names an occasion, so the pair only reads as a
  * pair to somebody who has seen both. *Doubles* and *singles* are the sport's own words, they
- * are already what `builderEyebrow` prints one screen on, and they differ by one word rather
- * than by all of them. `builderTitle` keeps its own: it titles a screen that fills seats, and
- * it has a third thing to say the moment somebody is sitting in one.
+ * are already what `searchFacts` prints one screen on, and they differ by one word rather than
+ * by all of them.
+ *
+ * **The builder has since lost its own title entirely**, which finishes the argument rather
+ * than reopening it: over a line already saying `Padel · doubles · for fun`, a second heading
+ * had a verb and no fact. What survives here is this control's own wording — the reason a
+ * squash court is never told to build a four — and it is untouched by that.
  */
 export function courtEntryTitle(seats: number): string {
   return isDoubles(seats) ? 'Build a doubles' : 'Build a singles';

@@ -338,9 +338,9 @@ export {
   PROVISIONAL_WORD,
   START_OVER_LABEL,
   SWAP_HINT,
-  builderTitle,
-  fillSeatsLabel,
+  USE_MATCHMAKING_LABEL,
   forecastHeading,
+  searchFacts,
 } from './components/builderPresentation';
 
 /**

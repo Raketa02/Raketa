@@ -814,12 +814,25 @@ refetches, because the rule against that is about orderings and a count has none
 why the tab bar carries no badge.
 
 **⚡Play's third screen is the builder, and a swap on it is a selection rather than a
-request.** A finished search is pushed onto it — _"where a completed search goes"_, which #268
+request.** **It has no title of its own**: `Padel · doubles · for fun` was an eyebrow under an
+h1 saying _Build the four_ — or _Set up the match_, or _Complete_ either of them once somebody
+was seated — and the h1 re-stated the shape the line already carried and added a verb for the
+furniture. Two lines, one fact, and the smaller one carrying more of it, so the line is
+promoted to the title and the heading is gone. What is left on a court whose search cannot be
+read is a name rather than the note's own sentence said twice. It is also what puts 10.3's
+chevron beside the only line there is rather than between two — and the chevron is `ink` now,
+because it is the one control in that header and it was drawn in the eyebrow's own grey. A
+finished search is pushed onto it — _"where a completed search goes"_, which #268
 and #269 both declined to decide — and the push happens **when the latch lifts** rather than
 when the response lands, because the wait is over the screen that launched it and the court is
 what it lifts onto. Three branches fill the court and **two of them are one request**: ⚡ is
 `POST /lineups`, and hand-seating somebody and then pressing ⚡ is the same request with
-`locked_seats` on it, _"a property of what you send rather than of where you send it"_. The
+`locked_seats` on it, _"a property of what you send rather than of where you send it"_. Its
+control says **Use Matchmaking**, one string where there were two: _Let the engine fill the
+seats_ and _…the rest_ were a pair because the engine fills **around** locked seats, and
+naming the act rather than the scope is true of an empty court and of one with three people on
+it — so there is nothing left for a second label to correct, and the word is the platform's own
+for the thing the button reaches. The
 third is the pool. **⚡'s wait is under the court rather than over it**, and the court **fills
 one seat at a time**: `motion.hold.fill`'s `650 plus 550 a seat` was booked to _"the animation
 it drives"_ and nothing drove it — the latch covered the screen for the sum and handed back a

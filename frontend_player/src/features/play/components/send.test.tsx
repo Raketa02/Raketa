@@ -67,7 +67,7 @@ import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession, usePlaySession } from '../store/playSession.store';
 
 import { courtEntryLabel } from './findAGamePresentation';
-import { fillSeatsLabel } from './builderPresentation';
+import { USE_MATCHMAKING_LABEL } from './builderPresentation';
 import { WITHHELD_SEAT_LINE } from './courtPresentation';
 import { engineFillStatus, poolRankingStatus } from './searchingPresentation';
 import { searchingFloorMs } from './searchingWait';
@@ -287,7 +287,7 @@ async function openAFullCourt() {
   act(() => jest.advanceTimersByTime(searchingFloorMs({ kind: 'pool' })));
   await waitFor(() => expect(screen).toHavePathname('/play/builder'));
 
-  fireEvent.press(await screen.findByLabelText(fillSeatsLabel({ seats: 4, filled: 1 })));
+  fireEvent.press(await screen.findByLabelText(USE_MATCHMAKING_LABEL));
   await screen.findByText(ENGINE_FILL);
   act(() =>
     jest.advanceTimersByTime(searchingFloorMs({ kind: 'fill', seats: 4, collapsed: false })),

@@ -10,7 +10,21 @@
  * The questionnaire is now one of them: a player may walk back over the questions they
  * have answered ([ADR-0020](../../../../docs/adr/0020-revisable-assessment-answers.md),
  * which supersedes ADR-0017's irreversibility rule), and this is the control they do it
- * with — 20pt, `muted`, on a 44 × 44 target, per design-system 10.3.
+ * with — h1-sized, on a 44 × 44 target, per design-system 10.3.
+ *
+ * ## The chevron is `ink`, and its box is the glyph
+ *
+ * It was drawn in `muted` — the eyebrow's own colour — which made the one **control** in this
+ * header the quietest thing in it, and left it reading as chrome beside the text rather than
+ * as something to press. `ink` is the step up, and it is only a colour: the size, the weight
+ * and the 44pt target are untouched, so nothing here grows.
+ *
+ * **Its line box is the glyph rather than h1's 24pt line**, which is what `num`'s own rule
+ * does for a drawn figure — *lineHeight equals the size* — applied to a drawn mark. The row
+ * centres its children, so a 24pt box containing a 19pt mark centred the box; on a header with
+ * two lines that was close enough to pass, and on one with a single line it put the chevron
+ * visibly off the text beside it. Read off the type role rather than typed, so the two cannot
+ * drift.
  *
  * The eyebrow labels a region you are READING. It is not `flab`, which labels a control
  * you are about to OPERATE — the two are not interchangeable (design-system 3.3).
@@ -81,6 +95,12 @@ const s = StyleSheet.create({
   title: { ...theme.type.h1, color: theme.color.ink },
   back: { alignItems: 'center', justifyContent: 'center' },
   backPressed: { opacity: 0.7 },
-  backMark: { ...theme.type.h1, color: theme.color.muted },
+  backMark: {
+    ...theme.type.h1,
+    // The mark's box IS the mark — see the module note. Read off the role it is drawn at, so
+    // a change to h1 carries here rather than leaving a number behind.
+    lineHeight: theme.type.h1.fontSize,
+    color: theme.color.ink,
+  },
   right: { alignItems: 'flex-end' },
 });
