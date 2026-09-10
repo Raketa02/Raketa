@@ -25,12 +25,17 @@ grid and the moment that has gone, each refused server-side.
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import pytest
 
 from app.modules.games.domain.windows import PLAN_HORIZON
-from app.modules.plans.domain.slots import PLACE_LENGTH_CAP, PLATFORM_ZONE
+from app.kernel import instant
+from app.modules.plans.domain.slots import (
+    PLACE_LENGTH_CAP,
+    PLATFORM_ZONE,
+    local_day,
+)
 from tests.api import matchmaking_world as world
 
 
@@ -103,11 +108,24 @@ async def _plans(client, token: str) -> list[dict]:
     return response.json()["plans"]
 
 
+def _the_day_it_was_arranged(game: dict) -> date:
+    """The **local** day this game was arranged on, in the platform's own zone.
+
+    Read the way the clamp reads it and not off the first ten characters of the
+    instant: ``last_plannable_day`` converts through the platform's zone before
+    taking a date, so between 22:00 and midnight UTC the UTC date is a day behind
+    the day the platform is having — and a test that did the arithmetic in UTC
+    would be off by one for two hours out of every twenty-four. Through the
+    domain's own ``local_day``, so there is one answer to *what day is it*.
+    """
+
+    return local_day(instant(datetime.fromisoformat(game["planned_at"])))
+
+
 def _a_plannable_day(game: dict) -> str:
     """A day inside this game's own horizon, read off the game's own record."""
 
-    planned = date.fromisoformat(game["planned_at"][:10])
-    return (planned + timedelta(days=2)).isoformat()
+    return (_the_day_it_was_arranged(game) + timedelta(days=2)).isoformat()
 
 
 # ---------------------------------------------------------------------------
@@ -336,7 +354,7 @@ async def test_a_day_past_the_horizon_is_refused(
     _, game = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
-    planned = date.fromisoformat(game["planned_at"][:10])
+    planned = _the_day_it_was_arranged(game)
 
     refused = await client.put(
         f"/api/v1/plans/{game['game_id']}/day",

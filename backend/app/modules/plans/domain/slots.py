@@ -176,6 +176,24 @@ def as_wall_time(minute: MinuteOfDay) -> wall_time:
     return wall_time(minute // _MINUTES_PER_HOUR, minute % _MINUTES_PER_HOUR)
 
 
+def local_day(at: Instant) -> date:
+    """Which day it is, on the platform's one zone. **The conversion, written once.**
+
+    Every day this context reasons about is a **local** day — the chips a member is
+    offered, the last one the horizon reaches, and *today* — while every instant it
+    holds is UTC. Taking the date off an instant without converting is right for
+    twenty-two hours out of twenty-four and a day out for the other two, which is
+    the kind of wrong that passes every test run in the morning.
+
+    It is here because it is the same one line as ``PLATFORM_ZONE``'s own reason:
+    one zone, recorded as a locale assumption, with its falsifier named (the first
+    shard whose players are somewhere else). A second spelling of it anywhere is a
+    second answer to *what day is it*.
+    """
+
+    return at.astimezone(PLATFORM_ZONE).date()
+
+
 def last_plannable_day(planned_at: Instant) -> date:
     """The last local day a plan may name. **The clamp, and it is one line.**
 
@@ -197,7 +215,7 @@ def last_plannable_day(planned_at: Instant) -> date:
     play a fortnight out cannot say so.
     """
 
-    return instant(planned_at + PLAN_HORIZON).astimezone(PLATFORM_ZONE).date()
+    return local_day(instant(planned_at + PLAN_HORIZON))
 
 
 def refuse_a_day_past_the_horizon(day: date, *, planned_at: Instant) -> date:
@@ -283,6 +301,7 @@ __all__ = [
     "as_wall_time",
     "hour_of",
     "last_plannable_day",
+    "local_day",
     "moment_of",
     "refuse_a_day_past_the_horizon",
 ]
