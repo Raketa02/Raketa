@@ -372,10 +372,10 @@ describe('offline', () => {
 
 describe('the arms with nothing to press', () => {
   /**
-   * §2.1: **`ON` has an arm and no door.** #360's inbox keeps an `ON` row while it is news, so
-   * the door exists after all — which is exactly why the arm does, and it is filed as
-   * [#390](https://github.com/Raketa02/Raketa/issues/390). Either way it resolves to the sentence
-   * rather than to a blank screen.
+   * §2.1: **`ON` has an arm, and the inbox row is what reaches it.** A completed line-up keeps
+   * its row while it is news and every row is a door, so this arm is reached the ordinary way.
+   * The card is the game's (#324, ADR-0143 §8); the sentence is drawn here and on the row, and
+   * by no system line — §3.4 refused the one #324 had given it.
    */
   it('draws the sentence for a completed line-up, and no card and no controls', async () => {
     const everybodyIn = {

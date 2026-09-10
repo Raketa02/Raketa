@@ -10,9 +10,13 @@
  * and the controls are three readings of **one** fold, so the screen cannot say *They're waiting
  * on you* over a court it is also refusing to let you answer.
  *
- * **`ON` has an arm and no door.** Nothing navigates here — the game's own standing owns the card
- * the moment a game exists — and the arm exists so a stale route resolves to a sentence rather
- * than to a blank screen.
+ * **`ON` has an arm, and the inbox row is what reaches it.** The game's own standing owns the
+ * **card** the moment a game exists (#324, ADR-0143 §8), so this arm draws the sentence and
+ * nothing else — but a completed line-up keeps its row while it is news
+ * ([`challengeInbox.ts`](../domain/challengeInbox.ts)), and every row is a door. **No system line
+ * draws §13's `ON` sentences**: §3.4 refused the one #324 had given them, so the row and this arm
+ * are the whole of it, and the row is what makes this one reachable. A stale route resolves here
+ * too, which is now the second way in rather than the only one (§2.1, #390).
  *
  * ## The affordance is never removed without the space saying what took it
  *

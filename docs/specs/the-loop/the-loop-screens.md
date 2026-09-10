@@ -290,12 +290,33 @@ nothing on the wire carries a side.
 | `DECLINED` · both | §13 *{name} said no…* / *You said no* | no | none |
 | `LAPSED` · both | §13 *{name}'s day ran out…* / *Your day ran out* | no | none |
 | `WITHDRAWN` · both | §13 *You withdrew this* / *{name} withdrew this — that court is closed* | no | none |
-| `ON` · both | §13 *Everybody's in* / *You're in — everybody's in* | no | none — **and no door reaches it** |
+| `ON` · both | §13 *Everybody's in* / *You're in — everybody's in* | no | none |
 
-**`ON` has an arm and no door.** #324 ruled that the game's standing owns the card the moment a
-game exists, so an `ON` challenge draws no row in `CHALLENGES` and nothing navigates here. The arm
-exists so that a stale route resolves to the sentence rather than to a blank screen, and it is
-written down so nobody builds a door to it.
+**`ON` has an arm, and the inbox row is what reaches it.** An `ON` challenge **keeps its row in
+`CHALLENGES` while it is news** — §1.1's *every one that ended in the last 24 h*, with the
+**inbox's own `Record`** deciding that a completed line-up counts as ended, because nothing about
+the arrangement can change again. Every row is a door, so the row opens this arm and the arm draws
+the sentence with no card and no controls. A stale route resolves here too, and that is now the
+second way in rather than the only one.
+
+**What #324 ruled is narrower than this section used to claim, and the difference matters.** #324
+took the **card** away — *"the game's standing owns the card the moment a game exists"*, upheld by
+[ADR-0143](../../adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)
+§8 — and gave the **sentence** a home: *"§13's sentence for `ON` (`Everybody's in`) keeps its home
+in the conversation, as the system line the first complete line-up writes."* §3.4 then **refused
+that line**, on the rule that no system line announces a conclusion the record already implies, and
+[`the-words.md`](../matchmaking/the-words.md) §23.1 lists `GamePlanned` among the six events that
+publish nothing. So the home #324 named is gone, and a `SeatAccepted` line is written **only when
+the room already existed** — on a singles two the one acceptance *is* the opening and writes
+nothing. **§13's `ON` sentences are drawn on the row and on this arm, and by no system line**, so
+the row is what makes them reachable at all — which is why extending *no card* to *no row* was this
+section's own step and not #324's. Settled by
+[#390](https://github.com/Raketa02/Raketa/issues/390).
+
+> **The cost, stated rather than glossed: an `ON` challenge draws a row in both sections, and
+> §1.4's argument does not cover it.** There it is *the challenge row is the obligation, the
+> conversation row is the room* — and nothing about an `ON` challenge is anybody's obligation. This
+> is news beside its room, and it is taken on that narrower ground.
 
 **Every act is on this screen and none is on a row.** #324 §2 kept verbatim: every row is a door,
 every act is on the surface behind it — Accept and Decline included.

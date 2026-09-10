@@ -264,9 +264,11 @@ export type ChallengeArm =
    * **The sentence alone** — every ending, `ON`, and the reader who has left a court that has
    * not.
    *
-   * `ON` is here with no door to it: #324 gave the card to the game's own standing the moment a
-   * game exists, so nothing navigates to this arm and it exists so a stale route resolves to a
-   * sentence rather than to a blank screen.
+   * `ON` is here because #324 gave the **card** to the game's own standing the moment a game
+   * exists — not because nothing reaches it. A completed line-up keeps its row while it is news
+   * ([`challengeInbox.ts`](./challengeInbox.ts)), and every row is a door, so this is the arm that
+   * row opens. The row draws §13's `ON` sentence as well; what draws it nowhere is a system line,
+   * which §3.4 refused, so the row is what makes this arm reachable (§2.1, #390).
    */
   | { readonly kind: 'stated'; readonly facts: StandingFacts };
 

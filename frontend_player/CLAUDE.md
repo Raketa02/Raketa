@@ -1078,8 +1078,11 @@ one. `domain/challengeDetail.ts`'s `challengeArm` folds six standings and two si
 and **the sentence, the card block and the controls are three readings of that one fold** — which
 is what discharges §2.4's _an affordance is never removed without the space saying what took it_
 **by construction** rather than by a rule a component remembers: there is no state in which the
-buttons are gone and the standing sentence has not changed. **`ON` has an arm and no door**, so a
-stale route resolves to a sentence rather than to a blank screen.
+buttons are gone and the standing sentence has not changed. **`ON` has an arm, and the inbox row is
+what reaches it** — a completed line-up keeps its row while it is news and every row is a door. The
+row draws §13's `ON` sentence too; **no system line** does, because §3.4 refused the one #324 had
+given it, so the row is what makes the arm reachable. #324 took the **card** away, not the row
+([#390](https://github.com/Raketa02/Raketa/issues/390)).
 
 **The two answers are gated on the seat and never on the side alone.** §2.1's table reads
 `AWAITING_ANSWERS · invitee → I'm in · Not this time`, and a padel four where one invitee has
