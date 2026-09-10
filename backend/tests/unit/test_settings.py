@@ -27,8 +27,8 @@ import pytest
 from app.core.config import (
     DEFAULT_JWT_SECRET_KEY,
     DEFAULT_PHOTO_STORAGE_SECRET_KEY,
+    DEPLOYED,
     ENVIRONMENT_PROFILES,
-    UNPROVISIONED,
     ConfigurationError,
     Environment,
     Settings,
@@ -70,12 +70,13 @@ def settings_for(env, **overrides) -> Settings:
     """A minimally *valid* configuration for `env`, plus whatever a case overrides.
 
     What each environment needs differs, which is the whole subject of this file: a
-    laptop needs nothing, an unprovisioned environment needs a host and a database,
-    and production needs the four things it refuses to start without.
+    laptop needs nothing, anything deployed needs the three addresses whose shipped
+    defaults are the dev stack's own service names, and production needs those plus
+    the four things it refuses to start with the shipped value of.
     """
     env = Environment(env)
     base: dict = {"APP_ENV": env}
-    if env in UNPROVISIONED:
+    if env in DEPLOYED:
         base |= {
             "APP_HOST": "10.0.0.1",
             "WRITER_DB_URL": POISON_DB_URL,
@@ -85,7 +86,6 @@ def settings_for(env, **overrides) -> Settings:
         base |= {
             "JWT_SECRET_KEY": POISON_SECRET,
             "PHOTO_STORAGE_SECRET_KEY": POISON_PHOTO_SECRET,
-            "WRITER_DB_URL": POISON_DB_URL,
             "DB_SSL_MODE": "require",
             "ALLOW_ORIGINS": ["https://club.raketa.example"],
             "ALLOW_CREDENTIALS": True,
@@ -198,24 +198,28 @@ def test_an_override_from_the_process_environment_also_wins(clean_env) -> None:
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("env", ["development", "staging"])
-def test_an_unprovisioned_environment_without_a_host_refuses(clean_env, env) -> None:
+#: Every environment the three presence refusals hold for. Spelled out rather than
+#: derived from `DEPLOYED`, because a set that quietly lost a member would quietly
+#: stop being asserted about — the parametrisation is what makes the loss visible.
+DEPLOYED_NAMES = ["development", "staging", "production"]
+
+
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+def test_a_deployed_environment_without_a_host_refuses(clean_env, env) -> None:
     with pytest.raises(ConfigurationError) as exc:
         build(APP_ENV=env, WRITER_DB_URL=POISON_DB_URL)
     assert "APP_HOST" in str(exc.value)
 
 
-@pytest.mark.parametrize("env", ["development", "staging"])
-def test_an_unprovisioned_environment_without_a_database_refuses(
-    clean_env, env
-) -> None:
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+def test_a_deployed_environment_without_a_database_refuses(clean_env, env) -> None:
     with pytest.raises(ConfigurationError) as exc:
         build(APP_ENV=env, APP_HOST="10.0.0.1")
     assert "WRITER_DB_URL" in str(exc.value)
 
 
-@pytest.mark.parametrize("env", ["development", "staging"])
-def test_an_unprovisioned_environment_without_an_ephemeral_store_refuses(
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+def test_a_deployed_environment_without_an_ephemeral_store_refuses(
     clean_env, env
 ) -> None:
     """The ledgers fail soft; booting permanently degraded is not the same thing.
@@ -224,11 +228,38 @@ def test_an_unprovisioned_environment_without_an_ephemeral_store_refuses(
     it — which is exactly why this has to refuse rather than shrug: a ledger that
     never works produces no error, no empty screen and no alarm, and looks from
     every angle like a city where nothing happened.
+
+    **`production` is in this list, and used not to be** (#341). While the three
+    refusals were stated over the unbuilt two alone, the one environment where a
+    laptop's service name costs the most was the one that could inherit it — and
+    the committed ECS task definition did exactly that.
     """
 
     with pytest.raises(ConfigurationError) as exc:
         build(APP_ENV=env, APP_HOST="10.0.0.1", WRITER_DB_URL=POISON_DB_URL)
     assert "REDIS_URL" in str(exc.value)
+
+
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+def test_a_deployed_environment_inherits_no_local_address(clean_env, env) -> None:
+    """The rule under all three, stated once: nothing deployed may *silently* end up
+    holding a value out of `docker-compose-local.yml`.
+
+    Asserted as "the refusal names it" rather than "the value differs from the
+    default", because the settings object asks whether somebody set it — a deployed
+    environment that deliberately configured the laptop's address is somebody's
+    decision, and an empty variable is nobody's.
+    """
+    for missing in ("APP_HOST", "WRITER_DB_URL", "REDIS_URL"):
+        supplied = {
+            "APP_HOST": "10.0.0.1",
+            "WRITER_DB_URL": POISON_DB_URL,
+            "REDIS_URL": POISON_REDIS_URL,
+        }
+        del supplied[missing]
+        with pytest.raises(ConfigurationError) as exc:
+            build(APP_ENV=env, **supplied)
+        assert missing in str(exc.value)
 
 
 def test_local_needs_no_ephemeral_store_configured(clean_env) -> None:
@@ -244,7 +275,11 @@ def test_an_unprovisioned_environment_that_is_provisioned_starts(
     clean_env, env
 ) -> None:
     """`development` and `staging` are not forbidden — they are unbuilt. The day a
-    domain is registered, turning one on is setting these two variables."""
+    domain is registered, turning one on is setting these three variables.
+
+    Still only the unbuilt two: `production` is covered by
+    `test_a_valid_production_configuration_starts`, which has four more things to
+    supply before it gets an answer."""
     settings = build(
         APP_ENV=env,
         APP_HOST="10.0.0.1",
@@ -436,6 +471,17 @@ REFUSALS = [
             APP_ENV="staging", APP_HOST="10.0.0.1", WRITER_DB_URL=POISON_DB_URL
         ),
     ),
+    # The same three in production. Not redundant: production reaches them through
+    # a different branch than it used to, and these are the messages a deploy of the
+    # ECS task definition would actually print into CloudWatch.
+    ("APP_HOST", lambda: build(APP_ENV="production", WRITER_DB_URL=POISON_DB_URL)),
+    ("WRITER_DB_URL", lambda: build(APP_ENV="production", APP_HOST="10.0.0.1")),
+    (
+        "REDIS_URL",
+        lambda: build(
+            APP_ENV="production", APP_HOST="10.0.0.1", WRITER_DB_URL=POISON_DB_URL
+        ),
+    ),
     ("JWT_SECRET_KEY", lambda: production(JWT_SECRET_KEY=DEFAULT_JWT_SECRET_KEY)),
     (
         "PHOTO_STORAGE_SECRET_KEY",
@@ -459,6 +505,9 @@ REFUSAL_IDS = [
     "APP_HOST",
     "WRITER_DB_URL",
     "REDIS_URL",
+    "APP_HOST-in-production",
+    "WRITER_DB_URL-in-production",
+    "REDIS_URL-in-production",
     "JWT_SECRET_KEY",
     "PHOTO_STORAGE_SECRET_KEY",
     "DEBUG",

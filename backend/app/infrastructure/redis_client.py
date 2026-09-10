@@ -25,9 +25,11 @@ over it.
 connects lazily on the first command — so an application whose Redis is down
 starts normally and its ledgers degrade, which is the posture
 ``matchmaking/domain/ledgers.py`` argues for at length. The refusal that *does*
-exist is in the settings: an unprovisioned environment that never set
-``REDIS_URL`` will not boot at all, because permanently degraded is not a state
-to inherit from a laptop's service name.
+exist is in the settings: a **deployed** environment that never set ``REDIS_URL``
+will not boot at all, because permanently degraded is not a state to inherit from
+a laptop's service name. That refusal covers `production` too, and for eleven days
+it did not — the committed ECS task definition supplied no ``REDIS_URL`` and would
+have run against this module's laptop default for ever (#341).
 """
 
 from __future__ import annotations

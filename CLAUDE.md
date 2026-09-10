@@ -88,6 +88,19 @@ the hooks themselves, `make gen-api`.
   ([`.github/scripts/check-ruleset-diff.sh`](.github/scripts/check-ruleset-diff.sh),
   `make ruleset-diff`, proven still to fire by `make test-ruleset-diff`; the whole build is
   written up in [`docs/specs/matchmaking/the-ruleset-gate.md`](docs/specs/matchmaking/the-ruleset-gate.md)).
+- **The deployment artifact boots, and a gate is what says so.**
+  `backend/deploy/ecs/taskdef.json` supplies a container's variables;
+  `backend/app/core/config.py` refuses to start without others. Nothing compared the two,
+  so for eleven days the committed task definition could not have started a container at
+  all — it selected `production` and supplied no `REDIS_URL`, no `PHOTO_STORAGE_SECRET_KEY`
+  and no `ALLOW_ORIGINS` (#341). `make taskdef` boots the artifact through the real
+  settings object and names whatever it does not supply. **There is no list of required
+  variables in the check**, deliberately: a list would be a fourth copy of the fact that
+  had already disagreed in three places. Only `local` runs, so this gate is the one thing
+  in the pipeline that ever constructs the production configuration — and it asserts
+  presence, never the values behind the secret ARNs, and reads nothing from AWS
+  ([`.github/scripts/check-taskdef-boots.sh`](.github/scripts/check-taskdef-boots.sh),
+  `make taskdef`, proven still to fire by `make test-taskdef`).
 - **One session changes one app.** A `PreToolUse` hook blocks writes that cross an app
   boundary. A block is information — surface it, don't route around it. See
   [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
@@ -133,9 +146,9 @@ guardrail doing its job.
 
 After changing either hook, run `make test-hooks` (69 assertions). A guardrail that
 silently stops matching is worse than none, because you stop watching for it. The same
-argument is why `make test-drift`, `make test-poetry-pin`, `make test-judged-pairings`
-and `make test-ruleset-diff` exist: each drives its check against a deliberately broken tree
-and asserts it goes red.
+argument is why `make test-drift`, `make test-poetry-pin`, `make test-judged-pairings`,
+`make test-ruleset-diff` and `make test-taskdef` exist: each drives its check against a
+deliberately broken tree and asserts it goes red.
 
 ## Agent skills
 

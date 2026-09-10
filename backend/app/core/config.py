@@ -96,10 +96,6 @@ ENVIRONMENT_PROFILES = {
     ),
 }
 
-#: The environments that must be explicitly provisioned before they can be selected.
-#: Neither exists yet, which is exactly why choosing one has to fail loudly.
-UNPROVISIONED = frozenset({Environment.DEVELOPMENT, Environment.STAGING})
-
 #: `DB_SSL_MODE` values that actually encrypt the connection. `disable` and `allow` do
 #: not — see `_build_db_ssl_context` in the database engine, which returns `False` for
 #: both, meaning asyncpg opens the socket in the clear.
@@ -121,8 +117,15 @@ DEFAULT_PHOTO_STORAGE_SECRET_KEY = "raketa_photos_pwd"
 #: than fall back on, exactly as the writer database's default is.
 DEFAULT_REDIS_URL = "redis://redis:6379/0"
 
-#: The environments a browser reaches over a public network. `local` is not one of them,
-#: which is what makes `http://localhost:3000` a legal allowed origin on a laptop.
+#: The environments that run somewhere other than a developer's machine. `local` is not
+#: one of them, which is what makes `http://localhost:3000` a legal allowed origin and
+#: `redis://redis:6379/0` a working address.
+#:
+#: It answers two questions, and used to answer only the first: which environments a
+#: browser reaches over a public network, and which ones may not inherit an address out
+#: of `docker-compose-local.yml`. The second was once asked of `development` and
+#: `staging` alone, under the name `UNPROVISIONED` — see the refusals below for why
+#: that was the wrong half of the set (#341).
 DEPLOYED = frozenset(
     {Environment.DEVELOPMENT, Environment.STAGING, Environment.PRODUCTION}
 )
@@ -542,24 +545,36 @@ class Settings(BaseSettings):
         trips two is broken either way."""
         env = self.APP_ENV
 
-        if env in UNPROVISIONED:
+        if env in DEPLOYED:
             # "Configured" means somebody set it. There is nothing to compare a host
             # against, because no domain is registered and no placeholder hostname is
-            # written anywhere — which is the point: an unprovisioned environment is
-            # honest about being unprovisioned rather than falling back to the local
-            # defaults and pointing at a database that is not there.
+            # written anywhere — which is the point: a deployed environment is honest
+            # about what nobody told it rather than falling back to the local defaults
+            # and pointing at a database that is not there.
+            #
+            # **Every deployed environment, and once only the unbuilt two** (#341).
+            # These three were stated over `development` and `staging`, on the reading
+            # that what makes an address dangerous is the environment being
+            # unprovisioned. It is not. What makes it dangerous is that the default is
+            # a service name out of `docker-compose-local.yml`, which resolves on a
+            # laptop and nowhere else — and that was most true of the one environment
+            # the narrower set exempted. The committed ECS task definition selected
+            # `production`, supplied no `REDIS_URL`, and would have run against
+            # `redis://redis:6379/0` for ever: the permanently-degraded boot that
+            # `infrastructure/redis_client.py` says must not be reachable, reached
+            # through the door left open here.
             if "APP_HOST" not in provided:
                 raise ConfigurationError(
                     f"APP_HOST is not set, and APP_ENV selects '{env}', which is "
-                    f"defined but not provisioned. No host exists for it yet — set "
-                    f"APP_HOST explicitly or use 'local'."
+                    f"deployed. No host is registered for it — set APP_HOST "
+                    f"explicitly or use 'local'."
                 )
             if "WRITER_DB_URL" not in provided:
                 raise ConfigurationError(
                     f"WRITER_DB_URL is not set, and APP_ENV selects '{env}', which is "
-                    f"defined but not provisioned. Falling back to the local default "
-                    f"would point at a database that does not exist — set "
-                    f"WRITER_DB_URL explicitly or use 'local'."
+                    f"deployed. Falling back to the local default would point at a "
+                    f"database that does not exist — set WRITER_DB_URL explicitly or "
+                    f"use 'local'."
                 )
             if "REDIS_URL" not in provided:
                 # The same refusal as the database's, and for the same reason
@@ -570,13 +585,16 @@ class Settings(BaseSettings):
                 # name. A ledger that never works looks exactly like a quiet week.
                 raise ConfigurationError(
                     f"REDIS_URL is not set, and APP_ENV selects '{env}', which is "
-                    f"defined but not provisioned. Falling back to the local default "
-                    f"would point at an ephemeral store that does not exist, and the "
-                    f"ledgers behind it would degrade silently — set REDIS_URL "
-                    f"explicitly or use 'local'."
+                    f"deployed. Falling back to the local default would point at an "
+                    f"ephemeral store that does not exist, and the ledgers behind it "
+                    f"would degrade silently — set REDIS_URL explicitly or use "
+                    f"'local'."
                 )
 
         if env in DEPLOYED:
+            # A second question of the same set, kept separate because it is a rule
+            # about *values* rather than about what nobody supplied.
+            #
             # The backend's instance of the platform's **public-network scheme rule**: a
             # URL a browser reaches over the internet is `https://` in every deployed
             # environment. The backend calls nothing over HTTP, so `ALLOW_ORIGINS` is

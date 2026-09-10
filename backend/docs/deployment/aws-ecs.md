@@ -11,10 +11,16 @@
 > memory. See [ADR-0010](../../../docs/adr/0010-local-first-development-aws-deferred.md).
 >
 > **Before reactivating, re-read this against the current code.** Dormant infrastructure
-> drifts silently — in particular, check that every setting in
-> [`../../app/core/config.py`](../../app/core/config.py) that has no default is present
-> in [`../../deploy/ecs/taskdef.json`](../../deploy/ecs/taskdef.json). A missing env var
-> shows up as a task that starts and immediately dies.
+> drifts silently — and it did: the task definition went eleven days without three of the
+> variables the settings object demands, which is a task that starts and immediately dies
+> ([#341](https://github.com/Raketa02/Raketa/issues/341)).
+>
+> **That particular drift is now a build gate.** `make taskdef` at the repository root
+> boots [`../../deploy/ecs/taskdef.json`](../../deploy/ecs/taskdef.json) through
+> [`../../app/core/config.py`](../../app/core/config.py) and names anything it fails to
+> supply; CI runs it on every backend pull request. Run it before reactivating rather than
+> comparing the two files by eye. It asserts **presence**, not the values behind the secret
+> ARNs — those are still yours to check.
 
 This service is built to run on **ECS Fargate**, pulling images from **ECR**,
 secrets from **Secrets Manager**, logs to **CloudWatch**, and serving traffic
@@ -61,10 +67,24 @@ GitHub Actions ──build──▶ ECR (image)
      --secret-string '{
         "JWT_SECRET_KEY":"<generate-with-openssl-rand>",
         "WRITER_DB_URL":"postgresql+asyncpg://<user>:<pwd>@<rds-endpoint>:5432/<db>",
-        "READER_DB_URL":"postgresql+asyncpg://<user>:<pwd>@<rds-endpoint>:5432/<db>"
+        "READER_DB_URL":"postgresql+asyncpg://<user>:<pwd>@<rds-endpoint>:5432/<db>",
+        "REDIS_URL":"redis://<elasticache-endpoint>:6379/0",
+        "PHOTO_STORAGE_SECRET_KEY":"<the-photo-bucket-secret-key>"
      }' \
      --region $AWS_REGION
    ```
+
+   **Every key here is referenced by the task definition, and the set is checked.** Adding
+   a variable to `taskdef.json` without adding it to this payload gives a task that cannot
+   pull its secrets; `make taskdef` catches the reverse — a settings object that demands a
+   variable the task definition does not supply — but it reads nothing from AWS and cannot
+   see this command. Keep the two in step by hand.
+
+   `REDIS_URL` needs somewhere to point. **No ElastiCache provisioning steps are written
+   here**, because none have ever been run; the ephemeral store is a real prerequisite of a
+   deployed environment and not an optional extra — the application refuses to start
+   without the variable, on the reasoning in
+   [`../../app/infrastructure/redis_client.py`](../../app/infrastructure/redis_client.py).
 
 5. **RDS PostgreSQL** with TLS enforced:
    - Parameter group: `rds.force_ssl = 1`.

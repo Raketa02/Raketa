@@ -77,7 +77,12 @@ def production(**overrides) -> Settings:
         APP_ENV=Environment.PRODUCTION,
         JWT_SECRET_KEY=POISON_SECRET,
         PHOTO_STORAGE_SECRET_KEY=POISON_SECRET,
+        # `APP_HOST` and `REDIS_URL` are here because every *deployed*
+        # environment is asked for them, production included (#341) — not
+        # because seeding has any interest in either.
+        APP_HOST="10.0.0.1",
         WRITER_DB_URL=POISON_DB_URL,
+        REDIS_URL=POISON_REDIS_URL,
         DB_SSL_MODE="require",
         ALLOW_ORIGINS=["https://raketa.example"],
         **overrides,
@@ -104,8 +109,8 @@ def test_the_other_three_are_permitted(clean_env, environment):
 
     settings = build(
         APP_ENV=environment,
-        # The three an unprovisioned environment refuses to start without. They
-        # are configuration, not seeding — this case is about the seed guard.
+        # The three a deployed environment refuses to start without. They are
+        # configuration, not seeding — this case is about the seed guard.
         APP_HOST="127.0.0.1",
         WRITER_DB_URL=POISON_DB_URL,
         REDIS_URL=POISON_REDIS_URL,
@@ -208,7 +213,9 @@ def test_importing_the_package_refuses_in_production():
         APP_ENV="production",
         JWT_SECRET_KEY=POISON_SECRET,
         PHOTO_STORAGE_SECRET_KEY=POISON_SECRET,
+        APP_HOST="10.0.0.1",
         WRITER_DB_URL=UNREACHABLE_DB_URL,
+        REDIS_URL=POISON_REDIS_URL,
         DB_SSL_MODE="require",
         ALLOW_CREDENTIALS="false",
     )
@@ -226,7 +233,9 @@ def test_the_command_refuses_in_production_before_it_reaches_a_database():
         APP_ENV="production",
         JWT_SECRET_KEY=POISON_SECRET,
         PHOTO_STORAGE_SECRET_KEY=POISON_SECRET,
+        APP_HOST="10.0.0.1",
         WRITER_DB_URL=UNREACHABLE_DB_URL,
+        REDIS_URL=POISON_REDIS_URL,
         DB_SSL_MODE="require",
         ALLOW_CREDENTIALS="false",
     )

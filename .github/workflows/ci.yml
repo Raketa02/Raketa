@@ -201,6 +201,15 @@ jobs:
       - name: Ruleset diff
         working-directory: ${{ github.workspace }}
         run: bash .github/scripts/check-ruleset-diff.sh
+      # The deployment artifact, booted through the real settings object. Only
+      # `local` runs, so nothing else in this pipeline ever constructs the
+      # production configuration — which is how backend/deploy/ecs/taskdef.json
+      # came to supply eleven variables and demand fourteen (#341). It asserts
+      # presence and not the values behind the secret ARNs, reads nothing from
+      # AWS, and needs no credentials.
+      - name: Task definition boots
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/check-taskdef-boots.sh
       # Last, and for the reason test-hooks.sh and test-contract-drift.sh exist:
       # the three purity gates above were all added to a tree that already
       # satisfied them, so none of them has ever been seen to fail. This drives
@@ -230,6 +239,13 @@ jobs:
       - name: Ruleset-diff check still fires
         working-directory: ${{ github.workspace }}
         run: bash .github/scripts/test-ruleset-diff.sh
+      # It drops each variable from the task definition in turn, and then — the
+      # case the design rests on — adds a refusal to config.py and asserts the
+      # check goes red without anything in .github/ being edited. A check that
+      # had copied out its own list of required variables would stay green there.
+      - name: Task-definition boot check still fires
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/test-taskdef-boots.sh
 
   player:
     name: Player app — lint, typecheck, test

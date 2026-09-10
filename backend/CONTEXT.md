@@ -149,12 +149,17 @@ there; they are not repeated here.
   `input_value=…`, which for an after-validator is the entire settings object, signing key
   included. _Avoid_: falling back, warning and continuing, a "strict mode" flag.
 - **Unprovisioned environment** — `development` and `staging`. Defined and validated, but
-  no domain is registered, so neither has a host or a database. Selecting one without
-  `APP_HOST` and `WRITER_DB_URL` is a startup refusal naming the missing variable. **No
-  placeholder hostname is written anywhere**, which is why "configured" can only mean
-  "somebody set it": there is nothing to compare a host against. _Avoid_: inventing
-  `api-dev.…`; a config file naming a host that does not exist describes infrastructure
-  that does not exist.
+  no domain is registered, so neither has a host or a database. **No placeholder hostname is
+  written anywhere**, which is why "configured" can only mean "somebody set it": there is
+  nothing to compare a host against. _Avoid_: inventing `api-dev.…`; a config file naming a
+  host that does not exist describes infrastructure that does not exist.
+- **Deployed environment** — `development`, `staging` and `production`: everything that is
+  not somebody's laptop. Selecting one without `APP_HOST`, `WRITER_DB_URL` and `REDIS_URL`
+  is a startup refusal naming the missing variable. The set is *deployed* rather than
+  *unprovisioned* because what makes those three defaults dangerous is that each is a
+  service name out of `docker-compose-local.yml`, and that is as true of `production` as of
+  the two nobody has built (#341). _Avoid_: exempting `production` on the grounds that it is
+  the real one — it is the one where inheriting a laptop costs most.
 - **Public-network scheme rule** — the platform rule that a URL a browser or a phone
   reaches over the internet is `https://` in every deployed environment, and unconstrained
   in `local`. The backend calls nothing over HTTP, so its only instance is `ALLOW_ORIGINS`:

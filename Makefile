@@ -8,7 +8,8 @@
         test-hooks test-drift contract-freshness test-contract-freshness \
         gen-judged-pairings judged-pairings \
         test-judged-pairings gen-ruleset-diff ruleset-diff test-ruleset-diff \
-        poetry-pin test-poetry-pin afk-install afk-build afk
+        poetry-pin test-poetry-pin taskdef test-taskdef \
+        afk-install afk-build afk
 
 help:              ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS=":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -114,6 +115,19 @@ poetry-pin:        ## verify every pinned Poetry can read backend/poetry.lock
 
 test-poetry-pin:   ## verify the poetry pin check still fires
 	bash .github/scripts/test-poetry-pin-drift.sh
+
+# The ECS task definition supplies a set of variables; app/core/config.py refuses
+# to start without another set; nothing compared them, and they disagreed for
+# eleven days (#341). This boots the committed artifact through the real settings
+# object rather than diffing two lists of names — there is no list of required
+# variables anywhere in the check, which is what keeps it from becoming a fourth
+# copy of the fact it exists to police. Cross-app because the artifact is in
+# backend/ and the gate is in .github/.
+taskdef:           ## verify backend/deploy/ecs/taskdef.json can start a container
+	bash .github/scripts/check-taskdef-boots.sh
+
+test-taskdef:      ## verify the task-definition boot check still fires
+	bash .github/scripts/test-taskdef-boots.sh
 
 # ----------------------------------------------------------------------------
 # AFK agent loop (sandbuket). See tools/afk/README.md.

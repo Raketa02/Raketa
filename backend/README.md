@@ -211,8 +211,18 @@ value outside that set fails at startup rather than being accepted silently.
 
 **Only `local` runs today.** `development` and `staging` are defined and validated
 but not provisioned: no domain is registered, so neither has a host or a database.
-Selecting one without setting `APP_HOST` and `WRITER_DB_URL` is a startup failure
-naming the missing variable — never a silent fallback.
+
+**Every deployed environment** — `development`, `staging` and `production` alike —
+must be given `APP_HOST`, `WRITER_DB_URL` and `REDIS_URL` explicitly. Each of the
+three has a default that is a service name out of `docker-compose-local.yml`, so
+inheriting one points a deployment at a laptop. Selecting a deployed environment
+without setting all three is a startup failure naming the missing variable — never
+a silent fallback.
+
+Those three, and **not yet** the photo settings, which have compose defaults of
+their own and no refusal — see the note in
+[`docs/environments.md`](../docs/environments.md) under *How each app refuses to
+fall back*.
 
 `APP_ENV` supplies the defaults for the three settings that always move together.
 Each stays overridable by setting it explicitly:
