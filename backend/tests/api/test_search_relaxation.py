@@ -16,6 +16,8 @@ dressed up as a good one (``docs/adr/0099``). Over HTTP, that is four claims:
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 
 from app.modules.matchmaking.domain.prompts import REPEATED_WIDENINGS
@@ -28,6 +30,26 @@ JUST_PAST_THE_RING = 51.61
 #: An evening the searcher has not ticked. ``commit_profile`` gives them Tuesday
 #: evening and Saturday morning.
 ANOTHER_EVENING = ("4:EVENING",)
+
+
+def a_weekday_the_window_reads_as_this_week() -> int:
+    """A day whose single ticked slot lands on ``THIS_WEEK``, whatever day it is.
+
+    ``window_of`` reads one ticked day **against today**: the same day is
+    ``TODAY``, the next one is ``TOMORROW``, the weekend is ``WEEKEND``, and only
+    anything else is ``THIS_WEEK``. A hardcoded day therefore asserts a different
+    rung two days out of every seven — which is how this was met, on a Thursday,
+    expecting ``THIS_WEEK`` of a grid whose only slot was that very evening.
+
+    The server's *today* is the **UTC** weekday (``SearchContext.today`` derives
+    it from ``now``), so that is the one read here. Weekdays only, because a
+    weekend-only grid is ``WEEKEND`` however far off it is; there are five of them
+    and at most two are spoken for, so this always finds one.
+    """
+
+    today = datetime.now(timezone.utc).isoweekday()
+    tomorrow = today % 7 + 1
+    return next(day for day in (1, 2, 3, 4, 5) if day not in (today, tomorrow))
 
 #: Tags on the other side of both splits from ``COMPETITIVE_TAGS``, which is
 #: what makes a candidate cost a for-fun search enough points that their week is
@@ -438,12 +460,13 @@ async def test_an_improvised_week_runs_this_search_and_asks_about_the_profile(
     until the player says otherwise.
     """
 
+    ticked = a_weekday_the_window_reads_as_this_week()
     await world.a_candidate(
         client,
         session_factory,
         "thursday",
         mu=searcher["mu"],
-        availability=ANOTHER_EVENING,
+        availability=(f"{ticked}:EVENING",),
     )
     await world.fold_the_log(session_factory, candidate_source)
 
@@ -451,13 +474,15 @@ async def test_an_improvised_week_runs_this_search_and_asks_about_the_profile(
         await world.search(
             client,
             searcher["token"],
-            availability_override=[{"day": 4, "part": "EVENING"}],
+            availability_override=[{"day": ticked, "part": "EVENING"}],
         )
     ).json()
 
     assert body["search"]["pool"]["window"] == "THIS_WEEK"
     prompts = {prompt["prompt"]: prompt for prompt in body["search"]["prompts"]}
-    assert prompts["KEEP_THESE_TIMES"]["slots"] == [{"day": 4, "part": "EVENING"}]
+    assert prompts["KEEP_THESE_TIMES"]["slots"] == [
+        {"day": ticked, "part": "EVENING"}
+    ]
 
     assert await world.saved_grid(session_factory, searcher["id"]) == (
         "2:EVENING",
@@ -465,7 +490,7 @@ async def test_an_improvised_week_runs_this_search_and_asks_about_the_profile(
     ), "the profile is untouched"
 
     (row,) = await world.recorded_searches(session_factory)
-    assert list(row.searcher_grid) == ["4:EVENING"]
+    assert list(row.searcher_grid) == [f"{ticked}:EVENING"]
     assert row.searcher_slot_count == 1
 
 
