@@ -323,16 +323,19 @@ class EventSourcedGameHistory:
     async def variety_of(
         self, player_id: UUID, *, now: Instant
     ) -> OpponentVariety | None:
-        """How many different people, over how many counted games. **One pass.**
+        """How many different people, over how many times on a court. **One pass.**
 
-        **The denominator is ``counted_games_for``'s, and it is written once**
-        (``_counted_and_played`` below), because the sheet prints this pair
-        beside a count of counted games and two spellings of *counted and
-        played* would eventually disagree on the same screen.
+        **The denominator counts seats opposite rather than games**, and the two
+        are only the same number in singles. A doubles evening puts three people
+        on the court, so a game-denominated pair reported ``3 of 1``: a fraction
+        whose numerator can exceed its denominator, which is not a share of
+        anything. Counting the counterparts each game contributed makes both
+        halves the same kind of thing, and the division honest at every court
+        size.
 
-        **The numerator is read off those same games and no others**, so a
-        friendly or a ghost can never put a face in the count without putting an
-        evening under it — which is what keeps the pair divisible.
+        **Which games count is still ``_counted_and_played``'s**, written once
+        below: a friendly and a ghost put nobody in either half, so a face can
+        never enter the count without an evening under it.
 
         **Nothing is trimmed and nothing is windowed.** The whole record is the
         statistic; the sort-then-bound the pairwise read applies exists because a
@@ -340,16 +343,17 @@ class EventSourcedGameHistory:
         """
 
         faces: set[UUID] = set()
-        counted = 0
+        met = 0
         for game in await self._games_of(player_id):
             if not _counted_and_played(game, now):
                 continue
-            counted += 1
-            faces |= game.line_up.counterparts_of(player_id)
-        if counted == 0:
+            counterparts = game.line_up.counterparts_of(player_id)
+            met += len(counterparts)
+            faces |= counterparts
+        if met == 0:
             return None
         return OpponentVariety(
-            distinct_counterparts=len(faces), counted_games=counted
+            distinct_counterparts=len(faces), times_on_court=met
         )
 
     # -- internals --------------------------------------------------------

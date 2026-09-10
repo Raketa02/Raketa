@@ -1346,15 +1346,17 @@ async def test_the_ledger_reads_the_same_answer_twice(implementation, session):
 
 
 @pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
-async def test_variety_is_the_people_over_the_counted_games_they_were_in(
+async def test_variety_is_the_people_over_the_times_they_were_on_a_court(
     implementation, session
 ):
     """The pair a record divides, and the two halves come from one fold.
 
-    Three counted games against two people: two different faces, three
-    evenings. Publishing the counts rather than the share is the whole shape of
-    this read — *fourteen of twenty* and *seven of ten* are different claims and
-    a percentage alone hides which one it is.
+    Three singles games against two people: two different faces, three times on
+    a court. In singles the denominator is also a count of evenings, which is
+    why a game was the denominator first and why the bug it carried only showed
+    on doubles. Publishing the counts rather than the share is the whole shape
+    of this read — *fourteen of twenty* and *seven of ten* are different claims
+    and a percentage alone hides which one it is.
     """
 
     port = implementation.build(session)
@@ -1370,7 +1372,7 @@ async def test_variety_is_the_people_over_the_counted_games_they_were_in(
 
     variety = await port.variety_of(player, now=now)
 
-    assert variety == OpponentVariety(distinct_counterparts=2, counted_games=3)
+    assert variety == OpponentVariety(distinct_counterparts=2, times_on_court=3)
 
 
 @pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
@@ -1396,6 +1398,11 @@ async def test_a_four_is_one_evening_and_three_different_people(
     *A pair is anybody you were on a court with*, and a variety figure that
     counted opponents alone would say a player who partners the same person
     every week spreads their games as widely as one who does not.
+
+    **And a four is three times on a court, not one.** The denominator counts
+    seats opposite rather than evenings, which is what makes the pair divisible
+    at every court size: this used to publish ``3 of 1``, a fraction whose
+    numerator exceeds its denominator and which only a clamp could draw.
     """
 
     port = implementation.build(session)
@@ -1411,7 +1418,7 @@ async def test_a_four_is_one_evening_and_three_different_people(
 
     variety = await port.variety_of(player, now=now)
 
-    assert variety == OpponentVariety(distinct_counterparts=3, counted_games=1)
+    assert variety == OpponentVariety(distinct_counterparts=3, times_on_court=3)
 
 
 @pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
@@ -1454,7 +1461,7 @@ async def test_a_friendly_and_a_ghost_are_in_neither_half_of_the_pair(
 
     variety = await port.variety_of(player, now=now)
 
-    assert variety == OpponentVariety(distinct_counterparts=1, counted_games=1)
+    assert variety == OpponentVariety(distinct_counterparts=1, times_on_court=1)
 
 
 @pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
@@ -1482,7 +1489,7 @@ async def test_the_fold_reaches_the_whole_record_and_never_a_window(
 
     variety = await port.variety_of(player, now=now)
 
-    assert variety == OpponentVariety(distinct_counterparts=2, counted_games=2)
+    assert variety == OpponentVariety(distinct_counterparts=2, times_on_court=2)
 
 
 def test_the_variety_fold_takes_one_player_and_can_never_be_called_over_a_list():

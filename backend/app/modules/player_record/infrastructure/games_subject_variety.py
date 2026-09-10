@@ -1,10 +1,10 @@
 """``SubjectVariety`` over ``games``' published fold. **A rename and nothing else.**
 
 Two words change at this seam and no arithmetic does. ``games`` measured
-``distinct_counterparts`` over ``counted_games`` — *everybody who was on a court
+``distinct_counterparts`` over ``times_on_court`` — *everybody who was on a court
 with them*, on that context's own rule that a pair is anybody you have played —
-and a record prints ``distinct_opponents`` over ``games_played``, which is what
-the row is called on screen. The honest word stays with the measurement and the
+and a record prints ``distinct_opponents`` over the same denominator, which is
+what the row is called on screen. The honest word stays with the measurement and the
 product's word stays on the sheet; this file is the one place they meet
 (``docs/adr/0155``).
 
@@ -52,7 +52,7 @@ class GamesSubjectVariety:
             return None
         return OpponentVariety(
             distinct_opponents=measured.distinct_counterparts,
-            games_played=measured.counted_games,
+            times_on_court=measured.times_on_court,
         )
 
 

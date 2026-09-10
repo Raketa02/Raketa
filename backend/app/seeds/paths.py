@@ -417,11 +417,11 @@ async def read_paths(
         games=build_game_history_query(session),
         engine=engine,
         ruleset=ruleset,
-        players=players or await _players(session, cohort),
+        players=players or await player_ids(session, cohort),
     )
 
 
-async def _players(session: AsyncSession, cohort: Cohort) -> Mapping[str, UUID]:
+async def player_ids(session: AsyncSession, cohort: Cohort) -> Mapping[str, UUID]:
     """Every seeded address a read here names, as the id the write path minted.
 
     Looked up by address rather than derived, because ``RegisterUser`` mints the

@@ -395,23 +395,24 @@ CANNOT_BE_DRAWN: Mapping[str, str] = {
         "member has ever signed in — the seed writes no session and will not "
         "fabricate one"
     ),
-    "PREVIOUS_ACCEPT": (
-        "reachable on the platform and absent from **this cohort**, which is a "
-        "weaker claim than the one that used to stand here and is the true one. "
-        "*Open* was `AWAITING_ANSWERS | ON | LINE_UP_INCOMPLETE`, so any pair "
-        "with an accepted seat was `OPEN_CHALLENGE`-gated for ever and the "
-        "signal could not be drawn anywhere; `docs/adr/0142` §1 made *open* mean "
-        "**still arranging**, so a completed line-up releases its pair and the "
-        "code can be drawn (#343). It is absent here because every accepted seat "
-        "these eleven fixtures write sits on a court still being arranged: the "
-        "one accept on a court the protagonist holds a seat on is "
-        "`in-your-line-up-and-accepted`'s, and `in-your-line-up-still-deciding` "
-        "has answered nothing beside it — and no game seats her at all, so the "
-        "played history's accepts are not hers either. Both halves are "
-        "contracted by demands in `tests/demands/`: the release, and the "
-        "half-built court that does not release"
-    ),
 }
+
+# **`PREVIOUS_ACCEPT` was named above until the pool got a history, and it moved
+# twice.** *Open* was `AWAITING_ANSWERS | ON | LINE_UP_INCOMPLETE`, so any pair with an
+# accepted seat was `OPEN_CHALLENGE`-gated for ever and the signal could not be drawn
+# anywhere; `docs/adr/0142` §1 made *open* mean **still arranging**, so a completed
+# line-up releases its pair and the code became drawable (#343). Both halves of that are
+# contracted by demands in `tests/demands/`.
+#
+# It stayed absent from **this** pool for one more reason after that: every accepted
+# seat the eleven relationship fixtures write sits on a court still being arranged, and
+# the games that seat the protagonist seat her as the **invitee**, so the accepts were
+# hers and the tally they leave sits on her card in *their* pools. `pool_history.py`
+# reverses that — she organises four of its five courts, so eight of the people in her
+# pool have accepted a seat **from her**, and every one of their cards carries the
+# tally. The code is promised now, and the assertion below has stopped stating an
+# absence and started requiring the witness.
+#
 
 
 def _printable_codes(ruleset: Ruleset) -> frozenset[str]:

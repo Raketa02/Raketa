@@ -4185,17 +4185,17 @@
             "title": "Distinct Opponents",
             "description": "How many **different people** those games were against.\n\n**A doubles partner is one of them.** *A pair is anybody you were on a court with* is the rule this platform already counts familiarity by, and a figure counting opponents alone would say that somebody who partners the same person every week spreads their games as widely as somebody who does not."
           },
-          "games_played": {
+          "times_on_court": {
             "type": "integer",
             "minimum": 1.0,
-            "title": "Games Played",
-            "description": "How many **counted games** they were on the court for \u2014 the denominator of the pair.\n\n**It is not `skill.counted_games`, and the two will differ on this same response.** That one is *what this Level rests on*: confirmed results, in one sport, that the rating actually folded. This one is *how much have they played*: every sport, and an evening nobody agreed a score for is in it. Two honest numbers about the same person, answering two questions \u2014 do not reconcile them.\n\n**Counted rather than every game**: a friendly was never evidence about anybody by the choice of the people who arranged it, and it is out of both halves of this pair rather than only the bottom one."
+            "title": "Times On Court",
+            "description": "How many **times they were on a court with somebody** across their counted games \u2014 the denominator of the pair, and never a count of games.\n\n**A doubles evening contributes three.** Games were the denominator first and are only divisible in singles: one doubles game put three people on the court, so the pair read `3 of 1` and the share went over a hundred. Counting the seats opposite makes both halves the same kind of thing \u2014 *five different people across ten times on a court* \u2014 and `distinct_opponents` can never exceed it.\n\n**It is not `skill.counted_games`, and the two will differ on this same response.** That one is *what this Level rests on*: confirmed results, in one sport, that the rating actually folded. This one is *how much have they played*: every sport, and an evening nobody agreed a score for is in it. Two honest numbers about the same person, answering two questions \u2014 do not reconcile them.\n\n**Counted rather than every game**: a friendly was never evidence about anybody by the choice of the people who arranged it, and it is out of both halves of this pair rather than only the bottom one."
           }
         },
         "type": "object",
         "required": [
           "distinct_opponents",
-          "games_played"
+          "times_on_court"
         ],
         "title": "OpponentVarietySchema",
         "description": "How widely this person spreads their games, over their **whole** record.\n\n**Two counts and no percentage, deliberately.** The card this sits on argues\ntwo rows above that a perfect record over nine games and one over forty are\ndifferent claims and that a bar alone hides which \u2014 so publishing a bare\nshare here would break the rule the card had just made about itself. Draw\nboth: `70 % \u00b7 14 of 20`.\n\n**The share is yours to compute and it is one division.** Nothing is rounded\non this side and there is no banding, no floor and no tone attached \u2014 unlike\na Level's band, which is a key precisely because a client deriving it would\nbe a second set of drawing constants.\n\n**This is a career statistic, not a window.** It is every counted game the\nplatform has recorded for them, which is what the number means: *how widely\ndo they spread their games*, rather than *how widely this season*. There is\nno decay behind it and no horizon.\n\n**It prices no promise.** It is not a reliability strand, it is in no\nweighted score, and it neither raises nor lowers anybody's standing. It is\ncontext for a Level \u2014 a low figure is somebody playing the same few faces\nevery week, whose rating may be narrow but untested."

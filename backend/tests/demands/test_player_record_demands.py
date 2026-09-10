@@ -465,7 +465,7 @@ async def test_variety_crosses_as_two_counts_in_this_contexts_own_words(
 ):
     """**The pair, renamed and not recomputed.** ``games`` measured everybody who
     was on a court with them over the games that counted; the record calls those
-    two numbers ``distinct_opponents`` and ``games_played`` and divides
+    two numbers ``distinct_opponents`` and ``times_on_court`` and divides
     neither."""
 
     variety = implementation.build(session)
@@ -476,7 +476,7 @@ async def test_variety_crosses_as_two_counts_in_this_contexts_own_words(
     await _a_confirmed_game(session, player, one, sport=Sport.PADEL, won=True)
 
     assert await variety.variety_of(player, now=now) == OpponentVariety(
-        distinct_opponents=2, games_played=3
+        distinct_opponents=2, times_on_court=3
     )
 
 
@@ -510,7 +510,7 @@ async def test_variety_is_about_every_sport_and_never_the_one_on_the_sheet(
     await _a_confirmed_game(session, player, other, sport=Sport.SQUASH, won=True)
 
     assert await variety.variety_of(player, now=_now()) == OpponentVariety(
-        distinct_opponents=2, games_played=2
+        distinct_opponents=2, times_on_court=2
     )
 
 

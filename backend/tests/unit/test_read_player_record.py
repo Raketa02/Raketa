@@ -249,7 +249,7 @@ async def test_a_refused_read_touches_no_provider():
     stranger up and then refused would have done the lookup the admission rule
     exists to prevent."""
 
-    variety = Variety(OpponentVariety(distinct_opponents=9, games_played=11))
+    variety = Variety(OpponentVariety(distinct_opponents=9, times_on_court=11))
     reliability = Reliability(a_panel())
     use_case, identities, links = reading(
         admits=False,
@@ -423,14 +423,14 @@ async def test_the_record_carries_the_pair_and_never_the_share():
     are the same share and different claims, and the division is a drawing
     decision this context does not make for the client."""
 
-    variety = Variety(OpponentVariety(distinct_opponents=14, games_played=20))
+    variety = Variety(OpponentVariety(distinct_opponents=14, times_on_court=20))
     use_case, _, _ = reading(
         admits=True, identity=an_identity(), variety=variety
     )
 
     record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
 
-    assert record.variety == OpponentVariety(distinct_opponents=14, games_played=20)
+    assert record.variety == OpponentVariety(distinct_opponents=14, times_on_court=20)
     assert variety.asked == [SUBJECT]
 
 
@@ -452,7 +452,7 @@ async def test_a_player_rated_in_nothing_is_still_asked_how_widely_they_play():
     skipped for somebody the sheet resolves no sport for: a newcomer rated in
     nothing may still have played, and the record says so."""
 
-    variety = Variety(OpponentVariety(distinct_opponents=2, games_played=3))
+    variety = Variety(OpponentVariety(distinct_opponents=2, times_on_court=3))
     use_case, _, _ = reading(
         admits=True,
         identity=an_identity(),
@@ -463,7 +463,7 @@ async def test_a_player_rated_in_nothing_is_still_asked_how_widely_they_play():
     record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
 
     assert record.skill is None
-    assert record.variety == OpponentVariety(distinct_opponents=2, games_played=3)
+    assert record.variety == OpponentVariety(distinct_opponents=2, times_on_court=3)
     assert variety.asked == [SUBJECT]
 
 
@@ -493,7 +493,7 @@ async def test_a_player_nothing_has_fallen_due_for_carries_no_panel():
         admits=True,
         identity=an_identity(),
         reliability=Reliability(None),
-        variety=Variety(OpponentVariety(distinct_opponents=3, games_played=4)),
+        variety=Variety(OpponentVariety(distinct_opponents=3, times_on_court=4)),
     )
 
     record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)

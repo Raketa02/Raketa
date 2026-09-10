@@ -19,17 +19,23 @@ A tap on a face inside the balance-forecast card opens **the player record** —
 of a *person*. It carries, in order:
 
 1. **The header** — poster, level, sport, the on-court shield, the whole handle, `In your
-   area · 1,2 km`, one pill per rated sport, and the reliability pill.
-2. **The skill card** — level, confidence, counted games, the band bar, the likely-range
-   bracket, and a per-sport *Last 5*.
-3. **The record**, headed *counted by the system, not written by people* — three metered
+   area · 1,2 km`, and one pill per rated sport.
+2. **The skill card** — level, confidence, the band bar and the likely-range bracket.
+3. **The record blocks** — `Player reliability` · `Last 5` · `Counted`, design-system 7.13's
+   three boxes, under the level bar, with a won square in `mint` and a lost one in `muted`. *(#384: the reliability pill left the header and the counted
+   figure left the skill headline, so each of the three is drawn once, in the shape the
+   competitive candidate card already draws them in. The row is a sibling of the skill card
+   rather than part of it, because the Player Score is about the whole person and the other
+   two are about one sport — see [`the-player-record.md`](the-player-record.md) §6.4.)*
+4. **The record**, headed *counted by the system, not written by people* — three metered
    rows (*shows up*, *answers challenges*, *answers about results*) and *opponent variety*.
-4. **What opponents said** — its own block, its own heading, a sportsmanship average out
+5. **What opponents said** — its own block, its own heading, a sportsmanship average out
    of 5 over the players who rated them.
-5. **Social tags**, tinted where they are shared.
+6. **Social tags**, tinted where they are shared.
 
-And one row that opens the existing Fit breakdown, present only where a pairing is behind
-the entry point.
+And **`Player fit ✦ 78`** under the sport pills — 7.10's fit pill with a word in front of it,
+pressable, rather than a button — opening the existing Fit breakdown, present only where a
+pairing is behind the entry point.
 
 ---
 
@@ -193,9 +199,22 @@ taps, one number.
 a busy month into a chore list; forcing an answer about all three is how you collect
 default-five noise.
 
-**It appears in the games list**, once the score has settled and **not until the day after the
-game** — an answer given in the ten minutes after losing 6-2 6-1 is not the answer wanted. It
-stays for **7 days**, then expires.
+**It appears at the end of the result screen**, once the score has settled and **not until the
+day after the game** — an answer given in the ten minutes after losing 6-2 6-1 is not the
+answer wanted. It stays for **7 days**, then expires.
+
+It was first built into the **games list**, on the argument that a card is about one of those
+evenings and a chore list of its own is how a favour becomes a queue. That argument survives;
+what changed is where the evening is *read*. A row in a list is not a moment anybody is
+thinking about how a game went — the screen showing what came of it is — so the card is asked
+at the foot of the result conversation and the games list no longer mentions it.
+
+**What that costs is that nothing surfaces the card.** Now carries no sign of one, so a player
+who never re-opens a settled game never sees it, and the two server-side gates mean the card is
+**not** on the screen at the moment the score is entered: it appears the next time that game is
+opened, once the result has settled and a day has passed. Both are accepted on the same ground
+the design already stands on — rating is a favour, ignoring one costs nothing, and there is no
+strand, badge or count anywhere that says otherwise.
 
 **One-time and final, per card.** Submitting closes it. **A blank stays blank for ever**, and
 submitting with all three blank closes the card too — an explicit *I am not rating anyone* is
@@ -319,6 +338,88 @@ submit, and the closed state.
 **Three sessions.** The ownership hook blocks cross-app writes, so this splits into a root
 session (ADRs, specs, glossary, ruleset regeneration), a `backend/` session and a
 `frontend_player/` session. This is a worktree, so **the final merge is run by a human**.
+
+---
+
+## 7a. When each figure is written — and the answer is *never*
+
+Asked once the sheet was built and worth writing down, because the question has a
+counter-intuitive answer and the code does not volunteer it: **when is *shows up* written?
+what triggers *answers about results*? where does *opponent variety* get saved?**
+
+**Nothing on this sheet is written anywhere.** There is no `player_score` table, no strand
+row, no counter incremented on an event, and no job that recomputes one. Every figure except
+the star average is **folded out of `games`' and `challenges`' event streams at the moment
+somebody opens the sheet**, against that request's single clock
+([ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
+`app/modules/player_score/` has no aggregate, no repository, no table and no migration, and a
+structural test fails the build if one appears.
+
+That is a decision rather than an economy. A stored Player Score would be a **second place
+for *did that game happen* to be true**, and the copy is always the one that gets believed —
+the same refusal `games`' standing and `challenges`' standing already make about a single
+game, applied to the fold over all of them. It is also why there is nothing to backfill: a
+strand that starts being measurable measures the whole history the day its provider ships.
+
+### What opens an opportunity, and what closes it
+
+A strand is a **ratio of opportunities**, and an opportunity is something that *fell due*. A
+game still inside its entry window and a seat still inside its day are in **neither** half —
+publishing them either way would state a conclusion the clock has not reached.
+
+| Figure | Provider | An opportunity opens when | The good outcome | The bad one | Neither, yet |
+| --- | --- | --- | --- | --- | --- |
+| *Shows up* | `games.attendance_for` | a line-up completes and the game opens | somebody entered *we played* | the **entry window** closed and nobody ever did — a **ghost** | inside the entry window |
+| *Answers challenges* | `challenges.answering_for` | a seat is invited | answered — **including a decline** | `answer_by` passed in silence — a **lapse** | inside the 24 hours |
+| *Answers about results* | `games.result_answering_for` | a score is put to the side that did **not** enter it | accepted **or countered** | the answer window ran out in silence | inside the window |
+| *Keeps plans* | — | never: no plan on this platform has a moment to be late for | | | |
+| *Settles up* | — | never: court money is out of scope | | | |
+| *Sportsmanship* | — | **stands down as a strand.** It is not a ratio and never was (§5) | | | |
+| **Opponent variety** | `games.variety_of` | it is **not a strand** — a career fold over counted, played games, pricing nothing | | | |
+| **What players said** | `sportsmanship` | the only figure here that **is** stored — see below | | | |
+
+Three of the six strand names therefore reach no screen, and **a name that stands down is
+absent from the answer rather than published at nought**: *we have not seen enough* and *they
+are bad at this* are different facts, and a zero would be the second one said about the first.
+A player with no strand at all is missing from the answer entirely, and `PlayerRecord.reliability`
+is `None` — the whole zone omitted rather than drawn empty.
+
+**Two of the three price silence rather than judgement**, which is load-bearing and easy to
+undo. Turning somebody down inside your day is *answering* them, and countering a score you
+believe is wrong is *answering* it — so no player is ever docked for disagreeing
+([ADR-0049](../../adr/0049-no-player-is-penalised-for-not-agreeing-a-result.md),
+[ADR-0156](../../adr/0156-a-results-strand-counts-answers-and-never-agreements.md)). A strand
+counting *agreements* is the one ADR-0137 struck, for exactly this reason.
+
+**One strand forgets and the other two do not.** *Answers about results* counts only the last
+twelve months (`ANSWERED_RESULTS_WINDOW`), because answering a score is a habit of opening an
+app rather than a commitment somebody made, and a mark that easy to fail by accident and that
+never lapses is a mark a player cannot work off. Turning up and answering an invitation count
+for ever: a ratio over a career already fades with new evidence, and a window there would make
+*out of what* stop meaning a career.
+
+### The one figure that is written, and what writes it
+
+**What other players said is stored, and it is the exception that proves the rule.** It is the
+only thing on this sheet the platform did not count for itself, so there is nothing to fold —
+somebody has to have typed it. `POST /api/v1/sportsmanship` (`AnswerTheCardCommand`) writes a
+`sportsmanship_rating` row keyed **`(rater_id, subject_id)`**, so a later card *replaces* the
+earlier answer and one row is already one person
+([ADR-0154](../../adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
+
+The card that carries it opens **the day after the game and closes seven days later**, both
+edges run from `games`' `played_at`, and **nothing sweeps an expired one** — not rating leaves
+no record of the omission, so there is no row for a job to correct. It is published as the mean
+over the **fifty most recent raters**, and it is **not in the Player Score**: the matcher may
+not read it at all, held by an `.importlinter` contract rather than by a test.
+
+### What this means for a seeded database
+
+`app/seeds/pool_history.py` writes no figure and could not: it writes **courts**. Every number
+on every sheet is a consequence of a challenge really sent off a real search, every seat
+really answered, a score really entered and really answered or really ignored — and the strand
+appears because the fold finds it. A ghost is written **by not writing anything**, which is
+the only honest way to have one.
 
 ---
 

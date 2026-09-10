@@ -2489,14 +2489,16 @@ export interface components {
              */
             distinct_opponents: number;
             /**
-             * Games Played
-             * @description How many **counted games** they were on the court for — the denominator of the pair.
+             * Times On Court
+             * @description How many **times they were on a court with somebody** across their counted games — the denominator of the pair, and never a count of games.
+             *
+             *     **A doubles evening contributes three.** Games were the denominator first and are only divisible in singles: one doubles game put three people on the court, so the pair read `3 of 1` and the share went over a hundred. Counting the seats opposite makes both halves the same kind of thing — *five different people across ten times on a court* — and `distinct_opponents` can never exceed it.
              *
              *     **It is not `skill.counted_games`, and the two will differ on this same response.** That one is *what this Level rests on*: confirmed results, in one sport, that the rating actually folded. This one is *how much have they played*: every sport, and an evening nobody agreed a score for is in it. Two honest numbers about the same person, answering two questions — do not reconcile them.
              *
              *     **Counted rather than every game**: a friendly was never evidence about anybody by the choice of the people who arranged it, and it is out of both halves of this pair rather than only the bottom one.
              */
-            games_played: number;
+            times_on_court: number;
         };
         /**
          * OptimisedFor

@@ -316,6 +316,16 @@ class OpponentVariety:
     say that somebody who partners the same person every week spreads their games
     as widely as somebody who does not.
 
+    **The denominator is people met and never games played**, and that is the
+    correction rather than a preference. A game was the denominator first, and it
+    is only divisible in singles: a doubles evening puts three people on the
+    court, so one game produced ``3 of 1`` — a fraction whose numerator exceeds
+    its denominator, which a client could only render by clamping the share at a
+    hundred and printing a pair that reads as nonsense. Counting the **seats
+    opposite** instead makes the two halves the same kind of thing: *five
+    different people across ten times on a court* is the sentence, and the share
+    is a share.
+
     **Both halves are read off the same games**, which is what keeps the pair
     coherent: a friendly and a ghost are in neither, so a player with forty
     friendlies and two counted games cannot be described as playing twenty
@@ -323,18 +333,26 @@ class OpponentVariety:
     """
 
     distinct_counterparts: int
-    counted_games: int
+    times_on_court: int
 
     def __post_init__(self) -> None:
         invariant(
-            self.counted_games >= 1,
+            self.times_on_court >= 1,
             "a variety over no counted game is an absence, not a nought — "
             "absence is spelled by not being in the answer at all",
         )
         invariant(
             self.distinct_counterparts >= 1,
             "a counted game somebody played alone: "
-            f"{self.distinct_counterparts} people over {self.counted_games} games",
+            f"{self.distinct_counterparts} people over "
+            f"{self.times_on_court} times",
+        )
+        invariant(
+            self.distinct_counterparts <= self.times_on_court,
+            "more different people than seats they sat opposite: "
+            f"{self.distinct_counterparts} over {self.times_on_court}. It is "
+            "what the denominator being a count of **games** could not say, "
+            "and a doubles evening broke it every time",
         )
 
 

@@ -218,6 +218,13 @@ class OpponentVariety:
     the card had just made about itself. What crosses is the fraction; *70 %* is
     what a client draws from it.
 
+    **The denominator is people met and never games played.** Games came first
+    and are only divisible in singles: a doubles evening puts three people on the
+    court, so one game published ``3 of 1`` and the client had to clamp a share
+    that had gone over a hundred. Counting the seats opposite makes both halves
+    the same kind of thing — *five different people across ten times on a court*
+    — and the invariant below is what keeps it that way.
+
     **It is a career statistic and never a window.** The fold behind it is
     unbounded, which is what the number means: *how widely do they spread their
     games*, not *how widely this season*. A second window here would be a figure
@@ -236,18 +243,26 @@ class OpponentVariety:
     """
 
     distinct_opponents: int
-    games_played: int
+    times_on_court: int
 
     def __post_init__(self) -> None:
         invariant(
-            self.games_played >= 1,
+            self.times_on_court >= 1,
             "a variety over no counted game is an absence, not a nought — this "
             "sheet omits the row rather than drawing a habit nobody has",
         )
         invariant(
             self.distinct_opponents >= 1,
             "a counted game played against nobody: "
-            f"{self.distinct_opponents} people over {self.games_played} games",
+            f"{self.distinct_opponents} people over {self.times_on_court} times",
+        )
+        invariant(
+            self.distinct_opponents <= self.times_on_court,
+            "more different people than seats they sat opposite: "
+            f"{self.distinct_opponents} over {self.times_on_court}. **This is "
+            "the invariant the row was missing**, and its absence is what let a "
+            "doubles evening publish `3 of 1` — a share the client could only "
+            "draw by clamping it",
         )
 
 

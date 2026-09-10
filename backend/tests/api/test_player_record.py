@@ -738,7 +738,7 @@ async def test_the_record_says_how_widely_they_spread_their_games(
 
     body = (await record_of(client, searcher["token"], subject)).json()
 
-    assert body["variety"] == {"distinct_opponents": 2, "games_played": 3}
+    assert body["variety"] == {"distinct_opponents": 2, "times_on_court": 3}
 
 
 async def test_variety_counts_every_sport_and_the_sport_asked_for_moves_it_not(
@@ -768,7 +768,7 @@ async def test_variety_counts_every_sport_and_the_sport_asked_for_moves_it_not(
         await record_of(client, searcher["token"], subject, sport=Sport.SQUASH)
     ).json()
 
-    assert padel["variety"] == {"distinct_opponents": 2, "games_played": 2}
+    assert padel["variety"] == {"distinct_opponents": 2, "times_on_court": 2}
     assert squash["variety"] == padel["variety"]
     assert padel["skill"]["last_five"] == ["WIN"]
     assert squash["skill"]["last_five"] == ["WIN"]
@@ -787,7 +787,7 @@ async def test_your_own_record_carries_the_same_pair(
     body = (await own_record(client, searcher["token"])).json()
 
     assert body["is_self"] is True
-    assert body["variety"] == {"distinct_opponents": 1, "games_played": 1}
+    assert body["variety"] == {"distinct_opponents": 1, "times_on_court": 1}
 
 
 # ---------------------------------------------------------------------------

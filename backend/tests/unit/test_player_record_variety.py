@@ -5,9 +5,9 @@
 after ``OnCourtVerdict`` beside ``PhotoReviewDecision`` and ``GameOutcome``
 beside ``Outcome``. This pair is different in kind from those two: the words do
 **not** agree, deliberately. ``games`` measured ``distinct_counterparts`` over
-``counted_games`` — everybody who was on a court with them, on that context's own
+``times_on_court`` — everybody who was on a court with them, on that context's own
 rule that a pair is anybody you have played — and the record prints
-``distinct_opponents`` over ``games_played``, which is what the row is called on
+``distinct_opponents`` over ``times_on_court``, which is what the row is called on
 screen.
 
 That is precisely why it is pinned here rather than left to the database-backed
@@ -58,11 +58,11 @@ async def test_the_two_counts_keep_their_places_when_they_change_their_names():
     ones would let a swap pass.
     """
 
-    games = PublishedVariety(Measured(distinct_counterparts=14, counted_games=20))
+    games = PublishedVariety(Measured(distinct_counterparts=14, times_on_court=20))
 
     printed = await GamesSubjectVariety(games).variety_of(SUBJECT, now=NOW)
 
-    assert printed == Printed(distinct_opponents=14, games_played=20)
+    assert printed == Printed(distinct_opponents=14, times_on_court=20)
     assert games.asked == [SUBJECT]
 
 
@@ -87,10 +87,9 @@ def test_neither_shape_has_grown_a_field_the_other_would_drop():
 
     assert [one.name for one in fields(Measured)] == [
         "distinct_counterparts",
-        "counted_games",
+        "times_on_court",
     ]
     assert [one.name for one in fields(Printed)] == [
         "distinct_opponents",
-        "games_played",
+        "times_on_court",
     ]
-
