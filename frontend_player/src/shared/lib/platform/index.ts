@@ -44,6 +44,7 @@ export {
   deviceLiveStream,
   type FollowLive,
   type LiveNudge,
+  type LiveTyping,
   type LiveStreamPort,
   type LiveStreamStatus,
 } from './liveStream';

@@ -18,14 +18,26 @@ import { focusManager, onlineManager } from '@tanstack/react-query';
 
 import { configureHttp, resetHttp } from '@/shared/lib/http';
 
-import { deviceLiveStream, REOPEN_MS, type LiveNudge, type LiveStreamStatus } from './liveStream';
+import {
+  deviceLiveStream,
+  REOPEN_MS,
+  type LiveNudge,
+  type LiveStreamStatus,
+  type LiveTyping,
+} from './liveStream';
 
 const ROOM = 'eeeeeeee-0000-4000-8000-000000000005';
 const STREAM_URL = `https://api.test.raketa.invalid/api/v1/conversations/${ROOM}/stream`;
+const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
 
 /** A nudge, as the route writes one. */
 function frame(lastSeq: number, conversationId = ROOM): string {
   return JSON.stringify({ v: 1, conversation_id: conversationId, last_seq: lastSeq });
+}
+
+/** A typing frame, as the route writes one — who, and no `last_seq` anywhere on it. */
+function typingFrame(playerIds: readonly string[], conversationId = ROOM): string {
+  return JSON.stringify({ v: 1, conversation_id: conversationId, player_ids: playerIds });
 }
 
 /**
@@ -84,9 +96,13 @@ class FakeSocket {
     this.write(frame(lastSeq));
   }
 
-  /** One frame written into the open response. */
-  write(body: string): void {
-    this.responseText += `data: ${body}\n\n`;
+  /**
+   * One frame written into the open response, **under its name** — `event: nudge` unless a test
+   * says otherwise, because that is what the route writes (ADR-0156 §5) and a frame with no name
+   * is one this port must not read as news.
+   */
+  write(body: string, event: string | null = 'nudge'): void {
+    this.responseText += `${event === null ? '' : `event: ${event}\n`}data: ${body}\n\n`;
     this.readyState = FakeSocket.LOADING;
     this.onreadystatechange?.();
   }
@@ -130,15 +146,17 @@ let generation: number;
 function followTheRoom() {
   const statuses: LiveStreamStatus[] = [];
   const nudges: LiveNudge[] = [];
+  const typing: LiveTyping[] = [];
 
   const stop = deviceLiveStream.follow({
     conversationId: ROOM,
     onStatus: (status) => statuses.push(status),
     onNudge: (one) => nudges.push(one),
+    onTyping: (one) => typing.push(one),
   });
   stops.push(stop);
 
-  return { statuses, nudges, stop };
+  return { statuses, nudges, typing, stop };
 }
 
 /**
@@ -304,6 +322,68 @@ describe('a frame', () => {
     latest().write(JSON.stringify({ v: 1, conversation_id: 4, last_seq: 'nine' }));
 
     expect(nudges).toHaveLength(1);
+  });
+
+  /**
+   * **The kind is the event name and never a field** (ADR-0156 §5): this port subscribes per
+   * name, so a frame under a name it has never heard of — and a frame with no name at all — is
+   * dropped by the transport rather than by a branch here.
+   */
+  it('is read only under its own name — an unnamed or unknown frame is nobody’s', async () => {
+    const { nudges, typing } = followTheRoom();
+    await connectAttempt();
+    latest().answer();
+
+    latest().write(frame(7), null);
+    latest().write(frame(8), 'presence');
+    latest().write(typingFrame([TOMEK]), 'nudge');
+    latest().write(frame(9), 'typing');
+
+    expect(nudges).toHaveLength(1);
+    expect(typing).toEqual([]);
+  });
+});
+
+describe('a typing frame', () => {
+  /**
+   * **Who is typing crosses whole**, and that is the one frame whose content is the news: presence
+   * has no read path to defer to (ADR-0156), so unlike a nudge there is nothing above this port
+   * that could re-read it.
+   */
+  it('reaches the app as the room and who is typing in it', async () => {
+    const { nudges, typing } = followTheRoom();
+    await connectAttempt();
+    latest().answer();
+
+    latest().write(typingFrame([TOMEK]), 'typing');
+
+    expect(typing).toEqual([{ conversationId: ROOM, playerIds: [TOMEK] }]);
+    // Not a nudge: it moves no sequence, and nothing above may re-read on it.
+    expect(nudges).toHaveLength(1);
+  });
+
+  /** An empty list is the clear, and it is the only clear there is. */
+  it('carries an empty list as a frame, not as nothing', async () => {
+    const { typing } = followTheRoom();
+    await connectAttempt();
+    latest().answer();
+
+    latest().write(typingFrame([TOMEK]), 'typing');
+    latest().write(typingFrame([]), 'typing');
+
+    expect(typing.map((one) => one.playerIds)).toEqual([[TOMEK], []]);
+  });
+
+  it('is dropped where what arrived is not a typing frame at all', async () => {
+    const { typing } = followTheRoom();
+    await connectAttempt();
+    latest().answer();
+
+    latest().write('not json', 'typing');
+    latest().write(JSON.stringify({ v: 1, conversation_id: ROOM }), 'typing');
+    latest().write(JSON.stringify({ v: 1, conversation_id: ROOM, player_ids: 'tomek' }), 'typing');
+
+    expect(typing).toEqual([]);
   });
 });
 

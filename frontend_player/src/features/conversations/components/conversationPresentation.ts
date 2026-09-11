@@ -63,6 +63,7 @@
 import { weekdayOf } from '@/shared/date/platformZone';
 import { counted } from '@/shared/formatting/counted';
 import { handleLine } from '@/shared/formatting/handleList';
+import { sentenceList } from '@/shared/formatting/sentenceList';
 import { placeWithoutTheCourt } from '@/shared/formatting/placeName';
 import { handleStem, playerName } from '@/shared/formatting/playerName';
 import { dayName } from '@/shared/vocabulary/availabilityPresentation';
@@ -353,3 +354,38 @@ export const LIVE_NOTE: Readonly<Record<Exclude<LiveState, 'live'>, string>> = {
   'not-live': 'Not live — you can still send, and anything you missed arrives when it reconnects.',
   held: 'Your account is on hold. You can read here, but not write.',
 };
+
+/**
+ * **Somebody is typing**, said — §22.5's third state, and the sentence a pulsing dot cannot say.
+ *
+ * Three shapes and one rule: **a name, two names, a count from three.** The client already holds
+ * the handles the frame's `player_ids` point at and a name is what the room is about, so a person
+ * is named — **in a pair too**, where a listener already knows who the one possible typist is:
+ * *somebody is typing* would be a second sentence kept only to withhold a name, and the drawn
+ * bubble carries none at all, so the spoken name is where the name goes (§20.4, §24.6). Three or
+ * more collapses to a count on §19's rule rather than growing a list; the reader is never in the
+ * list, so the collapse is reached only in a four where everybody else is typing at once.
+ *
+ * **The whole handle, never a first name** (ADR-0107), filled from membership and never from the
+ * frame — so a corrected nickname fixes the indicator with no frame re-sent. **The ellipsis is one
+ * character**, so a screen reader does not read *dot dot dot*.
+ *
+ * `undefined` for nobody: there is no sentence to say and no region to fill, which is how the
+ * indicator goes away without announcing that it did (§24.6).
+ */
+export function typingLine(
+  playerIds: readonly string[],
+  members: readonly ConversationMember[],
+): string | undefined {
+  if (playerIds.length === 0) return undefined;
+  if (playerIds.length >= TYPISTS_NAMED_UP_TO + 1) {
+    return `${counted(playerIds.length, 'person', 'people')} are typing…`;
+  }
+
+  const names = playerIds.map((id) => playerName(memberNamed(members, id)));
+
+  return names.length === 1 ? `${names[0]} is typing…` : `${sentenceList(names)} are typing…`;
+}
+
+/** How many typists are named before the sentence counts them instead. §22.5: two. */
+const TYPISTS_NAMED_UP_TO = 2;

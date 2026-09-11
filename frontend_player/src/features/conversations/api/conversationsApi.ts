@@ -137,3 +137,26 @@ export function postMessage(
     authenticated: true,
   });
 }
+
+/**
+ * **Say you are typing** — a heartbeat, not a state
+ * ([ADR-0156](../../../../../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)).
+ *
+ * `204`, no body: what is being typed is nobody's business until it is sent. There is no
+ * *stopped* — the server's own expiry is what clears the indicator, so a killed app clears it
+ * too, having sent nothing. Gated exactly like a send: a non-member gets `conversation_not_found`
+ * and a held account is refused, because an indicator is drawn on other people's screens.
+ *
+ * **It takes a `signal`, and it is the one write here that does.** A heartbeat outliving the
+ * composer that beat it would be a request from a screen that has gone; the caller aborts it on
+ * the way out, which is what keeps *no fire-and-forget request in a component* true of a `POST`
+ * nobody awaits an answer to.
+ */
+export function postTyping(conversationId: string, { signal }: Cancellable = {}): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: `/api/v1/conversations/${conversationId}/typing`,
+    authenticated: true,
+    signal,
+  });
+}

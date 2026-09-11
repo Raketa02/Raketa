@@ -618,6 +618,14 @@ const size = {
    *  There is no height and no minimum. A bubble is as tall as what somebody typed, and a
    *  one-character message drawn to a floor would be a box with a letter rattling in it. */
   bubble: { maxShare: 0.78 },
+  /**
+   * The typing indicator's dots — three of them, in the other side's bubble. **A bubble's width
+   * comes from its text and this one has none**, so these two are its own numbers: a dot the
+   * sport dot's size, so the smallest round mark in the app is one size, and a gap of one step,
+   * so three of them read as a group rather than as a row. Read off the mock's proportions;
+   * no device has drawn them (Part 16).
+   */
+  typing: { dot: 6, gap: 6 },
   /** The court — 7.12, and the drawn object whose numbers cannot be derived.
    *
    *  `space` is the drawing's own box and every coordinate below is in it. The 1,32 aspect
@@ -892,8 +900,8 @@ const shadow = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Motion — one entrance, one sheet, one popover, one fade, and one ripple. Nothing else
-// moves.
+// Motion — one entrance, one sheet, one popover, one fade, one ripple, and one pulse. Nothing
+// else moves.
 // Press feedback is immediate (Pressable's `pressed`), not animated: the prototype's
 // 120ms is a mouse-hover transition and has no touch equivalent.
 //
@@ -903,9 +911,9 @@ const shadow = {
 const motion = {
   fade: 200,
   /**
-   * One ring, expanding out of nothing and fading as it goes — **the only looping animation
-   * in the app**, and the only motion token whose duration is a cycle rather than a
-   * transition.
+   * One ring, expanding out of nothing and fading as it goes — one of **two looping animations
+   * in the app**, and the first motion token whose duration is a cycle rather than a
+   * transition. The second is `typing`, below.
    *
    * It is spent on the one thing in the product that is genuinely open-ended: the engine
    * seating a court, drawn under the court it is seating rather than over the screen. A
@@ -916,6 +924,18 @@ const motion = {
    * at rest — the sentence beneath it is what carries the state, so nothing is lost.
    */
   ripple: 1400,
+  /**
+   * The typing indicator's pulse — three dots, each brightest a third of a cycle after the one
+   * before it — and **the one thing in this app that animates although §1.5 says nothing has
+   * to**: three still dots are indistinguishable from a message that says `...`, and the motion
+   * is the whole signal. The argument is in Part 16 and on `TypingBubble.tsx`; the number is a
+   * cycle a reader sees as *now* rather than as a blink, and no device has drawn it.
+   *
+   * Skipped under reduced motion, where the dots are drawn still and the element's spoken name
+   * carries the fact — stated as a trade rather than a save, because a sighted reader with
+   * reduced motion gets the weaker of the two signals.
+   */
+  typing: 1200,
   rise: 300,
   sheet: 260,
   popover: 130,

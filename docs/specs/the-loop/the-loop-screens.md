@@ -928,27 +928,44 @@ people who have already agreed to play, true for the five seconds somebody's fin
 moving. There is no online, no last-seen and no read receipt anywhere on this map, and none is
 coming.
 
-> **One line below the last entry and above the composer, `muted`, present only while the `typing`
-> frame's `player_ids` is non-empty.**
+> **Three pulsing dots in the other side's bubble, at the newest end of the stream, present only
+> while the `typing` frame's `player_ids` is non-empty — and named by a sentence.**
+
+This section said *one `muted` line* until [#404](https://github.com/Raketa02/Raketa/issues/404)
+drew it; the design is a bubble, and the design wins (#397). What the sentence became is the
+element's spoken name.
 
 - **It sits in the stream, not in the header.** It is a fact about *now* in a room being read from
-  the bottom, and a header is where the facts that outlast the screen live. It scrolls with the
-  backlog and takes the place a next bubble would.
-- **It is a sentence and never a bare dot.** Part 13's *never colour as the only signal* refuses the
-  three-dot animation on its own, and the sentence is what a listener gets — see
-  [`the-words.md`](../matchmaking/the-words.md) §24.6 for the wording and the plural.
+  the bottom, and a header is where the facts that outlast the screen live. It takes the place a
+  next bubble would — the newest end — and scrolls with the backlog. It is **always the other
+  side's bubble**: `surface` bounded by `line` with the speaker's corner dropped, never the reader's
+  `night`, because the reader is not who it is about.
+- **The dots are the drawing and the sentence is the name, and they are one element.** Part 13's
+  *never colour as the only signal* is met by shape and motion for the eye and by §22.5's sentence
+  for the ear — [`the-words.md`](../matchmaking/the-words.md) §24.6 — and the region is polite.
+  **The motion is the whole signal**: three still dots are indistinguishable from a message that
+  says `...`, which is why this is the one thing that animates although design-system §1.5 says
+  nothing has to (Part 16). Under reduced motion the dots are drawn still and the name stays.
+- **A separate component, not a branch inside the bubble.** ADR-0146 refused one shape with a
+  `kind` on the wire and §2.1 refuses it at the surface: a typing indicator has no author, no text,
+  no `seq` and no place in the stream's ordering, and it is never an entry the list's data knows.
 - **The names come from the members you are already holding**, exactly as every system line does.
   The frame carries `player_ids` and nothing else, so a corrected handle fixes the indicator for
   free.
-- **Never you.** The server filters the reader out of their own room's frame, so the composer can
-  never draw an indicator for the person using it. The client does not need a second guard and must
-  not add one.
+- **Never you.** The server filters the reader out of their own room's frame, **and the client
+  filters again** — a composer drawing an indicator for the person using it is the most visible
+  possible bug, and a set difference is what the second guard costs (#404).
 - **It goes away on its own, and that is the design.** No *stopped* is sent by anybody: the server
   reports whoever's heartbeat has not expired, so a killed app, a lost signal and a dropped request
-  all clear the line within seconds. **The client keeps no timer**, because the frame carrying an
-  empty list *is* the clear.
-- **`muted`**, not `amber`. Nothing here is a state anybody needs to act on — it is the least
-  important thing on the screen, and the one directly above it is the *not live* line, which is not.
+  all clear the line within seconds. The frame carrying an empty list *is* the clear, and **it is
+  sent when the answer changes and never on a tick** — so the client keeps **no clock**: a timer
+  from the last frame would clear the indicator on exactly the person it exists for, somebody typing
+  a long message, and nothing would ever re-draw it. **The client's own net is the channel**: a
+  roster is only as live as the stream that carried it, so it is dropped the moment the channel is
+  not live — severed, backgrounded, or offline — and never remembered across a reconnect, because
+  the server re-announces anybody still typing on its first check.
+- **Typing is not query cache state.** A typing frame invalidates nothing, advances no cursor and
+  touches no page; it is held as the room's own state and drawn.
 
 **The client's own half is a heartbeat and nothing more.** Post `/typing` every ~3 s while the
 composer has focus and the text is changing, and **stop posting when it stops** — there is no call

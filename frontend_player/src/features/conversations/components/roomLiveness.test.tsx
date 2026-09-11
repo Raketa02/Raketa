@@ -13,6 +13,8 @@
  * drive it* half of the same sentence.
  */
 
+import { AccessibilityInfo, Animated } from 'react-native';
+
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -35,6 +37,7 @@ import { fakeLiveStream, type FakeLiveStream } from '@/test-support/platform';
 import {
   errorResponse,
   installTransport,
+  noContent,
   json,
   type Transport,
   type Wire,
@@ -44,7 +47,7 @@ import { sportLabel } from '@/features/onboarding/types';
 import { QUICK_CHIP } from '@/features/plans/types';
 
 import { conversationHeaderLabel } from './conversationAccessibility';
-import { COMPOSER_LABEL, LIVE_NOTE, SEND } from './conversationPresentation';
+import { COMPOSER_LABEL, LIVE_NOTE, SEND, typingLine } from './conversationPresentation';
 
 const ME = GATE_USER.id;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -82,14 +85,17 @@ function message(seq: number, authorId: string, text: string): Wire['MessageSche
   };
 }
 
-function room(entries: readonly Wire['MessageSchema'][] = []): Wire['ConversationResponse'] {
+function room(
+  entries: readonly Wire['MessageSchema'][] = [],
+  members: readonly Wire['ConversationMemberSchema'][] = MEMBERS,
+): Wire['ConversationResponse'] {
   return {
     read_at: READ_AT,
     conversation_id: ROOM,
     challenge_id: CHALLENGE,
     game_id: null,
     sport: 'PADEL',
-    members: MEMBERS,
+    members: [...members],
     entries: [...entries],
   };
 }
@@ -465,5 +471,234 @@ describe('held', () => {
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(screen.getByLabelText(COMPOSER_LABEL).props.editable).toBe(false);
     expect(screen.getByRole('button', { name: SEND }).props.accessibilityState.disabled).toBe(true);
+  });
+});
+
+describe('somebody is typing', () => {
+  const OLA = 'cccccccc-0000-4000-8000-000000000003';
+  const THREE: Wire['ConversationMemberSchema'][] = [
+    ...MEMBERS,
+    { player_id: OLA, nickname: 'ola.k' },
+  ];
+  const named = (ids: readonly string[], members = MEMBERS) =>
+    typingLine(
+      ids,
+      members.map((one) => ({
+        playerId: one.player_id,
+        ...(one.nickname === null ? {} : { nickname: one.nickname }),
+      })),
+    ) ?? '';
+  const typingPath = `${conversationPath(ROOM)}/typing`;
+
+  // The OS switch is set in one case below, and **set back rather than restored**: React Native's
+  // `AccessibilityInfo` is already a Jest mock, so a spy over it cannot be restored to anything —
+  // `overlay.test.tsx` sets it both ways for the same reason.
+  afterEach(() => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+    jest.restoreAllMocks();
+  });
+
+  /** The room, live, so the roster it is handed is one it may draw. */
+  async function openLive(answer: Wire['ConversationResponse'] = room()) {
+    await openTheRoom(answer);
+    act(() => channel.connect(ROOM));
+  }
+
+  /**
+   * The bubble is one element, named by §22.5's sentence and polite: it is a courtesy about
+   * somebody else's fingers, and interrupting a listener mid-message to deliver it would be the
+   * loudest possible way to say the least important thing on the screen.
+   */
+  it('appears on a typing frame, as one polite element named for who is typing', async () => {
+    await openLive();
+
+    act(() => channel.typing(ROOM, [TOMEK]));
+
+    const bubble = await screen.findByLabelText(named([TOMEK]));
+    expect(bubble.props.accessibilityLiveRegion).toBe('polite');
+    expect(named([TOMEK])).toBe('tomek.p is typing…');
+  });
+
+  /** An empty list is the clear, and it is the only clear the server sends. */
+  it('clears on the empty frame', async () => {
+    await openLive();
+
+    act(() => channel.typing(ROOM, [TOMEK]));
+    await screen.findByLabelText(named([TOMEK]));
+
+    act(() => channel.typing(ROOM, []));
+
+    await waitFor(() => expect(screen.queryByLabelText(named([TOMEK]))).toBeNull());
+  });
+
+  /**
+   * **Clears on its own when no further frame can arrive.** The server sends a frame only when the
+   * answer changes, so a clock would clear the indicator on somebody still typing; what the client
+   * keys its own net on is the channel — a roster is only as live as the stream that carried it,
+   * and a severed stream, a backgrounded app and a phone with no signal all drop it at once.
+   */
+  it('clears on its own when the channel is lost, with no further frame', async () => {
+    await openLive();
+
+    act(() => channel.typing(ROOM, [TOMEK]));
+    await screen.findByLabelText(named([TOMEK]));
+
+    act(() => channel.lose(ROOM));
+
+    await waitFor(() => expect(screen.queryByLabelText(named([TOMEK]))).toBeNull());
+
+    // And it does not come back on reconnect by itself: the server re-announces anybody still
+    // typing on its first check, so a roster this client remembered would be a guess.
+    act(() => channel.connect(ROOM));
+    expect(screen.queryByLabelText(named([TOMEK]))).toBeNull();
+  });
+
+  it('clears when the app goes to the background', async () => {
+    await openLive();
+
+    act(() => channel.typing(ROOM, [TOMEK]));
+    await screen.findByLabelText(named([TOMEK]));
+
+    act(() => channel.background(ROOM));
+
+    await waitFor(() => expect(screen.queryByLabelText(named([TOMEK]))).toBeNull());
+  });
+
+  /** The server filters the reader out; the client filters again, because the bug is visible. */
+  it('draws nothing for the reader’s own id', async () => {
+    await openLive();
+
+    act(() => channel.typing(ROOM, [ME]));
+    act(() => channel.typing(ROOM, [ME, TOMEK]));
+
+    await screen.findByLabelText(named([TOMEK]));
+    expect(screen.queryByLabelText(/me_ .*typing/)).toBeNull();
+  });
+
+  /** One indicator whichever number are typing, and the sentence counts from three. */
+  it('draws one indicator for a group, naming two and counting three', async () => {
+    const ZOFIA = 'dddddddd-0000-4000-8000-000000000004';
+    const FOUR: Wire['ConversationMemberSchema'][] = [
+      ...THREE,
+      { player_id: ZOFIA, nickname: 'zofia.b' },
+    ];
+    await openLive(room([], FOUR));
+
+    act(() => channel.typing(ROOM, [TOMEK, OLA]));
+    await screen.findByLabelText(named([TOMEK, OLA], FOUR));
+    expect(named([TOMEK, OLA], FOUR)).toBe('tomek.p and ola.k are typing…');
+
+    act(() => channel.typing(ROOM, [TOMEK, OLA, ZOFIA]));
+    await screen.findByLabelText(named([TOMEK, OLA, ZOFIA], FOUR));
+    expect(named([TOMEK, OLA, ZOFIA], FOUR)).toBe('3 people are typing…');
+    expect(screen.getAllByLabelText(/typing…$/)).toHaveLength(1);
+  });
+
+  /**
+   * **Typing is not query cache state.** A typing frame invalidates nothing and advances no cursor:
+   * the room is not re-read and no page is asked for, however many frames arrive.
+   */
+  it('never re-reads the room and never pages on a typing frame', async () => {
+    await openLive();
+    const reads = () => transport.requestsTo('GET', conversationPath(ROOM)).length;
+    const pages = () => transport.requestsTo('GET', `${conversationPath(ROOM)}/entries`).length;
+    const before = { reads: reads(), pages: pages() };
+
+    act(() => channel.typing(ROOM, [TOMEK]));
+    await screen.findByLabelText(named([TOMEK]));
+    act(() => channel.typing(ROOM, []));
+    act(() => channel.typing(ROOM, [TOMEK]));
+
+    await screen.findByLabelText(named([TOMEK]));
+    expect(reads()).toBe(before.reads);
+    expect(pages()).toBe(before.pages);
+
+    // A nudge still does what a nudge does, so the two are told apart and not merely both dropped.
+    act(() => channel.nudge(ROOM));
+    await waitFor(() => expect(reads()).toBe(before.reads + 1));
+  });
+
+  /**
+   * **Reduce motion draws the dots still and keeps the sentence.** The one loop this screen runs
+   * is not started, and the element is named exactly as it is with motion on.
+   */
+  it('draws static dots under reduced motion, and keeps the accessible name', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    const loop = jest.spyOn(Animated, 'loop');
+
+    await openLive();
+    act(() => channel.typing(ROOM, [TOMEK]));
+
+    expect(await screen.findByLabelText(named([TOMEK]))).toBeTruthy();
+    expect(loop).not.toHaveBeenCalled();
+  });
+
+  it('animates the dots when motion is not reduced', async () => {
+    const loop = jest.spyOn(Animated, 'loop');
+
+    await openLive();
+    act(() => channel.typing(ROOM, [TOMEK]));
+
+    await screen.findByLabelText(named([TOMEK]));
+    expect(loop).toHaveBeenCalled();
+  });
+
+  describe('the heartbeat', () => {
+    beforeEach(() => {
+      transport.on('POST', typingPath, () => noContent());
+    });
+
+    /**
+     * Posted on a keystroke and **never per keystroke**: a burst of them is one beat. The cadence
+     * itself — the second beat three seconds on — is `beatIsDue`'s and is pinned in
+     * `domain/typing.test.ts` against an explicit clock, which is the seam that number lives at.
+     */
+    it('is posted on typing, once for a burst of keystrokes, with no body', async () => {
+      await openLive();
+
+      const box = screen.getByLabelText(COMPOSER_LABEL);
+      fireEvent.changeText(box, 's');
+      fireEvent.changeText(box, 'si');
+      fireEvent.changeText(box, 'six');
+
+      await waitFor(() => expect(transport.requestsTo('POST', typingPath)).toHaveLength(1));
+      expect(transport.requestsTo('POST', typingPath)[0]?.body).toBeUndefined();
+
+      fireEvent.changeText(box, 'six?');
+      await act(async () => {});
+      expect(transport.requestsTo('POST', typingPath)).toHaveLength(1);
+    });
+
+    /** A hold stops you writing anywhere another player sees it, and this is seen by others. */
+    it('is silent when the account is held', async () => {
+      await openLive();
+      transport.on('POST', `${conversationPath(ROOM)}/messages`, () =>
+        errorResponse(403, 'account_held'),
+      );
+      fireEvent.changeText(screen.getByLabelText(COMPOSER_LABEL), 'anyone there?');
+      fireEvent.press(screen.getByRole('button', { name: SEND }));
+      await screen.findByText(LIVE_NOTE.held);
+
+      // The box is greyed, so a keystroke cannot reach it on a device; what a test can still
+      // drive through it is exactly what must not beat.
+      const beforeHold = transport.requestsTo('POST', typingPath).length;
+      fireEvent.changeText(screen.getByLabelText(COMPOSER_LABEL), 'still here?');
+
+      await act(async () => {});
+      expect(transport.requestsTo('POST', typingPath)).toHaveLength(beforeHold);
+    });
+
+    /** Nobody needs to be told their typing indicator did not reach anybody. */
+    it('says nothing when it fails', async () => {
+      transport.on('POST', typingPath, () => errorResponse(500, 'boom'));
+      await openLive();
+
+      fireEvent.changeText(screen.getByLabelText(COMPOSER_LABEL), 'hi');
+
+      await waitFor(() => expect(transport.requestsTo('POST', typingPath)).toHaveLength(1));
+      await act(async () => {});
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.queryByText(/went wrong|try again/i)).toBeNull();
+    });
   });
 });

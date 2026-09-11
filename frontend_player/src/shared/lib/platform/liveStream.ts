@@ -5,7 +5,12 @@
  * `GET /conversations/{id}/stream` whenever the room moves, and the nudge carries no content at
  * all
  * ([ADR-0147](../../../../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
- * §3). This is the whole of the app's first real-time surface.
+ * §3). Since [ADR-0156](../../../../../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)
+ * the same stream carries a second frame — **who is typing** — and the two are told apart by the
+ * SSE `event:` name and never by a field: this port subscribes to `nudge` and to `typing`, so a
+ * frame under any other name, or under none, is dropped by the transport rather than by a branch
+ * written here. That is what makes a third kind, one day, additive for every phone already in the
+ * world. This is the whole of the app's one real-time surface.
  *
  * ## Why it is a port, and why the port is this shape
  *
@@ -20,11 +25,17 @@
  * — for the Chats list — which ADR-0147's *never build* list forbids by name. There is one live
  * channel on this platform, it is a conversation's, and this is it.
  *
- * **What crosses upward is the room and never the number.** The frame carries `last_seq`, and this
- * module reads it to know a frame *is* a nudge and then drops it: above here a client fetches from
- * **its own** high-water mark through the ordinary read path, and a number handed up is a number
- * somebody eventually pages from. ADR-0147 §3 wanted that rule to stop being a rule anybody keeps;
- * inside this app the port is where it becomes one nothing above can express.
+ * **What crosses upward from a nudge is the room and never the number.** The frame carries
+ * `last_seq`, and this module reads it to know a frame *is* a nudge and then drops it: above here
+ * a client fetches from **its own** high-water mark through the ordinary read path, and a number
+ * handed up is a number somebody eventually pages from. ADR-0147 §3 wanted that rule to stop being
+ * a rule anybody keeps; inside this app the port is where it becomes one nothing above can express.
+ *
+ * **A typing frame crosses whole, and that is the one frame whose content is the news.** Presence
+ * has no read path to defer to — nothing records it, and ADR-0156 says nothing will — so `player_ids`
+ * is handed up as it arrived. It still carries no `last_seq`, because there is nothing it could
+ * honestly put there, and nothing above may re-read on one: the fact is in the frame and the cursor
+ * does not move.
  *
  * ## Three states, and a fourth that is not a failure
  *
@@ -93,11 +104,25 @@ export interface LiveNudge {
   readonly conversationId: string;
 }
 
+/**
+ * **Somebody is typing** — the room, and who, as the server reported it.
+ *
+ * Never the reader: the server filters them out of their own room's frame. Ids and no names, so
+ * a corrected handle fixes the indicator from the membership a room already holds. **An empty
+ * list is the clear**, and it is the only clear there is.
+ */
+export interface LiveTyping {
+  readonly conversationId: string;
+  readonly playerIds: readonly string[];
+}
+
 export interface FollowLive {
   /** The room to follow. One stream per open conversation, and never one for a list. */
   readonly conversationId: string;
-  /** Called for every frame. The answer is an invalidation, never a render. */
+  /** Called for every nudge. The answer is an invalidation, never a render. */
   readonly onNudge: (nudge: LiveNudge) => void;
+  /** Called for every typing frame. The answer is a render, and never an invalidation. */
+  readonly onTyping: (typing: LiveTyping) => void;
   /** Called on every transition, and once on the way in. */
   readonly onStatus: (status: LiveStreamStatus) => void;
 }
@@ -159,19 +184,52 @@ export const LIVE_NUDGE_AGREES: Exact<
   components['schemas']['LiveNudgeSchema']
 > = true;
 
-/** The room a frame names, or nothing where what arrived was not a nudge. */
-function nudgeOf(data: string | null): LiveNudge | undefined {
+/** The second frame, parsed the same way and for the same reason. Not gated on `v` either. */
+const TYPING = z.object({
+  v: z.number(),
+  conversation_id: z.string(),
+  player_ids: z.array(z.string()),
+});
+
+/** Held equal to the contract exactly as the nudge is. */
+export const LIVE_TYPING_AGREES: Exact<
+  z.infer<typeof TYPING>,
+  components['schemas']['LiveTypingSchema']
+> = true;
+
+/**
+ * The two names the route writes, and the only two this port listens for.
+ *
+ * Spelled here rather than generated, because the SSE item schema's `event` is a bare string the
+ * framework writes and no artifact carries the names — ADR-0156 §5 names that hole rather than
+ * closing it, and the route's description is where a client reads them.
+ */
+const NUDGE_EVENT = 'nudge';
+const TYPING_EVENT = 'typing';
+
+/** A frame's body as JSON, or nothing where it is not. A stream body is untrusted input. */
+function bodyOf(data: string | null): unknown {
   if (data === null) return undefined;
 
-  let frame: unknown;
   try {
-    frame = JSON.parse(data);
+    return JSON.parse(data);
   } catch {
     return undefined;
   }
+}
 
-  const parsed = NUDGE.safeParse(frame);
+/** The room a frame names, or nothing where what arrived was not a nudge. */
+function nudgeOf(data: string | null): LiveNudge | undefined {
+  const parsed = NUDGE.safeParse(bodyOf(data));
   return parsed.success ? { conversationId: parsed.data.conversation_id } : undefined;
+}
+
+/** The room and who is typing in it, or nothing where what arrived was not a typing frame. */
+function typingOf(data: string | null): LiveTyping | undefined {
+  const parsed = TYPING.safeParse(bodyOf(data));
+  return parsed.success
+    ? { conversationId: parsed.data.conversation_id, playerIds: parsed.data.player_ids }
+    : undefined;
 }
 
 /**
@@ -189,8 +247,8 @@ function worthRepeating(status: number): boolean {
 
 export const deviceLiveStream: LiveStreamPort = { follow };
 
-function follow({ conversationId, onNudge, onStatus }: FollowLive): () => void {
-  let source: EventSource | null = null;
+function follow({ conversationId, onNudge, onTyping, onStatus }: FollowLive): () => void {
+  let source: EventSource<typeof NUDGE_EVENT | typeof TYPING_EVENT> | null = null;
   let reopen: ReturnType<typeof setTimeout> | null = null;
   let stopped = false;
   /** Which rotation the open attempt's credential came from. */
@@ -280,7 +338,7 @@ function follow({ conversationId, onNudge, onStatus }: FollowLive): () => void {
     sentWith = attempt.generation;
     say('connecting');
 
-    const opened = new EventSource(attempt.url, {
+    const opened = new EventSource<typeof NUDGE_EVENT | typeof TYPING_EVENT>(attempt.url, {
       headers: { ...attempt.headers },
       // The library's own re-poll, kept for exactly one path: a server that ends the response
       // tidily raises no event, so this is what notices an expiry. See the module note.
@@ -325,11 +383,21 @@ function follow({ conversationId, onNudge, onStatus }: FollowLive): () => void {
       say('live');
     });
 
-    opened.addEventListener('message', (event) => {
+    // Per name, and never `message`: a frame the route names is dispatched under that name and
+    // nothing else, so an unnamed frame — or one under a name a later server invents — reaches
+    // no listener here. That is the whole of how a third kind stays additive (ADR-0156 §5).
+    opened.addEventListener(NUDGE_EVENT, (event) => {
       if (source !== opened) return;
 
       const nudge = nudgeOf(event.data);
       if (nudge !== undefined) onNudge(nudge);
+    });
+
+    opened.addEventListener(TYPING_EVENT, (event) => {
+      if (source !== opened) return;
+
+      const typing = typingOf(event.data);
+      if (typing !== undefined) onTyping(typing);
     });
 
     opened.addEventListener('error', (event) => {

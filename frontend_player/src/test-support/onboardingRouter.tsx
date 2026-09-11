@@ -16,6 +16,8 @@ import { Slot } from 'expo-router';
 import { renderRouter } from 'expo-router/testing-library';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ReducedMotionProvider } from '@/shared/ui';
+
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import AroundRoute from '@/app/(app)/(tabs)/around';
@@ -215,9 +217,15 @@ function TestRoot() {
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <WithPorts>
-          <Slot />
-        </WithPorts>
+        {/* The real root's one subscription to the OS motion switch, so a suite that spies
+            `AccessibilityInfo.isReduceMotionEnabled` reaches every surface the way a device
+            would — rather than the context's `false`, which is what a tree with no provider
+            answers whatever the OS says. */}
+        <ReducedMotionProvider>
+          <WithPorts>
+            <Slot />
+          </WithPorts>
+        </ReducedMotionProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

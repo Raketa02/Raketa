@@ -1819,10 +1819,11 @@ a `Note` above the composer and the third sits in the stream (§24.6).
 
 **The typing sentences name people and never a count of one**, because the client already holds the
 handles the frame's `player_ids` point at and a name is what the room is about. Three or more
-collapses to a count on §19's rule rather than growing a list — a room is four people at most, so
-the collapse is reached only in a doubles court where everybody is typing at once, and *4 people are
-typing…* is the honest end of that. **The whole handle, never a first name** (ADR-0107), and the
-ellipsis is a character rather than three dots so a screen reader does not read *dot dot dot*.
+collapses to a count on §19's rule rather than growing a list — a room is four people at most and
+the reader is never in the list, so the collapse is reached only in a doubles court where everybody
+else is typing at once, and *3 people are typing…* is the honest end of that. **The whole handle,
+never a first name** (ADR-0107), and the ellipsis is a character rather than three dots so a screen
+reader does not read *dot dot dot*.
 
 **It is never about you.** The server filters the reader out of their own room's frame, so there is
 no *you are typing* sentence to write and no state in which one could be reached.
@@ -2139,8 +2140,16 @@ different screen with a different reader.
 
 | Element | Role | Announces |
 | --- | --- | --- |
-| The typing line | `text`, `accessibilityLiveRegion="polite"` | §22.5's sentence, whole — `Ewa M. is typing…` |
-| The three-dot animation beside it | — | **hidden.** It is decoration for the same fact, and announcing both is §1.6's count problem in two spellings |
+| The typing bubble | one element, `accessibilityLiveRegion="polite"` | §22.5's sentence, whole — `ewa.m is typing…` |
+| The three dots inside it | — | **hidden.** They are the drawing of the same fact, and announcing both is §1.6's count problem in two spellings |
+
+**The bubble is the element and the sentence is its name** ([#404](https://github.com/Raketa02/Raketa/issues/404)):
+the design draws three pulsing dots and no words, so the sentence a pulsing dot cannot say is
+what the element is named, rather than a line of text drawn beside it. **A person is named in a
+pair too.** A pair has exactly one possible typist and the name adds nothing a listener does not
+know — but *somebody is typing* would be a second sentence kept only to withhold a name, the drawn
+bubble carries none at all so the spoken name is the only place the name goes (§20.4), and one
+sentence shape across every room is worth more to a listener than a shorter one in half of them.
 
 **Polite, and this is the one place that word is load-bearing rather than inherited.** A listener in
 a conversation is being read *messages*, one entry at a time, and an assertive region interrupts —

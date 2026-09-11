@@ -166,6 +166,33 @@ and the pre-emptive half is bought with one tap; `domain/liveState.ts` says so, 
 are what drive the arm. 6.2 and 6.13 each gained a `disabled` state for it, under one condition:
 **only where a note above has already said why.**
 
+**The stream carries a second frame, and the port subscribes per name**
+([#404](https://github.com/Raketa02/Raketa/issues/404),
+[ADR-0156](../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)).
+`event: nudge` and `event: typing` are the two names the route writes, and `liveStream.ts` listens
+for exactly those — never `message` — so a frame under a name this build has not heard of is dropped
+by the transport rather than by a branch; a port that listened to `message` hears **nothing** from
+the wire as it now is, which is the break #404 had to fix before it could draw anything. **A nudge
+crosses as the room and a typing frame crosses whole**, because presence has no read path to defer
+to. **Typing is not query cache state**: `useLiveConversation` holds the last frame's roster as the
+room's own state — replaced whole, an empty list being the only clear — and `domain/typing.ts` folds
+it against the channel and the reader. **The client keeps no clock**, and that is the one place this
+build reads the ticket against the wire: a frame arrives when the answer changes and never on a
+tick, so a timer from the last frame would clear the indicator on exactly the person it exists for.
+The client's own net is the channel — a roster is dropped, not hidden, the moment the stream is not
+live, and never remembered across a reconnect, because the server re-announces on its first check.
+The server filters the reader out and `typists` filters again. `TypingBubble` is a **third
+component and never a branch inside `Bubble`** — three pulsing dots in the other side's bubble at
+the newest end of the inverted list, one polite element named by §22.5's sentence, filled from
+membership; it is **the one thing this app animates although §1.5 says nothing has to**, because
+three still dots are a message that says `...`, and it is drawn still under reduced motion with the
+name kept (Part 16). The heartbeat is `useTypingHeartbeat`: a beat per keystroke off the composer's
+own `onChangeText`, throttled to the route's cadence by `beatIsDue`, with **nothing scheduled** — a
+player who stops typing stops beating and the server's expiry does the rest — aborted with the room
+so no request outlives its screen, **silent** when it fails, and closed with the composer under a
+hold. It is not a `useMutation`, because a paused heartbeat resuming on reconnect would say _typing_
+about a person who left a minute ago.
+
 **The plan card is pinned under the room's header, and it is a counter, the three chips and the
 lock** ([#366](https://github.com/Raketa02/Raketa/issues/366),
 [#403](https://github.com/Raketa02/Raketa/issues/403),

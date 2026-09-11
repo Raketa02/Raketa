@@ -142,17 +142,20 @@ import {
   streamOf,
   type StreamEntry,
 } from '../domain/stream';
+import { typists } from '../domain/typing';
 import { useConversation, useSendMessage, useSendingMessages } from '../hooks/useConversation';
 import { useLiveConversation } from '../hooks/useLiveConversation';
+import { useTypingHeartbeat } from '../hooks/useTypingHeartbeat';
 
 import { Bubble } from './Bubble';
 import { Composer } from './Composer';
 import { ConversationHeader } from './ConversationHeader';
 import { conversationErrorMessage } from './conversationErrorMessage';
-import { LIVE_NOTE, systemLineSentence } from './conversationPresentation';
+import { LIVE_NOTE, systemLineSentence, typingLine } from './conversationPresentation';
 import { DaySeparator } from './DaySeparator';
 import { RoomAbsent } from './RoomAbsent';
 import { SystemLine } from './SystemLine';
+import { TypingBubble } from './TypingBubble';
 
 /**
  * The game behind this room, under the room's own address.
@@ -247,11 +250,27 @@ function Room({
    * the screen above, so the channel exists exactly while there is a room to keep current — a
    * nudge arriving during the first read would invalidate a query that is already in flight.
    */
-  const channel = useLiveConversation(room.conversationId);
+  const { status: channel, typing } = useLiveConversation(room.conversationId);
   // Every write on this screen is a producer of *held*, and four of the five are the plan card's.
   const planRefusals = usePlanWriteRefusals();
   const state = liveState(channel, writeStanding([send.error, ...planRefusals]));
   const held = state === 'held';
+
+  /**
+   * **Somebody is typing**, as a sentence — or nothing, which is how the bubble goes away.
+   *
+   * The roster is the channel's and already folded against it; what is done here is the reader
+   * filter, which the server applies too and the ticket asks for twice, and the naming, which is
+   * membership's exactly as every system line's is. Not query cache state: the frame is the fact.
+   */
+  const typingSentence = typingLine(typists(typing, playerId), room.members);
+
+  /**
+   * The heartbeat, called from the composer's own keystrokes and from nowhere else — a keystroke
+   * is the one event that means *the words are changing*, and the box being greyed under a hold
+   * is the courtesy over `refused`, which is the mechanism.
+   */
+  const heartbeat = useTypingHeartbeat(room.conversationId, { refused: held });
 
   /**
    * What is in the box.
@@ -346,6 +365,16 @@ function Room({
           keyboardShouldPersistTaps="handled"
           onEndReached={onPageBack}
           onEndReachedThreshold={0.4}
+          // The header of an inverted list is its **newest** end, which is where a next bubble
+          // would land — so the indicator takes that place and scrolls with the backlog, and is
+          // never an entry: it has no `seq` and no key, and the list's data does not know it.
+          ListHeaderComponent={
+            typingSentence === undefined ? null : (
+              <View style={s.typing}>
+                <TypingBubble sentence={typingSentence} />
+              </View>
+            )
+          }
         />
 
         {sendRefusal === null ? null : (
@@ -380,7 +409,10 @@ function Room({
             post through the same `post`, so a chip send is an ordinary send (#402). */}
         <Composer
           text={draft}
-          onChange={setDraft}
+          onChange={(text) => {
+            setDraft(text);
+            heartbeat.beat();
+          }}
           chips={quickChips(plan, room.readAt)}
           onPost={post}
           refused={held}
@@ -470,6 +502,8 @@ const s = StyleSheet.create({
   page: { flex: 1 },
   stream: { paddingHorizontal: theme.size.gutter, paddingVertical: theme.space.sm },
   row: { gap: theme.space.xs, paddingBottom: theme.space.xs },
+  // The row's own step below it, so the bubble sits off the newest entry the way an entry would.
+  typing: { paddingBottom: theme.space.xs },
   refusal: { paddingHorizontal: theme.size.gutter, paddingBottom: theme.space.xs },
   standing: { paddingHorizontal: theme.size.gutter, paddingBottom: theme.space.xs },
 });

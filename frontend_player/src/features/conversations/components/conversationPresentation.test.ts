@@ -18,6 +18,7 @@ import {
   headerSubline,
   headerTitle,
   systemLineSentence,
+  typingLine,
 } from './conversationPresentation';
 import { conversationHeaderLabel } from './conversationAccessibility';
 
@@ -259,5 +260,37 @@ describe('what the header is called', () => {
 
   it('stops at the sport where there is no game', () => {
     expect(conversationHeaderLabel(['tomek.p'], 'Padel', undefined)).toBe('tomek.p, Padel');
+  });
+});
+
+describe('somebody is typing', () => {
+  const ZOFIA: ConversationMember = { playerId: 'zofia', nickname: 'zofia.b' };
+  const FOUR = [TOMEK, OLA, ZOFIA, { playerId: 'me', nickname: 'me_' }];
+
+  /**
+   * §22.5's three shapes: a name, two names, and a count from three. **Named, and named in a pair
+   * too** — a pair has one possible typist and the name adds nothing a listener does not know,
+   * but *somebody is typing* would be a second sentence kept only to withhold it, and the drawn
+   * bubble carries no name at all, so the spoken one is where the name goes (§20.4).
+   */
+  it('names one person, names two, and counts from three', () => {
+    expect(typingLine(['tomek'], FOUR)).toBe('tomek.p is typing…');
+    expect(typingLine(['tomek', 'ola'], FOUR)).toBe('tomek.p and ola.k are typing…');
+    expect(typingLine(['tomek', 'ola', 'zofia'], FOUR)).toBe('3 people are typing…');
+  });
+
+  /** The whole handle, never a first name (ADR-0107), filled from membership and never the frame. */
+  it('fills names from the members the room holds, and draws ? for one it cannot', () => {
+    expect(typingLine(['nobody-here'], MEMBERS)).toBe('? is typing…');
+  });
+
+  /** The ellipsis is one character, so a screen reader does not read *dot dot dot*. */
+  it('ends in one character rather than three', () => {
+    expect(typingLine(['tomek'], MEMBERS)).toMatch(/…$/);
+    expect(typingLine(['tomek'], MEMBERS)).not.toMatch(/\.\.\./);
+  });
+
+  it('says nothing about nobody', () => {
+    expect(typingLine([], MEMBERS)).toBeUndefined();
   });
 });

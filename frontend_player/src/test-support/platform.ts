@@ -45,6 +45,7 @@ import type {
   ImagePickingPort,
   LiveStreamPort,
   LiveStreamStatus,
+  LiveTyping,
   LocationFix,
   LocationPort,
   PermissionState,
@@ -246,6 +247,11 @@ export interface FakeLiveStream extends LiveStreamPort {
   background: (conversationId: string) => void;
   /** Deliver a nudge — *this room moved*, which is the whole of what one says. */
   nudge: (conversationId: string) => void;
+  /**
+   * Deliver a typing frame — who is typing in this room, right now. **An empty list is the
+   * clear**, and the server sends one only when the answer changes, never on a tick.
+   */
+  typing: (conversationId: string, playerIds: LiveTyping['playerIds']) => void;
 }
 
 /**
@@ -297,6 +303,12 @@ export function fakeLiveStream(): FakeLiveStream {
 
     nudge: (conversationId) => {
       for (const ask of rooms.get(conversationId) ?? []) ask.onNudge({ conversationId });
+    },
+
+    typing: (conversationId, playerIds) => {
+      for (const ask of rooms.get(conversationId) ?? []) {
+        ask.onTyping({ conversationId, playerIds });
+      }
     },
   };
 
