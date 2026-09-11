@@ -159,7 +159,9 @@ inbox into an archive. What the row carries is **actionable news** — *{name} s
 open again* says the pair rule has released and you may send again, which
 [ADR-0142](../../adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
 made possible for the first time. News has a shelf life; nothing is lost and nothing lies, because
-the list still holds them.
+the list still holds them. **A no of the reader's own is not news to them, and its row leaves with
+the tap** rather than after a day — §2.5 has the argument, and it is this paragraph's read from the
+other side.
 
 **The instant it is subtracted from is on the wire, and one standing here is not on the list**
 ([#388](https://github.com/Raketa02/Raketa/issues/388), [#395](https://github.com/Raketa02/Raketa/issues/395)).
@@ -557,10 +559,17 @@ sentences out of scope, and #337 had already amended two of §13's rows.
 **Why they are drawn no card block is §2.2's**, not this section's: the rule is the reader's and
 spans both live standings, so it is argued once where the card block is defined.
 
-**The row stays rather than being filtered**, because `GET /challenges` is *every challenge you
-hold a seat in* and a departed seat is still a seat — which is the reason
-[`the-words.md`](../matchmaking/the-words.md) §13.1 gives for the same row. A row that vanished
-would take the only available explanation with it.
+**The row stays for the reader whose day ran out, and leaves at once for the reader who said no**
+(amended 2026-09-11). `GET /challenges` is *every challenge you hold a seat in* and a departed seat
+is still a seat, which is the reason [`the-words.md`](../matchmaking/the-words.md) §13.1 gives for
+keeping the row — a row that vanished would take the only available explanation with it. That
+argument is about an explanation, and it is what §1.1's shelf life is for: a row is kept to tell
+the reader something they did not do. A **decline is the reader's own act**, so *You said no* tells
+them nothing, and their row goes with the tap — on a singles court their no ended and on a doubles
+court that carries on without them alike (`belongsOnTheInbox`); the organiser's row for the same no
+keeps its day, because to them it *is* news. A **lapse** nobody chose, and *Your day ran out. They
+are still filling the court.* is kept to be read exactly as before. The screen still resolves for a
+declined challenge by its route (#390), and the record is untouched.
 
 **And emphatically not because the pair rule still binds them** ([#393](https://github.com/Raketa02/Raketa/issues/393)).
 It does not: the pair **releases the moment a seat leaves**. `open_pairs_among` folds

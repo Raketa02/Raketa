@@ -1504,13 +1504,18 @@ press, on that screen, and it **pops back here**. The ⚡ is **not drawn**, and 
 rule rather than an omission: _the ⚡ is `zap` and never the character_, `Button` has no slot for a
 glyph, and §24.3's _decorative and hidden_ is discharged by there being nothing to hide.
 
-**The reader who has left such a court is not a live member, and their row stays anyway.** They get
-§13.1's sentence about their **own seat** — _You said no. They are still filling the court._ — and
-nothing to press, because the fold reads the seat rather than the side alone. The row is not
-filtered away instead: `GET /challenges` is _every challenge you hold a seat in_ and a departed seat
-is still a seat, and a vanished row would take the only available explanation with it. **Not because
-the pair rule holds them — it released them the moment they left** (#393); what keeps them out of
-_this_ court is `already_asked_at`, per aggregate.
+**The reader who has left such a court is not a live member, and the screen gives them §13.1's
+sentence about their own seat** — _You said no. They are still filling the court._ / _Your day ran
+out…_ — and nothing to press, because the fold reads the seat rather than the side alone.
+`GET /challenges` is _every challenge you hold a seat in_ and a departed seat is still a seat, so
+the record keeps them and the screen resolves for them by its route. **Whether the row is drawn is
+the inbox's question, and a no of your own leaves it with the tap** (`belongsOnTheInbox`): the
+shelf life keeps a row a day to tell the reader something they did not do — a seat reopened, a day
+run out, a court withdrawn — and a decline is the reader's own act, so _You said no_ is not news to
+them, on a singles court their no ended and on a doubles court that carries on without them alike.
+The organiser's row for the same no keeps its day, because to them it is news; a lapse nobody chose
+keeps its row to be read. **Not because the pair rule holds them — it released them the moment they
+left** (#393); what keeps them out of _this_ court is `already_asked_at`, per aggregate.
 
 **The builder is `features/play`'s existing screen at a second route, and nothing about it is
 forked.** `/chats/challenge/[challengeId]/fill` lights the Chats column for free and makes _back_

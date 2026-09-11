@@ -136,10 +136,10 @@ describe('when a challenge stopped being arranged', () => {
 
 describe('what the inbox still holds', () => {
   it('keeps everything that is still being arranged, mine and theirs', () => {
-    expect(belongsOnTheInbox(askedMe())).toBe(true);
-    expect(belongsOnTheInbox(askedMe({ organiserId: ME, standing: 'LINE_UP_INCOMPLETE' }))).toBe(
-      true,
-    );
+    expect(belongsOnTheInbox(askedMe(), ME)).toBe(true);
+    expect(
+      belongsOnTheInbox(askedMe({ organiserId: ME, standing: 'LINE_UP_INCOMPLETE' }), ME),
+    ).toBe(true);
   });
 
   /**
@@ -157,8 +157,8 @@ describe('what the inbox still holds', () => {
       { playerId: ME, answer: 'ACCEPTED', answerBy: at(-199) },
     ]);
 
-    expect(belongsOnTheInbox(justCompleted)).toBe(true);
-    expect(belongsOnTheInbox(longCompleted)).toBe(false);
+    expect(belongsOnTheInbox(justCompleted, ME)).toBe(true);
+    expect(belongsOnTheInbox(longCompleted, ME)).toBe(false);
   });
 
   it('keeps an ending inside the shelf life', () => {
@@ -166,7 +166,7 @@ describe('what the inbox still holds', () => {
       { playerId: ME, answer: 'LAPSED', answerBy: at(-1) },
     ]);
 
-    expect(belongsOnTheInbox(justLapsed)).toBe(true);
+    expect(belongsOnTheInbox(justLapsed, ME)).toBe(true);
   });
 
   it('lets it go once the shelf life has passed, so an inbox is not an archive', () => {
@@ -176,7 +176,7 @@ describe('what the inbox still holds', () => {
       [{ playerId: ME, answer: 'DECLINED', answerBy: at(-hours - 1) }],
     );
 
-    expect(belongsOnTheInbox(old)).toBe(false);
+    expect(belongsOnTheInbox(old, ME)).toBe(false);
   });
 
   /**
@@ -190,7 +190,7 @@ describe('what the inbox still holds', () => {
       { playerId: ME, answer: 'ACCEPTED', answerBy: at(-490) },
     ]);
 
-    expect(belongsOnTheInbox(withdrawn)).toBe(false);
+    expect(belongsOnTheInbox(withdrawn, ME)).toBe(false);
   });
 
   it('keeps a withdrawal that has just happened, in its place among the rest', () => {
@@ -199,11 +199,13 @@ describe('what the inbox still holds', () => {
       [{ playerId: ME, answer: 'ACCEPTED', answerBy: at(-490) }],
     );
 
-    expect(belongsOnTheInbox(justWithdrawn)).toBe(true);
+    expect(belongsOnTheInbox(justWithdrawn, ME)).toBe(true);
   });
 
   it('keeps a standing it cannot read, because it may not decide an unnamed thing is over', () => {
-    expect(belongsOnTheInbox(challenge({ standing: undefined, openedAt: at(-500) }))).toBe(true);
+    expect(belongsOnTheInbox(challenge({ standing: undefined, openedAt: at(-500) }), ME)).toBe(
+      true,
+    );
   });
 
   /**
@@ -219,7 +221,58 @@ describe('what the inbox still holds', () => {
     ]);
 
     expect(undated.endedAt).toBeUndefined();
-    expect(belongsOnTheInbox(undated)).toBe(true);
+    expect(belongsOnTheInbox(undated, ME)).toBe(true);
+  });
+});
+
+describe('a no of my own', () => {
+  /**
+   * The shelf life keeps a row a day so the reader learns something they did not do. A decline is
+   * the reader's own act, so there is nothing on *You said no* to be told — and the row goes with
+   * the tap, whether the no ended a singles court or left a doubles court to carry on without them.
+   */
+  it('leaves at once, on a court it ended', () => {
+    const iSaidNo = challenge({ standing: 'DECLINED', openedAt: at(-4), endedAt: at(-1) }, [
+      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: ME, answer: 'DECLINED', answerBy: at(20) },
+    ]);
+
+    expect(belongsOnTheInbox(iSaidNo, ME)).toBe(false);
+  });
+
+  it('leaves at once, on a court that carries on filling without me', () => {
+    const stillFilling = challenge({ standing: 'LINE_UP_INCOMPLETE', sport: 'padel' }, [
+      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: ME, answer: 'DECLINED', answerBy: at(20) },
+      {},
+      {},
+    ]);
+
+    expect(belongsOnTheInbox(stillFilling, ME)).toBe(false);
+    expect(challengeInbox([stillFilling], ME)).toEqual([]);
+  });
+
+  /** To the organiser the same no is news, and it keeps its day. */
+  it('is news to the organiser, whose row stays its day', () => {
+    const theirNo = challenge(
+      { organiserId: ME, standing: 'DECLINED', openedAt: at(-4), endedAt: at(-1) },
+      [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: EWA, answer: 'DECLINED', answerBy: at(20), nickname: 'ewa.m' },
+      ],
+    );
+
+    expect(belongsOnTheInbox(theirNo, ME)).toBe(true);
+  });
+
+  /** A lapse is not a decline: nobody chose it, and *Your day ran out* is kept to be read. */
+  it('is not a lapse, which keeps its row to be read', () => {
+    const myDayRanOut = challenge({ standing: 'LAPSED', openedAt: at(-49), endedAt: at(-1) }, [
+      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: ME, answer: 'LAPSED', answerBy: at(-1) },
+    ]);
+
+    expect(belongsOnTheInbox(myDayRanOut, ME)).toBe(true);
   });
 });
 

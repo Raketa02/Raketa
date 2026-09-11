@@ -166,6 +166,25 @@ async function openTheChallenge(
   await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
 }
 
+/**
+ * The same screen by its route — the way in for a challenge whose row is no longer on the inbox,
+ * which since a no of the reader's own leaves at once is the ordinary way a declined one is seen.
+ */
+async function openTheChallengeByRoute(
+  answer: Wire['ChallengeDetailResponse'],
+  listed: Wire['ChallengeSchema'],
+) {
+  stubChallenges(transport, [listed], READ_AT);
+  transport.on('GET', DETAIL_PATH, () => json(answer));
+
+  await launchSignedIn();
+  fireEvent.press(await screen.findByLabelText(/^Chats/));
+  await waitFor(() => expect(screen).toHavePathname('/chats'));
+
+  act(() => router.push(`/chats/challenge/${CHALLENGE_ID}`));
+  await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
+}
+
 describe('the arms', () => {
   it('states the standing, in the reader’s own person', async () => {
     await openTheChallenge();
@@ -182,7 +201,9 @@ describe('the arms', () => {
    * standing — and *that person is a stranger to you once more the moment they leave*.
    */
   it('draws no card once the challenge has ended', async () => {
-    await openTheChallenge(
+    // Ended by the reader's own no, whose row has left the inbox with the tap — so the screen
+    // is reached the second way in, a route (#390), which resolves exactly as before.
+    await openTheChallengeByRoute(
       detail({
         standing: 'DECLINED',
         seats: [

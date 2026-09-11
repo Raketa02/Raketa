@@ -158,14 +158,28 @@ const STILL_BEING_ARRANGED: Readonly<Record<Standing, boolean>> = {
 };
 
 /**
- * Whether this row belongs on the inbox at all: still being arranged, or its news still fresh.
+ * Whether this row belongs on the inbox at all: still being arranged, or its news still fresh —
+ * **and never a challenge the reader themselves said no to.**
  *
  * Two rows stay whatever their age, and it is one rule read twice: **a row the app cannot
  * describe or cannot date is not a row it may decide is finished.** A standing this build cannot
  * read is drawn as the out-of-date gap and keeps its place; so does an ending the contract
  * claimed and did not date.
+ *
+ * **A no of your own leaves at once**, and that is the shelf life's own argument read from the
+ * other side. What the row carries is *news* — a seat reopened, a day run out, a court withdrawn —
+ * and it is kept a day so the reader learns something they did not do. A decline is the one
+ * departure that is the reader's own act: there is nothing on *You said no* they have to be told,
+ * and a court they left going on filling without them is not their news either. So the row goes
+ * with the tap, on a singles court it ended and on a doubles court that carries on alike — where
+ * the organiser's row for the same no stays its day, because to them it *is* news. A lapse is not
+ * a decline: nobody chose it, and *Your day ran out* is kept to be read exactly as before.
+ *
+ * The record is untouched: `GET /challenges` still holds the seat, the screen still resolves for
+ * a stale route, and only the row departs.
  */
-export function belongsOnTheInbox(challenge: Challenge): boolean {
+export function belongsOnTheInbox(challenge: Challenge, playerId: string): boolean {
+  if (ownSeat(challenge, playerId)?.answer === 'DECLINED') return false;
   if (challenge.standing === undefined) return true;
   if (STILL_BEING_ARRANGED[challenge.standing]) return true;
 
@@ -218,7 +232,10 @@ export function challengeInbox(
   challenges: readonly Challenge[],
   playerId: string,
 ): readonly Challenge[] {
-  return inboxOrder(challenges.filter(belongsOnTheInbox), playerId);
+  return inboxOrder(
+    challenges.filter((challenge) => belongsOnTheInbox(challenge, playerId)),
+    playerId,
+  );
 }
 
 /**

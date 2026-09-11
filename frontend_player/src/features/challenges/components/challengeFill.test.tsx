@@ -24,6 +24,7 @@
  */
 
 import { onlineManager } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -272,6 +273,28 @@ async function openTheChallenge(
   await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
 }
 
+/**
+ * The same screen by its route. A reader who said no has no row to tap — a no of one's own leaves
+ * the inbox with the tap — and the screen still resolves for them (#390), which is what the two
+ * cases about the reader who left are read on.
+ */
+async function openTheChallengeByRoute(
+  answer: Wire['ChallengeDetailResponse'],
+  listed: Wire['ChallengeSchema'],
+  rooms: readonly Wire['ConversationRowSchema'][] = [],
+) {
+  stubChallenges(transport, [listed], READ_AT);
+  stubConversations(transport, rooms);
+  transport.on('GET', DETAIL_PATH, () => json(answer));
+
+  await launchSignedIn();
+  fireEvent.press(await screen.findByLabelText(/^Chats/));
+  await waitFor(() => expect(screen).toHavePathname('/chats'));
+
+  act(() => router.push(`/chats/challenge/${CHALLENGE_ID}`));
+  await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
+}
+
 /** The room this challenge's first acceptance opened, as `GET /conversations` lists it. */
 function conversationRow(
   over: Partial<Wire['ConversationRowSchema']> = {},
@@ -350,7 +373,7 @@ describe('the three controls', () => {
       { side: 'B' },
     ];
 
-    await openTheChallenge(
+    await openTheChallengeByRoute(
       detail({ organiser_id: BEA, seats: left }),
       row({ organiser_id: BEA, seats: left }),
     );
@@ -426,7 +449,7 @@ describe('*Open the chat*', () => {
       { side: 'B' },
     ];
 
-    await openTheChallenge(
+    await openTheChallengeByRoute(
       detail({ organiser_id: BEA, seats: left }),
       row({ organiser_id: BEA, seats: left }),
       [conversationRow()],

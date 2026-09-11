@@ -169,6 +169,39 @@ describe('what the section holds', () => {
     ).toBeTruthy();
   });
 
+  /**
+   * **A no of my own leaves at once.** The row is kept a day to tell the reader something they
+   * did not do; a decline is their own act, so *You said no* is not news to them — on a singles
+   * court their no ended, and on a doubles court that carries on filling without them alike. The
+   * organiser's row for the same no stays its day, which is the case above this one.
+   */
+  it('drops a challenge I said no to, whether it ended or carries on without me', async () => {
+    const iEnded = challenge({
+      standing: 'DECLINED',
+      ended_at: at(-1),
+      seats: [
+        { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+        { side: 'B', player_id: ME, answer: 'DECLINED', answer_by: at(20), nickname: 'me_' },
+      ],
+    });
+    const iLeft = challenge({
+      challenge_id: 'bbbbbbbb-0000-4000-8000-000000000002',
+      sport: 'PADEL',
+      standing: 'LINE_UP_INCOMPLETE',
+      seats: [
+        { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+        { side: 'A', player_id: ME, answer: 'DECLINED', answer_by: at(20), nickname: 'me_' },
+        { side: 'B' },
+        { side: 'B' },
+      ],
+    });
+
+    await openChats([iEnded, iLeft, mySend()]);
+
+    await screen.findByLabelText(/^tomek\.p, Squash/);
+    expect(screen.queryByLabelText(/^ewa\.m/)).toBeNull();
+  });
+
   it('lets an ended challenge go once it stops being news, so an inbox is not an archive', async () => {
     const longGone = mySend({
       standing: 'DECLINED',
