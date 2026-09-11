@@ -43,7 +43,6 @@ import {
 } from '@/test-support/transport';
 
 import { HOURS_OFFERED } from '../domain/slots';
-import { planKeys } from '../hooks/planKeys';
 
 import { planErrorMessage } from './planErrorMessage';
 import {
@@ -205,6 +204,28 @@ async function openTheRoom({
 
 /** The chip for one slot, found by the name it says rather than by the value it draws. */
 const slotChip = (name: string) => screen.getByLabelText(new RegExp(`^${name}:`));
+
+/**
+ * Let an answered response finish its way through the http client and the Query cache, **and
+ * reach the screen**. The path is microtasks up to the cache and then one `setTimeout(0)` —
+ * Query's `notifyManager` delivers cache updates on a macrotask — and this tree runs on the fake
+ * timers `expo-router/testing-library` installs, so that last step has to be advanced by hand
+ * rather than waited for. Sized by the bad path: with `usePlanWrite`'s cancel removed, the hour
+ * rolls back exactly here.
+ */
+async function drained(read: Promise<unknown>): Promise<void> {
+  const turns = async () => {
+    for (let turn = 0; turn < 20; turn += 1) await Promise.resolve();
+  };
+  await act(async () => {
+    await read;
+    await turns();
+  });
+  act(() => {
+    jest.advanceTimersByTime(1);
+  });
+  await act(turns);
+}
 
 describe('the card', () => {
   it('is the three slot chips, in where · day · hour order', async () => {
@@ -760,9 +781,12 @@ describe('what another member set arrives on the nudge', () => {
     const held = new Promise<Wire['PlanSchema'][]>((resolve) => {
       answerTheRead = resolve;
     });
-    transport.on('GET', PLANS_PATH, async () =>
-      json<Wire['PlanListResponse']>({ plans: await held }),
-    );
+    /** The read the nudge starts, so the test can wait for it to have been answered in full. */
+    let read: Promise<Response> = Promise.resolve(json({ plans: [] }));
+    transport.on('GET', PLANS_PATH, () => {
+      read = held.then((plans) => json<Wire['PlanListResponse']>({ plans }));
+      return read;
+    });
     transport.on('PUT', planSlotPath(GAME, 'hour'), () =>
       json(plan({ day: '2026-09-13', hour: '18:00:00' })),
     );
@@ -774,14 +798,48 @@ describe('what another member set arrives on the nudge', () => {
     fireEvent.press(await screen.findByText('18:00'));
     await waitFor(() => expect(screen.getByLabelText(`${SLOT_NAME.hour}: 18:00`)).toBeTruthy());
 
-    // The read the nudge started answers now, with the plan as it stood before the hour.
+    // The read the nudge started answers now, with the plan as it stood before the hour — and
+    // the test waits for that answer to have been handled, not merely sent: without the cancel
+    // this is the point at which the hour rolled back, which is how the drain was sized.
     answerTheRead([plan({ day: '2026-09-13' })]);
-    await waitFor(() =>
-      expect(queryClient.getQueryState(planKeys.list())?.fetchStatus).toBe('idle'),
-    );
+    await drained(read);
 
     expect(screen.getByLabelText(`${SLOT_NAME.hour}: 18:00`)).toBeTruthy();
     expect(screen.queryByLabelText(`${SLOT_NAME.hour}: not agreed yet`)).toBeNull();
+  });
+
+  /**
+   * The day sheet reads `agreed` off the plan, so another member's day landing while it is up
+   * moves the chosen chip under this player's thumb — and their own pick still writes their day.
+   * *Any member may change any slot, any number of times*: no new behaviour, asserted.
+   */
+  it('moves the chosen day under an open sheet, and the player’s pick still writes theirs', async () => {
+    await openTheRoom();
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: not agreed yet`));
+    await screen.findByLabelText(dayChipName('2026-09-13'));
+
+    stubPlans(transport, [plan({ day: '2026-09-13' })]);
+    stubConversation(transport, {
+      ...room(),
+      entries: [line(1, 'DAY_RECORDED', { value: '2026-09-13' })],
+    });
+    act(() => channel.nudge(ROOM));
+
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText(dayChipName('2026-09-13')).props.accessibilityState.selected,
+      ).toBe(true),
+    );
+
+    transport.on('PUT', planSlotPath(GAME, 'day'), () => json(plan({ day: '2026-09-14' })));
+    fireEvent.press(screen.getByLabelText(dayChipName('2026-09-14')));
+
+    await waitFor(() =>
+      expect(transport.requestsTo('PUT', planSlotPath(GAME, 'day'))[0]?.body).toEqual({
+        day: '2026-09-14',
+      }),
+    );
+    await waitFor(() => expect(screen.getByLabelText(`${SLOT_NAME.day}: Monday`)).toBeTruthy());
   });
 
   /**
@@ -800,9 +858,9 @@ describe('what another member set arrives on the nudge', () => {
       entries: [line(1, 'PLACE_RECORDED', { value: 'Zabłocie Sport' })],
     });
     act(() => channel.nudge(ROOM));
-    await waitFor(() =>
-      expect(queryClient.getQueryState(planKeys.list())?.fetchStatus).toBe('idle'),
-    );
+    // The chip is behind the sheet — hidden from assistive tech while the modal is up, and
+    // exactly where the other member's value lands.
+    await screen.findByLabelText('Where: Zabłocie Sport', { includeHiddenElements: true });
 
     expect(screen.getByDisplayValue('Hala Cracovia')).toBeTruthy();
 

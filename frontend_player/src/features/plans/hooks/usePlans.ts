@@ -132,10 +132,8 @@ function usePlanWrite<Ask>(mutationFn: (ask: Ask) => Promise<Plan>) {
   return useMutation<Plan, AppError, Ask>({
     mutationKey: planKeys.writing(),
     mutationFn,
-    // **Not optimism.** Nothing is drawn before the server answers; what is cancelled is a read
-    // the room's nudge started — see the module note — which can only be older than the reply
-    // this write is about to write in, and which would otherwise land after it and roll the slot
-    // back for a second.
+    // Not optimism — a read the room's nudge started, which can only be older than the reply
+    // written in below. The module note has the crossing.
     onMutate: () => client.cancelQueries({ queryKey: planKeys.list() }),
     onSuccess: (plan) => {
       client.setQueryData<readonly Plan[]>(planKeys.list(), (plans) =>

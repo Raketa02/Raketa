@@ -55,6 +55,7 @@ import {
   LIVE_NOTE,
   SEND,
   headerSubline,
+  systemLineSentence,
   typingLine,
 } from './conversationPresentation';
 
@@ -155,6 +156,18 @@ afterEach(async () => {
   resetSessionStatus();
   await clearStoredTokens();
 });
+
+/**
+ * Let anything already on its way to the socket get there. A negative about the request log is only
+ * honest after this: `httpRequest` awaits before it calls `fetch`, so a refetch issued on this tick
+ * is recorded on a later one. An async `act` drains those microtasks — a timer would not, because
+ * `expo-router/testing-library` runs this tree on fake ones — and it is enough: a nudge for this
+ * room followed by this flush has its `/plans` re-read in the log, which is how the helper was sized.
+ */
+const settled = () =>
+  act(async () => {
+    await Promise.resolve();
+  });
 
 /** Land in the app, open Chats, tap the one row. The walk every case here starts with. */
 async function openTheRoom(answer: Wire['ConversationResponse'] = room()) {
@@ -257,6 +270,53 @@ describe('the nudge', () => {
   });
 
   /**
+   * **The line and the card's new value appear together.** The re-read room carries *tomek.p set
+   * the place*, and the re-read plan carries the place — one nudge, two lists, and the chip says
+   * what the line says on the phone that pressed nothing.
+   */
+  it('brings the slot another member set — the line and the chip together', async () => {
+    stubGames(transport, [game()], READ_AT);
+    await openTheRoom({ ...room(), game_id: GAME });
+    await screen.findByLabelText('Where: not agreed yet');
+
+    const set: Wire['SystemLineSchema'] = {
+      type: 'system_line',
+      seq: 1,
+      code: 'PLACE_RECORDED',
+      occurred_at: READ_AT,
+      actor_id: TOMEK,
+      values: { value: 'Zabłocie Sport' },
+    };
+    stubPlans(transport, [
+      {
+        game_id: GAME,
+        place: 'Zabłocie Sport',
+        day: null,
+        hour: null,
+        agreed_point: null,
+        locked_at: null,
+      },
+    ]);
+    stubConversation(transport, { ...room(), game_id: GAME, entries: [set] });
+    act(() => channel.nudge(ROOM));
+
+    const sentence = systemLineSentence(
+      {
+        kind: 'system-line',
+        seq: 1,
+        code: 'PLACE_RECORDED',
+        occurredAt: READ_AT,
+        actorId: TOMEK,
+        values: { value: 'Zabłocie Sport' },
+      },
+      [{ playerId: TOMEK, nickname: 'tomek.p' }],
+      'full',
+    );
+    expect(await screen.findByText(sentence)).toBeTruthy();
+    expect(await screen.findByLabelText('Where: Zabłocie Sport')).toBeTruthy();
+  });
+
+  /**
    * The header's second line is *the same state as the card in Now*, folded off the plan — so the
    * third slot landing on the nudge moves it from *planning* to *game on*, on the phone that set
    * nothing.
@@ -351,12 +411,17 @@ describe('the nudge', () => {
     expect(await screen.findByText(headerSubline(sport, cardStateWord('confirm')))).toBeTruthy();
   });
 
-  /** A frame is news about one room, and this one is not it — so no list is re-read either. */
+  /**
+   * A frame is news about one room, and this one is not it — so no list is re-read either. A
+   * request reaches the socket only after the client's own awaits, so the check gives one the time
+   * it would have needed rather than reading the log on the same tick.
+   */
   it('is ignored where it names another room', async () => {
     await openTheRoom();
 
     const before = transport.requests.length;
     act(() => channel.nudge('99999999-0000-4000-8000-000000000099'));
+    await settled();
 
     expect(transport.requests.length).toBe(before);
   });

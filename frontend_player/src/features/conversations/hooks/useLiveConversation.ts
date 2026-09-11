@@ -54,7 +54,9 @@
  * `readAt` — the card's one clock (ADR-0148 §10) — comes off the same read, so it is now as old
  * as the last nudge rather than the last focus, which is the fresher of the two. **One rule for
  * the three keys, and it is stated as one so they are not three precedents**: a nudge re-reads
- * what the room draws, and nothing it does not.
+ * what the room draws, and nothing it does not. One residual on this half is the backend's and is
+ * stated in ADR-0147's amendment rather than here: across an outbox batch boundary the game can be
+ * noted on the room after the line's frame went out, and the next nudge or focus repairs it.
  *
  * **There is no cancel for the games list, and the asymmetry with the plan's is not an oversight.**
  * `usePlanWrite` cancels the plan list's in-flight read because a plan write **writes its reply
@@ -69,9 +71,10 @@
  * codes would couple the card's liveness to the line vocabulary, so a fifth plan line this build
  * cannot read — the one case an old phone most needs a re-read for — would leave the card stale
  * precisely there. *A build too old to read a code says so*; it must not also go quietly stale.
- * And the stream's opening frame is a nudge too (ADR-0147 §4), so every connect and every
- * fifteen-minute reconnect re-reads the plan for free, which is the catch-up after a stretch out
- * of the room.
+ * `GET /plans` is one short list the room already holds an observer on, so an invalidation is one
+ * request and re-renders nothing that did not change. And the stream's opening frame is a nudge
+ * too (ADR-0147 §4), so every connect and every fifteen-minute reconnect re-reads the plan for
+ * free, which is the catch-up after a stretch out of the room.
  *
  * ## What the invalidation costs, and what it deliberately does not touch
  *
@@ -83,9 +86,13 @@
  * two short requests more, on every nudge including the ones that were a message: ADR-0147 priced
  * *one extra round trip per delivered message*, and inside a room it is three, all to lists the
  * room draws. The games list is the only one of the three folded against a clock, and re-reading
- * it is what keeps the room's clock the freshest reading rather than the oldest; the Play rule
- * (ADR-0147 §10) is about a ranked list reordering under a finger, none of the three is one, and
- * the rail is not under this screen anyway — switching tabs replaces the stack.
+ * it is what keeps the room's clock the freshest reading rather than the oldest. **The other
+ * reader of that re-read is the game screen**, which `/chats/conversation/[id]/details` pushes
+ * *over* this room: the room stays mounted beneath it and this channel stays open, so a nudge
+ * re-folds that screen's standing and clock while it is on top — which is what a screen keyed on a
+ * standing wants, and is said here so nobody is surprised by it. The Play rule (ADR-0147 §10) is
+ * about a ranked list reordering under a finger, and none of the three lists is one; Now's rail is
+ * not under this screen at all, because switching tabs replaces the stack.
  *
  * **The Chats list is not invalidated, and the cost of that is stated rather than glossed.** A
  * send does invalidate it, because the reply says nothing about the row's order and the player is
@@ -154,6 +161,8 @@ export function useLiveConversation(conversationId: string): LiveConversation {
           // about. Never the Chats list.
           void client.invalidateQueries({ queryKey: conversationKeys.room(conversationId) });
           void client.invalidateQueries({ queryKey: planKeys.list() });
+          // The plan's writes cancel this list's read before writing a reply in; the games' writes
+          // invalidate rather than write in, so this one needs no such cancel. See the module note.
           void client.invalidateQueries({ queryKey: gameKeys.list() });
         },
         onTyping: (typing) => {
