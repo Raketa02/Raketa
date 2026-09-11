@@ -68,9 +68,8 @@
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
-import { CandidatePhoto } from '@/features/play/types';
 import { playerName } from '@/shared/formatting/playerName';
-import { Button, ScreenHeader } from '@/shared/ui';
+import { Button, PlayerPhoto, ScreenHeader } from '@/shared/ui';
 
 import { memberName, othersIn } from '../domain/membership';
 import type { ConversationRoom } from '../domain/room';
@@ -118,7 +117,7 @@ export function ConversationHeader({
         <View style={s.faces}>
           {others.map((member, at) => (
             <View key={member.playerId} style={at === 0 ? undefined : s.behind}>
-              <CandidatePhoto
+              <PlayerPhoto
                 playerId={member.playerId}
                 {...(member.photoUrl === undefined ? {} : { photoUrl: member.photoUrl })}
                 box={{ kind: 'face', size: ROW_FACE }}

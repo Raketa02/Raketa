@@ -57,7 +57,7 @@
 
 import { StyleSheet, View } from 'react-native';
 
-import { Button, PressableCard, theme } from '@/shared/ui';
+import { Button, PlayerPhoto, PressableCard, theme } from '@/shared/ui';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Term } from '../../domain/vocabulary';
@@ -70,7 +70,6 @@ import {
   overlapRowValue,
 } from '../playerCardPresentation';
 
-import { CandidatePhoto } from './CandidatePhoto';
 import { CardHead } from './CardHead';
 import { FactRow } from './FactRow';
 import { ReasonLine } from './ReasonLine';
@@ -94,6 +93,8 @@ export interface CandidateCardSocialProps {
   readonly envelope: SearchEnvelope;
   readonly action: CandidateAction;
   readonly onAction: () => void;
+  /** Dead where there is no seat left to add anybody to — `CandidateCard`'s prop, same rule. */
+  readonly actionDisabled?: boolean;
   /** The body's own action — *Why 78?*. */
   readonly onWhyFit: () => void;
 }
@@ -103,6 +104,7 @@ export function CandidateCardSocial({
   envelope,
   action,
   onAction,
+  actionDisabled = false,
   onWhyFit,
 }: CandidateCardSocialProps) {
   const facts = candidateFacts({ candidate, envelope, drawn: SOCIAL_CARD_DRAWS });
@@ -111,7 +113,7 @@ export function CandidateCardSocial({
   return (
     <PressableCard style={s.card} onPress={onWhyFit} accessibilityLabel={facts.label}>
       <View style={s.media}>
-        <CandidatePhoto
+        <PlayerPhoto
           playerId={candidate.playerId}
           photoUrl={candidate.card.photoUrl}
           box={{ kind: 'media' }}
@@ -145,6 +147,7 @@ export function CandidateCardSocial({
           label={CANDIDATE_ACTION_WORD[action]}
           accessibilityLabel={candidateActionLabel(action, facts.name)}
           onPress={onAction}
+          disabled={actionDisabled}
           size="sm"
           style={s.action}
         />

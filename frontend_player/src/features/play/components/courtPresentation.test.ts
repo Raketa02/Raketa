@@ -1,23 +1,19 @@
 /**
- * An empty seat, and why this four.
+ * An empty seat, and who the answer was for.
  *
- * Two rules are asserted. **`NO_SHARED_SLOTS` is a dock and not a refusal** — nobody is
- * removed from the court for it, and the sentence must not read as though somebody were. And
- * **no group reason quotes a figure**: `G` is recorded and never returned, so these five
- * sentences are the whole explanation and a number in one would be invented.
+ * **`NO_SHARED_SLOTS` is a dock and not a refusal** — nobody is removed from the court for it,
+ * and the sentence must not read as though somebody were. **The withheld seat states the fact
+ * and never the cause.** And **`GROUP` is said and `SEARCHER` is not**, because a sentence
+ * under every court would make the exception unreadable.
+ *
+ * `GroupReason` no longer has sentences to assert. The five lines were drawn in a row of their
+ * own under the forecast card's names, and the row is gone — so the copy is gone with it
+ * rather than living on as a table nothing renders (`courtPresentation`'s module note).
  */
 
-import { seatLock, type BuildSeat, type SeatGuard, type SpokenSeatGuard } from '../domain/lineup';
-import { GROUP_REASONS, OPTIMISED_FOR, UNFILLED_REASONS } from '../domain/vocabulary';
+import { OPTIMISED_FOR, UNFILLED_REASONS } from '../domain/vocabulary';
 
-import { SWAP_TOGGLE_LABEL } from './accessibilityPresentation';
-import {
-  WITHHELD_SEAT_LINE,
-  groupReasonLine,
-  optimisedForLine,
-  seatGuardLine,
-  unfilledSeatLine,
-} from './courtPresentation';
+import { WITHHELD_SEAT_LINE, optimisedForLine, unfilledSeatLine } from './courtPresentation';
 
 describe('an unfilled seat', () => {
   it('gives each obstacle its own sentence', () => {
@@ -41,34 +37,6 @@ describe('an unfilled seat', () => {
   });
 });
 
-describe('why this four', () => {
-  it('gives each reason that has a sentence its own', () => {
-    const lines = GROUP_REASONS.map(groupReasonLine).filter((line) => line !== undefined);
-
-    expect(new Set(lines).size).toBe(lines.length);
-  });
-
-  it('says nothing at all for the two that grade the answer', () => {
-    // The card above them prints two side strengths, the gap and the evenness percentage.
-    // *Nobody is out of their depth* and *the best all-round fit* are both claims about how
-    // good this four is, under four figures saying exactly that — the card arguing for its
-    // answer rather than reporting it. The three that remain name a choice the engine made,
-    // which no figure carries.
-    expect(groupReasonLine('STRONGEST_WEAKEST_SEAT')).toBeUndefined();
-    expect(groupReasonLine('BEST_AVERAGE_FIT')).toBeUndefined();
-  });
-
-  it('quotes no figure, because the objective is recorded and never returned', () => {
-    for (const line of GROUP_REASONS.map(groupReasonLine)) expect(line ?? '').not.toMatch(/\d/);
-  });
-
-  it('gives the two group rapport terms one sentence', () => {
-    // The code is the vocabulary: splitting it in copy would publish a distinction the enum
-    // deliberately does not carry.
-    expect(groupReasonLine('GROUP_RAPPORT')).toBe('These four read each other well');
-  });
-});
-
 describe('a seat whose player is no longer available', () => {
   it('states the fact and never the cause', () => {
     // Four fail-closed gates reach this mark — a block either way, a hold, an account that
@@ -89,42 +57,6 @@ describe('a seat whose player is no longer available', () => {
 
   it('is not a sentence about an unfilled seat — the seat is filled, by somebody', () => {
     expect(UNFILLED_REASONS.map(unfilledSeatLine)).not.toContain(WITHHELD_SEAT_LINE);
-  });
-});
-
-describe('a refused tap on a seat', () => {
-  const SPOKEN: readonly SpokenSeatGuard[] = ['SEAT_IS_YOURS'];
-
-  it('has a sentence for the lock that speaks, and silence for the one that does not', () => {
-    // `seatLock` returns exactly these codes, so a third lock added there fails the compiler at
-    // the table. Two of them lock a seat and only one of them says so: ADR-0150 §8 makes an
-    // accepted seat *not a control*, so the sentence it used to have — `{Name} already accepted
-    // — they keep their place` — is gone rather than unreachable.
-    const locks: readonly (SeatGuard | undefined)[] = (
-      [
-        { kind: 'you' },
-        { kind: 'player', accepted: true },
-        { kind: 'player', accepted: false },
-        { kind: 'empty' },
-      ] satisfies readonly BuildSeat[]
-    ).map(seatLock);
-
-    expect(locks).toEqual(['SEAT_IS_YOURS', 'ALREADY_ACCEPTED', undefined, undefined]);
-    expect(new Set(SPOKEN.map(seatGuardLine)).size).toBe(SPOKEN.length);
-  });
-
-  it('names the way out rather than only saying no', () => {
-    // A refusal that only refuses is a control a player presses twice. Your own seat is
-    // refused BECAUSE swap mode is where sides change, so the sentence names that toggle —
-    // through the switch's own label, so the screen cannot start referring to a control that
-    // is not on it.
-    expect(seatGuardLine('SEAT_IS_YOURS')).toContain(SWAP_TOGGLE_LABEL);
-  });
-
-  it('quotes nobody, because the one refusal left is about your own seat', () => {
-    // *You already accepted* is not a thing to be told, and the handle the table used to take
-    // went with the sentence that named somebody else's seat.
-    expect(seatGuardLine('SEAT_IS_YOURS')).not.toContain('You already');
   });
 });
 

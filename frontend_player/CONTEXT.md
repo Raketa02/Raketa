@@ -409,13 +409,16 @@ listed here because it is a Play surface rather than a profile one.
   it verifies nothing about a person and it is a label with no ground; "photo review", which is
   the uploader's surface and a different fold of the same code (`player_profile` warns where a
   card marks); a **tick** anywhere in this app that is not `shared/ui/Tick`'s drawn geometry.
-- **Social tag row** — the competitive card's row of up to six of the candidate's Social tags,
-  and the **overlap** drawn over it. The ones the searcher also chose are tinted and carry
-  `· you too` in words; the intersection is `matched[]`'s, off the wire, and is never recomputed
-  from a profile read. `domain/socialTagOverlap` is the rule and `SocialTagRow` draws it, which
-  is why the type and the component do not share a name. _Avoid_: "chips" — nothing here is
-  pressable, so they are tags (6.4); tinting a `complementary` or `clashing` pair, which is a
-  different relationship and reaches the card as prose.
+- **Social tag row** — a row of up to six of somebody's Social tags, and the **overlap** drawn
+  over it. The ones the reader also chose are tinted and carry `· you too` in words; on a
+  candidate card the intersection is `matched[]`'s, off the wire, and is never recomputed from a
+  profile read. **The rule and the drawing are two layers**: `SocialTagRow` and the four-answer
+  `SocialTagOverlap` are `shared/`'s, because the competitive card and the record sheet both draw
+  the row, while `play/domain/socialTagOverlap` — the rule that reads one of those answers off a
+  **candidate** — is Play's, because a candidate row is. That is why the type and the component do
+  not share a name. _Avoid_: "chips" — nothing here is pressable, so they are tags (6.4); tinting
+  a `complementary` or `clashing` pair, which is a different relationship and reaches the card as
+  prose.
 - **Stat box** — the drawn shape the competitive card states a **record block** and an **at
   stake** pair in (both are the root [`CONTEXT.md`](../CONTEXT.md)'s terms, not this file's):
   `StatBox`, a recessed `paper2` box with a name over a figure, three across and then two.
@@ -426,13 +429,16 @@ listed here because it is a Play surface rather than a profile one.
   which is a surface and this is a box inside one.
 - **Run of form, drawn** — five squares, one per result, oldest to newest and **never padded**: a
   run of three is three squares and the space after them, because the length is the statement.
-  Won is `ink` and lost is `muted` — a **lightness** step at 3,24:1, derived in
-  `recordSquares.test.ts`, so it reads with no hue perception at all — and because a square
-  carries no word, the whole row reaches a listener as **one counted clause** against the run's
-  own length (_3 of the last 5 won_) rather than as five elements. An outcome this build cannot
-  read takes the **whole field** with it at the mapper, for the same reason: half a run cannot be
-  drawn honestly, and _Counted_ beside it goes on printing. _Avoid_: a fifth square in a neutral
-  fill, which claims a game nobody played; five spoken states, which reads the row as a table.
+  `RunOfForm` is `shared/ui`'s, because the record block and the record sheet both draw it and a
+  second copy would be a second thing to keep in step with a **pinned** geometry test. Won is
+  `ink` and lost is `muted` — a **lightness** step at 3,24:1, derived from the component's own
+  `RUN_OF_FORM_FILL` in `recordSquares.test.ts`, so it reads with no hue perception at all — and
+  because a square carries no word, the whole row reaches a listener as **one counted clause**
+  against the run's own length (_3 of the last 5 won_) rather than as five elements. An outcome
+  this build cannot read takes the **whole field** with it at the mapper, for the same reason:
+  half a run cannot be drawn honestly, and _Counted_ beside it goes on printing. _Avoid_: a
+  fifth square in a neutral fill, which claims a game nobody played; five spoken states, which
+  reads the row as a table.
 - **Singles-only stake** — the rule that hides _Win, counted_ / _Lose, counted_ on a doubles seat.
   It is `domain/atStake` rather than the component's, because it is a thing somebody could be
   **wrong** about; the component is handed a pair or nothing. A **refusal to draw** and not an
@@ -782,6 +788,40 @@ only what this client had to invent to draw what is happening today and next
   does not name an act a state cannot take. _Avoid_: a second, quieter door behind the body, a
   disabled control where a card offers nothing, and a door that writes.
 
+### The sportsmanship card
+
+Three client-only concepts, all in `features/sportsmanship/`. The domain terms — the card,
+stars, blank, settled court — are the **root glossary's** and are not restated here; the word
+**rating** is Skill rating's everywhere in this app, so nothing in this feature is spelled with
+it.
+
+- **The star draft** — what the player has said so far on one card, held as a player id to
+  their stars for exactly as long as the card is on screen. **Absence is blank**, which is what
+  makes _leave anybody blank_ representable without a sixth value on a five-point scale, and a
+  map keyed by person is what makes _two answers about one player_ unrepresentable rather than
+  validated. Pressing the star that already stands **clears the row** — a rule about what an
+  answer is, in `domain/stars.ts` and never in the drawing, because sending is final and a
+  finger that slipped is the one person _leave anybody blank_ has to be true for. _Avoid_:
+  spelling a blank as `0` or as a null, and "the ratings" for what is typed — nothing is a
+  rating until it is sent, and not even then by this app's vocabulary.
+- **The rated court** — the evening a card is about, as **this feature declares it**: a game
+  id, its sport, and who was on the court. `GET /sportsmanship` answers ids and nothing else on
+  purpose, so the words come from the games list the card is drawn beside, and `Game` satisfies
+  the shape structurally rather than the feature adopting another feature's entity. A card
+  whose court is not in the list is **dropped**, because there would be nobody to name.
+  _Avoid_: reading the games cache from this feature, and re-deriving the seven-day window on
+  this side — which cards are open is the server's answer and this client holds no clock it
+  could be right with.
+- **The star row, drawn** — five 44pt targets, flush, with a drawn 24pt pentagram inside each
+  ([6.13](docs/design-system.md#613-the-star-row)). `StarRow` is `shared/ui`'s: it has a touch
+  rule, a press state, a fill pair and three pinned ratios, which is a design-system object
+  whether or not a second feature draws it. Given is `ink` and blank a `muted` outline — the
+  run of form's own pair at 3,24:1, so it reads with no hue perception, plus a **shape**
+  difference the squares could not have — and each star is **its own accessibility element**
+  with only the standing one `selected`, because a listener has no row to count along. _Avoid_:
+  a zero star, half stars, and marking every filled star selected, which reads the row out as a
+  table.
+
 ### Data and errors
 
 - **Query key factory** — the per-feature object in `hooks/` defining every key, with
@@ -951,6 +991,13 @@ comment and a commit message all use the same word.
   screen that names its denominator and reports one through `accessibilityValue`; a **meter**
   visualises a number the row beside it has already printed and is **hidden from assistive
   technology**. _Avoid_: using either word for the other, or calling a meter a progress bar.
+- **A meter's tone** — which of three fills it draws in, `good` · `neutral` · `poor`. It is
+  the **caller's** reading of the figure and never the meter's own: where a number turns poor
+  is a fact about what the number means, so one ladder is read by every surface drawing it and
+  a bar can never disagree with a pill above it about one ratio. _Avoid_: "the meter's
+  threshold", which puts the ladder in the primitive, and treating the tone as the carrier of
+  a value — it is always the third cue, behind the bar's length and the figure printed beside
+  it.
 - **Accessible name** — what a control announces. It is **copy**, not a component detail: it
   is localisable, it quotes formatted numbers, and it is composed from codes in a
   `*Presentation.ts`, never written as a template in the component that draws the control.

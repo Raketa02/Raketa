@@ -21,13 +21,20 @@ provider's own rounding, taken rather than recomputed — and the two counts tra
 under it so that the matcher can stand a strand down below ``min_observations``
 without ever needing to divide them itself.
 
-**Three strands cross as nothing at all.** *Keeps plans*, *settles up* and
-*sportsmanship* have no provider on this platform, so they are absent from the
-mapping rather than present at a nought — and the reliability term renormalises
-over the two that arrived. That is why ``SportsmanshipStrand`` has no
-construction site anywhere in this repository yet: the one strand that is a mean
-rather than a ratio is also the one nothing can measure, and inventing a mean to
-exercise the shape would put a number on a card that nobody said.
+**Three strands cross as nothing at all.** *Keeps plans* and *settles up* have
+no provider on this platform, and *sportsmanship* has one the matcher may not
+read (``docs/adr/0154``), so all three are absent from the mapping rather than
+present at a nought — and the reliability term renormalises over the three that
+arrived. That is why ``SportsmanshipStrand`` has no construction site anywhere in
+this repository: the one strand that is a mean rather than a ratio is also the
+one the matcher is forbidden to hear, and inventing a mean to exercise the shape
+would put a number in a ranking that nobody agreed could be there.
+
+**The third to arrive is *answers about results*** (``docs/adr/0156``), and
+nothing about this translation changed to admit it — which is the point of the
+shape. It is a ratio like the two beside it, it crosses as ``RatioStrand`` like
+them, and the only thing that moved on this side of the seam is that three keys
+arrive where two used to.
 
 **Reliability stops being absent platform-wide the moment this is wired.** The
 term is now a fact the platform *has*, which some people have no record for — so

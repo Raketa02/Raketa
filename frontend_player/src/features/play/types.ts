@@ -92,7 +92,6 @@ export { concernLine } from './components/concernPresentation';
 export {
   BALANCE_ROW_LABEL,
   CANDIDATE_ACTION_WORD,
-  CANDIDATE_POSTER_LABEL,
   DECK_ANSWER_WORDS,
   OVERLAP_ROW_LABEL,
   /**
@@ -125,12 +124,7 @@ export {
   inclusionLine,
   livenessLine,
 } from './components/livenessPresentation';
-export {
-  WITHHELD_SEAT_LINE,
-  groupReasonLine,
-  seatGuardLine,
-  unfilledSeatLine,
-} from './components/courtPresentation';
+export { WITHHELD_SEAT_LINE, unfilledSeatLine } from './components/courtPresentation';
 export {
   PROMPT_CLOSER,
   REFRESH_YOUR_TIMES_BODY,
@@ -149,7 +143,6 @@ export {
 export {
   CANDIDATE_ACTIONS,
   PLAY_LIVE_REGIONS,
-  SWAP_TOGGLE_LABEL,
   availabilityDiffCellLabel,
   candidateActionLabel,
   candidateCardLabel,
@@ -205,11 +198,6 @@ export {
   type CandidateCardSocialProps,
 } from './components/candidate/CandidateCardSocial';
 export { DECK_CARD_DRAWS, DeckCard, type DeckCardProps } from './components/candidate/DeckCard';
-export {
-  CandidatePhoto,
-  type CandidatePhotoBox,
-  type CandidatePhotoProps,
-} from './components/candidate/CandidatePhoto';
 export { CardHead, type CardHeadProps } from './components/candidate/CardHead';
 
 export { FactRow, type FactRowProps } from './components/candidate/FactRow';
@@ -256,10 +244,8 @@ export {
   seatPlaces,
   tapSeat,
   type BuildSeat,
-  type SeatGuard,
   type SeatPlace,
   type SeatTap,
-  type SwapState,
 } from './domain/lineup';
 
 export type {
@@ -451,8 +437,9 @@ export {
   PICK_PLAYERS_LABEL,
   PROVISIONAL_WORD,
   START_OVER_LABEL,
+  SWAP_HINT,
+  USE_MATCHMAKING_LABEL,
   builderTitle,
-  fillSeatsLabel,
   forecastHeading,
 } from './components/builderPresentation';
 

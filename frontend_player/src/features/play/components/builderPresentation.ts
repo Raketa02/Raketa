@@ -34,46 +34,87 @@
  * its rule is about *Match Fit* and *Match score*, and neither word is here.
  */
 
-import { modeWord } from './searchPresentation';
 import { isDoubles, type CourtHalf } from '../domain/lineup';
-import type { SearchMode } from '../domain/vocabulary';
 
 /**
- * The screen's title.
+ * The screen's title — **the game it is here to build**, in the sport's own two words.
  *
- * *Complete* rather than *Build* the moment somebody is already seated, because that is what
- * the screen is then for: `locked_seats` are people the fill will seat **around**, and a title
- * still saying *build* would describe an empty court the player can see is not empty.
+ * ## What it says, and the two wordings it is not
+ *
+ * It said *Build the four* / *Set up the match*, with *Complete the …* the moment anybody was
+ * seated. Three problems in one line: the pair was one sentence in two registers — one counts
+ * seats, the other names an occasion — so it only read as a pair to somebody who had seen both;
+ * *the four* is a word about a Sport that a squash court must never be told; and the third
+ * wording put the screen's name on the state of the court, which is the one thing on it a
+ * player can already see.
+ *
+ * Then it had **no title at all** for a day, with `searchFacts` promoted into its place. That
+ * is reversed here and the reason is worth keeping: the pool one screen on made the same
+ * promotion, and two screens carrying `Padel · doubles · for fun` as their heading is a
+ * heading that tells a player nothing about which of the two they are on. The line is honest
+ * and it is not a name.
+ *
+ * ## It is the same string the control that opens this screen carries
+ *
+ * `courtEntryTitle` reads this function, and that is a relationship rather than a coincidence:
+ * **the control names the screen it opens**, which is `whyFitControlWord`'s rule and its
+ * reason. A button promising *Build a doubles* that lands somebody on a screen called
+ * something else is the drift one shared string cannot have.
+ *
+ * **It does not branch on how full the court is.** The old third wording was right that a
+ * court with three faces on it is not being *built* from nothing — and the eyebrow above says
+ * what the search was, the court below shows who is in it, and a heading that moved under a
+ * player as they filled seats was naming the state rather than the screen.
  */
-export function builderTitle(court: { readonly seats: number; readonly filled: number }): string {
-  const noun = isDoubles(court.seats) ? 'four' : 'match';
-  return court.filled > 1
-    ? `Complete the ${noun}`
-    : isDoubles(court.seats)
-      ? 'Build the four'
-      : 'Set up the match';
+export function builderTitle(seats: number): string {
+  return isDoubles(seats) ? 'Build a doubles' : 'Build a singles';
 }
 
-/** `Padel · doubles · for fun` — the three facts the search was run under. */
-export function builderEyebrow(court: {
-  readonly sportName: string;
-  readonly seats: number;
-  readonly mode: SearchMode;
-}): string {
-  const shape = isDoubles(court.seats) ? 'doubles' : 'singles';
-  return `${court.sportName} · ${shape} · ${modeWord(court.mode)}`;
-}
+/*
+ * **`searchFacts` stood here** — `Padel · doubles · for fun`, the three facts the search was
+ * run under — and it is deleted rather than left with no caller.
+ *
+ * It was tried in both registers on both of Play's inner screens, and neither worked. As the
+ * **title** it put the court and the pool under one heading, naming the search on both and the
+ * screen on neither. As the **eyebrow** over the titles that replaced it, it read as those
+ * titles said twice: *doubles* is in `Build a doubles`, and the Sport is on the court itself —
+ * drawn in the picture, printed under the pool's own court, and spoken in both of their
+ * summaries.
+ *
+ * **What went with it is one word: the mode.** `for fun` against `competitive` is now stated
+ * on neither screen, and it is not invisible — the two draw different candidate cards, and the
+ * competitive one prints a head-to-head band the social one has no room for — but it is no
+ * longer *said*. That is the cost of the removal, recorded here rather than discovered.
+ *
+ * `modeWord` and `SearchMode` leave this file's imports with it. Both have other callers;
+ * nothing about either moved.
+ */
 
 /**
- * ⚡'s label, and it names **what is left** rather than the whole court.
+ * What the builder is called when it cannot read the search it was opened on.
  *
- * *The seats* on an untouched court and *the rest* the moment anybody is seated: the engine
- * fills around `locked_seats` and never over them, so a control offering to fill *the seats*
- * beside three faces would be offering to do something the request cannot ask for.
+ * There is no shape to name in that state — no Sport, no seat count and no mode — so
+ * `builderTitle` has nothing to branch on, and `isDoubles(0)` answering *singles* would be the
+ * screen claiming a court shape it does not know. It is not `NO_RECORD_TITLE` either: that
+ * sentence is the note's, it is the whole of what went wrong, and a header repeating it would
+ * say one thing twice on a screen whose body is that one note.
  */
-export function fillSeatsLabel(court: { readonly seats: number; readonly filled: number }): string {
-  return court.filled > 1 ? 'Let the engine fill the rest' : 'Let the engine fill the seats';
-}
+export const UNREADABLE_SEARCH_TITLE = 'Your line-up';
+
+/**
+ * ⚡'s label — **the act, named once**.
+ *
+ * It was a pair, *Let the engine fill the seats* and *Let the engine fill the rest*, and the
+ * branch was earned: the engine fills around `locked_seats` and never over them, so a control
+ * offering *the seats* beside three faces was offering something the request cannot ask for.
+ *
+ * **Naming the act instead of the scope dissolves the branch.** *Use Matchmaking* is true of an
+ * empty court and of one with three people on it, so there is nothing left for a second string
+ * to correct — and the word is the platform's own for what the button reaches
+ * (`docs/specs/matchmaking/`), where *let the engine* named the machinery and left a player to
+ * work out what it would do.
+ */
+export const USE_MATCHMAKING_LABEL = 'Use Matchmaking';
 
 /** The other branch, and the screen that owns widening. */
 export const PICK_PLAYERS_LABEL = 'Pick players myself';
@@ -86,17 +127,24 @@ export const PICK_PLAYERS_LABEL = 'Pick players myself';
  * is a different answer and not a quicker one.
  */
 /**
- * What the swap toggle's row says under its own label, in both states.
+ * **What a seat does, said above the court** — the one sentence that replaced the toggle.
  *
- * The label is `SWAP_TOGGLE_LABEL` and the state is the `switch` role's, so neither is
- * repeated here — §20.2's *prefer the role that carries the state*. What the line adds is what
- * a **tap** will now do, which is the thing the truth table changes and the control cannot
- * announce.
+ * Swapping was a mode: a `switch` in a card over the court, two descriptions under it, and a
+ * tap on a seat that meant *replace* or *trade* depending on which way it was thrown. The
+ * mode is gone and a seat trades, always (`domain/lineup`'s truth table), so what was a
+ * control's description becomes a **capability line** — the screen's own statement of what
+ * the graphic beneath it will do.
+ *
+ * It is one string and not two because there is no longer a state for a second one to
+ * describe. It is drawn only where a trade is possible at all — one other person on the court
+ * — for the reason the toggle was: a sentence advertising an act nobody can perform yet is a
+ * sentence that teaches the wrong thing.
+ *
+ * **It is announced.** The court's summary element names the Sport and the seats filled and
+ * every seat names its own place; none of them says what pressing one does, and this is the
+ * only place that fact is written. It was the toggle's job, and the toggle announced itself.
  */
-export const SWAP_TOGGLE_DESCRIPTION: Readonly<Record<'on' | 'off', string>> = {
-  on: 'Tap two seats to trade places. Nobody leaves the court.',
-  off: 'Tap a seat to swap that player for somebody else.',
-};
+export const SWAP_HINT = 'Tap a seat to swap players and propose your game layout';
 
 /**
  * The two halves of the court, as the forecast card's own rows label them.

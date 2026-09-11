@@ -17,7 +17,15 @@ import { render, screen } from '@testing-library/react-native';
 import { Image, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { formatLevel, formatRange, formatSignedLevel } from '@/shared/formatting/ratingFormat';
-import { balanceShare, courtPosterFor, courtSeatCount, theme } from '@/shared/ui';
+import {
+  ON_COURT_CLAUSE,
+  ON_COURT_MARK,
+  PlayerPhoto,
+  balanceShare,
+  courtPosterFor,
+  courtSeatCount,
+  theme,
+} from '@/shared/ui';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Evidence, ScoredTerm } from '../../domain/evidence';
@@ -25,11 +33,8 @@ import type { Term } from '../../domain/vocabulary';
 import { toCandidate } from '../../mappers/candidateMappers';
 import type { Wire } from '@/test-support/transport';
 
-import { ON_COURT_CLAUSE, ON_COURT_MARK } from '../playerCardPresentation';
-
 import { COMPETITIVE_CARD_DRAWS, CandidateCard } from './CandidateCard';
 import { CandidateCardSocial, SOCIAL_CARD_DRAWS } from './CandidateCardSocial';
-import { CandidatePhoto } from './CandidatePhoto';
 import { DECK_CARD_DRAWS, DeckCard } from './DeckCard';
 
 const PLAYER = '9f2a1c44-0000-4000-8000-000000000001';
@@ -407,7 +412,15 @@ describe('each card’s drawn set', () => {
     }
   });
 
-  it('filters first and takes three after, so a card that promised three draws three', () => {
+  /**
+   * **The competitive card makes no case, and that is not the filter running to empty.**
+   *
+   * `argues: false` stops the lines being composed at all — see `candidateFacts`. The
+   * distinction is load-bearing: a filtered list still has survivors to speak, and the whole
+   * point here is that nothing reaches the label either (asserted in *what each control
+   * announces*, below).
+   */
+  it('draws no reason line at all on the competitive card, filtered or otherwise', () => {
     drawCompetitive();
 
     for (const line of [
@@ -415,7 +428,7 @@ describe('each card’s drawn set', () => {
       '4 km away',
       "They're here to compete too",
     ]) {
-      expect(screen.getByText(line)).toBeTruthy();
+      expect(screen.queryByText(line)).toBeNull();
     }
   });
 
@@ -440,25 +453,16 @@ describe('each card’s drawn set', () => {
   });
 
   /**
-   * §5's *When nothing survives* claim, **re-checked rather than re-read**.
+   * §5's *When nothing survives* claim no longer has a card to be about.
    *
-   * The surviving set is one term smaller than it was, so the claim is worth confirming rather
-   * than inheriting. It rests on two things and #312 touched neither: `DISTANCE` never stands
-   * down, and this card draws no distance row — so the sentence for it is never filtered and a
-   * survivor always exists, even on a candidate with nothing else firing and no liveness
-   * reason to fall back to.
+   * It rested on the competitive card always having one sentence left — `DISTANCE` never
+   * stands down and no distance row is drawn, so a survivor always existed. The card argues
+   * nothing now, so the question it answered is gone; what is left worth pinning is that the
+   * **set** is untouched by that, because it still decides which clauses the label carries for
+   * every row the card does draw.
    */
-  it('cannot run out of reasons, with the surviving set one term smaller', () => {
-    expect(COMPETITIVE_CARD_DRAWS).not.toContain('DISTANCE');
-
-    drawCompetitive({
-      terms: TERMS.filter((row) => COMPETITIVE_CARD_DRAWS.includes(row.term as Term)).concat(
-        TERMS.filter((row) => row.term === 'DISTANCE'),
-      ),
-      livenessReasons: [],
-    });
-
-    expect(screen.getByText('4 km away')).toBeTruthy();
+  it('keeps the drawn set to what the card actually renders a value for', () => {
+    expect([...COMPETITIVE_CARD_DRAWS]).toEqual(['LEVEL_FIT', 'PREDICTED_BALANCE', 'RELIABILITY']);
   });
 });
 
@@ -575,9 +579,15 @@ describe('the social tag row', () => {
     expect(screen.getByText('Both of you: Plays to win')).toBeTruthy();
   });
 
-  /** Complementary and clashing are a different relationship and stay prose — the ticket's own. */
+  /**
+   * Complementary and clashing are a different relationship and stay prose — the ticket's own.
+   *
+   * Read on the **social** card, which is where a reason sentence is still drawn: the
+   * competitive card draws no reason line at all now, so a prose pair has no surface on it and
+   * the assertion would be about the removal rather than about the copy.
+   */
   it('keeps a complementary pair as a sentence and tints nothing off it', () => {
-    drawCompetitive({
+    drawSocial({
       terms: [
         tagTerm('playing_style', {
           complementary: [{ a: 'PLAYS_TO_WIN', b: 'QUIET_AND_FOCUSED' }],
@@ -753,13 +763,18 @@ describe('the record block', () => {
     expect(squares()).toHaveLength(3);
   });
 
-  it('tells a win from a loss by fill, in two neutrals rather than two hues', () => {
+  it('tells a win from a loss by fill, and draws the same pair the record sheet does', () => {
     // The ratios are `recordSquares.test.ts`'s; what is asserted here is that the drawing uses
     // the pair that file derives, so a repaint cannot happen in one place only.
+    //
+    // **It was two neutrals and is now a green and a grey** (#384). The run is one drawn object
+    // with two consumers, so the record sheet's repaint landed here too — deliberately: a
+    // reader closes a shortlist and taps a face, and five squares that changed colour between
+    // the two screens would read as two different facts about the same five games.
     drawCompetitive(withRecord({ lastFive: ['WIN', 'LOSS'] }));
 
     expect(squares().map((style) => style.backgroundColor)).toEqual([
-      theme.color.ink,
+      theme.color.mint,
       theme.color.muted,
     ]);
   });
@@ -985,9 +1000,9 @@ describe('the head-to-head band', () => {
   });
 
   it('collapses to the row the card drew before it, when only the forecast fired', () => {
-    // `PREDICTED_BALANCE` is in the drawn set whether or not the band can draw it, so its
-    // reason line is filtered off either way — a band that simply vanished would take the fact
-    // off the card in both registers at once.
+    // `PREDICTED_BALANCE` is in the drawn set whether or not the band can draw it, so the
+    // clause is spoken either way — a band that simply vanished would take the fact off the
+    // card in both registers at once.
     drawCompetitive({ terms: without('LEVEL_FIT') });
 
     expect(drawnTrack()).toBeUndefined();
@@ -1025,13 +1040,15 @@ describe('the card’s border', () => {
 
 describe('the photograph', () => {
   it('is drawn from the minted URL', () => {
-    render(<CandidatePhoto playerId={PLAYER} photoUrl={PHOTO} box={{ kind: 'thumb' }} />);
+    render(
+      <PlayerPhoto playerId={PLAYER} photoUrl={PHOTO} box={{ kind: 'panel', size: 'card' }} />,
+    );
 
     expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: PHOTO });
   });
 
   it('falls back to the poster on the omitted id, and to that player’s own poster', () => {
-    render(<CandidatePhoto playerId={PLAYER} box={{ kind: 'media' }} />);
+    render(<PlayerPhoto playerId={PLAYER} box={{ kind: 'media' }} />);
 
     expect(screen.UNSAFE_queryByType(Image)).toBeNull();
     // Found only with the hidden elements included, which is the assertion: 6.9's sentence
@@ -1046,7 +1063,7 @@ describe('the photograph', () => {
   });
 
   it('takes a third of its own box as its corner, at every size', () => {
-    render(<CandidatePhoto playerId={PLAYER} box={{ kind: 'face', size: 46 }} />);
+    render(<PlayerPhoto playerId={PLAYER} box={{ kind: 'face', size: 46 }} />);
     const face = StyleSheet.flatten(screen.UNSAFE_getAllByType(View)[0]?.props.style as ViewStyle);
 
     expect(face.borderRadius).toBeCloseTo(46 * 0.33);
@@ -1092,24 +1109,35 @@ describe('what each control announces', () => {
     ).toBeTruthy();
   });
 
+  /**
+   * **The listener gets the card the reader gets, and no more** — which is the whole reason
+   * `argues` empties the lines rather than the card simply not rendering them.
+   *
+   * The reason and concern sentences left this label on 2026-09-09, at the moment they left
+   * the drawing. Every clause that remains is a **row the card draws**: the level the panel
+   * prints, the reading the band prints, the tags the row prints — each stated here because
+   * the thing that draws it announces nothing of its own (§20.1).
+   */
   it('states each fact exactly once, in whichever register that card draws it', () => {
-    // The competitive card draws no distance row — which is why `DISTANCE` is not in its set
-    // and its reason line survives — so a label that also stated the kilometres would say
-    // them twice, in the one register nobody can see. It draws the forecast instead, and
-    // that one is a clause because the bar it belongs to announces nothing.
     drawCompetitive();
 
     expect(
       screen.getByLabelText(
         'Marek. Fit 78 out of 100. 2,83 · Established · likely 2,55 – 2,87. ' +
           'Fairly even · 74%. ' +
-          // The tag row's clauses, between the identifying facts and the argument — and
-          // grouped, because a listener hearing *you too* once per tag is being read a table.
-          'Tags you share: Plays to win. Their other tags: Stays for a drink. ' +
-          '3 slots you both ticked · next Tue evening. 4 km away. ' +
-          "They're here to compete too.",
+          // The tag row's clauses — and grouped, because a listener hearing *you too* once per
+          // tag is being read a table.
+          'Tags you share: Plays to win. Their other tags: Stays for a drink.',
       ),
     ).toBeTruthy();
+  });
+
+  /** The argument is not lost, it is one control away — and the control names it. */
+  it('offers the case it no longer makes, on a control named after the sheet it opens', () => {
+    drawCompetitive();
+
+    expect(screen.getByText('Why 78?')).toBeTruthy();
+    expect(screen.getByLabelText('Why Marek fits 78')).toBeTruthy();
   });
 
   it('puts the panel’s mark straight after the level row, where the panel draws it', () => {
@@ -1125,17 +1153,15 @@ describe('what each control announces', () => {
           'Photo checked: on court. ' +
           'Fairly even · 74%. ' +
           'Player Score 74 out of 100. 3 of the last 5 won. 29 counted games. ' +
-          'Tags you share: Plays to win. Their other tags: Stays for a drink. ' +
-          '3 slots you both ticked · next Tue evening. 4 km away. ' +
-          "They're here to compete too.",
+          'Tags you share: Plays to win. Their other tags: Stays for a drink.',
       ),
     ).toBeTruthy();
   });
 
   it('carries the record and the stake in §20.3’s order, between the band and the tags', () => {
     // Five more clauses, all of them identifying facts: what the platform watched, then what
-    // this pairing would move, then what the candidate published, then the argument. §20.3's
-    // one divergence from visual order is about the reasons and does not reach any of them.
+    // this pairing would move, then what the candidate published. §20.3's one divergence from
+    // visual order was about the reasons, and this card no longer has any.
     drawCompetitive({ ...withRecord(), atStake: AT_STAKE });
 
     expect(
@@ -1144,9 +1170,7 @@ describe('what each control announces', () => {
           'Fairly even · 74%. ' +
           'Player Score 74 out of 100. 3 of the last 5 won. 29 counted games. ' +
           'Win, counted +0,08. Lose, counted \u22120,05. ' +
-          'Tags you share: Plays to win. Their other tags: Stays for a drink. ' +
-          '3 slots you both ticked · next Tue evening. 4 km away. ' +
-          "They're here to compete too.",
+          'Tags you share: Plays to win. Their other tags: Stays for a drink.',
       ),
     ).toBeTruthy();
   });

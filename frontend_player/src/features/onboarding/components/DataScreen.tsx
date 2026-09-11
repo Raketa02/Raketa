@@ -36,6 +36,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Card, Note, theme } from '@/shared/ui';
 
 import { OnboardingChrome } from './OnboardingChrome';
+import { useHardwareBack } from '@/shared/lib/platform';
 
 /**
  * What Raketa keeps, and what it never does with it — the whole of onboarding, in the order
@@ -99,6 +100,17 @@ const POINTS = [
 
 export function DataScreen() {
   const router = useRouter();
+  /**
+   * **The device's back is claimed and refused, because this screen draws none.**
+   *
+   * Every screen in onboarding is reached by `replace`, so the group holds one entry per push
+   * — and the push behind this one is the welcome screen, from which the only way forward is
+   * to rate a sport again. An unclaimed press popped to exactly there.
+   * [ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md): *"Back and
+   * forward move freely inside each part and never cross between them."* A press that does
+   * nothing is what the missing back control has already said.
+   */
+  useHardwareBack(() => {});
 
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>

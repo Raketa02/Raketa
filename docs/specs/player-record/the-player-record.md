@@ -52,7 +52,7 @@ anywhere, or is an accepted refusal.
 | **When they were last active** | nothing. **Refused** — ADR-0107, ADR-0106 §5 | ❌ **collision C1** (§2.1) |
 | **Languages they speak** | nothing, anywhere. The `Language` modifier was *struck*, not deferred, as a nationality proxy under ADR-0096 | ❌ **collision C2** (§2.2) |
 | Sport pills — one per rated sport, dot + abbreviation + level | `rating` holds one `SkillRating` per (player, sport); `GET /ratings` serves **your own only** | ⚠️ **new read** (§4.4) |
-| Reliability pill out of 100, colour-coded | `PlayerCardSchema.player_score` (ADR-0140) | ✅ — the thresholds are new (§7.4) |
+| Reliability pill out of 100, colour-coded | `PlayerCardSchema.player_score` (ADR-0140) | ⚠️ **moved (#384)** — it is 7.13's `Player Score` block under the level bar, and untinted; the ladder stays on the metered rows |
 
 ### 1.2 Section 2 · The skill card
 
@@ -60,11 +60,11 @@ anywhere, or is an accepted refusal.
 | --- | --- | --- |
 | Level | `mu` — on the card as `level`, on `RatingResponse` as `mu` | ✅ |
 | `77% sure` | `SkillRating.confidence` — `100 × (1 − σ/1,20)`, capped at 99 (`CONTEXT.md`). **Not on the player card** | ⚠️ new field on this response |
-| `21 counted` | `counted_games` | ✅ |
+| `21 counted` | `counted_games` | ⚠️ **moved (#384)** — out of the headline and into 7.13's `Counted` block |
 | Four-segment band bar, current band full-strength | **`LevelBar` already draws exactly this** (design-system 7.5) | ✅ |
 | Likely-range bracket with end ticks | **`LevelBar` draws it**; `range` is on the card (ADR-0107 amendment) | ✅ |
 | Band name under the current segment | `band` on the card; `LevelBar` takes a `BandKey` | ✅ |
-| Last 5, oldest → newest, never padded | `last_five`; `RecordBlocks` draws the squares | ✅ |
+| Last 5, oldest → newest, never padded | `last_five`; `RecordBlocks` draws the squares | ✅ — and it is literally `RecordBlocks` now (#384), the sheet's own placer over the same `StatBox` |
 
 **Section 2 is the cheapest section in the design.** `LevelBar` was built to this exact
 specification and has never had a consumer that drew the bracket — it was written *for* the
@@ -150,6 +150,15 @@ that it may be shown. The client's `identityLine()` is written to take an **opti
 `languages` so the seam is there and the sheet does not have to be re-laid-out later.
 
 ### 2.3 C3 — "Confirms results" was struck, and it cannot be honestly published
+
+> **Settled the other way, on a denominator this section did not consider.** The product
+> owner was shown the collision below and reaffirmed the row, and
+> [ADR-0156](../../adr/0156-a-results-strand-counts-answers-and-never-agreements.md) ships a
+> **third meter** — as **Answers about results**, which counts *answers* to a score put in
+> front of somebody rather than agreements, so a counter scores exactly as an acceptance does
+> and only silence is a miss. *Confirms results* stays struck; what follows is the argument
+> against the meter this file proposed, and it still holds against that one. See
+> [`the-decisions.md`](the-decisions.md) §4, which is newer than this file.
 
 This is the sharpest collision, because the design's third meter is a strand the platform
 deliberately deleted:
@@ -742,10 +751,38 @@ consumer by name: *"the sport chips, **the sport tags on the player record**, an
 gradient"*. Every one carries the sport's abbreviation in text, which is the condition that
 comment attaches to drawing a sport dot at all.
 
-**`SkillCard`** — the headline row (`PADEL · 2,75 · 77 % sure · 21 counted`) over a
-`LevelBar` with `legend` omitted, over the `LastFive` run. Drawn only when `skill` is present.
-The three headline figures are one `Text` run, not three boxes: *"the three are inseparable
-by design"*, and three boxes is how one of them ends up conditionally hidden.
+**`SkillCard`** — the headline row (`PADEL · 2,75 · 77 % sure`) over a `LevelBar` with
+`legend` omitted. Drawn only when `skill` is present.
+
+> **Amended (#384).** The headline carried `· 21 counted` as a fourth clause, and the run of
+> five sat inside this card under the bar. Both moved into **`RecordBlocks`**, 7.13's three
+> boxes, drawn as the sheet's next row. The argument the headline was making is kept rather
+> than dropped: *the count is what makes the other two honest*, and *three boxes is how one of
+> them ends up conditionally hidden* — but the count's block is **never** conditional, because
+> `counted_games` is measured and the wire always sends it beside a Level. What was a rule a
+> string obeyed is now structural. Printing it in both places was refused: the two are inches
+> apart in one card, so a reader would meet `21 counted` twice in two registers.
+
+**`RecordBlocks`** — `Player reliability` · `Last 5` · `Counted`, in `shared/ui`'s `StatBox`, drawn
+under the skill card and **not inside it**. The three absences are independent: a player who
+has been ghosted on and holds no rating at all has a Player Score and no skill panel, so a
+block nested in a card gated on `skill` would take their one figure down with the sport. The
+Player Score block is **untinted** — see §7.4 and 7.13.
+
+> **Amended again (#384).** Four changes, each a decision against something written above.
+> **The block is titled *Player reliability*** — the domain term is untouched, but *Score*
+> beside a Level, a band and a run of form is a fourth number a reader can take for a rating.
+> **A won square is `mint` and a lost one `muted`**, which trades 7.13's lightness step for a
+> hue one and spends the 3:1 between the two states; the ratio against the ground is kept, so a
+> loss is still not the gap. **The Fit breakdown moves to `Player fit ✦ 78` under the sport
+> pills** — the sheet's one action, out of the foot where a reader had to scroll past four zones
+> to find it, and **not a button**: it is 7.10's own pill with a word in front of it, the same
+> object the reader met on their shortlist, because coral on a filled control promises a submit
+> and the thing to do on a record is read it. **The two
+> sentences under the sportsmanship row are removed** — `WRITTEN_BY_PLAYERS`, which
+> `the-words.md` asks for by name wherever the star figure is drawn beside the reliability
+> figure, and `BAND_HAS_NO_COUNT`. The row's label still names its author; nothing now says that
+> a low average costs nobody anything.
 
 **`RecordCard`** — the title, then a `StrandMeterRow` per served strand, then the variety row.
 The title is the rule the card enforces and it stays verbatim: **THE RECORD — COUNTED BY THE

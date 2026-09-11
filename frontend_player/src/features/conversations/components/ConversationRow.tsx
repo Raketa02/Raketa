@@ -16,7 +16,7 @@
  *
  * ## The face is a photograph or a poster, and here it is often the photograph
  *
- * `CandidatePhoto` is the photograph-or-poster switch and there is no monogram anywhere: #338 §5
+ * `PlayerPhoto` is the photograph-or-poster switch and there is no monogram anywhere: #338 §5
  * refused the avatar outright — no element, no hue, no radius rule — because a poster is a fact
  * about an id ([ADR-0134](../../../../../docs/adr/0134-the-poster-draws-a-player-and-no-value-is-invented.md))
  * and initials are a derived familiar form ADR-0107 refuses.
@@ -32,8 +32,8 @@
  * the tension `ChallengeRow` states at length and this row inherits whole.
  * [`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §5 is the
  * authoritative list of what moves to `shared/` and it names one promotion — `courtPosterFor()`,
- * which **has** moved and which this row reaches through `CandidatePhoto` rather than re-hashing.
- * `CandidatePhoto` itself cannot follow it without dragging `CANDIDATE_PANEL`, whose own docstring
+ * which **has** moved and which this row reaches through `PlayerPhoto` rather than re-hashing.
+ * `PlayerPhoto` itself cannot follow it without dragging `PHOTO_PANEL`, whose own docstring
  * argues it belongs to the card rather than to the system, so the alternative today is a second
  * box with a second `× 0.33` in it and one person drawn at two corners.
  *
@@ -50,10 +50,9 @@ import { router } from 'expo-router';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
-import { CandidatePhoto } from '@/features/play/types';
 import { handleLine } from '@/shared/formatting/handleList';
 import { playerName } from '@/shared/formatting/playerName';
-import { PressableCard, theme } from '@/shared/ui';
+import { PlayerPhoto, PressableCard, theme } from '@/shared/ui';
 
 import type { Conversation } from '../domain/conversation';
 import { memberName, othersIn } from '../domain/membership';
@@ -102,7 +101,7 @@ export function ConversationRow({ conversation, playerId }: ConversationRowProps
       <View style={s.faces}>
         {others.map((member, at) => (
           <View key={member.playerId} style={at === 0 ? undefined : s.behind}>
-            <CandidatePhoto
+            <PlayerPhoto
               playerId={member.playerId}
               {...(member.photoUrl === undefined ? {} : { photoUrl: member.photoUrl })}
               box={{ kind: 'face', size: ROW_FACE }}

@@ -52,13 +52,19 @@ from app.seeds.catalog import (
     answer_key,
 )
 from app.seeds.clock import NEWCOMER_WINDOW_DAYS, FixedClock, days_before
+from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
 from app.seeds.cohort import (
     ARCHETYPES,
     ARTIFACT,
     BAND_HISTOGRAM,
     COHORT,
+    EVERY_PLAYED_GAME,
+    GHOSTED_AT_LEAST_DAYS_AGO,
     PLAYED_GAMES,
+    PROTAGONIST_GAMES,
+    PROTAGONIST_HANDLE,
     RINGS,
+    WHAT_PLAYERS_SAID,
     Cohort,
     _distance_between,
     _ring_in,
@@ -150,7 +156,8 @@ def test_the_played_history_records_no_answer_the_platform_gave():
     would get believed, because it is the one a reader can see.
     """
 
-    played = as_document(generate())["played_games"]
+    document = as_document(generate())
+    played = document["played_games"] + document["protagonist_games"]
     assert played, "the artifact records no played game at all"
 
     for game in played:
@@ -160,6 +167,8 @@ def test_the_played_history_records_no_answer_the_platform_gave():
             "side_a",
             "side_b",
             "won_by",
+            "entered",
+            "answered",
         }, game
 
 
@@ -177,14 +186,124 @@ def test_no_declared_pair_plays_twice():
     assert len(pairs) == len(set(pairs)), "a pair shares two courts"
 
 
-def test_the_protagonist_plays_in_none_of_them():
-    """A game with her in it would take that person out of the pool every other
-    assertion in `screens.py` is read from — permanently, because nothing closes
-    a challenge every seat accepted."""
+def test_the_protagonist_plays_in_none_of_the_cohorts_own():
+    """**Two lists, and the split is the claim.** `PLAYED_GAMES` exists so the
+    cards *in* her pool reach every state a card can be in, and a row of it that
+    seated her would be answering a second question in the same table.
+
+    Her own evenings are `PROTAGONIST_GAMES`, which is checked below."""
 
     played = {handle for game in PLAYED_GAMES for handle in game.players}
 
     assert all(handle.startswith("cohort-") for handle in played), played
+
+
+def test_her_own_history_seats_her_on_side_b_and_never_organising():
+    """The two strands that exist because of where she sits.
+
+    An organiser's seat is accepted at birth, so an organiser answers no
+    invitation and has no *answers challenges*; and the side that **states** the
+    score is asked nothing, so a protagonist on side A has no *answers about
+    results*. Both would go missing silently — as an absent row rather than as a
+    failure — which is why this is a test and not a comment.
+    """
+
+    assert PROTAGONIST_GAMES, "her record has no evenings behind it"
+
+    for game in PROTAGONIST_GAMES:
+        assert game.side_b[0] == PROTAGONIST_HANDLE, game
+        assert PROTAGONIST_HANDLE not in game.side_a, game
+        assert game.organiser != PROTAGONIST_HANDLE, game
+
+
+def test_her_record_reaches_a_figure_that_is_not_a_full_bar():
+    """**Every strand she has is a fraction somebody could work off.**
+
+    A fixture of tidy evenings publishes nothing but 100% and never draws the
+    card's whole point: a penalty you can look up and watch lift. So one
+    arrangement is a ghost, one score goes unanswered, and this asserts the two
+    are actually there rather than trusting a comment above the rows.
+    """
+
+    ghosts = [game for game in PROTAGONIST_GAMES if game.was_a_ghost]
+    unanswered = [
+        game for game in PROTAGONIST_GAMES if game.was_scored and not game.answered
+    ]
+    played = [game for game in PROTAGONIST_GAMES if not game.was_a_ghost]
+
+    assert len(ghosts) == 1, [game.played_days_ago for game in PROTAGONIST_GAMES]
+    assert len(unanswered) == 1, [game.won_by for game in PROTAGONIST_GAMES]
+    assert {game.won_by for game in played} == {"A", "B"}, "the run is one colour"
+
+
+def test_her_opponents_are_fewer_than_her_games():
+    """*Opponent variety* is distinct people over counted games, so a fixture
+    where no pair ever plays twice publishes 100% and proves nothing about the
+    row. A completed line-up releases its pair, so this is reachable — and the
+    writer's probe has to key on the day for it to be written."""
+
+    played = [game for game in PROTAGONIST_GAMES if not game.was_a_ghost]
+    opponents = {
+        handle
+        for game in played
+        for handle in game.players
+        if handle != PROTAGONIST_HANDLE
+    }
+
+    assert len(opponents) < len(played), (sorted(opponents), len(played))
+
+
+def test_a_declared_ghost_is_old_enough_to_be_one():
+    """**A plan is a ghost only once its entry window has closed**, and that
+    window is an ordinary week plus a day — not the day a score's window is.
+
+    A ghost declared inside it is a game still *awaiting its entry*, which the
+    record leaves out of **both** halves of *shows up*: the bar reads full, the
+    strand is a lie by omission, and nothing fails. It cost a seeded run exactly
+    that, which is why the floor is derived from `games`' own constants here
+    rather than typed beside them.
+    """
+
+    assert GHOSTED_AT_LEAST_DAYS_AGO > (PLAN_HORIZON + ENTRY_GRACE).days
+
+    for game in PROTAGONIST_GAMES:
+        if game.was_a_ghost:
+            assert game.played_days_ago >= GHOSTED_AT_LEAST_DAYS_AGO, game
+
+
+def test_nobody_is_rated_by_somebody_they_never_played():
+    """A card is drawn for an evening, and a **ghost** is not one: there is
+    nobody to rate for a game the platform says did not happen."""
+
+    together: dict[str, set[str]] = {}
+    for game in EVERY_PLAYED_GAME:
+        if game.was_a_ghost:
+            continue
+        for pair in game.pairs:
+            one, other = sorted(pair)
+            together.setdefault(one, set()).add(other)
+            together.setdefault(other, set()).add(one)
+
+    assert WHAT_PLAYERS_SAID, "nobody says anything about anybody"
+    for subject, said in WHAT_PLAYERS_SAID.items():
+        for rater in said:
+            assert rater in together.get(subject, set()), (rater, subject)
+
+
+def test_somebody_is_rated_by_nobody():
+    """**The absence is the state most players are in**, and the record omits
+    the zone rather than publishing a nought. A fixture where everybody has been
+    rated cannot draw it."""
+
+    rated = set(WHAT_PLAYERS_SAID)
+    played_by_somebody = {
+        handle
+        for game in EVERY_PLAYED_GAME
+        if not game.was_a_ghost
+        for handle in game.players
+    }
+
+    assert played_by_somebody - rated, "everybody who played has been rated"
 
 
 def test_a_court_seats_what_its_sport_seats():

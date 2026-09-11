@@ -12,7 +12,6 @@ import { SEAT_PLACES } from '../domain/lineup';
 
 import {
   PLAY_LIVE_REGIONS,
-  SWAP_TOGGLE_LABEL,
   availabilityDiffCellLabel,
   candidateActionLabel,
   candidateCardLabel,
@@ -186,10 +185,6 @@ describe('the court', () => {
     for (const place of SEAT_PLACES) {
       expect(seatLabel(place, { kind: 'empty', unfilled: null })).not.toBe('');
     }
-  });
-
-  it('labels the swap toggle by what it does, and lets `checked` carry the state', () => {
-    expect(SWAP_TOGGLE_LABEL).toBe('Swap players');
   });
 });
 

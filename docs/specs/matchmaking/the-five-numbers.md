@@ -211,19 +211,30 @@ radius rung.
 ## 4. The reliability bar — 70, on the number the player can see
 
 **Which number.** The **published Player Score** — the one on the player's own profile — and
-not the matcher's private per-mode blend of the five strands. The two are different numbers: the
-screen blends at 35/20/12/10/8, and the ruleset weighs per mode at 33/33, 29/23 and so on
-([`ranking-weights.md`](ranking-weights.md) §6).
+not the matcher's private per-mode blend of the six strands. The two are different numbers: the
+screen blends at 35/20/15/12/10/8, and the ruleset weighs per mode at 25/32, 22/22, 24/4 and so
+on ([`ranking-weights.md`](ranking-weights.md) §6).
 
 > **Amended by [ADR-0140](../../adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md).**
 > There were six strands and *confirms results* was struck
 > ([ADR-0137](../../adr/0137-a-result-is-the-record-that-a-game-happened.md)), taking its `15`
-> out of the published blend and its two ruleset weights with it. The published vector **sums to
-> 85 and is not renormalised to a hundred**, because its basis is the strands a player actually
-> has rather than a budget — the blend renormalises over what is present, which is what lets a
-> player the platform can see two things about be compared with one it can see five about. The
-> per-mode vectors *were* rescaled, because a ruleset weight map is validated as totalling a
-> hundred. **The bar itself did not move.**
+> out of the published blend and its two ruleset weights with it. The published vector **summed
+> to 85 and was not renormalised to a hundred**, because its basis is the strands a player
+> actually has rather than a budget — the blend renormalises over what is present, which is what
+> lets a player the platform can see two things about be compared with one it can see five
+> about. The per-mode vectors *were* rescaled, because a ruleset weight map is validated as
+> totalling a hundred. **The bar itself did not move.**
+
+> **Amended again by [ADR-0156](../../adr/0156-a-results-strand-counts-answers-and-never-agreements.md).**
+> A sixth name is back and it is **not** the struck one: *answers about results* counts
+> **answers** — accepting and countering alike — where *confirms results* counted agreements and
+> therefore counted disagreements. It enters at the `15` ADR-0140 set aside rather than
+> redistributed, so the published blend is **35/20/15/12/10/8** and sums to a hundred again,
+> which is arithmetic rather than a rule: the basis is still the strands a player has. The two
+> per-mode vectors are **restored** to the six numbers they held before the strike, released as
+> `2026.09.08-a`. **The bar itself still did not move** — and, because the bar reads the
+> published number, a third strand entering it means a player's distance from 70 can change on
+> deploy through no act of their own.
 
 [ADR-0098](../../adr/0098-matcher-demands-as-executable-contracts.md) already rules that the
 matcher reads what the player is shown and never re-derives it. A penalty justified by a figure

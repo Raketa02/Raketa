@@ -3285,6 +3285,259 @@
           }
         }
       }
+    },
+    "/api/v1/sportsmanship": {
+      "get": {
+        "tags": [
+          "sportsmanship"
+        ],
+        "summary": "Cards waiting for your stars",
+        "description": "**A card appears the day after the game and stays for seven days.** Not on the evening itself \u2014 an answer given ten minutes after losing badly is not the answer this is for \u2014 and not for ever, because a card nobody is obliged to answer can only accumulate.\n\n**A game is on this list only once it is over**: the score is agreed, or both sides put one up and neither gave way. A game nobody ever said was played never appears at all \u2014 there is nobody to rate for an evening that did not happen.\n\n**Answering removes it, whatever you put on it.** Submitting closes the card for ever, including the card you answered with everybody left blank.\n\n**Absence is the only reason given.** A game not yet a day old, one whose week has run out and one you have already answered are all simply not here \u2014 and none of them is something to draw differently.\n\n**Ids only.** Join `game_id` against `/api/v1/games` for the handles, the sport and the date; `players` is everybody else who was on that court, in the line-up's own order.\n\n**Ignoring all of this costs nothing.** There is no strand for rating, no penalty, and nothing is recorded about a card that expired.",
+        "operationId": "read_the_open_cards_api_v1_sportsmanship_get",
+        "responses": {
+          "200": {
+            "description": "The courts still waiting for your stars, **soonest to expire first**. An empty list is the ordinary answer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenCardsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sportsmanship/{game_id}": {
+      "post": {
+        "tags": [
+          "sportsmanship"
+        ],
+        "summary": "Rate the players you played",
+        "description": "**Everybody from one game, answered together.** In doubles that is three people \u2014 both opponents *and* your partner, because the person who saw you play closest was on your own side of the net. In singles it is the one opponent.\n\n**Anybody may be left blank**: leave them out of `ratings`. Sending an empty `ratings` answers the card without rating anybody, which is an answer and closes it.\n\n**Submitting closes it for ever.** A second request is refused, a blank stays blank, and there is no correction path \u2014 so ask before you send.\n\n**Only your most recent rating of a given person counts.** Rating somebody again after another game replaces what you said last time rather than adding to it, so partners who play every week cannot inflate each other by volume.\n\n**A low rating feeds the average and nothing else.** It does not pass, hide or block, and it will not stop you being matched with that person again. `POST /api/v1/passes` and `POST /api/v1/blocks` are the controls that do those things, and both are meant to be deliberate.\n\n**Nobody is told, and no individual answer is ever shown to anybody.** What reaches a reader is an average out of five beside how many different people it rests on; what reaches the person you rated is a coarse band about themselves and no count.",
+        "operationId": "answer_the_card_api_v1_sportsmanship__game_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerTheCardRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Answered, and the card is closed. **Nothing is returned, and nothing ever will be** \u2014 there is no route through which an individual rating reaches anybody, including the person who gave it and the person it is about."
+          },
+          "400": {
+            "description": "`they_were_not_on_this_court` \u2014 stars for somebody who was not there, **including yourself**. You rate everybody else on the court and nobody else.\n\n`you_rated_the_same_person_twice` \u2014 one card carries one answer about each player. Refused rather than collapsed, because collapsing means the platform picking which of your two opinions to keep.\n\n`stars_are_one_to_five` \u2014 whole stars, one to five. There is no zero and there are no halves.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`this_game_is_not_yours_to_rate` \u2014 no settled game of **yours** has that id. **One code for three cases** \u2014 it does not exist, you did not play in it, or its result has not settled \u2014 because they have one remedy and separating them would answer *is this id real* about four strangers' evening.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`you_have_already_rated_this_game` \u2014 the card is closed. It closed when you answered it, whatever you put on it, and there is no way to reopen it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/me/record": {
+      "get": {
+        "tags": [
+          "player-record"
+        ],
+        "summary": "Your own record \u2014 how others see you",
+        "description": "**The same sheet everybody else is shown about you**, which is what makes it worth having: the numbers on it have been deciding who you are offered to since you signed up, and a penalty nobody can look up is a penalty nobody can fix.\n\n**Nothing gates it.** A block is between two people and the gender preference is mutual; neither has anything to say about somebody reading their own record, and a hold does not reach it either \u2014 this is the one screen a held player has for finding out how they appear.\n\n`is_self` is `true`. Read it rather than comparing ids.\n\n**What other players said comes back as a band and never as a figure.** `sportsmanship_band` is three steps wide and carries no count, and `sportsmanship` is absent \u2014 an average beside a count would let you subtract each new rating out and name it, and you know who you played, so every answer would be identifiable by the one person who must never see it. It changes nothing about how you are matched: the reliability pill is what the platform acts on.\n\n**`?sport=` works here too**, and picks which of your own Levels the skill card draws \u2014 the same resolution a stranger's sheet takes.",
+        "operationId": "read_own_record_api_v1_players_me_record_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Which sport you arrived from. **It selects what the sheet is about and never who may be seen.**\n\nWhere the subject holds a rating in it, that is the sport `skill` is drawn for. Where they do not \u2014 and where you send nothing \u2014 it falls back to the sport they have played most, ties broken by the sport registry's own order. Read `skill.sport` for the answer rather than assuming it is what you sent.\n\nAdmission is untouched by this. Whether a record opens at all is decided in the partitions the platform already showed you this person in, which is not something a client sends.",
+              "title": "Sport"
+            },
+            "description": "Which sport you arrived from. **It selects what the sheet is about and never who may be seen.**\n\nWhere the subject holds a rating in it, that is the sport `skill` is drawn for. Where they do not \u2014 and where you send nothing \u2014 it falls back to the sport they have played most, ties broken by the sport registry's own order. Read `skill.sport` for the answer rather than assuming it is what you sent.\n\nAdmission is untouched by this. Whether a record opens at all is decided in the partitions the platform already showed you this person in, which is not something a client sends."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerRecordResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`record_unavailable` \u2014 this account has no record to draw: no handle, or no profile committed. The recovery is onboarding's second part, which `GET /users/me` already sends a cold launch into.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/{player_id}/record": {
+      "get": {
+        "tags": [
+          "player-record"
+        ],
+        "summary": "One player's record",
+        "description": "Who this person is, as of the moment you opened it.\n\n**Read through a prior disclosure, never about a person.** It opens for somebody a search of yours returned, somebody you share a live challenge or a game with, and yourself \u2014 and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.\n\n**Nothing expires.** A search record is kept for ever, so a sheet you could open this morning opens next year \u2014 any shorter window could only refuse a face the app is currently showing.\n\n**The gates are live.** A block placed since the search, a hold, an account that may not be shown and the mutual gender preference are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.\n\n**Asking about yourself is allowed** and answers `is_self: true` \u2014 the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, **including the coarse `sportsmanship_band` in place of the figure**: the rule follows the subject and not the route.\n\n**`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.",
+        "operationId": "read_player_record_api_v1_players__player_id__record_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          },
+          {
+            "name": "sport",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Which sport you arrived from. **It selects what the sheet is about and never who may be seen.**\n\nWhere the subject holds a rating in it, that is the sport `skill` is drawn for. Where they do not \u2014 and where you send nothing \u2014 it falls back to the sport they have played most, ties broken by the sport registry's own order. Read `skill.sport` for the answer rather than assuming it is what you sent.\n\nAdmission is untouched by this. Whether a record opens at all is decided in the partitions the platform already showed you this person in, which is not something a client sends.",
+              "title": "Sport"
+            },
+            "description": "Which sport you arrived from. **It selects what the sheet is about and never who may be seen.**\n\nWhere the subject holds a rating in it, that is the sport `skill` is drawn for. Where they do not \u2014 and where you send nothing \u2014 it falls back to the sport they have played most, ties broken by the sport registry's own order. Read `skill.sport` for the answer rather than assuming it is what you sent.\n\nAdmission is untouched by this. Whether a record opens at all is decided in the partitions the platform already showed you this person in, which is not something a client sends."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerRecordResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`record_unavailable` \u2014 **one code for four causes, and the body is identical in all four.** You were never shown this person; one of you has blocked the other; the account is held or in a state that may not be shown; or there is no such player.\n\n**The indistinguishability is the feature.** A response that named which would deliver a block to the one person a block is meant to be invisible to, and a response that separated *never disclosed* from *no such player* would answer *is this id real* about a stranger. Draw one line \u2014 *This record isn't available.* \u2014 and do not branch on anything else here, because there is nothing else here.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3340,6 +3593,21 @@
           "text"
         ],
         "title": "AnswerOptionResponse"
+      },
+      "AnswerTheCardRequest": {
+        "properties": {
+          "ratings": {
+            "items": {
+              "$ref": "#/components/schemas/StarsGivenSchema"
+            },
+            "type": "array",
+            "title": "Ratings",
+            "description": "The players you are rating. **Leave somebody out to leave them blank**, and send an empty list to answer the card without rating anybody \u2014 both are answers, and both close the card for ever."
+          }
+        },
+        "type": "object",
+        "title": "AnswerTheCardRequest",
+        "description": "A whole card, answered once.\n\nEverybody from one game is answered together, which is what keeps a busy\nmonth from becoming a chore list."
       },
       "ArrangementSchema": {
         "properties": {
@@ -5430,6 +5698,15 @@
         "title": "GameListResponse",
         "description": "Your games, newest arrangement first.\n\n**One list and not several.** A game awaiting an entry, one awaiting an\nanswer and one that never happened are one thing at three moments of its\nlife, and splitting them would make the client's shelves the platform's\nopinion about which of them matters.\n\n``read_at`` is the instant every standing and deadline here was folded\nagainst. It travels so a client's countdowns and the standings beside them\ncannot come from two different readings of the clock."
       },
+      "GameOutcome": {
+        "type": "string",
+        "enum": [
+          "WIN",
+          "LOSS"
+        ],
+        "title": "GameOutcome",
+        "description": "How one counted game went for the person the record is about. **Two.**\n\n*Unscored* is not a third value: a game nobody agreed a score for produced no\noutcome for anybody, and the absence is spelled by not being in the run at\nall (``docs/adr/0137``).\n\n**A second spelling of ``games``' own ``Outcome``**, mapped at the adapter\nthat reads it \u2014 which is the shape ``matchmaking``'s ``GameResult`` already\ntakes for the same two words, and this context's standing rule about\nborrowing another context's domain types (``docs/adr/0155``). The risk is the\nsame one ``OnCourtVerdict`` carries and it is answered the same way:\n``tests/unit/test_player_record_skill.py`` fails the build if the two\nvocabularies stop agreeing."
+      },
       "GameResult": {
         "type": "string",
         "enum": [
@@ -6131,6 +6408,92 @@
         "title": "ModifierSchema",
         "description": "One modifier that fired, and what it was worth on this pairing."
       },
+      "OnCourtVerdict": {
+        "type": "string",
+        "enum": [
+          "allowed",
+          "flagged"
+        ],
+        "title": "OnCourtVerdict",
+        "description": "What the on-court check concluded about a photograph. **Two values.**\n\nThe third state \u2014 *nobody looked* \u2014 is the **absence** of one of these and\nnever a third value, which is ``docs/adr/0138``'s rule: a shield saying\n*checked and passed* cannot be drawn on a photograph nothing examined, and a\nvalue meaning *unknown* is a value somebody eventually draws a tick for.\n\n**The words are the ones a card already carries, and they are checked\nagainst it.** This is a second spelling of ``player_profile``'s\n``PhotoReviewDecision`` on purpose \u2014 this context imports no other context's\ndomain types \u2014 and a second spelling that drifts is worse than an import: a\nclient reading a search card and a record would get two words for one fact.\n``tests/unit/test_player_record_identity.py`` fails the build if the two\nvocabularies stop agreeing."
+      },
+      "OpenCardSchema": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id",
+            "description": "The game this card is about. Post the answer to `/api/v1/sportsmanship/{game_id}`, and join it against `/api/v1/games` for the handles, the sport and the date."
+          },
+          "players": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Everybody else who was on that court, in the line-up's own order \u2014 in doubles both opponents **and** your partner, in singles the one opponent. Any of them may be left blank when you answer."
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "players"
+        ],
+        "title": "OpenCardSchema",
+        "description": "One court still waiting for this player's stars.\n\n**Ids and nothing else.** What the people are called, which sport it was and\nwhen it happened all come from the games list this card is drawn beside \u2014\njoined on ``game_id``, which is the same join the client already makes to\ndraw the game. Repeating them here would be a second copy of an evening's\ndescription, and the day the two disagreed the card would name somebody the\ngame did not."
+      },
+      "OpenCardsResponse": {
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/OpenCardSchema"
+            },
+            "type": "array",
+            "title": "Cards",
+            "description": "The courts still waiting for your stars. A card appears the day after the game and stays for seven days; ignoring one costs nothing."
+          }
+        },
+        "type": "object",
+        "required": [
+          "cards"
+        ],
+        "title": "OpenCardsResponse",
+        "description": "Every card waiting for you, **soonest to expire first**.\n\nAn empty list is the ordinary answer and means nothing is waiting. It does\nnot distinguish *no games*, *not yet a day* and *already answered*: all three\nare simply not on the list, and none of them is something a client would draw\ndifferently.\n\n``cards`` is **required and never absent**, empty though it usually is: a\ndefault would emit it as optional and hand every client a list it has to\ncheck for existence before checking for length."
+      },
+      "OpinionBand": {
+        "type": "string",
+        "enum": [
+          "GOOD",
+          "MIXED",
+          "POOR"
+        ],
+        "title": "OpinionBand",
+        "description": "How somebody is coming across, in the three steps **they** may be told.\n\n**The subject's whole answer, and the coarseness is the safety.** A figure\nplus a count in front of the person they are about is a subtraction: an\naverage moving from 4,80 over ten to 4,73 over eleven names the new rating as\na 4, and they know who they played, so every answer would be identifiable by\nthe one person who must never see it. Three steps across the whole scale tell\nthem *something is going wrong*, which is the useful half.\n\n**A second spelling of ``sportsmanship``'s ``SportsmanshipBand``**, and it\ntakes a **different name** for the reason ``OnCourtVerdict`` does beside\n``PhotoReviewDecision`` and ``GameOutcome`` does beside ``Outcome``. That is\ntwo rules meeting: this context borrows no other context's domain types\n(``docs/adr/0155``), and the emitted contract is **one namespace** \u2014 a class\nof the same name in two modules does not shadow the other, it *renames both*,\nand every generated type a shipped app already holds moves. It is\n``RecordLikelyRangeSchema``'s argument, applied one layer down, because this\nenum reaches the wire as itself rather than through a schema class.\n\nThe risk a second spelling carries is answered the way those two answer it \u2014\n``tests/unit/test_player_record_sportsmanship.py`` fails the build if the two\nvocabularies stop agreeing.\n\n**There is no fourth value for *nobody has said anything*.** That is the\nfield's absence, on the rule every zone on this sheet takes."
+      },
+      "OpponentVarietySchema": {
+        "properties": {
+          "distinct_opponents": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Distinct Opponents",
+            "description": "How many **different people** those games were against.\n\n**A doubles partner is one of them.** *A pair is anybody you were on a court with* is the rule this platform already counts familiarity by, and a figure counting opponents alone would say that somebody who partners the same person every week spreads their games as widely as somebody who does not."
+          },
+          "times_on_court": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Times On Court",
+            "description": "How many **times they were on a court with somebody** across their counted games \u2014 the denominator of the pair, and never a count of games.\n\n**A doubles evening contributes three.** Games were the denominator first and are only divisible in singles: one doubles game put three people on the court, so the pair read `3 of 1` and the share went over a hundred. Counting the seats opposite makes both halves the same kind of thing \u2014 *five different people across ten times on a court* \u2014 and `distinct_opponents` can never exceed it.\n\n**It is not `skill.counted_games`, and the two will differ on this same response.** That one is *what this Level rests on*: confirmed results, in one sport, that the rating actually folded. This one is *how much have they played*: every sport, and an evening nobody agreed a score for is in it. Two honest numbers about the same person, answering two questions \u2014 do not reconcile them.\n\n**Counted rather than every game**: a friendly was never evidence about anybody by the choice of the people who arranged it, and it is out of both halves of this pair rather than only the bottom one."
+          }
+        },
+        "type": "object",
+        "required": [
+          "distinct_opponents",
+          "times_on_court"
+        ],
+        "title": "OpponentVarietySchema",
+        "description": "How widely this person spreads their games, over their **whole** record.\n\n**Two counts and no percentage, deliberately.** The card this sits on argues\ntwo rows above that a perfect record over nine games and one over forty are\ndifferent claims and that a bar alone hides which \u2014 so publishing a bare\nshare here would break the rule the card had just made about itself. Draw\nboth: `70 % \u00b7 14 of 20`.\n\n**The share is yours to compute and it is one division.** Nothing is rounded\non this side and there is no banding, no floor and no tone attached \u2014 unlike\na Level's band, which is a key precisely because a client deriving it would\nbe a second set of drawing constants.\n\n**This is a career statistic, not a window.** It is every counted game the\nplatform has recorded for them, which is what the number means: *how widely\ndo they spread their games*, rather than *how widely this season*. There is\nno decay behind it and no horizon.\n\n**It prices no promise.** It is not a reliability strand, it is in no\nweighted score, and it neither raises nor lowers anybody's standing. It is\ncontext for a Level \u2014 a low figure is somebody playing the same few faces\nevery week, whose rating may be narrow but untested."
+      },
       "OptimisedFor": {
         "type": "string",
         "enum": [
@@ -6613,6 +6976,86 @@
         "title": "PlayerProfileResponse",
         "description": "A player's profile as it now stands.\n\nThe same body whether the commit created the profile or replayed an earlier\none, so a client that only wants its profile needs no branch on the status.\n\n**No gender value comes back out**, and that is a rule rather than an\noversight (``docs/adr/0096`` \u00a76): a preference crosses the wire *in*, on a\nsearch; no response shape carries a gender out and no card renders one.\nThis body is only ever the caller's own profile, so nothing here would leak\na third party's answer \u2014 the field is left off anyway, because the moment\none response shape carries it, *which* shapes may is a judgement call made\nper endpoint instead of a line nobody has to re-argue. Nothing reads it back\ntoday: onboarding sends it once, and there is no profile editor. When one\nexists, adding it here is an addition to this document and ADR-0096's\nticket's to make.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
       },
+      "PlayerRecordResponse": {
+        "properties": {
+          "is_self": {
+            "type": "boolean",
+            "title": "Is Self",
+            "description": "Whether this is the reader's own record. **The server's answer, and the client never derives it** by comparing the id it asked about against its session \u2014 the sheet retitles to *How others see you*, drops the distance and shows a coarse band where a figure would be, and getting that wrong is most visible on the one screen it matters on.\n\n`true` on `/players/me/record` always, and on the parameterised route when a client asks about itself."
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "The whole handle. There is no name in this platform and **nothing may derive a familiar form from it** \u2014 every sentence naming somebody uses the whole handle or names nobody."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "The first photo \u2014 order is meaning in a photo list. **Omitted** when the player has no photograph, and the client draws the generated court poster rather than a placeholder."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "Short-lived signed URL that draws that photo. **Minted per response and stored nowhere** \u2014 this context stores nothing at all \u2014 so two reads of one record carry two links to one photograph.\n\n**You cannot sign one yourself.** `GET /photos/{photo_id}` signs only *your own* photos and refuses a stranger's id deliberately, so this is the only address this photograph has.\n\n**Present exactly when `photo_id` is.**"
+          },
+          "review": {
+            "$ref": "#/components/schemas/OnCourtVerdict",
+            "description": "What the on-court check concluded about `photo_id`, or **omitted** where this photograph has not been checked.\n\n**Omitted is not `allowed`, and only `allowed` earns a shield.** Three answers, not two: checked and passed, checked and flagged, and *nobody looked* \u2014 a photo that arrived while the reviewer could not be reached, or before the check existed at all. A client that drew a tick on the absence would be claiming a check happened on every photograph on the platform.\n\n**A fact about this photograph and not about the player**, present only beside `photo_id`. `flagged` blocks nothing \u2014 the photo is stored, it is shown, and the check is wrong sometimes. The evidence behind the verdict never crosses on any route."
+          },
+          "area_code": {
+            "type": "string",
+            "title": "Area Code",
+            "description": "Their coarse area, as a machine code. **An identifier and never a name** \u2014 nothing here can turn a coordinate into the name of a neighbourhood. What it licenses is the one comparison a client makes for itself: two players in the same square share a code, which is what *in your area* is drawn from."
+          },
+          "social_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Social Tags",
+            "description": "The Social tag ids they hold, in the vocabulary's own order. **Which of them the reader also holds is the client's own comparison** \u2014 the platform states no overlap here, so a record opened without a search behind it draws them untinted and claims nothing about common ground."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/SportPillSchema"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "One pill per sport they hold a rating in, **in the sport registry's own order** \u2014 the same order every list of sports on this surface takes, so a client never sorts one.\n\n**Empty for somebody rated in nothing**, which is an ordinary state part way through onboarding rather than an error. It is empty exactly when `skill` is absent."
+          },
+          "skill": {
+            "$ref": "#/components/schemas/SkillPanelSchema",
+            "description": "The skill card, for the one sport this sheet is about.\n\n**Which sport is resolved here and stated back on the panel.** The `?sport=` you asked with wins where they are rated in it; otherwise it falls back to the sport they have played most, ties broken by the sport registry's own order. A fallback on their *highest* Level would make the header a boast about a sport nobody asked about.\n\n**Omitted where no sport resolves** \u2014 that is, where they are rated in nothing at all. The header draws the poster with no Level on it, and there is no panel of noughts to mistake for a bad record."
+          },
+          "reliability": {
+            "$ref": "#/components/schemas/ReliabilitySchema",
+            "description": "**What the platform watched them do** \u2014 the reliability pill and the metered rows it is the mean of.\n\n**Omitted where nothing has ever fallen due for them**, which is most people today, and never a section of noughts: nobody has failed to turn up who was never due to. When it is omitted there is no `player_score` to draw a red pill from and no empty `strands` to head a card with.\n\n**A third absence, asking a third question.** Not `skill`'s \u2014 somebody rated in four sports may have had nothing fall due at all. Not `variety`'s either, and they do not move together: a plan that dissolved and a seat that ran out are opportunities here and neither is a game anybody played.\n\nIt is about **no sport**, like `variety`: `?sport=` does not move it. Turning up is a habit, not a padel habit."
+          },
+          "variety": {
+            "$ref": "#/components/schemas/OpponentVarietySchema",
+            "description": "How widely they spread their games \u2014 **the raw pair, over their whole record.**\n\n**Omitted where no counted game has ever been recorded for them**, which is not a nought and not `0 / 0`: a habit nobody has been observed having is not a narrow one. It is a **different absence from `skill`'s** \u2014 somebody rated in nothing may have played all week, and somebody rated in four sports may never have had a game counted.\n\n**It is about every sport**, unlike `skill.last_five` above it. `?sport=` does not move it: a person who plays padel with the same four faces and squash with twenty has one habit, and a figure narrowed to one sport would be a different statistic under the same word."
+          },
+          "sportsmanship": {
+            "$ref": "#/components/schemas/RecordSportsmanshipSchema",
+            "description": "**What other players said** \u2014 the average out of five and how many different people it rests on.\n\n**Its own zone, deliberately apart from `reliability`.** That card promises *counted by the system, not written by people*, and this is the one thing here people wrote. Two headings, no lie.\n\n**Omitted where nobody has rated them**, which is most people and is never a nought: rating is a favour, ignoring the card costs nothing, and nothing anywhere records that somebody did not answer. It is a **fourth absence** and asks a fourth question \u2014 not `skill`'s, not `variety`'s and not `reliability`'s, since a plan that dissolved and a seat that ran out are opportunities and neither is an opinion anybody offered.\n\n**Absent on your own record, always.** You are answered with `sportsmanship_band` instead. The two never appear together, and which one you get is decided by `is_self`.\n\n**It is about no sport**, like `variety` and `reliability`: `?sport=` does not move it. How somebody is to play with is not a padel fact.\n\n**The matcher never reads it.** A low figure hides nobody and demotes nobody \u2014 Pass and Block are the controls that act, and both are deliberate."
+          },
+          "sportsmanship_band": {
+            "$ref": "#/components/schemas/OpinionBand",
+            "description": "**How you are coming across, in three steps \u2014 and only ever about yourself.**\n\n**No figure and no count, and that is the whole design.** A published average beside a published count lets you subtract: moving from 4,80 over ten to 4,73 over eleven names the new rating as a 4, and you know who you played. Every answer would be identifiable by the one person who must never see it, and people stop answering honestly once that is true. A band tells you something is going wrong, which is the useful half.\n\n**Deliberately too coarse to read anything into.** At one or two ratings it cannot be informative about any individual, and even at fifty a step this wide moves for a change of habit rather than for one evening. Do not draw a number, a bar or a trend from it.\n\n**Present only when `is_self` is `true`**, and omitted where nobody has rated you yet \u2014 the same absence `sportsmanship` spells on somebody else's record.\n\n**It changes nothing about how you are matched.** The reliability pill is what the platform acts on, and this is not in it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_self",
+          "nickname",
+          "area_code",
+          "social_tags",
+          "sports"
+        ],
+        "title": "PlayerRecordResponse",
+        "description": "Everything the platform will say about one person, to this reader.\n\n**Read through a prior disclosure and never about a person at large.** A\nrecord opens for somebody a search of yours returned, somebody you share an\nopen challenge or a game with, and yourself. Anybody else \u2014 and anybody a\nlive gate no longer admits \u2014 is `404`, in one shape that names nothing."
+      },
       "PlayingStyleEvidence": {
         "properties": {
           "kind": {
@@ -6984,6 +7427,25 @@
         "title": "RatingsResponse",
         "description": "Every sport this player is rated at \u2014 empty when they are rated at none."
       },
+      "RecordLikelyRangeSchema": {
+        "properties": {
+          "low": {
+            "type": "number",
+            "title": "Low"
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          }
+        },
+        "type": "object",
+        "required": [
+          "low",
+          "high"
+        ],
+        "title": "RecordLikelyRangeSchema",
+        "description": "The **likely range** a Level sits in \u2014 \u03bc \u00b1 \u03c3, clamped to the scale.\n\n**Named for its surface, because the contract is one namespace and this\narrived second.** ``matchmaking`` already publishes a ``LikelyRangeSchema``\non the player card; a second class of that name does not shadow it, it\n*renames* it \u2014 the emitted document qualifies both by module and every\ngenerated type a shipped app already holds moves. It is ``games``' rule for\n``GameStanding``, applied to the wire: the cost of a shared word is paid by\nwhoever arrives second.\n\nThe shape is deliberately identical to the card's. Two edges of one value,\nboth rounded by the engine, and a client computes neither."
+      },
       "RecordPassRequest": {
         "properties": {
           "sport": {
@@ -7030,6 +7492,30 @@
         ],
         "title": "RecordPromptDeclineRequest",
         "description": "One *not now*, about a question. **Write-only.**\n\nNothing is returned by this route and no route anywhere returns a decline \u2014\nnot to you, not as a count, not as *\"you have said no to this four times\"*.\n\n**There is no `search_id` and no idempotency key.** A pass carries an origin\nbecause *pass rate on re-shown profiles* is unmeasurable without one; nothing\na decline is measured by needs one, and two of these questions are raised by\na background loop that has no search to cite. A second *not now* is a second\nrow with its own moment, exactly as a second pass is, and it buys the same\nmonth the first did.\n\n**How long it lasts is not yours to name**, and there is no field here for\nit. What it buys is that this question is not raised at you again for a\nwhile; it retires nothing \u2014 the standing prompt still expires on its own \u2014\nand it changes no value on your profile. Saying *yes* is a write through the\nroute that owns the value, and it is a different request entirely."
+      },
+      "RecordSportsmanshipSchema": {
+        "properties": {
+          "average": {
+            "type": "number",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Average",
+            "description": "The mean of what other players said, **out of five, to one decimal.** Served rather than derived: there is one mean and one rounding of this record on the platform, and it rounds halves up.\n\n**One to five, and never nought.** There is no zero on the scale a player taps \u2014 a rating that reads as *worthless* is a weapon out of proportion to a tap \u2014 so a person nobody has rated is **absent** here rather than sitting at the bottom of it."
+          },
+          "raters": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Raters",
+            "description": "How many **different people** the figure rests on. Always drawn beside it.\n\n**People and not ratings.** Only a rater's most recent stars about somebody count, so ten evenings with the same partner contribute one. A high count is therefore evidence of breadth rather than of repetition, and it cannot be inflated by volume.\n\n**At most fifty**, which is the window: the fifty most recent raters, each contributing the one answer that stands."
+          }
+        },
+        "type": "object",
+        "required": [
+          "average",
+          "raters"
+        ],
+        "title": "RecordSportsmanshipSchema",
+        "description": "What other players said \u2014 **the one thing here nobody counted.**\n\n**Named for its surface, because the contract is one namespace.** The word\nbelongs to ``sportsmanship``, which has a surface of its own; a class simply\ncalled ``SportsmanshipSchema`` here would not shadow whatever that context\npublishes next, it would *rename both* \u2014 and every generated type a shipped\napp already holds would move. It is ``RecordLikelyRangeSchema``'s rule, and\nthe same rule renamed the band this sits beside.\n\n**Its own heading, and never mixed with the rows above.** The record card is\nheaded *counted by the system, not written by people*, which is the promise\nevery metered row under it rests on; a number people typed sitting beneath\nthat title would make the title false. Draw this under *What opponents said*\nand the two apart.\n\n**Both numbers, always, from the very first rating.** There is no minimum\nbecause the count does a minimum's work honestly: `4,7 / 5 \u00b7 17 players` and\n`3,0 / 5 \u00b7 1 player` are the same field, and the second one visibly reads as\none person's opinion. Print them together \u2014 a figure drawn without its count\nis this field's one way of lying.\n\n**`raters` is people, not ratings.** Only somebody's most recent stars about\na person ever count, so a weekly partner is **one** rater however many\nevenings they play. That is what makes a high count evidence of *breadth*.\n\n**It is the fifty most recent raters and nothing is trimmed.** Somebody can\nrecover from a bad patch by playing with fifty other people; nobody's rating\nis discarded for being an outlier, because deciding which raters were wrong\nis a larger claim than publishing the number.\n\n**The matcher does not read it, and you should say so if you draw it beside\nthe pill.** A low figure here does not hide anybody, demote anybody or narrow\nanybody's search results \u2014 the reliability pill is the counted-only number\nand is exactly what the platform acts on.\n\n**Never on your own record.** `sportsmanship_band` is what you get about\nyourself, and this is absent \u2014 see that field for why."
       },
       "RefreshRequest": {
         "properties": {
@@ -7102,17 +7588,45 @@
         "title": "ReliabilityEvidence",
         "description": "What the candidate's record says about turning up and following through.\n\n``score`` is the **published Player Score** \u2014 the number on the player's own\nprofile \u2014 and never the matcher's private per-mode blend of the same six\nstrands. A penalty justified by a figure that exists nowhere a human can look\nis unexplainable, and a player who works their visible score back up must be\nable to see the penalty lift."
       },
+      "ReliabilitySchema": {
+        "properties": {
+          "player_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Player Score",
+            "description": "Their **Player Score** out of a hundred \u2014 the same figure the player card prints and the reliability floor prices, at the same player-facing weights.\n\n**It is the weighted mean of the `pct`s beneath it**, taken over the strands that are actually there: a name with nothing behind it costs nothing rather than dragging the number down. Read it rather than blending the rows yourself."
+          },
+          "strands": {
+            "items": {
+              "$ref": "#/components/schemas/StrandRowSchema"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Strands",
+            "description": "The rows behind the figure, **in the strand vocabulary's own order** \u2014 never sort them.\n\n**Only the strands this person has.** A strand nobody on this platform can measure and a strand nothing has fallen due under for *them* are the same absence here, and neither is a `0`: *we have not seen enough* and *they are bad at this* are different facts. There is always at least one row, because a panel with none is omitted whole."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_score",
+          "strands"
+        ],
+        "title": "ReliabilitySchema",
+        "description": "What the platform watched \u2014 the pill, and the rows it is the mean of.\n\n**Counted by the system, not written by people.** Every row under this\nheading is a ratio the platform observed. What opponents said about somebody\nis not here and will not be: an opinion under this title would make the title\nfalse.\n\n**The pill is exactly the number the matcher acts on**, at the player's own\npublished weights. That is what makes the screen worth having \u2014 somebody who\nworks their record back up can watch the penalty lift \u2014 and it is why the\nweights themselves are **not** on this response: they are a fact about how\nthe number is made, not about the person, and a client that had them could\nprint one strand as worth more than another, which no screen here claims."
+      },
       "ReliabilityStrand": {
         "type": "string",
         "enum": [
           "SHOWS_UP",
           "ANSWERS_CHALLENGES",
+          "ANSWERS_RESULTS",
           "KEEPS_PLANS",
           "SETTLES_UP",
           "SPORTSMANSHIP"
         ],
         "title": "ReliabilityStrand",
-        "description": "The five strands a reliability reading is built from, read separately.\n\nThey are weighted **per mode** and the two vectors order people oppositely \u2014\na candidate strong on *keeps plans* and weak on *sportsmanship* wins in\ncompetitive and loses in for fun. A single blended score cannot express that,\nwhich is the whole argument for the decomposition, and it is justified for\nexactly as long as such a pair exists (``ranking-weights.md`` \u00a76).\n\n**The inversion narrowed when the sixth strand was struck, and it is watched\nrather than assumed.** *Confirms results* carried it at 24/4 against\nsportsmanship's 5/16; what is left is 18/7 against 15/17, which still flips\nand is asserted in ``tests/unit/test_matchfit_terms.py``. The day no pair\ninverts, the decomposition has stopped paying for itself and the argument for\nit is due again.\n\n**There were six, and *confirms results* was struck rather than deferred**\n(``docs/adr/0137``, carried out by ``docs/adr/0140``). An unconfirmed result\nis a fact about a **pair** and a strand is a verdict about a **person**, and\nevery denominator tried on it docked somebody ADR-0049 protects. A withdrawn\nstrand costs the term nothing by construction: a strand nobody publishes\nstands down and the survivors renormalise inside the reading.\n\n**Three different blends of these five exist in this system and confusing\nthem is a live risk:** the published Player Score at 35/20/12/10/8, and these\ntwo. The reliability *floor* reads the published one \u2014 the one deliberate\nexception, because a penalty justified by a figure that exists nowhere a\nhuman can look is unexplainable."
+        "description": "The six strands a reliability reading is built from, read separately.\n\nThey are weighted **per mode** and the two vectors order people oppositely \u2014\na candidate strong on *answers about results* and weak on *sportsmanship*\nwins in competitive and loses in for fun. A single blended score cannot\nexpress that, which is the whole argument for the decomposition, and it is\njustified for exactly as long as such a pair exists (``ranking-weights.md``\n\u00a76).\n\n**The inversion is watched rather than assumed, and it widened again.** It\nwas 24/4 against sportsmanship's 5/16 while *confirms results* was here; the\nstrike left 18/7 against 15/17, and *answers about results* restores the wide\npair at 24/4 against 5/16 (``docs/adr/0156``). It is asserted in\n``tests/unit/test_matchfit_terms.py``, and the day no pair inverts, the\ndecomposition has stopped paying for itself and the argument for it is due\nagain.\n\n**The sixth name is not the one that was struck, and the difference is the\nwhole of ``docs/adr/0156``.** *Confirms results* asked whether a game reached\nan agreed score, which is a fact about a **pair**, and every denominator\ntried on it docked somebody ADR-0049 protects \u2014 both sides of an honest\ndisagreement included (``docs/adr/0137``). *Answers about results* asks\nwhether **this person** replied to a score put in front of them, and a\ncounter is as good an answer as an acceptance, so disagreeing costs nothing\nand only silence is priced.\n\n**Three different blends of these six exist in this system and confusing\nthem is a live risk:** the published Player Score at 35/20/15/12/10/8, and\nthese two. The reliability *floor* reads the published one \u2014 the one\ndeliberate exception, because a penalty justified by a figure that exists\nnowhere a human can look is unexplainable."
       },
       "ResultResponse": {
         "properties": {
@@ -7975,6 +8489,60 @@
         "title": "SidesSchema",
         "description": "The two sides of the net. **You are always on `A`.**\n\nThere is no arrangement in which the searcher crosses the net, because\n*which side am I on* is not a question a builder asks: what varies is who is\nbeside you."
       },
+      "SkillPanelSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "Which sport this panel is about \u2014 **the resolved one, not the one asked for.** They differ whenever the subject holds no rating in the sport you arrived from."
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their Level, as RacketSkill published it."
+          },
+          "band": {
+            "type": "string",
+            "title": "Band",
+            "description": "The band's published name, as a key. The band's numeric edges are **not** here: they are not a second range to compare `likely_range` against."
+          },
+          "confidence": {
+            "type": "integer",
+            "title": "Confidence",
+            "description": "How sure the platform is, as a whole percentage \u2014 `rating`'s own figure and never re-derived here.\n\n**It travels with `counted_games` and is meaningless without it.** A confident-looking number built on three games must not read like one built on forty, which is the whole reason both cross."
+          },
+          "counted_games": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Counted Games",
+            "description": "**How many confirmed counted results have moved this Level, in this sport.** Deliberately not the player card's `counted_games`, which is how much they have *played*, over every sport, and includes an evening nobody agreed a score for.\n\nThis one is what the certainty rests on, so it comes off the same stream as the Level beside it and moves in step with it. **`0` is a real answer here** and is not an absence: a rating from the questionnaire that no game has tested yet is exactly what it says."
+          },
+          "likely_range": {
+            "$ref": "#/components/schemas/RecordLikelyRangeSchema",
+            "description": "The range their Level probably sits in, \u03bc \u00b1 \u03c3 as the engine rounded it. Always present: two people both showing 2,75 are told apart by how wide this is."
+          },
+          "last_five": {
+            "items": {
+              "$ref": "#/components/schemas/GameOutcome"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Last Five",
+            "description": "Their last counted results **in this sport**, oldest to newest \u2014 the run of form drawn left to right.\n\n**Per sport, which is the fix.** A run built across every sport and drawn beneath a single sport's Level was squash results under a padel number.\n\n**Fewer than five is a real answer and is never padded**: three entries means three counted results, and the client draws the gap. An empty list means none of theirs has been counted and agreed.\n\n**There are no dates here, at any granularity.** A moment beside one of these would be activity recency, which no surface on this platform carries in any shape."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "level",
+          "band",
+          "confidence",
+          "counted_games",
+          "likely_range",
+          "last_five"
+        ],
+        "title": "SkillPanelSchema",
+        "description": "The skill card, for the one sport this sheet is about.\n\n**The sport is resolved by the server and stated back.** You asked with\n`?sport=`; what you get is that sport where they are rated in it, and\notherwise the one they have played most \u2014 so read `sport` here rather than\nassuming the answer is what you sent."
+      },
       "SocialTag": {
         "type": "string",
         "enum": [
@@ -8158,6 +8726,32 @@
         "title": "Sport",
         "description": "The four sports Raketa rates, as a closed enum."
       },
+      "SportPillSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "Which sport. The client draws its own dot and short form."
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their Level in it, as RacketSkill published it."
+          },
+          "band": {
+            "type": "string",
+            "title": "Band",
+            "description": "The Level band's published name. **A key and never derived from the Level** \u2014 a client mapping a number to a band would be a second set of drawing constants, and the day the boundaries move the two would disagree."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "level",
+          "band"
+        ],
+        "title": "SportPillSchema",
+        "description": "One sport this person is rated in, as a pill: the dot, the Level, the band.\n\n**Narrower than the panel below it, deliberately.** A pill answers *what else\ndo they play*; how sure the platform is and what that rests on belong to the\none sport the sheet is about, and repeating them four times would be four\nskill cards drawn as jewellery."
+      },
       "SportResource": {
         "properties": {
           "sport": {
@@ -8259,6 +8853,28 @@
         "title": "StandingProposalSchema",
         "description": "One side's score, on the table and not yet settled on.\n\n**At most one per side**, which is what bounds an argument to two rounds. Two\nof them is the disagreement this platform does not resolve \u2014 and it does not\nresolve it by *arbitrating*, not by hiding it: both scores travel, either\nside may agree with the other's, and that is the only end short of the game\ngoing unscored."
       },
+      "StarsGivenSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "One of the other players on that court \u2014 in doubles an opponent or your partner, in singles the one opponent."
+          },
+          "stars": {
+            "type": "integer",
+            "title": "Stars",
+            "description": "One to five whole stars. There is no zero and there are no halves."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "stars"
+        ],
+        "title": "StarsGivenSchema",
+        "description": "One player on the card, and the stars they were given.\n\n``stars`` is declared as a plain integer **on purpose**. The range is one to\nfive whole stars and it lives in the domain, where a seed, a test and a\nrequest all meet the same refusal; a Pydantic bound restating it here would\nbe a second copy of the rule, and the first of the two to be edited would win\nsilently for whichever callers went through it. A number off the scale comes\nback as `stars_are_one_to_five`."
+      },
       "StateResultRequest": {
         "properties": {
           "score": {
@@ -8294,6 +8910,42 @@
         ],
         "title": "StrandReading",
         "description": "One reliability strand that produced a reading.\n\nA strand with too few observations **stands down and is absent from the\nlist** rather than present at zero: *we have not seen enough* and *they are\nbad at this* are different facts, and a term may never be honestly neutral."
+      },
+      "StrandRowSchema": {
+        "properties": {
+          "strand": {
+            "$ref": "#/components/schemas/ReliabilityStrand",
+            "description": "Which strand this row is. **Key your copy off this code**, never off the row's position: a strand with nothing behind it is absent from the list entirely, so the rows you get are the rows this person has.\n\nThree of the six names have no provider on this platform today and never appear here. They are listed on the enum because the vocabulary is closed and shared with the Fit breakdown, not because they are coming."
+          },
+          "good": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Good",
+            "description": "How many of those opportunities went the way the strand is named for \u2014 a game that was played, a challenge that got an answer, a score that got a reply.\n\n**A no is a good outcome on `ANSWERS_CHALLENGES` and on `ANSWERS_RESULTS`.** Turning somebody down inside your day *is* answering them, and so is countering a score you believe is wrong; what both strands price is silence."
+          },
+          "opportunities": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Opportunities",
+            "description": "How many times this fell due. **An opportunity and never a total**: a game still awaiting its entry, a seat still inside its day and a score still inside its window are in neither half of this row, because publishing them either way would state a conclusion the clock has not reached.\n\n**`ANSWERS_RESULTS` counts the last twelve months and the other rows count a career.** It is the one strand that forgets, so a player can work a bad month off it.\n\nNever `0` \u2014 a row with nothing behind it is not drawn at all."
+          },
+          "pct": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Pct",
+            "description": "The figure out of a hundred for this strand. **Served, never derived** \u2014 dividing `good` by `opportunities` yourself produces a fourth rounding of one record: this one rounds halves up, and the day a client rounds differently the two disagree by a point on exactly the values a player notices.\n\n**Not the Fit breakdown's `StrandReading.value`**, which is the matcher's own reading of the same strand between 0 and 1. Two scales, two surfaces, two names \u2014 and `pct` is this contract's existing word for a whole percentage, as on the balance forecast."
+          }
+        },
+        "type": "object",
+        "required": [
+          "strand",
+          "good",
+          "opportunities",
+          "pct"
+        ],
+        "title": "StrandRowSchema",
+        "description": "One metered row: what fell due, what came of it, and the figure shown.\n\n**All three cross, and the third is not a convenience.** `good` and\n`opportunities` are the raw pair \u2014 a perfect record over nine and one over\nforty are different claims, and a bar alone hides which. `pct` is the figure\nthe platform itself acts on, served so that a client is not the fourth place\nthis record gets rounded."
       },
       "SubmitAnswerRequest": {
         "properties": {

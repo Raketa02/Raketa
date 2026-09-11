@@ -20,6 +20,7 @@
  */
 
 import { playerName } from '@/shared/formatting/playerName';
+import { ON_COURT_CLAUSE } from '@/shared/ui';
 
 import type { AtStake, Candidate, SearchEnvelope } from '../../domain/candidate';
 import { isTagEvidence, type Evidence, type ScoredTerm } from '../../domain/evidence';
@@ -32,7 +33,6 @@ import { balanceReading } from '../balancePresentation';
 import { concernLine } from '../concernPresentation';
 import { livenessLine } from '../livenessPresentation';
 import {
-  ON_COURT_CLAUSE,
   recordClauses,
   socialTagClauses,
   stakeClauses,
@@ -87,6 +87,24 @@ export interface CandidateFactsInput {
   readonly envelope: SearchEnvelope;
   /** The terms this surface renders a value for — the card's **own** exported set. */
   readonly drawn: readonly Term[];
+  /**
+   * Whether this surface draws the **argument** — the reason lines, and the concern under
+   * them. Default `true`, which is the two cards that have always drawn one.
+   *
+   * **It is not a filter, and that is the whole of why it exists.** `drawn` takes a term off
+   * the list *because the card states it somewhere else*, which is a claim about one fact;
+   * this says the surface makes no case at all, and the lines are therefore not composed. The
+   * difference shows up in the **label**: a card whose lines were filtered to nothing still
+   * has reasons to speak, and one that argues nothing must not speak any — §20.3 lets the
+   * spoken order differ from the drawn one, never the content.
+   *
+   * The competitive card sets it `false` (2026-09-09): its case is `SH.whyfit`'s, opened by a
+   * named control on every row, and twenty rows each carrying three sentences is a list nobody
+   * reads. Everything that card **measures** is untouched — the panel, the pill, the band, the
+   * record blocks — so what it loses is prose and not a fact. The social and deck cards keep
+   * theirs: neither has a sheet behind it, and on the deck the sentence **is** the card.
+   */
+  readonly argues?: boolean;
   /**
    * The **Social tag row**, passed in by the card that draws it — and omitted by the two that
    * do not ([#311](https://github.com/Raketa02/Raketa/issues/311)).
@@ -149,7 +167,7 @@ export interface CandidateFactsInput {
 }
 
 export function candidateFacts(input: CandidateFactsInput): CandidateFacts {
-  const { candidate, envelope, drawn, socialTags, record, stake, photo } = input;
+  const { candidate, envelope, drawn, argues = true, socialTags, record, stake, photo } = input;
   const name = playerName({ kind: 'player', nickname: candidate.card.nickname });
   const level = levelFactsOf(candidate);
   // Read once for both registers, exactly as the tag row and the record block are: the panel
@@ -161,8 +179,10 @@ export function candidateFacts(input: CandidateFactsInput): CandidateFacts {
   // draws it as a row must state it here, because the row itself announces nothing (§20.1).
   const balance = drawn.includes('PREDICTED_BALANCE') ? balanceOf(candidate) : undefined;
   const meta = drawn.includes('DISTANCE') ? metaFactsOf(candidate, envelope) : undefined;
-  const reasons = reasonLinesOf(candidate, drawn, socialTags);
-  const concerns = concernLines(candidate);
+  // Not composed rather than composed and dropped: what is not here cannot reach the label,
+  // and the label is the one place a card can say something it does not draw.
+  const reasons = argues ? reasonLinesOf(candidate, drawn, socialTags) : [];
+  const concerns = argues ? concernLines(candidate) : [];
   const tagClauses = socialTags === undefined ? [] : socialTagClauses(socialTags);
 
   return {

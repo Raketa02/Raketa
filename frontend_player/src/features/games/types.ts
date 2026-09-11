@@ -22,7 +22,8 @@
  * One game, on the screen a card pushes — and most of it is the result argument.
  *
  * The route validates its param and hands over a `gameId`; everything else on that screen is
- * derived from the one list this feature reads.
+ * derived from the one list this feature reads. **Nothing in the app pushes it today** — the
+ * list that did is composed nowhere — so the route resolves and no control reaches it.
  */
 export { GameScreen, type GameScreenProps } from './components/GameScreen';
 

@@ -325,6 +325,59 @@ forbidden_modules =
     app.modules.matchmaking
 allow_indirect_imports = true
 
+# The fourth of the same rule, and then — uniquely so far — the same rule pointed
+# back the other way. `sportsmanship` does not import the matcher, for the reason
+# its three neighbours do not: it is a provider, and a provider that knew its
+# consumer would eventually be shaped by it.
+#
+# The second contract is the one that is actually load-bearing, and it is a
+# **product** decision rather than a layering one (docs/adr/0154). The matcher
+# ignores sportsmanship entirely — not in the floor, not as a term, not as a
+# tie-break — because it is the one strand a person can weaponise and there is no
+# appeal route behind it. A reader seeing `3,1 / 5 · 12 players` and deciding for
+# themselves is the product working; the app halving somebody's exposure on the
+# same evidence, silently, with nothing they can answer, is not. That decision has
+# no other enforcement: nothing goes red the day a Match Fit term starts reading
+# a star average, because it would look like every other term beside it. This is
+# what goes red.
+#
+# It is also why the reliability pill is the counted-only number: a star average
+# is not a ratio out of a hundred and cannot be a strand in a weighted mean over
+# ratios, and had the pill included opinions the matcher ignores, the number a
+# player can see would not be the number that demotes them.
+#
+# **`allow_indirect_imports = true` on both, and the second one was measured
+# rather than assumed.** With the flag off it goes red on today's tree naming
+# three modules that have done nothing: every path it reports runs through
+# `app.bootstrap.composition`, which imports every adapter on the platform by
+# design, so a strict contract here is a contract about the composition root and
+# not about the matcher. The violation this exists for is the **direct** one, and
+# it is direct in the only shape it could realistically take: a composing adapter
+# in `matchmaking/infrastructure/`, spelled exactly like `games_match_history.py`
+# beside it, reading a star average into a term. That import names
+# `app.modules.sportsmanship` on its own line.
+#
+# The engines need no arm here: `engines-are-pure` above already forbids them
+# `app.modules` outright, and an arm that restates a rule is an arm that looks
+# like it is doing work.
+[importlinter:contract:sportsmanship-does-not-know-the-matcher]
+name = The Sportsmanship context does not import the matcher
+type = forbidden
+source_modules =
+    app.modules.sportsmanship
+forbidden_modules =
+    app.modules.matchmaking
+allow_indirect_imports = true
+
+[importlinter:contract:the-matcher-never-reads-sportsmanship]
+name = The matcher never reads sportsmanship — not the floor, not a term
+type = forbidden
+source_modules =
+    app.modules.matchmaking
+forbidden_modules =
+    app.modules.sportsmanship
+allow_indirect_imports = true
+
 # `scripts/` holds the offline machines — the ones that read a document, run the
 # engine over it and write the answer back. `scripts/__init__.py` says nothing
 # under `app/` may import from here, and this is what makes that true: the
@@ -412,8 +465,10 @@ source_modules =
     app.modules.challenges
     app.modules.games
     app.modules.matchmaking
-    app.modules.player_score
     app.modules.plans
+    app.modules.player_record
+    app.modules.player_score
+    app.modules.sportsmanship
 forbidden_modules =
     app.modules.conversations
 allow_indirect_imports = true
@@ -450,3 +505,61 @@ source_modules =
 forbidden_modules =
     app.modules.plans
 allow_indirect_imports = true
+
+# The player record is an **assembler**: it stores nothing, and every fact on the
+# sheet it draws is somebody else's (docs/adr/0155). That makes it the one context
+# on this platform whose domain and application layers have a standing reason to
+# reach sideways — the type it wants usually exists already, one directory over,
+# with the right shape and the wrong owner. `CardIdentity` is the example the ADR
+# argues about: three of its fields are exactly this sheet's header, and reusing it
+# would make a record inherit a *card's* closed list, which ADR-0107 keeps short
+# because a card is attached over twenty rows and frozen into a record kept for
+# ever. A record is one person, live, opened by a deliberate tap.
+#
+# So the rule is that this context declares its **own** ports and its own types,
+# and the translation happens in `infrastructure/`, where every adapter here is a
+# consumer-driven contract satisfied over somebody else's published port
+# (ADR-0098). That is a rule about import statements, which is exactly the kind
+# broken by somebody in a hurry, and nothing else would go red: an application
+# layer importing `CardIdentity` would look like a sensible reuse in the diff.
+#
+# `allow_indirect_imports = false`, and it is affordable because these two layers
+# import nothing but the kernel, the engines and each other. The strict flag is
+# what catches the interesting version — a domain module that reaches somebody
+# else's type through a shared helper has borrowed it exactly as completely.
+#
+# The engines are deliberately **not** on the forbidden list, and `ReliabilityStrand`
+# is the one name read from there: `app/engines/` is the pure layer every context
+# reads and none of them owns, exactly as the kernel is, so importing from it is not
+# reaching sideways. `player_score` already made that argument about these same five
+# names — a locally-declared copy would satisfy every protocol in the suite while
+# being free to drift — and the strand codes are on the player contract under that
+# enum's own spelling, so a second one would hand a client two words for one strand.
+#
+# The forbidden list is **spelled out rather than wildcarded**, and that carries a
+# cost worth naming: a context nobody has written yet is not on it, so the day an
+# eleventh arrives its types may be borrowed here with the build green. A wildcard
+# would not fix it — `app.modules` as a forbidden module also forbids this package
+# from importing itself, which is the same trap the two engine contracts above are
+# split in half to avoid. So the row is owed by whoever writes the eleventh
+# context, and this paragraph is where they are told.
+[importlinter:contract:the-player-record-declares-its-own-ports]
+name = The player record's domain and application layers borrow no other context's types
+type = forbidden
+source_modules =
+    app.modules.player_record.domain
+    app.modules.player_record.application
+forbidden_modules =
+    app.modules.auth
+    app.modules.blocks
+    app.modules.challenges
+    app.modules.conversations
+    app.modules.games
+    app.modules.matchmaking
+    app.modules.plans
+    app.modules.player_profile
+    app.modules.player_score
+    app.modules.rating
+    app.modules.sportsmanship
+    app.modules.users
+allow_indirect_imports = false

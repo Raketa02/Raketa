@@ -34,6 +34,10 @@
  * the two mounts to one request. Reading the cache only was rejected: it would leave the badge
  * blank on a cold start until the player visited Chats, making the count a reward for having
  * already looked, which inverts its job.
+ * **The same path decides whether a press is a move at all.** `openTab` takes it and declines
+ * the one case where the tab pressed is the screen already on — which used to lay the stack
+ * down again and rebuild Find a game underneath the player. It is handed the value the lit
+ * column is drawn from rather than a second read of its own, for the reason above.
  *
  * ## The transition says which of the two moves happened
  *
@@ -134,7 +138,7 @@ export function TabShell() {
       {barStandsDown(pathname) ? null : (
         <TabBar
           active={tabForPathname(pathname)}
-          onPress={openTab}
+          onPress={(tab) => openTab(tab, pathname)}
           challengesWaiting={challengesWaiting}
         />
       )}

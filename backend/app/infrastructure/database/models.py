@@ -18,6 +18,10 @@ from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
     SearchORM,
 )
+from app.modules.sportsmanship.infrastructure.card_model import (
+    SportsmanshipCardORM,
+    SportsmanshipRatingORM,
+)
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 
 __all__ = [
@@ -31,5 +35,7 @@ __all__ = [
     "RefreshTokenORM",
     "SearchCandidateORM",
     "SearchORM",
+    "SportsmanshipCardORM",
+    "SportsmanshipRatingORM",
     "UserORM",
 ]

@@ -37,7 +37,8 @@ folds against is not the one the first run did.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping, Protocol, Sequence, final, runtime_checkable
+from datetime import timedelta
+from typing import Final, Mapping, Protocol, Sequence, final, runtime_checkable
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -61,7 +62,17 @@ from app.modules.matchmaking.domain.deck import mode_for_intent
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.ports import PhotoStorage
 from app.seeds.clock import days_before
-from app.seeds.cohort import COHORT, Cohort, CohortMember, PLAYED_GAMES, PlayedGame
+from app.seeds.cohort import (
+    COHORT,
+    EVERY_PLAYED_GAME,
+    Cohort,
+    PlayedGame,
+)
+from app.seeds.pool_history import (
+    NAMED_ACCOUNTS,
+    THE_POOL_HAS_A_RECORD,
+    address_of,
+)
 from app.seeds.paths import (
     ReadPaths,
     read_paths,
@@ -71,6 +82,11 @@ from app.seeds.paths import (
     send_a_court,
     tick_the_tail_to_catch_up,
 )
+
+#: How far apart two moments may be and still be the same declared evening. A
+#: day is the declaration's own unit, so half of one either side is the widest
+#: window that cannot reach the row before or the row after.
+_A_DECLARED_EVENING: Final = timedelta(hours=12)
 
 #: The two scores a seeded game is entered with, one per winning side.
 #:
@@ -117,6 +133,28 @@ class Arrangement(Protocol):
 
     @property
     def players(self) -> tuple[str, ...]: ...
+
+
+class Organiser(Protocol):
+    """Whoever sends a court — the three things sending one costs.
+
+    Who they are for a message, the address a search is run as, and the
+    declaration that decides the mode, which decides whether the game that
+    follows is counted at all. A ``CohortMember`` satisfies it, and so does the
+    named account the pool's own history is organised by (:class:`_Organiser`);
+    structural for :class:`Arrangement`'s reason, so that the two layers that
+    declare arrangements hand the send whichever population their organiser
+    came out of.
+    """
+
+    @property
+    def handle(self) -> str: ...
+
+    @property
+    def email(self) -> str: ...
+
+    @property
+    def intents(self) -> tuple[tuple[str, str], ...]: ...
 
 
 class GameRefused(RuntimeError):
@@ -183,14 +221,16 @@ async def write_the_played_history(
             # wiring that is a query rather than an object.
             players: Mapping[str, UUID] | None = None
             for game in sorted(
-                PLAYED_GAMES, key=lambda one: -one.played_days_ago
+                (*EVERY_PLAYED_GAME, *THE_POOL_HAS_A_RECORD),
+                key=lambda one: -one.played_days_ago,
             ):
+                paths_now = days_before(now, game.played_days_ago).now()
                 paths = await read_paths(
                     session,
                     settings=settings,
                     candidates=candidates,
                     cohort=cohort,
-                    now=days_before(now, game.played_days_ago).now(),
+                    now=paths_now,
                     redis=redis,
                     players=players,
                     photos=photos,
@@ -198,7 +238,8 @@ async def write_the_played_history(
                 players = paths.players
                 written.append(
                     WrittenGame(
-                        game=game, line=await _write_one(paths, game, cohort)
+                        game=game,
+                        line=await _write_one(paths, game, cohort, when=paths_now),
                     )
                 )
 
@@ -212,33 +253,39 @@ def _costs(written: Sequence[WrittenGame]) -> tuple[str, ...]:
     who meets one of these as a symptom should meet it here as a sentence first.
     """
 
+    # **Distinct, because a pair may now share two courts.** A completed
+    # line-up releases its pair, so the protagonist's history plays three people
+    # five times — and a list that counted the same two names twice would say the
+    # released set is larger than it is.
     pairs = sorted(
-        " & ".join(sorted(pair))
-        for one in written
-        for pair in one.game.pairs
+        {" & ".join(sorted(pair)) for one in written for pair in one.game.pairs}
     )
     return (
         f"a completed line-up releases its pair (`docs/adr/0142` §1), so the "
         f"{len(pairs)} pair(s) that have played are back on each other's "
         f"surfaces — each carrying an ACCEPTED tally, which is what makes "
-        f"PREVIOUS_ACCEPT drawable on their cards. That is why no game here "
-        f"seats the protagonist: her pool is where `CANNOT_BE_DRAWN` is read, "
-        f"and it names that code as absent. Played: "
+        f"PREVIOUS_ACCEPT drawable on their cards. `pool_history.py` is what "
+        f"gives that code its witness: she **organises** most of its courts, "
+        f"so the people in her pool accepted a seat from her and their cards "
+        f"carry the tally — which is why `screens.py` promises the code "
+        f"rather than naming it in `CANNOT_BE_DRAWN`. Played: "
         + ", ".join(pairs)
         + ".",
     )
 
 
 async def _write_one(
-    paths: ReadPaths, game: PlayedGame, cohort: Cohort
+    paths: ReadPaths, game: PlayedGame, cohort: Cohort, *, when: Instant
 ) -> str:
     """One game, from whatever state the database is already in."""
 
     sport = Sport(game.sport)
-    organiser = cohort.by_handle(game.organiser)
-    standing = await the_game_already_there(paths, game, cohort)
+    organiser = _organiser_of(game, cohort)
+    standing = await the_game_already_there(paths, game, cohort, when=when)
     if standing is None:
-        standing = await arrange_the_court(paths, game, cohort, sport, organiser)
+        standing = await arrange_the_court(
+            paths, game, cohort, sport, organiser, when=when
+        )
         built = "arranged and played"
     else:
         built = "already played"
@@ -257,37 +304,86 @@ async def _write_one(
             f"which follows the organiser's own declared Play intent."
         )
 
-    entered = await _enter_the_result(paths, game, standing, cohort)
+    # **A ghost is written by not writing anything**, which is the only way to
+    # write one: nobody said *we played*, the entry window closed over the
+    # arrangement, and the platform now reads it as never played. An act here
+    # would be refused — `the_entry_window_has_closed` — so the absence is both
+    # the declaration and the mechanism.
+    entered = (
+        "never claimed"
+        if game.was_a_ghost
+        else await _enter_the_result(paths, game, standing, cohort)
+    )
     return (
         f"{sport.value.lower()} · {' & '.join(game.side_a)} against "
         f"{' & '.join(game.side_b)}, {game.played_days_ago} day(s) ago · "
-        f"{built}, {entered} · "
-        + (
-            "nobody agreed a score"
-            if not game.was_scored
-            else f"side {game.won_by} won"
-        )
+        f"{built}, {entered} · " + _ending(game)
     )
 
 
+def _ending(game: PlayedGame) -> str:
+    """Which of the three endings this row is, in the words the report prints."""
+
+    if game.was_a_ghost:
+        return "a ghost — the entry window closed over it"
+    if not game.was_scored:
+        return "nobody agreed a score"
+    if not game.answered:
+        return f"side {game.won_by} won, unanswered and confirmed by silence"
+    return f"side {game.won_by} won"
+
+
 async def the_game_already_there(
-    paths: ReadPaths, game: Arrangement, cohort: Cohort
+    paths: ReadPaths,
+    game: Arrangement,
+    cohort: Cohort,
+    *,
+    when: Instant | None = None,
 ) -> Game | None:
     """This declared game, if a previous run already arranged it.
 
-    Found **by its line-up** rather than by an id, because the id is minted by
-    the write path and a fresh database mints a different one — the same promise
-    every other probe in the seed makes. Read as the organiser through the
-    screen a player reads their own games on.
+    Found **by its line-up and its day**, never by an id: the id is minted by the
+    write path and a fresh database mints a different one, which is the promise
+    every other probe in the seed makes.
+
+    **The day is half the key when the caller supplies one, and the played
+    history always does.** The Plan and loop layers declare one arrangement per
+    pair and probe by line-up alone; the played history cannot, and the reason
+    it cannot was not always there. A completed
+    line-up releases its pair (``docs/adr/0142`` §1, #343), so two people may
+    play twice — which is what lets three opponents carry five counted games on
+    the protagonist's record. By line-up alone, the second evening with the same
+    person *is* the first one: the probe finds it, the run writes nothing, and
+    the fixture silently declares a game it never wrote.
+
+    A **day** rather than an instant, because the declaration's own granularity
+    is ``played_days_ago`` and an equality on a timestamp is a bet on what a
+    round trip through Postgres preserves.
     """
 
     wanted = frozenset(_ids(paths, cohort, game.players))
     organiser = player_of(paths, cohort, game.organiser)
     _, standing = await paths.read_games.execute(organiser)
     for row in standing:
-        if row.game.sport.value == game.sport and row.game.line_up.players == wanted:
+        if (
+            row.game.sport.value == game.sport
+            and row.game.line_up.players == wanted
+            and (when is None or _on_the_same_day(row.game.planned_at, when))
+        ):
             return row.game
     return None
+
+
+def _on_the_same_day(one: Instant, other: Instant) -> bool:
+    """Whether two moments are the same declared evening.
+
+    Half a day either side rather than a calendar date, because the fixture
+    counts backwards in whole days from the run's own *now* — which is a time of
+    day, not midnight — so two runs an hour apart put the same declared evening
+    on either side of a date boundary.
+    """
+
+    return abs(one - other) < _A_DECLARED_EVENING
 
 
 async def arrange_the_court(
@@ -295,7 +391,9 @@ async def arrange_the_court(
     game: Arrangement,
     cohort: Cohort,
     sport: Sport,
-    organiser: CohortMember,
+    organiser: Organiser,
+    *,
+    when: Instant | None = None,
 ) -> Game:
     """Send the court if nobody has, then answer every seat still outstanding.
 
@@ -311,16 +409,16 @@ async def arrange_the_court(
     act is an accept and its answer is a game it then has to go and find.
     """
 
-    court = await _the_court_already_sent(paths, game, cohort)
+    court = await _the_court_already_sent(paths, game, cohort, when=when)
     if court is None:
-        court = await _send_the_court(paths, game, cohort, sport, organiser)
+        court = await _send_the_court(paths, game, cohort, sport, organiser, when=when)
     for seat in court.seats:
         if seat.player_id is not None and seat.is_awaiting():
             await paths.accept.execute(
                 AnswerSeatCommand(challenge_id=court.id, player_id=seat.player_id)
             )
 
-    opened = await the_game_already_there(paths, game, cohort)
+    opened = await the_game_already_there(paths, game, cohort, when=when)
     if opened is None:
         raise GameRefused(
             f"every seat on challenge {court.id} was accepted and no game "
@@ -372,11 +470,18 @@ async def _enter_the_result(
         acts.append("score entered")
 
     if game.was_scored:
-        if standing.acceptance is None:
+        # **The silence is written by not writing**, exactly as the ghost is one
+        # layer up. A score nobody answers is confirmed by its own window
+        # closing, so the game is scored either way and the difference lands
+        # where it belongs: on *answers about results*, against everybody who
+        # was on the side that was asked.
+        if standing.acceptance is None and game.answered:
             await paths.accept_result.execute(
                 AcceptResultCommand(game_id=standing.id, player_id=answerer)
             )
             acts.append("accepted from across the net")
+        elif not game.answered:
+            acts.append("left unanswered across the net")
     elif GameSide.B not in standing.proposals:
         # **The counter, and it has to name the other winner.** A second score
         # agreeing with the first is a correction nobody objected to; what leaves
@@ -393,14 +498,28 @@ async def _enter_the_result(
 
 
 async def _the_court_already_sent(
-    paths: ReadPaths, game: Arrangement, cohort: Cohort
+    paths: ReadPaths,
+    game: Arrangement,
+    cohort: Cohort,
+    *,
+    when: Instant | None = None,
 ) -> Challenge | None:
     """The court this game was sent as, if a run already sent it.
 
-    Found by **who is seated on it** rather than by an id, for
-    :func:`_the_game_already_there`'s reason: an id is minted by the write path
-    and a fresh database mints a different one. Read through the organiser's own
-    challenge list, which is the screen a player reads their courts on.
+    Found by **who is seated on it, in which sport, and — when the caller
+    supplies a day — on which day** rather than by an id, for
+    :func:`the_game_already_there`'s reason: an id is minted
+    by the write path and a fresh database mints a different one. Read through
+    the organiser's own challenge list, which is the screen a player reads their
+    courts on.
+
+    **The day is half the key here too, and leaving it out cost a whole
+    afternoon.** A completed line-up is not *ended* — the arranging finished, so
+    the challenge stands and the pair is released — which means the court a pair
+    played on last week still answers *who is seated on it* for the court they
+    played on yesterday. The probe returned the older one, its seats were long
+    since accepted so nothing was sent, and the run then failed looking for a
+    game on a day that court was never played on.
     """
 
     organiser = player_of(paths, cohort, game.organiser)
@@ -410,6 +529,10 @@ async def _the_court_already_sent(
     )
     for row in standing:
         if row.challenge.organiser_id != organiser or row.standing in ENDED:
+            continue
+        if row.challenge.sport.value != game.sport:
+            continue
+        if when is not None and not _on_the_same_day(row.challenge.opened_at, when):
             continue
         seated = frozenset(
             seat.player_id
@@ -426,7 +549,9 @@ async def _send_the_court(
     game: Arrangement,
     cohort: Cohort,
     sport: Sport,
-    organiser: CohortMember,
+    organiser: Organiser,
+    *,
+    when: Instant | None = None,
 ) -> Challenge:
     """One real search run as the organiser, and the court it earns.
 
@@ -465,8 +590,9 @@ async def _send_the_court(
             f"arranged at all — and the pair it declares is a pair the platform "
             f"says cannot see each other. "
             f"Gates: {dict(sorted(record.counts.excluded_by_gate.items()))}. "
-            f"The row is a declared arrangement — `PLAYED_GAMES` in "
-            f"`app/seeds/cohort.py`, or `ARRANGED_GAMES` in `app/seeds/plans.py`."
+            f"The row is a declared arrangement — `PLAYED_GAMES` or "
+            f"`PROTAGONIST_GAMES` in `app/seeds/cohort.py`, or `ARRANGED_GAMES` "
+            f"in `app/seeds/plans.py`."
         )
 
     await send_a_court(
@@ -476,7 +602,7 @@ async def _send_the_court(
         record=record,
         invitees=[email_of(cohort, handle) for handle in game.players[1:]],
     )
-    sent = await _the_court_already_sent(paths, game, cohort)
+    sent = await _the_court_already_sent(paths, game, cohort, when=when)
     if sent is None:
         raise GameRefused(
             f"'{organiser.handle}' sent a {sport.value} court citing search "
@@ -486,7 +612,48 @@ async def _send_the_court(
     return sent
 
 
-def mode_of(paths: ReadPaths, member: CohortMember, sport: Sport) -> SearchMode:
+@final
+@dataclass(frozen=True, slots=True)
+class _Organiser:
+    """Whoever sent the court, from whichever population they came out of.
+
+    **Three fields, because three are what sending one costs**: who they are for a
+    message, the address a search is run as, and the declaration that decides the mode —
+    which decides whether the game that follows is counted at all. A ``CohortMember``
+    satisfied all three while every organiser was one; the pool's own history is
+    organised by the protagonist, who is a named account rather than a row in a
+    distribution.
+    """
+
+    handle: str
+    email: str
+    intents: tuple[tuple[str, str], ...]
+
+
+def _organiser_of(game: PlayedGame, cohort: Cohort) -> _Organiser:
+    """The sender of this court, looked up in whichever list holds them."""
+
+    if game.organiser.startswith("cohort-"):
+        member = cohort.by_handle(game.organiser)
+        return _Organiser(
+            handle=member.handle, email=member.email, intents=member.intents
+        )
+    account = NAMED_ACCOUNTS.get(game.organiser)
+    if account is None or account.profile is None:
+        raise GameRefused(
+            f"'{game.organiser}' organises a game and holds no profile, so there is no "
+            f"declaration to run their search under and no court for them to send."
+        )
+    return _Organiser(
+        handle=account.slug,
+        email=account.email,
+        intents=tuple(
+            (sport.value, intent.value) for sport, intent in account.profile.intents
+        ),
+    )
+
+
+def mode_of(paths: ReadPaths, member: Organiser, sport: Sport) -> SearchMode:
     """Which weight vector this organiser's own declaration puts them under.
 
     **Derived and never tabled**, the rule ``pairs.py`` states: a member takes
@@ -507,7 +674,15 @@ def mode_of(paths: ReadPaths, member: CohortMember, sport: Sport) -> SearchMode:
 
 
 def email_of(cohort: Cohort, handle: str) -> str:
-    return cohort.by_handle(handle).email
+    """The address behind a handle, from **any** of the three populations.
+
+    ``pool_history`` owns the walk, because it is the only module that can see all
+    three: the cohort is a distribution, the catalog is a set of named states and the
+    eleven are pair fixtures, and a court seats whoever it seats. This is the one seam
+    that needed to stop caring which list a name came from.
+    """
+
+    return address_of(handle, cohort)
 
 
 def player_of(paths: ReadPaths, cohort: Cohort, handle: str) -> UUID:

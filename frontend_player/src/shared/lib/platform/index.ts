@@ -6,6 +6,13 @@
  * interface a feature depends on, with one implementation that talks to the device and one
  * fake that a test drives (`src/test-support/platform.ts`).
  *
+ * `useHardwareBack` is a third kind and small enough to say so here: a **hook over a device
+ * gesture**, with no port under it because `BackHandler` is React Native's own and not an
+ * Expo native module — nothing below it needs replacing for a test, only pressing
+ * (`src/test-support/hardwareBack.ts`). It lives here for the reason `useOnForeground` does:
+ * *what the device does* is one directory, and a screen reaching for `BackHandler` itself is
+ * the second answer to a question this module already has one of.
+ *
  * Each of those modules is importable **only from inside its own file**, which is what
  * makes their behaviour readable in one sitting and their callers testable at all. The
  * linter enforces it; `scripts/test-import-boundaries.sh` proves the linter still does.
@@ -21,6 +28,7 @@
  */
 
 export { useOnForeground, wireFocusManager } from './appState';
+export { useHardwareBack } from './hardwareBack';
 export { openAppSettings } from './appSettings';
 export { KEYBOARD_AVOIDANCE } from './keyboard';
 export { useIsOnline, wireOnlineManager } from './networkState';

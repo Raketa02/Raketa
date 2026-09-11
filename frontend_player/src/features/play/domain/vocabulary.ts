@@ -56,22 +56,21 @@ export const TERMS = [
 export type Term = (typeof TERMS)[number];
 
 /**
- * How a **counted** game ended, for the one person the card is about.
+ * How a **counted** game ended — **`shared/vocabulary`'s**, and re-exported here so Play still
+ * reads its whole vocabulary from one file.
  *
  * Two values and no third. There is no draw in a racket sport, and a game nobody agreed a
  * score for is not here at all — it is *an evening rather than evidence*, so it is counted in
  * `countedGames` and absent from the run of form
  * ([ADR-0137](../../../../../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)).
  *
- * **No moment travels beside one of these.** `lastFive` is outcomes in order, which is a run
- * of form rather than a statement about when anybody was last here — activity recency at any
- * granularity is row three of the Liveness table and
- * [ADR-0106](../../../../../docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)
- * §5 refuses it.
+ * It moved out when the record sheet became the second surface to draw a run of five
+ * ([#373](https://github.com/Raketa02/Raketa/issues/373)): the run of squares is one drawn
+ * object in `shared/ui`, and a component below every feature cannot read a vocabulary that
+ * lives inside one. What stayed here is what Play does with an outcome — `lastFive` on the
+ * candidate, and `lastFiveReading`'s clause counting them.
  */
-export const GAME_RESULTS = ['WIN', 'LOSS'] as const;
-
-export type GameResult = (typeof GAME_RESULTS)[number];
+export { GAME_RESULTS, type GameResult } from '@/shared/vocabulary/gameResult';
 
 /**
  * What the on-court check **concluded** about a card's photograph.

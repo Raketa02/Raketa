@@ -40,6 +40,20 @@
  * is usually one digit, and an unchanged one is refused here rather than paid for a day later:
  * two matching scores nobody accepts still leave the game unscored.
  *
+ * ## The card asking how they were is the last thing on it
+ *
+ * `features/sportsmanship/`'s, composed here and drawn under everything above — the moment a
+ * player has to think about how an evening went is the moment they are looking at what came of
+ * it. It used to sit above the games list on Now
+ * ([#386](https://github.com/Raketa02/Raketa/issues/386)); moving it here costs the one thing
+ * that surfaced it, so a player who never re-opens a settled game never sees a card. That is a
+ * fair trade only because ignoring one costs nothing and always did.
+ *
+ * **It draws itself or nothing, and this screen decides neither.** Whether a card is open is the
+ * server's answer — settled, a day old, inside its week — so what is composed here is the court
+ * and never a condition. It happens to be drawable only in the two states `actsOffered` leaves
+ * empty, which is why its own send is never a second control beside a pinned one.
+ *
  * ## The refusal is a sentence, never a closed control
  *
  * A grid validated on every keystroke says *a set cannot end level* while somebody is typing the
@@ -99,6 +113,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useCurrentUser } from '@/features/auth/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { ShellScreen } from '@/features/shell/types';
+import { StarCardSection } from '@/features/sportsmanship/types';
 import { offlineMessage, recoveryMessage } from '@/shared/errors';
 import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 import { Button, Note, theme } from '@/shared/ui';
@@ -491,6 +506,19 @@ function Argument({
           {problem}
         </Note>
       )}
+
+      {/* **How were they** — last, and under everything this screen exists to say. The moment a
+          player has to think about how an evening went is the moment they are looking at what
+          came of it, which is this screen and not a row in a list.
+
+          It is handed the game and asks nothing about the state: *whether* a card is open is the
+          server's answer, and it is open only once the result has settled and only between the
+          day after and a week later. So it draws on `confirmed` and `unscored` and on nothing
+          else — which is also every state where `actsOffered` is empty, so the card's own send is
+          never a second control beside a pinned one. Nothing here re-derives any of that: a
+          second spelling of that window would eventually disagree with the one the send is judged
+          against, and it would disagree silently. */}
+      <StarCardSection court={game} />
     </ShellScreen>
   );
 }

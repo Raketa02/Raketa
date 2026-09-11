@@ -52,10 +52,30 @@ describe('the fill', () => {
 });
 
 describe('the number', () => {
-  it('is drawn as served, with nothing here rounding or rescaling it', () => {
+  it('is drawn whole, because the engine serves it with its decimals on', () => {
     render(<FitPill fit={78} />);
-
     expect(screen.getByText('78')).toBeTruthy();
+    screen.unmount();
+
+    render(<FitPill fit={78.42131} />);
+    expect(screen.getByText('78')).toBeTruthy();
+    expect(screen.queryByText('78.42131')).toBeNull();
+  });
+
+  /**
+   * **The fill reads the figure that is printed**, not the one that arrived.
+   *
+   * A pill drawn `hi` beside an 89 — because 89,6 crossed a line the reader cannot see — is
+   * Part 13's *never colour alone* failing in the one direction the word cannot rescue: the
+   * word here **is** the number.
+   */
+  it('rounds once, so the threshold and the figure are two views of one value', () => {
+    expect(drawn(FIT_HIGH - 0.6).pill?.backgroundColor).toBe(theme.color.night);
+    expect(screen.getByText(String(FIT_HIGH - 1))).toBeTruthy();
+    screen.unmount();
+
+    expect(drawn(FIT_HIGH - 0.5).pill?.backgroundColor).toBe(theme.color.coral);
+    expect(screen.getByText(String(FIT_HIGH))).toBeTruthy();
   });
 
   /** Twenty of these scroll past one another; a 78 wider than a 90 is a column that breathes. */
@@ -69,6 +89,26 @@ describe('the number', () => {
 
 describe('the pill', () => {
   /** UI §G1: the class defaults were overridden inline at all five call sites. */
+  /**
+   * **The word is a drawing and never a name.** §20.3 merges the pill into whatever names it —
+   * a card body on three surfaces, a control's own label on the fourth — so a label prop that
+   * started announcing itself would be the figure read twice on every card that has one.
+   */
+  it('draws the optional word before the glyph, and announces nothing', () => {
+    render(<FitPill fit={80} label="Player fit" />);
+
+    expect(screen.getByText('Player fit')).toBeTruthy();
+    expect(screen.queryByLabelText('Player fit')).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  /** Without one the pill is exactly what the four surfaces that never wanted a word draw. */
+  it('draws no word at all when it is given none', () => {
+    render(<FitPill fit={80} />);
+
+    expect(screen.queryByText('Player fit')).toBeNull();
+  });
+
   it('is the height every call site drew, rather than the default none of them used', () => {
     expect(drawn(78).pill?.height).toBe(theme.size.fit);
     expect(theme.size.fit).toBe(26);

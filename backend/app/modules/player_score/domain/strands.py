@@ -1,4 +1,4 @@
-"""The Player Score: five strand names, two of them live, and one published number.
+"""The Player Score: six strand names, three of them live, and one published number.
 
 **This context keeps no record of its own.** It has no aggregate, no table and no
 migration — every fact it publishes is folded out of ``games``' and
@@ -9,14 +9,15 @@ be the copy every screen believed. It is the same refusal ``games``' standing an
 ``challenges``' standing already make about a single game, applied to the fold
 over all of them.
 
-**The five names, and which of them can be published today.**
+**The six names, and which of them can be published today.**
 
 +---------------------+-------------------------------------------------------+
 | ``SHOWS_UP``        | live — a plan that produced a game, or a ghost         |
 | ``ANSWERS_CHALLENGES`` | live — a seat answered inside its window, or lapsed |
+| ``ANSWERS_RESULTS`` | live — a score answered inside its window, or ignored  |
 | ``KEEPS_PLANS``     | stands down — no plan on this platform has a moment    |
 | ``SETTLES_UP``      | stands down — court money is out of scope              |
-| ``SPORTSMANSHIP``   | stands down — nobody rates anybody afterwards          |
+| ``SPORTSMANSHIP``   | stands down — it is not a ratio and never was          |
 +---------------------+-------------------------------------------------------+
 
 **A strand that stands down is not a zero, and it is not a half.** It is simply
@@ -37,11 +38,12 @@ is the fence.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from types import MappingProxyType
-from typing import Mapping, final
+from typing import Final, Mapping, final
 
 from app.engines.matchfit.core import ReliabilityStrand
-from app.kernel import Instant, invariant
+from app.kernel import Instant, instant, invariant
 
 #: What each strand is worth in the number **the player is shown**, and nothing
 #: else. It is not the matcher's vector and may never be mistaken for it: the two
@@ -49,20 +51,23 @@ from app.kernel import Instant, invariant
 #: argument for the matcher reading strands separately, and this one exists
 #: because the player reads *one* number on their own screen.
 #:
-#: **Five names, and the numbers are the six-strand vector's own.** The published
+#: **Six names, and the numbers are the original vector's own.** The published
 #: blend was 35/20/15/12/10/8 while *confirms results* was a strand; it was struck
-#: (``docs/adr/0137``) and its 15 came out with it rather than being redistributed.
-#: Nothing was retuned, because nothing was learned: a weight that moved would be
-#: a hypothesis about the player's own screen with no evidence behind the move,
-#: and the renormalisation below already does what redistributing it would have.
+#: (``docs/adr/0137``) and its 15 came out with it rather than being
+#: redistributed, precisely so that a third live strand could take that share
+#: back without anything else moving — which is what ``docs/adr/0156`` does.
+#: Nothing has been retuned in either direction, because nothing was learned: a
+#: weight that moved would be a hypothesis about the player's own screen with no
+#: evidence behind the move.
 #:
-#: **It sums to 85 and that is not a defect.** A ruleset weight vector is required
-#: to sum to a hundred, so that each number reads as a share of its term's budget
-#: — which is why the matcher's two strand vectors were rescaled when the sixth
-#: name left. This one is not a budget. Its basis is *the strands the player
-#: actually has*, which is two today and would be a different number tomorrow, so
-#: a hundred here would be a coincidence dressed as a meaning. What the numbers
-#: state is the ratios between the names, and those are what survived.
+#: **It sums to a hundred again, and that is an accident of arithmetic rather
+#: than a rule.** A ruleset weight vector is *required* to sum to a hundred, so
+#: that each number reads as a share of its term's budget. This one is not a
+#: budget: its basis is *the strands the player actually has*, which is three
+#: today and was two yesterday, and the blend renormalises over whatever is
+#: there. It summed to 85 while a name was missing and nobody rescaled it; it
+#: sums to 100 now because the missing name came back at its own share. What the
+#: numbers state is the ratios between the names, and those have never moved.
 #:
 #: **They live here rather than in the ruleset**, and that is a boundary rather
 #: than a convenience. The ruleset is the matcher's release, versioned and frozen
@@ -71,17 +76,54 @@ from app.kernel import Instant, invariant
 #: release change what somebody's own profile says about them.
 #:
 #: Falsified the way every other weight vector here is: if two players the same
-#: distance apart on this blend are indistinguishable on ghost rate and answer
-#: rate, the split between the two live names is wrong.
+#: distance apart on this blend are indistinguishable on ghost rate, challenge
+#: answer rate and result answer rate, the split between the three live names is
+#: wrong.
 PUBLISHED_WEIGHTS: Mapping[ReliabilityStrand, int] = MappingProxyType(
     {
         ReliabilityStrand.SHOWS_UP: 35,
         ReliabilityStrand.ANSWERS_CHALLENGES: 20,
+        ReliabilityStrand.ANSWERS_RESULTS: 15,
         ReliabilityStrand.KEEPS_PLANS: 12,
         ReliabilityStrand.SETTLES_UP: 10,
         ReliabilityStrand.SPORTSMANSHIP: 8,
     }
 )
+
+
+#: How far back *answers about results* remembers. **The one window in this
+#: context, and it belongs to one strand** (``docs/adr/0156``).
+#:
+#: ``docs/adr/0140`` §4 refused a rolling window for *shows up* and *answers
+#: challenges* and that refusal stands: every opportunity there counts for ever,
+#: because a ratio over a career already fades with new evidence and a window
+#: would make *out of what* stop meaning a career. This strand is the exception
+#: and the reason is what it prices. Turning up and answering an invitation are
+#: **commitments somebody made**; answering a score is a **habit of opening the
+#: app**, and ADR-0049 has already said in as many words that a flat battery and
+#: simple inattention are the same event to us. A mark for something that easy to
+#: fail by accident, and that never lapses, is a mark a player cannot work off —
+#: so this is the only strand where the platform forgets.
+#:
+#: **Twelve months, chosen to equal the matcher's ``horizon_days``**, which is
+#: the other place this platform decides a record has gone stale. They are two
+#: spellings of one judgement and this context may not read the other one — a
+#: provider importing the matcher's ruleset is the arrow every port here keeps —
+#: so the cost is named rather than hidden: the day somebody moves the horizon,
+#: this number has to move with it, and ``tests/unit/test_player_score_strands.py``
+#: is what says so.
+ANSWERED_RESULTS_WINDOW: Final = timedelta(days=365)
+
+
+def answered_results_since(now: Instant) -> Instant:
+    """The oldest score answer *answers about results* still counts.
+
+    Written here rather than at the one call site so the subtraction has a home
+    beside the number it subtracts, the way every window in ``games`` is a
+    function beside its own constant.
+    """
+
+    return instant(now - ANSWERED_RESULTS_WINDOW)
 
 
 def out_of_a_hundred(part: float, whole: float) -> int:
@@ -166,7 +208,7 @@ class PlayerScore:
 
     **The blend renormalises over the strands that are there**, exactly as the
     reliability term renormalises inside itself. That is what makes a player with
-    two strands comparable to a player with five without either of them being
+    three strands comparable to a player with six without either of them being
     credited for a record nobody keeps, and it is why the three standing-down
     names cost the published number nothing.
     """
@@ -185,13 +227,19 @@ class PlayerScore:
         """The number out of a hundred **on the player's own profile.**
 
         The one deliberate blend in this system, and the reason it exists is that
-        a player reads one number about themselves. It is read by two consumers
-        and computed by neither: the reliability floor, whose
-        ``published_score_bar`` prices it, and the player card, which prints it
-        (``docs/adr/0140``). A penalty justified by a figure that exists nowhere
-        a human can look is unexplainable, and a card that printed a figure the
-        player's own profile disagreed with would be worse than a card that said
-        nothing.
+        a player reads one number about themselves. It is read by three consumers
+        and computed by none of them: the reliability floor, whose
+        ``published_score_bar`` prices it, the player card, which prints it
+        (``docs/adr/0140``), and the player record, which prints it **beside the
+        rows it is the mean of** (``docs/adr/0155``). A penalty justified by a
+        figure that exists nowhere a human can look is unexplainable, and a card
+        that printed a figure the player's own profile disagreed with would be
+        worse than a card that said nothing.
+
+        The third consumer is why ``StrandRatio.value`` is worth deriving in one
+        place rather than at each call site: the record prints this number and
+        every figure under it on one screen, so two roundings of one record would
+        be visible side by side.
         """
 
         weighted = sum(
@@ -218,6 +266,8 @@ class PlayerScore:
 
 
 __all__ = [
+    "ANSWERED_RESULTS_WINDOW",
+    "answered_results_since",
     "PUBLISHED_WEIGHTS",
     "PlayerScore",
     "StrandRatio",

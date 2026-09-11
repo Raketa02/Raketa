@@ -148,6 +148,34 @@ class SqlAlchemySearchStore:
         )
         return int(counted.scalar_one())
 
+    async def sports_shown_in(
+        self, *, searcher_id: UUID, player_id: UUID
+    ) -> frozenset[Sport]:
+        """Every sport this searcher's own searches have shown that player in.
+
+        **Distinct sports and not searches**, which is what keeps the answer
+        small however many times a pair have been shown to each other: the caller
+        needs a partition to evaluate a gate in, and a hundred padel searches are
+        one partition.
+
+        Three predicates, and each is one of this port's standing rules: the
+        searcher, because *the searcher may read their own rows and nobody
+        else's*; the player, because this is a question about a pair; and the
+        band, because a near-miss row was shown to nobody at all.
+        """
+
+        rows = await self._session.scalars(
+            select(SearchORM.sport)
+            .distinct()
+            .join(SearchCandidateORM, SearchORM.id == SearchCandidateORM.search_id)
+            .where(
+                SearchORM.searcher_id == searcher_id,
+                SearchCandidateORM.player_id == player_id,
+                SearchCandidateORM.band == CandidateBand.RETURNED.value,
+            )
+        )
+        return frozenset(Sport(sport) for sport in rows)
+
     async def dealt_since(
         self, *, searcher_id: UUID, sport: Sport, since: datetime
     ) -> frozenset[UUID]:

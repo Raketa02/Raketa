@@ -378,6 +378,61 @@ async def test_a_stranger_reads_nothing_and_cannot_tell_why(store):
     assert foreign is None is unknown
 
 
+async def test_a_search_discloses_the_sport_it_showed_somebody_in(store):
+    """The read the player record is entitled through (``docs/adr/0155``).
+
+    **Sports and not searches**: the caller needs the partition to re-evaluate a
+    gate in, and a hundred padel searches of the same pair are one partition.
+    """
+
+    adapter, session = store
+    record = _record()
+    await adapter.record(record)
+    await session.commit()
+    shown = record.candidates[0].player_id
+
+    assert await adapter.sports_shown_in(
+        searcher_id=SEARCHER, player_id=shown
+    ) == frozenset({Sport.PADEL})
+
+
+async def test_a_near_miss_discloses_nothing(store):
+    """A player withheld from a search was shown to nobody, so nothing about
+    them was disclosed — layer 3 has no read path here either."""
+
+    adapter, session = store
+    record = _record()
+    await adapter.record(record)
+    await session.commit()
+    withheld = next(
+        row.player_id
+        for row in record.candidates
+        if row.band is CandidateBand.NEAR_MISS
+    )
+
+    assert (
+        await adapter.sports_shown_in(searcher_id=SEARCHER, player_id=withheld)
+        == frozenset()
+    )
+
+
+async def test_a_disclosure_belongs_to_the_searcher_who_was_shown_it(store):
+    """Somebody else's search discloses nothing to this reader, which is the
+    difference between a disclosure and a directory of everybody the platform has
+    ever shown to anybody."""
+
+    adapter, session = store
+    record = _record()
+    await adapter.record(record)
+    await session.commit()
+    shown = record.candidates[0].player_id
+
+    assert (
+        await adapter.sports_shown_in(searcher_id=STRANGER, player_id=shown)
+        == frozenset()
+    )
+
+
 async def test_the_store_does_not_commit_for_its_caller(store):
     """The transaction boundary is a decision about the **command**, and here it
     is load-bearing: the record is committed before the response returns, by the

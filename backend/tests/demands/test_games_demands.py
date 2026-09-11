@@ -21,6 +21,7 @@ at two instants.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import get_type_hints
 from uuid import UUID
 
 import pytest
@@ -52,6 +53,8 @@ from app.modules.games.domain.ports import (
     ConfirmedResultLedger,
     GameDirectory,
     GameHistoryQuery,
+    OpponentVariety,
+    OpponentVarietyQuery,
     PlanningCourt,
     PlayedOutcome,
 )
@@ -79,6 +82,21 @@ def registered(port):
     return [
         pytest.param(implementation, id=implementation.name)
         for implementation in implementations_of(port)
+    ]
+
+
+def every_row():
+    """Every row in the register, whichever port it signs.
+
+    Named apart from ``registered`` because the two answer different questions:
+    that one is *run this demand against each signatory*, and this is *walk the
+    whole register* — which is what a structural check about the register itself
+    wants, now that one class here answers three contracts.
+    """
+
+    return [
+        pytest.param(one, id=f"{one.port.__name__}:{one.name}")
+        for one in GAME_IMPLEMENTATIONS
     ]
 
 
@@ -505,6 +523,86 @@ async def test_the_last_results_are_oldest_first_bounded_and_never_padded(
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_run_in_one_sport_is_filtered_before_it_is_trimmed(
+    implementation, session
+):
+    """**The whole reason this read exists beside the set one.**
+
+    Six padel games and then six tennis ones. The set read answers the last five
+    of everything — all tennis — and a consumer narrowing that afterwards would
+    show a padel Level with an empty run under it. This one filters first, so a
+    player who has played thirty in a sport gets five.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, opponent = new_uuid(), new_uuid()
+
+    for day, sport in enumerate([Sport.PADEL] * 6 + [Sport.TENNIS] * 6, start=1):
+        played = _ago(days=20 - day)
+        game = _planned(
+            line_up=_singles(player, opponent),
+            at=instant(played - timedelta(hours=1)),
+            sport=sport,
+        )
+        game.state_result(by=player, score=_score((6, 4)), occurred_at=played)
+        await _saved(session, game)
+
+    everything = await port.recent_results_for([player], now=now)
+    padel = await port.recent_results_in(player, sport=Sport.PADEL, now=now)
+
+    assert {one.sport for one in everything[player]} == {Sport.TENNIS}
+    assert len(padel) == RECENT_RESULTS
+    assert {one.sport for one in padel} == {Sport.PADEL}
+    assert [one.played_at for one in padel] == sorted(one.played_at for one in padel)
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_run_shorter_than_five_in_that_sport_is_never_padded(
+    implementation, session
+):
+    """Two results means two, and the card draws the gap."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, opponent = new_uuid(), new_uuid()
+
+    for day, winner in enumerate((player, opponent), start=1):
+        played = _ago(days=10 - day)
+        game = _planned(
+            line_up=_singles(player, opponent),
+            at=instant(played - timedelta(hours=1)),
+            sport=Sport.SQUASH,
+        )
+        game.state_result(
+            by=winner,
+            score=_score((6, 4)) if winner is player else _score((4, 6)),
+            occurred_at=played,
+        )
+        await _saved(session, game)
+
+    run = await port.recent_results_in(player, sport=Sport.SQUASH, now=now)
+
+    assert [one.outcome for one in run] == [Outcome.WIN, Outcome.LOSS]
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_sport_they_have_played_nothing_counted_in_is_an_empty_run(
+    implementation, session
+):
+    """**Empty and not absent**, unlike the mapping beside it: this read answers
+    about one player, so a short tuple already says the whole of *there is less
+    to show* and a second spelling would be one to get wrong."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+
+    assert (
+        await port.recent_results_in(new_uuid(), sport=Sport.BADMINTON, now=now) == ()
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
 async def test_a_player_with_no_results_is_absent_rather_than_empty(
     implementation, session
 ):
@@ -706,6 +804,241 @@ async def test_a_friendly_counts_towards_turning_up_like_any_other_game(
     assert (await port.attendance_for([one], now=now))[one].played == 1
 
 
+# ---------------------------------------------------------------------------
+# result_answering_for — the *answers about results* strand's input
+# ---------------------------------------------------------------------------
+
+
+def _forever_ago() -> Instant:
+    """A ``since`` far enough back that the window is not what is under test."""
+
+    return _ago(days=3650)
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_accepting_and_countering_are_both_answers_and_silence_is_the_miss(
+    implementation, session
+):
+    """The three endings of a score put in front of somebody, on one read.
+
+    **A counter is a good outcome**, which is the whole difference from the
+    strand ``docs/adr/0137`` struck: a player who believes the score is wrong says
+    so and is credited for saying it, so nobody is docked for disagreeing.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    opener, accepter = new_uuid(), new_uuid()
+    counterer, ignorer = new_uuid(), new_uuid()
+
+    accepted = _planned(line_up=_singles(opener, accepter), at=_ago(days=4))
+    accepted.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    accepted.accept_result(by=accepter, occurred_at=_ago(days=3))
+    await _saved(session, accepted)
+
+    countered = _planned(line_up=_singles(opener, counterer), at=_ago(days=4))
+    countered.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    countered.state_result(
+        by=counterer, score=_score((4, 6),), occurred_at=_ago(days=3)
+    )
+    await _saved(session, countered)
+
+    ignored = _planned(line_up=_singles(opener, ignorer), at=_ago(days=4))
+    ignored.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    await _saved(session, ignored)
+
+    answering = await port.result_answering_for(
+        [accepter, counterer, ignorer], since=_forever_ago(), now=now
+    )
+
+    assert (answering[accepter].answered, answering[accepter].ignored) == (1, 0)
+    assert (answering[counterer].answered, answering[counterer].ignored) == (1, 0)
+    assert (answering[ignorer].answered, answering[ignorer].ignored) == (0, 1)
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_the_side_that_entered_the_score_was_asked_nothing(
+    implementation, session
+):
+    """**One opportunity per game, and it belongs to the side that was asked.**
+
+    The entry that records *we played* records a score in the same act, so one
+    side always opens; once the other side counters, the argument is capped and
+    the opener may only give way. Charging the opener for not giving way is
+    exactly the *dock somebody for disagreeing* this strand exists not to do.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    opener, other = new_uuid(), new_uuid()
+
+    game = _planned(line_up=_singles(opener, other), at=_ago(days=4))
+    game.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    game.state_result(by=other, score=_score((4, 6),), occurred_at=_ago(days=3))
+    await _saved(session, game)
+
+    assert game.standing_at(now) is GameStanding.UNSCORED
+
+    answering = await port.result_answering_for(
+        [opener, other], since=_forever_ago(), now=now
+    )
+
+    assert set(answering) == {other}
+    assert (answering[other].answered, answering[other].ignored) == (1, 0)
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_score_still_inside_its_window_is_in_neither_half(
+    implementation, session
+):
+    """The answer is still wanted, so the player is absent rather than at ``0/0``."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    opener, other = new_uuid(), new_uuid()
+
+    game = _planned(line_up=_singles(opener, other), at=_ago(days=1))
+    game.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(hours=1))
+    await _saved(session, game)
+
+    assert (
+        await port.result_answering_for(
+            [opener, other], since=_forever_ago(), now=now
+        )
+        == {}
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_doubles_score_is_put_to_both_people_on_the_side_it_faces(
+    implementation, session
+):
+    """A pair carries the score their side never answered, and the openers carry
+    nothing.
+
+    It is one question and two people were asked it, which is the same per-person
+    shape *shows up* takes for a different reason: there, everybody on the court
+    was in the arrangement.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    a, b, c, d = new_uuid(), new_uuid(), new_uuid(), new_uuid()
+
+    game = _planned(line_up=_four(a, b, c, d), at=_ago(days=4))
+    game.state_result(by=a, score=_score((6, 4),), occurred_at=_ago(days=3))
+    await _saved(session, game)
+
+    answering = await port.result_answering_for(
+        [a, b, c, d], since=_forever_ago(), now=now
+    )
+
+    assert set(answering) == {c, d}
+    assert answering[c] == answering[d]
+    assert (answering[c].answered, answering[c].ignored) == (0, 1)
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_an_opportunity_older_than_the_callers_window_is_in_neither_half(
+    implementation, session
+):
+    """**The window is the caller's and this context holds no opinion about it.**
+
+    The same record read with two ``since`` values gives two answers, which is
+    what makes *how far back a strand remembers* a decision belonging to the
+    context that publishes the strand rather than to the one that owns the games.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    opener, other = new_uuid(), new_uuid()
+
+    game = _planned(line_up=_singles(opener, other), at=_ago(days=400))
+    game.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=399))
+    await _saved(session, game)
+
+    assert await port.result_answering_for(
+        [other], since=_forever_ago(), now=now
+    ) != {}
+    assert (
+        await port.result_answering_for([other], since=_ago(days=365), now=now) == {}
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_friendly_puts_a_score_in_front_of_somebody_like_any_other_game(
+    implementation, session
+):
+    """A score is a question whether or not the evening was evidence.
+
+    The choice that makes a game a friendly is a choice about ratings; it says
+    nothing about whether the people on that court answered each other.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    opener, other = new_uuid(), new_uuid()
+
+    game = _planned(
+        line_up=_singles(opener, other), at=_ago(days=4), kind=GameKind.FRIENDLY
+    )
+    game.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    await _saved(session, game)
+
+    answering = await port.result_answering_for(
+        [other], since=_forever_ago(), now=now
+    )
+
+    assert (answering[other].answered, answering[other].ignored) == (0, 1)
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_player_nobody_ever_put_a_score_to_is_absent(
+    implementation, session
+):
+    """The second read here whose zero would be invented.
+
+    Somebody who has never been sent a score has not ignored one, and a ``0/0``
+    would say they had.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+
+    assert (
+        await port.result_answering_for(
+            [new_uuid()], since=_forever_ago(), now=now
+        )
+        == {}
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_the_moment_is_when_the_opportunity_closed_and_not_when_it_opened(
+    implementation, session
+):
+    """An answer is dated from the answer; silence is dated from the deadline.
+
+    Dating silence from the score going up would age a record faster than the
+    record aged, which is the rule a ghost is already dated by.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    opener, other = new_uuid(), new_uuid()
+
+    proposed_at = _ago(days=3)
+    game = _planned(line_up=_singles(opener, other), at=_ago(days=4))
+    game.state_result(by=opener, score=_score((6, 4),), occurred_at=proposed_at)
+    await _saved(session, game)
+
+    answering = await port.result_answering_for(
+        [other], since=_forever_ago(), now=now
+    )
+
+    assert answering[other].last_at == instant(proposed_at + PROPOSAL_WINDOW)
+
+
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
 async def test_late_is_a_fact_about_a_plan_and_this_context_has_no_number(
     implementation, session
@@ -752,12 +1085,18 @@ def test_every_registered_implementation_is_of_a_published_port():
     assert stray == []
 
 
-@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+@pytest.mark.parametrize("implementation", every_row())
 def test_every_implementation_satisfies_the_protocol(implementation):
     """Structural, so a method renamed on one side is red rather than a runtime
-    ``AttributeError`` on somebody's search."""
+    ``AttributeError`` on somebody's search.
 
-    assert isinstance(implementation.build(None), GameHistoryQuery)
+    **Over every row rather than over one port's**, which is the shape the
+    consumer registers already take: one class here answers three of these
+    contracts, and a check that only walked the first would have watched half
+    the register.
+    """
+
+    assert isinstance(implementation.build(None), implementation.port)
 
 
 # ---------------------------------------------------------------------------
@@ -1090,3 +1429,170 @@ async def test_somebody_who_was_not_on_the_court_is_answered_about_nothing(
 
     assert await port.plannable_for(stranger, now=now) == {}
     assert game.id in await port.plannable_for(bo, now=now)
+
+
+# ---------------------------------------------------------------------------
+# OpponentVarietyQuery — the career statistic, unbounded and about one person
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
+async def test_variety_is_the_people_over_the_times_they_were_on_a_court(
+    implementation, session
+):
+    """The pair a record divides, and the two halves come from one fold.
+
+    Three singles games against two people: two different faces, three times on
+    a court. In singles the denominator is also a count of evenings, which is
+    why a game was the denominator first and why the bug it carried only showed
+    on doubles. Publishing the counts rather than the share is the whole shape
+    of this read — *fourteen of twenty* and *seven of ten* are different claims
+    and a percentage alone hides which one it is.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, one, other = new_uuid(), new_uuid(), new_uuid()
+
+    for opponent in (one, other, one):
+        game = _planned(line_up=_singles(player, opponent), at=_ago(days=3))
+        game.state_result(
+            by=player, score=_score((6, 4), (6, 3)), occurred_at=_ago(days=2)
+        )
+        await _saved(session, game)
+
+    variety = await port.variety_of(player, now=now)
+
+    assert variety == OpponentVariety(distinct_counterparts=2, times_on_court=3)
+
+
+@pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
+async def test_a_player_with_no_counted_game_is_absent_rather_than_nought(
+    implementation, session
+):
+    """**Absent, never ``0`` and never ``0/0``.** A player nothing was ever
+    counted for has not narrowed their circle — there is nothing to describe,
+    and the record omits the row rather than printing a habit nobody has."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+
+    assert await port.variety_of(new_uuid(), now=now) is None
+
+
+@pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
+async def test_a_four_is_one_evening_and_three_different_people(
+    implementation, session
+):
+    """**A partner is one of the faces**, exactly as they are for familiarity.
+
+    *A pair is anybody you were on a court with*, and a variety figure that
+    counted opponents alone would say a player who partners the same person
+    every week spreads their games as widely as one who does not.
+
+    **And a four is three times on a court, not one.** The denominator counts
+    seats opposite rather than evenings, which is what makes the pair divisible
+    at every court size: this used to publish ``3 of 1``, a fraction whose
+    numerator exceeds its denominator and which only a clamp could draw.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, partner = new_uuid(), new_uuid()
+    against_one, against_other = new_uuid(), new_uuid()
+
+    game = _planned(
+        line_up=_four(player, partner, against_one, against_other), at=_ago(days=3)
+    )
+    game.state_result(by=player, score=_score((6, 4), (6, 3)), occurred_at=_ago(days=2))
+    await _saved(session, game)
+
+    variety = await port.variety_of(player, now=now)
+
+    assert variety == OpponentVariety(distinct_counterparts=3, times_on_court=3)
+
+
+@pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
+async def test_a_friendly_and_a_ghost_are_in_neither_half_of_the_pair(
+    implementation, session
+):
+    """**Both halves are read off the same games**, which is why they are one
+    method.
+
+    A friendly is an acquaintance for familiarity and it is not evidence, so it
+    is out of the denominator — and it has to be out of the numerator too, or a
+    player with forty friendlies and two counted games would be described as
+    playing twenty different people per evening.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, opponent = new_uuid(), new_uuid()
+    friend, never_came = new_uuid(), new_uuid()
+
+    counted = _planned(line_up=_singles(player, opponent), at=_ago(days=3))
+    counted.state_result(
+        by=player, score=_score((6, 4), (6, 3)), occurred_at=_ago(days=2)
+    )
+    await _saved(session, counted)
+
+    friendly = _planned(
+        line_up=_singles(player, friend), at=_ago(days=3), kind=GameKind.FRIENDLY
+    )
+    friendly.state_result(by=player, score=_score((6, 4),), occurred_at=_ago(days=2))
+    await _saved(session, friendly)
+
+    await _saved(
+        session,
+        _planned(
+            line_up=_singles(player, never_came),
+            at=instant(now - PLAN_HORIZON - ENTRY_GRACE - timedelta(hours=1)),
+        ),
+    )
+
+    variety = await port.variety_of(player, now=now)
+
+    assert variety == OpponentVariety(distinct_counterparts=1, times_on_court=1)
+
+
+@pytest.mark.parametrize("implementation", registered(OpponentVarietyQuery))
+async def test_the_fold_reaches_the_whole_record_and_never_a_window(
+    implementation, session
+):
+    """**Unbounded is what makes it a career statistic.**
+
+    A game from three years ago is in it, because *how widely do they spread
+    their games* is a claim about a habit rather than about this season — and a
+    window here would be a second horizon that must not disagree with the
+    matcher's.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    player, long_ago, lately = new_uuid(), new_uuid(), new_uuid()
+
+    for opponent, days in ((long_ago, 1100), (lately, 3)):
+        game = _planned(line_up=_singles(player, opponent), at=_ago(days=days + 1))
+        game.state_result(
+            by=player, score=_score((6, 4), (6, 3)), occurred_at=_ago(days=days)
+        )
+        await _saved(session, game)
+
+    variety = await port.variety_of(player, now=now)
+
+    assert variety == OpponentVariety(distinct_counterparts=2, times_on_court=2)
+
+
+def test_the_variety_fold_takes_one_player_and_can_never_be_called_over_a_list():
+    """**The fence is the signature**, and it is asserted rather than described.
+
+    This fold is unbounded on purpose, so a set-shaped version of it would be an
+    invitation to call it inside a search's walk over five hundred candidates.
+    One player in, one answer or an absence out — and both halves of that are
+    what a widening would have to break first.
+    """
+
+    hints = get_type_hints(OpponentVarietyQuery.variety_of)
+
+    assert hints["player_id"] is UUID
+    assert hints["return"] == OpponentVariety | None

@@ -275,10 +275,19 @@ class BalanceRules:
 class ReliabilityRules:
     """The three bars a reliability reading has to clear.
 
-    ``min_observations`` is per **strand**: below it that strand alone stands
-    down and the survivors renormalise inside the term. ``horizon_days`` binds
-    the whole term — if the most recent observation across every strand is older,
-    reliability stands down entirely.
+    ``min_observations`` is a bar **per strand**, and the mapping is exhaustive:
+    below its own bar that strand alone stands down and the survivors renormalise
+    inside the term. **It was one number for every strand and is now one per
+    strand** (``docs/adr/0156``), because *answers about results* needs a higher
+    bar than the rest and raising the single number instead would take a newcomer
+    who has played three games and turned up to all three from a full score to no
+    score at all — a change to how the whole product treats newcomers, arrived at
+    as a side effect of tuning one strand. A missing key is refused rather than
+    defaulted: a strand nobody set a bar for would enter every reading on its
+    first observation, which is the failure the bar exists to prevent.
+
+    ``horizon_days`` binds the whole term — if the most recent observation across
+    every strand is older, reliability stands down entirely.
 
     ``published_score_bar`` is read against the **published Player Score**, the
     number on the player's own profile, and not the matcher's per-mode blend of
@@ -289,7 +298,7 @@ class ReliabilityRules:
     visible score back up must be able to see the penalty lift.
     """
 
-    min_observations: int
+    min_observations: Mapping[ReliabilityStrand, int]
     horizon_days: int
     published_score_bar: int
 
@@ -1041,10 +1050,19 @@ def _validate_balance(balance: BalanceRules) -> None:
 
 
 def _validate_reliability(reliability: ReliabilityRules) -> None:
+    # Exhaustive over the vocabulary, checked here rather than trusted, because a
+    # strand whose bar was never set would enter a reading on one observation and
+    # nothing else in the pipeline would notice.
     invariant(
-        reliability.min_observations >= 1,
-        f"reliability minimum observations: {reliability.min_observations}",
+        set(reliability.min_observations) == set(ReliabilityStrand),
+        "reliability minimum observations must name every strand: "
+        f"{sorted(strand.value for strand in reliability.min_observations)}",
     )
+    for strand, minimum in reliability.min_observations.items():
+        invariant(
+            minimum >= 1,
+            f"reliability minimum observations for {strand.value}: {minimum}",
+        )
     invariant(
         reliability.horizon_days >= 1,
         f"reliability horizon days: {reliability.horizon_days}",

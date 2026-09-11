@@ -2,7 +2,7 @@
 publishes outward.
 
 **Two of these are the module's own** — the repository and the directory — one
-is somebody else's, and two are the platform's. ``GameHistoryQuery`` is the read
+is somebody else's, and three are the platform's. ``GameHistoryQuery`` is the read
 every other context in
 [#302](https://github.com/Raketa02/Raketa/issues/302) was blocked on: the
 pairwise history the matcher's familiarity term has been standing down for want
@@ -31,6 +31,15 @@ the anchor its horizon is measured from, in one answer. The arrow runs
 ``plans -> games`` and never back: ``games`` does not know a plan exists, which
 is ADR-0145 §4's *"beside that context without being let into it"* made checkable
 and enforced in ``.importlinter``.
+**``OpponentVarietyQuery`` is a separate port and not a sixth fact on the history
+read**, and the split is a fence rather than a filing decision. Every read there
+is bounded — five results, five hundred counterparts — because its caller holds
+twenty rows and asks once; that one is deliberately unbounded, because *how
+widely do they spread their games* is a career statistic and a window would be a
+second horizon nothing keeps in step with the matcher's. An unbounded fold on the
+port a search already holds is one somebody eventually calls inside that walk, so
+it answers about one player, in a type only the surface that opens one person at
+a time is handed.
 
 **``PlayerHandles`` is the one port here this context consumes rather than
 offers**, and it is a single field wide on purpose. A game says who was on the
@@ -40,12 +49,14 @@ naming *sides* and a result agreed with nobody
 area and a run of form are what a searcher reads to decide about a game that
 might happen, and this is the record of one that did.
 
-**``attendance_for`` is the one read here that answers about fewer people than it
-was asked about**, and the exception proves the rule above rather than bending it
-(``docs/adr/0140``). It is ``player_score``'s input for *shows up*, where a
-``0/0`` would say *this person was due somewhere and did not come* about somebody
-nothing was ever arranged for. The two rules live in one class deliberately, so
-that a reader meets the difference instead of rediscovering it.
+**``attendance_for`` and ``result_answering_for`` are the two reads here that
+answer about fewer people than they were asked about**, and the exception proves
+the rule above rather than bending it (``docs/adr/0140``, ``docs/adr/0156``).
+Both are ``player_score``'s inputs — *shows up* and *answers about results* —
+where a ``0/0`` would say *this person was due somewhere and did not come* about
+somebody nothing was ever arranged for, and *this person ignored a score* about
+somebody nobody ever sent one to. The two rules live in one class deliberately,
+so that a reader meets the difference instead of rediscovering it.
 """
 
 from __future__ import annotations
@@ -186,6 +197,64 @@ class Attendance:
 
 @final
 @dataclass(frozen=True, slots=True)
+class ResultAnswering:
+    """What one player did about the scores put in front of them. **Per person.**
+
+    The *answers about results* strand's whole input (``docs/adr/0156``).
+    ``answered`` is scores they accepted or countered inside the window;
+    ``ignored`` is scores whose window ran out with nothing said. A score still
+    inside its window is in **neither** — the answer is still wanted, and filing
+    it either way would publish a conclusion the clock has not reached.
+
+    **The denominator is scores put in front of *them*, and never games.** The
+    side that entered the score is asked nothing, and once both sides have put a
+    score up the argument is capped — so a counter is the asked side's answer and
+    never a second question put back to the opener. That is the whole difference
+    from the strand ``docs/adr/0137`` struck: **nobody is docked for
+    disagreeing**, because there is no state a person reaches by holding their
+    position that this read files as a miss.
+
+    **A counter is a good outcome**, which makes this the second strand on this
+    platform where saying *no* scores, after *answers challenges*. What is priced
+    is silence, not judgement — and here the judgement being protected is
+    ADR-0049's: *no player is penalised for not agreeing a result.*
+
+    **Counted and friendly games are both here.** A score put in front of you is a
+    question whether or not the evening was evidence about anybody's Level.
+
+    ``last_at`` is the most recent moment one of those opportunities closed — the
+    instant something was said, or the deadline that passed in silence.
+
+    **It is the same shape as ``Attendance`` above and is deliberately not the
+    same type.** Three counts and a moment is what an opportunity record looks
+    like — ``challenges``' ``AnsweringRecord`` is a third one — and a shared
+    ``Opportunity(good, missed, last_at)`` would be a type whose field names could
+    not say *played* or *ghosted* or *ignored*. The words are the whole content of
+    these rows: a reader of the fold has to know that a ghost is charged to a
+    whole court and an ignored score only to the side it faced, and a generic pair
+    is exactly where that stops being visible. The cost is two invariants spelled
+    twice, and it is smaller than the cost of the alternative.
+    """
+
+    answered: int
+    ignored: int
+    last_at: Instant
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.answered >= 0 and self.ignored >= 0,
+            f"a negative score count: {self.answered} answered, "
+            f"{self.ignored} ignored",
+        )
+        invariant(
+            self.answered + self.ignored >= 1,
+            "an answering record with no closed score behind it is an absence, "
+            "not a zero — absence is spelled by not being in the answer",
+        )
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class CountedResult:
     """One counted game that produced an agreed score, from one player's side.
 
@@ -238,6 +307,99 @@ class ConfirmedGame:
             "a confirmed result with an empty side: a score names a winner and "
             f"somebody it was won against ({len(self.winners)}/{len(self.losers)})",
         )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class OpponentVariety:
+    """How many different people one player's counted games were played against.
+
+    **A pair and never a share.** The division is a drawing decision and the two
+    counts are the fact: *fourteen of twenty* and *seven of ten* are the same
+    percentage and different claims, and a reader told only the percentage cannot
+    tell which one they are looking at.
+
+    ``distinct_counterparts`` counts **everybody who was on a court with them**,
+    partner included, on ``LineUp.counterparts_of``'s own rule that *a pair is
+    anybody you were on a court with*. A figure counting opponents alone would
+    say that somebody who partners the same person every week spreads their games
+    as widely as somebody who does not.
+
+    **The denominator is people met and never games played**, and that is the
+    correction rather than a preference. A game was the denominator first, and it
+    is only divisible in singles: a doubles evening puts three people on the
+    court, so one game produced ``3 of 1`` — a fraction whose numerator exceeds
+    its denominator, which a client could only render by clamping the share at a
+    hundred and printing a pair that reads as nonsense. Counting the **seats
+    opposite** instead makes the two halves the same kind of thing: *five
+    different people across ten times on a court* is the sentence, and the share
+    is a share.
+
+    **Both halves are read off the same games**, which is what keeps the pair
+    coherent: a friendly and a ghost are in neither, so a player with forty
+    friendlies and two counted games cannot be described as playing twenty
+    different people an evening.
+    """
+
+    distinct_counterparts: int
+    times_on_court: int
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.times_on_court >= 1,
+            "a variety over no counted game is an absence, not a nought — "
+            "absence is spelled by not being in the answer at all",
+        )
+        invariant(
+            self.distinct_counterparts >= 1,
+            "a counted game somebody played alone: "
+            f"{self.distinct_counterparts} people over "
+            f"{self.times_on_court} times",
+        )
+        invariant(
+            self.distinct_counterparts <= self.times_on_court,
+            "more different people than seats they sat opposite: "
+            f"{self.distinct_counterparts} over {self.times_on_court}. It is "
+            "what the denominator being a count of **games** could not say, "
+            "and a doubles evening broke it every time",
+        )
+
+
+@runtime_checkable
+class OpponentVarietyQuery(Protocol):
+    """*How widely does this person spread their games?* — over the whole record.
+
+    **A second port rather than a sixth fact on ``GameHistoryQuery``, and the
+    split is the fence.** That port is held by a caller that walks twenty rows
+    and, for the pairwise read, five hundred counterparts; this fold is
+    deliberately **unbounded**, because a career statistic that stopped at a
+    window would be a second horizon that must not disagree with the matcher's.
+    An unbounded fold on the same port a search already holds is an invitation to
+    call it inside that walk. So it is handed only to the consumer that opens one
+    person at a time.
+
+    **One player and never a collection**, stated in the signature and asserted
+    there. There is no set-shaped version of this to reach for.
+
+    **Cost.** Bounded by how many games this player has ever been seated in — the
+    same profile as every other read in this context, because the fold *is* the
+    answer.
+    """
+
+    async def variety_of(
+        self, player_id: UUID, *, now: Instant
+    ) -> OpponentVariety | None:
+        """Their different faces and their counted games, or **nothing at all**.
+
+        ``None`` for a player no counted game has been recorded for, which is
+        this platform's one spelling for *we watched nothing*. A ``0`` would be a
+        habit nobody has, and a ``0 / 0`` would be arithmetic nobody can draw.
+
+        ``now`` is taken rather than read for the reason every fold here takes
+        it: whether a game was played is folded from the record against a clock,
+        and one response's facts are folded against one instant.
+        """
+        ...
 
 
 @runtime_checkable
@@ -414,7 +576,7 @@ class PlayerHandles(Protocol):
 
 @runtime_checkable
 class GameHistoryQuery(Protocol):
-    """The four facts this context owes the rest of the platform, and the fifth
+    """The six facts this context owes the rest of the platform, and the seventh
     it owes an honest ``None``."""
 
     async def played_counterparts(
@@ -465,6 +627,36 @@ class GameHistoryQuery(Protocol):
         """
         ...
 
+    async def recent_results_in(
+        self, player_id: UUID, *, sport: Sport, now: Instant
+    ) -> tuple[CountedResult, ...]:
+        """One player's last few counted results **in one sport**, oldest first.
+
+        **A second read and not a parameter on the one above**, because the two
+        answer for different callers and one of them must not move. The set read
+        is what a *search* attaches to twenty rows and freezes into a record kept
+        for ever; narrowing it to a sport would make the same person's card read
+        differently before and after, which is a change worth making deliberately
+        rather than as a side effect. This one is what a record sheet draws
+        beneath a single sport's Level, where a run built across every sport is
+        squash results under a padel number.
+
+        **Filtered before it is trimmed**, which is the whole reason a caller
+        cannot build this from the set read: that one answers at most
+        ``RECENT_RESULTS`` across every sport, so a consumer filtering afterwards
+        would show three results to somebody who has played thirty.
+
+        **One player and never a collection.** A record is one person opened by a
+        deliberate tap; a set-shaped version of this would be an invitation to
+        call it inside a walk over five hundred candidates.
+
+        At most ``RECENT_RESULTS``, and **fewer is a real answer that is never
+        padded**. Empty for a player with none — which needs no second spelling
+        here, unlike the mapping above, because a short tuple already says the
+        whole of *there is less to show*.
+        """
+        ...
+
     async def attendance_for(
         self, player_ids: Collection[UUID], *, now: Instant
     ) -> Mapping[UUID, Attendance]:
@@ -482,6 +674,29 @@ class GameHistoryQuery(Protocol):
         strand. The strand's arithmetic is not here: this context knows what
         happened to its own games and has no opinion about what that says about a
         person.
+        """
+        ...
+
+    async def result_answering_for(
+        self, player_ids: Collection[UUID], *, since: Instant, now: Instant
+    ) -> Mapping[UUID, ResultAnswering]:
+        """What each of these people did about the scores put in front of them.
+
+        **A player with none is absent from the answer**, the second read here
+        whose zero would be invented: somebody nobody has ever put a score to has
+        not ignored one.
+
+        **``since`` is the caller's window and never this context's**
+        (``docs/adr/0156``). A game's own three clocks are in ``windows.py`` and
+        are what a player is promised; *how far back a strand remembers* is a
+        judgement about what a record is worth, and it belongs to the context
+        that publishes the strand. This read answers about opportunities that
+        closed at or after that instant, and holds no opinion about which instant
+        it should be.
+
+        Its reader is ``player_score``. The arithmetic is not here: this context
+        knows what happened to its own games and has no opinion about what that
+        says about a person.
         """
         ...
 
@@ -516,7 +731,10 @@ __all__ = [
     "GameRepository",
     "PlannableGame",
     "PlanningCourt",
+    "OpponentVariety",
+    "OpponentVarietyQuery",
     "PlayedOutcome",
     "PlayerHandles",
     "PlayedTally",
+    "ResultAnswering",
 ]

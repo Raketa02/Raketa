@@ -195,6 +195,7 @@ from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
 from app.seeds.plans import SeededPlans, costs as plan_costs, write_the_plans
 from app.seeds.rooms import SeededRooms, open_the_rooms
 from app.seeds.screens import assert_the_screens
+from app.seeds.sportsmanship import SeededOpinions, write_what_players_said
 
 #: A questionnaire the seed can no longer finish is a hang, and a hang in a
 #: developer command reads as a broken database. The engine's own ceiling is well
@@ -1121,6 +1122,9 @@ class SeedReport:
     #: ``None`` on the callers that drive the populations without the layers
     #: above them, exactly as the two above are.
     rooms: SeededRooms | None = None
+    #: The cards those evenings left behind, and what the published fold makes
+    #: of them. ``None`` on the same callers and for the same reason.
+    opinions: SeededOpinions | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1182,6 +1186,13 @@ async def run(settings: Settings | None = None) -> SeedReport:
         played = await write_the_played_history(
             session_factory, settings=settings, now=now, photos=photos
         )
+        # **After the games and before anything reads a record**, because a card
+        # is drawn for a court that is over: nothing here arranges an evening,
+        # and every rating it writes is about one the layer above just wrote.
+        # It spends no pair and runs no search, so its position relative to the
+        # relationships is free — it sits here because it belongs to the
+        # evenings rather than to the inboxes.
+        opinions = await write_what_players_said(session_factory, now=now)
         # **After both populations and before every claim.** An edge is a real
         # search or deal run as the sender, so it needs everybody in the index —
         # and the claims are read off what the edges made true.
@@ -1243,6 +1254,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             plans=plans,
             rooms=rooms,
             loop=loop,
+            opinions=opinions,
             photographs=photographs,
         )
     finally:
@@ -1305,6 +1317,8 @@ def report(run_report: SeedReport) -> list[str]:
     lines.extend(["", *_cohort_lines(run_report.members)])
     if run_report.played is not None:
         lines.extend(["", *_played_lines(run_report.played)])
+    if run_report.opinions is not None:
+        lines.extend(["", *_opinion_lines(run_report.opinions)])
     lines.extend(["", *_photograph_lines(run_report.members)])
     if run_report.pairs is not None:
         lines.extend(["", *_relationship_lines(run_report.pairs)])
@@ -1401,6 +1415,28 @@ def _plan_lines(plans: SeededPlans) -> list[str]:
     return [
         "The plans, on games nobody has played:",
         *(f"  {line}" for line in plans.plans),
+    ]
+
+
+def _opinion_lines(opinions: SeededOpinions) -> list[str]:
+    """The cards that were answered, and what the record will print off them.
+
+    **The second half is read back and not computed**, which is the only reason
+    it is worth printing: the figure a developer sees here is the one
+    ``sportsmanship`` publishes when a record is opened, so a fold that started
+    disagreeing with the fixture would show up in this section rather than on a
+    screen nobody looked at.
+
+    And the figure is what a **reader** of that record is shown. The subject is
+    shown a coarse band and no count at all (``docs/adr/0154``) — so signing in
+    as one of these people and opening your own sheet is *not* how to check this
+    section; opening theirs from somebody else's pool is.
+    """
+
+    return [
+        "What other players said:",
+        *(f"  card · {line}" for line in opinions.cards),
+        *(f"  published · {line}" for line in opinions.published),
     ]
 
 

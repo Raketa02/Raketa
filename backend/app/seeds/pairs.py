@@ -66,6 +66,7 @@ from app.modules.matchmaking.application.commands import (
     RunLineupSearchCommand,
 )
 from app.modules.matchmaking.domain.deck import mode_for_intent
+from app.modules.matchmaking.domain.errors import LockedSeatNotAvailable
 from app.modules.matchmaking.domain.ports import PairwiseOutcome
 from app.modules.matchmaking.domain.searches import SearchRecord
 from app.modules.player_profile.domain.play_intent import PlayIntent
@@ -1298,6 +1299,10 @@ async def _a_sent_court_left_half_built(
         invitee = await _somebody_new_to(paths, organiser_id, record, cohort=cohort)
         if invitee is None:
             continue
+        if not await _the_fill_would_reach(
+            paths, organiser, seated=paths.player(invitee.email)
+        ):
+            continue
         challenge_id = await send_a_court(
             paths,
             organiser=organiser.email,
@@ -1394,6 +1399,8 @@ async def _a_mutual_born_court(paths: ReadPaths, *, cohort: Cohort) -> str:
         # member see anybody* is.
         if first_id not in returned_ids(towards_first):
             continue
+        if not await _the_fill_would_reach(paths, first, seated=second_id):
+            continue
         await paths.interest.execute(
             ExpressInterestCommand(
                 from_player_id=first_id,
@@ -1466,6 +1473,49 @@ async def _their_half_built_court(
         if (row.challenge.window is not None) is sent:
             return row.challenge
     return None
+
+
+async def _the_fill_would_reach(
+    paths: ReadPaths, filler: CohortMember, *, seated: UUID
+) -> bool:
+    """Whether ⚡ run as this member could seat this person — asked **before**
+    anything is written, so a pair it refuses is the next candidate's turn.
+
+    **A search showing somebody is not the same as a fill seating them.** The
+    shortlist that surfaced the person is ordered by rank key — Fit plus the
+    liveness offset — and the line-up's pool is the top ``K`` by **Fit alone**,
+    with a locked seat resolving out of that pool or not at all. So two people
+    who have played together are lifted into each other's shortlists by
+    ``PREVIOUS_ACCEPT`` and can still sit below ``K`` on raw Fit, and the fill
+    the court then needs answers ``locked_seat_not_available`` for a person the
+    platform itself showed. Whether that happens depends on who else the played
+    history has lifted, which is a property of the **population** and not of
+    this pair — so it is asked of the product's own rule rather than re-derived
+    from a record that carries twenty rows and not the pool.
+
+    It runs the same command the fill runs, with the one seat locked and no
+    challenge named, and **writes nothing outbound**: a line-up seats nobody
+    and sends nothing. Only the refusal that names the locked seat is read as
+    *no*; anything else is the fill's own business, and it will say so itself.
+    """
+
+    try:
+        await paths.lineup.execute(
+            RunLineupSearchCommand(
+                searcher_id=paths.player(filler.email),
+                sport=Sport.PADEL,
+                mode=_mode_declared_by(paths, _declarations_of(filler), Sport.PADEL),
+                locked_seats=(seated,),
+                completing_challenge_id=None,
+                availability_override=None,
+                offered_by_search_id=None,
+                rung=None,
+                trace_id=TRACE_ID,
+            )
+        )
+    except LockedSeatNotAvailable:
+        return False
+    return True
 
 
 async def _the_fill_reaches_the_court(

@@ -18,10 +18,12 @@ one thing that cannot be checked by reading the code, because the failure looks
 like a perfectly ordinary dictionary comprehension — and it is the rule whose
 breach would turn *no record* into *a bad record* everywhere downstream at once.
 
-**Two strands and never three.** *Keeps plans*, *settles up* and *sportsmanship*
-have no provider on this platform, and the assertions below say so by name rather
-than by asserting a length: the day one of them lands, a named assertion says
-which, and a length assertion would only say that something changed.
+**Three strands and never four.** *Keeps plans* and *settles up* have no
+provider on this platform and *sportsmanship* is published in its own right
+rather than as a strand (``docs/adr/0154``), and the assertions below say so by
+name rather than by asserting a length: the day one of them lands, a named
+assertion says which, and a length assertion would only say that something
+changed.
 """
 
 from __future__ import annotations
@@ -271,6 +273,38 @@ async def _played(session, *, one: UUID, other: UUID, at: Instant) -> Game:
     return game
 
 
+async def _answered_a_score(
+    session, *, opener: UUID, answerer: UUID, at: Instant, counter: bool = False
+) -> Game:
+    """A game whose score was put in front of ``answerer``, and answered.
+
+    ``counter`` is the whole point of the strand: a player who believes the score
+    is wrong says so, and saying so is an answer. Both paths leave the same fact
+    on the record — *they replied inside the window* — and the ending they leave
+    the **game** in is deliberately different, which is what proves the strand is
+    not counting agreements.
+    """
+
+    game = _plan(one=opener, other=answerer, at=at)
+    proposed_at = instant(at + timedelta(hours=2))
+    game.state_result(
+        by=opener, score=Score.of((SetScore(a=6, b=4),)), occurred_at=proposed_at
+    )
+    if counter:
+        game.state_result(
+            by=answerer,
+            score=Score.of((SetScore(a=4, b=6),)),
+            occurred_at=instant(proposed_at + timedelta(hours=1)),
+        )
+    else:
+        game.accept_result(
+            by=answerer, occurred_at=instant(proposed_at + timedelta(hours=1))
+        )
+    await _games(session).save(game)
+    await session.commit()
+    return game
+
+
 async def _ghosted(session, *, one: UUID, other: UUID) -> Game:
     """A plan nobody ever claimed, old enough that its entry window has shut."""
 
@@ -341,7 +375,7 @@ async def test_a_score_read_answers_only_about_players_it_was_asked_about(
 
 
 # ---------------------------------------------------------------------------
-# The two strands that have a provider
+# The three strands that have a provider
 # ---------------------------------------------------------------------------
 
 
@@ -459,6 +493,78 @@ async def test_a_game_that_happened_and_a_plan_that_ghosted_are_one_strand(
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_a_score_answered_and_a_score_ignored_are_one_strand(
+    implementation, session
+):
+    """*Answers about results*, both halves, on the same person.
+
+    Two scores were put in front of them; they replied to one and let the other
+    run out. Both are opportunities and one is a good outcome, and the miss is
+    counted **without anything having swept it** — a window that has closed has
+    closed whether or not a job noticed.
+    """
+
+    port = implementation.build(session)
+    player, opener = new_uuid(), new_uuid()
+    await _answered_a_score(session, opener=opener, answerer=player, at=_ago(days=4))
+    await _played(session, one=opener, other=player, at=_ago(days=3))
+
+    score = (await port.scores_for([player], now=_now()))[player]
+    strand = score.strands[ReliabilityStrand.ANSWERS_RESULTS]
+
+    assert (strand.good, strand.opportunities) == (1, 2)
+    assert strand.value == 50
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_countering_a_score_is_answering_it_and_disagreeing_costs_nothing(
+    implementation, session
+):
+    """**The reason this strand could be built and the struck one could not.**
+
+    The game ends unscored — two scores stood and neither side gave way — and the
+    person who disagreed is published at a hundred. A strand counting agreements
+    would have docked them, and would have docked the other side too, for the one
+    act ``docs/adr/0049`` most wants a player to feel free to make.
+    """
+
+    port = implementation.build(session)
+    opener, counterer = new_uuid(), new_uuid()
+    await _answered_a_score(
+        session, opener=opener, answerer=counterer, at=_ago(days=4), counter=True
+    )
+
+    scores = await port.scores_for([opener, counterer], now=_now())
+
+    assert scores[counterer].strands[ReliabilityStrand.ANSWERS_RESULTS].value == 100
+    # The opener was asked nothing: their score was the question.
+    assert ReliabilityStrand.ANSWERS_RESULTS not in scores[opener].strands
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_only_this_strand_forgets_and_the_other_two_count_a_career(
+    implementation, session
+):
+    """**One window, and it belongs to one strand** (``docs/adr/0156``).
+
+    The same game, more than twelve months old, is still an opportunity for
+    *shows up* and is no longer one for *answers about results*. That asymmetry is
+    the decision rather than a coincidence: turning up is a commitment somebody
+    made, and answering a score is a habit of opening an app — a mark for
+    something that cheap to fail by accident has to be one a player can work off.
+    """
+
+    port = implementation.build(session)
+    player, opener = new_uuid(), new_uuid()
+    await _played(session, one=opener, other=player, at=_ago(days=400))
+
+    score = (await port.scores_for([player], now=_now()))[player]
+
+    assert ReliabilityStrand.SHOWS_UP in score.strands
+    assert ReliabilityStrand.ANSWERS_RESULTS not in score.strands
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
 async def test_an_answer_survives_the_seat_being_offered_to_somebody_else(
     implementation, session
 ):
@@ -556,11 +662,12 @@ async def test_one_strand_is_a_score_and_the_two_records_are_independent(
 async def test_the_published_number_is_the_blend_over_the_strands_that_are_there(
     implementation, session
 ):
-    """35 and 20 over a basis of 55, and never over a hundred.
+    """35, 20 and 15 over a basis of 70, and never over a hundred.
 
-    A player with both strands at a hundred is published at a hundred — which is
-    the assertion that the three standing-down names cost the number nothing,
-    because a blend over a basis of a hundred would have capped them at 55.
+    A player with all three live strands at a hundred is published at a hundred —
+    which is the assertion that the three standing-down names cost the number
+    nothing, because a blend over a basis of a hundred would have capped them at
+    70.
     """
 
     port = implementation.build(session)
@@ -570,9 +677,17 @@ async def test_the_published_number_is_the_blend_over_the_strands_that_are_there
     )
     await _answers(session, challenge, player, yes=True, at=_ago(days=2))
     await _played(session, one=player, other=new_uuid(), at=_ago(days=3))
+    await _answered_a_score(
+        session, opener=new_uuid(), answerer=player, at=_ago(days=3)
+    )
 
     score = (await port.scores_for([player], now=_now()))[player]
 
+    assert set(score.strands) == {
+        ReliabilityStrand.SHOWS_UP,
+        ReliabilityStrand.ANSWERS_CHALLENGES,
+        ReliabilityStrand.ANSWERS_RESULTS,
+    }
     assert score.published == 100
 
 

@@ -5,9 +5,20 @@
  * Every id this build can draw has words, and no two ids share the same ones — two chips
  * reading alike are two choices a player cannot tell apart, and two reason lines reading
  * alike are two facts a player cannot tell apart either.
+ *
+ * The Social tag row's own three words are asserted here too, and the assertion is the split
+ * between the two registers: the chip carries a glyph and a per-tag marker, and the clause a
+ * listener gets carries neither — that half is the drawing surface's and stays with it
+ * ([#311](https://github.com/Raketa02/Raketa/issues/311)).
  */
 
-import { socialTagGroupHeading, socialTagLabel, socialTagName } from './socialTagPresentation';
+import {
+  NO_TAGS_IN_COMMON,
+  socialTagChip,
+  socialTagGroupHeading,
+  socialTagLabel,
+  socialTagName,
+} from './socialTagPresentation';
 import { SOCIAL_TAG_GROUP_IDS, SOCIAL_TAG_IDS } from './socialTags';
 
 describe('what a tag is called', () => {
@@ -39,5 +50,18 @@ describe('drawn with a glyph, spoken and written without one', () => {
       expect(socialTagLabel(tagId).endsWith(socialTagName(tagId))).toBe(true);
       expect(socialTagName(tagId)).toMatch(/^[A-Za-z]/);
     }
+  });
+});
+
+describe('the social tag row’s words', () => {
+  it('draws the tag with its glyph, and the marker only where it is shared', () => {
+    expect(socialTagChip({ id: 'PLAYS_TO_WIN', shared: true })).toBe('🏆 Plays to win · you too');
+    expect(socialTagChip({ id: 'PLAYS_TO_WIN', shared: false })).toBe('🏆 Plays to win');
+  });
+
+  it('states the one claim the row makes, and never accuses anybody of it', () => {
+    // Amber's register: *watch this, reversible, not yet wrong*. Nobody has done anything
+    // wrong by having different tags, so the sentence names the absence and stops there.
+    expect(NO_TAGS_IN_COMMON).toBe('No tags in common');
   });
 });

@@ -9,7 +9,7 @@
  * ## The face is a photograph or a poster, and there is no monogram
  *
  * #338 §5 refused the avatar outright — no element, no hue, no radius rule — because
- * `CandidatePhoto` already **is** the photograph-or-poster switch, a poster is a fact about an
+ * `PlayerPhoto` already **is** the photograph-or-poster switch, a poster is a fact about an
  * id ([ADR-0134](../../../../../docs/adr/0134-the-poster-draws-a-player-and-no-value-is-invented.md)),
  * and initials are a derived familiar form ADR-0107 refuses. The cost is stated there: this row
  * loses the six coloured initial tiles `chat_tab.png` draws.
@@ -18,7 +18,7 @@
  * `GET /challenges` borrows a handle and nothing else about a person — *"a Level, a band, an
  * area and a photograph are a card's, and a card is drawn on the detail read alone"*
  * ([ADR-0143](../../../../../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)).
- * So no `photoUrl` is passed, and `CandidatePhoto` falls back exactly as it does for a player
+ * So no `photoUrl` is passed, and `PlayerPhoto` falls back exactly as it does for a player
  * who has no photograph.
  *
  * **It is reached through `features/play`'s public surface rather than copied**, and that is a
@@ -26,7 +26,7 @@
  * [`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §4.3
  * says the parts kit's smallest members are shared *"through `shared/`"* — but §5, which is the
  * authoritative list of what moves, names **one** promotion and it is `courtPosterFor()`.
- * `CandidatePhoto` cannot follow it without dragging `CANDIDATE_PANEL`, whose own docstring
+ * `PlayerPhoto` cannot follow it without dragging `PHOTO_PANEL`, whose own docstring
  * argues it belongs to the card rather than to the system. So the row imports the component,
  * because the alternative today is a second box with a second `× 0.33` in it and one person
  * drawn at two corners — the drift having **one owner** exists to prevent. #361's card block is
@@ -60,10 +60,9 @@ import { router } from 'expo-router';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
-import { CandidatePhoto } from '@/features/play/types';
 import { handleLine } from '@/shared/formatting/handleList';
 import { playerName } from '@/shared/formatting/playerName';
-import { PressableCard, theme } from '@/shared/ui';
+import { PlayerPhoto, PressableCard, theme } from '@/shared/ui';
 
 import { seatName, type Challenge } from '../domain/challenge';
 import { othersOn } from '../domain/challengeInbox';
@@ -105,7 +104,7 @@ export function ChallengeRow({ challenge, playerId }: ChallengeRowProps) {
       <View style={s.faces}>
         {others.map((seat, at) => (
           <View key={seat.playerId} style={at === 0 ? undefined : s.behind}>
-            <CandidatePhoto playerId={seat.playerId} box={{ kind: 'face', size: ROW_FACE }} />
+            <PlayerPhoto playerId={seat.playerId} box={{ kind: 'face', size: ROW_FACE }} />
           </View>
         ))}
       </View>

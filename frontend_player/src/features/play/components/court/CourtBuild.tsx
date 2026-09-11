@@ -1,8 +1,7 @@
 /**
  * The **interactive** court — the one you build a line-up on.
  *
- * *"`CourtBuild` owns the swap truth table, the selection ring, the clear badge and the
- * guard toasts"*
+ * *"`CourtBuild` owns the swap truth table, the selection ring and the clear badge"*
  * ([`the-play-components.md`](../../../../../../docs/specs/matchmaking/the-play-components.md)
  * §4). Every number it draws is `Court`'s and every rule it applies is `domain/lineup`'s; what
  * is here is the wiring between them, and the one piece of state neither of them can hold.
@@ -15,31 +14,22 @@
  *
  * **The seat selected for a swap is the exception, and it is not a line-up fact.** It is
  * meaningless off this court, it dies with the screen, and hoisting it would make every screen
- * drawing a court re-implement the three-way toggle — select, deselect, trade — that the truth
- * table already spells out. The swap **toggle** is a prop, because the switch beside the court
- * is the screen's row and 6.12's control announces itself.
+ * drawing a court re-implement the three-way move — select, deselect, trade — that the truth
+ * table already spells out.
  *
- * **Turning the toggle off clears the selection**, adjusted during render rather than in an
- * effect: a seat left ringed under a toggle that is now off is a selection a player cannot
- * cancel, and re-enabling the toggle would restore a partner they had forgotten choosing.
+ * ## The mode went, and three things went with it
  *
- * ## The one guard toast is here because the refusal is
+ * A swap was a `switch` the screen drew above the court and handed down as a prop, and this
+ * component held a mirror of it so that **turning it off could clear the selection**. Tapping
+ * a seat now always means the same thing, so there is no mode, no mirror, and no adjustment
+ * during render. What tells a player is a sentence the screen prints above the graphic, and
+ * what tells a listener is that same sentence — the toggle used to announce itself.
  *
- * A tap that resolves to `REFUSE` never reaches the screen — there is nothing for a screen to
- * do with it — so the sentence is raised here, through `seatGuardLine`, and the toast queue is
- * `shared/`'s single host ([9.3](../../../../../docs/design-system.md#93-layer-order)). It
- * belongs to the **replacement** rather than to the trade: your own seat is freely movable
- * across the net, which is what *change sides, never seats* means, and it is why the sentence
- * names the toggle.
- *
- * **The second toast is gone and the seat is silent instead**
- * ([ADR-0150](../../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
- * §8): an accepted seat is not a control, so it has no refusal to make and the truth table
- * answers `NOTHING`. What draws the rule is the missing clear badge and the tap that does not
- * answer, which is #324's *no copy, no pill, no disabled control* applied to a seat.
- *
- * The clear badge draws no third refusal either: `seatIsClearable` decides whether it exists at
- * all, so the × a player cannot use is never on screen to press.
+ * **The two guard toasts went too, because there is nothing left to refuse.** They belonged to
+ * the replacement — your own seat and an accepted one may always change sides and never be
+ * swapped *out* — and a tap does not replace anybody any more. The clear badge is where a
+ * replacement starts now, and it draws no refusal either: `seatIsClearable` decides whether it
+ * exists at all, so the × a player cannot use is never on screen to press.
  *
  * ## There is no hold, and a seat does two things rather than three
  *
@@ -59,11 +49,9 @@
 
 import { useState } from 'react';
 
-import { showToast } from '@/shared/store/toast.store';
 import { Court, courtSeatSize, type SportKey } from '@/shared/ui';
 
 import { seatIsClearable, seatPlaces, tapSeat } from '../../domain/lineup';
-import { seatGuardLine } from '../courtPresentation';
 
 import { CourtSeat, type CourtSeatOccupant } from './CourtSeat';
 
@@ -80,9 +68,7 @@ export interface CourtBuildProps {
    * moves you across the net, and the side follows you.
    */
   readonly seats: readonly CourtSeatOccupant[];
-  /** 6.12's switch, drawn by the screen in its own row. */
-  readonly swapping: boolean;
-  /** Fill this seat, or replace who is in it — one act, against one seat. */
+  /** Fill this seat. Only an empty one asks, now that a tap on an occupied seat trades. */
   readonly onOpenPool: (seat: number) => void;
   /** Trade two seats. A re-arrangement of a response the builder already holds. */
   readonly onSwap: (from: number, to: number) => void;
@@ -96,25 +82,17 @@ export function CourtBuild({
   caption,
   sideLabels,
   seats,
-  swapping,
   onOpenPool,
   onSwap,
   onClear,
 }: CourtBuildProps) {
   const [selected, setSelected] = useState<number>();
-  // React's own answer to *adjust state when a prop changes*: read during render, not in an
-  // effect, so no frame is drawn with a selection the toggle no longer permits.
-  const [toggle, setToggle] = useState(swapping);
-  if (toggle !== swapping) {
-    setToggle(swapping);
-    setSelected(undefined);
-  }
 
   const size = courtSeatSize(width);
   const places = seatPlaces(seats);
 
   function press(at: number, occupant: CourtSeatOccupant) {
-    const decision = tapSeat({ swapping, selected }, at, occupant);
+    const decision = tapSeat(selected, at, occupant);
 
     switch (decision.kind) {
       case 'OPEN_POOL':
@@ -127,13 +105,6 @@ export function CourtBuild({
       case 'SWAP':
         setSelected(undefined);
         return onSwap(decision.from, decision.to);
-      case 'REFUSE':
-        return showToast({ message: seatGuardLine(decision.guard) });
-      // **An accepted seat is not a control**, so there is nothing to say and nothing to do
-      // (ADR-0150 §8). Named rather than a `default`, so a seventh arm on the truth table is a
-      // compile error here rather than a tap that silently stops working.
-      case 'NOTHING':
-        return;
     }
   }
 

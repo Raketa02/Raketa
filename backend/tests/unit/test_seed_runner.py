@@ -126,7 +126,13 @@ WRITTEN_CONTEXTS = frozenset(
 #: The assertions run real searches, deal real decks and compose real line-ups,
 #: and those use cases write the module's own durable ledgers — a search record,
 #: an interest row — which is not the same act as seeding an aggregate.
-EXERCISED_CONTEXTS = frozenset({"matchmaking"})
+#:
+#: `sportsmanship` joined on the day the record sheet needed *what other players
+#: said* to be non-empty, and it joined **here** rather than above for a reason
+#: the context chose: a card is not event-sourced and there is no aggregate to
+#: write. `AnswerTheCard` writes that module's own two tables through its own
+#: unit of work, which is the same shape as a search record.
+EXERCISED_CONTEXTS = frozenset({"matchmaking", "sportsmanship"})
 
 #: The repository builders the seed path may take from the composition root, and
 #: the context each of them writes an aggregate in. Written out by name, because
@@ -254,10 +260,12 @@ def test_the_walk_has_something_to_walk():
         "paths.py",
         "photos.py",
         "plans.py",
+        "pool_history.py",
         "relationships.py",
         "rooms.py",
         "runner.py",
         "screens.py",
+        "sportsmanship.py",
     }
 
 

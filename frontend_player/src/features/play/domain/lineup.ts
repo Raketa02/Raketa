@@ -77,8 +77,8 @@
  *
  * They are rules and not drawings, which is the whole of why they are here: a side somebody
  * could be wrong about (squash puts both players on the same half of the picture), a seat
- * somebody could wrongly empty, and a tap whose meaning depends on a toggle. What each of them
- * *says* is `components/courtPresentation.ts`', and what any of it *looks like* is
+ * somebody could wrongly empty, and a tap whose meaning depends on what is already held. What each
+ * of them *says* is `components/courtPresentation.ts`', and what any of it *looks like* is
  * `components/court/`'s — §7's line, drawn once.
  */
 
@@ -497,50 +497,21 @@ export function courtHalfOf(place: SeatPlace): CourtHalf {
 }
 
 /**
- * Why a seat is locked. A code, so the sentence is `components/`' and stays one spelling.
- *
- * It is *why*, and not *whether*, because the two are the same fact: a seat is locked for
- * exactly one of two reasons, and the reason is what the refusal has to say out loud. A
- * boolean beside a separate refusal vocabulary would be that fact written twice — and it is
- * how one of them ends up admitting a seat the other refuses.
- */
-export type SeatGuard = 'SEAT_IS_YOURS' | 'ALREADY_ACCEPTED';
-
-/**
- * The guards a tap **says something about** — which is one of the two, and the other one is
- * ADR-0150 §8.
- *
- * *"An accepted seat is not a control. No clear badge, no press, no pool — swapping is the only
- * thing that works on it, which **draws** an acceptance is to the game, not to the side rather
- * than writing it."* The source documentation asks for a named refusal — *"{Name} already
- * accepted — they keep their place"* — and it is **never written**, because #324's *no copy, no
- * pill, no disabled control* is the rule it loses to: a seat that answers with a sentence is a
- * control that refuses, and a seat that does not answer is not a control at all.
- *
- * `Exclude` rather than a second literal union, so a third guard added to {@link SeatGuard}
- * still fails `pnpm typecheck` at the table that writes the sentences — which is the property
- * that made that table a `Record` in the first place.
- */
-export type SpokenSeatGuard = Exclude<SeatGuard, 'ALREADY_ACCEPTED'>;
-
-/**
- * **The lock**, and the one place either half of it is written.
+ * **The lock** — a seat nobody may vacate: **yours, and anybody who has already accepted.**
  *
  * Two reasons and one rule rather than a special case beside a rule. Your own seat is not
  * something the builder is composing — it is the thing everything else is composed around —
  * and an acceptance is a promise the product has already made on somebody else's behalf.
  *
- * `undefined` is *not locked*, which is what every caller below reads.
+ * **It answers *whether*, and no longer *why*.** It returned a `SeatGuard` code — one per
+ * reason — for exactly as long as a tap on a locked seat was refused out loud, and the
+ * refusal had to name which reason it was. Removing the swap toggle removed both refusals
+ * with it: a tap trades now, and trading across the net is the one thing a locked seat was
+ * always allowed to do. What is left is a single question with a single reader, and a code
+ * nothing prints is a vocabulary with no listener.
  */
-export function seatLock(seat: BuildSeat): SeatGuard | undefined {
-  if (seat.kind === 'you') return 'SEAT_IS_YOURS';
-  if (seat.kind === 'player' && seat.accepted) return 'ALREADY_ACCEPTED';
-  return undefined;
-}
-
-/** A seat nobody may vacate: **yours, and anybody who has already accepted.** */
 export function seatIsLocked(seat: BuildSeat): boolean {
-  return seatLock(seat) !== undefined;
+  return seat.kind === 'you' || (seat.kind === 'player' && seat.accepted);
 }
 
 /**
@@ -562,67 +533,53 @@ export function seatIsClearable(seat: BuildSeat): boolean {
  * here touches a line-up, which is what lets the whole truth table be read in one place.
  */
 export type SeatTap =
-  /** Fill this seat, or replace who is in it. One act: the pool is opened against a seat. */
+  /** Fill this seat. One act: the pool is opened against a seat with nobody in it. */
   | { readonly kind: 'OPEN_POOL'; readonly seat: number }
   | { readonly kind: 'SELECT'; readonly seat: number }
   | { readonly kind: 'DESELECT' }
-  | { readonly kind: 'SWAP'; readonly from: number; readonly to: number }
-  | { readonly kind: 'REFUSE'; readonly guard: SpokenSeatGuard; readonly seat: number }
-  /**
-   * **Nothing at all** — an accepted seat, outside swap mode.
-   *
-   * Not a refusal: a refusal is something a control says, and ADR-0150 §8 is that this seat is
-   * not a control. It is an arm rather than a `REFUSE` the screen declines to draw, because a
-   * guard with no sentence is copy waiting to be written back in by the next reader.
-   */
-  | { readonly kind: 'NOTHING' };
-
-/** The court's interaction state, which is the swap toggle and the seat waiting for a partner. */
-export interface SwapState {
-  readonly swapping: boolean;
-  /** The seat selected for a trade. Only ever set while `swapping`. */
-  readonly selected: number | undefined;
-}
+  | { readonly kind: 'SWAP'; readonly from: number; readonly to: number };
 
 /**
  * **The swap truth table**, and the whole of what a seat does when it is pressed.
  *
  * ```
- * empty                     open the pool against this seat   (either mode)
- * swap off · yours          refuse: turn the toggle on to change sides
- * swap off · accepted       nothing — this seat is not a control
- * swap off · anybody else   open the pool against this seat
- * swap on  · nothing held   select
- * swap on  · this seat      deselect
- * swap on  · another seat   trade the two
+ * empty            open the pool against this seat
+ * nothing held     select
+ * this seat        deselect
+ * another seat     trade the two
  * ```
  *
- * **An empty seat is tested first, in both modes.** There is nothing in it to trade, and a
- * player in swap mode tapping a hole means the obvious thing.
+ * ## Swapping is not a mode, and losing the mode is what made it four rows
  *
- * **Both locks belong to the replacement and not to the trade.** Swapping is *change sides,
- * never seats*: your own seat and an accepted one are both freely movable across the net, and it
- * is only being replaced that they hold. **They differ in what they say about it.** Your own
- * seat refuses out loud, and the toast names the toggle, because the thing it refuses is
- * available one switch away. An accepted seat says **nothing**: ADR-0150 §8 is that it is not a
- * control, so it has no refusal to make — *no clear badge, no press, no pool*, and the drawing
- * carries the rule rather than a sentence beside it.
+ * The table had seven rows and a toggle over them, because a tap on an occupied seat meant
+ * two different things and a switch beside the court was what told them apart: *replace this
+ * player* with the toggle off, *trade these two* with it on. The toggle is gone
+ * (`BuilderScreen`), and with it the only reason a seat's tap had a mode at all — **a seat
+ * trades, always**, and the court says so in one sentence above it.
+ *
+ * **An empty seat is still tested first, and it is the only row that is not a trade.** There
+ * is nothing in it to swap, and tapping a hole means the obvious thing.
+ *
+ * **Replacing somebody is now the clear badge and then the hole it leaves.** That is a real
+ * cost — two taps where there was one — and it is the trade the toggle's removal makes: the
+ * × is drawn on exactly the seats a replacement was ever allowed against
+ * (`seatIsClearable`), so nothing that could be replaced has stopped being replaceable, and
+ * *Pick players myself* still opens the pool on the first empty seat.
+ *
+ * **Both refusals went with the mode.** They belonged to the replacement and never to the
+ * trade — *change sides, never seats* — so your own seat and an accepted one were always
+ * freely movable across the net, and it was only being replaced that they refused. With no
+ * replacement on a tap there is nothing left to refuse, which is why `seatIsLocked` no longer
+ * says which reason it is and `courtPresentation` no longer writes either sentence.
  *
  * The seat is passed rather than looked up, so this is total: a court draws its own seats, and
  * an index it could not produce is not a state to write a branch for.
+ *
+ * @param selected the seat already held for a trade, or `undefined` when none is.
  */
-export function tapSeat(state: SwapState, index: number, seat: BuildSeat): SeatTap {
+export function tapSeat(selected: number | undefined, index: number, seat: BuildSeat): SeatTap {
   if (seat.kind === 'empty') return { kind: 'OPEN_POOL', seat: index };
-
-  if (!state.swapping) {
-    const guard = seatLock(seat);
-    if (guard === undefined) return { kind: 'OPEN_POOL', seat: index };
-    return guard === 'ALREADY_ACCEPTED'
-      ? { kind: 'NOTHING' }
-      : { kind: 'REFUSE', guard, seat: index };
-  }
-
-  if (state.selected === undefined) return { kind: 'SELECT', seat: index };
-  if (state.selected === index) return { kind: 'DESELECT' };
-  return { kind: 'SWAP', from: state.selected, to: index };
+  if (selected === undefined) return { kind: 'SELECT', seat: index };
+  if (selected === index) return { kind: 'DESELECT' };
+  return { kind: 'SWAP', from: selected, to: index };
 }

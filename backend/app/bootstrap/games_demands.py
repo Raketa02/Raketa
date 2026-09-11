@@ -3,13 +3,13 @@
 **The same shape as ``matcher_demands.py``, and a second file rather than more
 rows in that one.** That register holds the ports the *matcher* declares of
 contexts it does not write; these are the ports a **provider** publishes for
-five consumers — the card's counted-games block, *Last 5*, the two facts the
+six consumers — the card's counted-games block, *Last 5*, the two facts the
 Player Score ticket reads per player, the confirmed results the rating context
-walks forward (``docs/adr/0139``), and the one question a **plan** asks before
-it lets anybody write a slot (``docs/adr/0148`` §8). Rows of both kinds
-in one list would make ``MATCHER_DEMANDS``'s exhaustiveness assertion a claim
-about two different things, and the first person to add a row would have to guess
-which.
+walks forward (``docs/adr/0139``), the one question a **plan** asks before
+it lets anybody write a slot (``docs/adr/0148`` §8), and the record sheet's
+opponent variety. Rows of both kinds in one list would make ``MATCHER_DEMANDS``'s
+exhaustiveness assertion a claim about two different things, and the first person
+to add a row would have to guess which.
 
 **A row carries a builder over a session**, not an instance, so the suite cannot
 quietly excuse the implementations with a database behind them — which here is
@@ -29,12 +29,14 @@ from app.bootstrap.composition import (
     build_confirmed_result_ledger,
     build_game_directory,
     build_game_history_query,
+    build_opponent_variety_query,
     build_planning_court,
 )
 from app.modules.games.domain.ports import (
     ConfirmedResultLedger,
     GameDirectory,
     GameHistoryQuery,
+    OpponentVarietyQuery,
     PlanningCourt,
 )
 
@@ -61,6 +63,7 @@ GAMES_DEMANDS: tuple[type, ...] = (
     GameDirectory,
     ConfirmedResultLedger,
     PlanningCourt,
+    OpponentVarietyQuery,
 )
 
 
@@ -84,6 +87,11 @@ GAME_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=PlanningCourt,
         name="EventSourcedPlanningCourt",
         build=build_planning_court,
+    ),
+    RegisteredImplementation(
+        port=OpponentVarietyQuery,
+        name="EventSourcedGameHistory",
+        build=build_opponent_variety_query,
     ),
 )
 

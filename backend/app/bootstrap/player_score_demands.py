@@ -50,7 +50,7 @@ PLAYER_SCORE_DEMANDS: tuple[type, ...] = (PublishedScoreQuery,)
 PLAYER_SCORE_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     RegisteredImplementation(
         port=PublishedScoreQuery,
-        name="TwoStrandsFromTheRecord",
+        name="ThreeStrandsFromTheRecord",
         build=build_published_score_query,
     ),
 )

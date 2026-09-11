@@ -42,11 +42,17 @@
  * hopes. A poster is shown and never read: no engine, no term and no gate may take an input
  * from what this returns.
  *
- * ## It refuses nothing, which is why it is not a rule anywhere
+ * ## It sits in `shared/ui`, beside the drawing it frames
  *
- * What a player id maps to is a fact about how the poster is *drawn*, expressed in the design
- * system's own vocabulary — so it belongs beside the drawing rather than under a feature's
- * `domain/`, which holds what the product refuses and requires. This refuses nothing.
+ * There is no rule here a profile could break. What a player id maps to is a fact about how
+ * the poster is *drawn* — expressed in the design system's own vocabulary — so it holds no
+ * domain rule and belongs to no feature. It began in `player_profile/components/`, because the
+ * photos step was the only surface that had met a poster; `PlayerPhoto` is the second and the
+ * **record sheet's header is the third**
+ * ([#384](https://github.com/Raketa02/Raketa/issues/384)), and a component below every feature
+ * cannot reach a function inside one. The design system's own contract — *one player id, one
+ * poster, forever* — is what makes this the design system's to keep, and it is why it moved
+ * rather than being re-exported through a third feature's barrel.
  *
  * ## The crops are gone, and the colour is what replaced them
  *

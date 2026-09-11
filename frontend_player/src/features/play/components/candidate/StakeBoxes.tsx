@@ -43,11 +43,10 @@
  */
 
 import { formatSignedLevel } from '@/shared/formatting/ratingFormat';
+import { StatBox, StatFigure, StatRow } from '@/shared/ui';
 
 import type { AtStake } from '../../domain/candidate';
 import { LOSS_STAKE_BLOCK, WIN_STAKE_BLOCK } from '../playerCardPresentation';
-
-import { StatBox, StatFigure, StatRow } from './StatBox';
 
 export interface StakeBoxesProps {
   /**

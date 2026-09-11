@@ -63,7 +63,6 @@
 import { StyleSheet, View } from 'react-native';
 
 import {
-  CandidatePhoto,
   CardHead,
   FactRow,
   ReasonLine,
@@ -75,7 +74,7 @@ import {
   stakeOnACard,
   type Term,
 } from '@/features/play/types';
-import { Card, theme } from '@/shared/ui';
+import { Card, PlayerPhoto, theme } from '@/shared/ui';
 
 import type { SeatCard } from '../domain/challengeDetail';
 
@@ -148,7 +147,7 @@ export function ChallengeCard({ playerId, card, seats }: ChallengeCardProps) {
         })}
       >
         <View style={s.media}>
-          <CandidatePhoto
+          <PlayerPhoto
             playerId={playerId}
             {...(person.photoUrl === undefined ? {} : { photoUrl: person.photoUrl })}
             box={{ kind: 'media' }}

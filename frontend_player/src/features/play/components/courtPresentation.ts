@@ -1,5 +1,5 @@
 /**
- * An empty seat, and why this four.
+ * An empty seat, and who the answer was for.
  *
  * Two vocabularies, both the **court's own statement about itself**
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §11).
@@ -15,27 +15,29 @@
  * removed from the court for it."* The sentence states the state and names nobody as the
  * cause.
  *
- * ## The group reasons quote no figure, ever
+ * ## `GroupReason` has no sentence here any more
  *
- * `G` is recorded and never returned — *"one closed code, never a number"* — so these five
- * sentences are the whole of the group objective's explanation. `GROUP_RAPPORT` covers two
- * group terms and gets **one** sentence: the code is the vocabulary, and splitting it in copy
- * would publish a distinction the enum deliberately does not carry.
+ * Five codes had five lines, drawn in a row of their own under the forecast card's names —
+ * *the evenest way to split these four*, *the four of you share the most slots*, *these four
+ * read each other well*, and two deliberate silences. **The row is gone**, and the copy went
+ * with it rather than staying behind as a table nothing renders.
  *
- * **And none of these appears inside the why-fit sheet.** A court seat's sheet explains the
- * *pairing's* Fit, never the `G` that seated them (#233 §9).
+ * What it was competing with is what decided it. The card already prints two side strengths,
+ * a signed gap, an evenness percentage and its word, and — since the seats became faces — the
+ * four people themselves, each a control into their own record. A sentence naming what the
+ * engine went looking for reads, underneath all of that, as a caption on an answer the reader
+ * has already been given four views of. The code is still on the wire and still in
+ * `domain/vocabulary`; nothing about the response changed, only what the client says about it.
  *
- * ## A third vocabulary joined them with the builder
+ * ## `OptimisedFor` is the other vocabulary, and it stays
  *
- * `OptimisedFor` is the court's statement about **the answer** rather than about a seat, and
- * it is here for the same reason the other two are: a code the engine names and the client
- * writes the sentence for.
+ * It is the court's statement about **the answer** rather than about a seat, and it survives
+ * the row above for the reason that row did not: it says something no figure on the card
+ * carries — that the engine stopped optimising for *you* — and it is a consequence of an act
+ * the player took, said before they discover it.
  */
 
-import type { SpokenSeatGuard } from '../domain/lineup';
-import type { GroupReason, OptimisedFor, UnfilledReason } from '../domain/vocabulary';
-
-import { SWAP_TOGGLE_LABEL } from './accessibilityPresentation';
+import type { OptimisedFor, UnfilledReason } from '../domain/vocabulary';
 
 const UNFILLED: Readonly<Record<UnfilledReason, string>> = {
   NO_CANDIDATE_ABOVE_FLOOR: 'Nobody in range was a good enough fit for this seat',
@@ -76,78 +78,6 @@ export function unfilledSeatLine(reason: UnfilledReason): string {
  * can see and act on, one tap from the pool.
  */
 export const WITHHELD_SEAT_LINE = "Something's changed — they can't be invited now";
-
-/**
- * The seat a tap **refuses**, in the court's own words — and there is one of them.
- *
- * A `Record` keyed by `SpokenSeatGuard` for §1's reason: a third guard added to the truth table
- * fails `pnpm typecheck` here rather than refusing a player in silence.
- *
- * **It names the way out.** A refusal that only says no is a control a player presses twice.
- * Your own seat is refused *because swap mode is where sides change*, so the sentence names
- * the toggle — through `SWAP_TOGGLE_LABEL` rather than beside it, because the switch's own
- * label **is** that word and two spellings of one control is how a screen starts referring to
- * something that is not on it.
- *
- * **The accepted seat's sentence was here and is gone**
- * ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
- * §8). It read *"{Name} already accepted — they keep their place"*, and it was written while
- * `BuildSeat.accepted` had no producer anywhere — so it was copy for a state nothing could
- * reach. The ticket that gave it one decided the other way: **an accepted seat is not a
- * control**, and a seat that is not a control has no refusal to make. What draws the rule is the
- * absence of the badge and the tap that does nothing, which is #324's *no copy, no pill, no
- * disabled control* applied to a seat.
- *
- * **It is not drawn on the clear badge**, because the badge is not drawn where it would fire
- * (`domain/lineup.ts`'s `seatIsClearable`) — the prototype offered the ×, refused the press, and
- * then had to explain itself.
- */
-const GUARD: Readonly<Record<SpokenSeatGuard, () => string>> = {
-  SEAT_IS_YOURS: () => `That seat is yours — turn on ${SWAP_TOGGLE_LABEL} to change sides`,
-};
-
-/**
- * Why a seat would not take the tap.
- *
- * It quotes nobody, and the one guard left is why: the seat is yours, and *You already accepted*
- * is not a thing to be told. The handle it used to take went with the sentence that named
- * somebody else's seat.
- */
-export function seatGuardLine(guard: SpokenSeatGuard): string {
-  return GUARD[guard]();
-}
-
-/**
- * Why these four — **three sentences and two silences**, and the silences are typed.
- *
- * Two of the five say nothing, on `OPTIMISED`'s own shape one function down: a `Record` keyed
- * by the union with `null` for *say nothing* is how this file states an absence, and it is not
- * the same thing as a code no build has ever seen.
- *
- * **The line is whether the sentence names a choice or grades the answer.** *The evenest way
- * to split these four*, *the four of you share the most slots* and *these four read each other
- * well* each name what the engine went looking for — a fact about the search, which no figure
- * on the card carries. *Nobody here is out of their depth* and *the best all-round fit across
- * the four seats* are the other kind: both are claims about **how good this four is**, printed
- * directly under two side strengths, a gap and an evenness percentage that say exactly that,
- * in the register a player reads it in. A card that prints four figures and then tells you
- * what to conclude from them is arguing for its own answer rather than reporting it.
- */
-const GROUP: Readonly<Record<GroupReason, string | null>> = {
-  EVENEST_ARRANGEMENT: 'The evenest way to split these four',
-  STRONGEST_WEAKEST_SEAT: null,
-  BEST_AVERAGE_FIT: null,
-  MOST_SHARED_SLOTS: 'The four of you share the most slots',
-  GROUP_RAPPORT: 'These four read each other well',
-};
-
-/**
- * What the court says about why these four. `undefined` where there is nothing to say —
- * which is two of the five, and a code this build has never seen.
- */
-export function groupReasonLine(reason: GroupReason): string | undefined {
-  return GROUP[reason] ?? undefined;
-}
 
 /**
  * Whom the answer was optimised for — **and the one value that says nothing.**

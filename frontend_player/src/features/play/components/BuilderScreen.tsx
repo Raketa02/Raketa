@@ -78,6 +78,31 @@
  * who is beside you, so the seats move and it is the same game — nothing is said, and nothing
  * needs to be (`domain/forecast`'s selection rule).
  *
+ * ## A swap is no longer a mode, and the toggle it needed is gone
+ *
+ * It was a `switch` in a card over the court (6.12's first and only consumer), because a tap
+ * on an occupied seat meant two things: *replace this player* with it off, *trade these two*
+ * with it on. What made the second meaning need a control was that the first one existed.
+ *
+ * **The forecast card is what removed the first.** Its side rows draw every seated player as
+ * their own face and handle — a 44pt control opening that person's record — so the court's
+ * seats stopped being the place a player goes to find out about somebody or to act on them.
+ * A seat with one meaning needs no mode to disambiguate it, so it trades, always, and what
+ * was the switch's description is now a line of copy above the graphic (`SWAP_HINT`).
+ *
+ * **Replacing somebody is the clear badge and then the hole it leaves** — two taps where there
+ * was one, on exactly the seats a replacement was ever allowed against, and *Pick players
+ * myself* still opens the pool without touching the court at all. Both refusals went with the
+ * mode, because there is no replacement left on a tap to refuse (`domain/lineup`).
+ *
+ * ## The card no longer says why these four
+ *
+ * `GroupReason` had a row of its own under the names — *the four of you share the most slots*
+ * and two others. It is gone, and the copy went with it rather than staying as a table nothing
+ * renders: read under two side strengths, a signed gap, an evenness percentage and four faces,
+ * a sentence naming what the engine went looking for is a caption on an answer the reader has
+ * already been given four views of. The code is still parsed; only the sentence is gone.
+ *
  * ## What the forecast card draws, and the one thing it still refuses
  *
  * **The two side strengths, the gap between them, and a two-segment bar.** Every one of those
@@ -171,6 +196,7 @@ import {
   type SendRefusal,
 } from '@/features/challenges/types';
 import { useProfileSurface } from '@/features/player_profile/types';
+import { PlayerRecordSheet, type RecordSubject } from '@/features/player_record/types';
 import { ShellScreen, landOnNow } from '@/features/shell/types';
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { useIsOnline } from '@/shared/lib/platform';
@@ -185,7 +211,7 @@ import {
   Card,
   Hairline,
   Note,
-  Switch,
+  PlayerPhoto,
   behindOverlay,
   courtSeatCount,
   theme,
@@ -212,6 +238,7 @@ import {
   type Seating,
 } from '../domain/forecast';
 import { seatPlaces, withheldSeats, type CourtHalf } from '../domain/lineup';
+import { socialTagOverlap } from '../domain/socialTagOverlap';
 import { alreadyAsked } from '../domain/raisedPrompt';
 import type { UnfilledReason } from '../domain/vocabulary';
 import { sentWeekForOrigin } from '../domain/workingWeek';
@@ -221,7 +248,6 @@ import { usePlaySession } from '../store/playSession.store';
 
 import {
   PLAY_LIVE_REGIONS,
-  SWAP_TOGGLE_LABEL,
   courtSummaryLabel,
   provisionalForecastAnnouncement,
   seatedNameLabel,
@@ -242,25 +268,19 @@ import {
   RETRY_FORECAST_LABEL,
   SIDE_HEADINGS,
   START_OVER_LABEL,
-  SWAP_TOGGLE_DESCRIPTION,
+  SWAP_HINT,
   VS_WORD,
-  builderEyebrow,
+  USE_MATCHMAKING_LABEL,
+  UNREADABLE_SEARCH_TITLE,
   builderTitle,
-  fillSeatsLabel,
   forecastHeading,
   sideName,
 } from './builderPresentation';
-import { CandidatePhoto } from './candidate/CandidatePhoto';
 import { CourtBuild } from './court/CourtBuild';
 import { PromptSheet } from './PromptSheet';
 import type { CourtSeatOccupant } from './court/CourtSeat';
 import { handlesOn, type SeatedHandle } from './court/seatedHandles';
-import {
-  WITHHELD_SEAT_LINE,
-  groupReasonLine,
-  optimisedForLine,
-  unfilledSeatLine,
-} from './courtPresentation';
+import { WITHHELD_SEAT_LINE, optimisedForLine, unfilledSeatLine } from './courtPresentation';
 import { useHeldWait } from './heldWait';
 import { playErrorMessage } from './playErrorMessage';
 import { SeatingWait } from './SeatingWait';
@@ -369,7 +389,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
    * says*, which is what lets an answer land without this screen writing a seating down.
    */
   const [seating, setSeating] = useState<Seating | undefined>(undefined);
-  const [swapping, setSwapping] = useState(false);
 
   /**
    * **The court ⚡ answered with, while it is still landing on screen.**
@@ -401,15 +420,27 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const [refusal, setRefusal] = useState<SendRefusal | undefined>(undefined);
 
   /**
-   * **Whose Fit is being explained** — `SH.whyfit`, over the court rather than over a list.
+   * **Whose record is being read** — `SH.player`, over the court rather than over a list.
    *
-   * The row itself and not an id, for the reason the pool and the deck both hold one: the
-   * sheet takes `(candidate, envelope)` and reads no global state, so a screen holding an id
-   * would be looking the same row up again on every render of a sheet that is already holding
-   * it. Route-local with the seating and the refusal, and gone the moment the court pops.
+   * The seat itself and not an id, for the reason the pool and the deck both hold a row: the
+   * sheet reads no global state, so a screen holding an id would be looking the same seat up
+   * again on every render of a sheet that is already holding it. Route-local with the seating
+   * and the refusal, and gone the moment the court pops.
    *
-   * **Two routes reach it and neither is the other's fallback**: a name on the forecast card
-   * is the route, and a hold on the seat is a shortcut duplicating it.
+   * **It replaced the Fit sheet's own state rather than joining it** ([#384](https://github.com/Raketa02/Raketa/issues/384)):
+   * a face opens the person, and the pairing's arithmetic is a row inside what that opens.
+   */
+  const [reading, setReading] = useState<ReadRecord | undefined>(undefined);
+
+  /**
+   * **Whose Fit is being explained** — `SH.whyfit`, now reached only from the record's own row.
+   *
+   * The row itself and not an id, for the same reason: the sheet takes `(candidate, envelope)`
+   * and reads no global state.
+   *
+   * **One route reaches it.** The hold on the seat went with #285, and the face went with #384
+   * — what is left is a row that names what it opens, which is the only place the arithmetic of
+   * a *pairing* has ever belonged.
    */
   const [explaining, setExplaining] = useState<Candidate | undefined>(undefined);
 
@@ -523,17 +554,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
     ),
   );
   const shortfall = record?.court === undefined ? undefined : shortfallBySeat(record.court);
-
-  /**
-   * Why the engine seated these four — **and `undefined` covers two different silences.**
-   *
-   * A hand-seated court has no `groupReason` at all, and one of the five codes has no sentence
-   * (`courtPresentation`'s `GROUP`). Both draw nothing, and neither is a case this screen
-   * decides: the first is the response's own absence, the second is a copy decision held where
-   * the other four sentences are.
-   */
-  const whyThisFour =
-    record?.court?.groupReason == null ? undefined : groupReasonLine(record.court.groupReason);
 
   const rows = new Map((record?.candidates ?? []).map((row) => [row.playerId, row]));
 
@@ -922,9 +942,25 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           same hide as the latch — a modal sheet's Part 13 obligation is that the tree behind
           it says so, and here that tree holds a second control spelled with the sheet's own
           words. */}
-      <View style={s.root} {...behindOverlay(proposing || explained !== undefined || asking)}>
+      <View
+        style={s.root}
+        {...behindOverlay(proposing || explained !== undefined || reading !== undefined || asking)}
+      >
         <ShellScreen
-          title={builderTitle({ seats, filled })}
+          /* **The game this screen is here to build**, in the same two words as the control
+             that opened it — the control names the screen it opens (`builderPresentation`).
+
+             **And nothing above it.** `Padel · doubles · for fun` stood there as 10.3's
+             eyebrow and read as the title said twice: *doubles* is in both lines, the Sport is
+             on the court below in the picture and in its spoken summary, and what was left
+             over was one word of mode. Where the record cannot be read there is no shape to
+             name, so the fallback is a name rather than a court shape the screen is guessing
+             at. */
+          title={
+            sportName === undefined || origin === undefined
+              ? UNREADABLE_SEARCH_TITLE
+              : builderTitle(seats)
+          }
           // **The gesture, drawn.** This screen is genuinely pushed — Find a game stays
           // underneath it — so the platform's own back already lands here, and 10.3's chevron
           // is opt-in for exactly the screens that can say where it goes. It adds no
@@ -932,11 +968,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           // without knowing the gesture exists. The session is untouched either way — only
           // `enterPlay` ends one, and going back is not entering.
           onBack={router.back}
-          eyebrow={
-            sportName === undefined || origin === undefined
-              ? undefined
-              : builderEyebrow({ sportName, seats, mode: origin.mode })
-          }
           action={
             origin === undefined || filling ? undefined : open === 0 ? (
               /* **The court, once full.** The two ways to fill it are gone, because there is
@@ -985,7 +1016,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                     component. It is where the prompt sheet hands focus back. */}
                 <View ref={fillControl}>
                   <Button
-                    label={fillSeatsLabel({ seats, filled })}
+                    label={USE_MATCHMAKING_LABEL}
                     size="lg"
                     busy={fill.isPending}
                     busyLabel={FILLING_LABEL}
@@ -1016,16 +1047,12 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                 </Note>
               )}
 
-              {filled > 1 && !filling ? (
-                <Card>
-                  <Switch
-                    label={SWAP_TOGGLE_LABEL}
-                    description={SWAP_TOGGLE_DESCRIPTION[swapping ? 'on' : 'off']}
-                    checked={swapping}
-                    onChange={setSwapping}
-                  />
-                </Card>
-              ) : null}
+              {/* **What a seat does, above the seat that does it.** It stood in a card as a
+                  `switch`'s description while a swap was a mode; the mode is gone and a tap
+                  always trades, so what is left is the capability rather than a control. Drawn
+                  on the toggle's own gate — one other person on the court, and not mid-fill —
+                  because there is nothing to trade with until there is somebody to trade. */}
+              {filled > 1 && !filling ? <Text style={s.swapHint}>{SWAP_HINT}</Text> : null}
 
               {/* `pointerEvents` and not a prop on the court: while the engine is seating it
                   there is nothing on it to operate, and a seat that opened the pool mid-fill
@@ -1042,7 +1069,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                   width={theme.size.court.build}
                   summary={courtSummaryLabel({ sportName, filled: seatsFilled(drawn), seats })}
                   seats={occupants}
-                  swapping={swapping}
                   onOpenPool={openPool}
                   onSwap={(from, to) => setSeating(swapSeats(seated, from, to))}
                   onClear={(at) => {
@@ -1248,7 +1274,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                         name={yours.drawn}
                         strength={chosen.split.yourSide}
                         seated={yours.handles}
-                        onExplain={setExplaining}
+                        onOpenRecord={setReading}
                       />
                       <Text style={s.vs} accessibilityElementsHidden importantForAccessibility="no">
                         {VS_WORD}
@@ -1259,16 +1285,10 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                         strength={chosen.split.theirSide}
                         tone={balanceTone(chosen.forecast.pct)}
                         seated={theirs.handles}
-                        onExplain={setExplaining}
+                        onOpenRecord={setReading}
                       />
                     </View>
                   </Hairline>
-
-                  {whyThisFour === undefined ? null : (
-                    <Hairline>
-                      <Text style={s.body}>{whyThisFour}</Text>
-                    </Hairline>
-                  )}
 
                   {/* **The two acts on this four, side by side** — re-arrange them, or empty
                       the court. *Even it out* is drawn shut rather than replaced by a sentence
@@ -1339,14 +1359,48 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
         />
       )}
 
+      {/* `SH.player`, over the court — **who this person is**, which is what a face is a picture
+          of. It reads no global state: the subject, the arrival sport, the distance, the
+          reader's own area and the pairing all arrive as props, which is what will let the chat
+          header and the game screen open the same sheet with none of the last three.
+
+          The **Fit row is present exactly where a pairing is** — the seat carries a candidate
+          only for somebody the origin search returned, so your own face and a withheld seat
+          offer none. Taking it hands the court over to `SH.whyfit`: one sheet at a time, rather
+          than a modal presented inside a modal's own window.
+
+          **No `returnFocusTo`**, on the pool's own precedent: up to four faces open the same
+          sheet, so there is no one control to return to, and a ref per face would be four refs
+          to keep in step with a list that changes on every swap. */}
+      {reading === undefined ? null : (
+        <PlayerRecordSheet
+          visible
+          onClose={() => setReading(undefined)}
+          subject={reading.subject}
+          {...(sport === undefined ? {} : { sport })}
+          {...(reading.candidate?.distanceKm === undefined
+            ? {}
+            : { distanceKm: reading.candidate.distanceKm })}
+          {...(record?.envelope.myAreaCode === undefined
+            ? {}
+            : { viewerAreaCode: record.envelope.myAreaCode })}
+          {...(reading.candidate === undefined
+            ? {}
+            : { tagOverlap: socialTagOverlap(reading.candidate) })}
+          {...pairingOf(reading, (pairing) => {
+            setReading(undefined);
+            setExplaining(pairing);
+          })}
+        />
+      )}
+
       {/* `SH.whyfit`, over the court — the only place a **seated** player's Fit is explained,
           because the pool removes everybody already on the court from the one surface that
           explains a person. It reads `(candidate, envelope)` off the origin search record and
           nothing else, which is what lets one sheet serve all three of its entry points.
 
-          **No `returnFocusTo`**, on the pool's own precedent: up to four names and four seats
-          open the same sheet, so there is no one control to return to, and a ref per name
-          would be four refs to keep in step with a list that changes on every swap. */}
+          **One route reaches it now**, and it is the record's own row: the face opens the
+          person, and a pairing's arithmetic is a row inside what that opens. */}
       {explained === undefined ? null : (
         <WhyFitSheet
           visible
@@ -1389,6 +1443,40 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
       )}
     </>
   );
+}
+
+/**
+ * **The Fit row's props, or none at all** — the pairing behind a tapped face, where there is one.
+ *
+ * A function rather than an expression at the call site because the `undefined` has to be
+ * narrowed *before* the callback closes over it: written inline, the closure re-reads the state
+ * it was built from and has to re-check a branch the spread has already taken. The figure is not
+ * rounded here — `fitRowTitle` rounds where it prints, which is the rule the day a second entry
+ * point builds this prop.
+ */
+function pairingOf(
+  read: ReadRecord,
+  onExplain: (pairing: Candidate) => void,
+): { readonly pairing?: { readonly fit: number; readonly onExplain: () => void } } {
+  const pairing = read.candidate;
+  return pairing === undefined
+    ? {}
+    : { pairing: { fit: pairing.fit, onExplain: () => onExplain(pairing) } };
+}
+
+/**
+ * **A face that has been tapped** — whose record to open, and the pairing behind them if there
+ * is one.
+ *
+ * Narrower than the `SeatedHandle` it is read off, and narrower in the one way that matters: a
+ * face with no `subject` is not a control, so a state carrying an optional one would be a sheet
+ * that could be opened about nobody. What is dropped with it — the place, the name, the face —
+ * is what the *row* draws, and the sheet draws none of it.
+ */
+interface ReadRecord {
+  readonly subject: RecordSubject;
+  /** The row the origin search still holds for them. Absent is *no Fit row on the sheet*. */
+  readonly candidate?: Candidate;
 }
 
 /** A seat nobody has landed in yet — the one value the drawn court substitutes while filling. */
@@ -1448,7 +1536,7 @@ function toOccupant(
 /**
  * One half of the court as a **panel** — who is standing on it, and what it is worth.
  *
- * ## The face is what made the hold deletable
+ * ## The face is what made the hold deletable, and what it opens has since changed
  *
  * This was a column of words, and a seated player's Fit had a second way in: a long press on
  * the seat ([#285](https://github.com/Raketa02/Raketa/issues/285)). A gesture nothing
@@ -1457,7 +1545,18 @@ function toOccupant(
  * of the person is a target you can see, at the size the design system already asks of a
  * control, and `CourtSeat` and `CourtBuild` drop the gesture on the strength of it.
  *
- * The photograph is `CandidatePhoto`'s photo-or-poster switch, so the face here and the face
+ * **A face now opens the person rather than the pairing**
+ * ([#384](https://github.com/Raketa02/Raketa/issues/384)). Tapping a photograph and receiving a
+ * weights-and-contributions table was always slightly wrong: somebody tapping a picture of a
+ * person is asking *who is this*. The Fit breakdown is a row inside what opens, which puts a
+ * pairing fact behind a label naming a pairing.
+ *
+ * **And your own face is a control here for the first time**, because nothing served your row
+ * and there was therefore nothing behind it to open. It reads the ungated `/players/me/record`,
+ * so the one player this screen most exists for — somebody whose reliability number is holding
+ * them back — can look the number up and watch it lift.
+ *
+ * The photograph is `PlayerPhoto`'s photo-or-poster switch, so the face here and the face
  * in the seat are **one drawing of one id** — a second implementation of the poster hash is
  * two faces for one person the day either one changes.
  *
@@ -1514,7 +1613,7 @@ function Side({
   strength,
   tone,
   seated,
-  onExplain,
+  onOpenRecord,
 }: {
   readonly heading: string;
   readonly name: string;
@@ -1522,7 +1621,7 @@ function Side({
   /** Absent on your own half, which is the neutral one — see the bed paragraph above. */
   readonly tone?: BalanceBarTone;
   readonly seated: readonly SeatedHandle[];
-  readonly onExplain: (candidate: Candidate) => void;
+  readonly onOpenRecord: (seat: ReadRecord) => void;
 }) {
   const bed = tone === undefined ? undefined : { backgroundColor: BALANCE_SOFT[tone] };
   const toned = tone === undefined ? undefined : { color: BALANCE_INK[tone] };
@@ -1538,19 +1637,20 @@ function Side({
       </Text>
 
       <View style={s.faces}>
-        {seated.map(({ place, name: who, face, candidate }, at) => {
-          // `CandidatePhoto` hides itself, so a face carries no name of its own and the
+        {seated.map((seat, at) => {
+          const { place, name: who, face, subject } = seat;
+          // `PlayerPhoto` hides itself, so a face carries no name of its own and the
           // button's label is the whole of what this control says.
           const drawn =
             face === undefined ? null : (
-              <CandidatePhoto
+              <PlayerPhoto
                 playerId={face.playerId}
                 {...(face.photoUrl === undefined ? {} : { photoUrl: face.photoUrl })}
                 box={{ kind: 'face', size: theme.size.minTouch }}
               />
             );
 
-          return candidate === undefined ? (
+          return subject === undefined ? (
             <View key={at} style={s.faceTarget}>
               {drawn}
             </View>
@@ -1558,8 +1658,16 @@ function Side({
             <Pressable
               key={at}
               accessibilityRole="button"
-              accessibilityLabel={seatedNameLabel(place, { name: who, fit: candidate.fit })}
-              onPress={() => onExplain(candidate)}
+              accessibilityLabel={seatedNameLabel(place, {
+                name: who,
+                self: subject.kind === 'me',
+              })}
+              onPress={() =>
+                onOpenRecord({
+                  subject,
+                  ...(seat.candidate === undefined ? {} : { candidate: seat.candidate }),
+                })
+              }
               // 6.6: the photo tile's `.7`, on the box rather than on the picture — the box is
               // the control, and a face that dimmed inside a target that did not would say the
               // two are separate things.
@@ -1654,6 +1762,16 @@ const s = StyleSheet.create({
   acts: { flexDirection: 'row', gap: theme.space.xs },
   failure: { gap: theme.space.sm },
   body: { ...theme.type.tiny, color: theme.color.ink },
+  /**
+   * The swap line, and the one sentence on this screen that is centred.
+   *
+   * Every other `body` here is a statement about something beside it — a shortfall under the
+   * seat it is about, a caveat under the figure it qualifies — and a left edge is what ties
+   * each of them to what it describes. This one is about **the whole graphic below it**, has
+   * no single thing to sit against, and reads as a caption on the court rather than a note in
+   * the column. `muted` for the same reason: it is an instruction the player needs once.
+   */
+  swapHint: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
   eyebrow: { ...theme.type.eyebrow, color: theme.color.muted },
   figure: { ...theme.num.xl, ...theme.tabular },
   word: { ...theme.type.cardTitle, color: theme.color.ink },

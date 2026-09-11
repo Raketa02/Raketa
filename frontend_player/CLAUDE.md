@@ -50,8 +50,120 @@ the room the first acceptance opens — the Chats tab's second section, and **th
 the header, the stream, the composer and the quick chips, below; `plans` is the three slots that
 room fills in — the card pinned under its header, and the one place `where · day · hour` is an
 order — **and the Now rail over both of them**, the ladder that names a card and the nine cards it
-names, below; and `games` is the result argument — the screen a card pushes, and the entering,
-correcting, agreeing and disagreeing that close the loop, below.
+names, below; `games` is the result argument — the screen a card pushes, and the entering,
+correcting, agreeing and disagreeing that close the loop, below; `sportsmanship` is the card at
+the end of that screen asking how the other players were, below; and `player_record` is the
+sheet a face on the forecast card opens, below.
+
+**A face opens the person, and the pairing gets a row**
+([#384](https://github.com/Raketa02/Raketa/issues/384),
+[#373](https://github.com/Raketa02/Raketa/issues/373)). Tapping a photograph on the balance
+forecast used to open the **Fit breakdown** — the arithmetic of a _pairing_ — which answers a
+question nobody asked by tapping a picture of a person. `features/player_record/` is what it
+opens instead: the poster with the Level printed on it and the sport beneath, the on-court mark,
+the whole handle, `In your area · 4 km` and one pill per rated sport; then the skill card — the
+Level, how sure the platform is, 7.5's band bar and its likely-range bracket — and under it
+**7.13's three record blocks**, `Player Score · Last 5 · Counted`, which is the row the
+competitive candidate card already draws about the same three facts. Each figure is drawn
+**once**: the reliability pill left the header and the counted figure left the skill headline,
+because the two are inches apart in one card and a reader would otherwise meet `21 counted`
+twice in two registers. The first block is titled **Player reliability** rather than _Player
+Score_ — the domain term is untouched and the matcher still prices it, but _Score_ beside a
+Level, a band and a run of form is a fourth number a reader can take for a rating, and
+_reliability_ is the one word that says what it is not. The run is **that sport's** and never padded. `StatBox` moved to
+`shared/ui` for it, which is `RunOfForm`'s and `PhotoPanel`'s promotion a third time and for
+the stronger reason: not that two files use it, but that the padding, the ground and the two
+type steps are **one specified shape**. The row is a **sibling** of the skill card and not a
+footer on it, and that is an absence rather than a layout — two of the three come off the
+resolved sport and the Player Score comes off the whole person, so a block nested in a card
+drawn only when a Level resolves would take a ghosted newcomer's one figure down with the
+sport. Its figure is `ink`: the sheet's one ladder stays on the metered rows that account for
+that number, where a bar lifting is the thing a held player came to watch. The Fit breakdown is
+not deleted: it moves behind **`Player fit 78` under the sport pills** — the sheet's one action,
+and one a reader had to scroll past four zones to find while it was a card at the foot. It is
+named for what it opens rather than for the question it answers, so the ✦ leaves the control's
+own name; the figure stays beside it, because that number is what a reader is deciding whether
+to ask about. It is deliberately **not a button**: 6.1's `primary` is coral, the app's one
+accent, and a filled coral control in the header competed with the photograph beside it and
+promised a _submit_. It is text with a target — the name in `ink`, the figure in the same
+tabular mono every other number on the sheet uses, no fill, border or radius, `hit.btn` for
+reach and opacity for the pressed state. It
+is **present only where a pairing is behind the entry point** — your own face carries no candidate row, so it offers
+none, and neither will a record opened later from a chat. It is a feature of its own rather than
+`play`'s because the second and third doors are other screens', and the sheet **reads no global
+state**: the subject, the arrival sport, the distance, the reader's own area and the pairing all
+arrive as props.
+
+**Your own face is a control for the first time**, because nothing served your row and there was
+nothing behind it to open. It reads `GET /players/me/record`, which is the **ungated** route —
+a block is between two people and a hold does not reach this screen — and the sheet retitles to
+_How others see you_ with the distance gone, because the reliability number has been deciding
+who you are offered to since you signed up and a penalty nobody can look up is a penalty nobody
+can fix. Whether it retitles is the server's `is_self` and never a comparison this client made;
+which route to ask is the court's own knowledge of which seat is yours.
+
+**The refusal is one line and nothing else, and there is no retry on it.** Never disclosed,
+blocked in either direction, held and no such player answer one code with one body, byte for
+byte — a response that named which would deliver a block to the one person a block is meant to
+be invisible to — so re-asking returns the refusal, and only a failure to _reach_ the platform
+gets a control. A **withheld** seat is the one face that is not a control at all: the court has
+already said the row is withheld, and a button that provably opens a refusal is the pool's own
+_a control that returns nothing is a control lying about being useful_. **The tags drawn are the
+record's own live list and the claim is the pairing's** (`domain/tagRow`): the engine's
+`matched[]` supplies the tint, a tag published since the search draws untinted, and _No tags in
+common_ is kept as the engine's claim and never invented — a candidate whose tag terms stood
+down carries none on its card, and a row read off the card would be hidden for somebody whose
+record plainly holds six. The **band is a key** and never derived from the Level, the pill's
+`SCORE_FLOOR` is the matcher's own `SCORE_MIN` so a player can watch the penalty lift at the
+number the engine acts on, and every absence is the field's own — no panel of noughts, and no
+sentence explaining a gap.
+
+**The card under it is headed with the rule it enforces, and one ladder tints the pill and
+every bar** ([#385](https://github.com/Raketa02/Raketa/issues/385)). Three metered rows —
+turning up, answering challenges and **answering about results**, never _confirming_ them,
+because countering a score you believe is wrong is an answer and costs nothing
+([ADR-0156](../docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md)) — each
+printing the raw pair it was measured over, since a perfect record over nine games and one over
+forty draw the **same bar**; and opponent variety as `70% · 14 of 20`, the share being the one
+division this client makes and the pair being what stops it reading as a settled habit over
+three games. _Counted by the system, not written by people_ is a promise about **authorship**
+rather than a title, so the one strand that is somebody's opinion is dropped in `countedRows`
+rather than trusted not to arrive — what other players said gets its own block, one heading
+down — while `KEEPS_PLANS` and `SETTLES_UP` are kept though nothing serves them, because the
+day either lights up the rows must still add to the figure above them. The tone is
+`scoreTone`'s, **read twice and never written twice**: two ladders would eventually disagree and
+the screen would show a green bar under a red pill for one ratio. The three fills clear 1.4.11
+against their track and are told apart by lightness as well as hue, at a bound stated in `L*`
+because three fills that each clear a near-white track **cannot** also be 3:1 from one another
+— the arithmetic makes the third darker than black, and `meterTone.test.ts` computes it rather
+than asserting it in prose. Every bar is hidden and carries no name, the fraction being text
+two words earlier; and a player nothing has ever fallen due for draws **no card at all**,
+because _we have not seen enough_ and _they are bad at this_ are different facts.
+
+**What opponents said is a second block, and the heading above it is the whole reason**
+([#387](https://github.com/Raketa02/Raketa/issues/387)). _Counted by the system, not written by
+people_ is one star average away from false at all times, so the one thing on this sheet people
+wrote stands **outside** that card under a heading naming its own author: two headings, no lie,
+and the heading is the cheap half of the pair. A reader gets `4,7 / 5 · 17 players`, and **the
+count is never separable from the figure** — `3,0 / 5 · 1 player` is the same field and has to
+visibly read as one person's opinion, which is the raw pair's own rule one block up; the average
+is written to **one decimal** through the app's single comma formatter, because `4,70` would
+claim a second place nobody serves on the one figure whose design is being coarse enough to be
+honest. The **subject** gets a band and no count, since an average beside a count is a
+subtraction that names each new rating exactly and they know who they played — and which arm a
+record carries is folded from the server's `is_self` **at the wire boundary**, so a response that
+carried both draws the band and _your own record drew the figure_ is unrepresentable rather than
+merely unlikely. The band **takes no tone**: `scoreTone` is this sheet's one ladder and it
+belongs to the number the matcher acts on, so a coarse three-step painted in the same three
+colours would offer itself to be read as a second Player Score on the one screen a held player
+opens to find out what is holding them back. Both arms **carried** one sentence with two halves the contract
+asks for by name — _it is not in the Player Score, and it hides nobody and holds nobody back_ —
+and both sentences are now **removed** by decision, along with the band's own _a band and no
+count_. What survives is the row's label naming its author; what is no longer said anywhere is
+that a low average costs nothing, so a reader may take a `2,0 / 5` for a penalty the platform
+issued. The sentences are kept in `recordPresentation` against the day that reading matters. And a subject nobody has rated draws **no block
+at all**: a fourth absence asking a fourth question, since rating is a favour and nothing
+anywhere records that a card was ignored.
 
 **The Chats tab is two sections, two contexts, two queries and two caches, and they are
 deliberately not merged** ([#363](https://github.com/Raketa02/Raketa/issues/363)). `CHALLENGES` is
@@ -441,6 +553,72 @@ of their own: a forecast helps you decide whether to play somebody, and on this 
 have. The reversal is filed as [#346](https://github.com/Raketa02/Raketa/issues/346) rather than
 taken.
 
+**A card at the end of the game screen asks how the other players were, and it is
+`features/sportsmanship/`**
+([#386](https://github.com/Raketa02/Raketa/issues/386),
+[ADR-0154](../docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)). **The
+word _rating_ is Skill rating's**, so everything in the feature is spelled **stars** or **the
+card**: a bare _rating_ on this platform is still the μ/σ a player holds in a sport, and these
+two things now stand one section apart on the same tab. A card carries **everybody else who was
+on that court** — in doubles both opponents _and your partner_, because the person who saw you
+play closest was on your own side of the net — each taking one to five whole stars, and there
+is no _side_ anywhere on it. **Two of the ticket's rules are unrepresentable rather than
+validated**: the scale is a five-member union, so `stars_are_one_to_five` cannot be earned, and
+a draft keyed by player id cannot hold two answers about one person, which is a refusal the
+backend spells out rather than collapsing. The third is the blank — **an absence and nothing
+else**, not a zero and not a null — which is why the row's value is optional and why `starsGiven`
+reads the draft **through the card's own list**, so stars for somebody who was not there are
+never assembled.
+
+**The window is the server's and this side never re-derives it.** A card appears the day after
+the game and stays seven days; one not yet a day old, one whose week has run out and one already
+answered are all simply **not on the list**, and _none of them is something to draw differently_.
+So the section draws exactly what it was handed — a second spelling of that window here would
+eventually disagree with the one the `POST` is judged against, and it would disagree silently.
+**The route answers ids and nothing else**, deliberately, so the words come from the game the
+card is drawn on: `GameScreen` composes `StarCardSection` under everything else on the page
+and hands down the one court it already holds. `RatedCourt` is declared in `sportsmanship` and
+satisfied structurally by `Game`, which is the seam the builder has with the challenge send —
+**the surface composes and the feature owns the act** — and a court the server did not name
+draws nothing rather than a card with ids in it.
+
+**It is at the foot of the game screen rather than above the games list, and the trade is
+stated rather than discovered.** A card is a question about one evening, and the moment anybody
+is thinking about how an evening went is the moment they are looking at what came of it — which
+is that screen and not a row. What it costs is that **nothing surfaces the card**: Now no longer
+mentions one, so a player who never re-opens a settled game never sees it, and because both
+gates are the server's the card is not there at the moment a score is entered either — it
+appears the next time that game is opened, settled and a day old. Both are affordable only
+because ignoring a card costs nothing and always did, which is the same ground the next
+paragraph but one stands on.
+
+**Everything the press cannot be taken back from is said before it.** The contract's own
+instruction is _"there is no correction path — so ask before you send"_, and the card asks by
+**stating**: what a star does — _it won't stop you being matched with them_, above the rows
+rather than beside the button, because a player decides what a star means while they are
+tapping and **Pass and Block already exist and both mean something specific** — that anybody
+may be left blank, and that sending closes the card for good. A pre-send sheet was weighed and
+refused: `ProposeSheet` exists because a challenge reaches four other people and starts a
+window nobody can stop, where this reaches nobody and tells nobody. What stands in its place is
+a row that **clears when the star already standing is pressed again**, which is the one gesture
+that makes a mis-tap survivable and is a rule about what an answer is rather than about a
+drawing — so it lives in `domain/stars.ts` and not in 6.13. **Sending with everybody blank
+closes the card too**, so the button says `Send no stars` rather than `Send` over an empty
+body: an explicit _I am not rating anyone_ is an answer, and a player should be able to read
+which one they are about to give. The write is neither optimistic nor `networkMode`-overriding
+— the seven days run from the **game**, so a send held until the connection returns closes the
+same card — and it **invalidates on settled rather than on success**, because the one refusal
+that matters says the card was _already_ closed, which is a list this client is holding a stale
+copy of.
+
+**Ignoring a card costs nothing, and the feature is built so that nothing says otherwise.**
+There is no strand for rating, no penalty and nothing recorded about a card that expired — so
+there is no count of what is outstanding, no badge, no thanks and no second asking. It is also
+why the card is the one read in the app that draws **nothing at all on a failed one**: the
+result screen around it draws a note, because a game a player pushed into vanishing is
+indistinguishable from a link gone stale and must not be, and a coral note over an unasked-for
+favour is the app apologising for a chore it invented.
+
 **The shell is five tabs over one stack, and it remembers nothing.** `TabShell` mounts the
 `TabBar` once, below the navigator, and reads the active column off the current path —
 `tabForPathname`, by the **first** segment, so ⚡Play stays lit for every screen inside Play.
@@ -453,7 +631,15 @@ Play leaves Play_. Both go through **one function**, `resetShellStack`: a flanki
 down one screen, `enterPlay` lays down two, and the second caller of `enterPlay` is the _Find
 a game_ segment, because re-entering the tab from inside it is arriving rather than going
 back. **A Play session ends exactly when the reset runs**, which is the definition the Play
-state ticket is owed. **The bar stands down on exactly one route, the conversation**, where the
+state ticket is owed. **A press that would land where the player already is does nothing at
+all** — `openTab` takes the pathname the bar's own lit column is drawn from and declines that
+one case. Every press ran the reset until 2026-09-10, so tapping Play on Find a game rebuilt
+the screen underneath the player: the session ended, the working week went back to the
+profile's copy, and whatever was ticked went with it — a reload with no cause, on the gesture
+people press twice when something feels slow. The rule the reset serves is _pressing a tab
+goes to that tab's start_, and somebody standing on it is already there; from anywhere else in
+the tab, including one screen deeper, the press still lays the stack down. **The bar stands
+down on exactly one route, the conversation**, where the
 composer replaces it ([#400](https://github.com/Raketa02/Raketa/issues/400)): `barStandsDown`
 beside `tabForPathname` names the whole path rather than `/chats/*`, `TabShell` does not render
 the bar there rather than hiding it, and the room takes the bottom safe-area inset the bar owns
@@ -519,6 +705,25 @@ it restarts at step one. The entry gate reads three facts and has four destinati
 `player_profile/` rather than in `onboarding/` because the profile screen will later edit the
 same values against the same rules
 ([ADR-0089](../docs/adr/0089-player-profile-context-event-sourced.md)).
+
+**The device's back button is the screen's own back control, and where a screen draws none the
+press is claimed and nothing happens.** Every screen in onboarding is reached by `replace`, so
+the group holds one history entry per push and the thing under it is whatever was on screen
+before the part began — welcome, one push behind the sport picker. Unclaimed, Android's back
+popped to exactly there: out of the part, past the control the screen does draw, and into a
+screen whose only way forward is to rate another sport. ADR-0090 forbids it in as many words —
+_"Back and forward move freely inside each part and never cross between them"_ — and the
+restart that ADR describes is what a **new launch** does through the entry gate, which a
+gesture is not. So a social step goes back a step, a question goes back a question, and the
+review, the result, the ratings summary and the data screen refuse: `stepBefore` and
+`questionNavigation`'s floor have already said there is nothing behind a first step, and a
+press that walks out anyway is a second, louder answer to a question the screen has answered.
+The mechanism is `useHardwareBack` in `shared/lib/platform`, subscribed **only while the screen
+is focused** — a stack keeps the screens under the top one mounted, and handlers run in reverse
+registration order, so a plain effect would let a question screen sitting under the result go
+on answering for it. Welcome and the sport picker are deliberately left alone: welcome is the
+app's root for a new player and back there should leave the app, and the picker is the one pop
+of a genuine push.
 
 **The consent step's copy is frozen and versioned.** `optInPresentation.ts` owns every
 sentence the Proposals opt-in card shows, together with the `copy_version` stamped beside
@@ -758,19 +963,22 @@ adjusted at one call site and not the other. Over it, `CourtMini` draws read-onl
 share every number and no behaviour. **The coordinates cannot be derived and H-25 is why** —
 squash has no net, so both players stand on the same half and _seat 3_ is not where seat 3 is
 in padel. That reaches the rules as well as the drawing: a seat's **side is read off seat
-order, never off the picture**, and it **follows you across the net**, because the swap toggle
-is _change sides, never seats_. **The seat label is an identifier under a face** — sixty-four
+order, never off the picture**, and it **follows you across the net**, because a swap is
+_change sides, never seats_. **The seat label is an identifier under a face** — sixty-four
 characters of handle in a 46pt seat is about four, so it draws the **first three, hard, with no
 ellipsis**, and the level sits beside them on the same line: a caption that told four faces
 apart had four characters and spent one of them apologising for a word nobody can go and read
 from there. The **sentence and the spoken name stay whole**, which is what keeps ADR-0107
 intact: a truncation invents nothing. Under both, `domain/lineup.ts` holds
 what somebody could be wrong about — `seatPlaces`, `seatIsLocked` / `seatIsClearable`, and the
-**swap truth table**, which is a decision and never a write. `seatLock` is the one spelling of
-_why_ a seat is locked, so the **two guard toasts** are its two codes: they are the
-replacement's and not the trade's — your own seat and a seat somebody already accepted are both
-freely movable across the net — and there is no third, because the clear badge is **not drawn**
-where it would be refused. **Volt means one thing per court**: the seat picked for a swap on the
+**swap truth table**, which is a decision and never a write. **A tap on a seat trades, always**:
+the `Swap players` switch above the court was removed on 2026-09-09, and with it the only reason
+a tap had two meanings, because the forecast card's names row draws a face per seated player and
+that is where a player goes to act on somebody now. Replacing somebody is the clear badge and
+then the hole it leaves. Both **guard toasts** went with the mode — they refused a
+_replacement_, your own seat and an accepted one having always been freely movable across the
+net — so `seatIsLocked` answers _whether_ rather than _why_, and its one reader is the clear
+badge, which is **not drawn** where it would be refused. **Volt means one thing per court**: the seat picked for a swap on the
 interactive one, and which seat is yours on the read-only one, which never has a selection to
 confuse it with. **The clear badge is the one target in this app that cannot reach 44pt** — a
 44pt square inset into a 46pt face leaves the seat a two-point border, and a slop grown outward
@@ -815,7 +1023,14 @@ picture read back as a label, which is the argument that had already removed the
 the sentence beside it. Its wording still branches on the seat count read off `Court`'s own
 coordinates, so a squash court is never told to build a four, and the **spoken** name keeps the
 arity in full (_Four seats, two a side_) because a listener has no picture and no chip row to
-count. It is in the page rather than in `ShellScreen`'s pinned slot, and the prototype's 2pt
+count. **A press opens on an empty court**: it mints a record of its own, so whatever was
+seated under the last one is orphaned and is discarded as the push is made. Popping back for
+another look at the week is deliberately **not** that — the shell's stack is untouched, so the
+session survives and the four are still there on the way forward — and what ends them is asking
+for a new game. It is not the origin guard's confirm either: that exists because changing the
+sport, the mode or the week would destroy a line-up _silently_, where this player pressed
+_Build_, watched a search run and landed on a court. It is in the page rather than in
+`ShellScreen`'s pinned slot, and the prototype's 2pt
 coral outline is **still not drawn**, because coral on a card is the pressed state — it arrives
 instead as 6.1's fill on a control, where a press has somewhere to go. **A cleared week runs a
 search**: an omitted override means _use my profile grid_ and an **empty list** means _I
@@ -948,12 +1163,30 @@ refetches, because the rule against that is about orderings and a count has none
 why the tab bar carries no badge.
 
 **⚡Play's third screen is the builder, and a swap on it is a selection rather than a
-request.** A finished search is pushed onto it — _"where a completed search goes"_, which #268
+request.** **It is called _Build a doubles_ or _Build a singles_, and its header draws nothing
+else** — the same two words as the control on Find a game that opened it, because the control
+names the screen it opens. Three wordings and two arrangements were tried to get there. _Build
+the four_ / _Set up the match_ is one sentence in two registers and a word about a Sport a
+squash court must never be told, with a third — _Complete the …_ — naming the state of the
+court rather than the screen. Then the title was dropped and `Padel · doubles · for fun`
+promoted into it, which put this screen and the pool under **one heading**. Then that line came
+back as 10.3's eyebrow over the restored title, and read as the title said twice: _doubles_ in
+both lines, the Sport already on the court in the picture and in its spoken summary. So it is
+deleted, and **the cost is one word** — `for fun` against `competitive` is now stated on
+neither of Play's inner screens, though the two draw different candidate cards. A court whose
+search cannot be read is called something honest instead of a shape it is guessing at. The
+chevron beside it is `ink` now, because it is the one control in that header and it was drawn
+in the eyebrow's own grey. A finished search is pushed onto it — _"where a completed search goes"_, which #268
 and #269 both declined to decide — and the push happens **when the latch lifts** rather than
 when the response lands, because the wait is over the screen that launched it and the court is
 what it lifts onto. Three branches fill the court and **two of them are one request**: ⚡ is
 `POST /lineups`, and hand-seating somebody and then pressing ⚡ is the same request with
-`locked_seats` on it, _"a property of what you send rather than of where you send it"_. The
+`locked_seats` on it, _"a property of what you send rather than of where you send it"_. Its
+control says **Use Matchmaking**, one string where there were two: _Let the engine fill the
+seats_ and _…the rest_ were a pair because the engine fills **around** locked seats, and
+naming the act rather than the scope is true of an empty court and of one with three people on
+it — so there is nothing left for a second label to correct, and the word is the platform's own
+for the thing the button reaches. The
 third is the pool. **⚡'s wait is under the court rather than over it**, and the court **fills
 one seat at a time**: `motion.hold.fill`'s `650 plus 550 a seat` was booked to _"the animation
 it drives"_ and nothing drove it — the latch covered the screen for the sum and handed back a
@@ -1003,6 +1236,12 @@ than a player with missing facts — a withheld row carries one field and no car
 name and no level to read out — and it says the fact and never the cause.
 
 **⚡Play's fourth screen is the pool, and the relaxation ladder is on it and on no other.**
+**It is called _Pick players_ and its header draws nothing else**, which is the court's own
+walk one screen on: the name was dropped for a day on the argument that a list of people with
+an _Add to the court_ on every row says _pick players_ for itself — what that missed is the
+screen next door, which had promoted the same line, so the two came out under one heading — and
+the eyebrow that came back over it read as a caption on what the header card below already
+draws.
 Every thin-result state in the specs pointed the player at a settings screen — _widen the
 radius in You_ — because the prototype had no offer to point at. It is struck: pointing
 somebody at a settings screen while a **one-tap widening with a true count** sits on the same
@@ -1378,8 +1617,27 @@ header naming the people and the sport, with `Send` beside it, wants **the name 
 drawing**, and the name stays required either way because a listener has none of that around them.
 Beside it, 10.3 gained a **lead** slot for the conversation header's faces — `right`'s counterpart
 at the other end, and a slot rather than a `faces` prop because a header that knew what a face was
-would be the design system owning an avatar, which #338 §5 refused by name. The rest arrive with
-the features that need them. **Build outward from the structure below** rather than reaching
+would be the design system owning an avatar, which #338 §5 refused by name. **Two more arrived by promotion rather than by being
+built there** — the **Social tag row** and 7.13's **run of form**, both the competitive card's
+until the player record sheet turned out to draw both
+([#375](https://github.com/Raketa02/Raketa/issues/375)). A copy of either would be a second
+thing to keep in step with a **pinned** geometry test, and importing them out of
+`features/play/` would point the arrow the wrong way. **The drawing came down and the rule
+stayed**: `play/domain/socialTagOverlap` reads the row's four answers off a _candidate_, which
+is a search result and Play's alone, and hands the value down — so the union and the two words
+it draws (`socialTagChip`, `NO_TAGS_IN_COMMON`) sit in `shared/vocabulary` beside the nineteen
+labels, and `GameResult` went with the squares for `PLAY_INTENTS`' reason. **6.13's star row is
+the newest of them and the first control since the switch** — five 44pt targets, flush, with a
+drawn 24pt pentagram inside each, because there was nothing to type: **Archivo ships no
+U+2605**, exactly as it ships no U+2713, and
+[ADR-0135](../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md) fixed the icon
+family as Feather, which has _no filled counterparts_ — and a five-star row is precisely the
+case that limitation binds. Its fill pair is the run of form's, taken deliberately so that
+_tell two states of one mark apart_ has one answer in this system rather than two, and its
+three ratios on `surface` are derived in `starRow.test.ts` off the component's own table. It
+takes no rule of its own: it **reports every press with the value pressed**, exactly as 6.8's
+cell fires whether or not it is ticked, so whether a second press clears the row is the
+caller's. The rest arrive with the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 

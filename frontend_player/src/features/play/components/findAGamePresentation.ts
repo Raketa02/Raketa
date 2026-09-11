@@ -46,6 +46,8 @@ import type { PlayIntent, SearchMode } from '../domain/vocabulary';
 
 import { isDoubles } from '../domain/lineup';
 
+import { builderTitle } from './builderPresentation';
+
 /** The screen's own title, and the one ⚡ opens on. */
 export const FIND_A_GAME_TITLE = 'Find a game';
 
@@ -361,16 +363,21 @@ export const NO_RATED_SPORT_LINE =
  * `isDoubles` is `domain/lineup`'s, for the reason recorded there — *four* is a word
  * about a Sport, and a squash court must never be told to build one.
  *
- * **The title names the game rather than the furniture.** It was `builderTitle`'s outright —
- * *Build the four* against *Set up the match* — and those two are one sentence in two
- * registers: one counts seats and the other names an occasion, so the pair only reads as a
- * pair to somebody who has seen both. *Doubles* and *singles* are the sport's own words, they
- * are already what `builderEyebrow` prints one screen on, and they differ by one word rather
- * than by all of them. `builderTitle` keeps its own: it titles a screen that fills seats, and
- * it has a third thing to say the moment somebody is sitting in one.
+ * **The control names the game rather than the furniture.** It was the builder's title
+ * outright — *Build the four* against *Set up the match* — and those two are one sentence in
+ * two registers: one counts seats and the other names an occasion, so the pair only reads as a
+ * pair to somebody who has seen both. *Doubles* and *singles* are the sport's own words, and
+ * they differ by one word rather than by all of them.
+ *
+ * **And the builder now carries these same two words as its own title**, which is why this
+ * reads `builderTitle` rather than repeating the pair. **The control names the screen it
+ * opens** — `whyFitControlWord`'s rule and its reason — so a button promising *Build a
+ * doubles* cannot land somebody on a heading that says something else. What is decided here is
+ * still this control's own question, *what does pressing this do*; what it no longer does is
+ * hold a second copy of the answer.
  */
 export function courtEntryTitle(seats: number): string {
-  return isDoubles(seats) ? 'Build a doubles' : 'Build a singles';
+  return builderTitle(seats);
 }
 
 /**

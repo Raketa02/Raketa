@@ -73,14 +73,53 @@ export function resetShellStack(stack: ShellStack): void {
  *
  * ⚡Play is not a special case with a special caller; it is the one tab whose start is two
  * screens deep.
+ *
+ * ## A tab you are already standing on is not somewhere to be sent
+ *
+ * The reset is the whole mechanism, and for a while it ran on **every** press — so a player
+ * tapping Play while Find a game was on screen had it rebuilt underneath them: the session
+ * ended, the working week went back to the profile's copy, and whatever they had ticked went
+ * with it. No screen was reached that was not already there; what the press bought was a
+ * reload. On the gesture people press twice when something feels slow, that is the worst
+ * possible answer.
+ *
+ * The rule this function serves is *pressing a tab goes to that tab's start*, and it is
+ * satisfied — with nothing to do — for a player who is already there. So the press is
+ * measured against **where they are**, and the only case it declines is the one where the
+ * answer and the question are the same screen. Every other press still resets: from another
+ * tab, and from anywhere deeper inside this one, which is where *the shell keeps no per-tab
+ * history* is actually observable.
+ *
+ * **It is `where` and not a flag the bar holds.** The bar already draws its active column
+ * from the path (`tabForPathname`) rather than from state, for the reason a second copy is
+ * always the one that disagrees — after a deep link, a redirect, or the hardware back
+ * button — and a press that consulted a different answer than the one drawn under the
+ * player's thumb would be that same bug with a longer fuse.
+ *
+ * @param where the pathname the player is on. `usePathname()`'s, which is the same value the
+ *   bar's own lit column is read from.
  */
-export function openTab(tab: TabBarKey): void {
+export function openTab(tab: TabBarKey, where: string): void {
+  if (where === startOf(tab)) return;
+
   if (tab === 'play') {
     enterPlay();
     return;
   }
 
   resetShellStack([SHELL_TAB_ROOT[tab]]);
+}
+
+/**
+ * The screen a press of this tab would land on — the **top** of what it lays down.
+ *
+ * Play's start is two screens and the one a player would be looking at is the second, so this
+ * is the last entry of the stack rather than its root. Read off `PLAY_STACK` itself rather
+ * than spelled again, because *which screen Play opens on* is a fact that already has one
+ * home and a second spelling of it is the one that goes stale.
+ */
+function startOf(tab: TabBarKey): string {
+  return tab === 'play' ? PLAY_STACK[PLAY_STACK.length - 1]! : SHELL_TAB_ROOT[tab];
 }
 
 /**

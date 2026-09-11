@@ -24,7 +24,7 @@
  * ## A poster has nothing to have passed
  *
  * The mark is a fact about **a photograph**, and a player with none is drawn the generated
- * court poster instead (`CandidatePhoto`). The wire omits `photo_id`, `photo_url` and `review`
+ * court poster instead (`PlayerPhoto`). The wire omits `photo_id`, `photo_url` and `review`
  * together, so a verdict with no photograph beside it is a state the contract does not
  * produce — and the rule asks anyway, because the alternative is a component that draws a mark
  * over a poster on the day the contract changes its mind, with nothing anywhere saying it must

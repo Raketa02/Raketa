@@ -50,12 +50,12 @@ import {
   formatSignedLevel,
 } from '@/shared/formatting/ratingFormat';
 import { slotName } from '@/shared/vocabulary/availabilityPresentation';
-import { socialTagLabel, socialTagName } from '@/shared/vocabulary/socialTagPresentation';
+import { NO_TAGS_IN_COMMON, socialTagName } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
 import type { AtStake } from '../domain/candidate';
-import type { SharedTag, SocialTagOverlap } from '../domain/socialTagOverlap';
+import type { SocialTagOverlap } from '../domain/socialTagOverlap';
 import type { GameResult, InclusionReason } from '../domain/vocabulary';
 
 import type { CandidateAction } from './accessibilityPresentation';
@@ -210,106 +210,11 @@ export const CANDIDATE_ACTION_WORD: Readonly<Record<CandidateAction, string>> = 
 export const DECK_ANSWER_WORDS = { pass: 'Not today', accept: "🎾 Let's play" } as const;
 
 /**
- * What the generated poster says it is, on a card.
- *
- * [6.9](../../../../docs/design-system.md#69-the-photo-tile-and-picker) requires the sentence
- * of every poster it draws — *"nobody should have to see a poster to know they are not
- * looking at the player"* — and the profile step's own wording is second-person and about a
- * photo the reader could go and add, which is not this. Third-person, and it names no one:
- * the card body's label already says whose face this is standing in for.
- *
- * It is **unspoken on every surface that draws it today**, because §20.1 merges an actionless
- * element into the nearest action above it and the card body is that action. The sentence is
- * carried anyway rather than left blank, so a poster drawn somewhere with no such ancestor
- * cannot arrive silently claiming to be a photograph.
- */
-export const CANDIDATE_POSTER_LABEL = 'A generated court poster, not a photograph';
-
-/**
- * **The photo panel's one mark** — what the on-court check concluded, in two words
- * ([#313](https://github.com/Raketa02/Raketa/issues/313)).
- *
- * Sentence case here and capitalised by the panel, exactly as the Sport beneath it is: the
- * capitals are a treatment the two labels share, and a string that arrived pre-shouted would
- * be the one place in this deck where a style decision is spelled into the copy.
- *
- * **It is the whole of what the card says about the check.** There is no sentence explaining
- * what was looked for, no *verified*, and above all **no number**: every verdict is computed
- * from a confidence the platform keeps, and ADR-0133's clause that it never crosses on any
- * route is untouched by ADR-0138. *We are 38% sure this is a court* is a figure a player can
- * do nothing with, and there is nothing here to derive one from in any case — the code is all
- * that arrives.
- */
-export const ON_COURT_MARK = 'On court';
-
-/**
- * `Photo checked: on court` — the mark, for a listener, and **it leads with the photograph**.
- *
- * The drawing can rely on where it sits: two words over somebody's picture, above their Level,
- * are plainly about the picture. A clause in a run of sentences cannot, and *on court* alone
- * arriving between a Level and a forecast is one comma away from **activity recency** — the
- * one thing `PlayerCardSchema` refuses at every granularity, *"not a timestamp, not active
- * today, not a green dot"*. So the noun comes first and the verdict second, and the sentence
- * says what was checked rather than what anybody is doing.
- *
- * *Checked* is the register the drawing spends its colour on, which is [Part 13](../../../../docs/design-system.md#part-13--accessibility)
- * read in the one place the mint is worth nothing: a listener gets the word the tint stands
- * for, and gets it as a fact rather than as praise.
- */
-export const ON_COURT_CLAUSE = 'Photo checked: on court';
-
-/**
- * **The Social tag row's words** — the chip, its *you too* marker, and the amber sentence.
- *
- * The row is `domain/socialTagOverlap`'s four answers; these are the four things they say
- * ([#311](https://github.com/Raketa02/Raketa/issues/311)). Nothing here decides which tags are
- * shared, and nothing here re-words a tag: `socialTagLabel` and `socialTagName` are the
- * promoted table's, and a second spelling of nineteen labels is what the promotion existed to
- * prevent ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §1).
- *
- * ## The chip is drawn with a glyph and a marker, and spoken as neither
- *
- * `socialTagLabel` carries the emoji because a wall of same-length chips is found by shape;
- * `socialTagName` is what a listener gets, because *"beer mug, stays for a drink"* is the app
- * reading its own layout aloud. The **marker** goes the other way and is the more interesting
- * half: `· you too` is drawn on the chip because the tint alone would be colour as the only
- * cue ([Part 13](../../../../docs/design-system.md#part-13--accessibility)), and it is *not*
- * repeated per tag in the spoken name — the label groups the shared ones under one clause
- * instead, because a listener hearing *you too* six times is being read a table.
- *
- * **A shared chip can truncate its marker at the largest text sizes.** `Tag` is
- * `numberOfLines={1}` by design ([6.4](../../../../docs/design-system.md#64-tag--the-status-pill)
- * — *a long state tag truncates rather than breaking the row*), and the longest label plus the
- * marker exceeds the card at roughly double the system size. The tint survives it and the
- * spoken name always carries the whole clause, so the fact is never lost; what is lost is the
- * second cue, for the reader who has asked for the largest type. Recorded rather than papered
- * over — fixing it means a wrapping tag, which is a change to the primitive and to 6.4.
- *
- * What a chip in the row is **drawn** with: the tag, and the marker where it is shared.
- */
-export function socialTagChip(tag: SharedTag): string {
-  const label = socialTagLabel(tag.id);
-  return tag.shared ? `${label} · ${YOU_TOO_MARKER}` : label;
-}
-
-/** The two words, once. Re-worded here and nowhere else — the clause has its own phrasing. */
-const YOU_TOO_MARKER = 'you too';
-
-/**
- * The amber sentence, which **stands in the row's place** rather than beside it.
- *
- * The one claim this row makes, and the only state in which the candidate's own tags are not
- * drawn: six untinted chips under a line saying none of them matched would be the card
- * answering a question nobody asked twice over, and the ticket puts the sentence *in the row's
- * place* in as many words. The tags are still a fact about them alone — they are read in full
- * on the surface that draws tags as tags, and the card's job here is the comparison.
- */
-export const NO_TAGS_IN_COMMON = 'No tags in common';
-
-/**
  * What the row contributes to the card's **spoken** name — nought, one or two clauses.
  *
- * Grouped rather than marked per tag, for the reason above, and worded so each clause says
+ * Grouped rather than marked per tag — `shared/vocabulary/socialTagPresentation`'s
+ * `socialTagChip` is where that is argued — and
+ * worded so each clause says
  * whose fact it is: *tags you share* is about the pair, *their other tags* and *their tags* are
  * about the candidate alone. That distinction is the whole of the row, so it is the one thing
  * the wording must not blur.

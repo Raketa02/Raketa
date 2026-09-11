@@ -68,6 +68,7 @@ from app.bootstrap.composition import (
 from app.infrastructure.redis_client import get_redis
 from app.modules.blocks.presentation.dependencies import BlockQueryDep
 from app.modules.matchmaking.application.express_interest import ExpressInterest
+from app.modules.matchmaking.application.fail_closed_gates import FailClosedGates
 from app.modules.matchmaking.application.forecast_lineup import ForecastLineup
 from app.modules.matchmaking.application.record_pass import RecordPass
 from app.modules.matchmaking.application.record_prompt_decline import (
@@ -440,20 +441,20 @@ RecordPromptDeclineDep = Annotated[
 ]
 
 
-def get_read_back_search(
-    db: DbSession,
+def get_fail_closed_gates(
     candidates: CandidateSourceDep,
     profiles: PlayerProfileRepositoryDep,
     blocks: BlockQueryDep,
     holds: AccountHoldQueryDep,
     account_status: AccountStatusQueryDep,
-) -> ReadBackSearch:
-    """The read-back, assembled per request. **Six collaborators, no engine.**
+) -> FailClosedGates:
+    """The four gates that fail closed, assembled per request.
 
-    It reads a record and re-evaluates four gates; it never scores, so there is
-    no ruleset here and no ``MatchFit``. The absence is the point — a use case
-    holding a scorer is a use case that can quietly start re-ranking a stored
-    answer, which is the one thing an immutable record may not do.
+    Declared here rather than inside the one use case that reads them, on the
+    same argument the ledgers above are: **every surface that shows one player to
+    another runs these four** (``docs/adr/0095``), and a surface deciding for
+    itself where a gate comes from is how one of them ends up wired to a
+    different answer.
 
     The candidate source is the process's, exactly as it is for a search: the
     mutual gender gate reads the other side's preference off the index row, so a
@@ -461,13 +462,40 @@ def get_read_back_search(
     503 rather than withholding everybody.
     """
 
-    return ReadBackSearch(
-        searches=build_search_store(db),
+    return FailClosedGates(
         profiles=profiles,
         candidates=candidates,
         blocks=blocks,
         holds=holds,
         account_status=account_status,
+    )
+
+
+FailClosedGatesDep = Annotated[FailClosedGates, Depends(get_fail_closed_gates)]
+
+
+def get_read_back_search(
+    db: DbSession,
+    holds: AccountHoldQueryDep,
+    gates: FailClosedGatesDep,
+) -> ReadBackSearch:
+    """The read-back, assembled per request. **Three collaborators, no engine.**
+
+    It reads a record and delegates four gates; it never scores, so there is no
+    ruleset here and no ``MatchFit``. The absence is the point — a use case
+    holding a scorer is a use case that can quietly start re-ranking a stored
+    answer, which is the one thing an immutable record may not do.
+
+    The hold query arrives twice over — once here and once inside the gates —
+    and that is not a wiring slip. What this one answers is *may the person
+    asking read anything at all*, which is a refusal about the reader and points
+    the other way down the same port.
+    """
+
+    return ReadBackSearch(
+        searches=build_search_store(db),
+        holds=holds,
+        gates=gates,
     )
 
 

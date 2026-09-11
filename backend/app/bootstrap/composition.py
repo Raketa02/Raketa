@@ -139,6 +139,7 @@ from app.modules.games.domain.ports import (
     GameDirectory,
     GameHistoryQuery,
     GameRepository,
+    OpponentVarietyQuery,
     PlanningCourt,
     PlayerHandles,
 )
@@ -198,6 +199,9 @@ from app.modules.matchmaking.domain.ports import (
     MatchHistoryQuery,
     PlayerScoreQuery,
 )
+from app.modules.matchmaking.application.fail_closed_gates import (
+    FailClosedGates,
+)
 from app.modules.matchmaking.application.roll_exposure import RollExposure
 from app.modules.matchmaking.domain.cards import (
     CardPhotoLinks,
@@ -228,8 +232,8 @@ from app.modules.matchmaking.infrastructure.published_player_scores import (
     PublishedPlayerScores,
 )
 from app.modules.player_score.domain.ports import PublishedScoreQuery
-from app.modules.player_score.infrastructure.two_strands_from_the_record import (
-    TwoStrandsFromTheRecord,
+from app.modules.player_score.infrastructure.three_strands_from_the_record import (
+    ThreeStrandsFromTheRecord,
 )
 from app.modules.matchmaking.infrastructure.candidate_index_tail import (
     CandidateIndexTail,
@@ -345,6 +349,60 @@ from app.modules.rating.infrastructure.event_sourced_assessment_repository impor
 )
 from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
     EventSourcedSkillRatingRepository,
+)
+from app.modules.player_record.infrastructure.games_subject_form import (
+    GamesSubjectForm,
+)
+from app.modules.player_record.infrastructure.games_subject_variety import (
+    GamesSubjectVariety,
+)
+from app.modules.player_record.infrastructure.published_subject_sportsmanship import (
+    PublishedSubjectSportsmanship,
+)
+from app.modules.player_record.infrastructure.rating_subject_ratings import (
+    RatingSubjectRatings,
+)
+from app.modules.player_record.infrastructure.score_subject_reliability import (
+    ScoreSubjectReliability,
+)
+from app.modules.player_record.domain.ports import (
+    PriorDisclosure,
+    RecordGates,
+    RecordPhotoLink,
+    SubjectForm,
+    SubjectIdentitySource,
+    SubjectRatings,
+    SubjectReliability,
+    SubjectSportsmanship,
+    SubjectVariety,
+)
+from app.modules.player_record.infrastructure.disclosures import (
+    ChallengesTheyShare,
+    GamesTheyPlayed,
+    SearchesThatShowedThem,
+)
+from app.modules.player_record.infrastructure.live_record_gates import (
+    LiveRecordGates,
+)
+from app.modules.player_record.infrastructure.presigned_record_photo import (
+    PresignedRecordPhoto,
+)
+from app.modules.player_record.infrastructure.subject_identities import (
+    ProfileAndAccountIdentity,
+)
+from app.modules.sportsmanship.domain.ports import (
+    PublishedSportsmanshipQuery,
+    SettledCourts,
+    SportsmanshipLedger,
+)
+from app.modules.sportsmanship.infrastructure.games_settled_courts import (
+    GamesSettledCourts,
+)
+from app.modules.sportsmanship.infrastructure.sqlalchemy_standing_answers import (
+    StandingAnswersAboutThem,
+)
+from app.modules.sportsmanship.infrastructure.sqlalchemy_sportsmanship_ledger import (
+    SqlAlchemySportsmanshipLedger,
 )
 from app.modules.users.domain.ports import UserRepository
 from app.modules.users.infrastructure.sqlalchemy_user_repository import (
@@ -907,7 +965,7 @@ def build_published_score_query(session: AsyncSession) -> PublishedScoreQuery:
     session, so this line stays a choice of implementation and the folds behind
     it stay with the contexts that own them.
     """
-    return TwoStrandsFromTheRecord(
+    return ThreeStrandsFromTheRecord(
         games=build_game_history_query(session),
         challenges=build_challenge_history_query(session),
     )
@@ -1215,6 +1273,22 @@ def build_at_stake_query(
     return RatingResultUpdateRule(build_rated_player_query(session, runtime=runtime))
 
 
+def build_opponent_variety_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> OpponentVarietyQuery:
+    """*How widely does this person spread their games* — over the whole record.
+
+    The same class as the history read and a **separate port**, which is the
+    whole of the fence: this fold is unbounded, and a caller holding it as part
+    of the port a search already carries could call it inside a walk over five
+    hundred candidates. Typed narrowly here, it reaches only the surface that
+    opens one person at a time.
+    """
+    return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
+
+
 def build_confirmed_result_ledger(
     session: AsyncSession,
     *,
@@ -1230,6 +1304,115 @@ def build_confirmed_result_ledger(
     return EventSourcedConfirmedResults(
         session, (runtime or get_event_runtime()).codec
     )
+
+
+def build_subject_ratings(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> SubjectRatings:
+    """Every sport a record's subject is rated in, in the record's own words.
+
+    Built over ``rating``'s **read** port and never its repository, which is the
+    whole reason that port exists: a repository remembers stream versions so a
+    rating it found can be moved, and a sheet drawing a number must not be able
+    to. The translation lives in ``player_record``'s infrastructure, which is
+    where every borrowed fact is renamed on this platform.
+    """
+
+    return RatingSubjectRatings(build_rated_player_query(session, runtime=runtime))
+
+
+def build_subject_form(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> SubjectForm:
+    """The run of five for one sport, over ``games``' published history.
+
+    The same query the player card's run is drawn from, asked its per-sport
+    question — so a record and a card cannot come to two answers about what a
+    counted result is.
+    """
+
+    return GamesSubjectForm(build_game_history_query(session, runtime=runtime))
+
+
+def build_subject_variety(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> SubjectVariety:
+    """How widely a record's subject spreads their games, over their whole record.
+
+    Built over ``games``' **variety port** and never over the history read beside
+    it, which is the fence rather than tidiness: this fold is unbounded, and the
+    narrow type is what stops it being reachable from a caller that walks five
+    hundred candidates.
+    """
+
+    return GamesSubjectVariety(
+        build_opponent_variety_query(session, runtime=runtime)
+    )
+
+
+def build_subject_reliability(session: AsyncSession) -> SubjectReliability:
+    """What the platform watched a record's subject do — the pill and its rows.
+
+    Built over ``player_score``'s **published** read and never over the two folds
+    underneath it, which is the same fence every other row here takes: the blend
+    a player is shown is that context's arithmetic, and a second caller reaching
+    past it to ``games`` and ``challenges`` would be a second author of what the
+    number means.
+    """
+
+    return ScoreSubjectReliability(build_published_score_query(session))
+
+
+def build_subject_sportsmanship(
+    session: AsyncSession,
+) -> SubjectSportsmanship:
+    """What other players said about a record's subject — at both resolutions.
+
+    Built over ``sportsmanship``'s **published** port and never over the ledger
+    beside it, which is the same fence every other row here takes: the ledger is
+    that context's store and a sheet holding it could write through it. It is
+    also what keeps the figure and the subject's band one fold — the provider
+    coarsens its own number, so a band cannot land on the other side of an edge
+    from the figure a reader is shown.
+    """
+
+    return PublishedSubjectSportsmanship(build_published_sportsmanship(session))
+
+
+def build_settled_courts(session: AsyncSession) -> SettledCourts:
+    """*Is this a settled court of mine, and who else was on it* — over ``games``.
+
+    The adapter lives in ``sportsmanship``'s own infrastructure, which is the
+    shape ``games`` takes for ``PlayerHandles``: a provider publishes what it
+    knows about its own subject, and the context that wants it narrower does the
+    narrowing. It is built over the directory rather than beside it, so the
+    court a card is drawn for is folded from the same read of the log the games
+    list already runs.
+    """
+    return GamesSettledCourts(build_game_directory(session))
+
+
+def build_sportsmanship_ledger(session: AsyncSession) -> SportsmanshipLedger:
+    """The answered cards, and one standing answer per pair of people.
+
+    It writes and never commits, so it is built per request beside the unit of
+    work the use case commits through — the lifetime every durable ledger in this
+    codebase is given.
+    """
+    return SqlAlchemySportsmanshipLedger(session)
+
+
+def build_published_sportsmanship(
+    session: AsyncSession,
+) -> PublishedSportsmanshipQuery:
+    """What other players said about somebody — the figure, or the coarse band.
+
+    Built over the session and never over the ledger beside it, which is the
+    fence rather than tidiness: the ledger writes, and a read a sheet performs
+    has no business holding a port a use case commits through. It reads the same
+    rows the ledger writes, which is what a published fold is.
+    """
+    return StandingAnswersAboutThem(session)
 
 
 def build_settle_ratings_on_results(
@@ -1399,6 +1582,92 @@ def build_card_photo_links(
     return PresignedCardPhotos(
         storage=storage, valid_for_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES
     )
+
+
+
+# --------------------------------------------------------------------------
+# The player record — one route out, and every port inward
+# --------------------------------------------------------------------------
+#
+# This context stores nothing (``docs/adr/0155``), so there is no repository
+# here and never will be: every builder below composes somebody else's published
+# port into a demand this one declared in its own words.
+
+
+def build_subject_identity_source(
+    *,
+    session: AsyncSession,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+    storage: PhotoStorage,
+) -> SubjectIdentitySource:
+    """Who a person is, from the two contexts that own the answer.
+
+    The same three providers ``build_player_card_source`` composes, asked about
+    one player rather than twenty — and built over their **own ports** for that
+    builder's reason: a walk over the profile streams written here would be a
+    second implementation of how a profile is folded.
+    """
+
+    return ProfileAndAccountIdentity(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=event_store, events=events
+        ),
+        photos=storage,
+    )
+
+
+def build_record_photo_link(
+    *, storage: PhotoStorage, settings: Settings
+) -> RecordPhotoLink:
+    """A record's photograph, addressed for one response.
+
+    **The window is read here**, from the one setting every photo link on this
+    platform is signed for, so a record, a card and ``GET /photos/{id}`` cannot
+    come to three answers about how long a link may live.
+    """
+
+    return PresignedRecordPhoto(
+        storage=storage, valid_for_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES
+    )
+
+
+def build_search_disclosure(session: AsyncSession) -> PriorDisclosure:
+    """*A search of mine returned them* — over the record that says so."""
+
+    return SearchesThatShowedThem(build_search_store(session))
+
+
+def build_challenge_disclosure(session: AsyncSession) -> PriorDisclosure:
+    """*We are both seated in a live challenge* — over ``challenges``' directory.
+
+    The strand that runs the other way from a search: a court is sent off the
+    organiser's search, so without this the person who was *asked* could not open
+    the record of the person who asked them.
+    """
+
+    return ChallengesTheyShare(build_challenge_directory(session))
+
+
+def build_game_disclosure(session: AsyncSession) -> PriorDisclosure:
+    """*We were on a court together* — over ``games``' directory."""
+
+    return GamesTheyPlayed(build_game_directory(session))
+
+
+def build_record_gates(
+    *, gates: FailClosedGates, holds: AccountHoldQuery
+) -> RecordGates:
+    """The four that fail closed, plus the reader's own hold.
+
+    The four are **not built here**: they are ``matchmaking``'s collaborator,
+    already assembled per request wherever a surface shows one player to another,
+    and this line composes rather than copies. A second spelling of a safety gate
+    is the defect the whole rule exists to prevent.
+    """
+
+    return LiveRecordGates(gates=gates, holds=holds)
 
 
 def build_absent_terms() -> frozenset[Term]:

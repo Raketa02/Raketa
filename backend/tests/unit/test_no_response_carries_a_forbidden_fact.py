@@ -29,6 +29,17 @@ added to a candidate row, in a diff where nothing looks wrong.
   conjunct to attach to.
 - **an unsettled case** — the matcher never reads `cases`; the hold does its
   work at the gate.
+- **an individual sportsmanship rating** — *no individual rating is returned to
+  anybody, on any route, in any shape.* What may be published about a person is
+  an **average** beside how many different people it rests on, and to the subject
+  a coarse **band** with no count at all; a published average plus a count lets a
+  subject subtract, name each new rating exactly, and go and find the one person
+  who could have given it. ``stars`` is the word this rule can catch, and the
+  scope of that is worth being honest about: it is the word the write route uses
+  and the only one a leak would plausibly reuse, and it catches nothing about a
+  figure published under an honest name. The rest of the rule is structural —
+  ``SportsmanshipLedger`` has no method that answers *what did somebody say about
+  me*, so a route wanting to leak one has to grow a read first.
 
 **Matching is on the words of a property name, never on a substring.** So
 ``gender`` catches ``gender_preference`` and ``threshold`` is not a hold. Both
@@ -77,6 +88,7 @@ FORBIDDEN: dict[str, tuple[object, ...]] = {
     ),
     "a shard key": ("shard",),
     "an unsettled case": ("unsettled", "hold", ("case", "id")),
+    "an individual sportsmanship rating": ("stars",),
 }
 
 #: Fields that trip a rule above and are published **on purpose**, each with the
@@ -194,6 +206,11 @@ def test_the_walk_reaches_the_shortlist_and_not_only_the_error_envelope():
     assert "ErrorResponse" in reached
     assert "ShortlistResponse" in reached, "the search route is not in the walk"
     assert "PlayerCardSchema" in reached
+    # The player record describes **one person** rather than a pairing, which
+    # makes it the surface every forbidden fact is most plausibly added to next:
+    # a gender, an age or a *last seen* would each look like a helpful field on
+    # a sheet whose whole job is answering *who is this*.
+    assert "PlayerRecordResponse" in reached, "the record route is not in the walk"
     assert len(_properties()) > 50
 
 
