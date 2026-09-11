@@ -121,6 +121,37 @@ def test_an_event_decodes_back_into_the_event_that_was_appended(event):
     assert decoded == event
 
 
+def test_a_fill_comes_back_naming_who_asked_by_id_and_never_by_text():
+    """**The nullable arm, filled.** ``invited_by`` is ``UUID | None``, which is
+    not ``UUID``, and a codec that matched the hint by identity handed the
+    filled arm back as a string — so the *asked more* line told off this event
+    carried its actor as text, equal to no member's id
+    ([#408](https://github.com/Raketa02/Raketa/issues/408))."""
+
+    codec = domain_event_codec()
+    asked = SeatsInvited(
+        challenge_id=CHALLENGE,
+        seats=A_COURT,
+        newly_invited=(str(ALICE),),
+        occurred_at=AT,
+        invited_by=ORGANISER,
+    )
+
+    encoded = codec.encode(asked)
+    decoded = codec.decode(
+        SerializedEventEnvelope(
+            id=new_uuid(),
+            event_type=encoded.event_type,
+            schema_version=encoded.schema_version,
+            payload=encoded.payload,
+            occurred_at=asked.occurred_at,
+        )
+    )
+
+    assert decoded == asked
+    assert type(decoded.invited_by) is type(ORGANISER)
+
+
 def test_a_court_comes_back_out_of_the_log_as_the_court_that_went_in():
     """The seat code's whole job, asserted on the five fields it carries."""
 

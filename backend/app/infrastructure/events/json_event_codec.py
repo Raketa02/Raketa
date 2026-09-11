@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import types
 import typing
 from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
@@ -71,10 +72,28 @@ def _coerce_payload(
     hints = _resolve_hints(event_cls)
     coerced: dict[str, Any] = {}
     for key, value in payload.items():
-        hint = hints.get(key)
+        hint = _declared(hints.get(key))
         if value is not None and hint is UUID and isinstance(value, str):
             value = UUID(value)
         elif value is not None and hint is datetime and isinstance(value, str):
             value = datetime.fromisoformat(value)
         coerced[key] = value
     return coerced
+
+
+def _declared(hint: Any) -> Any:
+    """The type a field is declared as, with an optional ``None`` set aside.
+
+    ``UUID | None`` is not ``UUID``, and matching the hint by identity left every
+    nullable id and instant as the string JSON handed back — so a replayed
+    ``SystemLineRecorded`` carried its actor as text, equal to no member's id and
+    unsortable beside one ([#408](https://github.com/Raketa02/Raketa/issues/408)).
+    A ``None`` value is already returned untouched above; this only decides what
+    a *present* value is coerced to. A union of two real types is left alone.
+    """
+
+    if typing.get_origin(hint) in (typing.Union, types.UnionType):
+        present = [arm for arm in typing.get_args(hint) if arm is not type(None)]
+        if len(present) == 1:
+            return present[0]
+    return hint
