@@ -392,7 +392,12 @@ Play leaves Play_. Both go through **one function**, `resetShellStack`: a flanki
 down one screen, `enterPlay` lays down two, and the second caller of `enterPlay` is the _Find
 a game_ segment, because re-entering the tab from inside it is arriving rather than going
 back. **A Play session ends exactly when the reset runs**, which is the definition the Play
-state ticket is owed. **Two of the five tabs are honest placeholders** now that Now has a screen
+state ticket is owed. **The bar stands down on exactly one route, the conversation**, where the
+composer replaces it ([#400](https://github.com/Raketa02/Raketa/issues/400)): `barStandsDown`
+beside `tabForPathname` names the whole path rather than `/chats/*`, `TabShell` does not render
+the bar there rather than hiding it, and the room takes the bottom safe-area inset the bar owns
+everywhere else — the one exception to design-system §10.1, recorded in Part 16. The column
+stays lit while the bar is down. **Two of the five tabs are honest placeholders** now that Now has a screen
 ([#367](https://github.com/Raketa02/Raketa/issues/367)): one sentence naming what the tab will be
 plus that it is not built, one of them a citation of a decision taken elsewhere. **No sentence the
 shell writes says "nothing is happening"** — it began as Now's refusal, because Now is where a send

@@ -14,10 +14,17 @@
  * A room that is **gone** never reaches this: `roomIsGone` leaves the screen instead, which is
  * §3.7's own answer. What lands here is a read that failed for some other reason, and a record
  * whose sport this build cannot name.
+ *
+ * **It takes the top inset, and only that one.** The header it draws stands where the room's
+ * will, and a header under the clock for the length of a read is the same bug for the length of
+ * a read ([#400](https://github.com/Raketa02/Raketa/issues/400)). The bottom edge is not taken
+ * because nothing here reaches it: on the room's own route the bar is down and the room takes
+ * that edge once it lands, and behind the *Details* door the bar is drawn and owns it.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { recoveryMessage, type AppError } from '@/shared/errors';
 import { Note, ScreenHeader, theme } from '@/shared/ui';
@@ -32,7 +39,7 @@ export interface RoomAbsentProps {
 
 export function RoomAbsent({ arriving, error }: RoomAbsentProps) {
   return (
-    <View style={s.screen}>
+    <SafeAreaView style={s.screen} edges={['top']}>
       {/* 10.3's header, over the word a room has before it can be named by the people in it —
           the real title is the handles, and there are none to draw yet. */}
       <ScreenHeader title={CONVERSATION_SCREEN_TITLE} onBack={router.back} />
@@ -46,7 +53,7 @@ export function RoomAbsent({ arriving, error }: RoomAbsentProps) {
           <Text style={s.line}>{NO_CONVERSATION_HERE}</Text>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

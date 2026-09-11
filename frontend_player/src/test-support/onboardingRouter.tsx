@@ -101,8 +101,11 @@ export const ONBOARDING_ROUTES = {
   // is completing, so the Chats column stays lit and *back* is correct by construction.
   '(app)/(tabs)/chats/challenge/[challengeId]/fill': ChallengeFillRoute,
   // And a conversation beside it, under its own static segment for the same reason: two ids of
-  // two different things cannot share one `/chats/[id]`.
-  '(app)/(tabs)/chats/conversation/[conversationId]': ConversationRoute,
+  // two different things cannot share one `/chats/[id]`. Spelled `…/index` exactly as the file
+  // tree spells it, because the shell names this route to give it the push transition and
+  // `Stack.Screen` matches on the name: a table that shortened it would leave the option on a
+  // route that does not exist, and the warning saying so on every suite that walks the shell.
+  '(app)/(tabs)/chats/conversation/[conversationId]/index': ConversationRoute,
   // The game screen, at its **second route** — one component and two addresses, so the Chats
   // column stays lit behind the room's *Details* and *back* is correct in both directions
   // ([#368](https://github.com/Raketa02/Raketa/issues/368), ADR-0149 §5).

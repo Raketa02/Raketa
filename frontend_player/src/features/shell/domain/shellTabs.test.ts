@@ -8,7 +8,7 @@
 
 import { TAB_BAR_TABS } from '@/shared/ui';
 
-import { PLAY_STACK, SHELL_TAB_ROOT, tabForPathname } from './shellTabs';
+import { PLAY_STACK, SHELL_TAB_ROOT, barStandsDown, tabForPathname } from './shellTabs';
 
 describe('the five routes', () => {
   it('names one for every tab the bar draws, and no others', () => {
@@ -51,5 +51,37 @@ describe('which tab a route is inside', () => {
     // Nothing outside `(tabs)` draws a bar at all, so this is the answer to a question
     // that is never asked rather than a claim that /sign-in is the Now tab.
     expect(tabForPathname('/sign-in')).toBe('now');
+  });
+});
+
+/**
+ * **One route stands the bar down, and it is named in full.** The conversation is the one screen
+ * whose composer replaces the bar ([#400](https://github.com/Raketa02/Raketa/issues/400)); the
+ * inbox it is pushed over, the challenge screen beside it and the game screen behind its own
+ * *Details* door all keep theirs — so a `/chats/*` match would be three screens too wide, and a
+ * prefix match would take the bar off the game screen at `…/details`.
+ */
+describe('where the bar stands down', () => {
+  const ROOM = '/chats/conversation/eeeeeeee-0000-4000-8000-000000000005';
+
+  it('is inside a conversation, and its column stays lit while it does', () => {
+    expect(barStandsDown(ROOM)).toBe(true);
+    expect(tabForPathname(ROOM)).toBe('chats');
+  });
+
+  it.each([
+    ['the Chats inbox the room is pushed over', '/chats'],
+    ['the challenge screen', '/chats/challenge/aaaaaaaa-0000-4000-8000-000000000001'],
+    ['the builder under a challenge', '/chats/challenge/aaaaaaaa-0000-4000-8000-000000000001/fill'],
+    ['the game screen behind the room’s own Details door', `${ROOM}/details`],
+    ['a game over Now', '/games/8f14e45f-ceea-467a-9dd1-4bd9c39d4a58'],
+    ['the shell root', '/'],
+    ['a path the shell does not own', '/sign-in'],
+  ])('is not %s', (_, pathname) => {
+    expect(barStandsDown(pathname)).toBe(false);
+  });
+
+  it('is not a conversation with no id, which is not a route at all', () => {
+    expect(barStandsDown('/chats/conversation')).toBe(false);
   });
 });

@@ -14,6 +14,8 @@
  */
 
 import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { KeyboardAvoidingView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -40,7 +42,7 @@ import { conversationErrorMessage } from './conversationErrorMessage';
 import { systemLineSentence } from './conversationPresentation';
 import { QUICK_CHIP } from '@/features/plans/types';
 
-import { DETAILS, SEND } from './conversationPresentation';
+import { CONVERSATION_SCREEN_TITLE, DETAILS, SEND } from './conversationPresentation';
 import { OPEN_THE_GAME } from './conversationAccessibility';
 
 const ME = GATE_USER.id;
@@ -448,5 +450,71 @@ describe('the quick chips', () => {
     fireEvent.press(await screen.findByRole('button', { name: QUICK_CHIP.hour }));
 
     expect(await screen.findByLabelText(`You: ${QUICK_CHIP.hour}`)).toBeTruthy();
+  });
+});
+
+/**
+ * **The frame, asserted structurally**, the way `ShellScreen.test.tsx` asserts 10.1's — because
+ * every claim here is about *what contains what*, and both fail invisibly in a renderer with no
+ * status bar and no home indicator ([#400](https://github.com/Raketa02/Raketa/issues/400)).
+ *
+ * The edges are read rather than a padding measured, because the padding is the library's
+ * arithmetic and the edges are the app's decision.
+ */
+describe('the frame', () => {
+  /**
+   * The safe area around one thing — the stack keeps the inbox mounted under the room, so there
+   * is more than one frame in the tree and the assertion has to say which.
+   */
+  function safeAreaAround(inside: (scope: ReturnType<typeof within>) => unknown) {
+    const frames = screen.UNSAFE_getAllByType(SafeAreaView);
+    const own = frames.find((candidate) => inside(within(candidate)) !== null);
+    if (own === undefined) throw new Error('nothing of the kind is inside a safe area');
+    return own;
+  }
+
+  /** The room's own frame: the one with the composer inside it. */
+  const frame = () => safeAreaAround((scope) => scope.queryByLabelText('Message'));
+
+  it('clears the status bar, and takes the bottom inset because no bar is under it', async () => {
+    await openTheRoom();
+    await screen.findByLabelText('Message');
+
+    // Both edges, and that is the exception 10.1 records: everywhere else the bottom inset is
+    // the tab bar's, and this is the one screen the bar stands down on — so the inset has no
+    // owner unless the room takes it, and untaken it is the field under the home indicator.
+    expect(frame().props.edges).toEqual(['top', 'bottom']);
+  });
+
+  it('keeps the keyboard avoidance inside the safe area, not around it', async () => {
+    await openTheRoom();
+    await screen.findByLabelText('Message');
+
+    // Outside, the keyboard offset would be computed against a frame that includes the inset
+    // and the composer would ride 34pt above the keyboard. Inside, the frame's bottom is where
+    // the keyboard's top will be.
+    expect(within(frame()).UNSAFE_getByType(KeyboardAvoidingView)).toBeTruthy();
+  });
+
+  it('draws the placeholder header inside a safe area too, while the room is still coming', async () => {
+    // The read in flight draws 10.3's header over a title the room has before it can be named,
+    // and a header that collided with the clock for the length of a read is the same bug for
+    // the length of a read.
+    stubConversations(transport, [listed()]);
+    transport.on('GET', conversationPath(ROOM), () => new Promise(() => {}));
+    stubEntries(transport, ROOM);
+
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText(/^Chats/));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
+    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
+
+    await screen.findByRole('header', { name: CONVERSATION_SCREEN_TITLE });
+    const around = safeAreaAround((scope) =>
+      scope.queryByRole('header', { name: CONVERSATION_SCREEN_TITLE }),
+    );
+
+    expect(around.props.edges).toEqual(['top']);
   });
 });

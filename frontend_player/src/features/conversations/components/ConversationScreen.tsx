@@ -82,11 +82,41 @@
  * way` when the agreed day is today*. A room whose line-up has not completed has **no game and no
  * plan**, which is `GET /plans`' own spelling for a game nothing has been agreed on — three
  * questions, no *On my way*, and no card at all.
+ *
+ * ## The room owns its chrome: the top inset, and the bottom one because the bar stands down
+ *
+ * This screen does not go through `ShellScreen` — it is a header, a pinned card, an inverted
+ * list and a composer over a keyboard, not a header over a scroller — and for a while it went
+ * through nothing at all: a bare `KeyboardAvoidingView` at the root, with the header under the
+ * status bar on Android and under the clock on iOS
+ * ([#400](https://github.com/Raketa02/Raketa/issues/400)). The frame is now the same
+ * `SafeAreaView` every other screen takes, and it takes **both edges**, which is the one place
+ * in the app that is true of a screen inside the shell:
+ *
+ * - **The top edge** is what every screen takes, and it is `edges` rather than inset
+ *   arithmetic, so a device this app has not seen is the library's problem and not this file's.
+ * - **The bottom edge is the tab bar's everywhere else** — 10.1: *the tab bar owns the bottom
+ *   safe-area inset and the CTA owns none*, because an inset applied twice is 34pt of nothing.
+ *   Here the bar **stands down** (`shellTabs.barStandsDown`, read by `TabShell`): the composer
+ *   replaces it so the keyboard and the stream get the whole screen, and with the bar gone the
+ *   inset has no owner. Untaken, it is the field under the home indicator; so the room takes it,
+ *   once, on its own frame — the exception 10.1's Part 16 row records.
+ *
+ * **The safe area is outside the keyboard avoidance, and the inset is on the frame rather than
+ * in the composer's strip**, and both are the same fact about arithmetic. `KeyboardAvoidingView`
+ * pads by however far the keyboard overlaps *its own* frame: with the safe area around it, that
+ * frame ends at the home indicator's top and the composer lands on the keyboard exactly; with
+ * the inset added inside the strip instead, the keyboard's full height is padded *and* the
+ * inset stays, which is the 34pt gap above the keyboard that every chat app has shipped once.
+ * The auth screens are the same shape — a safe area with both edges around a keyboard-avoiding
+ * page — and this is the third screen with a keyboard and the first to have needed it under the
+ * shell.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useCurrentUser } from '@/features/auth/types';
 import { quickChips, RoomPlan, usePlan } from '@/features/plans/types';
@@ -254,56 +284,60 @@ function Room({
   }
 
   return (
-    <KeyboardAvoidingView style={s.screen} behavior={KEYBOARD_AVOIDANCE}>
-      <ConversationHeader
-        room={room}
-        playerId={playerId}
-        onBack={router.back}
-        onOpenGame={() =>
-          router.push({
-            pathname: GAME_DETAILS_ROUTE,
-            params: { conversationId: room.conversationId },
-          })
-        }
-      />
+    // Both edges, and the safe area outside the keyboard avoidance — the module note says why
+    // each is the way round it is. The bottom edge is the one to notice: this is the screen the
+    // bar stands down on, so the inset it owns everywhere else is the room's here.
+    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView style={s.page} behavior={KEYBOARD_AVOIDANCE}>
+        <ConversationHeader
+          room={room}
+          playerId={playerId}
+          onBack={router.back}
+          onOpenGame={() =>
+            router.push({
+              pathname: GAME_DETAILS_ROUTE,
+              params: { conversationId: room.conversationId },
+            })
+          }
+        />
 
-      {/* Pinned under the header rather than emitted into the stream, which is the whole of
+        {/* Pinned under the header rather than emitted into the stream, which is the whole of
           §3.2's finding: the chat opens at its newest entry, so a card in the scroll is the first
           thing off-screen. A room with no game has no plan and draws none — the same nothing the
           header's absent *Details* draws, from the same field. */}
-      {room.gameId === undefined ? null : <RoomPlan gameId={room.gameId} refused={held} />}
+        {room.gameId === undefined ? null : <RoomPlan gameId={room.gameId} refused={held} />}
 
-      <FlatList
-        // Named so a suite can scroll it: paging backward is a fact about what reaching the end
-        // of this list asks for, and there is no other way to reach it from outside.
-        testID="conversation-stream"
-        inverted
-        data={shown}
-        keyExtractor={keyOf}
-        renderItem={({ item, index }) => (
-          <StreamRow
-            entry={item}
-            older={shown[index + 1]}
-            members={room.members}
-            playerId={playerId}
-            showAuthors={showAuthors}
-          />
+        <FlatList
+          // Named so a suite can scroll it: paging backward is a fact about what reaching the end
+          // of this list asks for, and there is no other way to reach it from outside.
+          testID="conversation-stream"
+          inverted
+          data={shown}
+          keyExtractor={keyOf}
+          renderItem={({ item, index }) => (
+            <StreamRow
+              entry={item}
+              older={shown[index + 1]}
+              members={room.members}
+              playerId={playerId}
+              showAuthors={showAuthors}
+            />
+          )}
+          contentContainerStyle={s.stream}
+          keyboardShouldPersistTaps="handled"
+          onEndReached={onPageBack}
+          onEndReachedThreshold={0.4}
+        />
+
+        {sendRefusal === null ? null : (
+          <View style={s.refusal}>
+            <Note variant="coral" accessibilityRole="alert">
+              {conversationErrorMessage(sendRefusal)}
+            </Note>
+          </View>
         )}
-        contentContainerStyle={s.stream}
-        keyboardShouldPersistTaps="handled"
-        onEndReached={onPageBack}
-        onEndReachedThreshold={0.4}
-      />
 
-      {sendRefusal === null ? null : (
-        <View style={s.refusal}>
-          <Note variant="coral" accessibilityRole="alert">
-            {conversationErrorMessage(sendRefusal)}
-          </Note>
-        </View>
-      )}
-
-      {/* Above every control it is about — the chips as well as the composer — because it is one
+        {/* Above every control it is about — the chips as well as the composer — because it is one
           fact about the screen rather than one per control, and because a greyed field is only
           acceptable where the sentence explaining it arrives first. `amber` on 1.3's reading:
           *watch this — reversible, not yet wrong*.
@@ -315,18 +349,19 @@ function Room({
           standing fact about the channel that goes true and false on its own roughly every quarter
           of an hour, and `alert` there would interrupt a player four times an hour to say nothing
           they need to act on. */}
-      {state === 'live' ? null : (
-        <View style={s.standing}>
-          <Note variant="amber" accessibilityRole={held ? 'alert' : undefined}>
-            {LIVE_NOTE[state]}
-          </Note>
-        </View>
-      )}
+        {state === 'live' ? null : (
+          <View style={s.standing}>
+            <Note variant="amber" accessibilityRole={held ? 'alert' : undefined}>
+              {LIVE_NOTE[state]}
+            </Note>
+          </View>
+        )}
 
-      <QuickChips chips={quickChips(plan, room.readAt)} onPost={post} refused={held} />
+        <QuickChips chips={quickChips(plan, room.readAt)} onPost={post} refused={held} />
 
-      <Composer text={draft} onChange={setDraft} onSend={() => post(draft)} refused={held} />
-    </KeyboardAvoidingView>
+        <Composer text={draft} onChange={setDraft} onSend={() => post(draft)} refused={held} />
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -407,6 +442,7 @@ function keyOf(entry: StreamEntry): string {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
+  page: { flex: 1 },
   stream: { paddingHorizontal: theme.size.gutter, paddingVertical: theme.space.sm },
   row: { gap: theme.space.xs, paddingBottom: theme.space.xs },
   refusal: { paddingHorizontal: theme.size.gutter, paddingBottom: theme.space.xs },

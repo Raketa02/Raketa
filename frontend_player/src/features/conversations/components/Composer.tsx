@@ -35,11 +35,16 @@
  * unidirectional by construction, so writing is unaffected — and disabling the composer would
  * state something false about the half that still works (§3.6).
  *
- * ## The strip is not a screen action
+ * ## The strip is not a screen action, and there is no bar under it
  *
  * It is `paper` rather than 10.1's pinned CTA slot: the composer is part of the room, sitting
- * under the stream and above the tab bar, and a control tray around it would draw a second
- * bounded surface on a screen whose whole content is already bounded blocks.
+ * under the stream, and a control tray around it would draw a second bounded surface on a screen
+ * whose whole content is already bounded blocks. **It is the last thing on the screen**: the tab
+ * bar stands down inside a conversation so the keyboard and the stream get the whole of it
+ * ([#400](https://github.com/Raketa02/Raketa/issues/400)), and the bottom safe-area inset the bar
+ * owns everywhere else is taken by the room's own frame, under this strip — not in it, because a
+ * padding here would be counted a second time the moment the keyboard is up. `ConversationScreen`
+ * carries that arithmetic.
  */
 
 import { StyleSheet, View } from 'react-native';

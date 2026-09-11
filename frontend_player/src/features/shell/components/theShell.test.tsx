@@ -17,8 +17,13 @@ import { FIND_A_GAME_TITLE, modeControlLabel, usePlaySession } from '@/features/
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  CHALLENGES_PATH,
   GATE_USER,
   launchSignedIn,
+  stubChallenges,
+  stubConversation,
+  stubConversations,
+  stubEntries,
   stubGate,
   stubProfileOptions,
   stubInterest,
@@ -349,5 +354,109 @@ describe('what a declaration changed on You does to Play', () => {
     pressTab('Play');
     await screen.findByLabelText(modeControlLabel('COMPETITIVE'));
     expect(selectedMode()).toBe(before);
+  });
+});
+
+/**
+ * **The bar stands down inside a conversation, and nowhere else under Chats.** The composer
+ * replaces it there so the keyboard and the stream get the whole screen
+ * ([#400](https://github.com/Raketa02/Raketa/issues/400)) — and it is *not rendered* rather than
+ * hidden, because the bar is a flex sibling of the navigator and a hidden one would still take its
+ * height and the bottom inset. The two neighbours are asserted beside it because a `/chats/*`
+ * match is the mistake this shape invites: the inbox the room is pushed over and the challenge
+ * screen beside it both keep their bar.
+ */
+describe('the bar stands down inside a conversation', () => {
+  const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
+  const ROOM = 'eeeeeeee-0000-4000-8000-000000000005';
+  const CHALLENGE = 'aaaaaaaa-0000-4000-8000-000000000001';
+  const READ_AT = '2026-09-08T12:00:00Z';
+
+  const MEMBERS: Wire['ConversationMemberSchema'][] = [
+    { player_id: GATE_USER.id, nickname: 'me_' },
+    { player_id: TOMEK, nickname: 'tomek.p' },
+  ];
+
+  /** One squash challenge addressed to you, with its detail — enough for the screen to draw. */
+  const CHALLENGE_ROW: Wire['ChallengeSchema'] = {
+    challenge_id: CHALLENGE,
+    sport: 'SQUASH',
+    organiser_id: TOMEK,
+    standing: 'AWAITING_ANSWERS',
+    opened_at: '2026-09-08T08:00:00Z',
+    seats: [
+      { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.p' },
+      {
+        side: 'B',
+        player_id: GATE_USER.id,
+        answer: null,
+        answer_by: '2026-09-09T08:00:00Z',
+        nickname: 'me_',
+      },
+    ],
+  };
+
+  const tabs = () => screen.queryAllByRole('tab');
+
+  /** By the start of the name: with a challenge waiting, the column's label carries the count. */
+  async function openChats() {
+    await launchIntoTheApp();
+    fireEvent.press(screen.getByLabelText(/^Chats/));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+  }
+
+  it('draws no bar in the room, and draws it again on the way back out', async () => {
+    stubConversations(transport, [
+      {
+        conversation_id: ROOM,
+        challenge_id: CHALLENGE,
+        game_id: null,
+        sport: 'PADEL',
+        members: MEMBERS,
+        last_entry: null,
+      },
+    ]);
+    stubConversation(transport, {
+      read_at: READ_AT,
+      conversation_id: ROOM,
+      challenge_id: CHALLENGE,
+      game_id: null,
+      sport: 'PADEL',
+      members: MEMBERS,
+      entries: [],
+    });
+    stubEntries(transport, ROOM);
+    await openChats();
+    expect(tabs()).toHaveLength(5);
+
+    fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
+
+    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
+    expect(tabs()).toHaveLength(0);
+
+    act(() => router.back());
+
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    expect(tabs()).toHaveLength(5);
+  });
+
+  it('keeps the bar on the challenge screen, which is under the same tab', async () => {
+    stubChallenges(transport, [CHALLENGE_ROW], READ_AT);
+    transport.on('GET', `${CHALLENGES_PATH}/${CHALLENGE}`, () =>
+      json<Wire['ChallengeDetailResponse']>({ read_at: READ_AT, ...CHALLENGE_ROW }),
+    );
+    await openChats();
+
+    fireEvent.press(await screen.findByLabelText(/^tomek\.p, Squash/));
+
+    await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE}`));
+    expect(tabs()).toHaveLength(5);
+    expect(tabs().map((tab) => tab.props.accessibilityState?.selected)).toEqual([
+      false,
+      false,
+      false,
+      true,
+      false,
+    ]);
   });
 });

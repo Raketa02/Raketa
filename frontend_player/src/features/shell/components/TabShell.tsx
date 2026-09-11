@@ -44,6 +44,23 @@
  * Find a game and pushing the deck over it genuinely are ones: what they arrive on stays
  * underneath, and leaving should read as coming back out. **This is the one thing in the shell
  * that has not been seen on a device.**
+ *
+ * ## The bar stands down inside a conversation, and standing down is not being drawn
+ *
+ * One screen replaces the bar with its composer, so the keyboard and the stream get the whole
+ * screen ([#400](https://github.com/Raketa02/Raketa/issues/400)). Which screen is
+ * `barStandsDown`'s answer, read off the same pathname the active column is — the shell learns
+ * that *a route* stands the bar down and nothing about what a conversation is. What it does with
+ * the answer is **not render** the bar rather than hide it: the bar is a flex sibling of the
+ * navigator, so a bar that was present and invisible would still take `TAB_BAR_HEIGHT` and the
+ * bottom inset, and the composer would sit that far above the keyboard. Nothing animates it away
+ * — the mock draws it absent, and 1.5 is *nothing animates that does not have to*; what happens
+ * at the edges of the push is the stack growing by the bar's height as the room slides in and
+ * shrinking as it slides out, **which has not been seen on a device either**.
+ *
+ * With the bar gone the bottom safe-area inset has no owner here, and the room takes it on its
+ * own frame — the one place in the app where 10.1's *the bar owns the bottom inset* does not
+ * hold, and the amendment beside it says so.
  */
 
 import { Stack, usePathname } from 'expo-router';
@@ -52,7 +69,7 @@ import { StyleSheet, View } from 'react-native';
 import { useChallengesWaiting } from '@/features/challenges/types';
 import { TabBar, theme } from '@/shared/ui';
 
-import { tabForPathname } from '../domain/shellTabs';
+import { barStandsDown, tabForPathname } from '../domain/shellTabs';
 
 import { openTab } from './shellNavigation';
 
@@ -98,12 +115,22 @@ export function TabShell() {
           name="chats/challenge/[challengeId]/fill"
           options={{ animation: 'default' }}
         />
+        {/* And so is a conversation: it is pushed over the Chats inbox, the list stays
+            underneath, and backing out returns to the row it was tapped from — the challenge
+            screen's argument, one row kind over ([#400](https://github.com/Raketa02/Raketa/issues/400)).
+            It is also the one screen the bar stands down on, below. */}
+        <Stack.Screen
+          name="chats/conversation/[conversationId]/index"
+          options={{ animation: 'default' }}
+        />
       </Stack>
-      <TabBar
-        active={tabForPathname(pathname)}
-        onPress={openTab}
-        challengesWaiting={challengesWaiting}
-      />
+      {barStandsDown(pathname) ? null : (
+        <TabBar
+          active={tabForPathname(pathname)}
+          onPress={openTab}
+          challengesWaiting={challengesWaiting}
+        />
+      )}
     </View>
   );
 }

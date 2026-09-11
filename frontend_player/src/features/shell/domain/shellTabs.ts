@@ -86,3 +86,39 @@ export function tabForPathname(pathname: string): TabBarKey {
   const [, segment = ''] = pathname.split('/');
   return TAB_FOR_SEGMENT[segment] ?? 'now';
 }
+
+/**
+ * Whether the bar **stands down** on a pathname — drawn nowhere, rather than drawn and hidden.
+ *
+ * One route does this, and it is named in full: the conversation, where the composer replaces
+ * the bar so the keyboard and the stream get the whole screen
+ * ([#400](https://github.com/Raketa02/Raketa/issues/400),
+ * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §3). It is a
+ * fact about **which screen the player is on** and so belongs beside `tabForPathname`, which is
+ * the other thing the shell reads off a route — and it is pure for the same reason that one is:
+ * stated here it can be read back without a renderer, and the shell that draws the bar learns
+ * nothing about what a conversation is.
+ *
+ * **The match is the whole shape and not a prefix.** Everything under `/chats/…` shares the
+ * inbox's column, and three of those screens keep their bar: the inbox itself, the challenge
+ * screen and the game screen behind the room's own *Details* door at `…/details` — a `/chats/*`
+ * match would take the bar off all of them, and a prefix match would take it off the last. What
+ * stands it down is exactly the room: `chats`, `conversation`, the room's id, and nothing after.
+ *
+ * **The column stays lit while the bar is down.** `tabForPathname` still answers `chats` for the
+ * room, and that is deliberate: standing the bar down is a fact about the chrome, not about
+ * where the player is, and the two answers are read by two different callers.
+ */
+export function barStandsDown(pathname: string): boolean {
+  // The first segment is read through the rule that already reads it, so *inside the Chats tab*
+  // is one answer and not a second spelling of `SHELL_TAB_ROOT.chats`. What follows it is §0.2's
+  // vocabulary: the static **kind** above the id, then the id, then nothing.
+  const [, , kind, id, ...rest] = pathname.split('/');
+  return (
+    tabForPathname(pathname) === 'chats' &&
+    kind === 'conversation' &&
+    id !== undefined &&
+    id !== '' &&
+    rest.length === 0
+  );
+}

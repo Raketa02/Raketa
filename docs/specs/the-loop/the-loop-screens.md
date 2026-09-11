@@ -84,10 +84,18 @@ Everything this map adds under `/chats/…` lights the Chats column **for free**
 | `/chats` | The Chats tab — two sections | Chats | grown from a placeholder |
 | `/chats/challenge/[challengeId]` | The challenge screen | Chats | ✅ |
 | `/chats/challenge/[challengeId]/fill` | The builder, re-entered — **`features/play`'s screen at a second route** | Chats | ✅ |
-| `/chats/conversation/[conversationId]` | The conversation | Chats | ✅ |
+| `/chats/conversation/[conversationId]` | The conversation — **the column is lit and the bar is not drawn** (§3) | Chats | ✅ |
 | `/chats/conversation/[conversationId]/details` | The game screen — **the same component `/games/[gameId]` renders** | Chats | ✅ |
 | `/` | Now — the rail | Now | grown from a placeholder |
 | `/games/[gameId]` | The game screen | Now, via `INSIDE_A_TAB` | renamed |
+
+**One row lights a column on a bar that is not there.** The conversation stands the tab bar down
+(§3, [#400](https://github.com/Raketa02/Raketa/issues/400)), and `tabForPathname` still answers
+*Chats* for it: which column a route is inside and whether the bar is drawn are two questions, read
+by two callers, and the second is `barStandsDown` beside the first in `shellTabs.ts` — pure on the
+whole path rather than on the first segment, because the inbox, the challenge screen and the game
+screen behind the room's *Details* door all keep their bar. The column staying lit is what makes
+*back* land on a lit *Chats* rather than on a bar that has to work out where it is.
 
 **Both dynamic segments under `/chats` carry a static kind above them, and that is a decision
 rather than a style.** A challenge id and a conversation id are different ids of different things,
@@ -583,6 +591,20 @@ and not to `games`** (ADR-0153 §4): `PLAN_HORIZON` stays in `games` because its
 `ENTRY_GRACE` is the argument, and there is no such interlock here — this grace is about the gap
 between app opens
 ([ADR-0151](../../adr/0151-a-window-whose-default-costs-you-the-game-must-outlast-the-gap-between-app-opens.md)).
+
+**The conversation is the one screen that stands the tab bar down, and it owns its own chrome**
+([#400](https://github.com/Raketa02/Raketa/issues/400)). The composer replaces the bar for as long
+as the player is in the room, so the keyboard and the stream get the whole screen rather than
+sharing its foot with three stacked strips — the mock draws the bar simply absent, and it is
+**not rendered** rather than hidden, because the bar is a flex sibling of the navigator and a
+hidden one still takes its height and the bottom inset. The screen takes the top safe-area inset
+the way every other screen does (`SafeAreaView`, `edges`, not inset arithmetic), and it takes the
+**bottom** one too, on the same frame, because with the bar gone that inset has no owner — the one
+exception to design-system 10.1's *the tab bar owns the bottom inset*, recorded there as a Part 16
+amendment. The safe area sits **outside** the keyboard avoidance, so the composer lands on the
+keyboard rather than a home indicator's height above it. The inbox the room is pushed over, the
+challenge screen beside it and the game screen behind its own *Details* door all keep their bar;
+§0.2's column stays lit throughout.
 
 ### 3.1 The header
 
