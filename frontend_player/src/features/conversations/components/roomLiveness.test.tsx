@@ -21,6 +21,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
   CONVERSATIONS_PATH,
+  GAMES_PATH,
   GATE_USER,
   PLANS_PATH,
   conversationPath,
@@ -48,7 +49,7 @@ import {
 import { sportLabel } from '@/features/onboarding/types';
 import { QUICK_CHIP, cardStateWord } from '@/features/plans/types';
 
-import { conversationHeaderLabel } from './conversationAccessibility';
+import { OPEN_THE_GAME, conversationHeaderLabel } from './conversationAccessibility';
 import {
   COMPOSER_LABEL,
   LIVE_NOTE,
@@ -105,6 +106,26 @@ function room(
     sport: 'PADEL',
     members: [...members],
     entries: [...entries],
+  };
+}
+
+const GAME = 'aaaaaaaa-0000-4000-8000-000000000009';
+
+/** The room's game, as `GET /games` lists it — arranged, the day still ahead. */
+function game(standing: Wire['GameSchema']['standing'] = 'AWAITING_ENTRY'): Wire['GameSchema'] {
+  return {
+    game_id: GAME,
+    challenge_id: CHALLENGE,
+    sport: 'PADEL',
+    kind: 'COUNTED',
+    standing,
+    planned_at: '2026-09-08T09:00:00Z',
+    entry_closes_at: '2026-09-20T07:00:00Z',
+    seats: [
+      { side: 'A', player_id: ME, nickname: 'me_' },
+      { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+    ],
+    proposals: [],
   };
 }
 
@@ -213,22 +234,25 @@ describe('the nudge', () => {
 
   /**
    * **A nudge re-reads what the room draws, and nothing it does not**
-   * ([#405](https://github.com/Raketa02/Raketa/issues/405)). The plan card is read off `GET /plans`,
-   * a slot somebody else set arrives as a line on this very frame, and a card that did not follow
-   * it would say `Where` under *tomek.p set the place*. The Chats list is **not** re-read: the room
-   * draws nothing from it, and it sits mounted under this screen.
+   * ([#405](https://github.com/Raketa02/Raketa/issues/405),
+   * [#406](https://github.com/Raketa02/Raketa/issues/406)). The plan card is read off `GET /plans`
+   * and the game it is about off `GET /games`; a slot somebody else set arrives as a line on this
+   * very frame, and a card that did not follow it would say `Where` under *tomek.p set the place*.
+   * The Chats list is **not** re-read: the room draws nothing from it, and it sits mounted under
+   * this screen.
    */
-  it('re-reads the plan beside the room, and never the Chats list', async () => {
+  it('re-reads the plan and the game beside the room, and never the Chats list', async () => {
     await openTheRoom();
 
     const before = transport.requests.length;
     act(() => channel.nudge(ROOM));
     await waitFor(() =>
-      expect(transport.requests.slice(before).map((request) => request.path)).toContain(PLANS_PATH),
+      expect(transport.requests.slice(before).map((request) => request.path)).toContain(GAMES_PATH),
     );
 
     const paths = transport.requests.slice(before).map((request) => request.path);
     expect(paths).toContain(conversationPath(ROOM));
+    expect(paths).toContain(PLANS_PATH);
     expect(paths).not.toContain(CONVERSATIONS_PATH);
   });
 
@@ -238,21 +262,6 @@ describe('the nudge', () => {
    * nothing.
    */
   it('moves the header’s state word when the last slot lands', async () => {
-    const GAME = 'aaaaaaaa-0000-4000-8000-000000000009';
-    const game: Wire['GameSchema'] = {
-      game_id: GAME,
-      challenge_id: CHALLENGE,
-      sport: 'PADEL',
-      kind: 'COUNTED',
-      standing: 'AWAITING_ENTRY',
-      planned_at: '2026-09-08T09:00:00Z',
-      entry_closes_at: '2026-09-20T07:00:00Z',
-      seats: [
-        { side: 'A', player_id: ME, nickname: 'me_' },
-        { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
-      ],
-      proposals: [],
-    };
     const agreed = (over: Partial<Wire['PlanSchema']>): Wire['PlanSchema'] => ({
       game_id: GAME,
       place: 'Zabłocie Sport',
@@ -262,7 +271,7 @@ describe('the nudge', () => {
       locked_at: null,
       ...over,
     });
-    stubGames(transport, [game], READ_AT);
+    stubGames(transport, [game()], READ_AT);
     stubPlans(transport, [agreed({})]);
     await openTheRoom({ ...room(), game_id: GAME });
 
@@ -273,6 +282,73 @@ describe('the nudge', () => {
     act(() => channel.nudge(ROOM));
 
     expect(await screen.findByText(headerSubline(sport, cardStateWord('game-on')))).toBeTruthy();
+  });
+
+  /**
+   * **A court that fills while you are in the room draws its card**
+   * ([#406](https://github.com/Raketa02/Raketa/issues/406)). The last acceptance's line arrives on
+   * the nudge and the re-read room now carries a game — but the card is `(game, plan)`, and the
+   * game is looked up in `GET /games`, which was last read on the way in. So the nudge re-reads
+   * that list too, and the card, the *Details* door and the header's state word are born here
+   * rather than on the next foregrounding.
+   */
+  it('draws the card, the door and the state word once the court completes', async () => {
+    await openTheRoom();
+    await screen.findByLabelText(COMPOSER_LABEL);
+    expect(screen.queryByLabelText(OPEN_THE_GAME)).toBeNull();
+
+    stubGames(transport, [game()], READ_AT);
+    stubConversation(transport, {
+      ...room(),
+      game_id: GAME,
+      entries: [
+        {
+          type: 'system_line',
+          seq: 1,
+          code: 'SEAT_ACCEPTED',
+          occurred_at: READ_AT,
+          actor_id: TOMEK,
+          values: {},
+        },
+      ],
+    });
+    act(() => channel.nudge(ROOM));
+
+    expect(await screen.findByLabelText('Where: not agreed yet')).toBeTruthy();
+    expect(screen.getByLabelText(OPEN_THE_GAME)).toBeTruthy();
+    expect(
+      screen.getByText(headerSubline(sportLabel('padel'), cardStateWord('planning'))),
+    ).toBeTruthy();
+  });
+
+  /**
+   * The header's state word reads the game's **standing** where the plan has no rung to say, so a
+   * *we played* line arriving on the nudge moves it off the games list and not the plan's.
+   */
+  it('moves the header’s state word when somebody says they played', async () => {
+    stubGames(transport, [game()], READ_AT);
+    await openTheRoom({ ...room(), game_id: GAME });
+    const sport = sportLabel('padel');
+    await screen.findByText(headerSubline(sport, cardStateWord('planning')));
+
+    stubGames(transport, [game('AWAITING_ANSWER')], READ_AT);
+    stubConversation(transport, {
+      ...room(),
+      game_id: GAME,
+      entries: [
+        {
+          type: 'system_line',
+          seq: 1,
+          code: 'GAME_PLAYED',
+          occurred_at: READ_AT,
+          actor_id: TOMEK,
+          values: {},
+        },
+      ],
+    });
+    act(() => channel.nudge(ROOM));
+
+    expect(await screen.findByText(headerSubline(sport, cardStateWord('confirm')))).toBeTruthy();
   });
 
   /** A frame is news about one room, and this one is not it — so no list is re-read either. */

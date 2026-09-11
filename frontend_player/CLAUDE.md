@@ -227,12 +227,16 @@ drawn only once the server has answered — which is why 6.2 grew 6.1's `busy`, 
 since this system greys for _you may not_ and for _on its way_ alike and only a word tells them
 apart. **The line arrives through the stream like any other entry**, on the same nudge every other
 member's copy of it arrives on, so nothing in `plans` invalidates the room — **and the room's nudge
-re-reads the plan beside the stream** ([#405](https://github.com/Raketa02/Raketa/issues/405)), so
-the card, the quick chips and the header's state word say on every phone what the line says, with
-nothing pressed; on every nudge and never on sighting a plan line, because a trigger keyed on the
-line vocabulary goes stale on exactly the build too old to read a new code. Every plan write first
-**cancels** the list's in-flight read, which is not optimism — a nudge-started read can land after
-the reply that was written in, and would roll the slot back for a second. **Any member may fill
+re-reads the plan and the game beside the stream** ([#405](https://github.com/Raketa02/Raketa/issues/405),
+[#406](https://github.com/Raketa02/Raketa/issues/406)), so the card, the quick chips and the
+header's state word say on every phone what the line says, with nothing pressed, and a court that
+completes while the room is open draws its card there and then; on every nudge and never on
+sighting a plan line, because a trigger keyed on the line vocabulary goes stale on exactly the
+build too old to read a new code — _a nudge re-reads what the room draws, and nothing it does not_,
+which is the Chats list. Every plan write first **cancels** the plan list's in-flight read, which
+is not optimism — a nudge-started read can land after the reply that was written in, and would
+roll the slot back for a second; the games list needs none, because a result write invalidates
+rather than writes in. **Any member may fill
 or change any slot, any number of times** — the line is the friction, there is no rate limit, and
 **a slot is never emptied**, so every editor opens on whatever is there and none of them offers a
 way to clear one. **The card is folded against `GET /games`' `read_at`** and never against the

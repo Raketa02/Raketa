@@ -415,7 +415,7 @@ thing.
 **Nothing this record decides moves, and no subscriber is built.** #342 made the client usable by
 one; the transport, the channel key and the envelope are still what Decisions 4 through 7 say.
 
-## Amendment — 2026-09-11: the plan card follows the nudge, and §12's *free* needed one line
+## Amendment — 2026-09-11: the plan card follows the nudge, and §12's *free* needed one rule
 
 **What was true and what was not.** Decision 3 says *there is no separate live-plan feature to
 build, and none to defer*, and §12 lists *live plan-slot changes, the lock* under *does not defer,
@@ -428,22 +428,39 @@ in the room drew *tomek.p set the place to Zabłocie* under a chip still reading
 *tomek.p locked the plan* under a live `Lock the plan`, until the app was next foregrounded
 ([#405](https://github.com/Raketa02/Raketa/issues/405)).
 
-**What changes, and it is one invalidation.** Decision 10 now reads: on a nudge the client
-invalidates **the conversation's query and the plan list**. A nudge re-reads what the room draws.
-The rule is chosen over the alternative — inspecting the re-fetched stream for a plan line and
-re-reading only then — because Decision 3 is exactly why a frame carries nothing to inspect: a
-trigger keyed on the line vocabulary would go stale on the build too old to read a new code, which
-is the build that most needs the re-read. The stream's opening frame is a nudge (Decision 4), so a
-reconnect re-reads the plan too, which is the catch-up for free. **The cost is stated:** Decision
-3's *one extra round trip per delivered message* is two inside a room, both to short lists the
-room draws. The Chats list is still never re-read on a nudge; the room draws nothing from it.
+**What changes, and it is one rule.** Decision 10 now reads: on a nudge the client invalidates
+**the conversation's query, the plan list and the games list** — a nudge re-reads what the room
+draws, and nothing it does not. The plan card is `(game, plan)`: the plan half is
+[#405](https://github.com/Raketa02/Raketa/issues/405), and the game half is
+[#406](https://github.com/Raketa02/Raketa/issues/406) — a doubles court that completed while the
+room was open re-read a room that now carried a game and drew no card, because `GET /games` had
+been read on the way in and held no game born a second ago; and a *we played* line moves a
+standing the header reads off that list. The rule is chosen over the alternative — inspecting the
+re-fetched stream for a plan line and re-reading only then — because Decision 3 is exactly why a
+frame carries nothing to inspect: a trigger keyed on the line vocabulary would go stale on the
+build too old to read a new code, which is the build that most needs the re-read. The stream's
+opening frame is a nudge (Decision 4), so a reconnect re-reads both lists too, which is the
+catch-up for free. **The cost is stated:** Decision 3's *one extra round trip per delivered
+message* is three inside a room, all to short lists the room draws, and the games list is the one
+folded against a clock — so the room's clock is now as old as the last nudge rather than the last
+focus, the fresher of the two. The Chats list is still never re-read on a nudge; the room draws
+nothing from it.
 
 **One consequence on the writer's own phone.** `PUT /plans/…` answers the plan and the client
 writes the reply in rather than refetching (ADR-0148 §8's idempotent write). A nudge-started read
 can now be in flight when the next slot is recorded, land after the reply, and roll that slot back
-for a second — so every plan write cancels the list's in-flight read first. That is not optimism:
-nothing is drawn before the server answers, and what is cancelled is a read that can only be older
-than the reply.
+for a second — so every plan write cancels the plan list's in-flight read first. That is not
+optimism: nothing is drawn before the server answers, and what is cancelled is a read that can
+only be older than the reply. The games list needs no such cancel, because a result write
+invalidates rather than writes in, so a nudge's re-read and a result's re-read are the same read.
+
+**A residual on the games half, stated rather than closed.** The accept that fills the last seat
+writes `SeatAccepted` and `GamePlanned` in one transaction, and the conversation notes the game
+*drawn, not announced* — no nudge, because that note moves no `seq` and Decision 3 refuses a frame
+that does. Both rows land in one outbox batch in practice, so the line's nudge re-reads a room that
+already carries its game; across a batch boundary the note can land after the frame, and the next
+nudge or the next focus repairs it. `EVENT_DELIVERY_BATCH_SIZE` is 100, so the boundary is a
+backlog rather than a Tuesday.
 
 **Nothing else moves.** The envelope, the transport, the channel key, the gapless sequence, the
 foreground rule and the *never build* list are what Decisions 2 through 12 say. The backend

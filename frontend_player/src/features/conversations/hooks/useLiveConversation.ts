@@ -34,7 +34,7 @@
  * port reads `last_seq` to know a frame is a nudge and drops it. The one field this hook reads is
  * `conversationId`, and it reads it to **check**, never to fetch.
  *
- * ## A nudge re-reads what the room draws — the stream and the plan
+ * ## A nudge re-reads what the room draws — the stream, the plan and the game
  *
  * The plan card pinned under the header is read off `GET /plans`, a list beside the room and never
  * inside it (ADR-0148 §7), and a slot another member set reaches this phone as a system line on
@@ -44,6 +44,23 @@
  * written down as *free*, true of the line and not yet of the card. So the nudge invalidates
  * `planKeys.list()` beside the room, and the card, the quick chips and the header's state word all
  * follow the line, because all three are readers of that one list.
+ *
+ * **The card is `(game, plan)`, and the game is the other half**
+ * ([#406](https://github.com/Raketa02/Raketa/issues/406)). It is looked up in `GET /games`, which
+ * was last read on the way into the room — so a doubles court that completed while the room was
+ * open re-read a room that now carried a game and drew no card, no *Details* and no state word,
+ * because the list had no game born a second ago; and a *we played* line moved a standing the
+ * header reads off that list and not the plan's. The nudge invalidates `gameKeys.list()` too.
+ * `readAt` — the card's one clock (ADR-0148 §10) — comes off the same read, so it is now as old
+ * as the last nudge rather than the last focus, which is the fresher of the two. **One rule for
+ * the three keys, and it is stated as one so they are not three precedents**: a nudge re-reads
+ * what the room draws, and nothing it does not.
+ *
+ * **There is no cancel for the games list, and the asymmetry with the plan's is not an oversight.**
+ * `usePlanWrite` cancels the plan list's in-flight read because a plan write **writes its reply
+ * in**, and a nudge-started read landing after it would roll a slot back. `features/games`' two
+ * result writes **invalidate** `gameKeys.list()` instead (`useGames.ts`), so a nudge's re-read and a
+ * result's re-read are the same read and cannot cross; there is nothing to cancel.
  *
  * **On every nudge, and not on sighting a plan line.** The alternative — read the re-fetched
  * stream for a new `PLACE_RECORDED | DAY_RECORDED | HOUR_RECORDED | PLAN_LOCKED` above the last
@@ -62,9 +79,13 @@
  * rather than only the newest. On a room somebody has paged back through three times that is four
  * requests for one message. It is the honest price of the cache being the single copy — the
  * alternative is a client assembling the newest page itself, which is the second store this whole
- * design refuses — and at two-to-four members it is nothing. The plan list is one short request
- * more, on every nudge including the ones that were a message: ADR-0147 priced *one extra round
- * trip per delivered message*, and inside a room it is two, both to lists the room draws.
+ * design refuses — and at two-to-four members it is nothing. The plan list and the games list are
+ * two short requests more, on every nudge including the ones that were a message: ADR-0147 priced
+ * *one extra round trip per delivered message*, and inside a room it is three, all to lists the
+ * room draws. The games list is the only one of the three folded against a clock, and re-reading
+ * it is what keeps the room's clock the freshest reading rather than the oldest; the Play rule
+ * (ADR-0147 §10) is about a ranked list reordering under a finger, none of the three is one, and
+ * the rail is not under this screen anyway — switching tabs replaces the stack.
  *
  * **The Chats list is not invalidated, and the cost of that is stated rather than glossed.** A
  * send does invalidate it, because the reply says nothing about the row's order and the player is
@@ -90,6 +111,7 @@ import { useEffect, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
+import { gameKeys } from '@/features/games/types';
 import { planKeys } from '@/features/plans/types';
 import { useLiveStream, type LiveStreamStatus } from '@/shared/lib/platform';
 
@@ -128,9 +150,11 @@ export function useLiveConversation(conversationId: string): LiveConversation {
           // another one, which nothing on screen would show.
           if (nudge.conversationId !== conversationId) return;
 
-          // What the room draws: the stream, and the plan pinned over it. Never the Chats list.
+          // What the room draws: the stream, the plan pinned over it, and the game the two are
+          // about. Never the Chats list.
           void client.invalidateQueries({ queryKey: conversationKeys.room(conversationId) });
           void client.invalidateQueries({ queryKey: planKeys.list() });
+          void client.invalidateQueries({ queryKey: gameKeys.list() });
         },
         onTyping: (typing) => {
           if (typing.conversationId !== conversationId) return;
