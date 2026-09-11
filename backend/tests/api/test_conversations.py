@@ -412,6 +412,119 @@ async def test_an_over_large_limit_is_a_422_and_never_a_silent_clamp(client, a_r
     assert response.status_code == 422
 
 
+# -- the people a page names ------------------------------------------------
+
+
+@pytest.fixture
+async def a_room_somebody_left(client, session_factory, a_room):
+    """The same room, with one invitee's *no* as its newest line.
+
+    The one entry whose actor is **never** a member: membership is the accepted
+    seats, and a *no* is not one — so ``bo`` is named by the page and by nothing
+    the roster says ([#408](https://github.com/Raketa02/Raketa/issues/408)).
+    """
+
+    await _decline(client, a_room["challenge_id"], a_room["people"]["bo"]["token"])
+    await world.deliver_the_outbox(session_factory)
+    return a_room
+
+
+def _faces(people: list[dict]) -> dict[str, str | None]:
+    return {person["player_id"]: person["nickname"] for person in people}
+
+
+async def test_the_room_names_the_person_who_left_beside_the_members(
+    client, a_room_somebody_left
+):
+    """[#408](https://github.com/Raketa02/Raketa/issues/408) — *bo said no* and
+    never *? said no*. The roster is unchanged; ``people`` is everybody the
+    response names, resolved once, and the departed are among them."""
+
+    room = a_room_somebody_left
+    response = await client.get(
+        f"/api/v1/conversations/{room['room']['conversation_id']}",
+        headers=world.auth(room["searcher"]["token"]),
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    bo = str(room["people"]["bo"]["id"])
+    assert body["entries"][-1]["code"] == "SEAT_LEFT"
+    assert body["entries"][-1]["actor_id"] == bo
+    assert bo not in {member["player_id"] for member in body["members"]}
+    assert _faces(body["people"])[bo] == "bo"
+    assert set(_faces(body["people"])) == {
+        member["player_id"] for member in body["members"]
+    } | {bo}
+
+
+async def test_the_row_names_the_person_its_last_entry_is_about(
+    client, a_room_somebody_left
+):
+    """The Chats row's second line is the last entry, and a departure is the one
+    it is most often about."""
+
+    room = a_room_somebody_left
+    row = (await _rooms(client, room["searcher"]["token"]))[0]
+
+    bo = str(room["people"]["bo"]["id"])
+    assert row["last_entry"]["actor_id"] == bo
+    assert _faces(row["people"])[bo] == "bo"
+    assert {member["player_id"] for member in row["members"]} <= set(
+        _faces(row["people"])
+    )
+
+
+async def test_a_page_names_the_people_on_it_and_nobody_else(
+    client, a_room_somebody_left
+):
+    """A page carries no header and no roster — only the faces of whoever it
+    names, so a client paging back can fill every ``{name}`` on it."""
+
+    room = a_room_somebody_left
+    conversation_id = room["room"]["conversation_id"]
+    token = room["searcher"]["token"]
+    await _say(client, conversation_id, token, "still on?", _A_CLIENT_MESSAGE_ID)
+
+    response = await client.get(
+        f"/api/v1/conversations/{conversation_id}/entries",
+        headers=world.auth(token),
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert [entry["type"] for entry in body["entries"]] == ["system_line", "message"]
+    assert _faces(body["people"]) == {
+        str(room["people"]["bo"]["id"]): "bo",
+        str(room["searcher"]["id"]): "searcher",
+    }
+
+
+async def test_a_room_where_nothing_has_happened_names_only_its_members(a_room):
+    """``people`` is a superset of ``members`` on the row and on the room, and
+    with no entry it is exactly the members."""
+
+    row = a_room["room"]
+
+    assert row["last_entry"] is None
+    assert _faces(row["people"]) == _faces(row["members"])
+
+
+async def test_people_are_ordered_by_id_and_never_by_a_set(
+    client, a_room_somebody_left
+):
+    """``docs/adr/0105`` §1 — two identical requests answer in one order."""
+
+    room = a_room_somebody_left
+    response = await client.get(
+        f"/api/v1/conversations/{room['room']['conversation_id']}",
+        headers=world.auth(room["searcher"]["token"]),
+    )
+
+    ids = [person["player_id"] for person in response.json()["people"]]
+    assert ids == sorted(ids)
+
+
 # -- the whole line-up, and the game --------------------------------------
 
 

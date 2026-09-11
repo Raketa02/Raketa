@@ -13,6 +13,11 @@
   fourth event and a fourth write route, and the lock is an **act** rather than a slot. Everything
   this record decides about the three slots — §8's shape, `agreed_point`, and *a slot carries its
   value and nothing else* — is untouched; `locked_at` is not on a slot.)*
+- **§4's *the client renders the handle from the members it already holds* is amended below
+  (2026-09-11, [#408](https://github.com/Raketa02/Raketa/issues/408))**: the handle is rendered
+  from the **`people`** the response resolves for everybody it names, of which the members are a
+  subset. `values` still repeats nothing, and a corrected handle still fixes the whole backlog;
+  what moved is *where the read puts the faces*.
 - **§6 is superseded for one surface by
   [ADR-0157](0157-the-conversation-header-names-its-people-by-their-stems-and-says-which-rung-the-game-is-on.md)**:
   the conversation's **header** draws the sport and the game's *card name* — the four-rung
@@ -309,3 +314,69 @@ expect the other, and the asymmetry is the difference between a record and a roo
 - **The union's discriminator is the first `oneOf` in this contract**, so it is also the first test
   of what `openapi-typescript` makes of one. If the generated type is unpleasant, that is a
   mapper's problem and not a reason to collapse two shapes into one.
+
+## Amendment — 2026-09-11: `{name}` is filled from the people the response names, not from the roster
+
+§4 said **`values` never repeats what membership already says** and drew the consequence in one
+sentence: *the line carries `actor_id`; the client renders the handle from the members it already
+holds.* The first half stands. The second half named the wrong list, and the one line whose actor
+is never a member showed it
+([#408](https://github.com/Raketa02/Raketa/issues/408)): a third player declined a doubles court
+and the room drew **`? said no — that seat is open again`**.
+
+**Membership is derived live, and the person a `SEAT_LEFT` line is about was never in it.**
+ADR-0146 §7 makes the roster the challenge's accepted seats until the line-up completes and the
+game's frozen line-up after, and a *no* is not an accepted seat — nor is a lapse. **Today that is
+the one line a roster lookup cannot name**, and it is worth being exact about why it is one and not
+several: an accepted seat cannot leave (`AnAcceptedPlayerMayNotBeRemoved`, `TheSeatIsAlreadyAnswered`,
+and a line-up is frozen), so the actor of every other code is on the court, every message's author
+is a member, and the departed have no *X is in* line and no bubbles to go unnamed. What the ticket
+counted as more lines is history this build cannot write. The client could still join the name from
+nowhere else: `Challenge.invite` rebuilds the seats from the arrangement, so a refilled seat drops
+the declined player's row, and the game's line-up never held them. The shape below is general all
+the same — a face for everybody the response names rather than a special case for one code —
+because the day a seat can be released, the contract does not move.
+
+**The read resolves a face for everybody the response names, and the roster stays the roster.**
+`ConversationResponse`, `ConversationRowSchema` and `EntryPageResponse` each carry **`people`** —
+one face read over the union of the members and every `actor_id` and `author_id` in the entries
+returned, keyed by id and ordered by id. On the room and on the row it is a superset of `members`,
+resolved in the same read, so a current member is the same face in both; on a page it is the
+page's own authors and actors and nothing about the roster, because a page does not know who the
+members are and does not need to. The client fills `{name}` and the author label from `people`.
+`members` is unchanged: still who is on the court right now, still the gate on every route.
+
+**Why this shape and not the other one.** The alternative was a `nickname` on every entry,
+resolved at read time — simplest for a client, at the cost of repeating a handle per line, of
+putting a face read on the send (`POST /messages` returns the entry shape), and of carrying no
+photograph for a bubble's author. Freezing the handle into `values` at telling time is the shape
+this record's own §4 rules out, and it would still have left every earlier line by the departed
+player reading `?`. A `people` list keeps every rule here intact and widens one word.
+
+**The shape is one and its name is two.** `ConversationPersonSchema` is the face — handle,
+photograph, nothing else, ADR-0141 §1's limit on what may be borrowed about a person on a record
+of an evening — and `ConversationMemberSchema` is that shape under a narrower claim, so a member
+is always among the response's `people` and the two lists cannot disagree about one.
+
+**What it found underneath.** The replayed line's actor was not only unnamed but *unsortable*: the
+event codec coerced a bare `UUID` hint and left `UUID | None` as the string JSON handed back, so
+a `SystemLineRecorded` folded out of the store carried its actor as text — equal to no member's
+id, and the `SEATS_INVITED` line told off `SeatsInvited.invited_by` had been written that way from
+the start. The codec now sets an optional `None` aside before it decides what a present value is
+coerced to, and both contexts' codec suites carry the filled nullable arm. Nothing stored changes;
+what a replay hands back does.
+
+**What it costs.** A row and a room repeat each member's face once more under `people`, which is a
+handful of ids and handles per response and never a second signed link — one face read mints each
+URL once. A page pays a face read it did not pay before, over at most the page's authors and
+actors. A client holds two lists where it held one, with a rule about which to look in first that
+this record makes unnecessary rather than mandatory: both are answered by one read. And the two
+names for one shape are two component schemas with identical properties, so the generated client
+gets two structurally equal types and has to decide that a member *is* a person — the price of the
+roster's name still saying what it says.
+
+**Nothing else in this record moves.** §4's union, the message's absent id, §5's client id and
+every other section stand as written. ADR-0146 §7 is untouched — membership is still derived and
+still never stored — and ADR-0156's typing frame still names its typists off the roster, because a
+typist is gated on membership and is one.
+

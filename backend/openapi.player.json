@@ -2313,7 +2313,7 @@
           "conversations"
         ],
         "summary": "One conversation",
-        "description": "**The header and the newest page in one response**, folded against one instant, so the members you are holding and the entries you are drawing can never disagree about who is in the room.\n\n**Open at the newest entry and page backward** from `entries[0].seq` through `/entries`. You have the whole conversation when you hold `seq` 1 \u2014 there is no `has_more`, because a gapless sequence makes `seq` 1 the beginning.\n\n**Nothing here is re-evaluated against you.** The safety gates ran when the challenge was minted; a read that re-ran them would tell you something changed about somebody else.",
+        "description": "**The header and the newest page in one response**, folded against one instant, so the members you are holding and the entries you are drawing can never disagree about who is in the room.\n\n**Open at the newest entry and page backward** from `entries[0].seq` through `/entries`. You have the whole conversation when you hold `seq` 1 \u2014 there is no `has_more`, because a gapless sequence makes `seq` 1 the beginning.\n\n**Nothing here is re-evaluated against you.** The safety gates ran when the challenge was minted; a read that re-ran them would tell you something changed about somebody else.\n\n**`people` is everybody this response names and `members` is the roster.** Fill every `{name}` and every author label from `people`: the actor of a `SEAT_LEFT` line is by definition no longer a member, and a client naming off the roster alone drew *? said no*.",
         "operationId": "read_conversation_api_v1_conversations__conversation_id__get",
         "security": [
           {
@@ -2372,7 +2372,7 @@
           "conversations"
         ],
         "summary": "A page of a conversation, backward",
-        "description": "**A cursor over `seq`, never an offset.** One code path serves history and catch-up: a client that has been away and finds a hole below the newest page walks backward through this route until it reaches its own high-water mark.\n\n**`before_seq` is exclusive**, and omitting it asks for the newest page.\n\n**No header and no `read_at` here.** A page of entries is folded against nothing \u2014 every entry carries its own moment \u2014 so a second instant would be a second clock to reconcile against the one the detail read gave you.",
+        "description": "**A cursor over `seq`, never an offset.** One code path serves history and catch-up: a client that has been away and finds a hole below the newest page walks backward through this route until it reaches its own high-water mark.\n\n**`before_seq` is exclusive**, and omitting it asks for the newest page.\n\n**No header and no `read_at` here.** A page of entries is folded against nothing \u2014 every entry carries its own moment \u2014 so a second instant would be a second clock to reconcile against the one the detail read gave you.\n\n**But every page carries the faces of whoever it names.** `people` is every author and actor on this page and nothing about the roster; merge it into what you hold, because the people a page names are not the members \u2014 the one who said no is on the page and off the court.",
         "operationId": "read_entries_api_v1_conversations__conversation_id__entries_get",
         "security": [
           {
@@ -4321,7 +4321,7 @@
             "type": "string",
             "format": "uuid",
             "title": "Player Id",
-            "description": "Who they are, and what a line's `actor_id` matches"
+            "description": "Who they are, and what a line's `actor_id` and a message's `author_id` match"
           },
           "nickname": {
             "anyOf": [
@@ -4333,7 +4333,7 @@
               }
             ],
             "title": "Nickname",
-            "description": "The whole handle, and **`null` for an account `users` can no longer name**. The member keeps their place either way: dropping them would draw a three-person doubles court. Nothing may derive a familiar form from it."
+            "description": "The whole handle, and **`null` for an account `users` can no longer name**. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it."
           },
           "photo_id": {
             "type": "string",
@@ -4353,7 +4353,47 @@
           "nickname"
         ],
         "title": "ConversationMemberSchema",
-        "description": "One person who has agreed to be on this court right now.\n\n**Derived from whichever record is arranging, never stored**\n(``docs/adr/0146`` \u00a77), and it **grows one acceptance at a time**: a doubles\nroom whose line-up is still filling draws the members it has, because a row\nwith four faces for a two-member room would be drawing the court rather than\nthe room.\n\n**A handle and a face, and nothing else.** No Level, no band, no area, no\nscore \u2014 those are a *card*'s, and a card is what a searcher reads to decide\nabout a game that might happen. These people have already agreed to play."
+        "description": "One person who has agreed to be on this court right now.\n\n**Derived from whichever record is arranging, never stored**\n(``docs/adr/0146`` \u00a77), and it **grows one acceptance at a time**: a doubles\nroom whose line-up is still filling draws the members it has, because a row\nwith four faces for a two-member room would be drawing the court rather than\nthe room.\n\n**The same four fields as a person, and a narrower claim.** Being on the\nlist is the fact; the face is `ConversationPersonSchema`'s. A member is\nalways among the response's `people` too, resolved in the same read, so the\ntwo lists cannot disagree about a current member."
+      },
+      "ConversationPersonSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Who they are, and what a line's `actor_id` and a message's `author_id` match"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nickname",
+            "description": "The whole handle, and **`null` for an account `users` can no longer name**. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Their current photograph. Omitted when they have none, and omitted together with `photo_url` \u2014 the two travel as a pair or not at all."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "A short-lived signed link to that photograph, minted for **this response**. It expires within minutes and is not a stored value."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "nickname"
+        ],
+        "title": "ConversationPersonSchema",
+        "description": "One person this response names \u2014 **a handle and a face, and nothing else.**\n\nNo Level, no band, no area, no score \u2014 those are a *card*'s, and a card is\nwhat a searcher reads to decide about a game that might happen. Everybody\nhere was on this court or spoke in this room.\n\n**The shape `people` is a list of, and the shape a member has.** A member is\na person who is on the court *right now*; the person a `SEAT_LEFT` line is\nabout is not, and is still somebody the page has to name. One shape for\nboth, so a client resolves every `actor_id` and `author_id` the same way."
       },
       "ConversationResponse": {
         "properties": {
@@ -4396,6 +4436,14 @@
             "type": "array",
             "title": "Members"
           },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationPersonSchema"
+            },
+            "type": "array",
+            "title": "People",
+            "description": "Everybody this response names, resolved once against `read_at` and ordered by id: the members, and every author and actor in `entries`. **A superset of `members`**, so a current member is the same face in both. Fill every `{name}` and every author label from here, and merge each page's `people` into it as you page back."
+          },
           "entries": {
             "items": {
               "oneOf": [
@@ -4427,6 +4475,7 @@
           "game_id",
           "sport",
           "members",
+          "people",
           "entries"
         ],
         "title": "ConversationResponse",
@@ -4471,6 +4520,14 @@
             "title": "Members",
             "description": "Who has agreed to be on this court right now"
           },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationPersonSchema"
+            },
+            "type": "array",
+            "title": "People",
+            "description": "Everybody this row names, resolved once and ordered by id: the members, and whoever `last_entry` is about. **A superset of `members`** \u2014 fill `{name}` and the author label from here."
+          },
           "last_entry": {
             "anyOf": [
               {
@@ -4505,6 +4562,7 @@
           "game_id",
           "sport",
           "members",
+          "people",
           "last_entry"
         ],
         "title": "ConversationRowSchema",
@@ -5387,14 +5445,23 @@
             "type": "array",
             "title": "Entries",
             "description": "The page, **oldest first inside it**. Empty when `before_seq` was 1 \u2014 there is nothing before the beginning."
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationPersonSchema"
+            },
+            "type": "array",
+            "title": "People",
+            "description": "Every author and every actor on this page, resolved once and ordered by id. **Not the roster and not a superset of it** \u2014 a page names only what is on it, so merge these into the `people` you already hold rather than replacing them. Empty when `entries` is."
           }
         },
         "type": "object",
         "required": [
-          "entries"
+          "entries",
+          "people"
         ],
         "title": "EntryPageResponse",
-        "description": "One page backward. **No header, and no instant.**"
+        "description": "One page backward. **No header, and no instant** \u2014 but the page's own faces.\n\n`people` is not a header: it says nothing about the room and nothing about\nwho is in it. It is the one thing the detail read could not have given a\nclient for this page, because the people a page names are not the members."
       },
       "ErrorResponse": {
         "description": "The body of every error response, on both API surfaces.",
@@ -6348,7 +6415,7 @@
             "type": "string",
             "format": "uuid",
             "title": "Author Id",
-            "description": "Which member typed it"
+            "description": "Who typed it \u2014 a member, since only a member may send. **Name them from the `people` on the response that carried this page**, the one list every face on it is in, so a message and a line are named the same way."
           },
           "sent_at": {
             "type": "string",
@@ -9003,7 +9070,7 @@
               }
             ],
             "title": "Actor Id",
-            "description": "Who did it, or `null`. **Render `{name}` from the members you are already holding** \u2014 the handle is never repeated here, so a corrected one fixes the whole backlog."
+            "description": "Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** \u2014 the handle is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: the actor of a `SEAT_LEFT` line is by definition no longer one, and `people` is where the read put their face."
           },
           "values": {
             "additionalProperties": {

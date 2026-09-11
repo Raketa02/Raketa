@@ -15,19 +15,29 @@ meaningless for the other, which every reader then has to remember.
 identifies an entry, and a UUID beside a unique key is a second identity for one
 row.
 
-**``values`` never repeats what membership already says.** The line carries
-``actor_id`` and the client fills ``{name}`` from the members it is already
-holding, so a corrected handle reaches the whole backlog for free. That rule is
-what keeps ``values`` down to *the count of seats asked*, *which way somebody
-left* and *what a slot was set to* — the three facts membership genuinely cannot
+**``values`` never repeats what a read resolves.** The line carries ``actor_id``
+and the client fills ``{name}`` from the people the response resolved at read
+time, so a corrected handle reaches the whole backlog for free. That rule is what
+keeps ``values`` down to *the count of seats asked*, *which way somebody left*
+and *what a slot was set to* — the three facts a face read genuinely cannot
 supply.
+
+**And the people a page names are not only the members** — the difference is
+``people_named`` at the bottom, and it is
+[#408](https://github.com/Raketa02/Raketa/issues/408)'s whole finding. Membership
+is the accepted seats and then the game's line-up, and a *no* is not an accepted
+seat, so the actor of a ``SEAT_LEFT`` line was never a member: **today that is
+the one line a roster lookup cannot name**, since an accepted seat cannot leave
+and every other code's actor is somebody on the court. The read resolves a face
+for everybody the page names rather than for that one code, so a departure that
+becomes reachable later needs no second shape — and the roster stays what it was.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Mapping, final
+from typing import Iterable, Mapping, final
 from uuid import UUID
 
 from app.kernel import Instant, invariant
@@ -187,3 +197,27 @@ class SystemLine:
 #: the discriminator is the type, and it is spelled on the wire in
 #: ``presentation/schemas.py`` where a JSON reader needs one.
 Entry = Message | SystemLine
+
+
+def people_named(entries: Iterable[Entry]) -> frozenset[UUID]:
+    """Everybody these entries name: each message's author and each line's actor.
+
+    **A set and never a list**, because it is the *question* a face read is asked
+    and not an order anything is drawn in — the read sorts what it answers with
+    (``docs/adr/0105`` §1). A line whose ``actor_id`` is ``None`` names nobody,
+    which is what the contract's nullable actor means, and it contributes nothing
+    here rather than a ``None`` for a caller to strip.
+
+    It is deliberately **not** narrowed to *those who are no longer members*:
+    ``people`` on the wire is *everybody this response names*, the members among
+    them, so a client looks one list up for every ``{name}`` — a read that
+    subtracted the roster here would hand it two lists to search for one face.
+    """
+
+    named: set[UUID] = set()
+    for entry in entries:
+        if isinstance(entry, Message):
+            named.add(entry.author_id)
+        elif entry.actor_id is not None:
+            named.add(entry.actor_id)
+    return frozenset(named)

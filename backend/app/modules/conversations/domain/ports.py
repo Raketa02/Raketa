@@ -237,7 +237,13 @@ class PlayedCourt(Protocol):
 @final
 @dataclass(frozen=True, slots=True)
 class MemberFace:
-    """What one member is called and what they look like.
+    """What one person a room names is called and what they look like.
+
+    **Named for the member and answered for everybody the page names.** The
+    person a ``SEAT_LEFT`` line is about is by definition no longer a member, and
+    the read still resolves their face beside the roster's
+    ([#408](https://github.com/Raketa02/Raketa/issues/408)); one shape for both,
+    because a client fills ``{name}`` from one list.
 
     **A handle, a photograph, and nothing else.** No Level, no band, no area, no
     score: a card is what a *searcher* reads to decide about a game that might
@@ -285,7 +291,8 @@ class MemberFaces(Protocol):
 
     async def faces_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, MemberFace]:
         """Each of these players. **One question about the union, never one per
-        seat** — a list of rooms asks once, about everybody in any of them.
+        seat** — a list of rooms asks once, about everybody in any of them, and
+        a read asks once about the roster **and** everybody its entries name.
 
         *One question* rather than *one query*, and the difference is worth
         stating: the handles are a set read, but a photograph is chosen off a
@@ -293,9 +300,11 @@ class MemberFaces(Protocol):
         implementation pays a fold each. What the port promises is that no caller
         ever loops — not that the provider does not.
 
-        **A player absent from the answer keeps their membership.** They are
+        **A player absent from the answer keeps their place.** A member is
         still somebody who agreed to play, and dropping them would draw a
-        three-person doubles court — ``games``' rule verbatim.
+        three-person doubles court — ``games``' rule verbatim; somebody a line
+        names is still the person it is about, and the client draws the unknown
+        player's mark for them rather than a line naming nobody.
         """
         ...
 

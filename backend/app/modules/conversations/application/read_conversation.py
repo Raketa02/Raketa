@@ -18,6 +18,13 @@ not exist gets. One code for two cases, on ``challenge_not_found``'s argument: a
 **And there is no ``read_at`` on the entries route beside this one**, because that
 route carries no header — this is the response whose membership is a fold, and
 this is the one that says when it was folded.
+
+**The faces are resolved for everybody the response names, not only for the
+roster** ([#408](https://github.com/Raketa02/Raketa/issues/408)). Membership is
+derived live, so the person a ``SEAT_LEFT`` line is about has by definition just
+left it — and the one line whose actor is never a member was the one line a
+roster lookup could not name. One face read over the union, and ``people`` is
+what it answered.
 """
 
 from __future__ import annotations
@@ -29,8 +36,8 @@ from uuid import UUID
 from app.kernel import Clock, Instant, Sport
 from app.modules.conversations.application.commands import ReadConversationCommand
 from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
-from app.modules.conversations.application.read_conversations import members_in
-from app.modules.conversations.domain.entries import Entry
+from app.modules.conversations.application.faces import faces_in
+from app.modules.conversations.domain.entries import Entry, people_named
 from app.modules.conversations.domain.paging import PAGE_LIMIT_DEFAULT
 from app.modules.conversations.domain.ports import MemberFace, MemberFaces
 
@@ -45,6 +52,10 @@ class OpenedConversation:
     game_id: UUID | None
     sport: Sport
     members: tuple[MemberFace, ...]
+    #: Everybody this response names — the members, and every author and actor
+    #: on the page — resolved once, against the same instant. A superset of
+    #: ``members``, so a current member is the same face in both.
+    people: tuple[MemberFace, ...]
     #: Oldest first inside the page, which is the order a stream is drawn in.
     #: The page's own start is ``entries[0].seq``; there is no ``has_more``
     #: because ``seq`` 1 is the beginning of the conversation.
@@ -73,12 +84,15 @@ class ReadConversation:
         found = await self._rooms.to_read(command.conversation_id, command.reader_id)
         room, members = found.conversation, found.members
 
-        faces = await self._faces.faces_of(members)
+        entries = room.page_back(before_seq=None, limit=PAGE_LIMIT_DEFAULT)
+        named = members | people_named(entries)
+        faces = await self._faces.faces_of(named)
         return now, OpenedConversation(
             conversation_id=room.conversation_id,
             challenge_id=room.challenge_id,
             game_id=room.game_id,
             sport=room.sport,
-            members=members_in(members, faces),
-            entries=room.page_back(before_seq=None, limit=PAGE_LIMIT_DEFAULT),
+            members=faces_in(members, faces),
+            people=faces_in(named, faces),
+            entries=entries,
         )

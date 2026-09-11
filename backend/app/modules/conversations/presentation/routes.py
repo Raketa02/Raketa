@@ -98,6 +98,7 @@ from app.modules.conversations.presentation.schemas import (
     TYPING_EVENT,
     ConversationListResponse,
     ConversationMemberSchema,
+    ConversationPersonSchema,
     ConversationResponse,
     ConversationRowSchema,
     EntryPageResponse,
@@ -218,7 +219,11 @@ async def read_conversations(
         "beginning.\n\n"
         "**Nothing here is re-evaluated against you.** The safety gates ran when "
         "the challenge was minted; a read that re-ran them would tell you "
-        "something changed about somebody else."
+        "something changed about somebody else.\n\n"
+        "**`people` is everybody this response names and `members` is the "
+        "roster.** Fill every `{name}` and every author label from `people`: "
+        "the actor of a `SEAT_LEFT` line is by definition no longer a member, "
+        "and a client naming off the roster alone drew *? said no*."
     ),
 )
 async def read_conversation(
@@ -235,6 +240,7 @@ async def read_conversation(
 @router.get(
     "/{conversation_id}/entries",
     response_model=EntryPageResponse,
+    response_model_exclude_unset=True,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {"description": "One page, oldest first inside it."},
@@ -251,6 +257,11 @@ async def read_conversation(
         "**No header and no `read_at` here.** A page of entries is folded against "
         "nothing — every entry carries its own moment — so a second instant would "
         "be a second clock to reconcile against the one the detail read gave you."
+        "\n\n"
+        "**But every page carries the faces of whoever it names.** `people` is "
+        "every author and actor on this page and nothing about the roster; merge "
+        "it into what you hold, because the people a page names are not the "
+        "members — the one who said no is on the page and off the court."
     ),
 )
 async def read_entries(
@@ -276,7 +287,7 @@ async def read_entries(
         ),
     ),
 ) -> EntryPageResponse:
-    entries = await use_case.execute(
+    page = await use_case.execute(
         ReadEntriesCommand(
             conversation_id=conversation_id,
             reader_id=user.id,
@@ -284,7 +295,10 @@ async def read_entries(
             limit=limit,
         )
     )
-    return EntryPageResponse(entries=[_entry(entry) for entry in entries])
+    return EntryPageResponse(
+        entries=[_entry(entry) for entry in page.entries],
+        people=[_person(person) for person in page.people],
+    )
 
 
 @router.post(
@@ -536,6 +550,7 @@ def _row(row: ConversationRow) -> ConversationRowSchema:
         game_id=row.game_id,
         sport=row.sport,
         members=[_member(member) for member in row.members],
+        people=[_person(person) for person in row.people],
         last_entry=None if row.last_entry is None else _entry(row.last_entry),
     )
 
@@ -550,12 +565,26 @@ def _conversation(
         game_id=room.game_id,
         sport=room.sport,
         members=[_member(member) for member in room.members],
+        people=[_person(person) for person in room.people],
         entries=[_entry(entry) for entry in room.entries],
     )
 
 
 def _member(member: MemberFace) -> ConversationMemberSchema:
-    """One member. **The two photograph fields are set together or not at all.**
+    """One member — a person's face, on the narrower list. See ``_face``."""
+
+    return ConversationMemberSchema(**_face(member))
+
+
+def _person(person: MemberFace) -> ConversationPersonSchema:
+    """One person the response names. See ``_face``."""
+
+    return ConversationPersonSchema(**_face(person))
+
+
+def _face(face: MemberFace) -> dict[str, Any]:
+    """The fields of one face. **The two photograph fields are set together or not
+    at all.**
 
     Set rather than passed as ``None``, because these two are *omitted* where
     every other nullable field here is ``null``: a player with no photograph is
@@ -565,14 +594,14 @@ def _member(member: MemberFace) -> ConversationMemberSchema:
     from the JSON rather than present and null.
     """
 
-    face: dict[str, Any] = {
-        "player_id": member.player_id,
-        "nickname": member.nickname,
+    fields: dict[str, Any] = {
+        "player_id": face.player_id,
+        "nickname": face.nickname,
     }
-    if member.photo_id is not None and member.photo_url is not None:
-        face["photo_id"] = member.photo_id
-        face["photo_url"] = member.photo_url
-    return ConversationMemberSchema(**face)
+    if face.photo_id is not None and face.photo_url is not None:
+        fields["photo_id"] = face.photo_id
+        fields["photo_url"] = face.photo_url
+    return fields
 
 
 def _entry(entry: Entry) -> MessageSchema | SystemLineSchema:

@@ -609,7 +609,12 @@ Rules to preserve:
   line-up after, one rule read against two records, and a stored roster would be the copy
   that decides who may read the messages. **Two shapes ride one stream and no sentence is
   ever stored**: a Message is content, a system line is a code and its values, and `values`
-  never repeats what membership already says, so a corrected handle fixes the whole backlog.
+  never repeats what membership already says, so a corrected handle fixes the whole backlog —
+  and **the read resolves a face for everybody the page names, not only for the roster**
+  (ADR-0148 §4 as amended, #408): the person a `SEAT_LEFT` line is about was never a member
+  — a *no* is not an accepted seat — so each of the three reads carries `people`: the roster
+  and the entries' actors and authors on the room and the row, the page's own on a page,
+  one `MemberFaces` read each. `members` stays the roster and the gate.
   **What is refused is a table rather than prose** — `application/telling.py` names every
   event either half of the loop publishes and what this room does about it, including the
   ones that write nothing and why, because a builder reading only the event list would write

@@ -784,8 +784,10 @@ re-introduces at the surface exactly what the wire was shaped to prevent.
 - **A message** is `seq`, `author_id`, `sent_at`, `text`, `client_message_id`. It has **no id of
   its own** — `(conversation_id, seq)` already identifies it.
 - **A system line** is `seq`, `code`, `occurred_at`, nullable `actor_id`, `values` — and **`values`
-  never repeats what membership already says**. The line carries `actor_id` and the client fills
-  `{name}` from the members it holds, exactly as `standingLine` does today.
+  never repeats what the read already resolves**. The line carries `actor_id` and the client fills
+  `{name}` from the response's `people` — the faces resolved for everybody it names, of which the
+  members are a subset ([#408](https://github.com/Raketa02/Raketa/issues/408), ADR-0148 §4 as
+  amended: the actor of a *seat left* line was never a member).
 
 **The author's handle is drawn on a bubble only in a conversation with more than two members**, and
 it is the **whole handle**. In a pair there is nothing to disambiguate; ADR-0107 forbids the

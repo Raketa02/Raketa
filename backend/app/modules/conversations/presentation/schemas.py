@@ -1,15 +1,26 @@
 """The conversation wire shapes — **two shapes in one stream, and no sentence.**
 
-Four rules decide everything below.
+Six rules decide everything below.
 
 **A system line is a code and its values, and the client renders it**
 (``docs/adr/0022``, ``docs/adr/0146`` §4). Nothing here carries display text. A
 rendered sentence on the wire would be a sentence frozen into history the moment
 it was stored, so rewording a line could never reword the backlog.
 
-**``values`` never repeats what membership already says.** The line carries
-``actor_id``; the client fills ``{name}`` from the members it is holding. A handle
-correction therefore reaches the whole backlog for free.
+**``values`` never repeats what the response already resolves.** The line
+carries ``actor_id``; the client fills ``{name}`` from the ``people`` beside it,
+which the read resolved at that moment. A handle correction therefore reaches the
+whole backlog for free.
+
+**And ``people`` is everybody the response names, not only the roster**
+([#408](https://github.com/Raketa02/Raketa/issues/408)). Membership is derived
+live — the accepted seats, then the game's line-up — and a *no* is not an
+accepted seat, so the person a ``SEAT_LEFT`` line is about was never a member
+and a client that filled ``{name}`` from ``members`` alone drew *? said no — that
+seat is open again*. ``members`` is still the roster and still the gate;
+``people`` is the roster **and** every author and actor the entries name,
+resolved once. On a page it is the page's own authors and actors and nothing
+about the roster.
 
 **A message has no id of its own.** ``(conversation_id, seq)`` already identifies
 it, and a UUID beside a unique key is a second identity for one row.
@@ -42,30 +53,35 @@ from app.kernel import Sport
 OMITTED: Any = None
 
 
-class ConversationMemberSchema(BaseModel):
-    """One person who has agreed to be on this court right now.
+class ConversationPersonSchema(BaseModel):
+    """One person this response names — **a handle and a face, and nothing else.**
 
-    **Derived from whichever record is arranging, never stored**
-    (``docs/adr/0146`` §7), and it **grows one acceptance at a time**: a doubles
-    room whose line-up is still filling draws the members it has, because a row
-    with four faces for a two-member room would be drawing the court rather than
-    the room.
+    No Level, no band, no area, no score — those are a *card*'s, and a card is
+    what a searcher reads to decide about a game that might happen. Everybody
+    here was on this court or spoke in this room.
 
-    **A handle and a face, and nothing else.** No Level, no band, no area, no
-    score — those are a *card*'s, and a card is what a searcher reads to decide
-    about a game that might happen. These people have already agreed to play.
+    **The shape `people` is a list of, and the shape a member has.** A member is
+    a person who is on the court *right now*; the person a `SEAT_LEFT` line is
+    about is not, and is still somebody the page has to name. One shape for
+    both, so a client resolves every `actor_id` and `author_id` the same way.
     """
 
     player_id: UUID = Field(
-        ..., description="Who they are, and what a line's `actor_id` matches"
+        ...,
+        description=(
+            "Who they are, and what a line's `actor_id` and a message's "
+            "`author_id` match"
+        ),
     )
     nickname: str | None = Field(
         ...,
         description=(
             "The whole handle, and **`null` for an account `users` can no longer "
-            "name**. The member keeps their place either way: dropping them "
-            "would draw a three-person doubles court. Nothing may derive a "
-            "familiar form from it."
+            "name**. The person keeps their place either way: a member dropped "
+            "would draw a three-person doubles court, and an actor dropped "
+            "would leave a line naming nobody. Draw the unknown player's mark "
+            "for `null` and nothing else. Nothing may derive a familiar form "
+            "from it."
         ),
     )
     photo_id: UUID = Field(
@@ -82,6 +98,22 @@ class ConversationMemberSchema(BaseModel):
             "response**. It expires within minutes and is not a stored value."
         ),
     )
+
+
+class ConversationMemberSchema(ConversationPersonSchema):
+    """One person who has agreed to be on this court right now.
+
+    **Derived from whichever record is arranging, never stored**
+    (``docs/adr/0146`` §7), and it **grows one acceptance at a time**: a doubles
+    room whose line-up is still filling draws the members it has, because a row
+    with four faces for a two-member room would be drawing the court rather than
+    the room.
+
+    **The same four fields as a person, and a narrower claim.** Being on the
+    list is the fact; the face is `ConversationPersonSchema`'s. A member is
+    always among the response's `people` too, resolved in the same read, so the
+    two lists cannot disagree about a current member.
+    """
 
 
 class MessageSchema(BaseModel):
@@ -104,7 +136,15 @@ class MessageSchema(BaseModel):
             "promise is the server's and nothing may depend on it."
         ),
     )
-    author_id: UUID = Field(..., description="Which member typed it")
+    author_id: UUID = Field(
+        ...,
+        description=(
+            "Who typed it — a member, since only a member may send. **Name "
+            "them from the `people` on the response that carried this page**, "
+            "the one list every face on it is in, so a message and a line are "
+            "named the same way."
+        ),
+    )
     sent_at: datetime = Field(..., description="When it landed")
     text: str = Field(..., description="Their own words, unrendered and unchanged")
     client_message_id: UUID = Field(
@@ -156,9 +196,11 @@ class SystemLineSchema(BaseModel):
     actor_id: UUID | None = Field(
         ...,
         description=(
-            "Who did it, or `null`. **Render `{name}` from the members you are "
-            "already holding** — the handle is never repeated here, so a "
-            "corrected one fixes the whole backlog."
+            "Who did it, or `null`. **Render `{name}` from the `people` on the "
+            "response that carried this line** — the handle is never repeated "
+            "here, so a corrected one fixes the whole backlog. Not from "
+            "`members` alone: the actor of a `SEAT_LEFT` line is by definition "
+            "no longer one, and `people` is where the read put their face."
         ),
     )
     values: dict[str, str] = Field(
@@ -206,6 +248,14 @@ class ConversationRowSchema(BaseModel):
     members: list[ConversationMemberSchema] = Field(
         ..., description="Who has agreed to be on this court right now"
     )
+    people: list[ConversationPersonSchema] = Field(
+        ...,
+        description=(
+            "Everybody this row names, resolved once and ordered by id: the "
+            "members, and whoever `last_entry` is about. **A superset of "
+            "`members`** — fill `{name}` and the author label from here."
+        ),
+    )
     last_entry: EntrySchema | None = Field(
         ...,
         description=(
@@ -250,6 +300,16 @@ class ConversationResponse(BaseModel):
     )
     sport: Sport
     members: list[ConversationMemberSchema]
+    people: list[ConversationPersonSchema] = Field(
+        ...,
+        description=(
+            "Everybody this response names, resolved once against `read_at` and "
+            "ordered by id: the members, and every author and actor in "
+            "`entries`. **A superset of `members`**, so a current member is the "
+            "same face in both. Fill every `{name}` and every author label from "
+            "here, and merge each page's `people` into it as you page back."
+        ),
+    )
     entries: list[EntrySchema] = Field(
         ...,
         description=(
@@ -261,13 +321,28 @@ class ConversationResponse(BaseModel):
 
 
 class EntryPageResponse(BaseModel):
-    """One page backward. **No header, and no instant.**"""
+    """One page backward. **No header, and no instant** — but the page's own faces.
+
+    `people` is not a header: it says nothing about the room and nothing about
+    who is in it. It is the one thing the detail read could not have given a
+    client for this page, because the people a page names are not the members.
+    """
 
     entries: list[EntrySchema] = Field(
         ...,
         description=(
             "The page, **oldest first inside it**. Empty when `before_seq` was 1 "
             "— there is nothing before the beginning."
+        ),
+    )
+    people: list[ConversationPersonSchema] = Field(
+        ...,
+        description=(
+            "Every author and every actor on this page, resolved once and "
+            "ordered by id. **Not the roster and not a superset of it** — a "
+            "page names only what is on it, so merge these into the `people` "
+            "you already hold rather than replacing them. Empty when `entries` "
+            "is."
         ),
     )
 

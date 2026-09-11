@@ -21,6 +21,7 @@ from app.modules.conversations.domain.entries import (
     SeatDeparture,
     SystemLine,
     SystemLineCode,
+    people_named,
 )
 from app.modules.conversations.domain.errors import (
     AMessageMustSaySomething,
@@ -410,3 +411,57 @@ def test_a_line_and_a_message_never_share_a_seq():
     events = [e for e in room.pull_events() if isinstance(e, entries)]
 
     assert [event.seq for event in events] == [1, 2]
+
+
+# -- who a page names ------------------------------------------------------
+
+
+def test_a_page_names_every_author_and_every_actor_and_nobody_twice():
+    """[#408](https://github.com/Raketa02/Raketa/issues/408) — ``{name}`` is
+    filled from the people the response resolves, and the person a
+    ``SEAT_LEFT`` line is about has by definition just left the membership. So
+    the read asks about everybody the page names, not only about the roster."""
+
+    room = _opened()
+    talker, leaver = uuid4(), uuid4()
+    room.say(
+        author_id=talker,
+        client_message_id=uuid4(),
+        text="where do we meet?",
+        occurred_at=_later(1),
+    )
+    room.record_line(
+        code=SystemLineCode.SEAT_LEFT,
+        actor_id=leaver,
+        values={DEPARTURE: SeatDeparture.DECLINED.value},
+        source_event_id=uuid4(),
+        occurred_at=_later(2),
+    )
+    room.say(
+        author_id=talker,
+        client_message_id=uuid4(),
+        text="anyone?",
+        occurred_at=_later(3),
+    )
+
+    assert people_named(room.entries) == frozenset({talker, leaver})
+
+
+def test_a_line_with_no_actor_names_nobody():
+    """A nullable ``actor_id`` is a shape the contract allows, and a page of such
+    lines resolves no face for the ``null``."""
+
+    room = _opened()
+    room.record_line(
+        code=SystemLineCode.GAME_PLAYED,
+        actor_id=None,
+        values={},
+        source_event_id=uuid4(),
+        occurred_at=_later(1),
+    )
+
+    assert people_named(room.entries) == frozenset()
+
+
+def test_an_empty_page_names_nobody():
+    assert people_named(()) == frozenset()

@@ -352,19 +352,22 @@ async def read_the_entries(
             conversations=conversations,
             membership=build_membership(session),
             clock=FixedClock(at=now),
-        )
+        ),
+        faces=build_member_faces(session, settings=settings),
     )
     walked: list[Entry] = []
     cursor: int | None = None
     while True:
-        page = await entries.execute(
-            ReadEntriesCommand(
-                conversation_id=room.conversation_id,
-                reader_id=reader,
-                before_seq=cursor,
-                limit=PAGE_LIMIT_DEFAULT,
+        page = (
+            await entries.execute(
+                ReadEntriesCommand(
+                    conversation_id=room.conversation_id,
+                    reader_id=reader,
+                    before_seq=cursor,
+                    limit=PAGE_LIMIT_DEFAULT,
+                )
             )
-        )
+        ).entries
         if not page:
             return tuple(walked)
         walked = [*page, *walked]

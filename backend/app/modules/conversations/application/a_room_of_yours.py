@@ -30,8 +30,9 @@ be two answers to *who is in this* against one instant.
 
 It is a collaborator rather than a base class — unlike ``challenges``' own
 ``AChallengeOfYours``, whose four collaborators are the same four for every act.
-Here they are not: a send needs a hold query and a unit of work, a page needs
-neither, and a header needs the faces. What the three share is exactly this, and
+Here they are not: a send needs a hold query and a unit of work, the two reads
+need the faces and neither of those, and the heartbeat and the stream need a
+store nothing else here touches. What all of them share is exactly this, and
 nothing else.
 """
 

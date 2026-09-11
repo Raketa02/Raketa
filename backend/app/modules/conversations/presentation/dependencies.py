@@ -192,8 +192,8 @@ def get_read_conversation(
 ReadConversationDep = Annotated[ReadConversation, Depends(get_read_conversation)]
 
 
-def get_read_entries(rooms: ARoomOfYoursDep) -> ReadEntries:
-    return ReadEntries(rooms=rooms)
+def get_read_entries(rooms: ARoomOfYoursDep, faces: MemberFacesDep) -> ReadEntries:
+    return ReadEntries(rooms=rooms, faces=faces)
 
 
 ReadEntriesDep = Annotated[ReadEntries, Depends(get_read_entries)]

@@ -1982,9 +1982,14 @@ decides it rather than taste: one shape forces either a **stored rendered senten
 copy into history so rewriting a line cannot rewrite the backlog, or a text field real for one kind
 and meaningless for the other. **Nobody typed *Tomek set the day*.**
 
-**`values` never repeats what membership already says.** The line carries `actor_id` and the client
-fills `{name}` from the members it holds, exactly as `standingLine` does today — so a handle
-correction reaches the whole backlog for free.
+**`values` never repeats what the read already resolves.** The line carries `actor_id` and the
+client fills `{name}` from the **`people`** beside it — the faces the response resolved for
+everybody it names — so a handle correction reaches the whole backlog for free. **Not from the
+members alone** ([#408](https://github.com/Raketa02/Raketa/issues/408), ADR-0148 §4 as amended):
+membership is the accepted seats and then the game's line-up, so the person a *seat left* line is
+about has by definition just left it, and a client naming off the roster drew `? said no — that
+seat is open again`. `members` is still the roster and still the gate; `people` is the roster and
+every author and actor the page names, resolved in the same read, and a page carries its own.
 
 | Code | Published by | The sentence |
 | --- | --- | --- |
@@ -2005,8 +2010,8 @@ second code. **A lapse is still not a decline**, which is §13's rule holding on
 ([ADR-0155](../../adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)). The
 three slots *are* the value and the room already holds a line for each of them, so a value here
 would be the second place they are true and the first thing to disagree with the slot line above it
-after a later move. `{name}` is filled from membership like every other line — the event carries
-`locked_by` and no name.
+after a later move. `{name}` is filled from the response's `people` like every other line — the
+event carries `locked_by` and no name.
 
 **It is an act and not a fourth slot, and it is not the slot count under another name.** A complete
 plan is one everybody *could* agree; this says somebody did. There is no *plan complete* line and

@@ -357,10 +357,11 @@ async def test_a_held_member_still_pages_backward(room, membership):
     """Every read on this context is ungated, and that is the whole rule's
     second half."""
 
-    entries = await ReadEntries(
+    page = await ReadEntries(
         rooms=ARoomOfYours(
             conversations=_OneRoom(room), membership=membership, clock=_FrozenClock()
-        )
+        ),
+        faces=_Faces(),
     ).execute(
         ReadEntriesCommand(
             conversation_id=room.conversation_id,
@@ -370,7 +371,7 @@ async def test_a_held_member_still_pages_backward(room, membership):
         )
     )
 
-    assert [entry.seq for entry in entries] == [1]
+    assert [entry.seq for entry in page.entries] == [1]
 
 
 async def test_a_non_member_is_refused_before_the_hold_is_ever_asked(room, membership):
