@@ -56,12 +56,14 @@ export function useGames() {
  * not play in it*, because separating them would answer *is this id real* about four strangers'
  * evening, and this side keeps that refusal rather than undoing it with a 404 of its own.
  */
-export function useGame(gameId: string) {
+export function useGame(gameId: string | undefined) {
   const games = useGames();
 
   return {
     ...games,
-    game: games.data?.find((one) => one.gameId === gameId),
+    // No id is no game, which is `usePlan`'s shape one feature over: a room whose line-up has not
+    // completed asks with nothing and is answered with nothing, rather than with a sentinel.
+    game: gameId === undefined ? undefined : games.data?.find((one) => one.gameId === gameId),
   };
 }
 

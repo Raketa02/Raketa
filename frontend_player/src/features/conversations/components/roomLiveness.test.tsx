@@ -37,8 +37,10 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
+import { sportLabel } from '@/features/onboarding/types';
 import { QUICK_CHIP } from '@/features/plans/types';
 
+import { conversationHeaderLabel } from './conversationAccessibility';
 import { LIVE_NOTE, SEND } from './conversationPresentation';
 
 const ME = GATE_USER.id;
@@ -373,7 +375,11 @@ describe('held', () => {
     fireEvent.press(screen.getByRole('button', { name: SEND }));
     await screen.findByText(LIVE_NOTE.held);
 
-    expect(screen.getByRole('header', { name: 'tomek.p' })).toBeTruthy();
+    expect(
+      screen.getByRole('header', {
+        name: conversationHeaderLabel(['tomek.p'], sportLabel('padel'), undefined),
+      }),
+    ).toBeTruthy();
     expect(screen.getByLabelText('tomek.p: six works for me')).toBeTruthy();
   });
 

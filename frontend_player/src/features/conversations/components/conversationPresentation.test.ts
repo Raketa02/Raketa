@@ -15,8 +15,11 @@ import {
   OPEN_THE_CHAT,
   conversationRowLine,
   entryLine,
+  headerSubline,
+  headerTitle,
   systemLineSentence,
 } from './conversationPresentation';
+import { conversationHeaderLabel } from './conversationAccessibility';
 
 const TOMEK: ConversationMember = { playerId: 'tomek', nickname: 'tomek.p' };
 const OLA: ConversationMember = { playerId: 'ola', nickname: 'ola.k' };
@@ -187,5 +190,62 @@ describe('the chat door', () => {
   /** *The same words as every other chat door*, which is what one constant buys. */
   it('is one sentence, owned here because what it opens is a conversation', () => {
     expect(OPEN_THE_CHAT).toBe('Open the chat');
+  });
+});
+
+/**
+ * **The header's two lines, and the one name it speaks**
+ * ([#401](https://github.com/Raketa02/Raketa/issues/401)). The drawn title is each handle's
+ * **stem** — `handleStem`, the prefix up to the first word break, which ADR-0107 permits because
+ * it invents nothing — and the spoken name is every handle **whole**, which is §20.4: *the visible
+ * label truncates, the spoken one never does*.
+ */
+describe('the header’s title line', () => {
+  /** A budget no room needs, so what is asserted is the stemming and not the dropping. */
+  const ROOM_ENOUGH = 80;
+
+  it('draws one other person by their stem', () => {
+    expect(headerTitle(['tomek.p'], ROOM_ENOUGH)).toBe('tomek');
+  });
+
+  it('draws two, comma-separated', () => {
+    expect(headerTitle(['tomek.p', 'ola.k'], ROOM_ENOUGH)).toBe('tomek, ola');
+  });
+
+  it('draws three — a doubles room — the same way', () => {
+    expect(headerTitle(['kuba.w', 'ola.k', 'zofia.b'], ROOM_ENOUGH)).toBe('kuba, ola, zofia');
+  });
+
+  /** `handleStem`'s own rule, read through this line rather than re-implemented under it. */
+  it('keeps a handle with no word break whole', () => {
+    expect(headerTitle(['bea_k', 'dorota-w'], ROOM_ENOUGH)).toBe('bea_k, dorota-w');
+  });
+
+  /** §15 survives: the stems are shorter inputs to the same rule, which still drops whole names. */
+  it('still gives way by dropping whole names, never by cutting one', () => {
+    expect(headerTitle(['aleksandra.m', 'tomek.p', 'ola.k'], 14)).toBe('aleksandra +2');
+  });
+});
+
+describe('the header’s second line', () => {
+  it('is the sport and the game’s state, lower case, where there is a game', () => {
+    expect(headerSubline('Padel', 'planning')).toBe('Padel · planning');
+  });
+
+  /** A `LINE_UP_INCOMPLETE` room has no game and no plan, and no state is invented for it. */
+  it('is the sport alone where there is no game', () => {
+    expect(headerSubline('Padel', undefined)).toBe('Padel');
+  });
+});
+
+describe('what the header is called', () => {
+  it('names every handle whole, then the sport and the state — the row’s own dialect', () => {
+    expect(conversationHeaderLabel(['tomek.p', 'ola.k'], 'Padel', 'game on')).toBe(
+      'tomek.p and ola.k, Padel, game on',
+    );
+  });
+
+  it('stops at the sport where there is no game', () => {
+    expect(conversationHeaderLabel(['tomek.p'], 'Padel', undefined)).toBe('tomek.p, Padel');
   });
 });

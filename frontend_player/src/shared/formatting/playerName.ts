@@ -69,8 +69,10 @@ export function playerName(player: NamedPlayer): string {
  * name produced a word the person never gave the platform. This produces no word at all — it
  * takes a **prefix of the handle they chose**, cut at a character they typed, and it is used
  * only where a box is drawing rather than where a sentence is naming. Every sentence, every
- * accessible name and every toast still carries all sixty-four characters, and the two rows
- * that draw this stem sit directly under one that speaks the whole thing.
+ * accessible name and every toast still carries all sixty-four characters: the two rows that
+ * draw this stem sit directly under one that speaks the whole thing, and the conversation's
+ * header, the third drawer, is called by the handles whole in its own accessible name
+ * ([#401](https://github.com/Raketa02/Raketa/issues/401)).
  *
  * **A dot or a space, and deliberately not a dash or an underscore.** Those two are the
  * characters a handle puts *between words* — `Sergio.Sabater`, `Hugo Ferrer` — where `-` and

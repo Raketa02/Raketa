@@ -78,6 +78,15 @@ export function handleBudget(screenWidth: number, faces: number): number {
  *
  * The chevron is `h1` and its reachable area is the header's own; what is subtracted is the
  * `space.sm` gaps 10.3 sets between its parts, the cluster, and the two controls.
+ *
+ * **And the characters are counted at `h1`, because that is what the title is set in.** Until
+ * [#401](https://github.com/Raketa02/Raketa/issues/401) they were counted at the rows' `cardTitle`,
+ * six points smaller — nearly half again as many characters — so this budget said a line fitted
+ * that did not. The header's title is not capped at one line, so what that drew was not a handle
+ * cut in the middle but a **second line**: the whole point of dropping names to a budget is to
+ * keep the header one line tall, and a count taken at the wrong size defeats it silently. The
+ * stems that ticket draws are shorter inputs to the same rule, and the rule is only worth anything
+ * if the count is honest.
  */
 export function headerHandleBudget(screenWidth: number, faces: number): number {
   const column =
@@ -90,7 +99,7 @@ export function headerHandleBudget(screenWidth: number, faces: number): number {
     DETAILS_WIDTH -
     theme.space.sm;
 
-  return charactersThatFit(column);
+  return charactersThatFit(column, theme.type.h1);
 }
 
 /** `Details`, whose length is the only thing about the word this arithmetic reads. */
@@ -105,5 +114,5 @@ const DETAILS_LETTERS = 7;
  * direction for a budget: over-reserving drops a name that would have fitted, where
  * under-reserving draws a handle under the control.
  */
-const DETAILS_WIDTH =
+export const DETAILS_WIDTH =
   Math.ceil(DETAILS_LETTERS * theme.type.btn.fontSize * WIDEST_HANDLE_EM) + 2 * theme.space.md;

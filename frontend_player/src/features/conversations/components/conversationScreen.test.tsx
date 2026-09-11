@@ -26,7 +26,9 @@ import {
   stubConversation,
   stubConversations,
   stubEntries,
+  stubGames,
   stubGate,
+  stubPlans,
 } from '@/test-support/onboardingRouter';
 import {
   errorResponse,
@@ -39,11 +41,12 @@ import {
 import { mapErrorResponse } from '@/shared/errors';
 
 import { conversationErrorMessage } from './conversationErrorMessage';
-import { systemLineSentence } from './conversationPresentation';
-import { QUICK_CHIP } from '@/features/plans/types';
+import { headerSubline, headerTitle, systemLineSentence } from './conversationPresentation';
+import { sportLabel } from '@/features/onboarding/types';
+import { QUICK_CHIP, cardStateWord } from '@/features/plans/types';
 
 import { CONVERSATION_SCREEN_TITLE, DETAILS, SEND } from './conversationPresentation';
-import { OPEN_THE_GAME } from './conversationAccessibility';
+import { OPEN_THE_GAME, conversationHeaderLabel } from './conversationAccessibility';
 
 const ME = GATE_USER.id;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -94,6 +97,31 @@ function message(
 function line(seq: number, code: string, occurredAt = READ_AT): Wire['SystemLineSchema'] {
   return { type: 'system_line', seq, code, occurred_at: occurredAt, actor_id: TOMEK, values: {} };
 }
+
+/** A room's game, as `GET /games` lists it — arranged, nothing agreed, the day still ahead. */
+function game(): Wire['GameSchema'] {
+  return {
+    game_id: GAME,
+    challenge_id: CHALLENGE,
+    sport: 'PADEL',
+    kind: 'COUNTED',
+    standing: 'AWAITING_ENTRY',
+    planned_at: '2026-09-08T09:00:00Z',
+    entry_closes_at: '2026-09-20T07:00:00Z',
+    seats: [
+      { side: 'A', player_id: ME, nickname: 'me_' },
+      { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+    ],
+    proposals: [],
+  };
+}
+
+function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
+  return { game_id: GAME, place: null, day: null, hour: null, agreed_point: null, ...over };
+}
+
+/** A title budget no room in these tests needs, so a line is asserted on its words alone. */
+const ROOM_ENOUGH = 80;
 
 function room(over: Partial<Wire['ConversationResponse']> = {}): Wire['ConversationResponse'] {
   return {
@@ -149,11 +177,52 @@ async function openTheRoom(answer: Wire['ConversationResponse'] = room()) {
 }
 
 describe('the header', () => {
-  it('names the people whole and the sport, and nothing about a standing', async () => {
+  /**
+   * **The drawn line is stemmed and the spoken name is whole, and the two differing is the point**
+   * ([#401](https://github.com/Raketa02/Raketa/issues/401)) — so both are asserted in one test,
+   * against the copy deck: `headerTitle` is `handleStem` over `handleLine`, and
+   * `conversationHeaderLabel` is every handle whole in the row's own dialect.
+   */
+  it('draws the stems and speaks the whole handles, in one element', async () => {
+    await openTheRoom(room({ members: THREE }));
+
+    const spoken = conversationHeaderLabel(['tomek.p', 'ola.k'], sportLabel('padel'), undefined);
+    const header = await screen.findByRole('header', { name: spoken });
+
+    expect(within(header).getByText(headerTitle(['tomek.p', 'ola.k'], ROOM_ENOUGH))).toBeTruthy();
+    expect(within(header).queryByText(/tomek\.p/)).toBeNull();
+  });
+
+  /** A `LINE_UP_INCOMPLETE` room has no game and no plan, and the line says the sport and stops. */
+  it('draws the sport alone under the people where there is no game', async () => {
     await openTheRoom();
 
-    expect(await screen.findByRole('header', { name: 'tomek.p' })).toBeTruthy();
-    expect(screen.getByText('Padel')).toBeTruthy();
+    // Scoped to the header, because the row it was opened from is still mounted under it and
+    // says the sport too.
+    const header = await screen.findByRole('header', {
+      name: conversationHeaderLabel(['tomek.p'], sportLabel('padel'), undefined),
+    });
+
+    expect(within(header).getByText(headerSubline(sportLabel('padel'), undefined))).toBeTruthy();
+    expect(within(header).queryByText(/·/)).toBeNull();
+  });
+
+  /**
+   * *The same state as the card in Now*: the game's card name, folded from the two lists the
+   * room already reads, drawn in lower case after the sport — and spoken after it too.
+   */
+  it('says where the game stands, in the Now card’s own word, where there is one', async () => {
+    stubGames(transport, [game()], READ_AT);
+    stubPlans(transport, [plan({ place: 'Zabłocie Sport', day: null, hour: null })]);
+    await openTheRoom(room({ game_id: GAME }));
+
+    const word = cardStateWord('planning');
+    expect(await screen.findByText(headerSubline(sportLabel('padel'), word))).toBeTruthy();
+    expect(
+      screen.getByRole('header', {
+        name: conversationHeaderLabel(['tomek.p'], sportLabel('padel'), word),
+      }),
+    ).toBeTruthy();
   });
 
   /**

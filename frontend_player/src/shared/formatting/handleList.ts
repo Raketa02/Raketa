@@ -74,15 +74,39 @@ export function spokenHandles(names: readonly string[]): string {
 export const WIDEST_HANDLE_EM = 1.01;
 
 /**
- * How many characters of handle a column this wide can hold.
+ * The two things about a type role that decide how wide its widest character is: the size, and
+ * the tracking added after every glyph — `theme.type`'s roles carry both, and this is the shape
+ * of what {@link charactersThatFit} reads off one.
+ */
+export interface HandleRole {
+  readonly fontSize: number;
+  /** Points added after each character. Absent is nought; `h1`'s is negative. */
+  readonly letterSpacing?: number;
+}
+
+/**
+ * How many characters of handle a column this wide can hold, **in the role the line is set in.**
  *
- * The type role is `cardTitle`, which is what both Chats rows set a handle line in. It never
- * answers nought: a row always names somebody, and a single handle longer than the row has
- * nothing to drop — §15 permits *that* one to truncate visually, *"a seat label may truncate
+ * The role defaults to `cardTitle`, which is what both Chats rows set a handle line in; the
+ * conversation header sets its line in `h1` and says so, because a budget counted at one size for
+ * a line drawn at another promises room the line does not have — six points of size is nearly half
+ * again as many characters — and what that draws is a one-line row cut mid-handle or a header
+ * grown a second line, depending on which surface capped it
+ * ([#401](https://github.com/Raketa02/Raketa/issues/401)). The role's tracking is spent too: it
+ * is part of every character's advance, and ignoring `h1`'s negative tracking would drop a name
+ * that fitted.
+ *
+ * It never answers nought: a row always names somebody, and a single handle longer than the row
+ * has nothing to drop — §15 permits *that* one to truncate visually, *"a seat label may truncate
  * visually; a sentence may not, and a spoken name never does"*.
  */
-export function charactersThatFit(columnWidth: number): number {
-  return Math.max(Math.floor(columnWidth / (theme.type.cardTitle.fontSize * WIDEST_HANDLE_EM)), 1);
+export function charactersThatFit(
+  columnWidth: number,
+  role: HandleRole = theme.type.cardTitle,
+): number {
+  const advance = role.fontSize * WIDEST_HANDLE_EM + (role.letterSpacing ?? 0);
+
+  return Math.max(Math.floor(columnWidth / advance), 1);
 }
 
 /**

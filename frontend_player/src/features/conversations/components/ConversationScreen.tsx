@@ -119,7 +119,13 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useCurrentUser } from '@/features/auth/types';
-import { quickChips, RoomPlan, usePlan } from '@/features/plans/types';
+import {
+  cardStateWord,
+  quickChips,
+  RoomPlan,
+  useGameCardName,
+  usePlan,
+} from '@/features/plans/types';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { playerName } from '@/shared/formatting/playerName';
 import { Note, theme } from '@/shared/ui';
@@ -223,6 +229,16 @@ function Room({
   const { plan } = usePlan(room.gameId);
 
   /**
+   * Where the game stands, for the header's second line — *the same state as the card in Now*
+   * ([#401](https://github.com/Raketa02/Raketa/issues/401)). Folded by `features/plans` over the
+   * two lists this screen already reads for the card and the chips, so it costs no request and
+   * cannot disagree with the card three taps away. A room with no game has no name to fold and
+   * the header draws the sport alone.
+   */
+  const card = useGameCardName(room.gameId);
+  const gameState = card === undefined ? undefined : cardStateWord(card);
+
+  /**
    * **What the room says about itself** — one fold, read once, over the channel and the account.
    *
    * The channel is followed for as long as this component is mounted, which is *one stream per
@@ -292,6 +308,7 @@ function Room({
         <ConversationHeader
           room={room}
           playerId={playerId}
+          {...(gameState === undefined ? {} : { gameState })}
           onBack={router.back}
           onOpenGame={() =>
             router.push({

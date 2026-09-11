@@ -14,6 +14,7 @@ import { GAME_CARD_NAMES, GAME_DOORS } from '../domain/gameCard';
 
 import {
   CARD_TAG,
+  cardStateWord,
   doorLabel,
   GAMES_HEADING,
   NOTHING_LEFT_TO_AGREE,
@@ -76,6 +77,35 @@ describe('the tag', () => {
     expect(amber).toEqual(['needs-result', 'today', 'confirm']);
     expect(CARD_TAG.uncounted?.variant).toBe('base');
     expect(CARD_TAG['never-played']?.variant).toBe('base');
+  });
+});
+
+/**
+ * **The card's name in the middle of a line** — `Padel · planning` — for the one surface that
+ * says it after something else ([#401](https://github.com/Raketa02/Raketa/issues/401)).
+ *
+ * It is a second table rather than `toLowerCase()` at the call site, because *Game on* → *game on*
+ * is right and a name that ever holds a proper noun would not be; the test below is what keeps
+ * the two tables in step **until** that day, and is what changes on it.
+ */
+describe('the card’s name in a line', () => {
+  it.each([
+    ['planning', 'planning'],
+    ['game-on', 'game on'],
+    ['today', 'today'],
+    ['needs-result', 'needs result'],
+  ] as const)('says %s as %s, in lower case', (name, word) => {
+    expect(cardStateWord(name)).toBe(word);
+  });
+
+  it('is the tag’s own word, lowered, on every card the tag names — until a proper noun arrives', () => {
+    for (const name of GAME_CARD_NAMES) {
+      expect(cardStateWord(name)).toBe(CARD_TAG[name]?.label.toLowerCase());
+    }
+  });
+
+  it('has no word for a standing this build cannot read, exactly as the tag has none', () => {
+    expect(cardStateWord('unreadable')).toBeUndefined();
   });
 });
 

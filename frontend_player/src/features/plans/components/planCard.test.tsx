@@ -207,7 +207,9 @@ describe('the card', () => {
   it('is not drawn at all where the room has no game', async () => {
     await openTheRoom({ gameId: null });
 
-    await screen.findByRole('header', { name: 'tomek.p' });
+    // The room is up once its header names the other person — whole, in the spoken name, which
+    // is the conversation's own deck and not this feature's to spell; the start is enough here.
+    await screen.findByRole('header', { name: /^tomek\.p/ });
     expect(screen.queryByText(SLOT_NAME.day)).toBeNull();
   });
 });

@@ -58,6 +58,29 @@ describe('the widest character a handle may contain', () => {
     expect(charactersThatFit(0)).toBe(1);
     expect(charactersThatFit(-100)).toBe(1);
   });
+
+  /**
+   * The budget is measured in the role the line is **set in**, and it defaults to the rows' —
+   * the header sets its handles in `h1`, and a budget counted at `cardTitle` for a line drawn six
+   * points larger is the mid-handle tail truncation §15 forbids, arriving through arithmetic
+   * ([#401](https://github.com/Raketa02/Raketa/issues/401)).
+   */
+  it('holds fewer characters in a larger role, and counts the rows’ role by default', () => {
+    expect(charactersThatFit(200, theme.type.h1)).toBeLessThan(charactersThatFit(200));
+    expect(charactersThatFit(200)).toBe(charactersThatFit(200, theme.type.cardTitle));
+  });
+
+  it('spends the role’s own tracking as well as its size', () => {
+    // `h1` is tracked tighter than nothing; a budget that ignored that would be pessimistic by
+    // one character every thirty or so, which is a name dropped that would have fitted.
+    const untracked = Math.floor(200 / (theme.type.h1.fontSize * WIDEST_HANDLE_EM));
+    const tracked = Math.floor(
+      200 / (theme.type.h1.fontSize * WIDEST_HANDLE_EM + theme.type.h1.letterSpacing),
+    );
+
+    expect(charactersThatFit(200, theme.type.h1)).toBe(tracked);
+    expect(tracked).toBeGreaterThanOrEqual(untracked);
+  });
 });
 
 describe('the line a row draws', () => {

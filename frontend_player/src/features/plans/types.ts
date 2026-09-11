@@ -77,3 +77,17 @@ export { QUICK_CHIP } from './components/planPresentation';
 
 /** What a plan is: three slots and the moment they name. */
 export type { Plan, PlanSlot } from './domain/slots';
+
+/**
+ * **Which card a game is, and the word for it in the middle of a line**
+ * ([#401](https://github.com/Raketa02/Raketa/issues/401)).
+ *
+ * The conversation header's second line says where the game stands — *the same state as the card
+ * in Now* — and both halves of that are this feature's: the fold is the ladder's, over the two
+ * reads the rail already makes, and the lower-case word sits beside `CARD_TAG` because lowering a
+ * name is a decision about words. What crosses here is a **card name** and never a standing, which
+ * is the whole of why this is affordable where ADR-0148 §6 refused a state on a conversation row
+ * ([ADR-0157](../../../../docs/adr/0157-the-conversation-header-names-its-people-by-their-stems-and-says-which-rung-the-game-is-on.md)).
+ */
+export { useGameCardName } from './hooks/useGameCardName';
+export { cardStateWord } from './components/nowPresentation';

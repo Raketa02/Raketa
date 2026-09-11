@@ -58,8 +58,9 @@
 
 import { weekdayOf } from '@/shared/date/platformZone';
 import { counted } from '@/shared/formatting/counted';
+import { handleLine } from '@/shared/formatting/handleList';
 import { placeWithoutTheCourt } from '@/shared/formatting/placeName';
-import { playerName } from '@/shared/formatting/playerName';
+import { handleStem, playerName } from '@/shared/formatting/playerName';
 import { dayName } from '@/shared/vocabulary/availabilityPresentation';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 
@@ -226,6 +227,49 @@ export const CONVERSATION_SCREEN_TITLE = 'Conversation';
  * player would do differently in any of the four.
  */
 export const NO_CONVERSATION_HERE = 'No conversation of yours has this address.';
+
+/**
+ * **The title line — each handle's stem, comma-separated, giving way by whole names**
+ * ([#401](https://github.com/Raketa02/Raketa/issues/401)).
+ *
+ * `handleStem` is the sanctioned cut: the handle up to its first word break, `Sergio.Sabater`
+ * drawn as `Sergio`. It is **not** the first name ADR-0107 forbids — that record is against
+ * *inventing* a familiar form, a stem is a prefix of the handle the person chose, cut at a
+ * character they typed, and `the-words.md` §15 is what permits a box to truncate what a sentence
+ * may not; `handleStem`'s own docstring carries the argument and the two conditions, and both
+ * hold here: the spoken name keeps every handle whole (`conversationHeaderLabel`), and a handle
+ * that opens with a break keeps all of itself.
+ *
+ * The stems are then **shorter inputs to the same rule**: `handleLine` still drops whole names at
+ * a separator and never cuts one (§15), so more names fit and nothing about the dropping changes.
+ *
+ * @param budget the line's width in characters at `h1` — `headerHandleBudget`.
+ */
+export function headerTitle(handles: readonly string[], budget: number): string {
+  return handleLine(handles.map(handleStem), budget);
+}
+
+/**
+ * **The second line — the sport, and the game's state where there is a game.**
+ *
+ * `Padel · planning`: the state is the Now card's own name in lower case, `features/plans`'
+ * `cardStateWord`, so the chat says where the game actually stands without a trip back to Now.
+ * It is the four-rung client-side ladder and its endings, folded from data the screen already
+ * holds — **not** the twenty-state standing ADR-0148 §6 refused on a conversation row, and
+ * [ADR-0157](../../../../../docs/adr/0157-the-conversation-header-names-its-people-by-their-stems-and-says-which-rung-the-game-is-on.md)
+ * says why that is a different thing.
+ *
+ * **A room with no game draws the sport alone.** `game_id` is nullable, a `LINE_UP_INCOMPLETE`
+ * room has no game and no plan, and that is the same nothing the absent *Details* door draws from
+ * the same field — no state is drawn for it and none is invented. The same is true while the
+ * games list is still coming, and for a standing this build cannot name.
+ */
+export function headerSubline(sportName: string, state: string | undefined): string {
+  return state === undefined ? sportName : `${sportName}${LINE_JOIN}${state}`;
+}
+
+/** What separates the sport from the state on the drawn line. Structure; a listener never hears it. */
+const LINE_JOIN = ' · ';
 
 /**
  * **The door to the game**, and the visible half of it is the design's word.

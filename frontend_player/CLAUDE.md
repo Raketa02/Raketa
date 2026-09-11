@@ -84,9 +84,20 @@ rule — _drop whole names, never shorten one_ — moved to `shared/formatting/h
 **The room is a header, a stream, a composer and three questions**
 ([#364](https://github.com/Raketa02/Raketa/issues/364)). The header is 10.3's with a new **lead**
 slot — a room is named by the people in it, so the faces sit beside the handles rather than in the
-page under them, where the stream would scroll them away — and its subtitle is **the sport and
-nothing else**, because the prototype's card-state tag is the twenty-state vocabulary leaking into
-the chat. **Details is drawn only where there is a game**: `game_id` is nullable, so a
+page under them, where the stream would scroll them away. **Its title is the handles' stems and its
+spoken name is the handles whole, and the line under it is the sport and the game's state in lower
+case** ([#401](https://github.com/Raketa02/Raketa/issues/401),
+[ADR-0157](../docs/adr/0157-the-conversation-header-names-its-people-by-their-stems-and-says-which-rung-the-game-is-on.md)):
+`handleStem` is a prefix of the handle the person typed — ADR-0107 forbids _inventing_ a familiar
+form and a stem invents nothing, which is `the-words.md` §15's and `handleStem`'s own argument — and
+the state is _the same state as the card in Now_ — `features/plans`' four-rung ladder in its own
+lower-case word, folded from the two lists the room already reads, **card name and never
+standing**. That supersedes ADR-0148 §6 for the header alone; the row keeps it, and what §6 refused
+— the prototype's twenty-state card-state tag, read by asking `challenges` and `games` — is still
+refused. A room with no game draws the sport alone. The two lines sit in 10.3's new **sub-line**
+slot rather than the eyebrow, title above and a quieter line below, and the header's budget is now
+counted at `h1` rather than the rows' `cardTitle`, which had let it promise a one-line title that
+wrapped. **Details is drawn only where there is a game**: `game_id` is nullable, so a
 line-up-incomplete room has nothing for that door to open and draws none rather than a dead one,
 and the door's spoken name is _Open the game_ because _Details_ names a screen where every other
 door on this map names its act. **The stream is two components and never one with a branch** —

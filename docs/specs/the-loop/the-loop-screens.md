@@ -608,15 +608,33 @@ challenge screen beside it and the game screen behind its own *Details* door all
 
 ### 3.1 The header
 
-**Back · the members' faces · their whole handles · the sport · Details.**
+**Back · the members' faces · their handles' stems · the sport and the game's state · Details.**
 
 - **The faces are photographs or posters**, per §1.2. ADR-0148 made photographs affordable here
   where ADR-0143 refused them, because a conversation is destroyed rather than kept — *a difference
   between a record and a room, not a change of mind*.
-- **The handles are whole**, and the list truncates at a separator. §15.
-- **The subtitle is the sport and nothing else.** The prototype's subtitle is the sport plus the
-  card-state tag, which is where the twenty-state vocabulary leaks into the chat; ADR-0148 §6
-  already refuses a standing on a conversation row and the header is the same fact one line up.
+- **The title is each handle's stem, comma-separated, and the spoken name is every handle whole**
+  ([#401](https://github.com/Raketa02/Raketa/issues/401),
+  [ADR-0157](../../adr/0157-the-conversation-header-names-its-people-by-their-stems-and-says-which-rung-the-game-is-on.md)).
+  `handleStem` is the handle up to its first word break — `Sergio.Sabater` drawn as `Sergio` — and
+  it is not the first name ADR-0107 forbids: a prefix of the handle the person chose, cut at a
+  character they typed, invents nothing, and §15 is what lets a box draw what a sentence may not.
+  The list still gives way by **dropping whole names** at a
+  separator and never by cutting one (§15); the stems are shorter inputs to that rule, so more
+  names fit. §20.4 is the other half: the header's accessible name carries every handle whole,
+  joined with a final *and*, then the sport, then the state — the row's own dialect (§24.2), one
+  screen on. The budget the line is dropped against is counted at `h1`, which is what the title is
+  set in.
+- **The second line is the sport and the game's state, lower case — `Padel · planning` — and it is
+  the same state as the card in Now.** This reverses what stood here, and the reversal is recorded
+  in ADR-0157 rather than absorbed. What was refused was the prototype's subtitle — the sport plus
+  the **card-state tag**, the twenty-state backend standing leaking into the chat, read by making
+  the room ask `challenges` and `games` what it is (ADR-0148 §6). What lands is the **four-rung
+  client-side ladder** and its endings, `gameCardName` folded from the two lists every room with a
+  game already reads for its pinned plan card, in `features/plans`' own lower-case word. *Card
+  name, never standing*; the row below keeps §6 in full. **A room with no game draws the sport
+  alone** — `game_id` is nullable, a `LINE_UP_INCOMPLETE` room has no game and no plan, and no state
+  is invented for it.
 - **Details is drawn only when there is a game.** `GET /conversations` carries a **nullable
   `game_id`**, so a `LINE_UP_INCOMPLETE` conversation — which has no game and no plan — has no
   Details button and nothing to open. Drawing a dead control would be the disabled control #324

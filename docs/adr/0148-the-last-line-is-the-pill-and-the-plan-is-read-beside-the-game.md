@@ -13,6 +13,11 @@
   fourth event and a fourth write route, and the lock is an **act** rather than a slot. Everything
   this record decides about the three slots — §8's shape, `agreed_point`, and *a slot carries its
   value and nothing else* — is untouched; `locked_at` is not on a slot.)*
+- **§6 is superseded for one surface by
+  [ADR-0157](0157-the-conversation-header-names-its-people-by-their-stems-and-says-which-rung-the-game-is-on.md)**:
+  the conversation's **header** draws the sport and the game's *card name* — the four-rung
+  client-side ladder Now already draws, folded from two lists the room already reads — and never
+  a standing. The **row** keeps every word of §6.
 - **Cites [ADR-0145](0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md)**, whose
   scoping of ADR-0137 is **checkable** — *"`games` importing the Plan is what breaks it"* — which
   is the constraint §7 is built around rather than a nicety it observes.

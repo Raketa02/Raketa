@@ -7,10 +7,12 @@
  * keeps one for the `Details` control on every room, drawn or not.
  */
 
+import { charactersThatFit } from '@/shared/formatting/handleList';
 import { theme } from '@/shared/ui';
 import { NARROWEST_SCREEN } from '@/test-support/fontMetrics';
 
 import {
+  DETAILS_WIDTH,
   FACE_OVERLAP,
   ROW_FACE,
   faceClusterWidth,
@@ -82,6 +84,28 @@ describe('the budget the header spends', () => {
 
   it('never goes under one character, because a header always names somebody', () => {
     expect(headerHandleBudget(0, 3)).toBe(1);
+  });
+
+  /**
+   * **Counted in the role the header draws.** The title is `h1`, and until #401 the budget was
+   * counted at the rows' `cardTitle` — a line six points smaller — so a header could be told a
+   * line fitted that then wrapped onto a second line, which is what the dropping exists to
+   * prevent. Re-derived the way the row's own test above re-derives its column, which is this
+   * file's precedent for asserting arithmetic.
+   */
+  it('counts its characters at h1, which is what the title is set in', () => {
+    const column =
+      NARROWEST_SCREEN -
+      2 * theme.size.gutter -
+      theme.type.h1.fontSize -
+      theme.space.sm -
+      faceClusterWidth(1) -
+      theme.space.sm -
+      DETAILS_WIDTH -
+      theme.space.sm;
+
+    expect(headerHandleBudget(NARROWEST_SCREEN, 1)).toBe(charactersThatFit(column, theme.type.h1));
+    expect(headerHandleBudget(NARROWEST_SCREEN, 1)).toBeLessThan(charactersThatFit(column));
   });
 
   /** One face size in this feature: a person is not two sizes two taps apart. */

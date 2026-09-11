@@ -2043,6 +2043,7 @@ about.
 
 | Element | Role | Announces |
 | --- | --- | --- |
+| The header | `header` | **every handle whole**, then the sport, then the game's state — `tomek.p and ola.k, Padel, planning`; `tomek.p, Padel` where there is no game. **One element** for the title and the line under it |
 | A message | — | **the author, always** — `Ola K.: on my way` · `You: 18:00 works` |
 | A system line | — | the rendered sentence, which already names its actor |
 | A day separator | `header` | the weekday |
@@ -2068,6 +2069,16 @@ seven radios announce seven answers, one of which is chosen. **The slot chip abo
 **`Open the game` rather than `Details`.** The visible label is the design's and stays; the
 accessible name names the destination, because *Details* is a word about a screen and every other
 door on this map is named by its act.
+
+**The header draws one thing and says another, and that is §20.4 applied to a title**
+([#401](https://github.com/Raketa02/Raketa/issues/401)). The drawn title is each handle's **stem** —
+`tomek, ola` — and the drawn line under it is `Padel · planning`; the element is named by the
+handles **whole**, joined with §22.6's final *and*, then the sport, then the state, with commas
+where the drawing has a `·`, because a middle dot is a mark a listener has no reading for. It is
+the Chats row's own shape (§24.2) one screen on, so the tab and the room do not change dialect. The
+title and the sub-line are **one element** on §20.1: the line qualifies what the title names and
+has no action of its own. The state is the Now card's name in lower case — the four-rung ladder,
+never a standing (ADR-0157) — and a room with no game stops at the sport.
 
 ### 24.5 Now, and the game screen
 

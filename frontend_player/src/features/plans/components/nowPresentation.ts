@@ -113,6 +113,39 @@ export const CARD_TAG: Readonly<
   unreadable: undefined,
 };
 
+/**
+ * **The card's name where it follows something else on one line** — `Padel · planning`, the
+ * conversation header's sub-line ([#401](https://github.com/Raketa02/Raketa/issues/401)).
+ *
+ * A second table rather than `CARD_TAG[name].label.toLowerCase()` at the call site, because the
+ * lowering is a decision about **words** and belongs where the words are: *Game on* → *game on* is
+ * right, and a name that ever holds a proper noun would be wrong the same way, silently, on every
+ * surface that lowered it. `nowPresentation.test.ts` holds the two tables equal *until* that day,
+ * so they cannot drift apart by accident and can only part on purpose.
+ *
+ * It is the **same vocabulary as the tag** — the four rungs and the endings, folded at read time
+ * from data the surface already holds — and not the standing `features/games` reads. What crosses
+ * the feature boundary is a **card name** and the word for it, and never a standing
+ * ([ADR-0157](../../../../../docs/adr/0157-the-conversation-header-names-its-people-by-their-stems-and-says-which-rung-the-game-is-on.md)).
+ * A card the tag has no name for has no word here either: the header draws the sport alone
+ * rather than inventing a state.
+ */
+const CARD_STATE_WORD: Readonly<Record<GameCardName, string | undefined>> = {
+  planning: 'planning',
+  'game-on': 'game on',
+  today: 'today',
+  'needs-result': 'needs result',
+  confirm: 'confirm the result',
+  counted: 'counted',
+  uncounted: 'uncounted',
+  'never-played': 'never played',
+  unreadable: undefined,
+};
+
+export function cardStateWord(name: GameCardName): string | undefined {
+  return CARD_STATE_WORD[name];
+}
+
 // ---------------------------------------------------------------------------
 // The eyebrow
 // ---------------------------------------------------------------------------

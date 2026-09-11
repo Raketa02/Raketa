@@ -37,9 +37,40 @@ export function conversationRowLabel(
   sportName: string,
   line: string | undefined,
 ): string {
-  const said = [spokenHandles(handles), sportName, ...(line === undefined ? [] : [line])];
+  return roomSaid(handles, sportName, line);
+}
 
-  return said.join(', ');
+/**
+ * **The one dialect a room is spoken in**, on the row and in the header alike: the handles whole
+ * with a final *and*, the sport, then whatever that surface has to add — the last entry on the
+ * row, the game's state in the header — or nothing. One shape, so the tab and the room cannot
+ * drift into two.
+ */
+function roomSaid(handles: readonly string[], sportName: string, then: string | undefined): string {
+  return [spokenHandles(handles), sportName, ...(then === undefined ? [] : [then])].join(', ');
+}
+
+/**
+ * **What the room's header is called** — every handle whole, then the sport, then the state.
+ *
+ * The drawn title is the handles' **stems** ([#401](https://github.com/Raketa02/Raketa/issues/401)),
+ * and this is the other half of what makes that allowed: §20.4's *the visible label truncates, the
+ * spoken one never does*, read with `handleStem`'s own condition — *every sentence, every accessible
+ * name and every toast still carries all sixty-four characters*. It is the row's dialect one screen
+ * on (§24.2's `Tomek W. and Ola K., padel, …`): the handles joined with a final *and*, so a
+ * listener hears where the people stop, then the facts in the order the header draws them.
+ *
+ * **One name for the title and the line under it**, because the header is one element — the
+ * sub-line qualifies what the title names and has no action of its own — and because the `·`
+ * that separates the sport from the state on the drawn line is a mark a listener has no reading
+ * for. A room with no game stops at the sport, exactly as the drawn line does.
+ */
+export function conversationHeaderLabel(
+  handles: readonly string[],
+  sportName: string,
+  state: string | undefined,
+): string {
+  return roomSaid(handles, sportName, state);
 }
 
 /**
