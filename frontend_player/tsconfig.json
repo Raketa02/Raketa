@@ -1,7 +1,7 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    // Strictness is non-negotiable — see CLAUDE.md "Code style".
+    // Strictness is non-negotiable. Nothing below is loosened per file or per feature.
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,

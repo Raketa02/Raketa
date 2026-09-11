@@ -3284,7 +3284,7 @@ data. Chrome is a header, and — on the questionnaire — the question navigato
 **Done is the end of the first part, not the end of onboarding.** A player who has not yet
 committed a Player profile takes the second part's six steps between done and data — the
 summary is the screen they enter it from. The order is a product decision rather than a
-design one and lives in the app's `CLAUDE.md`; what it fixes here is that _done_ is a screen
+design one and lives in [`docs/features/onboarding.md`](features/onboarding.md); what it fixes here is that _done_ is a screen
 two different flows continue from, so its action bar carries one control whose label names
 whichever of the two it is about.
 
