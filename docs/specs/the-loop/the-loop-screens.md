@@ -530,7 +530,11 @@ file by name. It binds every control on every screen in this document, not only 
 game*'s own shape — press, the search runs, the builder arrives with a court on it — which
 dissolves the *which search* crux, needs neither a stale `search_id` nor a reconstructed line-up,
 and makes *Pick players myself* work on the first screen instead of after a mandatory ⚡. Nothing
-outbound happens; the send is still a separate press, and it **pops back here**.
+outbound happens; the send is still a separate press, and it **pops back here**. The pool that
+press opens draws the fill's **own** record, which since
+[#407](https://github.com/Raketa02/Raketa/issues/407) carries the pool the four were drawn from
+rather than the seated alone — this journey mints no shortlist, and that record is the only list
+it has.
 
 **An accepted seat is not a control.** No clear badge, no press, no pool — swapping is the only
 thing that works on it, which **draws** *an acceptance is to the game, not to the side* rather than

@@ -9,12 +9,14 @@ pairs, and that the objective which chose the four never crosses as a number.
 
 from __future__ import annotations
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
 from sqlalchemy import select
 
+from app.bootstrap.composition import build_clock
+from app.modules.matchmaking.domain.ledgers import week_of
 from app.modules.matchmaking.infrastructure.search_model import SearchORM
 from tests.api import matchmaking_world as world
 
@@ -583,6 +585,12 @@ async def test_the_line_up_records_layer_four_and_no_route_returns_it(
     The winning combination and the runner-up are what the deciding margin is
     computed from; without them ADR-0116's gate is unfalsifiable and the reason
     code is unreproducible.
+
+    **And who sat down**, since the returned band became the pool
+    ([#407](https://github.com/Raketa02/Raketa/issues/407)): a complete four's
+    seated are the winner's members, but a partial line-up and a singles court
+    record no winner, and a search-time fact the record used to hold is not one
+    it may lose.
     """
 
     await _a_city(client, session_factory, candidate_source, searcher["mu"])
@@ -602,7 +610,11 @@ async def test_the_line_up_records_layer_four_and_no_route_returns_it(
     assert [row["band"] for row in layer_four["rows"]][:1] == ["WINNER"]
     assert all(row["terms"] for row in layer_four["rows"])
     assert len(layer_four["rows"]) <= 2
-    del body
+    assert set(layer_four["seated"]) == {
+        seat["player_id"]
+        for seat in body["lineup"]["seats"]
+        if seat["relationship"] != "SELF"
+    }, "layer 4 does not say who sat down"
 
 
 async def test_a_locked_seat_the_gates_no_longer_admit_is_refused_not_replaced(
@@ -678,10 +690,10 @@ async def test_a_line_up_reads_back_through_the_record_it_wrote(
 ):
     """``GET /searches/{id}`` reaches a line-up too, and the gates are re-run.
 
-    The record is the answer's identity on every surface, so the seated rows come
-    back the way they were shown — and **layer 4 comes back with them, into the
-    record and no further**: the read-back renders the rows, and there is no
-    field on any response for a combination to arrive in.
+    The record is the answer's identity on every surface, so the pool the four
+    were drawn from comes back the way it was shown — and **layer 4 comes back
+    with it, into the record and no further**: the read-back renders the rows,
+    and there is no field on any response for a combination to arrive in.
     """
 
     await _a_city(client, session_factory, candidate_source, searcher["mu"])
@@ -717,10 +729,10 @@ async def test_a_seated_card_carries_its_photograph_like_any_other(
 ):
     """**The same rows, in the same shape, on every surface.**
 
-    A line-up's returned band is who sat down, rendered through the one function
-    a shortlist and a deal go through — so a photograph that reached one surface
-    and not this one would mean the link had been wired per route rather than
-    per renderer.
+    A line-up's returned band is the pool it seated from, rendered through the
+    one function a shortlist and a deal go through — so a photograph that
+    reached one surface and not this one would mean the link had been wired per
+    route rather than per renderer.
     """
 
     photo = uuid4()
@@ -745,3 +757,45 @@ async def test_a_seated_card_carries_its_photograph_like_any_other(
         for player_id, card in cards.items()
         if player_id != str(seated)
     ), "a player with no photo was handed a link to one"
+
+
+async def test_a_line_up_returns_the_pool_it_seated_from(
+    client, session_factory, candidate_source, exposure_ledger, searcher
+):
+    """**A court is its answer, and the answer carries the pool it was drawn from.**
+
+    Four candidates and three seats: the fourth is not on the court and is still
+    a row, because ``candidates[]`` is the pool ⚡ seated from — the top rows by
+    Fit, the seated among them — and not the seated alone
+    ([#407](https://github.com/Raketa02/Raketa/issues/407)). A pool opened on
+    this record therefore has somebody to offer, and a forecast or a send citing
+    it may name anybody on it.
+
+    **Exposure counts the seated only.** The court is what was shown; the pool
+    behind it is shown only if the player opens it, and counting what may never
+    be opened would sink two dozen people per ⚡.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+
+    body = (await world.lineup(client, searcher["token"])).json()
+
+    seated = {
+        seat["player_id"]
+        for seat in body["lineup"]["seats"]
+        if seat["relationship"] != "SELF"
+    }
+    rows = [row["player_id"] for row in body["candidates"]]
+    assert len(seated) == 3
+    assert len(rows) == 4, "the record holds the seated alone, not the pool"
+    assert seated < set(rows), "somebody sat down who is not a row of the answer"
+    fits = [row["fit"] for row in body["candidates"]]
+    assert fits == sorted(fits, reverse=True), "the pool is in Fit order"
+    shown = await exposure_ledger.times_shown(
+        sport=world.SPORT,
+        week=week_of(build_clock().now()),
+        player_ids=[UUID(player_id) for player_id in rows],
+    )
+    assert {str(player_id): count for player_id, count in shown.items()} == {
+        player_id: (1 if player_id in seated else 0) for player_id in rows
+    }, "⚡ counted the whole pool as shown"

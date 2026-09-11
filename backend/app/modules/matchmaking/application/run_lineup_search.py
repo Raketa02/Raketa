@@ -30,6 +30,19 @@ complete a four, a newcomer least of all (``docs/adr/0099``).
 the engine is no longer optimising for the searcher, who may end up with a worse
 individual match than an empty court would have given them, so the envelope says
 ``optimised_for: GROUP`` and the screen can say so too.
+
+**The answer carries the pool it seated from, and the court names people on
+it.** The returned band is ``pool_for``'s top ``K`` by Fit — the seated among
+them — and not the seated alone (#407). A court is its answer, but a builder is
+also a screen somebody picks from, and *Pick players myself* on a court reached
+from a challenge has no list but this record: that journey mints no shortlist,
+``POST /forecasts`` and the send both refuse anybody the cited search never
+returned, and a plain ``POST /searches`` is gated by the very challenge being
+completed — so a record holding only the seated offered that screen the one
+person just taken off a seat, or nobody. **Exposure still counts the seated
+only**: the court is what was shown, the rest of the pool is shown only if the
+player opens the list, and counting what may never be opened would sink two
+dozen people per ⚡ under the ±6 adjustment (``the-engine.md`` §8).
 """
 
 from __future__ import annotations
@@ -115,8 +128,11 @@ class LineupAnswer:
     """What the route renders: the record, the court, and the three ways round.
 
     The record is the answer's identity, exactly as it is for a shortlist, and
-    the seated rows are read off it — so the card in the response and the card in
-    the record cannot disagree about what was shown.
+    its returned band is the **pool** the four were drawn from, in Fit order,
+    with the seated among them. A seat names a person by id and their row is
+    read off the record — so the card in the response and the card in the
+    record cannot disagree about what was shown, and a pool opened on this
+    record has the rest of the ranking to offer.
 
     ``seats``, ``arrangements`` and ``group_reason`` are beside it rather than on
     it for the reason the sorts are: they are a statement about *this* answer,
@@ -340,11 +356,17 @@ class RunLineupSearch:
                 ) from broken
 
         reason = unfilled_reason(pool, seating, context, guests=guests)
-        seated_rows = self._rows_for(pool, seating)
+        seated = self._seated_off_the_pool(pool, seating)
         with self._work.timed(stages, "attach"):
-            rows = await self._work.attach(seated_rows, context)
+            # **The whole pool, not the seated few.** ``K`` cards rather than
+            # three — the same bound a shortlist pays for twenty, and the price
+            # of a record *Pick players myself* can draw a list from.
+            rows = await self._work.attach(pool.rows, context)
 
         returned = tuple(row.scored for row in rows)
+        # Who actually sat down, among the rows that survived ``attach``: the
+        # only rows exposure is noted for, below.
+        shown = tuple(row for row in returned if row.player_id in seated)
         record = SearchRecord(
             id=search_id,
             searcher_id=searcher.player_id,
@@ -386,11 +408,19 @@ class RunLineupSearch:
             offered_by_search_id=asked.offered_by_search_id,
             rung_taken=asked.rung_taken,
             latency_ms_by_stage=stages,
-            lineup=_layer_four(pool, seating),
+            lineup=_layer_four(pool, seating, seated=seated),
             candidates=self._work.recorded_rows(rows, pool.near_misses),
         )
         await self._work.record(record)
-        await self._work.note_exposure(sport, now, returned, for_a_newcomer)
+        # **The seated only, and never the pool.** The court is what this answer
+        # shows; the rest of the pool is drawn only if the player opens the
+        # list, and a ⚡ that counted two dozen appearances would sink the top
+        # of every ranking a few fills later under the ±6 exposure adjustment
+        # (``the-engine.md`` §8). The cost is stated rather than hidden: a list
+        # opened off this record is shown and **under**-counted — the opposite
+        # error from a shortlist, which counts every row whether or not the
+        # player scrolled to it. Neither is a gate, and the two do not cancel.
+        await self._work.note_exposure(sport, now, shown, for_a_newcomer)
         searcher_id = str(searcher.player_id)
         week = improvised_week(asked=asked.grid, profile=declared.grid)
         return LineupAnswer(
@@ -573,39 +603,46 @@ class RunLineupSearch:
                     "two of the players you seated cannot share a court"
                 )
 
-    def _rows_for(
+    def _seated_off_the_pool(
         self, pool: LineupPool, seating: Seating
-    ) -> tuple[Scored, ...]:
-        """The seated, as the rows the record and the card were built from.
+    ) -> tuple[str, ...]:
+        """Who sat down, in the order they were seated — and the proof that
+        every one of them came out of the pool.
 
-        In **seat order** rather than in Fit order, because ``position`` on a
-        recorded row is where somebody was shown and on this surface that is
-        where they were seated.
+        The enumeration draws from the pool and the locked seats were resolved
+        against it, so a lookup that missed would mean the two had come apart,
+        and it says so rather than returning a court naming somebody the pool
+        never held. What it does **not** prove is a row on the record:
+        ``attach`` still drops a row it cannot build a card for, and a seat
+        naming somebody ``candidates`` does not carry is the gap the read-back
+        test names rather than one this closes.
 
-        Every seated player came out of this pool — the enumeration draws from
-        it and the locked seats were resolved against it — so a lookup that
-        missed would mean the two had come apart, and it says so rather than
-        returning a court with a person quietly removed from it.
+        The record's rows are the pool itself, in Fit order, so ``position`` on
+        this surface is a place in that list and not a seat — the Fit rank,
+        unless a row above was dropped for its card — and the court says
+        separately who sat where.
         """
 
-        return tuple(
+        for one in seating.seated:
             invariant(
                 pool.by_id(one.player_id),
                 f"{one.player_id} was seated and is not in the pool they were "
                 f"drawn from",
             )
-            for one in seating.seated
-        )
+        return tuple(one.player_id for one in seating.seated)
 
 
-def _layer_four(pool: LineupPool, seating: Seating) -> LineupRecord:
-    """Layer 4, assembled once. **Two rows, and no route returns either.**
+def _layer_four(
+    pool: LineupPool, seating: Seating, *, seated: tuple[str, ...]
+) -> LineupRecord:
+    """Layer 4, assembled once. **Two rows, and no route returns any of it.**
 
     The winner and the runner-up come back whole because the deciding margin is
     computed over their contributions, and a margin is not reproducible from a
     code. The counters come from the enumeration itself, which is the only place
     ``docs/adr/0116``'s falsifier — *how many combinations the pairwise gate
-    refused* — exists at all.
+    refused* — exists at all. And the seated are named, because the returned
+    band stopped naming them.
     """
 
     rows = tuple(
@@ -622,6 +659,11 @@ def _layer_four(pool: LineupPool, seating: Seating) -> LineupRecord:
         refused_by_floor=seating.counts.refused_by_floor,
         max_fit_rank_seated=max_fit_rank(pool, seating),
         rows=rows,
+        # **Who sat down, on the record.** The returned band is the pool now
+        # (#407), and a partial line-up or a singles court writes no winner to
+        # read the seated off — so the fact rides here, in the order they were
+        # seated, beside the deepest rank it already implied.
+        seated=tuple(UUID(one) for one in seated),
     )
 
 

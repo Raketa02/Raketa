@@ -151,12 +151,14 @@ def render_read_back(
 
 
 def render_lineup(answer: LineupAnswer, photos: PhotoLinks) -> LineupResponse:
-    """The seated four: the envelope, the rows, and the court they sit on.
+    """The seated four: the envelope, the pool, and the court they sit on.
 
     **The rows come off the record**, exactly as a shortlist's do, so a seated
     card carries the same number the shortlist showed and nothing is re-scored
-    behind the player's back. The court is beside them because a seat is a fact
-    about *this* answer rather than about a person.
+    behind the player's back. The rows are the **pool** the four were drawn
+    from, in Fit order, and the court names its people by id among them — a
+    seat is a fact about *this* answer rather than about a person, and the list
+    beside it is what a pool opened on this record has to offer.
 
     ``optimised_for`` is ``GROUP`` when the searcher hand-seated anybody: from
     that moment the engine is filling seats around them and may hand the searcher
@@ -176,9 +178,9 @@ def render_lineup(answer: LineupAnswer, photos: PhotoLinks) -> LineupResponse:
             ),
         ),
         # **The same rows, in the same shape, on every surface.** A line-up's
-        # returned band is who sat down, so the list is the seated four minus
-        # the searcher — and a client that renders a shortlist row can render
-        # this one without a branch.
+        # returned band is the pool it seated from, the seated among them, so a
+        # client that renders a shortlist row can render this one without a
+        # branch — and can draw a pool from it (#407).
         candidates=[_candidate(row, photos) for row in answer.record.returned],
         lineup=LineupSchema(
             seats=[_seat(seat) for seat in answer.seats],

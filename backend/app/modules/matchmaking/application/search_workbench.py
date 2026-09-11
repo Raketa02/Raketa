@@ -853,7 +853,7 @@ class SearchWorkbench:
         self,
         sport: Sport,
         now: Instant,
-        returned: tuple[Scored, ...],
+        shown: tuple[Scored, ...],
         for_a_newcomer: bool,
     ) -> None:
         """Add one appearance each to the week's bucket. **After the commit.**
@@ -864,6 +864,11 @@ class SearchWorkbench:
         refusal above — a search that ran and was recorded is a search that
         happened, whatever Redis thought.
 
+        ``shown`` is what the surface counts as shown, which is the caller's
+        call and not this method's: every returned row on a list, and the
+        **seated only** on a court, whose returned band is the pool it drew
+        from (#407).
+
         **A newcomer's search writes both families**, over the same rows: being
         volunteered into a newcomer's list is being shown, plus one further fact
         about who was looking. Two writes rather than a flag on one, because they
@@ -871,11 +876,13 @@ class SearchWorkbench:
         """
 
         week = week_of(now)
-        shown = [UUID(row.player_id) for row in returned]
-        await self._exposure.record_shown(sport=sport, week=week, player_ids=shown)
+        player_ids = [UUID(row.player_id) for row in shown]
+        await self._exposure.record_shown(
+            sport=sport, week=week, player_ids=player_ids
+        )
         if for_a_newcomer:
             await self._exposure.record_shown_to_a_newcomer(
-                sport=sport, week=week, player_ids=shown
+                sport=sport, week=week, player_ids=player_ids
             )
 
 

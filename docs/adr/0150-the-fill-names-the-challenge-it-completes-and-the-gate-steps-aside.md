@@ -301,3 +301,60 @@ fourteen in one commit, because a false claim half-corrected across two apps is 
 keeping: a literal search for *unreachable in every sport* misses `unreachable in **every sport**`
 and *unreachable until the challenge ends, in every sport*. Emphasis and word order defeat a grep,
 so the sweep that finds a claim like this has to be looser than the claim.
+
+## Amendment — 2026-09-11: the pool over a fill had nobody to offer, and the line-up's answer now carries the pool it seated from
+
+**What §7 promised.** Pressing ⚡ on the challenge screen *"is what makes *Pick players myself*
+work on the first screen rather than after a mandatory ⚡."* It did not, and the reason is not in
+this record: the builder reached from a challenge arrives on the fill's **own** record, and
+`POST /lineups` returned exactly the rows it seated — *"the seated, as the rows the record and the
+card were built from"*. So `pickable(candidates, members)` over that record was `{seated} − {seated}`,
+and the pool over a fill court — which this record calls one of *"the remedies on this court — ⚡
+and another seat"* — offered the one person just taken off a seat, or nobody
+([#407](https://github.com/Raketa02/Raketa/issues/407)).
+
+**Nothing on the client could supply a list, and that is this record's own doing.** The line-up is
+bound to one `search_id`; `POST /forecasts` and the send both refuse anybody the cited search never
+returned ([ADR-0108](0108-a-forecast-is-a-route-not-a-search.md) §3, `search_court_origin.py`);
+and a plain `POST /searches` is gated by the very challenge being completed — the people sitting on
+the court are exactly the ones it excludes, which is §3's argument read from the pool's side. On
+the *Find a game* route the same defect was fixed on the client by opening the pool on the
+shortlist the court was searched under; from a challenge there is no such shortlist.
+
+**Decision: `POST /lineups` returns the pool it seated from.** The returned band is `pool_for`'s
+top `K` by Fit, in Fit order, with the seated among them; `lineup.seats[].player_id` is looked up
+there, which is what `LineupSeatSchema` always said. The read-back therefore *is* a list, the pool
+over a fill opens on the fill's own record, and a forecast or a send citing that search may name
+anybody on it. Four costs, each paid on purpose:
+
+- **`attach` builds `K` cards rather than the seated few** — the same bound a shortlist pays for
+  twenty, over a pool already truncated at `K` for the enumeration's sake.
+- **Exposure counts the seated only.** The court is what was shown; the rest of the pool is shown
+  only if the player opens the list, and a ⚡ that counted two dozen appearances would sink the top
+  of every ranking a few fills later under the ±6 exposure adjustment
+  ([`the-engine.md`](../specs/matchmaking/the-engine.md) §8). A list opened off the record is
+  shown and **under**-counted — the opposite error from a shortlist, which counts every row it
+  returned whether or not the player scrolled to it. Neither is a gate, and the two do not cancel.
+- **`position` on a line-up's recorded row is a place in the pool and no longer a seat** — the Fit
+  rank, unless a row above it was dropped because its card could not be assembled, exactly as a
+  shortlist's is — and `n_returned` counts the pool while staying the redaction detector it was.
+  Who sat down was a
+  fact the returned band held and layer 4's winner holds only for a **complete** four — a partial
+  line-up and a singles court record no winner — so **layer 4 gains `seated`**, in the order they
+  were seated, beside the deepest rank it already implied. `null` on a row written before is *not
+  recorded* and never *nobody*, exactly as the area code's absence is; no migration, because layer
+  4 is one JSON column.
+- **`the-two-contracts.md` §1 and §5 move**, and are amended in the same commit.
+
+**The other shape was refused.** `POST /searches` taking `completing_challenge_id` — this record's
+own §2 one route over — would mint a challenge-completing shortlist for the pool to open on. It was
+refused for a hole rather than for its size: a shortlist is twenty rows by **rank key**, so an
+accepted seat is not guaranteed a row on it, and a pick that moved the court onto such a list would
+drop a seat §8 says is not a control. The fill already has the right posture for that case —
+`_locked` resolves a seat out of this search's own pool *or refuses* — and a list the seated are on
+by construction is the one the fill already holds.
+
+**What does not move.** §1–§9 stand. The seats route still resolves origins for the newly seated
+only, against `RETURNED` rows by id; the gate's exemption is still an input; and nothing here
+touches the ruleset corpus, whose line-up records name *who sat down* as the thing a ruleset diff
+compares, which is still the right comparison.

@@ -477,6 +477,14 @@ class LineupRecord:
     *whether the winning combination ever contains a candidate ranked past ``K``*
     and cannot fire, because the pool is truncated at ``K`` by construction; this
     one measures how deep into the ranking the engine actually reached.
+
+    ``seated`` is **who sat down**, and it is here because the returned band no
+    longer says (#407): that band is the pool the four were drawn from, and a
+    complete four's seated are the winner's members — but a partial line-up and
+    a singles court record no winner, and a search-time fact the record used to
+    hold is not one it may lose. ``None`` is *not recorded* — a search written
+    while the returned band was the seated in seat order, which searches being
+    kept for ever makes a standing state rather than a migration's leftover.
     """
 
     combinations: int
@@ -487,6 +495,11 @@ class LineupRecord:
     #: The winner, then the runner-up. Empty when no combination was scored, and
     #: one row long when there was nothing to beat.
     rows: tuple[RecordedCombination, ...]
+    #: Who took a seat, in the order they were seated — nought to three, and an
+    #: empty tuple is *nobody tonight*. ``None`` is *not recorded*, never
+    #: *nobody* — and it has no default, so *not recorded* is a state a writer
+    #: has to spell rather than the one it gets by forgetting.
+    seated: tuple[UUID, ...] | None
 
     def __post_init__(self) -> None:
         for name, count in (
@@ -505,6 +518,14 @@ class LineupRecord:
             == [CombinationBand.WINNER, CombinationBand.RUNNER_UP][: len(self.rows)],
             "layer 4's rows are the winner then the runner-up, in that order",
         )
+        # The two facts about the seated are one fact in two columns: a rank
+        # among nobody, or nobody with a rank, is a row where they have drifted.
+        if self.seated is not None:
+            invariant(
+                (self.max_fit_rank_seated is None) == (not self.seated),
+                f"layer 4 seats {len(self.seated)} and reads a deepest rank of "
+                f"{self.max_fit_rank_seated}",
+            )
 
 
 @final

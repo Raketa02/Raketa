@@ -368,7 +368,9 @@ least of all ([#175](https://github.com/Raketa02/Raketa/issues/175)).
 >   already seated. It is what the searcher would do by hand and it introduces no constant.
 > - **The line-up is not read back in full.** `the-two-contracts.md` §1 promises `GET
 >   /searches/{id}` returns the same schema the `POST` did; today it returns the envelope and the
->   seated rows, and the seating, the arrangements and `group_reason` do not survive. Layer 4
+>   pool the four were drawn from (the seated rows alone, before
+>   [#407](https://github.com/Raketa02/Raketa/issues/407)), and the seating, the arrangements and
+>   `group_reason` do not survive. Layer 4
 >   holds the winning combination and **no route may return it**, so reproducing the court needs a
 >   second stored shape — *what was shown*, beside *what was compared* — which is the same split
 >   the returned band and the near-miss band already have. Left out deliberately rather than
@@ -390,6 +392,7 @@ be unfalsifiable and §5's reason code unreproducible.
 | The runner-up | the same — exactly what the deciding margin is computed from |
 | Counters | combinations enumerated · refused by the pairwise gate · refused by the floor |
 | `max(fit_rank)` among the seated | `K`'s replacement falsifier |
+| Who sat down | in the order they were seated — since [#407](https://github.com/Raketa02/Raketa/issues/407) made the returned band the **pool** rather than the seated, and a partial line-up or a singles court records no winner to read them off. `null` on a row written before, which is *not recorded* and never *nobody* |
 
 Two rows, not 1 771: enough to replay the choice and compute the margin, and no more than any
 question anybody has asked. It inherits #169's rules unchanged — **written before the answer is

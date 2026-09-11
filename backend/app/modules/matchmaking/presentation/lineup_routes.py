@@ -148,7 +148,13 @@ forecasts_router = APIRouter(prefix="/forecasts", tags=["forecasts"])
         "rule released them with it, because that rule holds the people still "
         "arranging a game and they are not one of them.\n\n"
         "**A seated card shows the same number the shortlist showed.** Nothing "
-        "is re-scored when somebody sits down."
+        "is re-scored when somebody sits down.\n\n"
+        "**`candidates` is the pool the four were drawn from**, in Fit order, "
+        "with the seated among them — look a seat's `player_id` up there. It "
+        "is the list a pool opened on this answer draws, and the list "
+        "`POST /forecasts` and the send resolve a pick against, so a court "
+        "reached from a challenge has people to offer for its open seats "
+        "without a shortlist of its own."
     ),
 )
 async def run_lineup(

@@ -28,6 +28,7 @@ from app.modules.matchmaking.domain.searches import (
     CandidateBand,
     GameResult,
     InclusionReason,
+    LineupRecord,
     PoolDescription,
     RecordedCard,
     SearchCandidateRecord,
@@ -39,6 +40,7 @@ from app.modules.matchmaking.domain.searches import (
 )
 from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
+    SearchORM,
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
     SqlAlchemySearchStore,
@@ -333,6 +335,87 @@ async def test_a_search_recorded_before_the_area_was_kept_reads_back_without_one
 
     assert read is not None
     assert read.searcher_area_code is None
+
+
+def _a_line_up(*, seated: tuple[UUID, ...] | None) -> SearchRecord:
+    """A line-up's record: the shortlist's, on the surface layer 4 belongs to."""
+
+    return replace(
+        _record(),
+        surface=SearchSurface.LINEUP,
+        lineup=LineupRecord(
+            combinations=4,
+            refused_by_gate=1,
+            refused_by_floor=0,
+            max_fit_rank_seated=None if not seated else 2,
+            rows=(),
+            seated=seated,
+        ),
+    )
+
+
+async def test_layer_four_records_who_sat_down_and_reads_it_back(store):
+    """**The seated are on layer 4**, since the returned band became the pool
+    ([#407](https://github.com/Raketa02/Raketa/issues/407)). In the order they
+    were seated, and an empty tuple is *nobody tonight* — which is not the
+    absence below."""
+
+    adapter, session = store
+    seated = (uuid4(), uuid4())
+    record = _a_line_up(seated=seated)
+
+    await adapter.record(record)
+    await session.commit()
+
+    read = await adapter.find(search_id=record.id, searcher_id=SEARCHER)
+
+    assert read is not None and read.lineup is not None
+    assert read.lineup.seated == seated
+    assert read.lineup.max_fit_rank_seated == 2
+
+
+async def test_a_line_up_recorded_before_the_seated_were_kept_reads_back_without_them(
+    store,
+):
+    """``None`` is *not recorded*, and never *nobody*.
+
+    A row written while the returned band was the seated in seat order carries
+    no ``seated`` key in its blob, and searches are kept for ever — so the
+    state is standing rather than a migration's leftover, exactly as the area
+    code's is.
+    """
+
+    adapter, session = store
+    record = _a_line_up(seated=None)
+
+    await adapter.record(record)
+    await session.commit()
+    async with session.begin_nested():
+        row = (
+            await session.execute(select(SearchORM).where(SearchORM.id == record.id))
+        ).scalar_one()
+        assert "seated" not in row.lineup, "an unrecorded fact was written as null"
+
+    read = await adapter.find(search_id=record.id, searcher_id=SEARCHER)
+
+    assert read is not None and read.lineup is not None
+    assert read.lineup.seated is None
+
+
+def test_layer_four_cannot_seat_nobody_and_read_a_deepest_rank():
+    """The two facts about the seated are one fact in two columns."""
+
+    from app.kernel import InvariantViolated
+
+    with pytest.raises(InvariantViolated):
+        LineupRecord(
+            combinations=0,
+            refused_by_gate=0,
+            refused_by_floor=0,
+            max_fit_rank_seated=3,
+            rows=(),
+            seated=(),
+        )
 
 
 def test_an_area_code_is_recorded_or_absent_and_never_blank():

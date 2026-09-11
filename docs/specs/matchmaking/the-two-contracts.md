@@ -57,7 +57,7 @@ already carry that, and it would be the only context segment in the document.
 | Route | Surface | Returns |
 | --- | --- | --- |
 | `POST /api/v1/searches` | `SHORTLIST` | A ranked shortlist with full breakdowns |
-| `POST /api/v1/lineups` | `LINEUP` / `FILL_SEATS` | A seated line-up, three arrangements, forecasts |
+| `POST /api/v1/lineups` | `LINEUP` / `FILL_SEATS` | The pool it seated from, a seated line-up, three arrangements, forecasts |
 | `POST /api/v1/deck` | `DECK` | One deal: an ordered batch of cards |
 | `GET /api/v1/searches/{id}` | — | Any of the above, read back |
 
@@ -436,6 +436,29 @@ seat left needs an arranged forecast per candidate, so the engine precomputes on
 row when `open_seats == 1` and **omits it otherwise**. Everything else — *Best fit*, *Closest*,
 *Most reliable* — sorts client-side over fields already in the response, because a round trip
 per sort tap is latency spent on nothing.
+
+> **Amended 2026-09-11 by [#407](https://github.com/Raketa02/Raketa/issues/407): `candidates[]` on
+> a line-up is the pool it seated from, and not the seated alone.** The returned band used to be
+> exactly the people who sat down, in seat order — *a court is its answer, not a list*. It is also
+> the only list the builder reached from a challenge has: that journey mints no shortlist,
+> `POST /forecasts` and the send both refuse anybody the cited search never returned (ADR-0108
+> §3, `search_court_origin.py`), and a plain `POST /searches` is gated by the very challenge being
+> completed. So the pool over a fill court offered the one person just taken off a seat, or nobody.
+>
+> Now `candidates[]` is **`pool_for`'s top `K` by Fit, in Fit order, with the seated among them** —
+> `lineup.seats[].player_id` is looked up there, as `LineupSeatSchema` always said. `K` is ruleset
+> data (24 today) and a client never reads it from anywhere, exactly as it never reads twenty.
+> `position` on a line-up's recorded row is therefore a **place in the pool** and no longer a
+> seat — the Fit rank, unless a row above was dropped for a card that could not be assembled,
+> exactly as on a shortlist; who sat down is the response's `lineup` and, on the record, layer 4's
+> `seated` ([`the-group-objective.md`](the-group-objective.md) §6). **Exposure still counts the
+> seated only** — the court is what was shown, the rest of the pool is shown only if the player
+> opens the list, and a ⚡ that counted two dozen appearances would sink the top of every ranking
+> under the ±6 adjustment. A list opened off the record is shown and *under*-counted, the opposite
+> error from a shortlist's rows past the fold; neither is a gate. `POST /searches`
+> growing `completing_challenge_id` was the other shape and was refused: a shortlist is twenty by
+> rank key, so an accepted seat is not guaranteed a row on it, and a pick that moved the court
+> onto such a list would drop a seat ADR-0150 §8 says is not a control.
 
 ---
 

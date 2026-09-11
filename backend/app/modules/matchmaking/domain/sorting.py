@@ -151,12 +151,15 @@ def sorts_available(
     people have no record yet, so on most searches it is still absent, and that
     is the derivation working rather than a gap.
 
-    **Neither the deck nor a line-up draws any of them**, and that is the same
-    rule rather than an exception to it. A line-up returns **seats** and not a
-    list: the four are chosen together by one objective, and a control that
-    reordered them would be offering to undo the choice the surface exists to
-    make — *Even it out* is a selection among three arrangements, which is a
-    different control and rides on the line-up itself.
+    **Neither the deck nor a line-up draws any of them.** For the line-up it
+    is a decision not yet taken rather than the deck's rule: its list is the
+    **pool** it seated from (#407), in the Fit order that decided who was
+    eligible for a seat at all, and the four are chosen out of it together by
+    one objective — so a re-sort of the list would undo nothing on the court,
+    and *Even it out*, a selection among three arrangements, stays the one
+    control that rides on the line-up itself. ``BEST_FIT`` would reorder
+    nothing on a list already in Fit order; the other two are not offered
+    until a screen asks for them over that list.
 
     For the deck: a deck is one card at a time, so there is no list in the
     player's hand for a control to reorder, and its **order is its whole

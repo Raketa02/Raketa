@@ -298,24 +298,29 @@ def _lineup_blob(lineup: LineupRecord) -> dict[str, Any]:
     and allowed to change with the group vector.
     """
 
-    return {
+    blob: dict[str, Any] = {
         "combinations": lineup.combinations,
         "refused_by_gate": lineup.refused_by_gate,
         "refused_by_floor": lineup.refused_by_floor,
         "max_fit_rank_seated": lineup.max_fit_rank_seated,
-        "rows": [
-            {
-                "band": row.band.value,
-                "members": [str(one) for one in row.members],
-                "partner_id": str(row.partner_id),
-                "terms": [dict(term) for term in row.terms],
-                "degraded_terms": list(row.degraded_terms),
-                "side_gap": row.side_gap,
-                "forecast_pct": row.forecast_pct,
-            }
-            for row in lineup.rows
-        ],
     }
+    # Written only when recorded, so that its absence on the way back still
+    # reads as *not recorded* rather than as a null somebody wrote on purpose.
+    if lineup.seated is not None:
+        blob["seated"] = [str(one) for one in lineup.seated]
+    blob["rows"] = [
+        {
+            "band": row.band.value,
+            "members": [str(one) for one in row.members],
+            "partner_id": str(row.partner_id),
+            "terms": [dict(term) for term in row.terms],
+            "degraded_terms": list(row.degraded_terms),
+            "side_gap": row.side_gap,
+            "forecast_pct": row.forecast_pct,
+        }
+        for row in lineup.rows
+    ]
+    return blob
 
 
 def _lineup_record(blob: Mapping[str, Any] | None) -> LineupRecord | None:
@@ -329,11 +334,15 @@ def _lineup_record(blob: Mapping[str, Any] | None) -> LineupRecord | None:
 
     if blob is None:
         return None
+    seated = blob.get("seated")
     return LineupRecord(
         combinations=blob["combinations"],
         refused_by_gate=blob["refused_by_gate"],
         refused_by_floor=blob["refused_by_floor"],
         max_fit_rank_seated=blob["max_fit_rank_seated"],
+        # Absent on a row written while the returned band was the seated, and
+        # ``None`` is what that means: *not recorded*, never *nobody*.
+        seated=None if seated is None else tuple(UUID(one) for one in seated),
         rows=tuple(
             RecordedCombination(
                 band=CombinationBand(row["band"]),

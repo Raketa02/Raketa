@@ -73,7 +73,7 @@ Generation is `sport ∧ box ∧ gates` — the shard conjunct is struck
 | `excluded_by_gate` | JSONB histogram, one key per gate reason code — **ten in all**: §9.1's **eight**, plus [ADR-0096](../../adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)'s ninth and [ADR-0103](../../adr/0103-where-the-curve-saturates-the-gate-begins.md)'s tenth. (This row said *"the ten gates of §9.1 plus"* those two, which counts twelve; §9.1 lists eight and the roster is enumerated once in [`the-engine.md`](the-engine.md) §3.) Counts only; **no candidate is named at this layer** |
 | `n_scored` | Cleared every gate and was given a Fit |
 | `n_cleared_floor` | |
-| `n_returned` | Shortlist length. **Also the redaction detector** — compared against the count of `band = RETURNED` rows, a mismatch means erasure removed a candidate's row from a search that survived ([ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md) §6). It is load-bearing rather than redundant and is never denormalised away |
+| `n_returned` | Shortlist length — and on a line-up, the size of the **pool** returned ([#407](https://github.com/Raketa02/Raketa/issues/407)), never the seats filled. **Also the redaction detector** — compared against the count of `band = RETURNED` rows, a mismatch means erasure removed a candidate's row from a search that survived ([ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md) §6). It is load-bearing rather than redundant and is never denormalised away |
 | `n_near_miss_recorded` | How many layer-3 rows were written, `0 … NEAR_MISS_RECORDED`. The same detector for the near-miss band, which `best_withheld_fit` cannot provide because it is a value and not a count. Added by [#183](https://github.com/Raketa02/Raketa/issues/183) |
 | `best_withheld_fit` | The Fit of the best candidate that did not clear. Nullable — null means nothing was withheld, which is not the same as `0` |
 | `pool_description` | ADR-0099's shape: `{sport, radius_km_used, players_in_range, window, post_gate: true}`. Written on **every** search, not only empty ones — a thin pool and a broken floor are indistinguishable without it. Codes, never a sentence (ADR-0022) |
@@ -111,7 +111,7 @@ person did about it.
 |---|---|
 | `search_id` | |
 | `band` | `RETURNED` \| `NEAR_MISS` |
-| `position` | Rank within the band. `1` is the top of the shortlist, or the best withheld |
+| `position` | Rank within the band. `1` is the top of the shortlist, or the best withheld. On a line-up it is a place in the **pool** the four were drawn from — the Fit rank, unless a row above was dropped for its card — and never a seat; who sat down is layer 4's `seated` ([#407](https://github.com/Raketa02/Raketa/issues/407)) |
 | `player_id` | |
 | `fit` | |
 | `terms` | JSONB — every term with its value, weight, contribution and evidence codes. **Deliberately opaque**: it is stamped with `ruleset_version` and its shape is allowed to change between rulesets, which is exactly what a relational schema would fight |

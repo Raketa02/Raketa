@@ -618,3 +618,65 @@ async def test_the_fill_never_takes_somebody_out_of_a_court_they_are_in(
 
     assert refused.status_code == 409, refused.text
     assert refused.json()["code"] == "accepted_player_may_not_be_removed"
+
+
+# ---------------------------------------------------------------------------
+# The pool over a fill has somebody to offer
+# ---------------------------------------------------------------------------
+
+
+async def test_the_pool_over_a_fill_has_somebody_to_offer(
+    client, session_factory, candidate_source, searcher
+):
+    """[#407](https://github.com/Raketa02/Raketa/issues/407): a line-up answer
+    used to return exactly the people it seated, so the pool over a fill court —
+    which this journey mints no shortlist for — offered the one person just
+    taken off a seat, or nobody.
+
+    A city of five, one accepted, ⚡ seats two more: the two it did **not** seat
+    are still rows on the fill's own record. So the pool over this court can
+    offer another seat, a forecast citing the fill can price the swap, and the
+    send can seat the pick — all three against the one search the court is
+    bound to.
+    """
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    challenge_id = await _a_half_built_court(client, searcher, people["ana"])
+    filled = await world.lineup(
+        client, searcher["token"], completing_challenge_id=challenge_id
+    )
+    body = filled.json()
+    search_id = body["search"]["search_id"]
+    accepted = str(people["ana"]["id"])
+    seated = _seated(body["lineup"])
+    pool = [row["player_id"] for row in body["candidates"]]
+
+    assert accepted in pool, "the accepted seat is not an ordinary row"
+    offered = [player_id for player_id in pool if player_id not in seated]
+    assert offered, "the fill's record offers nobody it did not seat"
+    by_the_engine = sorted(seated - {accepted, str(searcher["id"])})
+    assert len(by_the_engine) == 2
+
+    priced = await world.forecast(
+        client,
+        searcher["token"],
+        search_id=search_id,
+        players=[accepted, offered[0], by_the_engine[0]],
+    )
+    assert priced.status_code == 200, priced.text
+
+    grown = await _fill(
+        client,
+        searcher["token"],
+        challenge_id,
+        search_id,
+        [
+            {"side": "A", "player_id": str(searcher["id"])},
+            {"side": "A", "player_id": accepted},
+            {"side": "B", "player_id": offered[0]},
+            {"side": "B", "player_id": by_the_engine[0]},
+        ],
+    )
+    assert grown.status_code == 200, grown.text
+    seats = {seat["player_id"] for seat in grown.json()["seats"]}
+    assert offered[0] in seats, "the pick off the pool did not reach the court"

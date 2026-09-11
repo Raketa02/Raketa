@@ -1437,11 +1437,14 @@ class LineupSchema(BaseModel):
 
 
 class LineupResponse(ShortlistResponse):
-    """The shortlist's envelope, its rows, and the court they were seated on.
+    """The shortlist's envelope, the pool, and the court seated out of it.
 
     One envelope and one row shape across every surface, so the read-back has one
     renderer to reproduce: what a line-up adds is the seating, not a second way
-    of describing a person.
+    of describing a person. `candidates` is the **pool** ⚡ seated from — in Fit
+    order, up to the ruleset's own candidate cap, the seated among them — and
+    not the seated alone, so *Pick players myself* on this answer has the rest
+    of the ranking to offer ([#407](https://github.com/Raketa02/Raketa/issues/407)).
     """
 
     lineup: LineupSchema

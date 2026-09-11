@@ -230,7 +230,10 @@ never the designed path.
 ## 3. ⚡ Let the engine fill the seats
 
 `POST /lineups`. The response carries the seated line-up, all three arrangements with a
-forecast each, and `optimised_for` in the envelope.
+forecast each, and `optimised_for` in the envelope — and, since
+[#407](https://github.com/Raketa02/Raketa/issues/407), **the pool the four were drawn from** in
+`candidates[]`, in Fit order with the seated among them, so that *Pick players myself* over a
+court that arrived with no shortlist of its own (§9) has people to offer.
 
 **The animation is presentation over a completed answer, and the client may take its time.**
 Animating a finished response is ordinary interface craft; the product's promise is that the
