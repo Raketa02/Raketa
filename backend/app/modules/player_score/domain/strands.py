@@ -55,7 +55,7 @@ from app.kernel import Instant, instant, invariant
 #: blend was 35/20/15/12/10/8 while *confirms results* was a strand; it was struck
 #: (``docs/adr/0137``) and its 15 came out with it rather than being
 #: redistributed, precisely so that a third live strand could take that share
-#: back without anything else moving — which is what ``docs/adr/0156`` does.
+#: back without anything else moving — which is what ``docs/adr/0160`` does.
 #: Nothing has been retuned in either direction, because nothing was learned: a
 #: weight that moved would be a hypothesis about the player's own screen with no
 #: evidence behind the move.
@@ -92,7 +92,7 @@ PUBLISHED_WEIGHTS: Mapping[ReliabilityStrand, int] = MappingProxyType(
 
 
 #: How far back *answers about results* remembers. **The one window in this
-#: context, and it belongs to one strand** (``docs/adr/0156``).
+#: context, and it belongs to one strand** (``docs/adr/0160``).
 #:
 #: ``docs/adr/0140`` §4 refused a rolling window for *shows up* and *answers
 #: challenges* and that refusal stands: every opportunity there counts for ever,
@@ -231,7 +231,7 @@ class PlayerScore:
         and computed by none of them: the reliability floor, whose
         ``published_score_bar`` prices it, the player card, which prints it
         (``docs/adr/0140``), and the player record, which prints it **beside the
-        rows it is the mean of** (``docs/adr/0155``). A penalty justified by a
+        rows it is the mean of** (``docs/adr/0159``). A penalty justified by a
         figure that exists nowhere a human can look is unexplainable, and a card
         that printed a figure the player's own profile disagreed with would be
         worse than a card that said nothing.

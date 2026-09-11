@@ -318,9 +318,9 @@ than level — because that is what *for fun* means.
 
 4  reliability  six strands read SEPARATELY, weighted per mode (ranking-weights §6), each
               strand standing down below ITS OWN min_observations — 5 for answers about
-              results, 3 for the rest (ADR-0156) — the whole term standing down past
+              results, 3 for the rest (ADR-0160) — the whole term standing down past
               RELIABILITY_HORIZON_DAYS = 365. Three of the six have a provider
-              (ADR-0140, ADR-0156); the other three stand down for everybody and the
+              (ADR-0140, ADR-0160); the other three stand down for everybody and the
               survivors renormalise inside the term.
 
 5  availability  |shared| / |mine|        ← the glossary verbatim. NO CONSTANTS AT ALL.
@@ -353,7 +353,7 @@ Every term's evidence crosses keyed by `kind`, and the union is enumerated in
 | Level fit | `{level_fit, their_mu, my_mu, delta, direction}` |
 | Predicted balance | `{predicted_balance, pct, my_sigma, their_sigma, confidence}` |
 | Intent alignment | `{intent_alignment, their_intent, my_mode, aligned}` |
-| Reliability | `{reliability, score, strands, floor_breached}` — `strands` is the **six named** strands, closed (*confirms results* struck by ADR-0137 and removed by ADR-0140; *answers about results*, which counts answers and not agreements, added by ADR-0156) |
+| Reliability | `{reliability, score, strands, floor_breached}` — `strands` is the **six named** strands, closed (*confirms results* struck by ADR-0137 and removed by ADR-0140; *answers about results*, which counts answers and not agreements, added by ADR-0160) |
 | Availability overlap | `{availability_overlap, shared_count, next_slot: {day, part}}` — `grid_stale` gone with staleness; `days_away` is **stored and never crossed** |
 | Playing style | `{playing_style, matched, complementary, clashing}` |
 | Social vibe | same shape, `{social_vibe, …}` |

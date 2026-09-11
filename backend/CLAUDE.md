@@ -757,7 +757,7 @@ Rules to preserve:
   argument, a stood-down reliability is now `NOTHING_FROM_THEM`, and the evidence gate counts
   eight live terms rather than seven — excluding nobody, at a margin of zero rather than one.
 - **A results strand counts answers, and never agreements**
-  ([ADR-0156](../docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md)).
+  ([ADR-0160](../docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md)).
   `ReliabilityStrand.ANSWERS_RESULTS` is the third live strand, and the thing to hold in your
   head is that **it is not the strand ADR-0137 struck**. *Confirms results* counted agreements,
   and because silence already confirms a lone score it could only ever have counted
@@ -784,7 +784,7 @@ Rules to preserve:
   the one the report cannot print: every player with a record is re-mixed on deploy.
   `2026.08.26-a` is edited once more to say **nought** about a word it never knew.
 - **Sportsmanship stores, and it is the first aggregate here that is not event-sourced**
-  ([ADR-0154](../docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
+  ([ADR-0158](../docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
   `app/modules/sportsmanship/` is the eighth context, and it is the mirror image of the
   seventh: `player_score` keeps no record at all, and this one is the first part of the
   player record that keeps one — an aggregate, two tables and a migration. The exemption
@@ -809,11 +809,11 @@ Rules to preserve:
   `None`, and `SportsmanshipLedger` has no method that answers *what did somebody say about
   me* — only *which of these cards are closed*, which is a fact about an act. **What this
   context publishes outward is a third port and never a method on that one**
-  ([ADR-0154](../docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)
+  ([ADR-0158](../docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)
   amendment, #382): `PublishedSportsmanshipQuery` answers the figure and how many different
   people it rests on for a reader, and a **coarse band** for the subject — two methods
   rather than one answer a caller narrows, because a use case that received the figure
-  would already hold the subtraction ADR-0154 §2 refuses, whatever it then drew. The
+  would already hold the subtraction ADR-0158 §2 refuses, whatever it then drew. The
   collapse costs that fold nothing, which is what the key bought: one row already is one
   person, so *the fifty most recent raters* is a `LIMIT` on a total order rather than a
   read-time collapse, and nothing is trimmed at either end. The band's edges are whole
@@ -841,7 +841,7 @@ Rules to preserve:
   that lapsed while somebody was typing is still answerable, which is the opposite of
   refusing one of two identical taps.
 - **A record is read through a prior disclosure, and the refusal names nothing**
-  ([ADR-0155](../docs/adr/0155-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)).
+  ([ADR-0159](../docs/adr/0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)).
   `app/modules/player_record/` is the ninth context and the second that keeps **no record
   at all** — no aggregate, no table, no migration, and a structural test that walks the
   package for an ORM import and the migrations for a table named after it. What separates

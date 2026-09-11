@@ -388,7 +388,7 @@ is `None` — the whole zone omitted rather than drawn empty.
 undo. Turning somebody down inside your day is *answering* them, and countering a score you
 believe is wrong is *answering* it — so no player is ever docked for disagreeing
 ([ADR-0049](../../adr/0049-no-player-is-penalised-for-not-agreeing-a-result.md),
-[ADR-0156](../../adr/0156-a-results-strand-counts-answers-and-never-agreements.md)). A strand
+[ADR-0160](../../adr/0160-a-results-strand-counts-answers-and-never-agreements.md)). A strand
 counting *agreements* is the one ADR-0137 struck, for exactly this reason.
 
 **One strand forgets and the other two do not.** *Answers about results* counts only the last
@@ -405,7 +405,7 @@ only thing on this sheet the platform did not count for itself, so there is noth
 somebody has to have typed it. `POST /api/v1/sportsmanship` (`AnswerTheCardCommand`) writes a
 `sportsmanship_rating` row keyed **`(rater_id, subject_id)`**, so a later card *replaces* the
 earlier answer and one row is already one person
-([ADR-0154](../../adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
+([ADR-0158](../../adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
 
 The card that carries it opens **the day after the game and closes seven days later**, both
 edges run from `games`' `played_at`, and **nothing sweeps an expired one** — not rating leaves

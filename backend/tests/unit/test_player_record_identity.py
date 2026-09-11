@@ -1,7 +1,7 @@
 """Who a record says somebody is, and the one word it borrows without importing.
 
 ``player_record`` declares its own types rather than reusing another context's
-(``docs/adr/0155``), which puts two enums with the same two strings one directory
+(``docs/adr/0159``), which puts two enums with the same two strings one directory
 apart. That is deliberate — a record is not a card and must not inherit a card's
 closed list — and the risk it carries is equally deliberate: **two spellings that
 drift are worse than an import**, because a client reading a search card and a

@@ -5,7 +5,7 @@ register on the platform after the matcher's. Every port here is declared in
 **this context's own vocabulary** and satisfied by an adapter that translates —
 which is what keeps a record from inheriting a card's closed list, a challenge's
 seat codes or a search record's bands through a type it borrowed
-(``docs/adr/0155``).
+(``docs/adr/0159``).
 
 **This context stores nothing, so there is no repository on this list.** It has
 no aggregate, no table and no migration; every fact it publishes it reads through
@@ -331,7 +331,7 @@ class SubjectSportsmanship(Protocol):
     The one thing on this sheet the platform did not count for itself, and the
     only demand here whose answer depends on **who is reading**. Everything else
     is the same fact retitled; this is two different facts, and the reason is
-    ``docs/adr/0154``'s: a published average beside a published count lets the
+    ``docs/adr/0158``'s: a published average beside a published count lets the
     person it is about subtract, name each new rating exactly, and go and find
     the one player who could have given it.
 

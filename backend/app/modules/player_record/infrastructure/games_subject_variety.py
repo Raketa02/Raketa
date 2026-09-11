@@ -6,7 +6,7 @@ with them*, on that context's own rule that a pair is anybody you have played â€
 and a record prints ``distinct_opponents`` over the same denominator, which is
 what the row is called on screen. The honest word stays with the measurement and the
 product's word stays on the sheet; this file is the one place they meet
-(``docs/adr/0155``).
+(``docs/adr/0159``).
 
 **The share is not computed here, and not anywhere on this side of the wire.**
 The pair crosses and the client divides â€” because *fourteen of twenty* and *seven

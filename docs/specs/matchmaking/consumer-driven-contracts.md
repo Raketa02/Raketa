@@ -89,13 +89,13 @@ Delivery of the indexed half is the backend's existing transactional outbox
 
 ### The six strands, and what each one counts
 
-> **Three of them are live** (ADR-0140, ADR-0156): *shows up*, out of plans that settled either
+> **Three of them are live** (ADR-0140, ADR-0160): *shows up*, out of plans that settled either
 > way, *answers challenges*, out of invitations whose day is over, and *answers about results*,
 > out of the scores put in front of somebody. The other three have no reading the matcher may
 > use and are **absent from a reading** rather than published at nought. *Confirms results* is
 > not in the table below at all: it was **withdrawn**, and a withdrawn demand leaves no row —
 > *answers about results* is a different measurement over the same events and not its
-> reinstatement ([ADR-0156](../../adr/0156-a-results-strand-counts-answers-and-never-agreements.md)).
+> reinstatement ([ADR-0160](../../adr/0160-a-results-strand-counts-answers-and-never-agreements.md)).
 
 Every strand crosses as **the published value, its numerator and denominator, and the moment of
 the most recent observation**. The matcher reads the value the player is shown and never
@@ -126,8 +126,8 @@ Two more are worth stating because they will surprise a reader:
 
 - ***Settles up* depends on court money, which this map rules out of scope.** It stands down,
   and so does *keeps plans*; *sportsmanship* has a surface now and the matcher is forbidden to
-  read it ([ADR-0154](../../adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)),
-  so three of the six are live (ADR-0140, ADR-0156). Expected, not a defect.
+  read it ([ADR-0158](../../adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)),
+  so three of the six are live (ADR-0140, ADR-0160). Expected, not a defect.
 - **The player-facing weights are not the matcher's weights.** The Player Score screen blends
   the strands at **35/20/15/12/10/8** (`:3374-3380`); the ruleset weighs them per mode at
   **25/32, 22/22, 24/4, 14/14, 10/12, 5/16**. Both are right. This is precisely why the matcher
@@ -186,7 +186,7 @@ a second decay here would double-count.
 
 | Constant | Start | What it does | Falsified by |
 | --- | --- | ---: | --- |
-| `RELIABILITY_MIN_OBSERVATIONS` | 3, **per strand**, and 5 for *answers about results* | A strand below **its own** bar is `NoEvidence` **on its own**; the surviving strands renormalise *inside* the reliability term. It was one number for every strand until [ADR-0156](../../adr/0156-a-results-strand-counts-answers-and-never-agreements.md): raising the single number to five instead would take a newcomer with three games and three turn-ups from a full score to no score at all | Ghost rate and answer rate regressed on strand value, split by observation count. If one-observation strands predict as well as five, the bar is too high |
+| `RELIABILITY_MIN_OBSERVATIONS` | 3, **per strand**, and 5 for *answers about results* | A strand below **its own** bar is `NoEvidence` **on its own**; the surviving strands renormalise *inside* the reliability term. It was one number for every strand until [ADR-0160](../../adr/0160-a-results-strand-counts-answers-and-never-agreements.md): raising the single number to five instead would take a newcomer with three games and three turn-ups from a full score to no score at all | Ghost rate and answer rate regressed on strand value, split by observation count. If one-observation strands predict as well as five, the bar is too high |
 | `RELIABILITY_HORIZON_DAYS` | 365 | If the most recent observation **across all strands** is older, the whole term stands down | Return rate of matches made on evidence older than a year |
 
 Both are **ruleset configuration** under [ADR-0093](../../adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md)'s

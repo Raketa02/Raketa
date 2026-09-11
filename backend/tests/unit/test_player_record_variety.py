@@ -1,7 +1,7 @@
 """Opponent variety at the seam, where two counts change their names.
 
 ``player_record`` declares its own types rather than reusing another context's
-(``docs/adr/0155``), and this is the third time that costs a second spelling —
+(``docs/adr/0159``), and this is the third time that costs a second spelling —
 after ``OnCourtVerdict`` beside ``PhotoReviewDecision`` and ``GameOutcome``
 beside ``Outcome``. This pair is different in kind from those two: the words do
 **not** agree, deliberately. ``games`` measured ``distinct_counterparts`` over

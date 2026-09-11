@@ -3,7 +3,7 @@
 **One release, and it moves exactly two things**: the two ``strand_weights``
 vectors gain ``ANSWERS_RESULTS``, and ``min_observations`` becomes a bar per
 strand so that one of them can ask for five without the other five asking for it
-too (``docs/adr/0156``). Everything else in this file is ``2026.08.26-a``
+too (``docs/adr/0160``). Everything else in this file is ``2026.08.26-a``
 unchanged, and it is copied rather than referenced because a released dataset is
 read as a whole — a file that inherited most of its numbers from another one
 would make *what did this search run under* a question answered by a diff.
@@ -21,7 +21,7 @@ would be a hypothesis with no evidence behind it dressed up as tidiness.
 agreements and was struck because an unconfirmed result is a fact about a
 **pair**; *answers about results* counts **answers**, and a counter is as good as
 an acceptance, so nobody is docked for disagreeing. The record is
-``docs/adr/0156`` and the argument that this is not a reinstatement is its
+``docs/adr/0160`` and the argument that this is not a reinstatement is its
 Decision 1.
 
 **What this release costs, and it is not nothing.** Every player with a record is
@@ -360,7 +360,7 @@ RULESET = Ruleset(
                         Term.SOCIAL_VIBE: 4,
                     }
                 ),
-                # **Restored, not retuned** (``docs/adr/0156``). These are the
+                # **Restored, not retuned** (``docs/adr/0160``). These are the
                 # six numbers this vector carried before *confirms results* was
                 # struck; 2026.08.26-a's five are the same ratios rescaled by
                 # largest remainder over the smaller vocabulary, so putting a
@@ -524,7 +524,7 @@ RULESET = Ruleset(
     # to*. It is a **dock, not an exclusion**: refusing to show a genuinely good
     # match over one missed game is the block's job, not the matcher's.
     reliability=ReliabilityRules(
-        # **One bar per strand, and only one of them moved** (``docs/adr/0156``).
+        # **One bar per strand, and only one of them moved** (``docs/adr/0160``).
         # Three is what the other five have always asked and they keep it: one
         # ghost out of one arrangement stands *shows up* down rather than
         # publishing a nought. *Answers about results* asks five, because it

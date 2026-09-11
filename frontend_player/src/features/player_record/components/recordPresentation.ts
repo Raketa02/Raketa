@@ -305,7 +305,7 @@ export function recordBlocksLabel(facts: RecordBlockFacts): string {
  *
  * **`ANSWERS_RESULTS` is *Answers about results* and never *confirms* anything.** Countering a
  * score you believe is wrong is an answer and costs nothing
- * ([ADR-0156](../../../../../docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md));
+ * ([ADR-0160](../../../../../docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md));
  * a player who did exactly that and then watched a *confirms* figure rise is the one person
  * certain to notice the word was wrong.
  *

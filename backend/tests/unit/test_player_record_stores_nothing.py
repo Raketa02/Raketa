@@ -1,6 +1,6 @@
 """The player record keeps no record. **Asserted structurally, not remembered.**
 
-``docs/adr/0155`` §1: this context has no aggregate, no table and no migration. It
+``docs/adr/0159`` §1: this context has no aggregate, no table and no migration. It
 composes five other contexts' published facts and enforces admission, and every
 figure that lands on the sheet later arrives from whoever owns it.
 

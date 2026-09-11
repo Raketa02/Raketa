@@ -687,7 +687,7 @@ async def test_a_player_nobody_has_rated_is_absent_and_never_a_nought(
 async def test_the_subjects_own_answer_is_a_band_and_carries_no_number(
     implementation, session
 ):
-    """**The privacy rule, run against the real fold** (``docs/adr/0154``). What
+    """**The privacy rule, run against the real fold** (``docs/adr/0158``). What
     comes back for the person the record is about is one of three steps: no
     average to subtract from and no count to subtract with, so no answer is
     identifiable by the one person who must never see it."""

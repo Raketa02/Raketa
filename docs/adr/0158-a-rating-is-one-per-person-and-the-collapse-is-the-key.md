@@ -1,4 +1,4 @@
-# ADR-0154 — A rating is one per person, the collapse is the key, and the matcher never reads it
+# ADR-0158 — A rating is one per person, the collapse is the key, and the matcher never reads it
 
 - **Status:** Accepted
 - **Date:** 2026-09-08
@@ -323,7 +323,7 @@ people it rests on — and `band_for`, three steps wide. It is **not a method on
 `SportsmanshipLedger`**: that port is this module's store, a consumer holding it could write
 through it, and §6's silence is about what a store may be asked rather than about a table.
 `player_record` declares its own `SubjectSportsmanship` beside it and translates in an
-adapter, on ADR-0155 §6's rule.
+adapter, on ADR-0159 §6's rule.
 
 **Two methods rather than one answer a caller narrows, and that is the whole of §2 made
 structural.** A use case that received the figure and coarsened it itself would already be

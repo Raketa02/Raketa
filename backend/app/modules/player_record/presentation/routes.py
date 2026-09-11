@@ -13,12 +13,12 @@ and *how a stranger sees you* stop being the same screen.
 
 **One zone differs by more than a title, and it is the only one.** What other
 players said crosses as a figure and a count to a reader, and as a coarse band to
-the person it is about (``docs/adr/0154``) — an average beside a count in front of
+the person it is about (``docs/adr/0158``) — an average beside a count in front of
 the subject is a subtraction that names each new rating exactly, and they know who
 they played. It is still one response type: two fields, at most one of them ever
 present, and which one is decided by ``is_self`` on this side.
 
-**One refusal, and it names nothing** (``docs/adr/0155``). Never disclosed to
+**One refusal, and it names nothing** (``docs/adr/0159``). Never disclosed to
 you, blocked either way, held, and no such player return the same `404` and the
 same body, byte for byte. A payload naming the gate delivers a block to the one
 person the block was meant to be invisible to; a payload separating *never

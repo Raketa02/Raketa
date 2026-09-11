@@ -45,7 +45,7 @@ there; they are not repeated here.
   `User` is the first (state rebuilt from its stream); `RefreshToken` is the second (current
   state is the truth, events provide audit + cross-context notification). `SportsmanshipCard`
   is the third and so far the only one: rows, and **no events at all**
-  ([ADR-0154](../docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
+  ([ADR-0158](../docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
   None is the default, and the third is the one that has to be argued for hardest, because
   *state changes emit domain events* is a standing rule here — it earns the exemption by
   having no life story (a card is born answered), no subscriber, and no derived standing

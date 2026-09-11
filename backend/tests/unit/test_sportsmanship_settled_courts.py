@@ -3,7 +3,7 @@
 ``RATEABLE`` is ``SETTLED & PLAYED``, derived from ``games``' own two sets so a
 sixth ending added over there arrives here as a question rather than as a silent
 omission. Derivation makes it right; it does not make it *asserted*, and
-``docs/adr/0154`` §7 calls two of the five members load-bearing by name:
+``docs/adr/0158`` §7 calls two of the five members load-bearing by name:
 
 **A ghost is out.** ``NEVER_PLAYED`` is settled over in ``games`` and there is
 nobody to rate for an evening that did not happen — so the intersection is the

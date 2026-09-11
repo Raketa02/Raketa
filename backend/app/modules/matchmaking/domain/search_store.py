@@ -121,7 +121,7 @@ class SearchStore(Protocol):
         """Every sport in whose partition this searcher has been **shown** them.
 
         **The disclosure the player record is read through**
-        (``docs/adr/0155``), answered from the one place *was this reader shown
+        (``docs/adr/0159``), answered from the one place *was this reader shown
         this person* is already written down: the ``RETURNED`` rows of their own
         searches. It is a question about a **pair**, so both ids are in the
         signature and neither is optional — a method that took a searcher alone

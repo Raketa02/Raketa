@@ -63,7 +63,7 @@
 > **Amended 2026-09-08 by [#380](https://github.com/Raketa02/Raketa/issues/380): opponent
 > variety returns, with its consumer named.** The 2026-08-26 amendment above withdrew it and
 > said what would bring it back — *if a later term wants variety, it returns as that term's
-> demand and signs for it*. The **player record** ([ADR-0155](0155-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md))
+> demand and signs for it*. The **player record** ([ADR-0159](0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md))
 > is that consumer, and the return is on exactly those terms rather than as a reinstatement:
 >
 > - It is **not** a seventh published statistic on `PlayerScoreQuery`, and `player_score` does

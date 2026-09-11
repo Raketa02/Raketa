@@ -21,7 +21,7 @@ is exactly the arrangement below.
 
 **And the subject's answer carries neither number.** ``band_for`` folds the same
 window and returns three steps wide; a caller holding it cannot subtract, which
-is ``docs/adr/0154``'s whole privacy argument made structural rather than
+is ``docs/adr/0158``'s whole privacy argument made structural rather than
 promised.
 """
 

@@ -1589,7 +1589,7 @@ def build_card_photo_links(
 # The player record — one route out, and every port inward
 # --------------------------------------------------------------------------
 #
-# This context stores nothing (``docs/adr/0155``), so there is no repository
+# This context stores nothing (``docs/adr/0159``), so there is no repository
 # here and never will be: every builder below composes somebody else's published
 # port into a demand this one declared in its own words.
 

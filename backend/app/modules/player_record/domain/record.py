@@ -4,10 +4,10 @@
 metered rows and what other players said.** The last of those arrives in two
 shapes rather than one, and the second shape is the only place on this sheet
 where *who is reading* changes what is said rather than only what it is titled
-(``docs/adr/0154``).
+(``docs/adr/0158``).
 
 **Every one of these fields is spelled here rather than imported**, and the
-duplication is the decision (``docs/adr/0155``). ``matchmaking`` already holds a
+duplication is the decision (``docs/adr/0159``). ``matchmaking`` already holds a
 ``CardIdentity`` with three of them on it, and a record that reused it would
 inherit a *card's* closed list — the list ``docs/adr/0107`` keeps short because it
 is attached over the twenty rows of a search and frozen into a record kept for
@@ -16,7 +16,7 @@ Two surfaces with two lists, and the day one of them grows a field is the day th
 other one is asked whether it wants one.
 
 **``ReliabilityStrand`` is the one name here that is imported, and the rule is
-unbroken.** What ADR-0155 §6 refuses is borrowing another *context's* domain
+unbroken.** What ADR-0159 §6 refuses is borrowing another *context's* domain
 types; that enum is not one — it lives in ``app/engines/``, the pure layer every
 context reads and none of them owns, exactly as ``Sport`` lives in the kernel. It
 is also the argument ``player_score`` already made about the same six names: a
@@ -112,7 +112,7 @@ class GameOutcome(StrEnum):
     **A second spelling of ``games``' own ``Outcome``**, mapped at the adapter
     that reads it — which is the shape ``matchmaking``'s ``GameResult`` already
     takes for the same two words, and this context's standing rule about
-    borrowing another context's domain types (``docs/adr/0155``). The risk is the
+    borrowing another context's domain types (``docs/adr/0159``). The risk is the
     same one ``OnCourtVerdict`` carries and it is answered the same way:
     ``tests/unit/test_player_record_skill.py`` fails the build if the two
     vocabularies stop agreeing.
@@ -236,7 +236,7 @@ class OpponentVariety:
     untested.
 
     **A second spelling of a pair ``games`` publishes**, like every fact on this
-    sheet (``docs/adr/0155``). There ``distinct_counterparts`` says what was
+    sheet (``docs/adr/0159``). There ``distinct_counterparts`` says what was
     measured — everybody who was on a court with them, partner included; here
     ``distinct_opponents`` says what the row is called on screen. The translation
     is one adapter, and there is no third place for either word.
@@ -298,7 +298,7 @@ class OpinionBand(StrEnum):
     takes a **different name** for the reason ``OnCourtVerdict`` does beside
     ``PhotoReviewDecision`` and ``GameOutcome`` does beside ``Outcome``. That is
     two rules meeting: this context borrows no other context's domain types
-    (``docs/adr/0155``), and the emitted contract is **one namespace** — a class
+    (``docs/adr/0159``), and the emitted contract is **one namespace** — a class
     of the same name in two modules does not shadow the other, it *renames both*,
     and every generated type a shipped app already holds moves. It is
     ``RecordLikelyRangeSchema``'s argument, applied one layer down, because this
@@ -540,7 +540,7 @@ class PlayerRecord:
         here because the failure is silent everywhere else: a figure and a count
         drawn on the sheet titled *How others see you* is a subtraction the
         subject can perform against their own record, and nothing about the
-        response would look wrong (``docs/adr/0154``).
+        response would look wrong (``docs/adr/0158``).
 
         A broken precondition and not a refusal — nobody typed this, and there is
         no state of the platform in which it is a legitimate answer.

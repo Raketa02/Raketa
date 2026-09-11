@@ -256,7 +256,7 @@ def test_a_term_missing_from_a_weight_vector_refuses_to_load() -> None:
 
 
 def test_a_strand_with_no_observation_bar_refuses_to_load() -> None:
-    """**A bar per strand, and the mapping is exhaustive** (``docs/adr/0156``).
+    """**A bar per strand, and the mapping is exhaustive** (``docs/adr/0160``).
 
     A strand nobody set a bar for would enter a reading on its first observation
     — a *we have seen one thing about you* published as a verdict — and nothing

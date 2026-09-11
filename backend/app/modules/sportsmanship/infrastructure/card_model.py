@@ -8,7 +8,7 @@ has to be storable — it is a card row with nothing pointing at it.
 
 **``sportsmanship_rating`` is keyed on the pair and not on the game**, which is
 the whole of *only a rater's most recent rating of a given person counts*
-(``docs/adr/0154``). Two friends who partner every week would otherwise supply
+(``docs/adr/0158``). Two friends who partner every week would otherwise supply
 each other with ten of their twelve ratings, and the published average would drift
 towards what one regular partner thinks — the opposite of what the row claims to
 measure. Keyed this way a later card **replaces** the earlier answer, so the

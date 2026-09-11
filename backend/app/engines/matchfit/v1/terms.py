@@ -285,7 +285,7 @@ def reliability(
     thirty-five out of thirty-eight — and the bar is per strand rather than one
     number over all of them, so a strand that needs more evidence than the rest
     can ask for it without moving what the platform demands of a newcomer
-    (``docs/adr/0156``). If the most recent observation across the whole record
+    (``docs/adr/0160``). If the most recent observation across the whole record
     is past the horizon, the **term** stands down: the strands share one cause —
     *this player stopped playing* — so an old record is old all the way through.
 

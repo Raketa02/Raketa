@@ -4,7 +4,7 @@
 first.** A reader is shown an average out of five beside how many different
 people it rests on; the person it is about is shown a **coarse band and no
 count**. That is not a rendering choice made at a screen — it is the rule
-``docs/adr/0154`` is built around, and it lives here because a figure and a count
+``docs/adr/0158`` is built around, and it lives here because a figure and a count
 in front of the subject is a subtraction: an average moving from 4,80 over ten to
 4,73 over eleven names the new rating as a 4, and they know who they played.
 Every answer would be identifiable by the one person who must never see it, and

@@ -243,7 +243,7 @@ async def test_every_strand_that_crosses_carries_its_own_evidence(
     """The six are read separately, and each brings what it was measured from.
 
     **No longer vacuous**: ``player_score`` ships and answers three of the six
-    for anybody with a record (``docs/adr/0140``, ``docs/adr/0156``). It stays
+    for anybody with a record (``docs/adr/0140``, ``docs/adr/0160``). It stays
     written over whatever arrives rather than over the three, because the shape
     is the demand — a strand
     is its own published value with the numerator and denominator behind it and
@@ -1736,7 +1736,7 @@ def test_all_six_strands_cross_separately_and_keep_their_own_evidence():
     **Only three of the six have a provider**, and this reading is hand-built to
     carry all of them: the shape has to keep working the day the other three
     land, and a contract exercised only over what happens to be wired is a
-    contract that goes stale quietly (``docs/adr/0140``, ``docs/adr/0156``).
+    contract that goes stale quietly (``docs/adr/0140``, ``docs/adr/0160``).
     """
 
     observed = instant(datetime(2026, 8, 1, tzinfo=timezone.utc))
@@ -1800,7 +1800,7 @@ def test_the_six_strands_are_the_platform_s_six():
     is withdrawn, not carried. *Answers about results* counts **answers** to a
     score put in front of somebody — a counter scores exactly as an acceptance
     does — which is a different measurement over the same events
-    (``docs/adr/0156``).
+    (``docs/adr/0160``).
     """
 
     assert [strand.value for strand in ReliabilityStrand] == [

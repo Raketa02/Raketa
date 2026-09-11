@@ -9,7 +9,7 @@ the safest place to honour it is a type that cannot carry a moment.
 
 ``Outcome`` is ``games``' word and ``GameOutcome`` is this context's; they carry
 the same two strings deliberately, and the agreement is asserted rather than
-assumed (``docs/adr/0155``) — the way ``OnCourtVerdict`` is against
+assumed (``docs/adr/0159``) — the way ``OnCourtVerdict`` is against
 ``PhotoReviewDecision`` one file over. The translation is a **table and not a
 cast**, so a third ending added over there is a ``KeyError`` at this seam rather
 than a string that means nothing on a sheet.

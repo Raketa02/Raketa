@@ -1,7 +1,7 @@
 """The card: one court, one rater, answered once and closed for ever.
 
 **The first aggregate on this platform that is stored rather than replayed**
-(``docs/adr/0154``). Every other one is event-sourced, and this one is not,
+(``docs/adr/0158``). Every other one is event-sourced, and this one is not,
 because a card has no life story to fold: it is born answered. There is one act,
 it happens once, nothing may amend it, and nothing subscribes to it — the
 published figure is a fold over rows, and the matcher never reads any of it. An

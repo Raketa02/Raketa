@@ -136,7 +136,7 @@ class SportsmanshipLedger(Protocol):
         **Each answer replaces this rater's previous one about that person**, so
         the collapse *only a rater's most recent rating counts* is the store's
         shape rather than a rule every future reader has to remember
-        (``docs/adr/0154``). Two friends who partner every week give each other
+        (``docs/adr/0158``). Two friends who partner every week give each other
         one opinion between them however many evenings they play, and the count
         beside the published figure keeps meaning *how many different people have
         an opinion*.
@@ -162,7 +162,7 @@ class PublishedSportsmanshipQuery(Protocol):
     band and **nothing else**. Both come off one window, and the reason they are
     two methods rather than one answer a caller narrows is that a caller which
     received the figure has already been handed the thing the rule forbids —
-    ``docs/adr/0154``'s subtraction is available to anybody holding an average
+    ``docs/adr/0158``'s subtraction is available to anybody holding an average
     and a count, whatever they choose to render. So the sheet about *you* calls
     a method that cannot say your figure.
 

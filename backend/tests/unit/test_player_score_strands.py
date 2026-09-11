@@ -230,7 +230,7 @@ def test_the_struck_strands_share_came_back_under_a_different_name() -> None:
 
 
 def test_the_one_window_here_agrees_with_the_matchers_horizon() -> None:
-    """**Two spellings of one judgement, and the cost is named** (``docs/adr/0156``).
+    """**Two spellings of one judgement, and the cost is named** (``docs/adr/0160``).
 
     This context may not read the matcher's ruleset — a provider importing the
     consumer it serves is the arrow every port here keeps — so the twelve months

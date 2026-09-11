@@ -5,7 +5,7 @@ decided; this is a question about the *reader* rather than about the subject, so
 nobody else could answer it. It decides what the sheet is **about** and never who
 may be seen — the four fail-closed gates run in the partition of the disclosure,
 which is a fact the platform holds, and the sport asked for is a fact the client
-sends (``docs/adr/0155``).
+sends (``docs/adr/0159``).
 
 **Registry order is structural here, not remembered.** Both functions walk
 ``Sport`` and look the mapping up, rather than iterating the mapping and sorting

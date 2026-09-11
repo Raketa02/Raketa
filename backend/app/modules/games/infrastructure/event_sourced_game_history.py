@@ -270,7 +270,7 @@ class EventSourcedGameHistory:
         ``attendance_for`` takes and for a different reason: there, everybody on
         the court was in the arrangement; here, only one side was asked.
 
-        **The window is the caller's** (``docs/adr/0156``). An opportunity that
+        **The window is the caller's** (``docs/adr/0160``). An opportunity that
         closed before ``since`` is not in either half — it is not a good outcome
         the player keeps for ever and not a miss they can never work off.
 

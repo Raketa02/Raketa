@@ -170,13 +170,13 @@ class ReliabilityStrand(str, Enum):
     **The inversion is watched rather than assumed, and it widened again.** It
     was 24/4 against sportsmanship's 5/16 while *confirms results* was here; the
     strike left 18/7 against 15/17, and *answers about results* restores the wide
-    pair at 24/4 against 5/16 (``docs/adr/0156``). It is asserted in
+    pair at 24/4 against 5/16 (``docs/adr/0160``). It is asserted in
     ``tests/unit/test_matchfit_terms.py``, and the day no pair inverts, the
     decomposition has stopped paying for itself and the argument for it is due
     again.
 
     **The sixth name is not the one that was struck, and the difference is the
-    whole of ``docs/adr/0156``.** *Confirms results* asked whether a game reached
+    whole of ``docs/adr/0160``.** *Confirms results* asked whether a game reached
     an agreed score, which is a fact about a **pair**, and every denominator
     tried on it docked somebody ADR-0049 protects — both sides of an honest
     disagreement included (``docs/adr/0137``). *Answers about results* asks

@@ -1,7 +1,7 @@
 """``GET /api/v1/players/{id}/record`` and ``/players/me/record``.
 
 A player taps a face and is told who that person is. The rule the route runs on
-(``docs/adr/0155``): **a record is read through a prior disclosure, never about a
+(``docs/adr/0159``): **a record is read through a prior disclosure, never about a
 person** — and the four fail-closed gates are re-evaluated live on every open,
 so a disclosure entitles a reader to ask and never to be answered.
 
@@ -1042,7 +1042,7 @@ async def test_nothing_is_trimmed_at_either_end_of_the_window(
 async def test_your_own_record_carries_a_band_and_never_the_figure(
     client, session_factory, searcher
 ):
-    """**The rule the whole design turns on** (``docs/adr/0154``).
+    """**The rule the whole design turns on** (``docs/adr/0158``).
 
     A published average beside a published count lets the subject subtract: 4,80
     over ten becoming 4,73 over eleven names the new rating as a 4, and they know
@@ -1131,7 +1131,7 @@ async def test_stars_move_no_part_of_the_reliability_pill(
     moved pill.
 
     It matters because the pill is exactly what the platform acts on
-    (``docs/adr/0154``): the moment an opinion the matcher ignores got into the
+    (``docs/adr/0158``): the moment an opinion the matcher ignores got into the
     number a player can see, the number they can see would stop being the number
     that demotes them, and the penalty would become the unexplainable kind the
     reliability floor's own rule forbids. The `.importlinter` contract beside

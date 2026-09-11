@@ -91,7 +91,7 @@ export interface StrandRow {
    * **A no is a good outcome on two of the three.** Turning somebody down inside your day *is*
    * answering them, and so is countering a score you believe is wrong: what both price is
    * silence, which is the whole of
-   * [ADR-0156](../../../../../docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md).
+   * [ADR-0160](../../../../../docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md).
    */
   readonly good: number;
   /**

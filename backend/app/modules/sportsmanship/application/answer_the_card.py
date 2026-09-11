@@ -10,7 +10,7 @@
 3. Build the card, which is where every rule about *who may be on it* lives.
 4. Write it and commit.
 
-**Nothing is emitted and nothing subscribes** (``docs/adr/0154``). No domain
+**Nothing is emitted and nothing subscribes** (``docs/adr/0158``). No domain
 event, no outbox row, no notification to the person who was rated — least of all
 to them. The published figure is a fold over the rows this writes, computed when
 somebody opens a record, and there is nothing anywhere that has to be told a card

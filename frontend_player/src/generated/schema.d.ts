@@ -3157,7 +3157,7 @@ export interface components {
          *     **A second spelling of ``games``' own ``Outcome``**, mapped at the adapter
          *     that reads it — which is the shape ``matchmaking``'s ``GameResult`` already
          *     takes for the same two words, and this context's standing rule about
-         *     borrowing another context's domain types (``docs/adr/0155``). The risk is the
+         *     borrowing another context's domain types (``docs/adr/0159``). The risk is the
          *     same one ``OnCourtVerdict`` carries and it is answered the same way:
          *     ``tests/unit/test_player_record_skill.py`` fails the build if the two
          *     vocabularies stop agreeing.
@@ -3797,7 +3797,7 @@ export interface components {
          *     takes a **different name** for the reason ``OnCourtVerdict`` does beside
          *     ``PhotoReviewDecision`` and ``GameOutcome`` does beside ``Outcome``. That is
          *     two rules meeting: this context borrows no other context's domain types
-         *     (``docs/adr/0155``), and the emitted contract is **one namespace** — a class
+         *     (``docs/adr/0159``), and the emitted contract is **one namespace** — a class
          *     of the same name in two modules does not shadow the other, it *renames both*,
          *     and every generated type a shipped app already holds moves. It is
          *     ``RecordLikelyRangeSchema``'s argument, applied one layer down, because this
@@ -4984,13 +4984,13 @@ export interface components {
          *     **The inversion is watched rather than assumed, and it widened again.** It
          *     was 24/4 against sportsmanship's 5/16 while *confirms results* was here; the
          *     strike left 18/7 against 15/17, and *answers about results* restores the wide
-         *     pair at 24/4 against 5/16 (``docs/adr/0156``). It is asserted in
+         *     pair at 24/4 against 5/16 (``docs/adr/0160``). It is asserted in
          *     ``tests/unit/test_matchfit_terms.py``, and the day no pair inverts, the
          *     decomposition has stopped paying for itself and the argument for it is due
          *     again.
          *
          *     **The sixth name is not the one that was struck, and the difference is the
-         *     whole of ``docs/adr/0156``.** *Confirms results* asked whether a game reached
+         *     whole of ``docs/adr/0160``.** *Confirms results* asked whether a game reached
          *     an agreed score, which is a fact about a **pair**, and every denominator
          *     tried on it docked somebody ADR-0049 protects — both sides of an honest
          *     disagreement included (``docs/adr/0137``). *Answers about results* asks

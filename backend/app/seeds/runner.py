@@ -1428,7 +1428,7 @@ def _opinion_lines(opinions: SeededOpinions) -> list[str]:
     screen nobody looked at.
 
     And the figure is what a **reader** of that record is shown. The subject is
-    shown a coarse band and no count at all (``docs/adr/0154``) — so signing in
+    shown a coarse band and no count at all (``docs/adr/0158``) — so signing in
     as one of these people and opening your own sheet is *not* how to check this
     section; opening theirs from somebody else's pool is.
     """

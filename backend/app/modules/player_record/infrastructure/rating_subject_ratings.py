@@ -4,7 +4,7 @@ arithmetic.**
 The adapter lives in the *consumer's* infrastructure, which is this platform's
 standing shape for a borrowed fact: a provider publishes what it knows about its
 own subject, and the context that wants it in different words does the renaming
-(``docs/adr/0155``). What crosses is the figures a rating already committed to
+(``docs/adr/0159``). What crosses is the figures a rating already committed to
 its own stream — the Level, the certainty, the range the engine rounded and the
 band's published name — with the field names changed and nothing recomputed.
 

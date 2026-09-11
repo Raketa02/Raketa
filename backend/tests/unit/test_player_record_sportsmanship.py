@@ -1,7 +1,7 @@
 """What other players said, at the seam — and the one answer that must not cross.
 
 ``player_record`` declares its own types rather than reusing another context's
-(``docs/adr/0155``), and this is the fourth time that costs a second spelling —
+(``docs/adr/0159``), and this is the fourth time that costs a second spelling —
 after ``OnCourtVerdict`` beside ``PhotoReviewDecision``, ``GameOutcome`` beside
 ``Outcome`` and the variety pair. Here the words **do** agree, so what is pinned
 is that they keep agreeing: a band renamed on one side and not the other would
@@ -13,7 +13,7 @@ system holds. The subject's answer is folded from the same window as the
 reader's, and it must arrive carrying **neither** the figure nor the count — a
 published average beside a published count in front of the person it is about is
 a subtraction that names each new rating exactly, and they know who they played
-(``docs/adr/0154``). The adapter is the last place that could go wrong quietly:
+(``docs/adr/0158``). The adapter is the last place that could go wrong quietly:
 a ``band_for`` written as *fetch the figure, coarsen it, drop the rest* would
 satisfy every protocol here and would have had the figure in hand.
 """

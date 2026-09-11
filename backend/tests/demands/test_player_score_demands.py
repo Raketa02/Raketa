@@ -20,7 +20,7 @@ breach would turn *no record* into *a bad record* everywhere downstream at once.
 
 **Three strands and never four.** *Keeps plans* and *settles up* have no
 provider on this platform and *sportsmanship* is published in its own right
-rather than as a strand (``docs/adr/0154``), and the assertions below say so by
+rather than as a strand (``docs/adr/0158``), and the assertions below say so by
 name rather than by asserting a length: the day one of them lands, a named
 assertion says which, and a length assertion would only say that something
 changed.
@@ -545,7 +545,7 @@ async def test_countering_a_score_is_answering_it_and_disagreeing_costs_nothing(
 async def test_only_this_strand_forgets_and_the_other_two_count_a_career(
     implementation, session
 ):
-    """**One window, and it belongs to one strand** (``docs/adr/0156``).
+    """**One window, and it belongs to one strand** (``docs/adr/0160``).
 
     The same game, more than twelve months old, is still an opportunity for
     *shows up* and is no longer one for *answers about results*. That asymmetry is

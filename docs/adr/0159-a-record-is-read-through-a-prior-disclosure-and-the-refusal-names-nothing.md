@@ -1,4 +1,4 @@
-# ADR-0155 — A record is read through a prior disclosure, and the refusal names nothing
+# ADR-0159 — A record is read through a prior disclosure, and the refusal names nothing
 
 - **Status:** Accepted
 - **Date:** 2026-09-08
@@ -400,7 +400,7 @@ second horizon nobody could keep in step with the first.
 distinct raters cross for a reader; a coarse band and nothing else crosses for the subject. A
 published average beside a published count in front of the person it is about is a
 subtraction that names each new rating exactly, and they know who they played
-([ADR-0154](0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md) §2). The split is
+([ADR-0158](0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md) §2). The split is
 on the *port* rather than in the assembler, because a use case that received the figure would
 already be holding the thing the rule forbids whatever it then rendered — so the sheet about
 *you* asks a question with no figure in its answer, and the question with one is never put.

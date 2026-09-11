@@ -379,7 +379,7 @@ async def test_a_stranger_reads_nothing_and_cannot_tell_why(store):
 
 
 async def test_a_search_discloses_the_sport_it_showed_somebody_in(store):
-    """The read the player record is entitled through (``docs/adr/0155``).
+    """The read the player record is entitled through (``docs/adr/0159``).
 
     **Sports and not searches**: the caller needs the partition to re-evaluate a
     gate in, and a hundred padel searches of the same pair are one partition.

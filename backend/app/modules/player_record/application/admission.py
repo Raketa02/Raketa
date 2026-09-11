@@ -7,7 +7,7 @@ search of the reader's **returned** them; or the pair **share an open challenge
 or a game**. Without a rule of that shape, a route taking a player id is a
 player-enumeration endpoint — a level, a photograph and an area for anybody in
 the city reachable by id — and a UUID being hard to guess is not an
-authorization model (``docs/adr/0155``).
+authorization model (``docs/adr/0159``).
 
 **Nothing expires.** A search record is kept for ever (``docs/adr/0104``), so any
 window shorter than that could only misfire: it would refuse a face the app is

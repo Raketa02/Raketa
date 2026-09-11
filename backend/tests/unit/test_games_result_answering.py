@@ -6,7 +6,7 @@ produced the same outcome, and the only games that ended unconfirmed were the
 ones where two people put different scores up and neither gave way — which docks
 both sides of every honest disagreement (``docs/adr/0137``). *Answers about
 results* counts **answers**: a counter is as good as an acceptance, and the only
-miss is silence until the window closes (``docs/adr/0156``).
+miss is silence until the window closes (``docs/adr/0160``).
 
 It is driven through the aggregate's own acts rather than by building
 ``Proposal`` rows by hand, because *which act was this* is the aggregate's

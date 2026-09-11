@@ -3,7 +3,7 @@
 **Two answers off one window, and the second one cannot say the first.** A reader
 is shown the figure beside how many different people it rests on; the person it is
 about is shown a coarse band and no count. That asymmetry is the whole of
-``docs/adr/0154``'s privacy argument — an average plus a count lets the subject
+``docs/adr/0158``'s privacy argument — an average plus a count lets the subject
 subtract, name each new rating exactly, and go and find the one person who could
 have given it — so it is asserted here at the rule rather than only at the route.
 

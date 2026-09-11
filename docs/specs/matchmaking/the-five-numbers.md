@@ -225,7 +225,7 @@ on ([`ranking-weights.md`](ranking-weights.md) §6).
 > about. The per-mode vectors *were* rescaled, because a ruleset weight map is validated as
 > totalling a hundred. **The bar itself did not move.**
 
-> **Amended again by [ADR-0156](../../adr/0156-a-results-strand-counts-answers-and-never-agreements.md).**
+> **Amended again by [ADR-0160](../../adr/0160-a-results-strand-counts-answers-and-never-agreements.md).**
 > A sixth name is back and it is **not** the struck one: *answers about results* counts
 > **answers** — accepting and countering alike — where *confirms results* counted agreements and
 > therefore counted disagreements. It enters at the `15` ADR-0140 set aside rather than

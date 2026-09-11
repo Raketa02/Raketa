@@ -27,7 +27,7 @@ than assumed: the three walkthrough golden files move by **0.016 and 0.009 Fit
 points** on two readings, no order changes and nobody crosses the floor.
 
 **And it was edited a second time, for the same kind of reason and not a
-different one** (``docs/adr/0156``). *Answers about results* entered the
+different one** (``docs/adr/0160``). *Answers about results* entered the
 vocabulary, and a strand vector here is validated as **exhaustive** over it, so
 this dataset had to say something about a name that did not exist when it
 shipped. What it says is **nought in both modes** — which is not a weight anybody
@@ -375,7 +375,7 @@ RULESET = Ruleset(
                         ReliabilityStrand.SHOWS_UP: 33,
                         ReliabilityStrand.ANSWERS_CHALLENGES: 29,
                         # Zero, and the zero is the honest number: this dataset
-                        # ran while the name did not exist (``docs/adr/0156``).
+                        # ran while the name did not exist (``docs/adr/0160``).
                         ReliabilityStrand.ANSWERS_RESULTS: 0,
                         ReliabilityStrand.KEEPS_PLANS: 18,
                         ReliabilityStrand.SETTLES_UP: 13,
@@ -522,7 +522,7 @@ RULESET = Ruleset(
     # match over one missed game is the block's job, not the matcher's.
     reliability=ReliabilityRules(
         # The single number this dataset shipped with, spelled once per strand
-        # because the *shape* changed under it (``docs/adr/0156``). Every value
+        # because the *shape* changed under it (``docs/adr/0160``). Every value
         # is the three it always was, including the strand it prices at nothing.
         min_observations=MappingProxyType(
             {

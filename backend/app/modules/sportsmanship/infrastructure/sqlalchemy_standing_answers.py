@@ -5,7 +5,7 @@
 ``sportsmanship_rating``'s primary key, so there is no ``GROUP BY``, no
 ``DISTINCT ON`` and no window function here — one row already **is** one person.
 A read-time collapse would be the rule the first reader to forget hands the
-farming problem back with a plausible number (``docs/adr/0154``), and this file
+farming problem back with a plausible number (``docs/adr/0158``), and this file
 is what that decision bought.
 
 **The window is applied in the statement and checked in the fold.** ``LIMIT`` is

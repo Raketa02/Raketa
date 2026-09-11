@@ -1,4 +1,4 @@
-# ADR-0156 — A results strand counts answers, and never agreements
+# ADR-0160 — A results strand counts answers, and never agreements
 
 - **Status:** Accepted
 - **Date:** 2026-09-08
@@ -174,7 +174,7 @@ on its own terms and not as a footnote to this one.
 
 **The bar for `SPORTSMANSHIP` stays at three and is inert**, and that is not the same number
 as `the-decisions.md` §6's *1*. That one is about the **published figure**, which
-[ADR-0154](0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md) publishes from the
+[ADR-0158](0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md) publishes from the
 first rating with the rater count printed beside it. The matcher may not read sportsmanship
 at all, so its ruleset bar governs a strand no provider crosses; setting it to one here would
 read as the matcher expecting to score somebody on a single opinion.

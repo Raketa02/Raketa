@@ -8,7 +8,7 @@ band method**, which is the whole point of this file.
 
 **Coarsening the figure here would satisfy the protocol.** It would also mean
 this process had held an average and a count about somebody, one line away from
-the sheet titled *How others see you*, and ``docs/adr/0154``'s rule is about what
+the sheet titled *How others see you*, and ``docs/adr/0158``'s rule is about what
 crosses the seam rather than about what is rendered: a caller holding the pair
 can perform the subtraction whatever it draws. So ``band_for`` never touches the
 figure's method, and ``tests/unit/test_player_record_sportsmanship.py`` fails the

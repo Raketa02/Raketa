@@ -153,7 +153,7 @@ that it may be shown. The client's `identityLine()` is written to take an **opti
 
 > **Settled the other way, on a denominator this section did not consider.** The product
 > owner was shown the collision below and reaffirmed the row, and
-> [ADR-0156](../../adr/0156-a-results-strand-counts-answers-and-never-agreements.md) ships a
+> [ADR-0160](../../adr/0160-a-results-strand-counts-answers-and-never-agreements.md) ships a
 > **third meter** — as **Answers about results**, which counts *answers* to a score put in
 > front of somebody rather than agreements, so a counter scores exactly as an acceptance does
 > and only silence is a miss. *Confirms results* stays struck; what follows is the argument

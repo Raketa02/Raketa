@@ -278,7 +278,7 @@ class ReliabilityRules:
     ``min_observations`` is a bar **per strand**, and the mapping is exhaustive:
     below its own bar that strand alone stands down and the survivors renormalise
     inside the term. **It was one number for every strand and is now one per
-    strand** (``docs/adr/0156``), because *answers about results* needs a higher
+    strand** (``docs/adr/0160``), because *answers about results* needs a higher
     bar than the rest and raising the single number instead would take a newcomer
     who has played three games and turned up to all three from a full score to no
     score at all — a change to how the whole product treats newcomers, arrived at

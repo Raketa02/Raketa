@@ -7,7 +7,7 @@ today: ``games`` can say whether a plan produced a game and what became of the
 scores put in front of somebody, ``challenges`` can say whether a seat got its
 answer, and **nothing on this platform can say anything about the other three**.
 The name moved with the count the day the third strand landed
-(``docs/adr/0156``), exactly as its own docstring said it would — which is how
+(``docs/adr/0160``), exactly as its own docstring said it would — which is how
 ``NoMatchHistoryExists`` and ``NoResultUpdateRuleExists`` retired.
 
 **It reads each provider's own published port and never their streams.** A
@@ -26,7 +26,7 @@ be fifteen hundred walks of two logs inside one request.
 **Three strands are absent and none of them is a zero.** *Keeps plans* has no
 plan with a moment to be late for, *settles up* has no court money, and
 *sportsmanship* is published in its own right and is not a ratio at all
-(``docs/adr/0154``). Each is missing from the mapping rather than published at
+(``docs/adr/0158``). Each is missing from the mapping rather than published at
 nought or at a half, so the published blend renormalises over what is there and
 the matcher's term does the same thing one layer out (``docs/adr/0140``).
 

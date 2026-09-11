@@ -1,6 +1,6 @@
 """Who may open a record — the three strands, and the partition they run in.
 
-The rule (``docs/adr/0155``): **a record is read through a prior disclosure,
+The rule (``docs/adr/0159``): **a record is read through a prior disclosure,
 never about a person.** Admitted when the reader *is* the subject, when a search
 of theirs returned them, or when the pair share an open challenge or a game — and
 never otherwise.

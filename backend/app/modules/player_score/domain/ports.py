@@ -51,7 +51,7 @@ class PublishedScoreQuery(Protocol):
     only once its window has — so a caller asking about attendance and about
     answering in one request must get one instant's answer to all of it. The
     instant is also what the one **window** here is measured back from
-    (``docs/adr/0156``), so two clocks would be two horizons.
+    (``docs/adr/0160``), so two clocks would be two horizons.
     """
 
     async def scores_for(

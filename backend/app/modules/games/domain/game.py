@@ -316,7 +316,7 @@ class Game:
         The fold is in ``answering.py`` beside the standing it is read off,
         because *is a counter an answer* is a judgement about what a result is;
         this is where a reader asks the question, on the aggregate, the way
-        ``was_played_at`` and ``confirmed_at`` are asked (``docs/adr/0156``).
+        ``was_played_at`` and ``confirmed_at`` are asked (``docs/adr/0160``).
         """
 
         return score_put_to_a_side(

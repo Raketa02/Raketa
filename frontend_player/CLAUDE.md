@@ -122,7 +122,7 @@ sentence explaining a gap.
 every bar** ([#385](https://github.com/Raketa02/Raketa/issues/385)). Three metered rows —
 turning up, answering challenges and **answering about results**, never _confirming_ them,
 because countering a score you believe is wrong is an answer and costs nothing
-([ADR-0156](../docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md)) — each
+([ADR-0160](../docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md)) — each
 printing the raw pair it was measured over, since a perfect record over nine games and one over
 forty draw the **same bar**; and opponent variety as `70% · 14 of 20`, the share being the one
 division this client makes and the pair being what stops it reading as a settled habit over
@@ -556,7 +556,7 @@ taken.
 **A card at the end of the game screen asks how the other players were, and it is
 `features/sportsmanship/`**
 ([#386](https://github.com/Raketa02/Raketa/issues/386),
-[ADR-0154](../docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)). **The
+[ADR-0158](../docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)). **The
 word _rating_ is Skill rating's**, so everything in the feature is spelled **stars** or **the
 card**: a bare _rating_ on this platform is still the μ/σ a player holds in a sport, and these
 two things now stand one section apart on the same tab. A card carries **everybody else who was

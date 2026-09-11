@@ -2,7 +2,7 @@
 
 ``ReadPlayerRecord`` answers about somebody else and runs the admission rule
 first; ``ReadOwnRecord`` answers about the person asking and has no admission
-collaborator to run. ``docs/adr/0155`` calls that *the same assembler with the
+collaborator to run. ``docs/adr/0159`` calls that *the same assembler with the
 gate short-circuited*, and the short circuit is spelled in the **wiring** rather
 than as a branch:
 
@@ -25,7 +25,7 @@ lands on this sheet arrives from the context that owns it, already decided.
 only one.** What other players said crosses as a figure and a count for a
 stranger, and as a coarse band with neither for the subject — because an average
 beside a count in front of the person it is about is a subtraction that names
-each new rating exactly, and they know who they played (``docs/adr/0154``). The
+each new rating exactly, and they know who they played (``docs/adr/0158``). The
 branch is on ``is_self``, which the assembler already holds; what makes it safe
 is that the *port* has two methods and the subject's one cannot say the figure,
 so a branch taken the wrong way asks for something that does not exist rather
@@ -36,7 +36,7 @@ outright if one ever arrives beside ``is_self``.
 selects which Level is printed; the four fail-closed gates run in the partition of
 the **disclosure**, which is a fact the platform holds. A record refused in a
 sport a client sent would be a client choosing whether it may see somebody
-(``docs/adr/0155``).
+(``docs/adr/0159``).
 
 **One clock, read once, handed down.** The run of form, the metered rows and the
 variety fold are all folded against an instant, and the record's own gate against

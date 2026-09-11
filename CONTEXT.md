@@ -1409,7 +1409,7 @@ player's before they are the matcher's: they are read on the player's own screen
 **Three of the six have a source and three do not** — decided by
 [ADR-0140](docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md),
 which also settles the clause ADR-0137 opened about whether *shows up* survives at all, and by
-[ADR-0156](docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md), which adds
+[ADR-0160](docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md), which adds
 the third.
 
 - **Player Score** — the blended number a player sees, out of a hundred. Computed from what
@@ -1431,7 +1431,7 @@ the third.
     are not opportunities. **A decline is a good outcome**: one of the two strands where a no
     scores, because what it prices is silence and not judgement.
   - **Answers about results** — whether a score put in front of a player gets an answer inside
-    its window. **Live** ([ADR-0156](docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md)).
+    its window. **Live** ([ADR-0160](docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md)).
     The opportunity is a **score put to you**: the entry that records *we played* records a
     score in the same act, so one side opens and the other is asked, and once both sides have
     put a score up nobody is asked anything further — the opener facing a counter may only give
@@ -1447,7 +1447,7 @@ the third.
     the open case is the Hold.
   - **Sportsmanship** — what opponents said afterwards. A mean, not a ratio. **Stands down,
     and now permanently**
-    ([ADR-0154](docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)). The
+    ([ADR-0158](docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)). The
     surface it was waiting for exists — see **Sportsmanship** below — and the reason it stays
     down has changed rather than lapsed: **it is not a strand and never was.** A star average
     is not a ratio out of a hundred, so it cannot be a term in a weighted mean over ratios;
@@ -1465,7 +1465,7 @@ the third.
   inside the reliability term. `ReliabilityStrand.CONFIRMS_RESULTS` and its two ruleset weights
   came out with the provider, in ADR-0140.
   **Answers about results is not this row coming back**
-  ([ADR-0156](docs/adr/0156-a-results-strand-counts-answers-and-never-agreements.md)). Silence
+  ([ADR-0160](docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md)). Silence
   already *confirms* a lone score, so a row counting confirmations finds ignoring and agreeing
   indistinguishable and the only unconfirmed games are the ones two people disagreed about — it
   would be a row counting **disagreements** under a word that sounds like diligence. The
@@ -1518,7 +1518,7 @@ the third.
 What the *other players* said about being on a court with somebody — the one thing on the
 player record the platform cannot count for itself, and the first part of that sheet that
 **stores** anything rather than deriving it
-([ADR-0154](docs/adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
+([ADR-0158](docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
 
 **The word *rating* is Skill rating's**, and this context pays the cost of arriving second:
 everything here is spelled **stars** or **the card**, and a bare *rating* on this platform
@@ -1583,7 +1583,7 @@ still means the μ/σ a player holds in a sport.
 
 **What the platform will say about one person to one reader**, current at the moment the
 sheet is opened — and the context that decides whether it says anything at all
-([ADR-0155](docs/adr/0155-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)).
+([ADR-0159](docs/adr/0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)).
 It is `player_score`'s shape with a second job: **no aggregate, no table and no migration**,
 every fact read through the owning context's published port, and one rule of its own —
 **admission**.

@@ -331,7 +331,7 @@ allow_indirect_imports = true
 # consumer would eventually be shaped by it.
 #
 # The second contract is the one that is actually load-bearing, and it is a
-# **product** decision rather than a layering one (docs/adr/0154). The matcher
+# **product** decision rather than a layering one (docs/adr/0158). The matcher
 # ignores sportsmanship entirely — not in the floor, not as a term, not as a
 # tie-break — because it is the one strand a person can weaponise and there is no
 # appeal route behind it. A reader seeing `3,1 / 5 · 12 players` and deciding for
@@ -507,7 +507,7 @@ forbidden_modules =
 allow_indirect_imports = true
 
 # The player record is an **assembler**: it stores nothing, and every fact on the
-# sheet it draws is somebody else's (docs/adr/0155). That makes it the one context
+# sheet it draws is somebody else's (docs/adr/0159). That makes it the one context
 # on this platform whose domain and application layers have a standing reason to
 # reach sideways — the type it wants usually exists already, one directory over,
 # with the right shape and the wrong owner. `CardIdentity` is the example the ADR

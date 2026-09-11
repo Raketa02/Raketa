@@ -1,7 +1,7 @@
 """The skill card's two borrowed facts, and the word each of them is renamed to.
 
 ``player_record`` declares its own types rather than reusing another context's
-(``docs/adr/0155``), which puts two enums with the same two strings a few
+(``docs/adr/0159``), which puts two enums with the same two strings a few
 directories apart — the same deliberate duplication ``OnCourtVerdict`` carries
 beside ``PhotoReviewDecision``, and the same risk: **two spellings that drift are
 worse than an import**, because a client reading a search card and a record would

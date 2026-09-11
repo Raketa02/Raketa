@@ -306,7 +306,7 @@ def test_a_strand_below_the_observation_bar_stands_down_alone() -> None:
 
 def test_the_observation_bar_is_per_strand_and_only_one_of_them_asks_for_five(
 ) -> None:
-    """**Per-strand minimums, at their boundary** (``docs/adr/0156``).
+    """**Per-strand minimums, at their boundary** (``docs/adr/0160``).
 
     The same four observations behind two strands: *shows up* is over its bar of
     three and reads, *answers about results* is under its bar of five and stands
@@ -383,7 +383,7 @@ def test_the_two_mode_vectors_order_the_same_two_candidates_oppositely() -> None
     other — a single blended score cannot express that, and the decomposition is
     justified for exactly as long as such a pair exists.
 
-    **The widest pair is back, and it is this one** (``docs/adr/0156``). It was
+    **The widest pair is back, and it is this one** (``docs/adr/0160``). It was
     *confirms results* against *sportsmanship* at 24/4 versus 5/16; that strand
     was struck (``docs/adr/0137``) and the inversion narrowed to *keeps plans*'s
     18/7 against 15/17, which still flipped and was what this test asserted.

@@ -309,7 +309,7 @@ half-the-live-terms bar. It stays true that the evidence gate excludes nobody to
 > arrive — so what moves is the integer rounding: 0.016 and 0.009 Fit points on the two
 > reliability readings in the walkthrough goldens, no reordering and no floor crossing.
 
-> **Amended again by [ADR-0156](../../adr/0156-a-results-strand-counts-answers-and-never-agreements.md),
+> **Amended again by [ADR-0160](../../adr/0160-a-results-strand-counts-answers-and-never-agreements.md),
 > and the sixth name is not the struck one.** *Answers about results* counts **answers** to a
 > score put in front of somebody — accepting and countering alike — where *confirms results*
 > counted agreements and, because silence already confirms a lone score, could only ever have
@@ -356,10 +356,10 @@ risk: the published Player Score at `35/20/15/12/10/8`
 ([`the-five-numbers.md`](the-five-numbers.md) §4), and these two. The reliability *floor* reads
 the published one — the one deliberate exception, recorded there.
 
-**Three strands stand down and three are live** (ADR-0140, ADR-0156). *Shows up*, *answers
+**Three strands stand down and three are live** (ADR-0140, ADR-0160). *Shows up*, *answers
 challenges* and *answers about results* have a provider; *keeps plans* needs a plan with a
 moment, *settles up* needs court money, and *sportsmanship* has a surface now but the matcher may
-not read it ([ADR-0154](../../adr/0154-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
+not read it ([ADR-0158](../../adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
 The strand vector renormalises within itself over whatever arrives, exactly as §10 renormalises
 the terms — which is why a strand with no provider costs the reading nothing.
 

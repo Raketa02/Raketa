@@ -546,7 +546,7 @@ async def test_a_stranger_is_told_the_figure_and_how_many_people_it_rests_on():
 
 
 async def test_the_subject_is_told_a_band_and_the_figure_is_never_asked_for():
-    """**The rule this branch exists for** (``docs/adr/0155``, ``docs/adr/0154``).
+    """**The rule this branch exists for** (``docs/adr/0159``, ``docs/adr/0158``).
 
     A figure and a count on the sheet titled *How others see you* is a
     subtraction: moving from 4,80 over ten to 4,73 over eleven names the new

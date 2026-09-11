@@ -51,7 +51,7 @@ might happen, and this is the record of one that did.
 
 **``attendance_for`` and ``result_answering_for`` are the two reads here that
 answer about fewer people than they were asked about**, and the exception proves
-the rule above rather than bending it (``docs/adr/0140``, ``docs/adr/0156``).
+the rule above rather than bending it (``docs/adr/0140``, ``docs/adr/0160``).
 Both are ``player_score``'s inputs — *shows up* and *answers about results* —
 where a ``0/0`` would say *this person was due somewhere and did not come* about
 somebody nothing was ever arranged for, and *this person ignored a score* about
@@ -200,7 +200,7 @@ class Attendance:
 class ResultAnswering:
     """What one player did about the scores put in front of them. **Per person.**
 
-    The *answers about results* strand's whole input (``docs/adr/0156``).
+    The *answers about results* strand's whole input (``docs/adr/0160``).
     ``answered`` is scores they accepted or countered inside the window;
     ``ignored`` is scores whose window ran out with nothing said. A score still
     inside its window is in **neither** — the answer is still wanted, and filing
@@ -687,7 +687,7 @@ class GameHistoryQuery(Protocol):
         not ignored one.
 
         **``since`` is the caller's window and never this context's**
-        (``docs/adr/0156``). A game's own three clocks are in ``windows.py`` and
+        (``docs/adr/0160``). A game's own three clocks are in ``windows.py`` and
         are what a player is promised; *how far back a strand remembers* is a
         judgement about what a record is worth, and it belongs to the context
         that publishes the strand. This read answers about opportunities that

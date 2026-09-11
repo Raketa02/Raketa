@@ -213,7 +213,7 @@ class PlayerScoreQuery(Protocol):
     **Three of them have a provider** — *shows up*, out of plans that settled
     either way, *answers challenges*, out of invitations whose day is over, and
     *answers about results*, out of the scores put in front of somebody
-    (``docs/adr/0156``). The other three are absent from every reading rather than
+    (``docs/adr/0160``). The other three are absent from every reading rather than
     published at nought, and the term renormalises over what arrives
     (``docs/adr/0140``).
 
@@ -223,7 +223,7 @@ class PlayerScoreQuery(Protocol):
     strand down — below **its own** ``min_observations`` a strand alone, past
     ``horizon_days`` the whole term — and both are ruleset configuration under
     ``docs/adr/0093``, never code and never environment-selected. The first is a
-    bar per strand rather than one number over all six (``docs/adr/0156``), so a
+    bar per strand rather than one number over all six (``docs/adr/0160``), so a
     strand that needs more evidence than the rest can ask for it without changing
     what the platform demands of a newcomer.
 

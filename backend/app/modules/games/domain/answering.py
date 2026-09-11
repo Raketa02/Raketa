@@ -5,7 +5,7 @@ a fact about a **pair** — two people agreeing — and ``docs/adr/0137`` struck
 strand that counted them for exactly that reason. What is folded here is a fact
 about **one side**: a score was put in front of them, and inside its window they
 either said something or they did not. Accepting says something. Countering says
-something. Only silence is silence (``docs/adr/0156``).
+something. Only silence is silence (``docs/adr/0160``).
 
 **A score is put to the side that has not put one up.** The entry that records
 *we played* records a score in the same act, so one side always opens; the other
