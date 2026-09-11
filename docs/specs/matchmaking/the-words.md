@@ -1715,9 +1715,26 @@ no value, because the sentence is true whichever pair produced it.
 **There is a lock, and it is an act rather than a state**
 ([ADR-0155](../../adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md),
 superseding ADR-0144's *There is no lock*). What it does is post **a system line into the room** —
-§23's `{name} locked the plan` — so the wording that belongs to it is that sentence and nothing
-else. There is deliberately **no locked-state copy on the card here**: what a card says about an
-agreed plan is #397's, and the backend sends `locked_at` and no adjective.
+§23's `{name} locked the plan` — and the backend sends `locked_at` and no adjective. **What the
+card says about it is a counter and a control**
+([#403](https://github.com/Raketa02/Raketa/issues/403)), and the count is derived from the three
+fields and never sent:
+
+| Element | Reads |
+| --- | --- |
+| The eyebrow | `The plan` — drawn uppercase, 3.3's section rule |
+| The counter | `N of 3 set` · `Locked` once somebody has |
+| The button | `Lock the plan` — **always**, and never with the reason appended |
+| The button, busy | `Locking…` — its own word, because nothing is being saved |
+
+**The reason is not on the label because it is on the counter.** The mock read *Lock it in · set
+all three first*; the counter directly above already reads `1 of 3 set`, and a second sentence
+would be the same count in a second spelling. **Once locked the button is gone**, not settled:
+a second lock records nothing and answers `200`, so the counter's one word carries the whole
+fact. The lock's own refusal has a sentence by its code —
+`Set all three before locking the plan.` for `the_plan_is_not_complete`, which the greyed button
+makes unreachable and the card writes anyway — and `plan_not_found` gets `This plan is not one
+you can change.`; `plan_is_history` and `account_held` say what they already said for a slot.
 
 **`locked by everybody` stays deleted.** It is a phrase the prototype's own data cannot support —
 no assent is recorded per person, and a lock is one person saying *we are agreed*, not four. And
@@ -2053,10 +2070,12 @@ about.
 | A message | — | **the author, always** — `Ola K.: on my way` · `You: 18:00 works` |
 | A system line | — | the rendered sentence, which already names its actor |
 | A day separator | `header` | the weekday |
+| The plan's heading | `header` | **one element** for the eyebrow and the counter — `The plan, 1 of 3 set` · `The plan, Locked` — which is `YOUR GAMES · n`'s shape one screen over, with a comma where the drawing has the pill |
 | A slot chip | `button` | `{Slot}, {value}` · `{Slot}, not set` — `Day, Saturday`, `Hour, not set` |
 | A day option | `radio` + `selected` | the weekday |
 | An hour option | `radio` + `selected` | the clock time |
 | Where | `textbox` | `Where` |
+| Lock the plan | `button` | `Lock the plan` — with `disabled` while a slot is empty, `busy` and `Locking…` while it goes out, and **not there** once the plan is locked |
 | The composer | `textbox` | `Message` |
 | Send | `button` | `Send` |
 | A quick chip | `button` | its own text |
@@ -2075,6 +2094,14 @@ seven radios announce seven answers, one of which is chosen. **The slot chip abo
 **`Open the game` rather than `Details`.** The visible label is the design's and stays; the
 accessible name names the destination, because *Details* is a word about a screen and every other
 door on this map is named by its act.
+
+**The greyed lock's reason is the heading two elements before it, in the reading order as well as
+on the screen** ([#403](https://github.com/Raketa02/Raketa/issues/403)). #324's rule is that a
+note above a greyed control has already said why, and the counter is that note in both registers:
+a listener swiping through the card meets `The plan, 1 of 3 set` and then the chips before
+reaching `Lock the plan, dimmed`, so the reason arrives first without a hint restating it. The
+button's name never changes for the state — the state is `accessibilityState`'s — and once the
+plan is locked there is no button to name, because the counter's `Locked` is the whole fact.
 
 **The header draws one thing and says another, and that is §20.4 applied to a title**
 ([#401](https://github.com/Raketa02/Raketa/issues/401)). The drawn title is each handle's **stem** —

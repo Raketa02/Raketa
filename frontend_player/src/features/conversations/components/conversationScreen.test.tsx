@@ -285,6 +285,31 @@ describe('the stream', () => {
     expect(screen.getByLabelText('tomek.p: six works for me')).toBeTruthy();
   });
 
+  /**
+   * The lock's confirmation is a line like every slot's, rendered from the copy deck with `{name}`
+   * filled from the members the room holds — and it quotes no value, because the three slots are
+   * the value and the room already holds a line for each (ADR-0155).
+   */
+  it('draws the lock as the sentence the deck writes, and quotes no value', async () => {
+    await openTheRoom(room({ entries: [line(1, 'PLAN_LOCKED')] }));
+
+    const sentence = systemLineSentence(
+      {
+        kind: 'system-line',
+        seq: 1,
+        code: 'PLAN_LOCKED',
+        occurredAt: READ_AT,
+        actorId: TOMEK,
+        values: {},
+      },
+      [{ playerId: TOMEK, nickname: 'tomek.p' }],
+      'full',
+    );
+
+    expect(await screen.findByText(sentence)).toBeTruthy();
+    expect(sentence).toBe('tomek.p locked the plan');
+  });
+
   /** §24.4: the author is always spoken, even where the bubble does not draw one. */
   it('names the author of every bubble, and the reader’s own as You', async () => {
     await openTheRoom(room({ entries: [message(1, ME, '18:00 works')] }));

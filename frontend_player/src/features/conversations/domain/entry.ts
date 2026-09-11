@@ -17,20 +17,27 @@
  * **The gaplessness is the server's promise and nothing here depends on it**: no reader infers
  * loss from a gap, so there is no rule in this file about one.
  *
- * ## Seven codes, and the two the values decide
+ * ## Eight codes, and the two the values decide
  *
  * The sentences are [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §23 and
  * live in `components/conversationPresentation.ts`; what is here is the vocabulary and the
- * narrowing. Two of the seven are a code **plus** a value:
+ * narrowing. Two of the eight are a code **plus** a value, and one is a code and nothing else:
  *
  * - **A seat leaving is one code with the answer as a value.** *That seat is open again* is the
  *   same news either way, so the two facts stay apart in `values.departure` rather than in a
  *   second code — and **a lapse is still not a decline**, which is §13's rule holding one layer
  *   down.
- * - **The three plan codes each carry the value that was recorded** — the place as it was typed,
+ * - **The three slot codes each carry the value that was recorded** — the place as it was typed,
  *   the day as `YYYY-MM-DD`, the hour as `HH:MM`. Setting a slot and moving one are **one code
  *   told twice**, which is the opposite rule for the opposite case: they are the same fact, where
  *   a lapse and a decline are two.
+ * - **The lock carries no value at all**
+ *   ([ADR-0155](../../../../../docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)).
+ *   It is the Plan's fourth code and not a fourth slot: the three slots are the value and the
+ *   room already holds a line for each, so a copy here would be the second place they are true
+ *   and the first thing to disagree with the slot line above it after a later move. There is no
+ *   unlocked code — the lock freezes nothing, and a slot moved afterwards keeps it and writes its
+ *   own line.
  *
  * ## The day is a calendar date, and that is what makes it zone-free
  *
@@ -49,7 +56,7 @@
 import { platformDay, weekdayOf } from '@/shared/date/platformZone';
 import type { Weekday } from '@/shared/vocabulary/week';
 
-/** The seven a system line can be. §23, and a code outside them is one this build cannot read. */
+/** The eight a system line can be. §23, and a code outside them is one this build cannot read. */
 export const SYSTEM_LINE_CODES = [
   'SEAT_ACCEPTED',
   'SEATS_INVITED',
@@ -58,6 +65,7 @@ export const SYSTEM_LINE_CODES = [
   'PLACE_RECORDED',
   'DAY_RECORDED',
   'HOUR_RECORDED',
+  'PLAN_LOCKED',
 ] as const;
 
 export type SystemLineCode = (typeof SYSTEM_LINE_CODES)[number];

@@ -3,11 +3,13 @@
  * real room it is pinned in, and only `fetch` faked.
  *
  * Most of [#366](https://github.com/Raketa02/Raketa/issues/366)'s acceptance criteria are
- * assertions in this file and opinions nowhere else — the card is the three chips and nothing
- * else, a chip reads its value or its name, the day row shrinks and then empties with the refusal
- * sentence beneath it, the hour row is the offered grid, a past combination is refused in written
- * copy rather than by a disabled control, nothing is optimistic, there is no lock, and a slot can
- * be changed as many times as anybody likes.
+ * assertions in this file and opinions nowhere else — a chip reads its value or its name, the day
+ * row shrinks and then empties with the refusal sentence beneath it, the hour row is the offered
+ * grid, a past combination is refused in written copy rather than by a disabled control, nothing
+ * is optimistic, and a slot can be changed as many times as anybody likes. So are
+ * [#403](https://github.com/Raketa02/Raketa/issues/403)'s: the eyebrow and the counter, the lock
+ * greyed below three slots and live at three, busy with its own word while it goes out, gone once
+ * it has, each refusal by its code, and a lock that freezes nothing.
  *
  * It asserts against the **copy deck** rather than against strings wherever a sentence has one,
  * because the wording is the deck's to change and the rules are not.
@@ -40,15 +42,21 @@ import { HOURS_OFFERED } from '../domain/slots';
 
 import { planErrorMessage } from './planErrorMessage';
 import {
+  LOCKED,
+  LOCKING,
+  LOCK_THE_PLAN,
   NO_DAY_LEFT_TO_SET,
   QUICK_CHIP,
   RECORD_PLACE,
   SAVING,
   SLOT_NAME,
+  THE_PLAN,
+  counterLabel,
   dayChipLabel,
   dayChipName,
+  planHeadingName,
 } from './planPresentation';
-import { mapErrorResponse } from '@/shared/errors';
+import { mapErrorResponse, recoveryMessage } from '@/shared/errors';
 
 const ME = GATE_USER.id;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -107,8 +115,31 @@ function game(): Wire['GameSchema'] {
 }
 
 function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
-  return { game_id: GAME, place: null, day: null, hour: null, agreed_point: null, ...over };
+  return {
+    game_id: GAME,
+    place: null,
+    day: null,
+    hour: null,
+    agreed_point: null,
+    locked_at: null,
+    ...over,
+  };
 }
+
+/** All three set, and the lock still to say so. */
+const COMPLETE: Partial<Wire['PlanSchema']> = {
+  place: 'Zabłocie Sport',
+  day: '2026-09-13',
+  hour: '18:00:00',
+};
+
+const LOCKED_AT = '2026-09-12T10:00:00Z';
+
+const lockPath = `/api/v1/plans/${GAME}/lock`;
+
+/** The refusal's own sentence, off the deck — never a raw string. */
+const refusalSentence = (status: number, code: string) =>
+  planErrorMessage(mapErrorResponse(status, { code, message: 'x' }));
 
 let transport: Transport;
 
@@ -175,16 +206,24 @@ describe('the card', () => {
   });
 
   /**
-   * ADR-0144 deleted *Lock it in*, the locked border and the `locked by everybody` pill: filling
-   * the third slot **is** the lock, and none of the three has anything left to draw.
+   * The eyebrow and the counter are **one `header` element** — the heading and its count, which is
+   * `YOUR GAMES · n`'s own shape — and the count is derived from the three fields, never sent.
    */
-  it('draws no lock, whatever is agreed', async () => {
-    await openTheRoom({
-      agreed: plan({ place: 'Zabłocie Sport', day: '2026-09-13', hour: '18:00:00' }),
-    });
+  it('is headed by the eyebrow and a count of the filled slots', async () => {
+    await openTheRoom({ agreed: plan({ day: '2026-09-13' }) });
 
-    await screen.findByText('Sunday');
-    expect(screen.queryByText(/lock/i)).toBeNull();
+    const heading = await screen.findByRole('header', {
+      name: planHeadingName({ gameId: GAME, day: '2026-09-13' }),
+    });
+    expect(within(heading).getByText(THE_PLAN)).toBeTruthy();
+    expect(within(heading).getByText('1 of 3 set')).toBeTruthy();
+  });
+
+  it('counts nought where nothing has been agreed', async () => {
+    await openTheRoom();
+
+    expect(await screen.findByText(counterLabel(undefined))).toBeTruthy();
+    expect(screen.getByText('0 of 3 set')).toBeTruthy();
   });
 
   /** §22.2: a chip reads its value once there is one, and the day is drawn as a weekday. */
@@ -381,6 +420,182 @@ describe('recording a slot', () => {
   });
 });
 
+describe('the lock', () => {
+  /** The button, found by its name — the same whether greyed, live or busy. */
+  const lock = () => screen.getByRole('button', { name: LOCK_THE_PLAN });
+
+  /**
+   * **Greyed and not pressable while any slot is empty** — 6.1's `disabled`, announced — and the
+   * sentence #324 owes a greyed control is the counter directly above it, which already says
+   * `2 of 3 set`. The label carries no reason.
+   */
+  it('is greyed while any slot is empty', async () => {
+    await openTheRoom({ agreed: plan({ place: 'Zabłocie Sport', day: '2026-09-13' }) });
+
+    await screen.findByText('2 of 3 set');
+    expect(lock().props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByText(LOCK_THE_PLAN)).toBeTruthy();
+    expect(screen.queryByText(/set all three/i)).toBeNull();
+  });
+
+  it('is live once all three are set', async () => {
+    await openTheRoom({ agreed: plan(COMPLETE) });
+
+    await screen.findByText('3 of 3 set');
+    expect(lock().props.accessibilityState.disabled).toBe(false);
+  });
+
+  /** `PUT`, no body: the value is the three slots and they are already recorded. */
+  it('sends the lock with no body, and the counter reads Locked once it lands', async () => {
+    await openTheRoom({ agreed: plan(COMPLETE) });
+    transport.on('PUT', lockPath, () => json(plan({ ...COMPLETE, locked_at: LOCKED_AT })));
+
+    fireEvent.press(await screen.findByRole('button', { name: LOCK_THE_PLAN }));
+
+    await waitFor(() => expect(transport.requestsTo('PUT', lockPath)).toHaveLength(1));
+    expect(transport.requestsTo('PUT', lockPath)[0]?.body).toBeUndefined();
+
+    expect(await screen.findByText(LOCKED)).toBeTruthy();
+    expect(screen.queryByText('3 of 3 set')).toBeNull();
+    expect(
+      screen.getByRole('header', {
+        name: planHeadingName({ gameId: GAME, lockedAt: LOCKED_AT }),
+      }),
+    ).toBeTruthy();
+  });
+
+  /**
+   * **Pending, never optimistic.** The press is blocked, the word changes, and the counter keeps
+   * saying `3 of 3 set` until the server has answered — busy and disabled are both greyed, so the
+   * word is the only thing telling them apart.
+   */
+  it('goes busy with its own word while the lock is going out', async () => {
+    await openTheRoom({ agreed: plan(COMPLETE) });
+
+    let answer: (schema: Wire['PlanSchema']) => void = () => {};
+    const held = new Promise<Wire['PlanSchema']>((resolve) => {
+      answer = resolve;
+    });
+    transport.on('PUT', lockPath, async () => json(await held));
+
+    fireEvent.press(await screen.findByRole('button', { name: LOCK_THE_PLAN }));
+
+    const busy = await screen.findByRole('button', { name: LOCKING });
+    expect(busy.props.accessibilityState.busy).toBe(true);
+    expect(busy.props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByText('3 of 3 set')).toBeTruthy();
+    expect(screen.queryByText(LOCKED)).toBeNull();
+
+    answer(plan({ ...COMPLETE, locked_at: LOCKED_AT }));
+    await screen.findByText(LOCKED);
+  });
+
+  /**
+   * **Gone, not settled.** A second lock records nothing and answers `200`, so a control still
+   * offering the act would be one that provably does nothing; the counter's word is the carrier.
+   */
+  it('is gone once the plan is locked, and the word Locked carries the fact', async () => {
+    await openTheRoom({ agreed: plan({ ...COMPLETE, locked_at: LOCKED_AT }) });
+
+    expect(await screen.findByText(LOCKED)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: LOCK_THE_PLAN })).toBeNull();
+    expect(screen.queryByText(LOCK_THE_PLAN)).toBeNull();
+  });
+
+  /**
+   * **A lock freezes nothing** (ADR-0155 §4). Every chip stays live on a locked plan, a move
+   * writes its own line, and the plan stays locked.
+   */
+  it('leaves every slot editable, and the plan stays locked after a move', async () => {
+    await openTheRoom({ agreed: plan({ ...COMPLETE, locked_at: LOCKED_AT }) });
+    transport.on('PUT', planSlotPath(GAME, 'day'), () =>
+      json(plan({ ...COMPLETE, day: '2026-09-14', locked_at: LOCKED_AT })),
+    );
+
+    await screen.findByText(LOCKED);
+    expect(slotChip(SLOT_NAME.day).props.accessibilityState.disabled).toBe(false);
+
+    fireEvent.press(screen.getByLabelText(`${SLOT_NAME.day}: Sunday`));
+    fireEvent.press(await screen.findByLabelText(dayChipName('2026-09-14')));
+
+    await waitFor(() => expect(screen.getByLabelText(`${SLOT_NAME.day}: Monday`)).toBeTruthy());
+    expect(screen.getByText(LOCKED)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: LOCK_THE_PLAN })).toBeNull();
+  });
+
+  describe('refused', () => {
+    /**
+     * Unreachable through the UI — the button is greyed below three — and handled anyway: the
+     * button is UX and the server is the correctness mechanism. The sentence is the code's own.
+     */
+    it('by an incomplete plan, in a sentence naming the remedy', async () => {
+      await openTheRoom({ agreed: plan(COMPLETE) });
+      transport.on('PUT', lockPath, () => errorResponse(409, 'the_plan_is_not_complete'));
+
+      fireEvent.press(await screen.findByRole('button', { name: LOCK_THE_PLAN }));
+
+      expect(
+        await screen.findByText(refusalSentence(409, 'the_plan_is_not_complete')),
+      ).toBeTruthy();
+      // The retry is the control that failed, and it is still there.
+      expect(lock().props.accessibilityState.disabled).toBe(false);
+    });
+
+    it('by a game that is over, in the sentence every plan write shares', async () => {
+      await openTheRoom({ agreed: plan(COMPLETE) });
+      transport.on('PUT', lockPath, () => errorResponse(409, 'plan_is_history'));
+
+      fireEvent.press(await screen.findByRole('button', { name: LOCK_THE_PLAN }));
+
+      expect(await screen.findByText(refusalSentence(409, 'plan_is_history'))).toBeTruthy();
+    });
+
+    it('by a plan that is not this reader’s, in its own sentence', async () => {
+      await openTheRoom({ agreed: plan(COMPLETE) });
+      transport.on('PUT', lockPath, () => errorResponse(404, 'plan_not_found'));
+
+      fireEvent.press(await screen.findByRole('button', { name: LOCK_THE_PLAN }));
+
+      expect(await screen.findByText(refusalSentence(404, 'plan_not_found'))).toBeTruthy();
+    });
+
+    /** Each refusal is a sentence of its own, and none of them is the fallback. */
+    it('by each code in a different sentence', () => {
+      const sentences = [
+        refusalSentence(409, 'the_plan_is_not_complete'),
+        refusalSentence(409, 'plan_is_history'),
+        refusalSentence(404, 'plan_not_found'),
+      ];
+
+      expect(new Set(sentences).size).toBe(3);
+      expect(sentences).not.toContain(refusalSentence(409, 'a_code_this_build_has_never_seen'));
+    });
+
+    /**
+     * **A hold is a fact about the account, not about the lock that met it.** It reaches the room's
+     * fold off this feature's mutation cache and draws as the room's one amber note — whose words
+     * are that feature's to assert — rather than as a coral sentence here, and every control that
+     * writes, the chips and the button, greys under it.
+     */
+    it('by a held account, as one note over greyed controls and never a coral sentence', async () => {
+      await openTheRoom({ agreed: plan(COMPLETE) });
+      transport.on('PUT', lockPath, () => errorResponse(403, 'account_held'));
+
+      fireEvent.press(await screen.findByRole('button', { name: LOCK_THE_PLAN }));
+
+      await waitFor(() => expect(lock().props.accessibilityState.disabled).toBe(true));
+      expect(slotChip(SLOT_NAME.day).props.accessibilityState.disabled).toBe(true);
+
+      // One note, and it is not this card's: the fallback a 403 would otherwise draw is absent,
+      // and so is any sentence the plan's own table could have written for it.
+      const held = mapErrorResponse(403, { code: 'account_held', message: 'x' });
+      expect(screen.getAllByRole('alert')).toHaveLength(1);
+      expect(screen.queryByText(recoveryMessage(held))).toBeNull();
+      expect(screen.queryByText(planErrorMessage(held))).toBeNull();
+    });
+  });
+});
+
 describe('a held account', () => {
   /**
    * A hold stops you writing anywhere another player sees it and **never stops you reading**. The
@@ -400,6 +615,34 @@ describe('a held account', () => {
       expect(slotChip(SLOT_NAME.day).props.accessibilityState.disabled).toBe(true),
     );
     expect(screen.getByText('Sunday')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: LOCK_THE_PLAN }).props.accessibilityState.disabled,
+    ).toBe(true);
+  });
+
+  /**
+   * The chips' own refusal reaches the room's fold too — a hold met on a slot write is the same
+   * fact as one met on the send, and it was `planErrorMessage`'s stated shape before anything
+   * wired it. The note's words are the room's to assert; what is this card's is that every chip
+   * greys and no coral sentence is drawn for it.
+   */
+  it('is told by a slot write, not only by the send', async () => {
+    await openTheRoom({ agreed: plan({ day: '2026-09-13' }) });
+    transport.on('PUT', planSlotPath(GAME, 'hour'), () => errorResponse(403, 'account_held'));
+
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.hour}: not agreed yet`));
+    fireEvent.press(await screen.findByText('18:00'));
+
+    await waitFor(() =>
+      expect(slotChip(SLOT_NAME.day).props.accessibilityState.disabled).toBe(true),
+    );
+    expect(slotChip(SLOT_NAME.hour).props.accessibilityState.disabled).toBe(true);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(
+      screen.queryByText(
+        recoveryMessage(mapErrorResponse(403, { code: 'account_held', message: 'x' })),
+      ),
+    ).toBeNull();
   });
 });
 

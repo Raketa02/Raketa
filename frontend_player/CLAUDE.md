@@ -166,16 +166,27 @@ and the pre-emptive half is bought with one tap; `domain/liveState.ts` says so, 
 are what drive the arm. 6.2 and 6.13 each gained a `disabled` state for it, under one condition:
 **only where a note above has already said why.**
 
-**The plan card is pinned under the room's header, and it is the three chips and nothing else**
-([#366](https://github.com/Raketa02/Raketa/issues/366),
-[ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)). **Pinned**,
-because a chat opens at its newest entry, so a card in the scroll is the first thing off-screen;
-**chips alone**, because the panel that explains them is the game screen's — one panel, one home.
-`domain/slots.ts` is the one place `where · day · hour` is an order, and the order is of decreasing
-negotiability. **There is no lock**: filling the third slot is the lock, the _Lock it in_ button
-existed to unlock ownership and booking and both are out of scope, and `locked by everybody` is a
-phrase the data cannot support, since no assent is recorded anywhere and a slot is set by whoever
-tapped last. **Two grids and neither is a rule this client invented** — the day row is today + 6
+**The plan card is pinned under the room's header, and it is a counter, the three chips and the
+lock** ([#366](https://github.com/Raketa02/Raketa/issues/366),
+[#403](https://github.com/Raketa02/Raketa/issues/403),
+[ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md),
+[ADR-0155](../docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)).
+**Pinned**, because a chat opens at its newest entry, so a card in the scroll is the first thing
+off-screen; **no panel**, because the panel that explains the chips is the game screen's — one
+panel, one home. `domain/slots.ts` is the one place `where · day · hour` is an order, and the order
+is of decreasing negotiability. **The count and the lock are two facts, and `domain/lock.ts` holds
+both**: `N of 3 set` is derived from the three fields and never sent, and `Locked` is `lockedAt`
+and **never** the count under another name — three filled slots is a plan everybody _could_ agree,
+and the lock says somebody did, by posting `{name} locked the plan` into the room, which is the
+whole of what it does. _Lock the plan_ is greyed below three, live at three, busy with its own word,
+and **gone** once locked rather than 6.1's `settled` — a second lock records nothing and answers
+`200`, so a control still offering it would be one that provably does nothing, and the counter's
+word is the carrier. **The label carries no reason**, because the counter directly above is the
+note #324 owes every greyed control. **A lock freezes nothing and there is no unlock**; `locked by
+everybody` stays a phrase the data cannot support. **A hold met on any plan write reaches the
+room's one amber note** off the mutation cache, through `usePlanWriteRefusals`, because a hold is
+a fact about the account whichever of the five writes on that screen met it. **Two grids and
+neither is a rule this client invented** — the day row is today + 6
 clamped to `planned_at + PLAN_HORIZON`, so it **shrinks as the week runs out** and inside the entry
 grace draws **no chips at all** with the refusal sentence beneath them, and the hour row is the
 thirty-five half hours between 06:00 and 23:00; both numbers are the server's, which refuses

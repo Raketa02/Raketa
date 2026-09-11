@@ -37,8 +37,8 @@
  * ## The held arm is unreachable in this build, and that is recorded rather than hidden
  *
  * **Nothing on this platform can open a case.** `account_held` is a real backend refusal on every
- * write — the send and, when [#366](https://github.com/Raketa02/Raketa/issues/366) lands, all
- * three slot writes — but the hold query's only registered implementation is the null object, so
+ * write — the send, the three slot writes and the lock — but the hold query's only registered
+ * implementation is the null object, so
  * no account can be in one and `make seed` cannot put one there
  * ([`backend/app/seeds/plans.py`](../../../../../backend/app/seeds/plans.py) says the same thing
  * from the other side). This is a **named exception** to the map's reachability constraint rather
@@ -88,7 +88,7 @@ export function liveState(stream: LiveStreamStatus, writing: WriteStanding): Liv
 }
 
 /**
- * **Whether the account may write here**, read off the refusal that is the only thing that says
+ * **Whether the account may write here**, read off the refusals that are the only thing that says
  * so.
  *
  * A hold reaches this client exactly one way: `account_held`, a `403` on a write. **No read
@@ -96,13 +96,21 @@ export function liveState(stream: LiveStreamStatus, writing: WriteStanding): Liv
  * to ask before the first tap, and this is the honest producer rather than the one §3.6 describes.
  * The moment a read carries the fact, this function takes it instead and nothing above it moves.
  *
+ * **Every write on the screen is a producer, and the fold takes all of them.** A hold is a fact
+ * about the account rather than about the act that met it, so the send, the three slot chips and
+ * the lock are five ways of learning one thing — and a room that folded only its own send would
+ * draw a coral *something went wrong* under a plan write while the composer beside it stayed
+ * open, which is the one fact said in two registers that the amber note exists to prevent. The
+ * plan's refusals arrive off the mutation cache through `features/plans`' public surface, which is
+ * how the room already reads what it is still sending.
+ *
  * It is a **derivation and not a stored flag**, which is what keeps it from being a second store —
- * and what that costs is stated rather than glossed: the refusal lives exactly as long as the
+ * and what that costs is stated rather than glossed: a refusal lives exactly as long as the
  * mutation that got it, so **leaving the room and coming back ungreys everything and the player
  * taps into the hold again.** Nothing in this build can lift a hold, so that repeat is a lie about
  * the account rather than a stale reading — and it is still the honest shape, because the fix is a
  * read that serves the fact and not a flag this client keeps about a state it cannot see.
  */
-export function writeStanding(refusal: AppError | null | undefined): WriteStanding {
-  return refusal?.code === 'account_held' ? 'held' : 'ordinary';
+export function writeStanding(refusals: readonly (AppError | null | undefined)[]): WriteStanding {
+  return refusals.some((refusal) => refusal?.code === 'account_held') ? 'held' : 'ordinary';
 }

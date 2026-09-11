@@ -21,9 +21,14 @@
  * ## A chip reads its value or its name, and never a word about the state it is in
  *
  * §22.2's table is three rows and one column of names: `Where`, `Day`, `Hour`, replaced by the
- * value once there is one. **There is no lock, so there is nothing to word** — ADR-0144 deleted
- * *Lock it in*, the locked border and `locked by everybody`, and none of the three has a sentence
- * here because none of the three has a state.
+ * value once there is one. **The lock is an act, and the words for it are a control and a
+ * counter** ([ADR-0155](../../../../../docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md),
+ * [#403](https://github.com/Raketa02/Raketa/issues/403)): `Lock the plan` on the button, always
+ * and with no reason appended, and `N of 3 set` on the counter above it until it reads `Locked`.
+ * **`locked by everybody` stays deleted** — nothing records assent from anyone but the one person
+ * who tapped, so *by everybody* is a claim the data cannot support, and the word is one this
+ * card can. The sentence the lock writes into the room is `conversationPresentation.ts`', by
+ * §23's assignment.
  *
  * **The plan is drawn literally and never counted down** (ADR-0145 §7). Nothing here formats a
  * duration, nothing quotes an absolute instant, and nothing says how long is left: a card changing
@@ -52,6 +57,7 @@ import { placeWithoutTheCourt } from '@/shared/formatting/placeName';
 import { sentenceList } from '@/shared/formatting/sentenceList';
 import { dayLabel, dayName } from '@/shared/vocabulary/availabilityPresentation';
 
+import { SLOTS, isLocked, slotCount } from '../domain/lock';
 import type { QuickChip } from '../domain/quickChips';
 import {
   PLACE_CAP,
@@ -142,6 +148,66 @@ export const NOT_AGREED_YET = 'not agreed yet';
  * this instant is the one about the attempt.
  */
 export const SAVING = 'Saving…';
+
+// ---------------------------------------------------------------------------
+// The eyebrow, the counter and the lock
+// ---------------------------------------------------------------------------
+
+/**
+ * The card's eyebrow. Drawn uppercase by 3.3's section rule — `eyebrow` labels a region you are
+ * reading, and is emphatically not `h2`, which titles a card and never a section.
+ */
+export const THE_PLAN = 'The plan';
+
+/**
+ * What the counter reads once the plan is locked — **one word, and never `locked by everybody`.**
+ *
+ * The word is the whole of what carries the fact once the button has gone (`domain/lock.ts`), so
+ * it is what discharges Part 13's *never colour alone* for the locked state: the pill does not
+ * change colour, and it would not be enough if it did.
+ */
+export const LOCKED = 'Locked';
+
+/**
+ * **The counter** — `N of 3 set`, and `Locked` once somebody has said so.
+ *
+ * The count is **derived here from the three fields** and never sent: the plan schema's own
+ * docstring refuses a count on the wire as *the one derived value that could disagree with the
+ * three fields beside it*. The lock replaces the count rather than sitting beside it, because a
+ * locked plan is a complete one by the server's own guard and `3 of 3 set · Locked` would say the
+ * guard twice.
+ */
+export function counterLabel(plan: Plan | undefined): string {
+  return isLocked(plan) ? LOCKED : `${slotCount(plan)} of ${SLOTS} set`;
+}
+
+/**
+ * **The eyebrow and the counter as one spoken name** — `The plan, 1 of 3 set`.
+ *
+ * One `header` element for the heading and its count, which is `YOUR GAMES · n`'s own shape
+ * (§24.5), with a comma where the drawing has a pill: a listener has no reading for a layout,
+ * which is §24.4's argument about the middle dot one surface over.
+ */
+export function planHeadingName(plan: Plan | undefined): string {
+  return `${THE_PLAN}, ${counterLabel(plan)}`;
+}
+
+/**
+ * The button's label, **always** — greyed, live or busy, and never with the reason appended.
+ *
+ * The mock read *Lock it in · set all three first*; the reason is struck because the counter
+ * directly above already says `1 of 3 set`, and a second sentence would be the same count in a
+ * second spelling. `domain/lock.ts` is where that is argued against #324's rule.
+ */
+export const LOCK_THE_PLAN = 'Lock the plan';
+
+/**
+ * The button's word while the lock is going out — 6.1's busy shape.
+ *
+ * Its own word rather than the chips' `Saving…`, because nothing is being saved: the value is the
+ * three slots and they are already recorded, and what is going out is an act.
+ */
+export const LOCKING = 'Locking…';
 
 /**
  * What each editor is called — a **statement of the act**, never the question the quick chips ask.

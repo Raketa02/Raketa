@@ -72,6 +72,17 @@ export interface Plan {
    * ([#367](https://github.com/Raketa02/Raketa/issues/367)).
    */
   readonly agreedPoint?: string;
+  /**
+   * The moment somebody said *we are agreed* — and absent while nobody has
+   * ([ADR-0155](../../../../../docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)).
+   *
+   * **The one value on a plan that is not a slot.** It is an act's moment rather than a fourth
+   * slot: three filled slots is a plan everybody *could* agree, and this says somebody did. A
+   * locked plan is not a frozen one — every slot stays editable and every move writes its own
+   * line — and there is no unlock, so it is never cleared. Read by `domain/lock.ts` and by
+   * nothing that decides a slot.
+   */
+  readonly lockedAt?: string;
 }
 
 /** The longest *where* this platform stores, in characters. The server's cap, mirrored. */

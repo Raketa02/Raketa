@@ -1,5 +1,6 @@
 /**
- * This feature's query-key factory — **one key, because one route is read.**
+ * This feature's query-key factory — **one query key, because one route is read** — and the one
+ * mutation key its writes share.
  *
  * `GET /plans` is *your plans, right now*: there is no id to mint one under and asking again is
  * asking the same question, which is `gameKeys`' own reasoning one feature over. A plan is looked
@@ -17,4 +18,14 @@ export const planKeys = {
   all: ['plans'] as const,
   /** Every plan for a game you are on the court of. Not keyed by game: one list, not several. */
   list: () => [...planKeys.all, 'list'] as const,
+  /**
+   * **The key every plan write is made under** — a *mutation* key, `conversationKeys.sending`'s
+   * shape one feature over.
+   *
+   * It is what `useMutationState` filters on to find the refusals the room folds *held* from: a
+   * hold is a fact about the **account**, so the room needs every write on its screen and four of
+   * the five are this feature's. **Not keyed per game**, deliberately — a hold met on one plan is
+   * true in every room, and the one thing read off this key is the account's standing.
+   */
+  writing: () => [...planKeys.all, 'writing'] as const,
 };

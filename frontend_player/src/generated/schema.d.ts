@@ -1036,6 +1036,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/conversations/{conversation_id}/typing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say you are typing
+         * @description **A heartbeat, not a state.** Post this while somebody is typing and stop posting when they stop — about every 3 seconds. There is deliberately no *stopped* call, because a *stopped* that never arrives — the app is killed, the phone loses signal, the request is dropped — would leave a room with an indicator nothing could ever clear.
+         *
+         *     **What clears it is the server's own 5-second expiry**, so the failure mode is the indicator vanishing rather than sticking. Keep the cadence under that expiry or your own indicator flickers on people who are still typing.
+         *
+         *     **It records nothing durable and moves no sequence.** The room's `last_seq` is exactly what it was, however many of these you post — a typing frame is not an entry, and nothing here appends, locks or commits.
+         *
+         *     **No rate limit, and none is planned.** Writing the same key repeatedly is idempotent and cheap, and the expiry is what bounds it.
+         *
+         *     **It carries no body.** What is being typed is nobody's business until it is sent.
+         */
+        post: operations["record_typing_api_v1_conversations__conversation_id__typing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/conversations/{conversation_id}/stream": {
         parameters: {
             query?: never;
@@ -1045,11 +1073,17 @@ export interface paths {
         };
         /**
          * Follow a conversation
-         * @description **A nudge, and nothing else on the wire.** Every frame is `{ v, conversation_id, last_seq }`. On receiving one, fetch from **your own** high-water mark through `GET /conversations/{id}/entries` — never from `last_seq`.
+         * @description **Two named events, and you subscribe per name.** `nudge` says the room moved; `typing` says somebody is typing. The kind is on the SSE `event:` field rather than inside the JSON, so an event name you have never heard of is ignored by construction — which is what makes a third one, one day, additive for a phone that shipped today.
+         *
+         *     **A `nudge` is `{ v, conversation_id, last_seq }` and nothing else.** On receiving one, fetch from **your own** high-water mark through `GET /conversations/{id}/entries` — never from `last_seq`.
+         *
+         *     **A `typing` is `{ v, conversation_id, player_ids }`, and it moves no cursor of any kind.** It is not an entry, carries no `seq`, and the room's `last_seq` is unaffected by it. It arrives when the answer changes and not on a timer, **you are never in it**, and an empty `player_ids` is how an indicator goes away. There is no *stopped* signal anywhere: the server reports whoever's heartbeat has not expired, so a killed app clears within 5 seconds by doing nothing at all.
+         *
+         *     **`v` does not move for the new event.** A client that listens only for `nudge` is entirely unaffected by this addition, which is why the envelope version says `1` on both.
          *
          *     **A dropped frame costs nothing.** Because you fetch from your own cursor and not from the frame's number, the *next* nudge repairs whatever the lost one would have said. There is nothing to detect and nothing to reconcile.
          *
-         *     **One frame arrives the moment the stream opens**, carrying the room's current `last_seq`. That is what makes resume correct without `Last-Event-ID` being load-bearing, and it is how a client that has been away catches up in one step.
+         *     **One `nudge` arrives the moment the stream opens**, carrying the room's current `last_seq`. That is what makes resume correct without `Last-Event-ID` being load-bearing, and it is how a client that has been away catches up in one step.
          *
          *     **The stream closes when your access token expires** — about every fifteen minutes. Reconnect with a fresh one through your ordinary refresh path; the token travels in the `Authorization` header, never a query string.
          *
@@ -1233,6 +1267,34 @@ export interface paths {
          *     **Writing the hour already there records nothing and answers `200`.**
          */
         put: operations["set_hour_api_v1_plans__game_id__hour_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{game_id}/lock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Agree the plan
+         * @description **We are agreed.** Any member may lock, once all three slots are set — and locking is an **act** rather than a fourth slot: a complete plan is one everybody *could* agree, and this says somebody did. It writes a system line into the room, which is the whole of what it does.
+         *
+         *     **It takes no body.** The value is the three slots and they are already recorded; sending one back would be the second place that fact is true.
+         *
+         *     **A locked plan is not a frozen one.** Any member may still move any slot afterwards, the plan stays locked, and every move writes its own line — there is no un-agreeing to fear, only re-agreeing. **The game leaving its entry window is still the only thing that freezes a slot.**
+         *
+         *     **There is no unlock**, for the same reason a slot is never emptied: the lock is a thing that happened.
+         *
+         *     **Locking a plan that is already locked answers `200` and records nothing**, and the first lock's `locked_at` is the one that stands.
+         */
+        put: operations["lock_the_plan_api_v1_plans__game_id__lock_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3356,6 +3418,45 @@ export interface components {
             last_seq: number;
         };
         /**
+         * LiveTypingSchema
+         * @description **Somebody is typing**, and it is the second frame on the wire.
+         *
+         *     ``docs/adr/0156``. It arrives when the answer changes and not on a tick, so a
+         *     room where nobody is typing produces nothing at all.
+         *
+         *     **It carries no `last_seq` and moves no sequence.** A typing frame is not an
+         *     entry: nothing was appended, nothing was locked, and the gapless allocator
+         *     behind `seq` was never asked for a number. A client must not advance any
+         *     cursor on one, and there is nothing here it could advance it to.
+         *
+         *     **It carries no name.** Fill handles from the membership you are already
+         *     holding, exactly as every system line does — which is why a corrected
+         *     nickname fixes the indicator without a frame being re-sent.
+         *
+         *     **An empty list is the clear**, and it is the only clear there is: nobody
+         *     sends *stopped*, and the server reports whoever's heartbeat has not expired.
+         *     A room whose last typist's app was killed reports nobody within seconds,
+         *     through the same field and with nothing special about it.
+         */
+        LiveTypingSchema: {
+            /**
+             * V
+             * @description The envelope version, **the same `1` a nudge carries and unbumped by this frame's arrival**. A named event an installed client does not listen for never reaches it, so nothing about the shape it parses has changed.
+             */
+            v: number;
+            /**
+             * Conversation Id
+             * Format: uuid
+             * @description The room this is about — the room this stream is for
+             */
+            conversation_id: string;
+            /**
+             * Player Ids
+             * @description Who is typing **right now**, never including you. A list because a group chat has more than one possible typist; draw one indicator either way. **Empty means nobody is**, which is how an indicator goes away.
+             */
+            player_ids: string[];
+        };
+        /**
          * LivenessReason
          * @description Why somebody moved, as a code. **Never as a number.**
          *
@@ -3703,6 +3804,17 @@ export interface components {
              *     Coarsened **later, never earlier**, so nobody is asked for a result before they could have played. It is sent because it is a timezone conversion the client must not redo.
              */
             agreed_point?: string | null;
+            /**
+             * Locked At
+             * @description The moment somebody agreed this plan, or `null` while nobody has.
+             *
+             *     **A locked plan is not a frozen one.** Any member may still move any slot afterwards, and each move writes its own system line — there is no un-agreeing to fear, only re-agreeing. The plan stays locked and the line trail is the friction, as it already is for every change.
+             *
+             *     **There is no unlock**, and this never returns to `null`. The lock is a thing that happened.
+             *
+             *     **It is not the slot count under another name**: a plan with all three slots filled is one everybody *could* agree, and this says somebody did.
+             */
+            locked_at?: string | null;
         };
         /**
          * PlayIntent
@@ -5286,11 +5398,13 @@ export interface components {
             seq: number;
             /**
              * Code
-             * @description What happened, as a machine code the client renders a sentence from. Seven: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`** and **`HOUR_RECORDED`**.
+             * @description What happened, as a machine code the client renders a sentence from. Eight: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**.
              *
              *     **A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news either way — and a lapse is still not a decline, which is what `values.departure` keeps apart.
              *
              *     **A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.
+             *
+             *     **`PLAN_LOCKED` is the Plan's fourth and it carries no values at all.** The three slots are the value and the room already holds a line for each. It is an act rather than a slot — a complete plan is one everybody *could* agree, and this says somebody did — and there is no unlocked code, because a slot moved afterwards keeps the lock and writes its own line.
              *
              *     **There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping — drawn, not announced.
              */
@@ -7532,6 +7646,57 @@ export interface operations {
             };
         };
     };
+    record_typing_api_v1_conversations__conversation_id__typing_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recorded. Also the answer when you were already recorded as typing — the heartbeat is idempotent and re-posting it is the cheapest thing this route does. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `account_held` — your account is under a live hold. **A hold stops you writing anywhere another player sees it**, and an indicator in somebody else's room is somewhere another player sees it. Every read on this context stays open to you. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `conversation_not_found` — **one code for two cases**: there is no room with that id, or there is one and you are not in it. They are not told apart on purpose, because a 403 would answer *is this id real* about a stranger's evening.
+             *
+             *     Leave the screen. There is no retry that changes this.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     follow_conversation_api_v1_conversations__conversation_id__stream_get: {
         parameters: {
             query?: never;
@@ -7543,7 +7708,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description An open `text/event-stream`. Every frame is a `LiveNudgeSchema` and nothing else. */
+            /** @description An open `text/event-stream`. Two named events ride it: `nudge` carries a `LiveNudgeSchema` and `typing` carries a `LiveTypingSchema`. **Subscribe per name**; a name you do not know is not yours to render. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -7802,7 +7967,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them**, and it is not a lock: once *we played* can no longer be said, the plan is a note about an evening that is over. */
+            /** @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7874,7 +8039,7 @@ export interface operations {
                 };
             };
             /**
-             * @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them**, and it is not a lock: once *we played* can no longer be said, the plan is a note about an evening that is over.
+             * @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.
              *
              *     `that_moment_has_already_passed` — the day and the hour together name a moment that has gone. **Raised when the second of the two is filled, in either order**, and it names neither: the platform has no opinion about which one is wrong, so change whichever you meant.
              */
@@ -7949,9 +8114,71 @@ export interface operations {
                 };
             };
             /**
-             * @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them**, and it is not a lock: once *we played* can no longer be said, the plan is a note about an evening that is over.
+             * @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.
              *
              *     `that_moment_has_already_passed` — the day and the hour together name a moment that has gone. **Raised when the second of the two is filled, in either order**, and it names neither: the platform has no opinion about which one is wrong, so change whichever you meant.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lock_the_plan_api_v1_plans__game_id__lock_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The plan as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanSchema"];
+                };
+            };
+            /** @description `account_held` — your account is under a live hold. **A hold stops you writing anywhere another player sees it, and never stops you reading**: `GET /plans` stays open to you, because a hold must not erase an arrangement other people are already inside. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `plan_not_found` — **one code for two cases**: there is no game with that id, or there is one and you were not on its court. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.
+             *
+             *     `the_plan_is_not_complete` — a slot is still empty. **A refusal and not a silent `200`**, which is deliberately the opposite shape from locking a plan that is already locked: a no-op here would leave you believing you had agreed one. It is a conflict rather than a `400` because the request carried nothing at all — what is wrong is the state of the plan.
              */
             409: {
                 headers: {

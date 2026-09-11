@@ -125,6 +125,7 @@ import {
   RoomPlan,
   useGameCardName,
   usePlan,
+  usePlanWriteRefusals,
 } from '@/features/plans/types';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { playerName } from '@/shared/formatting/playerName';
@@ -247,7 +248,9 @@ function Room({
    * nudge arriving during the first read would invalidate a query that is already in flight.
    */
   const channel = useLiveConversation(room.conversationId);
-  const state = liveState(channel, writeStanding(send.error));
+  // Every write on this screen is a producer of *held*, and four of the five are the plan card's.
+  const planRefusals = usePlanWriteRefusals();
+  const state = liveState(channel, writeStanding([send.error, ...planRefusals]));
   const held = state === 'held';
 
   /**

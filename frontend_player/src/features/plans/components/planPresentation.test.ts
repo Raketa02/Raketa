@@ -11,6 +11,9 @@ import type { Plan } from '../domain/slots';
 
 import {
   EVERYBODY_SAID_YES,
+  LOCKED,
+  LOCKING,
+  LOCK_THE_PLAN,
   NOTHING_IS_LEFT_TO_AGREE,
   NOT_AGREED_YET,
   PLAN_PANEL,
@@ -20,9 +23,12 @@ import {
   SLOT_IN_A_SENTENCE,
   SLOT_NAME,
   STILL_TO_AGREE,
+  THE_PLAN,
   checklistLines,
+  counterLabel,
   dayChipLabel,
   dayChipName,
+  planHeadingName,
   planTagsName,
   slotChipLabel,
   slotChipName,
@@ -188,5 +194,61 @@ describe('the read-only plan’s spoken name', () => {
     expect(planTagsName(plan({ hour: '18:00' }))).toBe(
       `${PLAN_SPOKEN_LEAD} ${SLOT_NAME.where}, ${NOT_AGREED_YET}. ${SLOT_NAME.day}, ${NOT_AGREED_YET}. ${SLOT_NAME.hour}, 18:00.`,
     );
+  });
+});
+
+describe('the counter', () => {
+  const COMPLETE = plan({ place: 'Zabłocie Sport', day: '2026-09-13', hour: '18:00' });
+
+  /** A count over three, and the count is derived from the three fields — never sent. */
+  it('counts the filled slots out of three', () => {
+    expect(counterLabel(undefined)).toBe('0 of 3 set');
+    expect(counterLabel(plan({ day: '2026-09-13' }))).toBe('1 of 3 set');
+    expect(counterLabel(plan({ place: 'Zabłocie Sport', hour: '18:00' }))).toBe('2 of 3 set');
+    expect(counterLabel(COMPLETE)).toBe('3 of 3 set');
+  });
+
+  /**
+   * `Locked`, and never `locked by everybody`: nothing records assent from anyone but the one
+   * person who tapped, so *by everybody* is a claim the data cannot support (ADR-0155).
+   */
+  it('reads Locked once the plan is locked, in a word', () => {
+    const locked = { ...COMPLETE, lockedAt: '2026-09-12T10:00:00Z' };
+
+    expect(counterLabel(locked)).toBe(LOCKED);
+    expect(LOCKED).toBe('Locked');
+    expect(LOCKED).not.toMatch(/everybody/i);
+  });
+});
+
+describe('the heading', () => {
+  /**
+   * The eyebrow and the counter are one `header` element — the heading and its count, which is
+   * `YOUR GAMES · n`'s own shape — with a comma where the drawing has the pill, because a listener
+   * has no reading for a layout.
+   */
+  it('is the eyebrow and the counter as one name', () => {
+    expect(THE_PLAN).toBe('The plan');
+    expect(planHeadingName(plan({ day: '2026-09-13' }))).toBe('The plan, 1 of 3 set');
+    expect(
+      planHeadingName(
+        plan({ place: 'x', day: '2026-09-13', hour: '18:00', lockedAt: '2026-09-12T10:00:00Z' }),
+      ),
+    ).toBe('The plan, Locked');
+  });
+});
+
+describe('the lock button', () => {
+  /** `Lock the plan`, always — the reason is the counter's and is never appended to the label. */
+  it('is named for the act and carries no reason', () => {
+    expect(LOCK_THE_PLAN).toBe('Lock the plan');
+    expect(LOCK_THE_PLAN).not.toMatch(/first|three|set/i);
+  });
+
+  /** Busy and disabled are both greyed; the word is the only thing telling them apart. */
+  it('has a busy word of its own', () => {
+    expect(LOCKING).toBe('Locking…');
+    expect(LOCKING).not.toBe(LOCK_THE_PLAN);
+    expect(LOCKING).not.toBe(SAVING);
   });
 });

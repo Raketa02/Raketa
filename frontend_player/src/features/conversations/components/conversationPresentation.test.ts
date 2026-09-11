@@ -1,5 +1,5 @@
 /**
- * §23's seven sentences, the two the values decide, and the one thing the row does differently.
+ * §23's eight sentences, the two the values decide, and the one thing the row does differently.
  *
  * It asserts the **sentences** because they are the copy deck — a code with no words does not
  * compile, but a code with the *wrong* words compiles perfectly — and it asserts the two places
@@ -42,7 +42,7 @@ function said(over: Partial<SystemLine> = {}): string {
   return systemLineSentence(line(over), MEMBERS, 'one-line');
 }
 
-describe('the seven sentences', () => {
+describe('the eight sentences', () => {
   it('names an acceptance, an invitation and a game that was played', () => {
     expect(said({ code: 'SEAT_ACCEPTED' })).toBe('tomek.p is in');
     expect(said({ code: 'SEATS_INVITED', values: { count: '2' } })).toBe('tomek.p asked 2 more');
@@ -71,6 +71,17 @@ describe('the seven sentences', () => {
     );
   });
 
+  /**
+   * The one plan line with no value: the three slots are the value and the room already holds a
+   * line for each, so `{name} locked the plan` is the whole sentence (§23, ADR-0155).
+   */
+  it('names who locked the plan, and quotes no value', () => {
+    expect(said({ code: 'PLAN_LOCKED' })).toBe('tomek.p locked the plan');
+    expect(said({ code: 'PLAN_LOCKED', values: { value: '18:00' } })).toBe(
+      'tomek.p locked the plan',
+    );
+  });
+
   /** There is no *Game on* line: a derived standing is never announced. */
   it('says nothing anywhere about the line-up being complete', () => {
     const everything = [
@@ -81,6 +92,7 @@ describe('the seven sentences', () => {
       'PLACE_RECORDED',
       'DAY_RECORDED',
       'HOUR_RECORDED',
+      'PLAN_LOCKED',
     ] as const;
 
     for (const code of everything) {

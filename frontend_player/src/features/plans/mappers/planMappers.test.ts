@@ -39,6 +39,14 @@ describe('a plan', () => {
   /** `null` is *this response said nothing*, and a slot is never emptied — so absent it is. */
   it('collapses every null to absent', () => {
     expect(toPlan(schema())).toEqual({ gameId: GAME });
+    expect(toPlan(schema({ locked_at: null }))).toEqual({ gameId: GAME });
+  });
+
+  /** The one value on a plan that is not a slot: the moment somebody said *we are agreed*. */
+  it('keeps the moment the plan was locked', () => {
+    expect(toPlan(schema({ locked_at: '2026-09-12T10:00:00Z' })).lockedAt).toBe(
+      '2026-09-12T10:00:00Z',
+    );
   });
 
   /** The wire may or may not carry seconds; the offered grid and the room's line never do. */

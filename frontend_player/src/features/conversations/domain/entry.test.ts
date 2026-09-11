@@ -21,12 +21,15 @@ import {
 } from './entry';
 
 describe('the code', () => {
-  it('reads all seven, and nothing else', () => {
+  it('reads all eight, and nothing else', () => {
     for (const code of SYSTEM_LINE_CODES) {
       expect(toSystemLineCode(code)).toBe(code);
     }
 
+    expect(SYSTEM_LINE_CODES).toHaveLength(8);
+    expect(toSystemLineCode('PLAN_LOCKED')).toBe('PLAN_LOCKED');
     expect(toSystemLineCode('GAME_ON')).toBeUndefined();
+    expect(toSystemLineCode('PLAN_UNLOCKED')).toBeUndefined();
     expect(toSystemLineCode('')).toBeUndefined();
   });
 });

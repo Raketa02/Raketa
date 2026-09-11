@@ -640,18 +640,59 @@ challenge screen beside it and the game screen behind its own *Details* door all
   Details button and nothing to open. Drawing a dead control would be the disabled control #324
   refused.
 
-### 3.2 The plan card is pinned, and it is the chips alone
+### 3.2 The plan card is pinned, and it is the count, the chips and the lock
 
 **The prototype's card is documented as pinned and is not** — it is emitted into the scrollable
 content, and the chat opens scrolled to the bottom, so it is the first thing off-screen in any
 conversation longer than a screen. That is #322's finding 1, and this file is where it is answered.
 
-> **The plan card is pinned under the header, and it is the three slot chips and nothing else.**
+> **The plan card is pinned under the header. It is an eyebrow and a counter, the three slot
+> chips, and *Lock the plan* — and nothing else.**
 
 **Pinned**, because every chat opens at its newest entry (that is what a cursor is for), so a card
 in the scroll is a card you have to hunt for — and the plan is the thing the room exists to fill.
-**The chips alone**, because the panel that explains them is permanent chrome above a composer, and
-ADR-0145 §6's panel already has a home: the game screen, where #336 §6 put it.
+**No panel**, because the panel that explains the slots is permanent chrome above a composer, and
+ADR-0145 §6's panel already has a home: the game screen, where #336 §6 put it. This section said
+*the chips alone* until [#403](https://github.com/Raketa02/Raketa/issues/403), which added the
+two things a plan can now say about itself — how far along it is, and that somebody agreed it —
+and left the panel exactly where it was.
+
+```
+┌────────────────────────────────────────┐
+│ THE PLAN                    1 of 3 set │
+│                                        │
+│ [ Where ] [ Sunday ] [    Hour     ]   │
+│                                        │
+│ ┌────────────────────────────────────┐ │
+│ │          Lock the plan             │ │
+│ └────────────────────────────────────┘ │
+└────────────────────────────────────────┘
+```
+
+**The eyebrow and the counter.** `THE PLAN` is an `eyebrow` — a region you are reading, never
+`h2` — and `N of 3 set` sits opposite it in a muted pill, **mono and tabular** because it is a
+number. The count is **derived on the client from the three fields and never sent**: the plan
+schema's own docstring refuses a count on the wire as the one derived value that could disagree
+with the three fields beside it. **Once locked, the counter reads `Locked`** — a word, because
+the pill does not change colour and a colour would not be enough if it did.
+
+**`Lock the plan`.** Greyed and not pressable while any slot is empty; coral and live once all
+three are set, the one control on the card in 6.1's `primary`; **busy with its own word** while
+the lock goes out; and **gone** once it has landed rather than 6.1's `settled` — a second lock
+records nothing and answers `200`, so a control still offering the act would be one that provably
+does nothing. **The label is `Lock the plan`, always**, with no reason appended: the note #324
+owes every greyed control is the counter directly above it, which already reads `1 of 3 set`,
+and a second sentence would be the same count in a second spelling. **The card's border is
+`line` and never changes** — the mock's coral rectangle is a highlight the author drew, and
+coral on a card already means pressed (design-system §5.1).
+
+**Pending, never optimistic**, on the rule every slot chip follows: the lock writes a line other
+people read, so the counter keeps saying `3 of 3 set` until the server has answered, and the
+confirmation is the line itself — `{name} locked the plan`, through the stream like every
+other entry. Each refusal is its own sentence by its **code**: `the_plan_is_not_complete`, which
+the greyed button makes unreachable and the card handles anyway because the button is UX and the
+server is the correctness mechanism; `plan_is_history`; `plan_not_found`; and `account_held`,
+which is the room's one amber note over greyed controls and never a coral sentence on the card.
 
 **One panel, one home; one plan, two primitives.** #338 §7: **`Chip`s here, where the plan is
 edited; `Tag`s on the game screen, where it is read** — *a pressable pill is a chip*, *tags are

@@ -3,7 +3,9 @@
  * component: *only in the foreground*, and *only after a connect attempt has failed*.
  */
 
-import { liveState } from './liveState';
+import { AppError } from '@/shared/errors';
+
+import { liveState, writeStanding } from './liveState';
 
 describe('not live', () => {
   it('is drawn once a connect attempt has failed', () => {
@@ -42,5 +44,28 @@ describe('held', () => {
     for (const stream of ['connecting', 'live', 'lost', 'closed'] as const) {
       expect(liveState(stream, 'held')).toBe('held');
     }
+  });
+});
+
+describe('what the account may write', () => {
+  const held = new AppError('forbidden', 'terminal', 'held', { code: 'account_held' });
+  const tooLong = new AppError('conflict', 'requires-user-correction', 'long', {
+    code: 'message_too_long',
+  });
+
+  /**
+   * **Every write on the screen is a producer**, not only the send: a hold is a fact about the
+   * account, and the slot chips and the lock meet the same refusal the composer does.
+   */
+  it('is held when any write on the screen was refused as held', () => {
+    expect(writeStanding([held])).toBe('held');
+    expect(writeStanding([null, undefined, held])).toBe('held');
+    expect(writeStanding([tooLong, held])).toBe('held');
+  });
+
+  it('is ordinary when nothing was, whatever else was refused', () => {
+    expect(writeStanding([])).toBe('ordinary');
+    expect(writeStanding([null, undefined])).toBe('ordinary');
+    expect(writeStanding([tooLong])).toBe('ordinary');
   });
 });

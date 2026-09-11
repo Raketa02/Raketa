@@ -1,5 +1,5 @@
 /**
- * **What a conversation says** — the seven system-line sentences, the section's name, the line a
+ * **What a conversation says** — the eight system-line sentences, the section's name, the line a
  * row draws, and every word on the screen behind it.
  *
  * The words are the client's because a code is all that crosses
@@ -43,13 +43,17 @@
  * *that seat is open again* with no answer, a raw `2026-13-40` — would be the app stating a fact
  * it has not read.
  *
- * ## Two of the seven are shaped by the wire rather than by taste
+ * ## Three of the eight are shaped by the wire rather than by taste
  *
  * **A seat leaving is one code with the answer as a value**, because *that seat is open again* is
  * the same news either way — and a lapse is still not a decline, which is why the two sentences
  * differ in their first clause and agree in their second. **Setting a slot and moving one are one
  * code told twice**, which is the opposite rule for the opposite case: there is no value telling a
- * first fill from a change, because they are the same fact.
+ * first fill from a change, because they are the same fact. **And the lock quotes nothing**
+ * ([ADR-0155](../../../../../docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)):
+ * the three slots are the value and the room already holds a line for each, so `{name} locked
+ * the plan` is the whole sentence — the one plan line whose `values` is empty, and the one that
+ * says somebody *agreed* rather than that somebody wrote something down.
  *
  * **And there is no *Game on* line**, here or anywhere: everybody having accepted is an
  * arrangement of the seats, so a sentence announcing it would be a second place for a derived
@@ -94,9 +98,9 @@ interface SystemLineFacts {
 }
 
 /**
- * §23's seven, keyed by the union — **so a code with no words does not compile.**
+ * §23's eight, keyed by the union — **so a code with no words does not compile.**
  *
- * One function per code rather than a `Record<Code, string>`, because every one of the seven
+ * One function per code rather than a `Record<Code, string>`, because every one of the eight
  * quotes at least a handle: the split §1 draws is between a code with no payload and one with a
  * payload, and there is no member of this vocabulary in the first group.
  */
@@ -133,6 +137,10 @@ const SYSTEM_LINE: Readonly<Record<SystemLineCode, (facts: SystemLineFacts) => s
 
   HOUR_RECORDED: ({ name, values }) =>
     values.value === undefined ? OUT_OF_DATE_GAP : `${name} set the time · ${values.value}`,
+
+  // No value and no gap to fall into: the sentence is whole with the name alone, and a value
+  // this line was never meant to carry is not read rather than guessed at.
+  PLAN_LOCKED: ({ name }) => `${name} locked the plan`,
 };
 
 /**

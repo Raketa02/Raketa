@@ -3,14 +3,17 @@
  *
  * **A plan is one game's, for ever** — three slots, `where · day · hour`, filled from the chat by
  * anybody on the court and changed as many times as they like
- * ([ADR-0144](../../../../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)).
- * There is no lock: **filling the third slot is the lock**, and what remains of the prototype's
- * locked state — a border, a button and a `locked by everybody` pill — was deleted rather than
- * rebuilt.
+ * ([ADR-0144](../../../../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)) —
+ * and, once all three are set, **locked** by any of them, which is an act rather than a fourth
+ * slot: it posts `{name} locked the plan` into the room and freezes nothing
+ * ([ADR-0155](../../../../docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)).
+ * What remains of the prototype's locked state — a border and a `locked by everybody` pill — stays
+ * deleted; the button came back with a destination.
  *
  * **What is exported is what has a caller**, which today is the room: the card it pins under its
- * header, and the plan itself, which the room's quick chips read to know which questions are still
- * worth asking. The three writes, the slot grids, the copy deck and the mapper stay internal.
+ * header, the plan itself, which the room's quick chips read to know which questions are still
+ * worth asking, and the refusals this feature's writes have met, which the room folds *held* from.
+ * The four writes, the slot grids, the copy deck and the mapper stay internal.
  *
  * **This feature imports `features/games` and nothing imports it back from there.** ADR-0149 §1
  * fixes that arrow: the ladder and the Now card belong here because a card needs both halves, and
@@ -62,6 +65,16 @@ export { GameScreenWithPlan, type GameScreenWithPlanProps } from './components/G
  * that is not part of it.
  */
 export { usePlan } from './hooks/usePlans';
+
+/**
+ * **Every refusal a plan write has met**, for the room's one fold over the account.
+ *
+ * A hold is a fact about the account rather than about the act that met it, and the room draws
+ * **one** amber note for every write on its screen — the send, the three slot chips and the lock.
+ * The room owns that fold and cannot see this feature's mutations, so what crosses is the list of
+ * refusals, read off the mutation cache, and the code is read on the other side.
+ */
+export { usePlanWriteRefusals } from './hooks/usePlans';
 
 /**
  * **The questions the room still has to ask**, and the words for them.

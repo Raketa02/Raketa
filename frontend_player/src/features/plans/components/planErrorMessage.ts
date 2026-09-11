@@ -1,5 +1,7 @@
 /**
- * Backend `code` → the sentence a refused slot writes, over `recoveryMessage`'s fallback.
+ * Backend `code` → the sentence a refused plan write draws, over `recoveryMessage`'s fallback —
+ * the three slots' and the lock's, in one table, because a code means one thing whichever act met
+ * it.
  *
  * `conversationErrorMessage`'s shape one feature over, and the reason is the same: localization
  * goes **code → message, never message → message**, and the fallback under the table is by
@@ -14,6 +16,19 @@
  * which of the two is wrong — and **names no value**, because the sentence is true whichever pair
  * produced it. It is drawn under the chip row, where both remedies are one tap away.
  *
+ * ## The lock's own refusal is unreachable through the UI, and handled anyway
+ *
+ * `the_plan_is_not_complete` is the server's guard on the lock, and the button is greyed below
+ * three slots — but **the button is UX and the server is the correctness mechanism**, and a slot
+ * this build cannot read draws as unfilled while the server counts it, so the two sides can
+ * disagree about *complete* exactly as they can about a horizon. The sentence names the remedy in
+ * the counter's own terms and no slot, because the platform has not said which one.
+ *
+ * `plan_not_found` is one code for two cases — no plan yet, or not your court — and it is here for
+ * the lock rather than for the slots, which write a plan into being: a lock on a game nobody has
+ * arranged anything on is refused by the count first, so what is left is a court you have left
+ * while this card was open.
+ *
  * ## Two codes are here because a mirrored number can drift, and two are not here at all
  *
  * `the_day_is_past_the_horizon` and `the_place_is_too_long` are both refusals this client already
@@ -27,10 +42,11 @@
  * gets none for the same reason one step further: every hour on the row **is** the offered grid.
  *
  * **`account_held` never reaches this table**, and that is a decision rather than a gap. A hold is
- * a fact about the **account** rather than about the slot that met it, so the room folds it into
- * `liveState` and draws §22.5's amber note above its controls, with the chips greyed under it —
- * *you are never told off for having tapped*. A coral sentence beside the chip as well would say
- * one fact twice, in the register the hold is deliberately not in.
+ * a fact about the **account** rather than about the write that met it, so the room folds it into
+ * `liveState` — off this feature's mutation cache, through `usePlanWriteRefusals` — and draws
+ * §22.5's amber note above its controls, with the chips and the button greyed under it — *you are
+ * never told off for having tapped*. A coral sentence beside the chip as well would say one fact
+ * twice, in the register the hold is deliberately not in.
  */
 
 import { codeMessage, type AppError } from '@/shared/errors';
@@ -51,6 +67,12 @@ const BY_CODE: Readonly<Record<string, string>> = {
 
   /** Refused whole, never truncated — so the remedy is the sender's and it is a short one. */
   the_place_is_too_long: 'That is longer than a place can be. Shorten it and set it again.',
+
+  /** The lock's guard, in the counter's own terms. Names no slot: the platform has not said. */
+  the_plan_is_not_complete: 'Set all three before locking the plan.',
+
+  /** One code for two cases, and neither is retried: the court has gone from under this card. */
+  plan_not_found: 'This plan is not one you can change.',
 };
 
 export function planErrorMessage(error: AppError): string {

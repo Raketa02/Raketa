@@ -1,5 +1,6 @@
 /**
- * The plan read and the three writes — one route per slot, because ADR-0144 has three events.
+ * The plan read and the four writes — one route per slot, because ADR-0144 has three events, and
+ * the lock, because ADR-0155 added a fourth that is an act rather than a slot.
  *
  * One of the two layers allowed to read generated types, and the only place these paths are
  * written down.
@@ -20,12 +21,14 @@
  * so there is no instant for it to have been folded against; the card folds against `GET /games`'
  * own `read_at`, which is what keeps every clock on a surface the same one.
  *
- * ## Three writes and no `Idempotency-Key`
+ * ## Four writes and no `Idempotency-Key`
  *
  * **A write of the value already there records nothing and answers `200`** — the server's rule,
  * and it is what stops a room filling with *Tomek set the day* three times over. That is a
  * stronger guarantee than a key would give and it does not expire, so a key beside it would be
- * the weaker of two — `challengesApi`'s own argument about the pair rule.
+ * the weaker of two — `challengesApi`'s own argument about the pair rule. **The lock takes the
+ * same language and applies it to an act**: locking a plan that is already locked answers `200`
+ * and records nothing, and the first lock's moment is the one that stands.
  *
  * ## A `signal` on the read and none on the writes
  *
@@ -91,6 +94,23 @@ export function putHour(gameId: string, body: SetHourRequest): Promise<PlanSchem
     method: 'PUT',
     path: `/api/v1/plans/${gameId}/hour`,
     body,
+    authenticated: true,
+  });
+}
+
+/**
+ * *We are agreed.*
+ *
+ * **No body**: the value is the three slots and they are already recorded, so sending one back
+ * would be the second place that fact is true. A `PUT` for the reason the slot routes are — the
+ * same act twice lands the same state. Refused `the_plan_is_not_complete` while a slot is empty,
+ * a **409 rather than a silent `200`**, because a no-op there would leave this client believing it
+ * had agreed a plan it had not (ADR-0155 §3).
+ */
+export function putLock(gameId: string): Promise<PlanSchema> {
+  return httpRequest<PlanSchema>({
+    method: 'PUT',
+    path: `/api/v1/plans/${gameId}/lock`,
     authenticated: true,
   });
 }

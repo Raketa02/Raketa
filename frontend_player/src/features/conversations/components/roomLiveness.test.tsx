@@ -21,12 +21,15 @@ import {
   GATE_USER,
   conversationPath,
   launchSignedIn,
+  planSlotPath,
   resetLiveStream,
   stubConversation,
   stubConversations,
   stubEntries,
+  stubGames,
   stubGate,
   stubLiveStream,
+  stubPlans,
 } from '@/test-support/onboardingRouter';
 import { fakeLiveStream, type FakeLiveStream } from '@/test-support/platform';
 import {
@@ -400,6 +403,57 @@ describe('held', () => {
    * Rendered under the strip it would be the dead end #324 refused — and for a listener, who meets
    * the screen in one order and no other, *above* is the only thing that means *first*.
    */
+  /**
+   * **Every write on the screen is a producer, not only the send.** A hold met on a plan write is
+   * the same fact about the account, and it reaches this fold off `features/plans`' mutation cache
+   * — so the one note is drawn, in the same words, with the composer and every chip greyed under
+   * it, and no coral sentence anywhere.
+   */
+  it('is told by a plan write, not only by the send', async () => {
+    const GAME = 'aaaaaaaa-0000-4000-8000-000000000009';
+    stubGames(
+      transport,
+      [
+        {
+          game_id: GAME,
+          challenge_id: CHALLENGE,
+          sport: 'PADEL',
+          kind: 'COUNTED',
+          standing: 'AWAITING_ENTRY',
+          planned_at: READ_AT,
+          entry_closes_at: '2026-09-20T09:00:00Z',
+          seats: [
+            { side: 'A', player_id: ME, nickname: 'me_' },
+            { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+          ],
+          proposals: [],
+        },
+      ],
+      READ_AT,
+    );
+    stubPlans(transport, []);
+    stubConversations(transport, [{ ...LISTED, game_id: GAME }]);
+    stubConversation(transport, { ...room(), game_id: GAME });
+    stubEntries(transport, ROOM);
+    transport.on('PUT', planSlotPath(GAME, 'day'), () => errorResponse(403, 'account_held'));
+
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText(/^Chats/));
+    fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
+    await screen.findByLabelText(COMPOSER_LABEL);
+
+    // The day chip and its row are the plan's own controls, named by that feature's deck; what is
+    // asserted here is the room's half — the note, and what it greys.
+    fireEvent.press(await screen.findByRole('button', { name: /^Day:/ }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Sunday' }));
+
+    await screen.findByText(LIVE_NOTE.held);
+    expect(screen.getAllByText(LIVE_NOTE.held)).toHaveLength(1);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.getByLabelText(COMPOSER_LABEL).props.editable).toBe(false);
+    expect(screen.getByRole('button', { name: SEND }).props.accessibilityState.disabled).toBe(true);
+  });
+
   it('sits above every control it explains, in render order', async () => {
     await refuseTheSend();
 

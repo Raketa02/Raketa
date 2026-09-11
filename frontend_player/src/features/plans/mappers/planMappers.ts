@@ -1,6 +1,11 @@
 /**
  * The wire boundary: `PlanListResponse` in, {@link Plan}s out — and **one field is respelled.**
  *
+ * **`locked_at` crosses as it is**, an instant and never an adjective: the wire sends the moment
+ * somebody said *we are agreed* and nothing about what the plan may still do, because a locked
+ * plan is not a frozen one (ADR-0155). It is the one value here that is not a slot, and `null`
+ * collapses to absent like every other, since there is no unlock for a `null` to be the record of.
+ *
  * ## The hour arrives as a clock face with seconds on it, and leaves as `HH:MM`
  *
  * `PlanSchema.hour` is a `format: time`, which the server writes as `18:00:00` and the system line
@@ -59,6 +64,7 @@ export function toPlan(schema: PlanSchema): Plan {
     ...(day !== undefined && CALENDAR_DAY.test(day) ? { day } : {}),
     ...(hour === undefined ? {} : { hour }),
     ...(schema.agreed_point == null ? {} : { agreedPoint: schema.agreed_point }),
+    ...(schema.locked_at == null ? {} : { lockedAt: schema.locked_at }),
   };
 }
 
