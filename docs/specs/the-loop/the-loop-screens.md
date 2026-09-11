@@ -963,9 +963,18 @@ element's spoken name.
   a long message, and nothing would ever re-draw it. **The client's own net is the channel**: a
   roster is only as live as the stream that carried it, so it is dropped the moment the channel is
   not live — severed, backgrounded, or offline — and never remembered across a reconnect, because
-  the server re-announces anybody still typing on its first check.
+  the server re-announces anybody still typing on its first check. **What that net does not cover
+  is stated**: a stream that dies without the port noticing — half-open, no error, no close, the OS
+  still saying online — reads `live`, and a roster on it stands until the token's `exp` closes the
+  stream, about fifteen minutes. It is the blind spot a nudge already has on that channel, bounded
+  by the same deadline; a last-resort clock would close it at the price of clearing a real typist,
+  and the guess is not taken.
 - **Typing is not query cache state.** A typing frame invalidates nothing, advances no cursor and
   touches no page; it is held as the room's own state and drawn.
+- **Polite is two mechanisms.** Android's `accessibilityLiveRegion="polite"` is genuinely polite
+  there and nothing on iOS; the app's queued announcement is polite on iOS and interrupts on
+  Android. The bubble uses each where it is polite, and it goes still under a running screen reader
+  as well as under reduced motion, on the app's own `useCollapsedPresentation` rule.
 
 **The client's own half is a heartbeat and nothing more.** Post `/typing` every ~3 s while the
 composer has focus and the text is changing, and **stop posting when it stops** — there is no call

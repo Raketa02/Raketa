@@ -425,6 +425,9 @@ const radius = {
 // Component metrics
 // ---------------------------------------------------------------------------
 
+/** The smallest round mark in the app — the sport dot's, and the typing indicator's. One size. */
+const SPORT_DOT = 6;
+
 const size = {
   btn: 34, // 32 tertiary-in-card · 34 default · 40 screen action · 42 result primary
   btnSm: 32,
@@ -625,7 +628,7 @@ const size = {
    * so three of them read as a group rather than as a row. Read off the mock's proportions;
    * no device has drawn them (Part 16).
    */
-  typing: { dot: 6, gap: 6 },
+  typing: { dot: SPORT_DOT, gap: space.xs },
   /** The court — 7.12, and the drawn object whose numbers cannot be derived.
    *
    *  `space` is the drawing's own box and every coordinate below is in it. The 1,32 aspect
@@ -724,7 +727,7 @@ const size = {
    *  stay the thing being read. */
   ripple: 92,
   rippleStroke: 2,
-  sportDot: 6,
+  sportDot: SPORT_DOT,
   infoGlyph: 14,
   tabIcon: 16,
   /** The ⚡Play disc — 28 until the bar was built, unreferenced by anything, and off the

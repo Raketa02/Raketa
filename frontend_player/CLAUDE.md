@@ -1528,16 +1528,17 @@ Rules to preserve:
 
 ### One owner per kind of state
 
-| State                     | Owner                                                                |
-| ------------------------- | -------------------------------------------------------------------- |
-| Anything from the backend | **TanStack Query** — never mirrored into a store                     |
-| Access + refresh tokens   | `shared/lib/auth` → `expo-secure-store` (+ in-memory mirror)         |
-| Logged-in / out           | `SessionStatus`: `bootstrapping \| authenticated \| unauthenticated` |
-| Local component state     | `useState` / `useReducer`                                            |
-| Shared ephemeral UI state | Zustand, **feature-scoped first**                                    |
-| Form input                | The form + one Zod schema                                            |
-| Navigation                | expo-router — a route param is not app state                         |
-| Config                    | `shared/config/env.ts`, Zod-validated at startup                     |
+| State                     | Owner                                                                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Anything from the backend | **TanStack Query** — never mirrored into a store                                                                                 |
+| A live frame's roster     | React state in the hook that follows the channel — not a query, not a store: it is the frame, and it is dropped with the channel |
+| Access + refresh tokens   | `shared/lib/auth` → `expo-secure-store` (+ in-memory mirror)                                                                     |
+| Logged-in / out           | `SessionStatus`: `bootstrapping \| authenticated \| unauthenticated`                                                             |
+| Local component state     | `useState` / `useReducer`                                                                                                        |
+| Shared ephemeral UI state | Zustand, **feature-scoped first**                                                                                                |
+| Form input                | The form + one Zod schema                                                                                                        |
+| Navigation                | expo-router — a route param is not app state                                                                                     |
+| Config                    | `shared/config/env.ts`, Zod-validated at startup                                                                                 |
 
 Reach for Zustand last: component-local → feature store → app-wide store, and only with a
 reason. Zustand never holds API entities, tokens, a backend cache, or a global loading flag.

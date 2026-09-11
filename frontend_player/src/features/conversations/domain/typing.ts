@@ -23,6 +23,15 @@
  * the indicator the moment the channel says so, and on reconnect the server's first check is due
  * immediately with its own memory reset, so anybody still typing is announced again.
  *
+ * **What that net does not cover, stated rather than hidden:** a stream that dies without the
+ * port noticing — a half-open connection that raises no error and no close, on a phone the OS
+ * still calls online. The channel reads `live`, no clear can arrive, and a roster stands until the
+ * token's `exp` closes the stream, roughly fifteen minutes. It is the same blind spot a nudge has
+ * on that channel — a room that looks live and is not — and it is bounded by the same deadline.
+ * A last-resort clock would close it at the price of clearing a real typist at that many minutes,
+ * and on this wire any client clock is a guess about a person; the guess is not taken here, and
+ * the residual is the record's to weigh (§3.6, Part 16).
+ *
  * ## Never the reader
  *
  * The server filters the reader out of their own room's frame, and {@link typists} filters again.

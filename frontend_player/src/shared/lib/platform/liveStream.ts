@@ -207,6 +207,9 @@ export const LIVE_TYPING_AGREES: Exact<
 const NUDGE_EVENT = 'nudge';
 const TYPING_EVENT = 'typing';
 
+/** The names this port opens a channel for. A frame under any other reaches no listener. */
+type LiveEventName = typeof NUDGE_EVENT | typeof TYPING_EVENT;
+
 /** A frame's body as JSON, or nothing where it is not. A stream body is untrusted input. */
 function bodyOf(data: string | null): unknown {
   if (data === null) return undefined;
@@ -248,7 +251,7 @@ function worthRepeating(status: number): boolean {
 export const deviceLiveStream: LiveStreamPort = { follow };
 
 function follow({ conversationId, onNudge, onTyping, onStatus }: FollowLive): () => void {
-  let source: EventSource<typeof NUDGE_EVENT | typeof TYPING_EVENT> | null = null;
+  let source: EventSource<LiveEventName> | null = null;
   let reopen: ReturnType<typeof setTimeout> | null = null;
   let stopped = false;
   /** Which rotation the open attempt's credential came from. */
@@ -338,7 +341,7 @@ function follow({ conversationId, onNudge, onTyping, onStatus }: FollowLive): ()
     sentWith = attempt.generation;
     say('connecting');
 
-    const opened = new EventSource<typeof NUDGE_EVENT | typeof TYPING_EVENT>(attempt.url, {
+    const opened = new EventSource<LiveEventName>(attempt.url, {
       headers: { ...attempt.headers },
       // The library's own re-poll, kept for exactly one path: a server that ends the response
       // tidily raises no event, so this is what notices an expiry. See the module note.

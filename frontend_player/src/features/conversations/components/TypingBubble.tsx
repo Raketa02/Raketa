@@ -30,13 +30,26 @@
  * read as a sent `...`. The element keeps its name, so a listener loses nothing; `Part 16`
  * records the trade rather than papering over it.
  *
- * ## One element, polite
+ * ## One element, polite — and polite is two mechanisms, split by platform
  *
  * The dots are not a sentence, so the bubble is given one — `typingLine`, §22.5's — as its
- * accessible name, and the element is a **polite** live region: an indicator that interrupted a
- * listener mid-message to say somebody is typing would be the loudest possible way to say the
- * least important thing on the screen (§24.6). The dots themselves are hidden from assistive
- * technology, because they are decoration for the same fact.
+ * accessible name, and it is announced **politely**: an indicator that interrupted a listener
+ * mid-message to say somebody is typing would be the loudest possible way to say the least
+ * important thing on the screen (§24.6). The dots themselves are hidden from assistive technology,
+ * because they are decoration for the same fact.
+ *
+ * **Neither of the app's two mechanisms is polite on both platforms, so this surface uses each
+ * where it is.** `overlay.tsx`'s rule — *an announcement, not an `accessibilityLiveRegion`* — is
+ * right for a toast, whose floor was always *interrupt*: `announce(…, 'queued')` is queued on iOS
+ * and falls back to the interrupting call on Android, and the Android attribute is a no-op on
+ * iOS. Here interrupting is refused rather than softened, so the Android attribute carries the
+ * region on Android, where it is genuinely polite and fires on the label changing, and the queued
+ * announcement carries it on iOS, where the attribute says nothing. One `Platform` read, for the
+ * one surface on which the platforms' polite mechanisms differ.
+ *
+ * **It goes still under a running screen reader as well as under reduced motion** — the app's
+ * own rule, `useCollapsedPresentation`: a listener gets none of the craft and all of the latency,
+ * and the sentence is what they get instead.
  *
  * ## The geometry is new, and no device has drawn it
  *
@@ -48,9 +61,9 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 
-import { theme, useCollapsedPresentation } from '@/shared/ui';
+import { theme, useCollapsedPresentation, useLiveRegion } from '@/shared/ui';
 
 export interface TypingBubbleProps {
   /** §22.5's sentence, whole — the element's name, and the only words here. */
@@ -62,6 +75,13 @@ const DOTS = [0, 1, 2] as const;
 
 /** How faint a dot goes between beats. Not invisible: three dots are the shape, the pulse is the signal. */
 const DOT_REST_OPACITY = 0.3;
+
+/**
+ * Where the polite announcement is a spoken one — iOS, whose `queue` is honoured and whose
+ * `accessibilityLiveRegion` is nothing. Android's attribute is the polite mechanism there, and an
+ * announcement beside it would interrupt. See the module note.
+ */
+const SPOKEN_BY_ANNOUNCEMENT = Platform.OS === 'ios';
 
 /**
  * One dot's opacity over the cycle — brightest a third of a beat after the dot before it, so the
@@ -83,6 +103,11 @@ function pulseOf(
 export function TypingBubble({ sentence }: TypingBubbleProps) {
   const collapsed = useCollapsedPresentation();
   const cycle = useRef(new Animated.Value(0)).current;
+
+  // Said again only when the sentence changes — a new typist, or a name — and never on a
+  // heartbeat, which the wire already guarantees. Nothing is said when it goes: nobody said
+  // *stopped*, and the platform does not know it (§24.6).
+  useLiveRegion(SPOKEN_BY_ANNOUNCEMENT ? sentence : null, 'queued');
 
   useEffect(() => {
     if (collapsed) return;
@@ -107,8 +132,8 @@ export function TypingBubble({ sentence }: TypingBubbleProps) {
       style={s.row}
       accessible
       accessibilityLabel={sentence}
+      // Android's polite region; a no-op on iOS, where the announcement above is the region.
       accessibilityLiveRegion="polite"
-      testID="typing-indicator"
     >
       <View style={s.bubble}>
         {DOTS.map((dot) => (
@@ -141,11 +166,12 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.color.line,
   },
+  // No opacity of its own: still, a dot is drawn whole — the rest value is the pulse's trough and
+  // belongs to the animation, never to the shape a reduced-motion reader is left with.
   dot: {
     width: theme.size.typing.dot,
     height: theme.size.typing.dot,
     borderRadius: theme.radius.pill,
     backgroundColor: theme.color.muted,
-    opacity: DOT_REST_OPACITY,
   },
 });

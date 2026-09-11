@@ -48,7 +48,7 @@ export function useTypingHeartbeat(
   conversationId: string,
   { refused = false }: { readonly refused?: boolean } = {},
 ): TypingHeartbeat {
-  /** When the last beat went out, on the device's monotonic clock. Not state: nothing draws it. */
+  /** When the last beat went out, on the monotonic clock. Not state: nothing draws it. */
   const lastBeatAt = useRef<number | undefined>(undefined);
   /** Aborts whatever is in flight when the room goes, so no beat outlives its screen. */
   const leaving = useRef(new AbortController());
@@ -61,7 +61,9 @@ export function useTypingHeartbeat(
   const beat = useCallback(() => {
     if (refused) return;
 
-    const now = Date.now();
+    // Monotonic, never the wall clock: a throttle is not a business decision, but a clock that
+    // can jump backwards is one that can silence beats for the length of the jump.
+    const now = performance.now();
     if (!beatIsDue(lastBeatAt.current, now)) return;
     lastBeatAt.current = now;
 

@@ -498,16 +498,33 @@ describe('somebody is typing', () => {
     jest.restoreAllMocks();
   });
 
+  /** What was said to a screen reader, and how. Cleared per case, since RN's stub is one mock. */
+  let spoken: jest.SpyInstance<
+    void,
+    Parameters<typeof AccessibilityInfo.announceForAccessibilityWithOptions>
+  >;
+
+  beforeEach(() => {
+    spoken = jest
+      .spyOn(AccessibilityInfo, 'announceForAccessibilityWithOptions')
+      .mockImplementation(() => undefined);
+    spoken.mockClear();
+  });
+
   /** The room, live, so the roster it is handed is one it may draw. */
   async function openLive(answer: Wire['ConversationResponse'] = room()) {
     await openTheRoom(answer);
+    // The root's one read of the OS motion switch resolves off the render that mounted it.
+    await act(async () => {});
     act(() => channel.connect(ROOM));
   }
 
   /**
    * The bubble is one element, named by §22.5's sentence and polite: it is a courtesy about
    * somebody else's fingers, and interrupting a listener mid-message to deliver it would be the
-   * loudest possible way to say the least important thing on the screen.
+   * loudest possible way to say the least important thing on the screen. **Polite is two
+   * mechanisms**: on this platform (iOS under jest-expo) the queued announcement, on Android the
+   * attribute — both are asserted, because each is the whole of it on one platform.
    */
   it('appears on a typing frame, as one polite element named for who is typing', async () => {
     await openLive();
@@ -515,8 +532,22 @@ describe('somebody is typing', () => {
     act(() => channel.typing(ROOM, [TOMEK]));
 
     const bubble = await screen.findByLabelText(named([TOMEK]));
-    expect(bubble.props.accessibilityLiveRegion).toBe('polite');
     expect(named([TOMEK])).toBe('tomek.p is typing…');
+    expect(bubble.props.accessibilityLiveRegion).toBe('polite');
+    expect(spoken).toHaveBeenCalledTimes(1);
+    expect(spoken).toHaveBeenCalledWith(named([TOMEK]), { queue: true });
+  });
+
+  /** Said on change and never on a heartbeat, and nothing is said when it goes (§24.6). */
+  it('is announced once per change, and its going is not announced', async () => {
+    await openLive();
+
+    act(() => channel.typing(ROOM, [TOMEK]));
+    await screen.findByLabelText(named([TOMEK]));
+    act(() => channel.typing(ROOM, []));
+    await waitFor(() => expect(screen.queryByLabelText(named([TOMEK]))).toBeNull());
+
+    expect(spoken).toHaveBeenCalledTimes(1);
   });
 
   /** An empty list is the clear, and it is the only clear the server sends. */
@@ -633,14 +664,26 @@ describe('somebody is typing', () => {
     expect(loop).not.toHaveBeenCalled();
   });
 
-  it('animates the dots when motion is not reduced', async () => {
+  /**
+   * The loop is the one thing here a walk cannot observe, so it is asked directly: started with
+   * the bubble, and **stopped when the indicator clears** — a loop left running would run for the
+   * life of the screen.
+   */
+  it('animates the dots when motion is not reduced, and stops when the indicator clears', async () => {
     const loop = jest.spyOn(Animated, 'loop');
 
     await openLive();
     act(() => channel.typing(ROOM, [TOMEK]));
-
     await screen.findByLabelText(named([TOMEK]));
-    expect(loop).toHaveBeenCalled();
+
+    expect(loop).toHaveBeenCalledTimes(1);
+    const running = loop.mock.results[0]?.value as { stop: () => void } | undefined;
+    const stop = jest.spyOn(running ?? { stop: () => undefined }, 'stop');
+
+    act(() => channel.typing(ROOM, []));
+    await waitFor(() => expect(screen.queryByLabelText(named([TOMEK]))).toBeNull());
+
+    expect(stop).toHaveBeenCalled();
   });
 
   describe('the heartbeat', () => {
