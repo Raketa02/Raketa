@@ -27,12 +27,15 @@
  * `challengeMappers` states the rule this follows — *"these fields are mapped by the ticket that
  * draws them"* — and [#364](https://github.com/Raketa02/Raketa/issues/364) is that ticket for two
  * of the three. **`challenge_id` is now mapped on the row**, because the challenge screen joins on
- * it to find its own way into the room; **`game_id` is mapped on the room** and not on the row,
- * because what it decides is whether the header draws *Details* and no row draws one. `read_at`
- * stays off the row and is on the room: it earns its place wherever something is folded against
- * an instant, and **a row draws no clock at all** while the room asks whether an agreed day is
- * today. A field mapped ahead of its reader is a shape somebody has to keep true of a screen
- * nobody has written.
+ * it to find its own way into the room; **`game_id` is mapped on the room**, because what it
+ * decides there is whether the header draws *Details* — and, since the accept started going to
+ * the room, **on the row as well**, for exactly one reader: a reply of `ON` says a game exists
+ * before the teller has told the room which, and the push waits for the row to say so rather
+ * than land in a room that draws no plan card yet (`useAwaitedChatDoor`). No row draws it.
+ * `read_at` stays off the row and is on the room: it earns its place wherever something is
+ * folded against an instant, and **a row draws no clock at all** while the room asks whether an
+ * agreed day is today. A field mapped ahead of its reader is a shape somebody has to keep true
+ * of a screen nobody has written.
  *
  * **An entry is mapped whole, and that is not the same call.** `sent_at`, `author_id` and
  * `client_message_id` have no reader on the row either — the row draws a message's text — but the
@@ -83,6 +86,7 @@ function toConversation(row: ConversationRowSchema): readonly Conversation[] {
     {
       conversationId: row.conversation_id,
       challengeId: row.challenge_id,
+      ...(row.game_id == null ? {} : { gameId: row.game_id }),
       sport,
       members: row.members.map(toMember),
       ...(lastEntry === undefined ? {} : { lastEntry }),

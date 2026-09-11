@@ -96,6 +96,7 @@ import {
   CONVERSATION_ROUTE,
   OPEN_THE_CHAT,
   useAwaitedChatDoor,
+  type RoomExpectation,
 } from '@/features/conversations/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { ShellScreen } from '@/features/shell/types';
@@ -205,13 +206,15 @@ function Arrangement({
   const online = useIsOnline();
 
   /**
-   * **Whether `I'm in` has been answered and the room it opens is being waited for.**
+   * **Whether `I'm in` has been answered, and what its room is being waited for to hold.**
    *
    * Route-local like `pressed`, and for the same reason: it is a fact about a press. Set on the
    * accept's reply and cleared by the push — or by the bound, inside the hook, after which the
-   * screen stays and draws the door whenever the list next holds the room.
+   * screen stays and draws the door whenever the list next holds the room. **The reply decides
+   * what is waited for**: `ON` means this yes completed the court and a game exists, so the wait
+   * is for the room to carry it, and the plan card is on screen when the room is.
    */
-  const [goingToTheRoom, setGoingToTheRoom] = useState(false);
+  const [goingToTheRoom, setGoingToTheRoom] = useState<RoomExpectation | false>(false);
 
   /**
    * **Where *Open the chat* goes**, or nothing — the client join ADR-0149 §3 settles, read here
@@ -226,7 +229,7 @@ function Arrangement({
    * **Waited for after an accept**, because the room that acceptance opens is written off the
    * outbox after the reply and the one re-read the reply triggers can land before it exists.
    */
-  const chat = useAwaitedChatDoor(detail.challengeId, goingToTheRoom);
+  const { door: chat, arrived } = useAwaitedChatDoor(detail.challengeId, goingToTheRoom);
 
   /**
    * The push itself — once, the moment the join answers, and only while a press asked for it.
@@ -237,10 +240,10 @@ function Arrangement({
    */
   const inTheRoom = readerIsInTheRoom(arm);
   useEffect(() => {
-    if (!goingToTheRoom || chat === undefined || !inTheRoom) return;
+    if (goingToTheRoom === false || !arrived || chat === undefined || !inTheRoom) return;
     setGoingToTheRoom(false);
     router.push({ pathname: CONVERSATION_ROUTE, params: { conversationId: chat } });
-  }, [goingToTheRoom, chat, inTheRoom]);
+  }, [goingToTheRoom, arrived, chat, inTheRoom]);
 
   /**
    * Which of the two is in flight, so the pressed control is the one that goes busy.
@@ -315,8 +318,16 @@ function Arrangement({
       {
         onSettled: () => setPressed(undefined),
         // Only a yes has a room to go to: a no leaves the reader outside whatever room the
-        // others keep, and the redraw's sentence is the whole of what it draws.
-        onSuccess: () => setGoingToTheRoom(act === 'accept'),
+        // others keep, and the redraw's sentence is the whole of what it draws. A yes that
+        // completed the court waits for the room to know its game, which `ON` says exists.
+        onSuccess: (answered) =>
+          setGoingToTheRoom(
+            act !== 'accept'
+              ? false
+              : answered.standing === 'ON'
+                ? 'the-room-and-its-game'
+                : 'the-room',
+          ),
         onError: actOn,
       },
     );

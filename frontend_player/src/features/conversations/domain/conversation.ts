@@ -45,6 +45,17 @@ export interface Conversation {
    * error: a room opens on the first acceptance, so a challenge nobody has answered has none.
    */
   readonly challengeId: string;
+  /**
+   * The game this room's line-up completed into, once the teller has noted it — absent until
+   * then, and on every room whose court is still filling.
+   *
+   * On the row for one reader: the screen that has just said *I'm in* and been told `ON`. That
+   * reply means a game exists — it is opened inline with the accept — while the room learns which
+   * off the outbox a moment later, so a push that waited only for the room would land in one that
+   * draws no plan card yet (`useAwaitedChatDoor`). No row draws it; the header's *Details* reads
+   * the room's own copy.
+   */
+  readonly gameId?: string;
   /** What they are arranging. The row's own identifying fact, beside the handles. */
   readonly sport: Sport;
   /** Who has agreed to be on this court **right now** — see `membership.ts`. */

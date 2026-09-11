@@ -99,25 +99,45 @@ export function useChatDoor(challengeId: string | undefined): string | undefined
 }
 
 /**
- * **The same door, waited for** — the join above, with the list re-read while a room is on its
- * way ([`domain/roomOpening`](../domain/roomOpening.ts)).
+ * **What the screen that just said *I'm in* is waiting for** — and the reply is what decides it.
  *
- * While `awaiting` and the join has not answered, the list is re-read on `ROOM_OPENING_POLL_MS`
- * and stops the moment a row for this challenge lands, or at `ROOM_OPENING_BOUND_MS`, whichever is
+ * A reply of `AWAITING_ANSWERS` or `LINE_UP_INCOMPLETE` opened or grew a room and nothing else, so
+ * the room is the whole of the wait. A reply of `ON` says a **game exists** — it is opened inline
+ * with the accept that filled the last seat — while the room learns *which* off the outbox a
+ * moment later (`GameNoted`, `tell_the_room.py`); a push that waited only for the room would land
+ * in one that draws no plan card yet, and nothing nudges when a game is noted. So the wait is for
+ * the row to say so, which is what the reply already knew.
+ */
+export type RoomExpectation = 'the-room' | 'the-room-and-its-game';
+
+/**
+ * **The same door, waited for** — the join above, with the list re-read while what is expected is
+ * on its way ([`domain/roomOpening`](../domain/roomOpening.ts)).
+ *
+ * While `awaiting` names an expectation the list does not yet meet, the list is re-read on
+ * `ROOM_OPENING_POLL_MS` and stops the moment it does, or at `ROOM_OPENING_BOUND_MS`, whichever is
  * first. It is a second observer over the **same** query, so nothing is fetched twice and the
  * Chats tab reads whatever this found; `refetchInterval` is the mechanism because it is Query's
  * own and stops itself, where a hand-rolled loop would be a request outliving the screen.
  *
+ * Two answers, because they are two facts. `door` is the join as it stands — a room the list
+ * holds, whatever else it knows — and is what a button is drawn from. `arrived` is whether the
+ * expectation is met, and is what a push waits for: a room listed without its game is a door
+ * and not yet an arrival.
+ *
  * The bound is held here rather than by the caller because it is a fact about the wait and not
- * about the screen: a caller says *I am expecting a room*, and this says when to stop asking.
- * `awaiting` going false resets it, so a second press waits its own full bound.
+ * about the screen: a caller says what it expects, and this says when to stop asking. `awaiting`
+ * going false resets it, so a second press waits its own full bound.
  */
-export function useAwaitedChatDoor(challengeId: string, awaiting: boolean): string | undefined {
+export function useAwaitedChatDoor(
+  challengeId: string,
+  awaiting: RoomExpectation | false,
+): { readonly door: string | undefined; readonly arrived: boolean } {
   const [expired, setExpired] = useState(false);
 
   useEffect(() => {
     setExpired(false);
-    if (!awaiting) return undefined;
+    if (awaiting === false) return undefined;
     const bound = setTimeout(() => setExpired(true), ROOM_OPENING_BOUND_MS);
     return () => clearTimeout(bound);
   }, [awaiting]);
@@ -126,12 +146,26 @@ export function useAwaitedChatDoor(challengeId: string, awaiting: boolean): stri
     queryKey: conversationKeys.list(),
     queryFn: ({ signal }) => readConversations({ signal }),
     refetchInterval: (query) =>
-      awaiting && !expired && doorIn(query.state.data, challengeId) === undefined
+      awaiting !== false && !expired && !met(query.state.data, challengeId, awaiting)
         ? ROOM_OPENING_POLL_MS
         : false,
   });
 
-  return doorIn(data, challengeId);
+  return {
+    door: doorIn(data, challengeId),
+    arrived: awaiting !== false && met(data, challengeId, awaiting),
+  };
+}
+
+/** Whether the list already holds what is expected of this challenge's room. */
+function met(
+  rooms: readonly Conversation[] | undefined,
+  challengeId: string,
+  expectation: RoomExpectation,
+): boolean {
+  const room = rooms?.find((one) => one.challengeId === challengeId);
+  if (room === undefined) return false;
+  return expectation === 'the-room' || room.gameId !== undefined;
 }
 
 /** The join itself: the room this challenge opened, in the player's own rooms, or nothing. */

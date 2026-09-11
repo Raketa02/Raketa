@@ -329,7 +329,11 @@ are already talking in, its history included, because membership is derived and 
 moment you joined. The reply is still the redraw (§2.4), and then the screen pushes the room. The
 room is written by the teller off the outbox **after** the accept has answered, so the door is
 **waited for** on a short bounded cadence rather than read once and missed; past the bound the
-screen stays, and draws the door when the list next holds the room. *Not this time* goes nowhere.
+screen stays, and draws the door when the list next holds the room. **What is waited for is the
+reply's to say**: `ON` means this yes completed the court and a game exists — opened inline with
+the accept — while the room is told which a moment later and nothing nudges when it is, so the
+wait is for the room to carry its game and the plan card is on screen when the room is. *Not this
+time* goes nowhere.
 
 **`AWAITING_ANSWERS` is three rows for the invitee, because the side alone cannot key it.**
 `standing_of` holds this standing while **any** seat is awaiting, so a padel four sits in it with

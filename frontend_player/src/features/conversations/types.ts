@@ -82,10 +82,17 @@ export { CONVERSATION_ROUTE } from './components/ConversationRow';
  *
  * `useAwaitedChatDoor` is the same join **waited for**: the room an acceptance opens is written
  * off the outbox after the accept has answered, so the screen that just said *I'm in* re-reads
- * the list on a short cadence until the door answers, and stops at a bound
- * (`domain/roomOpening`).
+ * the list on a short cadence until what it expects has landed, and stops at a bound
+ * (`domain/roomOpening`). What it expects is the reply's to say — the room, or the room **and
+ * its game** when the reply was `ON`, because a game is opened inline with that accept and the
+ * room is told which a moment later.
  */
-export { useAwaitedChatDoor, useChatDoor, useChatDoors } from './hooks/useConversations';
+export {
+  useAwaitedChatDoor,
+  useChatDoor,
+  useChatDoors,
+  type RoomExpectation,
+} from './hooks/useConversations';
 
 /**
  * **The rooms' query key**, exported for the one thing outside this feature that can change the

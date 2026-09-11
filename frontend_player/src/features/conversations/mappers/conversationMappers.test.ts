@@ -48,6 +48,17 @@ describe('what crosses', () => {
     });
   });
 
+  /**
+   * The game the line-up completed into rides on the row for one reader — the accept told `ON`,
+   * waiting to push a room that knows its game — and `null` collapses to absent, as on the room.
+   */
+  it('carries the game once the room has been told it, and nothing before', () => {
+    expect(mapped({ game_id: 'eeeeeeee-0000-4000-8000-000000000005' })[0]?.gameId).toBe(
+      'eeeeeeee-0000-4000-8000-000000000005',
+    );
+    expect(mapped()[0]).not.toHaveProperty('gameId');
+  });
+
   /** The order is the server's — *by the last entry, newest first* — and nothing re-sorts it. */
   it('keeps the order it was answered in', () => {
     const rooms = toConversations({

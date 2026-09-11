@@ -1445,7 +1445,12 @@ room is written by the teller off the outbox **after** the accept has answered, 
 the reply invalidates can land before it exists: `useAwaitedChatDoor` re-reads the list on a
 cadence a little under the outbox's own second and stops on the row or at a bound
 (`conversations/domain/roomOpening`), which is not Play's rule bending — a list of rooms, on the
-player's own press, stopping on the answer. Past the bound the screen simply stays, and it now
+player's own press, stopping on the answer. **What is waited for is the reply's to say.** `ON`
+means this yes completed the court and a game exists — opened inline with the accept — while the
+room is told which off the outbox a moment later and nothing nudges when it is; a push that
+waited for the room alone landed in one drawing no plan card, so the wait is for the row to carry
+its game, and `game_id` is mapped on the row for that one reader (`RoomExpectation`). Any other
+reply waits for the room alone, because there is no game to know. Past the bound the screen simply stays, and it now
 draws _Open the chat_ on **every arm whose reader the room would hold** rather than on the
 half-built court's alone — an accepted seat waiting on the others, a court that is on, the
 organiser once the first yes has landed — because _no door rather than a dead one_ cuts both ways.
