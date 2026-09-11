@@ -101,7 +101,7 @@ check: check-backend check-player  ## every app's gate
 # ----------------------------------------------------------------------------
 # Guardrails. Run after touching anything in .claude/hooks/.
 # ----------------------------------------------------------------------------
-test-hooks:        ## verify the ownership + bash guardrails and the context loader still match
+test-hooks:        ## verify the ownership + bash guardrails still match
 	bash .claude/hooks/test-hooks.sh
 
 test-drift:        ## verify the contract drift check still fires
