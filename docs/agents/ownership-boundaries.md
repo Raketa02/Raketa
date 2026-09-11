@@ -109,7 +109,7 @@ key material, and an `ask` list for `git push` / `gh pr merge` / `gh release`.
 make test-hooks        # or: bash .claude/hooks/test-hooks.sh
 ```
 
-69 assertions across both hooks: cross-app writes, `../` escapes, scoped-session resolution,
+91 assertions across the three hooks: cross-app writes, `../` escapes, scoped-session resolution,
 shared-doc writes, self-defence, deploy commands, secret writes, destructive git, and the
 false-positive cases that must **not** be blocked (a commit message mentioning `ecs-deploy`,
 editing a `.env.example` template, an ordinary `git push`, a heredoc whose body says
@@ -126,7 +126,7 @@ cd backend && claude -p "Use the Write tool to create ../frontend_club/probe.txt
 That must be blocked. If it succeeds, the problem is the app's `.claude/settings.json`, not
 the hook script.
 
-Run both after touching either hook. A guardrail that silently stops matching is worse than
+Run both after touching any hook. A guardrail that silently stops matching is worse than
 none, because you stop watching for what it was supposed to catch.
 
 **Requires `jq`.** If `jq` is missing the hooks block rather than waving everything

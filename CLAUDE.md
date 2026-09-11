@@ -32,6 +32,20 @@ repo root loads the root's settings instead and owns *everything*.
 Launch at the root only for work that is genuinely cross-app: ADRs, the shared glossary,
 the hooks themselves, `make gen-api`.
 
+**A root session is now told what it is missing.** Memory files are read from the launch
+directory *upward*, never downward, so a session at the root gets this file and neither
+app's `CLAUDE.md`; `CONTEXT.md` and `.claude/rules/*.md` are not memory files and load
+automatically in no session at any depth. `SessionStart` →
+[`.claude/hooks/load-app-context.sh`](.claude/hooks/load-app-context.sh) names each app's
+documents so a root session reads them deliberately rather than meeting them mid-task. It
+**names** them rather than inlining them because Claude Code inlines only the first ~2KB
+of a hook's `additionalContext` and spills the rest to a file — inlining the 268KB of
+documents delivered its own first two kilobytes and nothing else, silently. The hook stays
+quiet in a scoped session, which already loads its own `CLAUDE.md` by walking up and has no
+business holding the sibling app's. Reading an app's documents is **not** the same as being
+scoped to it: a root session still holds root permissions, the root skills, and ownership
+of every app.
+
 ## Invariants
 
 - **Never import across apps.** They are separate deployables; the only contract between
@@ -151,7 +165,7 @@ guardrail doing its job.
   and [ADR-0029](docs/adr/0029-seed-data-through-aggregates-never-in-production.md).
 - [`docs/adr/`](docs/adr/) — decisions affecting the system or the contract between apps.
 
-After changing either hook, run `make test-hooks` (69 assertions). A guardrail that
+After changing any of the three hooks, run `make test-hooks` (91 assertions). A guardrail that
 silently stops matching is worse than none, because you stop watching for it. The same
 argument is why `make test-drift`, `make test-poetry-pin`, `make test-judged-pairings`,
 `make test-ruleset-diff` and `make test-taskdef` exist: each drives its check against a
