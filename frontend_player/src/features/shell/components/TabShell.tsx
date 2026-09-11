@@ -79,7 +79,14 @@ export function TabShell() {
 
   return (
     <View style={s.shell}>
-      <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+      {/* `initialRouteName` is the shell's root stated outright — `SHELL_TAB_ROOT.now`, whose
+          route is `index` — and it is not the default. expo-router orders a navigator's routes
+          with the `Stack.Screen` children below **first**, so without it the first route this
+          stack holds is `play/index`, named first for its transition, and a stack rebuilt from
+          nothing opens there: a device showed every first press after a cold start landing on
+          Find a game with ⚡Play lit, because the entry gate had torn the tree down for one round
+          trip and this stack came back with no history to restore. `theShell.test.tsx` holds it. */}
+      <Stack initialRouteName="index" screenOptions={{ headerShown: false, animation: 'none' }}>
         <Stack.Screen name="play/index" options={{ animation: 'default' }} />
         {/* The deck is genuinely pushed: Find a game stays underneath it, so the transition
             that reads as *going deeper* is the true one — the same exception, for the same

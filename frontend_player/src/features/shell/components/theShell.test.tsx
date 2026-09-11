@@ -12,6 +12,8 @@
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
+import { authKeys } from '@/features/auth/types';
+import { onboardingKeys } from '@/features/onboarding/types';
 import { FIND_A_GAME_TITLE, modeControlLabel, usePlaySession } from '@/features/play/types';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -33,7 +35,7 @@ import { installTransport, json, type Transport, type Wire } from '@/test-suppor
 import { declarationOptionLabel } from '@/shared/vocabulary/playIntentPresentation';
 
 import { enterPlay } from './shellNavigation';
-import { NOW_COPY, PLACEHOLDER_COPY } from './shellCopy';
+import { CHATS_COPY, NOW_COPY, PLACEHOLDER_COPY } from './shellCopy';
 
 /** One rating and a committed profile: the gate's fourth answer is *the app*. */
 const RATING: Wire['RatingResponse'] = {
@@ -301,6 +303,107 @@ describe('the shell keeps no per-tab history', () => {
     await waitFor(() => expect(screen).toHavePathname('/play'));
     act(() => router.back());
     await waitFor(() => expect(screen).toHavePathname('/'));
+  });
+});
+
+/**
+ * **The shell outlives the entry gate re-reading the player, and a shell built from nothing opens
+ * on Now.** Two facts, and the first press after a cold start on a device was where they were both
+ * found false at once: bootstrap **seeds** the player into the cache, so the gate's own read of
+ * them never fetched at mount; thirty seconds later that seed is stale, and the first screen to
+ * mount `useCurrentUser()` refetches it — which the gate took for *a read this mount is in the
+ * middle of replacing* and answered `pending`, rendering nothing and tearing the authenticated
+ * tree down for the length of the round trip. The tree came back with a fresh stack, and a fresh
+ * stack opens on the **first route name it holds**, which was `play/index` — so every first press
+ * landed on Find a game with ⚡Play lit, whichever column had been pressed.
+ *
+ * `launchSignedIn` never seeded the player, which is why every suite here stayed green while a
+ * device did that on every launch. The first test puts the cache the way bootstrap leaves it.
+ */
+describe('the shell survives the gate re-reading the player', () => {
+  /** The cache as `restoreSessionStep` leaves it: the validated player, fresh, unfetched here. */
+  function seedThePlayer() {
+    queryClient.setQueryData(authKeys.currentUser(), {
+      id: GATE_USER.id,
+      email: GATE_USER.email,
+      nickname: GATE_USER.nickname,
+      hasPlayerProfile: true,
+    });
+  }
+
+  it('stays on the tab the player pressed while a screen refetches the seeded player', async () => {
+    seedThePlayer();
+    await launchIntoTheApp();
+    // The seed was honoured: the gate answered from it and asked the server nothing.
+    expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(0);
+
+    // The seed goes stale — the app's `staleTime` is thirty seconds — and the next screen to
+    // read the player will send for a fresh copy. That refetch is a background one: the gate
+    // already has its answer, and it is not what this mount set out to replace.
+    // Advanced outside `act`: inside it, this harness runs every pending timer — Query's
+    // five-minute collection among them — rather than the thirty seconds asked for.
+    jest.advanceTimersByTime(31_000);
+    act(() => {});
+
+    pressTab('Chats');
+
+    await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(1));
+    await waitFor(() =>
+      expect(queryClient.getQueryState(authKeys.currentUser())?.fetchStatus).toBe('idle'),
+    );
+    // Let anything the gate might have torn down come back before looking.
+    jest.advanceTimersByTime(50);
+    act(() => {});
+
+    expect(screen).toHavePathname('/chats');
+    expect(await screen.findByRole('header', { name: CHATS_COPY.title })).toBeTruthy();
+    expect(screen.queryByRole('header', { name: FIND_A_GAME_TITLE })).toBeNull();
+    expect(screen.getAllByRole('tab')).toHaveLength(5);
+  });
+
+  it('opens on Now, never on the first route it happens to list, when rebuilt from nothing', async () => {
+    // The gate genuinely losing its answer is the one way the tree is rebuilt, and the stack it
+    // comes back with holds no history — so what it opens on is the initial route, which has to
+    // be the tab the gate lands on rather than whichever screen the shell listed first for its
+    // transition. Reset rather than invalidated: an invalidated read still holds its answer.
+    //
+    // The re-read is **held open**, for the reason the gate's own suite holds its own: a
+    // navigator torn down forgets its state one tick later, and on a device the round trip is
+    // longer than that tick. Answered at once, the stack would come back rehydrated onto Chats
+    // and prove nothing about a stack that holds no history at all.
+    await launchIntoTheApp();
+    pressTab('Chats');
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+
+    let answerRatings = () => {};
+    const held = new Promise<void>((resolve) => {
+      answerRatings = resolve;
+    });
+    transport.on('GET', '/api/v1/ratings', async () => {
+      await held;
+      return json<Wire['RatingsResponse']>({ ratings: [RATING] });
+    });
+
+    act(() => {
+      void queryClient.resetQueries({ queryKey: onboardingKeys.ratings() });
+    });
+
+    // Query tells its observers on a timer of its own, and the gate answers on the render that
+    // follows: nothing, not a route tree — the bar is gone with everything under the gate.
+    jest.advanceTimersByTime(10);
+    act(() => {});
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
+    // One tick later the navigator that was under it has forgotten its state, as it would
+    // have on a device long before the answer came back.
+    jest.advanceTimersByTime(10);
+    act(() => {});
+
+    answerRatings();
+
+    expect(await screen.findByText(NOW_COPY.empty.line)).toBeTruthy();
+    expect(screen).toHavePathname('/');
+    expect(screen.queryByRole('header', { name: FIND_A_GAME_TITLE })).toBeNull();
+    expect(screen.getAllByRole('tab')).toHaveLength(5);
   });
 });
 
