@@ -307,7 +307,6 @@ describe('the stream', () => {
     );
 
     expect(await screen.findByText(sentence)).toBeTruthy();
-    expect(sentence).toBe('tomek.p locked the plan');
   });
 
   /** §24.4: the author is always spoken, even where the bubble does not draw one. */

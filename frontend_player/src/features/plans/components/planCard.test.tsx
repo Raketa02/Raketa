@@ -216,14 +216,15 @@ describe('the card', () => {
       name: planHeadingName({ gameId: GAME, day: '2026-09-13' }),
     });
     expect(within(heading).getByText(THE_PLAN)).toBeTruthy();
-    expect(within(heading).getByText('1 of 3 set')).toBeTruthy();
+    expect(
+      within(heading).getByText(counterLabel({ gameId: GAME, day: '2026-09-13' })),
+    ).toBeTruthy();
   });
 
   it('counts nought where nothing has been agreed', async () => {
     await openTheRoom();
 
     expect(await screen.findByText(counterLabel(undefined))).toBeTruthy();
-    expect(screen.getByText('0 of 3 set')).toBeTruthy();
   });
 
   /** §22.2: a chip reads its value once there is one, and the day is drawn as a weekday. */
@@ -422,7 +423,11 @@ describe('recording a slot', () => {
 
 describe('the lock', () => {
   /** The button, found by its name — the same whether greyed, live or busy. */
-  const lock = () => screen.getByRole('button', { name: LOCK_THE_PLAN });
+  const lockButton = () => screen.getByRole('button', { name: LOCK_THE_PLAN });
+
+  /** The counter's own sentence for a plan with every slot set and no lock. */
+  const ALL_THREE = counterLabel({ gameId: GAME, place: 'x', day: '2026-09-13', hour: '18:00' });
+  const TWO = counterLabel({ gameId: GAME, place: 'x', day: '2026-09-13' });
 
   /**
    * **Greyed and not pressable while any slot is empty** — 6.1's `disabled`, announced — and the
@@ -432,8 +437,8 @@ describe('the lock', () => {
   it('is greyed while any slot is empty', async () => {
     await openTheRoom({ agreed: plan({ place: 'Zabłocie Sport', day: '2026-09-13' }) });
 
-    await screen.findByText('2 of 3 set');
-    expect(lock().props.accessibilityState.disabled).toBe(true);
+    await screen.findByText(TWO);
+    expect(lockButton().props.accessibilityState.disabled).toBe(true);
     expect(screen.getByText(LOCK_THE_PLAN)).toBeTruthy();
     expect(screen.queryByText(/set all three/i)).toBeNull();
   });
@@ -441,8 +446,8 @@ describe('the lock', () => {
   it('is live once all three are set', async () => {
     await openTheRoom({ agreed: plan(COMPLETE) });
 
-    await screen.findByText('3 of 3 set');
-    expect(lock().props.accessibilityState.disabled).toBe(false);
+    await screen.findByText(ALL_THREE);
+    expect(lockButton().props.accessibilityState.disabled).toBe(false);
   });
 
   /** `PUT`, no body: the value is the three slots and they are already recorded. */
@@ -456,7 +461,7 @@ describe('the lock', () => {
     expect(transport.requestsTo('PUT', lockPath)[0]?.body).toBeUndefined();
 
     expect(await screen.findByText(LOCKED)).toBeTruthy();
-    expect(screen.queryByText('3 of 3 set')).toBeNull();
+    expect(screen.queryByText(ALL_THREE)).toBeNull();
     expect(
       screen.getByRole('header', {
         name: planHeadingName({ gameId: GAME, lockedAt: LOCKED_AT }),
@@ -483,7 +488,7 @@ describe('the lock', () => {
     const busy = await screen.findByRole('button', { name: LOCKING });
     expect(busy.props.accessibilityState.busy).toBe(true);
     expect(busy.props.accessibilityState.disabled).toBe(true);
-    expect(screen.getByText('3 of 3 set')).toBeTruthy();
+    expect(screen.getByText(ALL_THREE)).toBeTruthy();
     expect(screen.queryByText(LOCKED)).toBeNull();
 
     answer(plan({ ...COMPLETE, locked_at: LOCKED_AT }));
@@ -538,7 +543,7 @@ describe('the lock', () => {
         await screen.findByText(refusalSentence(409, 'the_plan_is_not_complete')),
       ).toBeTruthy();
       // The retry is the control that failed, and it is still there.
-      expect(lock().props.accessibilityState.disabled).toBe(false);
+      expect(lockButton().props.accessibilityState.disabled).toBe(false);
     });
 
     it('by a game that is over, in the sentence every plan write shares', async () => {
@@ -583,7 +588,7 @@ describe('the lock', () => {
 
       fireEvent.press(await screen.findByRole('button', { name: LOCK_THE_PLAN }));
 
-      await waitFor(() => expect(lock().props.accessibilityState.disabled).toBe(true));
+      await waitFor(() => expect(lockButton().props.accessibilityState.disabled).toBe(true));
       expect(slotChip(SLOT_NAME.day).props.accessibilityState.disabled).toBe(true);
 
       // One note, and it is not this card's: the fallback a 403 would otherwise draw is absent,

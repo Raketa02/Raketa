@@ -403,6 +403,19 @@ describe('held', () => {
    * Rendered under the strip it would be the dead end #324 refused — and for a listener, who meets
    * the screen in one order and no other, *above* is the only thing that means *first*.
    */
+  it('sits above every control it explains, in render order', async () => {
+    await refuseTheSend();
+
+    const inOrder = screen.root.findAll(() => true);
+    const at = (node: (typeof inOrder)[number]) => inOrder.indexOf(node);
+
+    const note = at(screen.getByText(LIVE_NOTE.held));
+
+    expect(note).toBeLessThan(at(screen.getByRole('button', { name: QUICK_CHIP.where })));
+    expect(note).toBeLessThan(at(screen.getByLabelText(COMPOSER_LABEL)));
+    expect(note).toBeLessThan(at(screen.getByRole('button', { name: SEND })));
+  });
+
   /**
    * **Every write on the screen is a producer, not only the send.** A hold met on a plan write is
    * the same fact about the account, and it reaches this fold off `features/plans`' mutation cache
@@ -452,18 +465,5 @@ describe('held', () => {
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(screen.getByLabelText(COMPOSER_LABEL).props.editable).toBe(false);
     expect(screen.getByRole('button', { name: SEND }).props.accessibilityState.disabled).toBe(true);
-  });
-
-  it('sits above every control it explains, in render order', async () => {
-    await refuseTheSend();
-
-    const inOrder = screen.root.findAll(() => true);
-    const at = (node: (typeof inOrder)[number]) => inOrder.indexOf(node);
-
-    const note = at(screen.getByText(LIVE_NOTE.held));
-
-    expect(note).toBeLessThan(at(screen.getByRole('button', { name: QUICK_CHIP.where })));
-    expect(note).toBeLessThan(at(screen.getByLabelText(COMPOSER_LABEL)));
-    expect(note).toBeLessThan(at(screen.getByRole('button', { name: SEND })));
   });
 });

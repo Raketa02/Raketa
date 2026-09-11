@@ -107,9 +107,13 @@ export function liveState(stream: LiveStreamStatus, writing: WriteStanding): Liv
  * It is a **derivation and not a stored flag**, which is what keeps it from being a second store —
  * and what that costs is stated rather than glossed: a refusal lives exactly as long as the
  * mutation that got it, so **leaving the room and coming back ungreys everything and the player
- * taps into the hold again.** Nothing in this build can lift a hold, so that repeat is a lie about
- * the account rather than a stale reading — and it is still the honest shape, because the fix is a
- * read that serves the fact and not a flag this client keeps about a state it cannot see.
+ * taps into the hold again.** For the send that is the moment the room unmounts; for a plan write
+ * it is the mutation cache's own `gcTime` after the card lets go of it, since the cache is what
+ * the room reads the plan's refusals off — so a hold met on the card outlasts a walk away and back
+ * by a few minutes, and then repeats exactly as the send's does. Nothing in this build can lift a
+ * hold, so that repeat is a lie about the account rather than a stale reading — and it is still
+ * the honest shape, because the fix is a read that serves the fact and not a flag this client
+ * keeps about a state it cannot see.
  */
 export function writeStanding(refusals: readonly (AppError | null | undefined)[]): WriteStanding {
   return refusals.some((refusal) => refusal?.code === 'account_held') ? 'held' : 'ordinary';

@@ -57,8 +57,10 @@
  * `planKeys.writing()` and {@link usePlanWriteRefusals} reads the errored ones back off the
  * mutation cache: the shape `useSendingMessages` already has for the optimistic bubbles, for the
  * same reason — a fact held in a mutation is read where the mutation is, never copied into a
- * second store. The refusal lives as long as the mutation, which is the lifetime `liveState.ts`
- * says is the honest one.
+ * second store. The refusal lives as long as the mutation — until the cache's default `gcTime`
+ * after the card's `reset()` or unmount lets go of it, which is minutes rather than the instant
+ * the send's own fold clears on; `liveState.ts` states the difference, and no `gcTime` is set here
+ * because a hold that outlasts a walk away and back is the truer of the two readings.
  */
 
 import { useMutation, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query';

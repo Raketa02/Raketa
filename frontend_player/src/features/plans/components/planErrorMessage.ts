@@ -44,9 +44,9 @@
  * **`account_held` never reaches this table**, and that is a decision rather than a gap. A hold is
  * a fact about the **account** rather than about the write that met it, so the room folds it into
  * `liveState` — off this feature's mutation cache, through `usePlanWriteRefusals` — and draws
- * §22.5's amber note above its controls, with the chips and the button greyed under it — *you are
- * never told off for having tapped*. A coral sentence beside the chip as well would say one fact
- * twice, in the register the hold is deliberately not in.
+ * §22.5's one amber note, above the composer and on the same screen as the greyed chips and
+ * button — *you are never told off for having tapped*. A coral sentence beside the chip as well
+ * would say one fact twice, in the register the hold is deliberately not in.
  */
 
 import { codeMessage, type AppError } from '@/shared/errors';

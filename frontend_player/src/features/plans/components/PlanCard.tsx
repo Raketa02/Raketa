@@ -88,8 +88,15 @@
  * screen, never one per control — which is the condition 6.2's `disabled` amendment attaches to a
  * greyed chip, and the reason `account_held` draws no coral sentence of its own here. **The room
  * learns of a hold met here off the mutation cache**, through `usePlanWriteRefusals`: this card
- * cannot reach the note above it, and a hold is a fact about the account whichever of the five
+ * cannot reach the room's note, and a hold is a fact about the account whichever of the five
  * writes on that screen met it.
+ *
+ * **Where that note sits is stated rather than assumed**: §3.6 puts it above the composer, and
+ * this card is pinned under the header, so the note is **below** these controls in render order
+ * and on the same screen as them — both are chrome, neither scrolls — and it is announced as an
+ * `alert` the moment the hold lands. That is #366's shape for the chips, inherited by the button
+ * and not re-decided here; whether a greyed card wants the note beside it rather than at the
+ * composer is a screen-level question for the room, filed with the look this card is owed.
  */
 
 import { useRef, useState, type RefObject } from 'react';
