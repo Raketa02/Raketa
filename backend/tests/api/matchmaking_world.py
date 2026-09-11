@@ -192,6 +192,7 @@ async def a_searcher(
     name: str = "searcher",
     *,
     intent: str = "COMPETITIVE",
+    sport: Sport = SPORT,
 ) -> dict:
     """One player, ready to search: profile, rating and declaration.
 
@@ -207,8 +208,8 @@ async def a_searcher(
 
     player_id, token = await register(client, name)
     await commit_profile(client, token)
-    mu = await rate(client, token)
-    await declare_intent(client, token, intent=intent)
+    mu = await rate(client, token, sport)
+    await declare_intent(client, token, intent=intent, sport=sport)
     return {"id": player_id, "token": token, "mu": mu}
 
 
@@ -577,20 +578,53 @@ def draw_real_cards(client, candidate_source, exposure_ledger) -> None:
         settings: SettingsDep,
     ):
         return build_court_pairing_query_over(
-            workbench=build_court_pairing_workbench(
-                session=db,
-                clock=clock,
-                unit_of_work=uow,
-                event_store=event_store,
-                events=events,
-                settings=settings,
-                exposure=exposure_ledger,
-                candidates=candidate_source,
+            workbench=a_real_workbench(
+                db,
+                clock,
+                uow,
+                event_store,
+                events,
+                settings,
+                exposure_ledger=exposure_ledger,
+                candidate_source=candidate_source,
             ),
             settings=settings,
         )
 
     override(client, get_court_pairing_query, _pairings)
+
+
+def a_real_workbench(
+    db,
+    clock,
+    uow,
+    event_store,
+    events,
+    settings,
+    *,
+    exposure_ledger,
+    candidate_source,
+):
+    """The **same assembly the routes build**, over this test's own two seams.
+
+    One place for the wiring, because two surfaces now price a court for
+    somebody already on it — the challenge detail and the game's pairing — and a
+    second copy of it would be a second opinion about which seams a court is
+    priced over. The six positional arguments are a request's own, handed on by
+    a dependency declared with them; the two keyword ones are what the suite
+    supplies for itself.
+    """
+
+    return build_court_pairing_workbench(
+        session=db,
+        clock=clock,
+        unit_of_work=uow,
+        event_store=event_store,
+        events=events,
+        settings=settings,
+        exposure=exposure_ledger,
+        candidates=candidate_source,
+    )
 
 
 def rewind_the_index(source, by: timedelta) -> None:

@@ -136,6 +136,7 @@ from app.modules.conversations.infrastructure.sqlalchemy_conversation_directory 
 )
 from app.modules.games.domain.ports import (
     ConfirmedResultLedger,
+    CourtPairing,
     GameDirectory,
     GameHistoryQuery,
     GameRepository,
@@ -292,6 +293,9 @@ from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
 from app.modules.matchmaking.infrastructure.challenge_court_cards import (
     ChallengeCourtCards,
     NoCourtCanBePriced,
+)
+from app.modules.matchmaking.infrastructure.games_court_pairing import (
+    GamesCourtPairing,
 )
 from app.modules.matchmaking.infrastructure.search_court_origin import (
     SearchCourtOrigin,
@@ -709,6 +713,83 @@ def build_court_pairing_query_over(
             engine=build_match_fit_engine(),
         ),
         photos=build_card_photo_links(storage=storage, settings=settings),
+    )
+
+
+def build_game_court_pairing(
+    *,
+    session: AsyncSession,
+    clock: Clock,
+    unit_of_work: UnitOfWork,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+    settings: Settings,
+    store: Redis | None,
+    candidates: CandidateSource | None,
+) -> CourtPairing:
+    """What the matcher makes of a game's court, for the reader (``docs/adr/0161``).
+
+    The one outward demand ``games`` makes of the matcher, and the third line
+    here where a court is priced for somebody already on it —
+    ``build_court_pairing_query``'s shape, one screen later. It is wired to a
+    route a tap opens and never to a list, for the same reason that one is: the
+    whole Fit stack runs over the court.
+
+    ``candidates`` is ``None`` in a process with no index, and ``store`` is
+    ``None`` where the ephemeral store never came up. Neither is a refusal, and
+    neither is a null object either: the forecast needs the matcher and the
+    seats and the stakes do not, so a process with no index still names every
+    Level on the court and prices it, and draws no forecast. That is the
+    adapter with no arranger, and not a second class.
+
+    **Two entry points and one assembly**, as beside it: this one is the
+    route's, over the connections a request holds, and
+    :func:`build_game_court_pairing_over` is the same wiring over a workbench a
+    caller already holds.
+    """
+
+    if candidates is None or store is None:
+        return build_game_court_pairing_over(session=session, workbench=None)
+    return build_game_court_pairing_over(
+        session=session,
+        workbench=build_court_pairing_workbench(
+            session=session,
+            clock=clock,
+            unit_of_work=unit_of_work,
+            event_store=event_store,
+            events=events,
+            settings=settings,
+            exposure=build_exposure_ledger(store),
+            candidates=candidates,
+        ),
+    )
+
+
+def build_game_court_pairing_over(
+    *, session: AsyncSession, workbench: SearchWorkbench | None
+) -> CourtPairing:
+    """The adapter itself, over a workbench the caller already holds — or none.
+
+    Three things composed and none of them new: the pairing use case the
+    challenge card is built on, the at-stake rule read forward, and ``rating``'s
+    published read for the seats — the last two over the session, exactly as
+    the workbench's own at-stake read is. ``workbench`` is ``None`` where this
+    process cannot price a court, and the two session reads are built
+    regardless, because they need no workbench.
+    """
+
+    return GamesCourtPairing(
+        arranger=(
+            None
+            if workbench is None
+            else PairWithACourt(
+                workbench=workbench,
+                ruleset=build_ruleset(),
+                engine=build_match_fit_engine(),
+            )
+        ),
+        at_stake=build_at_stake_query(session),
+        ratings=build_rated_player_query(session),
     )
 
 

@@ -221,6 +221,50 @@ async def test_asking_about_nobody_answers_about_nobody(implementation, session)
     assert await port.estimates_for([], sport=Sport.PADEL) == {}
 
 
+@pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))
+async def test_a_court_crosses_as_the_published_figures_in_one_sport(
+    implementation, session
+):
+    """**The third read, and the shape the game's pairing needs.** Four seats in
+    one sport, each with the figures a screen prints — the Level, the band's
+    name, the range the engine rounded and the certainty — and nothing derived
+    on the way out. A seat is not the matcher's twenty rows (that read carries
+    the engine's currency) and not a record's one person (that one walks every
+    sport), so neither existing read can stand in for it."""
+
+    port = implementation.build(session)
+    one = await _rated(session, mu=3.20, sigma=0.30, sport=Sport.PADEL)
+    two = await _rated(session, mu=2.60, sigma=0.40, sport=Sport.PADEL)
+    await _rated(session, mu=4.10, sigma=0.50, sport=Sport.SQUASH, player_id=one)
+
+    found = await port.published_for([one, two], sport=Sport.PADEL)
+
+    low, high = likely_range(2.60, 0.40)
+    assert set(found) == {one, two}
+    assert found[one].sport is Sport.PADEL
+    assert found[one].mu == 3.20
+    assert found[two].band_name == band_for(2.60).label
+    assert found[two].confidence == confidence_percent(0.40)
+    assert (found[two].range_low, found[two].range_high) == (
+        round(low, 2),
+        round(high, 2),
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(RatedPlayerQuery))
+async def test_a_court_read_leaves_the_unrated_seat_absent(implementation, session):
+    """Absent, on the rule every read here applies: a seat whose person holds no
+    rating in this sport is not in the answer, and nothing is invented for it."""
+
+    port = implementation.build(session)
+    rated = await _rated(session, mu=3.20, sigma=0.30, sport=Sport.PADEL)
+    elsewhere = await _rated(session, mu=3.20, sigma=0.30, sport=Sport.TENNIS)
+
+    found = await port.published_for([rated, elsewhere, new_uuid()], sport=Sport.PADEL)
+
+    assert set(found) == {rated}
+
+
 @pytest.mark.parametrize("port", RATING_DEMANDS, ids=lambda port: port.__name__)
 def test_every_published_read_has_something_answering_it(port):
     """A port nothing implements is a demand nothing runs against.

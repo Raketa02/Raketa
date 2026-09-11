@@ -48,29 +48,15 @@ from app.modules.challenges.domain.ports import (
     PairingForecast,
 )
 from app.modules.matchmaking.application.pair_with_a_court import (
+    NOTHING_TO_COMPUTE,
     PairedSeat,
     PairWithACourt,
     PairWithACourtCommand,
 )
 from app.modules.matchmaking.application.record_rows import term_rows
 from app.modules.matchmaking.domain.cards import CardPhotoLinks
-from app.modules.matchmaking.domain.errors import (
-    PlayerProfileNotCommitted,
-    PlayIntentNotDeclared,
-    SportNotRated,
-)
 
 logger = logging.getLogger(__name__)
-
-#: The three conflicts that mean *there is nothing to compute about this reader*.
-#: Being asked to play a sport you never declared for is how this feature works
-#: rather than a corner of it, so they are named rather than caught with
-#: everything else.
-NOTHING_TO_COMPUTE = (
-    PlayerProfileNotCommitted,
-    SportNotRated,
-    PlayIntentNotDeclared,
-)
 
 
 @final

@@ -49,6 +49,17 @@ naming *sides* and a result agreed with nobody
 area and a run of form are what a searcher reads to decide about a game that
 might happen, and this is the record of one that did.
 
+**``CourtPairing`` is the second port consumed here, and it is read *beside* the
+game rather than on it** (``docs/adr/0161``). The seat still carries the handle
+and nothing else; what this port answers — the forecast, the split, what is at
+stake, each seat's Level — is computed for the reader when the screen is opened,
+for as long as the game has not happened, and is stored nowhere. It is declared
+in this context's own words because ``games`` may not import the matcher
+(``.importlinter``), and the adapter that signs it lives on the matcher's side of
+that arrow. No ``Forecast``, no ``Split`` and no ``Stakes`` is borrowed from the
+engines: a provider that reached for the type one directory over would be the
+second-spelling trap the contract's own comment names.
+
 **``attendance_for`` and ``result_answering_for`` are the two reads here that
 answer about fewer people than they were asked about**, and the exception proves
 the rule above rather than bending it (``docs/adr/0140``, ``docs/adr/0160``).
@@ -68,6 +79,7 @@ from uuid import UUID
 
 from app.kernel import Instant, Minutes, Sport, invariant
 from app.modules.games.domain.game import Game
+from app.modules.games.domain.lineup import GameKind, LineUp
 from app.modules.games.domain.results import Outcome
 
 #: How many counterparts travel with one read of the pairwise history.
@@ -574,6 +586,181 @@ class PlayerHandles(Protocol):
         ...
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class SeatLevel:
+    """One seat's Level, as ``rating`` published it — and nothing else about them.
+
+    The four figures a record's skill panel and a player card already print:
+    the Level, the band's published name, the likely range the engine rounded,
+    and the certainty as a whole percentage. **This is not a card.** No area, no
+    Player Score, no photograph, no distance, no run of form — a card is what a
+    searcher reads to decide about a stranger, and these people are on your
+    court. Nothing here is derived: a band a consumer worked out from a Level
+    would be a second set of drawing constants.
+    """
+
+    player_id: UUID
+    level: float
+    band: str
+    range_low: float
+    range_high: float
+    confidence: int
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class CourtForecast:
+    """How even this court's game is forecast to be, read in the reader's direction.
+
+    ``provisional`` travels **inside** the forecast, on the engine's own rule:
+    the failure guarded against is a screen showing the number without its
+    caveat. It is never ``True`` on a game today — a line-up is frozen at the
+    plan, so no side is short — and the field is kept because the shape is the
+    court's; when a seat can be open, the answer is an **absence** rather than a
+    provisional figure (``docs/adr/0161`` §4).
+    """
+
+    pct: int
+    sigma_group: float
+    provisional: bool
+    assumption: str | None
+
+    def __post_init__(self) -> None:
+        invariant(0 <= self.pct <= 100, f"a forecast of {self.pct}%")
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class CourtSplit:
+    """The two side strengths the forecast was read from, **in the reader's
+    direction**: ``your_side`` is theirs wherever they sit.
+
+    ``gap`` is a property and signed — ``your_side − their_side`` — so two
+    readers on opposite sides see the sign flip and nobody can construct a gap
+    its own two strengths do not make.
+    """
+
+    your_side: float
+    their_side: float
+
+    @property
+    def gap(self) -> float:
+        return self.your_side - self.their_side
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class LevelDeltas:
+    """What a **counted** game on this court would do to the reader's Level.
+
+    The rule read forward, side against side, so it is the pair the result will
+    deliver — including what the rule does about an unrated seat, which is to
+    fold a side over the people on it who hold a rating. Never a pair of zeros:
+    absent on a friendly, where a counted result is meaningless rather than
+    unavailable, and absent where the rule has nothing to move or nothing to
+    price against.
+    """
+
+    win_delta: float
+    loss_delta: float
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.win_delta > 0 > self.loss_delta,
+            "a counted result that changes nothing or moves the wrong way: "
+            f"+{self.win_delta} / {self.loss_delta}",
+        )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Pairing:
+    """What the matcher makes of this court, for one reader, at one instant.
+
+    **The forecast and the split are present together or absent together**,
+    because they are one computation: the percentage and the two strengths it
+    was read from. Absent when the pairing cannot be computed — the reader holds
+    no rating or no declaration in the sport, a seat cannot be priced — and
+    there is deliberately **no reason beside the absence**: the game screen
+    draws nothing and says nothing.
+
+    ``seats`` is whoever on the court holds a rating in the sport, in the
+    line-up's own order. A court with an unrated member still names the Levels
+    of the rated ones.
+    """
+
+    seats: tuple[SeatLevel, ...]
+    forecast: CourtForecast | None = None
+    split: CourtSplit | None = None
+    at_stake: LevelDeltas | None = None
+
+    def __post_init__(self) -> None:
+        invariant(
+            (self.forecast is None) == (self.split is None),
+            "a forecast without the split it was read from, or the reverse",
+        )
+
+
+@runtime_checkable
+class CourtPairing(Protocol):
+    """*What does this platform make of my court?* — for the reader, right now.
+
+    An outward demand on the matcher, signed by an adapter that lives on the
+    matcher's side of the arrow (``docs/adr/0161``). The game screen needs a
+    forecast and cannot go and get one: ``games`` may not import
+    ``matchmaking``, and the whole recompute-fail-closed apparatus already
+    exists there for the challenge card — this port is how it is reused rather
+    than built a second time.
+
+    **Recomputed, never replayed, and nothing is recorded.** A game carries no
+    pairing and never will; the answer is as-of-now and means what a card means
+    *because this game has not happened*, which is why the caller asks only
+    while it has not.
+
+    **Two providers behind one port, and each fails on its own.** The forecast
+    and the split are the matcher's; the seats' Levels and the stakes are the
+    rating context's. A matcher that cannot be reached costs the first two and
+    never the Levels, because a Level is a fact about a person and not about
+    the pairing that could not be computed.
+
+    **Nothing here re-gates.** The four fail-closed gates ran when the
+    challenge was minted, and the court is the whole of the permission
+    (``docs/adr/0141``, ``docs/adr/0143`` §2). What makes that safe is the
+    recompute: a seat that cannot be priced today has no figure, with no trace.
+    """
+
+    async def pairing_for(
+        self,
+        *,
+        sport: Sport,
+        kind: GameKind,
+        line_up: LineUp,
+        reader_id: UUID,
+    ) -> Pairing | None:
+        """The pairing for this court, computed for this reader, **right now.**
+
+        ``line_up`` is the frozen court — who sits where — and ``reader_id`` is
+        on it; which side is *yours* is read off the line-up and never sent.
+        There is no instant to pass: nothing here is folded against a clock,
+        and the provider reads its own for the one thing that is bounded by
+        one (the index's staleness).
+
+        ``kind`` crosses so that a friendly is never priced: asking what a
+        counted game is worth on a court that will not be counted is a category
+        error, and the port refuses it by not being asked. The caller holds
+        the same rule as an invariant, so a provider that priced one anyway is
+        loud rather than rendered.
+
+        ``None`` means **the Levels themselves could not be read** and is the
+        one answer that carries nothing. A ``Pairing`` with the forecast absent
+        means the seats were read and the matcher could not price the court —
+        because there was nothing to compute, or because it could not be
+        reached. The wire does not tell those apart, by decision; the log does.
+        """
+        ...
+
+
 @runtime_checkable
 class GameHistoryQuery(Protocol):
     """The six facts this context owes the rest of the platform, and the seventh
@@ -725,6 +912,12 @@ __all__ = [
     "ConfirmedGame",
     "ConfirmedResultLedger",
     "CountedResult",
+    "CourtForecast",
+    "CourtPairing",
+    "CourtSplit",
+    "LevelDeltas",
+    "Pairing",
+    "SeatLevel",
     "GameCounterpart",
     "GameDirectory",
     "GameHistoryQuery",

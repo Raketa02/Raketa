@@ -568,7 +568,7 @@ Rules to preserve:
   rating context walks confirmed counted results forward, oldest first, ordered on the derived
   moment each became final
   ([ADR-0139](../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
-  It has **one inward port too**, and it is a single field wide:
+  It has **two inward ports**, and the first is a single field wide:
   `PlayerHandles` puts a **nickname** on a seat and nothing else about the person in it
   ([ADR-0141](../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)). A card is
   what a *searcher* reads to decide about a game that might happen, so a Level, an area or a run
@@ -582,6 +582,26 @@ Rules to preserve:
   per response** over the union of every court in the answer, and a handle `users` cannot answer
   for is `null` with the seat kept — the opposite of the shortlist, which drops a row it cannot
   name.
+  **The second inward port is `CourtPairing`, and it is read *beside* the game and never on it**
+  ([ADR-0161](../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)).
+  `GET /games/{game_id}/pairing` answers the forecast, the split, what is at stake and each
+  seat's Level — **for the reader**, only for somebody on the court (`404 game_not_found`, one
+  code for two cases) and only while the game is `AWAITING_ENTRY` (`409 pairing_is_history`),
+  because a pairing means what a card means *because this game has not happened*. The port is
+  declared in `games`' own types and signed by `matchmaking/infrastructure/games_court_pairing.py`
+  on the matcher's side of the arrow, so `games` still does not import the matcher; the adapter
+  reads `PairWithACourt` — the challenge card's own use case — so **the card and the game come to
+  one number for one court**, and a test says so. Three things are decided in the adapter and
+  each is an absence rather than a number: a seat the index cannot describe leaves the forecast
+  **omitted, never provisional**, with **no reason beside the absence**; `at_stake` is omitted on
+  a friendly and on a game is priced **side against side** through `AtStakeQuery`'s court-shaped
+  read, because every seat is known and that is the pair `settle_results` will deliver — which
+  is why a four's figure here is not the card's head-to-head one, and why a side with one
+  unrated seat is priced over its rated members rather than omitted; and the seats' Levels come
+  from `rating`'s **published** read (`RatedPlayerQuery.published_for`), never from the index.
+  **Two providers stand behind the one port and fail on their own**: a process with no index
+  draws no forecast and still names every Level and prices the court. `GET /games` is
+  untouched: a seat there still carries a handle and nothing else.
 - **A room is opened by the first acceptance, and it is told by contexts that do not know
   it exists** ([ADR-0146](../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md),
   [ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md),
@@ -996,14 +1016,18 @@ tests.
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Nine registers, and they are nine on purpose — one per kind of claim.**
+  **Ten registers, and they are ten on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
   *consumer* declares of contexts it does not write; `games_demands.py`,
   `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
   the ports one *provider* publishes outward; `challenge_demands.py` holds
   what `challenges` demands of the **matcher** — the arrow's other direction, which
   arrived with the challenge detail read
-  ([ADR-0143](../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md));
+  ([ADR-0143](../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md))
+  — and `game_demands.py` holds the one thing `games` demands of it, the court's pairing
+  ([ADR-0161](../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)), on its own list
+  because `games_demands.py` is what that context *publishes* and a demand is the other kind
+  of claim;
   `conversation_demands.py` holds what a **room** demands of the three contexts it is
   told by and reads from; and `plan_demands.py` holds the one fact a **plan** demands about
   a *person*. There is deliberately no *conversations provider* and no *plans provider*

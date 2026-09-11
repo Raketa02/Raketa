@@ -1,6 +1,9 @@
 # ADR-0143 — The challenge is the gate, and the card is recomputed for the reader
 
-- **Status:** Accepted
+- **Status:** Accepted — **extended a third time and its §8 narrowed by
+  [ADR-0161](0161-the-game-screen-draws-its-courts-pairing.md)**: `ON` still draws no card on
+  the *challenge*, and the game it became draws a pairing of its own, through a port, on this
+  record's own reason — the game has not happened.
 - **Date:** 2026-09-07
 - **Extends [ADR-0141](0141-a-game-names-its-court-and-the-court-is-the-gate.md)**, whose
   argument transfers whole and whose two refusals do not. That record settled what a

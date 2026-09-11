@@ -20,7 +20,6 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import Depends, Request
-from redis.asyncio import Redis
 
 from app.api.dependencies import (
     ClockDep,
@@ -28,6 +27,7 @@ from app.api.dependencies import (
     DomainEventStoreDep,
     EventPublisherDep,
     SettingsDep,
+    StoreOrNothingDep,
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
@@ -40,7 +40,6 @@ from app.bootstrap.composition import (
     build_origin_search_query,
     build_planned_game_opening,
 )
-from app.infrastructure.redis_client import get_redis
 from app.modules.challenges.application.answer_seat import AcceptSeat, DeclineSeat
 from app.modules.challenges.application.fill_seats import FillSeats
 from app.modules.challenges.application.read_challenge import ReadChallenge
@@ -94,28 +93,6 @@ def get_read_challenges(db: DbSession, clock: ClockDep) -> ReadChallenges:
 
 
 ReadChallengesDep = Annotated[ReadChallenges, Depends(get_read_challenges)]
-
-def get_ephemeral_store() -> Redis | None:
-    """The process's Redis pool, or nothing where it never came up.
-
-    **``None`` rather than a raise**, which is the one place this differs from
-    the matcher's declaration of the same pool — and the reason the alias below
-    is **not** called ``EphemeralStoreDep``, which is that declaration's name for
-    the opposite posture, one import away. A search that cannot read its
-    ledgers is a search that cannot answer; this route answers regardless, and a
-    store that is not there reaches the reader as *the pairing could not be
-    read* (``docs/adr/0143`` §6) rather than as a failed screen. It stays a
-    ``Depends`` so a test can override it.
-    """
-
-    try:
-        return get_redis()
-    except RuntimeError:
-        return None
-
-
-StoreOrNothingDep = Annotated[Redis | None, Depends(get_ephemeral_store)]
-
 
 def get_court_pairing_query(
     request: Request,

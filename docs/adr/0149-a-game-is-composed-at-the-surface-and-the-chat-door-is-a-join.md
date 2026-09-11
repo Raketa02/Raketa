@@ -1,6 +1,10 @@
 # ADR-0149 — A game is composed at the surface, and the chat door is a join
 
-- **Status:** Accepted
+- **Status:** Accepted — **its §6 amended by
+  [ADR-0161](0161-the-game-screen-draws-its-courts-pairing.md)**: *no pairing, Fit, level,
+  band, confidence or `at_stake` is drawn on `GameScreen`* is narrowed to *none of it is drawn
+  from `GameSchema`*. The forecast, the split, what is at stake and each seat's Level are drawn
+  from `GET /games/{game_id}/pairing`; a Fit is still drawn nowhere on a game.
 - **Date:** 2026-09-07
 
 Decided on [Now, and the one state-detail surface both tabs open](https://github.com/Raketa02/Raketa/issues/336),

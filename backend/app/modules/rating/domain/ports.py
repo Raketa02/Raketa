@@ -207,6 +207,15 @@ class RatedPlayerQuery(Protocol):
     opened by a tap and wants every sport they hold. Neither is the other with an
     argument moved, and a single method covering both would be a set read
     answering about four streams per id.
+
+    **A third, for a court** (``docs/adr/0161``). A game's pairing read prints a
+    Level beside each seat — four people, one sport, the **published** figures —
+    and neither read above can stand in for it: the batch carries the engine's
+    currency and no band, no range and no certainty, and the per-player read
+    walks every sport for somebody the caller only wants in one. It is the
+    batch's shape with the record's payload, and it is a third method rather
+    than a flag on either because a caller that could ask the batch for the
+    published form is one step from a matcher printing a band it derived.
     """
 
     async def estimates_for(
@@ -233,6 +242,24 @@ class RatedPlayerQuery(Protocol):
         repository beside this port remembers stream versions so that a rating it
         found can be moved; a sheet that draws a number has no business holding
         that, and the narrowness is the whole reason this port exists.
+        """
+        ...
+
+    async def published_for(
+        self, player_ids: Collection[UUID], *, sport: Sport
+    ) -> Mapping[UUID, RatedSport]:
+        """Each of these players' **published** rating in one sport.
+
+        The figures a rating already committed to its own stream and a rating
+        route already prints — the Level, the certainty, the range the engine
+        rounded and the band's name — for a court's worth of people at once.
+        **Nothing is derived on the way out**, which is the whole difference from
+        ``estimates_for``: a seat on a game screen prints a band, and a band a
+        consumer derived from a μ would be a second set of drawing constants.
+
+        A player with no rating in this sport is **absent from the answer**, on
+        the rule every read here applies. Asked about ids the caller already
+        holds, and answers only about those.
         """
         ...
 

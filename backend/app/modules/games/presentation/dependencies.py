@@ -14,23 +14,31 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Request
 
 from app.api.dependencies import (
     ClockDep,
     DbSession,
     DomainEventStoreDep,
     EventPublisherDep,
+    SettingsDep,
+    StoreOrNothingDep,
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
+    build_game_court_pairing,
     build_game_directory,
     build_game_repository,
     build_player_handles,
 )
 from app.modules.games.application.answer_result import AcceptResult, StateResult
+from app.modules.games.application.read_game_pairing import ReadGamePairing
 from app.modules.games.application.read_games import ReadGames
-from app.modules.games.domain.ports import GameRepository, PlayerHandles
+from app.modules.games.domain.ports import (
+    CourtPairing,
+    GameRepository,
+    PlayerHandles,
+)
 
 
 def get_game_repository(
@@ -88,3 +96,56 @@ def get_accept_result(
 
 
 AcceptResultDep = Annotated[AcceptResult, Depends(get_accept_result)]
+
+
+def get_court_pairing(
+    request: Request,
+    db: DbSession,
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    event_store: DomainEventStoreDep,
+    events: EventPublisherDep,
+    settings: SettingsDep,
+    store: StoreOrNothingDep,
+) -> CourtPairing:
+    """The matcher's and the rating context's answer about a game's court, per
+    request.
+
+    **The index is read off the running process rather than declared**, and it
+    is read with ``getattr`` deliberately: this context may not name the
+    matcher's types, and a process with no index is not a refusal here. A
+    search with none says ``503``; this screen answers regardless — the seats'
+    Levels and the stakes are the rating context's and are read whatever the
+    matcher's state, and the forecast is simply not drawn — because a game
+    screen is not gated on the matcher (``docs/adr/0161``).
+    """
+
+    return build_game_court_pairing(
+        session=db,
+        clock=clock,
+        unit_of_work=uow,
+        event_store=event_store,
+        events=events,
+        settings=settings,
+        store=store,
+        candidates=getattr(request.app.state, "candidate_source", None),
+    )
+
+
+def get_read_game_pairing(
+    clock: ClockDep,
+    games: GameRepositoryDep,
+    pairings: Annotated[CourtPairing, Depends(get_court_pairing)],
+) -> ReadGamePairing:
+    """The pairing read — the game of yours, the standing, and the port.
+
+    It holds the aggregate repository the acts hold, because *the game of
+    yours* is one question asked the same way by a read and by an act; and it
+    holds the pairing port, which is the expensive dependency this route
+    exists to pay for and which no other route in this context takes.
+    """
+
+    return ReadGamePairing(games=games, pairings=pairings, clock=clock)
+
+
+ReadGamePairingDep = Annotated[ReadGamePairing, Depends(get_read_game_pairing)]

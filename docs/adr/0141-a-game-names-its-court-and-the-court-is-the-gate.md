@@ -1,6 +1,10 @@
 # ADR-0141 — A game names the people on its court, and the court is the gate
 
-- **Status:** Accepted
+- **Status:** Accepted — **amended in one sentence by
+  [ADR-0161](0161-the-game-screen-draws-its-courts-pairing.md)**: the seat on `GET /games`
+  still carries the handle and nothing else, and a seat's Level is read *beside* the game,
+  through a port, for the duration of `AWAITING_ENTRY`. *No `player_card` to hang them on
+  later* stays true.
 - **Date:** 2026-09-06
 
 ## Context

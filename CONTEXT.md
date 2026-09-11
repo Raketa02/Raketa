@@ -76,7 +76,10 @@ A rating is **never only a number**.
   re-derives it. It exists only for games that would be counted. **It is not a preview of the
   rule; it is the rule**, read forward — the same function that moves the Level if the game is
   played, so the card cannot promise a figure the result then contradicts. *Absent* rather than
-  zero when either party holds no rating in that sport.
+  zero when either party holds no rating in that sport. **On a game it is read for the reader,
+  side against side** — every seat is known once a line-up is frozen, so the pair is the one
+  the result will deliver, and a four's figure is not the card's head-to-head one
+  ([ADR-0161](docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)).
 - **Result update** — what a **confirmed counted result** does to the two or four Levels that
   played it. A result is **evidence about the gap between two people**, fused by inverse
   variance like every other kind, so *how surprising it was* moves the Level and the certainty
@@ -867,7 +870,10 @@ appears here.
   property **of** the forecast and never a flag beside it, so the number cannot be rendered
   without its caveat. Filling the last seat makes the provisional figure and the arranged figure
   the same number, asserted rather than hoped
-  ([ADR-0108](docs/adr/0108-a-forecast-is-a-route-not-a-search.md)).
+  ([ADR-0108](docs/adr/0108-a-forecast-is-a-route-not-a-search.md)). **A game's forecast is the
+  arranged one, read beside the game for the reader** while the game has not happened, and it
+  is the challenge card's own figure for the same court — one apparatus, never a second
+  ([ADR-0161](docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)).
 - **Concern** — the engine's own statement that one term of a match is genuinely weak, keyed to
   that term. *What counts as weak* is a judgement about weights and curves and is made where they
   live; how many to show is the client's. A card shows one, the breakdown shows all of them.

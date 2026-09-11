@@ -47,11 +47,12 @@ refused in as many words.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import final
+from typing import Mapping, final
 from uuid import UUID
 
-from app.engines.matchfit.grouping import Arrangement, Forecast, Seated
+from app.engines.matchfit.grouping import Arranged, Arrangement, Forecast, Seated, Split
 from app.engines.matchfit.ruleset import Ruleset
+from app.engines.matchfit.scorable import Searcher
 from app.engines.matchfit.scoring import MatchFit
 from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.v1 import arranged
@@ -61,7 +62,12 @@ from app.modules.matchmaking.application.search_workbench import (
     SearchWorkbench,
 )
 from app.modules.matchmaking.domain.deck import mode_for_intent
-from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
+from app.modules.matchmaking.domain.errors import (
+    MatchmakingUnavailable,
+    PlayerProfileNotCommitted,
+    PlayIntentNotDeclared,
+    SportNotRated,
+)
 from app.modules.matchmaking.domain.fence import (
     area_of,
     combine_group_sigma,
@@ -80,6 +86,18 @@ from app.modules.matchmaking.domain.shortlist import (
     Generated,
     Generation,
     score_all,
+)
+
+
+#: The three conflicts that mean *there is nothing to compute about this reader*
+#: (§6). Being asked to play a sport you never declared for is how this feature
+#: works rather than a corner of it, so they are named here — on the use case
+#: that raises them — and every adapter over it keeps them apart from an outage
+#: rather than catching them with everything else.
+NOTHING_TO_COMPUTE = (
+    PlayerProfileNotCommitted,
+    SportNotRated,
+    PlayIntentNotDeclared,
 )
 
 
@@ -123,13 +141,24 @@ class PairedSeat:
     """
 
     answered: AnsweredCandidate
-    #: The whole court's forecast, carried on every seat. ``None`` where no game
-    #: can be arranged out of what is left of it.
-    forecast: Forecast | None
+    #: The whole court as arranged — its forecast and the split the forecast was
+    #: read from — carried on every seat. ``None`` where no game can be arranged
+    #: out of what is left of it. The split rides with the forecast because the
+    #: two are one computation (``the-two-contracts.md`` §5), and a consumer
+    #: that wants only the percentage reads ``forecast`` below.
+    arranged: Arranged | None
 
     @property
     def player_id(self) -> UUID:
         return UUID(self.answered.scored.player_id)
+
+    @property
+    def forecast(self) -> Forecast | None:
+        return None if self.arranged is None else self.arranged.forecast
+
+    @property
+    def split(self) -> Split | None:
+        return None if self.arranged is None else self.arranged.split
 
 
 @final
@@ -214,20 +243,20 @@ class PairWithACourt:
                 f"the matcher refused to price the court: {broken}"
             ) from broken
         answered = await self._work.attach(scored, context)
-        forecast = self._forecast(answered, command, context)
+        arranged = self._arranged(answered, command, context)
         return tuple(
             sorted(
-                (PairedSeat(answered=row, forecast=forecast) for row in answered),
+                (PairedSeat(answered=row, arranged=arranged) for row in answered),
                 key=lambda seat: seat.player_id,
             )
         )
 
-    def _forecast(
+    def _arranged(
         self,
         answered: tuple[AnsweredCandidate, ...],
         command: PairWithACourtCommand,
         context: SearchContext,
-    ) -> Forecast | None:
+    ) -> Arranged | None:
         """What the court as it stands would leave on court, in the reader's
         direction — **one figure, carried on every card.**
 
@@ -245,40 +274,63 @@ class PairWithACourt:
         ``_searcher_as_candidate`` already refuses to recompute a pair's combined
         uncertainty for the same reason: two chances to disagree about one
         number.
-
-        ``None`` where **no game can be arranged out of what is left**. A side
-        with nobody on it is not a side, so a court whose far side has all
-        declined leaves the reader and their partner with nothing to be forecast
-        against — and a number invented for that is worse than an absence with a
-        reason. A seat still open on the far side is a different case and is
-        exactly what ``provisional`` is for: it reads as if the missing player
-        matched the one already there.
         """
 
-        seated = {
-            UUID(row.scored.player_id): Seated(
-                candidate=row.scored.fenced, fit=0.0, locked=True
-            )
-            for row in answered
-        }
-        partner = next(
-            (seated[one] for one in sorted(command.partners) if one in seated), None
-        )
-        opponents = tuple(
-            seated[player_id]
-            for player_id in sorted(seated)
-            if player_id not in command.partners
-        )
-        if not opponents:
-            return None
-        per_side = seats_per_side(command.sport)
-        return arranged(
+        return arrange_the_court(
             searcher_of(context),
-            Arrangement(partner=partner, opponents=opponents[:per_side]),
-            self._ruleset,
-            combine_group_sigma,
-            seats_per_side=per_side,
-        ).forecast
+            {
+                UUID(row.scored.player_id): Seated(
+                    candidate=row.scored.fenced, fit=0.0, locked=True
+                )
+                for row in answered
+            },
+            partners=command.partners,
+            sport=command.sport,
+            ruleset=self._ruleset,
+        )
+
+
+def arrange_the_court(
+    searcher: Searcher,
+    seated: Mapping[UUID, Seated],
+    *,
+    partners: frozenset[UUID],
+    sport: Sport,
+    ruleset: Ruleset,
+) -> Arranged | None:
+    """The court as it stands, arranged around the reader and priced. **Pure.**
+
+    A module function rather than a method because two callers arrange a court
+    this way — the challenge card through the use case above, and the
+    determinism probe beside the game's pairing read — and the walk it makes is
+    the one place a court could be arranged differently on two processes: the
+    partner is the first of ``partners`` **sorted**, and the opponents are the
+    rest of the court **sorted**, because a set is never the source of an order
+    (``docs/adr/0105``).
+
+    ``None`` where **no game can be arranged out of what is left**. A side with
+    nobody on it is not a side, so a court whose far side has all declined
+    leaves the reader and their partner with nothing to be forecast against —
+    and a number invented for that is worse than an absence with a reason. A
+    seat still open on the far side is a different case and is exactly what
+    ``provisional`` is for: it reads as if the missing player matched the one
+    already there.
+    """
+
+    partner = next((seated[one] for one in sorted(partners) if one in seated), None)
+    opponents = tuple(
+        seated[player_id] for player_id in sorted(seated) if player_id not in partners
+    )
+    if not opponents:
+        return None
+    per_side = seats_per_side(sport)
+    return arranged(
+        searcher,
+        Arrangement(partner=partner, opponents=opponents[:per_side]),
+        ruleset,
+        combine_group_sigma,
+        seats_per_side=per_side,
+    )
 
 
 def _the_court(context: SearchContext, court_ids: tuple[UUID, ...]) -> Generation:
@@ -320,7 +372,9 @@ def _the_court(context: SearchContext, court_ids: tuple[UUID, ...]) -> Generatio
 
 
 __all__ = [
+    "NOTHING_TO_COMPUTE",
     "PairWithACourt",
     "PairWithACourtCommand",
     "PairedSeat",
+    "arrange_the_court",
 ]

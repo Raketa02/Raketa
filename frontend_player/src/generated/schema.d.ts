@@ -598,6 +598,8 @@ export interface paths {
          *     **Somebody who let your invitation run out is out of that court's own pool, and out of nothing else.** Nobody is asked twice on one challenge, so they are not a candidate for this fill for as long as that court stands. Every **other** search of yours reaches them immediately, in any sport: their seat reopened and the open-challenge rule released them with it, because that rule holds the people still arranging a game and they are not one of them.
          *
          *     **A seated card shows the same number the shortlist showed.** Nothing is re-scored when somebody sits down.
+         *
+         *     **`candidates` is the pool the four were drawn from**, in Fit order, with the seated among them — look a seat's `player_id` up there. It is the list a pool opened on this answer draws, and the list `POST /forecasts` and the send resolve a pick against, so a court reached from a challenge has people to offer for its open seats without a shortlist of its own.
          */
         post: operations["run_lineup_api_v1_lineups_post"];
         delete?: never;
@@ -1120,6 +1122,32 @@ export interface paths {
          *     **`read_at` is the instant every standing and deadline here was folded against.** Render your countdowns from it, so they cannot disagree with the standing beside them.
          */
         get: operations["read_games_api_v1_games_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/pairing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The game's pairing
+         * @description **The game screen's forecast, split, stakes and Levels, computed when you ask.** Nothing here is stored on the game, and nothing on `GET /games` changes: a seat there still carries a handle and nothing else.
+         *
+         *     **Read in your direction.** `split.gap` is your side's strength minus theirs, and `at_stake` is what a counted result would do to *your* Level — the rating engine's own rule read forward, side against side, so it is the pair the result will deliver.
+         *
+         *     **Three blocks, each omitted on its own ground.** `forecast` and `split` are omitted together when the pairing cannot be computed — somebody on the court holds no rating in the sport, or a seat could not be priced — and there is deliberately no reason beside the absence. `at_stake` is omitted on a friendly, where a counted result is meaningless rather than unavailable, and where the rule has nothing to move or nothing to price against — you hold no rating in the sport, or nobody across the net does. `seats` names the Level of everybody the platform holds one for.
+         *
+         *     **Only while the game is awaiting an entry.** After *we played* — or after the entry window closed on silence — the route refuses, because a pairing is a claim about a game that has not happened.
+         */
+        get: operations["read_game_pairing_api_v1_games__game_id__pairing_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3226,6 +3254,152 @@ export interface components {
          */
         GameOutcome: "WIN" | "LOSS";
         /**
+         * GamePairingAtStakeSchema
+         * @description What a **counted** game on this court would do to your Level.
+         *
+         *     The rating engine's own update rule read forward, **side against side** —
+         *     the pair the result will deliver if the game is played, and the same pair
+         *     for everybody on your side.
+         */
+        GamePairingAtStakeSchema: {
+            /** Win Delta */
+            win_delta: number;
+            /** Loss Delta */
+            loss_delta: number;
+        };
+        /**
+         * GamePairingForecastSchema
+         * @description How even this court's game is forecast to be, **read in your direction**.
+         *
+         *     ``provisional`` travels inside the forecast rather than beside it, on the
+         *     engine's own rule: the failure guarded against is a screen showing the
+         *     number without its caveat. **It is never `true` on a game today** — a
+         *     line-up is frozen at the plan, so no side is short — and the field is kept
+         *     because the shape is the court's. When a seat can be open, the answer is
+         *     *omitted*, never provisional.
+         */
+        GamePairingForecastSchema: {
+            /** Pct */
+            pct: number;
+            /**
+             * Sigma Group
+             * @description The confidence is part of the claim, so it crosses with it.
+             */
+            sigma_group: number;
+            /** Provisional */
+            provisional: boolean;
+            /**
+             * Assumption
+             * @description What the provisional figure assumed, as a code the client renders in its own words. Null when nothing was assumed — which, on a game, is always.
+             */
+            assumption: string | null;
+        };
+        /**
+         * GamePairingRangeSchema
+         * @description The likely range a seat's Level sits in — μ ± σ as RacketSkill published it.
+         *
+         *     Named for its surface rather than reusing the card's ``LikelyRangeSchema``:
+         *     a second class of that name would not shadow the card's in the contract, it
+         *     would rename it (``docs/adr/0159``'s rule, one context over).
+         */
+        GamePairingRangeSchema: {
+            /** Low */
+            low: number;
+            /** High */
+            high: number;
+        };
+        /**
+         * GamePairingResponse
+         * @description What this platform makes of your court, computed when you asked.
+         *
+         *     **Read beside the game and stored nowhere.** Everything here is as-of-now
+         *     and means what a card means *because this game has not happened*; the route
+         *     refuses once it has. Nothing on `GET /games` changes: a seat there still
+         *     carries a handle and nothing else.
+         *
+         *     **Three blocks, and each is omitted on its own ground.** `forecast` and
+         *     `split` go together — one computation — and are omitted when the pairing
+         *     cannot be computed: somebody on the court holds no rating in the sport, or
+         *     a seat could not be priced. There is no reason beside the absence; draw
+         *     nothing and say nothing. `at_stake` is omitted on a friendly, where a
+         *     counted result is *meaningless rather than unavailable*, and where the rule
+         *     has nothing to move or nothing to price against — you hold no rating in
+         *     the sport, or nobody across the net does. `seats` names the Level of
+         *     everybody the platform holds one for, and a court with an unrated member
+         *     still names the rated ones.
+         */
+        GamePairingResponse: {
+            /**
+             * Read At
+             * Format: date-time
+             * @description The instant the game's standing was folded at and the pairing computed against.
+             */
+            read_at: string;
+            /** @description How even the game is forecast to be, in your direction. **Omitted when the pairing cannot be computed**, and always together with `split`. */
+            forecast?: components["schemas"]["GamePairingForecastSchema"];
+            /** @description The evidence behind `pct`: between what and what, on the scale you already read Levels on. **Omitted together with `forecast`.** */
+            split?: components["schemas"]["GamePairingSplitSchema"];
+            /** @description What a counted result would do to your Level. **Omitted on a friendly** — meaningless rather than unavailable — and omitted where you hold no rating in this sport, or nobody on the other side does. A side with one unrated seat is priced over the people on it who are rated, because that is what the result will do. Never a pair of zeros. */
+            at_stake?: components["schemas"]["GamePairingAtStakeSchema"];
+            /**
+             * Seats
+             * @description One row per seat whose person holds a rating in this sport, in the court's own order. Somebody unrated is simply not here.
+             */
+            seats: components["schemas"]["GamePairingSeatSchema"][];
+        };
+        /**
+         * GamePairingSeatSchema
+         * @description One seat on the court and the Level of the person in it.
+         *
+         *     **This is not a card**, and it is not the seat on `GET /games` either — that
+         *     one carries a handle and nothing else (``docs/adr/0141``), and it is
+         *     untouched. What is here is the four figures a record's skill panel and a
+         *     player card already publish, read beside the game for as long as the game
+         *     has not happened.
+         */
+        GamePairingSeatSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Level
+             * @description Their Level, as RacketSkill published it.
+             */
+            level: number;
+            /**
+             * Band
+             * @description The Level band's published name, as a key — RacketSkill's own vocabulary, exactly as the player card and the record print it. The band's numeric edges are **not** here: they are not a second range to compare `range` against.
+             */
+            band: string;
+            /** @description The likely range their Level sits in, as the play card ships it. **The client computes nothing** — not this from `confidence`, and not a band from `level`. */
+            range: components["schemas"]["GamePairingRangeSchema"];
+            /**
+             * Confidence
+             * @description How sure the platform is, as a whole percentage — `rating`'s own figure and never re-derived here.
+             */
+            confidence: number;
+        };
+        /**
+         * GamePairingSplitSchema
+         * @description The two side strengths the forecast was read from, **in your direction**.
+         *
+         *     `your_side` is yours wherever you sit, and `gap` is `your_side − their_side`
+         *     — **signed and served**, so two readers on opposite sides see the sign flip
+         *     and neither subtracts two rounded figures the engine subtracted unrounded.
+         *     A side's strength is not the mean of the people on it, which is why these
+         *     are numbers only the engine has.
+         */
+        GamePairingSplitSchema: {
+            /** Your Side */
+            your_side: number;
+            /** Their Side */
+            their_side: number;
+            /** Gap */
+            gap: number;
+        };
+        /**
          * GameResult
          * @description How one counted game went for one of the people who played it.
          *
@@ -3508,11 +3682,14 @@ export interface components {
         };
         /**
          * LineupResponse
-         * @description The shortlist's envelope, its rows, and the court they were seated on.
+         * @description The shortlist's envelope, the pool, and the court seated out of it.
          *
          *     One envelope and one row shape across every surface, so the read-back has one
          *     renderer to reproduce: what a line-up adds is the seating, not a second way
-         *     of describing a person.
+         *     of describing a person. `candidates` is the **pool** ⚡ seated from — in Fit
+         *     order, up to the ruleset's own candidate cap, the seated among them — and
+         *     not the seated alone, so *Pick players myself* on this answer has the rest
+         *     of the ranking to offer ([#407](https://github.com/Raketa02/Raketa/issues/407)).
          */
         LineupResponse: {
             search: components["schemas"]["SearchEnvelope"];
@@ -8474,6 +8651,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GameListResponse"];
+                };
+            };
+        };
+    };
+    read_game_pairing_api_v1_games__game_id__pairing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What this platform makes of your court, computed for you at `read_at`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GamePairingResponse"];
+                };
+            };
+            /** @description `game_not_found` — no game of **yours** has that id. One code for two cases — it does not exist, or you were not on its court — because separating them would answer *is this id real* about four strangers' evening. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `pairing_is_history` — the game has happened, or its entry window closed on silence. The pairing means what a card means *because this game has not happened*; afterwards the values would be a claim about people made from a record that has moved on. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

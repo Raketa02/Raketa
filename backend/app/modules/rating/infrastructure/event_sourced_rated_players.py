@@ -73,16 +73,22 @@ class EventSourcedRatedPlayers:
             rating = await self._replayed(player_id, sport)
             if rating is None:
                 continue
-            held[sport] = RatedSport(
-                sport=sport,
-                mu=rating.mu,
-                confidence=rating.confidence,
-                range_low=rating.range_low,
-                range_high=rating.range_high,
-                band_name=rating.band_name,
-                counted_results=rating.counted_results,
-            )
+            held[sport] = _published(rating)
         return held
+
+    async def published_for(
+        self, player_ids: Collection[UUID], *, sport: Sport
+    ) -> Mapping[UUID, RatedSport]:
+        """A court's published ratings in one sport — the batch walk, sorted, with
+        the per-player read's payload. One translation for both reads, so a
+        seat and a record sheet cannot print two versions of one stream."""
+
+        found: dict[UUID, RatedSport] = {}
+        for player_id in sorted(set(player_ids)):
+            rating = await self._replayed(player_id, sport)
+            if rating is not None:
+                found[player_id] = _published(rating)
+        return found
 
     async def _replayed(self, player_id: UUID, sport: Sport) -> SkillRating | None:
         """One pair's rating, replayed, or ``None`` where the stream does not exist.
@@ -99,6 +105,26 @@ class EventSourcedRatedPlayers:
         if not stored:
             return None
         return SkillRating.from_history(record.event for record in stored)
+
+
+def _published(rating: SkillRating) -> RatedSport:
+    """The published form of one rating, and the only place it is spelled.
+
+    Both outward reads that answer in figures a screen prints go through here,
+    so the record sheet and a game's seat cannot come to two readings of one
+    stream — and ``counted_results`` is the aggregate's own count, which is what
+    keeps *what this certainty rests on* moving in step with the Level beside it.
+    """
+
+    return RatedSport(
+        sport=rating.sport,
+        mu=rating.mu,
+        confidence=rating.confidence,
+        range_low=rating.range_low,
+        range_high=rating.range_high,
+        band_name=rating.band_name,
+        counted_results=rating.counted_results,
+    )
 
 
 __all__ = ["EventSourcedRatedPlayers"]

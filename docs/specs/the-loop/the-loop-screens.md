@@ -1267,23 +1267,33 @@ record read out, and they are listed here because the mock will outlive this map
 on #285's argument — *"a hold is a gesture with no affordance, no announcement, and no equivalent in
 the accessibility API at all, so it was never reachable by the people who most needed the route."*
 
-### 5.5 What this screen refuses, and the reversal that is filed rather than taken
+### 5.5 What this screen refused, and the reversal that was taken
 
 **ADR-0143 §8 refused this screen's two richest blocks by name**, and a game exists only after `ON`,
-so that clause is about exactly this screen:
+so that clause was read as being about exactly this screen:
 
 > **`ON` draws neither. The game's standing owns it the moment a game exists, and that game's seats
 > carry handles under ADR-0141; a card here would be a second, worse copy of the game screen.**
 
-The **Balance forecast** and the `Tennis 3,10 · band 2,88–3,32 · 58%` rows are that card. **Upheld,
-not extended**, on an argument of its own: **a forecast exists to help you decide whether to play
-somebody, and on this screen you have already decided.** It is also expensive — `GameSchema` carries
-no pairing, so it would need a `games` → `matchmaking` port that does not exist plus ADR-0143's
-whole recompute-fail-closed apparatus on a second surface.
+The **Balance forecast** and the `Tennis 3,10 · band 2,88–3,32 · 58%` rows are that card. This
+file upheld the refusal, on an argument of its own — *a forecast exists to help you decide whether to
+play somebody, and on this screen you have already decided* — and filed the reversal as
+[#346](https://github.com/Raketa02/Raketa/issues/346), which closed *wontfix*.
 
-**Reversing it is a fresh decision extending ADR-0143 a second time**, filed as
-[#346](https://github.com/Raketa02/Raketa/issues/346). The loop closes without it, and what survives
-is `worthLine`'s one built sentence.
+**Reversed by [ADR-0161](../../adr/0161-the-game-screen-draws-its-courts-pairing.md)**, on the
+argument #346 itself named as the one that would win: **a Planning game has not happened, which is
+exactly why the challenge screen is allowed a forecast.** ADR-0143 §2's test is stated on the
+*values* — they are admissible because they *mean exactly what a card means* — and *you have already
+decided* governs the card's lifetime on the **arrangement**, not a different screen about a different
+record. So `ON` still draws no card on the *challenge*, and the game it became draws a pairing of its
+own: `GET /games/{game_id}/pairing` — the forecast, the split, what is at stake and each seat's
+Level, computed for the reader, only for somebody on the court, and only while the game is
+`AWAITING_ENTRY`. **Nothing goes on `GET /games`**: the seat there still carries a handle and nothing
+else, and the pairing is read *beside* the game through a port `games` publishes and the matcher
+signs. What §5.5 priced is paid rather than argued away — the port exists, and ADR-0143's apparatus
+is reused rather than built a second time, which is why the challenge card and the game screen come
+to one number for one court. The forecast block is
+[#415](https://github.com/Raketa02/Raketa/issues/415)'s; `worthLine`'s sentence survives beside it.
 
 ---
 
@@ -1344,7 +1354,8 @@ Standing obligations, none of which expires on being satisfied once. They are th
   **position** rather than a boolean.
 - **Typing indicators and presence.** Out of scope: the only things here with no event and no
   record, needing a second non-durable channel with different rules.
-- **A pairing forecast on this screen** — §5.5, upheld, and its reversal is
-  [#346](https://github.com/Raketa02/Raketa/issues/346).
+- **A pairing forecast on this screen** — decided since, the other way: §5.5 and
+  [ADR-0161](../../adr/0161-the-game-screen-draws-its-courts-pairing.md). The read is the
+  backend's; the block is [#415](https://github.com/Raketa02/Raketa/issues/415)'s.
 - **Push, and any out-of-app reach.** Out of scope. The loop closes without it, because every step
   after the first acceptance is between people who opted in by answering.

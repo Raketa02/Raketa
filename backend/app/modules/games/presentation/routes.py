@@ -1,8 +1,14 @@
-"""The three game routes: read yours, state a score, agree with one.
+"""The four game routes: read yours, read one's pairing, state a score, agree
+with one.
 
 **There is no route that creates a game.** A game exists because a challenge's
 line-up completed, and nothing a client sends can produce one — which is what
 makes *these people arranged this* a fact rather than a claim.
+
+**The pairing is read beside the game and never on it** (``docs/adr/0161``).
+``GameSchema`` carries no forecast and never will; what the game screen draws
+is computed when asked, for the reader, for as long as the game has not
+happened — and the seat on the list still carries a handle and nothing else.
 
 **There is no route called confirm.** A result is confirmed when a clock passes,
 and a clock is nobody's request. Silence confirming is not an endpoint that goes
@@ -24,6 +30,7 @@ from app.modules.games.application.commands import (
     AcceptResultCommand,
     StateResultCommand,
 )
+from app.modules.games.application.read_game_pairing import GamePairingRead
 from app.modules.games.application.read_games import StandingGame
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.results import Score, SetScore
@@ -35,12 +42,14 @@ from app.modules.games.domain.windows import (
 )
 from app.modules.games.presentation.dependencies import (
     AcceptResultDep,
+    ReadGamePairingDep,
     ReadGamesDep,
     StateResultDep,
 )
 from app.modules.games.presentation.schemas import (
     AcceptanceSchema,
     GameListResponse,
+    GamePairingResponse,
     GameSchema,
     ScoreSchema,
     SeatingSchema,
@@ -165,6 +174,70 @@ async def read_games(
         read_at=read_at,
         games=[_game(one, reader_id=user.id) for one in found],
     )
+
+
+@router.get(
+    "/{game_id}/pairing",
+    response_model=GamePairingResponse,
+    response_model_exclude_unset=True,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "description": (
+                "What this platform makes of your court, computed for you at "
+                "`read_at`."
+            )
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`game_not_found` — no game of **yours** has that id. One code "
+                "for two cases — it does not exist, or you were not on its "
+                "court — because separating them would answer *is this id "
+                "real* about four strangers' evening."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`pairing_is_history` — the game has happened, or its entry "
+                "window closed on silence. The pairing means what a card means "
+                "*because this game has not happened*; afterwards the values "
+                "would be a claim about people made from a record that has "
+                "moved on."
+            ),
+        },
+    },
+    summary="The game's pairing",
+    description=(
+        "**The game screen's forecast, split, stakes and Levels, computed when "
+        "you ask.** Nothing here is stored on the game, and nothing on "
+        "`GET /games` changes: a seat there still carries a handle and nothing "
+        "else.\n\n"
+        "**Read in your direction.** `split.gap` is your side's strength minus "
+        "theirs, and `at_stake` is what a counted result would do to *your* "
+        "Level — the rating engine's own rule read forward, side against side, "
+        "so it is the pair the result will deliver.\n\n"
+        "**Three blocks, each omitted on its own ground.** `forecast` and "
+        "`split` are omitted together when the pairing cannot be computed — "
+        "somebody on the court holds no rating in the sport, or a seat could "
+        "not be priced — and there is deliberately no reason beside the "
+        "absence. `at_stake` is omitted on a friendly, where a counted result "
+        "is meaningless rather than unavailable, and where the rule has nothing "
+        "to move or nothing to price against — you hold no rating in the sport, "
+        "or nobody across the net does. `seats` names the Level of everybody "
+        "the platform holds one for.\n\n"
+        "**Only while the game is awaiting an entry.** After *we played* — or "
+        "after the entry window closed on silence — the route refuses, because "
+        "a pairing is a claim about a game that has not happened."
+    ),
+)
+async def read_game_pairing(
+    game_id: UUID,
+    user: CurrentUserDep,
+    use_case: ReadGamePairingDep,
+) -> GamePairingResponse:
+    return _pairing(await use_case.execute(game_id, user.id))
 
 
 @router.post(
@@ -331,6 +404,54 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
         ],
         acceptance=_agreement(game) if arguing else None,
     )
+
+
+def _pairing(one: GamePairingRead) -> GamePairingResponse:
+    """The port's answer as the wire carries it, and **no arithmetic**.
+
+    Built through ``model_validate`` over a dict rather than by keyword, because
+    the route is declared ``response_model_exclude_unset=True`` and an absent
+    block has to stay absent: a key that is not here generates as ``field?: T``
+    and is not in the JSON at all. Every number crosses as the engine produced
+    it; ``gap`` is the split's own property and never a subtraction done here.
+
+    A pairing the port could not read at all — ``None`` — draws exactly what a
+    pairing with nothing in it draws: nothing, with the seats empty. The wire
+    does not tell the two apart, by decision (``docs/adr/0161`` §4).
+    """
+
+    pairing = one.pairing
+    fields: dict[str, Any] = {"read_at": one.read_at, "seats": []}
+    if pairing is None:
+        return GamePairingResponse.model_validate(fields)
+    fields["seats"] = [
+        {
+            "player_id": seat.player_id,
+            "level": seat.level,
+            "band": seat.band,
+            "range": {"low": seat.range_low, "high": seat.range_high},
+            "confidence": seat.confidence,
+        }
+        for seat in pairing.seats
+    ]
+    if pairing.forecast is not None and pairing.split is not None:
+        fields["forecast"] = {
+            "pct": pairing.forecast.pct,
+            "sigma_group": pairing.forecast.sigma_group,
+            "provisional": pairing.forecast.provisional,
+            "assumption": pairing.forecast.assumption,
+        }
+        fields["split"] = {
+            "your_side": pairing.split.your_side,
+            "their_side": pairing.split.their_side,
+            "gap": pairing.split.gap,
+        }
+    if pairing.at_stake is not None:
+        fields["at_stake"] = {
+            "win_delta": pairing.at_stake.win_delta,
+            "loss_delta": pairing.at_stake.loss_delta,
+        }
+    return GamePairingResponse.model_validate(fields)
 
 
 def _agreement(game: Game) -> AcceptanceSchema | None:

@@ -658,6 +658,38 @@ class AtStakeQuery(Protocol):
         """
         ...
 
+    async def counted_game_deltas_on_court(
+        self,
+        *,
+        player_id: UUID,
+        own_side: Collection[UUID],
+        opposing_side: Collection[UUID],
+        sport: Sport,
+    ) -> AtStake | None:
+        """What a **counted** game on this court would be worth to this player.
+
+        **The rule's own reading, for a line-up that is frozen**
+        (``docs/adr/0161``). The pair read above prices *you against this
+        person* because a card is drawn before the other seats are known; a game
+        knows all four, and the result will be priced **side against side** —
+        every player on a side moves by the same amount, on ``one_side``'s rule
+        that a partner is not somebody you are rated *against*. A game screen
+        printing the pair reading in a four would promise a figure the update
+        then contradicts, which is the one thing *at stake* exists not to do.
+
+        ``player_id`` is on ``own_side``, and the pair is theirs: the Level move
+        is the side's, so it is the same pair for everybody on it, and the
+        certainty it buys is the player's own and does not cross here.
+
+        ``None`` when this player holds no rating in this sport — there is
+        nothing to move — and when a whole side holds none, which is *nothing
+        to price against*. An unrated seat beside a rated one is **not** an
+        absence: the update folds a side over the people on it who hold a
+        rating, and so does this, because a figure that omitted the case the
+        rule prices would be a preview and not the rule.
+        """
+        ...
+
 
 # ---------------------------------------------------------------------------
 # AccountStatusQuery — ``users``

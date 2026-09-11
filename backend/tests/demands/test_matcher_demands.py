@@ -40,9 +40,15 @@ from app.engines.assessment import AssessmentResult, BandView
 from app.engines.matchfit.core import ReliabilityStrand, SearchMode
 from app.engines.racketskill.core import (
     STATUS_INITIAL_ESTIMATE,
+    SkillEstimate,
     band_for,
     confidence_percent,
     likely_range,
+)
+from app.engines.racketskill.update_v1 import (
+    information_share,
+    one_side,
+    rating_after,
 )
 from app.kernel import Instant, InvariantViolated, Sport, instant
 from app.modules.challenges.application.send_challenge import SendChallenge
@@ -1223,6 +1229,152 @@ async def test_at_stake_never_crosses_as_a_pair_that_changes_nothing(
     )
 
     assert at_stake is None or (at_stake.win_delta > 0 > at_stake.loss_delta)
+
+
+# **A court, priced the way the result will be priced** (``docs/adr/0161``). A
+# card prices *you against this person* because the other seats are unknown when
+# it is drawn; a game's line-up is frozen, so its figure is the rule's own — side
+# against side — and these demands hold the court read to that rather than to the
+# pair read beside it.
+
+
+@pytest.mark.parametrize("implementation", registered(AtStakeQuery))
+async def test_a_court_of_two_is_priced_exactly_as_the_pair_is(
+    implementation, session
+):
+    """In singles a side is one person, so the two readings are one number — and
+    a court read that disagreed with the card here would be two rules."""
+
+    port = implementation.build(session)
+    me = await _rated(session, mu=3.00, sigma=0.30, sport=Sport.TENNIS)
+    them = await _rated(session, mu=3.40, sigma=0.25, sport=Sport.TENNIS)
+
+    on_court = await port.counted_game_deltas_on_court(
+        player_id=me, own_side=[me], opposing_side=[them], sport=Sport.TENNIS
+    )
+    as_a_pair = await port.counted_game_deltas(
+        searcher_id=me, opponent_id=them, sport=Sport.TENNIS
+    )
+
+    assert on_court == as_a_pair
+    assert on_court is not None
+
+
+@pytest.mark.parametrize("implementation", registered(AtStakeQuery))
+async def test_a_four_is_priced_side_against_side_and_partners_share_the_pair(
+    implementation, session
+):
+    """**Both partners move by the same amount**, because a result is a statement
+    about one pair against another (``rule.py``'s ``one_side``) — and the pair
+    is **the one ``rating_after`` will move by**, which is the whole of what *at
+    stake* promises: not a preview of the rule but the rule, read forward.
+
+    It is held against the engine's own entry point rather than against the pair
+    read beside it, because in a four the two are different numbers: the step is
+    priced from the **side's** uncertainty and the side's Level, and a card
+    printing the head-to-head figure would be contradicted by the update.
+    """
+
+    port = implementation.build(session)
+    me = await _rated(session, mu=3.00, sigma=0.30, sport=Sport.PADEL)
+    partner = await _rated(session, mu=2.00, sigma=0.30, sport=Sport.PADEL)
+    left = await _rated(session, mu=3.00, sigma=0.30, sport=Sport.PADEL)
+    right = await _rated(session, mu=3.00, sigma=0.30, sport=Sport.PADEL)
+
+    mine = await port.counted_game_deltas_on_court(
+        player_id=me, own_side=[me, partner], opposing_side=[left, right],
+        sport=Sport.PADEL,
+    )
+    theirs = await port.counted_game_deltas_on_court(
+        player_id=partner, own_side=[partner, me], opposing_side=[right, left],
+        sport=Sport.PADEL,
+    )
+    head_to_head = await port.counted_game_deltas(
+        searcher_id=me, opponent_id=left, sport=Sport.PADEL
+    )
+    moved = rating_after(
+        player=SkillEstimate(mu=3.00, sigma=0.30),
+        opposition=one_side([SkillEstimate(3.00, 0.30), SkillEstimate(3.00, 0.30)]),
+        won=True,
+        results_so_far=0,
+        share=information_share(Sport.PADEL),
+        own_side=one_side([SkillEstimate(3.00, 0.30), SkillEstimate(2.00, 0.30)]),
+    )
+
+    assert mine is not None and head_to_head is not None
+    assert mine == theirs
+    assert (mine.win_delta, mine.loss_delta) == (moved.stakes.win, moved.stakes.loss)
+    assert mine != head_to_head
+
+
+@pytest.mark.parametrize("implementation", registered(AtStakeQuery))
+async def test_a_side_nobody_on_is_rated_prices_nothing_and_so_does_an_unrated_reader(
+    implementation, session
+):
+    """The two absences, and they are the update's own: *there is nothing to
+    price the other side against* when a whole side holds no Level, and nothing
+    to move when the reader holds none."""
+
+    port = implementation.build(session)
+    me = await _rated(session, mu=3.00, sigma=0.30, sport=Sport.PADEL)
+    partner = await _rated(session, mu=3.00, sigma=0.30, sport=Sport.PADEL)
+    stranger = new_uuid()
+
+    assert (
+        await port.counted_game_deltas_on_court(
+            player_id=me,
+            own_side=[me, partner],
+            opposing_side=[new_uuid(), new_uuid()],
+            sport=Sport.PADEL,
+        )
+        is None
+    )
+    assert (
+        await port.counted_game_deltas_on_court(
+            player_id=stranger,
+            own_side=[stranger, partner],
+            opposing_side=[me, new_uuid()],
+            sport=Sport.PADEL,
+        )
+        is None
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(AtStakeQuery))
+async def test_an_unrated_seat_beside_a_rated_one_is_priced_as_the_update_prices_it(
+    implementation, session
+):
+    """**Not an absence, because the rule prices it.** ``settle_results`` folds
+    a side over the people on it who hold a rating and moves the rated ones, so
+    a court with one unrated opponent is priced against the rated opponent
+    alone — and a figure that omitted this case would be a preview and not the
+    rule."""
+
+    port = implementation.build(session)
+    me = await _rated(session, mu=3.00, sigma=0.30, sport=Sport.PADEL)
+    partner = await _rated(session, mu=3.00, sigma=0.30, sport=Sport.PADEL)
+    left = await _rated(session, mu=3.40, sigma=0.25, sport=Sport.PADEL)
+
+    on_court = await port.counted_game_deltas_on_court(
+        player_id=me,
+        own_side=[me, partner],
+        opposing_side=[left, new_uuid()],
+        sport=Sport.PADEL,
+    )
+    moved = rating_after(
+        player=SkillEstimate(mu=3.00, sigma=0.30),
+        opposition=one_side([SkillEstimate(3.40, 0.25)]),
+        won=True,
+        results_so_far=0,
+        share=information_share(Sport.PADEL),
+        own_side=one_side([SkillEstimate(3.00, 0.30), SkillEstimate(3.00, 0.30)]),
+    )
+
+    assert on_court is not None
+    assert (on_court.win_delta, on_court.loss_delta) == (
+        moved.stakes.win,
+        moved.stakes.loss,
+    )
 
 
 # ---------------------------------------------------------------------------

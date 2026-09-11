@@ -16,6 +16,14 @@ agreement.
 repository's standing rule: a refusal states the class of problem and the client
 re-reads the sources it already owns. There is nothing to disclose in a game a
 player was on the court for, but the rule is kept so it stays a rule.
+
+**The pairing read has two refusals of its own** (``docs/adr/0161``), and the
+first is a ``404`` where the acts above say ``403``. An act on a game is made by
+somebody holding a game id the list already gave them, so *you were not on this
+court* is a caller's bug; a **read** keyed on an id is the shape a directory is
+probed through, and ``game_not_found`` is ``challenge_not_found``'s argument
+verbatim — one code for two cases, because separating them would answer *is
+this id real* about four strangers' evening.
 """
 
 from __future__ import annotations
@@ -24,6 +32,7 @@ from app.shared.domain.errors import (
     BadRequestError,
     ConflictError,
     ForbiddenError,
+    NotFoundError,
 )
 
 
@@ -185,3 +194,37 @@ class TheResultIsAlreadyAccepted(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("Your side has already accepted this result.")
+
+
+class NoGameOfYoursHasThatId(NotFoundError):
+    """A game id that names nothing this reader was on the court of.
+
+    **Two cases and one code, deliberately.** The game does not exist, or it
+    exists and this player did not play in it — and the two answer identically,
+    because an answer that separated them would tell a caller whether a
+    stranger's game id is real. ``YouWereNotOnThisCourt`` is the same fact
+    refused to an **act**, and stays a ``403`` there.
+    """
+
+    code = "game_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("No game of yours has that id.")
+
+
+class PairingIsHistory(ConflictError):
+    """A pairing asked for about a game that has happened, or never will.
+
+    The pairing means what a card means *because this game has not happened*
+    (``docs/adr/0143``): after it has, the values are a claim about people made
+    from a record that has moved on. So the read answers only while the game is
+    awaiting an entry — never after *we played*, and never after the entry
+    window closed on silence.
+    """
+
+    code = "pairing_is_history"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This game has happened, or never will, so there is no pairing to read."
+        )

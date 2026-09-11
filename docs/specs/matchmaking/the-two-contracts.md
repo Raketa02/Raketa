@@ -103,6 +103,17 @@ nothing), `POST /passes`, and `GET /interest`. A fourth was added by
 with no Origin key, which answers *not now* to a prompt and writes no value anywhere. The four
 above are the ones that create searches, and that is what §1 is about.
 
+**And one route answers the matcher's numbers from another context's router**
+([ADR-0161](../../adr/0161-the-game-screen-draws-its-courts-pairing.md)):
+
+| Route | Surface | Returns |
+| --- | --- | --- |
+| `GET /api/v1/games/{game_id}/pairing` | — | One game's court priced for the reader: the forecast, the split, what is at stake, each seat's Level |
+
+It is `games`' route over `games`' port, signed by an adapter in the matcher's infrastructure,
+and it records nothing — the shape is in §5a below. It is here because the numbers are this
+engine's and the rule that produces them is stated in this file.
+
 ### `POST /searches` is deliberately not idempotent
 
 Two taps are two searches. The index moved between them, and §19's denominator is *searches
@@ -459,6 +470,48 @@ per sort tap is latency spent on nothing.
 > growing `completing_challenge_id` was the other shape and was refused: a shortlist is twenty by
 > rank key, so an accepted seat is not guaranteed a row on it, and a pick that moved the court
 > onto such a list would drop a seat ADR-0150 §8 says is not a control.
+
+### 5a. The game's pairing — `GET /games/{game_id}/pairing`
+
+[ADR-0161](../../adr/0161-the-game-screen-draws-its-courts-pairing.md). The forecast above,
+read for a court whose line-up is **frozen**, by somebody on it, while the game has not
+happened. One shape:
+
+```
+GamePairingResponse
+  read_at:   instant
+  forecast?: Forecast                          — the type above, omitted together with split
+  split?:    { your_side, their_side, gap }    — in the reader's direction
+  at_stake?: { win_delta, loss_delta }         — the reader's own
+  seats:     [ { player_id, level, band, range: {low, high}, confidence } ]
+```
+
+**It is the challenge card's number.** The read goes through the same use case the challenge
+detail's card is built on, so the forecast the challenge screen drew while the court was being
+arranged equals the game's once the line-up completes — asserted over HTTP. §9.9's equality
+test has a third reading: challenge card, game pairing, one figure.
+
+**In the reader's direction.** `split.gap == your_side − their_side`, signed and served, so two
+readers on opposite sides see the sign flip and the same `pct`. `at_stake` is the reader's own
+pair, and on a game it is priced **side against side** — every seat is known, and that is the
+pair the result will deliver (`one_side` in the rating engine's rule). The candidate card's
+`at_stake` prices *you against this person* because the other seats are unknown when a card is
+drawn; the two are different questions and, in a four, different numbers.
+
+**Three absences.** `forecast` and `split` are omitted together when the pairing cannot be
+computed — somebody on the court holds no rating in the sport, or a seat could not be priced —
+and there is **no reason beside the absence**. `provisional` is never `true` on a game and
+the field is kept because the shape is the court's: when a seat can be open, the answer is
+*omitted*, never a half-read forecast. `at_stake` is omitted on a friendly (meaningless rather
+than unavailable) and where the rule has nothing to move or nothing to price against — the reader
+unrated, or a whole side unrated; a side with one unrated seat is priced over its rated members,
+exactly as the update prices it. Never a pair of zeros. `seats`
+names whoever holds a rating, in the court's own order, from `rating`'s published figures and
+never from the index — and a court with an unrated member still names the rated ones.
+
+**Who and when.** Only somebody on the court — `404 game_not_found`, one code for two cases —
+and only while the game is `AWAITING_ENTRY` — `409 pairing_is_history` after. Nothing changes
+on `GET /games`: the seat there carries a handle and nothing else (ADR-0141).
 
 ---
 
