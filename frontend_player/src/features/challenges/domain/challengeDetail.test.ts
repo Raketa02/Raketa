@@ -9,7 +9,13 @@
  */
 
 import type { ChallengeDetail, DetailSeat, SeatCard } from './challengeDetail';
-import { acceptedPlayers, challengeArm, redrawnFrom, seatsAwaiting } from './challengeDetail';
+import {
+  acceptedPlayers,
+  challengeArm,
+  readerIsInTheRoom,
+  redrawnFrom,
+  seatsAwaiting,
+} from './challengeDetail';
 import { STANDINGS, type Standing } from './standing';
 
 const ME = 'me';
@@ -256,6 +262,75 @@ describe('a half-built court', () => {
     const alone: readonly DetailSeat[] = [{ playerId: ME, answer: 'ACCEPTED' }, {}];
 
     expect(acceptedPlayers(detail('LINE_UP_INCOMPLETE', alone, ME), ME)).toEqual([]);
+  });
+});
+
+describe('the room, and whether the reader is in it', () => {
+  const PAIR: readonly DetailSeat[] = [
+    { playerId: BEA, answer: 'ACCEPTED' },
+    { playerId: ME, answer: undefined, answerBy: '2026-09-06T12:00:00Z' },
+  ];
+
+  /** Nobody is in a room they have not said yes to: an unanswered invitee is not a member. */
+  it('is not, while the reader has an answer to give', () => {
+    expect(readerIsInTheRoom(challengeArm(detail('AWAITING_ANSWERS', PAIR, BEA), ME))).toBe(false);
+  });
+
+  it('is, on an accepted seat waiting on the others, and for the organiser waiting', () => {
+    const waiting: readonly DetailSeat[] = [
+      { playerId: BEA, answer: 'ACCEPTED' },
+      { playerId: CYRYL, answer: undefined },
+      { playerId: ME, answer: 'ACCEPTED' },
+      {},
+    ];
+
+    expect(readerIsInTheRoom(challengeArm(detail('AWAITING_ANSWERS', waiting, BEA), ME))).toBe(
+      true,
+    );
+    expect(readerIsInTheRoom(challengeArm(detail('AWAITING_ANSWERS', waiting, BEA), BEA))).toBe(
+      true,
+    );
+  });
+
+  it('is, for a live member of a half-built court, and on a court that is on', () => {
+    const half: readonly DetailSeat[] = [
+      { playerId: BEA, answer: 'ACCEPTED' },
+      { playerId: ME, answer: 'ACCEPTED' },
+      {},
+      {},
+    ];
+    const on: readonly DetailSeat[] = [
+      { playerId: BEA, answer: 'ACCEPTED' },
+      { playerId: ME, answer: 'ACCEPTED' },
+    ];
+
+    expect(readerIsInTheRoom(challengeArm(detail('LINE_UP_INCOMPLETE', half, BEA), ME))).toBe(true);
+    expect(readerIsInTheRoom(challengeArm(detail('ON', on, BEA), ME))).toBe(true);
+  });
+
+  /**
+   * A reader who left is outside whatever room the others keep, and a list that still holds
+   * it is a beat behind the reply — this is the reading that keeps a door off that beat.
+   */
+  it('is not, for a reader who left, nor once the episode has ended', () => {
+    const left: readonly DetailSeat[] = [
+      { playerId: BEA, answer: 'ACCEPTED' },
+      { playerId: ME, answer: 'DECLINED' },
+      {},
+      {},
+    ];
+    const ended: readonly DetailSeat[] = [
+      { playerId: BEA, answer: 'ACCEPTED' },
+      { playerId: ME, answer: 'DECLINED' },
+    ];
+
+    expect(readerIsInTheRoom(challengeArm(detail('LINE_UP_INCOMPLETE', left, BEA), ME))).toBe(
+      false,
+    );
+    expect(readerIsInTheRoom(challengeArm(detail('AWAITING_ANSWERS', left, BEA), ME))).toBe(false);
+    expect(readerIsInTheRoom(challengeArm(detail('DECLINED', ended, BEA), ME))).toBe(false);
+    expect(readerIsInTheRoom(challengeArm(detail('WITHDRAWN', ended, BEA), ME))).toBe(false);
+    expect(readerIsInTheRoom(challengeArm(detail(undefined, ended, BEA), ME))).toBe(false);
   });
 });
 

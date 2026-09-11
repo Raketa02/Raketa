@@ -183,7 +183,10 @@ interface PlaySessionState {
    * **A seat taken from a different search starts a new line-up rather than mixing two.**
    * `POST /forecasts` would refuse the mixture — every player named must have appeared in the
    * one search — so a line-up spanning two origins is unsendable by construction, and holding
-   * one would only postpone the refusal to the moment it costs the most.
+   * one would only postpone the refusal to the moment it costs the most. The pool does not take
+   * that door when a court is standing: it moves the court onto the list with `seatAll`,
+   * carrying whoever that list can vouch for, because a pick that quietly emptied three seats
+   * is the destruction the origin guard exists to prevent.
    */
   readonly seat: (originSearchId: string, playerId: SeatedPlayerId) => void;
   /**
@@ -198,6 +201,12 @@ interface PlaySessionState {
    * An empty list clears the line-up rather than writing an empty one, which is `unseat`'s own
    * rule read from the other end: the engine seating nobody is a court with no line-up on it,
    * not a line-up with nobody in it.
+   *
+   * **The second caller is the pool, picking somebody off a list the line-up is not bound to.**
+   * That is the same rebinding wholesale — the court moves onto the list's own search, carrying
+   * the seats that search returned (`domain/lineup`'s `carriedOnto`) and the pick — and it is
+   * one write for `seat`'s own reason: written as `seat` per carried player, the store would pass
+   * through line-ups that never existed, the first of them a court with one person on it.
    */
   readonly seatAll: (originSearchId: string, playerIds: readonly SeatedPlayerId[]) => void;
   /** Take somebody off the court. The last one out leaves no empty line-up behind. */

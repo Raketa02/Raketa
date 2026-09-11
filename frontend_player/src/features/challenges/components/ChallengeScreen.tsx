@@ -31,6 +31,25 @@
  * with the app's own focus refetch, so a redraw can take **I'm in** away while the player is
  * looking at it. A mis-tap prevented beats a mis-tap refused.
  *
+ * ## `I'm in` goes to the room, and the door is drawn wherever the join answers
+ *
+ * Accepting is the one act in the app whose whole point is a room to talk in — the singles
+ * room with the person who challenged you, the doubles room the people already in are already
+ * talking in, its history included, because membership is derived and never cut at the moment
+ * you joined. So the reply is still the redraw, and then **the screen goes to the room**: the
+ * door is ADR-0149 §3's join over the player's rooms, and the room is opened off the outbox
+ * *after* the accept has answered, so it is **waited for** on a short bounded cadence
+ * (`useAwaitedChatDoor`, `domain/roomOpening`) rather than read once and missed. A push and not a
+ * replace — *back* returns here, to the standing in the first person, exactly as it does from
+ * the `filling` arm's own door. Where the room has not opened by the bound the screen simply
+ * stays, and it now draws **Open the chat on every arm the join answers on**, not only the
+ * half-built court's: *no door rather than a dead one* is the rule, and a room the list holds is
+ * a door on every arm whose reader is in it — an accepted seat waiting on the others, a court
+ * that is on, the organiser once the first yes has landed. Whether the reader is in it is the
+ * **fold's** answer (`readerIsInTheRoom`) and not the list's alone: a decline or a withdraw
+ * invalidates the list rather than patching it, so for a beat it can still hold a room the
+ * reader has just left, and the `answer` arm's reader has not said yes to any.
+ *
  * ## A half-built court is grown here and ended here, and they are different permissions
  *
  * **Any live member may complete the line-up; only the organiser may end it**
@@ -62,7 +81,7 @@
  * distance, the reasons, the concern and what is at stake.
  */
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -73,7 +92,11 @@ import {
   forecastHeading,
   useFillChallengeSeats,
 } from '@/features/play/types';
-import { CONVERSATION_ROUTE, OPEN_THE_CHAT, useChatDoor } from '@/features/conversations/types';
+import {
+  CONVERSATION_ROUTE,
+  OPEN_THE_CHAT,
+  useAwaitedChatDoor,
+} from '@/features/conversations/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { ShellScreen } from '@/features/shell/types';
 import { useCurrentUser } from '@/features/auth/types';
@@ -88,6 +111,7 @@ import { actRefusal, type ActRefusal } from '../domain/actRefusal';
 import {
   acceptedPlayers,
   challengeArm,
+  readerIsInTheRoom,
   seatsAwaiting,
   type ChallengeDetail,
 } from '../domain/challengeDetail';
@@ -181,6 +205,15 @@ function Arrangement({
   const online = useIsOnline();
 
   /**
+   * **Whether `I'm in` has been answered and the room it opens is being waited for.**
+   *
+   * Route-local like `pressed`, and for the same reason: it is a fact about a press. Set on the
+   * accept's reply and cleared by the push — or by the bound, inside the hook, after which the
+   * screen stays and draws the door whenever the list next holds the room.
+   */
+  const [goingToTheRoom, setGoingToTheRoom] = useState(false);
+
+  /**
    * **Where *Open the chat* goes**, or nothing — the client join ADR-0149 §3 settles, read here
    * because this is the surface that draws the door.
    *
@@ -189,8 +222,25 @@ function Arrangement({
    * keeps `LINE_UP_INCOMPLETE`'s arm honest — this standing always has a room, because it is
    * reached by somebody accepting, and the absence is a list that has not landed yet rather than
    * a state anybody has to explain.
+   *
+   * **Waited for after an accept**, because the room that acceptance opens is written off the
+   * outbox after the reply and the one re-read the reply triggers can land before it exists.
    */
-  const chat = useChatDoor(detail.challengeId);
+  const chat = useAwaitedChatDoor(detail.challengeId, goingToTheRoom);
+
+  /**
+   * The push itself — once, the moment the join answers, and only while a press asked for it.
+   *
+   * An effect rather than a line in `onSuccess`, because the door is not in the reply: it lands
+   * on a later read of another feature's list, and the render that holds it is the first place
+   * both facts are true at once.
+   */
+  const inTheRoom = readerIsInTheRoom(arm);
+  useEffect(() => {
+    if (!goingToTheRoom || chat === undefined || !inTheRoom) return;
+    setGoingToTheRoom(false);
+    router.push({ pathname: CONVERSATION_ROUTE, params: { conversationId: chat } });
+  }, [goingToTheRoom, chat, inTheRoom]);
 
   /**
    * Which of the two is in flight, so the pressed control is the one that goes busy.
@@ -262,7 +312,13 @@ function Arrangement({
     setPressed(act);
     answer.mutate(
       { challengeId: detail.challengeId, act },
-      { onSettled: () => setPressed(undefined), onError: actOn },
+      {
+        onSettled: () => setPressed(undefined),
+        // Only a yes has a room to go to: a no leaves the reader outside whatever room the
+        // others keep, and the redraw's sentence is the whole of what it draws.
+        onSuccess: () => setGoingToTheRoom(act === 'accept'),
+        onError: actOn,
+      },
     );
   }
 
@@ -335,6 +391,37 @@ function Arrangement({
    */
   const offline = online ? null : <Note variant="amber">{offlineMessage('does-not-resume')}</Note>;
 
+  /**
+   * ***Open the chat***, or nothing — the conversation's own door, drawn on every arm the join
+   * answers on. The words are that feature's, so the surfaces that draw one cannot say different
+   * things, and where it goes is a join over the player's rooms rather than a field on this
+   * challenge (ADR-0149 §3). **No door rather than a dead one**: a room the list does not hold
+   * draws nothing, which on a half-built court means only until the list has landed.
+   *
+   * **And only to a reader the room would hold** — `readerIsInTheRoom`, the fold's own answer.
+   * The list is invalidated rather than patched by the reply that takes a reader out of a room,
+   * so for a beat it still holds one they may no longer read; the join says a room exists, the
+   * arm says whether this reader is in it, and a door is drawn only where both do.
+   *
+   * `secondary` everywhere, because opening a room you are already in is never the primary act
+   * on a screen about a challenge — and on the arms with no other control it is still the only
+   * one, so a `primary` there would be the one accent spent on a door.
+   */
+  const door =
+    chat === undefined || !readerIsInTheRoom(arm) ? null : (
+      <Button
+        label={OPEN_THE_CHAT}
+        variant="secondary"
+        disabled={fill.isPending || withdraw.isPending}
+        onPress={() =>
+          router.push({
+            pathname: CONVERSATION_ROUTE,
+            params: { conversationId: chat },
+          })
+        }
+      />
+    );
+
   return (
     <>
       {/* The sheet is a **sibling** of the screen it covers, never a child: `behindOverlay`
@@ -371,19 +458,7 @@ function Arrangement({
                   onPress={fillTheSeats}
                 />
 
-                {chat === undefined ? null : (
-                  <Button
-                    label={OPEN_THE_CHAT}
-                    variant="secondary"
-                    disabled={fill.isPending || withdraw.isPending}
-                    onPress={() =>
-                      router.push({
-                        pathname: CONVERSATION_ROUTE,
-                        params: { conversationId: chat },
-                      })
-                    }
-                  />
-                )}
+                {door}
 
                 {/* A `View` around the button, because focus has to land on a **host element** this
                 component holds a ref to and `Button` is a component — `BottomSheet`'s own shape
@@ -434,7 +509,12 @@ function Arrangement({
                   />
                 </View>
               </View>
-            ) : undefined
+            ) : door === null ? undefined : (
+              /* The arms with no act of their own — an accepted seat waiting on the others, a
+                 court that is on, the organiser once the first yes has landed — and a room the
+                 list holds. The door is the whole of what they offer, and only while it exists. */
+              <View style={s.answers}>{door}</View>
+            )
           }
         >
           <Text style={s.standing}>{sentence}</Text>

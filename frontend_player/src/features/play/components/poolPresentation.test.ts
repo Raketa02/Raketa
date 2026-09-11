@@ -8,6 +8,8 @@
  */
 
 import {
+  POOL_LINEUP_COST,
+  leavingLine,
   poolLadderTitle,
   poolSeatedLine,
   rungCount,
@@ -147,5 +149,36 @@ describe('the header', () => {
     expect(poolSeatedLine({ filled: 4, seats: 4 })).toBe('4 of 4 seated');
     expect(poolSeatedLine({ filled: 1, seats: 2 })).toBe('1 of 2 seated');
     expect(poolSeatedLine({ filled: 2, seats: 2 })).toBe('2 of 2 seated');
+  });
+});
+
+describe('what a pick off another search’s list costs', () => {
+  /**
+   * The court is bound to one search and the list is another's — ⚡'s own record, or the strict
+   * search a rung widened — and the new origin can vouch only for the rows it returned. Whom
+   * that costs is **named**, before the tap, because a count tells the player nothing they can
+   * weigh and the court is one screen away.
+   */
+  it('names who leaves the court, one person or several', () => {
+    expect(leavingLine(['dorota_w'])).toBe(
+      'dorota_w isn’t on this list, so adding somebody from it takes dorota_w off the court.',
+    );
+    expect(leavingLine(['dorota_w', 'ewa.m'])).toBe(
+      'dorota_w and ewa.m aren’t on this list, so adding somebody from it takes them off the court.',
+    );
+  });
+
+  it('never prints a count in the place of the names', () => {
+    expect(leavingLine(['dorota_w', 'ewa.m', 'filip'])).not.toMatch(/\d/);
+  });
+
+  /**
+   * The widening sentence is the same rule said before the climb: somebody added off the strict
+   * list stays only if the wider one has them too. It used to promise the court *starts again*,
+   * which stopped being true the moment a pick carried the seats the new list could vouch for.
+   */
+  it('says the court stays only as far as the wider list can vouch for it', () => {
+    expect(POOL_LINEUP_COST).toMatch(/stays on the court only if the wider list has them too/);
+    expect(POOL_LINEUP_COST).not.toMatch(/starts again/);
   });
 });

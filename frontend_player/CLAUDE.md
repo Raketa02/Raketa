@@ -1235,6 +1235,26 @@ would force a second cause for _provisional_. Such a seat is a **fourth spoken k
 than a player with missing facts — a withheld row carries one field and no card, so there is no
 name and no level to read out — and it says the fact and never the cause.
 
+**The pool is opened on the list the court was searched under, and never on ⚡'s own record.**
+`POST /lineups` returns exactly the people it seated — a court is its answer, not a list — so a
+pool opened on the origin after ⚡ offered the one person just taken off a seat and nobody else,
+from both doors: the hole a cleared seat leaves and _Pick players myself_. The builder's
+`listSearchId` is the record it **arrived** on when that record has no `court`, which is the
+shortlist _Find a game_ minted and which the fill rebinds the line-up away from and leaves in
+the cache; on the challenge route the arrival is the fill's own answer, so there is no list to
+prefer and the pool still opens on the origin — which offers nobody new, because that journey
+mints no shortlist and only the backend can give it one
+([#407](https://github.com/Raketa02/Raketa/issues/407)). **A pick off a list the court is not bound to
+moves the court onto it** — `seatAll`, the way ⚡ rebinds, never `seat`'s line-up of one —
+carrying the seats that list returned (`domain/lineup`'s `carriedOnto`) and the pick. The new
+origin can vouch for nobody else: `POST /forecasts` and the send both cite one search, so a
+seated player the list never showed leaves the court with the tap, and the pool **says so by
+name before it**, in `replacingLine`'s own register. ⚡ seats from a wider pool than the
+shortlist shows, so that player exists; the same sentence covers the strict list's people a
+widened list did not return, and `POOL_LINEUP_COST` stopped promising the court _starts again_
+on a rung, because it no longer does. The pool re-reads the court's own record beside its list
+when the two differ, so a ⚡-built court is still marked where the gates have since said no.
+
 **⚡Play's fourth screen is the pool, and the relaxation ladder is on it and on no other.**
 **It is called _Pick players_ and its header draws nothing else**, which is the court's own
 walk one screen on: the name was dropped for a day on the argument that a list of people with
@@ -1415,6 +1435,25 @@ assumes they have not answered, which is #339's amendment owed one row up and is
 **`I'm in` replaces the design's _Accept — game on_**: accepting arranges nothing and draws
 _Planning_, so the phrase is false the moment it is tapped, and the label is the standing sentence
 in the first person.
+
+**`I'm in` goes to the room, and the door is drawn wherever the join answers.** Accepting is the
+one act whose whole point is a room to talk in — the singles room with the person who challenged
+you, the doubles room the people already in are already talking in, its history included, because
+membership is derived and never cut at the moment you joined. The reply is still the redraw, and
+then the screen pushes the room. The door is ADR-0149 §3's join over `GET /conversations`, and the
+room is written by the teller off the outbox **after** the accept has answered, so the one re-read
+the reply invalidates can land before it exists: `useAwaitedChatDoor` re-reads the list on a
+cadence a little under the outbox's own second and stops on the row or at a bound
+(`conversations/domain/roomOpening`), which is not Play's rule bending — a list of rooms, on the
+player's own press, stopping on the answer. Past the bound the screen simply stays, and it now
+draws _Open the chat_ on **every arm whose reader the room would hold** rather than on the
+half-built court's alone — an accepted seat waiting on the others, a court that is on, the
+organiser once the first yes has landed — because _no door rather than a dead one_ cuts both ways.
+Whether the reader is in the room is the fold's own answer, `readerIsInTheRoom`, asked **beside**
+the join and not instead of it: the join says a room exists, and a decline or a withdraw
+invalidates the list rather than patching it, so for a beat it still holds a room the reader has
+just left; the `answer` arm's reader has said yes to none. _Not this time_ goes nowhere, because a
+no leaves the reader outside whatever room the others keep.
 
 **Pending, never optimistic — and the reply is the redraw.** Both answer routes return
 `ChallengeSchema`, which _is_ the server's derived standing, so `redrawnFrom` folds it onto the

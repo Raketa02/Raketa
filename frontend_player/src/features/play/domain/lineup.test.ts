@@ -2,6 +2,7 @@ import { theme } from '@/shared/ui/theme';
 
 import {
   SEAT_PLACES,
+  carriedOnto,
   changingMode,
   changingSport,
   courtHalfOf,
@@ -199,6 +200,30 @@ describe('a seat whose player the live gates no longer admit', () => {
 
   it('has nothing to mark on a line-up nobody has started', () => {
     expect(withheldSeats(undefined, ['player-a'])).toEqual([]);
+  });
+});
+
+describe('a line-up moving onto another search’s list', () => {
+  /**
+   * `POST /forecasts` cites one search and refuses anybody it never showed, so a court moving
+   * onto a list can carry only the seats that list returned — and it keeps them in seat order,
+   * because where they sit is the origin's business and not the move's.
+   */
+  it('carries the seats the list returned, in seat order, and no others', () => {
+    expect(
+      carriedOnto(['player-a', 'player-b', 'player-c'], ['player-c', 'player-a', 'x']),
+    ).toEqual(['player-a', 'player-c']);
+  });
+
+  it('carries nobody off a list that returned none of them', () => {
+    expect(carriedOnto(['player-a', 'player-b'], ['x', 'y'])).toEqual([]);
+  });
+
+  it('carries everybody off a list that returned them all', () => {
+    expect(carriedOnto(['player-a', 'player-b'], ['player-b', 'player-a'])).toEqual([
+      'player-a',
+      'player-b',
+    ]);
   });
 });
 

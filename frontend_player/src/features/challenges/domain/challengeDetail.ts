@@ -362,6 +362,36 @@ export function challengeArm(detail: ChallengeDetail, playerId: string): Challen
  * wants: your own seat is the thing the court is composed around rather than something anybody
  * is completing, and it is `courtWithYou`'s to put back at the send.
  */
+/**
+ * **Whether the reader is somebody the room this challenge opened would hold** — read off the
+ * arm, so the door and the sentence are two readings of one fold.
+ *
+ * The room's membership is the challenge's accepted seats until the line-up completes and the
+ * game's frozen line-up after (ADR-0146 §7), and a room opens on the first acceptance. So the
+ * reader is in it on the two arms reached only by somebody being in — an accepted seat or the
+ * organiser waiting on answers, a live member of a half-built court — and on a court that is
+ * **on**; and not on the `answer` arm, where they have not said yes, nor on any other `stated`
+ * arm, every one of which is a reader who left or an episode that ended.
+ *
+ * It is asked beside the join and not instead of it. The join is what says a room *exists*
+ * (ADR-0149 §3), and a list can be a beat behind the reply that took the reader out of one —
+ * a decline or a withdraw invalidates the list rather than patching it — so for that beat the
+ * list still holds a room the reader may no longer read. This is the reading that closes it:
+ * a door is drawn only where both say so.
+ */
+export function readerIsInTheRoom(arm: ChallengeArm): boolean {
+  switch (arm.kind) {
+    case 'arranging':
+    case 'filling':
+      return true;
+    case 'stated':
+      return arm.facts.standing === 'ON';
+    case 'answer':
+    case 'unreadable':
+      return false;
+  }
+}
+
 export function acceptedPlayers(detail: ChallengeDetail, playerId: string): readonly string[] {
   return detail.seats.flatMap((seat) =>
     seat.playerId === undefined || seat.playerId === playerId || seat.answer !== 'ACCEPTED'

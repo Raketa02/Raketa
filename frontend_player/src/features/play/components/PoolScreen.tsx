@@ -126,6 +126,7 @@ import { Button, Chip, Note, behindOverlay, courtSeatCount, theme } from '@/shar
 
 import type { Candidate, RelaxedAsk, RungOffer } from '../domain/candidate';
 import { arrangementFor, seatOccupant, seatingToDraw, seatsFilled } from '../domain/forecast';
+import { carriedOnto } from '../domain/lineup';
 import { poolLadder } from '../domain/poolLadder';
 import { bestMatchId, orderPool, pickable, poolSortRow } from '../domain/poolOrder';
 import { alreadyAsked } from '../domain/raisedPrompt';
@@ -148,6 +149,7 @@ import {
   POOL_TITLE,
   READING_AGAIN_LABEL,
   READ_AGAIN_LABEL,
+  leavingLine,
   poolLadderTitle,
   replacingLine,
   rungCount,
@@ -183,6 +185,7 @@ export interface PoolScreenProps {
 export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
   const lineup = usePlaySession((state) => state.lineup);
   const seatPlayer = usePlaySession((state) => state.seat);
+  const seatAll = usePlaySession((state) => state.seatAll);
   const unseat = usePlaySession((state) => state.unseat);
   const addForThisSearch = usePlaySession((state) => state.addForThisSearch);
   const clearAddedForThisSearch = usePlaySession((state) => state.clearAddedForThisSearch);
@@ -218,6 +221,16 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
 
   const record = useSearchRecord(searchId);
   const reread = useReadSearchBack();
+  /**
+   * The court's own record re-read beside the list's, when the two are different searches.
+   *
+   * A mark on a seat the gates no longer admit is derived against **the origin's** live rows
+   * (`withheldSeats`), and the read-back that refreshes them is this screen's act — so a pool
+   * that re-read only its list would leave a ⚡-built court unmarked. Its own instance, because
+   * the failure this screen surfaces and offers to retry is the list's: the court's re-read is
+   * for the mark, and a mark that does not appear is the same state as no read-back at all.
+   */
+  const rereadCourt = useReadSearchBack();
   const climb = useTakeRung();
 
   const origin = record?.origin;
@@ -285,13 +298,47 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
   const bestMatch = bestMatchId(offered, sort);
 
   /**
+   * **Whether the court is bound to some other search than the one this list is.**
+   *
+   * It is, in two cases: the line-up is ⚡'s, whose record returns exactly the people it seated
+   * and is therefore never the list a player picks from (`BuilderScreen`'s `listSearchId`); or a
+   * rung was taken and the list moved on while the court stayed on the strict search. Either
+   * way a pick has to move the court onto this list — `POST /forecasts` cites one search — and
+   * the new origin can vouch only for the rows it returned.
+   */
+  const elsewhere = lineup !== undefined && lineup.originSearchId !== searchId;
+  /** The court's own record, for the names and faces of people this list may not hold. */
+  const courtRecord = useSearchRecord(elsewhere ? lineup?.originSearchId : undefined);
+
+  /**
    * The rows the header reads its names and faces off, and your own id for your own poster.
+   *
+   * The court's own record is read **after** this list's, so a seated player it holds is drawn
+   * from it: with the court bound elsewhere, this list may never have shown them at all.
    *
    * `self` is the account's, off `GET /users/me`: no route serves a searcher their own card, so
    * a seat that waited for an answer to name you would sit faceless until one landed.
    */
-  const rows = new Map((record?.candidates ?? []).map((row) => [row.playerId, row]));
+  const courtRows = [...(record?.candidates ?? []), ...(courtRecord?.candidates ?? [])];
+  const rows = new Map(courtRows.map((row) => [row.playerId, row]));
   const self = useCurrentUser().data?.id;
+
+  /**
+   * Who a pick keeps on the court, and who it takes off — **decided before the tap, and said.**
+   *
+   * `staying` is everybody the pick is not replacing. On a court bound to this list they all
+   * stay, trivially. On one bound elsewhere the list can vouch only for the rows it returned
+   * (`carriedOnto`), and the rest are named in a sentence above the rows rather than found
+   * missing from the court afterwards.
+   */
+  const staying = members.filter((seated) => seated !== replacing);
+  const carried = elsewhere
+    ? carriedOnto(
+        staying,
+        (record?.candidates ?? []).map((row) => row.playerId),
+      )
+    : staying;
+  const leaving = staying.filter((seated) => !carried.includes(seated));
 
   const ladder = poolLadder({
     rows: record?.candidates.length ?? 0,
@@ -331,6 +378,7 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
   const readAgain = useRef<() => void>(() => undefined);
   readAgain.current = () => {
     if (record !== undefined) reread.mutate(record);
+    if (courtRecord !== undefined) rereadCourt.mutate(courtRecord);
   };
 
   const readFor = useRef<string | undefined>(undefined);
@@ -391,8 +439,15 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
    * seat is never the person arriving in it, and there is no self-replacement to guard against.
    */
   function add(candidate: Candidate) {
-    if (replacing !== undefined) unseat(replacing);
-    seatPlayer(searchId, candidate.playerId);
+    if (elsewhere) {
+      // The court moves onto this list — one write, the way ⚡ rebinds — carrying the seats it
+      // can vouch for and the pick. `seat` would start a line-up of one instead, which is the
+      // origin guard's own silent destruction arriving from the pool.
+      seatAll(searchId, [...carried, candidate.playerId]);
+    } else {
+      if (replacing !== undefined) unseat(replacing);
+      seatPlayer(searchId, candidate.playerId);
+    }
     setPending(undefined);
   }
 
@@ -509,8 +564,18 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
                   one handle for another is a destruction found out about afterwards. */}
               {replacing === undefined ? null : (
                 <Text style={s.body}>
-                  {replacingLine(
-                    playerName(nameOf(record.candidates, replacing) ?? { kind: 'unknown' }),
+                  {replacingLine(playerName(nameOf(courtRows, replacing) ?? { kind: 'unknown' }))}
+                </Text>
+              )}
+
+              {/* And whom a pick off this list would take off the court, for the same reason:
+                  the court is bound to another search, and this one cannot vouch for them. */}
+              {leaving.length === 0 ? null : (
+                <Text style={s.body}>
+                  {leavingLine(
+                    leaving.map((seated) =>
+                      playerName(nameOf(courtRows, seated) ?? { kind: 'unknown' }),
+                    ),
                   )}
                 </Text>
               )}

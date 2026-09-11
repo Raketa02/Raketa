@@ -392,6 +392,42 @@ export function withheldSeats(
   return lineup.seats.filter((seated) => !live.has(seated));
 }
 
+/**
+ * Who stays on the court when the line-up **moves onto another search's list** — the people
+ * that list returned, in the order they were seated, and nobody else.
+ *
+ * ## Why a line-up ever moves
+ *
+ * ⚡ mints a search of its own and the line-up rebinds to it, because `POST /forecasts` refuses
+ * anybody the cited search never showed. But that record **returns exactly the people it
+ * seated** — a court is its answer, not a list — so a pool opened on it would offer the one
+ * person just taken off and nobody else. The list a player picks from is the ranked one the
+ * court was searched under, and a pick off it has to bind the line-up to *that* search, or the
+ * next forecast is refused.
+ *
+ * ## Why the difference, and not everybody
+ *
+ * The same bound, read from the other end: the new origin can vouch only for the rows it
+ * returned. A seat it never showed cannot travel — the forecast and the send would both refuse
+ * the four — so it leaves the court, and the pool **says so before the tap** rather than
+ * letting the court empty itself afterwards. That is `the-play-screens.md` §5.1's own sentence
+ * about re-running: the other seats are only *probably* in the new answer, and a line-up that
+ * moves is honestly a new line-up.
+ *
+ * Membership only. Where the arrangement is read from is the origin's business, and a seat that
+ * stays keeps its place in seat order.
+ *
+ * @param seats the line-up's seats, less anybody the pick is replacing.
+ * @param returnedIds the `player_id`s the list being picked from returned.
+ */
+export function carriedOnto(
+  seats: readonly SeatedPlayerId[],
+  returnedIds: readonly SeatedPlayerId[],
+): readonly SeatedPlayerId[] {
+  const returned = new Set(returnedIds);
+  return seats.filter((seated) => returned.has(seated));
+}
+
 // ---------------------------------------------------------------------------
 // The court: H-25's sides, the locked seats, and the swap truth table
 // ---------------------------------------------------------------------------

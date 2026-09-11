@@ -22,12 +22,17 @@ import { gameKeys } from '@/features/games/types';
 import { offlineMessage } from '@/shared/errors';
 import {
   CHALLENGES_PATH,
+  CONVERSATIONS_PATH,
   GATE_USER,
   launchSignedIn,
   stubChallenges,
+  stubConversation,
+  stubConversations,
+  stubEntries,
   stubGames,
   stubGate,
 } from '@/test-support/onboardingRouter';
+import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import {
   errorResponse,
   installTransport,
@@ -444,5 +449,182 @@ describe('the two refusals that are not a sentence', () => {
     await waitFor(() =>
       expect(queryClient.getQueryState(gameKeys.list())?.isInvalidated).toBe(true),
     );
+  });
+});
+
+describe('the room an acceptance opens', () => {
+  const ROOM = 'cccccccc-0000-4000-8000-000000000007';
+  const OLA = 'dddddddd-0000-4000-8000-000000000003';
+
+  /** The room this challenge opened, as `GET /conversations` lists it once the teller has written it. */
+  const listed = (
+    members: readonly Wire['ConversationMemberSchema'][],
+  ): Wire['ConversationRowSchema'] => ({
+    conversation_id: ROOM,
+    challenge_id: CHALLENGE_ID,
+    game_id: null,
+    sport: 'SQUASH',
+    members: [...members],
+    last_entry: null,
+  });
+
+  const opened = (members: readonly Wire['ConversationMemberSchema'][]) => {
+    stubConversation(transport, {
+      read_at: READ_AT,
+      conversation_id: ROOM,
+      challenge_id: CHALLENGE_ID,
+      game_id: null,
+      sport: 'SQUASH',
+      members: [...members],
+      entries: [],
+    });
+    stubEntries(transport, ROOM);
+  };
+
+  const EWA_AND_ME = [
+    { player_id: EWA, nickname: 'ewa.m' },
+    { player_id: ME, nickname: 'me_' },
+  ];
+
+  /**
+   * **`I'm in` goes to the room, and the room is waited for.** The accept's reply says nothing
+   * about a conversation and the room is written off the outbox after it — so the list answers
+   * empty at first, and the screen keeps asking until the row is there, then pushes it. What is
+   * asserted is the push landing off a **later** read: the first answers still hold nothing.
+   */
+  it('goes to the room once the list holds it, not on the first read that does not', async () => {
+    await openTheChallenge();
+    opened(EWA_AND_ME);
+
+    transport.on('POST', `${DETAIL_PATH}/accept`, () =>
+      json<Wire['ChallengeSchema']>(
+        row({
+          standing: 'ON',
+          seats: [
+            { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+            { side: 'B', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
+          ],
+        }),
+      ),
+    );
+
+    // The teller is a delivery behind the reply: the first two reads after the accept find no
+    // room, and only the third does.
+    const before = transport.requestsTo('GET', CONVERSATIONS_PATH).length;
+    transport.on('GET', CONVERSATIONS_PATH, () => {
+      const since = transport.requestsTo('GET', CONVERSATIONS_PATH).length - before;
+      return json<Wire['ConversationListResponse']>({
+        read_at: READ_AT,
+        conversations: since >= 3 ? [listed(EWA_AND_ME)] : [],
+      });
+    });
+
+    fireEvent.press(await screen.findByRole('button', { name: IM_IN }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`), {
+      timeout: 5000,
+    });
+    expect(transport.requestsTo('GET', CONVERSATIONS_PATH).length - before).toBeGreaterThanOrEqual(
+      3,
+    );
+  });
+
+  /** A no has no room to go to: the reader is outside whatever room the others keep. */
+  it('stays on the sentence after Not this time, whatever the list holds', async () => {
+    await openTheChallenge();
+    stubConversations(transport, [listed(EWA_AND_ME)]);
+
+    transport.on('POST', `${DETAIL_PATH}/decline`, () =>
+      json<Wire['ChallengeSchema']>(
+        row({
+          standing: 'DECLINED',
+          seats: [
+            { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+            { side: 'B', player_id: ME, answer: 'DECLINED', nickname: 'me_' },
+          ],
+        }),
+      ),
+    );
+
+    fireEvent.press(await screen.findByRole('button', { name: NOT_THIS_TIME }));
+
+    expect(
+      await screen.findByText(
+        standingLine({ side: 'invitee', standing: 'DECLINED', player: EWA_NAMED }),
+      ),
+    ).toBeTruthy();
+    expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`);
+  });
+
+  /**
+   * **The door is drawn on every arm the join answers on**, not only the half-built court's.
+   * A padel four where the reader has said yes and two seats are still awaiting is
+   * `AWAITING_ANSWERS` with no act left — and the room the first yes opened is already being
+   * talked in, so the arm's one control is the way into it.
+   */
+  it('draws Open the chat on an accepted seat still waiting on the others', async () => {
+    const waitingOnTwo = {
+      sport: 'PADEL' as const,
+      standing: 'AWAITING_ANSWERS' as const,
+      seats: [
+        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, nickname: 'ewa.m' },
+        { side: 'A' as const, player_id: OLA, answer: null, answer_by: at(20), nickname: 'ola.k' },
+        { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
+        { side: 'B' as const, player_id: null, answer: null, nickname: null },
+      ],
+    };
+    stubChallenges(transport, [row(waitingOnTwo)], READ_AT);
+    transport.on('GET', DETAIL_PATH, () => json(detail(waitingOnTwo)));
+    stubConversations(transport, [listed(EWA_AND_ME)]);
+    opened(EWA_AND_ME);
+
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText(/^Chats/));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    // The room's own row is on the tab beside the challenge's, spoken in the same dialect up to
+    // the sport — so the challenge row is picked out by the sentence it goes on to say.
+    fireEvent.press(await screen.findByLabelText(/^ewa\.m.*, Padel, You/));
+    await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
+
+    fireEvent.press(await screen.findByRole('button', { name: OPEN_THE_CHAT }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
+  });
+
+  /** And on a court that is on — reached from the row, with the room still standing. */
+  it('draws Open the chat on a completed line-up while its room stands', async () => {
+    const everybodyIn = {
+      standing: 'ON' as const,
+      seats: [
+        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, nickname: 'ewa.m' },
+        { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
+      ],
+    };
+    stubChallenges(transport, [row(everybodyIn)], READ_AT);
+    transport.on('GET', DETAIL_PATH, () => json(detail(everybodyIn)));
+    stubConversations(transport, [listed(EWA_AND_ME)]);
+
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText(/^Chats/));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    fireEvent.press(await screen.findByLabelText(/^ewa\.m, Squash, You/));
+    await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
+
+    expect(await screen.findByRole('button', { name: OPEN_THE_CHAT })).toBeTruthy();
+  });
+
+  /** No door rather than a dead one: a room the list does not hold draws nothing. */
+  it('draws no door where the list holds no room for this challenge', async () => {
+    const everybodyIn = {
+      standing: 'ON' as const,
+      seats: [
+        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, nickname: 'ewa.m' },
+        { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
+      ],
+    };
+    await openTheChallenge(detail(everybodyIn), row(everybodyIn));
+
+    expect(await screen.findByText(standingLine({ side: 'invitee', standing: 'ON' }))).toBeTruthy();
+    expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
   });
 });

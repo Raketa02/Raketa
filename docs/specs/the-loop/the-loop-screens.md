@@ -303,15 +303,33 @@ nothing on the wire carries a side.
 | Standing · reader | The sentence | Card block | Controls, in order |
 | --- | --- | --- | --- |
 | `AWAITING_ANSWERS` · invitee, unanswered | §13 *They're waiting on you* | **yes** | **`I'm in`** · **`Not this time`** |
-| `AWAITING_ANSWERS` · invitee, accepted | §13.2 *You're in. Waiting on {n} answers…* | **yes** | none |
+| `AWAITING_ANSWERS` · invitee, accepted | §13.2 *You're in. Waiting on {n} answers…* | **yes** | **Open the chat** *(the door, below)* |
 | `AWAITING_ANSWERS` · invitee, declined / lapsed | §13.2's **two sentences** — *You said no…* / *Your day ran out…* | no | none |
-| `AWAITING_ANSWERS` · organiser | §13 *Waiting on {n} answers* | **yes** | none |
+| `AWAITING_ANSWERS` · organiser | §13 *Waiting on {n} answers* | **yes** | **Open the chat** *(the door, below)* |
 | `LINE_UP_INCOMPLETE` · member | §13 *{n} in, {m} seats open…* / *You're in. {m} seats open…* | **yes** | **⚡ Fill the seats** · **Open the chat** · **Withdraw** *(organiser only)* |
 | `LINE_UP_INCOMPLETE` · reader who left | §13's **two new sentences** — §2.5 | no | none |
 | `DECLINED` · both | §13 *{name} said no…* / *You said no* | no | none |
 | `LAPSED` · both | §13 *{name}'s day ran out…* / *Your day ran out* | no | none |
 | `WITHDRAWN` · both | §13 *You withdrew this* / *{name} withdrew this — that court is closed* | no | none |
-| `ON` · both | §13 *Everybody's in* / *You're in — everybody's in* | no | none |
+| `ON` · both | §13 *Everybody's in* / *You're in — everybody's in* | no | **Open the chat** *(the door, below)* |
+
+**The door is drawn on every arm whose reader the room would hold** (2026-09-11). *Open the chat*
+is ADR-0149 §3's client join over `GET /conversations`, and it **fails soft**: where the list holds
+no room for this challenge — nobody has answered yet, the episode has ended — the arm draws
+nothing, which is the *no door rather than a dead one* rule and is what the four rows marked *(the
+door, below)* mean. Beside the join, the fold says whether **this reader** is in the room
+(`readerIsInTheRoom`): a row that reads *none* is a reader who left or an episode that ended, and
+the list — invalidated rather than patched by the reply that took them out — can hold their old
+room for a beat; the unanswered invitee has said yes to none. A door is drawn only where both say
+so.
+
+**`I'm in` goes to the room.** Accepting is the one act whose whole point is a room to talk in —
+the singles room with the person who challenged you, or the doubles room the people already in
+are already talking in, its history included, because membership is derived and never cut at the
+moment you joined. The reply is still the redraw (§2.4), and then the screen pushes the room. The
+room is written by the teller off the outbox **after** the accept has answered, so the door is
+**waited for** on a short bounded cadence rather than read once and missed; past the bound the
+screen stays, and draws the door when the list next holds the room. *Not this time* goes nowhere.
 
 **`AWAITING_ANSWERS` is three rows for the invitee, because the side alone cannot key it.**
 `standing_of` holds this standing while **any** seat is awaiting, so a padel four sits in it with

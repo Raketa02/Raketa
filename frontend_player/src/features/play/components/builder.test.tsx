@@ -90,6 +90,7 @@ import {
   sideName,
 } from './builderPresentation';
 import { WITHHELD_SEAT_LINE, optimisedForLine, unfilledSeatLine } from './courtPresentation';
+import { leavingLine } from './poolPresentation';
 import { playErrorMessage } from './playErrorMessage';
 import { promptControls, promptCopy } from './promptPresentation';
 import { engineFillStatus, poolRankingStatus } from './searchingPresentation';
@@ -116,8 +117,24 @@ const B = 'bbbbbbbb-0000-4000-8000-000000000001';
 const C = 'cccccccc-0000-4000-8000-000000000002';
 const D = 'dddddddd-0000-4000-8000-000000000003';
 
-const NAMES: Readonly<Record<string, string>> = { [B]: 'bea_k', [C]: 'cyryl', [D]: 'dorota_w' };
-const LEVELS: Readonly<Record<string, number>> = { [B]: 2.8, [C]: 2.71, [D]: 2.9 };
+/** Two more people: one the shortlist returned and ⚡ never seated, one the other way round. */
+const E = 'eeeeeeee-0000-4000-8000-000000000004';
+const F = 'ffffffff-0000-4000-8000-000000000005';
+
+const NAMES: Readonly<Record<string, string>> = {
+  [B]: 'bea_k',
+  [C]: 'cyryl',
+  [D]: 'dorota_w',
+  [E]: 'ela_p',
+  [F]: 'filip',
+};
+const LEVELS: Readonly<Record<string, number>> = {
+  [B]: 2.8,
+  [C]: 2.71,
+  [D]: 2.9,
+  [E]: 2.75,
+  [F]: 2.85,
+};
 
 function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
   return {
@@ -1902,5 +1919,161 @@ describe('the question ⚡ raised', () => {
     expect(screen.queryByText(KEEP_THESE_TIMES)).toBeNull();
     // And *not now* was written once, about the question, by the one screen that asked it.
     expect(transport.requestsTo('POST', DECLINES)).toEqual([]);
+  });
+});
+
+describe('the list the pool draws', () => {
+  /**
+   * **The pool is opened on the list the court was searched under, never on ⚡'s own record.**
+   *
+   * `POST /lineups` returns exactly the people it seated — a court is its answer, not a list —
+   * so a pool opened on the origin after ⚡ offered the one person just taken off a seat and
+   * nobody else, from either door: the hole a cleared seat leaves, and *Pick players myself*.
+   * The list is the shortlist this screen arrived on, which the fill rebinds the **line-up**
+   * away from and leaves in the cache.
+   */
+  const addLabel = (playerId: string) => `Add ${NAMES[playerId]} to the court`;
+
+  /** The shortlist with a fourth row ⚡ never seats, so the pool can be told apart from the court. */
+  const WIDER_SHORTLIST: Wire['ShortlistResponse'] = {
+    search: envelope(SEARCH_ID),
+    candidates: [card(B), card(C), card(D), card(E)],
+  };
+
+  /** ⚡'s answer with `F` in `D`'s seat — somebody the shortlist never returned. */
+  const seatedWithAStranger = (): Wire['LineupResponse'] =>
+    JSON.parse(
+      JSON.stringify(seatedFour())
+        .replaceAll(D, F)
+        .replaceAll(NAMES[D] ?? '', NAMES[F] ?? ''),
+    ) as Wire['LineupResponse'];
+
+  /**
+   * A forecast over **the people actually asked about**, with a hole where the fourth is
+   * missing. `forecastFor` answers every ask with the same full four, which is right for the
+   * swap tests and wrong here: the seat a cleared player leaves has to stay empty in the answer,
+   * or the pool is opened against a hole the forecast then fills with somebody else.
+   */
+  const forecastOver = (players: readonly string[]): Wire['ForecastResponse'] => ({
+    arrangements: [
+      arrangement(players[0] ?? '', players.slice(1), {
+        id: 1,
+        pct: 73,
+        current: true,
+        provisional: players.length < 3,
+      }),
+    ],
+    engine_version: 'matchfit-v1',
+    ruleset_version: 'ruleset-v1',
+  });
+
+  beforeEach(() => {
+    transport.on('POST', SEARCHES, () => json(WIDER_SHORTLIST));
+    transport.on('POST', FORECASTS, ({ body }) => json(forecastOver(seatOrderOf(body))));
+    // The pool re-reads the list it opened on, and the court's own record beside it.
+    transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () => json(WIDER_SHORTLIST));
+    transport.on('GET', `${SEARCHES}/${LINEUP_ID}`, () => json(seatedFour()));
+  });
+
+  it('opens the hole a cleared seat leaves on the shortlist, not on the fill', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    fireEvent.press(screen.getByLabelText(`Remove ${NAMES[B]} from their side`));
+    fireEvent.press(
+      await screen.findByLabelText(seatLabel('THEIR_SIDE', { kind: 'empty', unfilled: null })),
+    );
+    await waitFor(() => expect(screen).toHavePathname('/play/pool'));
+
+    // The whole shortlist less the two still seated: the person just taken off, and the one
+    // ⚡ never seated at all — who is the proof this is the list and not the court's record.
+    expect(await screen.findByLabelText(addLabel(E))).toBeTruthy();
+    expect(screen.getByLabelText(addLabel(B))).toBeTruthy();
+    expect(screen.queryByLabelText(addLabel(C))).toBeNull();
+    expect(screen.queryByLabelText(addLabel(D))).toBeNull();
+  });
+
+  it('opens Pick players myself on the same list once a seat is cleared', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    fireEvent.press(screen.getByLabelText(`Remove ${NAMES[B]} from their side`));
+    fireEvent.press(await screen.findByLabelText(PICK_PLAYERS_LABEL));
+    await waitFor(() => expect(screen).toHavePathname('/play/pool'));
+
+    expect(await screen.findByLabelText(addLabel(E))).toBeTruthy();
+    expect(screen.getByLabelText(addLabel(B))).toBeTruthy();
+  });
+
+  /**
+   * **A pick moves the court onto the list, and the two still seated come with it.** The
+   * forecast cites one search, so the line-up rebinds to the shortlist — which returned `C` and
+   * `D` — rather than starting again with one person on it, and the next forecast is asked
+   * under the shortlist about all three.
+   */
+  it('carries the seats the shortlist can vouch for onto it with the pick', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    fireEvent.press(screen.getByLabelText(`Remove ${NAMES[B]} from their side`));
+    fireEvent.press(
+      await screen.findByLabelText(seatLabel('THEIR_SIDE', { kind: 'empty', unfilled: null })),
+    );
+    await waitFor(() => expect(screen).toHavePathname('/play/pool'));
+
+    // Nobody the list holds is leaving, so nothing says so.
+    expect(screen.queryByText(/on this list, so adding somebody/)).toBeNull();
+
+    fireEvent.press(await screen.findByLabelText(addLabel(E)));
+
+    expect(usePlaySession.getState().lineup).toEqual({
+      originSearchId: SEARCH_ID,
+      seats: [C, D, E],
+    });
+    await waitFor(() =>
+      expect(
+        transport
+          .requestsTo('POST', FORECASTS)
+          .some((request) => (request.body as Wire['ForecastRequest']).search_id === SEARCH_ID),
+      ).toBe(true),
+    );
+    const moved = transport
+      .requestsTo('POST', FORECASTS)
+      .filter((request) => (request.body as Wire['ForecastRequest']).search_id === SEARCH_ID);
+    expect(seatOrderOf(moved[moved.length - 1]?.body)).toEqual([C, D, E]);
+  });
+
+  /**
+   * **Whom the list cannot vouch for is said before the tap, and leaves with it.** ⚡ seats
+   * from a wider pool than the shortlist shows, so a seated player the shortlist never returned
+   * is possible; the forecast would refuse them under the new origin, and the pool names them
+   * rather than letting the court find a seat gone afterwards.
+   */
+  it('names who the shortlist never showed, and takes them off with the pick', async () => {
+    transport.on('POST', LINEUPS, () => json(seatedWithAStranger()));
+    transport.on('GET', `${SEARCHES}/${LINEUP_ID}`, () => json(seatedWithAStranger()));
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    fireEvent.press(screen.getByLabelText(`Remove ${NAMES[B]} from their side`));
+    fireEvent.press(
+      await screen.findByLabelText(seatLabel('THEIR_SIDE', { kind: 'empty', unfilled: null })),
+    );
+    await waitFor(() => expect(screen).toHavePathname('/play/pool'));
+
+    expect(await screen.findByText(leavingLine([NAMES[F] ?? '']))).toBeTruthy();
+    // The stranger is never offered off a list that does not hold them.
+    expect(screen.queryByLabelText(addLabel(F))).toBeNull();
+
+    fireEvent.press(await screen.findByLabelText(addLabel(E)));
+
+    expect(usePlaySession.getState().lineup).toEqual({
+      originSearchId: SEARCH_ID,
+      seats: [C, E],
+    });
   });
 });

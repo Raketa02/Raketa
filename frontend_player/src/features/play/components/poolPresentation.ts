@@ -35,6 +35,7 @@
  */
 
 import { counted } from '@/shared/formatting/counted';
+import { sentenceList } from '@/shared/formatting/sentenceList';
 
 import type { RelaxedAsk } from '../domain/candidate';
 import type { Window } from '../domain/vocabulary';
@@ -94,13 +95,32 @@ export const POOL_LADDER_BODY =
  * What a line-up costs when the list is replaced — the other half of rule 9's reversibility.
  *
  * A widened search is a **new** search, and `POST /forecasts` refuses a four whose members did
- * not all appear in the search it cites. So somebody added off the strict list cannot be
- * carried onto the widened one, and that is said before the tap rather than discovered by the
- * court emptying itself afterwards.
+ * not all appear in the search it cites. So somebody added off the strict list travels onto the
+ * widened one only if that list returned them too (`domain/lineup`'s `carriedOnto`), and that
+ * is said before the tap rather than discovered by the court emptying itself afterwards. Whom
+ * it actually costs is said again on the widened list, by name — `leavingLine`.
  */
 export const POOL_LINEUP_COST =
-  'Widening runs a new search. Anybody you have added came off this one, so the court starts ' +
-  'again on the new list.';
+  'Widening runs a new search. Anybody you have added stays on the court only if the wider ' +
+  'list has them too.';
+
+/**
+ * Who a pick off **this** list would take off the court — **said, rather than assumed.**
+ *
+ * The court is bound to one search and this list is another's: ⚡'s own record, or the strict
+ * search a rung widened. A pick moves the court onto this list, and the new origin can vouch
+ * only for the people it returned — so whoever it never showed leaves the court with the tap.
+ * `replacingLine`'s own argument: the court is one screen away and the player cannot see it,
+ * so a seat emptied without a sentence is a destruction they find out about afterwards.
+ *
+ * Named, and never counted: *two players leave* tells the player nothing they can weigh, and
+ * the two names are the whole of the decision.
+ */
+export function leavingLine(names: readonly string[]): string {
+  const verb = names.length === 1 ? 'isn’t' : 'aren’t';
+  const them = names.length === 1 ? (names[0] ?? '') : 'them';
+  return `${sentenceList(names)} ${verb} on this list, so adding somebody from it takes ${them} off the court.`;
+}
 
 /**
  * A rung's price — **the total above the floor**, and the window if this rung would move it.

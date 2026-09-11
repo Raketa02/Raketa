@@ -26,6 +26,18 @@
  * *that* search's rows, and `POST /forecasts` refuses anybody the cited search never showed.
  * Everything else here reads the origin off the line-up, so nothing else has to know.
  *
+ * **Except the pool, which is opened on the list the court was searched under and never on
+ * ⚡'s own record.** A line-up answer returns exactly the people it seated — a court is its
+ * answer, not a list — so a pool opened on the origin after ⚡ offered the one person just
+ * taken off a seat and nobody else, and *Pick players myself* on a full court offered nobody at
+ * all. The ranked list is the record this screen **arrived** on, which is the shortlist *Find
+ * a game* minted; `listSearchId` below says when that is so, and the pool moves the court onto
+ * that list when a pick is made (`PoolScreen`'s `elsewhere`). Where there is no such list —
+ * the builder reached from a challenge arrives on the fill's own record — the pool still opens
+ * on the origin, and offers what that record holds, which is nobody new: that journey mints no
+ * shortlist, and only the backend can give it one
+ * ([#407](https://github.com/Raketa02/Raketa/issues/407)).
+ *
  * ## The wait is under the court, and the court fills one seat at a time
  *
  * ⚡'s wait is **not** `SearchingLatch`, and the difference is what the answer is about. A
@@ -338,6 +350,23 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const [answeredSearchId, setAnsweredSearchId] = useState(arrivalSearchId);
   const originSearchId = lineup?.originSearchId ?? answeredSearchId;
   const record = useSearchRecord(originSearchId);
+
+  /**
+   * **The list the pool draws** — the ranked list this court was searched under.
+   *
+   * The record this screen arrived on, when it is a list: `court` is present on a line-up answer
+   * and on nothing else, so its absence is what says *this record ranked people and seated
+   * nobody*. On the Play route that is the shortlist *Find a game* minted, and it outlives ⚡
+   * in the cache — the fill rebinds the **line-up**, not the screen. On the challenge route the
+   * arrival is the fill's own answer, so there is no list to prefer and the origin is what the
+   * pool gets — which offers nobody new, and is the backend's to fix rather than this line's
+   * ([#407](https://github.com/Raketa02/Raketa/issues/407)); an arrival record no longer held
+   * falls through the same way, because a pool opened on a record nobody holds has nothing to
+   * draw.
+   */
+  const arrival = useSearchRecord(arrivalSearchId);
+  const listSearchId =
+    arrival !== undefined && arrival.court === undefined ? arrivalSearchId : originSearchId;
 
   /**
    * **Who you are, which is the account's fact rather than an answer's**
@@ -772,7 +801,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
 
   /** Fill this seat, or replace who is in it — one act, against one seat, on the pool. */
   const openPool = (seat: number) =>
-    router.push({ pathname: POOL_ROUTE, params: { search: originSearchId, seat: String(seat) } });
+    router.push({ pathname: POOL_ROUTE, params: { search: listSearchId, seat: String(seat) } });
 
   function fillTheSeats() {
     if (origin === undefined) return;

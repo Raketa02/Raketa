@@ -15,12 +15,14 @@
  * list take it: no route serves a player their own id, and a row draws **the others** in the room.
  */
 
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { useCurrentUser } from '@/features/auth/types';
 import type { AppError } from '@/shared/errors';
 
 import type { Conversation } from '../domain/conversation';
+import { ROOM_OPENING_BOUND_MS, ROOM_OPENING_POLL_MS } from '../domain/roomOpening';
 import { readConversations } from '../use-cases/readConversations';
 
 import { conversationKeys } from './conversationKeys';
@@ -93,9 +95,52 @@ export function useConversationRows() {
  */
 export function useChatDoor(challengeId: string | undefined): string | undefined {
   const { data } = useConversations();
-  if (challengeId === undefined) return undefined;
+  return doorIn(data, challengeId);
+}
 
-  return data?.find((room) => room.challengeId === challengeId)?.conversationId;
+/**
+ * **The same door, waited for** — the join above, with the list re-read while a room is on its
+ * way ([`domain/roomOpening`](../domain/roomOpening.ts)).
+ *
+ * While `awaiting` and the join has not answered, the list is re-read on `ROOM_OPENING_POLL_MS`
+ * and stops the moment a row for this challenge lands, or at `ROOM_OPENING_BOUND_MS`, whichever is
+ * first. It is a second observer over the **same** query, so nothing is fetched twice and the
+ * Chats tab reads whatever this found; `refetchInterval` is the mechanism because it is Query's
+ * own and stops itself, where a hand-rolled loop would be a request outliving the screen.
+ *
+ * The bound is held here rather than by the caller because it is a fact about the wait and not
+ * about the screen: a caller says *I am expecting a room*, and this says when to stop asking.
+ * `awaiting` going false resets it, so a second press waits its own full bound.
+ */
+export function useAwaitedChatDoor(challengeId: string, awaiting: boolean): string | undefined {
+  const [expired, setExpired] = useState(false);
+
+  useEffect(() => {
+    setExpired(false);
+    if (!awaiting) return undefined;
+    const bound = setTimeout(() => setExpired(true), ROOM_OPENING_BOUND_MS);
+    return () => clearTimeout(bound);
+  }, [awaiting]);
+
+  const { data } = useQuery<readonly Conversation[], AppError>({
+    queryKey: conversationKeys.list(),
+    queryFn: ({ signal }) => readConversations({ signal }),
+    refetchInterval: (query) =>
+      awaiting && !expired && doorIn(query.state.data, challengeId) === undefined
+        ? ROOM_OPENING_POLL_MS
+        : false,
+  });
+
+  return doorIn(data, challengeId);
+}
+
+/** The join itself: the room this challenge opened, in the player's own rooms, or nothing. */
+function doorIn(
+  rooms: readonly Conversation[] | undefined,
+  challengeId: string | undefined,
+): string | undefined {
+  if (challengeId === undefined) return undefined;
+  return rooms?.find((room) => room.challengeId === challengeId)?.conversationId;
 }
 
 /**

@@ -79,8 +79,13 @@ export { CONVERSATION_ROUTE } from './components/ConversationRow';
  * other's ids, so the surface reads *the player's rooms* and finds the one this challenge opened.
  * **It fails soft**: no row is the ordinary state rather than an error, because a room opens on
  * the first acceptance and is destroyed when the episode ends.
+ *
+ * `useAwaitedChatDoor` is the same join **waited for**: the room an acceptance opens is written
+ * off the outbox after the accept has answered, so the screen that just said *I'm in* re-reads
+ * the list on a short cadence until the door answers, and stops at a bound
+ * (`domain/roomOpening`).
  */
-export { useChatDoor, useChatDoors } from './hooks/useConversations';
+export { useAwaitedChatDoor, useChatDoor, useChatDoors } from './hooks/useConversations';
 
 /**
  * **The rooms' query key**, exported for the one thing outside this feature that can change the
