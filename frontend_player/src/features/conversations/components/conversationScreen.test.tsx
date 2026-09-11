@@ -45,7 +45,13 @@ import { headerSubline, headerTitle, systemLineSentence } from './conversationPr
 import { sportLabel } from '@/features/onboarding/types';
 import { QUICK_CHIP, cardStateWord } from '@/features/plans/types';
 
-import { CONVERSATION_SCREEN_TITLE, DETAILS, SEND } from './conversationPresentation';
+import {
+  COMPOSER_LABEL,
+  COMPOSER_PLACEHOLDER,
+  CONVERSATION_SCREEN_TITLE,
+  DETAILS,
+  SEND,
+} from './conversationPresentation';
 import { OPEN_THE_GAME, conversationHeaderLabel } from './conversationAccessibility';
 
 const ME = GATE_USER.id;
@@ -376,7 +382,7 @@ describe('the composer', () => {
       });
     });
 
-    fireEvent.changeText(await screen.findByLabelText('Message'), 'on my way');
+    fireEvent.changeText(await screen.findByLabelText(COMPOSER_LABEL), 'on my way');
     fireEvent.press(screen.getByRole('button', { name: SEND }));
 
     expect(await screen.findByLabelText('You: on my way')).toBeTruthy();
@@ -403,7 +409,7 @@ describe('the composer', () => {
       });
     });
 
-    fireEvent.changeText(await screen.findByLabelText('Message'), 'on my way');
+    fireEvent.changeText(await screen.findByLabelText(COMPOSER_LABEL), 'on my way');
     fireEvent.press(screen.getByRole('button', { name: SEND }));
 
     await waitFor(() =>
@@ -433,7 +439,7 @@ describe('a refused send', () => {
       errorResponse(400, 'message_is_too_long'),
     );
 
-    const box = await screen.findByLabelText('Message');
+    const box = await screen.findByLabelText(COMPOSER_LABEL);
     fireEvent.changeText(box, 'a very long message');
     fireEvent.press(screen.getByRole('button', { name: SEND }));
 
@@ -447,7 +453,7 @@ describe('a refused send', () => {
     });
 
     expect(await screen.findByText(conversationErrorMessage(refused))).toBeTruthy();
-    expect(screen.getByLabelText('Message').props.value).toBe('a very long message');
+    expect(screen.getByLabelText(COMPOSER_LABEL).props.value).toBe('a very long message');
     expect(screen.queryByLabelText('You: a very long message')).toBeNull();
   });
 
@@ -457,13 +463,13 @@ describe('a refused send', () => {
    */
   it('leaves the screen when the room has gone', async () => {
     await openTheRoom();
-    await screen.findByLabelText('Message');
+    await screen.findByLabelText(COMPOSER_LABEL);
 
     transport.on('POST', `${conversationPath(ROOM)}/messages`, () =>
       errorResponse(404, 'conversation_not_found'),
     );
 
-    fireEvent.changeText(screen.getByLabelText('Message'), 'anyone there?');
+    fireEvent.changeText(screen.getByLabelText(COMPOSER_LABEL), 'anyone there?');
     fireEvent.press(screen.getByRole('button', { name: SEND }));
 
     await waitFor(() => expect(screen).toHavePathname('/chats'));
@@ -500,6 +506,35 @@ describe('the quick chips', () => {
     expect(screen.queryByRole('button', { name: QUICK_CHIP['on-my-way'] })).toBeNull();
   });
 
+  /**
+   * **The rule's chips, not a fixed list** ([#402](https://github.com/Raketa02/Raketa/issues/402)):
+   * the mock draws three hard-coded chips, and the block draws whatever `quickChips` answers —
+   * so a day that is agreed takes its question away, and *On my way* appears only on the day.
+   * `READ_AT` is Saturday the 12th in Warsaw, which is the zone the day is read in.
+   */
+  it('offers On my way on the agreed day, and drops the question the day answered', async () => {
+    stubGames(transport, [game()], READ_AT);
+    stubPlans(transport, [plan({ day: '2026-09-12' })]);
+    await openTheRoom(room({ game_id: GAME }));
+
+    expect(await screen.findByRole('button', { name: QUICK_CHIP['on-my-way'] })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: QUICK_CHIP.day })).toBeNull();
+    expect(screen.getByRole('button', { name: QUICK_CHIP.where })).toBeTruthy();
+    expect(screen.getByRole('button', { name: QUICK_CHIP.hour })).toBeTruthy();
+  });
+
+  it('offers no On my way for a day that is not today', async () => {
+    stubGames(transport, [game()], READ_AT);
+    stubPlans(transport, [plan({ day: '2026-09-13' })]);
+    await openTheRoom(room({ game_id: GAME }));
+
+    // The plan lands a beat after the room: the day's question is the thing that goes.
+    await screen.findByRole('button', { name: QUICK_CHIP.where });
+    await waitFor(() => expect(screen.queryByRole('button', { name: QUICK_CHIP.day })).toBeNull());
+    expect(screen.queryByRole('button', { name: QUICK_CHIP['on-my-way'] })).toBeNull();
+    expect(screen.getByRole('button', { name: QUICK_CHIP.hour })).toBeTruthy();
+  });
+
   /** A chip posts words and changes nothing — ADR-0144, and the whole of what a chip does. */
   it('posts its own words as a message', async () => {
     await openTheRoom();
@@ -519,6 +554,32 @@ describe('the quick chips', () => {
     fireEvent.press(await screen.findByRole('button', { name: QUICK_CHIP.hour }));
 
     expect(await screen.findByLabelText(`You: ${QUICK_CHIP.hour}`)).toBeTruthy();
+  });
+});
+
+/**
+ * **The chips, the field and Send are one block**
+ * ([#402](https://github.com/Raketa02/Raketa/issues/402)) — asserted structurally, because *one
+ * block* is a claim about what contains what and a renderer cannot see a ground or a hairline.
+ */
+describe('the composer block', () => {
+  it('holds the chips row, the field and Send together', async () => {
+    await openTheRoom();
+
+    const block = await screen.findByTestId('conversation-composer');
+
+    expect(within(block).getByRole('button', { name: QUICK_CHIP.where })).toBeTruthy();
+    expect(within(block).getByLabelText(COMPOSER_LABEL)).toBeTruthy();
+    expect(within(block).getByRole('button', { name: SEND })).toBeTruthy();
+  });
+
+  /** The hint is the deck's, and the name a listener gets is still `Message` — 6.13's own rule. */
+  it('hints at what the box is for, and keeps its spoken name', async () => {
+    await openTheRoom();
+
+    const field = await screen.findByPlaceholderText(COMPOSER_PLACEHOLDER);
+
+    expect(field.props.accessibilityLabel).toBe(COMPOSER_LABEL);
   });
 });
 
@@ -543,11 +604,11 @@ describe('the frame', () => {
   }
 
   /** The room's own frame: the one with the composer inside it. */
-  const frame = () => safeAreaAround((scope) => scope.queryByLabelText('Message'));
+  const frame = () => safeAreaAround((scope) => scope.queryByLabelText(COMPOSER_LABEL));
 
   it('clears the status bar, and takes the bottom inset because no bar is under it', async () => {
     await openTheRoom();
-    await screen.findByLabelText('Message');
+    await screen.findByLabelText(COMPOSER_LABEL);
 
     // Both edges, and that is the exception 10.1 records: everywhere else the bottom inset is
     // the tab bar's, and this is the one screen the bar stands down on — so the inset has no
@@ -557,7 +618,7 @@ describe('the frame', () => {
 
   it('keeps the keyboard avoidance inside the safe area, not around it', async () => {
     await openTheRoom();
-    await screen.findByLabelText('Message');
+    await screen.findByLabelText(COMPOSER_LABEL);
 
     // Outside, the keyboard offset would be computed against a frame that includes the inset
     // and the composer would ride 34pt above the keyboard. Inside, the frame's bottom is where

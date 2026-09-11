@@ -776,6 +776,23 @@ events get no sentence at all — ADR-0150 §9 closed `SeatLapsed`, and this clo
 
 ### 3.5 The composer and the quick chips
 
+**One block at the foot of the screen: the quick chips in a row above the field, and a coral
+Send beside it** ([#402](https://github.com/Raketa02/Raketa/issues/402)). They were two strips the
+screen emitted one after the other; the design draws them as one surface, on one ground, under one
+hairline and one set of paddings, and `Composer` is the component that grew the row — everything
+the block shares was already its. The chips post through the block's own send, so a chip send is an
+ordinary send. The block sits on the screen's own `paper` under a 1pt `line` along its top — 2.1's
+*`line` bounds a thing*, the tab bar's own edge, and not 5.3's `line2`, which is a fold inside one —
+and takes no ground of its own, because the bottom safe-area inset is the frame's, under it (§3,
+#400): a ground of its own would leave a band of paper above the home indicator, and taking the
+inset itself would count it twice with the keyboard up. Send is 6.1 `primary` — `coralInk` under
+white, Rule C — which is that variant's default, said explicitly. Every value is an existing step,
+so there is no Part 16 row: nothing in the design system changed. The field's hint is `Message
+about this game…` (§22.4) and its spoken name is still `Message` (§24.4). **A quick chip is never
+`busy`**: it is the optimistic send, so there is no *on its way* for the word to name — the bubble
+is the feedback — and 6.2's `busy` belongs to the plan card's slot chips, which write a line other
+people read and wait for the answer.
+
 **One line that grows to a cap, and Send.** `shared/ui` has **no text field at all** — the app's
 only `TextInput` is `features/auth/components/AuthControls.tsx` — so the field arrives at a **new
 Part 6 number with this composer**, and auth is refactored onto it in the same change or it is not
@@ -794,8 +811,8 @@ two-round-trip cost can honestly be avoided. It is safe because a message reache
 cannot be *wrong*: there is no derived standing to guess at, which is what makes the accept
 pending.
 
-**The quick chips are 6.2 `Chip`s in a row above the composer, and a chip posts words and nothing
-else.** ADR-0144's rule: *"Saturday works?"* is a question, and a chip that also filled the day slot
+**The quick chips are 6.2 `Chip`s in the row above the field, inside the block, and a chip posts
+words and nothing else.** ADR-0144's rule: *"Saturday works?"* is a question, and a chip that also filled the day slot
 would record an agreement nobody had yet — the one thing the card must not do. The prototype's two
 *actions wearing a message's clothes* were both ownership and money, and both died with Decision 3.
 

@@ -1780,6 +1780,12 @@ which never reaches the four-chip cap* — three unfilled slots plus an uncondit
 **exactly** four, and *On my way* on a Monday for a Saturday game is nonsense besides. Conditional,
 the maximum is three.
 
+**The box under them says `Message about this game…` while it is empty**
+([#402](https://github.com/Raketa02/Raketa/issues/402)). A hint and not a label: it goes the moment
+somebody types, so the name a listener gets is `Message` (§24.4) and this is only what the empty
+box says. *About this game* because the room is for the whole episode and nothing else
+([`the-loop-screens.md`](../the-loop/the-loop-screens.md) §3).
+
 ### 22.5 Not live, held, and somebody is typing
 
 **Three states the records made reachable and left as rules.** ADR-0147 §8 made *not live* honest —

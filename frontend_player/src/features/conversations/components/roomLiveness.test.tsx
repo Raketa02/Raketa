@@ -41,7 +41,7 @@ import { sportLabel } from '@/features/onboarding/types';
 import { QUICK_CHIP } from '@/features/plans/types';
 
 import { conversationHeaderLabel } from './conversationAccessibility';
-import { LIVE_NOTE, SEND } from './conversationPresentation';
+import { COMPOSER_LABEL, LIVE_NOTE, SEND } from './conversationPresentation';
 
 const ME = GATE_USER.id;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -130,7 +130,7 @@ async function openTheRoom(answer: Wire['ConversationResponse'] = room()) {
 
   fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
   await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
-  await screen.findByLabelText('Message');
+  await screen.findByLabelText(COMPOSER_LABEL);
 }
 
 describe('one stream, and only for an open room', () => {
@@ -152,7 +152,7 @@ describe('one stream, and only for an open room', () => {
     expect(channel.opened).toEqual([]);
 
     fireEvent.press(screen.getByLabelText(/^tomek\.p/));
-    await screen.findByLabelText('Message');
+    await screen.findByLabelText(COMPOSER_LABEL);
 
     expect(channel.opened).toEqual([ROOM]);
     expect(channel.following).toEqual([ROOM]);
@@ -256,7 +256,7 @@ describe('not live', () => {
       json<Wire['MessageSchema']>(message(1, ME, 'on my way')),
     );
 
-    const box = screen.getByLabelText('Message');
+    const box = screen.getByLabelText(COMPOSER_LABEL);
     expect(box.props.editable).not.toBe(false);
 
     fireEvent.changeText(box, 'on my way');
@@ -306,7 +306,7 @@ describe('held', () => {
       errorResponse(403, 'account_held'),
     );
 
-    fireEvent.changeText(screen.getByLabelText('Message'), 'anyone there?');
+    fireEvent.changeText(screen.getByLabelText(COMPOSER_LABEL), 'anyone there?');
     fireEvent.press(screen.getByRole('button', { name: SEND }));
 
     await screen.findByText(LIVE_NOTE.held);
@@ -340,7 +340,7 @@ describe('held', () => {
   it('greys the composer and closes the send', async () => {
     await refuseTheSend();
 
-    expect(screen.getByLabelText('Message').props.editable).toBe(false);
+    expect(screen.getByLabelText(COMPOSER_LABEL).props.editable).toBe(false);
     expect(screen.getByRole('button', { name: SEND }).props.accessibilityState.disabled).toBe(true);
   });
 
@@ -366,12 +366,12 @@ describe('held', () => {
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
     fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
-    await screen.findByLabelText('Message');
+    await screen.findByLabelText(COMPOSER_LABEL);
 
     transport.on('POST', `${conversationPath(ROOM)}/messages`, () =>
       errorResponse(403, 'account_held'),
     );
-    fireEvent.changeText(screen.getByLabelText('Message'), 'anyone there?');
+    fireEvent.changeText(screen.getByLabelText(COMPOSER_LABEL), 'anyone there?');
     fireEvent.press(screen.getByRole('button', { name: SEND }));
     await screen.findByText(LIVE_NOTE.held);
 
@@ -409,7 +409,7 @@ describe('held', () => {
     const note = at(screen.getByText(LIVE_NOTE.held));
 
     expect(note).toBeLessThan(at(screen.getByRole('button', { name: QUICK_CHIP.where })));
-    expect(note).toBeLessThan(at(screen.getByLabelText('Message')));
+    expect(note).toBeLessThan(at(screen.getByLabelText(COMPOSER_LABEL)));
     expect(note).toBeLessThan(at(screen.getByRole('button', { name: SEND })));
   });
 });

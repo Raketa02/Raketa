@@ -150,7 +150,6 @@ import { ConversationHeader } from './ConversationHeader';
 import { conversationErrorMessage } from './conversationErrorMessage';
 import { LIVE_NOTE, systemLineSentence } from './conversationPresentation';
 import { DaySeparator } from './DaySeparator';
-import { QuickChips } from './QuickChips';
 import { RoomAbsent } from './RoomAbsent';
 import { SystemLine } from './SystemLine';
 
@@ -374,9 +373,15 @@ function Room({
           </View>
         )}
 
-        <QuickChips chips={quickChips(plan, room.readAt)} onPost={post} refused={held} />
-
-        <Composer text={draft} onChange={setDraft} onSend={() => post(draft)} refused={held} />
+        {/* One block — the chips, the field and Send — with one door out: Send and every chip
+            post through the same `post`, so a chip send is an ordinary send (#402). */}
+        <Composer
+          text={draft}
+          onChange={setDraft}
+          chips={quickChips(plan, room.readAt)}
+          onPost={post}
+          refused={held}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -302,6 +302,15 @@ export const OPEN_THE_CHAT = 'Open the chat';
  */
 export const COMPOSER_LABEL = 'Message';
 
+/**
+ * **The hint in the empty box** — a placeholder and not a label, which 6.13 keeps apart on
+ * purpose: the placeholder goes the moment somebody types, so the name a listener gets is
+ * `COMPOSER_LABEL` above and this is only what the box says while it is empty
+ * ([#402](https://github.com/Raketa02/Raketa/issues/402), the-words §22.4). *About this game*
+ * because that is what the room is for — the whole episode, and nothing else.
+ */
+export const COMPOSER_PLACEHOLDER = 'Message about this game…';
+
 /** The one control beside it. */
 export const SEND = 'Send';
 

@@ -209,7 +209,9 @@ vocabulary by `the-words.md` §22's own assignment and the rule reads the slot o
 its own `PlanSlot` and its own order to make do with no plan feature to put them in, and a second
 spelling of _where · day · hour_ is exactly what this ticket says `domain/slots.ts` must be the one
 place of. **The row stayed in the room**: a chip is a message, and the send it goes out on is the
-composer's. **The platform zone left `conversations`** for `shared/date/platformZone.ts` on the
+composer's — and since [#402](https://github.com/Raketa02/Raketa/issues/402) it is drawn **inside
+the composer's block**, one surface with the field and a coral Send under one hairline at the foot
+of the screen, on the screen's own `paper` because the bottom inset is the frame's under it. **The platform zone left `conversations`** for `shared/date/platformZone.ts` on the
 third-caller rule, and unlike the tables promoted before it a second copy would be two answers to
 _which day is it in Warsaw_ on one screen; #335's _shorter value, not a second line_ moved to
 `shared/formatting/placeName.ts` beside them, because the `Where` chip is the third surface that
