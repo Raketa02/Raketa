@@ -414,3 +414,37 @@ thing.
 
 **Nothing this record decides moves, and no subscriber is built.** #342 made the client usable by
 one; the transport, the channel key and the envelope are still what Decisions 4 through 7 say.
+
+## Amendment — 2026-09-11: the plan card follows the nudge, and §12's *free* needed one line
+
+**What was true and what was not.** Decision 3 says *there is no separate live-plan feature to
+build, and none to defer*, and §12 lists *live plan-slot changes, the lock* under *does not defer,
+because Decision 3 makes it free — they are system lines in the same stream.* Both sentences were
+true of the **line** and were written before
+[ADR-0148](0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md) §7 put the plan
+on a second list, `GET /plans`, read beside the room and never inside it. Decision 10's client
+half — *on a nudge it invalidates the conversation's query* — re-read the stream alone, so a phone
+in the room drew *tomek.p set the place to Zabłocie* under a chip still reading `Where`, and
+*tomek.p locked the plan* under a live `Lock the plan`, until the app was next foregrounded
+([#405](https://github.com/Raketa02/Raketa/issues/405)).
+
+**What changes, and it is one invalidation.** Decision 10 now reads: on a nudge the client
+invalidates **the conversation's query and the plan list**. A nudge re-reads what the room draws.
+The rule is chosen over the alternative — inspecting the re-fetched stream for a plan line and
+re-reading only then — because Decision 3 is exactly why a frame carries nothing to inspect: a
+trigger keyed on the line vocabulary would go stale on the build too old to read a new code, which
+is the build that most needs the re-read. The stream's opening frame is a nudge (Decision 4), so a
+reconnect re-reads the plan too, which is the catch-up for free. **The cost is stated:** Decision
+3's *one extra round trip per delivered message* is two inside a room, both to short lists the
+room draws. The Chats list is still never re-read on a nudge; the room draws nothing from it.
+
+**One consequence on the writer's own phone.** `PUT /plans/…` answers the plan and the client
+writes the reply in rather than refetching (ADR-0148 §8's idempotent write). A nudge-started read
+can now be in flight when the next slot is recorded, land after the reply, and roll that slot back
+for a second — so every plan write cancels the list's in-flight read first. That is not optimism:
+nothing is drawn before the server answers, and what is cancelled is a read that can only be older
+than the reply.
+
+**Nothing else moves.** The envelope, the transport, the channel key, the gapless sequence, the
+foreground rule and the *never build* list are what Decisions 2 through 12 say. The backend
+already nudged on every plan line through one shared path; no route and no frame changed.

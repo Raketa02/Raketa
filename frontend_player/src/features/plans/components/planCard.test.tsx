@@ -15,21 +15,25 @@
  * because the wording is the deck's to change and the rules are not.
  */
 
-import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
   GATE_USER,
+  PLANS_PATH,
   launchSignedIn,
   planSlotPath,
+  resetLiveStream,
   stubConversation,
   stubConversations,
   stubEntries,
   stubGames,
   stubGate,
+  stubLiveStream,
   stubPlans,
 } from '@/test-support/onboardingRouter';
+import { fakeLiveStream, type FakeLiveStream } from '@/test-support/platform';
 import {
   errorResponse,
   installTransport,
@@ -39,6 +43,7 @@ import {
 } from '@/test-support/transport';
 
 import { HOURS_OFFERED } from '../domain/slots';
+import { planKeys } from '../hooks/planKeys';
 
 import { planErrorMessage } from './planErrorMessage';
 import {
@@ -142,14 +147,19 @@ const refusalSentence = (status: number, code: string) =>
   planErrorMessage(mapErrorResponse(status, { code, message: 'x' }));
 
 let transport: Transport;
+/** The room's live channel, driven by the one describe that is about what arrives on it. */
+let channel: FakeLiveStream;
 
 beforeEach(() => {
   transport = installTransport();
   stubGate(transport, { ratings: [PADEL_RATING], hasPlayerProfile: true });
+  channel = fakeLiveStream();
+  stubLiveStream(channel);
 });
 
 afterEach(async () => {
   transport.restore();
+  resetLiveStream();
   queryClient.clear();
   resetSessionStatus();
   await clearStoredTokens();
@@ -667,6 +677,142 @@ describe('the quick chips beside it', () => {
     expect(screen.getByText(QUICK_CHIP.day)).toBeTruthy();
     expect(screen.queryByText(QUICK_CHIP.where)).toBeNull();
     expect(screen.queryByText(QUICK_CHIP.hour)).toBeNull();
+  });
+});
+
+describe('what another member set arrives on the nudge', () => {
+  /** One line, as the room re-reads it: the code, who, and the value the slot now holds. */
+  function line(
+    seq: number,
+    code: string,
+    values: Readonly<Record<string, string>> = {},
+  ): Wire['SystemLineSchema'] {
+    return { type: 'system_line', seq, code, occurred_at: PLANNED_AT, actor_id: TOMEK, values };
+  }
+
+  /**
+   * **The card follows the line, on every phone in the room** ([#405](https://github.com/Raketa02/Raketa/issues/405)).
+   * A slot somebody else set reaches this phone as a system line on the nudge, and the card is
+   * read off `GET /plans` — so the nudge re-reads that list beside the room, and the chip says the
+   * value with nothing pressed here.
+   */
+  it('draws the place another member set, with nothing pressed', async () => {
+    await openTheRoom();
+    await screen.findByLabelText(`${SLOT_NAME.where}: not agreed yet`);
+
+    stubPlans(transport, [plan({ place: 'Zabłocie Sport' })]);
+    stubConversation(transport, {
+      ...room(),
+      entries: [line(1, 'PLACE_RECORDED', { value: 'Zabłocie Sport' })],
+    });
+    act(() => channel.nudge(ROOM));
+
+    expect(await screen.findByLabelText('Where: Zabłocie Sport')).toBeTruthy();
+    expect(screen.getByText(counterLabel({ gameId: GAME, place: 'Zabłocie Sport' }))).toBeTruthy();
+  });
+
+  /**
+   * The lock is the same fact one act later: somebody else agreed it, the line says so, and the
+   * counter reads `Locked` with the button **gone** — a control still offering the act would be one
+   * that provably does nothing, and until this phone re-read the plan that is exactly what it was.
+   */
+  it('reads Locked and drops the button when another member locks it', async () => {
+    await openTheRoom({ agreed: plan(COMPLETE) });
+    await screen.findByRole('button', { name: LOCK_THE_PLAN });
+
+    stubPlans(transport, [plan({ ...COMPLETE, locked_at: LOCKED_AT })]);
+    stubConversation(transport, { ...room(), entries: [line(1, 'PLAN_LOCKED')] });
+    act(() => channel.nudge(ROOM));
+
+    expect(await screen.findByText(LOCKED)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: LOCK_THE_PLAN })).toBeNull();
+  });
+
+  /** The quick chips read the same row, so a question about a slot somebody just filled goes. */
+  it('stops asking about the slot another member filled', async () => {
+    await openTheRoom();
+    await screen.findByText(QUICK_CHIP.hour);
+
+    stubPlans(transport, [plan({ hour: '18:00:00' })]);
+    stubConversation(transport, {
+      ...room(),
+      entries: [line(1, 'HOUR_RECORDED', { value: '18:00' })],
+    });
+    act(() => channel.nudge(ROOM));
+
+    await waitFor(() => expect(screen.queryByText(QUICK_CHIP.hour)).toBeNull());
+    expect(screen.getByText(QUICK_CHIP.where)).toBeTruthy();
+    expect(screen.getByText(QUICK_CHIP.day)).toBeTruthy();
+  });
+
+  /**
+   * **The write-in and the re-read can cross, and the write-in wins.** A nudge for the day's line
+   * starts a `GET /plans`; this phone records the hour while that read is in flight; the `PUT`
+   * answers first and is written in. The older read landing afterwards must not roll the hour
+   * back to empty — which is what it would do, for a second, until the hour's own nudge repaired
+   * it. Nothing here is optimistic: what is refused is a read that can only be older than the reply.
+   */
+  it('keeps a value this phone just recorded when an older read lands after it', async () => {
+    await openTheRoom({ agreed: plan({ day: '2026-09-13' }) });
+    await screen.findByLabelText(`${SLOT_NAME.day}: Sunday`);
+
+    let answerTheRead: (plans: Wire['PlanSchema'][]) => void = () => {};
+    const held = new Promise<Wire['PlanSchema'][]>((resolve) => {
+      answerTheRead = resolve;
+    });
+    transport.on('GET', PLANS_PATH, async () =>
+      json<Wire['PlanListResponse']>({ plans: await held }),
+    );
+    transport.on('PUT', planSlotPath(GAME, 'hour'), () =>
+      json(plan({ day: '2026-09-13', hour: '18:00:00' })),
+    );
+
+    act(() => channel.nudge(ROOM));
+    await waitFor(() => expect(transport.requestsTo('GET', PLANS_PATH).length).toBeGreaterThan(1));
+
+    fireEvent.press(screen.getByLabelText(`${SLOT_NAME.hour}: not agreed yet`));
+    fireEvent.press(await screen.findByText('18:00'));
+    await waitFor(() => expect(screen.getByLabelText(`${SLOT_NAME.hour}: 18:00`)).toBeTruthy());
+
+    // The read the nudge started answers now, with the plan as it stood before the hour.
+    answerTheRead([plan({ day: '2026-09-13' })]);
+    await waitFor(() =>
+      expect(queryClient.getQueryState(planKeys.list())?.fetchStatus).toBe('idle'),
+    );
+
+    expect(screen.getByLabelText(`${SLOT_NAME.hour}: 18:00`)).toBeTruthy();
+    expect(screen.queryByLabelText(`${SLOT_NAME.hour}: not agreed yet`)).toBeNull();
+  });
+
+  /**
+   * A typed note is the player's. Somebody else's place landing under the open sheet moves the
+   * chip behind it and never the words in the box — *a refusal puts the words back in the box*,
+   * and so does another member's value; recording then writes what this player typed.
+   */
+  it('keeps the words in the where box when another member sets the place underneath', async () => {
+    await openTheRoom();
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.where}: not agreed yet`));
+    fireEvent.changeText(await screen.findByLabelText(SLOT_NAME.where), 'Hala Cracovia');
+
+    stubPlans(transport, [plan({ place: 'Zabłocie Sport' })]);
+    stubConversation(transport, {
+      ...room(),
+      entries: [line(1, 'PLACE_RECORDED', { value: 'Zabłocie Sport' })],
+    });
+    act(() => channel.nudge(ROOM));
+    await waitFor(() =>
+      expect(queryClient.getQueryState(planKeys.list())?.fetchStatus).toBe('idle'),
+    );
+
+    expect(screen.getByDisplayValue('Hala Cracovia')).toBeTruthy();
+
+    transport.on('PUT', planSlotPath(GAME, 'place'), () => json(plan({ place: 'Hala Cracovia' })));
+    fireEvent.press(screen.getByText(RECORD_PLACE));
+    await waitFor(() =>
+      expect(transport.requestsTo('PUT', planSlotPath(GAME, 'place'))[0]?.body).toEqual({
+        place: 'Hala Cracovia',
+      }),
+    );
   });
 });
 

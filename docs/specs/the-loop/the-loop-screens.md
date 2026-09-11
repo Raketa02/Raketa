@@ -689,7 +689,10 @@ coral on a card already means pressed (design-system §5.1).
 **Pending, never optimistic**, on the rule every slot chip follows: the lock writes a line other
 people read, so the counter keeps saying `3 of 3 set` until the server has answered, and the
 confirmation is the line itself — `{name} locked the plan`, through the stream like every
-other entry. Each refusal is its own sentence by its **code**: `the_plan_is_not_complete`, which
+other entry. **And the card follows the line on every phone in the room**
+([#405](https://github.com/Raketa02/Raketa/issues/405)): the nudge that brings *tomek.p set the
+place* re-reads the plan beside the stream, so the chip, the counter and the lock say what the
+line says with nothing pressed — one outbox tick after the tap, which is the line's own latency. Each refusal is its own sentence by its **code**: `the_plan_is_not_complete`, which
 the greyed button makes unreachable and the card handles anyway because the button is UX and the
 server is the correctness mechanism; `plan_is_history`; `plan_not_found`; and `account_held`,
 which is the room's one amber note over greyed controls and never a coral sentence on the card.

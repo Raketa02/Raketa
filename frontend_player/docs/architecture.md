@@ -853,6 +853,14 @@ budget making it short.
   already takes for mutations. _Nothing in Play background-refetches_ is a **scope
   clarification, not an exception**: that rule is about a ranked list reordering under a
   finger, and a conversation is append-ordered.
+- **A nudge re-reads what the room draws, and nothing it does not.** The room's query and
+  `planKeys.list()` — the plan card is read off `GET /plans`, a list beside the room, and a slot
+  another member set reaches this phone as a line on the same frame
+  ([#405](https://github.com/Raketa02/Raketa/issues/405)). On every nudge, never on sighting a
+  plan line, because a trigger keyed on the line vocabulary goes stale on exactly the build too
+  old to read a new code. The Chats list is not re-read: the room draws nothing from it. And
+  because a plan write is written in rather than refetched, every plan write first **cancels**
+  the list's in-flight read — not optimism, a read that can only be older than the reply.
 - **One stream per open conversation, and never one for a list.** The port opens while a room
   is on screen and closes when it leaves. ADR-0147's _never build_ list says the rest.
 - **The port owns the route as well as the transport.** A port taking an arbitrary path

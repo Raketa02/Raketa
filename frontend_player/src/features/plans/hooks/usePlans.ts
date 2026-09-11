@@ -31,7 +31,20 @@
  * which is the same path every other member's copy of that line takes — the writer is a member,
  * so there is no second mechanism for the person who tapped. A cross-feature invalidation here
  * would also be this feature reaching into the one that composes it, which is the arrow
- * `features/plans` exists on the other side of.
+ * `features/plans` exists on the other side of. **The converse is the room's**: its nudge
+ * re-reads this list beside the stream, so what another member set is on this phone's card the
+ * moment its line is ([#405](https://github.com/Raketa02/Raketa/issues/405)).
+ *
+ * ## The cancel in `onMutate` is not optimism, and it is there because of the room
+ *
+ * The room's nudge starts a `GET /plans` this card did not ask for, and it can be in flight when
+ * a player records the next slot — each editor closes on the press, so *day* then *hour* two
+ * seconds apart is the ordinary case. The `PUT` answers first and is written in; the older read
+ * then lands and rolls the slot it never saw back to empty, until that slot's own nudge repairs it
+ * a second later. So every write here cancels the list's in-flight read first. Nothing is drawn
+ * before the server answers — what is cancelled is a read that can only be older than the reply
+ * — and a cancelled read leaves the list as it was, still marked stale, for the next nudge to
+ * re-read. `planCard.test.tsx` drives the crossing.
  *
  * ## `networkMode` is the app's, and the test is the app's own
  *
@@ -119,6 +132,11 @@ function usePlanWrite<Ask>(mutationFn: (ask: Ask) => Promise<Plan>) {
   return useMutation<Plan, AppError, Ask>({
     mutationKey: planKeys.writing(),
     mutationFn,
+    // **Not optimism.** Nothing is drawn before the server answers; what is cancelled is a read
+    // the room's nudge started — see the module note — which can only be older than the reply
+    // this write is about to write in, and which would otherwise land after it and roll the slot
+    // back for a second.
+    onMutate: () => client.cancelQueries({ queryKey: planKeys.list() }),
     onSuccess: (plan) => {
       client.setQueryData<readonly Plan[]>(planKeys.list(), (plans) =>
         plans === undefined ? [plan] : withPlan(plans, plan),

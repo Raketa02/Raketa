@@ -77,6 +77,17 @@ export { usePlan } from './hooks/usePlans';
 export { usePlanWriteRefusals } from './hooks/usePlans';
 
 /**
+ * **The plan list's key**, for the one reader that has to re-read it on somebody else's account.
+ *
+ * The room's live channel is the caller: a nudge says *this room moved*, a slot another member set
+ * moved it, and the card is read off `GET /plans` — so the nudge invalidates this key beside the
+ * room's, and the card follows the line on every phone
+ * ([#405](https://github.com/Raketa02/Raketa/issues/405)). The key and never the query: what
+ * crosses is an address to invalidate, and nothing about how the list is read.
+ */
+export { planKeys } from './hooks/planKeys';
+
+/**
  * **The questions the room still has to ask**, and the words for them.
  *
  * §22.4 is the plan's vocabulary by [`the-words.md`](../../../../docs/specs/matchmaking/the-words.md)

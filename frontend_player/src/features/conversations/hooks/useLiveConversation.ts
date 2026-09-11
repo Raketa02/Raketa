@@ -34,13 +34,37 @@
  * port reads `last_seq` to know a frame is a nudge and drops it. The one field this hook reads is
  * `conversationId`, and it reads it to **check**, never to fetch.
  *
+ * ## A nudge re-reads what the room draws — the stream and the plan
+ *
+ * The plan card pinned under the header is read off `GET /plans`, a list beside the room and never
+ * inside it (ADR-0148 §7), and a slot another member set reaches this phone as a system line on
+ * this very frame. A nudge that re-read the stream alone left the card saying `Where` under
+ * *tomek.p set the place* until the app was next foregrounded
+ * ([#405](https://github.com/Raketa02/Raketa/issues/405)) — which is the state ADR-0147 §12 had
+ * written down as *free*, true of the line and not yet of the card. So the nudge invalidates
+ * `planKeys.list()` beside the room, and the card, the quick chips and the header's state word all
+ * follow the line, because all three are readers of that one list.
+ *
+ * **On every nudge, and not on sighting a plan line.** The alternative — read the re-fetched
+ * stream for a new `PLACE_RECORDED | DAY_RECORDED | HOUR_RECORDED | PLAN_LOCKED` above the last
+ * `seq` held, and invalidate the plan only then — was considered and is refused. A nudge carries
+ * no content by construction and the port drops the number; a trigger derived from the stream's
+ * codes would couple the card's liveness to the line vocabulary, so a fifth plan line this build
+ * cannot read — the one case an old phone most needs a re-read for — would leave the card stale
+ * precisely there. *A build too old to read a code says so*; it must not also go quietly stale.
+ * And the stream's opening frame is a nudge too (ADR-0147 §4), so every connect and every
+ * fifteen-minute reconnect re-reads the plan for free, which is the catch-up after a stretch out
+ * of the room.
+ *
  * ## What the invalidation costs, and what it deliberately does not touch
  *
  * The room is an **infinite** query, so invalidating it re-reads every page the client is holding
  * rather than only the newest. On a room somebody has paged back through three times that is four
  * requests for one message. It is the honest price of the cache being the single copy — the
  * alternative is a client assembling the newest page itself, which is the second store this whole
- * design refuses — and at two-to-four members it is nothing.
+ * design refuses — and at two-to-four members it is nothing. The plan list is one short request
+ * more, on every nudge including the ones that were a message: ADR-0147 priced *one extra round
+ * trip per delivered message*, and inside a room it is two, both to lists the room draws.
  *
  * **The Chats list is not invalidated, and the cost of that is stated rather than glossed.** A
  * send does invalidate it, because the reply says nothing about the row's order and the player is
@@ -66,6 +90,7 @@ import { useEffect, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
+import { planKeys } from '@/features/plans/types';
 import { useLiveStream, type LiveStreamStatus } from '@/shared/lib/platform';
 
 import { shownTypists } from '../domain/typing';
@@ -103,7 +128,9 @@ export function useLiveConversation(conversationId: string): LiveConversation {
           // another one, which nothing on screen would show.
           if (nudge.conversationId !== conversationId) return;
 
+          // What the room draws: the stream, and the plan pinned over it. Never the Chats list.
           void client.invalidateQueries({ queryKey: conversationKeys.room(conversationId) });
+          void client.invalidateQueries({ queryKey: planKeys.list() });
         },
         onTyping: (typing) => {
           if (typing.conversationId !== conversationId) return;

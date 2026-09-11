@@ -11,7 +11,10 @@
  * it: **nothing on a plan is folded against a clock**. Its day and hour are wall-clock facts drawn
  * literally, so a list served from cache is not merely recent — it is exactly as true as one
  * fetched this second. What makes it current is the app's own focus refetch, and, inside a room,
- * the nudge that invalidates the stream a slot change writes a line into.
+ * **the nudge — which invalidates this key beside the stream's** (`useLiveConversation.ts`,
+ * [#405](https://github.com/Raketa02/Raketa/issues/405)). That sentence used to end at the
+ * stream, and the card sat stale under a line saying otherwise; `list()` is exported on
+ * `types.ts` for that one caller.
  */
 
 export const planKeys = {
