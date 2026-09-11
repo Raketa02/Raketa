@@ -138,3 +138,66 @@ shares Play's. Neither write on the screen behind it is optimistic and neither o
 `networkMode`: a standing is folded from the record and the clock, so the only client that can be
 right about what a game becomes is one that asks, and the app's own test — _does this act carry a
 deadline the player chose?_ — answers no for both, where the challenge send answers yes.
+
+**The Now card is a dark shell — a stage chip, the sport word, three slot rows with a bright-or-dim
+bar, a bigger court with faces, and two doors — and the Planning card is the first one drawn for
+real** ([#413](https://github.com/Raketa02/Raketa/issues/413), the design of
+[#410](https://github.com/Raketa02/Raketa/issues/410), which wins over every record it disagrees
+with and has each of them amended). One `GameCard` still draws all nine names and branches on
+nothing: every slot that differs by name is a table lookup in `nowPresentation.ts` — `CARD_TAG`,
+`STAGE_DOT`, `ACCENT`, `doorLabel` — so a tenth name fails `pnpm typecheck` in one file, and every
+name but Planning is drawn on **soft defaults** (mint bars, a mint `settled` door, the stage dot as
+the table says) until its own design arrives, so the rail does not mix two visual languages and a
+game flipping to _Game on_ under a thumb does not jump layouts. **The dot is the stage's** and the
+sport is the word beside it — the one surface on which a `Tag`'s dot is not a sport's, legal
+because the sport left the dot for a word and the token has one meaning on the card; nothing
+writes _singles_ or _doubles_, because the court says the format. **The figure, the line and the
+gloss retired into three `SlotRow`s** in `slots.ts`' own order: a settled slot draws its value big
+and white under a bright bar — the place without its court, `Sunday` `9 Aug` (the first date this
+app draws, §5.4 #6 amended), the hour in mono — and an unsettled one draws `Not agreed yet` small
+and grey under a dim bar, so the card fills with brightness as the plan does; `Not agreed yet` was
+the chips' spoken word only and is drawn now, capitalised, from one constant; `TIME` is the card's
+word for the `hour` slot where the chip keeps `Hour`; every value box is `h2`'s line tall so the
+bars stand at one height whatever they hold. The settled bar is the third drawing of
+`size.semanticBar` — bright is agreed, dim is not, on dark only — and the bright colour and the
+wide door's variant come from one `ACCENT` row, `volt` on Planning (_the plan is settled here_, a
+meaning volt has on this card and nowhere else, off `primary` still) and mint elsewhere, on 6.1's
+`settled` rather than a `mint` variant that would have equalled it. **One line survives under the
+slots** so no card loses a fact it drew: _Needs result_'s window and the endings' `gameStandingLine`.
+**The court is `court.card` 88, measured against mock 1 at 1×** and not derived — a 21pt seat by
+the ratio, which is what the mock's tiles measure — with **a face in every seat where the room has
+one**: the conversation rows the rail already fetches for the door carry every member's `photoUrl`,
+so `useChatDoors` folds `faces` beside the `conversationId` under the same challenge key and the
+card is handed both, failing soft twice over — no room is no bubble and posters in every seat, and
+no new fetch. **The caption is three letters on every seat, yours included**: the `volt` ring is
+the mark, and `you` under a ringed face was the same fact twice; every seat is handed to `SeatFace`
+as a `player`, because the `you` occupant exists for a builder that cannot carry your photograph
+and here the room does. No sport caption on the ground, because the sport is the word in the
+header. **The body is not pressable** — the two buttons are the only doors, which reverses §5.2's
+_the card body goes wherever the button goes_ — so the body is one accessibility element with no
+action, named for the tag, the sport and the three slots as sentences in the read-only plan tags'
+own shape, and the wide door's verb is no longer in that name because the door is an element of
+its own now and a name ending in `Open` beside a button announcing `Open` is the double announcement
+6.8 refuses. **The wide door is the next thing to do**: `Finish the plan` on Planning — the same
+`open` door as Game on's, under the word for the errand, and _Finish_ rather than _Lock_ because
+the lock is an act with its own control on that screen — `Open` · `We played` · `Confirm the result`
+on the others, and none on an ending; `doorLabel` is keyed by the card's name rather than by the
+door for exactly that reason, and a test holds it in step with `domain/`'s `DOOR`. **The
+consequence is stated: an ending's card opens nothing**, and the room behind it is destroyed, so a
+finished game's screen is not reachable from the rail — the card is the record for the day it
+stays. **The bubble is the app's first icon-only button** (design-system 6.14): Feather
+`message-circle` on `onDarkFill`, `minTouch` wide and `btnLg` tall so the row reads as one, with
+`Open the chat` spoken always and the glyph hidden; `Button` still has no glyph slot. The footer
+has no hairline — the design draws none, and a fold between the slots and the door that finishes
+them would cut the card in two — so the row itself takes 7.7's `marginTop: auto`, and `doors={false}`
+draws none at all — no caller yet; it is the prop #414 will draw the shell with at the top of
+the game screen, where both doors go. **The stage dot's
+colour was measured and found to be `amber`**: mock 1's dot is `#87641A`, a degree off amber's hue
+and a step off its lightness, at 1,61 against the tag it sits in — the value the ticket itself
+calls invisible on `night` — so `color.arranging` keeps the mock's hue and saturation and lifts the
+lightness alone to the step past the first that clears 1.4.11 on the tag's ground (`#D29B28`: 5,35
+on `night`, 3,49 on the tag, 3,17 on the icon door), named for its meaning — _a stage still being
+arranged_, the plan before the game and the result after it — and both the refused value and the
+drawn one are computed in `Tag.test.tsx`. `domain/` is untouched: the ladder, `gameCardName` and
+`DOOR` are what they were. No device has drawn any of it; the three Planning mocks are the fixtures
+`nowRail.test.tsx` walks, and the card is asked for a look against them.

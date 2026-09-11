@@ -1902,20 +1902,38 @@ class of problem, name nobody, grade nothing.
 **One note for every refused control on the screen**, not one per control. It is one fact about the
 account, and saying it five times is the failure #326 §6 names about counts.
 
-### 22.6 The card's gloss, and the screen's checklist
+### 22.6 The card's slots, and the screen's checklist
 
-**The four `AWAITING_ENTRY` rungs have no copy anywhere** and this is it. The rule is one sentence
-in two states plus one override — [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §4.3.
+**The four `AWAITING_ENTRY` rungs have no copy anywhere** and this is it. Since
+[#413](https://github.com/Raketa02/Raketa/issues/413) the card says the plan as **three slot rows**
+rather than as one sentence — [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §4.2.
 
-| Rung | The Now card's gloss |
+| Slot | Label | Settled | Not settled |
+| --- | --- | --- | --- |
+| where | `WHERE` | the place, without its court; spoken whole | `Not agreed yet` |
+| day | `DAY` | `Sunday` `9 Aug` — the weekday whole and the date beside it | `Not agreed yet` |
+| hour | `TIME` | `19:00` | `Not agreed yet` |
+
+**`TIME` is the card's word for the `hour` slot**, as the design draws it; the chip in the room
+keeps `Hour`, because a chip names the value you are about to set and a card labels the value
+that was. **`Not agreed yet` is drawn now, and capitalised as a sentence** — it was the chips'
+spoken word only, and the spoken names read the same constant, so a chip still says exactly what
+the card draws.
+
+**The sport is a word, top right** — `PADEL`, and `PADEL · FRIENDLY` for the marked kind. Nothing
+writes *singles* or *doubles*: the court says the format.
+
+**One line survives under the slots**, so no card loses a fact it drew before the shell:
+
+| Rung | Under the slots |
 | --- | --- |
-| **Planning** · **Today** | `Still to agree: where` · `Still to agree: the day` · `Still to agree: the hour` |
-| **Game on** | `Nothing left to agree` |
+| **Planning** · **Game on** · **Today** | nothing — the slots are the whole account |
 | **Needs result** | `{duration} left` |
+| everything that is not a rung | `gameStandingLine`'s sentence, cited |
 
-**The gloss names only the next slot**, in ADR-0144's order. That is what keeps it four words and
-what hands the fuller account to the checklist below — and it uses the ordering that record already
-fixed, where *where* is the most negotiable of the three.
+**The gloss is retired.** `Still to agree: where` named only the next slot, which was what kept it
+four words and handed the fuller account to the checklist below; the slots draw all three, and an
+unfilled one under a dim bar says the same thing without prose.
 
 **The checklist is three lines, capped, in one order**, on the game screen and never on the card:
 
@@ -1927,7 +1945,7 @@ fixed, where *where* is the most negotiable of the three.
 
 **`{list}` is the unfilled slot names in slot order**, joined with commas and a final *and*:
 `where and the hour`, `where, the day and the hour`. This is the one place the whole list is
-printed, which is why the gloss can name one.
+printed as prose.
 
 **The first line explains why the plan card is there at all** — a `LINE_UP_INCOMPLETE` challenge
 has an open conversation and no plan — and it is the same three words for all four rungs, because
@@ -1965,9 +1983,9 @@ writing:
 
 | Control | Where |
 | --- | --- |
-| `Open the chat` | the challenge screen, the game screen, and the Now card's ✉ — **one act, one spelling** |
+| `Open the chat` | the challenge screen, the game screen, and the Now card's bubble — **one act, one spelling**; on the card it is the spoken name of an icon-only door |
 | `⚡ Fill the seats` | the challenge screen's `LINE_UP_INCOMPLETE` arm, and it is the builder's own label for the identical act |
-| `Open` · `We played` · `Confirm the result` | the Now card's footer, one per rung — [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §5.2 |
+| `Finish the plan` · `Open` · `We played` · `Confirm the result` | the Now card's wide door, one per name — [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §5.2. **`Finish the plan` is Planning's word for the same door Game on opens with `Open`** ([#413](https://github.com/Raketa02/Raketa/issues/413)): the destination is the same and the errand is not. *Finish* and not *Lock*, because the lock is an act with its own control on that screen (ADR-0155) |
 
 **Nothing offline gets a third sentence.** `does-not-resume` is the shared value, unchanged, and
 the two values split on **resumption**; a third keyed to the act would break the only distinction
@@ -2182,15 +2200,20 @@ never a standing (ADR-0157) — and a room with no game stops at the sport.
 | Element | Role | Announces |
 | --- | --- | --- |
 | `YOUR GAMES · n` | `header` | the heading and its count |
-| A game card | `button` | the tag, the eyebrow, the figure and line, the gloss, then the door's verb — capped at roughly twenty words |
-| The ✉ | `button` | `Open the chat` — **the same words as every other chat door** |
+| A game card's body | — | **one element, no role, no action** — the tag, the sport, then the three slots as sentences: `Planning. Padel. Where, Zabłocie Sport, court 3. Day, Not agreed yet. Time, Not agreed yet.` — and the line under the slots where the card keeps one |
+| The wide door | `button` | its own verb — `Finish the plan`, `Open`, `We played`, `Confirm the result` |
+| The bubble | `button` | `Open the chat` — **the same words as every other chat door** |
 | The rail's dots | — | **one element, `Game {i} of {n}`, and no role** — 7.9's own shape (*"one element, one label — never one per segment"*), and not pressable, so it announces a position rather than offering an action |
 | The plan, read-only | — | **one element** — `The plan. Where, Zabłocie Sport. Day, Saturday. Hour, 18:00.` |
 | The checklist | — | **one element**, its three lines in order |
 
-**A card is one element and the ✉ is a second, because there are exactly two actions on it.** The
-body tap and the named door go to the same place — #336 made that a rule, so they are one action
-and not two — while the ✉ goes somewhere else and is therefore its own element.
+**A card is three elements, and the first has no action.** The body used to be a `button` whose
+name ended in the door's verb, because the body tap and the named door went to one place; since
+[#413](https://github.com/Raketa02/Raketa/issues/413) the body is not pressable, so it is one
+element of facts in the shape the read-only plan tags take — *one fact in three parts with no
+action* — and the two doors follow it as elements of their own. The verb is therefore **not** in
+the body's name: a body ending in `Open` beside a button announcing `Open` is the double
+announcement 6.8 refuses. The place is spoken whole and the day with its date.
 
 **The three read-only plan tags are one element** because they are one fact in three parts with no
 action: §20.1 unchanged, and the reason `Tag` was chosen over `Chip` for them in the first place.

@@ -740,11 +740,12 @@ follows is only what this client had to invent to let a room fill one in
 
 ### Now
 
-Seven client-only concepts, all of them in `features/plans/` — the rail and its card are this
+Eight client-only concepts, all of them in `features/plans/` — the rail and its card are this
 feature's because a card needs a **plan** beside a **game** and ADR-0149 §1's arrow runs one way
 ([`the-loop-components.md`](../docs/specs/the-loop/the-loop-components.md) §3.4). What follows is
 only what this client had to invent to draw what is happening today and next
-([#367](https://github.com/Raketa02/Raketa/issues/367)).
+([#367](https://github.com/Raketa02/Raketa/issues/367),
+[#413](https://github.com/Raketa02/Raketa/issues/413)).
 
 - **The ladder** — the four rungs a game's card is named by, **read in order**, in
   `domain/ladder.ts`: _the agreed point has passed_ → **Needs result**, _the agreed day is today_
@@ -769,24 +770,42 @@ only what this client had to invent to draw what is happening today and next
 - **The card name** — which of nine cards a game draws, folded at read time from the standing, the
   slot count and the clock: the four rungs, **Confirm the result** (one name over four
   `AWAITING_ANSWER` arms), **Counted**, **Uncounted**, **Never played**, and the named gap for a
-  standing this build cannot read. It is the **tag**, and its dot is the **sport's** — urgency is
-  the tag's own `warn`/`ok` variant, with the word beside it. _Avoid_: a status column, a client
-  state machine, and a sport dot on a card that names no sport.
-- **The figure and the line** — the card's one large slot and the row under it. The figure takes
-  **three shapes** — the hour, the **weekday** where there is a day and no hour, and **nothing**
-  where there is no day — and the line takes **whatever the figure did not**, which is what keeps
-  **the hour printed once**. _Avoid_: an absolute date, a countdown on either of them, and a second
-  figure slot for the word — the weekday is 3.3's `display`, which exists for exactly this.
-- **The gloss** — the one sentence the card adds: **the next unfilled slot in slot order**, or
-  _Nothing left to agree_ — with **Needs result overriding it** with the time left in the entry
-  window. One rule for three rungs, so there is no fourth string to keep in step with the ladder,
-  and the fuller account is the game screen's checklist. _Avoid_: a checklist on the card, listing
-  every unfilled slot, and restating the button.
-- **The named door** — the card's one control: it carries the **act's verb**, it **navigates**, and
-  it **never writes** — `Open` · `We played` · `Confirm the result`, one per rung, with the body
-  going wherever it goes and the **✉** beside it opening the room. An ending carries none: the app
-  does not name an act a state cannot take. _Avoid_: a second, quieter door behind the body, a
-  disabled control where a card offers nothing, and a door that writes.
+  standing this build cannot read. It is the **tag**, and every slot on the card that differs by
+  name is a **table lookup on it** — the stage dot, the accent, the door's word — so a tenth name
+  fails `pnpm typecheck` in one file. _Avoid_: a status column, a client state machine, a switch
+  over the names, and a tenth card.
+- **The shell** — one dark card for all nine names: **header · slots + court · footer**. The
+  Planning card is the first drawn for real; every other name is the same shell on **soft
+  defaults** until its own design arrives, so the rail does not mix two visual languages and a
+  card flipping under a thumb does not jump layouts. _Avoid_: a second card component, and a
+  layout that changes shape rather than content between two names.
+- **The stage dot** — the tag's dot on this card is **the stage's, not the sport's**: `arranging`
+  while the game is still in the players' hands (Planning, Needs result, Confirm the result),
+  `mint` where it is settled (Game on, Today, Counted), the quiet hairline on the two endings
+  nobody scored. It is legal because **the sport is the word beside it** — `PADEL`,
+  `PADEL · FRIENDLY` — and nothing writes _singles_ or _doubles_: the court says the format.
+  _Avoid_: a sport dot here, urgency as the pill's variant, and a dot on a card that names no
+  sport.
+- **The slot rows** — three, in the app's own order (**where · day · hour**, read from `slots.ts`),
+  each a **settled bar**, a label (`WHERE` · `DAY` · `TIME`) and a value. **Bright is agreed, dim is
+  not**: a settled slot draws its value big and white — the place without its court, `Sunday`
+  `9 Aug`, the hour in mono — and an unsettled one draws _Not agreed yet_ small and grey. The card
+  fills with brightness as the plan does. `TIME` is the card's word for the `hour` slot; the
+  chat's chip keeps `Hour`. _Avoid_: a figure, a line, a gloss, a countdown on any of them, and a
+  row that shrinks when its slot is empty.
+- **The accent** — one table by name for the settled bar's colour **and** the wide door's variant:
+  `volt` on Planning (_the plan is settled here_ — a meaning volt has on this card and nowhere
+  else), mint on everything else as the soft default. _Avoid_: a volt bar over a mint door, and
+  volt on `primary`.
+- **The line under the slots** — the one fact the shell keeps from before: **Needs result's
+  window** (`{duration} left`, folded against `read_at`, obeying nothing) and **the endings'
+  standing** (`gameStandingLine`, cited). Nothing on the three plan-led rungs. _Avoid_: the gloss
+  coming back under another name, and a checklist on the card.
+- **The two doors** — **the wide door** is the next thing to do and its word changes with the
+  stage: `Finish the plan` · `Open` · `We played` · `Confirm the result`, one per name and none on
+  an ending; it **navigates and never writes**. **The bubble** beside it is the icon door to the
+  room, drawn only where there is one. **The body is not a door.** _Avoid_: a pressable body, a
+  disabled control where a card offers nothing, a door that writes, and a third door.
 
 ### The sportsmanship card
 

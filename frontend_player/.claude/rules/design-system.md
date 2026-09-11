@@ -65,8 +65,10 @@ frame, a stage or a scenario switcher, and never use the four stage colours (`#0
   progress fill, hot tag, Chats badge. A sixth-and-a-half is not a taste call: pick the meaning
   and you will land on `amber` or on `ink`, which is where the row stripe and the rail's
   current dot both landed.
-- **A `Tag`'s dot is the sport's and only the sport's.** Urgency is the tag's `warn` / `ok`
-  variant, carried by the whole pill with the word beside it.
+- **A `Tag`'s dot is the sport's and only the sport's — except on the Now card, where it is the
+  stage's** and the sport is the word beside it (`STAGE_DOT`, 6.4 as amended by #413). Under
+  both: a dot is always accompanied by its name in text, and one surface gives the token one
+  meaning. Urgency elsewhere is the tag's `warn` / `ok` variant, carried by the whole pill.
 - **Rule C — white text never sits on `coral` or `mint`** (3.89:1 and 4.07:1). Use
   `coralInk` / `mintInk`. `ink` is the only dark that may sit on coral (4.50:1).
 - **`volt` is a fill anywhere and a stroke only on dark.** `ink` on a volt fill is
@@ -84,8 +86,9 @@ frame, a stage or a scenario switcher, and never use the four stage colours (`#0
   operate.** They are not interchangeable — and **`eyebrow` is the section heading**, in
   `muted`, uppercase. `h2` titles a card and never a section; five shipped surfaces got this
   wrong before the rule was written down.
-- **`display` (26/700 sans) is the only sans role above `h1`**, and it exists for one thing:
-  a figure slot holding a **word**. A number in it would be a §1.4 violation.
+- **There is no sans role above `h1`.** `display` (26/700) existed for the Now card's weekday
+  figure and retired with it (#413, Part 16); a word that wants to be that large is a Part 16
+  decision, not a `fontSize`.
 
 This design system covers `frontend_player/` **only.** The club app has its own; the palettes
 converge because it is one brand, but the values are never shared.

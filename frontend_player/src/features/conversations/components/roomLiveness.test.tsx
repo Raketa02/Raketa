@@ -279,7 +279,7 @@ describe('the nudge', () => {
   it('brings the slot another member set — the line and the chip together', async () => {
     stubGames(transport, [game()], READ_AT);
     await openTheRoom({ ...room(), game_id: GAME });
-    await screen.findByLabelText('Where: not agreed yet');
+    await screen.findByLabelText('Where: Not agreed yet');
 
     const set: Wire['SystemLineSchema'] = {
       type: 'system_line',
@@ -376,7 +376,7 @@ describe('the nudge', () => {
     });
     act(() => channel.nudge(ROOM));
 
-    expect(await screen.findByLabelText('Where: not agreed yet')).toBeTruthy();
+    expect(await screen.findByLabelText('Where: Not agreed yet')).toBeTruthy();
     expect(screen.getByLabelText(OPEN_THE_GAME)).toBeTruthy();
     expect(
       screen.getByText(headerSubline(sportLabel('padel'), cardStateWord('planning'))),

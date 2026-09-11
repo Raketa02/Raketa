@@ -80,6 +80,10 @@ export { CONVERSATION_ROUTE } from './components/ConversationRow';
  * **It fails soft**: no row is the ordinary state rather than an error, because a room opens on
  * the first acceptance and is destroyed when the episode ends.
  *
+ * `useChatDoors` is the join over the whole list, for the rail — the door **and the faces** in the
+ * room, because the rows carry every member's photograph and a game's seat carries none
+ * ([#413](https://github.com/Raketa02/Raketa/issues/413)).
+ *
  * `useAwaitedChatDoor` is the same join **waited for**: the room an acceptance opens is written
  * off the outbox after the accept has answered, so the screen that just said *I'm in* re-reads
  * the list on a short cadence until what it expects has landed, and stops at a bound
@@ -91,6 +95,7 @@ export {
   useAwaitedChatDoor,
   useChatDoor,
   useChatDoors,
+  type RoomDoor,
   type RoomExpectation,
 } from './hooks/useConversations';
 

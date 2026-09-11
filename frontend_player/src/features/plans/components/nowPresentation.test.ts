@@ -1,33 +1,38 @@
 /**
- * **What the card says, and the three rules that decide it**: the figure takes one of three
- * shapes, the line takes whatever the figure did not, and the gloss is one rule for three rungs
- * with one override.
+ * **What the card says, and the tables that decide it**: the tag's word, the stage's dot, the
+ * accent, the wide door's verb, the sport word, the one line the card keeps, and the three slots
+ * as a listener hears them.
  *
  * The ladder is `ladder.test.ts`'s and the fold is `gameCard.test.ts`'s; what is asserted here is
- * only the words, against the copy deck rather than against strings wherever a sentence has a
- * home.
+ * only the words and the tables, against the copy deck rather than against strings wherever a
+ * sentence has a home. Every table is walked over **all nine names**, because a name with no row
+ * is the drift a `Record` over the union exists to refuse
+ * ([#413](https://github.com/Raketa02/Raketa/issues/413)).
  */
 
-import type { Game } from '@/features/games/types';
+import { gameStandingLine, type Game } from '@/features/games/types';
+import { theme } from '@/shared/ui';
+import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 
-import { GAME_CARD_NAMES, GAME_DOORS } from '../domain/gameCard';
+import { GAME_CARD_NAMES, doorOf } from '../domain/gameCard';
+import type { Plan } from '../domain/slots';
 
 import {
+  ACCENT,
   CARD_TAG,
+  FINISH_THE_PLAN,
+  GAMES_HEADING,
+  STAGE_DOT,
+  cardLine,
+  cardSlotSpoken,
   cardStateWord,
   doorLabel,
-  GAMES_HEADING,
-  NOTHING_LEFT_TO_AGREE,
-  cardEyebrow,
-  cardFigure,
-  cardGloss,
-  cardLine,
-  cardLineSpoken,
   gameCardLabel,
   gamesHeading,
+  sportSpoken,
+  sportWord,
 } from './nowPresentation';
-import { STILL_TO_AGREE } from './planPresentation';
-import type { Plan } from '../domain/slots';
+import { NOT_AGREED_YET, SLOT_EYEBROW } from './planPresentation';
 
 const GAME_ID = '11111111-0000-4000-8000-000000000001';
 const READ_AT = '2026-09-12T09:00:00Z';
@@ -69,14 +74,53 @@ describe('the tag', () => {
     expect(named).toHaveLength(GAME_CARD_NAMES.length - 1);
     expect(CARD_TAG.unreadable).toBeUndefined();
   });
+});
 
-  /** Amber is a clock running. The two quiet endings are neither amber nor red. */
-  it('spends urgency on the three cards a clock is running on, and on no others', () => {
-    const amber = GAME_CARD_NAMES.filter((name) => CARD_TAG[name]?.variant === 'warn');
+/**
+ * **The dot is the stage's** (#413) — the one surface on which a `Tag`'s dot is not a sport's,
+ * and legal because the sport is the word beside it. Three colours, three meanings: the game is
+ * still in the players' hands, the game is settled, the game is over quietly.
+ */
+describe('the stage dot', () => {
+  it('is the arranging colour where the players still owe the game something', () => {
+    for (const name of ['planning', 'needs-result', 'confirm'] as const) {
+      expect(STAGE_DOT[name]).toBe(theme.color.arranging);
+    }
+  });
 
-    expect(amber).toEqual(['needs-result', 'today', 'confirm']);
-    expect(CARD_TAG.uncounted?.variant).toBe('base');
-    expect(CARD_TAG['never-played']?.variant).toBe('base');
+  it('is mint where the game is settled', () => {
+    for (const name of ['game-on', 'today', 'counted'] as const) {
+      expect(STAGE_DOT[name]).toBe(theme.color.mint);
+    }
+  });
+
+  it('is the quiet hairline on the two quiet endings, and nothing where there is no tag', () => {
+    expect(STAGE_DOT.uncounted).toBe(theme.color.onDarkHair);
+    expect(STAGE_DOT['never-played']).toBe(theme.color.onDarkHair);
+    expect(STAGE_DOT.unreadable).toBeUndefined();
+  });
+
+  it('has a row for every name the tag has a word for, and only those', () => {
+    for (const name of GAME_CARD_NAMES) {
+      expect(STAGE_DOT[name] === undefined).toBe(CARD_TAG[name] === undefined);
+    }
+  });
+});
+
+/**
+ * **The accent is one table** — the settled bar's bright colour and the wide button's variant
+ * come from the same row, so a card cannot draw a volt bar over a mint door.
+ */
+describe('the accent', () => {
+  it('is volt on Planning — the plan is settled here — and the volt button under it', () => {
+    expect(ACCENT.planning).toEqual({ bar: theme.color.volt, button: 'volt' });
+  });
+
+  it('is mint on every other card, until its own design arrives', () => {
+    for (const name of GAME_CARD_NAMES) {
+      if (name === 'planning') continue;
+      expect(ACCENT[name]).toEqual({ bar: theme.color.mint, button: 'settled' });
+    }
   });
 });
 
@@ -100,7 +144,7 @@ describe('the card’s name in a line', () => {
 
   it('is the tag’s own word, lowered, on every card the tag names — until a proper noun arrives', () => {
     for (const name of GAME_CARD_NAMES) {
-      expect(cardStateWord(name)).toBe(CARD_TAG[name]?.label.toLowerCase());
+      expect(cardStateWord(name)).toBe(CARD_TAG[name]?.toLowerCase());
     }
   });
 
@@ -109,140 +153,179 @@ describe('the card’s name in a line', () => {
   });
 });
 
-describe('the eyebrow', () => {
-  it('reads the court off the seats, and marks only a friendly', () => {
-    expect(cardEyebrow(game())).toBe('Singles');
-    expect(cardEyebrow(game({ kind: 'FRIENDLY' }))).toBe('Singles · Friendly');
+/**
+ * **The wide door's verb, per name** — `Finish the plan` on Planning, and the three verbs §22.7
+ * fixed on the other rungs. Keyed by the card's name rather than by the door, because the door
+ * *Planning* carries is `open` and the word on it is not.
+ */
+describe('the door’s word', () => {
+  it('says Finish the plan on Planning, where the door is the same open as Game on’s', () => {
+    expect(doorLabel('planning')).toBe(FINISH_THE_PLAN);
+    expect(doorLabel('game-on')).toBe('Open');
+    expect(doorOf('planning')).toBe(doorOf('game-on'));
   });
 
-  it('says Doubles for a court of four', () => {
-    const four: Game['seats'] = [
-      ...SINGLES_SEATS,
-      { side: 'A', playerId: 'a', nickname: 'ola_k' },
-      { side: 'B', playerId: 'b', nickname: 'marekb' },
-    ];
+  it('keeps the act’s own verb on the two score-led rungs and on the argument', () => {
+    expect(doorLabel('today')).toBe(WE_PLAYED);
+    expect(doorLabel('needs-result')).toBe(WE_PLAYED);
+    expect(doorLabel('confirm')).toBe('Confirm the result');
+  });
 
-    expect(cardEyebrow(game({ seats: four }))).toBe('Doubles');
+  /** A word for a door the ladder does not carry would be a control the state cannot take. */
+  it('has a word exactly where domain/ has a door, on all nine names', () => {
+    for (const name of GAME_CARD_NAMES) {
+      expect(doorLabel(name) === undefined).toBe(doorOf(name) === undefined);
+    }
+  });
+});
+
+describe('the sport word', () => {
+  it('is the sport, and marks only a friendly', () => {
+    expect(sportWord(game(), 'Padel')).toBe('Padel');
+    expect(sportWord(game({ kind: 'FRIENDLY' }), 'Padel')).toBe('Padel · Friendly');
   });
 
   /** A kind this build cannot read drops its clause; every other word on the card stands. */
   it('draws a game whose kind it cannot read as a game', () => {
     const { kind: _dropped, ...unknown } = game({ kind: 'FRIENDLY' });
 
-    expect(cardEyebrow(unknown)).toBe('Singles');
+    expect(sportWord(unknown, 'Padel')).toBe('Padel');
+  });
+
+  it('is spoken as a clause, because a listener has no reading for a middle dot', () => {
+    expect(sportSpoken(game(), 'Padel')).toBe('Padel');
+    expect(sportSpoken(game({ kind: 'FRIENDLY' }), 'Padel')).toBe('Padel, friendly');
+  });
+
+  it('says nothing about singles or doubles — the court says the format', () => {
+    const four: Game['seats'] = [
+      ...SINGLES_SEATS,
+      { side: 'A', playerId: 'a', nickname: 'ola_k' },
+      { side: 'B', playerId: 'b', nickname: 'marekb' },
+    ];
+
+    expect(sportWord(game({ seats: four }), 'Padel')).toBe('Padel');
   });
 });
 
-describe('the figure and the line, and the hour printed once', () => {
-  it('is the hour where there is one, with the day falling to the line', () => {
-    const agreed = plan({ place: 'Zabłocie Sport', day: '2026-09-19', hour: '18:00' });
-
-    expect(cardFigure(agreed)).toEqual({ kind: 'hour', value: '18:00' });
-    expect(cardLine(agreed)).toBe('Saturday · Zabłocie Sport');
-  });
-
-  it('is the weekday where there is a day and no hour, and the line never repeats it', () => {
-    const agreed = plan({ place: 'Zabłocie Sport', day: '2026-09-19' });
-
-    expect(cardFigure(agreed)).toEqual({ kind: 'weekday', value: 'Saturday' });
-    expect(cardLine(agreed)).toBe('Zabłocie Sport');
-  });
-
-  it('is nothing where no day is agreed, and the line is the place alone', () => {
-    expect(cardFigure(plan({ place: 'Zabłocie Sport' }))).toBeUndefined();
-    expect(cardLine(plan({ place: 'Zabłocie Sport' }))).toBe('Zabłocie Sport');
-  });
-
-  it('has no line at all where nothing has been agreed', () => {
-    expect(cardFigure(undefined)).toBeUndefined();
-    expect(cardLine(undefined)).toBeUndefined();
-  });
-
-  /** §20.4: the visible label truncates, the spoken one never does. */
-  it('shortens the place for the eye and speaks it whole', () => {
-    const long = plan({ place: 'Zabłocie Sport, court 3' });
-
-    expect(cardLineSpoken(long)).toContain('court 3');
-    expect(cardLine(long)).not.toBe(cardLineSpoken(long));
-  });
-});
-
-describe('the gloss', () => {
+/**
+ * **The one line the card keeps under the slots** — the window on *Needs result*, and the standing
+ * on everything that is not a rung. The three plan-led rungs draw none: the slots are their whole
+ * account, and *Still to agree* became a dim bar.
+ */
+describe('the line under the slots', () => {
   const facts = (over: Partial<Game> = {}, agreed?: Plan) => ({
     game: game(over),
     plan: agreed,
     playerId: 'me',
   });
 
-  it('names the next unfilled slot, in slot order, and only that one', () => {
-    expect(cardGloss('planning', facts())).toBe(`${STILL_TO_AGREE}: where`);
-    expect(cardGloss('planning', facts({}, plan({ place: 'Zabłocie Sport' })))).toBe(
-      `${STILL_TO_AGREE}: the day`,
-    );
+  it('is nothing on the three rungs whose account is the slots', () => {
+    expect(cardLine('planning', facts())).toBeUndefined();
     expect(
-      cardGloss('planning', facts({}, plan({ place: 'Zabłocie Sport', day: '2026-09-19' }))),
-    ).toBe(`${STILL_TO_AGREE}: the hour`);
+      cardLine('game-on', facts({}, plan({ place: 'x', day: '2026-09-19', hour: '18:00' }))),
+    ).toBeUndefined();
+    expect(cardLine('today', facts({}, plan({ day: '2026-09-12' })))).toBeUndefined();
   });
 
-  /** One rule for three rungs — *Today* is the case that justifies it. */
-  it('is the same rule on Today, which may genuinely still be missing an hour', () => {
-    expect(
-      cardGloss('today', facts({}, plan({ place: 'Zabłocie Sport', day: '2026-09-12' }))),
-    ).toBe(`${STILL_TO_AGREE}: the hour`);
-  });
-
-  it('says nothing is left once all three are filled', () => {
-    const full = plan({ place: 'Zabłocie Sport', day: '2026-09-19', hour: '18:00' });
-
-    expect(cardGloss('game-on', facts({}, full))).toBe(NOTHING_LEFT_TO_AGREE);
-    expect(cardGloss('today', facts({}, full))).toBe(NOTHING_LEFT_TO_AGREE);
-  });
-
-  it('overrides the slot rule with the time left when a result is owed', () => {
-    expect(cardGloss('needs-result', facts({ entryClosesAt: '2026-09-13T09:00:00Z' }))).toBe(
+  it('is the time left when a result is owed', () => {
+    expect(cardLine('needs-result', facts({ entryClosesAt: '2026-09-13T09:00:00Z' }))).toBe(
       '24 hours left',
     );
   });
 
-  /** Everything that is not a rung already has a sentence, and it is `features/games`'. */
+  /** Undated, the window has closed on somebody's word that the game happened: no countdown. */
+  it('is nothing on Needs result where the wire dated no window', () => {
+    expect(cardLine('needs-result', facts({ entryClosesAt: undefined }))).toBeUndefined();
+  });
+
+  /**
+   * Everything that is not a rung already has a sentence, and it is `features/games`' — so the
+   * assertion is the citation itself, not a copy of the words: the card says exactly what the
+   * screen behind it says, whatever those words become.
+   */
   it('says what an ended game is, in the sentence the screen behind it says', () => {
-    expect(cardGloss('counted', facts({ standing: 'CONFIRMED' }))).toBe('Agreed.');
-    expect(cardGloss('uncounted', facts({ standing: 'UNSCORED' }))).toBe('Nobody agreed a score.');
+    for (const standing of ['CONFIRMED', 'UNSCORED'] as const) {
+      const ended = game({ standing });
+      const name = standing === 'CONFIRMED' ? 'counted' : 'uncounted';
+
+      expect(cardLine(name, facts({ standing }))).toBe(gameStandingLine(ended, 'me'));
+    }
+  });
+});
+
+/**
+ * **The three slots, spoken** — each named and then what it holds, in `planTagsName`'s own
+ * register: the place whole, the day with its date, the hour as drawn, and *Not agreed yet* where
+ * nothing is.
+ */
+describe('a slot, spoken', () => {
+  it('names the slot and speaks the place whole, comma and court and all', () => {
+    expect(cardSlotSpoken(plan({ place: 'Zabłocie Sport, court 3' }), 'where')).toBe(
+      `${SLOT_EYEBROW.where}, Zabłocie Sport, court 3`,
+    );
+  });
+
+  it('speaks the day as the weekday and its date', () => {
+    expect(cardSlotSpoken(plan({ day: '2026-08-09' }), 'day')).toBe(
+      `${SLOT_EYEBROW.day}, Sunday 9 Aug`,
+    );
+  });
+
+  it('speaks the hour as it is drawn, under the card’s word for it', () => {
+    expect(cardSlotSpoken(plan({ hour: '19:00' }), 'hour')).toBe(`${SLOT_EYEBROW.hour}, 19:00`);
+  });
+
+  it('says a slot nobody has filled is not agreed yet, in the drawn words', () => {
+    expect(cardSlotSpoken(undefined, 'where')).toBe(`${SLOT_EYEBROW.where}, ${NOT_AGREED_YET}`);
+    expect(cardSlotSpoken(plan(), 'hour')).toBe(`${SLOT_EYEBROW.hour}, ${NOT_AGREED_YET}`);
   });
 });
 
 describe('what the card announces', () => {
   /**
-   * §24.5: the tag, the eyebrow, the figure and line, the gloss, then the door's verb — and the
-   * sport, because a listener has no picture of the court and the tag's dot is legal only where
-   * the sport is named.
+   * §24.5 as amended by #413: the tag, the sport, the three slots as sentences, then the line —
+   * and **no verb**, because the two doors are elements of their own now and a name ending in
+   * `Open` beside a button announcing `Open` is the double announcement 6.8 refuses.
    */
-  it('says the card’s name, the sport, what is agreed, the gloss and the door’s verb', () => {
+  it('says the card’s name, the sport, the three slots and nothing about the door', () => {
     const said = gameCardLabel({
-      name: 'game-on',
+      name: 'planning',
       sportName: 'Padel',
       game: game(),
-      plan: plan({ place: 'Zabłocie Sport', day: '2026-09-19', hour: '18:00' }),
+      plan: plan({ place: 'Zabłocie Sport, court 3' }),
       playerId: 'me',
-      door: 'open',
     });
 
     expect(said).toBe(
-      'Game on. Padel, singles. 18:00. Saturday · Zabłocie Sport. Nothing left to agree. Open',
+      'Planning. Padel. Where, Zabłocie Sport, court 3. Day, Not agreed yet. Time, Not agreed yet.',
     );
+    expect(said).not.toContain(FINISH_THE_PLAN);
   });
 
-  it('ends with nothing extra where the card carries no door', () => {
+  it('adds the line where the card keeps one', () => {
     const said = gameCardLabel({
       name: 'counted',
       sportName: 'Padel',
       game: game({ standing: 'CONFIRMED' }),
-      plan: undefined,
+      plan: plan({ place: 'Zabłocie Sport', day: '2026-09-11', hour: '18:00' }),
       playerId: 'me',
-      door: undefined,
     });
 
-    expect(said).toBe('Counted. Padel, singles. Agreed.');
-    for (const door of GAME_DOORS) expect(said).not.toContain(doorLabel(door));
+    expect(said).toBe(
+      `Counted. Padel. Where, Zabłocie Sport. Day, Friday 11 Sep. Time, 18:00. ${gameStandingLine(game({ standing: 'CONFIRMED' }), 'me')}`,
+    );
+  });
+
+  it('marks a friendly in the sport clause', () => {
+    const said = gameCardLabel({
+      name: 'game-on',
+      sportName: 'Padel',
+      game: game({ kind: 'FRIENDLY' }),
+      plan: plan({ place: 'Zabłocie Sport', day: '2026-09-19', hour: '18:00' }),
+      playerId: 'me',
+    });
+
+    expect(said).toContain('Padel, friendly.');
   });
 });

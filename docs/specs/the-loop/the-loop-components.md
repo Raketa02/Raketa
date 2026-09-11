@@ -233,8 +233,8 @@ clock by construction** rather than by a rule anyone remembers.
 
 **This is the single most drift-prone thing on the map**: four card names, two tickets that each
 keyed a rule on it, and one amendment already spent closing the hole between them. It is one
-function, it is `domain/`, and every surface reads it — the rail, the card, the gloss, and the game
-screen's arm.
+function, it is `domain/`, and every surface reads it — the rail, the card and its tables, and the
+game screen's arm.
 
 ### 3.4 The Now rail is `features/plans`', and the game screen is `features/games`'
 

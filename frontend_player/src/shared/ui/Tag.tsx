@@ -39,11 +39,15 @@ export interface TagProps {
    * A 6pt square in a sport's identity colour. The dot is decoration — the label beside
    * it always says the same thing, so colour is never the only carrier.
    *
-   * **The sport's, and only the sport's.** A caller reaching for it to carry urgency — the
-   * dot going amber as a clock runs down — is asking one token to mean two things, after
-   * which it means neither, and it would be colour restating a value the label has already
-   * rendered. Urgency is the **whole tag**: `warn` for a live window, `ok` for a settled
-   * one, with the word beside it (6.4, Part 13).
+   * **The sport's, and only the sport's — on every surface but one.** A caller reaching for
+   * it to carry urgency — the dot going amber as a clock runs down — is asking one token to
+   * mean two things, after which it means neither, and it would be colour restating a value
+   * the label has already rendered. Urgency is the **whole tag**: `warn` for a live window,
+   * `ok` for a settled one, with the word beside it (6.4, Part 13).
+   *
+   * The one surface is the Now card, where the dot is **the stage's** and the sport is the
+   * word beside the pill (`STAGE_DOT`, 6.4 as amended by #413). The argument above holds
+   * there too: the sport left the dot for a word, so the token has one meaning on that card.
    */
   readonly dot?: string;
   /** Defaults to `label`. Set it when the word alone is cryptic out of context. */

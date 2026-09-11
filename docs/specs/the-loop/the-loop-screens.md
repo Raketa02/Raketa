@@ -1081,61 +1081,83 @@ on the map's fog rather than built here.
 
 ### 4.2 The card
 
-**Tag · eyebrow · figure · line · gloss · court · footer.**
+**Header · slots + court · footer, on a dark shell** — the design of
+[#410](https://github.com/Raketa02/Raketa/issues/410), built by
+[#413](https://github.com/Raketa02/Raketa/issues/413), and the Planning card is the first one drawn
+for real. Where this disagrees with what stood here before, **the design won and the record is
+amended**; the old anatomy — *tag · eyebrow · figure · line · gloss · court · footer* — is kept
+below only as what each slot replaced.
+
+```
+┌──────────────────────────────────────────────────┐   night, radius 15
+│ (● Planning)                              PADEL  │   tag on-dark, dot = the STAGE · sport word
+│ ▌ WHERE                          ┌────────────┐  │   ▌ bright bar = settled
+│ ▌ Zabłocie Sport                 │ (ON)  (ZB) │  │   │ dim bar    = not agreed
+│ │ DAY                            │────────────│  │
+│ │ Not agreed yet                 │ (TK)  (KW) │  │   (TK) has the volt ring — you
+│ │ TIME                           └────────────┘  │
+│ │ Not agreed yet                                 │
+│ ┌──────────────────────────────┐  ┌────┐         │   the wide door · the bubble
+│ │       Finish the plan        │  │ 💬 │         │
+│ └──────────────────────────────┘  └────┘         │
+└──────────────────────────────────────────────────┘
+```
 
 | | |
 | --- | --- |
-| **Tag** | #324's card name. Affordable here because ADR-0148 §6's refusal was about a **cross-context read**, and a game card reads its own standing. **The dot is the sport's** — #338 §4 kept `TagProps.dot` the sport's and made urgency the tag's `warn` / `ok` variant, because a token with two meanings stops meaning either |
-| **Eyebrow** | `SINGLES` / `DOUBLES`, and `· FRIENDLY` only when it is one. `YOU OWN IT` goes with ownership |
-| **Figure** | The plan's hour, **drawn literally and never counted down**. Three shapes: the hour; the **weekday** when there is a day and no hour; **nothing** when there is no day |
-| **Line** | Whatever the figure did not take — the day, and the place. **The hour is printed once**: the design draws `19:30` then `Yesterday · 19:30`, the same doubling as its own *"answer by Tomorrow · 17:00 17:00"* |
-| **Gloss** | §4.3 |
-| **Court** | 7.12 at `header` **84** — the size named *"the court inside a card about it"*. A rail draws one court, where a list would draw a screenful |
-| **Footer** | A **named door** and the ✉, over 7.7's `marginTop: auto` hairline — which is what aligns footers across cards of unequal height, and the whole reason a rail can hold a card with a 40pt figure beside one with none |
+| **Tag** | #324's card name, on 6.4's `on-dark` pill. Affordable here because ADR-0148 §6's refusal was about a **cross-context read**, and a game card reads its own standing. **The dot is the stage's** — `arranging` while the game is in the players' hands (Planning, Needs result, Confirm the result), `mint` where it is settled (Game on, Today, Counted), the quiet hairline on the two endings nobody scored — and it is legal because the sport is the **word** beside it. *Replaces*: the sport dot and the pill's `warn` / `ok` variant |
+| **Sport word** | `PADEL`, `PADEL · FRIENDLY`, top right, uppercase, muted on dark. `FRIENDLY` is the marked case (ADR-0150). **Nothing writes *singles* or *doubles*: the court says the format.** *Replaces*: the eyebrow — `SINGLES` / `DOUBLES` went with the court saying it, `YOU OWN IT` went with ownership |
+| **Slots** | Three rows in the app's own order — **where · day · hour** (`slots.ts` is the one place that order lives) — each a 3pt bar, a label (`WHERE` / `DAY` / `TIME`) and a value. **A settled slot draws its value big and white with a bright bar; an unsettled one draws `Not agreed yet` small and grey with a dim bar.** The card fills with brightness as the plan does. WHERE is `placeWithoutTheCourt`, one line, tail-ellipsised, spoken whole; DAY is the weekday whole and **the date beside it** — `Sunday` `9 Aug` — which §5.4 #6 refused and the design reinstates; TIME is `plan.hour`, mono, and nothing else — no duration exists. *Replaces*: the figure, the line and the gloss (§4.3) |
+| **Line** | One small line under the slots, kept so no card loses a fact it drew before: ***Needs result*'s window** — `{duration} left`, folded from `entry_closes_at` against `read_at`, obeying nothing — and **the endings' standing**, `gameStandingLine`'s own sentence. Nothing on the three plan-led rungs: the slots are their whole account |
+| **Court** | 7.12 at `card` **88**, measured against the mock at 1×, beside the slots. **Each seat is the person's photograph** where the room has one and the generated poster otherwise; **three letters under every seat, yours included** — the `volt` ring is the only *this is you* mark, so the `you` caption went. No sport caption on the ground: the sport is the word in the header |
+| **Footer** | **The wide door** — the next thing to do, and its wording changes with the stage: `Finish the plan` on Planning, `Open` on Game on, `We played` on Today and Needs result, `Confirm the result` on the argument, and **none on an ending** — in the card's accent, `volt` on Planning and mint on everything else, over 7.7's `marginTop: auto` with no hairline. **The bubble** beside it opens the room, only where there is one. *Replaces*: the named door over a hairline, and the ✉ |
 
-**No checklist on the card.** Struck by the dev; the fuller account stays on the screen, where
-`resultBody` and `UNSCORED_FACTS` already live.
+**The card body is not pressable.** The two buttons are the only doors, which reverses §5.2's *the
+card body goes wherever the button goes*: there is nothing left for a body door to agree or
+disagree with. The body is **one accessibility element with no action** — the tag, the sport and
+the three slots as sentences (§24.5) — and the two doors follow it as elements of their own, so
+the wide door's verb is no longer part of the body's name.
 
-**The seats are generated posters and need no new token.** ADR-0134 makes a poster **a fact about
-an id**, which is why `seatFace.tsx` already draws your own seat from one — so the design's coloured
-tile with initials **is** the app's poster plus 7.12's three-character caption, with `?` for a seat
-`users` can no longer answer for.
+**Every other card is drawn by the same shell, softly.** The real look of the other eight cards is
+not in #410; until the author supplies it, every name draws the shell on soft defaults — mint bars
+and a mint wide door, the stage dot as above — so the rail does not mix two visual languages and a
+game flipping to *Game on* under your thumb does not jump layouts. When a name's design arrives it
+is a row in the tables (`STAGE_DOT`, `ACCENT`, `doorLabel`) or per-name content inside one shell,
+never a tenth card.
 
-**The weekday figure needs a type role this system does not have.** 1.4 is categorical that numbers
-are monospaced always, so a weekday is not `num.levelHero`, and the largest sans role is `h1` at
-**19** — under half the 40pt figure on the neighbouring card. #338 §3 tokenises a **display sans
-role in 3.3** rather than answering a type problem with a layout one, which would give the rail a
-card that changes shape rather than content.
+**The faces need no backend.** A game's seat carries a handle and nothing else about the person in
+it (ADR-0141), but the conversation rows the rail already fetches for the bubble carry every
+member's `photoUrl` — so the same join, keyed on the challenge, hands each card the faces for its
+own room. It fails soft: no room is no bubble **and** posters in every seat.
 
-### 4.3 The gloss — four rungs, one rule
+**The seats' posters need no new token.** ADR-0134 makes a poster **a fact about an id**, so the
+design's coloured tile with initials **is** the app's poster plus 7.12's three-character caption,
+with `?` for a seat `users` can no longer answer for.
 
-**The four `AWAITING_ENTRY` rungs have no copy anywhere**, and this file writes it. The gloss must
-add what the tag, the figure and the line have not, and must not restate the button.
+### 4.3 The gloss — retired, and what the bars say instead
 
-> **The gloss names the next slot still to agree, in ADR-0144's order — and `Needs result`
-> overrides it with the time left.**
+**The four `AWAITING_ENTRY` rungs had one sentence each on the card** — *Still to agree: where*,
+the next unfilled slot in slot order, with *Nothing left to agree* once there was none and *Needs
+result* overriding with the time left — and #413 retired it: the three slot rows draw **all
+three** slots, and an unfilled one draws `Not agreed yet` under a dim bar, so the sentence would
+now be the column said again in prose.
 
-| Rung | Gloss |
+| Rung | What the card says instead |
 | --- | --- |
-| **Planning** | the next unfilled slot: `Still to agree: where` · `the day` · `the hour` |
-| **Game on** | `Nothing left to agree` |
-| **Today** | the same rule — the next unfilled slot, or `Nothing left to agree` |
-| **Needs result** | `{duration} left`, folded from `entry_closes_at` against `read_at` |
+| **Planning** · **Game on** · **Today** | the three slots, bright where agreed and dim where not — nothing under them |
+| **Needs result** | the slots, and `{duration} left` under them, folded from `entry_closes_at` against `read_at` |
+| everything that is not a rung | the slots, and `gameStandingLine`'s sentence under them |
 
-**One rule for three rungs, derived from the slot count alone**, so there is no fourth string to
-keep in step with the ladder. **Naming only the next slot rather than listing the rest** is what
-keeps it four words and hands the fuller account to the screen's checklist (§5.3) — and it uses the
-ordering ADR-0144 already fixed, where *where* is the most negotiable of the three.
+**What survives is the override and the citation.** *Needs result* keeps its window because a
+passed agreement makes the unfilled slots irrelevant and the entry window is the only live fact
+left; it still **obeys nothing**, because `standing_of` gates entry on `entry_closes_at` and the
+server derives the standing. The endings keep `features/games`' own sentence, the same one the
+screen behind the card says. The checklist on the game screen (§5.3) is unchanged and is still the
+one place the whole list is printed as prose.
 
-***Today* uses the slot rule and that is the case that justifies it.** #324's second amendment
-dropped *Today*'s three-slot requirement — its test is *the agreed day is today*, needing no instant
-at all — so a *Today* card may genuinely have no hour and no place, and `Still to agree: the hour`
-on the morning of the game is exactly the alarm a player wants.
-
-***Needs result* overrides**, because a passed agreement makes the unfilled slots irrelevant and the
-entry window is the only live fact left. It states a duration and **obeys nothing**: the card does
-not disable at zero, because `standing_of` gates entry on `entry_closes_at` and the server derives
-the standing.
+***Today*'s alarm survives in a different shape.** #324's second amendment dropped *Today*'s
+three-slot requirement, so a *Today* card may genuinely have no hour — and a dim `TIME` bar on the
+morning of the game says so more loudly than four words did.
 
 ### 4.4 The empty state
 
@@ -1188,8 +1210,13 @@ tidy table at the price of the app declining to hear the one fact the whole loop
 
 **#336 §4 fixed the rule and left the table here.** The rule is that **the button is a named door**
 — it carries the act's verb, it navigates, and it never writes — and **the destination is the
-state's**, with the card body going wherever the button goes. A body that always opened the details
-screen would be a second, quieter door disagreeing with the first.
+state's**. *The card body goes wherever the button goes* was the rule's second half, on the
+argument that a body always opening the details screen would be a second, quieter door disagreeing
+with the first; **[#413](https://github.com/Raketa02/Raketa/issues/413) reversed it the other way
+round — the body is not a door at all**, and the two buttons on the card are the only doors. The
+consequence is stated rather than hidden: **an ending's card offers nothing and opens nothing**,
+and the room behind it is destroyed (ADR-0153), so a finished game's screen is not reachable from
+the rail — the card is the record for the day it stays.
 
 | # | Card | From | Button | Lands on |
 | --- | --- | --- | --- | --- |
@@ -1199,15 +1226,15 @@ screen would be a second, quieter door disagreeing with the first.
 | 17 | **Declined** | Chats row | — | `/chats/challenge/[id]`, `DECLINED` |
 | 18 | **Expired** | Chats row | — | `/chats/challenge/[id]`, `LAPSED` |
 | — | **Withdrawn** | Chats row | — | `/chats/challenge/[id]`, `WITHDRAWN` |
-| 5 | **Planning** | Now card | `Open` | `/games/[gameId]`, the Planning arm |
+| 5 | **Planning** | Now card | `Finish the plan` | `/games/[gameId]`, the Planning arm — the same door as Game on's, under the word for the errand |
 | 3 | **Game on** | Now card | `Open` | `/games/[gameId]`, the Game on arm |
 | 11 | **Today** | Now card | `We played` | `/games/[gameId]`, the score grid |
 | 12 | **Needs result** | Now card | `We played` | `/games/[gameId]`, the score grid |
 | 13 | **Confirm the result** ×4 | Now card | `Confirm the result` | `/games/[gameId]`, the confirm arm, both controls inline |
-| 14 | **Counted** | Now card | — | `/games/[gameId]`, offering nothing |
-| 16 | **Uncounted** | Now card | — | `/games/[gameId]`, offering nothing |
-| — | **Never played** | Now card | — | `/games/[gameId]`, offering nothing |
-| — | every live card | Now card | ✉ | `/chats/conversation/[conversationId]` |
+| 14 | **Counted** | Now card | — | nowhere — no door, and the body is not one |
+| 16 | **Uncounted** | Now card | — | nowhere |
+| — | **Never played** | Now card | — | nowhere |
+| — | every live card | Now card | the bubble | `/chats/conversation/[conversationId]` |
 | — | the conversation | Details | — | `/chats/conversation/[id]/details`, the arm the standing derives |
 
 **Fourteen cards, one route each side of the seam, and no deep-link parameter.** *The grid is the
@@ -1258,7 +1285,9 @@ record read out, and they are listed here because the mock will outlive this map
    app did something about it. It did not. [`the-words.md`](../matchmaking/the-words.md) §22.2.
 5. **The three slots are `Tag`s, not `Chip`s**, because the plan is read-only here and *a control
    that cannot be operated must not offer the affordance of one*.
-6. ***Sun 9* is a date**, and this app has none. The horizon is seven chips, so a weekday is exact.
+6. ***Sun 9* is a date**, and this app had none — the horizon is seven chips, so a weekday is
+   exact. **Amended by #413: the Now card draws the date beside the weekday** (`Sunday` `9 Aug`),
+   because the design wins; the game screen's plan tags still draw the weekday alone.
 7. ***60 min* is a duration nothing in this build holds** — no booking, no court, no slot length.
 8. ***COMPETITIVE* is a search's mode.** A game carries a `GameKind`, and `FRIENDLY` is the marked
    case.

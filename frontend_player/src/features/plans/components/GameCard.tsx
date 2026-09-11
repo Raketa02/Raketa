@@ -1,73 +1,81 @@
 /**
- * **One game on Now's rail** — tag · eyebrow · figure · line · gloss · court · footer
- * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §4.2).
+ * **One game on Now's rail** — a dark shell: header · slots + court · footer
+ * ([#413](https://github.com/Raketa02/Raketa/issues/413),
+ * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §4.2).
  *
- * It is handed `(game, plan | undefined)` plus the two facts the screen already holds — who is
- * reading, and where their room is — and **reads no global state of its own**
+ * It is handed `(game, plan | undefined)` plus the facts the screen already holds — who is
+ * reading, where their room is, and the faces in it — and **reads no global state of its own**
  * ([`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §3.4).
  * The join is the rail's, over three lists.
  *
- * ## Two actions, and the named door is not a third
+ * ## One shell for nine names, and no switch
  *
- * **The button is a named door**: it carries the act's verb, it navigates, and it **never writes**
- * ([#336](https://github.com/Raketa02/Raketa/issues/336) §4). **The body goes wherever the button
- * goes** — a body that always opened the details screen would be a second, quieter door
- * disagreeing with the first — so the two are *one* action, and §24.5 makes them one accessibility
- * element whose name ends with the door's verb. The drawn button is therefore **hidden**: it is
- * the sighted half of something the card's own name already says, and a second element announcing
- * `Open` beside a card that announces `… Open` is the double announcement 6.8 refuses.
+ * Every slot that differs by name is a **table lookup** on `GameCardName` — the tag's word, the
+ * stage's dot, the accent and the door's verb, all in `nowPresentation.ts` — and the shell itself
+ * branches on nothing. The Planning card is the first one drawn for real; every other name is
+ * drawn by the same shell on the soft defaults #410 fixed, so the rail does not mix two visual
+ * languages and a game flipping to *Game on* under your thumb does not jump layouts. When a
+ * name's own design arrives it will be a row in those tables, or per-name **content** inside this
+ * one shell — never a tenth card.
  *
- * **The ✉ is the second element**, because it goes somewhere else. It is drawn only where there is
- * a room to open — ADR-0149 §3's join fails soft, and an ending **destroys** a conversation rather
- * than delisting it (ADR-0153) — and a card with neither door draws no footer at all rather than
- * an empty rule across the bottom of it.
+ * ## Two doors, and the body is not a third
+ *
+ * **The card body is not pressable.** It used to go wherever the button went, on #336's argument
+ * that a body always opening the details screen would be a second, quieter door disagreeing with
+ * the first — and the design resolves that the other way: the two buttons are the only doors, so
+ * there is nothing for the body to agree or disagree with. What the body is instead is **one
+ * accessibility element with no action**: its name is the tag, the sport and the three slots as
+ * sentences (`gameCardLabel`), in the shape the read-only plan tags already take — *one element,
+ * because they are one fact in three parts with no action* (§24.5) — and the two doors follow it
+ * as elements of their own. The wide door's verb is therefore **not** in the body's name: a body
+ * ending in `Open` beside a button announcing `Open` is the double announcement 6.8 refuses, and
+ * the drawn button is no longer hidden because it is no longer the sighted half of something else.
+ *
+ * **The wide door is the next thing to do** and its word changes with the stage — `Finish the
+ * plan` on Planning, `Open` · `We played` · `Confirm the result` on the others, and none on an
+ * ending — while its destination is the standing's, as it always was: `GAME_ROUTE`, and the
+ * screen behind it lands on the arm the standing derives. **The bubble is the second door**,
+ * because it goes somewhere else, and it is drawn only where there is a room to open: ADR-0149
+ * §3's join fails soft, and an ending **destroys** a conversation rather than delisting it
+ * (ADR-0153). A card with neither draws no footer at all rather than an empty row across the
+ * bottom of it, and `doors={false}` draws none on purpose: it has no caller yet, and exists
+ * because [#414](https://github.com/Raketa02/Raketa/issues/414) draws this shell at the top of the
+ * game screen with the footer left off — the screen *is* where both doors would go — and #413 is
+ * where the shell's props are decided.
  *
  * ## The footer rides `marginTop: auto`, and that is what a rail is for
  *
- * 7.7 puts `marginTop: auto` on the last hairline of a rail card **so footers align across cards
- * of differing height**, which is the whole reason a rail can hold a card with a 40pt figure
- * beside one with none. The card takes the height the row gives it and the hairline falls to the
+ * 7.7 puts `marginTop: auto` on a rail card's footer **so footers align across cards of
+ * differing height**. There is no hairline above it any more — the design draws none, and a fold
+ * between three slots and the door that finishes them would cut the card in two — so the row
+ * itself takes the margin. The card takes the height the row gives it and the footer falls to the
  * bottom of it; nothing here measures anything.
- *
- * ## The figure is one slot with two type roles, and the hour is printed once
- *
- * `num.levelHero` for an hour, because
- * [1.4](../../../../docs/design-system.md#14-numbers-are-monospaced-always) is categorical that
- * numbers are monospaced always; **3.3's `display`** for a weekday, which is the one sans role
- * above `h1` and exists for exactly this — the alternatives were a mono-only figure slot and a
- * day-only card leading with the court, and both answer a type problem with a layout one. Which of
- * the two it is comes off `cardFigure` rather than off a regular expression here.
- *
- * ## There is no checklist on the card
- *
- * Struck by the dev: the fuller account stays on the game screen, where `resultBody` and
- * `UNSCORED_FACTS` already live, and the gloss names only the **next** slot.
  */
 
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { CONVERSATION_ROUTE } from '@/features/conversations/types';
 import { GAME_ROUTE, type Game } from '@/features/games/types';
 import { sportLabel } from '@/features/onboarding/types';
-import { Button, Card, Hairline, Tag, theme } from '@/shared/ui';
+import { Button, DarkCard, Tag, theme } from '@/shared/ui';
 
-import { doorOf, gameCardName } from '../domain/gameCard';
-import type { Plan } from '../domain/slots';
+import { gameCardName } from '../domain/gameCard';
+import { PLAN_SLOTS, type Plan } from '../domain/slots';
 
 import { ChatDoor } from './ChatDoor';
 import { GameCourt } from './GameCourt';
 import {
+  ACCENT,
   CARD_TAG,
+  STAGE_DOT,
   cardCourtSummary,
-  cardEyebrow,
-  cardFigure,
-  cardGloss,
   cardLine,
   doorLabel,
   gameCardLabel,
+  sportWord,
 } from './nowPresentation';
+import { SlotRow } from './SlotRow';
 
 export interface GameCardProps {
   readonly game: Game;
@@ -75,112 +83,106 @@ export interface GameCardProps {
   readonly plan: Plan | undefined;
   /** The reader's own id — which seat is theirs, and which sentence they are told. */
   readonly playerId: string;
-  /** Where the ✉ goes, and `undefined` where there is no room to open. */
+  /** Where the bubble goes, and `undefined` where there is no room to open. */
   readonly conversationId: string | undefined;
+  /** Each seat's photograph by player id, from the room. Empty is posters, never an error. */
+  readonly faces: ReadonlyMap<string, string>;
   /** The content width. 7.7's paging geometry: the card is `1.0 × content` and has no peek. */
   readonly width: number;
+  /** Whether the footer is drawn. Off on the game screen (#414), which is where both doors go. */
+  readonly doors?: boolean;
 }
 
-export function GameCard({ game, plan, playerId, conversationId, width }: GameCardProps) {
+export function GameCard({
+  game,
+  plan,
+  playerId,
+  conversationId,
+  faces,
+  width,
+  doors = true,
+}: GameCardProps) {
   const name = gameCardName(game, plan);
-  const door = doorOf(name);
   const tag = CARD_TAG[name];
-  const figure = cardFigure(plan);
-  const line = cardLine(plan);
+  const accent = ACCENT[name];
+  const verb = doorLabel(name);
+  const line = cardLine(name, { game, plan, playerId });
   const sportName = sportLabel(game.sport);
-
-  /**
-   * **The card's own 5.1 pressed border, driven by the body.**
-   *
-   * The card is not the control — the body is, and the ✉ is a second control on the same surface —
-   * so `PressableCard` cannot be used here without swallowing the ✉ into the card's one
-   * accessibility element. What is kept is the *state*, and the **border is `Card`'s own**: a
-   * coral outline spelled again here would be a second answer to a question 5.1 has settled, and a
-   * body that dimmed itself instead would be a third.
-   */
-  const [pressed, setPressed] = useState(false);
 
   const open = () => router.push({ pathname: GAME_ROUTE, params: { gameId: game.gameId } });
 
   return (
-    <Card pressed={pressed} style={[s.card, { width }]}>
-      {/* One element, one action, one name — everything above the fold merges into it, which is
-          §20.1 unchanged: the tag, the figure and the court have no action of their own. */}
-      <Pressable
+    <DarkCard style={[s.card, { width }]}>
+      {/* One element, one name, no action — the tag, the sport word, the slots and the court
+          have no action of their own, and the two doors below are elements of their own. */}
+      <View
         accessible
-        accessibilityRole="button"
-        accessibilityLabel={gameCardLabel({ name, sportName, game, plan, playerId, door })}
-        onPress={open}
-        onPressIn={() => setPressed(true)}
-        onPressOut={() => setPressed(false)}
+        accessibilityLabel={gameCardLabel({ name, sportName, game, plan, playerId })}
         style={s.body}
       >
-        {tag === undefined ? null : (
-          <Tag label={tag.label} variant={tag.variant} dot={theme.sport[game.sport]} />
-        )}
+        <View style={s.header}>
+          {tag === undefined ? null : <Tag label={tag} variant="onDark" dot={STAGE_DOT[name]} />}
+          <Text style={s.sport} numberOfLines={1}>
+            {sportWord(game, sportName)}
+          </Text>
+        </View>
 
-        <Text style={s.eyebrow}>{cardEyebrow(game)}</Text>
+        <View style={s.plan}>
+          <View style={s.slots}>
+            {PLAN_SLOTS.map((slot) => (
+              <SlotRow key={slot} slot={slot} plan={plan} accent={accent.bar} />
+            ))}
+          </View>
 
-        {figure === undefined ? null : (
-          <Text style={figure.kind === 'hour' ? s.hour : s.weekday}>{figure.value}</Text>
-        )}
+          <GameCourt
+            sport={game.sport}
+            seats={game.seats}
+            playerId={playerId}
+            faces={faces}
+            summary={cardCourtSummary(sportName, game.seats.length)}
+          />
+        </View>
 
         {line === undefined ? null : <Text style={s.line}>{line}</Text>}
+      </View>
 
-        <Text style={s.gloss}>{cardGloss(name, { game, plan, playerId })}</Text>
+      {!doors || (verb === undefined && conversationId === undefined) ? null : (
+        <View style={s.footer}>
+          {verb === undefined ? null : (
+            <Button label={verb} variant={accent.button} size="lg" onPress={open} style={s.door} />
+          )}
 
-        <GameCourt
-          sport={game.sport}
-          seats={game.seats}
-          playerId={playerId}
-          summary={cardCourtSummary(sportName, game.seats.length)}
-          caption={sportName}
-        />
-      </Pressable>
-
-      {door === undefined && conversationId === undefined ? null : (
-        <Hairline style={s.footer}>
-          <View style={s.footerRow}>
-            {door === undefined ? null : (
-              // Hidden on both platforms — one prop hides it on one only — because the card's own
-              // name already ends with this verb.
-              <View
-                style={s.doorBox}
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
-              >
-                <Button label={doorLabel(door)} size="sm" onPress={open} />
-              </View>
-            )}
-
-            {conversationId === undefined ? null : (
-              <ChatDoor
-                onPress={() =>
-                  router.push({ pathname: CONVERSATION_ROUTE, params: { conversationId } })
-                }
-              />
-            )}
-          </View>
-        </Hairline>
+          {conversationId === undefined ? null : (
+            <ChatDoor
+              onPress={() =>
+                router.push({ pathname: CONVERSATION_ROUTE, params: { conversationId } })
+              }
+            />
+          )}
+        </View>
       )}
-    </Card>
+    </DarkCard>
   );
 }
 
 const s = StyleSheet.create({
-  card: { gap: theme.space.xs },
-  body: { gap: theme.space.xs },
-  eyebrow: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
-  hour: { ...theme.num.levelHero, ...theme.tabular, color: theme.color.ink },
-  weekday: { ...theme.type.display, color: theme.color.ink },
-  line: { ...theme.type.tiny, color: theme.color.muted },
-  // `rlValue` and not `tiny`: the gloss is the one sentence the card adds, so it reads above the
-  // muted line under the figure and below the figure itself. There is no `body` role in 3.3.
-  gloss: { ...theme.type.rlValue, color: theme.color.ink },
-  // 7.7: the last hairline in a rail card takes `marginTop: auto`, so footers align across cards
-  // of differing height. The rail stretches every card to the tallest one's height.
-  footer: { marginTop: 'auto' },
-  footerRow: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
-  // The named door takes the room the row has; the ✉ is its own fixed width beside it.
-  doorBox: { flex: 1 },
+  card: { gap: theme.space.md },
+  body: { gap: theme.space.md },
+  header: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
+  // `marginLeft: auto` rather than `space-between`, so the word stays right when there is no tag.
+  sport: {
+    ...theme.type.eyebrow,
+    color: theme.color.onDarkEyebrow,
+    textTransform: 'uppercase',
+    marginLeft: 'auto',
+    flexShrink: 1,
+  },
+  plan: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.space.md },
+  slots: { flex: 1, gap: theme.space.sm },
+  line: { ...theme.type.tiny, color: theme.color.onDarkTiny },
+  // 7.7: the footer takes `marginTop: auto`, so footers align across cards of differing height.
+  // The rail stretches every card to the tallest one's height.
+  footer: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm, marginTop: 'auto' },
+  // The wide door takes the room the row has; the bubble is its own fixed width beside it.
+  door: { flex: 1 },
 });

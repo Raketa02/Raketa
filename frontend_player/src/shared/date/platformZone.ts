@@ -46,6 +46,8 @@
 
 import type { Weekday } from '@/shared/vocabulary/week';
 
+import { CALENDAR_DAY } from './calendarDay';
+
 /**
  * Named rather than computed with: **nothing passes this to a formatter**, for the reason the
  * module note gives. It is here so the assumption has a name a reader can search for, and so the
@@ -61,8 +63,6 @@ const CEST = 2 * HOUR;
 
 /** ISO weekday numbering, off `Date`'s Sunday-first `getUTCDay`. */
 const ISO_WEEKDAYS: readonly Weekday[] = [7, 1, 2, 3, 4, 5, 6];
-
-const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** The last Sunday of a month, at 01:00 UTC — the instant the EU changes its clocks. */
 function lastSundayAtOneUtc(year: number, month: number): number {

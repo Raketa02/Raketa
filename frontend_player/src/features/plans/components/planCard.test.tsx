@@ -53,6 +53,7 @@ import {
   QUICK_CHIP,
   RECORD_PLACE,
   SAVING,
+  NOT_AGREED_YET,
   SLOT_NAME,
   THE_PLAN,
   counterLabel,
@@ -291,7 +292,7 @@ describe('the day row', () => {
   it('offers today and the six days after it', async () => {
     await openTheRoom();
 
-    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: not agreed yet`));
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
 
     for (const day of ['2026-09-12', '2026-09-13', '2026-09-18']) {
       expect(await screen.findByLabelText(dayChipName(day))).toBeTruthy();
@@ -305,7 +306,7 @@ describe('the day row', () => {
   it('shrinks as the horizon runs out', async () => {
     await openTheRoom({ readAt: '2026-09-16T07:00:00Z' });
 
-    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: not agreed yet`));
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
 
     expect(await screen.findByLabelText(dayChipName('2026-09-19'))).toBeTruthy();
     expect(screen.queryByLabelText(dayChipName('2026-09-20'))).toBeNull();
@@ -318,7 +319,7 @@ describe('the day row', () => {
   it('draws no chips and says why inside the entry grace', async () => {
     await openTheRoom({ readAt: '2026-09-20T07:00:00Z' });
 
-    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: not agreed yet`));
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
 
     expect(await screen.findByText(NO_DAY_LEFT_TO_SET)).toBeTruthy();
     expect(screen.queryByLabelText(dayChipName('2026-09-19'))).toBeNull();
@@ -339,7 +340,7 @@ describe('the hour row', () => {
   it('is 30-minute steps between 06:00 and 23:00', async () => {
     await openTheRoom();
 
-    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.hour}: not agreed yet`));
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.hour}: ${NOT_AGREED_YET}`));
 
     expect(await screen.findByText('06:00')).toBeTruthy();
     expect(screen.getByText('06:30')).toBeTruthy();
@@ -355,7 +356,7 @@ describe('recording a slot', () => {
     await openTheRoom();
     transport.on('PUT', planSlotPath(GAME, 'day'), () => json(plan({ day: '2026-09-13' })));
 
-    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: not agreed yet`));
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
     fireEvent.press(await screen.findByLabelText(dayChipName('2026-09-13')));
 
     await waitFor(() =>
@@ -380,7 +381,7 @@ describe('recording a slot', () => {
     });
     transport.on('PUT', planSlotPath(GAME, 'day'), async () => json(await held));
 
-    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: not agreed yet`));
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
     fireEvent.press(await screen.findByLabelText(dayChipName('2026-09-13')));
 
     expect(await screen.findByText(SAVING)).toBeTruthy();
@@ -402,7 +403,7 @@ describe('recording a slot', () => {
       errorResponse(409, 'that_moment_has_already_passed'),
     );
 
-    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.hour}: not agreed yet`));
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.hour}: ${NOT_AGREED_YET}`));
     fireEvent.press(await screen.findByText('18:00'));
 
     const sentence = planErrorMessage(
@@ -431,7 +432,7 @@ describe('recording a slot', () => {
     await openTheRoom();
     transport.on('PUT', planSlotPath(GAME, 'place'), () => json(plan({ place: 'Zabłocie Sport' })));
 
-    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.where}: not agreed yet`));
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.where}: ${NOT_AGREED_YET}`));
     fireEvent.changeText(await screen.findByLabelText(SLOT_NAME.where), '  Zabłocie   Sport ');
     fireEvent.press(screen.getByText(RECORD_PLACE));
 
@@ -446,7 +447,7 @@ describe('recording a slot', () => {
   it('will not record a blank place', async () => {
     await openTheRoom();
 
-    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.where}: not agreed yet`));
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.where}: ${NOT_AGREED_YET}`));
     fireEvent.changeText(await screen.findByLabelText(SLOT_NAME.where), '   ');
 
     const record = await screen.findByLabelText(RECORD_PLACE);
@@ -668,7 +669,7 @@ describe('a held account', () => {
     await openTheRoom({ agreed: plan({ day: '2026-09-13' }) });
     transport.on('PUT', planSlotPath(GAME, 'hour'), () => errorResponse(403, 'account_held'));
 
-    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.hour}: not agreed yet`));
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.hour}: ${NOT_AGREED_YET}`));
     fireEvent.press(await screen.findByText('18:00'));
 
     await waitFor(() =>
@@ -721,7 +722,7 @@ describe('what another member set arrives on the nudge', () => {
    */
   it('draws the place another member set, with nothing pressed', async () => {
     await openTheRoom();
-    await screen.findByLabelText(`${SLOT_NAME.where}: not agreed yet`);
+    await screen.findByLabelText(`${SLOT_NAME.where}: ${NOT_AGREED_YET}`);
 
     stubPlans(transport, [plan({ place: 'Zabłocie Sport' })]);
     stubConversation(transport, {
@@ -796,7 +797,7 @@ describe('what another member set arrives on the nudge', () => {
     act(() => channel.nudge(ROOM));
     await waitFor(() => expect(transport.requestsTo('GET', PLANS_PATH).length).toBeGreaterThan(1));
 
-    fireEvent.press(screen.getByLabelText(`${SLOT_NAME.hour}: not agreed yet`));
+    fireEvent.press(screen.getByLabelText(`${SLOT_NAME.hour}: ${NOT_AGREED_YET}`));
     fireEvent.press(await screen.findByText('18:00'));
     await waitFor(() => expect(screen.getByLabelText(`${SLOT_NAME.hour}: 18:00`)).toBeTruthy());
 
@@ -807,7 +808,7 @@ describe('what another member set arrives on the nudge', () => {
     await drained(read);
 
     expect(screen.getByLabelText(`${SLOT_NAME.hour}: 18:00`)).toBeTruthy();
-    expect(screen.queryByLabelText(`${SLOT_NAME.hour}: not agreed yet`)).toBeNull();
+    expect(screen.queryByLabelText(`${SLOT_NAME.hour}: ${NOT_AGREED_YET}`)).toBeNull();
   });
 
   /**
@@ -817,7 +818,7 @@ describe('what another member set arrives on the nudge', () => {
    */
   it('moves the chosen day under an open sheet, and the player’s pick still writes theirs', async () => {
     await openTheRoom();
-    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: not agreed yet`));
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
     await screen.findByLabelText(dayChipName('2026-09-13'));
 
     stubPlans(transport, [plan({ day: '2026-09-13' })]);
@@ -851,7 +852,7 @@ describe('what another member set arrives on the nudge', () => {
    */
   it('keeps the words in the where box when another member sets the place underneath', async () => {
     await openTheRoom();
-    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.where}: not agreed yet`));
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.where}: ${NOT_AGREED_YET}`));
     fireEvent.changeText(await screen.findByLabelText(SLOT_NAME.where), 'Hala Cracovia');
 
     stubPlans(transport, [plan({ place: 'Zabłocie Sport' })]);
@@ -880,7 +881,7 @@ describe('what another member set arrives on the nudge', () => {
 it('draws a short weekday on the row and speaks the whole one', async () => {
   await openTheRoom();
 
-  fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: not agreed yet`));
+  fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
   const chip = await screen.findByLabelText(dayChipName('2026-09-13'));
 
   expect(within(chip).getByText(dayChipLabel('2026-09-13'))).toBeTruthy();

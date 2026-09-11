@@ -1,63 +1,60 @@
 /**
- * **Every word Now's rail and its card say** — the heading, the tag, the eyebrow, the figure, the
- * line and the gloss, plus the two names a listener gets
- * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §4,
- * [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22.6 and §24.5).
+ * **Every word Now's rail and its card say** — the heading, the tag's word, the sport word, the
+ * slot labels' spoken form, the door's verb, the one line under the slots, and the name a listener
+ * gets ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §4,
+ * [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22.6 and §24.5) — and the
+ * two tables keyed on the card's name that are not words: the stage's dot, and the accent.
  *
- * The card is **tag · eyebrow · figure · line · gloss · court · footer**, and every slot but the
- * court is written here. It is this feature's for the reason the rail is: the card is a
+ * The card is **header · slots + court · footer**
+ * ([#413](https://github.com/Raketa02/Raketa/issues/413)): a stage chip and the sport word, three
+ * plan slots each with a bright-or-dim bar, the court with faces, and two doors. Every slot but
+ * the court is written here. It is this feature's for the reason the rail is: the card is a
  * composition naming domain nouns, and the nouns are a plan's
  * ([`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §3.4).
  *
- * ## The gloss is one rule for three rungs, and one override
+ * ## The gloss became a bar
  *
- * > **Name the next slot still to agree, in ADR-0144's order — and *Needs result* overrides it
- * > with the time left.**
+ * The card used to add one sentence — *Still to agree: where*, the next unfilled slot in slot
+ * order — and the whole reason it named only the next one was to stay four words on a card whose
+ * figure and line had already spent the room. The slots column draws **all three**, and an
+ * unfilled one draws `Not agreed yet` under a dim bar, so the sentence would now be the column
+ * said again in prose. What survives of it is {@link cardLine}: ***Needs result*'s window**, which
+ * is the one live fact a passed agreement leaves, and **the endings' standing**, which is
+ * `features/games`' own sentence and the same one the screen behind the card says — so no card
+ * loses a fact it drew before.
  *
- * Naming only the **next** slot is what keeps it four words, and it hands the fuller account to
- * the game screen's checklist ([#368](https://github.com/Raketa02/Raketa/issues/368)), which is
- * the one place the whole list is printed. Deriving it from the slot count alone is what stops
- * there being a fourth string to keep in step with the ladder — ***Today* uses the slot rule, and
- * it is the case that justifies it**: #324's second amendment dropped *Today*'s three-slot
- * requirement, so a *Today* card may genuinely have no hour, and `Still to agree: the hour` on the
- * morning of the game is exactly the alarm a player wants.
+ * ## The figure and the line went with it, and the hour is still printed once
  *
- * ***Needs result* overrides**, because a passed agreement makes the unfilled slots irrelevant and
- * the entry window is the only live fact left. It **obeys nothing**: the card does not close at
- * zero, because `standing_of` gates entry on `entry_closes_at` and the server derives the standing.
- *
- * **Everything that is not one of the four rungs already has a sentence**, and it is
- * `features/games`' `gameStandingLine` — the same line the screen behind the card says, so a
- * player who reads a card, taps it and finds a different deadline is not a state this can reach.
- *
- * ## The hour is printed once, and that is what the figure and the line are for
- *
- * The design draws `19:30` in the figure and then `Yesterday · 19:30` beneath it, which is the
- * same doubling as its own *"answer by Tomorrow · 17:00 17:00"*. So the figure takes one of three
- * shapes and **the line takes whatever the figure did not**.
- *
- * The **place** is the one value that can overflow, so it is drawn through #335's *shorter value,
- * not a second line* and **spoken whole**, which is §20.4 one surface over — the same split
- * `planPresentation.ts` already makes for the chip.
+ * The figure took one of three shapes and the line took whatever it did not, which was the
+ * mechanism for *the hour is printed once*. The slots are that mechanism now, by construction:
+ * the hour has one row, the day has one row, and neither is anywhere else on the card.
  *
  * ## No absolute instant and no countdown, except the one the window owns
  *
  * A plan is **drawn literally and never counted down** (ADR-0145 §7): its day and its hour are
- * wall-clock facts. The single duration on this card is *Needs result*'s, and it is folded from
- * `entry_closes_at` against the games list's `read_at` — never against the phone.
+ * wall-clock facts, and the date beside the weekday is a calendar square rather than an instant.
+ * The single duration on this card is *Needs result*'s, and it is folded from `entry_closes_at`
+ * against the games list's `read_at` — never against the phone.
+ *
+ * ## Two tables that are not words live here anyway
+ *
+ * {@link STAGE_DOT} and {@link ACCENT} are colours and a variant, keyed on the card's name beside
+ * the word the same name draws. They are here rather than in the component because they are
+ * **decisions about a name** — which stage is still in the players' hands, which is settled — and
+ * a `Record` over the union is what makes a tenth name fail `pnpm typecheck` in one file rather
+ * than draw a dotless tag in another.
  */
 
 import { gameStandingLine, type Game } from '@/features/games/types';
 import { durationLeft } from '@/shared/formatting/durations';
-import { placeWithoutTheCourt } from '@/shared/formatting/placeName';
-import type { TagVariant } from '@/shared/ui';
+import { theme, type ButtonVariant } from '@/shared/ui';
 import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 
-import type { GameCardName, GameDoor } from '../domain/gameCard';
+import type { GameCardName } from '../domain/gameCard';
 import { isRung } from '../domain/ladder';
-import { unfilledSlots, type Plan } from '../domain/slots';
+import { PLAN_SLOTS, type Plan, type PlanSlot } from '../domain/slots';
 
-import { SLOT_IN_A_SENTENCE, STILL_TO_AGREE, dayChipName } from './planPresentation';
+import { SLOT_EYEBROW, spokenSlotValue } from './planPresentation';
 
 // ---------------------------------------------------------------------------
 // The rail
@@ -77,39 +74,57 @@ export function gamesHeading(count: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// The tag — the card's name
+// The tag — the card's name, and the stage's dot
 // ---------------------------------------------------------------------------
 
 /**
- * What the tag says, and what tone it says it in.
+ * What the tag says.
  *
  * **The tag is the card's name** ([#324](https://github.com/Raketa02/Raketa/issues/324)), which is
  * affordable here because ADR-0148 §6's refusal was about a **cross-context read** and a game card
- * reads its own standing. **The dot is the sport's and urgency is the tag's variant** (#338 §4):
- * a token with two meanings stops meaning either, so the amber is the whole pill and the word is
- * beside it — which is also Part 13's *never colour alone*, discharged by the name itself.
- *
- * `warn` is the three cards a clock is running on — the day is today, the window is closing, an
- * answer is owed — and `ok` the two that are settled. *Planning* and the two quiet endings are
- * `base`: **an unscored game reads as an evening, not an error**, so neither of them is red and
- * neither is amber.
+ * reads its own standing. On the dark shell every tag is 6.4's `on-dark` pill, so the table holds
+ * the word and nothing else: the urgency the light card carried as the pill's `warn` / `ok`
+ * variant is the **dot's** now ({@link STAGE_DOT}), with the word beside it — Part 13's *never
+ * colour alone*, discharged by the name itself.
  *
  * **A standing this build cannot read draws no tag at all.** There is no name to say and inventing
- * one would name a state; the gap lands in the gloss instead, which is where the whole line is
+ * one would name a state; the gap lands in the line instead, which is where the whole line is
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §3 — *the standing is the
  * whole line*).
  */
-export const CARD_TAG: Readonly<
-  Record<GameCardName, { readonly label: string; readonly variant: TagVariant } | undefined>
-> = {
-  planning: { label: 'Planning', variant: 'base' },
-  'game-on': { label: 'Game on', variant: 'ok' },
-  today: { label: 'Today', variant: 'warn' },
-  'needs-result': { label: 'Needs result', variant: 'warn' },
-  confirm: { label: 'Confirm the result', variant: 'warn' },
-  counted: { label: 'Counted', variant: 'ok' },
-  uncounted: { label: 'Uncounted', variant: 'base' },
-  'never-played': { label: 'Never played', variant: 'base' },
+export const CARD_TAG: Readonly<Record<GameCardName, string | undefined>> = {
+  planning: 'Planning',
+  'game-on': 'Game on',
+  today: 'Today',
+  'needs-result': 'Needs result',
+  confirm: 'Confirm the result',
+  counted: 'Counted',
+  uncounted: 'Uncounted',
+  'never-played': 'Never played',
+  unreadable: undefined,
+};
+
+/**
+ * **The dot is the stage's** — the one surface on which a `Tag`'s dot is not a sport's
+ * ([#413](https://github.com/Raketa02/Raketa/issues/413)).
+ *
+ * 6.4 fixed the dot as *the sport's, and only the sport's*, on the argument that a token with two
+ * meanings stops meaning either. That argument holds: the sport moved to a **word** in the header,
+ * so on this card the dot has one meaning, and it is the stage's. Three colours for three facts —
+ * `arranging` while the game is still in the players' hands (a plan to finish, a result to enter,
+ * an answer owed), `mint` where it is settled (the plan complete, the day here, the score
+ * counted), and the quiet hairline on the two endings nobody scored. A card with no tag has no
+ * dot to colour.
+ */
+export const STAGE_DOT: Readonly<Record<GameCardName, string | undefined>> = {
+  planning: theme.color.arranging,
+  'game-on': theme.color.mint,
+  today: theme.color.mint,
+  'needs-result': theme.color.arranging,
+  confirm: theme.color.arranging,
+  counted: theme.color.mint,
+  uncounted: theme.color.onDarkHair,
+  'never-played': theme.color.onDarkHair,
   unreadable: undefined,
 };
 
@@ -117,7 +132,7 @@ export const CARD_TAG: Readonly<
  * **The card's name where it follows something else on one line** — `Padel · planning`, the
  * conversation header's sub-line ([#401](https://github.com/Raketa02/Raketa/issues/401)).
  *
- * A second table rather than `CARD_TAG[name].label.toLowerCase()` at the call site, because the
+ * A second table rather than `CARD_TAG[name].toLowerCase()` at the call site, because the
  * lowering is a decision about **words** and belongs where the words are: *Game on* → *game on* is
  * right, and a name that ever holds a proper noun would be wrong the same way, silently, on every
  * surface that lowered it. `nowPresentation.test.ts` holds the two tables equal *until* that day,
@@ -147,142 +162,119 @@ export function cardStateWord(name: GameCardName): string | undefined {
 }
 
 // ---------------------------------------------------------------------------
-// The eyebrow
+// The accent — the settled bar and the wide button, from one row
 // ---------------------------------------------------------------------------
 
-/** The two shapes of court, read off the seats the game actually has. */
-const SINGLES = 'Singles';
-const DOUBLES = 'Doubles';
+/** The bar's bright colour, and the variant of the wide button under it. One row, never two. */
+export interface CardAccent {
+  readonly bar: string;
+  readonly button: ButtonVariant;
+}
+
+/**
+ * **The accent by name** — the colour a settled slot's bar is drawn in, and the variant of the
+ * wide door beneath the slots ([#413](https://github.com/Raketa02/Raketa/issues/413)).
+ *
+ * One table for both, so a card cannot draw a volt bar over a mint door: the bar says *the plan
+ * is settled here* and the button says what to do next, and they are one accent because they are
+ * one card. **Volt on Planning** — the card that is about settling the plan, and the design's own
+ * lime — which gives volt a meaning on this card it had nowhere else: a bright bar is a slot
+ * everybody has agreed. It stays off `primary`; 1.2's coral list is closed.
+ *
+ * **Mint on everything else, as a soft default.** The real look of the other eight cards is not
+ * in #410 — the author supplies it — and until then every card is drawn by this shell in the
+ * palette's settled colour so the rail does not mix two visual languages, and a game flipping to
+ * *Game on* under your thumb does not jump layouts.
+ *
+ * **`settled`, and not a `mint` variant invented beside it.** 6.1's `settled` is the mint button
+ * and the only one: its fill is `mintInk`, which is what Rule C requires under a white label, and
+ * that is the whole of what this card asks of it. Its docstring's clause about a second press is
+ * about the location step's control, whose *act* is what has been obtained; here the settled thing
+ * is the game — a full court, everybody in — and the label carries the verb, which is 6.1's own
+ * split (*a control that turns green must also change its words*). A `mint` variant whose every
+ * style equalled `settled`'s would be a colour-named copy of a meaning-named control, kept only
+ * until a design replaces it — the second card `shared/ui/README.md` refuses.
+ */
+export const ACCENT: Readonly<Record<GameCardName, CardAccent>> = {
+  planning: { bar: theme.color.volt, button: 'volt' },
+  'game-on': { bar: theme.color.mint, button: 'settled' },
+  today: { bar: theme.color.mint, button: 'settled' },
+  'needs-result': { bar: theme.color.mint, button: 'settled' },
+  confirm: { bar: theme.color.mint, button: 'settled' },
+  counted: { bar: theme.color.mint, button: 'settled' },
+  uncounted: { bar: theme.color.mint, button: 'settled' },
+  'never-played': { bar: theme.color.mint, button: 'settled' },
+  unreadable: { bar: theme.color.mint, button: 'settled' },
+};
+
+// ---------------------------------------------------------------------------
+// The sport word
+// ---------------------------------------------------------------------------
 
 /** The marked kind, and the only one that is said. A counted game says nothing about being one. */
 const FRIENDLY = 'Friendly';
 
-/** How many seats a singles court has. Two, and the boundary between the two words above. */
-const SINGLES_SEATS = 2;
-
 /**
- * `DOUBLES · FRIENDLY` — **the eyebrow carries only facts this build holds.**
+ * The sport word's parts — the sport, and `Friendly` only when the game is one.
  *
- * §4.2 lists a third clause, `YOU OWN IT`, and it **goes with ownership**: nothing on this
- * platform owns a game, *Needs an owner* is one of the seven refused states, and the app does not
- * name a thing it cannot do.
- *
- * *Friendly* is the marked case, because a `GameKind` this build cannot read drops the clause and
- * every other word on the card stands — a game whose kind is absent is drawn as a game.
+ * **Nothing here says *singles* or *doubles*: the court says the format** — four squares is a
+ * four and two is a two — and a word restating a picture directly beside it is the doubling the
+ * figure and the line were once split to prevent. *Friendly* is the marked case (ADR-0150),
+ * because a `GameKind` this build cannot read drops the clause and every other word on the card
+ * stands — a game whose kind is absent is drawn as a game.
  */
-function eyebrowParts(game: Game): readonly string[] {
-  const court = game.seats.length <= SINGLES_SEATS ? SINGLES : DOUBLES;
-
-  return game.kind === 'FRIENDLY' ? [court, FRIENDLY] : [court];
-}
-
-/** The eyebrow as it is **drawn**: the parts, in the row's own separator. */
-export function cardEyebrow(game: Game): string {
-  return eyebrowParts(game).join(' · ');
-}
-
-// ---------------------------------------------------------------------------
-// The figure and the line
-// ---------------------------------------------------------------------------
-
-/**
- * The card's one large slot: **the hour, a weekday, or nothing.**
- *
- * The `kind` travels because the two are drawn in different type roles — 1.4 is categorical that
- * numbers are monospaced always, so an hour is `num` and a weekday is 3.3's `display`, the one
- * sans role above `h1` and the one that exists for exactly this. A component branching on
- * `/^\d/` would be that decision made by a regular expression.
- */
-export type CardFigure =
-  | { readonly kind: 'hour'; readonly value: string }
-  | { readonly kind: 'weekday'; readonly value: string };
-
-/**
- * What the figure holds, and `undefined` where a plan names no moment at all.
- *
- * **§4.2's three shapes are a partition over (hour, day) and are read as one**: *the hour*; *the
- * weekday when there is a day and no hour*; *nothing when there is no day*. The third clause is
- * the remaining cell — no hour **and** no day — because the second names its own hour condition
- * and the first does not. The other reading, in which an hour agreed before a day draws nothing,
- * would take an agreed value off the card entirely, and the line does not pick it up: the line is
- * *whatever the figure did not*, and it never carries the hour.
- *
- * **The weekday is the weekday, and never *Today* or *Yesterday*.** Inside the horizon a weekday
- * is exact, and inside 24 h — which is all an ending gets — it can only be today or yesterday
- * anyway, so the format needs no fallback for a game ten days old. What it must not do is say
- * *Today* on a card whose **tag** already says *Today*: that is the same doubling the figure and
- * the line were split to prevent, one register over.
- */
-export function cardFigure(plan: Plan | undefined): CardFigure | undefined {
-  if (plan?.hour !== undefined) return { kind: 'hour', value: plan.hour };
-  if (plan?.day !== undefined) return { kind: 'weekday', value: dayChipName(plan.day) };
-
-  return undefined;
+function sportParts(game: Game, sportName: string): readonly string[] {
+  return game.kind === 'FRIENDLY' ? [sportName, FRIENDLY] : [sportName];
 }
 
 /**
- * The line under the figure: **whatever the figure did not take** — the day, and the place.
- *
- * `place` is the **drawn** half, shortened by #335's rule; {@link cardLineSpoken} is the same line
- * with the value whole. A plan with nothing agreed has no line at all rather than an empty one.
+ * `Padel` · `Padel · Friendly` — **the sport word, top right, as it is drawn.** Uppercase is the
+ * eyebrow's own rule and is applied by the style, so the words are stored as words.
  */
-export function cardLine(plan: Plan | undefined): string | undefined {
-  return joinLine(plan, (place) => placeWithoutTheCourt(place));
+export function sportWord(game: Game, sportName: string): string {
+  return sportParts(game, sportName).join(' · ');
 }
 
-/** The same line, **spoken** — the place whole, comma and court and all (§20.4). */
-export function cardLineSpoken(plan: Plan | undefined): string | undefined {
-  return joinLine(plan, (place) => place);
-}
+/**
+ * The same, **spoken** — `Padel, friendly`. A clause rather than the drawn row, because a `·`
+ * between two words is a separator a listener has no reading for.
+ */
+export function sportSpoken(game: Game, sportName: string): string {
+  const [sport, ...marks] = sportParts(game, sportName);
 
-function joinLine(plan: Plan | undefined, place: (written: string) => string): string | undefined {
-  const parts: string[] = [];
-
-  // The day, only where the figure took the hour instead — the doubling this split exists to stop.
-  if (plan?.day !== undefined && plan.hour !== undefined) parts.push(dayChipName(plan.day));
-  if (plan?.place !== undefined) parts.push(place(plan.place));
-
-  return parts.length === 0 ? undefined : parts.join(' · ');
+  return [sport, ...marks.map((mark) => mark.toLowerCase())].join(', ');
 }
 
 // ---------------------------------------------------------------------------
-// The gloss
+// The line under the slots
 // ---------------------------------------------------------------------------
 
 /**
- * The gloss where the checklist is empty. Said on *Game on*, and on *Today* once it is.
+ * **The one line the card keeps** — the window on *Needs result*, and the standing on everything
+ * that is not a rung. `undefined` on the three rungs whose whole account is the slots.
  *
- * **Not the checklist's sentence**, which is `NOTHING_IS_LEFT_TO_AGREE` and ends in a full stop:
- * a card's gloss is a label under a figure and the screen's is a line of prose, and §22.6 spells
- * the two differently on purpose.
- */
-export const NOTHING_LEFT_TO_AGREE = 'Nothing left to agree';
-
-/**
- * What the card's gloss says — **one rule for three rungs, one override, and the built sentence
- * for everything else.**
+ * ***Needs result* is the override that survived the gloss**, because a passed agreement makes the
+ * unfilled slots irrelevant and the entry window is the only live fact left. It **obeys nothing**:
+ * the card does not close at zero, because `standing_of` gates entry on `entry_closes_at` and the
+ * server derives the standing. Where the wire dated no window, somebody has already said the game
+ * happened and there is nothing left to count down — so nothing is drawn, where a duration of
+ * nothing would be a lie.
  *
- * It must add what the tag, the figure and the line have not, and must not restate the button.
+ * **Everything that is not a rung already has a sentence**, and it is `features/games`'
+ * `gameStandingLine` — the same line the screen behind the card says, so a player who reads a
+ * card, taps it and finds a different deadline is not a state this can reach. The membership test
+ * is the ladder's own rather than a cascade over the four names: a fifth rung spelled there and not
+ * here would fall through to the sentence written for an ended game, which is the one failure a
+ * single rule exists to prevent.
  */
-export function cardGloss(name: GameCardName, { game, plan, playerId }: CardFacts): string {
-  if (name === 'needs-result' && game.entryClosesAt !== undefined) {
-    return `${durationLeft(game.entryClosesAt, game.readAt)} left`;
+export function cardLine(name: GameCardName, { game, playerId }: CardFacts): string | undefined {
+  if (name === 'needs-result') {
+    return game.entryClosesAt === undefined
+      ? undefined
+      : `${durationLeft(game.entryClosesAt, game.readAt)} left`;
   }
 
-  // **The ladder's own membership test, and never a cascade over the four names.** A fifth rung
-  // spelled here and not there would fall through to the sentence written for an ended game, which
-  // is the one failure the gloss being *one rule for three rungs* exists to prevent.
-  //
-  // *Needs result* reaches the slot rule only where the wire dated no window, which is a game
-  // somebody has already said happened — the entry closed, and there is nothing left to count
-  // down. The slot sentence is true of it, where a duration of nothing would not be.
-  if (isRung(name)) {
-    const next = unfilledSlots(plan)[0];
-
-    return next === undefined
-      ? NOTHING_LEFT_TO_AGREE
-      : `${STILL_TO_AGREE}: ${SLOT_IN_A_SENTENCE[next]}`;
-  }
+  if (isRung(name)) return undefined;
 
   return gameStandingLine(game, playerId);
 }
@@ -299,23 +291,46 @@ export interface CardFacts {
 // ---------------------------------------------------------------------------
 
 /**
- * **The named door in the footer** — §22.7's three, one per rung.
+ * **The wide door on Planning** — the next thing to do, on the card that is about doing it.
  *
- * Each carries its act's **verb**, navigates, and never writes: *the grid is the screen*, so the
- * verb names what you arrive at and the standing guarantees you arrive there.
+ * It opens the game screen exactly as *Game on*'s `Open` does — the door is `open` on both, and
+ * `domain/gameCard.ts` says so — and the word differs because the destination is the same and the
+ * reason for going is not: on *Game on* you go to read a plan, on *Planning* you go to finish one.
+ * *Finish* and not *Lock*, because the lock is an act with its own control on that screen
+ * (ADR-0155), and a door that named it would be promising a button it does not press.
  */
-const DOOR_LABEL: Readonly<Record<GameDoor, string>> = {
-  open: 'Open',
+export const FINISH_THE_PLAN = 'Finish the plan';
+
+/**
+ * **The wide door's verb, per name** — §22.7's three, one per rung, and *Finish the plan* on the
+ * card whose door is `open` but whose errand is not
+ * ([#413](https://github.com/Raketa02/Raketa/issues/413)).
+ *
+ * Keyed by the **card's name** rather than by the door, because the door *Planning* carries is
+ * the same `open` as *Game on*'s and the word on it is not. Each carries its act's **verb**,
+ * navigates, and never writes: *the grid is the screen*, so the verb names what you arrive at and
+ * the standing guarantees you arrive there. `nowPresentation.test.ts` holds this table in step
+ * with `domain/`'s `DOOR` — a word exactly where there is a door — so neither can gain a row the
+ * other lacks.
+ */
+const DOOR_LABEL: Readonly<Record<GameCardName, string | undefined>> = {
+  planning: FINISH_THE_PLAN,
+  'game-on': 'Open',
   // *One act, one spelling* (§22.7). The screen behind this card draws the same verb on the arm
   // that leads with its plan, so the word is `shared/vocabulary/theActsWords.ts`' rather than
   // either feature's — the two of them reach each other at load time, and a word read across that
   // seam while a module is being evaluated reads a half-built one.
-  'we-played': WE_PLAYED,
+  today: WE_PLAYED,
+  'needs-result': WE_PLAYED,
   confirm: 'Confirm the result',
+  counted: undefined,
+  uncounted: undefined,
+  'never-played': undefined,
+  unreadable: undefined,
 };
 
-export function doorLabel(door: GameDoor): string {
-  return DOOR_LABEL[door];
+export function doorLabel(name: GameCardName): string | undefined {
+  return DOOR_LABEL[name];
 }
 
 // ---------------------------------------------------------------------------
@@ -323,20 +338,31 @@ export function doorLabel(door: GameDoor): string {
 // ---------------------------------------------------------------------------
 
 /**
- * The card, as one element: **the tag, the eyebrow, the figure and line, the gloss, then the
- * door's verb.**
+ * **One slot, spoken** — `Where, Zabłocie Sport, court 3` · `Day, Sunday 9 Aug` · `Time, 19:00` ·
+ * `Day, Not agreed yet`.
  *
- * §24.5, with the **sport** named in the eyebrow's clause — a listener has no picture of the court
- * in front of them, and a sport dot is legal in this system only where the sport is named
- * (`theme.ts`: *"a surface that draws one of these with no name beside it reopens the question as
- * surely as a fifth sport"*). The drawing names it under the court; the label names it here.
+ * `planTagsName`'s register one surface over: the slot is named because a listener hears three
+ * values in a row and has nothing to attach them to, and the comma rather than a colon because
+ * this is prose and the chip's is a control's name. The value is `spokenSlotValue`'s — the one
+ * spelling every spoken slot reads — asked for **with its date**, because this is the one surface
+ * that draws one. The **place is spoken whole**, comma and court and all (§20.4) — the drawn row
+ * shortens it, and this is the half the drawing cannot keep. The card's own labels are used, so a
+ * listener hears *Time* where the card draws `TIME`.
+ */
+export function cardSlotSpoken(plan: Plan | undefined, slot: PlanSlot): string {
+  return `${SLOT_EYEBROW[slot]}, ${spokenSlotValue(plan, slot, { date: true })}`;
+}
+
+/**
+ * The card, as one element: **the tag, the sport, the three slots as sentences, then the line.**
  *
- * **The door's verb is part of this name and is not an element of its own.** The body tap and the
- * named door go to the same place — #336 made that a rule — so they are one action and one
- * element, and the ✉ beside them is the second because it goes somewhere else.
+ * §24.5 as amended by [#413](https://github.com/Raketa02/Raketa/issues/413). The **sport** is
+ * named because a listener has no picture of the court in front of them, and it is what tells two
+ * padel games in a week apart. **The door's verb is no longer part of this name**: the body is not
+ * pressable, the two buttons are the only doors and each is an element of its own — so a name
+ * ending in `Open` beside a button announcing `Open` would be the double announcement 6.8 refuses.
  *
- * The place is spoken **whole** and the figure is spoken as it is drawn: the hour and the weekday
- * are both already words a listener can act on.
+ * The slots are spoken in the app's own order, read from `slots.ts` rather than restated here.
  */
 export function gameCardLabel({
   name,
@@ -344,29 +370,19 @@ export function gameCardLabel({
   game,
   plan,
   playerId,
-  door,
 }: CardFacts & {
   readonly name: GameCardName;
   readonly sportName: string;
-  readonly door: GameDoor | undefined;
 }): string {
-  const tag = CARD_TAG[name];
-  const figure = cardFigure(plan);
-  const line = cardLineSpoken(plan);
-
   return [
-    tag?.label,
-    // Spoken as a clause rather than as the drawn row: a `·` between two words is a separator a
-    // listener has no reading for, and the sport leads because it is what tells two padel games
-    // in a week apart.
-    [sportName, ...eyebrowParts(game).map((part) => part.toLowerCase())].join(', '),
-    figure?.value,
-    line,
-    cardGloss(name, { game, plan, playerId }),
-    door === undefined ? undefined : doorLabel(door),
+    CARD_TAG[name],
+    sportSpoken(game, sportName),
+    ...PLAN_SLOTS.map((slot) => cardSlotSpoken(plan, slot)),
+    cardLine(name, { game, plan, playerId }),
   ]
     .filter((part): part is string => part !== undefined)
-    .join('. ');
+    .map((part) => (part.endsWith('.') ? part : `${part}.`))
+    .join(' ');
 }
 
 /**

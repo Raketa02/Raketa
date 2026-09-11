@@ -92,6 +92,23 @@ export function personName(person: ConversationPerson): NamedPlayer {
     : { kind: 'player', nickname: person.nickname };
 }
 
+/**
+ * **Each member's photograph by their id** — only the members who have one, so a seat that looks
+ * its occupant up and finds nothing draws the poster.
+ *
+ * Read off `members` and never `people`, which is this file's own rule for faces: the roster is
+ * who is on the court, and every seat on a game is somebody on it. It is here beside `othersIn`
+ * because it is a reading of the roster, not of the surface that draws it — Now's rail hands the
+ * map to each card ([#413](https://github.com/Raketa02/Raketa/issues/413)).
+ */
+export function facesOf(members: readonly ConversationMember[]): ReadonlyMap<string, string> {
+  return new Map(
+    members.flatMap((member) =>
+      member.photoUrl === undefined ? [] : [[member.playerId, member.photoUrl] as const],
+    ),
+  );
+}
+
 /** Everybody in the room but the reader, in the order the fold answered them. */
 export function othersIn(
   members: readonly ConversationMember[],

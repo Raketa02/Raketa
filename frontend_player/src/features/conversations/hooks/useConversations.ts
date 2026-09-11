@@ -22,6 +22,7 @@ import { useCurrentUser } from '@/features/auth/types';
 import type { AppError } from '@/shared/errors';
 
 import type { Conversation } from '../domain/conversation';
+import { facesOf } from '../domain/membership';
 import { ROOM_OPENING_BOUND_MS, ROOM_OPENING_POLL_MS } from '../domain/roomOpening';
 import { readConversations } from '../use-cases/readConversations';
 
@@ -178,21 +179,46 @@ function doorIn(
 }
 
 /**
+ * **The way into one room, and the faces in it** — what a game's card is handed from the join.
+ *
+ * `faces` is every member's photograph by their id, and **absent for a member with none**, so a
+ * seat looks its occupant up and draws the poster when the map has nothing for them. It is read
+ * off `members` rather than `people`, which is `membership.ts`' own rule for faces: the roster is
+ * who is on the court, and every seat on a game is somebody on it.
+ */
+export interface RoomDoor {
+  readonly conversationId: string;
+  readonly faces: ReadonlyMap<string, string>;
+}
+
+/**
  * **The same join, over a list** — every room this player holds, keyed by the challenge that
- * opened it.
+ * opened it, with the faces the room carries
+ * ([#413](https://github.com/Raketa02/Raketa/issues/413)).
  *
  * A rail of games needs a door per card and a hook cannot be called in a loop, so the join runs
  * **once at the surface** and each card is handed the answer for its own challenge. That is also
  * what keeps [`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md)
- * §3.4's rule true of the card: it is handed the game, the plan beside it and the address of the
- * room, and reaches for nothing itself.
+ * §3.4's rule true of the card: it is handed the game, the plan beside it, the address of the
+ * room and the faces in it, and reaches for nothing itself.
+ *
+ * **The faces need no backend.** A game's seat carries a handle and nothing else about the person
+ * in it (ADR-0141), but the rows this list already fetches for the door carry every member's
+ * `photoUrl` — minted for this response, which is exactly as long as a card is drawn from it. So
+ * the same join answers both questions, keyed the same way, at no new fetch.
  *
  * It fails soft exactly as {@link useChatDoor} does, and for the same two reasons — a room opens
  * on the first acceptance and is destroyed when the episode ends, so a missing entry is the
- * ordinary state and never an error.
+ * ordinary state and never an error. No room is no door **and** no faces: the card draws posters,
+ * which is what a player with no photograph has in any case.
  */
-export function useChatDoors(): ReadonlyMap<string, string> {
+export function useChatDoors(): ReadonlyMap<string, RoomDoor> {
   const { data } = useConversations();
 
-  return new Map((data ?? []).map((room) => [room.challengeId, room.conversationId]));
+  return new Map(
+    (data ?? []).map((room) => [
+      room.challengeId,
+      { conversationId: room.conversationId, faces: facesOf(room.members) },
+    ]),
+  );
 }

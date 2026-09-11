@@ -738,7 +738,7 @@ describe('the room an acceptance opens', () => {
     });
 
     // The plan card, pinned under the header: three slots, nothing agreed.
-    expect(await screen.findByLabelText('Where: not agreed yet')).toBeTruthy();
+    expect(await screen.findByLabelText('Where: Not agreed yet')).toBeTruthy();
 
     // And Now, one tab over, has the game with the rail's word on it. The bar stands down in a
     // room, so the way to the tab is back out of it and out of the challenge behind it.
@@ -748,9 +748,10 @@ describe('the room an acceptance opens', () => {
     await waitFor(() => expect(screen).toHavePathname('/chats'));
     fireEvent.press(screen.getByLabelText('Now'));
     await waitFor(() => expect(screen).toHavePathname('/'));
-    // The rail's tag for a game with nothing agreed yet, spelled by the words themselves.
+    // The rail's tag for a game with nothing agreed yet, spelled by the words themselves — and
+    // the card's three slots, each saying so under a dim bar (#413).
     expect(await screen.findByText('Planning')).toBeTruthy();
-    expect(screen.getByText('Still to agree: where')).toBeTruthy();
+    expect(screen.getAllByText('Not agreed yet')).toHaveLength(3);
   });
 
   /** A no has no room to go to: the reader is outside whatever room the others keep. */

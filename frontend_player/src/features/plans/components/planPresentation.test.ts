@@ -20,6 +20,7 @@ import {
   PLAN_SPOKEN_LEAD,
   QUICK_CHIP,
   SAVING,
+  SLOT_EYEBROW,
   SLOT_IN_A_SENTENCE,
   SLOT_NAME,
   STILL_TO_AGREE,
@@ -33,6 +34,7 @@ import {
   slotChipLabel,
   slotChipName,
   slotsStillToAgree,
+  spokenSlotValue,
 } from './planPresentation';
 
 const GAME = '11111111-0000-4000-8000-000000000001';
@@ -77,6 +79,38 @@ describe('the day', () => {
   it('prints a value it cannot read as a weekday rather than naming one', () => {
     expect(dayChipLabel('someday')).toBe('someday');
     expect(dayChipName('someday')).toBe('someday');
+  });
+
+  /**
+   * **The Now card's name speaks the date beside the weekday** — the one reader that asks for
+   * it, because it is the one surface that draws one ([#413](https://github.com/Raketa02/Raketa/issues/413)).
+   * `dayDate` itself is `shared/date/calendarDay.test.ts`'s.
+   */
+  it('is spoken with its date only where a surface asks', () => {
+    const agreed = plan({ day: '2026-08-09' });
+
+    expect(spokenSlotValue(agreed, 'day')).toBe('Sunday');
+    expect(spokenSlotValue(agreed, 'day', { date: true })).toBe('Sunday 9 Aug');
+    expect(spokenSlotValue(undefined, 'day', { date: true })).toBe(NOT_AGREED_YET);
+  });
+});
+
+describe('an unfilled slot, drawn', () => {
+  /**
+   * The words were spoken only until the Now card drew them (#413): `Not agreed yet` under a dim
+   * bar is the card's whole account of a slot nobody has filled, so it is a sentence now — and
+   * the spoken names read the same constant, so a chip still says exactly what the card draws.
+   */
+  it('is one sentence, capitalised, in both registers', () => {
+    expect(NOT_AGREED_YET).toBe('Not agreed yet');
+    expect(slotChipName(undefined, 'where')).toBe(`${SLOT_NAME.where}: ${NOT_AGREED_YET}`);
+  });
+
+  /** The card's labels: the eyebrow form of the three slots, and `Time` is the card's word for
+   *  the hour — the mock draws it, and the chat's chip keeps `Hour`. */
+  it('is labelled WHERE · DAY · TIME on the card, where the chip says Where · Day · Hour', () => {
+    expect(SLOT_EYEBROW).toEqual({ where: 'Where', day: 'Day', hour: 'Time' });
+    expect(SLOT_EYEBROW.hour).not.toBe(SLOT_NAME.hour);
   });
 });
 

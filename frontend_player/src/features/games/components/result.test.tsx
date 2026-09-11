@@ -178,20 +178,21 @@ afterEach(async () => {
 });
 
 /**
- * Land in the app with these games, and open the first of them from Now's rail.
+ * Land in the app with these games, on the first of them — **at the screen's own address**.
  *
- * Matched on the card's **sport clause** rather than on the whole name: the rail's card is named
- * for what the game is asking of the reader, so the tag that opens the sentence changes with every
- * state this file walks ([#367](https://github.com/Raketa02/Raketa/issues/367)). The sport is the
- * one part of that name every card carries, and it is what tells two games apart.
+ * It used to walk in from Now's card, and the card is no longer a door: since
+ * [#413](https://github.com/Raketa02/Raketa/issues/413) the body is not pressable and an ending
+ * carries no door at all, so two of the arms this file walks cannot be reached from the rail. The
+ * rail's doors are the rail's tests' (`nowRail.test.tsx`, `gamePlan.test.tsx`); what this file is
+ * about is the screen's eight states, and `GameScreen` is state-keyed — the arm is the standing's
+ * wherever it is entered from, which is §5.2's own reason there is no deep-link parameter.
  */
-async function openGame(served: Wire['GameSchema'], sport = 'Padel') {
+async function openGame(served: Wire['GameSchema']) {
   stubGames(transport, [served], READ_AT);
-  await launchSignedIn();
-
-  const card = await screen.findByLabelText(new RegExp(`${sport}, `));
-  fireEvent.press(card);
+  await launchSignedIn(`/games/${GAME_ID}`);
   await waitFor(() => expect(screen).toHavePathname(`/games/${GAME_ID}`));
+  // The route resolves before the screen is drawn; the back control is on every arm.
+  await screen.findByLabelText('Back');
 }
 
 /**
@@ -204,8 +205,8 @@ async function openGame(served: Wire['GameSchema'], sport = 'Padel') {
  * own door carries. It is a second helper rather than a branch inside the first, so every
  * assertion below says which arm it is standing on.
  */
-async function openTheGrid(served: Wire['GameSchema'], sport = 'Padel') {
-  await openGame(served, sport);
+async function openTheGrid(served: Wire['GameSchema']) {
+  await openGame(served);
 
   fireEvent.press(screen.getByText(WE_PLAYED));
 }
@@ -543,7 +544,7 @@ describe('the score-entry instrument, which is the prototype’s', () => {
   });
 
   it('draws the sport’s own grid, in the sport’s own word for a row', async () => {
-    await openTheGrid(game({ sport: 'SQUASH' }), 'Squash');
+    await openTheGrid(game({ sport: 'SQUASH' }));
 
     expect(screen.getByLabelText('Game 5, You, empty')).toBeTruthy();
     expect(screen.queryByLabelText('Set 1, You, empty')).toBeNull();

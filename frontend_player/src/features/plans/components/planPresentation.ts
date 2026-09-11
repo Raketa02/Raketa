@@ -12,11 +12,13 @@
  *
  * ## §22.6 is split across two decks and the slot names are why
  *
- * The **gloss** is `nowPresentation.ts`' because it is a card's line; the **checklist** is here
- * because it is the plan's own fuller account and the game screen is where the plan is read. What
- * they share is the sentence register of the three slot names, so `SLOT_IN_A_SENTENCE` moved here
- * beside `SLOT_NAME` when the second reader arrived: two tables, one for a control and one for a
- * sentence, sitting together where the difference between them is visible.
+ * The **card's rows** are `nowPresentation.ts`' because they are a card's; the **checklist** is
+ * here because it is the plan's own fuller account and the game screen is where the plan is read.
+ * What every reader shares is how a slot is spelled, so the spellings sit here in three registers
+ * — `SLOT_NAME` for a control, `SLOT_IN_A_SENTENCE` for a sentence, `SLOT_EYEBROW` for the card's
+ * label — together, where the difference between them is visible. `SLOT_IN_A_SENTENCE` moved here
+ * when the checklist became its second reader; the card's gloss, which was the first, retired into
+ * the rows ([#413](https://github.com/Raketa02/Raketa/issues/413)).
  *
  * ## A chip reads its value or its name, and never a word about the state it is in
  *
@@ -48,10 +50,11 @@
  *
  * *Saturday* alone is not a control anybody can act on: §20's rule is one accessibility element
  * per action, and the action here is *change the day*. So every chip is spoken as its slot and
- * then its value — and an unfilled one says **not agreed yet** rather than reading its own drawn
- * label twice.
+ * then its value — and an unfilled one says **Not agreed yet** rather than reading its own drawn
+ * label twice; the Now card draws the same words under a dim bar.
  */
 
+import { dayDate } from '@/shared/date/calendarDay';
 import { weekdayOf } from '@/shared/date/platformZone';
 import { placeWithoutTheCourt } from '@/shared/formatting/placeName';
 import { sentenceList } from '@/shared/formatting/sentenceList';
@@ -78,6 +81,23 @@ export const SLOT_NAME: Readonly<Record<PlanSlot, string>> = {
   where: 'Where',
   day: 'Day',
   hour: 'Hour',
+};
+
+/**
+ * **The three slots as the Now card labels them** — `WHERE` · `DAY` · `TIME`, the eyebrow over
+ * each slot row ([#413](https://github.com/Raketa02/Raketa/issues/413)). Drawn uppercase by
+ * 3.3's rule, so the words are stored as words.
+ *
+ * A third table beside the control's and the sentence's, for the same reason the second one is
+ * here: this is the file that owns how a slot is spelled, and the one difference between the
+ * three is visible only where they sit together. **`Time` is the card's word for the `hour`
+ * slot**, as the mock draws it; the chip in the room keeps `Hour`, because a chip names the value
+ * you are about to set and a card labels the value that was.
+ */
+export const SLOT_EYEBROW: Readonly<Record<PlanSlot, string>> = {
+  where: 'Where',
+  day: 'Day',
+  hour: 'Time',
 };
 
 /** The day, short — seven of these sit in one row and three letters tell Tuesday from Thursday. */
@@ -123,22 +143,38 @@ export function slotChipName(
 }
 
 /**
- * **What one slot holds, said** — the value whole, and *not agreed yet* where there is none.
+ * **What one slot holds, said** — the value whole, and *Not agreed yet* where there is none.
  *
- * The one place a slot's **spoken** value is spelled, read by the chip in the room and by the
- * read-only tags on the game screen. The two differ in their punctuation and in nothing else, and
- * a second copy of *the day is a weekday and the place is never shortened* is exactly the drift
- * `slots.ts` exists to prevent one layer down.
+ * The one place a slot's **spoken** value is spelled, read by the chip in the room, by the
+ * read-only tags on the game screen, and by the Now card's own name. They differ in their
+ * punctuation and in one thing more — **the card asks for the date beside the weekday**, because
+ * it draws one ([#413](https://github.com/Raketa02/Raketa/issues/413)) and the other two do not —
+ * so the difference is an option here rather than a second copy: *the day is a weekday and the
+ * place is never shortened* spelled twice is exactly the drift `slots.ts` exists to prevent one
+ * layer down.
  */
-function spokenSlotValue(plan: Plan | undefined, slot: PlanSlot): string {
+export function spokenSlotValue(
+  plan: Plan | undefined,
+  slot: PlanSlot,
+  { date = false }: { readonly date?: boolean } = {},
+): string {
   const value = slotValue(plan, slot);
   if (value === undefined) return NOT_AGREED_YET;
+  if (slot !== 'day') return value;
 
-  return slot === 'day' ? dayChipName(value) : value;
+  return date ? `${dayChipName(value)} ${dayDate(value)}` : dayChipName(value);
 }
 
-/** What an unfilled slot is, said rather than drawn. The drawn half is the slot's own name. */
-export const NOT_AGREED_YET = 'not agreed yet';
+/**
+ * What an unfilled slot is — **drawn on the Now card, under a dim bar, and said everywhere.**
+ *
+ * Spoken only until [#413](https://github.com/Raketa02/Raketa/issues/413) drew it: the chip in the
+ * room draws its own name for an empty slot, and the read-only tags on the game screen do the
+ * same, so the sentence was a listener's alone. The card has no name to draw — its label is the
+ * eyebrow above the value — so the value itself says so, and a sentence that is drawn is
+ * capitalised as one. The spoken names read the same constant and so say exactly what is drawn.
+ */
+export const NOT_AGREED_YET = 'Not agreed yet';
 
 /**
  * The chip's word while its write is going out — **6.1's busy shape, on 6.2's pill.**

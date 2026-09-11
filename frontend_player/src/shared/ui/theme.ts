@@ -101,6 +101,25 @@ const color = {
    *  belongs on the volt fill beside it. Derived in Tag.test.tsx. */
   voltStroke: '#698A0F',
 
+  /** A STAGE STILL BEING ARRANGED — the dot on the Now card's tag while the game is in the
+   *  players' hands: the plan before it is played (*Planning*), the result after it (*Needs
+   *  result*, *Confirm the result*). Mint is the settled stage and `onDarkHair` the quiet
+   *  endings; this is the third dot, and the meaning is named rather than the hue (#413).
+   *
+   *  ON DARK ONLY. It is drawn on `night`, inside the on-dark tag, and nowhere on paper — so
+   *  there is no soft, no ink and no line: nothing writes on a 6pt dot and nothing borders it.
+   *
+   *  (!) MEASURED, then lifted. Mock 1 draws the dot at #87641A — hue 40,7°, which is `amber`
+   *  (39,5°) within a degree and within a step of lightness, at 2,45 on `night` and 1,61 on the
+   *  tag it sits in. That is the value the ticket itself calls invisible on `night`, and a dot
+   *  nobody can see carries no meaning there. So the hue and the saturation are the mock's and
+   *  ONLY the lightness is raised, to the step past the first that clears 1.4.11's 3:1 on the
+   *  tag's ground (.46 clears it at 3,12; a ratio one rounding from failing is one the next
+   *  tuning takes under, `photoScrim`'s rule): 5,35 on `night`, 3,49 on `onDarkTag` over it,
+   *  3,17 on `onDarkFill` over it. 31° off `coral` and 28° off `volt`, so it is neither's
+   *  family. Derived in Tag.test.tsx. */
+  arranging: '#D29B28',
+
   // --- On-dark-card child colours (the dark card repaints its children) ---
   onDarkTiny: 'rgba(255,255,255,0.68)', // 6.97 on night
   onDarkEyebrow: 'rgba(255,255,255,0.52)', // 4.74 on night
@@ -265,27 +284,11 @@ const font = {
  * `letterSpacing` and `lineHeight` are in POINTS, pre-converted from the prototype's em.
  */
 const type = {
-  /** DISPLAY SANS — 3.3, and the only sans role above `h1`.
-   *
-   *  The Now card's figure slot takes a WORD when a game has a day and no hour, and 1.4 is
-   *  categorical — numbers are monospaced always — so a weekday can never be `num.levelHero`.
-   *  The largest sans role was `h1` at 19, under half the 40pt figure on the card beside it in
-   *  a rail whose whole geometry is one card shape with three fillings: answering a TYPE
-   *  problem with a LAYOUT one gives a card that changes shape rather than content, which is
-   *  the first thing a reader notices paging one. 26 was DRAWN AND MEASURED on
-   *  `prototype/now-and-game-screen`; that it equals `num.levelLarge`'s size is a coincidence
-   *  of two ramps meeting, and nothing here is derived from that role.
-   *
-   *  **700 and not 600.** 3.2's *the display roles are 600* is the MONO column's rule and it
-   *  is a fact about what `fonts.ts` loads; `Archivo_700Bold` is loaded and is `h1`'s own
-   *  weight, so there is no synthetic bolding to inherit here.
-   *
-   *  Tracking continues 3.4's SANS ramp rather than borrowing the mono value it happens to
-   *  meet at this size: 15 -> -0.025em, 19 -> -0.030em, 26 -> -0.035em = -0.91pt. The line
-   *  height is the device's 30 and not the size, because *lineHeight equals the size* is a
-   *  rule about a 40pt level not growing its card, and a sans word has ascenders a mono
-   *  digit does not. */
-  display: { fontFamily: font.sans[700], fontSize: 26, letterSpacing: -0.91, lineHeight: 30 },
+  /** There is no sans role above `h1`. `display` (26 / 700) was added on 2026-09-08 for one
+   *  thing — the Now card's figure slot holding a weekday — and retired with that slot on
+   *  2026-09-12 (#413): the day is an `h2` row now. A token nothing references is a lie about
+   *  the system (docs/design-system.md Part 14 #1), and the next sans word above 19 is a decision
+   *  to make again rather than a role to reach for. */
   h1: { fontFamily: font.sans[700], fontSize: 19, letterSpacing: -0.57, lineHeight: 24 },
   h2: { fontFamily: font.sans[700], fontSize: 15, letterSpacing: -0.38, lineHeight: 20 },
   /** The onboarding question itself. The prototype's 650 maps to 700. */
@@ -701,6 +704,18 @@ const size = {
      * standing in it rather than a badge with four squares over it.
      */
     header: 84,
+    /**
+     * The court **on the Now card** — beside the three plan slots, with a face and three
+     * letters in every seat (#413).
+     *
+     * **88, measured against mock 1 at 1×** — the card is 340pt wide in the mock and the
+     * court's ground 88 × 116, which is the drawing's own 1,32 — and a number only for what
+     * a device drew. It is not derived from `header`: at 88 the seat is 21pt by `seatRatio`,
+     * which is what the mock's tiles measure, and the ratio governs rather than the floor.
+     * Fixed rather than a share of the slots column beside it, for `build`'s reason — a
+     * court that grew with the phone would put a different face size on every device.
+     */
+    card: 88,
     sideLabelOpacity: 0.6,
     line: {
       bound: 0.3,

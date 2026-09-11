@@ -27,9 +27,12 @@
  * Games and plans, which is
  * [ADR-0149](../../../../../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
  * §1's arrow — a card needs both halves, so the composition is this feature's and `features/games`
- * never learns a plan exists — plus the player's own rooms, which is §3's client join for the ✉.
- * Each card is handed `(game, plan | undefined)` and the address of its room, and **reads no
- * global state**.
+ * never learns a plan exists — plus the player's own rooms, which is §3's client join for the
+ * bubble **and, since [#413](https://github.com/Raketa02/Raketa/issues/413), for the faces**: a
+ * game's seat carries a handle and nothing else, and the rows fetched for the door carry every
+ * member's photograph, so one join keyed on the challenge answers both. Each card is handed
+ * `(game, plan | undefined)`, the address of its room and the faces in it, and **reads no global
+ * state**. No room fails soft twice over — no bubble, and posters in every seat.
  *
  * **Now has one clock by construction.** Every fold on this screen is against `GET /games`'
  * `read_at`: the ladder's, the gloss's duration and the shelf life. `GET /plans` deliberately
@@ -136,16 +139,23 @@ export function GamesRail({ empty }: GamesRailProps) {
             style={s.strip}
             contentContainerStyle={s.stripContent}
           >
-            {rows.map((game) => (
-              <GameCard
-                key={game.gameId}
-                game={game}
-                plan={plans.data?.find((one) => one.gameId === game.gameId)}
-                playerId={playerId}
-                conversationId={rooms.get(game.challengeId)}
-                width={cardWidth}
-              />
-            ))}
+            {rows.map((game) => {
+              // The same key the door uses, and the same soft failure: no room is no bubble
+              // and no faces, and the seats draw their posters.
+              const room = rooms.get(game.challengeId);
+
+              return (
+                <GameCard
+                  key={game.gameId}
+                  game={game}
+                  plan={plans.data?.find((one) => one.gameId === game.gameId)}
+                  playerId={playerId}
+                  conversationId={room?.conversationId}
+                  faces={room?.faces ?? NO_FACES}
+                  width={cardWidth}
+                />
+              );
+            })}
           </ScrollView>
 
           <PagerDots count={rows.length} current={current} />
@@ -157,6 +167,9 @@ export function GamesRail({ empty }: GamesRailProps) {
 
 /** Part 8's Strip gap, and the whole of what this file borrows from that section. */
 const STRIP_GAP = theme.space.sm;
+
+/** No room, no faces: one empty map rather than one per render, so a card's props hold still. */
+const NO_FACES: ReadonlyMap<string, string> = new Map();
 
 /** One frame at 60 Hz. The dots track the scroll, so they are told about every frame of it. */
 const SCROLL_THROTTLE_MS = 16;

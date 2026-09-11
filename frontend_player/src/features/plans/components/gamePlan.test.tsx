@@ -32,6 +32,9 @@ import {
 } from '@/test-support/onboardingRouter';
 import { installTransport, type Transport, type Wire } from '@/test-support/transport';
 
+import { RUNGS } from '../domain/ladder';
+
+import { doorLabel } from './nowPresentation';
 import {
   EVERYBODY_SAID_YES,
   NOTHING_IS_LEFT_TO_AGREE,
@@ -160,14 +163,18 @@ function stubTheWorld({
   stubEntries(transport, ROOM);
 }
 
-/** In through the Now card — the door §5.2 gives every rung. */
+/**
+ * In through the Now card's wide door — the one §5.2 gives every rung, and since #413 the only
+ * way in from the rail: the body is not pressable, and an ending carries no door at all.
+ */
 async function openFromNow(over: Parameters<typeof stubTheWorld>[0] = {}) {
   stubTheWorld(over);
 
   await launchSignedIn();
   await waitFor(() => expect(screen).toHavePathname('/'));
 
-  fireEvent.press(await screen.findByLabelText(/^Planning|^Game on|^Today|^Needs result|^Counted/));
+  const verbs = RUNGS.map(doorLabel).filter((verb): verb is string => verb !== undefined);
+  fireEvent.press(await screen.findByLabelText(new RegExp(`^(${[...new Set(verbs)].join('|')})$`)));
   await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
 }
 
@@ -241,7 +248,9 @@ describe('the three plan arms', () => {
    * no plan panel over it — an agreement about a future, above a record of a past.
    */
   it('draws nothing of the plan on an arm that is not an entry', async () => {
-    await openFromNow({
+    // Through the room: an ended game's card on Now carries no door (#413), so the screen behind
+    // it is reached by its other address.
+    await openFromTheRoom({
       games: [game({ standing: 'CONFIRMED', played_at: READ_AT, entry_closes_at: null })],
       plans: [WHOLE],
     });
@@ -425,7 +434,7 @@ describe('one component, two routes', () => {
     fireEvent.press(screen.getByLabelText(/^Now/));
     await waitFor(() => expect(screen).toHavePathname('/'));
 
-    fireEvent.press(await screen.findByLabelText(/^Game on/));
+    fireEvent.press(await screen.findByLabelText(doorLabel('game-on')!));
     await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
     expect(lit()).toEqual(['Now']);
   });
