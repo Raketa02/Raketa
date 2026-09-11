@@ -39,6 +39,8 @@ const ME = GATE_USER.id;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
 const OLA = 'cccccccc-0000-4000-8000-000000000003';
 const KUBA = 'dddddddd-0000-4000-8000-000000000004';
+/** Somebody who said no to this court — named by the wire's `people`, and never a member. */
+const BO = 'ffffffff-0000-4000-8000-00000000000b';
 
 const ROOM = 'eeeeeeee-0000-4000-8000-000000000005';
 
@@ -63,13 +65,20 @@ function member(
   return { player_id: playerId, nickname, ...over };
 }
 
+/**
+ * A row whose `people` is its members and nobody else — the ordinary row, where whoever the last
+ * entry is about is on the court. A suite naming somebody who is not supplies `people` itself.
+ */
 function room(over: Partial<Wire['ConversationRowSchema']> = {}): Wire['ConversationRowSchema'] {
+  const members = over.members ?? [member(ME, 'me_'), member(TOMEK, 'tomek.p')];
+
   return {
     conversation_id: ROOM,
     challenge_id: 'ffffffff-0000-4000-8000-000000000006',
     game_id: null,
     sport: 'SQUASH',
-    members: [member(ME, 'me_'), member(TOMEK, 'tomek.p')],
+    members,
+    people: members,
     last_entry: null,
     ...over,
   };
@@ -188,10 +197,10 @@ describe('the row', () => {
   });
 
   /**
-   * A system line is a code and its values, and `{name}` is filled from the members the row
+   * A system line is a code and its values, and `{name}` is filled from the people the row
    * already holds — never from `values`, so a corrected handle fixes the whole backlog.
    */
-  it('draws a system line from its code, naming its actor out of the membership', async () => {
+  it('draws a system line from its code, naming its actor out of the people it holds', async () => {
     await openChats([room({ last_entry: systemLine('DAY_RECORDED', { value: '2026-09-12' }) })]);
 
     expect(await screen.findByText('Squash · tomek.p set the day · Saturday')).toBeTruthy();
@@ -222,6 +231,32 @@ describe('the row', () => {
     expect(row.props.accessibilityLabel).toContain(
       'tomek.p set the place · Zabłocie Sport, court 3',
     );
+  });
+
+  /**
+   * **The one line a roster lookup cannot name** ([#409](https://github.com/Raketa02/Raketa/issues/409)):
+   * a *no* is not an accepted seat, so the actor of a `SEAT_LEFT` line was never a member and the
+   * row used to read `? said no`. `{name}` is filled from the row's `people`, which names them —
+   * in the drawn line and in the spoken one alike.
+   */
+  it('names a player who said no off the people the row holds, though they are not a member', async () => {
+    await openChats([
+      room({
+        sport: 'PADEL',
+        members: [member(ME, 'me_'), member(TOMEK, 'tomek.p'), member(OLA, 'ola.k')],
+        people: [
+          member(ME, 'me_'),
+          member(TOMEK, 'tomek.p'),
+          member(OLA, 'ola.k'),
+          member(BO, 'bo'),
+        ],
+        last_entry: systemLine('SEAT_LEFT', { departure: 'DECLINED' }, BO),
+      }),
+    ]);
+
+    expect(await screen.findByText('Padel · bo said no — that seat is open again')).toBeTruthy();
+    const row = screen.getByLabelText(/^tomek\.p and ola\.k, Padel/);
+    expect(row.props.accessibilityLabel).toContain('bo said no — that seat is open again');
   });
 
   /** The opening writes no line, so a room with no history has genuinely had nothing happen. */

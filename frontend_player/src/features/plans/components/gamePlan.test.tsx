@@ -141,6 +141,7 @@ function stubTheWorld({
             game_id: GAME,
             sport: 'PADEL',
             members: PAIR,
+            people: PAIR,
             last_entry: null,
           },
         ]
@@ -153,6 +154,7 @@ function stubTheWorld({
     game_id: GAME,
     sport: 'PADEL',
     members: PAIR,
+    people: PAIR,
     entries: [],
   });
   stubEntries(transport, ROOM);

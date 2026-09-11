@@ -29,7 +29,7 @@
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Entry } from './entry';
-import type { ConversationMember } from './membership';
+import type { ConversationMember, ConversationPerson } from './membership';
 
 export interface Conversation {
   readonly conversationId: string;
@@ -60,6 +60,12 @@ export interface Conversation {
   readonly sport: Sport;
   /** Who has agreed to be on this court **right now** — see `membership.ts`. */
   readonly members: readonly ConversationMember[];
+  /**
+   * Everybody this row names — the members, and whoever `last_entry` is about — resolved in the
+   * same read. **A superset of `members`**, and what `{name}` is filled from: the actor of a
+   * `SEAT_LEFT` line was never on the court ([#409](https://github.com/Raketa02/Raketa/issues/409)).
+   */
+  readonly people: readonly ConversationPerson[];
   /**
    * The newest thing in the room, or nothing.
    *

@@ -106,6 +106,7 @@ function room(
     game_id: null,
     sport: 'PADEL',
     members: [...members],
+    people: [...members],
     entries: [...entries],
   };
 }
@@ -136,6 +137,7 @@ const LISTED: Wire['ConversationRowSchema'] = {
   game_id: null,
   sport: 'PADEL',
   members: MEMBERS,
+  people: MEMBERS,
   last_entry: null,
 };
 

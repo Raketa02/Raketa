@@ -13,18 +13,27 @@ import { toConversationRoom, toConversations, toEntryPage, toMessage } from './c
 
 const ME = 'aaaaaaaa-0000-4000-8000-000000000001';
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
+/** Somebody who said no to this court — named by the wire, and never a member. */
+const BO = 'eeeeeeee-0000-4000-8000-000000000099';
 
 function member(over: Partial<Wire['ConversationMemberSchema']> = {}) {
   return { player_id: TOMEK, nickname: 'tomek.p', ...over };
 }
 
+/**
+ * A row whose `people` is its members and nobody else — the ordinary row, where every actor is
+ * on the court. A suite naming somebody who is not supplies `people` itself.
+ */
 function room(over: Partial<Wire['ConversationRowSchema']> = {}): Wire['ConversationRowSchema'] {
+  const members = over.members ?? [member(), member({ player_id: ME, nickname: 'me_' })];
+
   return {
     conversation_id: 'cccccccc-0000-4000-8000-000000000003',
     challenge_id: 'dddddddd-0000-4000-8000-000000000004',
     game_id: null,
     sport: 'PADEL',
-    members: [member(), member({ player_id: ME, nickname: 'me_' })],
+    members,
+    people: members,
     last_entry: null,
     ...over,
   };
@@ -92,6 +101,37 @@ describe('what crosses', () => {
     const [conversation] = mapped({ members: [member({ nickname: null })] });
 
     expect(conversation?.members).toEqual([{ playerId: TOMEK }]);
+  });
+
+  /**
+   * **Everybody the row names, and not only who is on the court**
+   * ([#409](https://github.com/Raketa02/Raketa/issues/409)). A *no* is not an accepted seat, so
+   * the actor of a `SEAT_LEFT` line was never a member — `people` is the list that can name them,
+   * and it is mapped as the same shape a member is, under a wider claim.
+   */
+  it('carries the people the row names, a member and a departed player alike', () => {
+    const [conversation] = mapped({
+      members: [member()],
+      people: [
+        member(),
+        { player_id: BO, nickname: 'bo', photo_id: 'p-1', photo_url: 'https://x/1' },
+      ],
+    });
+
+    expect(conversation?.people).toEqual([
+      { playerId: TOMEK, nickname: 'tomek.p' },
+      { playerId: BO, nickname: 'bo', photoUrl: 'https://x/1' },
+    ]);
+  });
+
+  /** `nickname: null` is the one case the `?` is for, on a person exactly as on a member. */
+  it('keeps a person whose handle the platform has lost, with no handle', () => {
+    const [conversation] = mapped({ people: [member(), { player_id: BO, nickname: null }] });
+
+    expect(conversation?.people).toEqual([
+      { playerId: TOMEK, nickname: 'tomek.p' },
+      { playerId: BO },
+    ]);
   });
 });
 
@@ -175,13 +215,16 @@ describe('what this build cannot read', () => {
 
 describe('one room, opened', () => {
   function opened(over: Partial<Wire['ConversationResponse']> = {}): Wire['ConversationResponse'] {
+    const members = over.members ?? [member()];
+
     return {
       read_at: '2026-09-08T12:00:00Z',
       conversation_id: 'cccccccc-0000-4000-8000-000000000003',
       challenge_id: 'dddddddd-0000-4000-8000-000000000004',
       game_id: null,
       sport: 'PADEL',
-      members: [member()],
+      members,
+      people: members,
       entries: [],
       ...over,
     };
@@ -233,20 +276,38 @@ describe('one room, opened', () => {
       },
     ]);
   });
+
+  /**
+   * The people ride **beside** the header rather than on it: the header comes off the first read
+   * alone, where the people grow with every page — so they are kept with the entries, which grow
+   * the same way.
+   */
+  it('carries the people the newest page names, beside the room and not on it', () => {
+    const room = toConversationRoom(
+      opened({ members: [member()], people: [member(), { player_id: BO, nickname: 'bo' }] }),
+    );
+
+    expect(room?.people).toEqual([
+      { playerId: TOMEK, nickname: 'tomek.p' },
+      { playerId: BO, nickname: 'bo' },
+    ]);
+    expect(room?.room.members).toEqual([{ playerId: TOMEK, nickname: 'tomek.p' }]);
+    expect(room?.room).not.toHaveProperty('people');
+  });
 });
 
 describe('a page backward', () => {
-  it('is the same narrowing with no header over it', () => {
-    const line: Wire['SystemLineSchema'] = {
-      type: 'system_line',
-      seq: 2,
-      code: 'SEAT_ACCEPTED',
-      occurred_at: '2026-09-08T10:00:00Z',
-      actor_id: TOMEK,
-      values: {},
-    };
+  const line: Wire['SystemLineSchema'] = {
+    type: 'system_line',
+    seq: 2,
+    code: 'SEAT_ACCEPTED',
+    occurred_at: '2026-09-08T10:00:00Z',
+    actor_id: TOMEK,
+    values: {},
+  };
 
-    expect(toEntryPage({ entries: [line] })).toEqual([
+  it('is the same narrowing with no header over it', () => {
+    expect(toEntryPage({ entries: [line], people: [member()] }).entries).toEqual([
       {
         kind: 'system-line',
         seq: 2,
@@ -256,6 +317,14 @@ describe('a page backward', () => {
         values: {},
       },
     ]);
+  });
+
+  /** The page's own authors and actors — not the roster, and nothing about who is in the room. */
+  it('carries the people the page names, which is not the roster', () => {
+    expect(toEntryPage({ entries: [line], people: [{ player_id: BO, nickname: null }] })).toEqual({
+      entries: [expect.objectContaining({ seq: 2 })],
+      people: [{ playerId: BO }],
+    });
   });
 });
 

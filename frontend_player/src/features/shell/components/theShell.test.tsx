@@ -566,6 +566,7 @@ describe('the bar stands down inside a conversation', () => {
         game_id: null,
         sport: 'PADEL',
         members: MEMBERS,
+        people: MEMBERS,
         last_entry: null,
       },
     ]);
@@ -576,6 +577,7 @@ describe('the bar stands down inside a conversation', () => {
       game_id: null,
       sport: 'PADEL',
       members: MEMBERS,
+      people: MEMBERS,
       entries: [],
     });
     stubEntries(transport, ROOM);

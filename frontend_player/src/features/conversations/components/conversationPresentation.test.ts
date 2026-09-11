@@ -9,7 +9,7 @@
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 
 import type { SystemLine } from '../domain/entry';
-import type { ConversationMember } from '../domain/membership';
+import type { ConversationMember, ConversationPerson } from '../domain/membership';
 
 import {
   OPEN_THE_CHAT,
@@ -25,6 +25,8 @@ import { conversationHeaderLabel } from './conversationAccessibility';
 const TOMEK: ConversationMember = { playerId: 'tomek', nickname: 'tomek.p' };
 const OLA: ConversationMember = { playerId: 'ola', nickname: 'ola.k' };
 const MEMBERS = [TOMEK, OLA];
+/** Somebody who said no to this court: named by the response, and never a member. */
+const BO: ConversationPerson = { playerId: 'bo', nickname: 'bo' };
 
 function line(over: Partial<SystemLine> = {}): SystemLine {
   return {
@@ -105,8 +107,31 @@ describe('the eight sentences', () => {
 });
 
 describe('who a line names', () => {
-  it('fills the slot from the members the row holds, and never from the values', () => {
+  it('fills the slot from the people the row holds, and never from the values', () => {
     expect(said({ actorId: 'ola', values: { name: 'somebody.else' } })).toBe('ola.k is in');
+  });
+
+  /**
+   * **The line a roster lookup could never name** ([#409](https://github.com/Raketa02/Raketa/issues/409)).
+   * A *no* is not an accepted seat, so the actor of a `SEAT_LEFT` line was never a member — and
+   * the row used to draw `? said no`. The row's line reads `people`, which names them.
+   */
+  it('names a departed player off the people, though they are not a member', () => {
+    const declined = line({ code: 'SEAT_LEFT', actorId: 'bo', values: { departure: 'DECLINED' } });
+
+    expect(
+      conversationRowLine(
+        {
+          conversationId: 'c1',
+          challengeId: 'ch1',
+          sport: 'padel',
+          members: MEMBERS,
+          people: [...MEMBERS, BO],
+          lastEntry: declined,
+        },
+        'one-line',
+      ),
+    ).toBe('bo said no — that seat is open again');
   });
 
   /**
@@ -192,7 +217,13 @@ describe('a room where nothing has happened yet', () => {
   it('has no line at all, rather than one asserting that nothing has happened', () => {
     expect(
       conversationRowLine(
-        { conversationId: 'c1', challengeId: 'ch1', sport: 'padel', members: MEMBERS },
+        {
+          conversationId: 'c1',
+          challengeId: 'ch1',
+          sport: 'padel',
+          members: MEMBERS,
+          people: MEMBERS,
+        },
         'one-line',
       ),
     ).toBeUndefined();
@@ -279,7 +310,11 @@ describe('somebody is typing', () => {
     expect(typingLine(['tomek', 'ola', 'zofia'], FOUR)).toBe('3 people are typing…');
   });
 
-  /** The whole handle, never a first name (ADR-0107), filled from membership and never the frame. */
+  /**
+   * The whole handle, never a first name (ADR-0107), filled from **membership** and never the
+   * frame — the roster and not `people`, because a typist is gated on membership and is one
+   * (ADR-0156). Somebody who left the court cannot be typing in it.
+   */
   it('fills names from the members the room holds, and draws ? for one it cannot', () => {
     expect(typingLine(['nobody-here'], MEMBERS)).toBe('? is typing…');
   });

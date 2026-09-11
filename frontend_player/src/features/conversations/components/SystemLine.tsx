@@ -7,9 +7,11 @@
  * and must not look like one — *nobody typed **Tomek set the day***.
  *
  * The sentence is `conversationPresentation.ts`', keyed by code, with `{name}` filled from the
- * members the room already holds and never from `values` — *so a corrected handle fixes the whole
- * backlog*. A code this build cannot read, and a code whose values it cannot read, both draw the
- * same named gap, because a system line **is** the whole of the slot it is drawn in.
+ * people the response names and never from `values` — *so a corrected handle fixes the whole
+ * backlog* — and **not from the roster**, because the actor of a `SEAT_LEFT` line was never a
+ * member ([#409](https://github.com/Raketa02/Raketa/issues/409)). A code this build cannot read,
+ * and a code whose values it cannot read, both draw the same named gap, because a system line
+ * **is** the whole of the slot it is drawn in.
  */
 
 import { StyleSheet, Text } from 'react-native';

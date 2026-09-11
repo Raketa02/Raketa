@@ -30,7 +30,7 @@
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Entry } from './entry';
-import type { ConversationMember } from './membership';
+import type { ConversationMember, ConversationPerson } from './membership';
 
 export interface ConversationRoom {
   readonly conversationId: string;
@@ -57,18 +57,31 @@ export interface ConversationRoom {
 }
 
 /**
+ * **One page of the stream and the people it names** — what every page carries, header or not.
+ *
+ * `people` rides with the entries rather than on the header because it grows the way they do:
+ * the newest page names the members and whoever its entries are about, and each page backward
+ * names its own authors and actors, which the room's first read could not have known. Merged by
+ * id as the pages accumulate (`mergedPeople`), never replaced.
+ */
+export interface EntryPage {
+  /** Oldest first, which is the order the stream is drawn in and the order the wire sends. */
+  readonly entries: readonly Entry[];
+  /** Everybody this page names, resolved in the same read. See `membership.ts`. */
+  readonly people: readonly ConversationPerson[];
+}
+
+/**
  * A room and **everything of its stream this client is holding** — one page on arrival, and one
  * more with each backward step.
  *
  * The two are separate because they arrive separately and grow differently: the header comes off
- * the first read alone and is not resent, while the entries accumulate. Folding them into one
- * object with a mutable `entries` field would put the same list in two places, and the one nobody
- * updated is the one a screen would eventually draw.
+ * the first read alone and is not resent, while the entries — and the people they name —
+ * accumulate. Folding them into one object with a mutable `entries` field would put the same list
+ * in two places, and the one nobody updated is the one a screen would eventually draw.
  */
-export interface OpenConversation {
+export interface OpenConversation extends EntryPage {
   readonly room: ConversationRoom;
-  /** Oldest first, which is the order the stream is drawn in and the order the wire sends. */
-  readonly entries: readonly Entry[];
 }
 
 /**

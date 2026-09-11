@@ -16,7 +16,7 @@ pill would have said_ is a product argument as well as a wire one, and the only 
 could now draw would be joined off the games cache, which is the cross-feature read
 [ADR-0009](../../../docs/adr/0009-feature-first-clean-architecture-frontends.md) refuses. **The last
 entry renders through the module the stream will use**, keyed by the seven system-line codes
-(`the-words.md` §23) with `{name}` filled from the members the row already holds and never from
+(`the-words.md` §23) with `{name}` filled from the `people` the row already holds and never from
 `values`, so a corrected handle fixes the whole backlog. **What the row does differently is a prop
 rather than a fork**: `LineRoom` says how much room the surface has, and it is what turns #335's
 _the fix is a shorter value, not a second line_ into something a copy deck can act on — a place
@@ -32,6 +32,29 @@ opposite of the challenge list above it and the reason nothing here has a shelf 
 rule — _drop whole names, never shorten one_ — moved to `shared/formatting/handleList.ts` beside
 `playerName()` when the second row kind arrived; **the face and the cluster did not**, and
 `challengeRowGeometry.ts` records the three homes that were tried and are wrong.
+
+**`{name}` is filled from the people the response names, and the roster is not that list**
+([#409](https://github.com/Raketa02/Raketa/issues/409),
+[ADR-0148](../../../docs/adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md)'s
+2026-09-11 amendment). Membership is derived live — the accepted seats, then the game's frozen
+line-up — and a _no_ is not an accepted seat, so the actor of a `SEAT_LEFT` line was never a member
+and a lookup over the roster drew **`? said no — that seat is open again`** in a doubles room whose
+third player declined. The wire now carries **`people`** on the room, the row and every page — the
+members and every actor and author the entries name, one face read — and every `{name}` and the
+bubble's author label read it through `personNamed`. **A person is the shape and a member is that
+shape under a narrower claim**: the generated client gets two structurally equal schemas, and
+`domain/membership.ts` is the one place that decides a member _is_ a person, so one mapper reads
+both. `people` rides **beside** the entries rather than on the header, because it grows the way
+they do — the room's first read names the members and whoever its page is about, and each page
+backward names its own authors and actors, which that first read could not have known — so a
+page's `people` is **merged by id** into what is held (`mergedPeople`, newest page first) and never
+put in its place, since replacing would forget the members the moment the first older page landed.
+Three things deliberately still read `members`: the faces the header and the row draw, because a
+declined player is a name a line needs and never a face the room draws; `namesItsAuthors`, which is
+a fact about the room's size; and `typingLine`, because a typist is gated on membership and is one
+(ADR-0156) — the one list a departed player is on is the one list that cannot be typing. The `?`
+keeps its single meaning: `nickname: null` is the platform no longer able to name the account, and
+nothing else draws it.
 
 **The room is a header, a stream, a composer and three questions**
 ([#364](https://github.com/Raketa02/Raketa/issues/364)). The header is 10.3's with a new **lead**

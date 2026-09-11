@@ -60,14 +60,14 @@ import { toSport } from '@/features/onboarding/types';
 
 import type { Conversation } from '../domain/conversation';
 import { toSystemLineCode, type Entry, type Message } from '../domain/entry';
-import type { ConversationMember } from '../domain/membership';
-import type { OpenConversation } from '../domain/room';
+import type { ConversationPerson } from '../domain/membership';
+import type { EntryPage, OpenConversation } from '../domain/room';
 
 type ConversationListResponse = components['schemas']['ConversationListResponse'];
 type ConversationResponse = components['schemas']['ConversationResponse'];
 type EntryPageResponse = components['schemas']['EntryPageResponse'];
 type ConversationRowSchema = components['schemas']['ConversationRowSchema'];
-type ConversationMemberSchema = components['schemas']['ConversationMemberSchema'];
+type ConversationPersonSchema = components['schemas']['ConversationPersonSchema'];
 type MessageSchema = components['schemas']['MessageSchema'];
 type SystemLineSchema = components['schemas']['SystemLineSchema'];
 
@@ -88,17 +88,23 @@ function toConversation(row: ConversationRowSchema): readonly Conversation[] {
       challengeId: row.challenge_id,
       ...(row.game_id == null ? {} : { gameId: row.game_id }),
       sport,
-      members: row.members.map(toMember),
+      members: row.members.map(toPerson),
+      people: row.people.map(toPerson),
       ...(lastEntry === undefined ? {} : { lastEntry }),
     },
   ];
 }
 
-function toMember(member: ConversationMemberSchema): ConversationMember {
+/**
+ * One face — a person's, and a member's, because **a member is a person under a narrower claim**.
+ * `ConversationMemberSchema` has `ConversationPersonSchema`'s four fields exactly, so one mapper
+ * reads both and `domain/membership.ts` is where the client decides the two are one type.
+ */
+function toPerson(person: ConversationPersonSchema): ConversationPerson {
   return {
-    playerId: member.player_id,
-    ...(member.nickname == null ? {} : { nickname: member.nickname }),
-    ...(member.photo_url == null ? {} : { photoUrl: member.photo_url }),
+    playerId: person.player_id,
+    ...(person.nickname == null ? {} : { nickname: person.nickname }),
+    ...(person.photo_url == null ? {} : { photoUrl: person.photo_url }),
   };
 }
 
@@ -143,21 +149,28 @@ export function toConversationRoom(response: ConversationResponse): OpenConversa
   if (sport === undefined) return undefined;
 
   return {
-    entries: response.entries.flatMap(toEntries),
+    ...toEntryPage(response),
     room: {
       conversationId: response.conversation_id,
       challengeId: response.challenge_id,
       ...(response.game_id == null ? {} : { gameId: response.game_id }),
       readAt: response.read_at,
       sport,
-      members: response.members.map(toMember),
+      members: response.members.map(toPerson),
     },
   };
 }
 
-/** A page backward — oldest first inside it, and no header on it at all. */
-export function toEntryPage(page: EntryPageResponse): readonly Entry[] {
-  return page.entries.flatMap(toEntries);
+/**
+ * A page — oldest first inside it, with the people it names, and no header on it at all.
+ *
+ * The newest page is the same shape with a header over it, which is why the room's own read goes
+ * through here for its page half: `people` on the room is *the members and whoever the entries
+ * are about*, and on a page backward it is the page's own authors and actors alone — the same
+ * field under the same rule, merged by id as the pages accumulate.
+ */
+export function toEntryPage(page: Pick<EntryPageResponse, 'entries' | 'people'>): EntryPage {
+  return { entries: page.entries.flatMap(toEntries), people: page.people.map(toPerson) };
 }
 
 /**

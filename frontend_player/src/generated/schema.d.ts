@@ -978,6 +978,8 @@ export interface paths {
          *     **Open at the newest entry and page backward** from `entries[0].seq` through `/entries`. You have the whole conversation when you hold `seq` 1 — there is no `has_more`, because a gapless sequence makes `seq` 1 the beginning.
          *
          *     **Nothing here is re-evaluated against you.** The safety gates ran when the challenge was minted; a read that re-ran them would tell you something changed about somebody else.
+         *
+         *     **`people` is everybody this response names and `members` is the roster.** Fill every `{name}` and every author label from `people`: the actor of a `SEAT_LEFT` line is by definition no longer a member, and a client naming off the roster alone drew *? said no*.
          */
         get: operations["read_conversation_api_v1_conversations__conversation_id__get"];
         put?: never;
@@ -1002,6 +1004,8 @@ export interface paths {
          *     **`before_seq` is exclusive**, and omitting it asks for the newest page.
          *
          *     **No header and no `read_at` here.** A page of entries is folded against nothing — every entry carries its own moment — so a second instant would be a second clock to reconcile against the one the detail read gave you.
+         *
+         *     **But every page carries the faces of whoever it names.** `people` is every author and actor on this page and nothing about the roster; merge it into what you hold, because the people a page names are not the members — the one who said no is on the page and off the court.
          */
         get: operations["read_entries_api_v1_conversations__conversation_id__entries_get"];
         put?: never;
@@ -2057,20 +2061,58 @@ export interface components {
          *     with four faces for a two-member room would be drawing the court rather than
          *     the room.
          *
-         *     **A handle and a face, and nothing else.** No Level, no band, no area, no
-         *     score — those are a *card*'s, and a card is what a searcher reads to decide
-         *     about a game that might happen. These people have already agreed to play.
+         *     **The same four fields as a person, and a narrower claim.** Being on the
+         *     list is the fact; the face is `ConversationPersonSchema`'s. A member is
+         *     always among the response's `people` too, resolved in the same read, so the
+         *     two lists cannot disagree about a current member.
          */
         ConversationMemberSchema: {
             /**
              * Player Id
              * Format: uuid
-             * @description Who they are, and what a line's `actor_id` matches
+             * @description Who they are, and what a line's `actor_id` and a message's `author_id` match
              */
             player_id: string;
             /**
              * Nickname
-             * @description The whole handle, and **`null` for an account `users` can no longer name**. The member keeps their place either way: dropping them would draw a three-person doubles court. Nothing may derive a familiar form from it.
+             * @description The whole handle, and **`null` for an account `users` can no longer name**. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it.
+             */
+            nickname: string | null;
+            /**
+             * Photo Id
+             * Format: uuid
+             * @description Their current photograph. Omitted when they have none, and omitted together with `photo_url` — the two travel as a pair or not at all.
+             */
+            photo_id?: string;
+            /**
+             * Photo Url
+             * @description A short-lived signed link to that photograph, minted for **this response**. It expires within minutes and is not a stored value.
+             */
+            photo_url?: string;
+        };
+        /**
+         * ConversationPersonSchema
+         * @description One person this response names — **a handle and a face, and nothing else.**
+         *
+         *     No Level, no band, no area, no score — those are a *card*'s, and a card is
+         *     what a searcher reads to decide about a game that might happen. Everybody
+         *     here was on this court or spoke in this room.
+         *
+         *     **The shape `people` is a list of, and the shape a member has.** A member is
+         *     a person who is on the court *right now*; the person a `SEAT_LEFT` line is
+         *     about is not, and is still somebody the page has to name. One shape for
+         *     both, so a client resolves every `actor_id` and `author_id` the same way.
+         */
+        ConversationPersonSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             * @description Who they are, and what a line's `actor_id` and a message's `author_id` match
+             */
+            player_id: string;
+            /**
+             * Nickname
+             * @description The whole handle, and **`null` for an account `users` can no longer name**. The person keeps their place either way: a member dropped would draw a three-person doubles court, and an actor dropped would leave a line naming nobody. Draw the unknown player's mark for `null` and nothing else. Nothing may derive a familiar form from it.
              */
             nickname: string | null;
             /**
@@ -2115,6 +2157,11 @@ export interface components {
             /** Members */
             members: components["schemas"]["ConversationMemberSchema"][];
             /**
+             * People
+             * @description Everybody this response names, resolved once against `read_at` and ordered by id: the members, and every author and actor in `entries`. **A superset of `members`**, so a current member is the same face in both. Fill every `{name}` and every author label from here, and merge each page's `people` into it as you page back.
+             */
+            people: components["schemas"]["ConversationPersonSchema"][];
+            /**
              * Entries
              * @description The newest page, **oldest first inside it**. Page backward from `entries[0].seq` through `GET /conversations/{id}/entries`; you have the beginning when you hold `seq` 1.
              */
@@ -2154,6 +2201,11 @@ export interface components {
              * @description Who has agreed to be on this court right now
              */
             members: components["schemas"]["ConversationMemberSchema"][];
+            /**
+             * People
+             * @description Everybody this row names, resolved once and ordered by id: the members, and whoever `last_entry` is about. **A superset of `members`** — fill `{name}` and the author label from here.
+             */
+            people: components["schemas"]["ConversationPersonSchema"][];
             /**
              * Last Entry
              * @description The newest thing in the room, rendered by the same two components the stream uses — never a preview string.
@@ -2890,7 +2942,11 @@ export interface components {
         };
         /**
          * EntryPageResponse
-         * @description One page backward. **No header, and no instant.**
+         * @description One page backward. **No header, and no instant** — but the page's own faces.
+         *
+         *     `people` is not a header: it says nothing about the room and nothing about
+         *     who is in it. It is the one thing the detail read could not have given a
+         *     client for this page, because the people a page names are not the members.
          */
         EntryPageResponse: {
             /**
@@ -2898,6 +2954,11 @@ export interface components {
              * @description The page, **oldest first inside it**. Empty when `before_seq` was 1 — there is nothing before the beginning.
              */
             entries: (components["schemas"]["MessageSchema"] | components["schemas"]["SystemLineSchema"])[];
+            /**
+             * People
+             * @description Every author and every actor on this page, resolved once and ordered by id. **Not the roster and not a superset of it** — a page names only what is on it, so merge these into the `people` you already hold rather than replacing them. Empty when `entries` is.
+             */
+            people: components["schemas"]["ConversationPersonSchema"][];
         };
         /**
          * ErrorResponse
@@ -3679,7 +3740,7 @@ export interface components {
             /**
              * Author Id
              * Format: uuid
-             * @description Which member typed it
+             * @description Who typed it — a member, since only a member may send. **Name them from the `people` on the response that carried this page**, the one list every face on it is in, so a message and a line are named the same way.
              */
             author_id: string;
             /**
@@ -6073,7 +6134,7 @@ export interface components {
             occurred_at: string;
             /**
              * Actor Id
-             * @description Who did it, or `null`. **Render `{name}` from the members you are already holding** — the handle is never repeated here, so a corrected one fixes the whole backlog.
+             * @description Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** — the handle is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: the actor of a `SEAT_LEFT` line is by definition no longer one, and `people` is where the read put their face.
              */
             actor_id: string | null;
             /**

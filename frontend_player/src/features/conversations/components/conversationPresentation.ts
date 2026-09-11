@@ -26,12 +26,16 @@
  * without the court. So how much room there is arrives as an argument: a row has one line and
  * asks for the short place, and a stream has the width and prints what somebody typed.
  *
- * ## `{name}` comes from membership and never from `values`
+ * ## `{name}` comes from the people the response names, and never from `values`
  *
  * The line carries an `actor_id` and no handle, *"so a corrected one fixes the whole backlog"*.
- * `memberNamed` is what fills the slot, and an actor the room cannot answer for draws the unknown
- * player's `?`. **It is never *You***: these are third-person records of what happened in a room,
- * read identically by everybody in it — see `domain/membership.ts`.
+ * `personNamed` over the response's **`people`** is what fills the slot — not the roster, because
+ * the actor of a `SEAT_LEFT` line was never a member and a roster lookup drew `? said no`
+ * ([#409](https://github.com/Raketa02/Raketa/issues/409)) — and an actor the response cannot
+ * answer for draws the unknown player's `?`. **It is never *You***: these are third-person records
+ * of what happened in a room, read identically by everybody in it — see `domain/membership.ts`.
+ * The one sentence here that still reads the roster is {@link typingLine}, because a typist is a
+ * member by construction.
  *
  * ## A line this build cannot read is a named gap, and so is one whose values it cannot read
  *
@@ -79,7 +83,11 @@ import {
   type SystemLine,
   type SystemLineCode,
 } from '../domain/entry';
-import { memberNamed, type ConversationMember } from '../domain/membership';
+import {
+  personNamed,
+  type ConversationMember,
+  type ConversationPerson,
+} from '../domain/membership';
 
 /**
  * How much room the surface drawing this line has — **the whole of what the row does
@@ -92,7 +100,7 @@ export type LineRoom = 'one-line' | 'full';
 
 /** Everything a sentence in the table below is allowed to read. */
 interface SystemLineFacts {
-  /** The actor, already named through membership. Never *You*, and never read from `values`. */
+  /** The actor, already named off `people`. Never *You*, and never read from `values`. */
   readonly name: string;
   readonly values: EntryValues;
   readonly room: LineRoom;
@@ -153,13 +161,13 @@ const SYSTEM_LINE: Readonly<Record<SystemLineCode, (facts: SystemLineFacts) => s
  */
 export function systemLineSentence(
   line: SystemLine,
-  members: readonly ConversationMember[],
+  people: readonly ConversationPerson[],
   room: LineRoom,
 ): string {
   if (line.code === undefined) return OUT_OF_DATE_GAP;
 
   return SYSTEM_LINE[line.code]({
-    name: playerName(memberNamed(members, line.actorId)),
+    name: playerName(personNamed(people, line.actorId)),
     values: line.values,
     room,
   });
@@ -175,10 +183,10 @@ export function systemLineSentence(
  */
 export function entryLine(
   entry: Entry,
-  members: readonly ConversationMember[],
+  people: readonly ConversationPerson[],
   room: LineRoom,
 ): string {
-  return entry.kind === 'message' ? entry.text : systemLineSentence(entry, members, room);
+  return entry.kind === 'message' ? entry.text : systemLineSentence(entry, people, room);
 }
 
 /**
@@ -200,7 +208,7 @@ export function conversationRowLine(
 ): string | undefined {
   return conversation.lastEntry === undefined
     ? undefined
-    : entryLine(conversation.lastEntry, conversation.members, room);
+    : entryLine(conversation.lastEntry, conversation.people, room);
 }
 
 /**
@@ -367,7 +375,9 @@ export const LIVE_NOTE: Readonly<Record<Exclude<LiveState, 'live'>, string>> = {
  * list, so the collapse is reached only in a four where everybody else is typing at once.
  *
  * **The whole handle, never a first name** (ADR-0107), filled from membership and never from the
- * frame — so a corrected nickname fixes the indicator with no frame re-sent. **The ellipsis is one
+ * frame — so a corrected nickname fixes the indicator with no frame re-sent. **The roster and not
+ * `people`**, deliberately: a typist is gated on membership and is one (ADR-0156), so the one list
+ * a departed player is on is the one list that cannot be typing. **The ellipsis is one
  * character**, so a screen reader does not read *dot dot dot*.
  *
  * `undefined` for nobody: there is no sentence to say and no region to fill, which is how the
@@ -382,7 +392,7 @@ export function typingLine(
     return `${counted(playerIds.length, 'person', 'people')} are typing…`;
   }
 
-  const names = playerIds.map((id) => playerName(memberNamed(members, id)));
+  const names = playerIds.map((id) => playerName(personNamed(members, id)));
 
   return names.length === 1 ? `${names[0]} is typing…` : `${sentenceList(names)} are typing…`;
 }

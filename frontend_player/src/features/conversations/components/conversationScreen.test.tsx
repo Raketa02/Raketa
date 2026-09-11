@@ -57,6 +57,8 @@ import { OPEN_THE_GAME, conversationHeaderLabel } from './conversationAccessibil
 const ME = GATE_USER.id;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
 const OLA = 'cccccccc-0000-4000-8000-000000000003';
+/** Somebody who said no to this court — named by the wire's `people`, and never a member. */
+const BO = 'dddddddd-0000-4000-8000-000000000004';
 
 const ROOM = 'eeeeeeee-0000-4000-8000-000000000005';
 const CHALLENGE = 'ffffffff-0000-4000-8000-000000000006';
@@ -104,6 +106,11 @@ function line(seq: number, code: string, occurredAt = READ_AT): Wire['SystemLine
   return { type: 'system_line', seq, code, occurred_at: occurredAt, actor_id: TOMEK, values: {} };
 }
 
+/** A *no* on this court, told by the one line whose actor a roster can never name (#409). */
+function saidNo(seq: number): Wire['SystemLineSchema'] {
+  return { ...line(seq, 'SEAT_LEFT'), actor_id: BO, values: { departure: 'DECLINED' } };
+}
+
 /** A room's game, as `GET /games` lists it — arranged, nothing agreed, the day still ahead. */
 function game(): Wire['GameSchema'] {
   return {
@@ -129,26 +136,36 @@ function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
 /** A title budget no room in these tests needs, so a line is asserted on its words alone. */
 const ROOM_ENOUGH = 80;
 
+/**
+ * A room whose `people` is its members and nobody else — the ordinary room, where everybody the
+ * entries name is on the court. A suite naming somebody who is not supplies `people` itself.
+ */
 function room(over: Partial<Wire['ConversationResponse']> = {}): Wire['ConversationResponse'] {
+  const members = over.members ?? PAIR;
+
   return {
     read_at: READ_AT,
     conversation_id: ROOM,
     challenge_id: CHALLENGE,
     game_id: null,
     sport: 'PADEL',
-    members: PAIR,
+    members,
+    people: members,
     entries: [],
     ...over,
   };
 }
 
 function listed(over: Partial<Wire['ConversationRowSchema']> = {}): Wire['ConversationRowSchema'] {
+  const members = over.members ?? PAIR;
+
   return {
     conversation_id: ROOM,
     challenge_id: CHALLENGE,
     game_id: null,
     sport: 'PADEL',
-    members: PAIR,
+    members,
+    people: members,
     last_entry: null,
     ...over,
   };
@@ -287,7 +304,7 @@ describe('the stream', () => {
 
   /**
    * The lock's confirmation is a line like every slot's, rendered from the copy deck with `{name}`
-   * filled from the members the room holds — and it quotes no value, because the three slots are
+   * filled from the people the room names — and it quotes no value, because the three slots are
    * the value and the room already holds a line for each (ADR-0155).
    */
   it('draws the lock as the sentence the deck writes, and quotes no value', async () => {
@@ -380,6 +397,54 @@ describe('paging backward', () => {
     const asked = transport.requests.filter((one) => one.path.includes('/entries'));
     expect(asked[0]?.path).toContain('before_seq=4');
     expect(asked[0]?.path).not.toContain('offset');
+  });
+
+  /**
+   * A page names its own authors and actors and nothing about the roster, and the room's first
+   * read could not have named them — so the page's `people` is **merged** into what the screen
+   * holds, and a line on it names somebody nobody else on screen has heard of.
+   */
+  it('names a departed player off the page that carries them', async () => {
+    await openTheRoom(room({ entries: [message(4, TOMEK, 'four')] }));
+    await screen.findByLabelText('tomek.p: four');
+    stubEntries(transport, ROOM, [saidNo(3)], [{ player_id: BO, nickname: 'bo' }]);
+
+    fireEvent(screen.getByTestId('conversation-stream'), 'endReached');
+
+    await waitFor(() =>
+      expect(screen.getByText('bo said no — that seat is open again')).toBeTruthy(),
+    );
+    expect(screen.getByLabelText('tomek.p: four')).toBeTruthy();
+  });
+});
+
+/**
+ * **`{name}` is filled from the people the response names, and not from the roster**
+ * ([#409](https://github.com/Raketa02/Raketa/issues/409)). Membership is the accepted seats, a
+ * *no* is not one, so the actor of a `SEAT_LEFT` line was never a member and the room used to
+ * draw `? said no — that seat is open again` — the one line a roster lookup cannot name.
+ */
+describe('who a line names', () => {
+  it('names a player who said no, though they are not a member', async () => {
+    await openTheRoom(
+      room({
+        members: PAIR,
+        people: [...PAIR, { player_id: BO, nickname: 'bo' }],
+        entries: [saidNo(1), message(2, TOMEK, 'shame')],
+      }),
+    );
+
+    expect(await screen.findByText('bo said no — that seat is open again')).toBeTruthy();
+    expect(screen.queryByText(/^\? said no/)).toBeNull();
+  });
+
+  /** The `?` is for one case: the platform can no longer name the account. */
+  it('draws the unknown player for somebody the platform has lost the handle of', async () => {
+    await openTheRoom(
+      room({ people: [...PAIR, { player_id: BO, nickname: null }], entries: [saidNo(1)] }),
+    );
+
+    expect(await screen.findByText('? said no — that seat is open again')).toBeTruthy();
   });
 });
 

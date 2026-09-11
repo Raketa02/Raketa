@@ -122,6 +122,7 @@ async function landOnNow({
             game_id: GAME,
             sport: 'PADEL',
             members: PAIR,
+            people: PAIR,
             last_entry: null,
           },
         ]

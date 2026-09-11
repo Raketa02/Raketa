@@ -70,6 +70,7 @@ import type { InfiniteData } from '@tanstack/react-query';
 import type { AppError } from '@/shared/errors';
 
 import type { Entry, Message } from '../domain/entry';
+import { mergedPeople } from '../domain/membership';
 import { earlierThan, type OpenConversation } from '../domain/room';
 import type { SendingMessage } from '../domain/stream';
 import { readConversation, type ConversationPage } from '../use-cases/readConversation';
@@ -108,12 +109,26 @@ export function useConversation(conversationId: string) {
   });
 }
 
-/** The header off the first page, and every page's entries in one order, oldest first. */
+/**
+ * The header off the first page, every page's entries in one order, oldest first — and everybody
+ * those pages name, **merged** newest page first.
+ *
+ * A page backward carries its own authors and actors and nothing about the roster
+ * ([#409](https://github.com/Raketa02/Raketa/issues/409)), so its people are added to what is
+ * held rather than put in its place: replacing would forget the members the moment the first
+ * older page landed, and a page's people are exactly the ones the room's first read could not
+ * have known. `mergedPeople` keeps the first face seen per id, which here is the newest page's —
+ * the read the room is folded against.
+ */
 function folded(pages: ConversationPages): OpenConversation | undefined {
   const room = pages.pages[0]?.room;
   if (room === undefined) return undefined;
 
-  return { room, entries: [...pages.pages].reverse().flatMap((page) => page.entries) };
+  return {
+    room,
+    entries: [...pages.pages].reverse().flatMap((page) => page.entries),
+    people: mergedPeople(pages.pages.map((page) => page.people)),
+  };
 }
 
 /**

@@ -103,7 +103,10 @@ export interface SystemLine {
   /** Absent when the server sent a code this build has no words for. See the module note. */
   readonly code?: SystemLineCode;
   readonly occurredAt: string;
-  /** Who did it, or nobody. `{name}` is filled from membership and never from `values`. */
+  /**
+   * Who did it, or nobody. `{name}` is filled from the response's `people` and never from
+   * `values` — and never from the roster, which cannot name the one who said no.
+   */
   readonly actorId?: string;
   readonly values: EntryValues;
 }

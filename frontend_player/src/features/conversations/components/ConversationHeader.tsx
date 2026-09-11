@@ -71,7 +71,7 @@ import { sportLabel } from '@/features/onboarding/types';
 import { playerName } from '@/shared/formatting/playerName';
 import { Button, PlayerPhoto, ScreenHeader } from '@/shared/ui';
 
-import { memberName, othersIn } from '../domain/membership';
+import { othersIn, personName } from '../domain/membership';
 import type { ConversationRoom } from '../domain/room';
 
 import { OPEN_THE_GAME, conversationHeaderLabel } from './conversationAccessibility';
@@ -103,7 +103,7 @@ export function ConversationHeader({
   const { width } = useWindowDimensions();
 
   const others = othersIn(room.members, playerId);
-  const handles = others.map((member) => playerName(memberName(member)));
+  const handles = others.map((member) => playerName(personName(member)));
   const sport = sportLabel(room.sport);
   const gameId = room.gameId;
 

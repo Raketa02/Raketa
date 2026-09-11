@@ -494,6 +494,7 @@ describe('the room an acceptance opens', () => {
     game_id: gameId,
     sport: 'SQUASH',
     members: [...members],
+    people: [...members],
     last_entry: null,
   });
 
@@ -505,6 +506,7 @@ describe('the room an acceptance opens', () => {
       game_id: null,
       sport: 'SQUASH',
       members: [...members],
+      people: [...members],
       entries: [],
     });
     stubEntries(transport, ROOM);
@@ -717,6 +719,7 @@ describe('the room an acceptance opens', () => {
         game_id: GAME,
         sport: 'PADEL',
         members: OLA_TOO,
+        people: OLA_TOO,
         entries: [],
       });
       stubEntries(transport, ROOM);

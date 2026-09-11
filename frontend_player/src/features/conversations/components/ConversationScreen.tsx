@@ -132,7 +132,7 @@ import { playerName } from '@/shared/formatting/playerName';
 import { Note, theme } from '@/shared/ui';
 
 import { liveState, writeStanding } from '../domain/liveState';
-import { memberNamed, type ConversationMember } from '../domain/membership';
+import { personNamed, type ConversationPerson } from '../domain/membership';
 import { namesItsAuthors, type OpenConversation } from '../domain/room';
 import { roomIsGone } from '../domain/roomGone';
 import {
@@ -219,7 +219,7 @@ function Room({
   readonly playerId: string;
   readonly onPageBack: () => void;
 }) {
-  const { room, entries } = opened;
+  const { room, entries, people } = opened;
 
   const send = useSendMessage(room.conversationId);
   const sending = useSendingMessages(room.conversationId, playerId);
@@ -260,8 +260,11 @@ function Room({
    * **Somebody is typing**, as a sentence — or nothing, which is how the bubble goes away.
    *
    * The roster is the channel's and already folded against it; what is done here is the reader
-   * filter, which the server applies too and the ticket asks for twice, and the naming, which is
-   * membership's exactly as every system line's is. Not query cache state: the frame is the fact.
+   * filter, which the server applies too and the ticket asks for twice, and the naming — off the
+   * **members**, which makes this the one sentence on the screen that reads the roster rather than
+   * `people`: a typist is gated on membership and is one (ADR-0156), where a system line's actor
+   * need not be ([#409](https://github.com/Raketa02/Raketa/issues/409)). Not query cache state:
+   * the frame is the fact.
    */
   const typingSentence = typingLine(typists(typing, playerId), room.members);
 
@@ -356,7 +359,7 @@ function Room({
             <StreamRow
               entry={item}
               older={shown[index + 1]}
-              members={room.members}
+              people={people}
               playerId={playerId}
               showAuthors={showAuthors}
             />
@@ -433,13 +436,14 @@ function Room({
 function StreamRow({
   entry,
   older,
-  members,
+  people,
   playerId,
   showAuthors,
 }: {
   readonly entry: StreamEntry;
   readonly older: StreamEntry | undefined;
-  readonly members: readonly ConversationMember[];
+  /** Everybody the held pages name — what `{name}` and the author label are filled from. */
+  readonly people: readonly ConversationPerson[];
   readonly playerId: string;
   readonly showAuthors: boolean;
 }) {
@@ -450,11 +454,11 @@ function StreamRow({
       {day === undefined ? null : <DaySeparator day={day} />}
 
       {entry.kind === 'system-line' ? (
-        <SystemLine sentence={systemLineSentence(entry, members, 'full')} />
+        <SystemLine sentence={systemLineSentence(entry, people, 'full')} />
       ) : (
         <Bubble
           text={entry.text}
-          author={authorName(entry, members, playerId)}
+          author={authorName(entry, people, playerId)}
           mine={entry.authorId === playerId}
           showAuthor={showAuthors && entry.authorId !== playerId}
         />
@@ -468,16 +472,18 @@ function StreamRow({
  *
  * `playerName`'s `you` arm is right here and wrong on a system line: a bubble is read *by* the
  * person it is addressed to, where a system line is a third-person record of what happened in a
- * room, read identically by everybody in it (`domain/membership.ts`).
+ * room, read identically by everybody in it (`domain/membership.ts`). The handle is read off
+ * `people`, as every `{name}` is — an author is always a member today, and one lookup for both
+ * is what makes that a fact about the wire rather than a rule this screen keeps.
  */
 function authorName(
   message: { readonly authorId: string },
-  members: readonly ConversationMember[],
+  people: readonly ConversationPerson[],
   playerId: string,
 ): string {
   return message.authorId === playerId
     ? playerName({ kind: 'you' })
-    : playerName(memberNamed(members, message.authorId));
+    : playerName(personNamed(people, message.authorId));
 }
 
 /**

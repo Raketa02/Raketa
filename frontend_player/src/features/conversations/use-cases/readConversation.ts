@@ -20,11 +20,14 @@
 
 import type { Cancellable } from '../api/conversationsApi';
 import { getConversation, getEntries } from '../api/conversationsApi';
-import type { Entry } from '../domain/entry';
-import type { ConversationRoom } from '../domain/room';
+import type { ConversationRoom, EntryPage } from '../domain/room';
 import { toConversationRoom, toEntryPage } from '../mappers/conversationMappers';
 
-export interface ConversationPage {
+/**
+ * One page as the query holds it: the entries and the people they name, and — on the newest page
+ * alone — the room over them.
+ */
+export interface ConversationPage extends EntryPage {
   /**
    * The room, on the newest page alone.
    *
@@ -33,8 +36,6 @@ export interface ConversationPage {
    * alike.
    */
   readonly room?: ConversationRoom;
-  /** The page itself, oldest first inside it. */
-  readonly entries: readonly Entry[];
   /**
    * The oldest `seq` this page **carried**, which is not always the oldest one it mapped.
    *
@@ -61,12 +62,12 @@ export async function readConversation({
     const answer = await getConversation(conversationId, { signal });
     const opened = toConversationRoom(answer);
 
-    return { ...(opened ?? { entries: [] }), ...oldestOf(answer.entries) };
+    return { ...(opened ?? { entries: [], people: [] }), ...oldestOf(answer.entries) };
   }
 
   const page = await getEntries({ conversationId, beforeSeq, signal });
 
-  return { entries: toEntryPage(page), ...oldestOf(page.entries) };
+  return { ...toEntryPage(page), ...oldestOf(page.entries) };
 }
 
 /** The first `seq` on the wire's own page — see {@link ConversationPage.oldest}. */

@@ -97,6 +97,7 @@ function room(gameId: string | null = GAME): Wire['ConversationResponse'] {
     game_id: gameId,
     sport: 'PADEL',
     members: PAIR,
+    people: PAIR,
     entries: [],
   };
 }
@@ -188,6 +189,7 @@ async function openTheRoom({
       game_id: gameId,
       sport: 'PADEL',
       members: PAIR,
+      people: PAIR,
       last_entry: null,
     },
   ]);

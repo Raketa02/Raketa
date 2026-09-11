@@ -308,6 +308,10 @@ function conversationRow(
       { player_id: ME, nickname: 'me_' },
       { player_id: BEA, nickname: 'bea_k' },
     ],
+    people: [
+      { player_id: ME, nickname: 'me_' },
+      { player_id: BEA, nickname: 'bea_k' },
+    ],
     last_entry: null,
     ...over,
   };

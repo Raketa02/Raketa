@@ -55,7 +55,7 @@ import { playerName } from '@/shared/formatting/playerName';
 import { PlayerPhoto, PressableCard, theme } from '@/shared/ui';
 
 import type { Conversation } from '../domain/conversation';
-import { memberName, othersIn } from '../domain/membership';
+import { othersIn, personName } from '../domain/membership';
 
 import { conversationRowLabel } from './conversationAccessibility';
 import { conversationRowLine } from './conversationPresentation';
@@ -78,7 +78,7 @@ export function ConversationRow({ conversation, playerId }: ConversationRowProps
   const { width } = useWindowDimensions();
 
   const others = othersIn(conversation.members, playerId);
-  const handles = others.map((member) => playerName(memberName(member)));
+  const handles = others.map((member) => playerName(personName(member)));
 
   const sport = sportLabel(conversation.sport);
   // Two readings of one line. The eye gets the row's — one line, and a place without its court;

@@ -520,14 +520,20 @@ export function stubConversation(transport: Transport, room: Wire['ConversationR
  *
  * The route is addressed without its query — the cursor is an argument to a route rather than a
  * second route — so a suite asserting *which* cursor was asked for reads `transport.requests`.
+ *
+ * `people` is the page's own authors and actors, which the wire says is *not the roster*. It
+ * defaults to nobody because the client merges a page's people into the ones it already holds,
+ * so a page whose authors are all members names them off the room's first read — a suite whose
+ * page names somebody that read did not supplies them here, as the wire would.
  */
 export function stubEntries(
   transport: Transport,
   conversationId: string,
   entries: readonly (Wire['MessageSchema'] | Wire['SystemLineSchema'])[] = [],
+  people: readonly Wire['ConversationPersonSchema'][] = [],
 ) {
   transport.on('GET', `${conversationPath(conversationId)}/entries`, () =>
-    json<Wire['EntryPageResponse']>({ entries: [...entries] }),
+    json<Wire['EntryPageResponse']>({ entries: [...entries], people: [...people] }),
   );
 }
 
