@@ -77,15 +77,18 @@ def _confirmed_counted(game: Game, now: Instant) -> ConfirmedGame | None:
     # The line-up's own order on each side, so the walk is the same on every
     # process — a ``frozenset`` here would be the set-iteration hazard
     # ``docs/adr/0105`` is written about, one layer below where it would show.
+    # A confirmed result is on a court every seat of which is filled — a
+    # score is refused while one is open (``docs/adr/0162``) — so the filter
+    # on the occupant is the type's and never drops anybody.
     winners = tuple(
         seating.player_id
         for seating in game.line_up.seatings
-        if seating.side is winning
+        if seating.side is winning and seating.player_id is not None
     )
     losers = tuple(
         seating.player_id
         for seating in game.line_up.seatings
-        if seating.side is not winning
+        if seating.side is not winning and seating.player_id is not None
     )
     return ConfirmedGame(
         game_id=game.id,

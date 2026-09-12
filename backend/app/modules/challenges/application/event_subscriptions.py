@@ -3,7 +3,7 @@
 A name here is a **published contract** and outlives every Python class it maps
 to: renaming ``ChallengeSent`` must never change what is already in the store.
 
-**Seven names, on one aggregate.** The prefix is the context's, which is what
+**Eight names, on one aggregate.** The prefix is the context's, which is what
 makes a name a statement about *what happened* rather than about which class
 wrote it.
 
@@ -34,6 +34,11 @@ true rather than a second one. It is also the first name here a **subscriber**
 will want: the conversation the first acceptance opened has to be destroyed, and
 the context that owns conversations will hear it here rather than being called
 from the use case.
+
+**``challenges.seat_left`` is the eighth** (``docs/adr/0162``): somebody leaving
+a game they had agreed to. It is about a seat and carries a player, so it is not
+a second exemption — but it is the one seat name a subscriber learns a second
+fact from, since it is written on an ``ON`` court and on no other.
 """
 
 from __future__ import annotations
@@ -47,6 +52,7 @@ from app.modules.challenges.domain.events import (
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
+    SeatLeft,
     SeatsInvited,
 )
 
@@ -59,6 +65,7 @@ _CONTRACTS = (
     (SeatAccepted, "challenges.seat_accepted"),
     (SeatDeclined, "challenges.seat_declined"),
     (SeatLapsed, "challenges.seat_lapsed"),
+    (SeatLeft, "challenges.seat_left"),
     (SeatsInvited, "challenges.seats_invited"),
     (ChallengeWithdrawn, "challenges.withdrawn"),
 )

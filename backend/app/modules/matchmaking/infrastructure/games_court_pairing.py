@@ -38,6 +38,14 @@ from ``rating``'s **published** read, live, and never from the index — the ind
 is the matcher's projection for ranking, and this is a fact about a person
 printed beside their name.
 
+**A court with a seat open draws its Levels and nothing else**
+(``docs/adr/0162`` §3). A forecast is a claim about a court, and a court somebody
+has left is not yet the one that will play; the stakes are priced *side against
+side* on the argument that every seat is known, and one is not. So both are the
+absence ADR-0161 §4 reserved for the day a seat could be open, rather than a
+provisional figure read over a short side — and the seats that are filled still
+name their Levels, because a Level is a fact about a person.
+
 **The absences are one absence on the wire, by decision** (``docs/adr/0161``
 §4). The reader's own three conflicts mean *there is nothing to compute*;
 anything else on the matcher's side means *it could not be read*; both leave
@@ -108,6 +116,10 @@ class GamesCourtPairing:
             # indistinguishable from a court nobody is rated on.
             logger.warning("the court's Levels could not be read", exc_info=True)
             return None
+        if not line_up.is_complete:
+            # **A seat is open, so there is no court to price yet.** The
+            # Levels of the people on it are still theirs.
+            return Pairing(seats=seats)
         arranged = await self._arranged(
             sport, kind, reader_id, partners=partners, opponents=opponents
         )
@@ -148,7 +160,8 @@ class GamesCourtPairing:
                 confidence=rated.confidence,
             )
             for seating in line_up.seatings
-            if (rated := published.get(seating.player_id)) is not None
+            if seating.player_id is not None
+            and (rated := published.get(seating.player_id)) is not None
         )
 
     async def _arranged(

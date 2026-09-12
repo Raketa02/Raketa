@@ -68,15 +68,20 @@ from app.modules.challenges.application.court_safety import CourtSafety
 from app.modules.challenges.application.open_from_mutual_interest import (
     OpenChallengeFromMutualInterest,
 )
-from app.modules.challenges.domain.planned_game import PlannedGameOpening
+from app.modules.challenges.domain.planned_game import PlannedGameHandover
+from app.modules.challenges.domain.seatable_game import SeatableGameQuery
 from app.modules.challenges.domain.settled_game import SettledGameQuery
 from app.modules.challenges.infrastructure.games_planned_game import (
     GamesPlannedGame,
+)
+from app.modules.challenges.infrastructure.games_seatable_game import (
+    GamesSeatableGame,
 )
 from app.modules.challenges.infrastructure.games_settled_game import (
     GamesSettledGame,
 )
 from app.modules.games.application.open_planned_game import OpenPlannedGame
+from app.modules.games.application.vacate_seat import VacateSeat
 from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
 from app.modules.conversations.application.destroy_ended_conversations import (
     DestroyEndedConversations,
@@ -135,6 +140,7 @@ from app.modules.conversations.infrastructure.sqlalchemy_conversation_directory 
     SqlAlchemyConversationDirectory,
 )
 from app.modules.games.domain.ports import (
+    AgreedMoment,
     ConfirmedResultLedger,
     CourtPairing,
     GameDirectory,
@@ -143,6 +149,7 @@ from app.modules.games.domain.ports import (
     OpponentVarietyQuery,
     PlanningCourt,
     PlayerHandles,
+    SeatableCourt,
 )
 from app.modules.games.infrastructure.event_sourced_confirmed_results import (
     EventSourcedConfirmedResults,
@@ -153,6 +160,10 @@ from app.modules.games.infrastructure.event_sourced_game_history import (
 from app.modules.games.infrastructure.event_sourced_planning_court import (
     EventSourcedPlanningCourt,
 )
+from app.modules.games.infrastructure.event_sourced_seatable_court import (
+    EventSourcedSeatableCourt,
+)
+from app.modules.plans.infrastructure.games_agreed_moment import PlansAgreedMoment
 from app.modules.games.infrastructure.event_sourced_game_repository import (
     EventSourcedGameRepository,
 )
@@ -878,7 +889,7 @@ def build_mutual_challenge_minting(
             settled_games=build_settled_game_query(session, runtime=runtime),
             safety=build_court_safety(session),
             clock=build_clock(),
-            planned_games=build_planned_game_opening(session, runtime=runtime),
+            planned_games=build_planned_game_handover(session, runtime=runtime),
         )
     )
 
@@ -1108,30 +1119,82 @@ def build_game_repository(
     )
 
 
-def build_planned_game_opening(
+def build_planned_game_handover(
     session: AsyncSession,
     *,
     runtime: EventRuntime | None = None,
-) -> PlannedGameOpening:
-    """The game a completed line-up opens, recorded inline.
+) -> PlannedGameHandover:
+    """The game a completed line-up opens or re-seats, and the seat a departure
+    vacates, recorded inline (``docs/adr/0162``).
 
-    It wraps a ``games`` use case rather than an aggregate: what a game born of a
-    completed line-up *is* belongs to that context, and the adapter is a
-    translation of one sentence into another.
+    It wraps two ``games`` use cases rather than an aggregate: what a game born
+    of a completed line-up *is* belongs to that context, and the adapter is a
+    translation of one sentence into another — twice.
 
-    **No unit of work here.** The opening joins the transaction of the acceptance
-    that caused it, so the use case appends and publishes and the caller commits —
+    **One repository for both**, because they run in one transaction and each
+    loads the stream it appends to; **no unit of work here**, because the
+    hand-over joins the transaction of the acceptance or the departure that
+    caused it, so the use case appends and publishes and the caller commits —
     the boundary stays a decision about the command.
     """
-    return GamesPlannedGame(
-        OpenPlannedGame(
-            games=build_game_repository(
-                session=session,
-                event_store=build_domain_event_store(session, runtime=runtime),
-                events=build_event_publisher(session, runtime=runtime),
-            )
+    games = build_game_repository(
+        session=session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+    return GamesPlannedGame(OpenPlannedGame(games=games), VacateSeat(games=games))
+
+
+def build_agreed_moment(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> AgreedMoment:
+    """*When has this game been agreed for?* — the Plan's answer to ``games``'
+    demand (``docs/adr/0162`` §4).
+
+    Over the Plan's repository rather than its directory, because the question
+    is about one game and ``load`` answers an unwritten plan — whose moment is
+    ``None`` — rather than nothing.
+    """
+    return PlansAgreedMoment(
+        build_plan_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
         )
     )
+
+
+def build_seatable_court(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> SeatableCourt:
+    """*May a seat on this challenge's court still be left, or taken?* —
+    ``games``' answer, over its repository and the Plan's moment.
+
+    A second game repository inside one unit of work, beside the hand-over's,
+    on ``build_settled_game_query``'s argument: this one only ever reads, and
+    the hand-over's is the only writer.
+    """
+    return EventSourcedSeatableCourt(
+        games=build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        moments=build_agreed_moment(session, runtime=runtime),
+    )
+
+
+def build_seatable_game_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> SeatableGameQuery:
+    """The read half of the departure's seam, in ``challenges``' own words:
+    the adapter translates ``games``' published answer and decides nothing."""
+    return GamesSeatableGame(build_seatable_court(session, runtime=runtime))
 
 
 def build_settled_game_query(
@@ -1150,13 +1213,15 @@ def build_settled_game_query(
     opening's idempotence. Nothing is written through it, and it commits nothing.
 
     **It is a second game repository inside one unit of work**, beside the one
-    ``build_planned_game_opening`` makes, and that is safe here for a reason
+    ``build_planned_game_handover`` makes, and that is safe here for a reason
     rather than by luck: a repository's per-unit-of-work state is the version
-    bookkeeping behind optimistic concurrency, this one only ever **reads**, and
-    the one that writes only ever opens a game that does not exist yet. The two
-    can therefore never hold a version of the same stream. Sharing one would mean
-    a builder taking another builder's product, which is not the shape any port
-    is wired in here.
+    bookkeeping behind optimistic concurrency, and this one only ever **reads**.
+    Two readers may hold a version of one stream; what must not happen is two
+    *writers* holding one, and the hand-over's repository is the only writer —
+    it opens a game, or since ``docs/adr/0162`` re-seats or vacates a seat on
+    one, and nothing built here appends beside it. Sharing one would mean a
+    builder taking another builder's product, which is not the shape any port is
+    wired in here.
     """
     return GamesSettledGame(
         build_game_repository(

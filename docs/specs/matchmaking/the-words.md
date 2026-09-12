@@ -2030,7 +2030,7 @@ every author and actor the page names, resolved in the same read, and a page car
 | --- | --- | --- |
 | a seat accepted | `challenges` · `SeatAccepted` | `{name} is in` |
 | seats invited | `challenges` · `SeatsInvited` | `{name} asked {n} more` |
-| a seat left | `challenges` · `SeatDeclined` \| `SeatLapsed` | `{name} said no — that seat is open again` · `{name}'s day ran out — that seat is open again` |
+| a seat left | `challenges` · `SeatDeclined` \| `SeatLapsed` \| `SeatLeft` | `{name} said no — that seat is open again` · `{name}'s day ran out — that seat is open again` · `{name} left — that seat is open again` |
 | the game was played | `games` · `GamePlayed` | `{name} said you played` |
 | a place recorded | `plans` | `{name} set the place · {value}` |
 | a day recorded | `plans` | `{name} set the day · {value}` |
@@ -2038,8 +2038,12 @@ every author and actor the page names, resolved in the same read, and a page car
 | the plan was locked | `plans` · `PlanLocked` | `{name} locked the plan` |
 
 **Eight codes, and the leave code is one with the answer as a value** — #221's *"that seat is open
-again"* is the same news either way, and the two facts stay apart in the value rather than in a
-second code. **A lapse is still not a decline**, which is §13's rule holding one layer down.
+again"* is the same news each way, and the facts stay apart in the value rather than in a
+second code. **A lapse is still not a decline**, which is §13's rule holding one layer down —
+and since [ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) there
+is a **third value, `LEFT`**: somebody leaving a game they had agreed to, which is neither a no nor
+silence, and the one departure whose actor was a member until this very line. `people` names
+them exactly as it names a decliner; nothing on the wire moved.
 
 **The lock is the one plan code that carries no value at all**
 ([ADR-0155](../../adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)). The
@@ -2075,6 +2079,7 @@ different rules do it.**
 | `ChallengeOpenedFromMutualInterest` | it **is** the opening; `seq` 1 is whatever happens next |
 | `GamePlanned` | **the seats already imply it** |
 | `challenges.withdrawn` | it **destroys** the room in the same act |
+| `games.seat_vacated` · `games.line_up_reseated` | the challenge's own `SeatLeft` and the acceptance that completed the court draw the lines, and membership reads the game's line-up live — a room told twice would write a second line |
 | `ResultProposed` · `Corrected` · `Countered` · `Accepted` | `games` has its own conversation for the argument |
 
 **No system line announces a derived standing, and there is no *Game on* line** — the prototype

@@ -51,7 +51,11 @@ class Standing(str, Enum):
     #: Nobody is waiting, somebody other than the organiser is in, and a seat is
     #: open. The state the builder is re-entered from — and **not a waiting
     #: room**: the people who are in are in, and a conversation between them has
-    #: already started.
+    #: already started. **Reached after ``ON`` too** (``docs/adr/0162``): a
+    #: court whose line-up completed into a game and then lost somebody is half
+    #: built again, and it is this standing with no change to the fold that
+    #: derives it — the game stands, with that seat open, until the next
+    #: completed line-up re-seats it.
     LINE_UP_INCOMPLETE = "LINE_UP_INCOMPLETE"
     #: Over, and somebody said no.
     DECLINED = "DECLINED"
@@ -129,8 +133,9 @@ def standing_of(
     organiser_id: UUID,
     now: Instant,
     withdrawn: bool,
+    game_opened: bool,
 ) -> Standing:
-    """The challenge's standing, from its seats, this instant, and the one thing
+    """The challenge's standing, from its seats, this instant, and the two things
     about it the seats cannot hold.
 
     The order of the questions is the design, and each rung is a decision:
@@ -151,6 +156,17 @@ def standing_of(
     organiser alone on an empty court, which is indistinguishable from never
     having sent. Singles gets the right answer for free.
 
+    **Unless the court has been a game** (``docs/adr/0162`` §2), which is the
+    second fact the seats cannot hold and is stated by every caller for the same
+    reason. The organiser alone on a court whose opponent *left* is not somebody
+    who never sent: a game stands, with a plan, a room and a record, and the
+    seat is theirs to fill. So this rung is skipped for such a court, and it can
+    reach neither ending by its seats — its exits are a re-seat, and the act
+    that calls the game off. ``game_opened`` is folded off ``SeatLeft`` rather
+    than read off the seats because a re-seat gives the departed's position to
+    the newcomer, and a court whose newcomer then declined would have no seat
+    left that said so.
+
     **Is an answer still owed?** *Awaiting* outranks *line-up incomplete*
     deliberately. A half-built padel court is not re-entered into the builder
     while somebody is still deciding — *a one-to-one padel challenge is half a
@@ -165,7 +181,9 @@ def standing_of(
     if withdrawn:
         return Standing.WITHDRAWN
     seats = tuple(seats)
-    if not any(seat.is_live_at(now) and not seat.holds(organiser_id) for seat in seats):
+    if not game_opened and not any(
+        seat.is_live_at(now) and not seat.holds(organiser_id) for seat in seats
+    ):
         return _how_it_ended(seats)
     if any(seat.is_awaiting_at(now) for seat in seats):
         return Standing.AWAITING_ANSWERS
@@ -196,6 +214,7 @@ def ended_at_of(
     now: Instant,
     updated_at: Instant,
     withdrawn_at: Instant | None,
+    game_opened: bool,
 ) -> Instant | None:
     """**When** this challenge ended, or ``None`` because it has not.
 
@@ -231,6 +250,7 @@ def ended_at_of(
         organiser_id=organiser_id,
         now=now,
         withdrawn=withdrawn_at is not None,
+        game_opened=game_opened,
     )
     if standing not in ENDED:
         return None
@@ -256,11 +276,17 @@ def ended_at_of(
 def _left_at(seat: Seat, *, updated_at: Instant) -> Instant:
     """When the person in this open seat left it.
 
-    **Every way an occupied seat opens carries a deadline**, so there is always
-    one to read: a decline and a lapse are both answers to something somebody was
-    asked, and ``Seat`` refuses a seated player holding neither an acceptance nor
-    a day. For a lapse the deadline *is* the answer — the window closing is the
-    leaving, which is why no sweep needs to have run.
+    **Every way an occupied seat opens *on a court that can end by its seats*
+    carries a deadline**, so there is always one to read: a decline and a lapse
+    are both answers to something somebody was asked, and ``Seat`` refuses a
+    seated player holding neither an acceptance nor a day. For a lapse the
+    deadline *is* the answer — the window closing is the leaving, which is why
+    no sweep needs to have run. A ``LEFT`` seat may carry no deadline, and it
+    never reaches here: a court that has been a game reaches neither ending by
+    its seats (``standing_of``), so the one ending it can have is the
+    withdrawal, dated above. Stated as an invariant rather than handled, because
+    a departure dated by a deadline it happened long after would be an ending
+    invented in a read.
 
     **A decline takes the smaller of the deadline and the stream's own instant.**
     Either alone is an upper bound and neither dominates: a court answered and
@@ -275,6 +301,10 @@ def _left_at(seat: Seat, *, updated_at: Instant) -> Instant:
     holds.
     """
 
+    invariant(
+        seat.answer is not SeatAnswer.LEFT,
+        f"a departure dating an ending, on a court that had been a game: {seat!r}",
+    )
     deadline = invariant(seat.answer_by, f"an open seat with no deadline: {seat!r}")
     if seat.answer is SeatAnswer.DECLINED:
         return min(deadline, updated_at)

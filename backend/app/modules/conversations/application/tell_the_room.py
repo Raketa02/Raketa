@@ -79,6 +79,7 @@ from app.modules.challenges.domain.events import (
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
+    SeatLeft,
     SeatsInvited,
 )
 from app.modules.conversations.domain.conversation import Conversation
@@ -158,23 +159,20 @@ class TellTheRoom:
                 values={COUNT: str(len(event.newly_invited))},
                 context=context,
             )
-        elif isinstance(event, (SeatDeclined, SeatLapsed)):
-            # **One code, with declined-or-lapsed as a value.** *That seat is
-            # open again* is the same news either way, and a lapse is still not
-            # a decline — the two facts stay apart in the value rather than in a
-            # second code, which is what keeps *answers challenges* measurable
-            # one layer up.
+        elif isinstance(event, (SeatDeclined, SeatLapsed, SeatLeft)):
+            # **One code, with declined, lapsed or left as a value.** *That seat
+            # is open again* is the same news each way, and a lapse is still not
+            # a decline — the three facts stay apart in the value rather than in
+            # a second code, which is what keeps *answers challenges* measurable
+            # one layer up. A departure from a game (``docs/adr/0162``) is the
+            # one whose actor was a member until this very line; membership is
+            # derived, so the read has already dropped them by the time the
+            # line is drawn, and ``people`` names them all the same.
             await self._line_in(
                 event.challenge_id,
                 event,
                 actor_id=event.player_id,
-                values={
-                    DEPARTURE: (
-                        SeatDeparture.DECLINED.value
-                        if isinstance(event, SeatDeclined)
-                        else SeatDeparture.LAPSED.value
-                    )
-                },
+                values={DEPARTURE: _departure_of(event).value},
                 context=context,
             )
         elif isinstance(event, ChallengeWithdrawn):
@@ -468,3 +466,13 @@ def _slot_value(
     if isinstance(event, DayRecorded):
         return event.day
     return as_wall_time(minute_of_day(event.minute_of_day)).isoformat("minutes")
+
+
+def _departure_of(event: SeatDeclined | SeatLapsed | SeatLeft) -> SeatDeparture:
+    """Which of the three ways a seat opens this event is."""
+
+    if isinstance(event, SeatDeclined):
+        return SeatDeparture.DECLINED
+    if isinstance(event, SeatLapsed):
+        return SeatDeparture.LAPSED
+    return SeatDeparture.LEFT

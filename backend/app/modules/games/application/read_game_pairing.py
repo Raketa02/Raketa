@@ -15,6 +15,10 @@ about people made from a record that has moved on.
 **Ask the port, once.** The clock is read here for the standing, and ``read_at``
 names that instant; the pairing is folded against nothing and takes none.
 
+**Hold the open-seat rule here too** (``docs/adr/0162`` §3). A court somebody
+has left draws its Levels and neither a forecast nor a stake; the adapter decides
+it and this side asserts it, on the friendly rule's own shape.
+
 **Hold the friendly rule here too.** The port is told the kind so that it never
 prices a friendly, and this side asserts the same thing on what comes back — a
 provider that priced one anyway is a wrong branch made loud rather than a
@@ -83,6 +87,14 @@ class ReadGamePairing:
             or pairing.at_stake is None,
             "a friendly priced: a counted result on it is meaningless, and the "
             "port was told the kind so as never to ask",
+        )
+        invariant(
+            game.line_up.is_complete
+            or pairing is None
+            or (pairing.forecast is None and pairing.at_stake is None),
+            "a court with a seat open priced: a forecast is a claim about a "
+            "court, and this one is not yet the court that will play "
+            "(docs/adr/0162)",
         )
         return GamePairingRead(read_at=now, pairing=pairing)
 

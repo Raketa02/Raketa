@@ -92,6 +92,21 @@ class WithdrawChallengeCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class LeaveGameCommand:
+    """*I am out of this game.* From the person holding one accepted seat.
+
+    **Not an ``AnswerSeatCommand`` under a third name**, for the reason the
+    withdraw is not: an answer is about an invitation and this is about a game
+    the caller had already agreed to. The two fields being the same is not a
+    reason to share the type — a caller that could leave where it meant to
+    decline is exactly the caller the split refuses.
+    """
+
+    challenge_id: UUID
+    player_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
 class FillSeatsCommand:
     """*Ask these people to take the open seats on this court.*
 

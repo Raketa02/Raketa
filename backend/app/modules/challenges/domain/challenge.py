@@ -20,14 +20,22 @@ it. The sweep (``lapse``) exists for the **record**, not for correctness.
 answering a seat you do not hold, answering twice, answering after your own
 deadline, challenging yourself, a challenge with no invitee, a court that is not
 the sport's, removing somebody who is already in the game, a send with nobody
-new to invite, and a withdraw that is not the organiser's or is asked of a
-standing that has some other end already. Everything else this context knows is
-derived.
+new to invite, a withdraw that is not the organiser's or is asked of a standing
+that has some other end already, and a departure from a court that is not a
+game. Everything else this context knows is derived.
 
 **One act here announces its own conclusion, and exactly one may**
 (``docs/adr/0142``). ``withdraw`` records the only standing no arrangement of the
 seats could reach; every other transition changes a seat and lets the fold
 answer.
+
+**A game's line-up is frozen until somebody leaves it** (``docs/adr/0162``).
+``leave`` is the one act on a court that has been a game: it writes ``LEFT``
+over an accepted seat, the fold re-derives ``LINE_UP_INCOMPLETE``, and the game
+this court became is told in the same transaction. The next completed line-up
+re-seats that game rather than opening another. A court that has been a game
+holds one fact beside its seats — ``game_opened`` — because the fold must not
+end it the day the organiser is alone on it.
 
 **What it does not refuse, and states as an invariant instead:** *an acceptance
 is to the game, not to the side.* The membership is settled; the arrangement is
@@ -51,6 +59,7 @@ from app.modules.challenges.domain.errors import (
     CannotChallengeYourself,
     NobodyIsAskedTwice,
     NobodyNewToInvite,
+    NotAGameYet,
     NotYourSeat,
     OnePersonToASeat,
     OnlyAHalfBuiltLineUpIsWithdrawn,
@@ -68,6 +77,7 @@ from app.modules.challenges.domain.events import (
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
+    SeatLeft,
     SeatsInvited,
 )
 from app.modules.challenges.domain.seats import (
@@ -130,6 +140,14 @@ class Challenge:
     #: stream's last event would have moved a client's shelf life when a loop
     #: ran, which is the one thing that loop must never do.
     withdrawn_at: Instant | None = None
+    #: Whether this court's line-up has ever completed into a game. **The second
+    #: thing about a challenge that is not in its seats** (``docs/adr/0162``
+    #: §2), folded off ``SeatLeft`` — the one event that can only be written on
+    #: a court that was ``ON`` — and read by the fold so that a court the
+    #: organiser is alone on is a game with a seat to fill rather than a send
+    #: nobody answered. Off the seats it would be lost the moment a re-seat gave
+    #: the departed's position to somebody else.
+    game_opened: bool = False
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -273,6 +291,42 @@ class Challenge:
             )
         )
 
+    def leave(self, player_id: UUID, *, occurred_at: Instant) -> None:
+        """One person leaves a game they had agreed to. It reopens **their** seat.
+
+        **A court that has been a game, and nothing else** (``docs/adr/0162``
+        §1): ``ON``, or reopened since and not yet re-seated — because two
+        people may leave, and the court the second one leaves is already half
+        built. Leaving a court that was never a game is a decline, and it is
+        already given; an ended challenge has nobody to leave. The standing is
+        asked before the seat, so somebody on a court that is not a game is told
+        that rather than told about their seat.
+
+        **An accepted seat, and nobody else's.** The seat must be this player's
+        and must hold their yes: a seat that is awaiting, declined, lapsed or
+        already left has nothing to leave. The use case refuses those as it
+        refuses a stranger, and this is the aggregate's backstop.
+
+        What it does not ask is whether the game's moment has passed, because
+        that is a fact about a **plan**, which this context cannot read. The use
+        case asks the game, through a port, before it gets here.
+        """
+
+        if self.standing_at(occurred_at) in ENDED:
+            raise TheChallengeIsOver()
+        if not self.has_become_a_game_at(occurred_at):
+            raise NotAGameYet()
+        seat = self.seat_of(player_id)
+        if seat is None or not seat.is_accepted():
+            raise NotYourSeat()
+        self._record_that(
+            SeatLeft(
+                challenge_id=self.challenge_id,
+                player_id=player_id,
+                occurred_at=occurred_at,
+            )
+        )
+
     def lapse(self, *, now: Instant) -> int:
         """Record every seat whose window has passed with nothing in it.
 
@@ -337,6 +391,13 @@ class Challenge:
             raise TheWithdrawIsTheOrganisers()
         if self.standing_at(occurred_at) is not Standing.LINE_UP_INCOMPLETE:
             raise OnlyAHalfBuiltLineUpIsWithdrawn()
+        if self.game_opened:
+            # **A court that has been a game is refused here until #417**
+            # (``docs/adr/0162`` §2). Its exit is calling the game off, which
+            # reaches the game's record; a withdraw that ended the challenge and
+            # destroyed the room while the game went on standing, with a seat
+            # open, would be an ending nobody on the court was told about.
+            raise OnlyAHalfBuiltLineUpIsWithdrawn()
         self._record_that(
             ChallengeWithdrawn(
                 challenge_id=self.challenge_id, occurred_at=occurred_at
@@ -367,14 +428,16 @@ class Challenge:
 
         if self.standing_at(occurred_at) in ENDED:
             raise TheChallengeIsOver()
-        _refuse_a_court_that_is_not(self.sport, [plan.side for plan in arrangement])
-        _refuse_a_bad_line_up(arrangement, organiser_id=self.organiser_id)
-
         still_in = {
             seat.player_id: seat
             for seat in self.seats
             if seat.is_live_at(occurred_at) and seat.player_id is not None
         }
+        _refuse_a_court_that_is_not(self.sport, [plan.side for plan in arrangement])
+        _refuse_a_bad_line_up(
+            arrangement, organiser_id=self.organiser_seat_required(occurred_at)
+        )
+
         planned = {plan.player_id for plan in arrangement if plan.player_id}
         if not set(still_in) <= planned:
             raise AnAcceptedPlayerMayNotBeRemoved()
@@ -416,6 +479,7 @@ class Challenge:
             organiser_id=self.organiser_id,
             now=now,
             withdrawn=self.withdrawn_at is not None,
+            game_opened=self.game_opened,
         )
 
     def ended_at(self, now: Instant) -> Instant | None:
@@ -437,15 +501,34 @@ class Challenge:
             now=now,
             updated_at=self.updated_at,
             withdrawn_at=self.withdrawn_at,
+            game_opened=self.game_opened,
         )
+
+    def organiser_seat_required(self, now: Instant) -> UUID | None:
+        """Whose seat a court posted to this challenge must hold, or nobody's.
+
+        The organiser holds a seat because *they are the one proposing*, and a
+        court that dropped them would be a court proposed by nobody. Once they
+        have **left** (``docs/adr/0162`` §2) that is exactly what the court is:
+        filled by whoever is still on it, with the organiser in ``answered`` and
+        never asked again. So the rule is asked only while they are live — which
+        *everybody live keeps their seat* already covers — and ``None`` here
+        tells the court check to ask nothing about them.
+        """
+
+        organiser = self.seat_of(self.organiser_id)
+        if organiser is not None and organiser.is_live_at(now):
+            return self.organiser_id
+        return None
 
     def has_become_a_game_at(self, now: Instant) -> bool:
         """Whether this challenge's line-up completed and handed over a game.
 
-        ``ON`` and nothing else, which is *every seat accepted* — the moment
-        ``PlannedGameOpening`` fires and the only moment it can, because after it
-        the membership may not change. A singles challenge born of two yeses is
-        ``ON`` the instant it exists and no accept ever happens on it.
+        ``ON``, or a court that has been ``ON`` and lost somebody since
+        (``docs/adr/0162``) — which is *every seat accepted*, the moment the
+        hand-over fires, and the game it opened stands whether or not a seat has
+        since reopened. A singles challenge born of two yeses is ``ON`` the
+        instant it exists and no accept ever happens on it.
 
         **It is one end of the mutual mint's idempotence key** (``docs/adr/0152``
         §4): *has a mutual between these two already minted a game in this sport,
@@ -460,7 +543,7 @@ class Challenge:
         two arranging something* that the pair rule already answers.
         """
 
-        return self.standing_at(now) is Standing.ON
+        return self.game_opened or self.standing_at(now) is Standing.ON
 
     def is_being_arranged_at(self, now: Instant) -> bool:
         """Whether these people are **still arranging a game** — the pair rule.
@@ -532,6 +615,10 @@ class Challenge:
         answer it and declined to use it on this read, because a send is somebody
         deliberately choosing a court. Nothing replaces the release, and that is
         the decision rather than the deferral.
+
+        **And held again the moment somebody leaves** (``docs/adr/0162``): a
+        reopened court is ``LINE_UP_INCOMPLETE``, its people are arranging once
+        more, and the one who left is a stranger to them as a decliner is.
         """
 
         if not self.is_being_arranged_at(now):
@@ -563,6 +650,7 @@ class Challenge:
         challenge.seats = ()
         challenge.answered = frozenset()
         challenge.withdrawn_at = None
+        challenge.game_opened = False
         challenge._events = EventRecorder()
         return challenge
 
@@ -601,6 +689,15 @@ class Challenge:
             return
         if isinstance(event, SeatLapsed):
             self._answer(event.player_id, SeatAnswer.LAPSED)
+            self._touch(event.occurred_at)
+            return
+        if isinstance(event, SeatLeft):
+            # Written on an ``ON`` court and nowhere else, so it is also the
+            # record that this court's line-up completed into a game — which
+            # the seats stop being able to say the moment the departed's
+            # position is given to somebody else.
+            self._answer(event.player_id, SeatAnswer.LEFT)
+            self.game_opened = True
             self._touch(event.occurred_at)
             return
         if isinstance(event, SeatsInvited):
@@ -701,9 +798,14 @@ def _refuse_a_court_that_is_not(sport: Sport, sides: Sequence[Side]) -> None:
 
 
 def refuse_a_bad_court(
-    occupants: Sequence[UUID | None], *, organiser_id: UUID
+    occupants: Sequence[UUID | None], *, organiser_id: UUID | None
 ) -> None:
     """The four things about *who is on the court* that are a caller's bug.
+
+    ``organiser_id`` is ``None`` for a court proposed by nobody — one whose
+    organiser has **left** the game it became (``docs/adr/0162`` §2) — and the
+    two rules about them are then not asked; ``Challenge.organiser_seat_required``
+    is where that is decided, so a caller never decides it for itself.
 
     **It takes the occupants and not the arrangement, so that it needs no
     sport.** A send has to be able to refuse *nobody to invite* before it has
@@ -720,10 +822,11 @@ def refuse_a_bad_court(
     """
 
     seated = [one for one in occupants if one is not None]
-    if organiser_id not in seated:
-        raise TheOrganiserHoldsASeat()
-    if seated.count(organiser_id) > 1:
-        raise CannotChallengeYourself()
+    if organiser_id is not None:
+        if organiser_id not in seated:
+            raise TheOrganiserHoldsASeat()
+        if seated.count(organiser_id) > 1:
+            raise CannotChallengeYourself()
     if len(set(seated)) != len(seated):
         raise OnePersonToASeat()
     if len(seated) < 2:
@@ -731,7 +834,7 @@ def refuse_a_bad_court(
 
 
 def _refuse_a_bad_line_up(
-    arrangement: Sequence[SeatPlan], *, organiser_id: UUID
+    arrangement: Sequence[SeatPlan], *, organiser_id: UUID | None
 ) -> None:
     """The same four, plus the one that is about the arrangement rather than the
     people: an organiser cannot arrive carrying an invitation to themselves."""
@@ -739,7 +842,7 @@ def _refuse_a_bad_line_up(
     refuse_a_bad_court(
         [plan.player_id for plan in arrangement], organiser_id=organiser_id
     )
-    if any(
+    if organiser_id is not None and any(
         plan.player_id == organiser_id and plan.origin is not None
         for plan in arrangement
     ):

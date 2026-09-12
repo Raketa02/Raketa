@@ -68,6 +68,12 @@ organiser's.** A mutual-born pair decides that on its own, since making an arbit
 the only person who can finish a padel four would leave the other looking at a court they can
 neither complete nor leave.
 
+> **Superseded in one word 2026-09-12 by [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)**: they can leave. A member of a court that
+> has become a game may leave it, and the same fill — by any live member — completes the court
+> they left; the organiser's seat is required on the posted court only while the organiser is
+> still on it. *Only the organiser may withdraw* stands, and the fallback once the organiser has
+> left is [#417](https://github.com/Raketa02/Raketa/issues/417)'s.
+
 The aggregate needs no change for this: `invite` never asked who was inviting, only that the
 organiser still holds a seat. What moves is the **searcher** — the seat origins cite the search
 of whoever pressed it. `OriginSearchQuery.court_origin`'s `organiser_id` parameter has always

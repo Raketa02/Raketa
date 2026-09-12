@@ -1,10 +1,11 @@
 """``PlayedCourt``, answered by the ``games`` context.
 
 **The other half of *one rule read against two records*.** A game's line-up is
-frozen at the plan and nothing in ``games`` can move anybody, so this is the
-record membership is read from once a line-up has completed — and it is asked only
-about rooms whose ``game_id`` is set, which means the two records never both
-answer about one room.
+frozen until somebody leaves it (``docs/adr/0162``) and moves only as
+``challenges`` tells it, so this is the record membership is read from once a
+line-up has completed — read live, so a departure drops its actor and a re-seat
+admits the newcomer — and it is asked only about rooms whose ``game_id`` is set,
+which means the two records never both answer about one room.
 
 **It reads through ``GameRepository``**, on the argument
 ``challenges/infrastructure/games_settled_game.py`` already makes for the same

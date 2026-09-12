@@ -29,6 +29,13 @@ the standing the write produced and reading the court back is
 ``challenge_of_yours.py``, because the withdraw does all three too and none of
 them is about an answer.
 
+**The moment is checked on a court that has been a game, and nothing else is.**
+A newcomer accepting into a reopened court is joining a game with a plan, and a
+plan may name a moment that has gone (``docs/adr/0162`` §4): *Sunday* accepted
+on Monday is a seat on a game whose moment is over, so the acceptance is refused
+with the same code the fill and the departure use. A court that was never a game
+costs no read.
+
 **No hold and no gate is re-checked here, and that is not an oversight.** The five
 facts are re-verified when a challenge is *minted*, because that is the act that
 puts two people in front of each other. Answering one you were already sent is a
@@ -46,9 +53,13 @@ from app.kernel import Clock, instant
 from app.modules.challenges.application.challenge_of_yours import AChallengeOfYours
 from app.modules.challenges.application.commands import AnswerSeatCommand
 from app.modules.challenges.application.completed_line_up import hand_over
+from app.modules.challenges.application.seat_change import (
+    refuse_a_court_closed_to_seating,
+)
 from app.modules.challenges.application.read_challenges import StandingChallenge
-from app.modules.challenges.domain.planned_game import PlannedGameOpening
+from app.modules.challenges.domain.planned_game import PlannedGameHandover
 from app.modules.challenges.domain.ports import ChallengeRepository, PlayerHandles
+from app.modules.challenges.domain.seatable_game import SeatableGameQuery
 from app.modules.challenges.domain.standing import Standing
 
 
@@ -69,16 +80,22 @@ class AcceptSeat(AChallengeOfYours):
         handles: PlayerHandles,
         uow: UnitOfWork,
         clock: Clock,
-        planned_games: PlannedGameOpening,
+        planned_games: PlannedGameHandover,
+        games: SeatableGameQuery,
     ) -> None:
         super().__init__(
             challenges=challenges, handles=handles, uow=uow, clock=clock
         )
         self._planned_games = planned_games
+        self._games = games
 
     async def execute(self, command: AnswerSeatCommand) -> StandingChallenge:
         at = instant(self._clock.now())
         challenge = await self._yours(command.challenge_id, command.player_id)
+        # Only on a court that has been a game; every other court costs no read.
+        await refuse_a_court_closed_to_seating(
+            challenge, at=at, games=self._games
+        )
         challenge.accept(command.player_id, occurred_at=at)
         standing = await self._written(challenge, at)
         if standing is Standing.ON:
@@ -86,6 +103,8 @@ class AcceptSeat(AChallengeOfYours):
             # fires at the instant the arrangement is knowable and settled —
             # in this transaction, so the accept and the game it produced
             # commit together or neither does (``domain/planned_game.py``).
+            # On a court that has been a game it is a **re-seat** of the same
+            # game rather than the opening of another.
             await hand_over(challenge, at=at, games=self._planned_games)
         return await self._committed(challenge, standing, at)
 

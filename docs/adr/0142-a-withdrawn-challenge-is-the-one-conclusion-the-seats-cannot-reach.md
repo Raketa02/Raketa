@@ -62,6 +62,16 @@ The rule is *the exit exists exactly where nothing else ends it*. `AWAITING_ANSW
 when the clocks run out. `ON` has become a game, and ending the challenge would not touch it.
 `LINE_UP_INCOMPLETE` is the one standing that never ends, and it is the one that gets the act.
 
+> **The departure half of that second sentence is superseded 2026-09-12 by [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md).** `ON` has
+> become a game, and a player on it may now **leave** it — `POST /challenges/{id}/departure` —
+> while the game awaits its entry and its agreed moment is ahead. The seat reopens on the
+> challenge, the game is told in the same transaction, and the court is `LINE_UP_INCOMPLETE`
+> again until the next completed line-up re-seats the same game. **The withdraw half stands
+> for now**: a court that has been a game is refused this route with the code below, because
+> its exit is calling the game off, which reaches the game's record and is
+> [#417](https://github.com/Raketa02/Raketa/issues/417)'s. Everything else in this section —
+> whole-challenge, irreversible, the Phase 1 refusal — is untouched.
+
 **Whole-challenge, and irreversible.** Per-seat would be the organiser removing an accepted
 player, which `AnAcceptedPlayerMayNotBeRemoved` refuses and keeps refusing — *the people who
 already agreed did nothing wrong*. A withdrawn challenge does not come back; re-asking the same

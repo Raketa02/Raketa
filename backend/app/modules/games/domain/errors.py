@@ -37,12 +37,12 @@ from app.shared.domain.errors import (
 
 
 class YouWereNotOnThisCourt(ForbiddenError):
-    """Somebody who did not play, acting on the result.
+    """Somebody who is not on the court, acting on the game.
 
-    **The people who may act are the people who were seated when the line-up
-    completed** — never a leaver, never somebody who declined, never a spectator.
-    A game's line-up is frozen at the plan, so this is answerable from the record
-    alone and needs no other context to be asked.
+    **The people who may act are the people on the court now** — never somebody
+    who left, never somebody who declined, never a spectator. The line-up is on
+    the record, so this is answerable from it alone and needs no other context to
+    be asked.
     """
 
     code = "you_were_not_on_this_court"
@@ -50,6 +50,43 @@ class YouWereNotOnThisCourt(ForbiddenError):
     def __init__(self) -> None:
         super().__init__(
             "Only the players of this game may enter or answer its result."
+        )
+
+
+class TheCourtHasAnOpenSeat(ConflictError):
+    """*We played* said about a court with a seat open.
+
+    #411 rule 5 withholds the entry on the client while a seat is open, and this
+    is what makes that a rule rather than a promise (``docs/adr/0162`` §3): a
+    score on a three-person doubles game is a score with a side the engine
+    cannot price and a seat with no outcome to give anyone. The seat stays open
+    until it is filled, the game is called off, or the entry window closes.
+    """
+
+    code = "the_court_has_an_open_seat"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This game has a seat open, so it cannot be recorded as played."
+        )
+
+
+class TheGameIsNotOpenToSeating(ConflictError):
+    """A seat asked to change on a game that is not awaiting its entry.
+
+    After *we played* — or after the entry window closed on silence — the
+    line-up is the record of an evening and nothing on it moves. ``challenges``
+    asks the moment guard before it gets here and refuses with its own
+    ``game_is_history``, so this is the aggregate's backstop rather than the
+    code a client meets — and it has its own code because a code is unique
+    across the platform, and this one names what *this* record refuses.
+    """
+
+    code = "the_line_up_is_settled"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This game has happened, or never will, so its line-up is settled."
         )
 
 

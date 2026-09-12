@@ -337,6 +337,11 @@ the declined player's row, and the game's line-up never held them. The shape bel
 the same — a face for everybody the response names rather than a special case for one code —
 because the day a seat can be released, the contract does not move.
 
+> **That day came 2026-09-12 with [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), and the contract did not move.** `SEAT_LEFT` carries
+> a third `departure`, `LEFT` — somebody leaving a game they had agreed to — and `people` names
+> them exactly as it names a decliner. *An accepted seat cannot leave* above is no longer true,
+> and the shape this section made general is why nothing else here had to change.
+
 **The read resolves a face for everybody the response names, and the roster stays the roster.**
 `ConversationResponse`, `ConversationRowSchema` and `EntryPageResponse` each carry **`people`** —
 one face read over the union of the members and every `actor_id` and `author_id` in the entries

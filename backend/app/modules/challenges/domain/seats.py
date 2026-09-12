@@ -12,10 +12,13 @@ the challenge's standing is then read off the seats (``standing.py``). A seat
 past its ``answer_by`` reads as lapsed whether or not any sweep has noticed,
 which is what makes the answer to *is this still open* the same at every instant.
 
-**A decline and a lapse both open the seat, and they are different facts.** The
-occupant stays on the seat with the answer that emptied it, because *who said no*
-and *who said nothing* is the whole of the **answers challenges** strand, and a
-seat that forgot which one happened could not tell them apart.
+**A decline, a lapse and a departure all open the seat, and they are three
+different facts.** The occupant stays on the seat with the answer that emptied
+it, because *who said no* and *who said nothing* is the whole of the **answers
+challenges** strand, and a seat that forgot which one happened could not tell
+them apart. *Who left* is the third (``docs/adr/0162``): written on an
+**accepted** seat of a court that had become a game, recorded and not yet
+scored, and kept apart from the other two for the day something prices it.
 
 **One string per seat on the wire.** The event codec coerces scalars only: a
 ``tuple[Seat, ...]`` would come back out of storage as a list of dicts and the
@@ -62,9 +65,10 @@ class Side(str, Enum):
 
 @final
 class SeatAnswer(str, Enum):
-    """What the person in this seat did about being asked.
+    """What the person in this seat did about being asked — or, having said yes,
+    about the game.
 
-    Three values and not four: *awaiting* is the absence of an answer, and giving
+    Four values and not five: *awaiting* is the absence of an answer, and giving
     it a name would make ``None`` and ``AWAITING`` two spellings of one state
     with nothing to choose between them.
 
@@ -72,11 +76,18 @@ class SeatAnswer(str, Enum):
     same thing to the line-up and they are different facts: *answers challenges*
     is a Strand over challenges that got an answer inside their window, and it is
     unmeasurable if silence is filed as judgement.
+
+    ``LEFT`` is the one answer written **over** another (``docs/adr/0162``): an
+    accepted seat, on a court whose line-up had completed into a game, whose
+    occupant has since left it. It opens the seat exactly as the other two do and
+    is neither of them — leaving a game you agreed to is not declining an
+    invitation, and nothing prices it yet.
     """
 
     ACCEPTED = "ACCEPTED"
     DECLINED = "DECLINED"
     LAPSED = "LAPSED"
+    LEFT = "LEFT"
 
 
 def seats_per_side(sport: Sport) -> int:
@@ -121,7 +132,8 @@ class Seat:
     ``answer_by`` is ``None`` exactly when nobody was asked: an empty seat, the
     organiser's — accepted from birth, because they are the one proposing — and
     both seats of a challenge born from a mutual yes, where the answers were
-    already given.
+    already given. A seat that was never asked can still be **left**, so a
+    ``LEFT`` seat may carry no deadline either.
     """
 
     side: Side
@@ -138,7 +150,8 @@ class Seat:
             )
             return
         invariant(
-            self.answer is SeatAnswer.ACCEPTED or self.answer_by is not None,
+            self.answer in (SeatAnswer.ACCEPTED, SeatAnswer.LEFT)
+            or self.answer_by is not None,
             f"a seated player with no answer and no deadline: {self!r}",
         )
         invariant(
@@ -183,13 +196,16 @@ class Seat:
     def is_open_at(self, now: Instant) -> bool:
         """Whether this seat is free for somebody new.
 
-        A declined or lapsed seat is open again — which is also what makes its
-        former occupant a stranger to everybody else on the court once more.
+        A declined, lapsed or left seat is open again — which is also what makes
+        its former occupant a stranger to everybody else on the court once more.
         """
 
         if self.player_id is None:
             return True
-        return self.answer is SeatAnswer.DECLINED or self.is_lapsed_at(now)
+        return (
+            self.answer in (SeatAnswer.DECLINED, SeatAnswer.LEFT)
+            or self.is_lapsed_at(now)
+        )
 
     def is_live_at(self, now: Instant) -> bool:
         """Whether somebody is still in this game through this seat."""

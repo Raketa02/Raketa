@@ -38,10 +38,12 @@ from app.bootstrap.composition import (
     build_court_safety,
     build_open_challenge_query,
     build_origin_search_query,
-    build_planned_game_opening,
+    build_planned_game_handover,
+    build_seatable_game_query,
 )
 from app.modules.challenges.application.answer_seat import AcceptSeat, DeclineSeat
 from app.modules.challenges.application.fill_seats import FillSeats
+from app.modules.challenges.application.leave_game import LeaveGame
 from app.modules.challenges.application.read_challenge import ReadChallenge
 from app.modules.challenges.application.read_challenges import ReadChallenges
 from app.modules.challenges.application.send_challenge import SendChallenge
@@ -50,6 +52,7 @@ from app.modules.challenges.domain.ports import (
     ChallengeRepository,
     CourtPairingQuery,
 )
+from app.modules.challenges.domain.seatable_game import SeatableGameQuery
 
 
 def get_challenge_repository(
@@ -152,17 +155,29 @@ def get_read_challenge(
 ReadChallengeDep = Annotated[ReadChallenge, Depends(get_read_challenge)]
 
 
+def get_seatable_game_query(db: DbSession) -> SeatableGameQuery:
+    """*May a seat on this court still change?* — read off ``games``, per request."""
+
+    return build_seatable_game_query(db)
+
+
+SeatableGameQueryDep = Annotated[SeatableGameQuery, Depends(get_seatable_game_query)]
+
+
 def get_accept_seat(
     db: DbSession,
     clock: ClockDep,
     uow: UnitOfWorkDep,
     challenges: ChallengeRepositoryDep,
+    games: SeatableGameQueryDep,
 ) -> AcceptSeat:
     """The accept, and the one thing it asks somebody else to do.
 
-    The game opening is declared here rather than inside the use case because
+    The game hand-over is declared here rather than inside the use case because
     *what opens a game* is a choice about wiring — and it is on **this** answer
     alone, because a decline empties a seat and can never fill the last one.
+    The seatable-court read is here for the same reason: an acceptance into a
+    court that has been a game is a re-seat, and the moment guards it.
     """
 
     return AcceptSeat(
@@ -170,7 +185,8 @@ def get_accept_seat(
         handles=build_challenge_handles(db),
         uow=uow,
         clock=clock,
-        planned_games=build_planned_game_opening(db),
+        planned_games=build_planned_game_handover(db),
+        games=games,
     )
 
 
@@ -215,11 +231,42 @@ def get_withdraw_challenge(
 WithdrawChallengeDep = Annotated[WithdrawChallenge, Depends(get_withdraw_challenge)]
 
 
+def get_leave_game(
+    db: DbSession,
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    challenges: ChallengeRepositoryDep,
+    games: SeatableGameQueryDep,
+) -> LeaveGame:
+    """The departure: an act on one challenge, and the game is told.
+
+    It holds the accept's hand-over and the accept's moment guard, because it is
+    the accept's mirror — a seat moving on a court that has been a game, told to
+    the game in the same transaction — and the court's safety gates, because a
+    departure writes a line into a room other people are in and the hold is read
+    through the same fail-closed gate the send and the fill read it through.
+    """
+
+    return LeaveGame(
+        challenges=challenges,
+        handles=build_challenge_handles(db),
+        safety=build_court_safety(db),
+        games=games,
+        uow=uow,
+        clock=clock,
+        planned_games=build_planned_game_handover(db),
+    )
+
+
+LeaveGameDep = Annotated[LeaveGame, Depends(get_leave_game)]
+
+
 def get_fill_seats(
     db: DbSession,
     clock: ClockDep,
     uow: UnitOfWorkDep,
     challenges: ChallengeRepositoryDep,
+    games: SeatableGameQueryDep,
 ) -> FillSeats:
     """The fill: an act on one challenge, holding the send's three extra reads.
 
@@ -238,6 +285,7 @@ def get_fill_seats(
         open_challenges=build_open_challenge_query(db),
         origins=build_origin_search_query(db),
         safety=build_court_safety(db),
+        games=games,
         uow=uow,
         clock=clock,
     )

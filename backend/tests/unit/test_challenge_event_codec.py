@@ -1,5 +1,5 @@
 """Every Challenges event survives the round trip through storage, and there are
-seven of them.
+eight of them.
 
 A durable name is a **published contract**, so three things are asserted: that
 each event has one, that an event decoded out of the store equals the event that
@@ -37,6 +37,7 @@ from app.modules.challenges.domain.events import (
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
+    SeatLeft,
     SeatsInvited,
 )
 from app.modules.challenges.domain.origins import SentFromSearch, SentOutsideASearch
@@ -93,6 +94,7 @@ EVENTS = [
     SeatAccepted(challenge_id=CHALLENGE, player_id=ALICE, occurred_at=AT),
     SeatDeclined(challenge_id=CHALLENGE, player_id=ALICE, occurred_at=AT),
     SeatLapsed(challenge_id=CHALLENGE, player_id=ALICE, occurred_at=AT),
+    SeatLeft(challenge_id=CHALLENGE, player_id=ALICE, occurred_at=AT),
     SeatsInvited(
         challenge_id=CHALLENGE,
         seats=A_COURT,
@@ -187,12 +189,12 @@ def test_every_event_this_context_records_has_a_durable_name():
     assert all(name.startswith("challenges.") for name in names)
 
 
-def test_there_are_seven_events_and_the_suite_covers_all_of_them():
-    """An eighth event added without a round trip here is the failure this catches."""
+def test_there_are_eight_events_and_the_suite_covers_all_of_them():
+    """A ninth event added without a round trip here is the failure this catches."""
 
     registered = {event_cls for event_cls, _ in _CONTRACTS}
 
-    assert len(registered) == 7
+    assert len(registered) == 8
     assert {type(event) for event in EVENTS} == registered
 
 
@@ -220,6 +222,7 @@ def test_one_durable_name_announces_a_conclusion_and_it_is_the_withdrawal():
     assert {name for name in names if name.rsplit(".", 1)[1] == "withdrawn"} == {
         "challenges.withdrawn"
     }
-    # The two that *are* about one seat say so, and neither is the challenge's.
+    # The three that *are* about one seat say so, and none is the challenge's.
     assert "challenges.seat_declined" in names
     assert "challenges.seat_lapsed" in names
+    assert "challenges.seat_left" in names

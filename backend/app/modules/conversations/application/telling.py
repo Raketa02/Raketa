@@ -52,10 +52,16 @@ the room, so a refusal read as *do not deliver this* would leave every withdrawn
 court a readable room for ever.
 
 **On the count.** ``the-words.md`` §23.1 is headed *the six events that publish
-nothing* and its own table names **eight** of them, four of which it groups on
+nothing* and its own table names **ten** of them, four of which it groups on
 one row as *the result argument*. The table below is the events, one row each, so
-it is eight; the discrepancy is in the source and is left visible rather than
+it is ten; the discrepancy is in the source and is left visible rather than
 resolved by dropping rows to make a number come out.
+
+**A departure is one code told by three events** (``docs/adr/0162``): a no, a
+silence, and now somebody leaving a game they had agreed to. The two events
+``games`` writes for the same fact — the seat vacated, the court re-seated —
+reach this room **not at all**: the challenge's line is the line, and the roster
+is read off the game live rather than told.
 """
 
 from __future__ import annotations
@@ -70,6 +76,7 @@ from app.modules.challenges.domain.events import (
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
+    SeatLeft,
     SeatsInvited,
 )
 from app.kernel import invariant
@@ -77,10 +84,12 @@ from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.games.domain.events import (
     GamePlanned,
     GamePlayed,
+    LineUpReseated,
     ResultAccepted,
     ResultCorrected,
     ResultCountered,
     ResultProposed,
+    SeatVacated,
 )
 from app.modules.plans.domain.events import (
     DayRecorded,
@@ -129,6 +138,11 @@ TELLINGS: tuple[Telling, ...] = (
     ),
     Telling(
         event=SeatLapsed,
+        line=SystemLineCode.SEAT_LEFT,
+        reaches_the_room=True,
+    ),
+    Telling(
+        event=SeatLeft,
         line=SystemLineCode.SEAT_LEFT,
         reaches_the_room=True,
     ),
@@ -189,6 +203,25 @@ TELLINGS: tuple[Telling, ...] = (
             "instead. It is the one telling here whose whole effect is that the "
             "room stops existing, which is why it reaches the room while drawing "
             "nothing"
+        ),
+    ),
+    Telling(
+        event=SeatVacated,
+        line=None,
+        reaches_the_room=False,
+        why_nothing=(
+            "the challenge's own `SeatLeft` draws the line for the same "
+            "departure, and membership reads the game's line-up live rather "
+            "than being told — a room told twice would write a second line"
+        ),
+    ),
+    Telling(
+        event=LineUpReseated,
+        line=None,
+        reaches_the_room=False,
+        why_nothing=(
+            "the acceptance that completed the court draws its own line, and "
+            "membership reads the game's line-up live rather than being told"
         ),
     ),
     Telling(

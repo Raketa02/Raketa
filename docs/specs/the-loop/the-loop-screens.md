@@ -58,6 +58,7 @@ map adds nine routes and two fields, across four contexts.
 | **`GET /api/v1/challenges/{challenge_id}`** | one challenge richly — the arrangement, the person and the pairing, recomputed for the reader | ADR-0143 |
 | **`POST /api/v1/challenges/{challenge_id}/seats`** | the send's shape minus the mint, `{search_id, court}` | [ADR-0150](../../adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md) §6 |
 | **`POST /api/v1/challenges/{challenge_id}/withdrawal`** | the challenge as it now stands, `WITHDRAWN` | [ADR-0142](../../adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md) |
+| **`POST /api/v1/challenges/{challenge_id}/departure`** | the challenge as it now stands, `LINE_UP_INCOMPLETE` with the caller's seat `LEFT`; the game keeps its id with that seat `player_id: null` | [ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) |
 | `POST /api/v1/lineups` | grows one optional **`completing_challenge_id`**; `sport`, `mode` and `locked_seats` are **refused** beside it | ADR-0150 §2 |
 | **`GET /api/v1/conversations`** | `read_at` + rows: members with handles and photos, sport, `last_entry`, `conversation_id`, `challenge_id`, nullable `game_id` | [ADR-0148](../../adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md) |
 | **`GET /api/v1/conversations/{id}`** | its own `read_at`, the header **and** the newest page — one fold | ADR-0148 |
@@ -314,6 +315,18 @@ nothing on the wire carries a side.
 | `LAPSED` · both | §13 *{name}'s day ran out…* / *Your day ran out* | no | none |
 | `WITHDRAWN` · both | §13 *You withdrew this* / *{name} withdrew this — that court is closed* | no | none |
 | `ON` · both | §13 *Everybody's in* / *You're in — everybody's in* | no | **Open the chat** *(the door, below)* |
+| `LINE_UP_INCOMPLETE` · member, **a court somebody left** | §13 *{n} in, {m} seats open…* — the same sentence, on a court that has been a game | **yes** | **⚡ Fill the seats** · **Open the chat** — and **no Withdraw**, until #417 |
+| `LINE_UP_INCOMPLETE` · reader who **left the game** | §13's two sentences for a reader who left, read as *You left* | no | none |
+
+**A reopened court is the half-built court again, and it is reached from the game**
+([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), 2026-09-12).
+`POST /challenges/{id}/departure` is on the **game screen**, not here — the game carries its
+`challenge_id` — and what it leaves behind is a `LINE_UP_INCOMPLETE` court whose seat reads `LEFT`,
+which this table draws exactly as it draws one a decline reopened: the fill is the same fill, the
+door is the same door. Two rows are added rather than the existing two widened, because one thing
+differs: **the withdraw is refused on a court that has been a game** — its exit is calling the
+game off, which is #417's — so the arm draws no Withdraw there, and a stale button meets
+`not_a_half_built_line_up`. The seat that left is drawn with its answer, as a declined seat is.
 
 **The door is drawn on every arm whose reader the room would hold** (2026-09-11). *Open the chat*
 is ADR-0149 §3's client join over `GET /conversations`, and it **fails soft**: where the list holds
@@ -1449,6 +1462,12 @@ Standing obligations, none of which expires on being satisfied once. They are th
 9. **No system line announces a derived standing** (§3.4). There is no *Game on* line.
 10. **Every state on every screen is reachable by `make seed`.** No `__DEV__` data path, no mock
     module, no fixture imported by a screen (ADR-0029).
+11. **An open seat is drawn, never dropped**
+    ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)). A game's
+    seat with `player_id: null` is a seat somebody left: it keeps its place and its side, the
+    court keeps its size, and *Needs a player* is folded from it on the client — nothing on the
+    wire names the rung. Every screen that draws a court draws the empty seat, and *We played* is
+    withheld while one is open.
 
 ---
 

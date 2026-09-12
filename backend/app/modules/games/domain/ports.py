@@ -60,6 +60,18 @@ that arrow. No ``Forecast``, no ``Split`` and no ``Stakes`` is borrowed from the
 engines: a provider that reached for the type one directory over would be the
 second-spelling trap the contract's own comment names.
 
+**``AgreedMoment`` is the third port consumed here, and ``SeatableCourt`` is the
+one it exists for** (``docs/adr/0162`` §4). A player may leave a game, and
+somebody may fill the seat, only while the game is awaiting its entry **and its
+agreed moment is ahead** — and the moment is the Plan's, computed there and
+nowhere else, in a context this one may not import (``.importlinter``,
+ADR-0145 §4). So this context *demands* the moment in its own words, an adapter
+in ``plans/infrastructure/`` signs it, and the guard — standing and moment,
+read together, once — is *published* here for ``challenges``, keyed by the
+challenge id because that is the currency ``challenges`` holds. Nothing about a
+moment is stored on a game: ADR-0137's *no date field anywhere* is still
+exactly true of this record.
+
 **``attendance_for`` and ``result_answering_for`` are the two reads here that
 answer about fewer people than they were asked about**, and the exception proves
 the rule above rather than bending it (``docs/adr/0140``, ``docs/adr/0160``).
@@ -520,6 +532,69 @@ class PlanningCourt(Protocol):
 
 
 @runtime_checkable
+class AgreedMoment(Protocol):
+    """*When has this game been agreed for?* — this context's demand on
+    whoever keeps a plan.
+
+    Declared in this context's own words and answered by an adapter that lives
+    on the Plan's side of the arrow, because ``games`` may not import the Plan
+    (ADR-0145 §4) and the moment is computed there and nowhere else
+    (``agreed_point``: both slots the agreed instant, the day alone the start
+    of the following local day, no day nothing at all).
+
+    **One game and never a collection**, because it is asked on a write path
+    about the one court an act names, and read at the guard rather than
+    stored anywhere.
+    """
+
+    async def agreed_point_of(self, game_id: UUID) -> Instant | None:
+        """The plan's moment, or ``None`` while no day is recorded — which
+        includes a game whose plan has never been written."""
+        ...
+
+
+@final
+class SeatChange(str, Enum):
+    """Whether a seat on this court may still be left or taken, and if not, why.
+
+    Three answers and no fourth: a court whose game is awaiting its entry with
+    its moment ahead — or not yet agreed — **admits** a change; one whose
+    agreed moment has passed refuses it, so a no-show cannot vacate a seat to
+    block the result and a newcomer cannot accept into *Sunday* on Monday; and
+    one whose game has happened, or never will, is the record of an evening
+    and nothing on it moves. *No game at all* is the port's ``None``.
+    """
+
+    ADMITTED = "ADMITTED"
+    MOMENT_PASSED = "MOMENT_PASSED"
+    GAME_IS_HISTORY = "GAME_IS_HISTORY"
+
+
+@runtime_checkable
+class SeatableCourt(Protocol):
+    """*May a seat on this challenge's court still be left, or taken?*
+
+    **Named for both halves** (``docs/adr/0162`` §4): a departure and a
+    re-entry — the fill, and the acceptance that completes it — are gated by
+    the same two facts, the game's standing and the plan's moment, and one
+    port answering both is what keeps the leaving and the filling from coming
+    to two answers about one instant.
+
+    **Keyed by the challenge id in both directions**, on ``SettledGameQuery``'s
+    argument: the caller's question is about a court it minted and handed over,
+    and it never learns a game id to ask with. The standing is the repository's
+    and the moment is ``AgreedMoment``'s, and the guard is written once, here.
+    """
+
+    async def seat_change_on(
+        self, challenge_id: UUID, *, now: Instant
+    ) -> SeatChange | None:
+        """The answer for the game this challenge became, or ``None`` because
+        it became none."""
+        ...
+
+
+@runtime_checkable
 class GameRepository(Protocol):
     """One game's stream, loaded and appended to."""
 
@@ -890,17 +965,18 @@ class GameHistoryQuery(Protocol):
     async def late_change_threshold(self) -> Minutes | None:
         """How close to its moment a change has to be to count as **late**.
 
-        ``None``, and now for a reason this context owns rather than borrows. A
-        plan here is a line-up with a window and no time in it: an accepted seat
-        cannot be withdrawn, and there is nothing to move. *Late* has no referent,
-        so there is no number — absent rather than defaulted, because a number
-        nobody measured is a number somebody picked.
+        ``None`` — **recorded, not yet scored** (``docs/adr/0162`` §8). A seat
+        can be left now and the game has a moment, so *late* has a referent for
+        the first time; what a departure an hour before it should cost is a
+        product judgement no record has made. The departure is written with its
+        instant so that a later record can weigh it without rewriting history,
+        and until one does there is no number — absent rather than defaulted,
+        because a number nobody measured is a number somebody picked.
 
         It is demanded of the context that owns plans even though ``player_score``
-        computes the strand, and this is that context. If a later product grows a
-        plan with a time in it, that is a conversation and it amends
-        ``docs/adr/0098`` — it is not a licence to publish a different number
-        under the same name.
+        computes the strand, and this is that context. The record that answers it
+        amends ``docs/adr/0098`` — it is not a licence to publish a different
+        number under the same name.
         """
         ...
 
@@ -908,6 +984,7 @@ class GameHistoryQuery(Protocol):
 __all__ = [
     "PLAYED_COUNTERPART_BOUND",
     "RECENT_RESULTS",
+    "AgreedMoment",
     "Attendance",
     "ConfirmedGame",
     "ConfirmedResultLedger",
@@ -930,4 +1007,6 @@ __all__ = [
     "PlayerHandles",
     "PlayedTally",
     "ResultAnswering",
+    "SeatChange",
+    "SeatableCourt",
 ]

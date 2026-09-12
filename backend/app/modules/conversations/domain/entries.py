@@ -97,13 +97,17 @@ class SystemLineCode(str, Enum):
 class SeatDeparture(str, Enum):
     """How a seat came to be open again. The value on ``SEAT_LEFT``.
 
-    Two facts, one code above them. Folding them into one would make *answers
+    Three facts, one code above them. Folding them into one would make *answers
     challenges* unmeasurable one layer up, which is exactly the mistake
-    ``SeatLapsed`` was split out of ``SeatDeclined`` to avoid.
+    ``SeatLapsed`` was split out of ``SeatDeclined`` to avoid. ``LEFT`` is the
+    third (``docs/adr/0162``): somebody leaving a game they had agreed to, which
+    is neither a no nor silence — and the one departure whose actor **was** a
+    member until the line that says so.
     """
 
     DECLINED = "DECLINED"
     LAPSED = "LAPSED"
+    LEFT = "LEFT"
 
 
 #: The key ``SEATS_INVITED`` carries its count under, and ``SEAT_LEFT`` its answer.

@@ -18,11 +18,11 @@ from __future__ import annotations
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant
 from app.modules.challenges.domain.challenge import Challenge
-from app.modules.challenges.domain.planned_game import PlannedGameOpening
+from app.modules.challenges.domain.planned_game import PlannedGameHandover
 
 
 async def hand_over(
-    challenge: Challenge, *, at: Instant, games: PlannedGameOpening
+    challenge: Challenge, *, at: Instant, games: PlannedGameHandover
 ) -> None:
     """This challenge's completed court, in the port's vocabulary.
 

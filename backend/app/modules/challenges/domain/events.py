@@ -1,4 +1,4 @@
-"""The Challenges context's domain events — **seven, and one of them a conclusion**.
+"""The Challenges context's domain events — **eight, and one of them a conclusion**.
 
 Events carry **primitive** fields, so their wire format survives any later
 refactor of the Python types: a sport, a mode and a window as their codes, a
@@ -20,6 +20,13 @@ roster rather than querying for a completed line-up. ``SeatLapsed`` is the
 sweep's, and it is emphatically **not** ``SeatDeclined``: *answers challenges* is
 a Strand over challenges that got an answer inside their window, and it is
 unmeasurable if silence and a no are one event.
+
+**One departure, written over an acceptance** (``docs/adr/0162``). ``SeatLeft``
+is somebody leaving a game they had agreed to, which can only happen on a court
+whose line-up had completed — so it is the one seat event the fold learns a
+second fact from: *this challenge has been a game*, which no arrangement of the
+seats can say once the departed's position has been given to somebody else. It
+is not an answer to an invitation and the history walk does not count it as one.
 
 **One re-seating.** ``SeatsInvited`` carries the **whole** resulting arrangement
 rather than a delta, because completing a half-built line-up moves accepted
@@ -149,6 +156,26 @@ class SeatLapsed:
     every read is bounded by ``now``, so the seat already reads as lapsed whether
     or not anything swept it. What this event buys is a durable denominator for
     *answers challenges* the moment there is a context to count it.
+    """
+
+    challenge_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatLeft:
+    """One person left a game they had agreed to. It reopens **their** seat.
+
+    Written on an **accepted** seat of a challenge that is ``ON`` and on no
+    other, which is what makes it carry a second fact for free: a court this was
+    written on had become a game, and the fold keeps that (``game_opened``) so a
+    court the organiser is left alone on is a game with a seat to fill rather
+    than a send nobody answered.
+
+    A decision and not a judgement about an invitation — it is kept apart from
+    ``SeatDeclined`` for the same reason a lapse is, and it is **recorded and
+    not yet scored** (``docs/adr/0162`` §8).
     """
 
     challenge_id: UUID

@@ -938,6 +938,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/challenges/{challenge_id}/departure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave the game
+         * @description **You are out of a game you had agreed to.** Your seat reopens on the challenge, the game survives with that seat drawn empty, and the people still on it keep what they agreed — the plan, the room, the record. Anyone still on the court may fill your seat the way a half-built court is filled, and the newcomer's yes re-seats the **same** game.
+         *
+         *     **Any player on the court, the organiser included**, while the game is awaiting its entry and its agreed moment is ahead — or no moment is agreed yet. Once the moment has passed, leaving means nothing and is refused.
+         *
+         *     **You are out of this court's own pool for as long as it stands.** Nobody is asked twice on one challenge; being asked again is a **new** challenge. Every other search reaches you at once — the pair rule released you the moment you left.
+         *
+         *     **The others are told**: the room draws *{name} left — that seat is open again*, and your own list and inbox no longer hold the game or the room.
+         *
+         *     **Two people may leave**, and two seats may be open. Nothing here prices a departure yet — it is recorded, with its moment, and that is all.
+         *
+         *     **A noun and not a verb**, like the withdrawal: what this creates is the departure.
+         */
+        post: operations["leave_game_api_v1_challenges__challenge_id__departure_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/conversations": {
         parameters: {
             query?: never;
@@ -5592,9 +5622,10 @@ export interface components {
         SearchSurface: "SHORTLIST" | "LINEUP" | "DECK" | "FILL_SEATS";
         /**
          * SeatAnswer
-         * @description What the person in this seat did about being asked.
+         * @description What the person in this seat did about being asked — or, having said yes,
+         *     about the game.
          *
-         *     Three values and not four: *awaiting* is the absence of an answer, and giving
+         *     Four values and not five: *awaiting* is the absence of an answer, and giving
          *     it a name would make ``None`` and ``AWAITING`` two spellings of one state
          *     with nothing to choose between them.
          *
@@ -5602,9 +5633,15 @@ export interface components {
          *     same thing to the line-up and they are different facts: *answers challenges*
          *     is a Strand over challenges that got an answer inside their window, and it is
          *     unmeasurable if silence is filed as judgement.
+         *
+         *     ``LEFT`` is the one answer written **over** another (``docs/adr/0162``): an
+         *     accepted seat, on a court whose line-up had completed into a game, whose
+         *     occupant has since left it. It opens the seat exactly as the other two do and
+         *     is neither of them — leaving a game you agreed to is not declining an
+         *     invitation, and nothing prices it yet.
          * @enum {string}
          */
-        SeatAnswer: "ACCEPTED" | "DECLINED" | "LAPSED";
+        SeatAnswer: "ACCEPTED" | "DECLINED" | "LAPSED" | "LEFT";
         /**
          * SeatCardSchema
          * @description The card for one seat: who they are, and what you make of them.
@@ -5670,7 +5707,12 @@ export interface components {
         };
         /**
          * SeatingSchema
-         * @description One person, on one side. The court is frozen at the plan.
+         * @description One position on one side: a person, or a seat somebody has left.
+         *
+         *     **The court is frozen until somebody leaves it** (``docs/adr/0162``). An
+         *     open seat is drawn, never dropped — `player_id` is `null` and the seat keeps
+         *     its place — so a four with one seat open is still a four and the client
+         *     folds *Needs a player* from it. Nothing on the wire names that rung.
          *
          *     **A handle, and nothing else about them** (``docs/adr/0141``). A Level, a
          *     band, an area and a run of form are what a *searcher* reads to decide about a
@@ -5684,14 +5726,14 @@ export interface components {
             side: components["schemas"]["GameSide"];
             /**
              * Player Id
-             * Format: uuid
+             * @description Who holds this seat. ``null`` on a seat somebody has **left** and nobody has filled yet: the seat stays, drawn empty, and the game is awaiting a player before it can be recorded as played. **Always present** — a seat is never dropped.
              */
-            player_id: string;
+            player_id: string | null;
             /**
              * Nickname
              * @description The whole handle, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``).
              *
-             *     ``null`` where ``users`` no longer has this account. The seat stays: dropping it would publish a three-person doubles game, and the screen has a side to name instead.
+             *     ``null`` where ``users`` no longer has this account, and on an open seat. The seat stays: dropping it would publish a three-person doubles game, and the screen has a side to name instead.
              */
             nickname?: string | null;
         };
@@ -6294,7 +6336,7 @@ export interface components {
              * Code
              * @description What happened, as a machine code the client renders a sentence from. Eight: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**.
              *
-             *     **A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news either way — and a lapse is still not a decline, which is what `values.departure` keeps apart.
+             *     **A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news each way — and a lapse is still not a decline, which is what `values.departure` keeps apart. Somebody **leaving a game they had agreed to** is the third way, since ADR-0162, and the one whose actor was a member until this very line.
              *
              *     **A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.
              *
@@ -6316,7 +6358,7 @@ export interface components {
             actor_id: string | null;
             /**
              * Values
-             * @description What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED` or `LAPSED`; the three plan codes each carry `value` — the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED` and `GAME_PLAYED` carry nothing.
+             * @description What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the three plan codes each carry `value` — the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED` and `GAME_PLAYED` carry nothing.
              */
             values: {
                 [key: string]: string;
@@ -8124,6 +8166,8 @@ export interface operations {
              * @description `seat_already_answered` — you have answered this one. **Not idempotent, deliberately**: *yes* after *no* is a different answer and not a repeat of one.
              *
              *     `answer_window_has_passed` — your day ran out. The seat already reads as lapsed and may have been offered to somebody else, so an answer that resurrected it would contradict a card the platform has already drawn.
+             *
+             *     `game_moment_has_passed` — **on a court somebody left**, the moment the plan agreed has passed, so a yes now would seat you into a game whose moment is gone. `game_is_history` — that game has happened, or never will. Neither is reachable on a court that was never a game.
              */
             409: {
                 headers: {
@@ -8177,6 +8221,8 @@ export interface operations {
              * @description `seat_already_answered` — you have answered this one. **Not idempotent, deliberately**: *yes* after *no* is a different answer and not a repeat of one.
              *
              *     `answer_window_has_passed` — your day ran out. The seat already reads as lapsed and may have been offered to somebody else, so an answer that resurrected it would contradict a card the platform has already drawn.
+             *
+             *     `game_moment_has_passed` — **on a court somebody left**, the moment the plan agreed has passed, so a yes now would seat you into a game whose moment is gone. `game_is_history` — that game has happened, or never will. Neither is reachable on a court that was never a game.
              */
             409: {
                 headers: {
@@ -8270,6 +8316,8 @@ export interface operations {
              *     `accepted_player_may_not_be_removed` — a court that dropped somebody who is already in.
              *
              *     `challenge_is_over` — this challenge has ended.
+             *
+             *     `game_moment_has_passed`, `game_is_history` — **on a court somebody left**: the game's agreed moment has passed, or the game has happened or never will, so nobody may be seated into it. Neither is reachable on a court that was never a game.
              */
             409: {
                 headers: {
@@ -8337,7 +8385,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `not_a_half_built_line_up` — this challenge has some other end already. **One code for five standings**, because they are one sentence: `AWAITING_ANSWERS` ends itself when the clocks run out, `ON` has become a game, and the three endings have ended. */
+            /** @description `not_a_half_built_line_up` — this challenge has some other end already. **One code for five standings**, because they are one sentence: `AWAITING_ANSWERS` ends itself when the clocks run out, `ON` has become a game, and the three endings have ended. **And for a court somebody left**, which is half built again and is refused here all the same: its exit is calling the game off, which reaches the game's record and is not this route. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -8353,6 +8401,81 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    leave_game_api_v1_challenges__challenge_id__departure_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                challenge_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Your seat is open again, and the challenge as it now stands at `LINE_UP_INCOMPLETE`. The game survives with that seat empty. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeSchema"];
+                };
+            };
+            /** @description `account_held` — **your** account is under a live hold. A departure writes a line into a room other people are in, which is reach. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `challenge_not_found` — no challenge of **yours** has that id, or you hold no **accepted** seat on it. One code for three cases: it does not exist, you are not on its court, or your seat is awaiting, declined, lapsed or already left — because a departure is the one act whose refusal must not confirm that you *were* on this court a moment ago. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `not_a_game_yet` — this court has not become a game. Leaving a half-built court is a decline, and it is already given. **One code for two standings**, `AWAITING_ANSWERS` and `LINE_UP_INCOMPLETE`, on a court that was never a game.
+             *
+             *     `challenge_is_over` — this challenge has ended.
+             *
+             *     `game_is_history` — the game has happened, or its entry window closed on silence. The line-up is the record of an evening, and nothing on it moves.
+             *
+             *     `game_moment_has_passed` — the moment the plan agreed has passed. Leaving would mean nothing now, and a no-show cannot vacate a seat to block the result.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `challenge_gates_unavailable` — a safety gate could not be read, so nothing was minted. Transient and about the platform: retry the same request. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -8758,6 +8881,8 @@ export interface operations {
              *     `your_side_has_already_answered` — one score per side. The cap is what bounds an argument to two rounds, and what makes silence safe to read as agreement.
              *
              *     `the_other_side_has_answered` — correcting is free until they respond and not afterwards. `acceptance.agreed_at` is when they did, so the sentence a player reads need not be vague about it.
+             *
+             *     `the_court_has_an_open_seat` — somebody left and nobody has filled their seat, so there is no court to have played on. Fill it, or let the window close.
              */
             409: {
                 headers: {

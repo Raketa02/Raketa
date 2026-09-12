@@ -62,7 +62,8 @@ from app.bootstrap.composition import (
     build_mutual_challenge_minting,
     build_open_challenge_query,
     build_origin_search_query,
-    build_planned_game_opening,
+    build_planned_game_handover,
+    build_seatable_game_query,
     build_pass_ledger,
     build_play_intent_declaration_repository,
     build_photo_storage,
@@ -440,7 +441,8 @@ async def read_paths(
             handles=court_handles,
             uow=uow,
             clock=clock,
-            planned_games=build_planned_game_opening(session),
+            planned_games=build_planned_game_handover(session),
+            games=build_seatable_game_query(session),
         ),
         decline=DeclineSeat(
             challenges=challenges, handles=court_handles, uow=uow, clock=clock
@@ -454,6 +456,7 @@ async def read_paths(
             open_challenges=build_open_challenge_query(session),
             origins=build_origin_search_query(session),
             safety=build_court_safety(session),
+            games=build_seatable_game_query(session),
             uow=uow,
             clock=clock,
         ),

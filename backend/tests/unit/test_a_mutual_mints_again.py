@@ -47,7 +47,7 @@ from app.bootstrap.composition import (
     build_event_publisher,
     build_game_repository,
     build_open_challenge_query,
-    build_planned_game_opening,
+    build_planned_game_handover,
     build_settled_game_query,
 )
 from app.engines.matchfit.core import SearchMode
@@ -114,7 +114,7 @@ def _mint(
         settled_games=settled_games or build_settled_game_query(session),
         safety=a_safe_court([ALICE, BOB]),
         clock=FrozenClock(at),
-        planned_games=build_planned_game_opening(session),
+        planned_games=build_planned_game_handover(session),
     )
 
 

@@ -105,10 +105,13 @@ class GamesSettledCourts:
             # court the same walk on every process (``docs/adr/0105``).
             # ``counterparts_of`` is a set, so the order is taken from the
             # seatings rather than from it.
+            # A played game has every seat filled — a score is refused on a
+            # court with one open (``docs/adr/0162``) — so the ``None`` arm
+            # is the type's and drops nobody.
             others=tuple(
                 seating.player_id
                 for seating in game.line_up.seatings
-                if seating.player_id != player_id
+                if seating.player_id is not None and seating.player_id != player_id
             ),
             played_at=played_at,
         )

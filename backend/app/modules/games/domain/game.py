@@ -13,6 +13,14 @@ There is no sweep, because there is nothing for one to correct — and no
 ``ResultConfirmed`` event, because a derived standing has exactly one place to be
 true.
 
+**The line-up is frozen until somebody leaves it** (``docs/adr/0162``). Two
+acts move it and both are told by ``challenges`` in the transaction of the act
+that caused them: ``vacate`` opens one seat, and ``reseat`` replaces the whole
+court once a completed line-up arrives for it. Neither moves ``planned_at`` —
+it keeps meaning *when it became a game* — and neither is a standing: a court
+with an open seat is still awaiting its entry. What an open seat changes is who
+may act, and that a result is refused until the seat is filled.
+
 **One aggregate per game and never one per player.** Whether you won is a
 property of the game and of which side you were on; a per-player record would be
 four copies of one score, and the day two of them disagreed there would be
@@ -30,7 +38,7 @@ from dataclasses import dataclass, field
 from typing import Iterable
 from uuid import UUID
 
-from app.kernel import Instant, Sport, instant
+from app.kernel import Instant, Sport, instant, invariant
 from app.modules.games.domain.answering import (
     ScorePutToASide,
     score_put_to_a_side,
@@ -39,7 +47,9 @@ from app.modules.games.domain.errors import (
     AcceptingYourOwnSidesResult,
     AResultMustCarryAScore,
     NobodyHasProposedAResult,
+    TheCourtHasAnOpenSeat,
     TheEntryWindowHasClosed,
+    TheGameIsNotOpenToSeating,
     TheOtherSideHasAnswered,
     TheResultIsAlreadyAccepted,
     TheResultIsSettled,
@@ -49,10 +59,12 @@ from app.modules.games.domain.errors import (
 from app.modules.games.domain.events import (
     GamePlanned,
     GamePlayed,
+    LineUpReseated,
     ResultAccepted,
     ResultCorrected,
     ResultCountered,
     ResultProposed,
+    SeatVacated,
 )
 from app.modules.games.domain.lineup import GameKind, LineUp, GameSide
 from app.modules.games.domain.results import Outcome, Score
@@ -148,6 +160,52 @@ class Game:
         )
         return game
 
+    # -- the line-up ------------------------------------------------------
+
+    def vacate(self, player_id: UUID, *, occurred_at: Instant) -> None:
+        """Somebody on the court leaves the game. **Their seat opens.**
+
+        Told by ``challenges`` in the transaction of the departure, which has
+        already asked the moment guard; what this refuses is the aggregate's
+        own half of it — a game that is not awaiting its entry has a line-up
+        that is the record of an evening, and nothing on it moves — and somebody
+        who is not on the court, which is the one refusal shared with every act
+        here.
+        """
+
+        self._side_of(player_id)
+        if self.standing_at(occurred_at) is not GameStanding.AWAITING_ENTRY:
+            raise TheGameIsNotOpenToSeating()
+        self._record_that(
+            SeatVacated(
+                game_id=self.game_id, player_id=player_id, occurred_at=occurred_at
+            )
+        )
+
+    def reseat(self, line_up: LineUp, *, occurred_at: Instant) -> None:
+        """A completed line-up arrived for a court with a seat open. **This is
+        the court now.**
+
+        The whole arrangement replaces the whole arrangement: an accepted player
+        may have crossed the net as well as a newcomer having sat down. The
+        court must be **complete** — a re-seat is what a completed line-up
+        hands over — and the game must still be awaiting its entry. Called only
+        on a court with a seat open; a court standing whole is answered
+        ``None`` one layer up rather than re-seated with itself.
+        """
+
+        invariant(line_up.is_complete, "a re-seat with a seat still open")
+        invariant(not self.line_up.is_complete, "a re-seat of a court standing whole")
+        if self.standing_at(occurred_at) is not GameStanding.AWAITING_ENTRY:
+            raise TheGameIsNotOpenToSeating()
+        self._record_that(
+            LineUpReseated(
+                game_id=self.game_id,
+                seatings=line_up.codes,
+                occurred_at=occurred_at,
+            )
+        )
+
     # -- the result -------------------------------------------------------
 
     def state_result(
@@ -181,6 +239,12 @@ class Game:
         if self.played_at is None:
             if occurred_at >= entry_closes_at(self.planned_at):
                 raise TheEntryWindowHasClosed()
+            if not self.line_up.is_complete:
+                # **A score on a court with a seat open is refused**
+                # (``docs/adr/0162`` §3): a side the engine cannot price, and
+                # a seat with no outcome to give anyone. Asked after the
+                # window, so a ghost is told it is a ghost.
+                raise TheCourtHasAnOpenSeat()
             self._record_that(
                 GamePlayed(game_id=self.game_id, said_by=by, occurred_at=occurred_at)
             )
@@ -329,9 +393,9 @@ class Game:
     def outcome_for(self, player_id: UUID, *, now: Instant) -> Outcome | None:
         """Win or loss for one of the people who played. **Never a draw.**
 
-        ``None`` for anybody who was not on this court, and for every standing
-        but ``CONFIRMED`` — an unscored game moves nobody's Level and has no
-        outcome to give anyone.
+        ``None`` for anybody who is not on this court — a leaver included — and
+        for every standing but ``CONFIRMED``: an unscored game moves nobody's
+        Level and has no outcome to give anyone.
         """
 
         side = self.line_up.side_of(player_id)
@@ -428,6 +492,10 @@ class Game:
             self.window = None if event.window is None else Window(event.window)
             self.line_up = LineUp.from_codes(event.seatings)
             self.planned_at = instant(event.occurred_at)
+        elif isinstance(event, SeatVacated):
+            self.line_up = self.line_up.vacated_by(event.player_id)
+        elif isinstance(event, LineUpReseated):
+            self.line_up = LineUp.from_codes(event.seatings)
         elif isinstance(event, GamePlayed):
             self.played_at = instant(event.occurred_at)
         elif isinstance(event, (ResultProposed, ResultCorrected, ResultCountered)):

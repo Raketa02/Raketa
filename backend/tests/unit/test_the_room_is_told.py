@@ -24,6 +24,7 @@ from app.modules.challenges.domain.events import (
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
+    SeatLeft,
     SeatsInvited,
 )
 from app.modules.conversations.application.membership import Membership
@@ -33,10 +34,12 @@ from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.games.domain.events import (
     GamePlanned,
     GamePlayed,
+    LineUpReseated,
     ResultAccepted,
     ResultCorrected,
     ResultCountered,
     ResultProposed,
+    SeatVacated,
 )
 from app.modules.plans.domain.events import (
     DayRecorded,
@@ -57,9 +60,12 @@ EVERY_PUBLISHED_EVENT = (
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
+    SeatLeft,
     SeatsInvited,
     ChallengeWithdrawn,
     GamePlanned,
+    SeatVacated,
+    LineUpReseated,
     GamePlayed,
     ResultProposed,
     ResultCorrected,
@@ -93,16 +99,19 @@ def test_each_event_that_publishes_nothing_names_its_reason(telling):
     assert telling.why_nothing
 
 
-def test_the_eight_that_write_nothing_are_the_eight_the_words_names():
+def test_the_ten_that_write_nothing_are_the_ten_the_words_names():
     """``the-words.md`` §23.1 is headed *the six events that publish nothing* and
-    its own table names eight of them, four grouped on one row as *the result
-    argument*. The discrepancy is in the source; this asserts the events."""
+    its own table names ten of them, four grouped on one row as *the result
+    argument* and two on one row as *the game's line-up moving*. The
+    discrepancy is in the source; this asserts the events."""
 
     assert {telling.event for telling in WRITES_NOTHING} == {
         ChallengeSent,
         ChallengeOpenedFromMutualInterest,
         ChallengeWithdrawn,
         GamePlanned,
+        SeatVacated,
+        LineUpReseated,
         ResultProposed,
         ResultCorrected,
         ResultCountered,
@@ -162,11 +171,19 @@ def test_the_send_reaches_nothing_because_no_room_exists_yet():
     assert ChallengeSent not in TOLD_ABOUT
 
 
-def test_a_seat_leaving_is_one_code_told_by_two_events():
+def test_a_seat_leaving_is_one_code_told_by_three_events():
+    """``docs/adr/0162`` §5 — a no, a silence, and somebody leaving a game they
+    had agreed to. The two events ``games`` writes for the same departure reach
+    the room not at all: a room told twice would write a second line."""
+
     declined = next(t for t in TELLINGS if t.event is SeatDeclined)
     lapsed = next(t for t in TELLINGS if t.event is SeatLapsed)
+    left = next(t for t in TELLINGS if t.event is SeatLeft)
 
-    assert declined.line is lapsed.line is SystemLineCode.SEAT_LEFT
+    assert declined.line is lapsed.line is left.line is SystemLineCode.SEAT_LEFT
+    assert SeatLeft in TOLD_ABOUT
+    for event in (SeatVacated, LineUpReseated):
+        assert event not in TOLD_ABOUT
 
 
 def test_every_plan_event_writes_a_line_and_each_writes_its_own():

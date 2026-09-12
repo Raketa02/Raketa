@@ -88,7 +88,7 @@ class _Remembering:
 
 
 class _RecordingGames:
-    """A ``PlannedGameOpening`` that records what it was asked to open."""
+    """A ``PlannedGameHandover`` that records what it was asked to open."""
 
     def __init__(self) -> None:
         self.opened: list[dict] = []

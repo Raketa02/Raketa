@@ -2001,7 +2001,7 @@
             }
           },
           "409": {
-            "description": "`seat_already_answered` \u2014 you have answered this one. **Not idempotent, deliberately**: *yes* after *no* is a different answer and not a repeat of one.\n\n`answer_window_has_passed` \u2014 your day ran out. The seat already reads as lapsed and may have been offered to somebody else, so an answer that resurrected it would contradict a card the platform has already drawn.",
+            "description": "`seat_already_answered` \u2014 you have answered this one. **Not idempotent, deliberately**: *yes* after *no* is a different answer and not a repeat of one.\n\n`answer_window_has_passed` \u2014 your day ran out. The seat already reads as lapsed and may have been offered to somebody else, so an answer that resurrected it would contradict a card the platform has already drawn.\n\n`game_moment_has_passed` \u2014 **on a court somebody left**, the moment the plan agreed has passed, so a yes now would seat you into a game whose moment is gone. `game_is_history` \u2014 that game has happened, or never will. Neither is reachable on a court that was never a game.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2070,7 +2070,7 @@
             }
           },
           "409": {
-            "description": "`seat_already_answered` \u2014 you have answered this one. **Not idempotent, deliberately**: *yes* after *no* is a different answer and not a repeat of one.\n\n`answer_window_has_passed` \u2014 your day ran out. The seat already reads as lapsed and may have been offered to somebody else, so an answer that resurrected it would contradict a card the platform has already drawn.",
+            "description": "`seat_already_answered` \u2014 you have answered this one. **Not idempotent, deliberately**: *yes* after *no* is a different answer and not a repeat of one.\n\n`answer_window_has_passed` \u2014 your day ran out. The seat already reads as lapsed and may have been offered to somebody else, so an answer that resurrected it would contradict a card the platform has already drawn.\n\n`game_moment_has_passed` \u2014 **on a court somebody left**, the moment the plan agreed has passed, so a yes now would seat you into a game whose moment is gone. `game_is_history` \u2014 that game has happened, or never will. Neither is reachable on a court that was never a game.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2169,7 +2169,7 @@
             }
           },
           "409": {
-            "description": "`court_origin_not_found` \u2014 no search of yours showed all of the people you are newly asking. One code for four cases, on purpose. **The people already on the court are not looked up in it**, so a court that keeps them is not refused for them.\n\n`line_up_no_longer_sendable` \u2014 somebody on this court can no longer be invited to it. **Which one is deliberately not said, and neither is why.** Re-read the challenge and the origin search.\n\n`open_challenge_stands` \u2014 two people on this court already have a game between them **in any sport**, and it is not this one: this court's own pairs are excepted, and no other challenge is.\n\n`nobody_new_to_invite` \u2014 every seat on the court you posted is already taken by somebody in the game. **The court is not grown, and nothing is written.**\n\n`nobody_is_asked_twice` \u2014 somebody on that court has already answered this challenge. Unreachable through the builder, which does not offer them; this is the aggregate's backstop.\n\n`accepted_player_may_not_be_removed` \u2014 a court that dropped somebody who is already in.\n\n`challenge_is_over` \u2014 this challenge has ended.",
+            "description": "`court_origin_not_found` \u2014 no search of yours showed all of the people you are newly asking. One code for four cases, on purpose. **The people already on the court are not looked up in it**, so a court that keeps them is not refused for them.\n\n`line_up_no_longer_sendable` \u2014 somebody on this court can no longer be invited to it. **Which one is deliberately not said, and neither is why.** Re-read the challenge and the origin search.\n\n`open_challenge_stands` \u2014 two people on this court already have a game between them **in any sport**, and it is not this one: this court's own pairs are excepted, and no other challenge is.\n\n`nobody_new_to_invite` \u2014 every seat on the court you posted is already taken by somebody in the game. **The court is not grown, and nothing is written.**\n\n`nobody_is_asked_twice` \u2014 somebody on that court has already answered this challenge. Unreachable through the builder, which does not offer them; this is the aggregate's backstop.\n\n`accepted_player_may_not_be_removed` \u2014 a court that dropped somebody who is already in.\n\n`challenge_is_over` \u2014 this challenge has ended.\n\n`game_moment_has_passed`, `game_is_history` \u2014 **on a court somebody left**: the game's agreed moment has passed, or the game has happened or never will, so nobody may be seated into it. Neither is reachable on a court that was never a game.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2258,7 +2258,96 @@
             }
           },
           "409": {
-            "description": "`not_a_half_built_line_up` \u2014 this challenge has some other end already. **One code for five standings**, because they are one sentence: `AWAITING_ANSWERS` ends itself when the clocks run out, `ON` has become a game, and the three endings have ended.",
+            "description": "`not_a_half_built_line_up` \u2014 this challenge has some other end already. **One code for five standings**, because they are one sentence: `AWAITING_ANSWERS` ends itself when the clocks run out, `ON` has become a game, and the three endings have ended. **And for a court somebody left**, which is half built again and is refused here all the same: its exit is calling the game off, which reaches the game's record and is not this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/challenges/{challenge_id}/departure": {
+      "post": {
+        "tags": [
+          "challenges"
+        ],
+        "summary": "Leave the game",
+        "description": "**You are out of a game you had agreed to.** Your seat reopens on the challenge, the game survives with that seat drawn empty, and the people still on it keep what they agreed \u2014 the plan, the room, the record. Anyone still on the court may fill your seat the way a half-built court is filled, and the newcomer's yes re-seats the **same** game.\n\n**Any player on the court, the organiser included**, while the game is awaiting its entry and its agreed moment is ahead \u2014 or no moment is agreed yet. Once the moment has passed, leaving means nothing and is refused.\n\n**You are out of this court's own pool for as long as it stands.** Nobody is asked twice on one challenge; being asked again is a **new** challenge. Every other search reaches you at once \u2014 the pair rule released you the moment you left.\n\n**The others are told**: the room draws *{name} left \u2014 that seat is open again*, and your own list and inbox no longer hold the game or the room.\n\n**Two people may leave**, and two seats may be open. Nothing here prices a departure yet \u2014 it is recorded, with its moment, and that is all.\n\n**A noun and not a verb**, like the withdrawal: what this creates is the departure.",
+        "operationId": "leave_game_api_v1_challenges__challenge_id__departure_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "challenge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Challenge Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Your seat is open again, and the challenge as it now stands at `LINE_UP_INCOMPLETE`. The game survives with that seat empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeSchema"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`challenge_not_found` \u2014 no challenge of **yours** has that id, or you hold no **accepted** seat on it. One code for three cases: it does not exist, you are not on its court, or your seat is awaiting, declined, lapsed or already left \u2014 because a departure is the one act whose refusal must not confirm that you *were* on this court a moment ago.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`account_held` \u2014 **your** account is under a live hold. A departure writes a line into a room other people are in, which is reach.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`not_a_game_yet` \u2014 this court has not become a game. Leaving a half-built court is a decline, and it is already given. **One code for two standings**, `AWAITING_ANSWERS` and `LINE_UP_INCOMPLETE`, on a court that was never a game.\n\n`challenge_is_over` \u2014 this challenge has ended.\n\n`game_is_history` \u2014 the game has happened, or its entry window closed on silence. The line-up is the record of an evening, and nothing on it moves.\n\n`game_moment_has_passed` \u2014 the moment the plan agreed has passed. Leaving would mean nothing now, and a no-show cannot vacate a seat to block the result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`challenge_gates_unavailable` \u2014 a safety gate could not be read, so nothing was minted. Transient and about the platform: retry the same request.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2851,7 +2940,7 @@
             }
           },
           "409": {
-            "description": "Everything above, plus:\n\n`your_side_has_already_answered` \u2014 one score per side. The cap is what bounds an argument to two rounds, and what makes silence safe to read as agreement.\n\n`the_other_side_has_answered` \u2014 correcting is free until they respond and not afterwards. `acceptance.agreed_at` is when they did, so the sentence a player reads need not be vague about it.",
+            "description": "Everything above, plus:\n\n`your_side_has_already_answered` \u2014 one score per side. The cap is what bounds an argument to two rounds, and what makes silence safe to read as agreement.\n\n`the_other_side_has_answered` \u2014 correcting is free until they respond and not afterwards. `acceptance.agreed_at` is when they did, so the sentence a player reads need not be vague about it.\n\n`the_court_has_an_open_seat` \u2014 somebody left and nobody has filled their seat, so there is no court to have played on. Fill it, or let the window close.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8440,10 +8529,11 @@
         "enum": [
           "ACCEPTED",
           "DECLINED",
-          "LAPSED"
+          "LAPSED",
+          "LEFT"
         ],
         "title": "SeatAnswer",
-        "description": "What the person in this seat did about being asked.\n\nThree values and not four: *awaiting* is the absence of an answer, and giving\nit a name would make ``None`` and ``AWAITING`` two spellings of one state\nwith nothing to choose between them.\n\n``LAPSED`` is recorded by the sweep and is **never** a decline. They do the\nsame thing to the line-up and they are different facts: *answers challenges*\nis a Strand over challenges that got an answer inside their window, and it is\nunmeasurable if silence is filed as judgement."
+        "description": "What the person in this seat did about being asked \u2014 or, having said yes,\nabout the game.\n\nFour values and not five: *awaiting* is the absence of an answer, and giving\nit a name would make ``None`` and ``AWAITING`` two spellings of one state\nwith nothing to choose between them.\n\n``LAPSED`` is recorded by the sweep and is **never** a decline. They do the\nsame thing to the line-up and they are different facts: *answers challenges*\nis a Strand over challenges that got an answer inside their window, and it is\nunmeasurable if silence is filed as judgement.\n\n``LEFT`` is the one answer written **over** another (``docs/adr/0162``): an\naccepted seat, on a court whose line-up had completed into a game, whose\noccupant has since left it. It opens the seat exactly as the other two do and\nis neither of them \u2014 leaving a game you agreed to is not declining an\ninvitation, and nothing prices it yet."
       },
       "SeatCardSchema": {
         "properties": {
@@ -8557,9 +8647,17 @@
             "$ref": "#/components/schemas/GameSide"
           },
           "player_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Player Id"
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player Id",
+            "description": "Who holds this seat. ``null`` on a seat somebody has **left** and nobody has filled yet: the seat stays, drawn empty, and the game is awaiting a player before it can be recorded as played. **Always present** \u2014 a seat is never dropped."
           },
           "nickname": {
             "anyOf": [
@@ -8571,7 +8669,7 @@
               }
             ],
             "title": "Nickname",
-            "description": "The whole handle, and **nothing may derive a familiar form from it** \u2014 every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``).\n\n``null`` where ``users`` no longer has this account. The seat stays: dropping it would publish a three-person doubles game, and the screen has a side to name instead."
+            "description": "The whole handle, and **nothing may derive a familiar form from it** \u2014 every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``).\n\n``null`` where ``users`` no longer has this account, and on an open seat. The seat stays: dropping it would publish a three-person doubles game, and the screen has a side to name instead."
           }
         },
         "type": "object",
@@ -8580,7 +8678,7 @@
           "player_id"
         ],
         "title": "SeatingSchema",
-        "description": "One person, on one side. The court is frozen at the plan.\n\n**A handle, and nothing else about them** (``docs/adr/0141``). A Level, a\nband, an area and a run of form are what a *searcher* reads to decide about a\ngame that might happen, and a gate decided they may see them; this is the\nrecord of a game that did, and it re-publishes nobody's profile off the back\nof it. The court is the whole of the permission \u2014 ``GET /games`` answers\nabout games you were on the court of \u2014 so nothing here is re-gated against\nwho is reading."
+        "description": "One position on one side: a person, or a seat somebody has left.\n\n**The court is frozen until somebody leaves it** (``docs/adr/0162``). An\nopen seat is drawn, never dropped \u2014 `player_id` is `null` and the seat keeps\nits place \u2014 so a four with one seat open is still a four and the client\nfolds *Needs a player* from it. Nothing on the wire names that rung.\n\n**A handle, and nothing else about them** (``docs/adr/0141``). A Level, a\nband, an area and a run of form are what a *searcher* reads to decide about a\ngame that might happen, and a gate decided they may see them; this is the\nrecord of a game that did, and it re-publishes nobody's profile off the back\nof it. The court is the whole of the permission \u2014 ``GET /games`` answers\nabout games you were on the court of \u2014 so nothing here is re-gated against\nwho is reading."
       },
       "SendChallengeRequest": {
         "properties": {
@@ -9299,7 +9397,7 @@
           "code": {
             "type": "string",
             "title": "Code",
-            "description": "What happened, as a machine code the client renders a sentence from. Eight: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**.\n\n**A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news either way \u2014 and a lapse is still not a decline, which is what `values.departure` keeps apart.\n\n**A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.\n\n**`PLAN_LOCKED` is the Plan's fourth and it carries no values at all.** The three slots are the value and the room already holds a line for each. It is an act rather than a slot \u2014 a complete plan is one everybody *could* agree, and this says somebody did \u2014 and there is no unlocked code, because a slot moved afterwards keeps the lock and writes its own line.\n\n**There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping \u2014 drawn, not announced."
+            "description": "What happened, as a machine code the client renders a sentence from. Eight: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**.\n\n**A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news each way \u2014 and a lapse is still not a decline, which is what `values.departure` keeps apart. Somebody **leaving a game they had agreed to** is the third way, since ADR-0162, and the one whose actor was a member until this very line.\n\n**A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.\n\n**`PLAN_LOCKED` is the Plan's fourth and it carries no values at all.** The three slots are the value and the room already holds a line for each. It is an act rather than a slot \u2014 a complete plan is one everybody *could* agree, and this says somebody did \u2014 and there is no unlocked code, because a slot moved afterwards keeps the lock and writes its own line.\n\n**There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping \u2014 drawn, not announced."
           },
           "occurred_at": {
             "type": "string",
@@ -9326,7 +9424,7 @@
             },
             "type": "object",
             "title": "Values",
-            "description": "What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED` or `LAPSED`; the three plan codes each carry `value` \u2014 the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED` and `GAME_PLAYED` carry nothing."
+            "description": "What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the three plan codes each carry `value` \u2014 the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED` and `GAME_PLAYED` carry nothing."
           }
         },
         "type": "object",

@@ -30,8 +30,10 @@ court and ending one are different acts and get different permissions. The case
 that decides it is the mutual-born doubles challenge: ``LINE_UP_INCOMPLETE`` from
 birth, both players on side A, and an "organiser" who is only whoever's yes
 arrived second — making that arbitrary tiebreak the only person who can finish
-the four would leave the other looking at a court they can neither complete nor
-leave.
+the four would leave the other looking at a court they could neither complete
+nor leave. **They can leave now** (``docs/adr/0162``), and the same fill is how a
+court somebody left is completed: the organiser's seat is required on the posted
+court only while the organiser is still on it.
 
 **Whole-court, never per-seat, and a refusal writes nothing.** The same rule the
 send keeps and for the same reason: a partial fill that silently dropped one
@@ -59,6 +61,9 @@ from app.modules.challenges.application.court_verification import (
     newly_asked,
     seats_of,
 )
+from app.modules.challenges.application.seat_change import (
+    refuse_a_court_closed_to_seating,
+)
 from app.modules.challenges.application.read_challenges import StandingChallenge
 from app.modules.challenges.domain.challenge import Challenge, refuse_a_bad_court
 from app.modules.challenges.domain.errors import (
@@ -72,6 +77,7 @@ from app.modules.challenges.domain.ports import (
     OriginSearchQuery,
     PlayerHandles,
 )
+from app.modules.challenges.domain.seatable_game import SeatableGameQuery
 
 
 @final
@@ -86,6 +92,7 @@ class FillSeats(AChallengeOfYours):
         open_challenges: OpenChallengeQuery,
         origins: OriginSearchQuery,
         safety: CourtSafety,
+        games: SeatableGameQuery,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
@@ -93,6 +100,7 @@ class FillSeats(AChallengeOfYours):
             challenges=challenges, handles=handles, uow=uow, clock=clock
         )
         self._origins = origins
+        self._games = games
         self._court = CourtVerification(
             safety=safety, open_challenges=open_challenges
         )
@@ -123,13 +131,22 @@ class FillSeats(AChallengeOfYours):
         #    **order**, exactly as it is on the send.
         refuse_a_bad_court(
             [choice.player_id for choice in command.court],
-            organiser_id=challenge.organiser_id,
+            organiser_id=challenge.organiser_seat_required(at),
         )
 
         # 3. Their own hold, with the same code a search returns. About the
         #    caller and nobody else, so it is asked before a single fact about
         #    another person is read.
         await self._court.refuse_a_held_caller(command.player_id)
+
+        # 3b. On a court that has been a game, and only there: whether its seats
+        #     may still change (``docs/adr/0162`` §4). A game that has happened
+        #     or never will, and one whose agreed moment has passed, both
+        #     refuse — a newcomer seated into *Sunday* on Monday would be seated
+        #     into a game whose moment is gone.
+        await refuse_a_court_closed_to_seating(
+            challenge, at=at, games=self._games
+        )
 
         # 4. The search this fill was built on, for the **newly seated only**.
         #    Everybody already in came from somewhere else, and a plan carrying

@@ -1055,7 +1055,19 @@ where, money, results or the conversation itself belongs here.
   — the same people may be challenged again later, and that is a new challenge.
 - **Seat** — one position on the challenge's court: a **Side** and either an occupant or nothing.
   The seats are a fixed list of `2 × seats_per_side(sport)`, so *which side is short* is a fact
-  the challenge holds rather than one a reader has to count.
+  the challenge holds rather than one a reader has to count. A seat is **open** when nobody is in
+  it, or when its occupant declined, lapsed, or — on a court that has become a **Game** —
+  **left** ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)).
+  The occupant stays on the seat with the answer that emptied it, because the three are three
+  different facts.
+- **Departure** — a player **leaving a game they had agreed to**, before it is played
+  ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)). Lands on the
+  challenge, as a fourth answer, `LEFT`, written over an accepted seat: the seat reopens, the
+  **Standing** is *Line-up incomplete* again, and the game is told in the same transaction. Any
+  player on the court may leave, the organiser included, while the game awaits its entry and its
+  agreed moment is ahead; after the moment it is refused, so a no-show cannot vacate a seat to
+  block the result. Two may leave. The one who left is out of this court's own pool for good and
+  a stranger to the others again on the instant. **Recorded and not yet scored.**
 - **Organiser** — the player who sent it. They hold a seat like anybody else, and it is
   **accepted from birth**, because they are the one proposing. That is what makes *"every seat
   accepted"* the whole of the completion rule, with no special case for singles.
@@ -1068,6 +1080,8 @@ where, money, results or the conversation itself belongs here.
   one exception, below. A status column would be wrong for the whole gap between a deadline
   passing and a sweep noticing, and it would be the copy that gets believed. *Challenge sent* and
   *Challenge for you* are not two standings — they are one standing read from two sides.
+  `LINE_UP_INCOMPLETE` is reached **after `ON`** too, by a **Departure**: the court is half built
+  again, the pair is held again, and the next completed line-up re-seats the same **Game**.
 - **Withdraw** — the organiser **ending** a half-built line-up, for everybody on it
   ([ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)).
   Legal while the **Standing** is *Line-up incomplete* and nowhere else, because that is the one
@@ -1098,7 +1112,11 @@ where, money, results or the conversation itself belongs here.
 - **A challenge stands as long as somebody other than the organiser is still in it** — accepted,
   or yet to answer. A decline reopens that one seat and disturbs nothing else, because the people
   who already agreed did nothing wrong; but when the last of them is gone, there is nobody left to
-  keep faith with and the challenge is over. Singles gets the right answer for free.
+  keep faith with and the challenge is over. Singles gets the right answer for free. **Unless the
+  court has become a Game** ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)):
+  the organiser alone on a court whose opponent left is a game with a seat to fill, not a send
+  nobody answered, so such a court reaches neither ending by its seats — its exits are a re-seat
+  and calling the game off.
 - **Membership grows one acceptance at a time, and that is the point.** Each accept is
   consequential the moment it happens rather than a step toward a total: it admits one person to a
   conversation that starts as soon as the second player is in it, and grows as the others arrive.
@@ -1201,10 +1219,16 @@ anything about how good anybody is — that is the rating context reading this o
 - **Game** — one arranged game and its result. **Opened by a completed line-up**, in the
   transaction of the acceptance that filled the last seat, and never by a request: nothing a
   client sends can produce one, which is what makes *these people arranged this* a fact rather
-  than a claim. One game per arrangement, for ever.
-- **Line-up** — who played and on which side, **frozen at the plan**. An acceptance is to the
-  game and not to the side, so the membership is settled the moment the last seat accepts;
-  nothing in this context can move anybody afterwards.
+  than a claim. One game per arrangement, for ever — and **re-seated** by the next completed
+  line-up after a **Departure**, same id, same `planned_at`, same plan, same room
+  ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)).
+- **Line-up** — who is on the court and on which side, **frozen until somebody leaves it**
+  ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)). An
+  acceptance is to the game and not to the side, so the membership is settled the moment the last
+  seat accepts; nothing in this context moves anybody on its own. It moves in exactly two told
+  ways: a **Departure** opens one seat, and the next completed line-up **re-seats** the whole
+  court. **An open seat is a seat** — drawn empty, in its place, never dropped — and a result is
+  refused while one is open.
 - **Kind** — **counted** or a **friendly**, stamped when the game is arranged and never derived
   at the end. A friendly is a thing people *choose*: reclassifying a counted game because nobody
   typed a score would hand a player the exact evening they said they did not want, and would

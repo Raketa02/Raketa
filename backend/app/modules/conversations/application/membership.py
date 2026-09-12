@@ -1,18 +1,22 @@
 """**One rule read against two records**, and this is the file it lives in.
 
 *The people who have agreed to be on this court right now* — the challenge's
-accepted seats until the line-up completes, the game's frozen line-up after
-(``docs/adr/0146`` §7). It is one rule rather than two, and what selects the
-record is the room's own nullable ``game_id``: a room that has been told its
-line-up completed reads the game, and every other room reads the challenge.
+accepted seats until the line-up completes, the game's **current** line-up after
+(``docs/adr/0146`` §7, as ``docs/adr/0162`` amended it: a seat can be left and
+re-seated, and the game's line-up is read live either way). It is one rule rather
+than two, and what selects the record is the room's own nullable ``game_id``: a
+room that has been told its line-up completed reads the game, and every other
+room reads the challenge.
 
 **Derived, never stored.** A roster on the conversation would make *who is in
 this* true in a second place, and the first copy to go wrong is the one deciding
 who may read the messages.
 
-**It grows one acceptance at a time and then stops.** A doubles room whose
-line-up is still filling draws the members it has, because a row that drew four
-faces for a two-member room would be drawing the court rather than the room.
+**It grows one acceptance at a time, and a game's room moves with its court.** A
+doubles room whose line-up is still filling draws the members it has, because a
+row that drew four faces for a two-member room would be drawing the court rather
+than the room; a room whose game lost somebody draws the three, and the newcomer
+the moment the re-seat commits.
 
 **Two questions for a whole list, never one per room.** The rooms are split by
 which record answers about them and each side is asked once. *Questions* rather

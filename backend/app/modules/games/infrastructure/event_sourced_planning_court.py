@@ -57,6 +57,10 @@ class EventSourcedPlanningCourt:
         found: dict[UUID, PlannableGame] = {}
         for events in streams.values():
             game = Game.from_history(events)
+            if player_id not in game.line_up.players:
+                # A court they have since left (``docs/adr/0162``). The plan is
+                # the game's, and the game is not theirs to plan any more.
+                continue
             found[game.id] = PlannableGame(
                 planned_at=game.planned_at,
                 open_to_planning=(

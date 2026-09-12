@@ -547,12 +547,28 @@ Rules to preserve:
   `app/modules/games/` is the sixth context and the second event-sourced racket-sport one;
   it adds **no table and no migration**, because the streams live in `event_store` beside
   everybody else's. Four things about it are load-bearing and none of them is obvious from
-  the code alone. **Nothing creates a game over HTTP** — `challenges` calls
-  `PlannedGameOpening` **inline, in the transaction of the acceptance that filled the last
-  seat**, on `MutualChallengeMinting`'s argument: a subscriber would have to re-derive
-  *did this accept complete the line-up* by reading somebody else's aggregate, and the
-  player who taps the last accept would be told the game is on by a screen that cannot yet
-  show it. **The three ends are folded and never stored, and nothing announces one** —
+  the code alone. **Nothing creates a game over HTTP, and nothing moves a seat on one over
+  HTTP either** — `challenges` calls `PlannedGameHandover` **inline, in the transaction of
+  the acceptance that filled the last seat**, on `MutualChallengeMinting`'s argument: a
+  subscriber would have to re-derive *did this accept complete the line-up* by reading
+  somebody else's aggregate, and the player who taps the last accept would be told the game
+  is on by a screen that cannot yet show it. **The line-up is frozen until somebody leaves
+  it** ([ADR-0162](../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)):
+  `POST /challenges/{id}/departure` writes `LEFT` over an accepted seat and hands
+  `vacate_seat` over on the same port in the same transaction, so `SeatVacated` opens the
+  seat on the game — drawn `player_id: null`, never dropped — and the next completed line-up
+  hands over a **re-seat** of the same game (`LineUpReseated`, same id, same `planned_at`)
+  rather than the opening of another. A result is refused while a seat is open
+  (`the_court_has_an_open_seat`), every fold reads the current court, and the pairing read
+  omits the forecast, the split and the stakes until it is whole. The **moment guard** is
+  three ports and no arrow moves: `games` demands `AgreedMoment` of the Plan in its own words
+  (signed in `plans/infrastructure/`, contracted on `game_demands.py`), publishes
+  `SeatableCourt` (`games_demands.py`), and `challenges` reads it through its own
+  `SeatableGameQuery` — on the departure, the fill and the acceptance, and only on a court
+  that has been a game. The challenge folds one fact beside its seats for this,
+  `game_opened`, off `SeatLeft`, so a court the organiser is alone on is a game with a seat
+  to fill rather than a lapse; withdraw on such a court is refused until #417 gives the game
+  an end of its own. **The three ends are folded and never stored, and nothing announces one** —
   there is no `ResultConfirmed`, no sweep and no job, because a derived standing has
   exactly one place to be true; *silence confirms* is a clock passing, so the test for it
   advances a clock and there is deliberately no method called `confirm`. **One route
@@ -625,9 +641,10 @@ Rules to preserve:
   two part company at row one because the opening event writes no entry. The lock is the
   one thing this suite cannot exercise: SQLite renders no `FOR UPDATE` and runs one
   connection, so that path meets Postgres or nothing. **Membership is derived, never
-  stored** — the challenge's accepted seats until the line-up completes, the game's frozen
-  line-up after, one rule read against two records, and a stored roster would be the copy
-  that decides who may read the messages. **Two shapes ride one stream and no sentence is
+  stored** — the challenge's accepted seats until the line-up completes, the game's
+  **current** line-up after (ADR-0162: a seat can be left and re-seated, and the roster reads
+  the game live either way), one rule read against two records, and a stored roster would be
+  the copy that decides who may read the messages. **Two shapes ride one stream and no sentence is
   ever stored**: a Message is content, a system line is a code and its values, and `values`
   never repeats what membership already says, so a corrected handle fixes the whole backlog —
   and **the read resolves a face for everybody the page names, not only for the roster**
@@ -1032,9 +1049,12 @@ tests.
   told by and reads from; and `plan_demands.py` holds the one fact a **plan** demands about
   a *person*. There is deliberately no *conversations provider* and no *plans provider*
   register, and there never will be: a conversation is told and tells nothing, and nothing
-  on this side of the wire reads a plan — `games` may not import it, and the card ladder
-  that reads one is the client's `domain/`. Neither has a consumer, so neither publishes a
-  port. **The Plan's other read is on somebody else's register**, and that is the rule
+  on this side of the wire reads a plan **through a port the Plan declares** — `games` may
+  not import it, and the card ladder that reads one is the client's `domain/`. The one fact
+  `games` does read off a plan, its agreed moment, is `games`' **own** demand
+  (`AgreedMoment`, on `game_demands.py`) that the Plan's adapter signs — the consumer
+  contracts its own demand, which is the rule below from the other side (ADR-0162 §4).
+  Neither has a consumer of a port it declares, so neither publishes one. **The Plan's other read is on somebody else's register**, and that is the rule
   rather than an exception: *is this player on this game's court, and is that game still
   open to planning* is `games`' question about `games`' record, so `PlanningCourt` is
   published there and contracted on `games_demands.py` — a consumer contracting its own

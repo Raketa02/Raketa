@@ -358,8 +358,10 @@ already given, and §8's rules let them be drawn a full court of cards. The clie
 and, for the same reader, none in `LINE_UP_INCOMPLETE` — the same person, released by the same
 rule, drawn two ways.
 
-> **A reader whose own seat has left — declined or lapsed — is drawn no card block, in either
-> live standing.**
+> **A reader whose own seat has left — declined, lapsed or, since
+> [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), left — is drawn no
+> card block, in either live standing.** A seat that left a game is a seat that left, and the
+> pair rule releases on it as on a decline (§8 amended 2026-09-12, consistently).
 
 **Two reasons, and the second is the stronger.** The card exists to price somebody you are about to
 say `I'm in` or `Not this time` about, so a reader who has left has nothing for it to do. And the

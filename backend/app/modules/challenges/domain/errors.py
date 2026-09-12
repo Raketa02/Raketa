@@ -209,9 +209,11 @@ class TheWithdrawIsTheOrganisers(ForbiddenError):
 
     **The invitee is not offered a smaller version of it either.** Leaving a
     seat you have already answered is refused by ``TheSeatIsAlreadyAnswered``
-    and stays refused; a withdraw is whole-challenge, and a per-seat one would
-    be the organiser removing an accepted player, which
-    ``AnAcceptedPlayerMayNotBeRemoved`` exists to say no to.
+    while the court is being arranged — once it has become a game, leaving is
+    its own act (``docs/adr/0162``) and still not a withdraw; a withdraw is
+    whole-challenge, and a per-seat one would be the organiser removing an
+    accepted player, which ``AnAcceptedPlayerMayNotBeRemoved`` exists to say no
+    to.
     """
 
     code = "withdraw_is_the_organisers"
@@ -255,12 +257,73 @@ class OnlyAHalfBuiltLineUpIsWithdrawn(ConflictError):
     **One code for five standings, deliberately.** They are one sentence — *this
     is not a half-built line-up* — and splitting them would be five ways of
     saying that the caller is looking at a standing it has already been told.
+
+    **And for one more, until #417.** A court that has been a game and had a seat
+    reopened is ``LINE_UP_INCOMPLETE`` too, and it is refused here with the same
+    code (``docs/adr/0162`` §2): its exit is calling the game off, which reaches
+    the game's record and is that ticket's whole subject. A withdraw that ended
+    the challenge and destroyed the room while the game went on standing would
+    be an end nobody on the court was told about.
     """
 
     code = "not_a_half_built_line_up"
 
     def __init__(self) -> None:
         super().__init__("Only a half-built line-up can be withdrawn.")
+
+
+class NotAGameYet(ConflictError):
+    """A departure asked of a court that has not become a game.
+
+    Leaving a half-built court is a **decline**, and it is already given: an
+    invitee who has not answered says no, and one who has is in a court that is
+    still being arranged rather than in a game. The departure is the act for the
+    one standing where nothing else lets a person out — ``ON`` — and it is asked
+    of no other (``docs/adr/0162`` §1).
+
+    **One code for two standings**: ``AWAITING_ANSWERS`` and
+    ``LINE_UP_INCOMPLETE`` are one sentence here — *this is not a game yet*.
+    """
+
+    code = "not_a_game_yet"
+
+    def __init__(self) -> None:
+        super().__init__("This challenge has not become a game yet.")
+
+
+class TheGameIsHistory(ConflictError):
+    """A seat asked to change on a court whose game has happened, or never will.
+
+    The departure, the fill and the acceptance all meet it, on a court that had
+    become a game: after *we played*, and after the entry window closed on
+    silence, the line-up is the record of an evening and nothing on it moves.
+    **Not ``challenge_is_over``**, deliberately: the challenge is still ``ON``
+    and the person is looking at a game, so the refusal names the game.
+    """
+
+    code = "game_is_history"
+
+    def __init__(self) -> None:
+        super().__init__("This game has happened, or never will.")
+
+
+class TheGameMomentHasPassed(ConflictError):
+    """A seat asked to change after the moment the plan agreed.
+
+    Once the agreed moment has passed the game is *Needs result* and leaving
+    means nothing — so it is refused, and a no-show cannot vacate a seat to
+    block the result. The same instant closes the court to a fill and to an
+    acceptance: a newcomer accepting into *Sunday* on Monday joins a game whose
+    moment is gone (``docs/adr/0162`` §4).
+
+    The moment is the **plan's**, read through ``games`` at the guard and
+    stored nowhere on this side.
+    """
+
+    code = "game_moment_has_passed"
+
+    def __init__(self) -> None:
+        super().__init__("The moment this game was agreed for has passed.")
 
 
 class TheChallengeIsOver(ConflictError):

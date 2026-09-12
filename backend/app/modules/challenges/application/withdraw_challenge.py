@@ -6,6 +6,11 @@ game. ``LINE_UP_INCOMPLETE`` — somebody in, a seat open, nobody deciding — n
 ends on its own, and nobody holds an exit: the acceptor is refused by the
 already-answered rule and the organiser has had no act at all. This is that act.
 
+**Except on a court that has been a game** (``docs/adr/0162`` §2), which is
+``LINE_UP_INCOMPLETE`` again once somebody left it and is refused here all the
+same: its exit is calling the game off, which reaches the game's record and is
+#417's. The aggregate holds the refusal.
+
 **Whole-challenge, organiser only, irreversible.** Every one of those is the
 aggregate's to enforce and none of them is re-derived here: this use case knows
 what every act in this context knows — load a challenge of yours, write, fold the

@@ -900,6 +900,8 @@ class HalfBuiltLineUp:
     ``seated_ids`` is everybody live on the court **other than the member
     asking**, in the court's own order, and they are what a fill locks. It
     excludes the member for the reason a search never returns its own searcher.
+    **It may be empty**: a court that has been a game and lost everybody but the
+    filler is still a court with seats to fill (``docs/adr/0162`` §6).
 
     ``answered_and_gone`` is everybody who answered this challenge and holds no
     seat on it any more — the declined and the lapsed. They are released back
@@ -922,11 +924,11 @@ class HalfBuiltLineUp:
             f"somebody both seated and gone from {self.challenge_id}: "
             f"{sorted(set(self.seated_ids) & self.answered_and_gone)}",
         )
-        invariant(
-            bool(self.seated_ids),
-            f"a half-built line-up nobody but the member is on: "
-            f"{self.challenge_id}",
-        )
+        # **Empty is a court the filler is alone on, and it is a real court**
+        # (``docs/adr/0162`` §6): a singles opponent who left leaves the
+        # organiser alone with a game to fill, and a doubles court three people
+        # left the same. It used to be refused here, when ``LINE_UP_INCOMPLETE``
+        # needed a second person; a court that has been a game does not.
 
 
 @runtime_checkable

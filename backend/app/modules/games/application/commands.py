@@ -1,4 +1,4 @@
-"""What a caller may ask this context to do. **Three commands, and no flags.**
+"""What a caller may ask this context to do. **Four commands, and no flags.**
 
 Each is one sentence a player could say. There is no *kind* on the result
 command deciding between proposing, correcting and countering: which of the three
@@ -25,6 +25,15 @@ class OpenPlannedGameCommand:
     counted: bool
     window: str | None
     line_up: Sequence[tuple[str, UUID]]
+
+
+@dataclass(frozen=True, slots=True)
+class VacateSeatCommand:
+    """Somebody left the game this challenge became. ``challenges`` sends this
+    in the transaction of the departure, and nothing else does."""
+
+    challenge_id: UUID
+    player_id: UUID
 
 
 @dataclass(frozen=True, slots=True)

@@ -55,6 +55,7 @@ from app.modules.challenges.domain.errors import (
     CannotChallengeYourself,
     NobodyIsAskedTwice,
     NobodyNewToInvite,
+    NotAGameYet,
     NotYourSeat,
     OnePersonToASeat,
     OnlyAHalfBuiltLineUpIsWithdrawn,
@@ -72,6 +73,7 @@ from app.modules.challenges.domain.events import (
     SeatAccepted,
     SeatDeclined,
     SeatLapsed,
+    SeatLeft,
     SeatsInvited,
 )
 from app.modules.challenges.domain.origins import SentFromSearch, SentOutsideASearch
@@ -1517,9 +1519,13 @@ def test_every_court_that_has_ended_can_say_when_and_every_one_that_stands_canno
 
     updated = at(70)
     for sport in (Sport.TENNIS, Sport.PADEL):
-        for seats in _every_arrangement_of(sport):
+        for seats, game_opened in _every_arrangement_of(sport):
             standing = standing_of(
-                seats, organiser_id=ORGANISER, now=INSIDE, withdrawn=False
+                seats,
+                organiser_id=ORGANISER,
+                now=INSIDE,
+                withdrawn=False,
+                game_opened=game_opened,
             )
             ended = ended_at_of(
                 seats,
@@ -1527,6 +1533,7 @@ def test_every_court_that_has_ended_can_say_when_and_every_one_that_stands_canno
                 now=INSIDE,
                 updated_at=updated,
                 withdrawn_at=None,
+                game_opened=game_opened,
             )
 
             assert (ended is not None) == (standing in ENDED), (standing, seats)
@@ -1537,7 +1544,7 @@ def test_a_withdrawal_is_dated_by_the_act_whatever_the_seats_say():
     instant no arrangement of the seats can argue with."""
 
     for sport in (Sport.TENNIS, Sport.PADEL):
-        for seats in _every_arrangement_of(sport):
+        for seats, game_opened in _every_arrangement_of(sport):
             assert (
                 ended_at_of(
                     seats,
@@ -1545,9 +1552,178 @@ def test_a_withdrawal_is_dated_by_the_act_whatever_the_seats_say():
                     now=INSIDE,
                     updated_at=at(70),
                     withdrawn_at=at(30),
+                    game_opened=game_opened,
                 )
                 == at(30)
             ), seats
+
+
+# ---------------------------------------------------------------------------
+# Leaving a game — the line-up is frozen until somebody leaves it (ADR-0162)
+# ---------------------------------------------------------------------------
+
+
+def a_completed_four() -> Challenge:
+    challenge = a_padel_challenge()
+    for who in (ALICE, BOB, CAROL):
+        challenge.accept(who, occurred_at=at(1))
+    assert challenge.standing_at(INSIDE) is Standing.ON
+    return challenge
+
+
+def test_leaving_reopens_the_seat_and_the_court_is_half_built_again():
+    """The seat carries ``LEFT`` with its occupant still on it, the fold
+    re-derives ``LINE_UP_INCOMPLETE`` with no change to its rungs, and the one
+    who left is a stranger to the others again — out of the pair, and out of
+    this court's own pool."""
+
+    challenge = a_completed_four()
+    challenge.leave(CAROL, occurred_at=at(2))
+
+    assert challenge.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+    assert challenge.seat_of(CAROL).answer is SeatAnswer.LEFT
+    assert challenge.players_in_it_at(INSIDE) == {ORGANISER, ALICE, BOB}
+    assert CAROL in challenge.already_asked_at(INSIDE)
+    assert challenge.is_being_arranged_at(INSIDE)
+    assert isinstance(challenge.pull_events()[-1], SeatLeft)
+
+
+def test_a_court_that_has_been_a_game_says_so_after_the_seat_is_given_away():
+    """**The fact the seats cannot hold.** A re-seat gives the departed's
+    position to somebody else, and a court whose newcomer then declined has no
+    seat left saying it was once a game — so it is folded off ``SeatLeft`` and
+    kept, and ``has_become_a_game_at`` keeps answering yes."""
+
+    challenge = a_completed_four()
+    challenge.leave(CAROL, occurred_at=at(2))
+    challenge.invite(
+        (
+            SeatPlan(side=Side.A, player_id=ORGANISER),
+            SeatPlan(side=Side.A, player_id=ALICE),
+            SeatPlan(side=Side.B, player_id=BOB),
+            invited(STRANGER, Side.B, 4),
+        ),
+        by=ALICE,
+        occurred_at=at(3),
+    )
+    challenge.decline(STRANGER, occurred_at=at(4))
+
+    assert all(seat.answer is not SeatAnswer.LEFT for seat in challenge.seats)
+    rebuilt = replayed(challenge)
+    assert rebuilt.game_opened
+    assert rebuilt.has_become_a_game_at(INSIDE)
+    assert rebuilt.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+
+
+def test_the_organiser_alone_on_a_court_that_has_been_a_game_is_not_a_lapse():
+    """``docs/adr/0162`` §2 — the singles case. Without ``game_opened`` the fold
+    would file the organiser alone as ``LAPSED``; with it, the court is half
+    built and the seat is theirs to fill. And the organiser may leave too."""
+
+    challenge = a_tennis_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+    challenge.leave(ALICE, occurred_at=at(2))
+
+    assert challenge.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+    assert challenge.ended_at(INSIDE) is None
+
+    other = a_tennis_challenge()
+    other.accept(ALICE, occurred_at=at(1))
+    other.leave(ORGANISER, occurred_at=at(2))
+
+    assert other.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+    assert other.players_in_it_at(INSIDE) == {ALICE}
+    assert other.organiser_seat_required(INSIDE) is None
+
+
+def test_two_may_leave_and_the_second_leaves_a_court_already_half_built():
+    challenge = a_completed_four()
+    challenge.leave(BOB, occurred_at=at(2))
+    challenge.leave(CAROL, occurred_at=at(3))
+
+    assert [seat.answer for seat in challenge.seats].count(SeatAnswer.LEFT) == 2
+    assert challenge.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+
+
+def test_only_a_court_that_has_been_a_game_can_be_left():
+    """Leaving a half-built court is a decline, and it is already given; an
+    ended challenge has nobody to leave; and only an accepted seat has anything
+    to leave."""
+
+    arranging = a_padel_challenge()
+    arranging.accept(ALICE, occurred_at=at(1))
+    with pytest.raises(NotAGameYet):
+        arranging.leave(ALICE, occurred_at=INSIDE)
+
+    ended = a_tennis_challenge()
+    ended.decline(ALICE, occurred_at=at(1))
+    with pytest.raises(TheChallengeIsOver):
+        ended.leave(ORGANISER, occurred_at=INSIDE)
+
+    game = a_completed_four()
+    with pytest.raises(NotYourSeat):
+        game.leave(STRANGER, occurred_at=at(2))
+    game.leave(CAROL, occurred_at=at(2))
+    with pytest.raises(NotYourSeat):
+        game.leave(CAROL, occurred_at=at(3))
+
+
+def test_a_court_that_has_been_a_game_is_not_withdrawn_here():
+    """Refused with the withdraw's own code until #417 gives the game an end of
+    its own — a withdraw that ended the challenge while the game stood would be
+    an ending nobody on the court was told about."""
+
+    challenge = a_completed_four()
+    challenge.leave(CAROL, occurred_at=at(2))
+    assert challenge.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+
+    with pytest.raises(OnlyAHalfBuiltLineUpIsWithdrawn):
+        challenge.withdraw(ORGANISER, occurred_at=at(3))
+
+
+def test_the_departed_are_not_asked_again_and_the_seat_goes_to_somebody_new():
+    challenge = a_completed_four()
+    challenge.leave(CAROL, occurred_at=at(2))
+    court = (
+        SeatPlan(side=Side.A, player_id=ORGANISER),
+        SeatPlan(side=Side.A, player_id=ALICE),
+        SeatPlan(side=Side.B, player_id=BOB),
+    )
+
+    with pytest.raises(NobodyIsAskedTwice):
+        challenge.invite(
+            (*court, invited(CAROL, Side.B, 4)), by=ALICE, occurred_at=at(3)
+        )
+    challenge.invite(
+        (*court, invited(STRANGER, Side.B, 4)), by=ALICE, occurred_at=at(3)
+    )
+    challenge.accept(STRANGER, occurred_at=at(4))
+
+    assert challenge.standing_at(INSIDE) is Standing.ON
+    assert CAROL in challenge.already_asked_at(INSIDE)
+
+
+def test_a_court_the_organiser_left_is_filled_without_them():
+    """``refuse_a_bad_court``'s organiser rule is asked only while the organiser
+    is still on the court; once they have left, the court is proposed by nobody
+    and filled by whoever is still on it."""
+
+    challenge = a_completed_four()
+    challenge.leave(ORGANISER, occurred_at=at(2))
+
+    challenge.invite(
+        (
+            invited(STRANGER, Side.A, 4),
+            SeatPlan(side=Side.A, player_id=ALICE),
+            SeatPlan(side=Side.B, player_id=BOB),
+            SeatPlan(side=Side.B, player_id=CAROL),
+        ),
+        by=ALICE,
+        occurred_at=at(3),
+    )
+
+    assert challenge.standing_at(INSIDE) is Standing.AWAITING_ANSWERS
+    assert challenge.organiser_id == ORGANISER
 
 
 # ---------------------------------------------------------------------------
@@ -1569,11 +1745,12 @@ def _asked(side: Side, who, answer: SeatAnswer | None, deadline: Instant) -> Sea
 
 
 #: Every state one seat of a court can be in, as a factory taking the side and
-#: whoever sits there. Six and not five: a seat whose day has run out with no
+#: whoever sits there. Seven and not six: a seat whose day has run out with no
 #: sweep having been past reads as lapsed, and it is a *different* arrangement
 #: from one the sweep recorded — folding both is what makes the enumeration
 #: below an enumeration of the states this context can hold rather than of the
-#: ones it happens to write down.
+#: ones it happens to write down. The seventh is a seat somebody **left**
+#: (``docs/adr/0162``), which exists only on a court that has been a game.
 _SEAT_STATES = (
     lambda side, who: Seat(side=side),
     lambda side, who: _asked(side, who, None, OUTSIDE),
@@ -1581,27 +1758,49 @@ _SEAT_STATES = (
     lambda side, who: _asked(side, who, SeatAnswer.ACCEPTED, OUTSIDE),
     lambda side, who: _asked(side, who, SeatAnswer.DECLINED, OUTSIDE),
     lambda side, who: _asked(side, who, SeatAnswer.LAPSED, OUTSIDE),
+    lambda side, who: _asked(side, who, SeatAnswer.LEFT, OUTSIDE),
+)
+
+#: The organiser's two states: accepted from birth, and — on a court that has
+#: been a game — gone from it. A left seat carries no deadline here because the
+#: organiser was never asked, which is the one such seat the enumeration above
+#: cannot produce.
+_ORGANISER_STATES = (
+    lambda side: Seat(side=side, player_id=ORGANISER, answer=SeatAnswer.ACCEPTED),
+    lambda side: Seat(side=side, player_id=ORGANISER, answer=SeatAnswer.LEFT),
 )
 
 
-def _every_arrangement_of(sport: Sport) -> Iterator[tuple[Seat, ...]]:
-    """Every court this sport can hold, with the organiser on the first seat.
+def _has_a_departure(seats: tuple[Seat, ...]) -> bool:
+    return any(seat.answer is SeatAnswer.LEFT for seat in seats)
+
+
+def _every_arrangement_of(sport: Sport) -> Iterator[tuple[tuple[Seat, ...], bool]]:
+    """Every court this sport can hold, with the organiser on the first seat,
+    **and whether it has been a game**.
 
     The organiser's seat is fixed because it is fixed everywhere: accepted from
-    birth, because they are the one proposing. Every other position takes each
-    of the six states in turn, and a distinct person, so no arrangement here is
-    one the aggregate would have refused for a reason having nothing to do with
-    what is being asked.
+    birth, because they are the one proposing — or left, on a court that became
+    a game. Every other position takes each of the seven states in turn, and a
+    distinct person, so no arrangement here is one the aggregate would have
+    refused for a reason having nothing to do with what is being asked.
+
+    The second half of each pair is the fact the seats cannot hold. A court with
+    a left seat has been a game by construction; a court without one may have
+    been (re-seated since) or not, and both are yielded.
     """
 
     sides = court_sides(sport)
-    organiser = Seat(side=sides[0], player_id=ORGANISER, answer=SeatAnswer.ACCEPTED)
     people = [new_uuid() for _ in sides[1:]]
-    for states in product(_SEAT_STATES, repeat=len(sides) - 1):
-        yield (organiser,) + tuple(
-            state(side, who)
-            for state, side, who in zip(states, sides[1:], people, strict=True)
-        )
+    for organiser in _ORGANISER_STATES:
+        for states in product(_SEAT_STATES, repeat=len(sides) - 1):
+            seats = (organiser(sides[0]),) + tuple(
+                state(side, who)
+                for state, side, who in zip(states, sides[1:], people, strict=True)
+            )
+            yield seats, True
+            if not _has_a_departure(seats):
+                yield seats, False
 
 
 def test_an_event_may_announce_a_conclusion_only_when_the_seats_cannot_reach_it():
@@ -1619,12 +1818,37 @@ def test_an_event_may_announce_a_conclusion_only_when_the_seats_cannot_reach_it(
     """
 
     reachable = {
-        standing_of(seats, organiser_id=ORGANISER, now=INSIDE, withdrawn=False)
+        standing_of(
+            seats,
+            organiser_id=ORGANISER,
+            now=INSIDE,
+            withdrawn=False,
+            game_opened=game_opened,
+        )
         for sport in (Sport.TENNIS, Sport.PADEL)
-        for seats in _every_arrangement_of(sport)
+        for seats, game_opened in _every_arrangement_of(sport)
     }
 
     assert reachable == set(Standing) - {Standing.WITHDRAWN}
+
+
+def test_a_court_that_has_been_a_game_reaches_neither_ending_by_its_seats():
+    """``docs/adr/0162`` §2 — the organiser alone on a court whose opponent left
+    is a game with a seat to fill, not a send nobody answered. Whatever the
+    seats say, such a court folds to one of the three that are not endings."""
+
+    for sport in (Sport.TENNIS, Sport.PADEL):
+        for seats, game_opened in _every_arrangement_of(sport):
+            if not game_opened:
+                continue
+            standing = standing_of(
+                seats,
+                organiser_id=ORGANISER,
+                now=INSIDE,
+                withdrawn=False,
+                game_opened=True,
+            )
+            assert standing not in ENDED, (standing, seats)
 
 
 def test_the_one_event_that_is_not_about_a_seat_is_the_withdrawal():

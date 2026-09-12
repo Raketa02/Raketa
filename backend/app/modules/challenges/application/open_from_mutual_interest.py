@@ -86,7 +86,7 @@ from app.modules.challenges.application.commands import (
 from app.modules.challenges.application.court_safety import CourtSafety
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.errors import TheGatesCouldNotBeEvaluated
-from app.modules.challenges.domain.planned_game import PlannedGameOpening
+from app.modules.challenges.domain.planned_game import PlannedGameHandover
 from app.modules.challenges.domain.ports import (
     ChallengeRepository,
     OpenChallengeQuery,
@@ -108,7 +108,7 @@ class OpenChallengeFromMutualInterest:
         settled_games: SettledGameQuery,
         safety: CourtSafety,
         clock: Clock,
-        planned_games: PlannedGameOpening,
+        planned_games: PlannedGameHandover,
     ) -> None:
         self._challenges = challenges
         self._open_challenges = open_challenges

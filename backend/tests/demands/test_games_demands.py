@@ -57,6 +57,8 @@ from app.modules.games.domain.ports import (
     OpponentVarietyQuery,
     PlanningCourt,
     PlayedOutcome,
+    SeatChange,
+    SeatableCourt,
 )
 from app.modules.games.domain.results import Outcome, Score, SetScore
 from app.modules.games.domain.standing import GameStanding
@@ -215,8 +217,20 @@ async def test_a_counted_game_nobody_agreed_is_an_evening_and_never_evidence(
     one, other = new_uuid(), new_uuid()
 
     game = _planned(line_up=_singles(one, other), at=_ago(days=3))
-    game.state_result(by=one, score=_score((6, 4),), occurred_at=_ago(days=2))
-    game.state_result(by=other, score=_score((4, 6),), occurred_at=_ago(days=2))
+    game.state_result(
+        by=one,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=2),
+    )
+    game.state_result(
+        by=other,
+        score=_score(
+            (4, 6),
+        ),
+        occurred_at=_ago(days=2),
+    )
     await _saved(session, game)
 
     assert game.standing_at(now) is GameStanding.UNSCORED
@@ -277,7 +291,13 @@ async def test_silence_confirms_a_lone_score_when_its_window_closes():
     winner, loser = new_uuid(), new_uuid()
     entered = _ago(days=1)
     game = _planned(line_up=_singles(winner, loser), at=_ago(days=2))
-    game.state_result(by=winner, score=_score((6, 1),), occurred_at=entered)
+    game.state_result(
+        by=winner,
+        score=_score(
+            (6, 1),
+        ),
+        occurred_at=entered,
+    )
 
     a_moment_later = instant(entered + timedelta(minutes=1))
     a_day_later = instant(entered + PROPOSAL_WINDOW)
@@ -308,13 +328,25 @@ async def test_an_acceptance_settles_nothing_until_its_grace_has_passed():
     )
     entered = _ago(days=1)
     game = _planned(line_up=line_up, at=_ago(days=2), sport=Sport.PADEL)
-    game.state_result(by=a_one, score=_score((6, 4),), occurred_at=entered)
+    game.state_result(
+        by=a_one,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=entered,
+    )
     game.accept_result(by=b_one, occurred_at=instant(entered + timedelta(minutes=2)))
 
     inside = instant(entered + timedelta(minutes=3))
     assert game.standing_at(inside) is GameStanding.AWAITING_ANSWER
 
-    game.state_result(by=b_two, score=_score((4, 6),), occurred_at=inside)
+    game.state_result(
+        by=b_two,
+        score=_score(
+            (4, 6),
+        ),
+        occurred_at=inside,
+    )
     assert game.standing_at(instant(entered + ACCEPTANCE_GRACE)) is (
         GameStanding.AWAITING_ANSWER
     )
@@ -334,7 +366,13 @@ async def test_a_counter_with_no_score_is_refused_at_the_aggregate():
 
     one, other = new_uuid(), new_uuid()
     game = _planned(line_up=_singles(one, other), at=_ago(days=1))
-    game.state_result(by=one, score=_score((6, 4),), occurred_at=_ago(hours=2))
+    game.state_result(
+        by=one,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(hours=2),
+    )
 
     with pytest.raises(AResultMustCarryAScore):
         game.state_result(by=other, score=None, occurred_at=_ago(hours=1))
@@ -373,11 +411,29 @@ async def test_each_side_answers_once():
 
     one, other = new_uuid(), new_uuid()
     game = _planned(line_up=_singles(one, other), at=_ago(hours=6))
-    game.state_result(by=one, score=_score((6, 4),), occurred_at=_ago(hours=5))
-    game.state_result(by=other, score=_score((4, 6),), occurred_at=_ago(hours=4))
+    game.state_result(
+        by=one,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(hours=5),
+    )
+    game.state_result(
+        by=other,
+        score=_score(
+            (4, 6),
+        ),
+        occurred_at=_ago(hours=4),
+    )
 
     with pytest.raises(YourSideHasAlreadyAnswered):
-        game.state_result(by=one, score=_score((6, 2),), occurred_at=_ago(hours=3))
+        game.state_result(
+            by=one,
+            score=_score(
+                (6, 2),
+            ),
+            occurred_at=_ago(hours=3),
+        )
 
 
 async def test_nobody_who_did_not_play_may_act_on_the_result():
@@ -388,7 +444,11 @@ async def test_nobody_who_did_not_play_may_act_on_the_result():
 
     with pytest.raises(YouWereNotOnThisCourt):
         game.state_result(
-            by=new_uuid(), score=_score((6, 0),), occurred_at=_ago(hours=1)
+            by=new_uuid(),
+            score=_score(
+                (6, 0),
+            ),
+            occurred_at=_ago(hours=1),
         )
 
 
@@ -403,7 +463,13 @@ async def test_a_ghost_game_may_not_be_resurrected():
     )
 
     with pytest.raises(TheEntryWindowHasClosed):
-        game.state_result(by=one, score=_score((6, 4),), occurred_at=now)
+        game.state_result(
+            by=one,
+            score=_score(
+                (6, 4),
+            ),
+            occurred_at=now,
+        )
 
 
 async def test_a_settled_result_is_final():
@@ -412,12 +478,20 @@ async def test_a_settled_result_is_final():
     one, other = new_uuid(), new_uuid()
     entered = _ago(days=2)
     game = _planned(line_up=_singles(one, other), at=_ago(days=3))
-    game.state_result(by=one, score=_score((6, 4),), occurred_at=entered)
+    game.state_result(
+        by=one,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=entered,
+    )
 
     with pytest.raises(TheResultIsSettled):
         game.state_result(
             by=other,
-            score=_score((4, 6),),
+            score=_score(
+                (4, 6),
+            ),
             occurred_at=instant(entered + PROPOSAL_WINDOW + timedelta(minutes=1)),
         )
 
@@ -464,7 +538,13 @@ async def test_a_friendly_is_never_evidence_and_is_still_an_acquaintance(
     game = _planned(
         line_up=_singles(one, other), at=_ago(days=2), kind=GameKind.FRIENDLY
     )
-    game.state_result(by=one, score=_score((6, 4),), occurred_at=_ago(days=1))
+    game.state_result(
+        by=one,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=1),
+    )
     await _saved(session, game)
 
     counts = await port.counted_games_for([one, other], now=now)
@@ -501,7 +581,13 @@ async def test_the_last_results_are_oldest_first_bounded_and_never_padded(
         )
         game.state_result(
             by=winner,
-            score=_score((6, 4),) if winner is player else _score((4, 6),),
+            score=_score(
+                (6, 4),
+            )
+            if winner is player
+            else _score(
+                (4, 6),
+            ),
             occurred_at=played,
         )
         await _saved(session, game)
@@ -634,7 +720,13 @@ async def test_a_played_game_and_a_ghost_stay_apart_in_one_counterpart(
     one, other = new_uuid(), new_uuid()
 
     played = _planned(line_up=_singles(one, other), at=_ago(days=2))
-    played.state_result(by=one, score=_score((6, 4),), occurred_at=_ago(days=1))
+    played.state_result(
+        by=one,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=1),
+    )
     await _saved(session, played)
     await _saved(
         session,
@@ -695,7 +787,13 @@ async def test_attendance_counts_a_game_played_and_a_plan_that_ghosted(
     one, other = new_uuid(), new_uuid()
 
     played = _planned(line_up=_singles(one, other), at=_ago(days=3))
-    played.state_result(by=one, score=_score((6, 4),), occurred_at=_ago(days=2))
+    played.state_result(
+        by=one,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=2),
+    )
     await _saved(session, played)
     ghost = _planned(
         line_up=_singles(one, other),
@@ -767,7 +865,13 @@ async def test_a_four_that_played_once_is_one_opportunity_for_each_of_them(
     a, b, c, d = new_uuid(), new_uuid(), new_uuid(), new_uuid()
 
     game = _planned(line_up=_four(a, b, c, d), at=_ago(days=3))
-    game.state_result(by=a, score=_score((6, 4),), occurred_at=_ago(days=2))
+    game.state_result(
+        by=a,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=2),
+    )
     await _saved(session, game)
 
     attendance = await port.attendance_for([a, b, c, d], now=now)
@@ -797,7 +901,13 @@ async def test_a_friendly_counts_towards_turning_up_like_any_other_game(
     game = _planned(
         line_up=_singles(one, other), at=_ago(days=3), kind=GameKind.FRIENDLY
     )
-    game.state_result(by=one, score=_score((6, 4),), occurred_at=_ago(days=2))
+    game.state_result(
+        by=one,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=2),
+    )
     await _saved(session, game)
 
     assert await port.counted_games_for([one], now=now) == {one: 0}
@@ -832,19 +942,41 @@ async def test_accepting_and_countering_are_both_answers_and_silence_is_the_miss
     counterer, ignorer = new_uuid(), new_uuid()
 
     accepted = _planned(line_up=_singles(opener, accepter), at=_ago(days=4))
-    accepted.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    accepted.state_result(
+        by=opener,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=3),
+    )
     accepted.accept_result(by=accepter, occurred_at=_ago(days=3))
     await _saved(session, accepted)
 
     countered = _planned(line_up=_singles(opener, counterer), at=_ago(days=4))
-    countered.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
     countered.state_result(
-        by=counterer, score=_score((4, 6),), occurred_at=_ago(days=3)
+        by=opener,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=3),
+    )
+    countered.state_result(
+        by=counterer,
+        score=_score(
+            (4, 6),
+        ),
+        occurred_at=_ago(days=3),
     )
     await _saved(session, countered)
 
     ignored = _planned(line_up=_singles(opener, ignorer), at=_ago(days=4))
-    ignored.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    ignored.state_result(
+        by=opener,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=3),
+    )
     await _saved(session, ignored)
 
     answering = await port.result_answering_for(
@@ -873,8 +1005,20 @@ async def test_the_side_that_entered_the_score_was_asked_nothing(
     opener, other = new_uuid(), new_uuid()
 
     game = _planned(line_up=_singles(opener, other), at=_ago(days=4))
-    game.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
-    game.state_result(by=other, score=_score((4, 6),), occurred_at=_ago(days=3))
+    game.state_result(
+        by=opener,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=3),
+    )
+    game.state_result(
+        by=other,
+        score=_score(
+            (4, 6),
+        ),
+        occurred_at=_ago(days=3),
+    )
     await _saved(session, game)
 
     assert game.standing_at(now) is GameStanding.UNSCORED
@@ -898,13 +1042,17 @@ async def test_a_score_still_inside_its_window_is_in_neither_half(
     opener, other = new_uuid(), new_uuid()
 
     game = _planned(line_up=_singles(opener, other), at=_ago(days=1))
-    game.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(hours=1))
+    game.state_result(
+        by=opener,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(hours=1),
+    )
     await _saved(session, game)
 
     assert (
-        await port.result_answering_for(
-            [opener, other], since=_forever_ago(), now=now
-        )
+        await port.result_answering_for([opener, other], since=_forever_ago(), now=now)
         == {}
     )
 
@@ -926,7 +1074,13 @@ async def test_a_doubles_score_is_put_to_both_people_on_the_side_it_faces(
     a, b, c, d = new_uuid(), new_uuid(), new_uuid(), new_uuid()
 
     game = _planned(line_up=_four(a, b, c, d), at=_ago(days=4))
-    game.state_result(by=a, score=_score((6, 4),), occurred_at=_ago(days=3))
+    game.state_result(
+        by=a,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=3),
+    )
     await _saved(session, game)
 
     answering = await port.result_answering_for(
@@ -954,15 +1108,17 @@ async def test_an_opportunity_older_than_the_callers_window_is_in_neither_half(
     opener, other = new_uuid(), new_uuid()
 
     game = _planned(line_up=_singles(opener, other), at=_ago(days=400))
-    game.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=399))
+    game.state_result(
+        by=opener,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=399),
+    )
     await _saved(session, game)
 
-    assert await port.result_answering_for(
-        [other], since=_forever_ago(), now=now
-    ) != {}
-    assert (
-        await port.result_answering_for([other], since=_ago(days=365), now=now) == {}
-    )
+    assert await port.result_answering_for([other], since=_forever_ago(), now=now) != {}
+    assert await port.result_answering_for([other], since=_ago(days=365), now=now) == {}
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
@@ -982,20 +1138,22 @@ async def test_a_friendly_puts_a_score_in_front_of_somebody_like_any_other_game(
     game = _planned(
         line_up=_singles(opener, other), at=_ago(days=4), kind=GameKind.FRIENDLY
     )
-    game.state_result(by=opener, score=_score((6, 4),), occurred_at=_ago(days=3))
+    game.state_result(
+        by=opener,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=3),
+    )
     await _saved(session, game)
 
-    answering = await port.result_answering_for(
-        [other], since=_forever_ago(), now=now
-    )
+    answering = await port.result_answering_for([other], since=_forever_ago(), now=now)
 
     assert (answering[other].answered, answering[other].ignored) == (0, 1)
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
-async def test_a_player_nobody_ever_put_a_score_to_is_absent(
-    implementation, session
-):
+async def test_a_player_nobody_ever_put_a_score_to_is_absent(implementation, session):
     """The second read here whose zero would be invented.
 
     Somebody who has never been sent a score has not ignored one, and a ``0/0``
@@ -1006,9 +1164,7 @@ async def test_a_player_nobody_ever_put_a_score_to_is_absent(
     now = instant(datetime.now(timezone.utc))
 
     assert (
-        await port.result_answering_for(
-            [new_uuid()], since=_forever_ago(), now=now
-        )
+        await port.result_answering_for([new_uuid()], since=_forever_ago(), now=now)
         == {}
     )
 
@@ -1029,12 +1185,16 @@ async def test_the_moment_is_when_the_opportunity_closed_and_not_when_it_opened(
 
     proposed_at = _ago(days=3)
     game = _planned(line_up=_singles(opener, other), at=_ago(days=4))
-    game.state_result(by=opener, score=_score((6, 4),), occurred_at=proposed_at)
+    game.state_result(
+        by=opener,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=proposed_at,
+    )
     await _saved(session, game)
 
-    answering = await port.result_answering_for(
-        [other], since=_forever_ago(), now=now
-    )
+    answering = await port.result_answering_for([other], since=_forever_ago(), now=now)
 
     assert answering[other].last_at == instant(proposed_at + PROPOSAL_WINDOW)
 
@@ -1078,9 +1238,7 @@ def test_every_published_port_has_at_least_one_implementation():
 def test_every_registered_implementation_is_of_a_published_port():
     """And the other direction, so the two lists check each other."""
 
-    stray = [
-        one.name for one in GAME_IMPLEMENTATIONS if one.port not in GAMES_DEMANDS
-    ]
+    stray = [one.name for one in GAME_IMPLEMENTATIONS if one.port not in GAMES_DEMANDS]
 
     assert stray == []
 
@@ -1121,7 +1279,13 @@ async def test_a_game_says_whether_it_was_counted_and_whether_it_was_confirmed(
     player, opponent = new_uuid(), new_uuid()
 
     counted = _planned(line_up=_singles(player, opponent), at=_ago(days=3))
-    counted.state_result(by=player, score=_score((6, 4),), occurred_at=_ago(days=2))
+    counted.state_result(
+        by=player,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=2),
+    )
     await _saved(session, counted)
 
     friendly = _planned(
@@ -1129,7 +1293,13 @@ async def test_a_game_says_whether_it_was_counted_and_whether_it_was_confirmed(
         at=_ago(hours=3),
         kind=GameKind.FRIENDLY,
     )
-    friendly.state_result(by=player, score=_score((6, 1),), occurred_at=_ago(hours=2))
+    friendly.state_result(
+        by=player,
+        score=_score(
+            (6, 1),
+        ),
+        occurred_at=_ago(hours=2),
+    )
     await _saved(session, friendly)
 
     by_id = {game.id: game for game in await port.playing(player)}
@@ -1230,8 +1400,20 @@ async def test_an_unscored_game_is_an_evening_and_never_reaches_the_ledger(
     home, away = new_uuid(), new_uuid()
 
     game = _planned(line_up=_singles(home, away), at=_ago(days=4))
-    game.state_result(by=home, score=_score((6, 4),), occurred_at=_ago(days=3))
-    game.state_result(by=away, score=_score((4, 6),), occurred_at=_ago(days=3))
+    game.state_result(
+        by=home,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=3),
+    )
+    game.state_result(
+        by=away,
+        score=_score(
+            (4, 6),
+        ),
+        occurred_at=_ago(days=3),
+    )
     await _saved(session, game)
 
     assert game.standing_at(now) is GameStanding.UNSCORED
@@ -1304,11 +1486,23 @@ async def test_results_are_published_in_the_order_they_became_final(
     home, away = new_uuid(), new_uuid()
 
     earlier = _planned(line_up=_singles(home, away), at=_ago(days=5))
-    earlier.state_result(by=home, score=_score((6, 1),), occurred_at=_ago(days=4))
+    earlier.state_result(
+        by=home,
+        score=_score(
+            (6, 1),
+        ),
+        occurred_at=_ago(days=4),
+    )
     await _saved(session, earlier)
 
     later = _planned(line_up=_singles(home, away), at=_ago(days=3))
-    later.state_result(by=away, score=_score((6, 2),), occurred_at=_ago(days=2))
+    later.state_result(
+        by=away,
+        score=_score(
+            (6, 2),
+        ),
+        occurred_at=_ago(days=2),
+    )
     await _saved(session, later)
 
     published = await port.confirmed_counted_results(now=now)
@@ -1539,7 +1733,13 @@ async def test_a_friendly_and_a_ghost_are_in_neither_half_of_the_pair(
     friendly = _planned(
         line_up=_singles(player, friend), at=_ago(days=3), kind=GameKind.FRIENDLY
     )
-    friendly.state_result(by=player, score=_score((6, 4),), occurred_at=_ago(days=2))
+    friendly.state_result(
+        by=player,
+        score=_score(
+            (6, 4),
+        ),
+        occurred_at=_ago(days=2),
+    )
     await _saved(session, friendly)
 
     await _saved(
@@ -1596,3 +1796,179 @@ def test_the_variety_fold_takes_one_player_and_can_never_be_called_over_a_list()
 
     assert hints["player_id"] is UUID
     assert hints["return"] == OpponentVariety | None
+
+
+# ---------------------------------------------------------------------------
+# A seat somebody left (docs/adr/0162) — what every read says about the court now
+# ---------------------------------------------------------------------------
+
+
+async def _a_game_somebody_left(session, *, at: Instant) -> tuple[Game, UUID, UUID]:
+    """A singles game, and then the opponent leaves it. The seat is open."""
+
+    ana, bo = new_uuid(), new_uuid()
+    game = _planned(line_up=_singles(ana, bo), at=at)
+    game.vacate(bo, occurred_at=instant(at + timedelta(minutes=5)))
+    await _saved(session, game)
+    return game, ana, bo
+
+
+@pytest.mark.parametrize("implementation", registered(GameDirectory))
+async def test_somebody_who_left_is_no_longer_on_the_court_the_directory_answers(
+    implementation, session
+):
+    """``docs/adr/0162`` §3 — the people who may act are the people on the court
+    **now**. The leaver's list no longer holds the game; the one who stayed still
+    reads it, with the seat open rather than gone."""
+
+    port = implementation.build(session)
+    game, ana, bo = await _a_game_somebody_left(session, at=_ago(days=1))
+
+    assert [one.id for one in await port.playing(ana)] == [game.id]
+    (theirs,) = await port.playing(ana)
+    assert [seating.player_id for seating in theirs.line_up.seatings] == [ana, None]
+    assert await port.playing(bo) == ()
+
+
+@pytest.mark.parametrize("implementation", registered(PlanningCourt))
+async def test_somebody_who_left_may_no_longer_plan_and_the_plan_stays_open(
+    implementation, session
+):
+    """An open seat does not freeze the plan — the people still on the court
+    may set a slot — and the plan is the game's, so the one who left is not
+    on its court to write it."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    game, ana, bo = await _a_game_somebody_left(session, at=_ago(days=1))
+
+    assert (await port.plannable_for(ana, now=now))[game.id].open_to_planning
+    assert await port.plannable_for(bo, now=now) == {}
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_somebody_who_left_is_nobodys_counterpart_and_nobodys_attendee(
+    implementation, session
+):
+    """``docs/adr/0162`` §3 and §8 — recorded, not scored. A court left open
+    until its window closed is a ghost for the one who stayed, and the leaver is
+    neither a counterpart nor an attendee of it."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    game, ana, bo = await _a_game_somebody_left(session, at=_ago(days=30))
+    assert game.standing_at(now) is GameStanding.NEVER_PLAYED
+
+    assert await port.played_counterparts(bo, now=now) == ()
+    assert await port.played_counterparts(ana, now=now) == ()
+    attendance = await port.attendance_for([ana, bo], now=now)
+    assert bo not in attendance
+    assert attendance[ana].ghosts == 1
+
+
+# ---------------------------------------------------------------------------
+# SeatableCourt — may a seat on this challenge's court still be left, or taken?
+# ---------------------------------------------------------------------------
+
+
+class _AgreedFor:
+    """``AgreedMoment`` answering one instant for every game, or nothing."""
+
+    def __init__(self, moment: Instant | None) -> None:
+        self._moment = moment
+
+    async def agreed_point_of(self, game_id: UUID) -> Instant | None:
+        return self._moment
+
+
+def _seatable(implementation, session, *, agreed: Instant | None):
+    """The registered implementation over a stated moment, because the moment
+    is the Plan's and this suite must not write a plan to say so."""
+
+    from app.modules.games.infrastructure.event_sourced_seatable_court import (
+        EventSourcedSeatableCourt,
+    )
+
+    built = implementation.build(session)
+    assert isinstance(built, EventSourcedSeatableCourt)
+    return EventSourcedSeatableCourt(
+        games=_repository(session), moments=_AgreedFor(agreed)
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(SeatableCourt))
+async def test_a_court_awaiting_its_entry_with_no_moment_agreed_admits_a_change(
+    implementation, session
+):
+    now = instant(datetime.now(timezone.utc))
+    ana, bo = new_uuid(), new_uuid()
+    game = await _saved(session, _planned(line_up=_singles(ana, bo), at=_ago(days=1)))
+
+    port = _seatable(implementation, session, agreed=None)
+
+    assert await port.seat_change_on(game.challenge_id, now=now) is SeatChange.ADMITTED
+
+
+@pytest.mark.parametrize("implementation", registered(SeatableCourt))
+async def test_the_agreed_moment_is_the_line_and_it_is_read_at_the_guard(
+    implementation, session
+):
+    """``docs/adr/0162`` §4 — ahead of the moment a change is admitted; at it and
+    past it, refused. Nothing is stored: the same court answers differently at
+    two instants with nothing having happened in between."""
+
+    ana, bo = new_uuid(), new_uuid()
+    game = await _saved(session, _planned(line_up=_singles(ana, bo), at=_ago(days=1)))
+    agreed = instant(datetime.now(timezone.utc))
+    port = _seatable(implementation, session, agreed=agreed)
+
+    before = await port.seat_change_on(
+        game.challenge_id, now=instant(agreed - timedelta(minutes=1))
+    )
+    at = await port.seat_change_on(game.challenge_id, now=agreed)
+    after = await port.seat_change_on(
+        game.challenge_id, now=instant(agreed + timedelta(hours=1))
+    )
+
+    assert (before, at, after) == (
+        SeatChange.ADMITTED,
+        SeatChange.MOMENT_PASSED,
+        SeatChange.MOMENT_PASSED,
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(SeatableCourt))
+async def test_a_game_that_has_happened_or_never_will_is_history_before_its_moment(
+    implementation, session
+):
+    """The standing first, then the moment — a ghost is told it is history
+    rather than that its Sunday has gone."""
+
+    now = instant(datetime.now(timezone.utc))
+    ana, bo = new_uuid(), new_uuid()
+    played = _planned(line_up=_singles(ana, bo), at=_ago(days=1))
+    played.state_result(by=ana, score=_score((6, 4), (6, 3)), occurred_at=_ago(hours=1))
+    await _saved(session, played)
+    ghost = await _saved(session, _planned(line_up=_singles(ana, bo), at=_ago(days=30)))
+    port = _seatable(implementation, session, agreed=instant(now - timedelta(days=2)))
+
+    assert (
+        await port.seat_change_on(played.challenge_id, now=now)
+        is SeatChange.GAME_IS_HISTORY
+    )
+    assert (
+        await port.seat_change_on(ghost.challenge_id, now=now)
+        is SeatChange.GAME_IS_HISTORY
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(SeatableCourt))
+async def test_a_challenge_that_opened_no_game_is_answered_about_nothing(
+    implementation, session
+):
+    port = _seatable(implementation, session, agreed=None)
+
+    assert (
+        await port.seat_change_on(new_uuid(), now=instant(datetime.now(timezone.utc)))
+        is None
+    )

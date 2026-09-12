@@ -248,13 +248,17 @@ class RunLineupSearch:
         for_a_newcomer = searcher.is_new_at(now)
 
         # **The surface is derived, never sent.** A line-up and filling seats
-        # differ only by locked seats, which is a property of the request, so
+        # differ by locked seats, which is a property of the request, so
         # ``search.surface`` records which of the two happened without the
         # client having chosen a route (``the-two-contracts.md`` §1). A fill
-        # from a challenge lands here too and needs no fifth value: a half-built
-        # court always has somebody on it, so its locked seats are never empty.
+        # from a challenge lands here too and needs no fifth value — and since
+        # ``docs/adr/0162`` it may lock nobody, when the court it completes has
+        # lost everybody but the filler, so naming the challenge is what makes
+        # it a fill rather than the locked seats being non-empty.
         surface = (
-            SearchSurface.FILL_SEATS if ask.locked_seats else SearchSurface.LINEUP
+            SearchSurface.FILL_SEATS
+            if ask.locked_seats or ask.exempt_challenge_id is not None
+            else SearchSurface.LINEUP
         )
         with self._work.timed(stages, "read_gates"):
             context = await self._work.bind(

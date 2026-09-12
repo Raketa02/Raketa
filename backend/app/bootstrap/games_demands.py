@@ -3,13 +3,15 @@
 **The same shape as ``matcher_demands.py``, and a second file rather than more
 rows in that one.** That register holds the ports the *matcher* declares of
 contexts it does not write; these are the ports a **provider** publishes for
-six consumers — the card's counted-games block, *Last 5*, the two facts the
+seven consumers — the card's counted-games block, *Last 5*, the two facts the
 Player Score ticket reads per player, the confirmed results the rating context
 walks forward (``docs/adr/0139``), the one question a **plan** asks before
-it lets anybody write a slot (``docs/adr/0148`` §8), and the record sheet's
-opponent variety. Rows of both kinds in one list would make ``MATCHER_DEMANDS``'s
-exhaustiveness assertion a claim about two different things, and the first person
-to add a row would have to guess which.
+it lets anybody write a slot (``docs/adr/0148`` §8), the record sheet's
+opponent variety, and the one question a **challenge** asks before a seat on
+a court that has been a game may move (``docs/adr/0162`` §4). Rows of both
+kinds in one list would make ``MATCHER_DEMANDS``'s exhaustiveness assertion a
+claim about two different things, and the first person to add a row would have
+to guess which.
 
 **A row carries a builder over a session**, not an instance, so the suite cannot
 quietly excuse the implementations with a database behind them — which here is
@@ -31,6 +33,7 @@ from app.bootstrap.composition import (
     build_game_history_query,
     build_opponent_variety_query,
     build_planning_court,
+    build_seatable_court,
 )
 from app.modules.games.domain.ports import (
     ConfirmedResultLedger,
@@ -38,6 +41,7 @@ from app.modules.games.domain.ports import (
     GameHistoryQuery,
     OpponentVarietyQuery,
     PlanningCourt,
+    SeatableCourt,
 )
 
 #: What this context owes the rest of the platform, declared as data for the
@@ -58,12 +62,18 @@ from app.modules.games.domain.ports import (
 #: be. The Plan cannot contract it — a consumer contracting its own provider's
 #: port is the consumer marking its own homework — which is why it sits beside
 #: the three the rest of the platform already reads.
+#:
+#: **``SeatableCourt`` is here for the same reason** (``docs/adr/0162`` §4): it
+#: is the read that decides whether a departure, a fill or an acceptance may
+#: land on a court that has been a game, and its one consumer — ``challenges`` —
+#: cannot contract it without marking its own homework.
 GAMES_DEMANDS: tuple[type, ...] = (
     GameHistoryQuery,
     GameDirectory,
     ConfirmedResultLedger,
     PlanningCourt,
     OpponentVarietyQuery,
+    SeatableCourt,
 )
 
 
@@ -92,6 +102,11 @@ GAME_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=OpponentVarietyQuery,
         name="EventSourcedGameHistory",
         build=build_opponent_variety_query,
+    ),
+    RegisteredImplementation(
+        port=SeatableCourt,
+        name="EventSourcedSeatableCourt",
+        build=build_seatable_court,
     ),
 )
 

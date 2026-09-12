@@ -94,7 +94,12 @@ class StateResultRequest(BaseModel):
 
 
 class SeatingSchema(BaseModel):
-    """One person, on one side. The court is frozen at the plan.
+    """One position on one side: a person, or a seat somebody has left.
+
+    **The court is frozen until somebody leaves it** (``docs/adr/0162``). An
+    open seat is drawn, never dropped — `player_id` is `null` and the seat keeps
+    its place — so a four with one seat open is still a four and the client
+    folds *Needs a player* from it. Nothing on the wire names that rung.
 
     **A handle, and nothing else about them** (``docs/adr/0141``). A Level, a
     band, an area and a run of form are what a *searcher* reads to decide about a
@@ -106,16 +111,25 @@ class SeatingSchema(BaseModel):
     """
 
     side: GameSide
-    player_id: UUID
+    player_id: UUID | None = Field(
+        ...,
+        description=(
+            "Who holds this seat. ``null`` on a seat somebody has **left** and "
+            "nobody has filled yet: the seat stays, drawn empty, and the game "
+            "is awaiting a player before it can be recorded as played. "
+            "**Always present** — a seat is never dropped."
+        ),
+    )
     nickname: str | None = Field(
         default=None,
         description=(
             "The whole handle, and **nothing may derive a familiar form from "
             "it** — every sentence naming somebody uses all of it or names "
             "nobody (``docs/adr/0107``).\n\n"
-            "``null`` where ``users`` no longer has this account. The seat "
-            "stays: dropping it would publish a three-person doubles game, and "
-            "the screen has a side to name instead."
+            "``null`` where ``users`` no longer has this account, and on an "
+            "open seat. The seat stays: dropping it would publish a "
+            "three-person doubles game, and the screen has a side to name "
+            "instead."
         ),
     )
 

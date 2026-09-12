@@ -1,4 +1,4 @@
-"""The Games context's domain events — **six, and every one of them an act**.
+"""The Games context's domain events — **eight, and every one of them an act**.
 
 Events carry **primitive** fields, so their wire format survives any later
 refactor of the Python types: a sport, a kind and a window as their codes, a
@@ -18,6 +18,15 @@ tap and two facts, read by different people: ``GamePlayed`` is what
 stays true whatever happens to the score afterwards; ``ResultProposed`` is the
 first move in a negotiation that may end in no score at all. One event carrying
 both would make every reader of the first depend on the shape of the second.
+
+**Two events move the line-up, and both are told rather than decided here**
+(``docs/adr/0162``). ``SeatVacated`` is somebody leaving a game they agreed to,
+and ``LineUpReseated`` is the next completed line-up arriving for a game that
+has a seat open; each is written in the transaction of the act on the challenge
+that caused it. Neither announces a standing — a court with an open seat is still
+``AWAITING_ENTRY`` — and each passes ``docs/adr/0142`` §3's test the way a
+withdrawal does: a departure, and the arrangement that replaces it, are decisions
+no arrangement of this record could reach.
 
 **Three proposals events and not one with a kind field.** A first score, a
 revision of your own side's score and a disagreement with the other side's are
@@ -40,8 +49,9 @@ class GamePlanned:
 
     Opened by ``challenges`` in the transaction of the accept that filled the
     last seat, through a port it declares and this context signs. The
-    arrangement travels whole: **a game's line-up is frozen at the plan**, and
-    nothing in this context can move anybody.
+    arrangement travels whole: **a game's line-up is frozen until somebody
+    leaves it** (``docs/adr/0162``), and nothing in this context moves anybody on
+    its own.
 
     ``window`` is the code the challenge was sent under, carried through and
     never re-derived — ``None`` exactly when the challenge had none, which is a
@@ -56,6 +66,41 @@ class GamePlanned:
     window: str | None
     #: The whole court, in the order ``challenges`` handed it over: one
     #: ``A|<uuid>`` per person. See ``lineup.py`` for the code.
+    seatings: tuple[str, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        _retuple(self, "seatings")
+
+
+@dataclass(frozen=True)
+class SeatVacated:
+    """Somebody on the court left the game before it happened.
+
+    Told by ``challenges``, in the transaction of the departure it recorded, so
+    the seat opens on both records or on neither. The game's ``planned_at`` does
+    not move: it keeps meaning *when it became a game*.
+    """
+
+    game_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class LineUpReseated:
+    """A completed line-up arrived for a game with a seat open, and this is the
+    court now.
+
+    **The whole arrangement travels**, as ``GamePlanned.seatings`` and
+    ``challenges``' ``SeatsInvited`` carry theirs, because a re-seat may move an
+    accepted player across the net as well as fill the seat, and two events
+    would let a reader fold a half-applied court nobody built. Same field name
+    as the opening's on purpose: the stream reads match on it, so a newcomer is
+    found on the court they joined.
+    """
+
+    game_id: UUID
     seatings: tuple[str, ...]
     occurred_at: datetime
 

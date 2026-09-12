@@ -32,7 +32,7 @@ from app.bootstrap.game_demands import (
 )
 from app.kernel import InvariantViolated, Sport
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
-from app.modules.games.domain.ports import CourtPairing
+from app.modules.games.domain.ports import AgreedMoment, CourtPairing
 from tests.api import matchmaking_world as world
 
 
@@ -194,12 +194,20 @@ async def test_the_forecast_and_the_split_are_read_in_the_readers_direction(
     line_up = _line_up((reader["id"], ada), (other["id"], bea))
 
     mine = await _read(
-        implementation, session_factory, candidate_source, exposure_ledger,
-        reader_id=reader["id"], line_up=line_up,
+        implementation,
+        session_factory,
+        candidate_source,
+        exposure_ledger,
+        reader_id=reader["id"],
+        line_up=line_up,
     )
     theirs = await _read(
-        implementation, session_factory, candidate_source, exposure_ledger,
-        reader_id=other["id"], line_up=line_up,
+        implementation,
+        session_factory,
+        candidate_source,
+        exposure_ledger,
+        reader_id=other["id"],
+        line_up=line_up,
     )
 
     assert mine is not None and theirs is not None
@@ -224,8 +232,12 @@ async def test_a_singles_court_is_one_strength_a_side(
     await world.fold_the_log(session_factory, candidate_source)
 
     answer = await _read(
-        implementation, session_factory, candidate_source, exposure_ledger,
-        reader_id=me["id"], line_up=_line_up((me["id"],), (you["id"],)),
+        implementation,
+        session_factory,
+        candidate_source,
+        exposure_ledger,
+        reader_id=me["id"],
+        line_up=_line_up((me["id"],), (you["id"],)),
         sport=Sport.TENNIS,
     )
 
@@ -251,8 +263,12 @@ async def test_a_reader_with_nothing_to_compute_still_gets_the_seats(
     await world.commit_profile(client, unrated)
 
     answer = await _read(
-        implementation, session_factory, candidate_source, exposure_ledger,
-        reader_id=unrated_id, line_up=_line_up((unrated_id, ada), (bea, cy)),
+        implementation,
+        session_factory,
+        candidate_source,
+        exposure_ledger,
+        reader_id=unrated_id,
+        line_up=_line_up((unrated_id, ada), (bea, cy)),
     )
 
     assert answer is not None
@@ -278,8 +294,12 @@ async def test_a_seat_the_index_cannot_describe_empties_the_forecast_not_the_lev
     late = await world.a_candidate(client, session_factory, "late", mu=reader["mu"])
 
     answer = await _read(
-        implementation, session_factory, candidate_source, exposure_ledger,
-        reader_id=reader["id"], line_up=_line_up((reader["id"], ada), (bea, late)),
+        implementation,
+        session_factory,
+        candidate_source,
+        exposure_ledger,
+        reader_id=reader["id"],
+        line_up=_line_up((reader["id"], ada), (bea, late)),
     )
 
     assert answer is not None
@@ -307,12 +327,22 @@ async def test_a_friendly_is_never_priced_and_a_counted_game_is(
     line_up = _line_up((reader["id"], ada), (bea, cy))
 
     friendly = await _read(
-        implementation, session_factory, candidate_source, exposure_ledger,
-        reader_id=reader["id"], line_up=line_up, kind=GameKind.FRIENDLY,
+        implementation,
+        session_factory,
+        candidate_source,
+        exposure_ledger,
+        reader_id=reader["id"],
+        line_up=line_up,
+        kind=GameKind.FRIENDLY,
     )
     counted = await _read(
-        implementation, session_factory, candidate_source, exposure_ledger,
-        reader_id=reader["id"], line_up=line_up, kind=GameKind.COUNTED,
+        implementation,
+        session_factory,
+        candidate_source,
+        exposure_ledger,
+        reader_id=reader["id"],
+        line_up=line_up,
+        kind=GameKind.COUNTED,
     )
 
     assert friendly is not None and counted is not None
@@ -338,12 +368,20 @@ async def test_the_stakes_are_the_sides_and_both_partners_get_one_pair(
     line_up = _line_up((reader["id"], partner["id"]), (bea, cy))
 
     mine = await _read(
-        implementation, session_factory, candidate_source, exposure_ledger,
-        reader_id=reader["id"], line_up=line_up,
+        implementation,
+        session_factory,
+        candidate_source,
+        exposure_ledger,
+        reader_id=reader["id"],
+        line_up=line_up,
     )
     theirs = await _read(
-        implementation, session_factory, candidate_source, exposure_ledger,
-        reader_id=partner["id"], line_up=line_up,
+        implementation,
+        session_factory,
+        candidate_source,
+        exposure_ledger,
+        reader_id=partner["id"],
+        line_up=line_up,
     )
 
     assert mine is not None and theirs is not None
@@ -371,6 +409,103 @@ async def test_a_reader_who_is_not_on_the_court_is_a_broken_precondition(
 
     with pytest.raises(InvariantViolated):
         await _read(
-            implementation, session_factory, candidate_source, exposure_ledger,
-            reader_id=stranger_id, line_up=_line_up((ada,), (bea,)),
+            implementation,
+            session_factory,
+            candidate_source,
+            exposure_ledger,
+            reader_id=stranger_id,
+            line_up=_line_up((ada,), (bea,)),
+        )
+
+
+# ---------------------------------------------------------------------------
+# AgreedMoment — when has this game been agreed for? The Plan's answer.
+# ---------------------------------------------------------------------------
+
+
+def _moments(implementation, session):
+    return implementation.build(
+        PairingSeams(session=session, candidates=None, exposure=None)
+    )
+
+
+async def _a_plan_recording(session_factory, *, day, hour):
+    """One game's plan, written through the aggregate: a day, and maybe an hour.
+
+    Answers the game id. The game itself is never written — a plan's stream id
+    **is** its game's, and this port is asked about one game and reads the plan.
+    """
+
+    from datetime import datetime, timezone
+
+    from app.bootstrap.composition import (
+        build_domain_event_store,
+        build_event_publisher,
+        build_plan_repository,
+    )
+    from app.kernel import instant
+    from app.shared.ids import new_uuid
+
+    game_id = new_uuid()
+    now = instant(datetime.now(timezone.utc))
+    async with session_factory() as session:
+        plans = build_plan_repository(
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        )
+        plan = await plans.load(game_id)
+        if day is not None:
+            plan.record_day(day=day, by=new_uuid(), planned_at=now, occurred_at=now)
+        if hour is not None:
+            plan.record_hour(hour=hour, by=new_uuid(), occurred_at=now)
+        await plans.save(plan)
+        await session.commit()
+    return game_id
+
+
+@pytest.mark.parametrize("implementation", registered(AgreedMoment))
+async def test_the_implementation_satisfies_the_protocol(
+    implementation, session_factory
+):
+    async with session_factory() as session:
+        assert isinstance(_moments(implementation, session), AgreedMoment)
+
+
+@pytest.mark.parametrize("implementation", registered(AgreedMoment))
+async def test_a_game_with_no_plan_has_no_moment(implementation, session_factory):
+    """A plan is born by being used, so a game nobody has agreed anything about
+    has no stream — and no moment, which is what admits every seat change."""
+
+    from app.shared.ids import new_uuid
+
+    async with session_factory() as session:
+        assert (
+            await _moments(implementation, session).agreed_point_of(new_uuid()) is None
+        )
+
+
+@pytest.mark.parametrize("implementation", registered(AgreedMoment))
+async def test_the_moment_is_the_plans_own_and_never_recomputed_here(
+    implementation, session_factory
+):
+    """``docs/adr/0145`` §3 through ``docs/adr/0162`` §4 — both slots the agreed
+    instant, the day alone the start of the following local day. The port
+    answers what ``Plan.agreed_point`` answers, because it reads it."""
+
+    from datetime import datetime, time, timedelta, timezone
+
+    from app.kernel import instant, minute_of_day
+    from app.modules.plans.domain.slots import local_day, moment_of
+
+    day = local_day(instant(datetime.now(timezone.utc))) + timedelta(days=2)
+    exact = await _a_plan_recording(session_factory, day=day, hour=time(18, 0))
+    coarse = await _a_plan_recording(session_factory, day=day, hour=None)
+
+    async with session_factory() as session:
+        port = _moments(implementation, session)
+        assert await port.agreed_point_of(exact) == moment_of(
+            day, minute_of_day(18 * 60)
+        )
+        assert await port.agreed_point_of(coarse) == moment_of(
+            day + timedelta(days=1), minute_of_day(0)
         )

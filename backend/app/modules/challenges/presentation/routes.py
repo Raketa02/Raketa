@@ -1,5 +1,5 @@
 """The challenge routes: send one, read yours, read one richly, answer a seat
-either way, grow a half-built one and end one.
+either way, grow a half-built one, end one — and leave the game one became.
 
 **All of them are on the player surface.** The one that looks like a console's — a
 read of your own pending challenges — is not: an invitee has to be able to find
@@ -33,6 +33,7 @@ from app.core.exception_handlers import ErrorResponse
 from app.modules.challenges.application.commands import (
     AnswerSeatCommand,
     FillSeatsCommand,
+    LeaveGameCommand,
     SeatChoice,
     SendChallengeCommand,
     WithdrawChallengeCommand,
@@ -52,6 +53,7 @@ from app.modules.challenges.presentation.dependencies import (
     AcceptSeatDep,
     DeclineSeatDep,
     FillSeatsDep,
+    LeaveGameDep,
     ReadChallengeDep,
     ReadChallengesDep,
     SendChallengeDep,
@@ -239,7 +241,12 @@ _ANSWER_REFUSALS: dict[int | str, dict[str, Any]] = {
             "`answer_window_has_passed` — your day ran out. The seat already "
             "reads as lapsed and may have been offered to somebody else, so an "
             "answer that resurrected it would contradict a card the platform has "
-            "already drawn."
+            "already drawn.\n\n"
+            "`game_moment_has_passed` — **on a court somebody left**, the moment "
+            "the plan agreed has passed, so a yes now would seat you into a game "
+            "whose moment is gone. `game_is_history` — that game has happened, "
+            "or never will. Neither is reachable on a court that was never a "
+            "game."
         ),
     },
 }
@@ -425,7 +432,11 @@ async def decline_seat(
                 "does not offer them; this is the aggregate's backstop.\n\n"
                 "`accepted_player_may_not_be_removed` — a court that dropped "
                 "somebody who is already in.\n\n"
-                "`challenge_is_over` — this challenge has ended."
+                "`challenge_is_over` — this challenge has ended.\n\n"
+                "`game_moment_has_passed`, `game_is_history` — **on a court "
+                "somebody left**: the game's agreed moment has passed, or the "
+                "game has happened or never will, so nobody may be seated into "
+                "it. Neither is reachable on a court that was never a game."
             ),
         },
         status.HTTP_503_SERVICE_UNAVAILABLE: _REFUSALS[
@@ -514,7 +525,10 @@ async def fill_seats(
                 "`not_a_half_built_line_up` — this challenge has some other end "
                 "already. **One code for five standings**, because they are one "
                 "sentence: `AWAITING_ANSWERS` ends itself when the clocks run "
-                "out, `ON` has become a game, and the three endings have ended."
+                "out, `ON` has become a game, and the three endings have ended. "
+                "**And for a court somebody left**, which is half built again and "
+                "is refused here all the same: its exit is calling the game off, "
+                "which reaches the game's record and is not this route."
             ),
         },
     },
@@ -560,6 +574,93 @@ async def withdraw_challenge(
     return _challenge(
         await use_case.execute(
             WithdrawChallengeCommand(challenge_id=challenge_id, player_id=user.id)
+        )
+    )
+
+
+@router.post(
+    "/{challenge_id}/departure",
+    response_model=ChallengeSchema,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "description": (
+                "Your seat is open again, and the challenge as it now stands at "
+                "`LINE_UP_INCOMPLETE`. The game survives with that seat empty."
+            )
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`challenge_not_found` — no challenge of **yours** has that id, "
+                "or you hold no **accepted** seat on it. One code for three "
+                "cases: it does not exist, you are not on its court, or your seat "
+                "is awaiting, declined, lapsed or already left — because a "
+                "departure is the one act whose refusal must not confirm that "
+                "you *were* on this court a moment ago."
+            ),
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "model": ErrorResponse,
+            "description": (
+                "`account_held` — **your** account is under a live hold. A "
+                "departure writes a line into a room other people are in, which "
+                "is reach."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`not_a_game_yet` — this court has not become a game. Leaving a "
+                "half-built court is a decline, and it is already given. **One "
+                "code for two standings**, `AWAITING_ANSWERS` and "
+                "`LINE_UP_INCOMPLETE`, on a court that was never a game.\n\n"
+                "`challenge_is_over` — this challenge has ended.\n\n"
+                "`game_is_history` — the game has happened, or its entry window "
+                "closed on silence. The line-up is the record of an evening, and "
+                "nothing on it moves.\n\n"
+                "`game_moment_has_passed` — the moment the plan agreed has "
+                "passed. Leaving would mean nothing now, and a no-show cannot "
+                "vacate a seat to block the result."
+            ),
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: _REFUSALS[
+            status.HTTP_503_SERVICE_UNAVAILABLE
+        ],
+    },
+    summary="Leave the game",
+    description=(
+        "**You are out of a game you had agreed to.** Your seat reopens on the "
+        "challenge, the game survives with that seat drawn empty, and the people "
+        "still on it keep what they agreed — the plan, the room, the record. "
+        "Anyone still on the court may fill your seat the way a half-built "
+        "court is filled, and the newcomer's yes re-seats the **same** game.\n\n"
+        "**Any player on the court, the organiser included**, while the game is "
+        "awaiting its entry and its agreed moment is ahead — or no moment is "
+        "agreed yet. Once the moment has passed, leaving means nothing and is "
+        "refused.\n\n"
+        "**You are out of this court's own pool for as long as it stands.** "
+        "Nobody is asked twice on one challenge; being asked again is a **new** "
+        "challenge. Every other search reaches you at once — the pair rule "
+        "released you the moment you left.\n\n"
+        "**The others are told**: the room draws *{name} left — that seat is "
+        "open again*, and your own list and inbox no longer hold the game or "
+        "the room.\n\n"
+        "**Two people may leave**, and two seats may be open. Nothing here "
+        "prices a departure yet — it is recorded, with its moment, and that is "
+        "all.\n\n"
+        "**A noun and not a verb**, like the withdrawal: what this creates is "
+        "the departure."
+    ),
+)
+async def leave_game(
+    challenge_id: UUID,
+    user: CurrentUserDep,
+    use_case: LeaveGameDep,
+) -> ChallengeSchema:
+    return _challenge(
+        await use_case.execute(
+            LeaveGameCommand(challenge_id=challenge_id, player_id=user.id)
         )
     )
 

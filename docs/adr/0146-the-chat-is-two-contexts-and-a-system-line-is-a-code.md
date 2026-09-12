@@ -144,6 +144,11 @@ line-up after. That is one rule rather than two — **the people who have agreed
 right now** — which is what grows one acceptance at a time (#221) and then stops growing when a
 line-up is *frozen at the plan*.
 
+> **Two words superseded 2026-09-12 by [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)**: the game's **current** line-up after, and it
+> no longer *stops growing* — a seat can be left and re-seated, and the roster reads the game's
+> line-up live either way. The rule itself, *the people who have agreed to be on this court right
+> now*, is exactly what made that a two-word change: nothing is stored, so nothing had to move.
+
 Storing it would make *who is in this* true in a second place, and the first copy to go wrong is
 the one deciding who may read the messages.
 

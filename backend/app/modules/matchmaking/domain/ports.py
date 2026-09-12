@@ -764,7 +764,9 @@ class HalfBuiltCourt:
     court's own order: **the locked seats**, resolved out of this search's own
     pool like any other hand-seated player. They are not a way past the pool —
     a seated player with no scored row is a player the group objective cannot
-    optimise around, and ``optimised_for: GROUP`` *is* that optimisation.
+    optimise around, and ``optimised_for: GROUP`` *is* that optimisation. **It
+    may be empty** on a court that has been a game and lost everybody but the
+    filler (``docs/adr/0162`` §6).
 
     ``answered_and_gone`` is everybody who answered this challenge and left it.
     They are back in the deck the moment they declined or lapsed, so without this
@@ -793,11 +795,10 @@ class HalfBuiltCourt:
             f"somebody both seated on {self.challenge_id} and gone from it: "
             f"{sorted(set(self.seated_ids) & self.answered_and_gone)}",
         )
-        invariant(
-            bool(self.seated_ids),
-            f"a half-built court with nobody on it but the filler: "
-            f"{self.challenge_id}",
-        )
+        # **Empty is a court the filler is alone on** (``docs/adr/0162`` §6):
+        # a singles opponent who left, or a four three people left. Such a fill
+        # locks nobody and is still a fill — it names the challenge, exempts
+        # its pair and excludes the departed.
 
 
 @runtime_checkable

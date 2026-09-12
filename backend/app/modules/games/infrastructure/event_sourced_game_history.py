@@ -3,8 +3,12 @@
 **Everything here folds the aggregate**, and that is the difference from
 ``challenges``' history read. There, an answer is a thing that happened *to the
 court as it stood then*, so the walk carries the arrangement along with it; here
-a game's line-up is **frozen at the plan** and cannot move, so today's court is
-the court that played and the fold is the whole answer.
+a game's line-up moves in exactly two told ways and the fold carries both
+(``docs/adr/0162``), so today's court is the court as it stands and the fold is
+the whole answer. **Every read answers about the people on the court now**: the
+streams read finds everybody a court has ever seated, and the folded line-up is
+what says who is still on it — a leaver is nobody's counterpart, nobody's
+attendee, and their list no longer holds the game.
 
 **Nothing is projected.** Every fact these reads publish — played or a ghost,
 counted, confirmed, won or lost — is folded from the record against the caller's
@@ -308,12 +312,13 @@ class EventSourcedGameHistory:
         }
 
     async def late_change_threshold(self) -> Minutes | None:
-        """``None``, and the reason is this context's own.
+        """``None`` — **recorded, not yet scored** (``docs/adr/0162`` §8).
 
-        A plan here is a line-up with a window and no time in it: an accepted seat
-        cannot be withdrawn and there is nothing to move, so *late* has no
-        referent and there is no number to publish. Absent rather than defaulted,
-        because a number nobody measured is a number somebody picked.
+        A seat can be left and the game has a moment, so *late* has a referent
+        now; what a departure an hour before it should cost is a judgement no
+        record has made, and until one does there is no number to publish.
+        Absent rather than defaulted, because a number nobody measured is a
+        number somebody picked.
         """
 
         return None
@@ -359,7 +364,19 @@ class EventSourcedGameHistory:
     # -- internals --------------------------------------------------------
 
     async def _games_of(self, player_id: UUID) -> list[Game]:
-        return await self._games_among({player_id})
+        """Every game this player is on the court of **now**.
+
+        The streams read answers wider than that — it finds every court that has
+        ever seated them, a seat they have since left included — and the folded
+        line-up narrows it. The set reads need no such narrowing because each of
+        them intersects ``line_up.players`` with the people it was asked about.
+        """
+
+        return [
+            game
+            for game in await self._games_among({player_id})
+            if player_id in game.line_up.players
+        ]
 
     async def _games_among(self, player_ids: Collection[UUID]) -> list[Game]:
         streams = await streams_seating(self._session, self._codec, player_ids)

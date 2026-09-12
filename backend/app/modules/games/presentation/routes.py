@@ -1,9 +1,13 @@
 """The four game routes: read yours, read one's pairing, state a score, agree
 with one.
 
-**There is no route that creates a game.** A game exists because a challenge's
-line-up completed, and nothing a client sends can produce one — which is what
-makes *these people arranged this* a fact rather than a claim.
+**There is no route that creates a game, and none that moves a seat on one.** A
+game exists because a challenge's line-up completed, and nothing a client sends
+can produce one — which is what makes *these people arranged this* a fact rather
+than a claim. A seat opens because somebody left the **challenge**
+(``POST /challenges/{id}/departure``) and is filled because the next completed
+line-up re-seated the same game; here a seat somebody left is drawn with
+`player_id: null` (``docs/adr/0162``).
 
 **The pairing is read beside the game and never on it** (``docs/adr/0161``).
 ``GameSchema`` carries no forecast and never will; what the game screen draws
@@ -115,7 +119,10 @@ _STATING_REFUSALS: dict[int | str, dict[str, Any]] = {
             "to read as agreement.\n\n"
             "`the_other_side_has_answered` — correcting is free until they "
             "respond and not afterwards. `acceptance.agreed_at` is when they "
-            "did, so the sentence a player reads need not be vague about it."
+            "did, so the sentence a player reads need not be vague about it.\n\n"
+            "`the_court_has_an_open_seat` — somebody left and nobody has filled "
+            "their seat, so there is no court to have played on. Fill it, or "
+            "let the window close."
         ),
     },
 }
@@ -385,7 +392,11 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
             SeatingSchema(
                 side=seating.side,
                 player_id=seating.player_id,
-                nickname=one.handles.get(seating.player_id),
+                nickname=(
+                    None
+                    if seating.player_id is None
+                    else one.handles.get(seating.player_id)
+                ),
             )
             for seating in game.line_up.seatings
         ],
