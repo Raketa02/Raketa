@@ -257,7 +257,8 @@ class TellTheRoom:
     # -- being closed ------------------------------------------------------
 
     async def _withdrawn(self, event: ChallengeWithdrawn) -> None:
-        """The organiser ended it. **The room is destroyed, and writes no line.**
+        """Whoever held the exit ended it. **The room is destroyed, and writes
+        no line** — whether or not it already holds its game (``docs/adr/0163``).
 
         ``docs/adr/0153`` §2. There is nobody left to read a line — the news is on
         the challenge screen — and this is the only arm here whose whole effect is

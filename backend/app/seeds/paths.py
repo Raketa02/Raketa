@@ -461,7 +461,11 @@ async def read_paths(
             clock=clock,
         ),
         withdraw=WithdrawChallenge(
-            challenges=challenges, handles=court_handles, uow=uow, clock=clock
+            challenges=challenges,
+            handles=court_handles,
+            uow=uow,
+            clock=clock,
+            planned_games=build_planned_game_handover(session),
         ),
         state_result=StateResult(games=games, handles=handles, uow=uow, clock=clock),
         accept_result=AcceptResult(games=games, handles=handles, uow=uow, clock=clock),

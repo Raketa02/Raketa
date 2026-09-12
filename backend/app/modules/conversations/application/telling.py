@@ -82,6 +82,7 @@ from app.modules.challenges.domain.events import (
 from app.kernel import invariant
 from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.games.domain.events import (
+    GameCalledOff,
     GamePlanned,
     GamePlayed,
     LineUpReseated,
@@ -222,6 +223,16 @@ TELLINGS: tuple[Telling, ...] = (
         why_nothing=(
             "the acceptance that completed the court draws its own line, and "
             "membership reads the game's line-up live rather than being told"
+        ),
+    ),
+    Telling(
+        event=GameCalledOff,
+        line=None,
+        reaches_the_room=False,
+        why_nothing=(
+            "the challenge's own withdrawal **destroys** the room in the same "
+            "transaction, so there is nobody left to read a line and no room "
+            "to be a length — the news is on the challenge screen and the card"
         ),
     ),
     Telling(

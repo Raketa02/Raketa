@@ -112,6 +112,12 @@ mutual-born challenge that ended without ever producing a game releases them too
 withdraw ships, a withdrawn half-built court has finished with nothing to show for it, and holding
 the pair on its memory would recreate the permanence one branch over.
 
+> **Amended 2026-09-12 by [ADR-0163](0163-called-off-is-the-fourth-end-of-a-game.md).** `SETTLED`
+> is `{NEVER_PLAYED, CONFIRMED, UNSCORED, CALLED_OFF}`: a game called off with a seat open is
+> finished with on the same reading as a ghost — nothing more will happen to it — and releases
+> the pair as a ghost does. Its challenge is `WITHDRAWN`, which the paragraph above already
+> releases, so a mutual whose game was called off may mint again.
+
 ### 5. The release is a port onto `games`, and the send path does not get one
 
 `challenges` grows `SettledGameQuery.settled_among(challenge_ids) -> frozenset[UUID]` in

@@ -1,14 +1,18 @@
-"""Which courts a card may be drawn for — **all five standings, pinned.**
+"""Which courts a card may be drawn for — **all six standings, pinned.**
 
 ``RATEABLE`` is ``SETTLED & PLAYED``, derived from ``games``' own two sets so a
-sixth ending added over there arrives here as a question rather than as a silent
-omission. Derivation makes it right; it does not make it *asserted*, and
-``docs/adr/0158`` §7 calls two of the five members load-bearing by name:
+new ending added over there arrives here as a question rather than as a silent
+omission — which is exactly what happened when ``CALLED_OFF`` arrived
+(``docs/adr/0163``): the sweep below went red on the missing builder, and the
+answer was the derivation's. Derivation makes it right; it does not make it
+*asserted*, and ``docs/adr/0158`` §7 calls two of the members load-bearing by
+name:
 
-**A ghost is out.** ``NEVER_PLAYED`` is settled over in ``games`` and there is
-nobody to rate for an evening that did not happen — so the intersection is the
-whole of the narrowing, and a reader who reached for ``SETTLED`` alone would
-offer cards for games nobody turned up to.
+**A ghost is out, and so is a called-off game.** ``NEVER_PLAYED`` and
+``CALLED_OFF`` are settled over in ``games`` and there is nobody to rate for an
+evening that did not happen — so the intersection is the whole of the narrowing,
+and a reader who reached for ``SETTLED`` alone would offer cards for games nobody
+turned up to.
 
 **An unscored game is in, on purpose.** Two people who cannot agree what the
 score was were still on a court together for two hours, and how that went is
@@ -20,7 +24,7 @@ The file also pins the other half of the port's contract — that a game the cal
 did not play in is not findable through it at all, because the read asks *which
 games are mine* rather than *which game is this*.
 
-**Both arities are swept over the same five standings**, because they are one
+**Both arities are swept over the same six standings**, because they are one
 question and the narrowing has one home: a list that offered a ghost and a
 singular that refused one would be a screen showing a card the act behind it
 would not accept.
@@ -107,6 +111,17 @@ def _never_played():
     return game, instant(PLANNED_AT + PLAN_HORIZON + ENTRY_GRACE + timedelta(hours=1))
 
 
+def _called_off():
+    """Somebody left, and somebody still on the court called it off."""
+
+    players = _four()
+    game = a_doubles_game(*players)
+    game.vacate(players[3], occurred_at=instant(PLANNED_AT + timedelta(hours=1)))
+    called = instant(PLANNED_AT + timedelta(hours=2))
+    game.call_off(by=players[0], occurred_at=called)
+    return game, instant(called + timedelta(hours=1))
+
+
 def _awaiting_answer():
     players = _four()
     game = a_doubles_game(*players)
@@ -142,6 +157,7 @@ def _unscored():
 BUILDERS = {
     GameStanding.AWAITING_ENTRY: _awaiting_entry,
     GameStanding.NEVER_PLAYED: _never_played,
+    GameStanding.CALLED_OFF: _called_off,
     GameStanding.AWAITING_ANSWER: _awaiting_answer,
     GameStanding.CONFIRMED: _confirmed,
     GameStanding.UNSCORED: _unscored,

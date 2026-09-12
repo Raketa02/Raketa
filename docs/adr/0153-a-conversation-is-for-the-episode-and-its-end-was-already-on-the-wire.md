@@ -76,6 +76,13 @@ A conversation is destroyed at the **earliest** of:
 - the challenge reaching a conclusion that yields no game, plus the same grace (§3);
 - a withdrawal, which still destroys the room **in the same act** and writes no line.
 
+> **The fourth arm is amended 2026-09-12 by
+> [ADR-0163](0163-called-off-is-the-fourth-end-of-a-game.md).** A withdrawal now reaches a court
+> that has been a game — a reopened court is called off through it — so the room it destroys may
+> already hold its `game_id`. The arm does not read it: `_withdrawn` looks the room up by
+> challenge and destroys whatever it finds, and nothing here moves the end later. `GameCalledOff`
+> itself reaches the room not at all.
+
 **Both anchors are facts the room is already told, and this is the windfall.**
 `Game.planned_at` **is** `GamePlanned.occurred_at` — `game.py:406` sets it from that event and
 nothing else — and `the-words.md` §23.1 already lists `GamePlanned` among the events the room

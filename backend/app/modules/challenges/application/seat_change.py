@@ -11,12 +11,17 @@ into *Sunday* on Monday.
 argument: the port is a ``Protocol`` and belongs in ``domain/``; this performs I/O
 through it, which is a use case's job.
 
-**Asked only on a court that has been a game.** A half-built court that was never
-one costs no read; a court that has been one has a game behind it by construction
-— the opening runs in the acceptance's own transaction — so a port answering
-``None`` there is a broken precondition rather than a state, and it raises rather
-than admitting the act. The alternative is a seat moving on a record nobody can
-find.
+**Asked only on a court that has been a game, and still stands.** A half-built
+court that was never one costs no read; a court that has been one has a game
+behind it by construction — the opening runs in the acceptance's own transaction
+— so a port answering ``None`` there is a broken precondition rather than a
+state, and it raises rather than admitting the act. The alternative is a seat
+moving on a record nobody can find. **And a court that has ended costs no read
+either** (``docs/adr/0163`` §3): a reopened court can now be withdrawn, so an
+ended court that has been a game exists, and the aggregate's own
+``challenge_is_over`` is the refusal it owes — *standing, then moment*, which
+is the order ``docs/adr/0162`` §1 stated. Reading the game first would answer
+``game_is_history`` about a challenge the caller is looking at as ``WITHDRAWN``.
 """
 
 from __future__ import annotations
@@ -31,6 +36,7 @@ from app.modules.challenges.domain.seatable_game import (
     LineUpChange,
     SeatableGameQuery,
 )
+from app.modules.challenges.domain.standing import ENDED
 
 
 async def refuse_a_court_closed_to_seating(
@@ -40,10 +46,13 @@ async def refuse_a_court_closed_to_seating(
     change: **its moment has passed**, or **it has happened or never will**.
 
     Two refusals and no third: a court that was never a game returns without a
-    read, and one that has a game is admitted unless the game says otherwise.
+    read, so does one that has ended — the aggregate refuses that on its own —
+    and one that has a game is admitted unless the game says otherwise.
     """
 
     if not challenge.has_become_a_game_at(at):
+        return
+    if challenge.standing_at(at) in ENDED:
         return
     change = invariant(
         await games.line_up_change_on(challenge.id, now=at),

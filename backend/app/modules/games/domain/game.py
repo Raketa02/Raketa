@@ -21,6 +21,13 @@ it keeps meaning *when it became a game* — and neither is a standing: a court
 with an open seat is still awaiting its entry. What an open seat changes is who
 may act, and that a result is refused until the seat is filled.
 
+**And a court with a seat open can be called off** (``docs/adr/0163``). ``call_off``
+is the third act told by ``challenges`` — in the transaction of the withdrawal —
+and the only act here that announces an end: ``CALLED_OFF`` is the fourth end, a
+decision a person took, folded off ``GameCalledOff`` and read before the clock.
+It is neither an evening nor a ghost, and every read that counts either leaves
+it out.
+
 **One aggregate per game and never one per player.** Whether you won is a
 property of the game and of which side you were on; a per-player record would be
 four copies of one score, and the day two of them disagreed there would be
@@ -47,9 +54,11 @@ from app.modules.games.domain.errors import (
     AcceptingYourOwnSidesResult,
     AResultMustCarryAScore,
     NobodyHasProposedAResult,
+    NotAGameToCallOff,
     TheCourtHasAnOpenSeat,
     TheEntryWindowHasClosed,
     TheGameIsNotOpenToSeating,
+    TheGameWasCalledOff,
     TheOtherSideHasAnswered,
     TheResultIsAlreadyAccepted,
     TheResultIsSettled,
@@ -57,6 +66,7 @@ from app.modules.games.domain.errors import (
     YourSideHasAlreadyAnswered,
 )
 from app.modules.games.domain.events import (
+    GameCalledOff,
     GamePlanned,
     GamePlayed,
     LineUpReseated,
@@ -106,6 +116,13 @@ class Game:
     #: When somebody said it happened, and ``None`` while nobody has. **This is
     #: the moment**, and there is no other one anywhere in this context.
     played_at: Instant | None
+    #: When somebody called it off, or ``None`` because nobody has. **The one
+    #: thing about a game that is not a reading of the record and the clock**
+    #: (``docs/adr/0163``) — a decision somebody took, folded off
+    #: ``GameCalledOff`` and read by ``standing_at`` before anything else, in
+    #: ``Challenge.withdrawn_at``'s exact shape and for its reason: an instant
+    #: rather than a flag, because the client shelves the ending card from it.
+    called_off_at: Instant | None
     #: At most one per side. A ``Mapping`` rather than a list, because the cap is
     #: the shape: there is nowhere here to put a third score.
     proposals: dict[GameSide, Proposal]
@@ -206,6 +223,34 @@ class Game:
             )
         )
 
+    # -- ending it ---------------------------------------------------------
+
+    def call_off(self, *, by: UUID, occurred_at: Instant) -> None:
+        """Somebody on the court ends a game that has a seat open. **Its end.**
+
+        Told by ``challenges`` in the transaction of the withdrawal
+        (``docs/adr/0163`` §2), which has already decided whose act it is — the
+        organiser's, or any remaining player's once the organiser has left.
+        What this refuses is the aggregate's own invariant, kept whether or not
+        the caller already guarantees it: **a game awaiting its entry with a seat
+        open**, and nothing else. A court standing whole that will not play lets
+        its window lapse into *Never played*; a game already ended by its clock
+        is never un-ended, because the platform has drawn that card. And the
+        caller is on the court, on the one rule every act here shares.
+        """
+
+        self._side_of(by)
+        if (
+            self.standing_at(occurred_at) is not GameStanding.AWAITING_ENTRY
+            or self.line_up.is_complete
+        ):
+            raise NotAGameToCallOff()
+        self._record_that(
+            GameCalledOff(
+                game_id=self.game_id, called_by=by, occurred_at=occurred_at
+            )
+        )
+
     # -- the result -------------------------------------------------------
 
     def state_result(
@@ -237,6 +282,11 @@ class Game:
             raise AResultMustCarryAScore()
 
         if self.played_at is None:
+            if self.called_off_at is not None:
+                # **Asked before the window**, as the ghost's refusal is asked
+                # before the open seat: the end this game met is the answer,
+                # and its window stopped mattering the moment it was called off.
+                raise TheGameWasCalledOff()
             if occurred_at >= entry_closes_at(self.planned_at):
                 raise TheEntryWindowHasClosed()
             if not self.line_up.is_complete:
@@ -327,6 +377,7 @@ class Game:
         return standing_of(
             planned_at=self.planned_at,
             played_at=self.played_at,
+            called_off_at=self.called_off_at,
             proposals=self.proposals,
             acceptance=self.acceptance,
             now=now,
@@ -472,6 +523,7 @@ class Game:
         game.version = 0
         game.window = None
         game.played_at = None
+        game.called_off_at = None
         game.proposals = {}
         game.acceptance = None
         game._events = EventRecorder()
@@ -496,6 +548,8 @@ class Game:
             self.line_up = self.line_up.vacated_by(event.player_id)
         elif isinstance(event, LineUpReseated):
             self.line_up = LineUp.from_codes(event.seatings)
+        elif isinstance(event, GameCalledOff):
+            self.called_off_at = instant(event.occurred_at)
         elif isinstance(event, GamePlayed):
             self.played_at = instant(event.occurred_at)
         elif isinstance(event, (ResultProposed, ResultCorrected, ResultCountered)):

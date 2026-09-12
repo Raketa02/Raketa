@@ -69,7 +69,9 @@ class Standing(str, Enum):
     #:
     #: **Not ``STOOD_DOWN``.** The root ``CONTEXT.md`` owns *stands down*
     #: platform-wide for a term that cannot be evaluated, and one word means one
-    #: idea in the file that owns it. *Cancel* and *call off* belong to the plan.
+    #: idea in the file that owns it. *Call off* is what a withdrawal does to
+    #: the **game** a reopened court became (``docs/adr/0163``), and the game's
+    #: own standing carries that word.
     WITHDRAWN = "WITHDRAWN"
 
 

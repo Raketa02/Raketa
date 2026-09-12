@@ -1668,17 +1668,97 @@ def test_only_a_court_that_has_been_a_game_can_be_left():
         game.leave(CAROL, occurred_at=at(3))
 
 
-def test_a_court_that_has_been_a_game_is_not_withdrawn_here():
-    """Refused with the withdraw's own code until #417 gives the game an end of
-    its own — a withdraw that ended the challenge while the game stood would be
-    an ending nobody on the court was told about."""
+def test_a_court_that_has_been_a_game_is_withdrawn_by_the_organiser():
+    """``docs/adr/0163`` §1 — the withdraw reaches a reopened court. The game is
+    told one layer up; here the challenge ends as any withdrawn one does, with
+    the seats left as they were and the pair released."""
 
     challenge = a_completed_four()
     challenge.leave(CAROL, occurred_at=at(2))
     assert challenge.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
 
-    with pytest.raises(OnlyAHalfBuiltLineUpIsWithdrawn):
-        challenge.withdraw(ORGANISER, occurred_at=at(3))
+    challenge.withdraw(ORGANISER, occurred_at=at(3))
+
+    assert challenge.standing_at(INSIDE) is Standing.WITHDRAWN
+    assert challenge.ended_at(INSIDE) == at(3)
+    assert challenge.has_become_a_game_at(INSIDE), "the game it became is still a fact"
+    assert challenge.players_in_it_at(INSIDE) == frozenset()
+    assert challenge.seat_of(CAROL).answer is SeatAnswer.LEFT
+    assert isinstance(challenge.pull_events()[-1], ChallengeWithdrawn)
+
+
+def test_once_the_organiser_has_left_any_remaining_player_holds_the_exit():
+    """``docs/adr/0163`` §1 — the organiser's fallback. A court whose organiser
+    is gone would otherwise have an exit nobody holds."""
+
+    challenge = a_completed_four()
+    challenge.leave(ORGANISER, occurred_at=at(2))
+    assert challenge.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+
+    challenge.withdraw(BOB, occurred_at=at(3))
+
+    assert challenge.standing_at(INSIDE) is Standing.WITHDRAWN
+
+
+def test_the_fallback_is_asked_first_and_reads_no_standing():
+    """A non-organiser on a court whose organiser is still in is told the act is
+    not theirs before the fold is consulted — and so is somebody whose own seat
+    is no longer live, because *remaining* means live."""
+
+    organiser_in = a_completed_four()
+    organiser_in.leave(CAROL, occurred_at=at(2))
+    with pytest.raises(TheWithdrawIsTheOrganisers):
+        organiser_in.withdraw(ALICE, occurred_at=at(3))
+    assert organiser_in.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+
+    organiser_out = a_completed_four()
+    organiser_out.leave(ORGANISER, occurred_at=at(2))
+    organiser_out.leave(CAROL, occurred_at=at(3))
+    with pytest.raises(TheWithdrawIsTheOrganisers):
+        organiser_out.withdraw(CAROL, occurred_at=at(4))
+    with pytest.raises(TheWithdrawIsTheOrganisers):
+        organiser_out.withdraw(STRANGER, occurred_at=at(4))
+    # **The organiser who left is not a remaining player either**: the exit
+    # fell back to the people still on the court, and a stranger to them now
+    # does not get to end their game.
+    with pytest.raises(TheWithdrawIsTheOrganisers):
+        organiser_out.withdraw(ORGANISER, occurred_at=at(4))
+    assert organiser_out.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+
+
+def test_the_fallback_holds_after_the_organisers_seat_was_given_away():
+    """A re-seat gives the departed's position to the newcomer, so the organiser
+    holds no seat at all — and is no more in than when their seat said ``LEFT``."""
+
+    challenge = a_completed_four()
+    challenge.leave(ORGANISER, occurred_at=at(2))
+    challenge.invite(
+        (
+            invited(STRANGER, Side.A, 4),
+            SeatPlan(side=Side.A, player_id=ALICE),
+            SeatPlan(side=Side.B, player_id=BOB),
+            SeatPlan(side=Side.B, player_id=CAROL),
+        ),
+        by=ALICE,
+        occurred_at=at(3),
+    )
+    challenge.decline(STRANGER, occurred_at=at(4))
+    assert challenge.seat_of(ORGANISER) is None
+    assert challenge.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+
+    challenge.withdraw(CAROL, occurred_at=at(5))
+
+    assert challenge.standing_at(INSIDE) is Standing.WITHDRAWN
+
+
+def test_a_reopened_court_is_the_only_one_a_non_organiser_may_end():
+    """The Phase 1 reason stands where it applies: a court that was never a
+    game is the organiser's alone to withdraw, whatever its seats say."""
+
+    challenge = a_court_nobody_will_finish()
+
+    with pytest.raises(TheWithdrawIsTheOrganisers):
+        challenge.withdraw(ALICE, occurred_at=at(4))
 
 
 def test_the_departed_are_not_asked_again_and_the_seat_goes_to_somebody_new():

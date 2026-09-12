@@ -567,10 +567,18 @@ Rules to preserve:
   `SeatableGameQuery` — on the departure, the fill and the acceptance, and only on a court
   that has been a game. The challenge folds one fact beside its seats for this,
   `game_opened`, off `SeatLeft`, so a court the organiser is alone on is a game with a seat
-  to fill rather than a lapse; withdraw on such a court is refused until #417 gives the game
-  an end of its own. **The three ends are folded and never stored, and nothing announces one** —
-  there is no `ResultConfirmed`, no sweep and no job, because a derived standing has
-  exactly one place to be true; *silence confirms* is a clock passing, so the test for it
+  to fill rather than a lapse. **And withdraw reaches such a court and calls the game off**
+  ([ADR-0163](../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)): the withdraw
+  hands `call_off` over on the same port in the same transaction, `GameCalledOff` is the
+  fourth end — read first by `standing_of`, in `SETTLED`, out of `PLAYED`, and **in no
+  tally**, because a ghost is silence and this was an act — and the act is the organiser's
+  or, once the organiser's own seat is open, any remaining player's. A court whose window
+  already closed is withdrawn without the game being told; the ghost stands. **Three ends
+  are folded from the record and the clock and the fourth is announced, and all four are
+  never stored** — there is no `ResultConfirmed`, no sweep and no job, because a derived
+  standing has exactly one place to be true, and `GameCalledOff` may announce its end
+  only because no arrangement of the record could reach it (ADR-0142 §3's exemption,
+  argued again for `games`); *silence confirms* is a clock passing, so the test for it
   advances a clock and there is deliberately no method called `confirm`. **One route
   resolves three acts** — `POST /games/{id}/result` is a proposal, a correction or a
   counter depending on what already stands, so a client cannot mislabel one, and there is

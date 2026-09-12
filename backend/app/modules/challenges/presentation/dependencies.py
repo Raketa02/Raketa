@@ -216,15 +216,21 @@ def get_withdraw_challenge(
     uow: UnitOfWorkDep,
     challenges: ChallengeRepositoryDep,
 ) -> WithdrawChallenge:
-    """The withdraw, and it is the decline's four collaborators exactly.
+    """The withdraw: the decline's four collaborators, and the hand-over.
 
-    **No game opening here**, and the absence is the same statement ``DeclineSeat``
-    makes: only an accept can fill the last seat, and a withdraw is the act for a
-    line-up that never will.
+    **The hand-over is here because a withdraw can reach a game now**
+    (``docs/adr/0163``): a court that has been a game is withdrawn through this
+    route and the game is called off in the same transaction. It is the same
+    seam the accept and the departure hold, built the same way, so the three
+    acts that tell the game cannot come to two wirings of it.
     """
 
     return WithdrawChallenge(
-        challenges=challenges, handles=build_challenge_handles(db), uow=uow, clock=clock
+        challenges=challenges,
+        handles=build_challenge_handles(db),
+        uow=uow,
+        clock=clock,
+        planned_games=build_planned_game_handover(db),
     )
 
 

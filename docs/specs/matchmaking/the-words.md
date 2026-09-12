@@ -1850,6 +1850,24 @@ hiding the only consequence the player cannot undo.
 (§24). And the sheet says nothing about the pair rule releasing: that is a fact about what becomes
 possible afterwards, and a confirmation is not the place to sell a consequence.
 
+**On a court that has been a game the same sheet is reworded, and the act is the same route**
+([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #411 rule 4). The game is
+called off in the act, so the sheet names the game rather than the court, and the control is any
+remaining player's once the organiser has left:
+
+| | |
+| --- | --- |
+| Sheet title | `Before you call it off` |
+| Body | `Everybody still in loses this game.` |
+| Body | `The conversation goes with it, and what people wrote is deleted.` |
+| Body | `This cannot be undone.` |
+| The act | `Call the game off` |
+| In flight | `Calling it off…` |
+| Dismissal | `Keep it open` |
+
+**The visible control says `Call it off`**, and it is drawn only while a seat is open — a full
+court that will not play has no such control, and its window lapses into *Never played* as today.
+
 ### 22.4 The quick chips
 
 **A chip posts words and nothing else** (ADR-0144). One per unfilled slot, in slot order, plus
@@ -2004,6 +2022,12 @@ writing:
 | `⚡ Fill the seats` | the challenge screen's `LINE_UP_INCOMPLETE` arm, and it is the builder's own label for the identical act |
 | `Finish the plan` · `Open` · `We played` · `Confirm the result` | the Now card's wide door, one per name — [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §5.2. **`Finish the plan` is Planning's word for the same door Game on opens with `Open`** ([#413](https://github.com/Raketa02/Raketa/issues/413)): the destination is the same and the errand is not. *Finish* and not *Lock*, because the lock is an act with its own control on that screen (ADR-0155) |
 
+**And one ending with no door**: **`Called off`** is the card's word for `GameStanding.CALLED_OFF`
+([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)) — an ending like *Never
+played*, and unlike it in one respect the card must not draw: nobody let a window close on it,
+somebody ended it. The sentence is *It was called off* and it names nobody, because `called_off_by`
+is on no wire and the room that would have said who is gone.
+
 **Nothing offline gets a third sentence.** `does-not-resume` is the shared value, unchanged, and
 the two values split on **resumption**; a third keyed to the act would break the only distinction
 the function has. One amber note above a greyed pair, pre-emptive, exactly as `BuilderScreen`
@@ -2080,6 +2104,7 @@ different rules do it.**
 | `GamePlanned` | **the seats already imply it** |
 | `challenges.withdrawn` | it **destroys** the room in the same act |
 | `games.seat_vacated` · `games.line_up_reseated` | the challenge's own `SeatLeft` and the acceptance that completed the court draw the lines, and membership reads the game's line-up live — a room told twice would write a second line |
+| `games.called_off` | the challenge's own withdrawal **destroys** the room in the same transaction, so there is nobody left to read a line and no room to be a length ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)) |
 | `ResultProposed` · `Corrected` · `Countered` · `Accepted` | `games` has its own conversation for the argument |
 
 **No system line announces a derived standing, and there is no *Game on* line** — the prototype

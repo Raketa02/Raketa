@@ -1,4 +1,4 @@
-"""What a caller may ask this context to do. **Four commands, and no flags.**
+"""What a caller may ask this context to do. **Five commands, and no flags.**
 
 Each is one sentence a player could say. There is no *kind* on the result
 command deciding between proposing, correcting and countering: which of the three
@@ -34,6 +34,17 @@ class VacateSeatCommand:
 
     challenge_id: UUID
     player_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class CallOffGameCommand:
+    """The challenge was withdrawn with a seat open, so the game it became is
+    called off. ``challenges`` sends this in the transaction of the withdrawal,
+    and nothing else does. ``called_by`` is whoever held the exit — the
+    organiser, or a remaining player once the organiser has left."""
+
+    challenge_id: UUID
+    called_by: UUID
 
 
 @dataclass(frozen=True, slots=True)

@@ -11,6 +11,8 @@ line-up is*.
 **It translates one sentence into another and nothing else.** The side codes are
 identical strings on both sides on purpose, so the mapping here is a pass-through
 rather than a table; a table would be a place for the two spellings to drift.
+Three sentences now (``docs/adr/0163``): the opening, the departure, and the
+withdrawal that calls the game off.
 """
 
 from __future__ import annotations
@@ -19,7 +21,9 @@ from typing import Sequence, final
 from uuid import UUID
 
 from app.kernel import Instant, Sport
+from app.modules.games.application.call_off_game import CallOffGame
 from app.modules.games.application.commands import (
+    CallOffGameCommand,
     OpenPlannedGameCommand,
     VacateSeatCommand,
 )
@@ -30,11 +34,18 @@ from app.modules.games.application.vacate_seat import VacateSeat
 @final
 class GamesPlannedGame:
     """*Everybody accepted* → the ``games`` command that records the arrangement;
-    *somebody left* → the one that opens their seat."""
+    *somebody left* → the one that opens their seat; *the court is withdrawn* →
+    the one that calls the game off."""
 
-    def __init__(self, games: OpenPlannedGame, departures: VacateSeat) -> None:
+    def __init__(
+        self,
+        games: OpenPlannedGame,
+        departures: VacateSeat,
+        withdrawals: CallOffGame,
+    ) -> None:
         self._games = games
         self._departures = departures
+        self._withdrawals = withdrawals
 
     async def open_planned_game(
         self,
@@ -62,5 +73,13 @@ class GamesPlannedGame:
     ) -> None:
         await self._departures.execute(
             VacateSeatCommand(challenge_id=challenge_id, player_id=player_id),
+            occurred_at=occurred_at,
+        )
+
+    async def call_off(
+        self, *, challenge_id: UUID, by: UUID, occurred_at: Instant
+    ) -> None:
+        await self._withdrawals.execute(
+            CallOffGameCommand(challenge_id=challenge_id, called_by=by),
             occurred_at=occurred_at,
         )

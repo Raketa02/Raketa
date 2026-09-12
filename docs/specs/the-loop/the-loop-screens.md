@@ -315,7 +315,7 @@ nothing on the wire carries a side.
 | `LAPSED` · both | §13 *{name}'s day ran out…* / *Your day ran out* | no | none |
 | `WITHDRAWN` · both | §13 *You withdrew this* / *{name} withdrew this — that court is closed* | no | none |
 | `ON` · both | §13 *Everybody's in* / *You're in — everybody's in* | no | **Open the chat** *(the door, below)* |
-| `LINE_UP_INCOMPLETE` · member, **a court somebody left** | §13 *{n} in, {m} seats open…* — the same sentence, on a court that has been a game | **yes** | **⚡ Fill the seats** · **Open the chat** — and **no Withdraw**, until #417 |
+| `LINE_UP_INCOMPLETE` · member, **a court somebody left** | §13 *{n} in, {m} seats open…* — the same sentence, on a court that has been a game | **yes** | **⚡ Fill the seats** · **Open the chat** · **Call it off** *(the organiser — or, once the organiser has left, any remaining player;* [ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)*)* |
 | `LINE_UP_INCOMPLETE` · reader who **left the game** | §13's two sentences for a reader who left, read as *You left* | no | none |
 
 **A reopened court is the half-built court again, and it is reached from the game**
@@ -324,9 +324,12 @@ nothing on the wire carries a side.
 `challenge_id` — and what it leaves behind is a `LINE_UP_INCOMPLETE` court whose seat reads `LEFT`,
 which this table draws exactly as it draws one a decline reopened: the fill is the same fill, the
 door is the same door. Two rows are added rather than the existing two widened, because one thing
-differs: **the withdraw is refused on a court that has been a game** — its exit is calling the
-game off, which is #417's — so the arm draws no Withdraw there, and a stale button meets
-`not_a_half_built_line_up`. The seat that left is drawn with its answer, as a declined seat is.
+differs: **the withdraw on a court that has been a game calls the game off**
+([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), same day) — the same
+route, the sheet reworded (`the-words.md` §22.3), and the control is the organiser's or, once the
+organiser's own seat is open, any remaining player's. It was refused for the length of one record,
+with `not_a_half_built_line_up`; that refusal is gone. The seat that left is drawn with its
+answer, as a declined seat is.
 
 **The door is drawn on every arm whose reader the room would hold** (2026-09-11). *Open the chat*
 is ADR-0149 §3's client join over `GET /conversations`, and it **fails soft**: where the list holds
@@ -531,13 +534,16 @@ file by name. It binds every control on every screen in this document, not only 
 
 ### 2.5 `LINE_UP_INCOMPLETE`, and the reader who has left
 
-**Three controls, in the order grow · talk · end** (ADR-0150), and only the organiser sees three.
+**Three controls, in the order grow · talk · end** (ADR-0150), and only the organiser sees three —
+on a court that was never a game. On a court that has been one, the third falls back
+([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md) §1).
 
 | Control | Who | What it does |
 | --- | --- | --- |
 | **⚡ Fill the seats** | any live member | runs the fill and **pushes a builder holding a full court and a fresh search** |
 | **Open the chat** | any live member | `/chats/conversation/[conversationId]` |
 | **Withdraw** | the organiser only | opens the sheet — §2.6 |
+| **Call it off** | on a court that has been a game: the organiser, or once the organiser has left, any remaining player | the same route and the same sheet, reworded — `the-words.md` §22.3; the game is called off in the act |
 
 **⚡ is the entry point, and items 1 and 2 of that ticket had one answer.** Pressing it is *Find a
 game*'s own shape — press, the search runs, the builder arrives with a court on it — which
@@ -598,7 +604,10 @@ challenged again immediately, in any sport, by anybody. What keeps them out of *
 
 **Whole-challenge, irreversible, organiser only, and in `LINE_UP_INCOMPLETE` and nowhere else.**
 It destroys the conversation (ADR-0142), so it is the second irreversible act in this app that
-reaches other people — and it takes the shape the first one already has.
+reaches other people — and it takes the shape the first one already has. *Organiser only* holds
+on a court that was never a game; on a court that has been one, the act calls the game off and
+falls back to any remaining player once the organiser has left
+([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)).
 
 **A sheet, on `SH.propose`'s exact shape**: a real modal (9.1) with `accessibilityViewIsModal`,
 hidden siblings and Android back; a title naming the **moment** rather than the act, so the act is
@@ -1208,6 +1217,7 @@ the same game depending which day they tap it.
 | **Counted** | the agreed score, the outcome, the worth line | none |
 | **Uncounted** | *an evening, not evidence* | none |
 | **Never played** | *It never happened* | none |
+| **Called off** | *It was called off* — an ending, and no door ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)) | none |
 
 **The plan-lead layout, since [#414](https://github.com/Raketa02/Raketa/issues/414)** — the two
 rungs whose card door says *Finish the plan* / *Open*, redrawn to #410's design:
@@ -1290,6 +1300,7 @@ the rail — the card is the record for the day it stays.
 | 14 | **Counted** | Now card | — | nowhere — no door, and the body is not one |
 | 16 | **Uncounted** | Now card | — | nowhere |
 | — | **Never played** | Now card | — | nowhere |
+| — | **Called off** | Now card | — | nowhere — shelved a day from `called_off_at`, which `GameSchema` carries beside `played_at` for exactly this; `entry_closes_at` is `null` on it, so a card that read the window would stay eight days ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)) |
 | — | every live card | Now card | the bubble | `/chats/conversation/[conversationId]` |
 | — | the conversation | Details | — | `/chats/conversation/[id]/details`, the arm the standing derives |
 | — | **Planning** · **Game on** | the game screen | `Open the chat` — `dark`, `lg`, full width | `/chats/conversation/[conversationId]` — the join, failing soft |

@@ -191,13 +191,18 @@ class ChallengeWithdrawn:
     it the exemption rather than a breach: a fact about a seat is a fact the fold
     already has, and this one is not in the seats anywhere.
 
-    It carries **no player**, and that is not an omission. Only the organiser may
-    withdraw, the organiser's seat is on the stream from the opening event, and a
-    second copy of *who* would be a second place for it to be true — the failure
-    ``SeatLapsed`` avoids by carrying the one player a whole-court event could
-    not otherwise name. Whole-challenge and irreversible: there is no
-    ``ChallengeReopened`` beside this, because re-asking the same people is a
-    **new** challenge with fresh deadlines and its own ``answered`` set.
+    It carries **no player**, and that is not an omission. On a court that was
+    never a game only the organiser may withdraw, the organiser's seat is on the
+    stream from the opening event, and a second copy of *who* would be a second
+    place for it to be true — the failure ``SeatLapsed`` avoids by carrying the
+    one player a whole-court event could not otherwise name. On a court that
+    has been a game the act may be a remaining player's (``docs/adr/0163`` §1),
+    and there the actor is on the **game's** record, ``GameCalledOff.called_by``,
+    written in the same transaction; the one path where nobody records it — a
+    court whose game had already ended by its clock — is costed in that record.
+    Whole-challenge and irreversible: there is no ``ChallengeReopened`` beside
+    this, because re-asking the same people is a **new** challenge with fresh
+    deadlines and its own ``answered`` set.
     """
 
     challenge_id: UUID

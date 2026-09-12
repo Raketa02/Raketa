@@ -20,9 +20,10 @@ it. The sweep (``lapse``) exists for the **record**, not for correctness.
 answering a seat you do not hold, answering twice, answering after your own
 deadline, challenging yourself, a challenge with no invitee, a court that is not
 the sport's, removing somebody who is already in the game, a send with nobody
-new to invite, a withdraw that is not the organiser's or is asked of a standing
-that has some other end already, and a departure from a court that is not a
-game. Everything else this context knows is derived.
+new to invite, a withdraw that is not the organiser's — or, once the organiser
+has left, not a remaining player's — or is asked of a standing that has some
+other end already, and a departure from a court that is not a game. Everything
+else this context knows is derived.
 
 **One act here announces its own conclusion, and exactly one may**
 (``docs/adr/0142``). ``withdraw`` records the only standing no arrangement of the
@@ -35,7 +36,11 @@ over an accepted seat, the fold re-derives ``LINE_UP_INCOMPLETE``, and the game
 this court became is told in the same transaction. The next completed line-up
 re-seats that game rather than opening another. A court that has been a game
 holds one fact beside its seats — ``game_opened`` — because the fold must not
-end it the day the organiser is alone on it.
+end it the day the organiser is alone on it. **And its exit is the withdraw**
+(``docs/adr/0163``): a reopened court is ``LINE_UP_INCOMPLETE``, the withdraw
+is that standing's act, and the game is called off one layer up in the same
+transaction — by the organiser, or by any remaining player once the organiser's
+own seat is open.
 
 **What it does not refuse, and states as an invariant instead:** *an acceptance
 is to the game, not to the side.* The membership is settled; the arrangement is
@@ -362,7 +367,8 @@ class Challenge:
     # -- ending it ---------------------------------------------------------
 
     def withdraw(self, player_id: UUID, *, occurred_at: Instant) -> None:
-        """The organiser ends a line-up nobody is going to complete.
+        """The organiser ends a line-up nobody is going to complete — or, on a
+        court that has been a game, whoever still holds the exit.
 
         **Whole-challenge, and irreversible** (``docs/adr/0142`` §2). Per-seat
         would be the organiser removing an accepted player, which
@@ -377,31 +383,55 @@ class Challenge:
         ends itself when the clocks run out, and the only thing a withdraw would
         add there is the ability to ask the same person again tomorrow —
         ``NobodyIsAskedTwice`` is scoped to one aggregate and cannot see a
-        withdraw-and-resend. ``ON`` has become a game and ending the challenge
-        would not touch it.
+        withdraw-and-resend. ``ON`` has become a game with nobody to fill a seat
+        for. **A court that has been a game and lost somebody is
+        ``LINE_UP_INCOMPLETE`` again, and this is its exit too**
+        (``docs/adr/0163``): the game is called off in the same transaction, one
+        layer up, and the room is destroyed as it is for any withdrawal. What
+        this aggregate records is the same event with the same shape — the
+        seats are left as they were, ``game_opened`` stays true.
 
-        **Whose act it is, asked first.** That the caller is not the organiser is
-        true regardless of what the seats say, exactly as *who is on the court*
-        is checked ahead of anything a send has to read; asking the standing
-        first would tell an invitee which standings they cannot end, one probe at
-        a time.
+        **Whose act it is, asked first.** The organiser's — or, **once the
+        organiser's own seat is no longer live, any remaining player's**, because
+        a court whose organiser has left would otherwise have an exit nobody
+        holds, and the people who agreed did nothing wrong. An organiser who has
+        left is not a remaining player: the exit fell back to the people still
+        on the court, and a stranger to them now does not end their game.
+        Neither question reads the standing: that the caller may not end this
+        court is true regardless of what the fold says, exactly as *who is on
+        the court* is checked ahead of anything a send has to read; asking the
+        standing first would tell an invitee which standings they cannot end,
+        one probe at a time. ``organiser_seat_required`` is the one place *has
+        the organiser left* is decided, and it is read rather than re-derived
+        here.
         """
 
-        if player_id != self.organiser_id:
+        if not self._holds_the_exit_at(player_id, occurred_at):
             raise TheWithdrawIsTheOrganisers()
         if self.standing_at(occurred_at) is not Standing.LINE_UP_INCOMPLETE:
-            raise OnlyAHalfBuiltLineUpIsWithdrawn()
-        if self.game_opened:
-            # **A court that has been a game is refused here until #417**
-            # (``docs/adr/0162`` §2). Its exit is calling the game off, which
-            # reaches the game's record; a withdraw that ended the challenge and
-            # destroyed the room while the game went on standing, with a seat
-            # open, would be an ending nobody on the court was told about.
             raise OnlyAHalfBuiltLineUpIsWithdrawn()
         self._record_that(
             ChallengeWithdrawn(
                 challenge_id=self.challenge_id, occurred_at=occurred_at
             )
+        )
+
+    def _holds_the_exit_at(self, player_id: UUID, now: Instant) -> bool:
+        """Whether this player may withdraw: they are still live on the court,
+        and they are the organiser — or the organiser no longer is.
+
+        On a court that was never a game the organiser is live from birth and
+        nobody can leave it, so this is *the organiser and nobody else*, which
+        is ``docs/adr/0142`` §2 unchanged; the fallback exists only where a
+        departure does.
+        """
+
+        seat = self.seat_of(player_id)
+        if seat is None or not seat.is_live_at(now):
+            return False
+        return (
+            player_id == self.organiser_id
+            or self.organiser_seat_required(now) is None
         )
 
     # -- completing a half-built game -------------------------------------

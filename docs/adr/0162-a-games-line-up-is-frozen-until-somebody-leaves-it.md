@@ -157,6 +157,11 @@ room while the game went on standing, `AWAITING_ENTRY`, with an open seat and no
 So `LINE_UP_INCOMPLETE` is the standing that gets the act, and a court that has been a game is
 the one `LINE_UP_INCOMPLETE` that does not — until the act that touches the game exists.
 
+> **That act exists, same day: [ADR-0163](0163-called-off-is-the-fourth-end-of-a-game.md).**
+> The withdraw reaches a reopened court and calls the game off in the same transaction; the
+> organiser's fallback is decided there too. The paragraph above is kept as the reason the
+> refusal was interim rather than as a rule.
+
 ### 3. The game's line-up stops being frozen, and the same game is re-seated
 
 **`Seating` admits an open seat** — `player_id: None` on a side, coded `A|` — and
@@ -288,7 +293,9 @@ rewriting history. Which strand, which window and which threshold are that recor
 
 ### 9. What is out of scope, and why the fold allows what it allows
 
-Calling the game off, the organiser's fallback and `CALLED_OFF` are #417's. Removing somebody
+Calling the game off, the organiser's fallback and `CALLED_OFF` are #417's — decided in
+[ADR-0163](0163-called-off-is-the-fourth-end-of-a-game.md), which also answers the question the
+Consequences below leave open: a called-off game is **not** a ghost. Removing somebody
 else stays refused — `AnAcceptedPlayerMayNotBeRemoved` — because the people who agreed did
 nothing wrong. There is no way back for the one who left and no unlock. And the fold lets the
 **last** person leave rather than refusing it, because the alternative is a rule about a count
@@ -321,6 +328,8 @@ no members and answers `conversation_not_found` to everybody, and its window clo
   `not_a_half_built_line_up` now covers a court that *is* half built, for a stated interim
   reason. A client drawing *Withdraw* on `LINE_UP_INCOMPLETE` draws a button that refuses on a
   reopened court until #417 lands; the client tickets (#418, #419) know it.
+  *Lifted the same day by [ADR-0163](0163-called-off-is-the-fourth-end-of-a-game.md); the code
+  is one code for five standings again.*
 - **The contract grows, and one widening is not additive for an installed build.**
   `SeatingSchema.player_id` goes from required to required-and-nullable: a regenerated client
   absorbs it as `string | null`, but a build installed before this record types it `string` and

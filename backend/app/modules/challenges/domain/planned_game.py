@@ -1,4 +1,4 @@
-"""The one thing this context asks somebody else to **do** — twice over.
+"""The one thing this context asks somebody else to **do** — three times over.
 
 Every seam on ``domain/ports.py`` is a *read* about a fact this context owns or
 can fold — the repository, the log queries and the four gates. This is the
@@ -10,18 +10,21 @@ reads have nothing to say about one.
 left ``ports.py``, and for the neighbouring reason — they are reads, but about a
 **game**, which is the one thing here this context does not know the shape of.
 The three are one arrow (``challenges -> games``) written three times: this one
-hands an arrangement over and hands a departure over, one asks whether anything
-more will happen to what came of it, and one asks whether its seats may still
-change.
+hands an arrangement over, hands a departure over and hands a withdrawal over,
+one asks whether anything more will happen to what came of it, and one asks
+whether its seats may still change.
 
-**It fires at the instant a line-up completes, and again at the instant somebody
-leaves the game it became** (``docs/adr/0162``). The first hand-over used to be
-the only one — *every seat accepted, nobody left to answer, and the membership
-settled for good* — and the membership is no longer settled for good: a player
-may leave a game that has not happened, the seat opens on both records, and the
-**next** completed line-up hands over a re-seat of the same game rather than
-the opening of another. Which of the two a completion is, is the other side's to
-say: this context hands over the court and learns back an id, or nothing.
+**It fires at the instant a line-up completes, again at the instant somebody
+leaves the game it became** (``docs/adr/0162``), **and again at the instant a
+court that has been a game is withdrawn** (``docs/adr/0163``). The first
+hand-over used to be the only one — *every seat accepted, nobody left to answer,
+and the membership settled for good* — and the membership is no longer settled
+for good: a player may leave a game that has not happened, the seat opens on
+both records, and the **next** completed line-up hands over a re-seat of the same
+game rather than the opening of another. Which of the two a completion is, is
+the other side's to say: this context hands over the court and learns back an
+id, or nothing. And a reopened court's exit is the withdraw, which reaches the
+game: it is **called off**, the fourth end, in the withdrawal's own transaction.
 
 **Inline, in the transaction of the act**, and not through the outbox.
 ``docs/adr/0003`` is this repository's convention for side effects and is right
@@ -48,7 +51,8 @@ from app.kernel import Instant, Sport
 @runtime_checkable
 class PlannedGameHandover(Protocol):
     """*Everybody accepted — there is now a game they might play.* And:
-    *somebody left — that seat on it is open.*
+    *somebody left — that seat on it is open.* And: *this court is withdrawn —
+    the game it became is called off.*
 
     Signed by an adapter that calls the ``games`` commands, wired in the
     composition root with every other choice of implementation. The two contexts
@@ -99,5 +103,22 @@ class PlannedGameHandover(Protocol):
         game's seats may still change, so what the other side refuses is its own
         half — a game that has happened, or never will — and a refusal there
         rolls the departure back with it. It does **not** commit.
+        """
+        ...
+
+    async def call_off(
+        self, *, challenge_id: UUID, by: UUID, occurred_at: Instant
+    ) -> None:
+        """This challenge has been withdrawn with a seat open, and it had become
+        a game. **That game is called off.**
+
+        Called only on a court that has been a game, after the aggregate has
+        recorded the withdrawal and decided whose act it is — so ``by`` is the
+        organiser, or a remaining player once the organiser has left, and it is
+        the one record of the actor: ``ChallengeWithdrawn`` carries no player.
+        The other side reads no moment guard for this; what it decides on its
+        own is that **a game already ended by its clock stays the end it is**
+        (``docs/adr/0163`` §6) — a ghost is not un-ghosted, and the withdraw
+        still ends the challenge. It does **not** commit.
         """
         ...

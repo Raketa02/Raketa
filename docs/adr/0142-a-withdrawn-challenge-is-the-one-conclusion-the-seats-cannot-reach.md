@@ -66,11 +66,14 @@ when the clocks run out. `ON` has become a game, and ending the challenge would 
 > become a game, and a player on it may now **leave** it — `POST /challenges/{id}/departure` —
 > while the game awaits its entry and its agreed moment is ahead. The seat reopens on the
 > challenge, the game is told in the same transaction, and the court is `LINE_UP_INCOMPLETE`
-> again until the next completed line-up re-seats the same game. **The withdraw half stands
-> for now**: a court that has been a game is refused this route with the code below, because
-> its exit is calling the game off, which reaches the game's record and is
-> [#417](https://github.com/Raketa02/Raketa/issues/417)'s. Everything else in this section —
-> whole-challenge, irreversible, the Phase 1 refusal — is untouched.
+> again until the next completed line-up re-seats the same game. **The withdraw half is
+> superseded the same day by [ADR-0163](0163-called-off-is-the-fourth-end-of-a-game.md)**: a
+> withdraw on a court that has been a game **does** touch it — the game is called off in the
+> same transaction, `CALLED_OFF`, the fourth end — and *organiser only* gains its fallback: once
+> the organiser's own seat is open, any player still on the court holds the exit, because the
+> people who agreed did nothing wrong and one of them has to hold it. On a court that was never
+> a game, everything in this section — organiser only, whole-challenge, irreversible, the Phase 1
+> refusal — is untouched.
 
 **Whole-challenge, and irreversible.** Per-seat would be the organiser removing an accepted
 player, which `AnAcceptedPlayerMayNotBeRemoved` refuses and keeps refusing — *the people who

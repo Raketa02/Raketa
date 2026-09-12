@@ -166,6 +166,16 @@ async def _saved(session, game: Game) -> Game:
     return game
 
 
+def _called_off(*, line_up: LineUp, at: Instant, leaver: UUID, caller: UUID) -> Game:
+    """A game somebody left and somebody still on it called off, an hour apart
+    (``docs/adr/0163``)."""
+
+    game = _planned(line_up=line_up, at=at)
+    game.vacate(leaver, occurred_at=instant(at + timedelta(hours=1)))
+    game.call_off(by=caller, occurred_at=instant(at + timedelta(hours=2)))
+    return game
+
+
 # ---------------------------------------------------------------------------
 # The three ends, each reached through the aggregate and read back through the
 # port
@@ -765,6 +775,33 @@ async def test_a_plan_still_inside_its_entry_window_says_nothing_about_the_pair(
     assert await port.played_counterparts(one, now=now) == ()
 
 
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_called_off_game_says_nothing_about_the_pair_for_good(
+    implementation, session
+):
+    """``docs/adr/0163`` §3 — the fourth end is neither an evening nor a ghost.
+
+    Nobody played, so it is not ``PLAYED``; and nobody let a window close on it,
+    so it is not ``PLANNED_NEVER_PLAYED`` either — somebody ended it. It is left
+    out, and it stays out however far the clock runs, because the act is read
+    before the window.
+    """
+
+    port = implementation.build(session)
+    one, other = new_uuid(), new_uuid()
+
+    await _saved(
+        session,
+        _called_off(
+            line_up=_singles(one, other), at=_ago(days=30), leaver=other, caller=one
+        ),
+    )
+
+    now = instant(datetime.now(timezone.utc))
+    assert await port.played_counterparts(one, now=now) == ()
+    assert await port.counted_games_for([one, other], now=now) == {one: 0, other: 0}
+
+
 # ---------------------------------------------------------------------------
 # attendance_for — the *shows up* strand's input, per person and never per pair
 # ---------------------------------------------------------------------------
@@ -806,6 +843,30 @@ async def test_attendance_counts_a_game_played_and_a_plan_that_ghosted(
     assert (attendance[one].played, attendance[one].ghosts) == (1, 1)
     assert attendance[one] == attendance[other]
     assert attendance[one].last_at == played.played_at
+
+
+@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
+async def test_a_called_off_game_charges_nobody_with_a_ghost(implementation, session):
+    """``docs/adr/0163`` §3, and #411 rule 7 on the people who stayed.
+
+    A ghost is a window closing on silence; this was an act. Filing it against
+    the three who did not leave would price somebody else's departure through
+    them, so it is not an opportunity at all — and a player whose only
+    arrangement was called off is absent, not a measured nought.
+    """
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    one, other = new_uuid(), new_uuid()
+
+    await _saved(
+        session,
+        _called_off(
+            line_up=_singles(one, other), at=_ago(days=30), leaver=other, caller=one
+        ),
+    )
+
+    assert await port.attendance_for([one, other], now=now) == {}
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
@@ -1606,6 +1667,28 @@ async def test_a_game_somebody_said_they_played_is_no_longer_open_to_planning(
 
 
 @pytest.mark.parametrize("implementation", registered(PlanningCourt))
+async def test_a_called_off_game_is_history_and_still_answered_about(
+    implementation, session
+):
+    """``docs/adr/0163`` §3 — the fourth end freezes the slots as the other
+    three do, and the plan is still drawn beside the game."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    ana, bo = new_uuid(), new_uuid()
+
+    game = await _saved(
+        session,
+        _called_off(line_up=_singles(ana, bo), at=_ago(days=1), leaver=bo, caller=ana),
+    )
+    found = await port.plannable_for(ana, now=now)
+
+    assert game.standing_at(now) is GameStanding.CALLED_OFF
+    assert game.id in found
+    assert not found[game.id].open_to_planning
+
+
+@pytest.mark.parametrize("implementation", registered(PlanningCourt))
 async def test_somebody_who_was_not_on_the_court_is_answered_about_nothing(
     implementation, session
 ):
@@ -1958,6 +2041,27 @@ async def test_a_game_that_has_happened_or_never_will_is_history_before_its_mome
     )
     assert (
         await port.seat_change_on(ghost.challenge_id, now=now)
+        is SeatChange.GAME_IS_HISTORY
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(SeatableCourt))
+async def test_a_called_off_game_is_history_to_a_seat_change(implementation, session):
+    """``docs/adr/0163`` §3 — nothing on a called-off court moves, before its
+    moment or after. Nothing reaches this read on that path today (the
+    challenge is `WITHDRAWN` and refuses first), and the port answers rightly
+    all the same."""
+
+    now = instant(datetime.now(timezone.utc))
+    ana, bo = new_uuid(), new_uuid()
+    game = await _saved(
+        session,
+        _called_off(line_up=_singles(ana, bo), at=_ago(days=1), leaver=bo, caller=ana),
+    )
+    port = _seatable(implementation, session, agreed=instant(now + timedelta(days=2)))
+
+    assert (
+        await port.seat_change_on(game.challenge_id, now=now)
         is SeatChange.GAME_IS_HISTORY
     )
 

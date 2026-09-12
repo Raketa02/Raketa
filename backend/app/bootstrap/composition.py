@@ -80,6 +80,7 @@ from app.modules.challenges.infrastructure.games_seatable_game import (
 from app.modules.challenges.infrastructure.games_settled_game import (
     GamesSettledGame,
 )
+from app.modules.games.application.call_off_game import CallOffGame
 from app.modules.games.application.open_planned_game import OpenPlannedGame
 from app.modules.games.application.vacate_seat import VacateSeat
 from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
@@ -1124,25 +1125,28 @@ def build_planned_game_handover(
     *,
     runtime: EventRuntime | None = None,
 ) -> PlannedGameHandover:
-    """The game a completed line-up opens or re-seats, and the seat a departure
-    vacates, recorded inline (``docs/adr/0162``).
+    """The game a completed line-up opens or re-seats, the seat a departure
+    vacates, and the game a withdrawal calls off, recorded inline
+    (``docs/adr/0162``, ``docs/adr/0163``).
 
-    It wraps two ``games`` use cases rather than an aggregate: what a game born
+    It wraps three ``games`` use cases rather than an aggregate: what a game born
     of a completed line-up *is* belongs to that context, and the adapter is a
-    translation of one sentence into another — twice.
+    translation of one sentence into another — three times.
 
-    **One repository for both**, because they run in one transaction and each
-    loads the stream it appends to; **no unit of work here**, because the
-    hand-over joins the transaction of the acceptance or the departure that
-    caused it, so the use case appends and publishes and the caller commits —
-    the boundary stays a decision about the command.
+    **One repository for all three**, because they run in one transaction and
+    each loads the stream it appends to; **no unit of work here**, because the
+    hand-over joins the transaction of the acceptance, the departure or the
+    withdrawal that caused it, so the use case appends and publishes and the
+    caller commits — the boundary stays a decision about the command.
     """
     games = build_game_repository(
         session=session,
         event_store=build_domain_event_store(session, runtime=runtime),
         events=build_event_publisher(session, runtime=runtime),
     )
-    return GamesPlannedGame(OpenPlannedGame(games=games), VacateSeat(games=games))
+    return GamesPlannedGame(
+        OpenPlannedGame(games=games), VacateSeat(games=games), CallOffGame(games=games)
+    )
 
 
 def build_agreed_moment(

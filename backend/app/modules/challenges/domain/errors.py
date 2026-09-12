@@ -201,11 +201,22 @@ class NobodyIsAskedTwice(ConflictError):
 
 
 class TheWithdrawIsTheOrganisers(ForbiddenError):
-    """Somebody on the court asked to end the whole challenge.
+    """Somebody on the court asked to end the whole challenge, and the act is
+    not theirs.
 
     Forbidden rather than not-found, for ``NotYourSeat``'s reason: the challenge
     exists and the caller can see it, and what is being refused is an act on
     everybody else's arrangement.
+
+    **One code for three cases, and the code keeps its name** (``docs/adr/0163``
+    §1). On a court that was never a game the withdraw is the organiser's alone;
+    on a court that has been a game it falls back, once the organiser's own seat
+    is open, to any remaining player — so a non-organiser on a court whose
+    organiser is still in, somebody whose own seat is no longer live on a court
+    whose organiser has left, and the organiser who left it themselves, are all
+    told the same thing: *the act is not yours*. The sentence gained its second
+    clause; the code did not move, because a shipped client already switches on
+    it.
 
     **The invitee is not offered a smaller version of it either.** Leaving a
     seat you have already answered is refused by ``TheSeatIsAlreadyAnswered``
@@ -219,7 +230,10 @@ class TheWithdrawIsTheOrganisers(ForbiddenError):
     code = "withdraw_is_the_organisers"
 
     def __init__(self) -> None:
-        super().__init__("Only the organiser may withdraw a challenge.")
+        super().__init__(
+            "Only the organiser may withdraw a challenge — or, once the organiser "
+            "has left the game it became, anybody still on its court."
+        )
 
 
 class TheFillIsTheLiveMembers(ForbiddenError):
@@ -258,12 +272,12 @@ class OnlyAHalfBuiltLineUpIsWithdrawn(ConflictError):
     is not a half-built line-up* — and splitting them would be five ways of
     saying that the caller is looking at a standing it has already been told.
 
-    **And for one more, until #417.** A court that has been a game and had a seat
-    reopened is ``LINE_UP_INCOMPLETE`` too, and it is refused here with the same
-    code (``docs/adr/0162`` §2): its exit is calling the game off, which reaches
-    the game's record and is that ticket's whole subject. A withdraw that ended
-    the challenge and destroyed the room while the game went on standing would
-    be an end nobody on the court was told about.
+    **A court that has been a game and had a seat reopened is not among them.**
+    It is ``LINE_UP_INCOMPLETE`` too, and it *is* withdrawn here
+    (``docs/adr/0163``): the game it became is called off in the same
+    transaction, so the withdraw no longer ends a challenge while its game goes
+    on standing — which was the one reason ``docs/adr/0162`` §2 refused it with
+    this code for a day.
     """
 
     code = "not_a_half_built_line_up"

@@ -976,13 +976,12 @@ async def test_the_pairing_omits_the_forecast_and_the_stakes_while_a_seat_is_ope
     assert gone.status_code == 404, gone.text
 
 
-async def test_a_reopened_court_cannot_be_withdrawn_and_cannot_record_a_result(
+async def test_a_reopened_court_cannot_record_a_result(
     client, session_factory, candidate_source, searcher, clock
 ):
-    """Two refusals that keep the game whole until #417 gives it an end of its
-    own. A withdraw would end the challenge and destroy the room while the game
-    went on standing; a score on a court with a seat open is a score with a side
-    nobody can price."""
+    """A score on a court with a seat open is a score with a side nobody can
+    price. The court's exit is the withdraw, which calls the game off
+    (``docs/adr/0163``, ``tests/api/test_calling_off.py``)."""
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     challenge_id = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
@@ -990,13 +989,6 @@ async def test_a_reopened_court_cannot_be_withdrawn_and_cannot_record_a_result(
     assert (
         await _leave(client, people["cy"]["token"], challenge_id)
     ).status_code == 200
-
-    withdrawn = await client.post(
-        f"/api/v1/challenges/{challenge_id}/withdrawal",
-        headers=world.auth(searcher["token"]),
-    )
-    assert withdrawn.status_code == 409, withdrawn.text
-    assert withdrawn.json()["code"] == "not_a_half_built_line_up"
 
     stated = await client.post(
         f"/api/v1/games/{game['game_id']}/result",

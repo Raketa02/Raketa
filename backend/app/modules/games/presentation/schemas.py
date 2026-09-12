@@ -2,7 +2,7 @@
 
 Three rules decide everything below.
 
-**The standing is derived and travels as a code.** ``GameStanding`` is five values and
+**The standing is derived and travels as a code.** ``GameStanding`` is six values and
 the words for them are the client's (``docs/adr/0022``). It is on the response
 because it is a fold of the record against the moment the list was read — and it
 is **not** on the aggregate, in the store, or anywhere a second copy could go
@@ -250,7 +250,21 @@ class GameSchema(BaseModel):
         default=None,
         description=(
             "When *we played* stops being sayable and the game becomes a game "
-            "that never happened. ``null`` once somebody has said it happened."
+            "that never happened. ``null`` once somebody has said it happened, "
+            "and ``null`` on a game that was called off — the window no longer "
+            "matters, and a card that shelved itself by it would stay for eight "
+            "days."
+        ),
+    )
+    called_off_at: datetime | None = Field(
+        default=None,
+        description=(
+            "When somebody called it off, while a seat was open "
+            "(``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; "
+            "then the act's own instant, which is what the ending card is "
+            "shelved from — a day later, as `played_at` and `entry_closes_at` "
+            "already shelve the other endings. **Nobody is named**: the room "
+            "is gone and the card says *Called off*."
         ),
     )
     seats: list[SeatingSchema] = Field(

@@ -51,7 +51,11 @@ nobody left to read one — so there is no room left to derive an instant for. I
 is also why a room that is still arranging answers ``None`` here rather than
 being given a clock of its own: ``docs/adr/0142`` §1's own answer to a court
 nobody will complete is the organiser ending it, and inventing a deadline for
-that here would be this context folding somebody else's record.
+that here would be this context folding somebody else's record. **A withdrawal
+now reaches a room that already holds its game** (``docs/adr/0163``) — a
+reopened court is called off through it — and nothing here reads ``game_id``
+on that path: the destruction is the teller's, in the act, and the anchors
+below are only ever consulted on a read of a room that still exists.
 """
 
 from __future__ import annotations

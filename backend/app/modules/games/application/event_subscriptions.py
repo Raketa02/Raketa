@@ -3,7 +3,7 @@
 A name here is a **published contract** and outlives every Python class it maps
 to: renaming ``GamePlanned`` must never change what is already in the store.
 
-**Eight names, on one aggregate**, and every one of them is something a person did.
+**Nine names, on one aggregate**, and every one of them is something a person did.
 ``games.planned`` is the exception that proves it — a line-up completing is four
 people's acceptances arriving at a total, and it is recorded because *the
 arrangement at the instant it was settled* is not recoverable from anywhere else
@@ -16,6 +16,11 @@ be a second place for it to be true — the one a subscriber would believe, and 
 one that would be wrong for the whole gap between a deadline passing and anything
 looking. The rating context reads confirmed results forward instead
 (``docs/adr/0137``).
+
+**``games.called_off`` is the ninth, and the one end a name announces**
+(``docs/adr/0163``): a decision somebody took while a seat was open, which no
+reading of the record could reach — so the name is the fact's only home rather
+than a second one, on ``challenges.withdrawn``'s exemption.
 
 **``games.seat_vacated`` and ``games.line_up_reseated`` are the seventh and
 eighth** (``docs/adr/0162``): the two ways a line-up moves after the plan, each
@@ -34,6 +39,7 @@ from __future__ import annotations
 from app.application.events import EventCatalog, EventDispatcher
 from app.modules.games.application.handlers import LogGameEvent
 from app.modules.games.domain.events import (
+    GameCalledOff,
     GamePlanned,
     GamePlayed,
     LineUpReseated,
@@ -48,6 +54,7 @@ _CONTRACTS = (
     (GamePlanned, "games.planned"),
     (SeatVacated, "games.seat_vacated"),
     (LineUpReseated, "games.line_up_reseated"),
+    (GameCalledOff, "games.called_off"),
     (GamePlayed, "games.played"),
     (ResultProposed, "games.result_proposed"),
     (ResultCorrected, "games.result_corrected"),

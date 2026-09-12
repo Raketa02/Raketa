@@ -887,7 +887,7 @@ export interface paths {
          * Fill the open seats
          * @description **Grows a court that is already standing**, from a line-up you just built. The people who accepted keep their places and their answers; the open seats are offered to the people you name.
          *
-         *     **Any live member may do this — only the organiser may withdraw.** Growing a court and ending one are different acts. A challenge born of two mutual yeses has an organiser who is only whoever said yes second, and leaving the other one unable to finish the four would make an arbitrary tiebreak decide whose game it is. Somebody who declined or let their day run out is **not** a live member.
+         *     **Any live member may do this — the withdraw is the organiser's**, or, once the organiser has left the game a court became, any remaining player's. Growing a court and ending one are different acts. A challenge born of two mutual yeses has an organiser who is only whoever said yes second, and leaving the other one unable to finish the four would make an arbitrary tiebreak decide whose game it is. Somebody who declined or let their day run out is **not** a live member.
          *
          *     **Post the whole court, not the new seats.** An acceptance is to the game and not to the side, so you may move somebody across the net — and you may never take them out.
          *
@@ -919,6 +919,8 @@ export interface paths {
          * Withdraw the challenge
          * @description **The exit for a line-up nobody is going to complete**, and the only one: somebody is in, a seat is open, nobody is deciding, and nothing in this challenge will ever end it. The acceptor cannot leave — their seat is answered — and until now the organiser had no act at all.
          *
+         *     **And the exit for a game somebody left.** A court that has been a game and lost somebody is half built again, and this is how it is called off: the challenge is withdrawn exactly as below, and the game it became reaches its fourth end, `CALLED_OFF`, in the same act — its plan is history, its pairing is history, and it is neither an evening nor a game that never happened, so nothing anybody is measured on moves. Only while a seat is open: a full court that will not play lets its window lapse into `NEVER_PLAYED`, as it always has. **The act is the organiser's — or, once the organiser's own seat is open, any remaining player's.** A court whose game's window has already closed is withdrawn all the same, and the game stays the ghost it already is.
+         *
          *     **`LINE_UP_INCOMPLETE` and nowhere else.** Before anybody answers, the seats lapse on their own and the pair is released within the window; what a withdraw would add there is the ability to ask the same person again tomorrow, on a fresh clock, which nothing in this context can police.
          *
          *     **Whole-challenge, and it never removes one person.** A withdraw ends the arrangement for everybody on it — the people who already agreed did nothing wrong, and taking one of them out of a court that still stands is refused here as it is everywhere else.
@@ -929,7 +931,7 @@ export interface paths {
          *
          *     **What this releases is the people who accepted.** A half-built four held its pair for the life of the database — whoever agreed was unreachable in every sport, with nobody holding an exit — and this is that exit. Somebody who let their day run out needed none: their seat reopened and the open-challenge rule released them with it, so every search has reached them since. What they are out of is this court's own pool, for as long as it stands, and asking them again is a **new** challenge.
          *
-         *     **A noun and not a verb**, because what this creates is the withdrawal — the one thing in this context that a fold of the seats could never produce.
+         *     **A noun and not a verb**, because what this creates is the withdrawal — the one thing in this context that a fold of the seats could never produce. The conversation is destroyed in the act, whether or not it already held its game.
          */
         post: operations["withdraw_challenge_api_v1_challenges__challenge_id__withdrawal_post"];
         delete?: never;
@@ -3481,9 +3483,14 @@ export interface components {
             played_at?: string | null;
             /**
              * Entry Closes At
-             * @description When *we played* stops being sayable and the game becomes a game that never happened. ``null`` once somebody has said it happened.
+             * @description When *we played* stops being sayable and the game becomes a game that never happened. ``null`` once somebody has said it happened, and ``null`` on a game that was called off — the window no longer matters, and a card that shelved itself by it would stay for eight days.
              */
             entry_closes_at?: string | null;
+            /**
+             * Called Off At
+             * @description When somebody called it off, while a seat was open (``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; then the act's own instant, which is what the ending card is shelved from — a day later, as `played_at` and `entry_closes_at` already shelve the other endings. **Nobody is named**: the room is gone and the card says *Called off*.
+             */
+            called_off_at?: string | null;
             /**
              * Seats
              * @description The court, in the order the challenge handed it over
@@ -3509,10 +3516,10 @@ export interface components {
         GameSide: "A" | "B";
         /**
          * GameStanding
-         * @description The five standings, as codes. A client's words are the client's own.
+         * @description The six standings, as codes. A client's words are the client's own.
          * @enum {string}
          */
-        GameStanding: "AWAITING_ENTRY" | "NEVER_PLAYED" | "AWAITING_ANSWER" | "CONFIRMED" | "UNSCORED";
+        GameStanding: "AWAITING_ENTRY" | "NEVER_PLAYED" | "AWAITING_ANSWER" | "CONFIRMED" | "UNSCORED" | "CALLED_OFF";
         /**
          * Gender
          * @description What a player says about themselves — self-declared, freely changed.
@@ -5348,7 +5355,7 @@ export interface components {
              * Format: uuid
              * @description The half-built challenge this fill completes. **Send it and send nothing else about the court**: the sport, the kind of evening and the locked seats are all read off it.
              *
-             *     **Any live member may fill; only the organiser may withdraw.** A challenge born of two mutual yeses has an organiser who is only whoever said yes second, and leaving the other one unable to finish the four would be an arbitrary tiebreak deciding whose game it is.
+             *     **Any live member may fill; the withdraw is the organiser's** — or, once the organiser has left the game a court became, any remaining player's. A challenge born of two mutual yeses has an organiser who is only whoever said yes second, and leaving the other one unable to finish the four would be an arbitrary tiebreak deciding whose game it is.
              *
              *     The people who accepted come back as **ordinary candidate rows**, so the builder can draw them; the open-challenge gate steps aside for this one challenge and for nothing else, and the four fail-closed gates are untouched — so somebody blocked, held or deactivated since they accepted is still `locked_seat_not_available`.
              *
@@ -8367,7 +8374,7 @@ export interface operations {
                     "application/json": components["schemas"]["ChallengeSchema"];
                 };
             };
-            /** @description `withdraw_is_the_organisers` — you hold a seat on this court and the act is not yours. **Not a 404**: you can already see this challenge, so pretending it is not there while your own seat is drawn on it would be the wrong lie. */
+            /** @description `withdraw_is_the_organisers` — you hold a seat on this court and the act is not yours: the organiser's, or, once the organiser has left the game this court became, any remaining player's. **Not a 404**: you can already see this challenge, so pretending it is not there while your own seat is drawn on it would be the wrong lie. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8385,7 +8392,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `not_a_half_built_line_up` — this challenge has some other end already. **One code for five standings**, because they are one sentence: `AWAITING_ANSWERS` ends itself when the clocks run out, `ON` has become a game, and the three endings have ended. **And for a court somebody left**, which is half built again and is refused here all the same: its exit is calling the game off, which reaches the game's record and is not this route. */
+            /** @description `not_a_half_built_line_up` — this challenge has some other end already. **One code for five standings**, because they are one sentence: `AWAITING_ANSWERS` ends itself when the clocks run out, `ON` has become a game with nobody to fill a seat for, and the three endings have ended. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -8883,6 +8890,8 @@ export interface operations {
              *     `the_other_side_has_answered` — correcting is free until they respond and not afterwards. `acceptance.agreed_at` is when they did, so the sentence a player reads need not be vague about it.
              *
              *     `the_court_has_an_open_seat` — somebody left and nobody has filled their seat, so there is no court to have played on. Fill it, or let the window close.
+             *
+             *     `the_game_was_called_off` — somebody ended it while a seat was open, so there is nothing to have played. The ending is on `standing` and `called_off_at`.
              */
             409: {
                 headers: {

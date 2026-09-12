@@ -1,13 +1,17 @@
 """The four game routes: read yours, read one's pairing, state a score, agree
 with one.
 
-**There is no route that creates a game, and none that moves a seat on one.** A
-game exists because a challenge's line-up completed, and nothing a client sends
-can produce one — which is what makes *these people arranged this* a fact rather
-than a claim. A seat opens because somebody left the **challenge**
-(``POST /challenges/{id}/departure``) and is filled because the next completed
-line-up re-seated the same game; here a seat somebody left is drawn with
-`player_id: null` (``docs/adr/0162``).
+**There is no route that creates a game, none that moves a seat on one, and
+none that ends one.** A game exists because a challenge's line-up completed, and
+nothing a client sends can produce one — which is what makes *these people
+arranged this* a fact rather than a claim. A seat opens because somebody left
+the **challenge** (``POST /challenges/{id}/departure``) and is filled because the
+next completed line-up re-seated the same game; here a seat somebody left is
+drawn with `player_id: null` (``docs/adr/0162``). And a game with a seat open
+is **called off** because the challenge was withdrawn
+(``POST /challenges/{id}/withdrawal``), which is where the act's permission
+lives; here it is read as `standing: CALLED_OFF` with `called_off_at` beside it
+(``docs/adr/0163``).
 
 **The pairing is read beside the game and never on it** (``docs/adr/0161``).
 ``GameSchema`` carries no forecast and never will; what the game screen draws
@@ -122,7 +126,10 @@ _STATING_REFUSALS: dict[int | str, dict[str, Any]] = {
             "did, so the sentence a player reads need not be vague about it.\n\n"
             "`the_court_has_an_open_seat` — somebody left and nobody has filled "
             "their seat, so there is no court to have played on. Fill it, or "
-            "let the window close."
+            "let the window close.\n\n"
+            "`the_game_was_called_off` — somebody ended it while a seat was "
+            "open, so there is nothing to have played. The ending is on "
+            "`standing` and `called_off_at`."
         ),
     },
 }
@@ -386,8 +393,11 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
         planned_at=game.planned_at,
         played_at=game.played_at,
         entry_closes_at=(
-            entry_closes_at(game.planned_at) if game.played_at is None else None
+            entry_closes_at(game.planned_at)
+            if game.played_at is None and game.called_off_at is None
+            else None
         ),
+        called_off_at=game.called_off_at,
         seats=[
             SeatingSchema(
                 side=seating.side,

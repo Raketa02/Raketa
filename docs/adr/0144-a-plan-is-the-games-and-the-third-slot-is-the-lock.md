@@ -147,6 +147,13 @@ a line announcing it would be a conclusion the record already implies — `chall
 `games`' identical one. *Calling the game off* is out of scope: `games` opens one game per
 arrangement for ever, and a cancel would need it to grow the state ADR-0137 refused.
 
+> **The last sentence is superseded 2026-09-12 by
+> [ADR-0163](0163-called-off-is-the-fourth-end-of-a-game.md).** A game with a seat open can be
+> called off — the withdraw grown to a reopened court — and it did not need the state ADR-0137
+> refused: `CALLED_OFF` is folded off `GameCalledOff`, never stored. Nothing about the Plan moves:
+> there is still no cancellation *here*, and a called-off game's plan is history exactly as a
+> ghost's is.
+
 ### The record is event-sourced and stores nothing it can derive
 
 The system lines the conversation draws **are** this context's history; a three-column table would

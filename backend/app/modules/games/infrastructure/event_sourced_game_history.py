@@ -404,6 +404,14 @@ def _pairwise_outcome(game: Game, now: Instant) -> PlayedOutcome | None:
 
     Three answers and not two: a game whose entry window is still open says
     **nothing yet** about the pair, and is left out rather than filed as either.
+
+    **And a called-off game says nothing at all, for good** (``docs/adr/0163``
+    §3). It is not an evening — nobody played — and it is not a ghost, because a
+    ghost is a window closing on silence and this was an act somebody took while
+    a seat was open. Filing it as a ghost would charge the people who stayed for
+    somebody else's departure, which #411 rule 7 refuses. So it is ``None`` here,
+    and every read built on this — the pair, the attendance, the counts, the
+    variety — leaves it out by the same line.
     """
 
     standing = game.standing_at(now)

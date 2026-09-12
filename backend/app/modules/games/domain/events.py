@@ -1,16 +1,25 @@
-"""The Games context's domain events — **eight, and every one of them an act**.
+"""The Games context's domain events — **nine, and every one of them an act**.
 
 Events carry **primitive** fields, so their wire format survives any later
 refactor of the Python types: a sport, a kind and a window as their codes, a
 player as a ``str`` uuid, a whole seating as one string (``lineup.py``) and a
 whole score as another (``results.py``).
 
-**No event announces a standing.** There is no ``ResultConfirmed``, no
-``GameUnscored`` and no ``GameNeverPlayed``, for the reason ``challenges`` has no
-``GameOn``: a derived standing has exactly one place to be true, and an event
-saying otherwise would become the second — and it would be the one a subscriber
-believed. Silence confirming is a fact about a clock, and a clock has nothing to
-publish.
+**No event announces a standing the record already implies.** There is no
+``ResultConfirmed``, no ``GameUnscored`` and no ``GameNeverPlayed``, for the
+reason ``challenges`` has no ``GameOn``: a derived standing has exactly one place
+to be true, and an event saying otherwise would become the second — and it would
+be the one a subscriber believed. Silence confirming is a fact about a clock, and
+a clock has nothing to publish.
+
+**One event announces an end, and it is the rule's one exemption here**
+(``docs/adr/0163``). ``GameCalledOff`` is a decision a person took while a seat
+was open, and there is nothing on the record to fold it out of — no played
+moment, no window closing — so it passes ``docs/adr/0142`` §3's test the way
+``ChallengeWithdrawn`` does: *an event may announce a conclusion only when no
+arrangement of the record could reach it*. It is the first event here about the
+game as a whole rather than about a seat, a score or a moment, and the next one
+has to pass the same test in writing.
 
 **Two events for one act, at the entry.** *We played, here is the score* is one
 tap and two facts, read by different people: ``GamePlayed`` is what
@@ -106,6 +115,28 @@ class LineUpReseated:
 
     def __post_init__(self) -> None:
         _retuple(self, "seatings")
+
+
+@dataclass(frozen=True)
+class GameCalledOff:
+    """Somebody on the court ended the game while a seat was open.
+
+    Told by ``challenges`` in the transaction of the **withdrawal** that caused
+    it (``docs/adr/0163`` §2), so the ``WITHDRAWN`` on the challenge and the end
+    on the game commit together or neither does. It carries **who**, because on
+    a court that has been a game the withdraw is no longer the organiser's alone
+    — and ``ChallengeWithdrawn`` still carries no player, so this is the one
+    record of the actor.
+
+    **It is the fourth end and the only one an event reaches.** The standing
+    reads it first, before the clock; a game already ended by its clock is never
+    told this, because un-ghosting a game the platform has already drawn as
+    *Never played* would contradict the card.
+    """
+
+    game_id: UUID
+    called_by: UUID
+    occurred_at: datetime
 
 
 @dataclass(frozen=True)

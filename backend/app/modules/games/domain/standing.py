@@ -7,8 +7,15 @@ status field on the aggregate, no ``ResultConfirmed`` event, and this function i
 the only place a standing exists. It is ``challenges``' own rule, *nothing
 announces a conclusion the seats already imply*, applied to a result.
 
-Five values, and they are the five the record and the clock can answer for. Three
-of them are ends and two of them are waits.
+Six values. Five of them are what the record and the clock can answer for — three
+ends and two waits — and **the sixth is the one exemption this module holds, and
+it is written down so it stays one** (``docs/adr/0163``). A game called off is a
+decision a person took, and there is nothing on the record to fold it out of, so
+it is the one standing an event announces — on the rule ``challenges`` wrote for
+``WITHDRAWN``: *an event may announce a conclusion only when no arrangement of
+the record could reach it* (``docs/adr/0142`` §3). ``GameCalledOff`` is not a
+second place for the fact to be true; it is the only place, and the fold reads it
+first.
 
 **The class is ``GameStanding`` and the domain term is *standing*.** ``challenges``
 already publishes a ``Standing`` component on ``openapi.player.json``, and a
@@ -37,7 +44,7 @@ from app.modules.games.domain.windows import (
 
 @final
 class GameStanding(str, Enum):
-    """The five standings, as codes. A client's words are the client's own."""
+    """The six standings, as codes. A client's words are the client's own."""
 
     #: Arranged, and nobody has said it happened yet.
     AWAITING_ENTRY = "AWAITING_ENTRY"
@@ -51,21 +58,39 @@ class GameStanding(str, Enum):
     #: They played and no score is agreed. **An evening, not evidence**: it counts
     #: toward how much these people have played and moves nobody's Level.
     UNSCORED = "UNSCORED"
+    #: Somebody ended it while a seat was open, before it happened. **The one
+    #: value here that no reading of the record reaches** (``docs/adr/0163``):
+    #: nobody said they played and no window closed, so it can reuse none of the
+    #: three ends above. It arrives on the fold from ``GameCalledOff`` and from
+    #: nowhere else — told by the challenge's withdraw, in its transaction. **An
+    #: end, and neither an evening nor a ghost**: a ghost is silence, this was
+    #: an act, and it is in no tally.
+    CALLED_OFF = "CALLED_OFF"
 
 
-#: The three standings that mean *nothing more will happen to this game*. A
+#: The four standings that mean *nothing more will happen to this game*. A
 #: settled game refuses every act, which is ADR-0048's *a settled result is
 #: final* with no support correction path and no reversal.
+#:
+#: **``CALLED_OFF`` is the fourth, and it is a fourth *kind* of ending** rather
+#: than a spelling of the ghost's (``docs/adr/0163`` §3): a ghost is a window
+#: closing on silence and this is a decision somebody took. They are one set here
+#: because the readers of this set — the mutual mint's idempotence key, the
+#: sportsmanship court, every act on the result — ask *is anything more going to
+#: happen*, and for both the answer is no.
 SETTLED = frozenset(
     {
         GameStanding.NEVER_PLAYED,
         GameStanding.CONFIRMED,
         GameStanding.UNSCORED,
+        GameStanding.CALLED_OFF,
     }
 )
 
-#: The two standings that mean these people were on a court together. Read by the
-#: pairwise fold, and by ``counted_games``.
+#: The three standings that mean these people were on a court together. Read by
+#: the pairwise fold, and by ``counted_games``. **``CALLED_OFF`` is not here**,
+#: and neither is it read as a ghost anywhere: the history walk answers ``None``
+#: for it, as it does for a game still inside its window.
 PLAYED = frozenset(
     {
         GameStanding.AWAITING_ANSWER,
@@ -139,6 +164,7 @@ def standing_of(
     *,
     planned_at: Instant,
     played_at: Instant | None,
+    called_off_at: Instant | None,
     proposals: Mapping[GameSide, Proposal],
     acceptance: Acceptance | None,
     now: Instant,
@@ -146,6 +172,16 @@ def standing_of(
     """The game's standing, from its record and this instant.
 
     The order of the questions is the design, and each rung is a decision:
+
+    **Was it called off?** The one question here that is not a reading of the
+    clock, and it is asked first for the reason ``challenges`` asks about a
+    withdrawal first (``docs/adr/0163``): every other answer is still what it
+    was — the plan is on the record and its window may not have closed — so a
+    fold that read the clock first would answer with the standing somebody has
+    just ended, and would turn a called-off game into a ghost the day its window
+    closed. ``called_off_at`` is **stated by every caller and never defaulted**,
+    so a second reader of this function has to say which game it is asking about
+    rather than inheriting an answer.
 
     **Did it happen at all?** Nothing about a score matters until somebody says
     they played, and after the entry window nothing ever will.
@@ -160,6 +196,9 @@ def standing_of(
     this platform has refused to arbitrate, and when both windows have closed
     they leave the game unscored.
     """
+
+    if called_off_at is not None:
+        return GameStanding.CALLED_OFF
 
     if played_at is None:
         return (

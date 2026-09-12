@@ -71,6 +71,50 @@ class TheCourtHasAnOpenSeat(ConflictError):
         )
 
 
+class NotAGameToCallOff(ConflictError):
+    """A call-off asked of a game that is not awaiting its entry with a seat open.
+
+    **One code for both halves** (``docs/adr/0163`` §2), because they are one
+    sentence — *this is not a game that can be called off*. A court standing
+    whole that will not play lets its window lapse into *Never played*, as it
+    always has (#411 rule 4); a game that has already ended by its clock stays
+    the end it is, because a call-off that reached a ghost would flip a standing
+    the platform has already drawn and un-charge a strand after the fact.
+
+    The challenge guarantees the open seat by construction — a withdraw is
+    admitted in ``LINE_UP_INCOMPLETE`` and nowhere else — and the use case steps
+    over a game already ended by its clock rather than raising this, so on the
+    withdraw route neither half is a code a client meets. The aggregate keeps the
+    refusal all the same: the button is UX, and the server is the correctness
+    mechanism.
+    """
+
+    code = "not_a_game_to_call_off"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Only a game awaiting its entry with a seat open can be called off."
+        )
+
+
+class TheGameWasCalledOff(ConflictError):
+    """*We played* said about a game somebody called off.
+
+    Its own code rather than the ghost's ``the_entry_window_has_closed`` or the
+    umbrella ``the_result_is_settled``, for the ghost's own reason: the entry is
+    the one act a player composes by hand, and it is told which end it met. The
+    acceptance meets the umbrella, as it does on a ghost — a tap on a score that
+    is already on the table needs no such precision.
+    """
+
+    code = "the_game_was_called_off"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This game was called off, so it cannot be recorded as played."
+        )
+
+
 class TheGameIsNotOpenToSeating(ConflictError):
     """A seat asked to change on a game that is not awaiting its entry.
 
@@ -110,7 +154,9 @@ class TheResultIsSettled(ConflictError):
     **A settled result is final** — there is no support correction path and no
     reversal — and *over* includes the game that produced no result at all: two
     people who were both on court and cannot agree what happened is not a result,
-    and reopening it a day later is the arbitration this platform refused.
+    and reopening it a day later is the arbitration this platform refused. It
+    includes a game that was **called off**, too, on the acceptance — the entry
+    names that end with its own code (``TheGameWasCalledOff``).
     """
 
     code = "the_result_is_settled"
@@ -255,8 +301,8 @@ class PairingIsHistory(ConflictError):
     The pairing means what a card means *because this game has not happened*
     (``docs/adr/0143``): after it has, the values are a claim about people made
     from a record that has moved on. So the read answers only while the game is
-    awaiting an entry — never after *we played*, and never after the entry
-    window closed on silence.
+    awaiting an entry — never after *we played*, never after the entry window
+    closed on silence, and never after it was called off.
     """
 
     code = "pairing_is_history"

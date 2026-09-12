@@ -1089,9 +1089,20 @@ where, money, results or the conversation itself belongs here.
   is deciding so no clock will run out. **Whole-challenge, and it removes nobody** — a withdraw
   that emptied one seat would be the organiser taking out somebody who already agreed.
   **Irreversible**: asking the same people again is a *new* Challenge, with fresh deadlines and
-  its own record of who has answered.
+  its own record of who has answered. **It reaches a court that has been a game**
+  ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)): a reopened court is
+  *Line-up incomplete* again, the withdraw is its exit, and the **Game** is **called off** in the
+  same act. There the act is the organiser's **or, once the organiser's own seat is open, any
+  player still on the court's** — the people who agreed did nothing wrong and one of them has to
+  hold the exit.
   The word is *withdraw* and not **stand down**, which this file owns platform-wide for a term
-  that cannot be evaluated, and not *cancel* or *call off*, which belong to a plan.
+  that cannot be evaluated; *call off* is what the withdraw does to the **Game**.
+- **Call off** — what a **Withdraw** does to the **Game** a reopened court became
+  ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)): the game reaches its
+  fourth end, *Called off*, in the transaction of the withdrawal. Only while a seat is open — a
+  full court that will not play lets its window lapse into *Never played*, as today. The room is
+  destroyed in the act. A game whose window has already closed on the open seat is a ghost, and
+  stays one: the withdraw ends the challenge alone, and the ghost is not un-charged.
 - **Answer window** — how long one invitee has to answer, **dated per seat when that seat was
   invited**. Seats filled later start their own day; they cannot inherit a deadline from a send
   they were not part of.
@@ -1221,7 +1232,10 @@ anything about how good anybody is — that is the rating context reading this o
   client sends can produce one, which is what makes *these people arranged this* a fact rather
   than a claim. One game per arrangement, for ever — and **re-seated** by the next completed
   line-up after a **Departure**, same id, same `planned_at`, same plan, same room
-  ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)).
+  ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)). It reaches
+  **four ends**: three folded from the record and the clock, and a fourth — **Called off** — that
+  an act reaches, told by the challenge's withdraw while a seat is open
+  ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)).
 - **Line-up** — who is on the court and on which side, **frozen until somebody leaves it**
   ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)). An
   acceptance is to the game and not to the side, so the membership is settled the moment the last
@@ -1255,8 +1269,12 @@ anything about how good anybody is — that is the rating context reading this o
   the *score* and not from the tap. Inside it a counter still wins, so a partner who is quick to
   their phone cannot close the door on an opponent who has not read the score yet.
 - **Standing** — what a game *is* right now: `AWAITING_ENTRY`, `NEVER_PLAYED`,
-  `AWAITING_ANSWER`, `CONFIRMED`, `UNSCORED`. **Derived from the record and the clock, never
-  stored and never announced.** Spelled `GameStanding` in code and on the wire, because
+  `AWAITING_ANSWER`, `CONFIRMED`, `UNSCORED`, `CALLED_OFF`. **Derived from the record and the
+  clock, never stored** — and never announced, with one exception: `CALLED_OFF` is a decision a
+  person took, folded off `GameCalledOff` and read first, on the same exemption `WITHDRAWN` has
+  ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)). It is an end, and it is
+  **neither an evening nor a ghost**: a ghost is silence and this was an act, so it is in no
+  tally and moves no **Strand**. Spelled `GameStanding` in code and on the wire, because
   Challenges already publishes a `Standing` component and a second class of that name would
   *rename* it rather than shadow it — **the contract is one namespace, and the cost of a
   shared word is paid by whoever arrives second.** The same is true of `GameSide`.
@@ -1264,6 +1282,7 @@ anything about how good anybody is — that is the rating context reading this o
   `player_card.counted_games` prints and what §9.10's newcomer predicate reads.
 - **Ghost game** — a plan whose entry window closed with nobody ever saying it happened. Kept
   distinguishable from a played game, because familiarity is about people who actually played.
+  A **called-off** game is not one: the window did not close on silence, somebody ended it.
 
 **Invariants**
 
@@ -1284,7 +1303,10 @@ anything about how good anybody is — that is the rating context reading this o
 - **The people who may act are the people who were on the court**, and nobody else, ever.
 - **Nothing announces a conclusion the record already implies.** There is no `ResultConfirmed`,
   no `GameUnscored` and no `GameNeverPlayed` — the same rule `challenges` states about `GameOn`,
-  and for the same reason: a derived standing has exactly one place to be true.
+  and for the same reason: a derived standing has exactly one place to be true. `GameCalledOff`
+  is the one event that announces an end, and it may because no arrangement of the record could
+  reach it — `challenges`' exemption, argued again in
+  [ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md).
 
 ### Conversation (`backend/app/modules/conversations/`)
 
@@ -1348,7 +1370,10 @@ Nothing about when, where, money or the result belongs here — it is **told** a
   **destroyed, not delisted**. It ends at the earliest of: the entry window closing, so *we played*
   can no longer be said; a grace after somebody says they played; a grace after the challenge ends
   without ever producing a game. A withdrawal destroys it in the same act
-  ([ADR-0153](docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)).
+  ([ADR-0153](docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)),
+  a room whose court has been a game included — the game being **called off** is told to the
+  room by nothing, because the withdrawal has already destroyed it
+  ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)).
 
 **Invariants**
 

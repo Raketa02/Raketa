@@ -448,8 +448,10 @@ async def decline_seat(
         "**Grows a court that is already standing**, from a line-up you just "
         "built. The people who accepted keep their places and their answers; the "
         "open seats are offered to the people you name.\n\n"
-        "**Any live member may do this — only the organiser may withdraw.** "
-        "Growing a court and ending one are different acts. A challenge born of "
+        "**Any live member may do this — the withdraw is the organiser's**, or, "
+        "once the organiser has left the game a court became, any remaining "
+        "player's. Growing a court and ending one are different acts. A "
+        "challenge born of "
         "two mutual yeses has an organiser who is only whoever said yes second, "
         "and leaving the other one unable to finish the four would make an "
         "arbitrary tiebreak decide whose game it is. Somebody who declined or "
@@ -514,9 +516,11 @@ async def fill_seats(
             "model": ErrorResponse,
             "description": (
                 "`withdraw_is_the_organisers` — you hold a seat on this court "
-                "and the act is not yours. **Not a 404**: you can already see "
-                "this challenge, so pretending it is not there while your own "
-                "seat is drawn on it would be the wrong lie."
+                "and the act is not yours: the organiser's, or, once the "
+                "organiser has left the game this court became, any remaining "
+                "player's. **Not a 404**: you can already see this challenge, so "
+                "pretending it is not there while your own seat is drawn on it "
+                "would be the wrong lie."
             ),
         },
         status.HTTP_409_CONFLICT: {
@@ -525,10 +529,8 @@ async def fill_seats(
                 "`not_a_half_built_line_up` — this challenge has some other end "
                 "already. **One code for five standings**, because they are one "
                 "sentence: `AWAITING_ANSWERS` ends itself when the clocks run "
-                "out, `ON` has become a game, and the three endings have ended. "
-                "**And for a court somebody left**, which is half built again and "
-                "is refused here all the same: its exit is calling the game off, "
-                "which reaches the game's record and is not this route."
+                "out, `ON` has become a game with nobody to fill a seat for, and "
+                "the three endings have ended."
             ),
         },
     },
@@ -538,6 +540,18 @@ async def fill_seats(
         "one: somebody is in, a seat is open, nobody is deciding, and nothing "
         "in this challenge will ever end it. The acceptor cannot leave — their "
         "seat is answered — and until now the organiser had no act at all.\n\n"
+        "**And the exit for a game somebody left.** A court that has been a "
+        "game and lost somebody is half built again, and this is how it is "
+        "called off: the challenge is withdrawn exactly as below, and the game "
+        "it became reaches its fourth end, `CALLED_OFF`, in the same act — its "
+        "plan is history, its pairing is history, and it is neither an evening "
+        "nor a game that never happened, so nothing anybody is measured on "
+        "moves. Only while a seat is open: a full court that will not play lets "
+        "its window lapse into `NEVER_PLAYED`, as it always has. **The act is "
+        "the organiser's — or, once the organiser's own seat is open, any "
+        "remaining player's.** A court whose game's window has already closed "
+        "is withdrawn all the same, and the game stays the ghost it already "
+        "is.\n\n"
         "**`LINE_UP_INCOMPLETE` and nowhere else.** Before anybody answers, the "
         "seats lapse on their own and the pair is released within the window; "
         "what a withdraw would add there is the ability to ask the same person "
@@ -563,7 +577,8 @@ async def fill_seats(
         "challenge.\n\n"
         "**A noun and not a verb**, because what this creates is the withdrawal "
         "— the one thing in this context that a fold of the seats could never "
-        "produce."
+        "produce. The conversation is destroyed in the act, whether or not it "
+        "already held its game."
     ),
 )
 async def withdraw_challenge(

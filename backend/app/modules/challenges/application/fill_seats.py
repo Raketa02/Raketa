@@ -25,7 +25,9 @@ the origin's, so it has nothing to check; here the sport is the *challenge's*, a
 padel and badminton both seat four — without the check a filler could seat people
 off a search this court's own gates never judged.
 
-**Any live member may press it; only the organiser may withdraw.** Growing a
+**Any live member may press it; the withdraw is the organiser's** — or, once
+the organiser has left the game a court became, any remaining player's
+(``docs/adr/0163``). Growing a
 court and ending one are different acts and get different permissions. The case
 that decides it is the mutual-born doubles challenge: ``LINE_UP_INCOMPLETE`` from
 birth, both players on side A, and an "organiser" who is only whoever's yes

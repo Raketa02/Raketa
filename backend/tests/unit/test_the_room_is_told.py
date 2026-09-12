@@ -32,6 +32,7 @@ from app.modules.conversations.application.telling import TELLINGS, TOLD_ABOUT
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.games.domain.events import (
+    GameCalledOff,
     GamePlanned,
     GamePlayed,
     LineUpReseated,
@@ -66,6 +67,7 @@ EVERY_PUBLISHED_EVENT = (
     GamePlanned,
     SeatVacated,
     LineUpReseated,
+    GameCalledOff,
     GamePlayed,
     ResultProposed,
     ResultCorrected,
@@ -99,11 +101,12 @@ def test_each_event_that_publishes_nothing_names_its_reason(telling):
     assert telling.why_nothing
 
 
-def test_the_ten_that_write_nothing_are_the_ten_the_words_names():
+def test_the_eleven_that_write_nothing_are_the_eleven_the_words_names():
     """``the-words.md`` §23.1 is headed *the six events that publish nothing* and
-    its own table names ten of them, four grouped on one row as *the result
-    argument* and two on one row as *the game's line-up moving*. The
-    discrepancy is in the source; this asserts the events."""
+    its own table names eleven of them, four grouped on one row as *the result
+    argument*, two on one row as *the game's line-up moving*, and the call-off
+    on a row of its own (``docs/adr/0163``). The discrepancy is in the source;
+    this asserts the events."""
 
     assert {telling.event for telling in WRITES_NOTHING} == {
         ChallengeSent,
@@ -112,6 +115,7 @@ def test_the_ten_that_write_nothing_are_the_ten_the_words_names():
         GamePlanned,
         SeatVacated,
         LineUpReseated,
+        GameCalledOff,
         ResultProposed,
         ResultCorrected,
         ResultCountered,
@@ -184,6 +188,20 @@ def test_a_seat_leaving_is_one_code_told_by_three_events():
     assert SeatLeft in TOLD_ABOUT
     for event in (SeatVacated, LineUpReseated):
         assert event not in TOLD_ABOUT
+
+
+def test_a_call_off_reaches_the_room_not_at_all_because_the_withdrawal_already_did():
+    """``docs/adr/0163`` §5 — the withdrawal destroys the room in the same
+    transaction, so the game's own end has nobody left to tell. It is refused
+    with a reason rather than dropped, and the withdrawal is still told."""
+
+    called_off = next(t for t in TELLINGS if t.event is GameCalledOff)
+    withdrawn = next(t for t in TELLINGS if t.event is ChallengeWithdrawn)
+
+    assert called_off.line is None and not called_off.reaches_the_room
+    assert "destroys" in called_off.why_nothing
+    assert GameCalledOff not in TOLD_ABOUT
+    assert withdrawn.reaches_the_room and ChallengeWithdrawn in TOLD_ABOUT
 
 
 def test_every_plan_event_writes_a_line_and_each_writes_its_own():
