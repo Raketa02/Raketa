@@ -62,13 +62,18 @@
  * which is the same fact in the register a listener gets.
  */
 
+import { YOU_MARK } from '@/features/player_record/types';
+import { levelRow } from '@/features/play/types';
 import { counted } from '@/shared/formatting/counted';
-import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
+import { handleStem, playerName, type NamedPlayer } from '@/shared/formatting/playerName';
+import { formatPercent } from '@/shared/formatting/ratingFormat';
 import { sentenceList } from '@/shared/formatting/sentenceList';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { Game } from '../domain/game';
+import type { Game, GameSeat } from '../domain/game';
+import type { PairingSeat } from '../domain/pairing';
+import { sidesForReader } from '../domain/pairing';
 import { othersOn, resultArgument, type ResultArgument } from '../domain/resultArgument';
 import type { ScoreKey, ScoreProblem } from '../domain/score';
 import { scoreColumn, type GameKind, type Outcome } from '../domain/vocabulary';
@@ -598,3 +603,156 @@ export const SENDING_LABEL = 'Sending…';
  * is a box on somebody's phone.
  */
 export const RUB_OUT_LABEL = 'Rub out';
+
+// ---------------------------------------------------------------------------
+// The court's pairing — the forecast block and the players card (the-words.md §25)
+// ---------------------------------------------------------------------------
+
+/**
+ * The forecast block's eyebrow. **Stored as words and drawn uppercase** by the eyebrow style,
+ * for `formatEyebrow`'s reason: a second copy in the string would reach a screen reader as
+ * letters.
+ */
+export const BALANCE_FORECAST = 'Balance forecast';
+
+/**
+ * The word between the two side strengths, and the whole of what the middle column says.
+ *
+ * Lower case, because it is a unit rather than a heading: the two figures either side of it are
+ * the sentence. The builder's forecast card says the same word in the same place, and it is
+ * spelled here rather than borrowed because it is a word this screen says and §25 lists.
+ */
+export const GAP_WORD = 'gap';
+
+/**
+ * **What a confirmed score does**, under the percentage — the counted game moves everybody, the
+ * friendly moves nobody. `undefined` for a kind this build cannot read: the sentence is dropped
+ * and the figure above it still stands, which is §3's split applied to a clause that keys no
+ * total. It is `worthLine`'s fact in the forecast's register — *movement*, beside the number that
+ * says how even — and not that sentence again, because the two sit on one screen four cards
+ * apart and a reader who has read one should not be told it twice in the same words.
+ */
+export function forecastSentence(kind: GameKind | undefined): string | undefined {
+  if (kind === undefined) return undefined;
+  return kind === 'COUNTED'
+    ? 'A counted game — a confirmed score moves everybody’s level.'
+    : 'A friendly — nothing moves.';
+}
+
+/** The two stake tiles' names. *If*, because on a game the result has not happened. */
+export const WIN_TILE = 'If you win';
+export const LOSE_TILE = 'If you lose';
+
+/**
+ * The bar's two labels — **stems**, yours then theirs.
+ *
+ * A segment half a card wide cannot hold sixty-four characters, and `handleStem` is the one cut
+ * ADR-0107 permits: a prefix of what somebody typed, drawn where a box draws and never where a
+ * sentence names. *You* leads your side because a player reading their own handle on a bar about
+ * them is the one place the whole handle is the wrong word; a seat `users` cannot answer for is
+ * the unknown player's `?`. Singles is the same rule with one name a side.
+ */
+export function barLabels(seats: readonly GameSeat[], playerId: string): readonly [string, string] {
+  const [yours, theirs] = halves(seats, playerId);
+  // The cut is made on the handle and never on *You* or on `?`: neither is a handle, and
+  // `handleStem` is licensed for a prefix of what somebody typed.
+  const stem = (seat: GameSeat): string => {
+    const who = named(seat, playerId);
+    return who.kind === 'player' ? handleStem(who.nickname) : playerName(who);
+  };
+
+  return [yours.map(stem).join(SIDE_JOIN), theirs.map(stem).join(SIDE_JOIN)];
+}
+
+/** How two stems on one side are joined on the bar. The builder's own join, for the same box. */
+const SIDE_JOIN = ' + ';
+
+/**
+ * The same two sides **as a sentence names them** — every handle whole, over *and* — for the
+ * split row's spoken name. `barLabels` is the drawing and this is the register a listener gets;
+ * the two are computed off one split of the court so they cannot disagree about who is where.
+ */
+export function sideNames(seats: readonly GameSeat[], playerId: string): readonly [string, string] {
+  const [yours, theirs] = halves(seats, playerId);
+  const name = (seat: GameSeat): string => playerName(named(seat, playerId));
+
+  return [sentenceList(yours.map(name)), sentenceList(theirs.map(name))];
+}
+
+/** Who a seat holds, in the reader's own terms — `whoIs`'s rule, read off the seat in hand. */
+function named(seat: GameSeat, playerId: string): NamedPlayer {
+  if (seat.playerId === playerId) return { kind: 'you' };
+  return seat.nickname === undefined
+    ? { kind: 'unknown' }
+    : { kind: 'player', nickname: seat.nickname };
+}
+
+/**
+ * The court split into your side and theirs — the domain's one split, and an empty pair for a
+ * reader holding no seat, which the plan lead never draws for.
+ */
+function halves(
+  seats: readonly GameSeat[],
+  playerId: string,
+): readonly [readonly GameSeat[], readonly GameSeat[]] {
+  const sides = sidesForReader(seats, playerId);
+  return sides === undefined ? [[], []] : [sides.yours, sides.theirs];
+}
+
+/**
+ * One seat's Level, in the row under the handle — `the-words.md` §6.4's level row with the
+ * confidence as a fourth clause: `2,71 · Established · likely 2,55 – 2,87 · 74% sure`.
+ *
+ * The first three clauses are Play's `levelRow`, cited rather than re-spelled, so the band's name,
+ * the range's dash and the two-decimal comma cannot drift between a card and this row. The fourth
+ * is the engine's own whole percentage through the one formatter, and the word *sure* is this
+ * screen's — the challenge card says `{n}% sure` the same way.
+ */
+export function seatLevelLine(seat: PairingSeat): string {
+  return `${levelRow(seat)} · ${formatPercent(seat.confidence)} sure`;
+}
+
+/**
+ * The players card's footer — the promise the record sheet keeps, and the gesture that opens it.
+ *
+ * **Tap, not hold**: the design's *press and hold* is refused on #285's argument — a hold has no
+ * affordance, no announcement and no equivalent in the accessibility API — and the sentence says
+ * the gesture that is actually there. The second sentence is the record's own authorship promise,
+ * said where the reader is about to open one.
+ */
+export const PLAYERS_FOOTER =
+  'Tap anyone for their record — level, form and how they behave. Counted by the system; nobody writes text about people here.';
+
+/** The players card's eyebrow. Stored as words, drawn uppercase — `BALANCE_FORECAST`'s rule. */
+export const PLAYERS = 'Players';
+
+/**
+ * Who a row is about: the handle where the account still has one, and whether it is yours.
+ *
+ * Not `NamedPlayer`, because that formatter's *you* is a sentence's word for its reader and this
+ * row draws the handle **whole** with the mark after it — `recordHandle`'s shape on the record
+ * sheet, for the same reason: a panel with your face on it and a stranger's name under it.
+ */
+export interface PlayerRowPerson {
+  /** Absent where `users` no longer has the account, which draws the unknown player's `?`. */
+  readonly nickname?: string;
+  readonly yours: boolean;
+}
+
+/** The whole handle, with the one mark that says it is yours. */
+export function playerRowName(person: PlayerRowPerson): string {
+  const handle =
+    person.nickname === undefined
+      ? playerName({ kind: 'unknown' })
+      : playerName({ kind: 'player', nickname: person.nickname });
+  return person.yours ? `${handle} ${YOU_MARK}` : handle;
+}
+
+/**
+ * What the row's tap is called — **the record it opens, by whose it is.** *Your record* for your
+ * own, because a control named *me_'s record* on a screen addressed to *me_* has read the reader
+ * their own handle; the sheet it opens is retitled the same way.
+ */
+export function recordLabel(person: PlayerRowPerson): string {
+  return person.yours ? 'Your record' : `${playerRowName(person)}’s record`;
+}

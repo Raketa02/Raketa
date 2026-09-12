@@ -2280,3 +2280,60 @@ anybody needs.
 | The builder, the court and the seat | §20.4 and §20.4.1 — reached from Chats at a second route, and unchanged by the journey |
 | Durations, weekdays, clock times, counts | §B16, through §18 |
 | Pluralisation | §19 — no string hardcodes an `s`, accessible names included |
+
+### 24.8 The court's pairing on the game screen
+
+Two blocks on the plan lead ([#415](https://github.com/Raketa02/Raketa/issues/415), §25), and
+§20.1 decides the elements: nothing in the forecast block has an action, so it is four elements of
+facts; every row of the players card has one, so every row is a `button`.
+
+| Element | Role | Announces |
+| --- | --- | --- |
+| `BALANCE FORECAST` | `header` | the eyebrow |
+| The split row | — | **one element** — both sides named whole over *and*, then the gap: `You and kasia.w 2,70, tomek.p and marek b 2,71, gap −0,01` |
+| The balance bar | `image`, **hidden** | its own §20.4 name is kept on the element — the word and the figure — and the subtree is hidden, because the row above speaks all three of its numbers and the reading beside it speaks the word: a fourth reading of one fact is 6.8's double announcement |
+| The reading | — | **one element** — §20.4's order, the word then the figure, then the sentence: `Very even, 90%. A counted game — a confirmed score moves everybody’s level.` |
+| The stake tiles | — | **one element, two clauses or none** — `If you win +0,08, If you lose −0,08` |
+| `PLAYERS` | `header` | the eyebrow |
+| A player's row | `button` | **the record it opens**, by whose it is — `tomek.p’s record`, and `Your record` for your own; the level row is the button's **hint**, so a listener hears under the name what the sighted reader sees under the handle |
+| The footer | — | one plain sentence, §25's |
+
+**The bar's labels are stems and the row's name is whole**, which is §20.4's rule — *the visible
+label truncates, the spoken one never does* — applied to the one place a handle is cut on this
+screen. **Tap, not hold**: a row is a `button` because #285's argument against the hold is an
+argument about exactly this table — a hold has no row in it.
+
+## 25. The court's pairing
+
+Decided by [#410](https://github.com/Raketa02/Raketa/issues/410) and built by
+[#415](https://github.com/Raketa02/Raketa/issues/415), on
+[ADR-0161](../../adr/0161-the-game-screen-draws-its-courts-pairing.md)'s reversal of §5.5's
+refusal. The surface is [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §5.5; the
+sentences are here, in `games/components/gamePresentation.ts`, because the pairing is the game's
+and §1's owner is the vocabulary.
+
+**Most of this section is cited.** The four balance words and their breaks are §B9's through
+`balancePresentation.ts` (§18); the level row is §6.4's through Play's `levelRow`; the figures take
+§B16's shapes through the one formatter. What is new is the block's own frame and the one row shape
+the app did not have.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The forecast block's eyebrow | `BALANCE FORECAST` | stored as words, drawn uppercase |
+| Between the two strengths | `gap` | lower case — a unit rather than a heading, the builder's own word in the same place |
+| Under the figure, counted | `A counted game — a confirmed score moves everybody’s level.` | `worthLine`'s fact in the forecast's register — *movement*, beside the number that says how even — and not that sentence again four cards apart |
+| Under the figure, friendly | `A friendly — nothing moves.` | the negative, kept: true whether or not anything reads it |
+| Under the figure, unreadable kind | *nothing* | §3's drop — the figure stands and the clause goes |
+| The stake tiles | `If you win` · `If you lose` | *if*, because on a game the result has not happened; **not** the card's `Win, counted` / `Lose, counted`, which name a mode a game has already answered |
+| The players card's eyebrow | `PLAYERS` | |
+| A row's handle | `{handle}` · `{handle} (you)` · `?` | the whole handle (ADR-0107), `player_record`'s own `(you)` mark after yours, the unknown player's `?` for a seat `users` cannot answer for |
+| A row's level | `{level} · {band} · likely {low} – {high} · {n}% sure` | §6.4's three clauses cited, and the confidence as a fourth in the challenge card's own words |
+| A row with no pairing row | *the handle alone* | somebody unrated is not in `seats`; nothing says so |
+| The footer | `Tap anyone for their record — level, form and how they behave. Counted by the system; nobody writes text about people here.` | **tap**, not the design's *press and hold* (#285); the second sentence is the record's own authorship promise, said where a reader is about to open one |
+| A row's control | `{handle}’s record` · `Your record` | §24.8 |
+
+**Absence has no sentence.** ADR-0161 §4: the forecast and the split are omitted together when the
+pairing cannot be computed, and *there is deliberately no reason beside the absence* — the block is
+absent entirely, the tiles with it, and nothing on the screen says *unrated*, *unavailable* or
+anything else. The players card is drawn regardless, because its rows are the court's seats and the
+Level under each is what the pairing adds.

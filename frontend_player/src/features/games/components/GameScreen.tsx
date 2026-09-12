@@ -109,8 +109,9 @@
  *
  * [#410](https://github.com/Raketa02/Raketa/issues/410)'s design redraws the screen for the two
  * plan-lead rungs ([#414](https://github.com/Raketa02/Raketa/issues/414)): an eyebrow and **no
- * title**, the Now card at the top with its doors left off, a slot for the forecast and the players
- * ([#415](https://github.com/Raketa02/Raketa/issues/415) fills it), the chat's editable plan card,
+ * title**, the Now card at the top with its doors left off, the court's pairing — the forecast
+ * block and the players card, filled by [#415](https://github.com/Raketa02/Raketa/issues/415)
+ * with this feature's own `CourtPairing` — the chat's editable plan card,
  * *Open the chat* dark and full width, *We played* quiet beneath it. So the one slot became
  * **three** — `card`, `court`, `plan` — and every one of them is a `ReactNode` this screen draws in
  * order and cannot read, for the same reason the first was. The eyebrow is `formatEyebrow`'s —
@@ -202,9 +203,13 @@ export interface GameScreenProps {
    */
   readonly card: ReactNode;
   /**
-   * **The court's pairing — the forecast and the players — under the card.** A slot
-   * [#415](https://github.com/Raketa02/Raketa/issues/415) fills; `null` until it does, and stated
-   * as a prop now so the layout's order is decided once. Drawn on the plan lead and nowhere else.
+   * **The court's pairing — the forecast and the players — under the card.** A slot, so the
+   * layout's order is decided once, and it is this feature's own `CourtPairing` that fills it
+   * ([#415](https://github.com/Raketa02/Raketa/issues/415)) — composed by whoever composes the
+   * screen rather than drawn here, because the faces on the players card come off the room join
+   * that composition already holds for the card above, and this screen may not read that list.
+   * Drawn on the plan lead and nowhere else, which is what keeps the read behind it off every
+   * other arm.
    */
   readonly court: ReactNode;
   /**

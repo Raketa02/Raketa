@@ -1203,7 +1203,17 @@ rungs whose card door says *Finish the plan* / *Open*, redrawn to #410's design:
 ‹  DOUBLES · COUNTED                         ← the eyebrow, and no title (10.3 as amended)
 ┌ the Now card, doors={false} ───────────────┐   the tag, the sport word, the slots, the court
 └────────────────────────────────────────────┘
-┌ the court's pairing (#415) ────────────────┐   BALANCE FORECAST · PLAYERS — null until then
+┌ BALANCE FORECAST ──────────────────────────┐   the court's pairing, §5.5 — absent entirely without a forecast
+│ 2,70            gap −0,01            2,71  │
+│ [ You + Zofia ▓▓▓▓▓░░░░░ Kuba + Ola ]      │
+│ 90%  Very even · A counted game — …        │
+│ [ If you win +0,08 ] [ If you lose −0,08 ] │   two tiles or none
+└────────────────────────────────────────────┘
+┌ PLAYERS ───────────────────────────────────┐   always drawn — your side first, you first
+│ (TK) tomek.p (you)                         │   a row is a button: tap opens the record
+│      2,71 · Established · likely … · 74% sure
+│ …                                          │
+│ Tap anyone for their record — …            │
 └────────────────────────────────────────────┘
 ┌ THE PLAN ─────────────────────  1 of 3 set ┐   the chat's PlanCard, editable
 │ [ Where ] [ Saturday ] [ Hour ]            │
@@ -1342,6 +1352,11 @@ record read out, and they are listed here because the mock will outlive this map
 **And *press and hold anyone for the full record* is gone.** `CourtSeat.tsx` deleted that shortcut
 on #285's argument — *"a hold is a gesture with no affordance, no announcement, and no equivalent in
 the accessibility API at all, so it was never reachable by the people who most needed the route."*
+**Still gone since [#415](https://github.com/Raketa02/Raketa/issues/415) put the record behind the
+players card**: the gesture is a **tap**, on the whole row, which is a `button` with a name — so the
+route #285 was arguing for is the one that exists, and the footer says *tap* because that is what is
+there. The design's sentence said *press and hold*; honouring #285 is not reversing it, it is
+drawing the affordance the hold never had.
 
 ### 5.5 What this screen refused, and the reversal that was taken
 
@@ -1370,6 +1385,41 @@ signs. What §5.5 priced is paid rather than argued away — the port exists, an
 is reused rather than built a second time, which is why the challenge card and the game screen come
 to one number for one court. The forecast block is
 [#415](https://github.com/Raketa02/Raketa/issues/415)'s; `worthLine`'s sentence survives beside it.
+
+**The client shape** ([#415](https://github.com/Raketa02/Raketa/issues/415)) — two blocks in the
+plan lead's `court` slot, over one read:
+
+- **The read is the game's.** `features/games` owns `GET /games/{game_id}/pairing` end to end —
+  `api/pairingApi.ts`, `mappers/pairingMappers.ts` (the wire boundary), `domain/pairing.ts`,
+  `hooks/usePairing.ts` under `gameKeys.pairing(gameId)` — and the slot is filled by that feature's
+  own `CourtPairing`, composed by `GameScreenWithPlan` because the faces come off the room join it
+  already holds. **The read is enabled on `AWAITING_ENTRY` and made on the plan lead alone**: the
+  slot is drawn on the two plan-lead rungs and nowhere else, and the route refuses by name after
+  the game has happened, so a result arm never asks. The three refusals — `game_not_found`,
+  `pairing_is_history`, `account_held` — are folded to *no pairing* **by code**, an answer rather
+  than an outage; anything else is the failure it is.
+- **No arithmetic on the client.** The gap, the percentage, the deltas and the range are printed as
+  served; the bar takes the signed gap as its `advantage` on 7.11's one fixed scale, exactly as the
+  builder's forecast card feeds it. The words and the bar are Play's, cited across a declared
+  `games → play` edge rather than copied (`eslint.config.mjs`, and `pnpm test:boundaries` asserts
+  the edge stays open).
+- **The forecast block's anatomy** (mock 7): `BALANCE FORECAST` · the two side strengths in `num.l`
+  with `gap` and the signed gap between them · the balance bar at `md`, labelled with **stems** —
+  `You + {partner}` / `{stem} + {stem}`, or `You` / `{stem}` in singles · the percentage in the
+  tone's ink beside §B9's word · the sentence about what a score does · the two stake tiles, the
+  win tile tinted mint (7.14 as amended). **Absent entirely when the pairing carries no forecast**
+  — somebody unrated, a refusal, a read in flight or failed — with no sentence saying why; the tiles
+  go with it. Two tiles or none.
+- **The players card's anatomy** (mock 8): `PLAYERS` · one row per seat, **your side first — you,
+  then your partner — then the other side** (`courtForReader`, the one re-ordering) · the face off
+  the room join at the Chats row's 38, the poster failing soft · the **whole handle**, `(you)` after
+  yours, `?` for a seat `users` cannot answer for · the level row `{level} · {band} · likely {low} –
+  {high} · {n}% sure` in mono, or **nothing under an unrated seat** · **no chip on anybody** · the
+  footer. Always drawn — it does not depend on the forecast.
+- **Tap, not hold.** The whole row is a `button` named for the record it opens, and it opens
+  `PlayerRecordSheet` for that player with the sport the reader arrived from and nothing else — no
+  distance, no overlap, no pairing row, because no search stands behind this screen. The read
+  behind the sheet admits somebody you share a game with, so nothing on the backend moved for it.
 
 ---
 
@@ -1432,6 +1482,7 @@ Standing obligations, none of which expires on being satisfied once. They are th
   record, needing a second non-durable channel with different rules.
 - **A pairing forecast on this screen** — decided since, the other way: §5.5 and
   [ADR-0161](../../adr/0161-the-game-screen-draws-its-courts-pairing.md). The read is the
-  backend's; the block is [#415](https://github.com/Raketa02/Raketa/issues/415)'s.
+  backend's; the block is [#415](https://github.com/Raketa02/Raketa/issues/415)'s, and §5.5
+  holds its client shape.
 - **Push, and any out-of-app reach.** Out of scope. The loop closes without it, because every step
   after the first acceptance is between people who opted in by answering.

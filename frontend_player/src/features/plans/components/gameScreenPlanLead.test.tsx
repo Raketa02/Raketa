@@ -31,6 +31,7 @@ import {
   stubEntries,
   stubGames,
   stubGate,
+  stubPairing,
   stubPlans,
 } from '@/test-support/onboardingRouter';
 import {
@@ -194,6 +195,10 @@ function stubTheWorld({
     entries: [],
   });
   stubEntries(transport, ROOM);
+  // The court's pairing is #415's and walked in `features/games`; here it is a refusal by name,
+  // so the slot draws the players card alone and this suite's card count is the plan's and the
+  // court's.
+  stubPairing(transport, GAME, { refused: 409, code: 'pairing_is_history' });
 }
 
 /** In at the screen's own address under Now — the wide door's destination. */
@@ -285,7 +290,11 @@ describe('the card at the top', () => {
     });
 
     await screen.findByText(CARD_TAG.planning!);
-    const faces = screen.UNSAFE_getAllByType(Image).map((image) => image.props.source);
+    // Scoped to the card: since #415 the players card under it draws the same face off the same
+    // join, and that row is `playersCard.test.tsx`'s.
+    const faces = within(screen.getByLabelText(/Padel/))
+      .UNSAFE_getAllByType(Image)
+      .map((image) => image.props.source);
 
     expect(faces).toEqual([{ uri: TOMEK_PHOTO }]);
   });

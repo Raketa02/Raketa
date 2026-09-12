@@ -16,13 +16,18 @@ import {
   COUNTER_LABEL,
   CORRECT_LABEL,
   UNSCORED_FACTS,
+  barLabels,
   clockLine,
   courtLine,
+  forecastSentence,
   formatEyebrow,
   gameEyebrow,
   outcomeLine,
+  playerRowName,
+  recordLabel,
   resultBody,
   scoreProblemLine,
+  seatLevelLine,
   setLabel,
   sideLabels,
   spokenScore,
@@ -467,5 +472,96 @@ describe('who a sentence names, and who it deliberately does not', () => {
   it('still calls the two columns of a score sides, never people', () => {
     expect(sideLabels(2)).toEqual({ ours: 'Your side', theirs: 'Their side' });
     expect(sideLabels(1)).toEqual({ ours: 'You', theirs: 'Them' });
+  });
+});
+
+describe('the court’s pairing, in words', () => {
+  /**
+   * The sentence under the percentage says what a confirmed score **does** — the counted game
+   * moves everybody, the friendly moves nobody — and is dropped, never guessed, for a kind this
+   * build cannot read. The check is the same one `worthLine`'s is: the two kinds say opposite
+   * things about movement, and neither reads as a failure.
+   */
+  it('says a counted game moves everybody’s level and a friendly moves nothing', () => {
+    expect(forecastSentence('COUNTED')).toMatch(/counted/i);
+    expect(forecastSentence('COUNTED')).toMatch(/moves/);
+    expect(forecastSentence('FRIENDLY')).toMatch(/friendly/i);
+    expect(forecastSentence('FRIENDLY')).toMatch(/nothing moves/i);
+    expect(forecastSentence(undefined)).toBeUndefined();
+  });
+
+  /**
+   * The bar's two labels are **stems**, because a segment half a card wide cannot hold sixty-four
+   * characters: `You + {partner stem}` against `{stem} + {stem}` in doubles, `You` against
+   * `{stem}` in singles. A handle that is a stem already is drawn whole.
+   */
+  it('labels the bar with stems — you and your partner against the other side', () => {
+    const doubles = barLabels(
+      [
+        { side: 'A', playerId: 'me', nickname: 'tomek.p' },
+        { side: 'A', playerId: 'p', nickname: 'Zofia.B' },
+        { side: 'B', playerId: 'o1', nickname: 'kuba_w' },
+        { side: 'B', playerId: 'o2', nickname: 'Ola Nowak' },
+      ],
+      'me',
+    );
+
+    expect(doubles).toEqual(['You + Zofia', 'kuba_w + Ola']);
+  });
+
+  it('labels a singles bar with you and one stem', () => {
+    const singles = barLabels(
+      [
+        { side: 'B', playerId: 'o', nickname: 'kuba_w' },
+        { side: 'A', playerId: 'me', nickname: 'tomek.p' },
+      ],
+      'me',
+    );
+
+    expect(singles).toEqual(['You', 'kuba_w']);
+  });
+
+  /** A seat `users` can no longer answer for is the unknown player's `?`, on the bar as anywhere. */
+  it('draws the unknown player’s mark for a seat with no handle', () => {
+    expect(
+      barLabels(
+        [
+          { side: 'A', playerId: 'me' },
+          { side: 'B', playerId: 'o' },
+        ],
+        'me',
+      ),
+    ).toEqual(['You', '?']);
+  });
+
+  /**
+   * The level row is `the-words.md` §6.4's — `{level} · {band} · likely {low}–{high}` — with the
+   * confidence as a fourth clause, `{n}% sure`. Two decimals, decimal comma, on every figure; the
+   * band's published name as it came; the percentage whole.
+   */
+  it('prints the level row as a fixture reads it', () => {
+    expect(
+      seatLevelLine({
+        playerId: 'me',
+        level: 2.71,
+        band: 'Established',
+        range: { low: 2.55, high: 2.87 },
+        confidence: 74,
+      }),
+    ).toBe('2,71 · Established · likely 2,55 – 2,87 · 74% sure');
+  });
+
+  /** The row's own name: the handle whole with the one mark that says it is yours. */
+  it('names a row by the whole handle, and marks yours', () => {
+    expect(playerRowName({ nickname: 'tomek.p', yours: false })).toBe('tomek.p');
+    expect(playerRowName({ nickname: 'tomek.p', yours: true })).toBe('tomek.p (you)');
+    expect(playerRowName({ yours: false })).toBe('?');
+  });
+
+  /** What the tap is called: the record it opens, by whose it is. */
+  it('names the control by the record it opens', () => {
+    expect(recordLabel({ nickname: 'tomek.p', yours: false })).toBe('tomek.p’s record');
+    expect(recordLabel({ nickname: 'tomek.p', yours: true })).toBe('Your record');
+    expect(recordLabel({ yours: false })).toBe('?’s record');
   });
 });

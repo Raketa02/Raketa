@@ -40,6 +40,18 @@
  * [2.5](../../../docs/design-system.md#25-contrast--computed) licenses it **at 11pt and
  * above**, which `rlLabel`'s 11,5 clears; the figure is `ink` at 14,57.
  *
+ * ## One tinted variant, and it is the game screen's
+ *
+ * 7.14 keeps the stake boxes untinted on a card — *mint is settled, safe, covered, and neither is
+ * true of a result nobody has played* — and #410's design tints the **win** tile on the game
+ * screen's forecast block ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking),
+ * [#415](https://github.com/Raketa02/Raketa/issues/415)). The design wins, and it lands here as a
+ * `variant` rather than as a second box, for the reason this file exists: the padding, the ground
+ * and the two type steps are one shape, and a tinted copy is where they stop matching. `mint`
+ * paints the bed `mintSoft` and the label `mintInk` — the pair 2.2 publishes together at 5:1 or
+ * better — and the figure stays `ink`, because the number is the fact and the tint is the tile.
+ * The lose tile takes the recessed ground and no red: nothing has ended, badly or otherwise.
+ *
  * ## It announces nothing
  *
  * §20.1 merges an actionless element into the nearest action above it — the card body on one
@@ -55,9 +67,13 @@ import { theme } from './theme';
 
 import type { ReactNode } from 'react';
 
+/** The recessed box every card draws, or the one tinted tile the game screen draws. */
+export type StatBoxVariant = 'recessed' | 'mint';
+
 export interface StatBoxProps {
   /** The block's own name — *Player Score*, *Last 5*, *Counted*, *Win, counted*. */
   readonly label: string;
+  readonly variant?: StatBoxVariant;
   /**
    * The fact, already drawn.
    *
@@ -67,13 +83,13 @@ export interface StatBoxProps {
   readonly children: ReactNode;
 }
 
-export function StatBox({ label, children }: StatBoxProps) {
+export function StatBox({ label, variant = 'recessed', children }: StatBoxProps) {
   return (
-    <View style={s.box}>
+    <View style={[s.box, BED[variant]]}>
       {/* One line, hard. Four of the five names are two words and the fifth is *Counted*; a
           box whose name wrapped would be a box a third taller than the two beside it, and the
           row's whole point is that the figures line up. */}
-      <Text style={s.label} numberOfLines={1}>
+      <Text style={[s.label, LABEL[variant]]} numberOfLines={1}>
         {label}
       </Text>
       {children}
@@ -102,13 +118,22 @@ const s = StyleSheet.create({
   box: {
     flex: 1,
     gap: theme.space.xxs,
-    backgroundColor: theme.color.paper2,
     borderRadius: theme.radius.note,
     paddingVertical: theme.space.xs,
     paddingHorizontal: theme.space.sm,
   },
-  label: { ...theme.type.rlLabel, color: theme.color.muted },
+  label: { ...theme.type.rlLabel },
   // `num.s` and not a step larger: the panel prints a Level at `num.xl` and the band prints
   // two more, and a record figure that competed with them would read as a third rating.
   figure: { ...theme.num.s, ...theme.tabular, color: theme.color.ink },
+});
+
+const BED = StyleSheet.create({
+  recessed: { backgroundColor: theme.color.paper2 },
+  mint: { backgroundColor: theme.color.mintSoft },
+});
+
+const LABEL = StyleSheet.create({
+  recessed: { color: theme.color.muted },
+  mint: { color: theme.color.mintInk },
 });

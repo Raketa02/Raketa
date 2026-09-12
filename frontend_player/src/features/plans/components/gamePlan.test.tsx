@@ -19,17 +19,20 @@
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
+import { BALANCE_FORECAST, PLAYERS, recordLabel } from '@/features/games/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 import {
   GATE_USER,
   launchSignedIn,
+  pairingPath,
   stubConversation,
   stubConversations,
   stubEntries,
   stubGames,
   stubGate,
+  stubPairing,
   stubPlans,
 } from '@/test-support/onboardingRouter';
 import { installTransport, type Transport, type Wire } from '@/test-support/transport';
@@ -173,6 +176,13 @@ function stubTheWorld({
     entries: [],
   });
   stubEntries(transport, ROOM);
+  stubPairing(transport, GAME, {
+    read_at: READ_AT,
+    forecast: { pct: 90, sigma_group: 0.4, provisional: false, assumption: null },
+    split: { your_side: 2.7, their_side: 2.71, gap: -0.01 },
+    at_stake: { win_delta: 0.08, loss_delta: -0.08 },
+    seats: [],
+  });
 }
 
 /**
@@ -504,15 +514,31 @@ describe('the eight corrections, re-decided by the design, and the two refusals'
   });
 
   /**
-   * §5.5: **no pairing forecast and no player rows.** ADR-0143 §8 refused both for the only
-   * standing a game exists in, and the reversal is filed as #346 rather than taken.
+   * §5.5, **reversed by ADR-0161**: the plan lead draws the court's pairing — the forecast block
+   * and the player rows — from a read of its own beside the game. The score lead still does not:
+   * the grid is the screen there, and the pairing is read on the plan lead's `court` slot and
+   * nowhere else. The blocks' own anatomy is `forecastBlock.test.tsx`'s and `playersCard.test.tsx`'s;
+   * what is asserted here is which lead draws them.
    */
-  it('draws no forecast and no player rows', async () => {
+  it('draws the forecast and the player rows on the plan lead, and not on the score lead', async () => {
     await openFromNow({ plans: [WHOLE] });
+
+    expect(await screen.findByText(BALANCE_FORECAST)).toBeTruthy();
+    expect(screen.getByText(PLAYERS)).toBeTruthy();
+    expect(screen.getByText('90%')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: recordLabel({ nickname: 'tomek.p', yours: false }) }),
+    ).toBeTruthy();
+  });
+
+  it('draws no forecast and no player rows on the score lead', async () => {
+    await openFromNow({ plans: [PASSED] });
 
     await screen.findByText(PLAN_PANEL.title);
 
-    expect(screen.queryByText(/forecast|balance|band/i)).toBeNull();
+    expect(screen.queryByText(BALANCE_FORECAST)).toBeNull();
+    expect(screen.queryByText(PLAYERS)).toBeNull();
     expect(screen.queryByText(/%/)).toBeNull();
+    expect(transport.requestsTo('GET', pairingPath(GAME))).toHaveLength(0);
   });
 });

@@ -851,6 +851,11 @@ const hit = {
   /** Anchored inside the tile, not over its corner — see `size.photoTile`. All four sides
    *  are equal because none of them crosses an edge. */
   photoRemove: { top: 8, bottom: 8, left: 8, right: 8 },
+  /** The people list's row (7.19): a 38pt face is the row's height, and the rows sit
+   *  `space.sm` apart — so 3 a side lifts it to 44 and leaves 3 of the 9pt gap between two
+   *  targets, which is the neighbour rule read vertically. No horizontal slop: the row is
+   *  already the card's width. */
+  peopleRow: { top: 3, bottom: 3 },
 } as const;
 
 // ---------------------------------------------------------------------------

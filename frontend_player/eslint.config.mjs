@@ -394,6 +394,17 @@ export default [
   // that feature's own api/ and mappers/, and would drop the purity ban from its domain/. Each
   // block therefore restates the baseline block it shadows — by its constant, never by hand —
   // with this one ban added.
+  //
+  // **`features/games` → `features/play` and `→ features/player_record` are declared edges,
+  // and neither is a ban's mirror.** #415 has the game screen's forecast block cite Play's
+  // balance words and level row through `play/types.ts` — `balanceWord`, `balanceTone`,
+  // `balanceLabel`, `levelRow` — rather than copy §B9's breaks a third time: words and a
+  // formatter, no screen and no state. The players card beside it opens `player_record`'s
+  // `PlayerRecordSheet` — a screen, on the same seam Play's builder already crosses — and
+  // borrows its `(you)` mark. Nothing here forbids either, because feature-to-feature imports
+  // through a `types.ts` are the sanctioned shape; they are written down so the next reader of
+  // this block does not take the one-way ban above for a rule that `games` imports nothing,
+  // and `scripts/test-import-boundaries.sh` asserts both edges stay open.
   {
     files: ['src/features/games/**'],
     rules: {

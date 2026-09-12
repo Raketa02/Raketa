@@ -41,8 +41,11 @@
  * slot became three and this is where all three are filled. The **card** is `GameCard` with
  * `doors={false}` — the shell #413 built, on the same `useChatDoors` join the rail runs: the
  * room's address it does not draw and the faces it does, keyed by the challenge, failing soft
- * into posters. The **court** is `null` until [#415](https://github.com/Raketa02/Raketa/issues/415)
- * fills it. The **plan** is `GameScreenPlan` on the plan lead — the editable card, the panel
+ * into posters. The **court** is `features/games`' own `CourtPairing`
+ * ([#415](https://github.com/Raketa02/Raketa/issues/415)) — the forecast block and the players
+ * card over the pairing read beside the game — handed the same faces map, because the players
+ * card draws the same people off the same join and the screen may not read that list itself. The
+ * **plan** is `GameScreenPlan` on the plan lead — the editable card, the panel
  * inside it — and `GamePlan` on the score lead, where the plan is read beside a score in `Tag`s
  * with the checklist and the door, as it always was. The screen draws whichever it is handed and
  * never learns which; the lead it is handed alongside is what decides here.
@@ -58,7 +61,7 @@
 
 import { useCurrentUser } from '@/features/auth/types';
 import { useChatDoors } from '@/features/conversations/types';
-import { GameScreen, useGame } from '@/features/games/types';
+import { CourtPairing, GameScreen, useGame } from '@/features/games/types';
 
 import { entryLeadOf } from '../domain/gameCard';
 import { usePlan } from '../hooks/usePlans';
@@ -100,7 +103,11 @@ export function GameScreenWithPlan({ gameId }: GameScreenWithPlanProps) {
           />
         )
       }
-      court={null}
+      court={
+        game === undefined || playerId === undefined ? null : (
+          <CourtPairing game={game} playerId={playerId} faces={room?.faces ?? NO_FACES} />
+        )
+      }
       plan={
         game === undefined ? null : entryLead === 'the-plan' ? (
           <GameScreenPlan game={game} plan={plan} />

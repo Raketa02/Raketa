@@ -223,6 +223,14 @@ expect_allowed @/features/games/types "$PLANS_SCREEN"
 expect_allowed @/generated/schema "$GAMES_WIRE"
 expect_blocked @/generated/schema "$GAMES_SCREEN" "api/ or mappers/"
 expect_blocked react-native "$GAMES_DOMAIN" 'pure TypeScript'
+# The two declared edges the other way out of `games` (#415): the forecast block cites Play's
+# balance words through its public surface, and the players card opens `player_record`'s
+# sheet. Asserted so a later hand widening the one-way ban into "games imports no feature"
+# goes red here rather than at the first `pnpm lint` after it.
+expect_allowed @/features/play/types "$GAMES_SCREEN"
+expect_allowed @/features/player_record/types "$GAMES_SCREEN"
+# And the deep path is still what it always was: a feature never reaches past another's types.ts.
+expect_blocked @/features/play/components/balancePresentation "$GAMES_SCREEN" 'types.ts'
 
 echo
 printf '%s passed, %s failed\n' "$pass" "$fail"

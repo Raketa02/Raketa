@@ -62,7 +62,7 @@ import {
 } from '@/shared/lib/platform';
 import { queryClient } from '@/shared/lib/query-client';
 
-import { json, type Transport, type Wire } from './transport';
+import { errorResponse, json, type Transport, type Wire } from './transport';
 
 /**
  * The Now tab's one line — which is what *the player is in the app* looks like on screen.
@@ -415,6 +415,29 @@ export function stubGames(
 ) {
   transport.on('GET', GAMES_PATH, () =>
     json<Wire['GameListResponse']>({ read_at: readAt, games: [...games] }),
+  );
+}
+
+export const pairingPath = (gameId: string) => `/api/v1/games/${gameId}/pairing`;
+
+/**
+ * One game's pairing, as `GET /games/{game_id}/pairing` answers — **or the refusal it gives by
+ * name**, `pairing_is_history` once the game has happened.
+ *
+ * Not stubbed on every launch: the read is made on the game screen's plan lead and nowhere else,
+ * and a suite about that screen says what the court is worth. A suite that reaches the plan lead
+ * without stubbing it gets the transport's *no stub* failure folded to nothing drawn, which is the
+ * block's own answer to an outage — so nothing breaks, and a suite asserting the block is present
+ * has to say so.
+ */
+export function stubPairing(
+  transport: Transport,
+  gameId: string,
+  answer:
+    Wire['GamePairingResponse'] | { readonly refused: 409 | 404 | 403; readonly code: string },
+) {
+  transport.on('GET', pairingPath(gameId), () =>
+    'refused' in answer ? errorResponse(answer.refused, answer.code) : json(answer),
   );
 }
 

@@ -28,6 +28,27 @@
 export { GameScreen, type GameScreenProps } from './components/GameScreen';
 
 /**
+ * **The court's pairing, for the composition that fills the game screen's `court` slot.**
+ *
+ * The forecast block and the players card over one read of `GET /games/{game_id}/pairing`
+ * ([ADR-0161](../../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)). It crosses
+ * because the faces the players card draws come off the room join `features/plans` holds for the
+ * card above it, and the screen may not read that list — so the composition hands this the map and
+ * the screen draws the slot it is handed, as it draws the other two.
+ */
+export { CourtPairing, type CourtPairingProps } from './components/CourtPairing';
+
+/**
+ * **The pairing's own words, exported for the suite that walks the plan lead from `plans`.**
+ *
+ * `gamePlan.test.tsx` asserts which lead draws the court's pairing, and a test spelling *Balance
+ * forecast* as a literal is a red build for the ticket that rewords it — `findAGamePresentation`'s
+ * rule, the one every copy deck in this app is read through. Nothing in `src/` outside this
+ * feature reads any of them.
+ */
+export { BALANCE_FORECAST, PLAYERS, recordLabel } from './components/gamePresentation';
+
+/**
  * The route's own check on the id it is handed, because a route param is attacker-controlled and
  * this one becomes a path that appends a score to somebody's stream — and **where that route is**,
  * for the feature that pushes it.

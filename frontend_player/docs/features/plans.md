@@ -211,8 +211,10 @@ of [#410](https://github.com/Raketa02/Raketa/issues/410), which wins over
 exists. The **card** is `GameCard` with `doors={false}`, on the same `useChatDoors` join the rail
 runs — the room's address it does not draw and the faces it does, keyed by the challenge, failing
 soft into posters — and with no `width`, because a column child takes the content width where a
-horizontal scroller's child has to be told it (Part 16). The **court** is `null` until #415 draws
-the pairing ADR-0161 admitted. The **plan** is `GameScreenPlan` on the plan lead and `GamePlan` on
+horizontal scroller's child has to be told it (Part 16). The **court** is `features/games`' own
+`CourtPairing` ([#415](https://github.com/Raketa02/Raketa/issues/415)) — the pairing ADR-0161
+admitted, drawn by the feature that owns the read and handed the same faces map, because the
+players card draws the same people off the same join. The **plan** is `GameScreenPlan` on the plan lead and `GamePlan` on
 the score lead, decided beside the lead itself so the two cannot disagree. `GameScreenPlan` is
 `RoomPlan`'s shape one surface over — `PlanCard` **reused as it is**, handed the game's own clock
 — with two things the room does differently: `PLAN_PANEL` is drawn **inside the card through the

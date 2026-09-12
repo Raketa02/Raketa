@@ -62,12 +62,13 @@
  * gesture with no affordance, no announcement, and no equivalent in the accessibility API at all.*
  * Nothing here is pressable but the door.
  *
- * **No pairing forecast and no player rows.** ADR-0143 §8 refused both *for the only standing a
- * game exists in* — *"a card here would be a second, worse copy of the game screen"* — and §5.5
- * upholds it with an argument of its own: **a forecast exists to help you decide whether to play
- * somebody, and on this screen you have already decided.** Reversing it is a fresh decision
- * extending ADR-0143 a second time, filed as
- * [#346](https://github.com/Raketa02/Raketa/issues/346) rather than taken here.
+ * **No pairing forecast and no player rows here, and that is now a statement about this lead
+ * rather than about the screen.** ADR-0143 §8 refused both for the only standing a game exists
+ * in, §5.5 upheld it, and [ADR-0161](../../../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)
+ * reversed it the other way — a Planning game has not happened, which is exactly why a forecast
+ * is honest on it — so the **plan lead** draws the court's pairing in the screen's `court` slot
+ * ([#415](https://github.com/Raketa02/Raketa/issues/415)). The score lead does not: the grid is
+ * the screen there, the slot is not drawn, and the read is not made.
  *
  * ## The door is always drawn, whichever door you came in by
  *

@@ -114,10 +114,10 @@ the details design are **absences** rather than sentences and each is a record r
 `GamePlan`'s own note — _part of day_ is not a slot, the lock button and its coral outline are
 deleted, the slots are tags, _Sun 9_ is a date this app does not have, _60 min_ is a duration nothing
 holds, and _COMPETITIVE_ is a search's mode rather than a game's kind — as is **press and hold for
-the full record**, and as are the **pairing forecast and the player rows**, upheld with an argument
-of their own: a forecast helps you decide whether to play somebody, and on this screen you already
-have. The reversal is filed as [#346](https://github.com/Raketa02/Raketa/issues/346) rather than
-taken.
+the full record**, and as were the **pairing forecast and the player rows** — upheld then with an
+argument of their own (a forecast helps you decide whether to play somebody, and on this screen
+you already have), filed as [#346](https://github.com/Raketa02/Raketa/issues/346), and **reversed
+since** by ADR-0161 for the plan lead, below.
 
 **The plan lead is redrawn — an eyebrow and no title, three slots over two doors, nothing
 pinned** ([#414](https://github.com/Raketa02/Raketa/issues/414), #410's design). `GameScreen`'s one
@@ -144,3 +144,48 @@ played` opens it the footer is back with the send and `Leave it as it is`; the f
 played` went with that, because no entry arm reaches the footer with the grid closed any more (on
 the score lead the grid is the screen). The score lead and the result arms keep today's screen
 whole, and `result.test.tsx` asserts the entry window's sentence where it is still said.
+
+**The plan lead draws its court's pairing — the forecast block and the players card, read beside
+the game and never on it** ([#415](https://github.com/Raketa02/Raketa/issues/415),
+[ADR-0161](../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md), #410's design). #346
+had closed the reversal _wontfix_ on the argument that a forecast helps you decide and here you
+have decided; the ADR settles it the other way on the argument #346 itself named — **a Planning
+game has not happened, which is exactly why the challenge screen is allowed a forecast** — and pays
+what the refusal priced: one route, `GET /games/{game_id}/pairing`, answering only while the game
+is `AWAITING_ENTRY`, and **nothing on `GET /games`**. So this feature owns the read end to end —
+`pairingApi`, `pairingMappers` (the wire boundary), `domain/pairing`, `usePairing` under
+`gameKeys.pairing(gameId)` — and fills the `court` slot #414 declared with its own `CourtPairing`,
+composed by `GameScreenWithPlan` because the players' faces come off the room join that composition
+already holds and this screen may not read that list. **The read is enabled on `AWAITING_ENTRY`
+and made on the plan lead alone**: the slot is drawn on the two plan-lead rungs and nowhere else,
+the route refuses by name after the game has happened, and `forecastBlock.test.tsx` asserts a
+result arm never asks. The route's three refusals — `game_not_found`, `pairing_is_history`,
+`account_held` — are folded to _no pairing_ **by code** in the use case, an answer rather than an
+outage, so a refused game is neither retried on every focus nor reported as the platform being
+down. **No arithmetic on the client**: the gap is printed with the sign it was served with, the bar
+takes it as its `advantage` on 7.11's one fixed scale exactly as the builder's forecast card feeds
+it, and the range, the band and the percentage are the engine's. The words and the bar are
+**Play's, cited across a declared `games → play` edge** — `balanceWord`, `balanceTone`,
+`balanceLabel`, `levelRow` through `play/types.ts`, written into `eslint.config.mjs` beside the
+one-way ban and asserted open by `pnpm test:boundaries` — because three copies of §B9's breaks is
+where one becomes `>`. **The forecast block is absent entirely when the pairing carries no
+forecast, and nothing says why** (ADR-0161 §4, #410's decision): somebody unrated, a refusal, the
+read in flight or failed all draw the same nothing, the stake tiles go with the block, and a
+provisional figure — never served on a game today — is folded to the same absence in the mapper
+rather than drawn without its caveat. Under the figure the sentence says what a confirmed score
+**does**: _A counted game — a confirmed score moves everybody's level._ / _A friendly — nothing
+moves._ — `worthLine`'s fact in the forecast's register rather than that sentence again four cards
+apart — and the tiles are `If you win` / `If you lose`, **two or none**, the win tile tinted mint
+on the design's word (7.14 as amended, Part 16), drawn by a placer of this feature's own over the
+shared `StatBox` because Play's `StakeBoxes` names a mode a game has already answered and refuses a
+doubles court a game has already filled. **The players card is always drawn** — its rows are the
+court's seats and the Level under each is what the pairing adds — **your side first, you first**
+(`courtForReader`, the one re-ordering this feature makes), the whole handle with `(you)` after
+yours, the level row as §6.4 spells it plus `{n}% sure`, nothing under an unrated seat, **no chip
+on anybody**, the face off the room join at the Chats row's 38 (7.19, the first people list in the
+system). **Tap, not hold**: the whole row is a `button` named for the record it opens, dimmed on
+press, opening `PlayerRecordSheet` for that player with the sport and nothing else — no search
+stands behind this screen — and the footer says _tap_ because #285's argument against the hold is
+honoured rather than reversed: the route the hold never offered is the one that exists.
+`gamePlan.test.tsx`'s refusal is inverted: the plan lead draws both blocks, and the score lead
+still draws neither and never asks.
