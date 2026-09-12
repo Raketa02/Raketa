@@ -18,6 +18,7 @@ import {
   UNSCORED_FACTS,
   clockLine,
   courtLine,
+  formatEyebrow,
   gameEyebrow,
   outcomeLine,
   resultBody,
@@ -359,6 +360,45 @@ describe('an agreement, which the proposing side could not see at all', () => {
     expect(body).not.toContain('can still put a different score up');
     expect(body).toContain('each side gets one');
     expect(body).toContain('Nobody is marked');
+  });
+});
+
+describe('the eyebrow on the plan lead', () => {
+  const doubles: Game = {
+    ...GAME,
+    seats: [
+      { side: 'A', playerId: 'me', nickname: 'me_' },
+      { side: 'A', playerId: 'partner', nickname: 'kasia_w' },
+      { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+      { side: 'B', playerId: 'other', nickname: 'marekb' },
+    ],
+  };
+
+  /**
+   * **The format and the kind, and nothing else** ([#414](https://github.com/Raketa02/Raketa/issues/414)):
+   * the card under it names the people and the plan names the day, so the handles and *arranged n
+   * ago* go. The format is read off the seats, as the Now card's retired eyebrow read it. **Not
+   * uppercased here** — the header's style does that, and a listener would get the letters.
+   */
+  it.each([
+    ['singles, counted', GAME, 'Singles · Counted'],
+    ['singles, friendly', { ...GAME, kind: 'FRIENDLY' } as const, 'Singles · Friendly'],
+    ['doubles, counted', doubles, 'Doubles · Counted'],
+    ['doubles, friendly', { ...doubles, kind: 'FRIENDLY' } as const, 'Doubles · Friendly'],
+  ])('reads the format and the kind — %s', (_, game, eyebrow) => {
+    expect(formatEyebrow(game)).toBe(eyebrow);
+  });
+
+  /** **`Counted`, never `Competitive`** — that is a search's word (§5.4 #8). */
+  it('never says competitive', () => {
+    expect(formatEyebrow(GAME).toLowerCase()).not.toContain('competitive');
+  });
+
+  /** A `GameKind` this build cannot read drops the clause, and the format stands. */
+  it('drops the kind where the build cannot read one', () => {
+    const { kind: _kind, ...unreadable } = GAME;
+
+    expect(formatEyebrow(unreadable)).toBe('Singles');
   });
 });
 

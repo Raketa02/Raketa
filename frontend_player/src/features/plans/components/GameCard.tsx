@@ -38,10 +38,10 @@
  * because it goes somewhere else, and it is drawn only where there is a room to open: ADR-0149
  * §3's join fails soft, and an ending **destroys** a conversation rather than delisting it
  * (ADR-0153). A card with neither draws no footer at all rather than an empty row across the
- * bottom of it, and `doors={false}` draws none on purpose: it has no caller yet, and exists
- * because [#414](https://github.com/Raketa02/Raketa/issues/414) draws this shell at the top of the
- * game screen with the footer left off — the screen *is* where both doors would go — and #413 is
- * where the shell's props are decided.
+ * bottom of it, and `doors={false}` draws none on purpose: it is how
+ * [#414](https://github.com/Raketa02/Raketa/issues/414) draws this shell at the top of the game
+ * screen — the screen *is* where both doors go, dark and full width under the plan card — and
+ * #413 is where the shell's props were decided.
  *
  * ## The footer rides `marginTop: auto`, and that is what a rail is for
  *
@@ -87,8 +87,13 @@ export interface GameCardProps {
   readonly conversationId: string | undefined;
   /** Each seat's photograph by player id, from the room. Empty is posters, never an error. */
   readonly faces: ReadonlyMap<string, string>;
-  /** The content width. 7.7's paging geometry: the card is `1.0 × content` and has no peek. */
-  readonly width: number;
+  /**
+   * The content width, on the rail — 7.7's paging geometry: the card is `1.0 × content` and has no
+   * peek, and a horizontal scroller does not stretch its children so the number is handed down.
+   * **Absent at the top of the game screen** (#414), where the card is a column child and takes
+   * the content width the way every card in a scroll does.
+   */
+  readonly width?: number;
   /** Whether the footer is drawn. Off on the game screen (#414), which is where both doors go. */
   readonly doors?: boolean;
 }
@@ -112,7 +117,7 @@ export function GameCard({
   const open = () => router.push({ pathname: GAME_ROUTE, params: { gameId: game.gameId } });
 
   return (
-    <DarkCard style={[s.card, { width }]}>
+    <DarkCard style={[s.card, width === undefined ? undefined : { width }]}>
       {/* One element, one name, no action — the tag, the sport word, the slots and the court
           have no action of their own, and the two doors below are elements of their own. */}
       <View

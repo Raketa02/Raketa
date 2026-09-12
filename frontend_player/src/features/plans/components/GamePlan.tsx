@@ -1,8 +1,15 @@
 /**
- * **The plan, on the game screen** — the panel, the three read-only tags, the checklist, and the
- * chat door under them
+ * **The plan, on the game screen's score lead** — the panel, the three read-only tags, the
+ * checklist, and the chat door under them
  * ([#368](https://github.com/Raketa02/Raketa/issues/368),
  * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5).
+ *
+ * **Two of the four entry arms since [#414](https://github.com/Raketa02/Raketa/issues/414)** —
+ * *Today* and *Needs result*, where the grid is the screen and the plan is context for a score.
+ * The two plan-lead rungs draw the chat's editable card instead (`GameScreenPlan`, beside this
+ * file), because the door that brings you there says *Finish the plan*; ADR-0149 §4's *read-only
+ * wherever it is drawn outside the chat* is amended to exactly this lead, and everything below
+ * about the tags, the checklist and the door still holds here.
  *
  * **It is a child, and the screen that renders it knows nothing about it.** `GameScreen` stays
  * `features/games`' and receives this as a `ReactNode`
@@ -17,10 +24,10 @@
  * [`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §3.4's rule
  * for the card, one surface over.
  *
- * ## It is the same block on all four entry arms, and it is not told which one
+ * ## It is the same block on both score-lead arms, and it is not told which one
  *
  * §22.6 settles it: *the rungs differ by the clock and not by the arrangement*. So the checklist is
- * one rule on all four, and *how long is left to say you played* is the screen's own standing line,
+ * one rule on both, and *how long is left to say you played* is the screen's own standing line,
  * drawn above this and never spelled again here. What the arm decides is on the screen around this
  * — whether the grid is open — and nothing inside it, which is why no arm reaches this component.
  *

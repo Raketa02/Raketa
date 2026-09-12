@@ -184,9 +184,12 @@ features/plans/
 
 ### 3.1 The plan is drawn twice, in two primitives, and that is not a variant
 
-**`Chip`s in the conversation where it is edited; `Tag`s on the game screen where it is read**
-(#338 §7). *A pressable pill is a chip*, *tags are never pressable* — the vocabulary doing exactly
-what it was split to do.
+**`Chip`s where it is edited — the conversation and, since
+[#414](https://github.com/Raketa02/Raketa/issues/414), the game screen's two plan-lead rungs —
+and `Tag`s on the score lead, where it is read** (#338 §7; ADR-0149 §4 as amended). *A pressable
+pill is a chip*, *tags are never pressable* — the vocabulary doing exactly what it was split to do.
+The editable card is **one component on both surfaces** (`PlanCard`), with a `note` slot the game
+screen fills with the panel and the room leaves empty.
 
 **Two components rather than one with an `editable` prop**, on `the-play-components.md` §3's own
 reasoning about `CourtMini` and `CourtBuild`: *"read-only avatars and interactive seats are

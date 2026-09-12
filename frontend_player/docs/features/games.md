@@ -118,3 +118,29 @@ the full record**, and as are the **pairing forecast and the player rows**, uphe
 of their own: a forecast helps you decide whether to play somebody, and on this screen you already
 have. The reversal is filed as [#346](https://github.com/Raketa02/Raketa/issues/346) rather than
 taken.
+
+**The plan lead is redrawn — an eyebrow and no title, three slots over two doors, nothing
+pinned** ([#414](https://github.com/Raketa02/Raketa/issues/414), #410's design). `GameScreen`'s one
+slot became three — `card`, `court`, `plan`, all opaque, drawn in that order on the plan lead and
+nowhere else — and the screen still holds no plan, no ladder and no rung. **The eyebrow is
+`formatEyebrow`'s**: the format read off the seats (the rule the Now card's retired eyebrow used,
+living here now) and the kind off the game — `Doubles · Counted`, `Singles · Friendly`, stored as
+words and drawn uppercase, **`Counted` and never `Competitive`** (§5.4 #8 stands), the kind clause
+dropped where the build cannot read one. There is **no title under it**, the first screen in this
+app without one (10.3 as amended, Part 16): the card names the people and the plan names the day,
+so `gameEyebrow`'s handles and _arranged n ago_ — kept on every other arm — would be the same facts
+twice. **The standing line, the shape line and the checklist go on this lead**: the card's bars say
+what is agreed, the counter says how much, and the court is drawn rather than described; the
+sentence about what a score records is drawn only once the grid is open, with the grid it is about.
+**The two doors are in the scroll**: `Open the chat` is the app's first `dark` button, `lg` and full
+width — _a filled action with no meaning attached_, which is what a wide door needs to be on a
+screen that asks for nothing and so wears no accent — through the same soft-failing `useChatDoor`
+join ADR-0149 §3 settles, drawn by the screen itself — which widens the seam the ADR named by one
+importer, `games` reaching `conversations` for the word, the route and the join, and says so — in
+a child of its own so the join is read where the door is drawn, over the one list the composition
+already reads for the card's faces; and `We played` is `secondary` beneath it, opening the grid over the plan as before.
+**Nothing is pinned while the grid is closed** — the design pins nothing — and the moment `We
+played` opens it the footer is back with the send and `Leave it as it is`; the footer's own `We
+played` went with that, because no entry arm reaches the footer with the grid closed any more (on
+the score lead the grid is the screen). The score lead and the result arms keep today's screen
+whole, and `result.test.tsx` asserts the entry window's sentence where it is still said.

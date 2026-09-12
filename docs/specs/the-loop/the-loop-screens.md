@@ -1187,19 +1187,52 @@ the same game depending which day they tap it.
 
 | Arm | What it shows | Primary act |
 | --- | --- | --- |
-| **Planning** | the plan as it stands, and which slots are missing | **Open the chat** |
-| **Game on** | the plan, whole | **Open the chat** |
-| **Today** | the plan, whole | **We played** |
+| **Planning** | the card at the top, the court's pairing, the plan **editable** — chips, counter, lock, the panel inside | **Open the chat** |
+| **Game on** | the same layout, the plan whole and the lock live | **Open the chat** |
+| **Today** | the plan, whole, in `Tag`s | **We played** |
 | **Needs result** | the plan, and how long is left to say you played | **We played** |
 | **Confirm the result** ×4 | built — #314, untouched | built |
 | **Counted** | the agreed score, the outcome, the worth line | none |
 | **Uncounted** | *an evening, not evidence* | none |
 | **Never played** | *It never happened* | none |
 
-**The plan is drawn read-only here, in `Tag`s, and edited only in the chat.** So the two planning
-arms' act is a door to the chat — **always drawn, whichever door you came in by**. Arriving from Now
-it is the whole point; arriving from **Details** it is the way back. Drawing it conditionally would
-make the surface depend on its door, which is the one thing Decision 7 bought by having only one.
+**The plan-lead layout, since [#414](https://github.com/Raketa02/Raketa/issues/414)** — the two
+rungs whose card door says *Finish the plan* / *Open*, redrawn to #410's design:
+
+```
+‹  DOUBLES · COUNTED                         ← the eyebrow, and no title (10.3 as amended)
+┌ the Now card, doors={false} ───────────────┐   the tag, the sport word, the slots, the court
+└────────────────────────────────────────────┘
+┌ the court's pairing (#415) ────────────────┐   BALANCE FORECAST · PLAYERS — null until then
+└────────────────────────────────────────────┘
+┌ THE PLAN ─────────────────────  1 of 3 set ┐   the chat's PlanCard, editable
+│ [ Where ] [ Saturday ] [ Hour ]            │
+│ ┌ ⓘ Agreed between you — nothing is booked ┐   PLAN_PANEL, inside the card, between the chips and the lock
+│ └──────────────────────────────────────────┘
+│ [ Lock the plan ]  (greyed below three)    │
+└────────────────────────────────────────────┘
+[              Open the chat                ]   ← Button dark, lg — in the scroll, nothing pinned
+[                We played                  ]   ← Button secondary
+(the star card, when a rating is waiting)
+```
+
+**The eyebrow is the format and the kind** — `DOUBLES · COUNTED`, `SINGLES · FRIENDLY` — read off
+the seats and the `GameKind`, with **no title under it**: the card names the people and the plan
+names the day, so `Padel · with … · arranged n ago` would be the same facts twice. `COUNTED`,
+never `COMPETITIVE` (§5.4 #8 stands). The standing line and the checklist (§5.3) go on this lead —
+the card's bars say what is agreed and the counter says how much. **The plan is edited here**
+([ADR-0149 §4 as amended](../../adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)):
+the chat's card reused as it is, with `PLAN_PANEL` drawn inside it through the one `note` slot the
+room leaves empty. **Nothing is pinned while the grid is closed**; *We played* opens it over the
+plan and the pinned footer comes back with the send and the way out.
+
+**On the score lead the plan is drawn read-only, in `Tag`s, and edited in the chat** — so the
+chat door there is a door to where the plan is changed; on the plan lead it is a door to where a
+change is *seen*, since every write posts a line into the room. On both it is **always drawn,
+whichever door you came in by**. Arriving from Now it is the whole point; arriving from
+**Details** it is the way back. Drawing it conditionally would make the surface depend on its
+door, which is the one thing Decision 7 bought by having only one. It fails soft on there being
+no room (ADR-0149 §3), on both leads.
 
 ***We played* is available in every `AWAITING_ENTRY` arm**, not only the two that lead with it.
 `standing_of` gates entry on `entry_closes_at` and on nothing else, so four people can arrange a
@@ -1236,6 +1269,8 @@ the rail — the card is the record for the day it stays.
 | — | **Never played** | Now card | — | nowhere |
 | — | every live card | Now card | the bubble | `/chats/conversation/[conversationId]` |
 | — | the conversation | Details | — | `/chats/conversation/[id]/details`, the arm the standing derives |
+| — | **Planning** · **Game on** | the game screen | `Open the chat` — `dark`, `lg`, full width | `/chats/conversation/[conversationId]` — the join, failing soft |
+| — | **Planning** · **Game on** | the game screen | `We played` — `secondary`, beneath | the score grid, opened over the plan; the pinned footer returns with it |
 
 **Fourteen cards, one route each side of the seam, and no deep-link parameter.** *The grid is the
 screen*: `GameScreen` is state-keyed, so the verb names what you arrive at and the standing
@@ -1257,7 +1292,10 @@ instead of one: **the app does not name a thing it cannot do.**
 ### 5.3 The checklist
 
 **Three lines, capped, in one order — what is true now, what is still to agree, what it moves.** The
-game screen's, never the card's, and drawn on the four `AWAITING_ENTRY` arms only; the ended arms
+game screen's, never the card's, and drawn **on the two score-lead arms only** since
+[#414](https://github.com/Raketa02/Raketa/issues/414): on the plan lead the card at the top carries
+the first two — its bars say what is agreed and the counter says how much — and the third is the
+kind word in the eyebrow. It was drawn on all four `AWAITING_ENTRY` arms until then; the ended arms
 and the four `AWAITING_ANSWER` arms are built and untouched.
 
 | | Line | Where it comes from |
@@ -1278,16 +1316,25 @@ record read out, and they are listed here because the mock will outlive this map
 1. ***Part of day* is not a slot.** The three are **where · day · hour**, and ADR-0145 §2 deleted
    the part-of-day bands *"deleted, not repurposed"*.
 2. ***Lock it in · set all three first* is deleted.** Filling the third slot **is** the lock.
+   **Amended by #403 and #414**: there is a lock, and it is an act with its own control —
+   `Lock the plan`, greyed below three under the counter that says why — and since #414 that
+   control is on the game screen's plan lead too, **via the reused card, as the chat decided it and
+   not as the prototype drew it**: no *set all three first*, no coral outline, the counter as the
+   reason.
 3. **The coral outline around the plan goes with it** — it was the locked state's border, and 5.1
    already spends a coral outline on the *pressed* state.
 4. **The *No clock time yet — on purpose* panel inverts.** It stops explaining an absence and names
    one: a player seeing *Zabłocie Sport · Saturday · 18:00* inside an app may reasonably assume the
    app did something about it. It did not. [`the-words.md`](../matchmaking/the-words.md) §22.2.
-5. **The three slots are `Tag`s, not `Chip`s**, because the plan is read-only here and *a control
-   that cannot be operated must not offer the affordance of one*.
+   Since #414 it is drawn **inside the plan card**, between the chips and the lock.
+5. **The three slots are `Tag`s on the score lead and `Chip`s on the plan lead** (#414, ADR-0149 §4
+   as amended). The tags stay where the plan is read beside a score and *a control that cannot be
+   operated must not offer the affordance of one*; the chips are the chat's own, on the two rungs
+   whose door promised *Finish the plan*.
 6. ***Sun 9* is a date**, and this app had none — the horizon is seven chips, so a weekday is
    exact. **Amended by #413: the Now card draws the date beside the weekday** (`Sunday` `9 Aug`),
-   because the design wins; the game screen's plan tags still draw the weekday alone.
+   because the design wins — and since #414 that card heads the game screen's plan lead, so a date
+   is drawn there too, on the card; the plan's chips and tags still draw the weekday alone.
 7. ***60 min* is a duration nothing in this build holds** — no booking, no court, no slot length.
 8. ***COMPETITIVE* is a search's mode.** A game carries a `GameKind`, and `FRIENDLY` is the marked
    case.

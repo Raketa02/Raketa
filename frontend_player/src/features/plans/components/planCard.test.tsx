@@ -50,6 +50,7 @@ import {
   LOCKING,
   LOCK_THE_PLAN,
   NO_DAY_LEFT_TO_SET,
+  PLAN_PANEL,
   QUICK_CHIP,
   RECORD_PLACE,
   SAVING,
@@ -259,6 +260,20 @@ describe('the card', () => {
     await openTheRoom();
 
     expect(await screen.findByText(counterLabel(undefined))).toBeTruthy();
+  });
+
+  /**
+   * **No panel in the room** — §3.2, still. The card grew a `note` slot for the game screen,
+   * where the panel is drawn inside it ([#414](https://github.com/Raketa02/Raketa/issues/414),
+   * `gameScreenPlanLead.test.tsx`); the room passes none, because the panel would be permanent
+   * chrome above a composer (ADR-0145 §6).
+   */
+  it('draws no panel in the room', async () => {
+    await openTheRoom();
+
+    await screen.findByText(THE_PLAN);
+    expect(screen.queryByText(PLAN_PANEL.title)).toBeNull();
+    expect(screen.queryByText(PLAN_PANEL.body)).toBeNull();
   });
 
   /** §22.2: a chip reads its value once there is one, and the day is drawn as a weekday. */

@@ -1,26 +1,31 @@
 /**
- * **The plan card** — pinned under the room's header: an eyebrow and a counter, the three slot
- * chips, and *Lock the plan*
+ * **The plan card** — an eyebrow and a counter, the three slot chips, and *Lock the plan*
  * ([#366](https://github.com/Raketa02/Raketa/issues/366),
  * [#403](https://github.com/Raketa02/Raketa/issues/403),
- * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §3.2).
+ * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §3.2) — drawn
+ * **in two places**: pinned under the room's header, and in the scroll of the game screen's plan
+ * lead ([#414](https://github.com/Raketa02/Raketa/issues/414), ADR-0149 §4 as amended).
  *
- * **Pinned**, because every chat opens at its newest entry — that is what a cursor is for — so a
- * card in the scroll is a card you have to hunt for, and the plan is the thing the room exists to
- * fill. **No panel**, because the panel that explains the slots is permanent chrome above a
- * composer and already has a home: the game screen, where the plan is read
+ * **Pinned in the room**, because every chat opens at its newest entry — that is what a cursor is
+ * for — so a card in the scroll is a card you have to hunt for, and the plan is the thing the room
+ * exists to fill. **No panel there**, because the panel that explains the slots is permanent
+ * chrome above a composer
  * ([ADR-0145](../../../../../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md)
- * §6). One panel, one home. It is 5.1's card — `surface`, a 1pt `line` border — and **the border
- * is never an accent**: the mock's coral rectangle is a highlight the author drew, and coral on a
- * card already means pressed.
+ * §6); its home is the game screen, where it is drawn **inside this card** through the `note`
+ * slot — between the chips and the button, where the design puts it — and the room passes none.
+ * One panel, one home, and the card does not know which surface it is on. It is 5.1's card —
+ * `surface`, a 1pt `line` border — and **the border is never an accent**: the mock's coral
+ * rectangle is a highlight the author drew, and coral on a card already means pressed.
  *
- * ## `Chip`s here and `Tag`s there, and that is not a variant
+ * ## `Chip`s on both plan-lead surfaces, `Tag`s on the score lead
  *
  * *A pressable pill is a chip*, *tags are never pressable* — the vocabulary doing exactly what it
  * was split to do (#338 §7). The read-only rendering is a **second component in this feature**
  * rather than an `editable` prop on this one, on `CourtMini` and `CourtBuild`'s own reasoning:
  * here the difference is larger, because one takes three mutations and three input surfaces and
- * the other takes none.
+ * the other takes none. ADR-0149 §4 put the read-only one on the game screen wherever the plan is
+ * drawn outside the chat; the design reuses **this** card there on the two rungs whose door says
+ * *Finish the plan*, and the tags keep the score lead, where the plan is context for a score.
  *
  * ## The lock is an act, and the card draws it as a counter and a control
  *
@@ -99,7 +104,7 @@
  * composer is a screen-level question for the room, filed with the look this card is owed.
  */
 
-import { useRef, useState, type RefObject } from 'react';
+import { useRef, useState, type ReactNode, type RefObject } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { offlineMessage, type AppError } from '@/shared/errors';
@@ -143,9 +148,23 @@ export interface PlanCardProps {
   readonly plan: Plan | undefined;
   /** The account may not write here. Every chip greys, and the screen owns the one note. */
   readonly refused?: boolean;
+  /**
+   * **Drawn between the chips and the button** — the game screen's panel (`PLAN_PANEL`, *Agreed
+   * between you — nothing is booked*), inside the card where the design puts it. The room passes
+   * none: the panel is not chrome above a composer (ADR-0145 §6). A slot rather than a flag, so
+   * the card holds an arrangement and the surface holds what goes in it.
+   */
+  readonly note?: ReactNode;
 }
 
-export function PlanCard({ gameId, plannedAt, readAt, plan, refused = false }: PlanCardProps) {
+export function PlanCard({
+  gameId,
+  plannedAt,
+  readAt,
+  plan,
+  refused = false,
+  note,
+}: PlanCardProps) {
   const write = useSetSlot();
   const lock = useLockPlan();
 
@@ -283,6 +302,10 @@ export function PlanCard({ gameId, plannedAt, readAt, plan, refused = false }: P
           busy word would otherwise be the whole account of a wait with no end in sight. */}
       {paused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
 
+      {/* The surface's own panel, under the chips and their refusal — the refusal names both
+          chips as its remedies, so it stays directly under them — and above the lock. */}
+      {note}
+
       {/* Gone once locked, and greyed under the counter or the room's note — never with a reason
           of its own on the label. `primary` because this is the one act on the card that asks:
           the chips are values and this is the agreement. The card's column stretches it to the
@@ -350,14 +373,10 @@ export function PlanCard({ gameId, plannedAt, readAt, plan, refused = false }: P
 }
 
 const s = StyleSheet.create({
-  // 5.1's card, at the gutter and with the gutter's own step below it, so the stream's first
-  // separator is not flush against the border. **No device has drawn this**: the numbers are the
-  // system's steps read off the mock's proportions, and Part 16 says so.
-  card: {
-    marginHorizontal: theme.size.gutter,
-    marginBottom: theme.space.sm,
-    gap: theme.space.sm,
-  },
+  // 5.1's card and the step between its rows. **Where it sits is the surface's to say** — the
+  // room pins it under the header at the gutter, the game screen lays it in a scroll that
+  // already is — so no margin lives here.
+  card: { gap: theme.space.sm },
   heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   eyebrow: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
   // 6.4's pill — `line2`, the tag radius, the tag's padding — around a figure rather than a word.

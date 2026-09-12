@@ -34,6 +34,19 @@
  * address nothing matches is that screen's to say. The lead handed over in that moment names the
  * score, and it is never read: no arm renders until there is a game.
  *
+ * ## Three children on the plan lead, and one join answers two of them
+ *
+ * [#414](https://github.com/Raketa02/Raketa/issues/414) redrew the plan lead as the Now card at
+ * the top, the court's pairing under it and the chat's editable plan card under that, so the one
+ * slot became three and this is where all three are filled. The **card** is `GameCard` with
+ * `doors={false}` — the shell #413 built, on the same `useChatDoors` join the rail runs: the
+ * room's address it does not draw and the faces it does, keyed by the challenge, failing soft
+ * into posters. The **court** is `null` until [#415](https://github.com/Raketa02/Raketa/issues/415)
+ * fills it. The **plan** is `GameScreenPlan` on the plan lead — the editable card, the panel
+ * inside it — and `GamePlan` on the score lead, where the plan is read beside a score in `Tag`s
+ * with the checklist and the door, as it always was. The screen draws whichever it is handed and
+ * never learns which; the lead it is handed alongside is what decides here.
+ *
  * **A plan read still in flight leads with the plan, and that is the same answer as no plan.**
  * `GET /plans` has no row for a game nobody has arranged anything on, so *not yet arrived* and
  * *nothing agreed* reach `entryLeadOf` identically — which is the semantics `slots.ts` already
@@ -43,12 +56,16 @@
  * not the journey.
  */
 
+import { useCurrentUser } from '@/features/auth/types';
+import { useChatDoors } from '@/features/conversations/types';
 import { GameScreen, useGame } from '@/features/games/types';
 
 import { entryLeadOf } from '../domain/gameCard';
 import { usePlan } from '../hooks/usePlans';
 
+import { GameCard } from './GameCard';
 import { GamePlan } from './GamePlan';
+import { GameScreenPlan } from './GameScreenPlan';
 
 export interface GameScreenWithPlanProps {
   /** Validated by `features/games`' route schema before it reaches either surface. */
@@ -58,14 +75,42 @@ export interface GameScreenWithPlanProps {
 export function GameScreenWithPlan({ gameId }: GameScreenWithPlanProps) {
   const { game } = useGame(gameId);
   const { plan } = usePlan(gameId);
+  const rooms = useChatDoors();
+  const playerId = useCurrentUser().data?.id;
 
   const entryLead = game === undefined ? 'the-score' : entryLeadOf(plan, game.readAt);
+
+  // The same key the rail's join uses, and the same soft failure: no room is no faces, and the
+  // seats draw their posters. The address is not drawn — `doors={false}` — but the card takes it.
+  const room = game === undefined ? undefined : rooms.get(game.challengeId);
 
   return (
     <GameScreen
       gameId={gameId}
       entryLead={entryLead}
-      plan={game === undefined ? null : <GamePlan game={game} plan={plan} />}
+      card={
+        game === undefined || playerId === undefined ? null : (
+          <GameCard
+            game={game}
+            plan={plan}
+            playerId={playerId}
+            conversationId={room?.conversationId}
+            faces={room?.faces ?? NO_FACES}
+            doors={false}
+          />
+        )
+      }
+      court={null}
+      plan={
+        game === undefined ? null : entryLead === 'the-plan' ? (
+          <GameScreenPlan game={game} plan={plan} />
+        ) : (
+          <GamePlan game={game} plan={plan} />
+        )
+      }
     />
   );
 }
+
+/** No room, no faces: one empty map rather than one per render. */
+const NO_FACES: ReadonlyMap<string, string> = new Map();

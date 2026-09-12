@@ -4,7 +4,9 @@
   [ADR-0161](0161-the-game-screen-draws-its-courts-pairing.md)**: *no pairing, Fit, level,
   band, confidence or `at_stake` is drawn on `GameScreen`* is narrowed to *none of it is drawn
   from `GameSchema`*. The forecast, the split, what is at stake and each seat's Level are drawn
-  from `GET /games/{game_id}/pairing`; a Fit is still drawn nowhere on a game.
+  from `GET /games/{game_id}/pairing`; a Fit is still drawn nowhere on a game. **Its §4 amended
+  below (2026-09-12)**: the plan is edited wherever it is drawn on the two plan-lead rungs — the
+  chat's card, reused — and read-only in `Tag`s on the score lead alone.
 - **Date:** 2026-09-07
 
 Decided on [Now, and the one state-detail surface both tabs open](https://github.com/Raketa02/Raketa/issues/336),
@@ -141,3 +143,46 @@ recompute-rather-than-replay apparatus is not built a second time, and the scree
 as-of-now claim about a person on a record that will be read for as long as the game exists. If
 that refusal is ever reversed it is a fresh decision extending ADR-0143 a second time, with its
 own argument — not a detail of a screen spec.
+
+## Amendment — 2026-09-12: the plan is edited wherever it is drawn
+
+§4 said **the plan is read-only wherever it is drawn outside the chat**, so the slots are `Tag`s
+and never `Chip`s, and the way to change one is the chat door. The design that arrived with
+[#410](https://github.com/Raketa02/Raketa/issues/410) draws the game screen's two plan-lead rungs
+— *Planning* and *Game on* — with **the chat's editable card**: the eyebrow and the counter, three
+chips with a sheet each, *Lock the plan*, and the panel inside it. The design wins and this record
+is amended ([#414](https://github.com/Raketa02/Raketa/issues/414)).
+
+**The argument that the room is where the arranging happens stands**, and the reason the screen
+now offers the same card is the button that brings you there. #413's wide door on the Planning card
+says **`Finish the plan`** — a verb for an errand — and a screen that answered it with three tags
+and a door back to the room would be a screen that did not keep what the button promised. So the
+card is **reused as it is** (`PlanCard`, one component, `RoomPlan`'s own join one surface over),
+with exactly one addition: an optional `note` slot between the chips and the lock, which the game
+screen fills with `PLAN_PANEL` and the room leaves empty, so *no panel in the room* stays true and
+the panel still has one home. Nothing about the card's writes moved — three slot mutations and the
+lock, pending and never optimistic, each refusal by its code, a hold greying every control under one
+note — and the room is still where a change is *seen*: every write posts a system line into it,
+whichever surface it was made from.
+
+**§4 narrows to the score lead.** *Today* and *Needs result* lead with the score grid, and there
+the plan is context for a score rather than the errand: it stays `Tag`s, one accessibility element,
+with the checklist under it and the chat door as before. `the-loop-components.md` §3.1's *`Chip`s in
+the conversation, `Tag`s on the game screen* becomes **`Chip`s on both plan-lead surfaces, `Tag`s on
+the score lead**.
+
+**The card at the top, and the two doors.** The same design puts #413's Now card at the head of
+the screen with its footer left off (`doors={false}`) — the tag, the sport word, the three slots
+with their bars and the court with its faces, on the rail's own `useChatDoors` join — under an
+eyebrow reading `DOUBLES · COUNTED` and **no title**, the first screen this app draws without one.
+Under the plan card sit the two doors the card's footer would have held: **`Open the chat`**, dark
+and full width, the same soft-failing join §3 settles, drawn by the screen itself; and **`We
+played`** as a quiet secondary beneath it, in the scroll rather than pinned, opening the grid over
+the plan exactly as before. The standing line and the three-line checklist go on this lead — the
+card's bars say what is agreed and the counter says how much. The score lead and the result arms
+keep today's screen whole.
+
+**What this does not change.** §1 and §2 stand: `features/games` still never learns a plan exists.
+The screen grew from one slot to three — `card`, `court`, `plan` — every one an opaque `ReactNode`
+`GameScreenWithPlan` composes, and the `court` slot is `null` until
+[#415](https://github.com/Raketa02/Raketa/issues/415) draws the pairing ADR-0161 admitted.

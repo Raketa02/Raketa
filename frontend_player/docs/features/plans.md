@@ -201,3 +201,36 @@ arranged_, the plan before the game and the result after it — and both the ref
 drawn one are computed in `Tag.test.tsx`. `domain/` is untouched: the ladder, `gameCardName` and
 `DOOR` are what they were. No device has drawn any of it; the three Planning mocks are the fixtures
 `nowRail.test.tsx` walks, and the card is asked for a look against them.
+
+**The game screen's plan lead draws the chat's editable card, with the panel inside it, under the
+Now card with its doors left off** ([#414](https://github.com/Raketa02/Raketa/issues/414), the design
+of [#410](https://github.com/Raketa02/Raketa/issues/410), which wins over
+[ADR-0149](../../../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
+§4 and has it amended). `GameScreenWithPlan` fills three slots now rather than one — `card`,
+`court`, `plan` — every one an opaque `ReactNode`, so `features/games` still never learns a plan
+exists. The **card** is `GameCard` with `doors={false}`, on the same `useChatDoors` join the rail
+runs — the room's address it does not draw and the faces it does, keyed by the challenge, failing
+soft into posters — and with no `width`, because a column child takes the content width where a
+horizontal scroller's child has to be told it (Part 16). The **court** is `null` until #415 draws
+the pairing ADR-0161 admitted. The **plan** is `GameScreenPlan` on the plan lead and `GamePlan` on
+the score lead, decided beside the lead itself so the two cannot disagree. `GameScreenPlan` is
+`RoomPlan`'s shape one surface over — `PlanCard` **reused as it is**, handed the game's own clock
+— with two things the room does differently: `PLAN_PANEL` is drawn **inside the card through the
+`note` slot**, between the chips and the lock, where the design puts it and the room leaves empty,
+so _no panel in the room_ stays true and the panel still has one home; and `refused` is folded
+here off the same mutation cache the room reads, through the room's own `writeStanding`, with the
+room's own sentence drawn once above the card as an `alert` — one fold and one constant, because
+a hold is one fact said on two surfaces, and a greyed chip with no note would be the dead end #324
+refused. **Why the editable card and not the tags**: #413's wide door on the Planning card says
+_Finish the plan_, and a screen that answered that verb with three tags and a door back to the
+room would be a screen that did not keep what the button promised; the room is still where the
+arranging is _seen_, since every write posts a line into it. **Where the card sits is the
+surface's to say**: `PlanCard` lost its gutter margins, `RoomPlan` pins it at the gutter in a
+wrapper of its own as before, and the game screen lays it in a scroll that already is. The read-only tags,
+the checklist and `GamePlan`'s chat door **stay for the score lead**, where the plan is context for
+a score and _a control that cannot be operated must not offer the affordance of one_ still holds.
+Two of §5.4's corrections are re-decided by the design on this lead and one is not: a lock word
+**is** drawn (greyed below three, as the chat decided it — never _set all three first_), a date
+**is** drawn (on the card at the top, beside the weekday; the chips keep the weekday), and
+`competitive` still is not. No device has drawn it; the screen is asked for a look against mocks
+4–6 and 9.

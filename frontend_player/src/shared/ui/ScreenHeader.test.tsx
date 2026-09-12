@@ -65,6 +65,22 @@ describe('the title and its sub-line', () => {
   });
 });
 
+describe('a header with no title', () => {
+  /**
+   * **The eyebrow is the heading where there is no h1.** The game screen's plan lead draws
+   * `DOUBLES · COUNTED` and nothing under it ([#414](https://github.com/Raketa02/Raketa/issues/414)),
+   * so a listener's first stop has to be that line rather than an element with a role and no
+   * words in it — and it is named by its own words, never labelled with them, for the reason the
+   * title is not.
+   */
+  it('is named by the eyebrow, which becomes the one element the header is', () => {
+    render(<ScreenHeader eyebrow="Doubles · Counted" />);
+
+    expect(screen.getByRole('header', { name: 'Doubles · Counted' })).toBeTruthy();
+    expect(screen.queryByLabelText('Doubles · Counted')).toBeNull();
+  });
+});
+
 describe('what the header is called', () => {
   /**
    * §20.4: *the visible label truncates, the spoken one never does*. The conversation draws the

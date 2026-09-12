@@ -104,6 +104,40 @@ export function gameEyebrow(sportName: string, game: Game, playerId: string): st
   return `${sportName}${played} · arranged ${durationSince(game.plannedAt, game.readAt)} ago`;
 }
 
+/** The two shapes of court, read off the seats the game actually has. */
+const SINGLES = 'Singles';
+const DOUBLES = 'Doubles';
+
+/** How many seats a singles court has. Two, and the boundary between the two words above. */
+const SINGLES_SEATS = 2;
+
+/**
+ * The kind, as the eyebrow says it — **`Counted`, never `Competitive`**: that is a search's word
+ * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5.4 #8), and
+ * the design's own forecast sentence says *a counted game*.
+ */
+const KIND_WORD: Readonly<Record<GameKind, string>> = { COUNTED: 'Counted', FRIENDLY: 'Friendly' };
+
+/**
+ * `Doubles · Counted` — **the eyebrow on the plan lead, and the whole head of that screen**
+ * ([#414](https://github.com/Raketa02/Raketa/issues/414)).
+ *
+ * The format and the kind, and nothing else: the card under it names the people and the plan
+ * names the day, so the handles and *arranged n ago* that `gameEyebrow` carries would be the same
+ * facts twice on one screen. The format is read off the seats — the rule the Now card's retired
+ * eyebrow used, living here now — and the kind off the game; **a kind this build cannot read
+ * drops its clause and the format stands**, so a game whose kind is absent is still headed as a
+ * game. There is no title under it: the design draws none, and 10.3 is amended to say so.
+ *
+ * **Not uppercased here.** The header's style does that, and a second copy in the string would
+ * reach a screen reader as letters.
+ */
+export function formatEyebrow(game: Game): string {
+  const format = game.seats.length <= SINGLES_SEATS ? SINGLES : DOUBLES;
+
+  return game.kind === undefined ? format : `${format} · ${KIND_WORD[game.kind]}`;
+}
+
 /**
  * *with kasia_w, tomek.p and marekb* — **and the empty string for a court with nobody else on
  * it**, which is the stale-link case rather than a game.
@@ -375,7 +409,7 @@ export function outcomeLine(outcome: Outcome | undefined): string | undefined {
  * sentence's job is the other half: how many were out there, and who was against whom.
  */
 export function courtLine(ours: number, theirs: number): string {
-  return ours + theirs > 2
+  return ours + theirs > SINGLES_SEATS
     ? 'Doubles — you and your partner against two others.'
     : 'Singles — you against one other player.';
 }

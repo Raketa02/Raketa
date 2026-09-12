@@ -4,10 +4,12 @@
  *
  * Most of [#368](https://github.com/Raketa02/Raketa/issues/368)'s acceptance criteria are
  * assertions in this file and opinions nowhere else — the three plan arms are on the screen the
- * result argument already keys, the plan is read-only in `Tag`s, *Open the chat* is drawn whichever
- * door you came in by, *We played* is available on every entry arm, the checklist is three lines in
- * one order with the third cited, one component answers two routes, and the eight corrections to
- * the details design are absences rather than sentences.
+ * result argument already keys, *Open the chat* is drawn whichever door you came in by, *We
+ * played* is available on every entry arm, one component answers two routes, and the corrections
+ * to the details design are absences rather than sentences. **Since
+ * [#414](https://github.com/Raketa02/Raketa/issues/414) the two plan-lead rungs draw the chat's
+ * editable card** — that layout is `gameScreenPlanLead.test.tsx`'s — so what is read-only in
+ * `Tag`s with the checklist under it is the **score lead**, and those assertions stand there.
  *
  * The words are `planPresentation.test.ts`'s and the ladder is `ladder.test.ts`'s; what is asserted
  * here is that the screen is wired to both, against the **copy deck** wherever a sentence has a
@@ -37,12 +39,14 @@ import { RUNGS } from '../domain/ladder';
 import { doorLabel } from './nowPresentation';
 import {
   EVERYBODY_SAID_YES,
+  LOCK_THE_PLAN,
   NOTHING_IS_LEFT_TO_AGREE,
   NOT_AGREED_YET,
   PLAN_PANEL,
   PLAN_SPOKEN_LEAD,
   SLOT_NAME,
   STILL_TO_AGREE,
+  counterLabel,
 } from './planPresentation';
 
 const ME = GATE_USER.id;
@@ -106,6 +110,14 @@ const WHOLE = plan({
   day: '2026-09-19',
   hour: '18:00',
   agreed_point: '2026-09-19T16:00:00Z',
+});
+
+/** The whole plan, agreed for this morning — the *Needs result* arm's, which leads with the score. */
+const PASSED = plan({
+  place: 'Zabłocie Sport, court 3',
+  day: '2026-09-12',
+  hour: '08:00',
+  agreed_point: '2026-09-12T06:00:00Z',
 });
 
 let transport: Transport;
@@ -195,28 +207,35 @@ async function openFromTheRoom(over: Parameters<typeof stubTheWorld>[0] = {}) {
 
 describe('the three plan arms', () => {
   /**
-   * §5.1's *Planning*: the plan as it stands, and which slots are missing. The whole list is
-   * printed here — §22.6's *this is the one place*, which is what lets the card's gloss name one.
+   * §5.1's *Planning*, as #414 redrew it: the plan as it stands in **chips to fill**, the panel
+   * inside the card, and the count of what is set where the checklist's list of what is missing
+   * used to be — the counter says how much, the chips say which.
    */
-  it('draws the plan as it stands and the full list of what is missing', async () => {
+  it('draws the plan as chips to fill, and counts what is set', async () => {
     await openFromNow();
 
     expect(await screen.findByText(PLAN_PANEL.title)).toBeTruthy();
-    expect(screen.getByText(SLOT_NAME.where)).toBeTruthy();
-    expect(screen.getByText(SLOT_NAME.day)).toBeTruthy();
-    expect(screen.getByText(SLOT_NAME.hour)).toBeTruthy();
-    expect(screen.getByText(`${STILL_TO_AGREE}: where, the day and the hour.`)).toBeTruthy();
+    for (const name of Object.values(SLOT_NAME)) {
+      expect(screen.getByLabelText(`${name}: ${NOT_AGREED_YET}`)).toBeTruthy();
+    }
+    expect(screen.getByText(counterLabel(undefined))).toBeTruthy();
+    expect(screen.queryByText(new RegExp(`^${STILL_TO_AGREE}`))).toBeNull();
   });
 
-  /** *Game on*: the plan, whole — and the values, never a date and never a part of a day. */
+  /** *Game on*: the plan, whole, in the chips — the values, and never a part of a day. */
   it('draws the plan whole once there is nothing left to agree', async () => {
     await openFromNow({ plans: [WHOLE] });
 
-    // #335's shorter value is drawn and §20.4's whole one is spoken.
-    expect(await screen.findByText('Zabłocie Sport')).toBeTruthy();
-    expect(screen.getByText('Saturday')).toBeTruthy();
-    expect(screen.getByText('18:00')).toBeTruthy();
-    expect(screen.getByText(NOTHING_IS_LEFT_TO_AGREE)).toBeTruthy();
+    // #335's shorter value is drawn and §20.4's whole one is spoken — on the chip and on the card.
+    expect(
+      await screen.findByLabelText(`${SLOT_NAME.where}: Zabłocie Sport, court 3`),
+    ).toBeTruthy();
+    expect(screen.getByLabelText(`${SLOT_NAME.day}: Saturday`)).toBeTruthy();
+    expect(screen.getByLabelText(`${SLOT_NAME.hour}: 18:00`)).toBeTruthy();
+    expect(
+      screen.getByText(counterLabel({ gameId: GAME, place: 'x', day: 'd', hour: 'h' })),
+    ).toBeTruthy();
+    expect(screen.queryByText(NOTHING_IS_LEFT_TO_AGREE)).toBeNull();
   });
 
   /**
@@ -264,28 +283,35 @@ describe('the three plan arms', () => {
   });
 });
 
-describe('the plan is read-only here', () => {
+describe('the plan is read-only on the score lead', () => {
   /**
-   * §5.4's fifth correction, and ADR-0149 §4 under it: *a control that cannot be operated must not
-   * offer the affordance of one.* §24.5 makes the three one element, which is the reason `Tag` was
-   * chosen over `Chip` in the first place.
+   * §5.4's fifth correction, and ADR-0149 §4 under it — narrowed by #414 to the two rungs that
+   * lead with the score, where the plan is context for a score rather than the errand: *a control
+   * that cannot be operated must not offer the affordance of one.* §24.5 makes the three one
+   * element, which is the reason `Tag` was chosen over `Chip` in the first place.
    */
   it('is one element with no action, and names each slot inside it', async () => {
-    await openFromNow({ plans: [WHOLE] });
+    await openFromNow({ plans: [PASSED] });
 
     const spoken = await screen.findByLabelText(new RegExp(`^${PLAN_SPOKEN_LEAD}`));
 
     expect(spoken).toBeTruthy();
     expect(spoken.props.accessibilityRole).toBeUndefined();
     expect(spoken.props.accessibilityLabel).toBe(
-      `${PLAN_SPOKEN_LEAD} Where, Zabłocie Sport, court 3. Day, Saturday. Hour, 18:00.`,
+      `${PLAN_SPOKEN_LEAD} Where, Zabłocie Sport, court 3. Day, Saturday. Hour, 08:00.`,
     );
+    expect(screen.queryByText(LOCK_THE_PLAN)).toBeNull();
   });
 
   it('says an unfilled slot is not agreed yet rather than offering a way to fill it', async () => {
-    await openFromNow();
+    // The agreed day is today, so the score leads — with the place and the hour still to agree.
+    await openFromNow({
+      plans: [plan({ day: '2026-09-12', agreed_point: '2026-09-12T22:00:00Z' })],
+    });
 
-    expect(await screen.findByLabelText(new RegExp(NOT_AGREED_YET))).toBeTruthy();
+    const spoken = await screen.findByLabelText(new RegExp(`^${PLAN_SPOKEN_LEAD}`));
+    expect(spoken.props.accessibilityLabel).toContain(NOT_AGREED_YET);
+    expect(screen.queryByLabelText(`${SLOT_NAME.where}: ${NOT_AGREED_YET}`)).toBeNull();
   });
 });
 
@@ -378,13 +404,14 @@ describe('the two landings inside one standing', () => {
   });
 });
 
-describe('the checklist', () => {
+describe('the checklist, on the score lead', () => {
   /**
    * Three lines, capped, in one order — what is true now, what is still to agree, what it moves.
-   * The third is **cited, not written**: `worthLine`'s built and tested sentence.
+   * The third is **cited, not written**: `worthLine`'s built and tested sentence. Drawn on the
+   * two rungs that lead with the score; on the plan lead the card and the counter carry it (#414).
    */
   it('is three lines in one order, the third of them cited', async () => {
-    await openFromNow({ plans: [WHOLE] });
+    await openFromNow({ plans: [PASSED] });
 
     expect(
       (
@@ -397,7 +424,7 @@ describe('the checklist', () => {
 
   /** A `GameKind` this build cannot read drops the clause and the other two lines stand. */
   it('drops its third line rather than writing one when the kind is unreadable', async () => {
-    await openFromNow({ games: [game({ kind: 'SOMETHING_NEW' as never })], plans: [WHOLE] });
+    await openFromNow({ games: [game({ kind: 'SOMETHING_NEW' as never })], plans: [PASSED] });
 
     expect(await screen.findByText(EVERYBODY_SAID_YES)).toBeTruthy();
     expect(screen.queryByText(WORTH_COUNTED)).toBeNull();
@@ -413,7 +440,10 @@ describe('one component, two routes', () => {
     await openFromTheRoom({ plans: [WHOLE] });
 
     expect(await screen.findByText(PLAN_PANEL.title)).toBeTruthy();
-    expect(screen.getByText(NOTHING_IS_LEFT_TO_AGREE)).toBeTruthy();
+    expect(screen.getByLabelText(`${SLOT_NAME.day}: Saturday`)).toBeTruthy();
+    expect(
+      screen.getByText(counterLabel({ gameId: GAME, place: 'x', day: 'd', hour: 'h' })),
+    ).toBeTruthy();
   });
 
   /**
@@ -451,21 +481,23 @@ describe('one component, two routes', () => {
   });
 });
 
-describe('the eight corrections, and the two refusals', () => {
+describe('the eight corrections, re-decided by the design, and the two refusals', () => {
   /**
-   * §5.4, each one a record read out: no part of day, no lock, no coral locked border, a panel
-   * that names an absence, `Tag`s rather than `Chip`s, a weekday rather than a date, no duration
-   * the build does not hold, and a `GameKind` rather than a search's mode.
+   * §5.4, each one a record read out — and three of them re-decided by #410's design, which wins:
+   * **a lock word is drawn** (greyed, the chat's own control), **a date is drawn** (on the card at
+   * the top, beside the weekday), and the slots are `Chip`s. What still stands: no part of day, no
+   * *set all three first*, no duration the build does not hold, and a `GameKind` rather than a
+   * search's mode — `Counted`, never `Competitive`.
    */
-  it('draws none of what the details design drew', async () => {
+  it('draws what the design won, and none of what the records still refuse', async () => {
     await openFromNow({ plans: [WHOLE] });
 
     await screen.findByText(PLAN_PANEL.title);
 
-    expect(screen.queryByText(/lock/i)).toBeNull();
+    expect(screen.getByText(LOCK_THE_PLAN)).toBeTruthy();
+    expect(screen.queryByText(/set all three/i)).toBeNull();
+    expect(screen.getByText('19 Sep')).toBeTruthy();
     expect(screen.queryByText(/morning|afternoon|evening/i)).toBeNull();
-    // *Sun 9* is a date and this app has none: the horizon is seven chips, so a weekday is exact.
-    expect(screen.queryByText(/\bSun\b|\bSep\b|\b9\b/)).toBeNull();
     // *60 min* is a duration nothing in this build holds — no booking, no court, no slot length.
     expect(screen.queryByText(/\d+\s*min\b/i)).toBeNull();
     expect(screen.queryByText(/competitive/i)).toBeNull();

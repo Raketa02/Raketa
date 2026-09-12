@@ -23,9 +23,17 @@
  *
  * Two reads and neither is this component's to own — they are the app's lists, shared with Now and
  * with the game screen, so on a warm cache this costs nothing at all.
+ *
+ * **The room passes no note** — the panel that explains the slots is not chrome above a composer
+ * (ADR-0145 §6); the game screen draws the same card with it inside
+ * ([#414](https://github.com/Raketa02/Raketa/issues/414)) — and it is the room that puts the card
+ * at the gutter, because where a card sits is the surface's to say.
  */
 
+import { StyleSheet, View } from 'react-native';
+
 import { useGame } from '@/features/games/types';
+import { theme } from '@/shared/ui';
 
 import { usePlan } from '../hooks/usePlans';
 
@@ -45,12 +53,22 @@ export function RoomPlan({ gameId, refused = false }: RoomPlanProps) {
   if (game === undefined) return null;
 
   return (
-    <PlanCard
-      gameId={gameId}
-      plannedAt={game.plannedAt}
-      readAt={game.readAt}
-      plan={plan}
-      refused={refused}
-    />
+    <View style={s.pinned}>
+      <PlanCard
+        gameId={gameId}
+        plannedAt={game.plannedAt}
+        readAt={game.readAt}
+        plan={plan}
+        refused={refused}
+      />
+    </View>
   );
 }
+
+const s = StyleSheet.create({
+  // Pinned under the header at the gutter, with the gutter's own step below it so the stream's
+  // first separator is not flush against the border. **No device has drawn this**: the numbers
+  // are the system's steps read off the mock's proportions, and Part 16 says so. The game screen
+  // draws the same card with no margin, in a scroll that already sits at the gutter (#414).
+  pinned: { marginHorizontal: theme.size.gutter, marginBottom: theme.space.sm },
+});

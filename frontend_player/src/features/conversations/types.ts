@@ -61,6 +61,20 @@ export { parseConversationRouteParams, type ConversationRouteParams } from './sc
 export { OPEN_THE_CHAT } from './components/conversationPresentation';
 
 /**
+ * **Whether the account may write, and the one sentence that says it may not** — exported for
+ * the game screen's plan card ([#414](https://github.com/Raketa02/Raketa/issues/414)).
+ *
+ * A hold is a fact about the account and reaches this client only as `account_held` on a write;
+ * `writeStanding` is the fold over every refusal a screen has met and `LIVE_NOTE.held` is the
+ * amber note the room draws over its greyed controls. The plan card is drawn on the game screen
+ * now as well as in the room, greys the same way off the same mutation cache, and owes the same
+ * note — one fold and one constant is what makes *the same words* true by construction, exactly
+ * as `OPEN_THE_CHAT` above.
+ */
+export { writeStanding } from './domain/liveState';
+export { LIVE_NOTE } from './components/conversationPresentation';
+
+/**
  * **Where that door goes**, spelled once for every surface that opens a room.
  *
  * Three features now push it — the challenge screen's half-built court, Now's card, and the row

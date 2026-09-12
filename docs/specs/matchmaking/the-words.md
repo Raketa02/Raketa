@@ -1747,8 +1747,9 @@ happening* **moves with the copy rather than being deleted**.
 
 **The panel inverts.** ADR-0145 §6: it stops explaining an absence and names one, because a player
 seeing *Zabłocie Sport · Saturday · 18:00* inside an app may reasonably assume the app did
-something about it. It did not. Drawn on the game screen, where the plan is read — never in the
-conversation, where it would be permanent chrome above a composer.
+something about it. It did not. Drawn on the game screen — since
+[#414](https://github.com/Raketa02/Raketa/issues/414) **inside the plan card**, between the chips
+and the lock — never in the conversation, where it would be permanent chrome above a composer.
 
 > **Agreed between you — nothing is booked**
 > Raketa does not hold courts. This is the note you are keeping between you: anybody here can
@@ -1807,6 +1808,22 @@ empty, and that is a code — `the_plan_is_not_complete` — rather than copy he
 **And *"whoever books becomes the owner"* is deleted rather than rewritten.** Decision 3 said the
 sentence would be rewritten; ADR-0144 found it has no moment left to be posted at. A sentence with
 nothing to trigger it is not rewritten; it is gone.
+
+**The game screen's eyebrow on the plan lead is the format and the kind** — and nothing else
+([#414](https://github.com/Raketa02/Raketa/issues/414)):
+
+| Format | Counted | Friendly |
+| --- | --- | --- |
+| two seats | `SINGLES · COUNTED` | `SINGLES · FRIENDLY` |
+| four seats | `DOUBLES · COUNTED` | `DOUBLES · FRIENDLY` |
+
+Stored as words (`Doubles · Counted`) and drawn uppercase by 3.3's rule, so a listener hears words
+and not letters. **`COUNTED`, never `COMPETITIVE`** — that is a search's mode (§5.4 #8), and the
+design's own forecast sentence says *a counted game*. A kind this build cannot read drops its
+clause and the format stands. There is **no title under it**: the card names the people and the
+plan names the day, so the handles and *arranged n ago* the other arms' eyebrow carries would be
+the same facts twice. The words drawn on that screen are otherwise the decided ones — `The plan`,
+`N of 3 set` · `Locked`, `Lock the plan`, the panel above, `Open the chat`, `We played`.
 
 ### 22.3 The withdraw
 

@@ -42,6 +42,17 @@
  * visibly off the text beside it. Read off the type role rather than typed, so the two cannot
  * drift.
  *
+ * ## A header with no title is headed by its eyebrow
+ *
+ * 10.3 says a screen keeps its h1 even where the eyebrow seems to say enough, and the game
+ * screen's plan lead is the first surface the design draws without one
+ * ([#414](https://github.com/Raketa02/Raketa/issues/414), Part 16): `DOUBLES · COUNTED` over a
+ * card that names the people and a plan that names the day, and nothing an h1 could add. So
+ * `title` is optional, and **where it is absent the eyebrow moves inside the element and becomes
+ * the heading** — the same words, the same style, one row lower in the tree — because a listener's
+ * first stop has to be the line that says what the screen is, not an element with a role and no
+ * words in it. With a title the eyebrow stays above and outside, exactly as before.
+ *
  * The eyebrow labels a region you are READING. It is not `flab`, which labels a control
  * you are about to OPERATE — the two are not interchangeable (design-system 3.3).
  */
@@ -52,7 +63,8 @@ import type { ReactNode } from 'react';
 import { theme } from './theme';
 
 export interface ScreenHeaderProps {
-  readonly title: string;
+  /** The h1. Absent on a screen the design draws without one — the eyebrow is the heading then. */
+  readonly title?: string;
   /**
    * What the header is **called**, where that differs from what it draws — §20.4's rule. Absent,
    * the element is named by the title and the sub-line. Every character of a shortened title
@@ -109,19 +121,28 @@ export function ScreenHeader({
       {lead}
 
       <View style={s.titles}>
-        {eyebrow !== undefined ? <Text style={s.eyebrow}>{eyebrow}</Text> : null}
+        {eyebrow !== undefined && title !== undefined ? (
+          <Text style={s.eyebrow}>{eyebrow}</Text>
+        ) : null}
         {/* One element: the title and what qualifies it. `accessible` is what merges the two
             texts on both platforms, and the role is the block's rather than the title's so a
             listener lands on the whole. A label only where the screen supplied one — absent, the
             platform reads the texts as drawn, and a header labelled with its own title would
-            answer for it in every `getByLabelText` that means the control beside it. */}
+            answer for it in every `getByLabelText` that means the control beside it. Where there
+            is no title the eyebrow is what is inside it, and is the heading. */}
         <View
           accessible
           accessibilityRole="header"
           {...(titleLabel === undefined ? {} : { accessibilityLabel: titleLabel })}
           style={s.named}
         >
-          <Text style={s.title}>{title}</Text>
+          {title === undefined ? (
+            eyebrow !== undefined ? (
+              <Text style={s.eyebrow}>{eyebrow}</Text>
+            ) : null
+          ) : (
+            <Text style={s.title}>{title}</Text>
+          )}
           {subline !== undefined ? <Text style={s.subline}>{subline}</Text> : null}
         </View>
       </View>

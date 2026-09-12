@@ -36,7 +36,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader, theme } from '@/shared/ui';
 
 export interface ShellScreenProps {
-  readonly title: string;
+  /**
+   * The h1 — **optional since [#414](https://github.com/Raketa02/Raketa/issues/414)**, whose
+   * plan lead is the first screen the design draws with an eyebrow and no title. Forwarded, not
+   * designed: `ScreenHeader` makes the eyebrow the heading where there is none.
+   */
+  readonly title?: string;
   readonly eyebrow?: string;
   /** Pinned below the scroller and above the tab bar. Absent when there is nothing to press. */
   readonly action?: ReactNode;

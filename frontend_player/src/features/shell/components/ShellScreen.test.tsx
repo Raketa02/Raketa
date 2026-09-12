@@ -71,6 +71,29 @@ describe('the call to action', () => {
   });
 });
 
+describe('a screen with no title', () => {
+  /**
+   * The game screen's plan lead is the first ([#414](https://github.com/Raketa02/Raketa/issues/414)):
+   * an eyebrow, no h1. The header is still pinned and still a heading — the eyebrow is what it
+   * says — and the page under it is untouched.
+   */
+  it('pins the eyebrow as its heading and draws nothing under it', () => {
+    render(
+      <SafeAreaProvider initialMetrics={METRICS}>
+        <ShellScreen eyebrow="Doubles · Counted">
+          <Text>the page</Text>
+        </ShellScreen>
+      </SafeAreaProvider>,
+    );
+
+    const heading = screen.getByRole('header', { name: 'Doubles · Counted' });
+
+    expect(within(scroller()).queryByRole('header')).toBeNull();
+    expect(within(heading).getAllByText(/./)).toHaveLength(1);
+    expect(within(scroller()).getByText('the page')).toBeTruthy();
+  });
+});
+
 describe('the safe area', () => {
   it('takes the top edge and leaves the bottom to the tab bar', () => {
     renderScreen();

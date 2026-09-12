@@ -288,6 +288,18 @@ describe("the card on Now's rail", () => {
 
 describe('entering a result', () => {
   it('says when saying nothing stops being possible, before the clock runs', async () => {
+    // On the score lead: the agreed point is behind the fold. The plan lead draws no standing
+    // line since #414 — the card and the counter carry it — so the window is asserted where it
+    // is still said.
+    stubPlans(transport, [
+      {
+        game_id: GAME_ID,
+        place: 'Zabłocie Sport',
+        day: '2026-09-04',
+        hour: '20:00',
+        agreed_point: '2026-09-04T18:00:00Z',
+      },
+    ]);
     await openGame(game());
 
     const said = standingLine(
