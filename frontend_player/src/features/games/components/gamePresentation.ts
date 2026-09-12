@@ -203,8 +203,8 @@ export function standingLine(argument: ResultArgument, readAt: string): string {
     case 'never-played':
       return 'Nobody said this one happened before the window closed, so nothing was recorded.';
     case 'called-off':
-      // #419 §3's own gloss, and nothing invented beside it until that ticket draws the ending:
-      // it names nobody, because `called_off_by` is on no wire (ADR-0163).
+      // The gloss, on the card and under the title alike. It names nobody, because
+      // `called_off_by` is on no wire and the room that would have said who is gone (ADR-0163).
       return 'Called off';
     case 'ours-stands':
       return `Your side's score is on the table. If nobody answers within ${durationLeft(argument.proposal.answerBy, readAt)}, it stands.`;
@@ -237,6 +237,13 @@ export function standingLine(argument: ResultArgument, readAt: string): string {
 }
 
 /**
+ * **The fourth end's title** (ADR-0163, #419 §3) — a constant beside the fold that returns it,
+ * because the suite that walks *Call it off* one feature over asserts the screen re-folds into
+ * this arm and may not spell it: a literal there is a red build for the ticket that rewords it.
+ */
+export const IT_WAS_CALLED_OFF = 'It was called off';
+
+/**
  * The screen's own title — **variant C's, unchanged**, plus the three states the prototype's
  * five screens did not have to name.
  */
@@ -251,7 +258,7 @@ export function resultTitle(argument: ResultArgument): string {
     case 'never-played':
       return 'It never happened';
     case 'called-off':
-      return 'It was called off';
+      return IT_WAS_CALLED_OFF;
     case 'ours-stands':
       return 'Sent — waiting';
     case 'theirs-stands':
@@ -350,6 +357,10 @@ export function resultBody(argument: ResultArgument): string | undefined {
       // paperwork about a game the platform already knows about — it *is* the record.
       return 'Putting a score in is what records that this game happened. There is nothing else behind it — no booking, no calendar.';
     case 'never-played':
+    // The fourth end is drawn as the ghost is (#419 §3): neither an evening nor a game that never
+    // happened, so nothing anybody is measured on moves (ADR-0163) — and the sentence is the
+    // ghost's own, because it is the same fact about the same people.
+    case 'called-off':
       return 'Nobody is marked for that. Not you, not any of the others.';
     case 'ours-stands':
       return 'You can change what you entered until they answer, and it does not use your side’s one turn up. If they put something else up instead, only an acceptance settles it.';
@@ -378,8 +389,6 @@ export function resultBody(argument: ResultArgument): string | undefined {
     case 'not-yours':
     case 'unreadable':
     case 'confirmed':
-    // The ending's own screen is #419's; until then the title and the gloss are the whole of it.
-    case 'called-off':
       return undefined;
   }
 }

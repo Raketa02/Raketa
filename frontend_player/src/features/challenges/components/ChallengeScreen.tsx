@@ -108,7 +108,8 @@ import { durationLeft } from '@/shared/formatting/durations';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import { Button, Note, behindOverlay, theme } from '@/shared/ui';
 
-import { actRefusal, type ActRefusal } from '../domain/actRefusal';
+import { actRefusal } from '../domain/actRefusal';
+import { fillRoute } from '../schemas/routeParams';
 import {
   acceptedPlayers,
   challengeArm,
@@ -119,6 +120,7 @@ import {
 import { useAnswerSeat, useChallenge, useWithdrawChallenge } from '../hooks/useChallenge';
 import type { SeatAnswerAct } from '../use-cases/answerSeat';
 
+import { actOnRefusal } from './actOnRefusal';
 import { ChallengeCard } from './ChallengeCard';
 import { WITHDRAW_CHALLENGE_NAME } from './challengeAccessibility';
 import { challengeErrorMessage } from './challengeErrorMessage';
@@ -138,21 +140,6 @@ import {
   yourAnswerWindowLine,
 } from './challengePresentation';
 import { WithdrawSheet } from './WithdrawSheet';
-
-/**
- * **The builder, under this challenge** — `features/play`'s own screen at a second route.
- *
- * One screen component and two routes, which is ADR-0149 §9's shape reused: each route lights
- * its own column, and *back* is correct in both directions **by construction** rather than
- * through a `from` parameter that would make `tabForPathname` impure
- * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §0.2). Being
- * under `/chats` is what lights the Chats column, for free.
- *
- * Spelled here because this screen is the only thing that pushes it, and because a `/chats/…`
- * path is this feature's to own — `features/play` holds the paths under `/play/…` for the same
- * reason, one tab over.
- */
-export const fillRoute = (challengeId: string) => `/chats/challenge/${challengeId}/fill` as const;
 
 export interface ChallengeScreenProps {
   /** Validated by `schemas/routeParams.ts` before it reaches here; the route does that. */
@@ -305,9 +292,7 @@ function Arrangement({
    * the one code for two cases, and there is nothing behind this screen to leave the player on.
    */
   function actOn(error: AppError): void {
-    const next: ActRefusal = actRefusal(error);
-    if (next.kind === 'READ_IT_BACK') onReRead();
-    if (next.kind === 'LEAVE') router.back();
+    actOnRefusal(error, onReRead);
   }
 
   function send(act: SeatAnswerAct): void {

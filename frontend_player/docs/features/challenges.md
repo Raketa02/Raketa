@@ -261,3 +261,44 @@ in the sentence every write here says it with. **Whether the control is drawn is
 rule**: only while the agreed moment is ahead, mirroring `game_moment_has_passed` off the same
 instant rather than offering a control the act would refuse. The room's `SEAT_LEFT` line gains
 its third value — _{name} left — that seat is open again_ — one context over.
+
+**The fill and the withdraw both reach a reopened court, and both are pressed on the game screen**
+([#419](https://github.com/Raketa02/Raketa/issues/419),
+[ADR-0163](../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)). **`FillTheSeat` is
+the challenge screen's ⚡ pressed on a game**: the same `useFillChallengeSeats`, the same push to
+`fillRoute` — moved beside the route's own schema, since three surfaces push it now — and the
+same builder, whose send pops back to wherever it was pushed from. One input differs: who has
+already said yes is read off the **game's** seats by whoever composes it, because the game's court
+is the court as it stands now and the challenge's is the arrangement as it was sent; this feature
+never learns what a game is. It is one component for two surfaces — the Now card's wide door and
+the game screen's primary act — because they are one press; the card hands in its accent and the
+door's width, the screen hands in nothing. Drawn only while the agreed moment is ahead (the
+composer's rule, mirroring `game_moment_has_passed`), it goes busy under its own label as the
+challenge screen's ⚡ does, and a refusal costs it what `actRefusal` says: a stale tap re-reads the
+composer's games list, `challenge_not_found` leaves, the rest is said. The word is
+`theActsWords.ts`' `FILL_THE_SEAT` — singular, one per surface beside `⚡ Fill the seats` — because
+two features say it and the control is composed into the card. **`CallOff` is the withdraw grown
+to a reopened court**: the act is `useWithdrawChallenge` unchanged in what it sends, the sheet is
+`WithdrawSheet` **handed different words** — it takes a `words` prop now, defaulting to its own
+deck, rather than a fourth copy of its shape — and the deck is `callOffPresentation.ts`: _Before
+you call it off_; _Everybody loses this game._ / _The conversation goes with it, and what people
+wrote is deleted._ / _This cannot be undone._; `Call it off`; `Keep it`; `Calling it off…` in
+flight. One label on the control and on the sheet's act, on `Send the challenge`'s precedent, with
+what is under the sheet hidden by `behindOverlay` while it is up. **Who may is answered here and
+not by the composer**: `holdsTheExit` on the cheap `Challenge` row — the reader's seat is accepted,
+and they are the organiser or the organiser's seat has been given up, read and never assumed, so a
+court the organiser holds no seat on fails soft — and `useHoldsTheExit` joins it off the challenge
+list the tab bar already holds, keyed by the game's `challengeId` — one more observer on a query
+the app keeps, rather than a detail read for one boolean; the composer hands in only what is its
+own to say, that a seat is open. Not gated by the moment, so on
+a short court past it this is the one act left. **`useWithdrawChallenge` now invalidates the games
+and the plans as well as the challenges and the rooms**, because a withdraw can call a game off in
+the act and a hook that declares its cache effect declares all of it; on a court that was never a
+game the two re-reads find nothing changed. Success **stays** — the screen is about a game that
+still exists, with an ending now — and re-folds into the called-off arm off the games list.
+`actRefusal` needed no new code: `withdraw_is_the_organisers`, `not_a_half_built_line_up` and
+`challenge_is_over` were already re-reads. **Not done here**: the challenge screen's own withdraw on
+a court that has been a game still says `Withdraw` with the court's words and still draws it for
+the organiser alone (`mayEnd`), where the server would accept a remaining player's once the
+organiser has left; `the-loop-screens.md` §2's arms table names _Call it off_ there, and that
+surface is a follow-up.

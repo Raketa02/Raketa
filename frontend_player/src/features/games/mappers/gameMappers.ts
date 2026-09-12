@@ -158,6 +158,7 @@ export function toGame(wire: GameSchema, readAt: string): Game | undefined {
     plannedAt: wire.planned_at,
     playedAt: wire.played_at ?? undefined,
     entryClosesAt: wire.entry_closes_at ?? undefined,
+    calledOffAt: wire.called_off_at ?? undefined,
     score: wire.score == null ? undefined : toScore(wire.score),
     outcome: wire.outcome == null ? undefined : member(OUTCOMES, wire.outcome),
     proposals: proposals.filter((one): one is StandingProposal => one !== undefined),

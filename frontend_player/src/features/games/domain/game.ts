@@ -99,6 +99,22 @@ export function openSeats(seats: readonly GameSeat[]): readonly GameSeat[] {
 }
 
 /**
+ * **Everybody in a seat but the reader**, by id and in the court's order — what the fill is told
+ * about the court it completes ([#419](https://github.com/Raketa02/Raketa/issues/419)).
+ *
+ * The seats a fill may never take out, on `acceptedPlayers`' shape one feature over: *in seat
+ * order and without the reader*, because the reader's own seat is what the court is composed
+ * around and the builder puts it back at the send. Read off the game rather than the challenge
+ * because the game's seats are the court as it stands **now** — the challenge's are the
+ * arrangement as it was sent, and a re-seat has moved on from it.
+ */
+export function seatedOthers(seats: readonly GameSeat[], reader: string): readonly string[] {
+  return seats.flatMap((seat) =>
+    seat.playerId === undefined || seat.playerId === reader ? [] : [seat.playerId],
+  );
+}
+
+/**
  * One side's score, on the table and not yet settled on.
  *
  * **At most one per side**, which is what bounds an argument to two rounds. Two of them is the
@@ -173,8 +189,18 @@ export interface Game {
   readonly plannedAt: string;
   /** When somebody said it happened. Absent while nobody has. */
   readonly playedAt?: string;
-  /** When *we played* stops being sayable. Absent once somebody has said it happened. */
+  /**
+   * When *we played* stops being sayable. Absent once somebody has said it happened — and on a
+   * game that was called off, where the window no longer matters.
+   */
   readonly entryClosesAt?: string;
+  /**
+   * When somebody called it off, while a seat was open
+   * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)). Present
+   * exactly on `CALLED_OFF`: the act's own instant, which is what the ending card is shelved from.
+   * **Nobody is named** — the room is gone with the act, and the card says *Called off*.
+   */
+  readonly calledOffAt?: string;
   /** The agreed score. Absent until something settles on one. */
   readonly score?: Score;
   /** Win or loss **for you**, and absent for every standing but a confirmed one. */

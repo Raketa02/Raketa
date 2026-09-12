@@ -42,8 +42,7 @@ export const GAME_CARD_NAMES = [
   'counted',
   'uncounted',
   'never-played',
-  // The fourth end (ADR-0163). Its own look and its shelf life are #419's; the name is what
-  // the contract's `CALLED_OFF` demands of every table below.
+  // The fourth end (ADR-0163): an act rather than a fold, shelved from its own instant.
   'called-off',
   'unreadable',
 ] as const;
@@ -59,11 +58,16 @@ export type GameCardName = (typeof GAME_CARD_NAMES)[number];
  * **The named door in a card's footer** — §5.2's table, and the rule over it: *the button carries
  * the act's verb, it navigates, and it never writes.*
  *
- * `undefined` is a card with nothing to press, which the three endings and the gap all are: the
- * body still opens the game, and a control offering an act that state cannot take would be the
- * app naming a thing it cannot do.
+ * `undefined` is a card with nothing to press, which the four endings and the gap all are: a
+ * control offering an act that state cannot take would be the app naming a thing it cannot do.
+ *
+ * **`fill` is the one door that runs something before it navigates** — the fill the challenge
+ * screen's *⚡ Fill the seats* runs, which mints a search and pushes the builder onto its answer
+ * ([#419](https://github.com/Raketa02/Raketa/issues/419)). It still reaches nobody: the send is a
+ * separate press on the builder, and the rule above is about the game, which the door leaves as
+ * it found it.
  */
-export const GAME_DOORS = ['open', 'we-played', 'confirm'] as const;
+export const GAME_DOORS = ['open', 'we-played', 'confirm', 'fill'] as const;
 
 /**
  * **The named door in a card's footer**, derived from the list above rather than declared beside
@@ -106,9 +110,9 @@ const DOOR: Readonly<Record<GameCardName, GameDoor | undefined>> = {
   // The plan is read on the screen, so the two planning rungs open it and say so.
   planning: 'open',
   'game-on': 'open',
-  // The plan survives a departure (#411 rule 6) and the screen is where the seat is dealt with.
-  // `open` until #419 turns this door into *Fill the seat* — no dead door ships.
-  'needs-a-player': 'open',
+  // The plan survives a departure (#411 rule 6), and the seat is dealt with in the builder: the
+  // door runs the fill and pushes it, the flow the challenge screen already has (#419).
+  'needs-a-player': 'fill',
   // *We played* is available in every `AWAITING_ENTRY` arm; these are the two that lead with it.
   today: 'we-played',
   'needs-result': 'we-played',
@@ -147,9 +151,14 @@ export function entryLeadOf(court: CourtRead, plan: Plan | undefined): EntryLead
  * **The last instant this game's own record dates, or nothing** — the ending a shelf life is
  * measured from.
  *
- * The wire dates no ending, exactly as `ChallengeSchema` dates none, so this is the honest
- * approximation of one and the two cases are different:
+ * The wire dates one ending exactly and approximates the others, so the three cases differ:
  *
+ * - A game that was **called off** carries `called_off_at`, the act's own instant, and it is
+ *   read first because the other two fields cannot date it: `entry_closes_at` is `null` on it —
+ *   *the window no longer matters, and a card that shelved itself by it would stay for eight
+ *   days* — and `played_at` never is, because a game is called off only while a seat is open and
+ *   nothing is recorded on a short court
+ *   ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)).
  * - A game that **never happened** ended at `entry_closes_at`, and that is exact: the window
  *   closing *is* the ending.
  * - A game that **was played** carries `played_at` and nothing later — the proposal's deadline and
@@ -170,7 +179,7 @@ export function entryLeadOf(court: CourtRead, plan: Plan | undefined): EntryLead
  * than choosing between two candidates.
  */
 function endedNoEarlierThan(game: Game): string | undefined {
-  return game.entryClosesAt ?? game.playedAt;
+  return game.calledOffAt ?? game.entryClosesAt ?? game.playedAt;
 }
 
 /**

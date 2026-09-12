@@ -12,7 +12,7 @@
 
 import { gameStandingLine, type Game } from '@/features/games/types';
 import { theme } from '@/shared/ui';
-import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
+import { FILL_THE_SEAT, WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 
 import { GAME_CARD_NAMES, doorOf } from '../domain/gameCard';
 import type { Plan } from '../domain/slots';
@@ -182,11 +182,16 @@ describe('the door’s word', () => {
     expect(doorLabel('confirm')).toBe('Confirm the result');
   });
 
-  /** `Open`, the same door as Game on's, until #419 makes it *Fill the seat* — no dead door. */
-  it('says Open on Needs a player, where the door is still the game screen', () => {
+  /**
+   * **`Fill the seat`, singular** (#419): the card's door on a court somebody left. The challenge
+   * screen keeps `⚡ Fill the seats` for the same act — that surface is about a court still being
+   * built, and this one is about the one seat that opened.
+   */
+  it('says Fill the seat on Needs a player, where the door is the fill', () => {
     expect(CARD_TAG['needs-a-player']).toBe('Needs a player');
-    expect(doorLabel('needs-a-player')).toBe('Open');
-    expect(doorOf('needs-a-player')).toBe(doorOf('game-on'));
+    expect(doorLabel('needs-a-player')).toBe(FILL_THE_SEAT);
+    expect(FILL_THE_SEAT).toBe('Fill the seat');
+    expect(doorOf('needs-a-player')).toBe('fill');
   });
 
   /** A word for a door the ladder does not carry would be a control the state cannot take. */

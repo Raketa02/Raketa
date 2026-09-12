@@ -807,8 +807,9 @@ only what this client had to invent to draw what is happening today and next
 - **The card name** — which of eleven cards a game draws, folded at read time from the standing,
   the court, the slot count and the clock: the five rungs, **Confirm the result** (one name over
   four `AWAITING_ANSWER` arms), **Counted**, **Uncounted**, **Never played**, **Called off** (the
-  fourth end, [ADR-0163](../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md); its look and
-  its shelf life are #419's), and the named gap for a standing this build cannot read. It is the
+  fourth end, [ADR-0163](../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md) — shelved a
+  day from `calledOffAt`, read before the window and the entry, and drawn as _Never played_ is),
+  and the named gap for a standing this build cannot read. It is the
   **tag**, and every slot on the card that differs by name is a **table lookup on it** — the stage
   dot, the accent, the door's word — so a twelfth name fails `pnpm typecheck` in one file.
   _Avoid_: a status column, a client state machine, a switch over the names, and a twelfth card.
@@ -840,11 +841,21 @@ only what this client had to invent to draw what is happening today and next
   standing** (`gameStandingLine`, cited). Nothing on the three plan-led rungs. _Avoid_: the gloss
   coming back under another name, and a checklist on the card.
 - **The two doors** — **the wide door** is the next thing to do and its word changes with the
-  stage: `Finish the plan` · `Open` · `We played` · `Confirm the result`, one per name and none on
-  an ending — `Open` on _Needs a player_ too, the same door as _Game on_'s, until #419 turns it
-  into `Fill the seat`; it **navigates and never writes**. **The bubble** beside it is the icon door to the
-  room, drawn only where there is one. **The body is not a door.** _Avoid_: a pressable body, a
-  disabled control where a card offers nothing, a door that writes, and a third door.
+  stage: `Finish the plan` · `Open` · `Fill the seat` · `We played` · `Confirm the result`, one per
+  name and none on an ending; it **navigates and never writes**. `Fill the seat` is the one door
+  that runs something first — the challenge screen's fill, a search that reaches nobody — and it
+  is `features/challenges`' `FillTheSeat` drawn in the door's place, only while the agreed moment
+  is ahead. **The bubble** beside it is the icon door to the room, drawn only where there is one.
+  **The body is not a door.** _Avoid_: a pressable body, a disabled control where a card offers
+  nothing, a door that writes, and a third door.
+- **The court's acts** — the game screen's fourth slot, `courtActs`, drawn last on the plan lead:
+  every one a **challenge** act reached from a game, composed by `plans` through
+  `challenges/types.ts` and handed its one rule as `offered`. `Fill the seat` (primary, where
+  _We played_ would be, while the moment is ahead), `Call it off` (secondary, while a seat is open,
+  for whoever holds the exit — the organiser, or anyone left once the organiser's own seat is open,
+  a fact `CallOff` joins off the challenge list itself), `Leave this game` (last, while the moment
+  is ahead). _Avoid_: `plans` learning what an organiser is, an act mounted and unmounted by its
+  rule rather than handed it, and any of these on the card or in the chat.
 
 ### The sportsmanship card
 

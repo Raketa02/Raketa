@@ -54,13 +54,14 @@ import { useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { offlineMessage, type AppError } from '@/shared/errors';
+import { offlineMessage } from '@/shared/errors';
 import { useIsOnline } from '@/shared/lib/platform';
 import { Button, Note, theme } from '@/shared/ui';
 
 import { actRefusal } from '../domain/actRefusal';
 import { useLeaveGame } from '../hooks/useChallenge';
 
+import { actOnRefusal } from './actOnRefusal';
 import { challengeErrorMessage } from './challengeErrorMessage';
 import { LEAVE_THIS_GAME, LEAVING } from './leaveGamePresentation';
 import { LeaveSheet } from './LeaveSheet';
@@ -95,17 +96,13 @@ export function LeaveGame({ challengeId, offered, onReRead }: LeaveGameProps) {
   const [confirming, setConfirming] = useState(false);
   const control = useRef<View>(null);
 
-  /** What a refusal costs, carried out — see the module note. */
-  function actOn(error: AppError): void {
-    const next = actRefusal(error);
-    if (next.kind === 'READ_IT_BACK') onReRead();
-    if (next.kind === 'LEAVE') router.back();
-  }
-
-  /** The sheet asked; this is the answer. */
+  /** The sheet asked; this is the answer. A refusal costs what `actOnRefusal` says it does. */
   function go(): void {
     setConfirming(false);
-    leave.mutate(challengeId, { onSuccess: () => router.back(), onError: actOn });
+    leave.mutate(challengeId, {
+      onSuccess: () => router.back(),
+      onError: (error) => actOnRefusal(error, onReRead),
+    });
   }
 
   const refusal = leave.error === null ? undefined : actRefusal(leave.error);

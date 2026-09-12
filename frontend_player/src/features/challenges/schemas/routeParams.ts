@@ -29,3 +29,19 @@ export function parseChallengeRouteParams(
   const result = challengeRouteParams.safeParse(params);
   return result.success ? result.data : undefined;
 }
+
+/**
+ * **The builder, under a challenge** — `features/play`'s own screen at a second route.
+ *
+ * One screen component and two routes, which is ADR-0149 §9's shape reused: each route lights
+ * its own column, and *back* is correct in both directions **by construction** rather than
+ * through a `from` parameter that would make `tabForPathname` impure
+ * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §0.2). Being
+ * under `/chats` is what lights the Chats column, for free.
+ *
+ * Spelled beside the route's own check because a `/chats/…` path is this feature's to own —
+ * `features/play` holds the paths under `/play/…` for the same reason, one tab over — and here
+ * rather than on the challenge screen since [#419](https://github.com/Raketa02/Raketa/issues/419):
+ * the game screen and the Now card push it too, through `FillTheSeat`.
+ */
+export const fillRoute = (challengeId: string) => `/chats/challenge/${challengeId}/fill` as const;

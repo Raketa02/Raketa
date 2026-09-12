@@ -1852,22 +1852,9 @@ hiding the only consequence the player cannot undo.
 possible afterwards, and a confirmation is not the place to sell a consequence.
 
 **On a court that has been a game the same sheet is reworded, and the act is the same route**
-([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #411 rule 4). The game is
-called off in the act, so the sheet names the game rather than the court, and the control is any
-remaining player's once the organiser has left:
-
-| | |
-| --- | --- |
-| Sheet title | `Before you call it off` |
-| Body | `Everybody still in loses this game.` |
-| Body | `The conversation goes with it, and what people wrote is deleted.` |
-| Body | `This cannot be undone.` |
-| The act | `Call the game off` |
-| In flight | `Calling it off…` |
-| Dismissal | `Keep it open` |
-
-**The visible control says `Call it off`**, and it is drawn only while a seat is open — a full
-court that will not play has no such control, and its window lapses into *Never played* as today.
+([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #411 rule 4): the game is
+called off in the act, so the sheet names the game rather than the court. Its words are §22.9's,
+settled with the ending's and the fill door's by [#419](https://github.com/Raketa02/Raketa/issues/419).
 
 ### 22.4 The quick chips
 
@@ -2021,6 +2008,7 @@ writing:
 | --- | --- |
 | `Open the chat` | the challenge screen, the game screen, and the Now card's bubble — **one act, one spelling**; on the card it is the spoken name of an icon-only door |
 | `⚡ Fill the seats` | the challenge screen's `LINE_UP_INCOMPLETE` arm, and it is the builder's own label for the identical act |
+| `Fill the seat` | the Now card's wide door on **Needs a player**, and the game screen's primary act on that arm — **the same act, singular** ([#419](https://github.com/Raketa02/Raketa/issues/419)): one per surface, because a challenge screen is about a court still being built with as many seats open as the send left, and this door is about a game that had every seat and lost one. Two seats may be open (#411 rule 3); the door still names the errand one seat at a time, as the tag does. The one door that runs something before it navigates — the fill mints a search — and it still reaches nobody. `theActsWords.ts`', because two features say it |
 | `Finish the plan` · `Open` · `We played` · `Confirm the result` | the Now card's wide door, one per name — [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §5.2. **`Finish the plan` is Planning's word for the same door Game on opens with `Open`** ([#413](https://github.com/Raketa02/Raketa/issues/413)): the destination is the same and the errand is not. *Finish* and not *Lock*, because the lock is an act with its own control on that screen (ADR-0155) |
 
 **And one ending with no door**: **`Called off`** is the card's word for `GameStanding.CALLED_OFF`
@@ -2066,10 +2054,9 @@ stale tap re-reads and says nothing, `challenge_not_found` leaves the screen, an
 
 **The rung**: **`Needs a player`** is the card's word for a court somebody left, above *Needs
 result*, *Today* and *Game on*; the state word one line over is `needs a player`, so the room's
-header reads `Padel · needs a player`. The wide door says **`Open`** — the same door as *Game on*'s,
-until [#419](https://github.com/Raketa02/Raketa/issues/419)'s `Fill the seat`. **`We played` is
-withheld** while the seat is open, and no sentence replaces it: the empty seat on the card is the
-whole of the explanation.
+header reads `Padel · needs a player`. The wide door says **`Fill the seat`** (§22.7, §22.9).
+**`We played` is withheld** while the seat is open, and no sentence replaces it: the empty seat on
+the card is the whole of the explanation.
 
 **The open seat**: on the players card the row reads **`Open seat`** where a handle would be — an
 empty face, no level row, and **nothing to press**, because there is no record to open for nobody.
@@ -2078,6 +2065,62 @@ seats` (§24.5).
 
 **The line**: `{name} left — that seat is open again` — §23's third `SEAT_LEFT` value, coordinated
 with #416.
+
+### 22.9 Filling the seat, calling it off, and the fourth end
+
+**The reopened court's whole account, on the game screen and the card**
+([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #411 rules 3 and 4, built
+by [#419](https://github.com/Raketa02/Raketa/issues/419)).
+
+**The door** is **`Fill the seat`** — §22.7's row: the card's wide door and the screen's primary act
+on *Needs a player*, one word for one press, drawn only while the agreed moment is ahead. It goes
+busy under its own label while the search runs, as the challenge screen's ⚡ does, and lands in the
+builder.
+
+**The control** is **`Call it off`** — `secondary`, above *Leave this game*, drawn only while a seat
+is open and for whoever holds the exit: the organiser, or, once the organiser's own seat is open,
+any remaining player. Not gated by the moment — the withdraw is not — so on a short court past its
+moment it is the one act left. **The visible control and the sheet's act carry one label**, on
+`Send the challenge`'s precedent: the act is named once, and what is under the sheet is hidden while
+it is up.
+
+**The sheet** is the withdraw's (§22.3), reworded for a court that has been a game:
+
+| | |
+| --- | --- |
+| The control | `Call it off` |
+| In flight | `Calling it off…` |
+| Sheet title | `Before you call it off` |
+| Body | `Everybody loses this game.` |
+| Body | `The conversation goes with it, and what people wrote is deleted.` |
+| Body | `This cannot be undone.` |
+| The act | `Call it off` |
+| Dismissal | `Keep it` |
+
+**These are the author's words from #419, and they replace the placeholder #417 wrote here while
+it had no client to build** — `Everybody still in loses this game.` / `Call the game off` / `Keep it
+open` — three of the four changed on purpose: the first line drops *still in* because the sheet is
+read by somebody who is, the act is the control's own word so it is named once, and the dismissal
+is `Keep it` rather than the withdraw's `Keep it open`, because a game is not open the way a court
+is. The second body line is the withdraw's own, unchanged — ADR-0142's *destroyed, not delisted*
+holds here too, and a confirmation that did not say so would be hiding the only consequence nobody
+can undo. The first names what the act ends: not *this court*, which is the challenge's word, but *this
+game*, because that is what the people still in it lose. Nothing here says the pair rule releases,
+on §22.3's own line. A refused call-off draws no new copy: a stale tap re-reads and says nothing,
+`challenge_not_found` leaves the screen, and `account_held` is `challengeErrorMessage`'s sentence.
+
+**The ending's words** — the fourth end, drawn as *Never played* is:
+
+| | |
+| --- | --- |
+| The tag | `Called off` |
+| The state word | `called off` |
+| The line under the slots, and the standing line | `Called off` |
+| The screen's title | `It was called off` |
+| The body | `Nobody is marked for that. Not you, not any of the others.` — the ghost's own sentence, because it is the same fact about the same people: neither an evening nor a game that never happened, so nothing anybody is measured on moves |
+
+**Nobody is named**, because `called_off_by` is on no wire and the room that would have said who
+is gone with the act. The card is shelved a day from `called_off_at`.
 
 ## 23. The system lines — the codes, and what publishes nothing
 
@@ -2294,7 +2337,7 @@ never a standing (ADR-0157) — and a room with no game stops at the sport.
 | --- | --- | --- |
 | `YOUR GAMES · n` | `header` | the heading and its count |
 | A game card's body | — | **one element, no role, no action** — the tag, the sport, then the three slots as sentences: `Planning. Padel. Where, Zabłocie Sport, court 3. Day, Not agreed yet. Time, Not agreed yet.` — and the line under the slots where the card keeps one. **On a court somebody left, the open seat is said after the sport** — `Needs a player. Padel. An open seat. Where, …` · `2 open seats.` — because the court is hidden from a listener and the tag names the errand, not the shape (#418) |
-| The wide door | `button` | its own verb — `Finish the plan`, `Open`, `We played`, `Confirm the result` |
+| The wide door | `button` | its own verb — `Finish the plan`, `Open`, `Fill the seat`, `We played`, `Confirm the result` |
 | The bubble | `button` | `Open the chat` — **the same words as every other chat door** |
 | The rail's dots | — | **one element, `Game {i} of {n}`, and no role** — 7.9's own shape (*"one element, one label — never one per segment"*), and not pressable, so it announces a position rather than offering an action |
 | The plan, read-only | — | **one element** — `The plan. Where, Zabłocie Sport. Day, Saturday. Hour, 18:00.` |

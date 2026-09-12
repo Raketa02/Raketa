@@ -34,7 +34,13 @@
  * **The wide door is the next thing to do** and its word changes with the stage — `Finish the
  * plan` on Planning, `Open` · `We played` · `Confirm the result` on the others, and none on an
  * ending — while its destination is the standing's, as it always was: `GAME_ROUTE`, and the
- * screen behind it lands on the arm the standing derives. **The bubble is the second door**,
+ * screen behind it lands on the arm the standing derives. **One door is a different door**
+ * ([#419](https://github.com/Raketa02/Raketa/issues/419)): *Fill the seat* on *Needs a player*
+ * runs the challenge screen's fill and lands in the builder, and it is `features/challenges`'
+ * `FillTheSeat` drawn in the door's place with the card's accent and the door's width, rather
+ * than a button here that knows what a fill is. It is drawn **only while the agreed moment is
+ * ahead**, mirroring the server: nobody may be seated into a game whose moment has passed, so a
+ * card past it has the bubble alone. **The bubble is the second door**,
  * because it goes somewhere else, and it is drawn only where there is a room to open: ADR-0149
  * §3's join fails soft, and an ending **destroys** a conversation rather than delisting it
  * (ADR-0153). A card with neither draws no footer at all rather than an empty row across the
@@ -55,12 +61,14 @@
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { FillTheSeat } from '@/features/challenges/types';
 import { CONVERSATION_ROUTE } from '@/features/conversations/types';
-import { GAME_ROUTE, type Game } from '@/features/games/types';
+import { GAME_ROUTE, seatedOthers, type Game } from '@/features/games/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { Button, DarkCard, Tag, theme } from '@/shared/ui';
 
-import { gameCardName } from '../domain/gameCard';
+import { doorOf, gameCardName } from '../domain/gameCard';
+import { momentHasPassed } from '../domain/ladder';
 import { PLAN_SLOTS, type Plan } from '../domain/slots';
 
 import { ChatDoor } from './ChatDoor';
@@ -96,6 +104,11 @@ export interface GameCardProps {
   readonly width?: number;
   /** Whether the footer is drawn. Off on the game screen (#414), which is where both doors go. */
   readonly doors?: boolean;
+  /**
+   * What a refused fill costs: **a re-read of the games list, never a toast.** The rail holds the
+   * read every card folds from, so the rail re-reads it; the fold the card lands on is the word.
+   */
+  readonly onReRead: () => void;
 }
 
 export function GameCard({
@@ -106,6 +119,7 @@ export function GameCard({
   faces,
   width,
   doors = true,
+  onReRead,
 }: GameCardProps) {
   const name = gameCardName(game, plan);
   const tag = CARD_TAG[name];
@@ -115,6 +129,16 @@ export function GameCard({
   const sportName = sportLabel(game.sport);
 
   const open = () => router.push({ pathname: GAME_ROUTE, params: { gameId: game.gameId } });
+
+  /**
+   * **The fill is offered only while the agreed moment is ahead** — the ladder's own test, the
+   * rule the game screen applies to the same control, so the card and the screen cannot disagree
+   * about it. Past the moment the door is not drawn at all: a control the builder's send would
+   * refuse is a promise the card cannot keep.
+   */
+  const fill = doorOf(name) === 'fill';
+  const fillOffered = fill && !momentHasPassed(plan, game.readAt);
+  const wideDoor = verb !== undefined && (!fill || fillOffered);
 
   return (
     <DarkCard style={[s.card, width === undefined ? undefined : { width }]}>
@@ -151,9 +175,19 @@ export function GameCard({
         {line === undefined ? null : <Text style={s.line}>{line}</Text>}
       </View>
 
-      {!doors || (verb === undefined && conversationId === undefined) ? null : (
+      {!doors || (!wideDoor && conversationId === undefined) ? null : (
         <View style={s.footer}>
-          {verb === undefined ? null : (
+          {!wideDoor ? null : fill ? (
+            <FillTheSeat
+              challengeId={game.challengeId}
+              sport={game.sport}
+              accepted={seatedOthers(game.seats, playerId)}
+              offered={fillOffered}
+              onReRead={onReRead}
+              variant={accent.button}
+              style={s.door}
+            />
+          ) : (
             <Button label={verb} variant={accent.button} size="lg" onPress={open} style={s.door} />
           )}
 

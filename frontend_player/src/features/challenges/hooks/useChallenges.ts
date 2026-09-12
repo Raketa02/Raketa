@@ -50,7 +50,7 @@ import type { AppError } from '@/shared/errors';
 
 import { useCurrentUser } from '@/features/auth/types';
 
-import { pairAlreadyPlaying, type Challenge } from '../domain/challenge';
+import { holdsTheExit, pairAlreadyPlaying, type Challenge } from '../domain/challenge';
 import { challengeInbox, challengesWaiting } from '../domain/challengeInbox';
 import { readChallenges } from '../use-cases/readChallenges';
 import { sendChallenge, type SendAsk, type SentChallenge } from '../use-cases/sendChallenge';
@@ -156,6 +156,36 @@ export function useChallengeInbox() {
         ? []
         : challengeInbox(challenges.data, playerId),
   };
+}
+
+/**
+ * **Whether this reader may call a game off** — the organiser fact, joined off the list
+ * ([#419](https://github.com/Raketa02/Raketa/issues/419),
+ * [ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)).
+ *
+ * A game carries no organiser; the challenge behind it does, and `game.challengeId` is the join
+ * key — the shape ADR-0149 §3 chose for exactly this kind of fact, rather than a field on
+ * `GET /games` restating a challenge's. It is read off the **list** and not the detail, because
+ * the tab bar already holds the list for its badge and every row of it carries what
+ * `holdsTheExit` reads — `organiserId`, and each seat's answer — so what a game screen costs is
+ * one more observer on a query the app already keeps (refetched on mount at the list's own
+ * `staleTime: 0`), rather than a detail read of its own, with its pairing, for one boolean.
+ *
+ * **Asked only while the composer's own rule holds** — `enabled` is *a seat is open* — on
+ * `useOpenPair`'s switch: the control is mounted on every plan-lead screen, and a question about
+ * the exit on a full court would refetch the list at `staleTime: 0` for an answer nothing draws.
+ *
+ * **Fails soft**: switched off, no list yet, no reader yet, no row for this court, or a reader the
+ * row does not seat all answer *no* — and *no* draws no control, never a control the act would
+ * refuse. Who the reader is comes from `useCurrentUser`, as every other reading of this list
+ * takes it.
+ */
+export function useHoldsTheExit(challengeId: string, enabled: boolean): boolean {
+  const { data } = useChallengeList(enabled);
+  const playerId = useCurrentUser().data?.id;
+  const row = data?.find((one) => one.challengeId === challengeId);
+
+  return enabled && row !== undefined && playerId !== undefined && holdsTheExit(row, playerId);
 }
 
 /**

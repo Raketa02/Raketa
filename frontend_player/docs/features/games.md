@@ -219,3 +219,19 @@ know. **`CALLED_OFF` joins `GameStanding`** as the fourth end
 assertion demands it — with a `called-off` arm that offers nothing, titled _It was called off_
 over the gloss _Called off_ — the two words #419 §3 and ADR-0163 fix — and no body, because
 nothing is invented beside them. Its `called_off_at`, its shelf life and its screen are #419's.
+
+**The fourth end is dated, and drawn as the ghost is**
+([#419](https://github.com/Raketa02/Raketa/issues/419),
+[ADR-0163](../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)). `Game` gains
+`calledOffAt` and the mapper reads `called_off_at` — the act's own instant, present exactly on
+`CALLED_OFF`, and what the card is shelved from one feature over. The `called-off` arm gains the
+ghost's own body — _Nobody is marked for that. Not you, not any of the others._ — because it is the
+same fact about the same people: neither an evening nor a game that never happened, so nothing
+anybody is measured on moves, and a screen that said only the title would leave the reader to
+wonder whether calling it off cost them. Everything else falls out of the arm being an ending:
+no plan, no doors, no act on the court, the pairing not asked for (`usePairing` is enabled on
+`AWAITING_ENTRY` alone, and the composition mounts `CourtPairing` on the plan lead alone), and the
+star section as for any ending. Nobody is named — `called_off_by` is on no wire. **`seatedOthers`
+joins `openSeats` on `types.ts`**: everybody in a seat but the reader, by id and in the court's
+order — what the fill is told about the court it completes, and why it is read off the game rather
+than the challenge is `challenges.md`'s to say.

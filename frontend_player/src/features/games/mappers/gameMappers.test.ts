@@ -218,6 +218,28 @@ describe('a code this build has never seen', () => {
     expect(game?.seats).toEqual([{ side: 'A', playerId: 'me', nickname: 'me_' }, { side: 'B' }]);
   });
 
+  /**
+   * **The fourth end is dated by the act** (ADR-0163): `called_off_at` is the instant somebody
+   * called it off, and it is what the ending card is shelved from — `entry_closes_at` is `null`
+   * on it, so a card that read the window would stay eight days.
+   */
+  it('reads when a game was called off, and leaves it absent on every other standing', () => {
+    const calledOff = toGame(
+      wireGame({
+        standing: 'CALLED_OFF',
+        entry_closes_at: null,
+        called_off_at: '2026-09-04T20:00:00Z',
+      }),
+      READ_AT,
+    );
+
+    expect(calledOff).toMatchObject({
+      standing: 'CALLED_OFF',
+      calledOffAt: '2026-09-04T20:00:00Z',
+    });
+    expect(toGame(wireGame({ called_off_at: null }), READ_AT)?.calledOffAt).toBeUndefined();
+  });
+
   it('drops a game whose court it cannot place somebody on', () => {
     const games = toGames({
       read_at: READ_AT,

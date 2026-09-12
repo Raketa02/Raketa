@@ -49,7 +49,7 @@ import { gameStandingLine, openSeats, type Game } from '@/features/games/types';
 import { counted } from '@/shared/formatting/counted';
 import { durationLeft } from '@/shared/formatting/durations';
 import { theme, type ButtonVariant } from '@/shared/ui';
-import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
+import { FILL_THE_SEAT, WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 
 import type { GameCardName } from '../domain/gameCard';
 import { isRung } from '../domain/ladder';
@@ -313,9 +313,10 @@ export interface CardFacts {
 export const FINISH_THE_PLAN = 'Finish the plan';
 
 /**
- * **The wide door's verb, per name** — §22.7's three, one per rung, and *Finish the plan* on the
+ * **The wide door's verb, per name** — §22.7's three, one per rung, *Finish the plan* on the
  * card whose door is `open` but whose errand is not
- * ([#413](https://github.com/Raketa02/Raketa/issues/413)).
+ * ([#413](https://github.com/Raketa02/Raketa/issues/413)), and *Fill the seat* on the one whose
+ * door is the fill.
  *
  * Keyed by the **card's name** rather than by the door, because the door *Planning* carries is
  * the same `open` as *Game on*'s and the word on it is not. Each carries its act's **verb**,
@@ -327,9 +328,9 @@ export const FINISH_THE_PLAN = 'Finish the plan';
 const DOOR_LABEL: Readonly<Record<GameCardName, string | undefined>> = {
   planning: FINISH_THE_PLAN,
   'game-on': 'Open',
-  // The same `open` door as *Game on*'s, under the same word, until #419 turns it into *Fill the
-  // seat*: the screen is where the seat is dealt with, and no dead door ships in the meantime.
-  'needs-a-player': 'Open',
+  // The fill, and the word is `theActsWords.ts`' for `WE_PLAYED`'s reason one row down: the
+  // control that carries it out is `features/challenges`', composed into this card (#419).
+  'needs-a-player': FILL_THE_SEAT,
   // *One act, one spelling* (§22.7). The screen behind this card draws the same verb on the arm
   // that leads with its plan, so the word is `shared/vocabulary/theActsWords.ts`' rather than
   // either feature's — the two of them reach each other at load time, and a word read across that

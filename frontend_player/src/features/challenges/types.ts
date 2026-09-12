@@ -121,3 +121,30 @@ export type { ProposedCourt } from './mappers/challengeMappers';
  * stay with them, because the screen that draws them may not know what they say.
  */
 export { LeaveGame, type LeaveGameProps } from './components/LeaveGame';
+
+/**
+ * **The fill, for the game screen and the Now card** — the challenge screen's ⚡ pressed on a game
+ * ([#419](https://github.com/Raketa02/Raketa/issues/419)): the same search, the same builder under
+ * the challenge, and the seats already taken read off the game by whoever composes it. One
+ * control for the card's wide door and the screen's primary act, because they are one press.
+ */
+export { FillTheSeat, type FillTheSeatProps } from './components/FillTheSeat';
+
+/**
+ * **The call-off, for the game screen** — the withdraw grown to a reopened court
+ * ([ADR-0163](../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419), on
+ * `LeaveGame`'s seam. It answers *who may* itself, off this feature's own list, so the composer
+ * hands in only what is its own to say: that a seat is open.
+ */
+export { CallOff, type CallOffProps } from './components/CallOff';
+
+/**
+ * **The two controls' words, exported for the suite that walks the plan lead from `plans`.**
+ *
+ * `gameScreenPlanLead.test.tsx` asserts where on the arm each act sits, and a test spelling *Leave
+ * this game* as a literal is a red build for the ticket that rewords it — `findAGamePresentation`'s
+ * rule, the one every copy deck in this app is read through. Nothing in `src/` outside this
+ * feature reads either.
+ */
+export { CALL_IT_OFF } from './components/callOffPresentation';
+export { LEAVE_THIS_GAME } from './components/leaveGamePresentation';

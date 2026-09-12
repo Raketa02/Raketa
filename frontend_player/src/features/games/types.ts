@@ -43,10 +43,17 @@ export { CourtPairing, type CourtPairingProps } from './components/CourtPairing'
  *
  * `gamePlan.test.tsx` asserts which lead draws the court's pairing, and a test spelling *Balance
  * forecast* as a literal is a red build for the ticket that rewords it — `findAGamePresentation`'s
- * rule, the one every copy deck in this app is read through. Nothing in `src/` outside this
- * feature reads any of them.
+ * rule, the one every copy deck in this app is read through. `IT_WAS_CALLED_OFF` crosses for the
+ * same reason one feature over: `callOff.test.tsx` asserts the screen re-folds into the fourth
+ * end. Nothing in `src/` outside this feature reads any of them.
  */
-export { BALANCE_FORECAST, OPEN_SEAT, PLAYERS, recordLabel } from './components/gamePresentation';
+export {
+  BALANCE_FORECAST,
+  IT_WAS_CALLED_OFF,
+  OPEN_SEAT,
+  PLAYERS,
+  recordLabel,
+} from './components/gamePresentation';
 
 /**
  * The route's own check on the id it is handed, because a route param is attacker-controlled and
@@ -137,6 +144,12 @@ export { worthLine } from './components/gamePresentation';
  */
 export type { EntryLead } from './domain/resultArgument';
 
-/** What a game is, for the feature that draws a plan beside one. */
+/**
+ * What a game is, for the feature that draws a plan beside one — and the two readings of its
+ * seats that feature keys on: which are open, and who is in the rest. `seatedOthers` is what the
+ * fill is told about the court it completes ([#419](https://github.com/Raketa02/Raketa/issues/419)):
+ * the composition reads it off the game and hands it to `features/challenges`' control, so
+ * neither of those features learns the other's court.
+ */
 export type { Game } from './domain/game';
-export { openSeats } from './domain/game';
+export { openSeats, seatedOthers } from './domain/game';

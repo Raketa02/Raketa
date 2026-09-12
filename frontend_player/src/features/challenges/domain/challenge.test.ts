@@ -7,7 +7,13 @@
  */
 
 import type { Challenge, ChallengeSeat } from './challenge';
-import { challengeStands, pairAlreadyPlaying, playersStillIn, standingFactsFor } from './challenge';
+import {
+  challengeStands,
+  holdsTheExit,
+  pairAlreadyPlaying,
+  playersStillIn,
+  standingFactsFor,
+} from './challenge';
 import { STANDINGS, type SeatAnswer, type Standing } from './standing';
 
 const ME = 'me';
@@ -89,6 +95,52 @@ describe('which challenges still hold a pair', () => {
     ]);
 
     expect(playersStillIn(left)).toEqual([ME, BEA]);
+  });
+});
+
+/**
+ * **Who may call a game off** — the withdraw's own rule, read on the client so the control is drawn
+ * only where the act would be accepted (ADR-0163, #411 rule 4): the reader is still on the court,
+ * and they are the organiser — or the organiser no longer is.
+ */
+describe('who holds the exit', () => {
+  /** A padel four that became a game and lost Cyryl; Bea organised it. */
+  const reopened = (organiserAnswer: SeatAnswer = 'ACCEPTED') =>
+    ({
+      ...challenge('LINE_UP_INCOMPLETE', [
+        { playerId: BEA, answer: organiserAnswer },
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: CYRYL, answer: 'LEFT' },
+        { playerId: 'dorota', answer: 'ACCEPTED' },
+      ]),
+      organiserId: BEA,
+    }) satisfies Challenge;
+
+  it('is the organiser’s while the organiser is on the court, and nobody else’s', () => {
+    expect(holdsTheExit(reopened(), BEA)).toBe(true);
+    expect(holdsTheExit(reopened(), ME)).toBe(false);
+    expect(holdsTheExit(reopened(), 'dorota')).toBe(false);
+  });
+
+  it('falls back to any remaining player once the organiser has left', () => {
+    expect(holdsTheExit(reopened('LEFT'), ME)).toBe(true);
+    expect(holdsTheExit(reopened('LEFT'), 'dorota')).toBe(true);
+  });
+
+  it('is nobody’s who has left, the organiser included', () => {
+    expect(holdsTheExit(reopened('LEFT'), BEA)).toBe(false);
+    expect(holdsTheExit(reopened('LEFT'), CYRYL)).toBe(false);
+  });
+
+  it('is nobody’s who holds no seat on it', () => {
+    expect(holdsTheExit(reopened('LEFT'), 'stranger')).toBe(false);
+  });
+
+  /** A court the organiser holds no seat on cannot be read; the answer fails soft, never open. */
+  it('falls back to nobody when the organiser’s own seat cannot be found', () => {
+    const noOrganiserSeat = { ...reopened(), organiserId: 'somebody-else' };
+
+    expect(holdsTheExit(noOrganiserSeat, ME)).toBe(false);
   });
 });
 

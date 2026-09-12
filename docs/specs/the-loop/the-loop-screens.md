@@ -543,7 +543,7 @@ on a court that was never a game. On a court that has been one, the third falls 
 | **⚡ Fill the seats** | any live member | runs the fill and **pushes a builder holding a full court and a fresh search** |
 | **Open the chat** | any live member | `/chats/conversation/[conversationId]` |
 | **Withdraw** | the organiser only | opens the sheet — §2.6 |
-| **Call it off** | on a court that has been a game: the organiser, or once the organiser has left, any remaining player | the same route and the same sheet, reworded — `the-words.md` §22.3; the game is called off in the act |
+| **Call it off** | on a court that has been a game: the organiser, or once the organiser has left, any remaining player | the same route and the same sheet, reworded — `the-words.md` §22.9; the game is called off in the act |
 
 **⚡ is the entry point, and items 1 and 2 of that ticket had one answer.** Pressing it is *Find a
 game*'s own shape — press, the search runs, the builder arrives with a court on it — which
@@ -1180,9 +1180,18 @@ somebody is in it; so `rungOf` reads the court before the clock, and **Needs a p
 `AWAITING_ENTRY` and the seat is `player_id: null`, and the ladder is the one place the two are
 read together. The server's own *Never played* still wins — a window that closed on a short court
 closed all the same. The tag is `Needs a player`, the dot is `arranging` (the game is back in the
-players' hands), the wide door is **`Open`** — the same door as *Game on*'s, until
-[#419](https://github.com/Raketa02/Raketa/issues/419) turns it into *Fill the seat* — and the
-empty seat is drawn as the builder draws one: a dashed outline, no plus, no caption, no ring.
+players' hands), the wide door is **`Fill the seat`** — the challenge screen's own fill, run from
+the card and landing in the builder ([#419](https://github.com/Raketa02/Raketa/issues/419)), drawn
+**only while the agreed moment is ahead** because nobody may be seated into a game whose moment is
+gone; past it the card has the bubble alone — and the empty seat is drawn as the builder draws
+one: a dashed outline, no plus, no caption, no ring.
+
+**Called off** ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), built by
+[#419](https://github.com/Raketa02/Raketa/issues/419)) is the fourth ending on the same shell: the
+tag `Called off` with the quiet hairline dot, the line `Called off` under the slots, no door, and
+**shelved a day from `called_off_at`** — read before the window and the entry, because
+`entry_closes_at` is `null` on it and `played_at` never is. Nobody is named: the room went with
+the act.
 
 **What survives is the override and the citation.** *Needs result* keeps its window because a
 passed agreement makes the unfilled slots irrelevant and the entry window is the only live fact
@@ -1225,14 +1234,14 @@ the same game depending which day they tap it.
 | --- | --- | --- |
 | **Planning** | the card at the top, the court's pairing, the plan **editable** — chips, counter, lock, the panel inside | **Open the chat** |
 | **Game on** | the same layout, the plan whole and the lock live | **Open the chat** |
-| **Needs a player** | the same layout with the empty seat on the card and an *Open seat* row on the players card, no forecast (the pairing omits it), the plan still editable — and **no *We played*** while the seat is open ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), #418) | **Open the chat** |
+| **Needs a player** | the same layout with the empty seat on the card and an *Open seat* row on the players card, no forecast (the pairing omits it), the plan still editable — and **no *We played*** while the seat is open ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), #418); **Fill the seat** where *We played* would be, **Call it off** for whoever holds the exit ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419) | **Fill the seat** — while the agreed moment is ahead; **Open the chat** otherwise |
 | **Today** | the plan, whole, in `Tag`s | **We played** |
 | **Needs result** | the plan, and how long is left to say you played | **We played** |
 | **Confirm the result** ×4 | built — #314, untouched | built |
 | **Counted** | the agreed score, the outcome, the worth line | none |
 | **Uncounted** | *an evening, not evidence* | none |
 | **Never played** | *It never happened* | none |
-| **Called off** | *It was called off* — an ending, and no door ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)) | none |
+| **Called off** | *It was called off* over the line *Called off*, and the ghost's own body — *Nobody is marked for that* — with no plan, no doors and no act on the court; drawn as *Never played* is ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419) | none |
 
 **The plan-lead layout, since [#414](https://github.com/Raketa02/Raketa/issues/414)** — the two
 rungs whose card door says *Finish the plan* / *Open*, redrawn to #410's design:
@@ -1261,6 +1270,8 @@ rungs whose card door says *Finish the plan* / *Open*, redrawn to #410's design:
 └────────────────────────────────────────────┘
 [              Open the chat                ]   ← Button dark, lg — in the scroll, nothing pinned
 [                We played                  ]   ← Button secondary — withheld while a seat is open
+[             Fill the seat                 ]   ← Button primary, lg — Needs a player only, while the moment is ahead (#419)
+[              Call it off                  ]   ← Button secondary — Needs a player only, for whoever holds the exit (#419)
 [            Leave this game                ]   ← Button secondary, last — while the agreed moment is ahead (#418)
 (the star card, when a rating is waiting)
 ```
@@ -1301,11 +1312,31 @@ and the client mirrors the rule off the same instant rather than offering a cont
 refuse. The rung alone cannot say it, because *Needs a player* outranks *Needs result*. It is a
 **challenge** act reached from a game — the seat that reopens is the challenge's — so the control
 is `features/challenges`', composed by `features/plans` into a fourth slot on the screen
-(`courtActs`), the shape the chat doors already take; #419's *Fill the seat* and *Call it off* go
-in the same slot. Pending, never optimistic; on success the games, the plans and the rooms are
+(`courtActs`), the shape the chat doors already take; *Fill the seat* and *Call it off* sit in the
+same slot. Pending, never optimistic; on success the games, the plans and the rooms are
 re-read and the screen goes back — the card is gone from the rail because the server no longer
 lists it. A stale tap re-reads the games list and says nothing; `challenge_not_found` leaves;
 `account_held` is said as every write in that feature says it. Not on the card, not in the chat.
+
+**On *Needs a player* the slot holds two more, and they are the reopened court's whole account**
+([#419](https://github.com/Raketa02/Raketa/issues/419), #411 rules 3 and 4,
+[ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)). ***Fill the seat*** is the
+arm's primary act, drawn where *We played* would be: it runs the challenge screen's own fill —
+`POST /lineups` naming the challenge and nothing else, the people **the game's seats** hold read as
+accepted — and pushes the builder under the challenge, whose send pops back to this screen; the
+newcomer's yes re-seats the same game, and the nudge re-reads it. Drawn only while the agreed
+moment is ahead, with the leave, because nobody may be seated into a game whose moment is gone. It
+is the same control as the card's wide door — `features/challenges`' `FillTheSeat`, composed by
+`features/plans` into both — so the two cannot say two things about one press. ***Call it off*** is
+the withdraw grown to a reopened court: `secondary`, above the leave, behind the withdraw's sheet
+reworded (`the-words.md` §22.9), for **the organiser — or, once the organiser's own seat is open,
+any remaining player** — a challenge fact, joined off the challenge list the tab bar already holds
+(ADR-0149 §3's shape; nothing is added to `GET /games` for it), failing soft into no control. Only
+while a seat is open, and **not** only while the moment is ahead: the withdraw is not guarded by
+the moment, so on a short court past it this is the one act left. Pending, never optimistic; on
+success the games, the plans, the rooms and the challenges are re-read and the screen **stays**,
+re-folding into the *Called off* arm off the games list. A stale tap re-reads and says nothing;
+`challenge_not_found` leaves; `account_held` is said.
 
 ### 5.2 Which door each card opens, in full
 
@@ -1340,8 +1371,10 @@ the rail — the card is the record for the day it stays.
 | — | the conversation | Details | — | `/chats/conversation/[id]/details`, the arm the standing derives |
 | — | **Planning** · **Game on** | the game screen | `Open the chat` — `dark`, `lg`, full width | `/chats/conversation/[conversationId]` — the join, failing soft |
 | — | **Planning** · **Game on** | the game screen | `We played` — `secondary`, beneath | the score grid, opened over the plan; the pinned footer returns with it |
-| — | **Needs a player** | Now card | `Open` | `/games/[gameId]`, the plan lead — the same door as Game on's, until #419's *Fill the seat* ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)) |
+| — | **Needs a player** | Now card | `Fill the seat` — while the agreed moment is ahead; none past it | the fill (`POST /lineups`, naming the challenge), then `/chats/challenge/[challengeId]/fill` — the builder, whose send pops back to the rail. **The one door that runs something before it navigates**, and it still reaches nobody ([#419](https://github.com/Raketa02/Raketa/issues/419), [ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)) |
 | — | **Needs a player** | the game screen | `Open the chat` — and **no `We played`** while the seat is open | `/chats/conversation/[conversationId]` |
+| — | **Needs a player** | the game screen | `Fill the seat` — `primary`, `lg`, where *We played* would be, while the agreed moment is ahead | the same fill and the same builder, popping back to the screen (#419) |
+| — | **Needs a player** | the game screen | `Call it off` — `secondary`, above the leave, for whoever holds the exit | the sheet, then `POST /challenges/{id}/withdrawal`, then **stays** — the screen re-folds into *Called off* off the re-read ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419) |
 | — | **Planning** · **Game on** · **Needs a player** | the game screen | `Leave this game` — `secondary`, **last**, while the agreed moment is ahead | the sheet, then `POST /challenges/{id}/departure`, then back — **not a door: it writes**, like the plan's chips above it ([#418](https://github.com/Raketa02/Raketa/issues/418)) |
 
 **Fourteen cards, one route each side of the seam, and no deep-link parameter.** *The grid is the

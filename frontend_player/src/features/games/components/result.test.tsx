@@ -576,6 +576,32 @@ describe('the ends', () => {
     expect(screen.queryByText(ACCEPT_LABEL)).toBeNull();
   });
 
+  /**
+   * **The fourth end, drawn as the ghost is** (#419 §3, ADR-0163): the title and the standing
+   * line the ticket fixes, the ghost's own body — nothing anybody is measured on moves — and
+   * nothing to press: no plan, no doors, no act on the court, and no pairing asked for, because
+   * the read is `enabled` on `AWAITING_ENTRY` alone and answers `pairing_is_history` anyway.
+   */
+  it('reads a called-off game as its fourth end and offers nothing', async () => {
+    await openGame(
+      game({
+        standing: 'CALLED_OFF',
+        entry_closes_at: null,
+        called_off_at: '2026-09-04T20:00:00Z',
+      }),
+    );
+
+    expect(screen.getByText(resultTitle({ kind: 'called-off' }))).toBeTruthy();
+    expect(screen.getByText(standingLine({ kind: 'called-off' }, READ_AT))).toBeTruthy();
+    expect(screen.getByText(resultBody({ kind: 'called-off' })!)).toBeTruthy();
+    expect(screen.queryByText(WE_PLAYED)).toBeNull();
+    expect(screen.queryByText(ENTER_LABEL)).toBeNull();
+    expect(screen.queryByText(/Open the chat/)).toBeNull();
+    expect(screen.queryByText(/Leave this game|Call it off|Fill the seat/)).toBeNull();
+    expect(screen.queryByText(/The plan/)).toBeNull();
+    expect(transport.requestsTo('GET', `${GAMES_PATH}/${GAME_ID}/pairing`)).toEqual([]);
+  });
+
   it('draws a confirmed result with both sides named, and nothing to press', async () => {
     await openGame(
       game({

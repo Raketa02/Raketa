@@ -230,7 +230,10 @@ court — the seats and the instant off the games list, `CourtRead` — before i
 because a seat somebody left is a fact about the court and the game cannot be played or recorded
 until somebody is in it. Nothing on the wire names the rung; `player_id: null` is the whole of
 what it says, and this is the one place it is read against the plan. `momentHasPassed` is the
-second rung's own test, exported for the one control drawn only while the moment is ahead.
+second rung's own test, exported for the controls drawn only while the moment is ahead — *Leave
+this game*, and, since [#419](https://github.com/Raketa02/Raketa/issues/419), the *Fill the seat*
+door on the card and on the screen, which mirrors the server's `game_moment_has_passed` off the
+same instant rather than opening a builder whose send would be refused.
 
 **The agreed point is `domain/` beside it**, and it is the value #324 and #329 each keyed a rule on
 without the two ever being checked against each other: **the agreed instant when day and hour are
@@ -272,6 +275,8 @@ another person*. **Its table is a row short and one of its rows now has a second
 | **The challenge screen** | `features/challenges/` | **new** — five standings and the sixth, two sides, the two answers |
 | **The withdraw sheet** | `features/challenges/` | **new** — `SH.propose`'s shape, a second time |
 | **⚡ Fill the seats** | `features/challenges/` — the control; `features/play/` — the act | §4.2 |
+| **Fill the seat** | `features/challenges/` — the control, `FillTheSeat`, composed by `features/plans/` into the Now card's footer and the game screen's `courtActs`; `features/play/` — the act; the word is `shared/vocabulary/theActsWords.ts`' | [#419](https://github.com/Raketa02/Raketa/issues/419) — the same act read off a **game**'s seats |
+| **Call it off** | `features/challenges/` — the control, `CallOff`, the withdraw's sheet reworded, the organiser fact joined off `GET /challenges` inside it; composed by `features/plans/` into `courtActs` | [#419](https://github.com/Raketa02/Raketa/issues/419), [ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md) |
 | The card block on the challenge screen | **`features/challenges/`** | §4.3 |
 
 ### 4.1 The badge's prop, and why the bar reads no hook

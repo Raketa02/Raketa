@@ -279,3 +279,29 @@ gets its name, `called-off`, and a soft-default row in every table — `Called o
 dot, no door — and nothing more; its `called_off_at`, its shelf life and its screen are #419's,
 and until then a called-off card stays on the rail, as every undated ending does. No device has
 drawn any of it; the rung, the empty seat and the control are asked for a look.
+
+**The reopened court's door is the fill, and the fourth end gets its shelf life**
+([#419](https://github.com/Raketa02/Raketa/issues/419), the fourth child of
+[#411](https://github.com/Raketa02/Raketa/issues/411),
+[ADR-0163](../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)). `GAME_DOORS` gains
+`fill` and _Needs a player_ carries it: the card's wide door on that rung is `Fill the seat` — the
+challenge screen's own fill, run from the card and landing in the builder under the challenge —
+and it is **`features/challenges`' `FillTheSeat` drawn in the door's place**, with the card's
+accent and the door's width, rather than a button here that knows what a fill is. The card hands
+it the game's `challengeId`, its sport, the people the game's seats hold (`seatedOthers`, read off
+`features/games` beside `openSeats`) and one rule, **only while the agreed moment is ahead** —
+`momentHasPassed` off the plan and the games list's instant, the same test the leave reads —
+because nobody may be seated into a game whose moment is gone; past it the card draws the bubble
+alone rather than a door whose send would be refused. The word is `theActsWords.ts`', for
+`WE_PLAYED`'s reason: two features say it and the control is composed into the card, so it can
+live in neither. `GameCard` gains `onReRead` for the one refusal that is a re-read, handed the
+rail's own games read. **The game screen's `courtActs` slot now holds three**, in the design's
+order: `FillTheSeat` as the arm's primary act where _We played_ would be, `CallOff` above the
+leave, `LeaveGame` last — each handed its one rule as `offered`. This composition states what is
+its own to state — a seat is open (`openSeats`), the moment is ahead — and **never learns what an
+organiser is**: `CallOff` joins that fact off the challenge list itself. **`Called off` is finished
+on this side**: `belongsOnTheRail` reads `calledOffAt` first, because `entry_closes_at` is `null`
+on it and `played_at` never is, so the card is shelved a day from the act; the tag, the hairline
+dot and the state word were #418's, and the line under the slots is the standing's one word. The
+card's door and the screen's acts have not been drawn on a device; asked for a look, and for a
+words decision on the ending card, whose tag and line both read _Called off_.

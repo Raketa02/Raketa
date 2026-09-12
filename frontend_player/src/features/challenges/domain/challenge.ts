@@ -157,6 +157,38 @@ export function playersStillIn(challenge: Challenge): readonly string[] {
 }
 
 /**
+ * **Whether this reader holds the exit** — the withdraw's own rule, read on the client so *Call it
+ * off* is drawn only where the act would be accepted
+ * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md), #411 rule
+ * 4): the reader is still on the court, and they are the organiser — **or the organiser no longer
+ * is.** A court whose organiser has left would otherwise have an exit nobody holds, and the people
+ * who agreed did nothing wrong; an organiser who has left is not a remaining player, because the
+ * exit fell back to the people still on the court.
+ *
+ * **On a court that was never a game this is *the organiser and nobody else***, ADR-0142 §2
+ * unchanged — the organiser is live from birth and nobody can leave it — so the fallback exists
+ * only where a departure does. Read off the cheap list rather than the detail, because the tab
+ * bar already holds that list for its badge and the fact is on every row of it: `organiserId`,
+ * and each seat's answer. Nothing here reads the standing; that the caller may not end this court
+ * is true regardless of what the fold says, exactly as the server checks it.
+ */
+export function holdsTheExit(
+  challenge: Pick<Challenge, 'organiserId' | 'seats'>,
+  playerId: string,
+): boolean {
+  const seatOf = (id: string) => challenge.seats.find((seat) => seat.playerId === id);
+
+  if (seatOf(playerId)?.answer !== 'ACCEPTED') return false;
+  if (playerId === challenge.organiserId) return true;
+
+  // The fallback needs the organiser's seat to have been given up — read, never assumed: a
+  // court the organiser holds no seat on is not one this side can answer for, so nobody is
+  // offered an act the server would refuse.
+  const organiser = seatOf(challenge.organiserId)?.answer;
+  return organiser !== undefined && GIVES_UP_THE_SEAT[organiser];
+}
+
+/**
  * **Who on this court you already have a game with** — the name the refusal would not carry.
  *
  * @param invitees the people being invited, in seat order and **without the organiser**: they

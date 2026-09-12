@@ -87,7 +87,7 @@ describe('which card a game draws', () => {
 describe('the door each card carries', () => {
   it('is §5.2’s table, and every name is in it', () => {
     expect(GAME_CARD_NAMES.map(doorOf)).toEqual([
-      'open',
+      'fill',
       'we-played',
       'we-played',
       'open',
@@ -99,6 +99,15 @@ describe('the door each card carries', () => {
       undefined,
       undefined,
     ]);
+  });
+
+  /**
+   * **The reopened court's door is the fill** (#419): the same flow the challenge screen's
+   * `⚡ Fill the seats` runs, pushed from the card — the builder is where a seat is dealt with.
+   */
+  it('is the fill on Needs a player, and no longer the game screen', () => {
+    expect(doorOf('needs-a-player')).toBe('fill');
+    expect(doorOf('needs-a-player')).not.toBe(doorOf('game-on'));
   });
 
   it('offers nothing on the four endings and on the gap', () => {
@@ -126,6 +135,19 @@ describe('how long an ending keeps a card', () => {
 
     expect(belongsOnTheRail(closed('2026-09-11T10:00:00Z'))).toBe(true);
     expect(belongsOnTheRail(closed('2026-09-11T08:00:00Z'))).toBe(false);
+  });
+
+  /**
+   * **The fourth end is shelved from the act** (ADR-0163): `entry_closes_at` is `null` on a
+   * called-off game, so the window cannot date it, and `played_at` never can — a game is called
+   * off only while a seat is open, and nothing is recorded on a short court.
+   */
+  it('keeps a called-off game for a day after somebody called it off', () => {
+    const calledOff = (at: string) =>
+      game({ standing: 'CALLED_OFF', calledOffAt: at, entryClosesAt: undefined });
+
+    expect(belongsOnTheRail(calledOff('2026-09-11T10:00:00Z'))).toBe(true);
+    expect(belongsOnTheRail(calledOff('2026-09-11T08:00:00Z'))).toBe(false);
   });
 
   it('keeps a played game for a day after somebody said so', () => {

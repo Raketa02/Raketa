@@ -132,10 +132,14 @@ describe('silence confirming, which has to be visible before it happens', () => 
     expect(line).toContain('3 days');
   });
 
-  /** The two words #419 §3 and ADR-0163 fix, and nothing beside them until that ticket. */
+  /**
+   * The two words #419 §3 and ADR-0163 fix. **Nobody is named**: `called_off_by` is on no wire, and
+   * the room that would have said who is gone with the act.
+   */
   it('says a called-off game was called off, and names nobody', () => {
     expect(resultTitle({ kind: 'called-off' })).toBe('It was called off');
     expect(standingLine({ kind: 'called-off' }, READ_AT)).toBe('Called off');
+    expect(resultBody({ kind: 'called-off' })).not.toMatch(/\bby\b|who/);
   });
 
   it('drops the clause rather than inventing a deadline when the wire sent none', () => {
@@ -171,6 +175,15 @@ describe('an unscored game reads as an evening, not as an error', () => {
 describe('nobody is penalised, which is a sentence and not an omission', () => {
   it('says so on the game that never happened', () => {
     expect(resultBody({ kind: 'never-played' })).toContain('Nobody is marked');
+  });
+
+  /**
+   * **The fourth end is drawn as the ghost is** (#419 §3): neither an evening nor a game that
+   * never happened, so nothing anybody is measured on moves (ADR-0163) — and the screen says so
+   * rather than leaving the reader to wonder whether calling it off cost them.
+   */
+  it('says so on the game that was called off', () => {
+    expect(resultBody({ kind: 'called-off' })).toContain('Nobody is marked');
   });
 
   it('says so on the disagreement, on both sides of it', () => {

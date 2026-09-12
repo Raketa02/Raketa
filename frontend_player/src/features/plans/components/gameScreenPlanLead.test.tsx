@@ -17,12 +17,13 @@
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { Image, Text } from 'react-native';
 
+import { CALL_IT_OFF, LEAVE_THIS_GAME } from '@/features/challenges/types';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { BALANCE_FORECAST, OPEN_SEAT, PLAYERS } from '@/features/games/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { Card } from '@/shared/ui';
-import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
+import { FILL_THE_SEAT, WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 import {
   GATE_USER,
   launchSignedIn,
@@ -478,6 +479,31 @@ describe('an open seat', () => {
     expect(await screen.findByText(CARD_TAG['needs-a-player']!)).toBeTruthy();
     expect(screen.getByText(OPEN_THE_CHAT)).toBeTruthy();
     expect(screen.queryByText(WE_PLAYED)).toBeNull();
+  });
+
+  /**
+   * **The arm's acts, in the design's order** (#419): the chat door, then *Fill the seat* as the
+   * primary act where *We played* would be, then the court's acts — *Call it off* for whoever
+   * may, which here is nobody, since the challenge list holds no row — and *Leave this game*
+   * last. On the full-court rungs there is no fill at all. The acts themselves are walked in
+   * `features/challenges` (`fillTheSeat.test.tsx`, `callOff.test.tsx`).
+   */
+  it('offers Fill the seat as the primary act, between the chat door and Leave this game', async () => {
+    await openFromNow({ games: [game({ seats: SHORT })], plans: [WHOLE] });
+
+    await screen.findByRole('button', { name: FILL_THE_SEAT });
+    const buttons = screen.getAllByRole('button').map((one) => one.props.accessibilityLabel);
+
+    expect(buttons.indexOf(OPEN_THE_CHAT)).toBeLessThan(buttons.indexOf(FILL_THE_SEAT));
+    expect(buttons.indexOf(FILL_THE_SEAT)).toBeLessThan(buttons.indexOf(LEAVE_THIS_GAME));
+    expect(screen.queryByRole('button', { name: CALL_IT_OFF })).toBeNull();
+  });
+
+  it('offers no fill on a full court', async () => {
+    await openFromNow({ plans: [WHOLE] });
+
+    await screen.findByText(WE_PLAYED);
+    expect(screen.queryByRole('button', { name: FILL_THE_SEAT })).toBeNull();
   });
 
   /** The plan survives a departure: the chips are live and the lock is drawn. */

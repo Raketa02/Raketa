@@ -12,6 +12,16 @@
  * All five of those are `BottomSheet`'s already, which is the whole reason this file is short:
  * what a second sheet on that shape owes is its four sentences and the name of its act.
  *
+ * ## The same sheet, reworded, on a court that has been a game
+ *
+ * The withdraw reaches a reopened court and calls the game off in the act
+ * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)), and the
+ * confirmation is **this sheet with different words** rather than a fourth copy of its shape: the
+ * act is the same route, the second body line — the room goes with it — is the same consequence,
+ * and what changes is what the people still in it lose. So the deck is a prop, defaulting to the
+ * withdraw's own; `CallOff` hands in `callOffPresentation.ts`', and the challenge screen hands in
+ * nothing ([#419](https://github.com/Raketa02/Raketa/issues/419)).
+ *
  * ## The second body line is what earns the sheet
  *
  * ADR-0142 chose **destroyed, not delisted** — the conversation and everything written in it go
@@ -42,11 +52,29 @@ import {
   WITHDRAW_THE_CHALLENGE,
 } from './challengeDetailPresentation';
 
+/** The four sentences and the act's name — one deck per surface, and the shape is this sheet's. */
+export interface WithdrawWords {
+  readonly title: string;
+  readonly body: readonly string[];
+  readonly act: string;
+  readonly closeLabel: string;
+}
+
+/** The withdraw's own words, and the default: a half-built court, ended. */
+const WITHDRAW_WORDS: WithdrawWords = {
+  title: WITHDRAW_SHEET_TITLE,
+  body: WITHDRAW_SHEET_BODY,
+  act: WITHDRAW_THE_CHALLENGE,
+  closeLabel: WITHDRAW_SHEET_CLOSE_LABEL,
+};
+
 export interface WithdrawSheetProps {
   readonly visible: boolean;
   readonly onClose: () => void;
   /** Confirming. The caller dismisses the sheet and runs the withdraw — see the module note. */
   readonly onWithdraw: () => void;
+  /** What the sheet says. The withdraw's own unless the surface is a game that is being called off. */
+  readonly words?: WithdrawWords;
   /**
    * The control the sheet was opened from. Focus returns there on close.
    *
@@ -57,17 +85,23 @@ export interface WithdrawSheetProps {
   readonly returnFocusTo: FocusTarget;
 }
 
-export function WithdrawSheet({ visible, onClose, onWithdraw, returnFocusTo }: WithdrawSheetProps) {
+export function WithdrawSheet({
+  visible,
+  onClose,
+  onWithdraw,
+  words = WITHDRAW_WORDS,
+  returnFocusTo,
+}: WithdrawSheetProps) {
   return (
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      title={WITHDRAW_SHEET_TITLE}
-      closeLabel={WITHDRAW_SHEET_CLOSE_LABEL}
+      title={words.title}
+      closeLabel={words.closeLabel}
       returnFocusTo={returnFocusTo}
     >
       <View style={s.block}>
-        {WITHDRAW_SHEET_BODY.map((line) => (
+        {words.body.map((line) => (
           <Text key={line} style={s.body}>
             {line}
           </Text>
@@ -75,7 +109,7 @@ export function WithdrawSheet({ visible, onClose, onWithdraw, returnFocusTo }: W
       </View>
 
       <View style={s.action}>
-        <Button label={WITHDRAW_THE_CHALLENGE} size="lg" onPress={onWithdraw} />
+        <Button label={words.act} size="lg" onPress={onWithdraw} />
       </View>
     </BottomSheet>
   );

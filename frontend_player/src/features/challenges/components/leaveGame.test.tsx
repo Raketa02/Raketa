@@ -14,8 +14,9 @@
  * `challengeErrorMessage`'s, as it is for every write in this feature.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { onlineManager } from '@tanstack/react-query';
+import { router } from 'expo-router';
 
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { AppError, offlineMessage } from '@/shared/errors';
@@ -202,13 +203,22 @@ function stubTheWorld({
   stubPairing(transport, GAME, { refused: 409, code: 'pairing_is_history' });
 }
 
-/** In at the screen's own address under Now, from the rail — so *back* has somewhere to go. */
+/**
+ * In at the screen's own address under Now, **from the rail** — so *back* has somewhere to go.
+ *
+ * Through the card's wide door on a full court, and by route on a court somebody left: since
+ * [#419](https://github.com/Raketa02/Raketa/issues/419) that rung's door is the fill, which lands
+ * in the builder rather than on this screen, and past the moment the card has no wide door at all.
+ */
 async function openFromNow(over: Parameters<typeof stubTheWorld>[0] = {}) {
   stubTheWorld(over);
 
   await launchSignedIn();
   await waitFor(() => expect(screen).toHavePathname('/'));
-  fireEvent.press(await screen.findByRole('button', { name: /Finish the plan|^Open$/ }));
+  await screen.findByLabelText(/Padel/);
+  const door = screen.queryByRole('button', { name: /Finish the plan|^Open$/ });
+  if (door === null) act(() => router.push(`/games/${GAME}`));
+  else fireEvent.press(door);
   await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
   await screen.findByText(OPEN_THE_CHAT);
 }

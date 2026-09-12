@@ -6,7 +6,7 @@
  * | `useChallenge` | `GET /challenges/{id}` — the arrangement, the people and the pairing |
  * | `useAnswerSeat` | `POST …/accept` and `…/decline` — **pending, never optimistic** |
  * | `useInviteSeats` | `POST …/seats` — ⚡'s send, from the builder this screen pushes |
- * | `useWithdrawChallenge` | `POST …/withdrawal` — the organiser's, and the only end a half-built court has |
+ * | `useWithdrawChallenge` | `POST …/withdrawal` — the organiser's, and the only end a half-built court has; **on a court that has been a game, whoever holds the exit's, and the game is called off in the act** |
  * | `useLeaveGame` | `POST …/departure` — any player's, from the **game** screen, while the moment is ahead |
  *
  * ## The offer may expire under the finger, and it is let to
@@ -163,7 +163,9 @@ export function useInviteSeats() {
 }
 
 /**
- * **The withdraw** — the one act on this screen that ends something rather than answering it.
+ * **The withdraw** — the one act on the challenge screen that ends something rather than answering
+ * it, and ***Call it off*** on the game screen, which is the same act on the same route
+ * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)).
  *
  * Pending, never optimistic: the route returns the challenge as it now stands at `WITHDRAWN`, so
  * the screen redraws from the reply exactly as the two answers do, and `redrawnFrom` drops the
@@ -174,6 +176,14 @@ export function useInviteSeats() {
  * there is nothing in this reply about a room, and a client that removed the row itself would be
  * asserting a deletion it was not told about. The same argument the accept above makes in the
  * other direction.
+ *
+ * **And the game, and its plan** — since a withdraw can reach a court that has been a game and
+ * call it off in the act, and neither list is in the reply. Declared here rather than at the one
+ * call site that knows it was a game, because a hook that declares its cache effect declares all
+ * of it (`useLeaveGame`'s own line): the game screen stays where it is and re-folds into the
+ * called-off arm off the re-read, and the card shelves itself from `called_off_at`. On a court
+ * that was never a game the two re-reads find nothing changed, which is the honest cost of one
+ * declaration instead of two.
  */
 export function useWithdrawChallenge() {
   const client = useQueryClient();
@@ -188,6 +198,8 @@ export function useWithdrawChallenge() {
 
       void client.invalidateQueries({ queryKey: challengeKeys.list() });
       void client.invalidateQueries({ queryKey: conversationKeys.list() });
+      void client.invalidateQueries({ queryKey: gameKeys.list() });
+      void client.invalidateQueries({ queryKey: planKeys.list() });
     },
   });
 }

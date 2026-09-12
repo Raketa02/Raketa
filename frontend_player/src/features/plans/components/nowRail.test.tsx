@@ -20,10 +20,11 @@ import { Image, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { NOW_COPY } from '@/features/shell/types';
-import { SEAT_NAME_LETTERS } from '@/features/play/types';
+import { SEAT_NAME_LETTERS, endPlaySession } from '@/features/play/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { theme } from '@/shared/ui';
+import { FILL_THE_SEAT } from '@/shared/vocabulary/theActsWords';
 import {
   GATE_USER,
   launchSignedIn,
@@ -31,8 +32,10 @@ import {
   stubGames,
   stubGate,
   stubPlans,
+  stubProfileOptions,
+  stubProfileSurface,
 } from '@/test-support/onboardingRouter';
-import { installTransport, type Transport, type Wire } from '@/test-support/transport';
+import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
 import { GAME_CARD_NAMES } from '../domain/gameCard';
 import { PLAN_SLOTS } from '../domain/slots';
@@ -105,6 +108,7 @@ beforeEach(() => {
 afterEach(async () => {
   transport.restore();
   queryClient.clear();
+  endPlaySession();
   resetSessionStatus();
   await clearStoredTokens();
 });
@@ -434,6 +438,16 @@ describe('every other name, on the same shell', () => {
       undefined,
       /^Nobody said this one happened before the window closed/,
     ],
+    [
+      'called-off',
+      game({
+        standing: 'CALLED_OFF',
+        entry_closes_at: null,
+        called_off_at: '2026-09-12T08:00:00Z',
+      }),
+      undefined,
+      'Called off',
+    ],
   ] as const)('%s draws its tag, its door and its line', async (name, served, agreed, line) => {
     await landOnNow({ games: [served], plans: agreed === undefined ? [] : [agreed] });
 
@@ -451,14 +465,17 @@ describe('every other name, on the same shell', () => {
       expect(screen.getByRole('button', { name: verb })).toBeTruthy();
     }
 
-    if (line !== undefined) expect(screen.getByText(line)).toBeTruthy();
+    // `getAll`, because on *Called off* the line is the tag's word again: the gloss the ticket
+    // fixes is the standing's one word, and the tag is the card's name.
+    if (line !== undefined) expect(screen.getAllByText(line).length).toBeGreaterThan(0);
   });
 });
 
 /**
  * **The fifth rung, above the clock** (#411 rule 5, ADR-0162): a seat somebody left is drawn
- * empty on the court, the tag says what is needed, the door is *Game on*'s `Open` until #419
- * turns it into *Fill the seat*, and a listener — who cannot see the court — is told the gap.
+ * empty on the court, the tag says what is needed, the door is *Fill the seat* — the challenge
+ * screen's own fill, pushed from the card (#419) — and a listener, who cannot see the court, is
+ * told the gap.
  */
 describe('Needs a player', () => {
   const SHORT: Wire['GameSchema']['seats'] = [
@@ -474,13 +491,135 @@ describe('Needs a player', () => {
     agreed_point: '2026-09-11T18:00:00Z',
   });
 
-  it('draws its tag above the clock, and Open as its door', async () => {
+  /** The same plan, agreed for a day still ahead. */
+  const AHEAD = plan({ ...PASSED, day: '2026-09-19', agreed_point: '2026-09-19T18:00:00Z' });
+
+  it('draws its tag above the clock, and Fill the seat as its door', async () => {
+    await landOnNow({ games: [game({ seats: SHORT })], plans: [AHEAD] });
+
+    expect(await screen.findByText(CARD_TAG['needs-a-player']!)).toBeTruthy();
+    expect(screen.queryByText(CARD_TAG['game-on']!)).toBeNull();
+    expect(screen.getByRole('button', { name: FILL_THE_SEAT })).toBeTruthy();
+    expect(doorLabel('needs-a-player')).toBe(FILL_THE_SEAT);
+  });
+
+  /**
+   * **Past the moment nobody may be seated into the game**, so the door stands down with the
+   * screen's own fill, mirroring `game_moment_has_passed` — the tag still outranks the clock,
+   * and the bubble is the card's one door.
+   */
+  it('draws no wide door once the agreed moment has passed, and still outranks the clock', async () => {
     await landOnNow({ games: [game({ seats: SHORT })], plans: [PASSED] });
 
     expect(await screen.findByText(CARD_TAG['needs-a-player']!)).toBeTruthy();
     expect(screen.queryByText(CARD_TAG['needs-result']!)).toBeNull();
-    expect(screen.getByRole('button', { name: doorLabel('needs-a-player')! })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: FILL_THE_SEAT })).toBeNull();
+    expect(screen.getByRole('button', { name: OPEN_THE_CHAT })).toBeTruthy();
     expect(screen.queryByText(/left to say you played/)).toBeNull();
+  });
+
+  /**
+   * **The door runs the challenge screen's fill and lands in the builder**, under the challenge,
+   * with the people the game's seats hold read as accepted — the fill names the challenge and
+   * nothing else about the court (ADR-0150 §2), and the newcomer is the one clearable seat.
+   */
+  it('opens the builder from Fill the seat, with the game’s seated players accepted', async () => {
+    const LINEUP_ID = 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
+    const KASIA = 'cccccccc-0000-4000-8000-000000000003';
+    const candidate = (playerId: string, nickname: string): Wire['CandidateSchema'] => ({
+      player_id: playerId,
+      fit: 78,
+      distance_km: 4,
+      player_card: {
+        nickname,
+        area_code: 'A+050612+0019938',
+        social_tags: [],
+        level: 3.1,
+        band: 'Established',
+        range: { low: 2.55, high: 2.87 },
+      },
+      concerns: [],
+      terms: [],
+      degraded_terms: [],
+      modifiers: [],
+      liveness_reasons: [],
+    });
+    const arrangement: Wire['ArrangementSchema'] = {
+      pairing_id: 1,
+      is_current: true,
+      is_evenest: true,
+      sides: {
+        A: [{ seat_index: 0, relationship: 'SELF', player_id: ME }],
+        B: [{ seat_index: 1, relationship: 'OPPONENT', player_id: KASIA }],
+      },
+      forecast: { pct: 61, sigma_group: 0.41, provisional: false, assumption: null },
+      split: { your_side: 2.7, their_side: 3.1, gap: -0.4 },
+    };
+    stubProfileOptions(transport);
+    stubProfileSurface(transport);
+    transport.on('POST', '/api/v1/lineups', () =>
+      json<Wire['LineupResponse']>({
+        search: {
+          search_id: LINEUP_ID,
+          at: '2026-09-12T09:00:05Z',
+          surface: 'LINEUP',
+          mode: 'FOR_FUN',
+          ruleset_version: 'ruleset-v1',
+          engine_version: 'matchfit-v1',
+          optimised_for: 'GROUP',
+          index_stale: false,
+          pool: {
+            sport: 'PADEL',
+            radius_km_used: 12,
+            players_in_range: 7,
+            window: 'THIS_WEEK',
+            post_gate: true,
+          },
+          radius_clamp: false,
+          sorts_available: [],
+          rung_offers: null,
+        },
+        candidates: [candidate(KASIA, 'kasia_w')],
+        lineup: {
+          seats: [
+            { side: 'A', seat_index: 0, relationship: 'SELF', player_id: ME },
+            { side: 'B', seat_index: 1, relationship: 'OPPONENT', player_id: KASIA },
+          ],
+          arrangements: [arrangement],
+          group_reason: 'EVENEST_ARRANGEMENT',
+        },
+      }),
+    );
+    transport.on('POST', '/api/v1/forecasts', () =>
+      json<Wire['ForecastResponse']>({
+        arrangements: [arrangement],
+        engine_version: 'matchfit-v1',
+        ruleset_version: 'ruleset-v1',
+      }),
+    );
+
+    // A padel four short of one, so the accepted seats are somebody other than the reader.
+    const THREE_IN: Wire['GameSchema']['seats'] = [
+      { side: 'A', player_id: ME, nickname: 'me_' },
+      { side: 'A', player_id: TOMEK, nickname: 'tomek.p' },
+      { side: 'B', player_id: 'dddddddd-0000-4000-8000-000000000004', nickname: 'marekb' },
+      { side: 'B', player_id: null, nickname: null },
+    ];
+    await landOnNow({ games: [game({ seats: THREE_IN })], plans: [AHEAD] });
+
+    fireEvent.press(await screen.findByRole('button', { name: FILL_THE_SEAT }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE}/fill`));
+    expect(transport.requestsTo('POST', '/api/v1/lineups')[0]?.body).toEqual({
+      completing_challenge_id: CHALLENGE,
+    });
+    await screen.findByRole('button', { name: /^Remove kasia_w/ });
+    expect(screen.queryByRole('button', { name: /^Remove tomek\.p/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Remove marekb/ })).toBeNull();
+
+    // And back lands where you left — the rail.
+    fireEvent.press(screen.getByLabelText('Back'));
+    await waitFor(() => expect(screen).toHavePathname('/'));
   });
 
   it('draws the open seat empty — no face, no letters — and the rest of the court as it was', async () => {
@@ -558,6 +697,30 @@ describe('how long an ending keeps its card', () => {
 
     expect(await screen.findByText(gamesHeading(0))).toBeTruthy();
     expect(screen.getByText(NOW_COPY.empty.line)).toBeTruthy();
+  });
+
+  /**
+   * **The fourth end is shelved from the act** (ADR-0163, #419 §3): `entry_closes_at` is `null`
+   * on it, so the card reads `called_off_at` — a day, as the other endings get — and the tag's
+   * dot is the quiet hairline, with no door under it.
+   */
+  const calledOff = (at: string) =>
+    game({ standing: 'CALLED_OFF', entry_closes_at: null, called_off_at: at });
+
+  it('keeps a called-off game for a day, with its tag and no door', async () => {
+    await landOnNow({ games: [calledOff('2026-09-11T10:00:00Z')] });
+
+    expect(await screen.findByText(gamesHeading(1))).toBeTruthy();
+    expect(screen.getAllByText(CARD_TAG['called-off']!).length).toBeGreaterThan(0);
+    for (const verb of GAME_CARD_NAMES.map(doorLabel)) {
+      if (verb !== undefined) expect(screen.queryByRole('button', { name: verb })).toBeNull();
+    }
+  });
+
+  it('and then the called-off card leaves too', async () => {
+    await landOnNow({ games: [calledOff('2026-09-11T08:00:00Z')] });
+
+    expect(await screen.findByText(gamesHeading(0))).toBeTruthy();
   });
 });
 
