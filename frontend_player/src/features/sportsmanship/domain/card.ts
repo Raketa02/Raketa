@@ -49,9 +49,16 @@ export interface OpenCard {
   readonly players: readonly string[];
 }
 
-/** One person on the court, as much of them as a card needs. */
+/**
+ * One person on the court, as much of them as a card needs.
+ *
+ * `playerId` is optional because a game's seat can be **open** — somebody left, nobody has
+ * filled it (ADR-0162). No card is ever open on such a court: a result is refused while a seat
+ * is, and a game that never happened offers none. The type admits it so the games feature's
+ * court is still this one structurally, and `named` simply finds no seat for anybody.
+ */
 export interface RatedSeat {
-  readonly playerId: string;
+  readonly playerId?: string;
   /** Absent where `users` no longer has that account, which draws the unknown player's `?`. */
   readonly nickname?: string;
 }

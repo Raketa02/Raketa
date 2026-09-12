@@ -820,6 +820,7 @@ seats open, and the chat is already open"*, which is false in both clauses.
 | `ACCEPTED` | `You're in. {m} seats open, and the chat is already open` |
 | `DECLINED` | `You said no. They are still filling the court.` |
 | `LAPSED` | `Your day ran out. They are still filling the court.` |
+| `LEFT` | `You left. They are still filling the court.` — the third way out, since [ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md): they left the game this court had become. §13.2's row reads `You left. They are still waiting on answers.` |
 
 **The row is not filtered away instead**, because `GET /challenges` is *every challenge you hold a
 seat in* and a departed seat is still a seat — which is the reason the scenario above already gives.
@@ -2033,6 +2034,51 @@ the two values split on **resumption**; a third keyed to the act would break the
 the function has. One amber note above a greyed pair, pre-emptive, exactly as `BuilderScreen`
 already ships it.
 
+### 22.8 Leaving a game, and the seat it leaves open
+
+**The third irreversible act in this app that reaches other people, and it takes the withdraw's
+shape** ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), #411
+rules 1, 5, 6 and 8, built by [#418](https://github.com/Raketa02/Raketa/issues/418)): a title
+naming the **moment**, the act named once on the control that carries it out, a dismissal named by
+what it does.
+
+| | |
+| --- | --- |
+| The control | `Leave this game` — `secondary`, **last** on the game screen's plan lead, drawn only while the agreed moment is ahead |
+| In flight | `Leaving…` |
+| Sheet title | `Before you leave` |
+| Body | `The others keep the game and can fill your seat.` |
+| Body | `You can't be asked back into this one.` |
+| Body | `This cannot be undone.` |
+| The act | `Leave the game` |
+| Dismissal | `Stay in` |
+
+**The first body line is the one that earns the sheet**, and it is the opposite of the withdraw's:
+a departure destroys **nothing** — the others keep the game, the plan and the room — so the line
+says what survives, and the second says the one cost that is the leaver's alone: `already_asked_at`
+keeps them out of this court's pool for as long as it stands. Nothing here says the pair rule
+releases, on §22.3's own line.
+
+**The visible control is the whole sentence**, so it is the accessible name too — unlike
+`Withdraw`, there is no shorter form a reader would want. A refused leave draws no new copy: a
+stale tap re-reads and says nothing, `challenge_not_found` leaves the screen, and `account_held` is
+`challengeErrorMessage`'s sentence as for every write in that feature.
+
+**The rung**: **`Needs a player`** is the card's word for a court somebody left, above *Needs
+result*, *Today* and *Game on*; the state word one line over is `needs a player`, so the room's
+header reads `Padel · needs a player`. The wide door says **`Open`** — the same door as *Game on*'s,
+until [#419](https://github.com/Raketa02/Raketa/issues/419)'s `Fill the seat`. **`We played` is
+withheld** while the seat is open, and no sentence replaces it: the empty seat on the card is the
+whole of the explanation.
+
+**The open seat**: on the players card the row reads **`Open seat`** where a handle would be — an
+empty face, no level row, and **nothing to press**, because there is no record to open for nobody.
+On the card's spoken name it is one clause after the sport, counted: `An open seat` · `2 open
+seats` (§24.5).
+
+**The line**: `{name} left — that seat is open again` — §23's third `SEAT_LEFT` value, coordinated
+with #416.
+
 ## 23. The system lines — the codes, and what publishes nothing
 
 **A system line is a code and its values, never a Message with a `kind`**
@@ -2247,7 +2293,7 @@ never a standing (ADR-0157) — and a room with no game stops at the sport.
 | Element | Role | Announces |
 | --- | --- | --- |
 | `YOUR GAMES · n` | `header` | the heading and its count |
-| A game card's body | — | **one element, no role, no action** — the tag, the sport, then the three slots as sentences: `Planning. Padel. Where, Zabłocie Sport, court 3. Day, Not agreed yet. Time, Not agreed yet.` — and the line under the slots where the card keeps one |
+| A game card's body | — | **one element, no role, no action** — the tag, the sport, then the three slots as sentences: `Planning. Padel. Where, Zabłocie Sport, court 3. Day, Not agreed yet. Time, Not agreed yet.` — and the line under the slots where the card keeps one. **On a court somebody left, the open seat is said after the sport** — `Needs a player. Padel. An open seat. Where, …` · `2 open seats.` — because the court is hidden from a listener and the tag names the errand, not the shape (#418) |
 | The wide door | `button` | its own verb — `Finish the plan`, `Open`, `We played`, `Confirm the result` |
 | The bubble | `button` | `Open the chat` — **the same words as every other chat door** |
 | The rail's dots | — | **one element, `Game {i} of {n}`, and no role** — 7.9's own shape (*"one element, one label — never one per segment"*), and not pressable, so it announces a position rather than offering an action |
@@ -2326,6 +2372,7 @@ facts; every row of the players card has one, so every row is a `button`.
 | The stake tiles | — | **one element, two clauses or none** — `If you win +0,08, If you lose −0,08` |
 | `PLAYERS` | `header` | the eyebrow |
 | A player's row | `button` | **the record it opens**, by whose it is — `tomek.p’s record`, and `Your record` for your own; the level row is the button's **hint**, so a listener hears under the name what the sighted reader sees under the handle |
+| An open seat's row | — | **one element, no role, no action** — `Open seat`, its own words: there is no record to open for nobody, and a row that could be pressed would promise one (#418, §22.8) |
 | The footer | — | one plain sentence, §25's |
 
 **The bar's labels are stems and the row's name is whole**, which is §20.4's rule — *the visible

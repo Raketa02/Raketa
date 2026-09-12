@@ -6,11 +6,12 @@
  * nowhere typed to put a payload, so what a refusal buys is *which read to make next* rather than
  * a sentence chosen off a code.
  *
- * **It is named for the acts and not for the answers**, because there are four of them now and
- * they refuse in the same three ways: `I'm in`, `Not this time`, `Withdraw`, and — on the builder
- * this screen pushes — the fill. What they share is a subject: every one of these codes says
- * *this challenge is not what the screen thought it was*, and the honest answer to that is to
- * read it again.
+ * **It is named for the acts and not for the answers**, because there are five of them now and
+ * they refuse in the same three ways: `I'm in`, `Not this time`, `Withdraw`, the fill on the
+ * builder this screen pushes — and, on the **game** screen, *Leave this game*. What they share is
+ * a subject: every one of these codes says *this challenge is not what the screen thought it
+ * was*, and the honest answer to that is to read it again. For the departure the read is the
+ * games list, because that is what its screen folds from; the fold is the same.
  *
  * | Refusal | What the screen does |
  * | --- | --- |
@@ -19,8 +20,11 @@
  * | `not_a_half_built_line_up` | **Re-read and redraw.** The withdraw's own: this court has some other end already. |
  * | `withdraw_is_the_organisers` | **Re-read and redraw.** The control was drawn for a side the reader is not on. |
  * | `fill_is_the_live_members` | **Re-read and redraw.** The reader left this court while they were building on it. |
- * | `challenge_is_over` | **Re-read and redraw.** It ended under the builder. |
- * | `challenge_not_found` | **Leave the screen.** It is gone, or it was never yours. |
+ * | `challenge_is_over` | **Re-read and redraw.** It ended under the builder, or under the leave. |
+ * | `not_a_game_yet` | **Re-read and redraw.** The departure's own: this court was never a game. |
+ * | `game_is_history` | **Re-read and redraw.** The game has happened, or never will — an ending. |
+ * | `game_moment_has_passed` | **Re-read and redraw.** The agreed moment passed under the finger; the control goes with it. |
+ * | `challenge_not_found` | **Leave the screen.** It is gone, or it was never yours — or, on a departure, you hold no accepted seat on it. |
  * | anything else | Say what it says, and read nothing. |
  *
  * **It is a code and never a status.** Two of the re-read arms are `409`, one is `403` and one is
@@ -81,6 +85,9 @@ const READ_IT_BACK: ReadonlySet<string> = new Set([
   'withdraw_is_the_organisers',
   'fill_is_the_live_members',
   'challenge_is_over',
+  'not_a_game_yet',
+  'game_is_history',
+  'game_moment_has_passed',
 ]);
 
 export function actRefusal(error: AppError): ActRefusal {

@@ -61,7 +61,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import type { AtStake, Forecast, LikelyRange, ScoredTerm, Term } from '@/features/play/types';
 
 import { ownSeat, seatName, standingFactsFor, type ChallengeSeat } from './challenge';
-import type { SeatAnswer, Standing, StandingFacts } from './standing';
+import { GIVES_UP_THE_SEAT, type SeatAnswer, type Standing, type StandingFacts } from './standing';
 
 /**
  * Who one person on this court is — **a closed list with two permanent gaps.**
@@ -299,15 +299,12 @@ export type ChallengeArm =
  * §2.4 already rules the expired offer acceptable — *the offer may expire under the finger and
  * is let to*.
  *
- * **A `Record` keyed by the union rather than a disjunction**, for `challenge.ts`'s `ENDED`
- * reason: a fourth `SeatAnswer` fails `pnpm typecheck` here rather than quietly counting as
- * *not left*, which is the exact class of miss this rule was written to close.
+ * **The vocabulary's own table, `GIVES_UP_THE_SEAT`, read under this file's name for it** —
+ * one `Record` keyed by the union for the two readers that ask, so a fifth `SeatAnswer` fails
+ * `pnpm typecheck` once rather than quietly counting as *not left* here and *in* one file over,
+ * which is the exact class of miss this rule was written to close.
  */
-const LEFT: Readonly<Record<SeatAnswer, boolean>> = {
-  ACCEPTED: false,
-  DECLINED: true,
-  LAPSED: true,
-};
+const LEFT: Readonly<Record<SeatAnswer, boolean>> = GIVES_UP_THE_SEAT;
 
 function hasLeft(seat: ChallengeSeat | undefined): boolean {
   return seat?.answer === undefined ? false : LEFT[seat.answer];
@@ -465,11 +462,9 @@ export function redrawnFrom(detail: ChallengeDetail, answered: AnsweredChallenge
     standing: answered.standing,
     seats: answered.seats.map((seat, at) => {
       const held = detail.seats[at];
-      const keeps =
-        held?.card !== undefined &&
-        held.playerId === seat.playerId &&
-        seat.answer !== 'DECLINED' &&
-        seat.answer !== 'LAPSED';
+      // The card block leaves with the person: a seat given up in any of the three ways draws its
+      // arrangement and the handle alone, and that person is a stranger again (ADR-0143 §8).
+      const keeps = held?.card !== undefined && held.playerId === seat.playerId && !hasLeft(seat);
 
       return keeps && held.card !== undefined ? { ...seat, card: held.card } : seat;
     }),

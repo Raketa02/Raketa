@@ -1168,7 +1168,21 @@ now be the column said again in prose.
 | --- | --- |
 | **Planning** · **Game on** · **Today** | the three slots, bright where agreed and dim where not — nothing under them |
 | **Needs result** | the slots, and `{duration} left` under them, folded from `entry_closes_at` against `read_at` |
+| **Needs a player** | the slots, and nothing under them — the **empty seat on the court** is the whole of what this rung adds, and the spoken name says `An open seat` after the sport ([#418](https://github.com/Raketa02/Raketa/issues/418)) |
 | everything that is not a rung | the slots, and `gameStandingLine`'s sentence under them |
+
+**The fifth rung, and it is above the clock**
+([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), #411 rule 5,
+built by [#418](https://github.com/Raketa02/Raketa/issues/418)). A seat somebody left is a fact
+about the **court** and not about the plan, and the game cannot be played — or recorded — until
+somebody is in it; so `rungOf` reads the court before the clock, and **Needs a player** outranks
+*Needs result*, *Today* and *Game on* alike. Nothing on the wire names it: the standing stays
+`AWAITING_ENTRY` and the seat is `player_id: null`, and the ladder is the one place the two are
+read together. The server's own *Never played* still wins — a window that closed on a short court
+closed all the same. The tag is `Needs a player`, the dot is `arranging` (the game is back in the
+players' hands), the wide door is **`Open`** — the same door as *Game on*'s, until
+[#419](https://github.com/Raketa02/Raketa/issues/419) turns it into *Fill the seat* — and the
+empty seat is drawn as the builder draws one: a dashed outline, no plus, no caption, no ring.
 
 **What survives is the override and the citation.** *Needs result* keeps its window because a
 passed agreement makes the unfilled slots irrelevant and the entry window is the only live fact
@@ -1211,6 +1225,7 @@ the same game depending which day they tap it.
 | --- | --- | --- |
 | **Planning** | the card at the top, the court's pairing, the plan **editable** — chips, counter, lock, the panel inside | **Open the chat** |
 | **Game on** | the same layout, the plan whole and the lock live | **Open the chat** |
+| **Needs a player** | the same layout with the empty seat on the card and an *Open seat* row on the players card, no forecast (the pairing omits it), the plan still editable — and **no *We played*** while the seat is open ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), #418) | **Open the chat** |
 | **Today** | the plan, whole, in `Tag`s | **We played** |
 | **Needs result** | the plan, and how long is left to say you played | **We played** |
 | **Confirm the result** ×4 | built — #314, untouched | built |
@@ -1245,7 +1260,8 @@ rungs whose card door says *Finish the plan* / *Open*, redrawn to #410's design:
 │ [ Lock the plan ]  (greyed below three)    │
 └────────────────────────────────────────────┘
 [              Open the chat                ]   ← Button dark, lg — in the scroll, nothing pinned
-[                We played                  ]   ← Button secondary
+[                We played                  ]   ← Button secondary — withheld while a seat is open
+[            Leave this game                ]   ← Button secondary, last — while the agreed moment is ahead (#418)
 (the star card, when a rating is waiting)
 ```
 
@@ -1271,6 +1287,25 @@ no room (ADR-0149 §3), on both leads.
 `standing_of` gates entry on `entry_closes_at` and on nothing else, so four people can arrange a
 game at six and play it at eight without ever filling a slot. Strict one-action-per-state buys a
 tidy table at the price of the app declining to hear the one fact the whole loop exists to collect.
+**One exception, since [ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)**:
+*We played* is **withheld while a seat is open** (#411 rule 5) — the server refuses a result on a
+short court, and a game with a gap in it is not one anybody could have played. It is the domain's
+answer (`actsOffered`) rather than the screen's, so the card's door and the screen's control cannot
+disagree about it.
+
+***Leave this game* is the last thing on the plan lead**
+([#418](https://github.com/Raketa02/Raketa/issues/418), #411 rules 1 and 8): a `secondary` control
+under *We played*, behind a sheet on the withdraw's shape (`the-words.md` §22.8), drawn **only while
+the agreed moment is ahead** — the server refuses a departure past it with `game_moment_has_passed`,
+and the client mirrors the rule off the same instant rather than offering a control the act would
+refuse. The rung alone cannot say it, because *Needs a player* outranks *Needs result*. It is a
+**challenge** act reached from a game — the seat that reopens is the challenge's — so the control
+is `features/challenges`', composed by `features/plans` into a fourth slot on the screen
+(`courtActs`), the shape the chat doors already take; #419's *Fill the seat* and *Call it off* go
+in the same slot. Pending, never optimistic; on success the games, the plans and the rooms are
+re-read and the screen goes back — the card is gone from the rail because the server no longer
+lists it. A stale tap re-reads the games list and says nothing; `challenge_not_found` leaves;
+`account_held` is said as every write in that feature says it. Not on the card, not in the chat.
 
 ### 5.2 Which door each card opens, in full
 
@@ -1305,6 +1340,9 @@ the rail — the card is the record for the day it stays.
 | — | the conversation | Details | — | `/chats/conversation/[id]/details`, the arm the standing derives |
 | — | **Planning** · **Game on** | the game screen | `Open the chat` — `dark`, `lg`, full width | `/chats/conversation/[conversationId]` — the join, failing soft |
 | — | **Planning** · **Game on** | the game screen | `We played` — `secondary`, beneath | the score grid, opened over the plan; the pinned footer returns with it |
+| — | **Needs a player** | Now card | `Open` | `/games/[gameId]`, the plan lead — the same door as Game on's, until #419's *Fill the seat* ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)) |
+| — | **Needs a player** | the game screen | `Open the chat` — and **no `We played`** while the seat is open | `/chats/conversation/[conversationId]` |
+| — | **Planning** · **Game on** · **Needs a player** | the game screen | `Leave this game` — `secondary`, **last**, while the agreed moment is ahead | the sheet, then `POST /challenges/{id}/departure`, then back — **not a door: it writes**, like the plan's chips above it ([#418](https://github.com/Raketa02/Raketa/issues/418)) |
 
 **Fourteen cards, one route each side of the seam, and no deep-link parameter.** *The grid is the
 screen*: `GameScreen` is state-keyed, so the verb names what you arrive at and the standing

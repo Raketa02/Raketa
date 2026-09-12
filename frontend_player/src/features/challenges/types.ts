@@ -115,3 +115,9 @@ export { parseChallengeRouteParams, type ChallengeRouteParams } from './schemas/
  * read back off `GET /challenges` like anybody else's.
  */
 export type { ProposedCourt } from './mappers/challengeMappers';
+/**
+ * **The departure, for the game screen** — a challenge act reached from a game, composed by
+ * `features/plans` onto `features/games`' screen (ADR-0162). The control and its sheet; the words
+ * stay with them, because the screen that draws them may not know what they say.
+ */
+export { LeaveGame, type LeaveGameProps } from './components/LeaveGame';

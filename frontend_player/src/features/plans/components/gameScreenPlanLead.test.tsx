@@ -18,6 +18,7 @@ import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-lib
 import { Image, Text } from 'react-native';
 
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
+import { BALANCE_FORECAST, OPEN_SEAT, PLAYERS } from '@/features/games/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { Card } from '@/shared/ui';
@@ -160,11 +161,13 @@ function stubTheWorld({
   plans = [],
   room = true,
   members = PAIR,
+  court = { refused: 409, code: 'pairing_is_history' },
 }: {
   readonly games?: readonly Wire['GameSchema'][];
   readonly plans?: readonly Wire['PlanSchema'][];
   readonly room?: boolean;
   readonly members?: readonly Wire['ConversationMemberSchema'][];
+  readonly court?: Parameters<typeof stubPairing>[2];
 } = {}) {
   stubGames(transport, games, READ_AT);
   stubPlans(transport, plans);
@@ -195,10 +198,10 @@ function stubTheWorld({
     entries: [],
   });
   stubEntries(transport, ROOM);
-  // The court's pairing is #415's and walked in `features/games`; here it is a refusal by name,
-  // so the slot draws the players card alone and this suite's card count is the plan's and the
-  // court's.
-  stubPairing(transport, GAME, { refused: 409, code: 'pairing_is_history' });
+  // The court's pairing is #415's and walked in `features/games`; here it is a refusal by name
+  // unless a case says otherwise, so the slot draws the players card alone and this suite's card
+  // count is the plan's and the court's.
+  stubPairing(transport, GAME, court);
 }
 
 /** In at the screen's own address under Now — the wide door's destination. */
@@ -437,6 +440,84 @@ describe('what went', () => {
     expect(screen.queryByText(NOTHING_IS_LEFT_TO_AGREE)).toBeNull();
     expect(screen.queryByText(new RegExp(`^${STILL_TO_AGREE}`))).toBeNull();
     expect(screen.queryByText(/This one counts/)).toBeNull();
+  });
+});
+
+/**
+ * **A seat somebody left** (#411 rules 5 and 6, ADR-0162): the screen is the plan lead — the seat
+ * outranks the clock — with the empty seat on the card, an *Open seat* row on the players card,
+ * the plan still editable, the chat door still there, and no *We played*, because a game with a
+ * gap in it cannot be recorded. The forecast is absent because #416's pairing omits it, and the
+ * block is drawn off the pairing alone — nothing here special-cases the seat.
+ */
+describe('an open seat', () => {
+  const SHORT: Wire['GameSchema']['seats'] = [
+    { side: 'A', player_id: ME, nickname: 'me_' },
+    { side: 'A', player_id: KASIA, nickname: 'kasia_w' },
+    { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+    { side: 'B', player_id: null, nickname: null },
+  ];
+
+  /** The pairing beside a short court: Levels for whoever is in, and no forecast (#416). */
+  const NO_FORECAST: Wire['GamePairingResponse'] = {
+    read_at: READ_AT,
+    seats: [
+      {
+        player_id: ME,
+        level: 2.71,
+        band: 'Established',
+        range: { low: 2.55, high: 2.87 },
+        confidence: 74,
+      },
+    ],
+  };
+
+  it('withholds We played, and keeps the chat door', async () => {
+    await openFromNow({ games: [game({ seats: SHORT })], plans: [WHOLE] });
+
+    expect(await screen.findByText(CARD_TAG['needs-a-player']!)).toBeTruthy();
+    expect(screen.getByText(OPEN_THE_CHAT)).toBeTruthy();
+    expect(screen.queryByText(WE_PLAYED)).toBeNull();
+  });
+
+  /** The plan survives a departure: the chips are live and the lock is drawn. */
+  it('keeps the plan card editable', async () => {
+    await openFromNow({ games: [game({ seats: SHORT })], plans: [WHOLE] });
+
+    await screen.findByText(PLAN_PANEL.title);
+    expect(slotChip(SLOT_NAME.where).props.accessibilityState.disabled).toBe(false);
+    expect(
+      screen.getByRole('button', { name: LOCK_THE_PLAN }).props.accessibilityState.disabled,
+    ).toBe(false);
+  });
+
+  /** A row with nobody in it: the words, no level row, and nothing to press. */
+  it('draws the open seat as a row on the players card that is not a button', async () => {
+    await openFromNow({ games: [game({ seats: SHORT })], court: NO_FORECAST });
+
+    await screen.findByText(PLAYERS);
+    expect(screen.getByText(OPEN_SEAT)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: new RegExp(OPEN_SEAT) })).toBeNull();
+    expect(screen.getAllByRole('button', { name: /record$/i })).toHaveLength(3);
+  });
+
+  it('draws no forecast block, because the pairing carries none', async () => {
+    await openFromNow({ games: [game({ seats: SHORT })], court: NO_FORECAST });
+
+    await screen.findByText(PLAYERS);
+    expect(screen.queryByText(BALANCE_FORECAST)).toBeNull();
+  });
+
+  /** Past its moment the seat still outranks the clock: the plan lead, and not the grid. */
+  it('is the plan lead even once the agreed moment has passed', async () => {
+    await openFromNow({
+      games: [game({ seats: SHORT })],
+      plans: [plan({ ...WHOLE, day: '2026-09-11', agreed_point: '2026-09-11T16:00:00Z' })],
+    });
+
+    expect(await screen.findByText(CARD_TAG['needs-a-player']!)).toBeTruthy();
+    expect(screen.getByText(PLAN_PANEL.title)).toBeTruthy();
+    expect(screen.queryByText('Send this score')).toBeNull();
   });
 });
 

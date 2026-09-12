@@ -74,6 +74,22 @@ describe('which challenges still hold a pair', () => {
 
     expect(playersStillIn(lapsed)).toEqual([ME, BEA]);
   });
+
+  /**
+   * The third way a seat opens (ADR-0162): somebody leaving a game they had agreed to. It is
+   * neither a no nor silence, and the pair releases the moment they go — a seat kept in the game
+   * here would be somebody uninvitable by the person they just walked out on.
+   */
+  it('drops the seat that left the game, which is neither a no nor silence', () => {
+    const left = challenge('LINE_UP_INCOMPLETE', [
+      { playerId: ME, answer: 'ACCEPTED' },
+      { playerId: BEA, answer: 'ACCEPTED' },
+      { playerId: CYRYL, answer: 'LEFT' },
+      {},
+    ]);
+
+    expect(playersStillIn(left)).toEqual([ME, BEA]);
+  });
 });
 
 describe('who on this court you already have a game with', () => {

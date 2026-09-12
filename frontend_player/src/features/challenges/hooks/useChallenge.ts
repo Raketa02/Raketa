@@ -7,6 +7,7 @@
  * | `useAnswerSeat` | `POST …/accept` and `…/decline` — **pending, never optimistic** |
  * | `useInviteSeats` | `POST …/seats` — ⚡'s send, from the builder this screen pushes |
  * | `useWithdrawChallenge` | `POST …/withdrawal` — the organiser's, and the only end a half-built court has |
+ * | `useLeaveGame` | `POST …/departure` — any player's, from the **game** screen, while the moment is ahead |
  *
  * ## The offer may expire under the finger, and it is let to
  *
@@ -64,11 +65,13 @@ import type { AppError } from '@/shared/errors';
 
 import { conversationKeys } from '@/features/conversations/types';
 import { gameKeys } from '@/features/games/types';
+import { planKeys } from '@/features/plans/types';
 
 import type { AnsweredChallenge, ChallengeDetail } from '../domain/challengeDetail';
 import { redrawnFrom } from '../domain/challengeDetail';
 import { answerSeat, type AnswerSeatAsk } from '../use-cases/answerSeat';
 import { inviteSeats, type InviteSeatsAsk } from '../use-cases/inviteSeats';
+import { leaveGame } from '../use-cases/leaveGame';
 import { readChallenge } from '../use-cases/readChallenge';
 import { withdrawChallenge } from '../use-cases/withdrawChallenge';
 
@@ -184,6 +187,47 @@ export function useWithdrawChallenge() {
       );
 
       void client.invalidateQueries({ queryKey: challengeKeys.list() });
+      void client.invalidateQueries({ queryKey: conversationKeys.list() });
+    },
+  });
+}
+
+/**
+ * ***Leave this game*** — the departure, and the one act in this feature pressed on a screen that
+ * is not this feature's ([ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)).
+ *
+ * The act lands on the challenge — that is where the seat reopens — and it is reached from the
+ * game, which carries its `challengeId`; so the hook is here, behind the `LeaveGame` control that
+ * `types.ts` exports, and the control is composed onto the game screen by `features/plans` the way
+ * `useChatDoors` is.
+ *
+ * **Pending, never optimistic**, and `CHALLENGE_MUTATION_OPTIONS` spread whole: a departure is
+ * dated exactly, and the moment guard is read against the tap — one queued for a reconnect could
+ * land past the agreed moment as a refusal nobody was there to read.
+ *
+ * **What lands is a redraw for the challenge screen and a re-read for everything else.** The
+ * reply is the challenge as it now stands with the reader's seat `LEFT`, written into the detail
+ * as the withdraw's is. The game, its plan and its room are **lists this reply says nothing
+ * about** — the leaver's rail drops the card, their plans list drops the row, their inbox drops
+ * the room — so all three are invalidated rather than patched: the card is gone from the rail
+ * because the server no longer lists it, not because the client removed it. `planKeys` is read
+ * from `features/plans` for this one line, because a hook that declares its cache effect
+ * declares all of it.
+ */
+export function useLeaveGame() {
+  const client = useQueryClient();
+
+  return useMutation<AnsweredChallenge, AppError, string>({
+    mutationFn: leaveGame,
+    ...CHALLENGE_MUTATION_OPTIONS,
+    onSuccess: (left, challengeId) => {
+      client.setQueryData<ChallengeDetail | undefined>(challengeKeys.detail(challengeId), (held) =>
+        held === undefined ? held : redrawnFrom(held, left),
+      );
+
+      void client.invalidateQueries({ queryKey: challengeKeys.list() });
+      void client.invalidateQueries({ queryKey: gameKeys.list() });
+      void client.invalidateQueries({ queryKey: planKeys.list() });
       void client.invalidateQueries({ queryKey: conversationKeys.list() });
     },
   });

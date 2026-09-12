@@ -16,7 +16,8 @@
  * ```
  * seated     surface, 2         the face is a photograph, and the ring is what separates it
  *                               from a generated ground the same white is drawn over
- * empty      surface, 2, DASHED the interactive court's open seat
+ * empty      surface, 2, DASHED the interactive court's open seat — and the game card's, for a
+ *                               seat somebody left (ADR-0162), with no plus in it
  * selected   volt, 3            picked for a swap
  * yours      volt, 2            which seat is you, on the READ-ONLY court
  * none       -                  the read-only court's absent player, who is not drawn at all

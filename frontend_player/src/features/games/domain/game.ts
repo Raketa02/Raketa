@@ -62,15 +62,40 @@ export interface Score {
   readonly sets: readonly SetScore[];
 }
 
-/** One person, on one side. The court is frozen at the plan. */
+/**
+ * One position on one side: a person, or a seat somebody has left.
+ *
+ * **A seat is never dropped, and since
+ * [ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)
+ * it can be open.** `playerId` is absent on a seat whose occupant left the game and nobody has
+ * filled yet: the seat keeps its place and its side, the court keeps its size, and every screen
+ * that draws the court draws it empty. The line-up is frozen at the plan **until somebody leaves
+ * it** — and the next completed line-up re-seats the same game.
+ */
 export interface GameSeat {
   readonly side: GameSide;
-  readonly playerId: string;
+  /** Who holds this seat. **Absent on an open seat** — somebody left, and nobody has filled it. */
+  readonly playerId?: string;
   /**
    * What they are called — **the whole handle, and nothing may shorten it into a sentence.**
-   * Absent where `users` no longer has the account, which draws the unknown player's `?`.
+   * Absent where `users` no longer has the account, which draws the unknown player's `?` — and
+   * on an open seat, which draws nobody.
    */
   readonly nickname?: string;
+}
+
+/**
+ * **The seats nobody is in** — the fact *Needs a player* is folded from, and the one a result is
+ * refused on while it is true.
+ *
+ * Nothing on the wire names the rung: an open seat is `player_id: null`, the standing stays
+ * `AWAITING_ENTRY`, and it is the client's card that says a player is needed. One function, so
+ * the screen's acts, the players card and the card's spoken label read one definition of *open*.
+ * The ladder in `features/plans` spells the same field itself — a runtime import of this
+ * feature's `types.ts` would pull the screen into a `domain/` module — and says so where it does.
+ */
+export function openSeats(seats: readonly GameSeat[]): readonly GameSeat[] {
+  return seats.filter((seat) => seat.playerId === undefined);
 }
 
 /**

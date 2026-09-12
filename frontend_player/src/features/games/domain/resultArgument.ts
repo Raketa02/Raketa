@@ -15,6 +15,7 @@
  * | --- | --- | --- |
  * | `AWAITING_ENTRY` | — | the entry, and when it stops being sayable |
  * | `NEVER_PLAYED` | — | a ghost: nothing to do, and nobody marked for it |
+ * | `CALLED_OFF` | — | the fourth end (ADR-0163): somebody ended it, and nobody is marked for it |
  * | `AWAITING_ANSWER` | your score | free correction, and the hour silence agrees |
  * | `AWAITING_ANSWER` | their score | agree, or disagree **with a score** |
  * | `AWAITING_ANSWER` | both scores | both of them, and the agreement that ends the argument |
@@ -69,7 +70,7 @@
 
 import type { NamedPlayer } from '@/shared/formatting/playerName';
 
-import type { Acceptance, Game, Score, StandingProposal } from './game';
+import { openSeats, type Acceptance, type Game, type Score, type StandingProposal } from './game';
 import type { GameSide, Outcome } from './vocabulary';
 
 /** The one act a screen state offers, in the order the screen draws them. */
@@ -140,8 +141,15 @@ export type ResultArgument =
    * offer an agreement with a score nobody put up.
    */
   | { readonly kind: 'unreadable' }
-  | { readonly kind: 'awaiting-entry'; readonly entryClosesAt?: string }
+  /**
+   * Nobody has said it happened. **`seatOpen` is whether somebody left and nobody has filled
+   * the seat** (ADR-0162): the entry is withheld while it is true, because the server refuses a
+   * result on a short court and a game with a gap in it is not one anybody could have played.
+   */
+  | { readonly kind: 'awaiting-entry'; readonly entryClosesAt?: string; readonly seatOpen: boolean }
   | { readonly kind: 'never-played' }
+  /** Called off while a seat was open — an act, and an ending like the ghost's with nobody marked. */
+  | { readonly kind: 'called-off' }
   | { readonly kind: 'ours-stands'; readonly proposal: StandingProposal }
   /** `by` is whoever on the other side put it up — the one person a screen here can name. */
   | {
@@ -195,11 +203,16 @@ export function whoIs(game: Game, reader: string, playerId: string): NamedPlayer
  *
  * The court's order and never a re-sort: which side was short is part of what a court is, and a
  * list re-ordered here would say a different thing about the same evening on two screens.
+ *
+ * **An open seat holds nobody**, so it is not in a list of people: a sentence *with X and Y*
+ * about a court somebody left names the ones still on it, and never a `?` for the gap.
  */
 export function othersOn(game: Game, reader: string): readonly NamedPlayer[] {
-  return game.seats
-    .filter((seat) => seat.playerId !== reader)
-    .map((seat) => whoIs(game, reader, seat.playerId));
+  return game.seats.flatMap((seat) =>
+    seat.playerId === undefined || seat.playerId === reader
+      ? []
+      : [whoIs(game, reader, seat.playerId)],
+  );
 }
 
 /**
@@ -223,9 +236,15 @@ export function resultArgument(game: Game, playerId: string): ResultArgument {
 
   switch (game.standing) {
     case 'AWAITING_ENTRY':
-      return { kind: 'awaiting-entry', entryClosesAt: game.entryClosesAt };
+      return {
+        kind: 'awaiting-entry',
+        entryClosesAt: game.entryClosesAt,
+        seatOpen: openSeats(game.seats).length > 0,
+      };
     case 'NEVER_PLAYED':
       return { kind: 'never-played' };
+    case 'CALLED_OFF':
+      return { kind: 'called-off' };
     case 'CONFIRMED':
       return { kind: 'confirmed', score: game.score, outcome: game.outcome };
     case 'UNSCORED':
@@ -318,7 +337,9 @@ export function editingAct(argument: ResultArgument): EditingAct | undefined {
 export function actsOffered(argument: ResultArgument): readonly ResultAct[] {
   switch (argument.kind) {
     case 'awaiting-entry':
-      return ['enter'];
+      // *We played* is withheld while a seat is open (#411 rule 5): the seat stays open until it
+      // is filled, the game is called off, or the window closes into *Never played*.
+      return argument.seatOpen ? [] : ['enter'];
     case 'ours-stands':
       return ['correct'];
     case 'theirs-stands':
@@ -337,6 +358,7 @@ export function actsOffered(argument: ResultArgument): readonly ResultAct[] {
     case 'not-yours':
     case 'unreadable':
     case 'never-played':
+    case 'called-off':
     case 'confirmed':
     case 'unscored':
       return [];

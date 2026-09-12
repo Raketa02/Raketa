@@ -45,7 +45,7 @@ export type Standing = (typeof STANDINGS)[number];
 export type ChallengeSide = 'organiser' | 'invitee';
 
 /**
- * What the person in a seat did about being asked — **three values, and *awaiting* is not one
+ * What the person in a seat did about being asked — **four values, and *awaiting* is not one
  * of them.**
  *
  * The absence of an answer *is* awaiting, and giving it a name would make *nothing yet* and
@@ -54,10 +54,32 @@ export type ChallengeSide = 'organiser' | 'invitee';
  * **`LAPSED` is never a decline.** They do the same thing to the line-up and they are
  * different facts — the `answers challenges` strand counts challenges that got an answer
  * inside their window, and it is unmeasurable if silence is filed as judgement.
+ *
+ * **`LEFT` is the one answer written over another**
+ * ([ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)):
+ * an accepted seat, on a court whose line-up had completed into a game, whose occupant has since
+ * left it. It opens the seat exactly as the other two do and is neither of them — leaving a game
+ * you agreed to is not declining an invitation, and nothing prices it yet.
  */
-export const SEAT_ANSWERS = ['ACCEPTED', 'DECLINED', 'LAPSED'] as const;
+export const SEAT_ANSWERS = ['ACCEPTED', 'DECLINED', 'LAPSED', 'LEFT'] as const;
 
 export type SeatAnswer = (typeof SEAT_ANSWERS)[number];
+
+/**
+ * **Which answers mean the seat has been given up** — a no, silence, and (ADR-0162) leaving the
+ * game the court became. `ACCEPTED` is the one that does not.
+ *
+ * A `Record` keyed by the union rather than a disjunction at each reader, and **one table for
+ * the two readers** — the pair rule and the detail's arm: a fifth answer added to the contract
+ * fails `pnpm typecheck` here, once, rather than quietly counting as *in* wherever an `||` chain
+ * forgot it, which is exactly the class of miss `LEFT` would have been.
+ */
+export const GIVES_UP_THE_SEAT: Readonly<Record<SeatAnswer, boolean>> = {
+  ACCEPTED: false,
+  DECLINED: true,
+  LAPSED: true,
+  LEFT: true,
+};
 
 /**
  * One standing, with the payload its sentence quotes.

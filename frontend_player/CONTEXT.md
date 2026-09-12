@@ -607,13 +607,25 @@ not restated here; what follows is only what this client had to invent to draw t
   which day they tap it), and passing the screen anything that says which of its two routes
   mounted it.
 - **The entry lead** — which of two things an `AWAITING_ENTRY` arm leads with: **the plan** while
-  the moment is still ahead, **the score** once it is here. One standing over two landings, which
-  is what §5.2 means by _Planning_ arriving at the Planning arm and _Today_ arriving at the score
-  grid. It is folded in `features/plans` — the ladder reads a plan — and **derived from the card's
+  the moment is still ahead, **the score** once it is here — and **the plan** while a seat is
+  open, whatever the clock says. One standing over two landings, which is what §5.2 means by
+  _Planning_ arriving at the Planning arm and _Today_ arriving at the score grid. It is folded in
+  `features/plans` — the ladder reads a plan, and now the court — and **derived from the card's
   own door**, so the two cannot disagree: _the verb names what you arrive at_. It changes **what
-  leads and never what is offered**: _We played_ is available on all four arms, one press away on
-  the two that do not lead with it. _Avoid_: a rung crossing into `features/games`, a second table
-  mapping rungs to landings, and reading it as a permission — entry is gated on the window alone.
+  leads and never what is offered**: _We played_ is available on every arm with a full court, one
+  press away on the ones that do not lead with it, and **withheld while a seat is open** — which
+  is the domain's answer (`actsOffered`), not the lead's. _Avoid_: a rung crossing into
+  `features/games`, a second table mapping rungs to landings, and reading it as a permission —
+  entry is gated on the window and the court, and nothing else.
+- **The court acts** — the fourth `ReactNode` slot on `GameScreen`, drawn **last** on the plan
+  lead under _We played_: the acts on the court itself — _Leave this game_
+  ([ADR-0162](../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)), and #419's
+  fill and call-off beside it. Every one is a **challenge** act reached from a game — the seat
+  that reopens is the challenge's — so the control, its sheet and its words are
+  `features/challenges`', exported through its `types.ts` and composed by `features/plans`, which
+  also decides whether one is drawn at all (the agreed moment). _Avoid_: the screen reading the
+  slot, a leave control on the card or in the chat, and `features/games` learning what a
+  challenge is.
 - **The read instant** — `read_at`, the moment every standing and deadline in the list was
   folded against. **Every duration on these screens is measured from it and never from the
   device clock**, so a countdown cannot drift out of agreement with the word printed beside it.
@@ -753,14 +765,33 @@ only what this client had to invent to draw what is happening today and next
 ([#367](https://github.com/Raketa02/Raketa/issues/367),
 [#413](https://github.com/Raketa02/Raketa/issues/413)).
 
-- **The ladder** — the four rungs a game's card is named by, **read in order**, in
-  `domain/ladder.ts`: _the agreed point has passed_ → **Needs result**, _the agreed day is today_
-  → **Today**, _all three slots filled_ → **Game on**, otherwise **Planning**. The conditions
-  overlap on purpose and the order is what resolves them: **the clock outranks the checklist**
+- **The ladder** — the five rungs a game's card is named by, **read in order**, in
+  `domain/ladder.ts`: _a seat is open_ → **Needs a player**, _the agreed point has passed_ →
+  **Needs result**, _the agreed day is today_ → **Today**, _all three slots filled_ → **Game
+  on**, otherwise **Planning**. The conditions overlap on purpose and the order is what resolves
+  them: **the clock outranks the checklist**
   ([ADR-0145](../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md) §3),
-  so rungs 3 and 4 are reached only when the point has not passed and the day is not today.
-  _Avoid_: restating _and the moment still ahead_ as a condition of its own — the order already
-  says it — and reading any rung anywhere but here.
+  so rungs 4 and 5 are reached only when the point has not passed and the day is not today — and
+  **the open seat outranks the clock**
+  ([ADR-0162](../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), #411 rule
+  5): a court somebody left cannot be played or recorded until somebody is in that seat, so the
+  rung is read off the court before the plan is asked anything. _Avoid_: restating _and the moment
+  still ahead_ as a condition of its own — the order already says it — reading a rung anywhere
+  but here, and asking the wire for the rung: nothing on it names one, and `player_id: null` is
+  the whole of what it says.
+- **The open seat** — a seat somebody has **left** and nobody has filled: `player_id: null` on
+  the wire, `playerId` absent here, and **still a seat** — it keeps its place and its side, the
+  court keeps its size, and every surface that draws the court draws it empty: the builder's
+  dashed outline on the card, an **Open seat** row on the players card, `An open seat` in the
+  card's spoken name. It stays open until it is filled, the game is called off, or the window
+  closes into _Never played_. _We played_ is withheld while one is open. _Avoid_: dropping the
+  seat (a three-person doubles game), drawing `?` in it (that is a person `users` cannot name),
+  and a plus (nothing on these courts is pressable).
+- **The agreed moment** — whether the plan's agreed point is behind the games list's instant:
+  `momentHasPassed`, the first clock rung's own test, exported for the one control that is drawn
+  only while it is ahead — _Leave this game_. The rung alone cannot say it, because _Needs a
+  player_ outranks _Needs result_. _Avoid_: reading it against the phone's clock, and a second
+  comparison beside the ladder's.
 - **The agreed point** — the moment a plan names: the agreed **instant** when the day and the hour
   are both recorded, the **start of the following local day** when only the day is, and **nothing**
   when no day is. **Later rather than earlier**, so nobody is asked for a result before they could
@@ -773,22 +804,23 @@ only what this client had to invent to draw what is happening today and next
   nowhere to put a shelf. The order is **the server's, newest arrangement first**, and it is
   **stable** where a clock sort silently re-orders a player's cards between sessions. _Avoid_:
   shelves, a re-sort, and calling it a list.
-- **The card name** — which of nine cards a game draws, folded at read time from the standing, the
-  slot count and the clock: the four rungs, **Confirm the result** (one name over four
-  `AWAITING_ANSWER` arms), **Counted**, **Uncounted**, **Never played**, and the named gap for a
-  standing this build cannot read. It is the **tag**, and every slot on the card that differs by
-  name is a **table lookup on it** — the stage dot, the accent, the door's word — so a tenth name
-  fails `pnpm typecheck` in one file. _Avoid_: a status column, a client state machine, a switch
-  over the names, and a tenth card.
-- **The shell** — one dark card for all nine names: **header · slots + court · footer**. The
+- **The card name** — which of eleven cards a game draws, folded at read time from the standing,
+  the court, the slot count and the clock: the five rungs, **Confirm the result** (one name over
+  four `AWAITING_ANSWER` arms), **Counted**, **Uncounted**, **Never played**, **Called off** (the
+  fourth end, [ADR-0163](../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md); its look and
+  its shelf life are #419's), and the named gap for a standing this build cannot read. It is the
+  **tag**, and every slot on the card that differs by name is a **table lookup on it** — the stage
+  dot, the accent, the door's word — so a twelfth name fails `pnpm typecheck` in one file.
+  _Avoid_: a status column, a client state machine, a switch over the names, and a twelfth card.
+- **The shell** — one dark card for all eleven names: **header · slots + court · footer**. The
   Planning card is the first drawn for real; every other name is the same shell on **soft
   defaults** until its own design arrives, so the rail does not mix two visual languages and a
   card flipping under a thumb does not jump layouts. _Avoid_: a second card component, and a
   layout that changes shape rather than content between two names.
 - **The stage dot** — the tag's dot on this card is **the stage's, not the sport's**: `arranging`
-  while the game is still in the players' hands (Planning, Needs result, Confirm the result),
-  `mint` where it is settled (Game on, Today, Counted), the quiet hairline on the two endings
-  nobody scored. It is legal because **the sport is the word beside it** — `PADEL`,
+  while the game is still in the players' hands (Planning, Needs a player, Needs result, Confirm
+  the result), `mint` where it is settled (Game on, Today, Counted), the quiet hairline on the
+  three endings nobody scored. It is legal because **the sport is the word beside it** — `PADEL`,
   `PADEL · FRIENDLY` — and nothing writes _singles_ or _doubles_: the court says the format.
   _Avoid_: a sport dot here, urgency as the pill's variant, and a dot on a card that names no
   sport.
@@ -809,7 +841,8 @@ only what this client had to invent to draw what is happening today and next
   coming back under another name, and a checklist on the card.
 - **The two doors** — **the wide door** is the next thing to do and its word changes with the
   stage: `Finish the plan` · `Open` · `We played` · `Confirm the result`, one per name and none on
-  an ending; it **navigates and never writes**. **The bubble** beside it is the icon door to the
+  an ending — `Open` on _Needs a player_ too, the same door as _Game on_'s, until #419 turns it
+  into `Fill the seat`; it **navigates and never writes**. **The bubble** beside it is the icon door to the
   room, drawn only where there is one. **The body is not a door.** _Avoid_: a pressable body, a
   disabled control where a card offers nothing, a door that writes, and a third door.
 

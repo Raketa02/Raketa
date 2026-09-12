@@ -127,6 +127,9 @@ const SYSTEM_LINE: Readonly<Record<SystemLineCode, (facts: SystemLineFacts) => s
     const departure = departureOf(values);
     if (departure === 'DECLINED') return `${name} said no — that seat is open again`;
     if (departure === 'LAPSED') return `${name}'s day ran out — that seat is open again`;
+    // The third way (ADR-0162): they had agreed, and left the game. The same second clause,
+    // because it is the same news — and `people` names them, as it names a decliner.
+    if (departure === 'LEFT') return `${name} left — that seat is open again`;
     return OUT_OF_DATE_GAP;
   },
 

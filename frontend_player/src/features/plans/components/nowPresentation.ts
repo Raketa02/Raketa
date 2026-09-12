@@ -45,7 +45,8 @@
  * than draw a dotless tag in another.
  */
 
-import { gameStandingLine, type Game } from '@/features/games/types';
+import { gameStandingLine, openSeats, type Game } from '@/features/games/types';
+import { counted } from '@/shared/formatting/counted';
 import { durationLeft } from '@/shared/formatting/durations';
 import { theme, type ButtonVariant } from '@/shared/ui';
 import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
@@ -97,10 +98,14 @@ export const CARD_TAG: Readonly<Record<GameCardName, string | undefined>> = {
   'game-on': 'Game on',
   today: 'Today',
   'needs-result': 'Needs result',
+  // The fifth rung, above the clock (#411 rule 5): a seat somebody left, drawn empty on the
+  // court beside it. The errand and not the shape — the court says how many.
+  'needs-a-player': 'Needs a player',
   confirm: 'Confirm the result',
   counted: 'Counted',
   uncounted: 'Uncounted',
   'never-played': 'Never played',
+  'called-off': 'Called off',
   unreadable: undefined,
 };
 
@@ -111,20 +116,22 @@ export const CARD_TAG: Readonly<Record<GameCardName, string | undefined>> = {
  * 6.4 fixed the dot as *the sport's, and only the sport's*, on the argument that a token with two
  * meanings stops meaning either. That argument holds: the sport moved to a **word** in the header,
  * so on this card the dot has one meaning, and it is the stage's. Three colours for three facts —
- * `arranging` while the game is still in the players' hands (a plan to finish, a result to enter,
- * an answer owed), `mint` where it is settled (the plan complete, the day here, the score
- * counted), and the quiet hairline on the two endings nobody scored. A card with no tag has no
- * dot to colour.
+ * `arranging` while the game is still in the players' hands (a plan to finish, a seat to fill, a
+ * result to enter, an answer owed), `mint` where it is settled (the plan complete, the day here,
+ * the score counted), and the quiet hairline on the three endings nobody scored. A card with no tag
+ * has no dot to colour.
  */
 export const STAGE_DOT: Readonly<Record<GameCardName, string | undefined>> = {
   planning: theme.color.arranging,
   'game-on': theme.color.mint,
   today: theme.color.mint,
   'needs-result': theme.color.arranging,
+  'needs-a-player': theme.color.arranging,
   confirm: theme.color.arranging,
   counted: theme.color.mint,
   uncounted: theme.color.onDarkHair,
   'never-played': theme.color.onDarkHair,
+  'called-off': theme.color.onDarkHair,
   unreadable: undefined,
 };
 
@@ -150,10 +157,12 @@ const CARD_STATE_WORD: Readonly<Record<GameCardName, string | undefined>> = {
   'game-on': 'game on',
   today: 'today',
   'needs-result': 'needs result',
+  'needs-a-player': 'needs a player',
   confirm: 'confirm the result',
   counted: 'counted',
   uncounted: 'uncounted',
   'never-played': 'never played',
+  'called-off': 'called off',
   unreadable: undefined,
 };
 
@@ -200,10 +209,12 @@ export const ACCENT: Readonly<Record<GameCardName, CardAccent>> = {
   'game-on': { bar: theme.color.mint, button: 'settled' },
   today: { bar: theme.color.mint, button: 'settled' },
   'needs-result': { bar: theme.color.mint, button: 'settled' },
+  'needs-a-player': { bar: theme.color.mint, button: 'settled' },
   confirm: { bar: theme.color.mint, button: 'settled' },
   counted: { bar: theme.color.mint, button: 'settled' },
   uncounted: { bar: theme.color.mint, button: 'settled' },
   'never-played': { bar: theme.color.mint, button: 'settled' },
+  'called-off': { bar: theme.color.mint, button: 'settled' },
   unreadable: { bar: theme.color.mint, button: 'settled' },
 };
 
@@ -316,6 +327,9 @@ export const FINISH_THE_PLAN = 'Finish the plan';
 const DOOR_LABEL: Readonly<Record<GameCardName, string | undefined>> = {
   planning: FINISH_THE_PLAN,
   'game-on': 'Open',
+  // The same `open` door as *Game on*'s, under the same word, until #419 turns it into *Fill the
+  // seat*: the screen is where the seat is dealt with, and no dead door ships in the meantime.
+  'needs-a-player': 'Open',
   // *One act, one spelling* (§22.7). The screen behind this card draws the same verb on the arm
   // that leads with its plan, so the word is `shared/vocabulary/theActsWords.ts`' rather than
   // either feature's — the two of them reach each other at load time, and a word read across that
@@ -326,6 +340,7 @@ const DOOR_LABEL: Readonly<Record<GameCardName, string | undefined>> = {
   counted: undefined,
   uncounted: undefined,
   'never-played': undefined,
+  'called-off': undefined,
   unreadable: undefined,
 };
 
@@ -354,13 +369,30 @@ export function cardSlotSpoken(plan: Plan | undefined, slot: PlanSlot): string {
 }
 
 /**
- * The card, as one element: **the tag, the sport, the three slots as sentences, then the line.**
+ * **The gap in the court, said** — `An open seat` · `2 open seats` — and nothing on a full court.
+ *
+ * The court is drawn into a hidden subtree and the tag names the errand, so without this a
+ * listener would hear *Needs a player* and have no idea how short the court is. Counted from
+ * `openSeats`, the one definition of *open*; the singular is an article rather than a `1`,
+ * because this is a clause in prose and not a legend.
+ */
+export function openSeatsSpoken(game: Game): string | undefined {
+  const open = openSeats(game.seats).length;
+  if (open === 0) return undefined;
+
+  return open === 1 ? 'An open seat' : counted(open, 'open seat', 'open seats');
+}
+
+/**
+ * The card, as one element: **the tag, the sport, the open seat where there is one, the three
+ * slots as sentences, then the line.**
  *
  * §24.5 as amended by [#413](https://github.com/Raketa02/Raketa/issues/413). The **sport** is
  * named because a listener has no picture of the court in front of them, and it is what tells two
- * padel games in a week apart. **The door's verb is no longer part of this name**: the body is not
- * pressable, the two buttons are the only doors and each is an element of its own — so a name
- * ending in `Open` beside a button announcing `Open` would be the double announcement 6.8 refuses.
+ * padel games in a week apart — and the **open seat** is named for the same reason, one clause
+ * after it. **The door's verb is no longer part of this name**: the body is not pressable, the two
+ * buttons are the only doors and each is an element of its own — so a name ending in `Open`
+ * beside a button announcing `Open` would be the double announcement 6.8 refuses.
  *
  * The slots are spoken in the app's own order, read from `slots.ts` rather than restated here.
  */
@@ -377,6 +409,7 @@ export function gameCardLabel({
   return [
     CARD_TAG[name],
     sportSpoken(game, sportName),
+    openSeatsSpoken(game),
     ...PLAN_SLOTS.map((slot) => cardSlotSpoken(plan, slot)),
     cardLine(name, { game, plan, playerId }),
   ]

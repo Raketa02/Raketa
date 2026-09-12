@@ -37,18 +37,43 @@ function plan(over: Partial<Plan> = {}): Plan {
   return { gameId: GAME_ID, ...over };
 }
 
+/** The same court after the opponent left: their seat open, nobody in it. */
+const SHORT: Game['seats'] = [{ side: 'A', playerId: 'me', nickname: 'me' }, { side: 'B' }];
+
 describe('which card a game draws', () => {
   it('reads the ladder only while an entry is still awaited', () => {
     expect(gameCardName(game(), plan({ day: '2026-09-12' }))).toBe('today');
   });
 
-  it('names each of the four endings and never asks the plan about them', () => {
+  /**
+   * **The open seat outranks the clock** (#411 rule 5): a court somebody left is *Needs a
+   * player* on the agreed day and after the agreed point alike — and the server's own ending
+   * still wins, because a window that closed on a short court closed all the same.
+   */
+  it('is Needs a player while a seat is open, whatever the plan and the clock say', () => {
+    expect(gameCardName(game({ seats: SHORT }), undefined)).toBe('needs-a-player');
+    expect(gameCardName(game({ seats: SHORT }), plan({ day: '2026-09-12' }))).toBe(
+      'needs-a-player',
+    );
+    expect(
+      gameCardName(game({ seats: SHORT }), plan({ agreedPoint: '2026-09-11T18:00:00Z' })),
+    ).toBe('needs-a-player');
+  });
+
+  it('still lets the server’s Never played win over an open seat', () => {
+    expect(gameCardName(game({ seats: SHORT, standing: 'NEVER_PLAYED' }), undefined)).toBe(
+      'never-played',
+    );
+  });
+
+  it('names each of the endings and never asks the plan about them', () => {
     const today = plan({ day: '2026-09-12' });
 
     expect(gameCardName(game({ standing: 'AWAITING_ANSWER' }), today)).toBe('confirm');
     expect(gameCardName(game({ standing: 'CONFIRMED' }), today)).toBe('counted');
     expect(gameCardName(game({ standing: 'UNSCORED' }), today)).toBe('uncounted');
     expect(gameCardName(game({ standing: 'NEVER_PLAYED' }), today)).toBe('never-played');
+    expect(gameCardName(game({ standing: 'CALLED_OFF' }), today)).toBe('called-off');
   });
 
   /** An app that cannot say what a game is may not name a card after one of the states it knows. */
@@ -62,6 +87,7 @@ describe('which card a game draws', () => {
 describe('the door each card carries', () => {
   it('is §5.2’s table, and every name is in it', () => {
     expect(GAME_CARD_NAMES.map(doorOf)).toEqual([
+      'open',
       'we-played',
       'we-played',
       'open',
@@ -71,11 +97,18 @@ describe('the door each card carries', () => {
       undefined,
       undefined,
       undefined,
+      undefined,
     ]);
   });
 
-  it('offers nothing on the three endings and on the gap', () => {
-    for (const name of ['counted', 'uncounted', 'never-played', 'unreadable'] as const) {
+  it('offers nothing on the four endings and on the gap', () => {
+    for (const name of [
+      'counted',
+      'uncounted',
+      'never-played',
+      'called-off',
+      'unreadable',
+    ] as const) {
       expect(doorOf(name)).toBeUndefined();
     }
   });
@@ -140,15 +173,23 @@ describe('what the game screen’s entry arm leads with', () => {
    * than written beside it. Two tables would be two opinions about where one button goes.
    */
   it('is the plan while the moment is still ahead', () => {
-    expect(entryLeadOf(undefined, READ_AT)).toBe('the-plan');
+    expect(entryLeadOf(game(), undefined)).toBe('the-plan');
     expect(
-      entryLeadOf(plan({ place: 'Zabłocie Sport', day: '2026-09-19', hour: '18:00' }), READ_AT),
+      entryLeadOf(game(), plan({ place: 'Zabłocie Sport', day: '2026-09-19', hour: '18:00' })),
     ).toBe('the-plan');
   });
 
   it('is the score on the agreed day, and once the agreed point has passed', () => {
-    expect(entryLeadOf(plan({ day: '2026-09-12' }), READ_AT)).toBe('the-score');
-    expect(entryLeadOf(plan({ agreedPoint: '2026-09-11T18:00:00Z' }), READ_AT)).toBe('the-score');
+    expect(entryLeadOf(game(), plan({ day: '2026-09-12' }))).toBe('the-score');
+    expect(entryLeadOf(game(), plan({ agreedPoint: '2026-09-11T18:00:00Z' }))).toBe('the-score');
+  });
+
+  /** A seat open is not a score to enter: the plan leads, even past the agreed point. */
+  it('is the plan while a seat is open, whatever the clock says', () => {
+    expect(entryLeadOf(game({ seats: SHORT }), plan({ day: '2026-09-12' }))).toBe('the-plan');
+    expect(entryLeadOf(game({ seats: SHORT }), plan({ agreedPoint: '2026-09-11T18:00:00Z' }))).toBe(
+      'the-plan',
+    );
   });
 
   /** It cannot disagree with the card, because it is derived from it. */
@@ -160,10 +201,13 @@ describe('what the game screen’s entry arm leads with', () => {
       plan({ agreedPoint: '2026-09-11T18:00:00Z' }),
     ];
 
-    for (const one of rungs) {
-      const expected = doorOf(gameCardName(game(), one)) === 'we-played' ? 'the-score' : 'the-plan';
+    for (const court of [game(), game({ seats: SHORT })]) {
+      for (const one of rungs) {
+        const expected =
+          doorOf(gameCardName(court, one)) === 'we-played' ? 'the-score' : 'the-plan';
 
-      expect(entryLeadOf(one, READ_AT)).toBe(expected);
+        expect(entryLeadOf(court, one)).toBe(expected);
+      }
     }
   });
 });

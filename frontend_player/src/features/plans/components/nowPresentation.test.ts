@@ -42,6 +42,14 @@ const SINGLES_SEATS: Game['seats'] = [
   { side: 'B', playerId: 'them', nickname: 'tomek.p' },
 ];
 
+/** A doubles court after two people left: two seats open. */
+const TWO_SHORT: Game['seats'] = [
+  { side: 'A', playerId: 'me', nickname: 'me_' },
+  { side: 'A' },
+  { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+  { side: 'B' },
+];
+
 function game(over: Partial<Game> = {}): Game {
   return {
     gameId: GAME_ID,
@@ -83,7 +91,7 @@ describe('the tag', () => {
  */
 describe('the stage dot', () => {
   it('is the arranging colour where the players still owe the game something', () => {
-    for (const name of ['planning', 'needs-result', 'confirm'] as const) {
+    for (const name of ['planning', 'needs-a-player', 'needs-result', 'confirm'] as const) {
       expect(STAGE_DOT[name]).toBe(theme.color.arranging);
     }
   });
@@ -94,9 +102,10 @@ describe('the stage dot', () => {
     }
   });
 
-  it('is the quiet hairline on the two quiet endings, and nothing where there is no tag', () => {
+  it('is the quiet hairline on the three quiet endings, and nothing where there is no tag', () => {
     expect(STAGE_DOT.uncounted).toBe(theme.color.onDarkHair);
     expect(STAGE_DOT['never-played']).toBe(theme.color.onDarkHair);
+    expect(STAGE_DOT['called-off']).toBe(theme.color.onDarkHair);
     expect(STAGE_DOT.unreadable).toBeUndefined();
   });
 
@@ -138,6 +147,8 @@ describe('the card’s name in a line', () => {
     ['game-on', 'game on'],
     ['today', 'today'],
     ['needs-result', 'needs result'],
+    ['needs-a-player', 'needs a player'],
+    ['called-off', 'called off'],
   ] as const)('says %s as %s, in lower case', (name, word) => {
     expect(cardStateWord(name)).toBe(word);
   });
@@ -169,6 +180,13 @@ describe('the door’s word', () => {
     expect(doorLabel('today')).toBe(WE_PLAYED);
     expect(doorLabel('needs-result')).toBe(WE_PLAYED);
     expect(doorLabel('confirm')).toBe('Confirm the result');
+  });
+
+  /** `Open`, the same door as Game on's, until #419 makes it *Fill the seat* — no dead door. */
+  it('says Open on Needs a player, where the door is still the game screen', () => {
+    expect(CARD_TAG['needs-a-player']).toBe('Needs a player');
+    expect(doorLabel('needs-a-player')).toBe('Open');
+    expect(doorOf('needs-a-player')).toBe(doorOf('game-on'));
   });
 
   /** A word for a door the ladder does not carry would be a control the state cannot take. */
@@ -315,6 +333,44 @@ describe('what the card announces', () => {
     expect(said).toBe(
       `Counted. Padel. Where, Zabłocie Sport. Day, Friday 11 Sep. Time, 18:00. ${gameStandingLine(game({ standing: 'CONFIRMED' }), 'me')}`,
     );
+  });
+
+  /**
+   * **The court is hidden from a listener, so the gap in it is said** — one clause after the
+   * sport, counted, because *Needs a player* names the errand and not the shape of the court.
+   */
+  it('says the open seat on Needs a player, and how many when there are more', () => {
+    const one = gameCardLabel({
+      name: 'needs-a-player',
+      sportName: 'Padel',
+      game: game({ seats: [SINGLES_SEATS[0]!, { side: 'B' }] }),
+      plan: undefined,
+      playerId: 'me',
+    });
+    const two = gameCardLabel({
+      name: 'needs-a-player',
+      sportName: 'Padel',
+      game: game({ seats: TWO_SHORT }),
+      plan: undefined,
+      playerId: 'me',
+    });
+
+    expect(one).toBe(
+      'Needs a player. Padel. An open seat. Where, Not agreed yet. Day, Not agreed yet. Time, Not agreed yet.',
+    );
+    expect(two).toContain('Padel. 2 open seats. Where,');
+  });
+
+  it('says nothing about seats on a full court', () => {
+    const said = gameCardLabel({
+      name: 'planning',
+      sportName: 'Padel',
+      game: game(),
+      plan: undefined,
+      playerId: 'me',
+    });
+
+    expect(said).not.toMatch(/open seat/);
   });
 
   it('marks a friendly in the sport clause', () => {

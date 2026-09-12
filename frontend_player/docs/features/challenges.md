@@ -222,3 +222,42 @@ two are free to diverge, which is the point. What is **not** duplicated is the v
 words: `challengeDetailMappers` narrows against Play's own lists and produces Play's own domain
 objects, so a term or an evidence variant added to the contract reaches both features at once and
 the only thing spelled twice is the field renaming, which is what a mapper is.
+
+**A player can leave a game, and the act is this feature's even though the screen is not**
+([#418](https://github.com/Raketa02/Raketa/issues/418),
+[ADR-0162](../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)).
+`POST /challenges/{id}/departure` writes a fourth `SeatAnswer`, **`LEFT`**, over an accepted seat:
+the seat that reopens is the challenge's, so the fill, the pool, the pair rule and the room's line
+all keep the record they already have, and the game is told in the same transaction. `SEAT_ANSWERS`
+gains the value and **every table over the union gains a row** — `playersStillIn` now reads a
+`Record` rather than an `||` chain, because a fourth answer missing from a disjunction would have
+silently kept somebody in a game they had walked out of; `challengeDetail`'s `LEFT` table treats
+it as the other two, so the card block leaves with the person and the arm draws them as having
+left; and the reader's own seat reads **_You left. They are still filling the court._** on §13.1's
+shape, and _You left. They are still waiting on answers._ one row up, because a court somebody
+left can be asking its newcomer. **The control is `LeaveGame`, composed onto the game screen by
+`features/plans` through `types.ts`** — the shape `useChatDoors` already takes — because the
+departure is a challenge act reached from a game, and the words stay with the control: a deck of
+their own, `leaveGamePresentation.ts`, beside the surface that says them rather than rows in the
+challenge screen's. **Quiet, destructive, last, behind a sheet**: a `secondary` button reading
+`Leave this game` at the bottom of the plan lead, `Leaving…` while in flight, greyed under the
+amber note offline, and `LeaveSheet` in front of it on `WithdrawSheet`'s exact shape — _Before
+you leave_; _The others keep the game and can fill your seat._ / _You can't be asked back into
+this one._ / _This cannot be undone._; `Leave the game`; `Stay in` — reworded because a departure
+destroys nothing where a withdraw destroys the room, so the first line says what survives and the
+second the one cost that is the leaver's alone. **Pending, never optimistic, and
+`CHALLENGE_MUTATION_OPTIONS` spread whole**: a departure is dated exactly and guarded against the
+agreed moment, so one queued for a reconnect could land as a refusal nobody was there to read.
+`useLeaveGame` redraws the challenge detail from the reply as the withdraw does and **invalidates
+the games, the plans and the conversations** — lists the reply says nothing about, and the
+leaver's rail, plans and inbox all drop the game — so the card is gone from the rail because the
+server no longer lists it, not because the client removed it; `planKeys` is read from
+`features/plans` for that one line, because a hook that declares its cache effect declares all of
+it. Then the control goes `back`, whichever door the screen was opened by. **`actRefusal` gains
+the departure's three codes** — `not_a_game_yet`, `game_is_history`, `game_moment_has_passed` —
+all _re-read and say nothing_, and the re-read is the composer's games list rather than a detail
+this feature holds; `challenge_not_found` leaves the screen as before, and `account_held` is said
+in the sentence every write here says it with. **Whether the control is drawn is the composer's
+rule**: only while the agreed moment is ahead, mirroring `game_moment_has_passed` off the same
+instant rather than offering a control the act would refuse. The room's `SEAT_LEFT` line gains
+its third value — _{name} left — that seat is open again_ — one context over.

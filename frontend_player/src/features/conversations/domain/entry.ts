@@ -24,9 +24,11 @@
  * narrowing. Two of the eight are a code **plus** a value, and one is a code and nothing else:
  *
  * - **A seat leaving is one code with the answer as a value.** *That seat is open again* is the
- *   same news either way, so the two facts stay apart in `values.departure` rather than in a
- *   second code — and **a lapse is still not a decline**, which is §13's rule holding one layer
- *   down.
+ *   same news each way, so the facts stay apart in `values.departure` rather than in a second
+ *   code — and **a lapse is still not a decline**, which is §13's rule holding one layer down.
+ *   Since [ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)
+ *   there is a third value, `LEFT`: somebody leaving a game they had agreed to, which is neither
+ *   a no nor silence, and the one departure whose actor was a member until this very line.
  * - **The three slot codes each carry the value that was recorded** — the place as it was typed,
  *   the day as `YYYY-MM-DD`, the hour as `HH:MM`. Setting a slot and moving one are **one code
  *   told twice**, which is the opposite rule for the opposite case: they are the same fact, where
@@ -70,8 +72,8 @@ export const SYSTEM_LINE_CODES = [
 
 export type SystemLineCode = (typeof SYSTEM_LINE_CODES)[number];
 
-/** How a seat left. One code, two facts, and they are never told as one. */
-export const DEPARTURES = ['DECLINED', 'LAPSED'] as const;
+/** How a seat left. One code, three facts, and they are never told as one. */
+export const DEPARTURES = ['DECLINED', 'LAPSED', 'LEFT'] as const;
 
 export type Departure = (typeof DEPARTURES)[number];
 

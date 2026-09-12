@@ -24,12 +24,12 @@
 
 import type { EntryLead, Game } from '@/features/games/types';
 
-import { RUNGS, rungOf } from './ladder';
+import { RUNGS, rungOf, type CourtRead } from './ladder';
 import type { Plan } from './slots';
 
 /**
  * Every card the Now rail can draw, in the order the rungs are read and the endings arrive: the
- * four rungs, the argument, the three endings, and the gap.
+ * five rungs, the argument, the four endings, and the gap.
  *
  * **`confirm` is one name over four arms.** §5.2 lists *Confirm the result* four times because
  * `GameScreen` has four `AWAITING_ANSWER` arms behind it; the card is the same card in all four,
@@ -42,6 +42,9 @@ export const GAME_CARD_NAMES = [
   'counted',
   'uncounted',
   'never-played',
+  // The fourth end (ADR-0163). Its own look and its shelf life are #419's; the name is what
+  // the contract's `CALLED_OFF` demands of every table below.
+  'called-off',
   'unreadable',
 ] as const;
 
@@ -79,7 +82,7 @@ export function gameCardName(game: Game, plan: Plan | undefined): GameCardName {
 
   switch (game.standing) {
     case 'AWAITING_ENTRY':
-      return rungOf(plan, game.readAt);
+      return rungOf(plan, game);
     case 'AWAITING_ANSWER':
       return 'confirm';
     case 'CONFIRMED':
@@ -88,6 +91,8 @@ export function gameCardName(game: Game, plan: Plan | undefined): GameCardName {
       return 'uncounted';
     case 'NEVER_PLAYED':
       return 'never-played';
+    case 'CALLED_OFF':
+      return 'called-off';
   }
 }
 
@@ -101,6 +106,9 @@ const DOOR: Readonly<Record<GameCardName, GameDoor | undefined>> = {
   // The plan is read on the screen, so the two planning rungs open it and say so.
   planning: 'open',
   'game-on': 'open',
+  // The plan survives a departure (#411 rule 6) and the screen is where the seat is dealt with.
+  // `open` until #419 turns this door into *Fill the seat* — no dead door ships.
+  'needs-a-player': 'open',
   // *We played* is available in every `AWAITING_ENTRY` arm; these are the two that lead with it.
   today: 'we-played',
   'needs-result': 'we-played',
@@ -108,6 +116,7 @@ const DOOR: Readonly<Record<GameCardName, GameDoor | undefined>> = {
   counted: undefined,
   uncounted: undefined,
   'never-played': undefined,
+  'called-off': undefined,
   unreadable: undefined,
 };
 
@@ -130,8 +139,8 @@ export function doorOf(name: GameCardName): GameDoor | undefined {
  * ([`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §3.3 —
  * *"every surface reads it … and the game screen's arm"*).
  */
-export function entryLeadOf(plan: Plan | undefined, readAt: string): EntryLead {
-  return doorOf(rungOf(plan, readAt)) === 'we-played' ? 'the-score' : 'the-plan';
+export function entryLeadOf(court: CourtRead, plan: Plan | undefined): EntryLead {
+  return doorOf(rungOf(plan, court)) === 'we-played' ? 'the-score' : 'the-plan';
 }
 
 /**

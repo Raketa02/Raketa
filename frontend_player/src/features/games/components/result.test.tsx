@@ -303,7 +303,7 @@ describe('entering a result', () => {
     await openGame(game());
 
     const said = standingLine(
-      { kind: 'awaiting-entry', entryClosesAt: '2026-09-09T09:00:00Z' },
+      { kind: 'awaiting-entry', entryClosesAt: '2026-09-09T09:00:00Z', seatOpen: false },
       READ_AT,
     );
 

@@ -31,6 +31,7 @@ import {
   setLabel,
   sideLabels,
   spokenScore,
+  resultTitle,
   standingLine,
   worthLine,
 } from './gamePresentation';
@@ -124,15 +125,21 @@ describe('silence confirming, which has to be visible before it happens', () => 
 
   it('names the entry window too, so a game does not quietly become a ghost', () => {
     const line = standingLine(
-      { kind: 'awaiting-entry', entryClosesAt: '2026-09-08T09:00:00Z' },
+      { kind: 'awaiting-entry', entryClosesAt: '2026-09-08T09:00:00Z', seatOpen: false },
       READ_AT,
     );
 
     expect(line).toContain('3 days');
   });
 
+  /** The two words #419 §3 and ADR-0163 fix, and nothing beside them until that ticket. */
+  it('says a called-off game was called off, and names nobody', () => {
+    expect(resultTitle({ kind: 'called-off' })).toBe('It was called off');
+    expect(standingLine({ kind: 'called-off' }, READ_AT)).toBe('Called off');
+  });
+
   it('drops the clause rather than inventing a deadline when the wire sent none', () => {
-    expect(standingLine({ kind: 'awaiting-entry' }, READ_AT)).toBe(
+    expect(standingLine({ kind: 'awaiting-entry', seatOpen: false }, READ_AT)).toBe(
       'Nobody has said this one happened yet.',
     );
   });
@@ -215,7 +222,10 @@ describe('the clock, which is how silence is made visible', () => {
 
   it('runs on the entry window too, so a game does not quietly become a ghost', () => {
     expect(
-      clockLine({ kind: 'awaiting-entry', entryClosesAt: '2026-09-08T09:00:00Z' }, READ_AT)?.figure,
+      clockLine(
+        { kind: 'awaiting-entry', entryClosesAt: '2026-09-08T09:00:00Z', seatOpen: false },
+        READ_AT,
+      )?.figure,
     ).toBe('3 days');
   });
 

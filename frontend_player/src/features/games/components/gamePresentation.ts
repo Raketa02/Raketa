@@ -202,6 +202,10 @@ export function standingLine(argument: ResultArgument, readAt: string): string {
         : `Nobody has said this one happened yet — ${durationLeft(argument.entryClosesAt, readAt)} left to say you played.`;
     case 'never-played':
       return 'Nobody said this one happened before the window closed, so nothing was recorded.';
+    case 'called-off':
+      // #419 §3's own gloss, and nothing invented beside it until that ticket draws the ending:
+      // it names nobody, because `called_off_by` is on no wire (ADR-0163).
+      return 'Called off';
     case 'ours-stands':
       return `Your side's score is on the table. If nobody answers within ${durationLeft(argument.proposal.answerBy, readAt)}, it stands.`;
     case 'theirs-stands':
@@ -246,6 +250,8 @@ export function resultTitle(argument: ResultArgument): string {
       return 'The score';
     case 'never-played':
       return 'It never happened';
+    case 'called-off':
+      return 'It was called off';
     case 'ours-stands':
       return 'Sent — waiting';
     case 'theirs-stands':
@@ -372,6 +378,8 @@ export function resultBody(argument: ResultArgument): string | undefined {
     case 'not-yours':
     case 'unreadable':
     case 'confirmed':
+    // The ending's own screen is #419's; until then the title and the gloss are the whole of it.
+    case 'called-off':
       return undefined;
   }
 }
@@ -725,6 +733,14 @@ export const PLAYERS_FOOTER =
 
 /** The players card's eyebrow. Stored as words, drawn uppercase — `BALANCE_FORECAST`'s rule. */
 export const PLAYERS = 'Players';
+
+/**
+ * **The row for a seat somebody left** (ADR-0162, #411 rule 6) — the words where a handle would
+ * be, an empty face beside them, no level row, and nothing to press: there is no record to open
+ * for nobody. The seat is drawn rather than dropped, because a players card that listed three
+ * people on a doubles court would be describing a different game.
+ */
+export const OPEN_SEAT = 'Open seat';
 
 /**
  * Who a row is about: the handle where the account still has one, and whether it is yours.

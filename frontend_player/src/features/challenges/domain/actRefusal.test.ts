@@ -34,6 +34,11 @@ const READ_IT_BACK = [
   // the builder.
   'fill_is_the_live_members',
   'challenge_is_over',
+  // The departure's (ADR-0162): this court was never a game, the game has happened or never
+  // will, and the agreed moment has passed under the finger.
+  'not_a_game_yet',
+  'game_is_history',
+  'game_moment_has_passed',
 ];
 
 describe('a refused act', () => {

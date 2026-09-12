@@ -197,6 +197,27 @@ describe('a code this build has never seen', () => {
     ]);
   });
 
+  /**
+   * **An open seat is a seat** (ADR-0162): somebody left the game and nobody has filled it, so
+   * `player_id` is `null` and the seat keeps its place and its side. Dropping it would publish a
+   * three-person doubles game; dropping the game would take a live court off the rail.
+   */
+  it('keeps a seat somebody has left, with nobody in it', () => {
+    const [game] = toGames({
+      read_at: READ_AT,
+      games: [
+        wireGame({
+          seats: [
+            { side: 'A', player_id: 'me', nickname: 'me_' },
+            { side: 'B', player_id: null, nickname: null },
+          ],
+        }),
+      ],
+    });
+
+    expect(game?.seats).toEqual([{ side: 'A', playerId: 'me', nickname: 'me_' }, { side: 'B' }]);
+  });
+
   it('drops a game whose court it cannot place somebody on', () => {
     const games = toGames({
       read_at: READ_AT,

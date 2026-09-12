@@ -26,6 +26,15 @@
  * **Your side first — you, then your partner — then the other side** (`courtForReader`): a list
  * of people is read from the reader outward, whatever order the challenge seated the court in.
  *
+ * ## An open seat is a row with nobody in it
+ *
+ * A seat somebody left is still a seat (ADR-0162, #411 rule 6), so it keeps its row in the
+ * reader's order: an empty face — `SeatFace`'s `empty` occupant under Play's dashed ring, the
+ * same drawing the Now card's court uses for it — the words `Open seat` where the handle would
+ * be, no level row (the pairing names whoever holds a rating, and nobody holds this seat), and
+ * **not a button**: there is no record to open for nobody, and a row that could be pressed
+ * would promise one. It is one plain element, named by its own words.
+ *
  * ## The face is the room's, and it is the Chats row's size
  *
  * A game's seat carries no photograph, so the face comes off the same join the Now card above
@@ -61,6 +70,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { SeatFace } from '@/features/play/types';
 import { PlayerRecordSheet, type RecordSubject } from '@/features/player_record/types';
 import { Card, PlayerPhoto, theme } from '@/shared/ui';
 
@@ -68,6 +78,7 @@ import type { Game, GameSeat } from '../domain/game';
 import { courtForReader, type Pairing } from '../domain/pairing';
 
 import {
+  OPEN_SEAT,
   PLAYERS,
   PLAYERS_FOOTER,
   playerRowName,
@@ -112,32 +123,44 @@ export function PlayersCard({ game, playerId, pairing, faces }: PlayersCardProps
       </Text>
 
       <View style={s.rows}>
-        {rows.map((seat) => {
+        {rows.map((seat, at) => {
+          if (seat.playerId === undefined) {
+            // Keyed by its place in the reader's order: two people may leave, and neither seat
+            // has an id to key on.
+            return (
+              <View key={`open-${at}`} style={s.row} accessible accessibilityLabel={OPEN_SEAT}>
+                <SeatFace size={FACE} occupant={{ kind: 'empty' }} ring="empty" />
+                <View style={s.words}>
+                  <Text style={s.handle} numberOfLines={1}>
+                    {OPEN_SEAT}
+                  </Text>
+                </View>
+              </View>
+            );
+          }
+
+          const { playerId: who } = seat;
           const person = {
             ...(seat.nickname === undefined ? {} : { nickname: seat.nickname }),
-            yours: seat.playerId === playerId,
+            yours: who === playerId,
           };
           const row = pairingRowOf(seat);
           const line = row === undefined ? undefined : seatLevelLine(row);
 
           return (
             <Pressable
-              key={seat.playerId}
+              key={who}
               accessibilityRole="button"
               accessibilityLabel={recordLabel(person)}
               {...(line === undefined ? {} : { accessibilityHint: line })}
-              onPress={() =>
-                setReading({ kind: person.yours ? 'me' : 'player', playerId: seat.playerId })
-              }
+              onPress={() => setReading({ kind: person.yours ? 'me' : 'player', playerId: who })}
               hitSlop={theme.hit.peopleRow}
               // 6.6: the row is the target, so the row dims — the tick-box row's rule.
               style={({ pressed }) => [s.row, pressed ? s.rowPressed : undefined]}
             >
               <PlayerPhoto
-                playerId={seat.playerId}
-                {...(faces.get(seat.playerId) === undefined
-                  ? {}
-                  : { photoUrl: faces.get(seat.playerId) })}
+                playerId={who}
+                {...(faces.get(who) === undefined ? {} : { photoUrl: faces.get(who) })}
                 box={{ kind: 'face', size: FACE }}
               />
               <View style={s.words}>

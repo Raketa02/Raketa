@@ -1,7 +1,7 @@
 /**
  * The words `games` is spoken to this app in — **codes, and never sentences**.
  *
- * Five of them are a standing, two are what kind of evening it was, two are a side of the net
+ * Six of them are a standing, two are what kind of evening it was, two are a side of the net
  * and two are what a confirmed result says about you. Every one is the backend's own vocabulary
  * ([ADR-0022](../../../../../docs/adr/0022-kernel-negative-space-and-constant-homes.md)), and
  * the words for them are this feature's — `components/gamePresentation.ts` and nowhere else.
@@ -17,14 +17,19 @@
 /**
  * What a game is at the instant it was read.
  *
- * **Derived from the record and the clock and never stored**, which is why there are five of
+ * **Derived from the record and the clock and never stored**, which is why there are six of
  * them and not a status column: a game whose entry window ran out reads as never played whether
  * or not anything has swept it, *because nothing sweeps it*
  * ([ADR-0137](../../../../../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md) §2).
- * Three are ends and two are waits, and the client may not fold a sixth.
+ * Four are ends and two are waits, and the client may not fold a seventh. **`CALLED_OFF` is the
+ * fourth end** ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)):
+ * an act rather than a fold — somebody ended a game a seat had been left on — and neither an
+ * evening nor a ghost, so nothing anybody is measured on moves. Its card and its shelf life are
+ * [#419](https://github.com/Raketa02/Raketa/issues/419)'s; what is here is the word the contract
+ * demands.
  */
 export type GameStanding =
-  'AWAITING_ENTRY' | 'NEVER_PLAYED' | 'AWAITING_ANSWER' | 'CONFIRMED' | 'UNSCORED';
+  'AWAITING_ENTRY' | 'NEVER_PLAYED' | 'AWAITING_ANSWER' | 'CONFIRMED' | 'UNSCORED' | 'CALLED_OFF';
 
 /**
  * Whether this evening is evidence.

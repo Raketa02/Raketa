@@ -35,6 +35,17 @@
  * other three, and *which one is you* is the ring's to say — the court decides the ring, as it
  * always has.
  *
+ * ## An open seat is drawn empty, and it is the builder's empty seat
+ *
+ * A seat somebody left is a seat — `player_id: null`, never dropped
+ * ([ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md))
+ * — so the court keeps its size and the gap is drawn where the person was: `SeatFace`'s `empty`
+ * occupant under the dashed `empty` ring `CourtBuild` draws for a seat nobody is in, with no plus
+ * (nothing here is pressable), no caption (there is no handle to cut) and no `yours` ring (it is
+ * nobody's). `CourtMini` draws an unfilled seat as nothing at all, and the reason does not
+ * transfer: that court's summary says how many seats are filled, and this one's card names the
+ * errand — *Needs a player* — and draws the seat the errand is about.
+ *
  * ## No sport caption on the ground
  *
  * The court used to carry the sport's name in its bottom band, because a tag's dot was the
@@ -75,28 +86,36 @@ export function GameCourt({ sport, seats, playerId, faces, summary }: GameCourtP
       importantForAccessibility="no-hide-descendants"
     >
       <Court sport={sport} width={theme.size.court.card} summary={summary}>
-        {seats.map((seat) => (
-          // Every seat is a child, so the wrapper is the seat's slot and the caption hangs off it.
-          <View key={seat.playerId} style={seatBox(size)}>
-            <SeatFace
-              size={size}
-              occupant={{
-                kind: 'player',
-                playerId: seat.playerId,
-                photoUrl: faces.get(seat.playerId),
-              }}
-              ring={seat.playerId === playerId ? 'yours' : 'seated'}
-            />
-            <SeatCaption
-              size={size}
-              name={playerName(
-                seat.nickname === undefined
-                  ? { kind: 'unknown' }
-                  : { kind: 'player', nickname: seat.nickname },
-              )}
-            />
-          </View>
-        ))}
+        {seats.map((seat, at) =>
+          seat.playerId === undefined ? (
+            // The open seat: a dashed outline where the person was, and nothing in it. Keyed by
+            // its place on the court, because two people may leave and neither seat has an id.
+            <View key={`open-${at}`} style={seatBox(size)}>
+              <SeatFace size={size} occupant={{ kind: 'empty' }} ring="empty" />
+            </View>
+          ) : (
+            // Every seat is a child, so the wrapper is the seat's slot and the caption hangs off it.
+            <View key={seat.playerId} style={seatBox(size)}>
+              <SeatFace
+                size={size}
+                occupant={{
+                  kind: 'player',
+                  playerId: seat.playerId,
+                  photoUrl: faces.get(seat.playerId),
+                }}
+                ring={seat.playerId === playerId ? 'yours' : 'seated'}
+              />
+              <SeatCaption
+                size={size}
+                name={playerName(
+                  seat.nickname === undefined
+                    ? { kind: 'unknown' }
+                    : { kind: 'player', nickname: seat.nickname },
+                )}
+              />
+            </View>
+          ),
+        )}
       </Court>
     </View>
   );

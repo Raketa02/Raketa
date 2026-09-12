@@ -79,7 +79,24 @@ import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 
 import { standingFactsFor, type Challenge } from '../domain/challenge';
 import { yourAnswerBy } from '../domain/challengeInbox';
-import type { StandingFacts } from '../domain/standing';
+import type { SeatAnswer, StandingFacts } from '../domain/standing';
+
+/**
+ * **The first clause for a reader who has given their seat up** — §13.1's three ways out, keyed
+ * by every answer but the one that keeps a seat, so a fourth way added to the contract fails to
+ * compile here rather than falling through to *You're in*. The second clause is the standing's
+ * and the same for all three: what they did is the whole of what they are told.
+ */
+const GAVE_UP: Readonly<Record<Exclude<SeatAnswer, 'ACCEPTED'>, string>> = {
+  DECLINED: 'You said no.',
+  LAPSED: 'Your day ran out.',
+  // The third way out (ADR-0162): they left the game this court had become.
+  LEFT: 'You left.',
+};
+
+function gaveUp(answer: SeatAnswer | undefined): string | undefined {
+  return answer === undefined || answer === 'ACCEPTED' ? undefined : GAVE_UP[answer];
+}
 
 export function standingLine(facts: StandingFacts): string {
   const organiser = facts.side === 'organiser';
@@ -89,11 +106,10 @@ export function standingLine(facts: StandingFacts): string {
       const waiting = `Waiting on ${counted(facts.awaiting, 'answer', 'answers')}`;
       if (organiser) return waiting;
 
-      // §13.2. The two who have left are told that it continues and nothing about its shape —
+      // §13.2. The ones who have left are told that it continues and nothing about its shape —
       // §13.1's rule, and `They` is the people still on the court in both places.
-      if (facts.ownAnswer === 'DECLINED') return 'You said no. They are still waiting on answers.';
-      if (facts.ownAnswer === 'LAPSED')
-        return 'Your day ran out. They are still waiting on answers.';
+      const gone = gaveUp(facts.ownAnswer);
+      if (gone !== undefined) return `${gone} They are still waiting on answers.`;
 
       // The reader who is in gets §13's `LINE_UP_INCOMPLETE` shape with one clause swapped, and
       // the clause is the organiser's own sentence — so both sides print one `awaiting` and
@@ -113,9 +129,8 @@ export function standingLine(facts: StandingFacts): string {
 
       // §13.1. `They are still filling the court` and never a count: a reader who has left is
       // not told who is on it.
-      if (facts.ownAnswer === 'DECLINED') return 'You said no. They are still filling the court.';
-      if (facts.ownAnswer === 'LAPSED')
-        return 'Your day ran out. They are still filling the court.';
+      const gone = gaveUp(facts.ownAnswer);
+      if (gone !== undefined) return `${gone} They are still filling the court.`;
       return `You're in. ${open}, and the chat is already open`;
     }
     case 'DECLINED':

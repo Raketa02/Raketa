@@ -55,6 +55,7 @@ const STANDINGS: Readonly<Record<GameStanding, true>> = {
   AWAITING_ANSWER: true,
   CONFIRMED: true,
   UNSCORED: true,
+  CALLED_OFF: true,
 };
 
 const KINDS: Readonly<Record<GameKind, true>> = { COUNTED: true, FRIENDLY: true };
@@ -84,13 +85,22 @@ function toScore(wire: ScoreSchema): Score {
  * **A missing handle is not a missing seat.** `null` here is an account `users` no longer has,
  * and the seat keeps its place: dropping it would draw a three-person doubles game. It collapses
  * to absent like every other optional in this file, and the screen draws the unknown player.
+ *
+ * **And a missing player is not a missing seat either** (ADR-0162): `player_id: null` is a seat
+ * somebody has left and nobody has filled, and it keeps its place and its side. It collapses to
+ * absent the same way, and the screens draw it open.
  */
 function toSeat(wire: SeatingSchema): GameSeat | undefined {
   const side = member(SIDES, wire.side);
   if (side === undefined) return undefined;
 
+  const playerId = wire.player_id ?? undefined;
   const nickname = wire.nickname ?? undefined;
-  return { side, playerId: wire.player_id, ...(nickname === undefined ? {} : { nickname }) };
+  return {
+    side,
+    ...(playerId === undefined ? {} : { playerId }),
+    ...(nickname === undefined ? {} : { nickname }),
+  };
 }
 
 function toStandingProposal(wire: StandingProposalSchema): StandingProposal | undefined {

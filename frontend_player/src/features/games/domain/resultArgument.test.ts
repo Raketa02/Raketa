@@ -77,8 +77,35 @@ describe('before anybody has said it happened', () => {
   it('offers the entry, and says when saying so stops being possible', () => {
     const argument = resultArgument(game(), ME);
 
-    expect(argument).toEqual({ kind: 'awaiting-entry', entryClosesAt: '2026-09-09T18:00:00Z' });
+    expect(argument).toEqual({
+      kind: 'awaiting-entry',
+      entryClosesAt: '2026-09-09T18:00:00Z',
+      seatOpen: false,
+    });
     expect(actsOffered(argument)).toEqual(['enter']);
+  });
+
+  /**
+   * **We played is withheld while a seat is open** (#411 rule 5): the server refuses a result on
+   * a short court, and a game with a gap in it is not one anybody could have played.
+   */
+  it('offers no entry while a seat somebody left is still open', () => {
+    const short = game({
+      seats: [
+        { side: 'A', playerId: ME, nickname: 'me_' },
+        { side: 'A', playerId: PARTNER, nickname: 'kasia_w' },
+        { side: 'B', playerId: OPPONENT, nickname: 'tomek.p' },
+        { side: 'B' },
+      ],
+    });
+    const argument = resultArgument(short, ME);
+
+    expect(argument).toEqual({
+      kind: 'awaiting-entry',
+      entryClosesAt: '2026-09-09T18:00:00Z',
+      seatOpen: true,
+    });
+    expect(actsOffered(argument)).toEqual([]);
   });
 
   it('offers it to anybody who held a seat, which is all four of them', () => {
@@ -89,6 +116,14 @@ describe('before anybody has said it happened', () => {
     const argument = resultArgument(game({ standing: 'NEVER_PLAYED' }), ME);
 
     expect(argument).toEqual({ kind: 'never-played' });
+    expect(actsOffered(argument)).toEqual([]);
+  });
+
+  /** The fourth end (ADR-0163): somebody ended it, and nothing anybody is measured on moves. */
+  it('offers nothing once the game has been called off', () => {
+    const argument = resultArgument(game({ standing: 'CALLED_OFF' }), ME);
+
+    expect(argument).toEqual({ kind: 'called-off' });
     expect(actsOffered(argument)).toEqual([]);
   });
 });

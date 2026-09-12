@@ -6,6 +6,7 @@
  * where a value this build cannot read has to leave a named gap rather than a guess.
  */
 
+import { cardStateWord } from '@/features/plans/types';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 
 import type { SystemLine } from '../domain/entry';
@@ -52,14 +53,19 @@ describe('the eight sentences', () => {
     expect(said({ code: 'GAME_PLAYED' })).toBe('tomek.p said you played');
   });
 
-  /** One code, two facts. A lapse is not a decline, and the second clause is the same news. */
-  it('keeps a decline and a lapse apart, and says the same thing about the seat', () => {
+  /**
+   * One code, three facts. A lapse is not a decline, and since ADR-0162 leaving a game you had
+   * agreed to is neither — the second clause is the same news each way.
+   */
+  it('keeps a decline, a lapse and a departure apart, and says the same thing about the seat', () => {
     const declined = said({ code: 'SEAT_LEFT', values: { departure: 'DECLINED' } });
     const lapsed = said({ code: 'SEAT_LEFT', values: { departure: 'LAPSED' } });
+    const left = said({ code: 'SEAT_LEFT', values: { departure: 'LEFT' } });
 
     expect(declined).toBe('tomek.p said no — that seat is open again');
     expect(lapsed).toBe("tomek.p's day ran out — that seat is open again");
-    expect(declined).not.toBe(lapsed);
+    expect(left).toBe('tomek.p left — that seat is open again');
+    expect(new Set([declined, lapsed, left]).size).toBe(3);
   });
 
   it('names the three plan slots by what they are, and the day as a weekday', () => {
@@ -274,6 +280,11 @@ describe('the header’s title line', () => {
 describe('the header’s second line', () => {
   it('is the sport and the game’s state, lower case, where there is a game', () => {
     expect(headerSubline('Padel', 'planning')).toBe('Padel · planning');
+  });
+
+  /** The fifth rung reaches the header through the same word table as the other four. */
+  it('says needs a player on a court somebody left', () => {
+    expect(headerSubline('Padel', cardStateWord('needs-a-player'))).toBe('Padel · needs a player');
   });
 
   /** A `LINE_UP_INCOMPLETE` room has no game and no plan, and no state is invented for it. */

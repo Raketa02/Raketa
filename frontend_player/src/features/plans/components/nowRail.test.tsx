@@ -455,6 +455,56 @@ describe('every other name, on the same shell', () => {
   });
 });
 
+/**
+ * **The fifth rung, above the clock** (#411 rule 5, ADR-0162): a seat somebody left is drawn
+ * empty on the court, the tag says what is needed, the door is *Game on*'s `Open` until #419
+ * turns it into *Fill the seat*, and a listener — who cannot see the court — is told the gap.
+ */
+describe('Needs a player', () => {
+  const SHORT: Wire['GameSchema']['seats'] = [
+    { side: 'A', player_id: ME, nickname: 'me_' },
+    { side: 'B', player_id: null, nickname: null },
+  ];
+
+  /** A plan whose agreed point has passed — the clock says *Needs result*, and loses. */
+  const PASSED = plan({
+    place: 'Zabłocie Sport',
+    day: '2026-09-11',
+    hour: '20:00',
+    agreed_point: '2026-09-11T18:00:00Z',
+  });
+
+  it('draws its tag above the clock, and Open as its door', async () => {
+    await landOnNow({ games: [game({ seats: SHORT })], plans: [PASSED] });
+
+    expect(await screen.findByText(CARD_TAG['needs-a-player']!)).toBeTruthy();
+    expect(screen.queryByText(CARD_TAG['needs-result']!)).toBeNull();
+    expect(screen.getByRole('button', { name: doorLabel('needs-a-player')! })).toBeTruthy();
+    expect(screen.queryByText(/left to say you played/)).toBeNull();
+  });
+
+  it('draws the open seat empty — no face, no letters — and the rest of the court as it was', async () => {
+    await landOnNow({ games: [game({ seats: SHORT })] });
+
+    await theCard();
+    const drawn = { includeHiddenElements: true };
+
+    expect(screen.getByText('me_'.slice(0, SEAT_NAME_LETTERS), drawn)).toBeTruthy();
+    expect(screen.queryByText('?', drawn)).toBeNull();
+    // The empty seat is the builder's own drawing of one — a dashed outline and nothing in it.
+    const dashed = screen
+      .UNSAFE_getAllByType(View)
+      .filter((box) => StyleSheet.flatten(box.props.style as ViewStyle)?.borderStyle === 'dashed');
+    expect(dashed).toHaveLength(1);
+  });
+
+  it('says the open seat aloud, because the court is not read', async () => {
+    await landOnNow({ games: [game({ seats: SHORT })] });
+
+    expect(await screen.findByLabelText(/^Needs a player\. Padel\. An open seat\./)).toBeTruthy();
+  });
+});
+
 describe('the court', () => {
   /** The ring is the mark; the caption is the handle's first letters on every seat, yours too. */
   it('captions your own seat with three letters of your handle, never with you', async () => {

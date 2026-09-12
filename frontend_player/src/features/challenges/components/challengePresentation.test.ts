@@ -104,13 +104,15 @@ describe('an invitee who has already answered is not the wait', () => {
     );
   });
 
-  it('keeps its own first clause for each of the two who have left', () => {
+  it('keeps its own first clause for each of the three who have left', () => {
     expect(standingLine(invitee('DECLINED'))).toBe(
       'You said no. They are still waiting on answers.',
     );
     expect(standingLine(invitee('LAPSED'))).toBe(
       'Your day ran out. They are still waiting on answers.',
     );
+    // A re-seated court asking its newcomer: the one who left reads what they did (ADR-0162).
+    expect(standingLine(invitee('LEFT'))).toBe('You left. They are still waiting on answers.');
   });
 
   /**
@@ -268,10 +270,22 @@ describe('an invitee who has left a challenge that has not', () => {
         ownAnswer: 'LAPSED',
       }),
     ).toBe('Your day ran out. They are still filling the court.');
+
+    // The third way out (ADR-0162): they left the game the court had become, and the court is
+    // half built again. The same second clause, because it is the same news.
+    expect(
+      standingLine({
+        side: 'invitee',
+        standing: 'LINE_UP_INCOMPLETE',
+        accepted: 2,
+        open: 2,
+        ownAnswer: 'LEFT',
+      }),
+    ).toBe('You left. They are still filling the court.');
   });
 
   it('never tells them how many are in, because that court is no longer theirs to be told', () => {
-    for (const ownAnswer of ['DECLINED', 'LAPSED'] as const) {
+    for (const ownAnswer of ['DECLINED', 'LAPSED', 'LEFT'] as const) {
       const line = standingLine({
         side: 'invitee',
         standing: 'LINE_UP_INCOMPLETE',

@@ -38,7 +38,13 @@
 import type { NamedPlayer } from '@/shared/formatting/playerName';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { ChallengeSide, SeatAnswer, Standing, StandingFacts } from './standing';
+import {
+  GIVES_UP_THE_SEAT,
+  type ChallengeSide,
+  type SeatAnswer,
+  type Standing,
+  type StandingFacts,
+} from './standing';
 
 /** One seat of a challenge: who is in it, what they did about being asked, and by when. */
 export interface ChallengeSeat {
@@ -132,16 +138,19 @@ export function challengeStands(challenge: Challenge): boolean {
 }
 
 /**
- * Everybody still in this game: an occupied seat that has neither declined nor lapsed.
+ * Everybody still in this game: an occupied seat that has neither declined, lapsed nor left.
  *
  * Empty on an ended challenge, which is the whole of *the pair releases when the challenge
- * does* — stated here rather than left to each caller to remember.
+ * does* — stated here rather than left to each caller to remember. Which answers give a seat up
+ * is the vocabulary's own table, `GIVES_UP_THE_SEAT`, for the reason it gives: the pair rule is
+ * what stops somebody being invited into a refusal, and a fourth answer missing from an `||`
+ * chain here would silently have kept somebody in a game they had walked out of.
  */
 export function playersStillIn(challenge: Challenge): readonly string[] {
   if (!challengeStands(challenge)) return [];
 
   return challenge.seats.flatMap((seat) =>
-    seat.playerId === undefined || seat.answer === 'DECLINED' || seat.answer === 'LAPSED'
+    seat.playerId === undefined || (seat.answer !== undefined && GIVES_UP_THE_SEAT[seat.answer])
       ? []
       : [seat.playerId],
   );

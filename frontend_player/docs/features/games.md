@@ -189,3 +189,33 @@ stands behind this screen — and the footer says _tap_ because #285's argument 
 honoured rather than reversed: the route the hold never offered is the one that exists.
 `gamePlan.test.tsx`'s refusal is inverted: the plan lead draws both blocks, and the score lead
 still draws neither and never asks.
+
+**A seat can be open, and the game survives it** ([#418](https://github.com/Raketa02/Raketa/issues/418),
+[ADR-0162](../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)).
+`GameSeat.playerId` is optional — absent on a seat somebody left and nobody has filled — and
+`openSeats` in `domain/game.ts` is the one definition of _open_ that the card, the screen's acts
+and the spoken label read. **_We played_ is withheld while a seat is open**, and it is the
+domain's answer rather than the screen's: the `awaiting-entry` arm folds `seatOpen` off the court,
+and `actsOffered` returns no `enter` while it is true, because the server refuses a result on a
+short court and a game with a gap in it is not one anybody could have played. Nothing else on the
+arm changes — the score lead cannot be reached with an open seat, since the rung outranks the
+clock. **The players card draws the seat as an `Open seat` row** — an empty face (`SeatFace`'s
+`empty` occupant under Play's dashed ring, the same drawing the Now card's court uses), the words
+where the handle would be, no level row (the pairing names whoever holds a rating, and nobody
+holds this seat), and **not a button**, because there is no record to open for nobody; it is one
+plain element named by its own words, in the reader's order like the rest. **The forecast block
+is absent because the pairing omits it** — #416 serves no forecast, split or stakes while a seat
+is open, and the block is drawn off the pairing alone; nothing special-cases the seat, and
+`gameScreenPlanLead.test.tsx` walks the whole composition to say so. `othersOn` skips an open
+seat — a sentence _with X and Y_ names the people on the court, never a `?` for the gap — and
+`RatedSeat` admits the absence structurally, though no card is ever open on such a court. **The
+screen gains a fourth slot, `courtActs`**, drawn last on the plan lead under _We played_ and stood
+down with the doors while the grid is open: the acts on the court itself — _Leave this game_,
+and #419's fill and call-off — every one a **challenge** act reached from a game, so the control
+and its words are that feature's and the composer hands them in, exactly as the plan is handed
+in. Whether one is drawn at all is the composer's rule, read off the plan this screen may not
+know. **`CALLED_OFF` joins `GameStanding`** as the fourth end
+([ADR-0163](../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)) — the `Exact`
+assertion demands it — with a `called-off` arm that offers nothing, titled _It was called off_
+over the gloss _Called off_ — the two words #419 §3 and ADR-0163 fix — and no body, because
+nothing is invented beside them. Its `called_off_at`, its shelf life and its screen are #419's.

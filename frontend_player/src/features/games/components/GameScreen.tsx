@@ -114,7 +114,10 @@
  * with this feature's own `CourtPairing` — the chat's editable plan card,
  * *Open the chat* dark and full width, *We played* quiet beneath it. So the one slot became
  * **three** — `card`, `court`, `plan` — and every one of them is a `ReactNode` this screen draws in
- * order and cannot read, for the same reason the first was. The eyebrow is `formatEyebrow`'s —
+ * order and cannot read, for the same reason the first was. A **fourth**, `courtActs`, arrived with
+ * [#418](https://github.com/Raketa02/Raketa/issues/418): the acts on the court itself, drawn last
+ * — *Leave this game*, and #419's fill and call-off — every one a **challenge** act reached from a
+ * game, so it is composed onto this screen exactly as the plan is. The eyebrow is `formatEyebrow`'s —
  * the format off the seats and the kind off the game, *Doubles · Counted* — because the card names
  * the people and the plan names the day, so `gameEyebrow`'s handles and *arranged n ago* would be
  * the same facts twice on one screen; it keeps the other arms. **The standing line and the
@@ -231,9 +234,21 @@ export interface GameScreenProps {
    * somebody is trying to record.
    */
   readonly entryLead: EntryLead;
+  /**
+   * **The acts on the court itself, drawn last on the plan lead** — *Leave this game*
+   * ([#418](https://github.com/Raketa02/Raketa/issues/418)), and the fill and the call-off
+   * [#419](https://github.com/Raketa02/Raketa/issues/419) adds beside it. A slot, because every
+   * one of them is a **challenge** act reached from a game (ADR-0162): the seat that reopens is
+   * the challenge's, so the control, its sheet and its words are that feature's, and whoever
+   * composes this screen hands them in — exactly as the plan is handed in, and for the same
+   * reason. Whether one is drawn at all is the composer's rule (the agreed moment, read off the
+   * plan this screen may not know); `null` is a court with no act to offer. Drawn under *We
+   * played*, in the scroll, and stood down with the doors while the grid is open.
+   */
+  readonly courtActs: ReactNode;
 }
 
-export function GameScreen({ gameId, card, court, plan, entryLead }: GameScreenProps) {
+export function GameScreen({ gameId, card, court, plan, entryLead, courtActs }: GameScreenProps) {
   const { game, isPending, error } = useGame(gameId);
   const me = useCurrentUser().data?.id;
 
@@ -261,6 +276,7 @@ export function GameScreen({ gameId, card, court, plan, entryLead }: GameScreenP
       court={court}
       plan={plan}
       entryLead={entryLead}
+      courtActs={courtActs}
     />
   );
 }
@@ -275,6 +291,7 @@ function Argument({
   court,
   plan,
   entryLead,
+  courtActs,
 }: {
   readonly game: Game;
   readonly playerId: string;
@@ -282,6 +299,7 @@ function Argument({
   readonly court: ReactNode;
   readonly plan: ReactNode;
   readonly entryLead: EntryLead;
+  readonly courtActs: ReactNode;
 }) {
   const argument = resultArgument(game, playerId);
   const state = useStateResult();
@@ -504,7 +522,9 @@ function Argument({
 
       {/* The two doors, on the plan lead: the chat's, dark and full width, and *We played* quiet
           beneath it — in the scroll, because nothing is pinned here. Both stand down while the
-          grid is open, when the pinned footer carries the send and the way out. */}
+          grid is open, when the pinned footer carries the send and the way out. *We played* is
+          the domain's to offer, and it withholds it while a seat is open (#411 rule 5). Under
+          them, last, the acts on the court itself — handed in, and not read. */}
       {doorsInTheScroll ? (
         <>
           <OpenTheChat challengeId={game.challengeId} />
@@ -515,6 +535,7 @@ function Argument({
               onPress={() => edit(emptyDraft(game.sport))}
             />
           ) : null}
+          {courtActs}
         </>
       ) : null}
 

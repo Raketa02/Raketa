@@ -46,7 +46,7 @@ export { CourtPairing, type CourtPairingProps } from './components/CourtPairing'
  * rule, the one every copy deck in this app is read through. Nothing in `src/` outside this
  * feature reads any of them.
  */
-export { BALANCE_FORECAST, PLAYERS, recordLabel } from './components/gamePresentation';
+export { BALANCE_FORECAST, OPEN_SEAT, PLAYERS, recordLabel } from './components/gamePresentation';
 
 /**
  * The route's own check on the id it is handed, because a route param is attacker-controlled and
@@ -139,3 +139,4 @@ export type { EntryLead } from './domain/resultArgument';
 
 /** What a game is, for the feature that draws a plan beside one. */
 export type { Game } from './domain/game';
+export { openSeats } from './domain/game';

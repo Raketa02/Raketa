@@ -88,11 +88,11 @@ them: _every game you arrange shows up here_ and _Play finds you one_ are true o
 games and of one with none, so there is nothing to hold them back for and holding them back would
 leave a blank screen. The bolt is not drawn, on 10.2's own rule.
 
-**The ladder is `domain/`, four rungs read in order, and the clock outranks the checklist** — _the
-agreed point has passed_ → Needs result, _the agreed day is today_ → Today, _all three slots
-filled_ → Game on, otherwise Planning. It is the single most drift-prone thing on the map: four card
-names, two tickets that each keyed a rule on it and one amendment already spent closing the hole
-between them, so it is one function every surface reads. The **agreed point** sits beside it — the
+**The ladder is `domain/`, five rungs read in order, and the clock outranks the checklist** — _a
+seat is open_ → Needs a player, _the agreed point has passed_ → Needs result, _the agreed day is
+today_ → Today, _all three slots filled_ → Game on, otherwise Planning. It is the single most
+drift-prone thing on the map: five card names, two tickets that each keyed a rule on it and one
+amendment already spent closing the hole between them, so it is one function every surface reads. The **agreed point** sits beside it — the
 agreed instant when day and hour are both recorded, the start of the following local day when only
 the day is, nothing when no day is, **later rather than earlier** so nobody is asked for a result
 before they could have played — and it is the server's field, never recomputed here. Everything
@@ -236,3 +236,46 @@ Two of §5.4's corrections are re-decided by the design on this lead and one is 
 **is** drawn (on the card at the top, beside the weekday; the chips keep the weekday), and
 `competitive` still is not. No device has drawn it; the screen is asked for a look against mocks
 4–6 and 9.
+
+**The open seat outranks the clock, and the ladder gains a rung above it**
+([#418](https://github.com/Raketa02/Raketa/issues/418), the third child of
+[#411](https://github.com/Raketa02/Raketa/issues/411),
+[ADR-0162](../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)). A seat
+somebody left is `player_id: null` on the wire and `playerId` absent on `GameSeat`, and the mapper
+**keeps** such a game — the seat keeps its place and its side, the court keeps its size — because
+dropping the seat would publish a three-person doubles game and dropping the game would take a
+live court off the rail. `rungOf` now reads the court as well as the plan and the instant
+(`CourtRead`, the two fields of a `Game` the ladder needs), and _Needs a player_ is read **first**:
+a game with a gap in it cannot be played or recorded until somebody is in that seat, so _Needs
+result_ over a short court would ask for a score nobody could enter and _Today_ would announce a
+game that has a gap in it; the server's own `NEVER_PLAYED` still wins, because a window that
+closed on a short court closed all the same. Nothing on the wire names the rung — the standing
+stays `AWAITING_ENTRY` and the seat says `null` — so the ladder is the one place the two are read
+together, and the rule is spelled on the field there rather than imported from `features/games`,
+on `gameCard.ts`'s own `import type` line. **The tables gain a row each**, on the shell's soft
+defaults: the tag `Needs a player`, the stage dot `arranging` (the game is back in the players'
+hands), the accent mint, the state word `needs a player` for the room's header, and the door
+**`Open`** — the same `open` door as _Game on_'s under the same word, until
+[#419](https://github.com/Raketa02/Raketa/issues/419) turns it into _Fill the seat_, because no
+dead door ships. **The court draws the seat empty, and it is the builder's empty seat**:
+`SeatFace`'s `empty` occupant under Play's dashed `empty` ring with no plus in it, no caption and
+no `yours` ring — `CourtMini` draws an unfilled seat as nothing, and the reason does not
+transfer, because that court's summary says how many seats are filled and this card names the
+errand and draws the seat the errand is about. **The card's spoken name gains one clause** after
+the sport — `An open seat` · `2 open seats` — because the court is hidden from a listener and the
+tag names the errand and not the shape. **`entryLeadOf` takes the court** and is still derived
+from the card's own door, so a short court leads with the plan whatever the clock says — a seat
+open is not a score to enter — and **`momentHasPassed` is exported** from the ladder, the first
+clock rung's own test, for the one control drawn only while the moment is ahead. **The game
+screen's plan lead gains a fourth slot, `courtActs`, drawn last under _We played_**, and this
+feature fills it with `features/challenges`' `LeaveGame` — a challenge act reached from a game,
+composed here exactly as `useChatDoors` is, through that feature's `types.ts` — **only while the
+agreed moment is ahead**, mirroring the rule the server enforces with `game_moment_has_passed`;
+the rung alone cannot say it, because _Needs a player_ outranks _Needs result_. On a stale tap the
+control asks this composition to re-read the games list, because that read is the one clock every
+fold on the screen is against. **`CALLED_OFF` is absorbed as far as the compiler forces**
+([ADR-0163](../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)): the fourth end
+gets its name, `called-off`, and a soft-default row in every table — `Called off`, the hairline
+dot, no door — and nothing more; its `called_off_at`, its shelf life and its screen are #419's,
+and until then a called-off card stays on the rail, as every undated ending does. No device has
+drawn any of it; the rung, the empty seat and the control are asked for a look.

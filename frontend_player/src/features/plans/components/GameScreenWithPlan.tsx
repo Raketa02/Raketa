@@ -50,6 +50,18 @@
  * with the checklist and the door, as it always was. The screen draws whichever it is handed and
  * never learns which; the lead it is handed alongside is what decides here.
  *
+ * ## And a fourth, which is another feature's act
+ *
+ * [#418](https://github.com/Raketa02/Raketa/issues/418) added *Leave this game* under the doors —
+ * a **challenge** act reached from a game, because the seat that reopens is the challenge's
+ * ([ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)).
+ * So the control, its sheet and its words are `features/challenges`', read through its
+ * `types.ts` the way `useChatDoors` is, and this is where they are handed into the screen's
+ * `courtActs` slot — and where the one rule about *whether* is applied: only while the agreed
+ * moment is ahead, which is the ladder's `momentHasPassed` over the plan this composition already
+ * holds and the games list's own instant. On a stale tap the control asks this composition to
+ * re-read the games list, because that read is the one clock every fold on the screen is against.
+ *
  * **A plan read still in flight leads with the plan, and that is the same answer as no plan.**
  * `GET /plans` has no row for a game nobody has arranged anything on, so *not yet arrived* and
  * *nothing agreed* reach `entryLeadOf` identically — which is the semantics `slots.ts` already
@@ -60,10 +72,12 @@
  */
 
 import { useCurrentUser } from '@/features/auth/types';
+import { LeaveGame } from '@/features/challenges/types';
 import { useChatDoors } from '@/features/conversations/types';
 import { CourtPairing, GameScreen, useGame } from '@/features/games/types';
 
 import { entryLeadOf } from '../domain/gameCard';
+import { momentHasPassed } from '../domain/ladder';
 import { usePlan } from '../hooks/usePlans';
 
 import { GameCard } from './GameCard';
@@ -76,12 +90,19 @@ export interface GameScreenWithPlanProps {
 }
 
 export function GameScreenWithPlan({ gameId }: GameScreenWithPlanProps) {
-  const { game } = useGame(gameId);
+  const { game, refetch } = useGame(gameId);
   const { plan } = usePlan(gameId);
   const rooms = useChatDoors();
   const playerId = useCurrentUser().data?.id;
 
-  const entryLead = game === undefined ? 'the-score' : entryLeadOf(plan, game.readAt);
+  const entryLead = game === undefined ? 'the-score' : entryLeadOf(game, plan);
+  /**
+   * **Leaving is offered only while the agreed moment is ahead** (#411 rule 1) — the ladder's
+   * own test, read off the plan and the games list's instant, mirroring the rule the server
+   * enforces with `game_moment_has_passed`. The rung cannot say it alone: *Needs a player*
+   * outranks *Needs result*, so a short court past its moment is on this lead with no act left.
+   */
+  const mayLeave = game !== undefined && !momentHasPassed(plan, game.readAt);
 
   // The same key the rail's join uses, and the same soft failure: no room is no faces, and the
   // seats draw their posters. The address is not drawn — `doors={false}` — but the card takes it.
@@ -113,6 +134,20 @@ export function GameScreenWithPlan({ gameId }: GameScreenWithPlanProps) {
           <GameScreenPlan game={game} plan={plan} />
         ) : (
           <GamePlan game={game} plan={plan} />
+        )
+      }
+      courtActs={
+        // A challenge act reached from a game (ADR-0162): the control is `features/challenges`',
+        // composed here as the chat doors are, and the re-read it asks for on a stale tap is this
+        // component's own games read — the one clock every fold on the screen is against. The
+        // rule is handed in as `offered` rather than applied as a mount, so a leave in flight is
+        // not unmounted from under its own reply.
+        game === undefined ? null : (
+          <LeaveGame
+            challengeId={game.challengeId}
+            offered={mayLeave}
+            onReRead={() => void refetch()}
+          />
         )
       }
     />

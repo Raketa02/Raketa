@@ -205,6 +205,19 @@ export function postWithdrawal(challengeId: string): Promise<ChallengeSchema> {
   });
 }
 
+/**
+ * *I'm leaving this game.* **A noun and not a verb, like the withdrawal**: what this creates is
+ * the departure. The reply is the challenge as it now stands — `LINE_UP_INCOMPLETE`, with the
+ * caller's seat `LEFT` — and the game it became keeps its id with that seat open (ADR-0162).
+ */
+export function postDeparture(challengeId: string): Promise<ChallengeSchema> {
+  return httpRequest<ChallengeSchema>({
+    method: 'POST',
+    path: `/api/v1/challenges/${challengeId}/departure`,
+    authenticated: true,
+  });
+}
+
 /** The read may be abandoned; the send may not. See the module note. */
 export interface Cancellable {
   readonly signal?: AbortSignal;

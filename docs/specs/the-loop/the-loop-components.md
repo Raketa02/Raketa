@@ -213,16 +213,24 @@ the line arrives through the stream like any other entry.
 ### 3.3 The ladder is `domain/`, and it is the one thing that must not drift
 
 ```ts
-// features/plans/domain/ladder.ts — four rungs, read in order
-1. the agreed point exists and has passed  → Needs result
-2. the agreed day is today                 → Today
-3. all three slots filled                  → Game on
-4. otherwise                               → Planning
+// features/plans/domain/ladder.ts — five rungs, read in order
+1. a seat is open                          → Needs a player
+2. the agreed point exists and has passed  → Needs result
+3. the agreed day is today                 → Today
+4. all three slots filled                  → Game on
+5. otherwise                               → Planning
 ```
 
-**Read in order, and the clock outranks the checklist** (ADR-0145 §3). Rungs 3 and 4 are reached
+**Read in order, and the clock outranks the checklist** (ADR-0145 §3). Rungs 4 and 5 are reached
 only when the point has not passed and the day is not today, so #329's *"and the agreed moment
-still ahead"* is implied by the ladder rather than restated in a row.
+still ahead"* is implied by the ladder rather than restated in a row. **And the open seat outranks
+the clock** ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md),
+#411 rule 5, built by [#418](https://github.com/Raketa02/Raketa/issues/418)): `rungOf` reads the
+court — the seats and the instant off the games list, `CourtRead` — before it reads the plan,
+because a seat somebody left is a fact about the court and the game cannot be played or recorded
+until somebody is in it. Nothing on the wire names the rung; `player_id: null` is the whole of
+what it says, and this is the one place it is read against the plan. `momentHasPassed` is the
+second rung's own test, exported for the one control drawn only while the moment is ahead.
 
 **The agreed point is `domain/` beside it**, and it is the value #324 and #329 each keyed a rule on
 without the two ever being checked against each other: **the agreed instant when day and hour are
@@ -234,7 +242,7 @@ Later rather than earlier, so nobody is asked for a result before they could hav
 against the clock, so there is no instant for it to have been folded against, and **Now has one
 clock by construction** rather than by a rule anyone remembers.
 
-**This is the single most drift-prone thing on the map**: four card names, two tickets that each
+**This is the single most drift-prone thing on the map**: five card names, two tickets that each
 keyed a rule on it, and one amendment already spent closing the hole between them. It is one
 function, it is `domain/`, and every surface reads it — the rail, the card and its tables, and the
 game screen's arm.
