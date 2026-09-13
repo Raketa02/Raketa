@@ -302,3 +302,48 @@ a court that has been a game still says `Withdraw` with the court's words and st
 the organiser alone (`mayEnd`), where the server would accept a remaining player's once the
 organiser has left; `the-loop-screens.md` §2's arms table names _Call it off_ there, and that
 surface is a follow-up.
+
+**_Leave the game_ from the Chats list and from the challenge screen, before the court is whole**
+([#427](https://github.com/Raketa02/Raketa/issues/427),
+[ADR-0165](../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+§1, §6). A yes can be taken back: the departure route is admitted on a court that has never been a
+game (#424), and the client meets it in two new places on one component. `DepartureDoor` — named
+for the shape rather than the word, because a `LeaveTheGame` an article away from `LeaveGame` would
+be one name — is the **door**: a render prop that hands the surface the act's word, a way to open
+the sheet, the accessibility action a row offers in place of a swipe and the ref the sheet returns
+focus to, and draws the sheet itself as a sibling of whatever the surface drew, with what the
+surface drew hidden while the sheet is up (`CallOff`'s line: one label on the door and on the
+sheet's act), so the act's whole shape is one file's whether it is met on a row or on a screen. The
+conversation row takes it **composed by the shell** rather than imported — `features/challenges`
+imports `features/conversations`, and the cycle is Part 1's named defect — so `ChatsScreen` hands
+`DepartureDoor` to `ConversationsSection` as its `act`, satisfying the `RowActDoor` shape that row
+declares without either feature naming the other; the challenge screen draws it as a `secondary`
+button on **both live arms** — an accepted invitee waiting on the others, and any member of a
+filling court, the organiser included, because the organiser is a player in that rule — **last**,
+after the withdraw, on the game screen's own order (the act that ends it for everybody above the act
+that takes one person out). Whether it is drawn is the fold's `mayLeave`: the reader is on a court
+that is not whole **with somebody**, and the one case it withholds is a court of one — the organiser
+nobody has joined has nothing to leave, and their exit there is #428's _Remove the challenge_. It
+says nothing about whether the court has been a game; on one that has, it is the same route the game
+screen's _Leave this game_ posts, and the moment guard is answered in words rather than by a control
+this read cannot see the moment for. **The sheet is `LeaveSheet` grown, not a fourth sheet**: on the
+game screen it dismisses on confirm and draws no refusal and no pending state, on `WithdrawSheet`'s
+line; from the list there is no control left to carry either — the revealed button closed with the
+row — so the sheet takes `body`, `busy`, `said` and `offline`, stays up while the act is in flight,
+and **says a refusal in words** where the game screen re-reads and says nothing, because a list row
+has no fold for a re-read to land on. The words are `leaveGamePresentation.ts`': one body line for
+the list's sheet, `LEAVE_FROM_THE_LIST_BODY`, and `LEAVE_REFUSED` — a sentence for each of the four
+codes the route documents, over `challengeErrorMessage`'s fallback — with the lists re-read for
+every code that means _this court is not what the row thought it was_, **once the sheet is
+dismissed**: the sheet is drawn inside the row it is about, and a re-read landing _over_ mid-sentence
+would take the row and the words away together, so the re-read is owed and paid on _Stay in_, and a
+court that has genuinely ended goes when the server says so. Which lists is `useReReadCourtLists`',
+in `hooks/`, because a cache effect is the hook layer's to declare and the door decides only when. **The inbox drops an own `LEFT` at once**, as it
+drops an own no: `OWN_ACT_LEAVES_AT_ONCE` is a second `Record` over `SeatAnswer` and deliberately
+not `GIVES_UP_THE_SEAT`, because the two differ in exactly one cell — a lapse opens the seat and
+nobody chose it. **`useLeaveGame` writes the reply into the challenge list** (`rowRedrawnFrom`, the
+standing and the seats with the list's own `readAt` kept) **and drops the room from the conversations
+list** (that feature's `dropRoomOfChallenge`), so both of the leaver's rows are gone on the reply
+and not a round trip later — _gone without a refetch_ — and then re-reads the four lists as before,
+because the reply is one court and the lists are every court. The game screen's `LeaveGame` is
+unchanged.

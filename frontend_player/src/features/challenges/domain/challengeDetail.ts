@@ -60,7 +60,13 @@ import type { NamedPlayer } from '@/shared/formatting/playerName';
 import type { Sport } from '@/shared/vocabulary/sport';
 import type { AtStake, Forecast, LikelyRange, ScoredTerm, Term } from '@/features/play/types';
 
-import { ownSeat, seatName, standingFactsFor, type ChallengeSeat } from './challenge';
+import {
+  ownSeat,
+  seatName,
+  standingFactsFor,
+  type Challenge,
+  type ChallengeSeat,
+} from './challenge';
 import { GIVES_UP_THE_SEAT, type SeatAnswer, type Standing, type StandingFacts } from './standing';
 
 /**
@@ -240,16 +246,19 @@ export type ChallengeArm =
    */
   | { readonly kind: 'answer'; readonly facts: StandingFacts; readonly answerBy?: string }
   /**
-   * **Still being arranged, and there is nothing here for you to press** — the card block, and
-   * the standing sentence over it.
+   * **Still being arranged, and there is one thing here you might press** — the card block, the
+   * standing sentence over it, and the way out.
    *
    * The organiser waiting on answers, and an invitee who has **accepted** and is still in it —
    * an invitee who has *left* is drawn the sentence alone instead (#392). A court
    * that is still **filling** left this arm with [#362](https://github.com/Raketa02/Raketa/issues/362):
    * it draws the same card block and the same sentence and three controls besides, which is a
    * different reading of the fold and therefore a different arm.
+   *
+   * `mayLeave` is [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+   * §1's — see {@link onACourtWithSomebody}.
    */
-  | { readonly kind: 'arranging'; readonly facts: StandingFacts }
+  | { readonly kind: 'arranging'; readonly facts: StandingFacts; readonly mayLeave: boolean }
   /**
    * **A half-built court, and the three things a live member does about one** — grow · talk ·
    * end, in that order ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)).
@@ -271,6 +280,8 @@ export type ChallengeArm =
       readonly facts: StandingFacts;
       /** Whether the withdraw is drawn. The organiser's, and nobody else's (ADR-0142). */
       readonly mayEnd: boolean;
+      /** Whether *Leave the game* is drawn — {@link onACourtWithSomebody}. */
+      readonly mayLeave: boolean;
     }
   /**
    * **The sentence alone** — every ending, `ON`, and the reader who has left a court that has
@@ -334,17 +345,52 @@ export function challengeArm(detail: ChallengeDetail, playerId: string): Challen
   // *anybody* is awaiting — so it reaches the same question `LINE_UP_INCOMPLETE` asks below.
   if (facts.standing === 'AWAITING_ANSWERS') {
     if (hasLeft(seat)) return { kind: 'stated', facts };
-    return { kind: 'arranging', facts };
+    return { kind: 'arranging', facts, mayLeave: onACourtWithSomebody(detail, playerId) };
   }
 
   // The one reading §2.5 had to close: a court still filling draws a card block, three controls
   // and the sentence for the people still in it, and the sentence alone for the reader who left.
   if (facts.standing === 'LINE_UP_INCOMPLETE') {
-    if (hasLeft(seat)) return { kind: 'stated', facts };
-    return { kind: 'filling', facts, mayEnd: facts.side === 'organiser' };
+    if (hasLeft(seat)) {
+      return { kind: 'stated', facts };
+    }
+    return {
+      kind: 'filling',
+      facts,
+      mayEnd: facts.side === 'organiser',
+      mayLeave: onACourtWithSomebody(detail, playerId),
+    };
   }
 
   return { kind: 'stated', facts };
+}
+
+/**
+ * **Whether *Leave the game* is drawn** — the reader is on a court that is not whole, and so is
+ * somebody else ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §1, [#427](https://github.com/Raketa02/Raketa/issues/427)).
+ *
+ * Asked only on the two live arms, whose reader holds an accepted seat by construction — the
+ * organiser's from birth, an invitee's by their yes — so what is left to ask is the second half:
+ * **is anybody on this court with them?** A yes taken back opens a seat the others can fill, and
+ * that is the whole of what the act means; a court of one has nobody to keep the seat open for. The
+ * organiser alone, with every invitee still deciding or already out, is on no court with anybody,
+ * and their way out there is *Remove the challenge* (ADR-0165 §4, #428) — drawing *Leave the game*
+ * beside it would be two doors out of an empty room.
+ *
+ * The organiser is a **player** in this rule and not a role: once somebody has joined, they leave
+ * like anybody else, and `mayEnd` one arm over stays the withdraw's own question.
+ *
+ * It says nothing about whether the court has been a game. On a court that has, the same act is
+ * the game screen's *Leave this game* and this control posts the same route; the moment guard the
+ * server keeps there is answered by the words on the sheet rather than by hiding a control this
+ * read cannot see the moment for.
+ */
+function onACourtWithSomebody(detail: ChallengeDetail, playerId: string): boolean {
+  return detail.seats.some(
+    (seat) =>
+      seat.playerId !== undefined && seat.playerId !== playerId && seat.answer === 'ACCEPTED',
+  );
 }
 
 /**
@@ -469,6 +515,23 @@ export function redrawnFrom(detail: ChallengeDetail, answered: AnsweredChallenge
       return keeps && held.card !== undefined ? { ...seat, card: held.card } : seat;
     }),
   };
+}
+
+/**
+ * **The reply is the redraw, for the row** — the same fold onto the cheap `Challenge` the inbox
+ * holds, for the one act whose reply is what takes the row away
+ * ([#427](https://github.com/Raketa02/Raketa/issues/427)).
+ *
+ * The departure's reply says the reader's own seat is `LEFT`, and the inbox drops an own *left*
+ * at once ([`challengeInbox.ts`](./challengeInbox.ts)) — so writing the reply into the list is
+ * what makes the row go on the reply rather than on the re-read that follows it. No cards here to
+ * keep or drop; what rides across is the standing and the seats, and **`readAt` stays the
+ * list's**: it is the instant the rows beside this one were folded against, the reply carries
+ * none, and a row measuring from a different instant than its neighbours is exactly the mistake
+ * `challengeKeys.detail`'s note refuses.
+ */
+export function rowRedrawnFrom(row: Challenge, answered: AnsweredChallenge): Challenge {
+  return { ...row, standing: answered.standing, seats: answered.seats };
 }
 
 /**

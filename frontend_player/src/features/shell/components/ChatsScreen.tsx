@@ -18,6 +18,15 @@
  * the room. It falls out of the composition rather than being arranged here: neither section knows
  * the other exists.
  *
+ * **The tab composes one act into the rooms' rows, and it is the only thing it hands under them
+ * that is not a sentence** ([#427](https://github.com/Raketa02/Raketa/issues/427)). *Leave the
+ * game*, revealed by a swipe on a conversation row, is the **departure's** — a challenge act — and
+ * the row is the conversation's; `features/challenges` already imports `features/conversations`,
+ * so the row importing the act back would be the cycle Part 1 calls a defect. The shell imports
+ * both, so the door is composed here, on the shape `features/plans` uses to hand `LeaveGame` into
+ * the game screen (ADR-0149 §1): the section says what a row needs from an act, the challenges
+ * feature exports a component that satisfies it, and neither names the other.
+ *
  * The panel stays last: it explains the limit rather than announcing it, so it belongs under what
  * a player came here to read rather than above it.
  *
@@ -25,7 +34,7 @@
  * with a glyph, and the right register for a sentence about how the product works.
  */
 
-import { ChallengesSection } from '@/features/challenges/types';
+import { ChallengesSection, DepartureDoor } from '@/features/challenges/types';
 import { ConversationsSection } from '@/features/conversations/types';
 import { Note } from '@/shared/ui';
 
@@ -36,7 +45,7 @@ export function ChatsScreen() {
   return (
     <ShellScreen title={CHATS_COPY.title}>
       <ChallengesSection empty={CHATS_COPY.emptyChallenges} />
-      <ConversationsSection empty={CHATS_COPY.emptyConversations} />
+      <ConversationsSection empty={CHATS_COPY.emptyConversations} act={DepartureDoor} />
 
       <Note variant="info" title={CHATS_COPY.panel.title}>
         {CHATS_COPY.panel.body}

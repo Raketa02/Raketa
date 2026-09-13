@@ -306,9 +306,9 @@ nothing on the wire carries a side.
 | Standing · reader | The sentence | Card block | Controls, in order |
 | --- | --- | --- | --- |
 | `AWAITING_ANSWERS` · invitee, unanswered | §13 *They're waiting on you* | **yes** | **`I'm in`** · **`Not this time`** |
-| `AWAITING_ANSWERS` · invitee, accepted | §13.2 *You're in. Waiting on {n} answers…* | **yes** | **Open the chat** *(the door, below)* |
+| `AWAITING_ANSWERS` · invitee, accepted | §13.2 *You're in. Waiting on {n} answers…* | **yes** | **Open the chat** *(the door, below)* · **Leave the game** *(a yes taken back before the court is whole — ADR-0165 §1, #427; the same sheet the Chats list's swipe opens, §22.10)* |
 | `AWAITING_ANSWERS` · invitee, declined / lapsed | §13.2's **two sentences** — *You said no…* / *Your day ran out…* | no | none |
-| `AWAITING_ANSWERS` · organiser | §13 *Waiting on {n} answers* | **yes** | **Open the chat** *(the door, below)* · **Remove the challenge** *(while nobody besides the organiser holds an accepted seat — ADR-0165 §4)* |
+| `AWAITING_ANSWERS` · organiser | §13 *Waiting on {n} answers* | **yes** | **Open the chat** *(the door, below)* · **Remove the challenge** *(while nobody besides the organiser holds an accepted seat — ADR-0165 §4)* · **Leave the game** *(once somebody has joined — the organiser is a player in that rule, ADR-0165 §1, #427; a court of one has nothing to leave)* |
 | `LINE_UP_INCOMPLETE` · member | §13 *{n} in, {m} seats open…* / *You're in. {m} seats open…* | **yes** | **⚡ Fill the seats** · **Open the chat** · **Leave the game** *(any member — ADR-0165 §1)* |
 | `LINE_UP_INCOMPLETE` · reader who left | §13's **two new sentences** — §2.5 | no | none |
 | `DECLINED` · both | §13 *{name} said no…* / *You said no* | no | none |
@@ -543,7 +543,7 @@ others ([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-
 | --- | --- | --- |
 | **⚡ Fill the seats** | any live member | runs the fill and **pushes a builder holding a full court and a fresh search** |
 | **Open the chat** | any live member | `/chats/conversation/[conversationId]` |
-| **Leave the game** | any live member, on a court that was never a game | `POST …/departure` — the seat opens; the same sheet the Chats list's swipe opens (ADR-0165 §6). On a game the control is the game screen's, as #411 rule 8 has it |
+| **Leave the game** | any live member, on a court that was never a game | `POST …/departure` — the seat opens; the same sheet the Chats list's swipe opens (ADR-0165 §6, `the-words.md` §22.10). On a game the control is the game screen's, as #411 rule 8 has it — but the challenge read carries no fact for whether a court has been a game, so #427 draws this on every filling court the reader is on with somebody, and on one that has been a game the moment guard is told in words on the sheet rather than by hiding a control the read cannot see the moment for |
 | **Call it off** | on a court that has been a game: **any player on the court** (ADR-0165 §5) | the withdraw's route and the withdraw's sheet, reworded — `the-words.md` §22.9; the game is called off in the act |
 
 **⚡ is the entry point, and items 1 and 2 of that ticket had one answer.** Pressing it is *Find a

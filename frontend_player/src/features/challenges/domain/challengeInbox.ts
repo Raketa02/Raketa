@@ -54,7 +54,7 @@
  */
 
 import { ownSeat, type Challenge, type ChallengeSeat } from './challenge';
-import type { Standing } from './standing';
+import type { SeatAnswer, Standing } from './standing';
 
 /**
  * How long a finished challenge keeps its row — **24 h, and it is not the conversation's.**
@@ -158,28 +158,53 @@ const STILL_BEING_ARRANGED: Readonly<Record<Standing, boolean>> = {
 };
 
 /**
+ * **Which of the reader's own answers take the row with them** — a no, and a departure.
+ *
+ * The shelf life keeps a row a day so the reader learns something they did not do; an act of
+ * their own is not that. A decline was the first
+ * ([#388](https://github.com/Raketa02/Raketa/issues/388)) and a departure is the second
+ * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §6): *an own left is the reader's own act in the same sense*. A lapse is **not** one — nobody
+ * chose it, and *Your day ran out* is kept to be read — and an accepted seat has not left at all.
+ *
+ * A `Record` keyed by the union rather than a pair of `===`, for `GIVES_UP_THE_SEAT`'s reason: a
+ * fifth answer fails `pnpm typecheck` here rather than quietly keeping a row whose reader walked
+ * out of it. **Deliberately not that table**, though it differs from it in one cell: that one
+ * asks whether a seat is open, this one asks whose act opened it, and the lapse is exactly where
+ * the two questions part.
+ */
+const OWN_ACT_LEAVES_AT_ONCE: Readonly<Record<SeatAnswer, boolean>> = {
+  ACCEPTED: false,
+  DECLINED: true,
+  LAPSED: false,
+  LEFT: true,
+};
+
+/**
  * Whether this row belongs on the inbox at all: still being arranged, or its news still fresh —
- * **and never a challenge the reader themselves said no to.**
+ * **and never a challenge the reader themselves said no to, or walked out of.**
  *
  * Two rows stay whatever their age, and it is one rule read twice: **a row the app cannot
  * describe or cannot date is not a row it may decide is finished.** A standing this build cannot
  * read is drawn as the out-of-date gap and keeps its place; so does an ending the contract
  * claimed and did not date.
  *
- * **A no of your own leaves at once**, and that is the shelf life's own argument read from the
- * other side. What the row carries is *news* — a seat reopened, a day run out, a court withdrawn —
- * and it is kept a day so the reader learns something they did not do. A decline is the one
- * departure that is the reader's own act: there is nothing on *You said no* they have to be told,
- * and a court they left going on filling without them is not their news either. So the row goes
- * with the tap, on a singles court it ended and on a doubles court that carries on alike — where
- * the organiser's row for the same no stays its day, because to them it *is* news. A lapse is not
- * a decline: nobody chose it, and *Your day ran out* is kept to be read exactly as before.
+ * **A no of your own leaves at once, and so does a departure**, and that is the shelf life's own
+ * argument read from the other side. What the row carries is *news* — a seat reopened, a day run
+ * out, a court withdrawn — and it is kept a day so the reader learns something they did not do.
+ * A decline and a departure are the two ways out that are the reader's own act: there is nothing
+ * on *You said no* or *You left* they have to be told, and a court they left going on filling
+ * without them is not their news either. So the row goes with the tap, on a singles court it
+ * ended and on a doubles court that carries on alike — where the others' row for the same act
+ * stays its day, because to them it *is* news. A lapse is not either: nobody chose it, and *Your
+ * day ran out* is kept to be read exactly as before ({@link OWN_ACT_LEAVES_AT_ONCE}).
  *
  * The record is untouched: `GET /challenges` still holds the seat, the screen still resolves for
  * a stale route, and only the row departs.
  */
 export function belongsOnTheInbox(challenge: Challenge, playerId: string): boolean {
-  if (ownSeat(challenge, playerId)?.answer === 'DECLINED') return false;
+  const ownAnswer = ownSeat(challenge, playerId)?.answer;
+  if (ownAnswer !== undefined && OWN_ACT_LEAVES_AT_ONCE[ownAnswer]) return false;
   if (challenge.standing === undefined) return true;
   if (STILL_BEING_ARRANGED[challenge.standing]) return true;
 

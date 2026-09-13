@@ -187,3 +187,27 @@ game's** (ADR-0157): a room without one draws the sport alone above a card it no
 sport is `shared/ui`'s drawn knowledge (`courtSeatCount`) and `domain/` is pure; the rule of what
 stands in the button's place is `features/plans`' `domain/lock.ts` — the room states its line-up
 and decides nothing about the lock.
+
+**A chat row swiped left reveals _Leave the game_, and what it reveals is composed onto it**
+([#427](https://github.com/Raketa02/Raketa/issues/427),
+[ADR-0165](../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+§1, §6). Nobody is in a chat separately from being on its court — membership is the accepted seats
+— so _leave the chat_ can only mean _leave the game_, and every room is a court the reader is on,
+so **every conversation row reveals it**; the challenge row beside it reveals nothing in this
+ticket, and the organiser's nobody-joined row is [#428](https://github.com/Raketa02/Raketa/issues/428)'s.
+The row is 6.15's `SwipeRow`, and the act behind the revealed button — its sheet, its words, its
+refusals — is the **departure's**, which is a challenge act and is recorded in
+[`challenges.md`](challenges.md). This feature may not import that one: `features/challenges`
+already imports this one, and a feature importing a feature that imports it is the cycle
+`architecture.md` Part 1 calls a defect. So the act arrives as the plan arrives on the game screen
+(ADR-0149 §1), **composed at the surface**: `ConversationRow` declares what a row needs from an act
+— `RowActDoor`, the word, a way to open it, the listener's accessibility action and the focus ref —
+`ConversationsSection` carries an `act` down to each row, and the shell's `ChatsScreen`, which owns
+the tab and imports both features, hands in `DepartureDoor`. Neither feature names the other, and a
+section handed no act draws rows that are doors and only doors. **The leaver's row goes on the
+reply, not on the re-read** — the one write another feature may make to this list,
+`dropRoomOfChallenge`, exported beside the key: a reply that says the reader's seat is `LEFT` _has_
+said they are out of the room, which is where the withdraw's _invalidate rather than patch_ argument
+turns over. The caller names the court and which rows that touches is decided here, so what crosses
+the seam is still an act on a list and never the shape of one; the re-read that follows confirms the
+removal rather than causing it.

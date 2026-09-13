@@ -26,6 +26,16 @@ export {
 } from './components/ConversationsSection';
 
 /**
+ * **What a row needs from an act composed onto it** ([#427](https://github.com/Raketa02/Raketa/issues/427)).
+ *
+ * The departure is `features/challenges`' and the row is this feature's, and neither may import
+ * the other; so the row declares the shape — a word, a way to open, the listener's action, the
+ * focus ref — and the shell hands in a component that satisfies it. Exported so the shell can
+ * type what it composes; nothing about an act's meaning crosses.
+ */
+export type { RowAct, RowActDoor, RowActProps } from './components/ConversationRow';
+
+/**
  * **The screen a row opens** — mounted by `/chats/conversation/[conversationId]`.
  *
  * The header, the stream, the quick chips and the composer
@@ -129,3 +139,12 @@ export {
  * crosses the seam is the address of a list rather than the shape of one.
  */
 export { conversationKeys } from './hooks/conversationKeys';
+
+/**
+ * **The one write another feature may make to this list**, and the argument for it is that file's
+ * ([#427](https://github.com/Raketa02/Raketa/issues/427)): a departure's reply says the reader's
+ * seat is `LEFT`, membership is the accepted seats, so the reply *has* said they are out of the
+ * room — and the row goes on the reply rather than a round trip later. Still an act on a list and
+ * never the shape of one: the caller names the court, and which rows that touches is decided here.
+ */
+export { dropRoomOfChallenge } from './hooks/conversationCache';

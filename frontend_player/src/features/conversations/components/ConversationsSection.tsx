@@ -40,6 +40,11 @@
  * **The empty line is the tab's rather than this feature's.** It says what lands on this *screen*,
  * and the screen is the shell's; what is this feature's is the heading, which names its own
  * content. Neither may assert that nothing is happening.
+ *
+ * **And so is the act a row reveals** ([#427](https://github.com/Raketa02/Raketa/issues/427)):
+ * *Leave the game* is the departure's, a challenge act, and this feature may not import that one
+ * — `features/challenges` imports this one, and the cycle is Part 1's named defect. The shell
+ * composes it in as `act`, and `ConversationRow` says what shape it has to have.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -49,7 +54,7 @@ import { Note, theme } from '@/shared/ui';
 
 import { useConversationRows } from '../hooks/useConversations';
 
-import { ConversationRow } from './ConversationRow';
+import { ConversationRow, type RowAct } from './ConversationRow';
 import { CONVERSATIONS_HEADING } from './conversationPresentation';
 
 export interface ConversationsSectionProps {
@@ -58,9 +63,17 @@ export interface ConversationsSectionProps {
    * [10.1](../../../../docs/design-system.md#101-screen-structure).
    */
   readonly empty: string;
+  /**
+   * **The act a swipe on a row reveals**, composed by the tab rather than known here
+   * ([#427](https://github.com/Raketa02/Raketa/issues/427)). The departure is the challenge's
+   * act and the row is this feature's, and neither may import the other, so the shell — which
+   * owns the tab and imports both — hands it in, the way `features/plans` hands `LeaveGame` into
+   * the game screen (ADR-0149 §1). Absent, the rows are doors and only doors.
+   */
+  readonly act?: RowAct;
 }
 
-export function ConversationsSection({ empty }: ConversationsSectionProps) {
+export function ConversationsSection({ empty, act }: ConversationsSectionProps) {
   const { data, error, playerId, rows } = useConversationRows();
 
   // *The list has landed and the reader is known.* Both, for `ChallengesSection`'s reason: gating
@@ -95,6 +108,7 @@ export function ConversationsSection({ empty }: ConversationsSectionProps) {
               key={conversation.conversationId}
               conversation={conversation}
               playerId={playerId}
+              {...(act === undefined ? {} : { act })}
             />
           ))}
     </View>

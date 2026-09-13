@@ -276,6 +276,46 @@ describe('a no of my own', () => {
   });
 });
 
+describe('a departure of my own', () => {
+  /**
+   * An own *left* is the reader's own act in the same sense as an own *no*
+   * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+   * §6): there is nothing on *You left* they have to be told, and a court they walked out of
+   * going on filling without them is not their news.
+   */
+  it('leaves at once, on a court that carries on filling without me', () => {
+    const iLeft = challenge({ standing: 'LINE_UP_INCOMPLETE', sport: 'padel' }, [
+      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: 'ola', answer: 'ACCEPTED', nickname: 'ola.k' },
+      { playerId: ME, answer: 'LEFT' },
+      {},
+    ]);
+
+    expect(belongsOnTheInbox(iLeft, ME)).toBe(false);
+    expect(challengeInbox([iLeft], ME)).toEqual([]);
+  });
+
+  /** And on the court it ended — one left, nobody deciding, and a departure is a no. */
+  it('leaves at once, on a court my leaving ended', () => {
+    const iEndedIt = challenge({ standing: 'DECLINED', openedAt: at(-4), endedAt: at(-1) }, [
+      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: ME, answer: 'LEFT' },
+    ]);
+
+    expect(belongsOnTheInbox(iEndedIt, ME)).toBe(false);
+  });
+
+  /** To the people still on the court the same departure is news, and their row keeps its day. */
+  it('is news to the others, whose row stays while the court fills', () => {
+    const theyLeft = challenge({ organiserId: ME, standing: 'LINE_UP_INCOMPLETE' }, [
+      { playerId: ME, answer: 'ACCEPTED' },
+      { playerId: EWA, answer: 'LEFT', nickname: 'ewa.m' },
+    ]);
+
+    expect(belongsOnTheInbox(theyLeft, ME)).toBe(true);
+  });
+});
+
 describe('the order', () => {
   const soon = askedMe({ challengeId: 'soon' });
   const later = challenge({ challengeId: 'later' }, [

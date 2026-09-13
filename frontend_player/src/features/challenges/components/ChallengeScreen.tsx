@@ -60,6 +60,20 @@
  * who can finish a padel four would leave the other looking at a court they can neither complete
  * nor leave.
  *
+ * ## And it is left here — by anybody, before the court is whole
+ *
+ * ***Leave the game*** on both live arms
+ * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §1, [#427](https://github.com/Raketa02/Raketa/issues/427)): an accepted seat waiting on the
+ * others, and a member of a court that is filling — the organiser included, because the
+ * organiser is a player in that rule. Whether it is drawn is the fold's `mayLeave`, and the one
+ * case it withholds is a court of one: the organiser nobody has joined has nothing to leave, and
+ * their exit there is #428's *Remove the challenge*. It is the same door the Chats list's swipe
+ * reveals — `DepartureDoor`, this feature's own, which draws the sheet and holds the act — so the
+ * act is met once, however the reader arrived at it. **Last among the controls**, after the
+ * withdraw: on the game screen the act that ends the game for everybody sits above the act that
+ * takes one person out of it, and the same order holds here.
+ *
  * **⚡ runs the fill and pushes the builder; the send is a separate press, on that screen, and it
  * pops back here** — which is why nothing in this flow calls `resetShellStack`. `landOnNow`'s
  * argument does not transfer: *"there is nothing left to be behind: the court is gone"* is false
@@ -124,6 +138,7 @@ import { actOnRefusal } from './actOnRefusal';
 import { ChallengeCard } from './ChallengeCard';
 import { WITHDRAW_CHALLENGE_NAME } from './challengeAccessibility';
 import { challengeErrorMessage } from './challengeErrorMessage';
+import { DepartureDoor } from './DepartureDoor';
 import {
   FILL_THE_SEATS,
   IM_IN,
@@ -418,6 +433,33 @@ function Arrangement({
       />
     );
 
+  /**
+   * ***Leave the game***, or nothing — the departure's door, on the two arms whose reader holds a
+   * seat on a court that is not whole and is on it with somebody (`mayLeave`). `secondary`, for
+   * the withdraw's reason: taking yourself off a court is never the primary act on a screen about
+   * arranging one. The sheet, the act, its words and its refusals are `DepartureDoor`'s — the same
+   * door a Chats row reveals — and what this screen adds is its own answer to a refusal: the
+   * detail re-read, so a court that ended under the press re-folds into its ending's sentence.
+   */
+  const leave =
+    (arm.kind === 'arranging' || arm.kind === 'filling') && arm.mayLeave ? (
+      <DepartureDoor challengeId={detail.challengeId} onRefusal={actOn}>
+        {(door) => (
+          <View ref={door.control}>
+            <Button
+              label={door.label}
+              variant="secondary"
+              disabled={!online || fill.isPending || withdraw.isPending}
+              onPress={() => {
+                beginAnAct();
+                door.open();
+              }}
+            />
+          </View>
+        )}
+      </DepartureDoor>
+    ) : null;
+
   return (
     <>
       {/* The sheet is a **sibling** of the screen it covers, never a child: `behindOverlay`
@@ -472,6 +514,8 @@ function Arrangement({
                     />
                   </View>
                 ) : null}
+
+                {leave}
               </View>
             ) : arm.kind === 'answer' ? (
               <View style={s.answers}>
@@ -505,11 +549,18 @@ function Arrangement({
                   />
                 </View>
               </View>
-            ) : door === null ? undefined : (
+            ) : door === null && leave === null ? undefined : (
               /* The arms with no act of their own — an accepted seat waiting on the others, a
                  court that is on, the organiser once the first yes has landed — and a room the
-                 list holds. The door is the whole of what they offer, and only while it exists. */
-              <View style={s.answers}>{door}</View>
+                 list holds. The door is what they offer, and only while it exists; the arranging
+                 arm offers the way out beside it, to a reader on a court with somebody. */
+              <View style={s.answers}>
+                {/* The one greyed control this arm can hold is the leave, so the note that says
+                    why is drawn only where it is. */}
+                {leave === null ? null : offline}
+                {door}
+                {leave}
+              </View>
             )
           }
         >

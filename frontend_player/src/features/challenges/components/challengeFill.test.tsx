@@ -66,6 +66,12 @@ import {
   WITHDRAW_SHEET_TITLE,
   WITHDRAW_THE_CHALLENGE,
 } from './challengeDetailPresentation';
+import {
+  LEAVE_FROM_THE_LIST_BODY,
+  LEAVE_SHEET_TITLE,
+  LEAVE_THE_GAME,
+  leaveRefusalMessage,
+} from './leaveGamePresentation';
 
 const ME = GATE_USER.id;
 const BEA = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -409,6 +415,86 @@ describe('the three controls', () => {
     expect(screen.getByRole('button', { name: FILL_THE_SEATS }).props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true }),
     );
+  });
+});
+
+describe('*Leave the game*', () => {
+  const DEPARTURE_PATH = `${DETAIL_PATH}/departure`;
+
+  /**
+   * **A yes can be taken back before the court is whole** (ADR-0165 §1,
+   * [#427](https://github.com/Raketa02/Raketa/issues/427)): any member of a filling court has the
+   * door, the organiser included — the organiser is a player in that rule — and it is the same
+   * sheet the Chats list's swipe opens.
+   */
+  it('is drawn for any member of a filling court, the organiser included', async () => {
+    await openTheChallenge();
+
+    expect(await screen.findByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
+    expect(screen.getByRole('button', { name: FILL_THE_SEATS })).toBeTruthy();
+  });
+
+  it('is drawn for a member who is not the organiser', async () => {
+    await openTheChallenge(detail({ organiser_id: BEA }), row({ organiser_id: BEA }));
+
+    expect(await screen.findByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
+  });
+
+  it('opens the sheet that names the consequence, and sends nothing until confirmed', async () => {
+    await openTheChallenge();
+
+    fireEvent.press(await screen.findByRole('button', { name: LEAVE_THE_GAME }));
+
+    expect(await screen.findByText(LEAVE_SHEET_TITLE)).toBeTruthy();
+    expect(screen.getByText(LEAVE_FROM_THE_LIST_BODY)).toBeTruthy();
+    expect(transport.requestsTo('POST', DEPARTURE_PATH)).toEqual([]);
+  });
+
+  /** The reply is the redraw: the reader's seat reads `LEFT`, and the screen says *You left*. */
+  it('redraws from the reply into the sentence for a reader who left, with nothing to press', async () => {
+    const left: Wire['SeatSchema'][] = [
+      { side: 'A', player_id: ME, answer: 'LEFT', nickname: 'me_' },
+      { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
+      { side: 'B' },
+      { side: 'B' },
+    ];
+    transport.on('POST', DEPARTURE_PATH, () => json(row({ seats: left })));
+
+    await openTheChallenge();
+    fireEvent.press(await screen.findByRole('button', { name: LEAVE_THE_GAME }));
+    // One label on the control and on the sheet's act, and what is under the sheet is hidden
+    // while it is up — so the second press can only reach the act.
+    await screen.findByText(LEAVE_FROM_THE_LIST_BODY);
+    fireEvent.press(screen.getByRole('button', { name: LEAVE_THE_GAME }));
+
+    expect(
+      await screen.findByText(
+        standingLine({
+          side: 'organiser',
+          standing: 'LINE_UP_INCOMPLETE',
+          accepted: 1,
+          open: 3,
+          ownAnswer: 'LEFT',
+        }),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: FILL_THE_SEATS })).toBeNull();
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
+    expect(screen.queryByLabelText('Withdraw this challenge')).toBeNull();
+  });
+
+  /** A refusal is said on the sheet, in the departure's own words, and the screen stays. */
+  it('says why on the sheet when the departure is refused', async () => {
+    transport.on('POST', DEPARTURE_PATH, () => errorResponse(409, 'game_moment_has_passed'));
+
+    await openTheChallenge();
+    fireEvent.press(await screen.findByRole('button', { name: LEAVE_THE_GAME }));
+    await screen.findByText(LEAVE_FROM_THE_LIST_BODY);
+    fireEvent.press(screen.getByRole('button', { name: LEAVE_THE_GAME }));
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByText(leaveRefusalMessage(refusal('game_moment_has_passed')))).toBeTruthy();
+    expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`);
   });
 });
 

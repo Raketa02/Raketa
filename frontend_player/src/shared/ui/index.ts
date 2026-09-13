@@ -98,6 +98,7 @@ export { Star, STAR_FILL, type StarProps } from './Star';
 export { StarRow, type StarNames, type StarRowProps } from './StarRow';
 export { StatBox, StatFigure, StatRow, type StatBoxProps, type StatBoxVariant } from './StatBox';
 export { Switch, type SwitchProps } from './Switch';
+export { SwipeRow, type RevealedControl, type SwipeRowProps } from './SwipeRow';
 export {
   TabBar,
   TAB_BAR_HEIGHT,

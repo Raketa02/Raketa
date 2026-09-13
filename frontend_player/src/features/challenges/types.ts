@@ -123,6 +123,19 @@ export type { ProposedCourt } from './mappers/challengeMappers';
 export { LeaveGame, type LeaveGameProps } from './components/LeaveGame';
 
 /**
+ * **The departure's door, for a Chats row** — the same act met from the list
+ * ([#427](https://github.com/Raketa02/Raketa/issues/427), ADR-0165 §6). A door rather than a
+ * control: the row decides what a door looks like there — the button a swipe reveals, and the
+ * accessibility action a listener takes in its place — and this hands it the word, the way to
+ * open the sheet, and the sheet itself, drawn beside whatever the row drew. **Composed by the
+ * shell** into the conversations section rather than imported by it, on ADR-0149's shape: the act
+ * is this feature's and the row is that one's, and a feature importing a feature that imports it
+ * is the cycle Part 1 calls a defect. The challenge screen takes the same door on its two live
+ * arms, so the act is met once, three ways.
+ */
+export { DepartureDoor, type DepartureDoorProps, type LeaveDoor } from './components/DepartureDoor';
+
+/**
  * **The fill, for the game screen and the Now card** — the challenge screen's ⚡ pressed on a game
  * ([#419](https://github.com/Raketa02/Raketa/issues/419)): the same search, the same builder under
  * the challenge, and the seats already taken read off the game by whoever composes it. One

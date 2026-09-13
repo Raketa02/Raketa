@@ -598,6 +598,15 @@ const size = {
    *  surface, exactly as 6.11's is: a 23pt track is well under the 44pt minimum, and a
    *  `hitSlop` around it would leave the words beside it inert. */
   switch: { track: 40, height: 23, knob: 18, row: 44 },
+  /** The swipe row — 6.15. A list row that slides left to REVEAL one control behind it, and
+   *  the two numbers that are the gesture's own rather than the row's.
+   *
+   *  `reveal` is the control's width and how far the card can travel: `btn` type at 12pt
+   *  puts *Leave the game* at about 95pt, and `space.md` either side of it lands on the grid
+   *  at 120. `intent` is how far a finger travels across before the row claims the touch —
+   *  under it a tap is a tap and a drift is the list's scroll, which is the one thing this
+   *  control must never take. Four steps of the grid, about a fingertip's width. */
+  swipeRow: { reveal: 120, intent: 12 },
   /** The text field — 6.13. `row` is the box at ONE line, and it is `btnXl`: the field and
    *  the button it sits above are the same control height, which is what four shipped auth
    *  boxes have drawn since sign-up. It is written as its own number rather than borrowed
@@ -939,8 +948,8 @@ const shadow = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Motion — one entrance, one sheet, one popover, one fade, one ripple, and one pulse. Nothing
-// else moves.
+// Motion — one entrance, one sheet, one popover, one fade, one ripple, one pulse, and one settle.
+// Nothing else moves.
 // Press feedback is immediate (Pressable's `pressed`), not animated: the prototype's
 // 120ms is a mouse-hover transition and has no touch equivalent.
 //
@@ -978,6 +987,14 @@ const motion = {
   rise: 300,
   sheet: 260,
   popover: 130,
+  /**
+   * The swipe row's card coming to rest once the finger lifts (6.15) — to revealed or to closed,
+   * never in between. Short enough to read as the card *landing* rather than travelling, since the
+   * finger has already done the travelling, and long enough that a card released a few points
+   * short of the threshold is seen to go back rather than to blink. Skipped under collapsed
+   * presentation, where the card is drawn at rest.
+   */
+  settle: 160,
   /** The prototype's cubic-bezier(.2,.8,.2,1) — decelerating. */
   easeDecel: { x1: 0.2, y1: 0.8, x2: 0.2, y2: 1 },
   /** How long a state is SHOWN — the one thing here that reduced motion does not skip.

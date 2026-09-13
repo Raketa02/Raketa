@@ -94,6 +94,27 @@ _tell two states of one mark apart_ has one answer in this system rather than tw
 three ratios on `surface` are derived in `starRow.test.ts` off the component's own table. It
 takes no rule of its own: it **reports every press with the value pressed**, exactly as 6.8's
 cell fires whether or not it is ticked, so whether a second press clears the row is the
-caller's. The rest arrive with the features that need them. **Build outward from the structure below** rather than reaching
+caller's. **6.15's swipe row is the first control that moves a row**
+([#427](https://github.com/Raketa02/Raketa/issues/427),
+[ADR-0165](../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+§6): a list row that slides left on React Native's own `PanResponder` — as the radius slider
+already drags, and with neither `react-native-gesture-handler` nor `reanimated` added — to
+reveal **one** control at its full height, and nothing else. The control is 6.1 `dark`'s fill,
+`night`, and **not coral**: §1.2's list is closed, and the act a swipe reveals is the one the
+screens draw `secondary`. #231 §3's argument against a swipe on the deck is kept by construction,
+because the swipe only reveals: the act is the control's, and every caller puts a confirmation
+behind it. What it must never take is the list's scroll, so it **never claims the press** — the
+card under the finger is a door — and claims a move only once the finger has travelled
+`size.swipeRow.intent` across and further across than down; once claimed it refuses to hand the
+gesture back, on the slider's own line. The arithmetic — which move is a swipe, where the card
+sits, where it settles — is `swipeRowGeometry.ts` and is pinned as numbers; the settle is
+`motion.settle`, the system's seventh motion, skipped under collapsed presentation. A swipe is
+never the only path: the control behind a closed card is hidden from assistive technology, and
+`PressableCard` gained `accessibilityActions` so the caller offers the same act in the rotor. A row
+handed nothing to reveal attaches no responder and draws nothing behind the card — which is the
+contract [#428](https://github.com/Raketa02/Raketa/issues/428)'s challenge row reuses, revealing
+_Remove the challenge_ only while nobody has joined. `test-support/swipe.ts` is the finger a test
+moves, and it says why the handlers are called directly and in the responder system's own order
+rather than through `fireEvent`. The rest arrive with the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.

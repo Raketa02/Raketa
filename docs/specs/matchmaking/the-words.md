@@ -2133,6 +2133,53 @@ on §22.3's own line. A refused call-off draws no new copy: a stale tap re-reads
 **Nobody is named**, because `called_off_by` is on no wire and the room that would have said who
 is gone with the act. The card is shelved a day from `called_off_at`.
 
+### 22.10 Leaving from the Chats list, and before the court is whole
+
+**The same act met twice more** — revealed by a swipe on a chat row, and drawn on the challenge
+screen's two live arms ([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+§1, §6, built by [#427](https://github.com/Raketa02/Raketa/issues/427)). The sheet is §22.8's — the
+title, the act and the dismissal are the same words — and what differs is the one line it says
+and what it does with a refusal.
+
+| | |
+| --- | --- |
+| The revealed control, and the screen's button | `Leave the game` — §22.8's act, now the control's word too: one label on the control and on the sheet's act, on `Send the challenge`'s precedent |
+| Sheet title | `Before you leave` |
+| Body | `Your seat opens for someone else and you'll leave the chat.` |
+| The act | `Leave the game` |
+| In flight | `Leaving…`, on the sheet's act |
+| Dismissal | `Stay in` |
+
+**One line where §22.8's sheet has three**, and it is the author's sentence: the seat and the chat
+in one breath, because nobody is in a chat separately from being on its court, and the line exists
+so that leaving the chat is not a surprise about leaving the game. §22.8's three are reached from a
+screen about a game the reader has been looking at and say what survives and what the leaver gives
+up; this one is reached from a list, one swipe deep, and has to say what the act **is** first.
+
+**A refusal is said on the sheet, in words.** On the game screen a refused leave re-reads and says
+nothing, because the fold the re-read lands on is the sentence; a list row has no fold, so the
+sheet stays up and says why, with the act still there to press again:
+
+| Code | The sentence |
+| --- | --- |
+| `game_moment_has_passed` | `The time you agreed has passed, so there's nothing to leave now.` |
+| `challenge_is_over` | `This one is already over.` |
+| `game_is_history` | `This game has already happened, or never will.` |
+| `challenge_not_found` | `You don't hold a seat on this court.` — one code for three cases, chosen so a departure's refusal never confirms you *were* on it; the sentence confirms nothing about before |
+| anything else | `challengeErrorMessage`'s sentence, as for every write in that feature |
+
+Each names the fact and never the mechanism. For the four, the lists are re-read **once the sheet is
+dismissed** — the sheet is drawn inside the row it is about, and a re-read that landed *over*
+while the sentence was being read would take the row and the words away together — so a court that
+has genuinely ended goes when the server says it has, and not a moment before.
+
+**The rows go on the reply.** The leaver's chat row is gone by membership and their challenge row
+by the inbox rule that already drops an own *no* — an own *left* is the reader's own act in the
+same sense — and both go the moment the reply lands, before any list is re-read.
+
+**The swipe is never the only path** (§20.12): the same act is the row's accessibility action,
+under the same word, and taking it opens the same sheet.
+
 ## 23. The system lines — the codes, and what publishes nothing
 
 **A system line is a code and its values, never a Message with a `kind`**

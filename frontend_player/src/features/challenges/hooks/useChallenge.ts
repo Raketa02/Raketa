@@ -7,7 +7,8 @@
  * | `useAnswerSeat` | `POST …/accept` and `…/decline` — **pending, never optimistic** |
  * | `useInviteSeats` | `POST …/seats` — ⚡'s send, from the builder this screen pushes |
  * | `useWithdrawChallenge` | `POST …/withdrawal` — the organiser's, and the only end a half-built court has; **on a court that has been a game, whoever holds the exit's, and the game is called off in the act** |
- * | `useLeaveGame` | `POST …/departure` — any player's, from the **game** screen, while the moment is ahead |
+ * | `useLeaveGame` | `POST …/departure` — any player's: from the **game** screen while the moment is ahead, and from a **Chats** row or the challenge screen before the court is whole (#427) |
+ * | `useReReadCourtLists` | what a **refused** departure re-reads, once its words have been read — the two lists a court is drawn on |
  *
  * ## The offer may expire under the finger, and it is let to
  *
@@ -63,12 +64,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
 
-import { conversationKeys } from '@/features/conversations/types';
+import { conversationKeys, dropRoomOfChallenge } from '@/features/conversations/types';
 import { gameKeys } from '@/features/games/types';
 import { planKeys } from '@/features/plans/types';
 
+import type { Challenge } from '../domain/challenge';
 import type { AnsweredChallenge, ChallengeDetail } from '../domain/challengeDetail';
-import { redrawnFrom } from '../domain/challengeDetail';
+import { redrawnFrom, rowRedrawnFrom } from '../domain/challengeDetail';
 import { answerSeat, type AnswerSeatAsk } from '../use-cases/answerSeat';
 import { inviteSeats, type InviteSeatsAsk } from '../use-cases/inviteSeats';
 import { leaveGame } from '../use-cases/leaveGame';
@@ -210,26 +212,37 @@ export function useWithdrawChallenge() {
 }
 
 /**
- * ***Leave this game*** — the departure, and the one act in this feature pressed on a screen that
- * is not this feature's ([ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)).
+ * ***Leave this game*, and *Leave the game*** — the departure, met on the game screen, on a Chats
+ * row, and on the challenge screen before the court is whole
+ * ([ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md),
+ * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §1, §6).
  *
  * The act lands on the challenge — that is where the seat reopens — and it is reached from the
- * game, which carries its `challengeId`; so the hook is here, behind the `LeaveGame` control that
- * `types.ts` exports, and the control is composed onto the game screen by `features/plans` the way
+ * game, which carries its `challengeId`, from a room, which carries it too, and from the challenge
+ * itself; so the hook is here, behind the `LeaveGame` control and the `DepartureDoor` that
+ * `types.ts` exports, and those are composed onto the surfaces that draw them the way
  * `useChatDoors` is.
  *
  * **Pending, never optimistic**, and `CHALLENGE_MUTATION_OPTIONS` spread whole: a departure is
  * dated exactly, and the moment guard is read against the tap — one queued for a reconnect could
  * land past the agreed moment as a refusal nobody was there to read.
  *
- * **What lands is a redraw for the challenge screen and a re-read for everything else.** The
- * reply is the challenge as it now stands with the reader's seat `LEFT`, written into the detail
- * as the withdraw's is. The game, its plan and its room are **lists this reply says nothing
- * about** — the leaver's rail drops the card, their plans list drops the row, their inbox drops
- * the room — so all three are invalidated rather than patched: the card is gone from the rail
- * because the server no longer lists it, not because the client removed it. `planKeys` is read
- * from `features/plans` for this one line, because a hook that declares its cache effect
- * declares all of it.
+ * **What lands is a redraw for the two rows that are the leaver's, and a re-read for everything
+ * else.** The reply is the challenge as it now stands with the reader's seat `LEFT`, written into
+ * the detail as the withdraw's is — and, since [#427](https://github.com/Raketa02/Raketa/issues/427),
+ * into the **challenge list** too, where the inbox rule drops an own *left* at once, and taken out
+ * of the **conversations list** by `dropRoomOfChallenge`, that feature's own write. Both are the
+ * reply's to say: membership is the accepted seats, so a seat that reads `LEFT` *is* the reader
+ * out of the room, and the withdraw's *invalidate rather than patch* argument — a reply that says
+ * nothing about a room — does not hold for the one reply that does. So the leaver's two rows are
+ * gone on the reply and not a round trip later. The game and its plan are still **lists this reply
+ * says nothing about** — the leaver's rail drops the card, their plans list drops the row — so
+ * those are invalidated rather than patched, and the two lists just written are re-read as well,
+ * because the reply is one court and the lists are every court: the card is gone from the rail
+ * because the server no longer lists it, not because the client removed it. `planKeys` is read from
+ * `features/plans` for this one line, because a hook that declares its cache effect declares all
+ * of it.
  */
 export function useLeaveGame() {
   const client = useQueryClient();
@@ -242,10 +255,40 @@ export function useLeaveGame() {
         held === undefined ? held : redrawnFrom(held, left),
       );
 
+      // The leaver's two rows, on the reply (#427): the inbox drops an own `LEFT` at once, and
+      // the room is theirs no longer because membership is the accepted seats.
+      client.setQueryData<readonly Challenge[] | undefined>(challengeKeys.list(), (held) =>
+        held?.map((row) => (row.challengeId === challengeId ? rowRedrawnFrom(row, left) : row)),
+      );
+      dropRoomOfChallenge(client, challengeId);
+
       void client.invalidateQueries({ queryKey: challengeKeys.list() });
       void client.invalidateQueries({ queryKey: gameKeys.list() });
       void client.invalidateQueries({ queryKey: planKeys.list() });
       void client.invalidateQueries({ queryKey: conversationKeys.list() });
     },
   });
+}
+
+/**
+ * **What a refused departure re-reads** — the two lists a court is drawn on, marked stale
+ * ([#427](https://github.com/Raketa02/Raketa/issues/427)).
+ *
+ * A refusal that means *this court is not what the row thought it was* — over, history, the
+ * moment passed, not yours — is answered on the list in words, and then by reading again, so a
+ * court that has genuinely ended goes when the server says it has. The *when* is the door's
+ * (`DepartureDoor` waits for the sheet to be dismissed, so the words are read before the row they
+ * are about can go); the *what* is declared here, because a cache effect is this file's to declare
+ * — one place to change which lists a court touches, beside the success path that touches them.
+ *
+ * Returns the act rather than performing it, for the same reason: the component decides the
+ * moment, and a hook that fired on mount would be a hook deciding it.
+ */
+export function useReReadCourtLists(): () => void {
+  const client = useQueryClient();
+
+  return () => {
+    void client.invalidateQueries({ queryKey: conversationKeys.list() });
+    void client.invalidateQueries({ queryKey: challengeKeys.list() });
+  };
 }

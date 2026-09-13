@@ -44,15 +44,44 @@
  * games cache — which feature-first Clean Architecture refuses. The three the design draws are
  * gone, and *Settle up* went with ownership. **The last line is the state**, and it is one line,
  * tail-truncated: a row is a door and the line is a pointer *to* the room, not a preview of it.
+ *
+ * ## Swiped left, it reveals one thing — and the thing is composed onto it
+ *
+ * *Leave the game* ([#427](https://github.com/Raketa02/Raketa/issues/427),
+ * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §6): every room is a court the reader is on, so every row reveals it. The row is a `SwipeRow`
+ * — the swipe only uncovers a button — and the act behind the button, its sheet, its words and its
+ * refusals are the **departure's**, which is a challenge act. This feature may not import that one:
+ * `features/challenges` already imports this one, and a feature importing a feature that imports
+ * it is the cycle Part 1 calls a defect. So the act arrives the way the plan arrives on the game
+ * screen (ADR-0149 §1): **composed at the surface** — the shell, which owns the Chats tab and
+ * already imports both features, hands the section an {@link RowAct}, and the row draws whatever
+ * door it is handed. What a row needs from an act is declared **here**, as {@link RowActDoor} —
+ * the word, a way to open it, the accessibility action and the focus ref — and the act's owner
+ * satisfies the shape without either side naming the other. No act handed, no swipe: the row is
+ * a door and only a door.
+ *
+ * **A swipe is never the only path.** A screen reader consumes the gesture before the row sees
+ * it, so the same door is the row's `accessibilityAction`, offered in the rotor under the act's
+ * own word; taking it opens the same sheet. The card is the element the sheet returns focus to,
+ * because the control a swipe reveals has closed with the row by the time the sheet is up.
  */
 
+import type { ComponentType, ReactNode, RefObject } from 'react';
 import { router } from 'expo-router';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+  type AccessibilityActionEvent,
+  type AccessibilityActionInfo,
+} from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
 import { handleLine } from '@/shared/formatting/handleList';
 import { playerName } from '@/shared/formatting/playerName';
-import { PlayerPhoto, PressableCard, theme } from '@/shared/ui';
+import { PlayerPhoto, PressableCard, SwipeRow, theme } from '@/shared/ui';
 
 import type { Conversation } from '../domain/conversation';
 import { othersIn, personName } from '../domain/membership';
@@ -68,13 +97,46 @@ import { FACE_OVERLAP, ROW_FACE, handleBudget } from './conversationGeometry';
  */
 export const CONVERSATION_ROUTE = '/chats/conversation/[conversationId]';
 
+/**
+ * **What a row needs from an act composed onto it** — declared by the row, satisfied by the act's
+ * owner, and named by neither.
+ *
+ * The word goes on the revealed control and in the rotor; `open` is what both do; `action` and
+ * `onAccessibilityAction` are the listener's path, because a swipe is a gesture assistive
+ * technology consumes; `control` is where the act's sheet returns focus, attached to the card
+ * because the revealed control has closed with the row by then.
+ */
+export interface RowActDoor {
+  readonly label: string;
+  readonly open: () => void;
+  readonly control: RefObject<View>;
+  readonly action: AccessibilityActionInfo;
+  readonly onAccessibilityAction: (event: AccessibilityActionEvent) => void;
+}
+
+export interface RowActProps {
+  /** The court the row is a room of — the one id both contexts already share. */
+  readonly challengeId: string;
+  /** The row, drawn around the door it is handed. */
+  readonly children: (door: RowActDoor) => ReactNode;
+}
+
+/**
+ * An act composed onto a row: a component that takes the court and hands back a door, drawing
+ * whatever the act needs beside it — a sheet, a note. The shell supplies one; this feature knows
+ * only its shape.
+ */
+export type RowAct = ComponentType<RowActProps>;
+
 export interface ConversationRowProps {
   readonly conversation: Conversation;
   /** The reader. A row names **the others** in the room, so it is never derived here. */
   readonly playerId: string;
+  /** The act a swipe reveals, or nothing — and with nothing, the row does not move. */
+  readonly act?: RowAct;
 }
 
-export function ConversationRow({ conversation, playerId }: ConversationRowProps) {
+export function ConversationRow({ conversation, playerId, act: Act }: ConversationRowProps) {
   const { width } = useWindowDimensions();
 
   const others = othersIn(conversation.members, playerId);
@@ -87,15 +149,20 @@ export function ConversationRow({ conversation, playerId }: ConversationRowProps
   const drawn = conversationRowLine(conversation, 'one-line');
   const spoken = conversationRowLine(conversation, 'full');
 
-  return (
+  const open = () =>
+    router.push({
+      pathname: CONVERSATION_ROUTE,
+      params: { conversationId: conversation.conversationId },
+    });
+
+  /** The card — the door to the room — around whatever act it is handed, or around nothing. */
+  const card = (door?: RowActDoor) => (
     <PressableCard
+      ref={door?.control}
       accessibilityLabel={conversationRowLabel(handles, sport, spoken)}
-      onPress={() =>
-        router.push({
-          pathname: CONVERSATION_ROUTE,
-          params: { conversationId: conversation.conversationId },
-        })
-      }
+      accessibilityActions={door === undefined ? undefined : [door.action]}
+      onAccessibilityAction={door?.onAccessibilityAction}
+      onPress={open}
       style={s.row}
     >
       <View style={s.faces}>
@@ -119,6 +186,16 @@ export function ConversationRow({ conversation, playerId }: ConversationRowProps
         </Text>
       </View>
     </PressableCard>
+  );
+
+  if (Act === undefined) return card();
+
+  return (
+    <Act challengeId={conversation.challengeId}>
+      {(door) => (
+        <SwipeRow reveal={{ label: door.label, onPress: door.open }}>{card(door)}</SwipeRow>
+      )}
+    </Act>
   );
 }
 

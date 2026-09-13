@@ -227,8 +227,18 @@ describe('a half-built court', () => {
     const invitee = challengeArm(detail('LINE_UP_INCOMPLETE', HALF_BUILT, BEA), ME);
     const organiser = challengeArm(detail('LINE_UP_INCOMPLETE', HALF_BUILT, ME), ME);
 
-    expect(invitee).toEqual({ kind: 'filling', facts: expect.anything(), mayEnd: false });
-    expect(organiser).toEqual({ kind: 'filling', facts: expect.anything(), mayEnd: true });
+    expect(invitee).toEqual({
+      kind: 'filling',
+      facts: expect.anything(),
+      mayEnd: false,
+      mayLeave: true,
+    });
+    expect(organiser).toEqual({
+      kind: 'filling',
+      facts: expect.anything(),
+      mayEnd: true,
+      mayLeave: true,
+    });
   });
 
   /**
@@ -262,6 +272,62 @@ describe('a half-built court', () => {
     const alone: readonly DetailSeat[] = [{ playerId: ME, answer: 'ACCEPTED' }, {}];
 
     expect(acceptedPlayers(detail('LINE_UP_INCOMPLETE', alone, ME), ME)).toEqual([]);
+  });
+});
+
+describe('the way out before the court is whole', () => {
+  /**
+   * **A yes can be taken back before the court is whole**
+   * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+   * §1), and the door is drawn on both live standings — for an accepted invitee waiting on the
+   * others as much as for a member of a court that is filling. The organiser is a player in that
+   * rule: once somebody has joined, they leave like anybody else.
+   */
+  it('is offered to an accepted invitee still waiting on the others, and to the organiser beside them', () => {
+    const waiting: readonly DetailSeat[] = [
+      { playerId: BEA, answer: 'ACCEPTED' },
+      { playerId: ME, answer: 'ACCEPTED', card: A_CARD },
+      { playerId: CYRYL, answerBy: '2026-09-07T09:00:00Z' },
+      {},
+    ];
+
+    const invitee = challengeArm(detail('AWAITING_ANSWERS', waiting, BEA), ME);
+    const organiser = challengeArm(detail('AWAITING_ANSWERS', waiting, ME), ME);
+
+    expect(invitee).toEqual({ kind: 'arranging', facts: expect.anything(), mayLeave: true });
+    expect(organiser).toEqual({ kind: 'arranging', facts: expect.anything(), mayLeave: true });
+  });
+
+  /**
+   * **A court of one has nothing to leave.** The organiser alone, with everybody still deciding,
+   * is on no court with anybody — their exit there is *Remove the challenge* (ADR-0165 §4,
+   * [#428](https://github.com/Raketa02/Raketa/issues/428)), and a *Leave the game* beside it
+   * would be two doors out of an empty room.
+   */
+  it('is not offered to an organiser nobody has joined yet', () => {
+    const arm = challengeArm(
+      detail('AWAITING_ANSWERS', [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: BEA, answerBy: '2026-09-07T09:00:00Z' },
+      ]),
+      ME,
+    );
+
+    expect(arm).toEqual({ kind: 'arranging', facts: expect.anything(), mayLeave: false });
+  });
+
+  it('is not offered to an organiser whose every invitee has already given the seat up', () => {
+    const arm = challengeArm(
+      detail('AWAITING_ANSWERS', [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: BEA, answer: 'DECLINED' },
+        { playerId: CYRYL, answerBy: '2026-09-07T09:00:00Z' },
+        {},
+      ]),
+      ME,
+    );
+
+    expect(arm).toEqual({ kind: 'arranging', facts: expect.anything(), mayLeave: false });
   });
 });
 

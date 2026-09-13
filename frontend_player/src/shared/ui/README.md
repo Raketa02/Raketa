@@ -89,7 +89,9 @@ with `Tick`; and by sign-up's age question: `TickBox`; and by Play: `TabBar`, `S
 chat map: `TextField` (6.13, which auth's four boxes moved onto in the same commit) and
 `PagerDots` (7.18, Now's rail); ahead of the record sheet: `SocialTagRow`, `RunOfForm`, and
 `PhotoPanel` with `PlayerPhoto`, `OnCourtMark` and `courtPosterFor` under it; and by the
-sportsmanship card: `StarRow` with `Star`. Import them from `@/shared/ui`.
+sportsmanship card: `StarRow` with `Star`; and by the Chats list's _Leave the game_: `SwipeRow`
+(6.15), a row that slides left on `PanResponder` to reveal one control, with its arithmetic in
+`swipeRowGeometry.ts`. Import them from `@/shared/ui`.
 
 **Six of those arrived by promotion rather than by being built here**, and the promotion is the
 interesting half ([#375](https://github.com/Raketa02/Raketa/issues/375),

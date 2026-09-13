@@ -635,8 +635,8 @@ not restated here; what follows is only what this client had to invent to draw t
 
 ### The room
 
-Seven client-only concepts, in `features/conversations/`, `shared/lib/platform/` and — for the
-one of them two features now read — `shared/date/`. **The quick chip is not among them**: the
+Eight client-only concepts, in `features/conversations/`, `shared/lib/platform/`, `shared/ui/`
+and — for the one of them two features now read — `shared/date/`. **The quick chip is not among them**: the
 questions are about the plan's slots and the words are §22.4's, so both are `features/plans`' and
 only the row that draws them is the room's. The domain terms — Conversation, Message,
 System line, Member — are the **root glossary's** and are not restated here; what follows is only
@@ -693,6 +693,17 @@ what this client had to invent to draw the room
   client only as the `account_held` refusal — no read serves it — and **nothing in this build can
   open a case**, which is a named exception recorded in `domain/liveState.ts`. _Avoid_: "suspended"
   or "banned", a note per control, and hiding the room.
+- **The swipe row** — a list row that slides left to **reveal** one control behind it, and the
+  control's act is never the swipe's: `shared/ui/SwipeRow`, on React Native's own `PanResponder`,
+  claiming a touch only on a move that has travelled the **intent distance** across and further
+  across than down, and never on the press — so a tap stays a tap on the door and a drift stays the
+  list's scroll. A row rests **closed** or **revealed** and never in between. The Chats
+  conversation row reveals _Leave the game_, which is the departure's door (`DepartureDoor`,
+  `features/challenges`', **composed in by the shell** because neither feature may import the
+  other), and the same act is the card's **accessibility action**, because a swipe is a gesture a
+  screen reader consumes. _Avoid_: "swipe to delete" or "swipe to leave" — the
+  swipe reveals a word and the sheet behind it acts; a row that slides to show nothing; a gesture
+  library.
 
 ### The plan
 
