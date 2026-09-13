@@ -325,7 +325,7 @@ describe('the card', () => {
     expect(screen.getByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`)).toBeTruthy();
     expect(screen.getByLabelText(`${SLOT_NAME.hour}: ${NOT_AGREED_YET}`)).toBeTruthy();
     expect(screen.getByText(counterLabel(agreed()))).toBeTruthy();
-    expect(screen.getByText(lockWaitsLine({ in: 2, seats: 4 }))).toBeTruthy();
+    expect(screen.getByText(lockWaitsLine({ members: 2, seats: 4 }))).toBeTruthy();
     expect(screen.queryByRole('button', { name: LOCK_THE_PLAN })).toBeNull();
   });
 
@@ -568,7 +568,7 @@ describe('the lock', () => {
   it('is absent while the room has no game, with the count line where it will be', async () => {
     await openTheRoom({ gameId: null, agreed: plan(COMPLETE) });
 
-    expect(await screen.findByText(lockWaitsLine({ in: 2, seats: 4 }))).toBeTruthy();
+    expect(await screen.findByText(lockWaitsLine({ members: 2, seats: 4 }))).toBeTruthy();
     expect(screen.queryByRole('button', { name: LOCK_THE_PLAN })).toBeNull();
     expect(screen.queryByText(LOCK_THE_PLAN)).toBeNull();
   });
@@ -584,7 +584,7 @@ describe('the lock', () => {
       gameId: null,
       agreed: plan({ place: 'Zabłocie Sport', day: '2026-09-13' }),
     });
-    await screen.findByText(lockWaitsLine({ in: 2, seats: 4 }));
+    await screen.findByText(lockWaitsLine({ members: 2, seats: 4 }));
 
     stubGames(transport, [game()], PLANNED_AT);
     stubConversation(transport, {
@@ -603,7 +603,7 @@ describe('the lock', () => {
     act(() => channel.nudge(ROOM));
 
     expect(await screen.findByRole('button', { name: LOCK_THE_PLAN })).toBeTruthy();
-    expect(screen.queryByText(lockWaitsLine({ in: 2, seats: 4 }))).toBeNull();
+    expect(screen.queryByText(lockWaitsLine({ members: 2, seats: 4 }))).toBeNull();
     expect(screen.getByLabelText('Where: Zabłocie Sport')).toBeTruthy();
     expect(screen.getByLabelText(`${SLOT_NAME.day}: Sunday`)).toBeTruthy();
   });

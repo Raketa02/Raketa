@@ -249,13 +249,13 @@ export const LOCKING = 'Locking…';
  * **The line drawn where the lock will be, while the room has no game** — ADR-0164 §5's own
  * sentence, verbatim: `2 of 4 in — you can plan now, lock when everyone's here`.
  *
- * `in` is the room's members and `seats` the sport's court, handed in by the surface that knows
- * both; the words are the plan's. It is the note #324 owes an absent control — it says what the
- * player may do now and exactly what will bring the button — and it is one line rather than two
- * because the two halves are one fact about the court. A singles room never draws it: two yeses
- * is the whole court and the room opens with its game.
+ * `members` is the room's and `seats` the sport's court, handed in by the surface that knows both;
+ * the words are the plan's. It is the note #324 owes an absent control — it says what the player
+ * may do now and exactly what will bring the button — and it is one line rather than two because
+ * the two halves are one fact about the court. A singles room never draws it: two yeses is the
+ * whole court and the room opens with its game.
  */
-export function lockWaitsLine({ in: members, seats }: CourtCount): string {
+export function lockWaitsLine({ members, seats }: CourtCount): string {
   return `${members} of ${seats} in — you can plan now, lock when everyone's here`;
 }
 

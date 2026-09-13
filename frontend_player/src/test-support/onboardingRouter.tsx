@@ -448,18 +448,21 @@ export const PLANS_PATH = '/api/v1/plans';
  * or not**, keyed by `challenge_id` and carrying the anchor its day row runs from (ADR-0164).
  *
  * There is **no `read_at` on this envelope**, deliberately: a plan folds nothing against the clock,
- * so a suite that wants *today* to be a particular day sets `stubGames`' instant instead — the card
- * is folded against the game list's, which is what keeps every clock on a surface the same one.
+ * so a suite that wants *today* to be a particular day sets the surface's own instant instead —
+ * the room's `read_at` in the chat, `stubGames`' on the game screen — which is what keeps every
+ * clock on a surface the same one. The row's `anchor` is not a clock: it is where the day row's
+ * horizon runs from.
  *
  * Stubbed on every launch beside the games and the rooms, for the reason those two are: the plan
  * card is pinned in every room from its opening, so a suite that opens one would otherwise fail at
  * the socket with a name that points at `fetch` rather than at the card
- * ([#366](https://github.com/Raketa02/Raketa/issues/366)). Defaulted to no rows, which draws no
- * card at all — a suite that wants the card stubs the court's row.
+ * ([#366](https://github.com/Raketa02/Raketa/issues/366)).
  *
- * Defaulted to nothing, which is not an empty plan but **no plan** — *a plan is born by being
- * used*, so a game nobody has arranged anything on has no row here at all and the card draws three
- * empty slots.
+ * **Defaulted to no rows, and the two surfaces read that differently.** The room draws nothing
+ * until its row lands — the row is what says there is a plan to draw, and carries the anchor to
+ * draw it with — so a suite that wants the card in a room stubs the court's row. The game screen
+ * draws the card off the game's own `planned_at` meanwhile, which is what the row's anchor is once
+ * a game exists (ADR-0164 §4), so its suites get three empty slots with nothing stubbed.
  */
 export function stubPlans(transport: Transport, plans: readonly Wire['PlanSchema'][] = []) {
   transport.on('GET', PLANS_PATH, () => json<Wire['PlanListResponse']>({ plans: [...plans] }));

@@ -110,6 +110,14 @@ export { QUICK_CHIP } from './components/planPresentation';
 export type { Plan, PlanSlot } from './domain/slots';
 
 /**
+ * **The court's line-up, as the card reads it** — complete, or still filling with its count. The
+ * room folds one off its own read and hands it to the pinned card, which is the one caller: the
+ * lock waits for the court (ADR-0164 §5), and the room is where who is in and whether the court
+ * has its game are both known.
+ */
+export type { LineUp } from './domain/lock';
+
+/**
  * **Which card a game is, and the word for it in the middle of a line**
  * ([#401](https://github.com/Raketa02/Raketa/issues/401)).
  *

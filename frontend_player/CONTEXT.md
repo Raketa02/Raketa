@@ -696,7 +696,7 @@ what this client had to invent to draw the room
 
 ### The plan
 
-Ten client-only concepts, all of them in `features/plans/`. The domain terms — Plan, Slot, the
+Eleven client-only concepts, all of them in `features/plans/`. The domain terms — Plan, Slot, the
 three recordings — are [ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)'s,
 re-keyed on the **challenge** and given an **anchor** by
 [ADR-0164](../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md),
@@ -727,13 +727,19 @@ follows is only what this client had to invent to let a room fill one in
   third slot **is** the lock and there is nothing left to draw about one.
 - **The count line** — `2 of 4 in — you can plan now, lock when everyone's here`, drawn **where
   the lock button will be, exactly while the room has no game** (ADR-0164 §5): the room's members
-  over the sport's seats, handed to the card as a `CourtCount` and read by `lockControl` as its
-  `waiting` state, before the slot count. It is the note #324 owes an absent control — the button
-  is **absent, never greyed** — and it becomes the button on the nudge that brings the game. A
-  singles room never draws it, because two yeses is the whole court and the room opens with its
-  game. _Avoid_: a disabled lock with a reason on it, counting seats from the plan, and drawing it
-  on a game with a seat left open — that court has its game and the button, and the server's
+  over the sport's seats. It is the note #324 owes an absent control — the button is **absent,
+  never greyed** — and it becomes the button on the nudge that brings the game. A singles room
+  never draws it, because two yeses is the whole court and the room opens with its game. _Avoid_:
+  a disabled lock with a reason on it, counting seats from the plan, and drawing it on a game with
+  a seat left open — that court has its game and the button, and the server's
   `the_court_is_not_whole` is a sentence.
+- **The line-up, as the card reads it** — `LineUp`: `{ complete: true }`, or
+  `{ complete: false, members, seats }`. **Complete means the court has become a game** (ADR-0165
+  §1: the line-up having completed), never that the count is full — three of four with a game is
+  a seat left open on a complete line-up. Folded by the room (`lineUpOf`, handed the sport's seat
+  count), handed to the card, and read by `lockControl` as its `waiting` state before the slot
+  count; the game screen hands `LINE_UP_COMPLETE`. _Avoid_: an optional count standing in for the
+  fact, and deriving completeness from `members === seats`.
 - **The quick chip** — one of at most three questions above the room's composer, **one per
   unfilled plan slot in slot order plus _On my way_ when the agreed day is today**. A chip **posts
   words and changes nothing**: filling the slot it asks about would record an agreement nobody had

@@ -149,7 +149,7 @@ afterEach(async () => {
 /** Every list this screen and the room behind it read, and a room to open unless asked otherwise. */
 function stubTheWorld({
   games = [game()],
-  plans = [plan()],
+  plans = [],
   room = true,
 }: {
   readonly games?: readonly Wire['GameSchema'][];

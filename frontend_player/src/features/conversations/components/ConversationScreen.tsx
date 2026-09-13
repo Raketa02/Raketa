@@ -69,8 +69,9 @@
  * §2, [#425](https://github.com/Raketa02/Raketa/issues/425)): the plan is the challenge's, the room
  * has carried `challengeId` since it opened, so two of four can start on where and when without
  * waiting on the others. What the room hands down beside the id is its own clock — *today* on the
- * day chips is this read's `read_at` — and, exactly while it has no game, **the court's count**:
- * its members over the sport's seats, which the card draws as the line where the lock will be.
+ * day chips is this read's `read_at` — and **its line-up**, folded by `domain/room.ts`: complete
+ * once the room has its game, still filling until then with its members over the sport's seats,
+ * which the card draws as the line where the lock will be.
  * The lock waits for the court, and the header's second line and the *Details* door still wait
  * with it: those are the game's (ADR-0157), and a room without one draws the sport alone above a
  * card it now has.
@@ -142,7 +143,7 @@ import { Note, courtSeatCount, theme } from '@/shared/ui';
 
 import { liveState, writeStanding } from '../domain/liveState';
 import { personNamed, type ConversationPerson } from '../domain/membership';
-import { namesItsAuthors, type OpenConversation } from '../domain/room';
+import { lineUpOf, namesItsAuthors, type OpenConversation } from '../domain/room';
 import { roomIsGone } from '../domain/roomGone';
 import {
   mayPost,
@@ -242,16 +243,12 @@ function Room({
   const { plan } = usePlan(room.challengeId);
 
   /**
-   * **Who is in against how many the court takes, while the room has no game** — the two numbers
-   * the card's count line says where the lock will be (ADR-0164 §5). The members are the
-   * challenge's accepted seats and the seats are the sport's court, and the room is the one
-   * surface that holds both beside the fact that decides whether to say them at all: `gameId`.
-   * Once the court has its game the card is handed none, and draws the button.
+   * **The court's line-up, for the card's lock** (ADR-0164 §5) — complete once the room has its
+   * game, still filling until then with who is in against the sport's seats. `domain/room.ts` is
+   * the fold; what this screen adds is the one fact it cannot hold, how many stand on a court of
+   * this sport, which is drawn knowledge.
    */
-  const court =
-    room.gameId === undefined
-      ? { in: room.members.length, seats: courtSeatCount(room.sport) }
-      : undefined;
+  const lineUp = lineUpOf(room, courtSeatCount(room.sport));
 
   /**
    * Where the game stands, for the header's second line — *the same state as the card in Now*
@@ -371,7 +368,7 @@ function Room({
         <RoomPlan
           challengeId={room.challengeId}
           readAt={room.readAt}
-          {...(court === undefined ? {} : { court })}
+          lineUp={lineUp}
           refused={held}
         />
 

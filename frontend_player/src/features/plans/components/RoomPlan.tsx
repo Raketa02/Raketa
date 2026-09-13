@@ -26,11 +26,11 @@
  * flickering above a stream. The read is not this component's to own — it is the app's list, shared
  * with Now and with the game screen, so on a warm cache this costs nothing at all.
  *
- * **The lock waits for the court** (ADR-0164 §5). The room says so by handing down the court's
- * count exactly while it has no game — its members over the sport's seats — and the card draws
- * the count line where the button will be; the room passes none once it has its game, and the
- * button is drawn. The rule of what stands there is `domain/lock.ts`'; what is the room's to know
- * is who is in and whether the court has completed.
+ * **The lock waits for the court** (ADR-0164 §5). The room says so by handing down its line-up —
+ * complete, or still filling with its members over the sport's seats — and the card draws the
+ * count line where the button will be until it is complete. The rule of what stands there is
+ * `domain/lock.ts`'; what is the room's to know is who is in and whether the court has its game,
+ * and its own `domain/room.ts` folds the two into the line-up.
  *
  * **The room passes no note** — the panel that explains the slots is not chrome above a composer
  * (ADR-0145 §6); the game screen draws the same card with it inside
@@ -42,7 +42,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { theme } from '@/shared/ui';
 
-import type { CourtCount } from '../domain/lock';
+import type { LineUp } from '../domain/lock';
 import { usePlan } from '../hooks/usePlans';
 
 import { PlanCard } from './PlanCard';
@@ -52,28 +52,20 @@ export interface RoomPlanProps {
   readonly challengeId: string;
   /** The instant the room was folded against — *today* on the day row. */
   readonly readAt: string;
-  /**
-   * **Who is in against how many the court takes — given exactly while the room has no game.**
-   * With it the card draws the count line where the lock will be; without it, the button.
-   */
-  readonly court?: CourtCount;
+  /** The court's line-up, folded by the room: complete, or still filling with its count. */
+  readonly lineUp: LineUp;
   /** The account may not write here. Every chip greys, and the screen owns the one note. */
   readonly refused?: boolean;
 }
 
-export function RoomPlan({ challengeId, readAt, court, refused = false }: RoomPlanProps) {
+export function RoomPlan({ challengeId, readAt, lineUp, refused = false }: RoomPlanProps) {
   const { plan } = usePlan(challengeId);
 
   if (plan === undefined) return null;
 
   return (
     <View style={s.pinned}>
-      <PlanCard
-        plan={plan}
-        readAt={readAt}
-        {...(court === undefined ? {} : { court })}
-        refused={refused}
-      />
+      <PlanCard plan={plan} readAt={readAt} lineUp={lineUp} refused={refused} />
     </View>
   );
 }

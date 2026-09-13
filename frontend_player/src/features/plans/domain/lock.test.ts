@@ -11,7 +11,7 @@
  */
 
 import type { Plan } from './slots';
-import { SLOTS, isLocked, lockControl, slotCount } from './lock';
+import { LINE_UP_COMPLETE, SLOTS, isLocked, lockControl, slotCount, type LineUp } from './lock';
 
 const CHALLENGE = '11111111-0000-4000-8000-000000000001';
 
@@ -20,7 +20,10 @@ function plan(over: Partial<Plan> = {}): Plan {
 }
 
 /** Two of a padel four are in, and the room has no game. */
-const TWO_OF_FOUR = { in: 2, seats: 4 } as const;
+const TWO_OF_FOUR: LineUp = { complete: false, members: 2, seats: 4 };
+
+/** The court has its game — the fold's ordinary input, spelled once. */
+const WHOLE = { pending: false, lineUp: LINE_UP_COMPLETE } as const;
 
 const COMPLETE = plan({ place: 'Zabłocie Sport', day: '2026-09-13', hour: '18:00' });
 
@@ -50,18 +53,18 @@ describe('the lock', () => {
 
 describe('the control', () => {
   it('is greyed while any slot is empty', () => {
-    expect(lockControl(undefined, { pending: false })).toBe('greyed');
-    expect(lockControl(plan({ day: '2026-09-13' }), { pending: false })).toBe('greyed');
-    expect(lockControl(plan({ place: 'x', day: '2026-09-13' }), { pending: false })).toBe('greyed');
+    expect(lockControl(undefined, WHOLE)).toBe('greyed');
+    expect(lockControl(plan({ day: '2026-09-13' }), WHOLE)).toBe('greyed');
+    expect(lockControl(plan({ place: 'x', day: '2026-09-13' }), WHOLE)).toBe('greyed');
   });
 
   it('is live once all three are set', () => {
-    expect(lockControl(COMPLETE, { pending: false })).toBe('live');
+    expect(lockControl(COMPLETE, WHOLE)).toBe('live');
   });
 
   /** Pending, never optimistic: the press is blocked and the word changes, nothing else does. */
   it('is busy while the lock is going out', () => {
-    expect(lockControl(COMPLETE, { pending: true })).toBe('busy');
+    expect(lockControl(COMPLETE, { ...WHOLE, pending: true })).toBe('busy');
   });
 
   /**
@@ -71,8 +74,8 @@ describe('the control', () => {
   it('is gone once the plan is locked', () => {
     const locked = { ...COMPLETE, lockedAt: '2026-09-12T10:00:00Z' };
 
-    expect(lockControl(locked, { pending: false })).toBe('gone');
-    expect(lockControl(locked, { pending: true })).toBe('gone');
+    expect(lockControl(locked, WHOLE)).toBe('gone');
+    expect(lockControl(locked, { ...WHOLE, pending: true })).toBe('gone');
   });
 
   /**
@@ -81,17 +84,21 @@ describe('the control', () => {
    * count of slots says nothing here: three of three set by two of four is still a plan nobody may
    * agree for four.
    */
-  it('waits for the court while the room has no game, whatever the count', () => {
-    expect(lockControl(undefined, { pending: false, court: TWO_OF_FOUR })).toBe('waiting');
-    expect(lockControl(plan({ day: '2026-09-13' }), { pending: false, court: TWO_OF_FOUR })).toBe(
-      'waiting',
-    );
-    expect(lockControl(COMPLETE, { pending: false, court: TWO_OF_FOUR })).toBe('waiting');
+  it('waits for the court while the line-up is incomplete, whatever the count', () => {
+    const filling = { pending: false, lineUp: TWO_OF_FOUR } as const;
+
+    expect(lockControl(undefined, filling)).toBe('waiting');
+    expect(lockControl(plan({ day: '2026-09-13' }), filling)).toBe('waiting');
+    expect(lockControl(COMPLETE, filling)).toBe('waiting');
   });
 
-  /** The court handed in is the whole of the rule: a room with its game passes none. */
-  it('is offered the moment the room has its game', () => {
-    expect(lockControl(COMPLETE, { pending: false, court: undefined })).toBe('live');
-    expect(lockControl(plan(), { pending: false, court: undefined })).toBe('greyed');
+  /**
+   * The line-up having completed is the whole of the rule — *has this court become a game* — so a
+   * game a seat has since been left open on is still complete and still offers the lock; what the
+   * server says to that is a sentence, not a state.
+   */
+  it('is offered the moment the line-up has completed, and stays offered', () => {
+    expect(lockControl(COMPLETE, WHOLE)).toBe('live');
+    expect(lockControl(plan(), WHOLE)).toBe('greyed');
   });
 });

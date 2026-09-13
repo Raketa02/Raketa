@@ -19,7 +19,7 @@
  *
  * | | |
  * | --- | --- |
- * | `waiting` | the room has no game — the control is not drawn, and the count line stands where it will be |
+ * | `waiting` | the line-up has not completed — the control is not drawn, and the count line stands where it will be |
  * | `greyed` | a slot is still empty — the act is refused and the counter above says why |
  * | `live` | all three are set and nobody has locked |
  * | `busy` | the lock is going out — pending, never optimistic |
@@ -32,11 +32,15 @@
  * control is **absent, never greyed** — #324's rule: a greyed button would promise an act the
  * server refuses with `the_court_is_not_whole`, and no count of slots would unlock it — and in its
  * place the surface draws one line, `2 of 4 in — you can plan now, lock when everyone's here`,
- * which is the note #324 owes. The count of members over seats is the surface's to state, because
- * the room knows who is in and the sport knows how many it takes; what this file decides is only
- * that a court still being filled has no lock to draw. It is read before the count, as the server
- * asks its refusals in that order. A game with a seat later left open still draws the button — the
- * room has its game — and the server's refusal is surfaced in words if it is ever reached.
+ * which is the note #324 owes. **The fact this reads is whether the line-up has completed** — *has
+ * this court become a game* is derived from the line-up having completed
+ * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §1), so a game a seat has since been left open on is still complete, still draws the button,
+ * and meets the server's refusal in words if it is ever reached. The count of members over seats
+ * rides on the incomplete arm because that is the only arm with a line to say it on; the numbers
+ * are the surface's to state — the room knows who is in and the sport knows how many it takes —
+ * and this file decides only that a court still being filled has no lock to draw. It is read
+ * before the slot count, as the server asks its refusals in that order.
  *
  * **Gone rather than 6.1's `settled`**, and the argument is §6.1's own test read against the
  * wire. `settled` is for a control whose act *is still available*: pressing it again obtains the
@@ -76,24 +80,34 @@ export function isLocked(plan: Plan | undefined): boolean {
 }
 
 /**
- * **Who is in against how many the court takes** — the two numbers the count line says, handed to
- * the card exactly while the room has no game. `in` is the room's members, `seats` is the sport's
- * court; neither is this feature's to count.
+ * **Who is in against how many the court takes** — the two numbers the count line says. `members`
+ * is the room's, `seats` is the sport's court; neither is this feature's to count.
  */
 export interface CourtCount {
-  readonly in: number;
+  readonly members: number;
   readonly seats: number;
 }
 
-/** What the control is, read off the plan, the court and the write in flight. See the module note. */
+/**
+ * **The court's line-up, as far as the lock reads it**: complete — the court has become a game,
+ * and stays complete whatever happens to a seat after — or still filling, with the count for the
+ * line drawn where the lock will be. A discriminated pair rather than an optional count, so the
+ * fold reads a named fact and the numbers exist exactly where there is a line to say them on.
+ */
+export type LineUp = { readonly complete: true } | ({ readonly complete: false } & CourtCount);
+
+/** The line-up of a court that has its game — what every game surface hands the card. */
+export const LINE_UP_COMPLETE: LineUp = { complete: true };
+
+/** What the control is, read off the plan, the line-up and the write in flight. See the module note. */
 export type LockControl = 'waiting' | 'greyed' | 'live' | 'busy' | 'gone';
 
 export function lockControl(
   plan: Plan | undefined,
-  { pending, court }: { readonly pending: boolean; readonly court?: CourtCount },
+  { pending, lineUp }: { readonly pending: boolean; readonly lineUp: LineUp },
 ): LockControl {
   if (isLocked(plan)) return 'gone';
-  if (court !== undefined) return 'waiting';
+  if (!lineUp.complete) return 'waiting';
   if (pending) return 'busy';
 
   return slotCount(plan) === SLOTS ? 'live' : 'greyed';

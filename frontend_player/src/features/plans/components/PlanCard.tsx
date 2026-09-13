@@ -125,7 +125,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { BottomSheet, Button, Card, Chip, Note, theme } from '@/shared/ui';
 
-import { lockControl, type CourtCount } from '../domain/lock';
+import { lockControl, type LineUp } from '../domain/lock';
 import { HOURS_OFFERED, PLAN_SLOTS, offeredDays, type Plan, type PlanSlot } from '../domain/slots';
 import { useLockPlan, useSetSlot } from '../hooks/usePlans';
 
@@ -164,11 +164,11 @@ export interface PlanCardProps {
   /** The instant the surface was folded against — **the one clock on this card**, *today*. */
   readonly readAt: string;
   /**
-   * **Who is in against how many the court takes — given exactly while the room has no game.**
-   * The lock waits for the court (ADR-0164 §5): with this the button is absent and the count line
-   * stands where it will be; without it the button is drawn. The game screen never passes one.
+   * **The court's line-up** — complete, and the lock is offered; or still filling, with who is in
+   * against how many it takes, and the count line stands where the lock will be (ADR-0164 §5).
+   * The room folds it off its own read; a game surface hands `LINE_UP_COMPLETE`.
    */
-  readonly court?: CourtCount;
+  readonly lineUp: LineUp;
   /** The account may not write here. Every chip greys, and the screen owns the one note. */
   readonly refused?: boolean;
   /**
@@ -180,7 +180,7 @@ export interface PlanCardProps {
   readonly note?: ReactNode;
 }
 
-export function PlanCard({ plan, readAt, court, refused = false, note }: PlanCardProps) {
+export function PlanCard({ plan, readAt, lineUp, refused = false, note }: PlanCardProps) {
   const { challengeId, anchor } = plan;
   const write = useSetSlot();
   const lock = useLockPlan();
@@ -225,10 +225,7 @@ export function PlanCard({ plan, readAt, court, refused = false, note }: PlanCar
   const paused = PLAN_SLOTS.some((slot) => going[slot].isPaused) || lock.isPaused;
 
   /** What the button is — and whether it is drawn at all. `domain/lock.ts` is the fold. */
-  const control = lockControl(plan, {
-    pending: lock.isPending,
-    ...(court === undefined ? {} : { court }),
-  });
+  const control = lockControl(plan, { pending: lock.isPending, lineUp });
 
   /**
    * The chip each editor was opened from, so focus goes back to it.
@@ -326,18 +323,17 @@ export function PlanCard({ plan, readAt, court, refused = false, note }: PlanCar
           chips as its remedies, so it stays directly under them — and above the lock. */}
       {note}
 
-      {/* Waiting while the room has no game — the count line in the button's place, the note an
-          absent control is owed. `tiny` and `muted`, as the counter's register: it is a fact about
-          the court and not a status, and the one act it names is ahead of the player, not on it. */}
-      {control === 'waiting' && court !== undefined ? (
-        <Text style={s.waiting}>{lockWaitsLine(court)}</Text>
-      ) : null}
-
-      {/* Gone once locked, and greyed under the counter or the room's note — never with a reason
-          of its own on the label. `primary` because this is the one act on the card that asks:
-          the chips are values and this is the agreement. The card's column stretches it to the
-          content width, which is what the mock draws. */}
-      {control === 'gone' || control === 'waiting' ? null : (
+      {/* One place, three things: the count line while the line-up is still filling — the note an
+          absent control is owed — nothing once the plan is locked, and the button otherwise. The
+          branch is on the line-up rather than on `control` because the line reads the count, and
+          the fold has already said the two agree: an incomplete line-up is `waiting` and nothing
+          else is. Gone once locked, and greyed under the counter or the room's note — never with
+          a reason of its own on the label. `primary` because this is the one act on the card that
+          asks: the chips are values and this is the agreement. The card's column stretches it to
+          the content width, which is what the mock draws. */}
+      {!lineUp.complete ? (
+        <Text style={s.waiting}>{lockWaitsLine(lineUp)}</Text>
+      ) : control === 'gone' ? null : (
         <Button
           label={LOCK_THE_PLAN}
           busyLabel={LOCKING}
@@ -414,7 +410,9 @@ const s = StyleSheet.create({
     backgroundColor: theme.color.line2,
   },
   counterLabel: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted },
-  // The count line, in the counter's own register — a fact about the court, read and not operated.
+  // The count line: a sentence with two numerals in it, drawn as a sentence — `tiny` and `muted`,
+  // as *you need 2 more* and *8 days left* already are. The mono-and-tabular rule is for figures
+  // that stand alone and would ripple; a numeral inside a sentence takes the sentence's type.
   waiting: { ...theme.type.tiny, color: theme.color.muted },
   // Wrapping rather than scrolling: three chips fit a phone, and the one that can grow is the
   // place — drawn without its court, and taking a second line rather than a gesture on the rare

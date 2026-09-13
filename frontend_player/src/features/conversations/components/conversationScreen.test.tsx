@@ -226,15 +226,20 @@ describe('the header', () => {
   });
 
   /**
-   * A `LINE_UP_INCOMPLETE` room has no game, and the line says the sport and stops. It has a plan
-   * — the challenge's — and the card is pinned under this header from the opening (ADR-0164 §2).
+   * A `LINE_UP_INCOMPLETE` room has no game, and the line says the sport and stops — **over the
+   * plan card**, which is the challenge's and pinned under this header from the opening
+   * (ADR-0164 §2; what the card draws there is `planCard.test.tsx`'s). The rung is the game's.
    */
-  it('draws the sport alone under the people where there is no game', async () => {
+  it('draws the sport alone under the people where there is no game, over the card', async () => {
+    stubPlans(transport, [plan()]);
     await openTheRoom();
+
+    // The card is up — its own *Where* chip, and not the composer's question about it.
+    expect(await screen.findByLabelText('Where: Not agreed yet')).toBeTruthy();
 
     // Scoped to the header, because the row it was opened from is still mounted under it and
     // says the sport too.
-    const header = await screen.findByRole('header', {
+    const header = screen.getByRole('header', {
       name: conversationHeaderLabel(['tomek.p'], sportLabel('padel'), undefined),
     });
 
@@ -266,12 +271,12 @@ describe('the header', () => {
    * plan, and `planCard.test.tsx` holds what the card draws in its place: the count line where
    * the lock will be.
    */
-  it('draws no Details where there is no game', async () => {
+  it('draws no Details where there is no game, over the card', async () => {
     stubPlans(transport, [plan()]);
     await openTheRoom();
 
-    // The card is up — the room is complete — and the door is not.
-    expect(await screen.findByRole('button', { name: QUICK_CHIP.where })).toBeTruthy();
+    // The card is up — its own chip — and the door is not.
+    expect(await screen.findByLabelText('Where: Not agreed yet')).toBeTruthy();
     expect(screen.queryByLabelText(OPEN_THE_GAME)).toBeNull();
   });
 

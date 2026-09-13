@@ -279,10 +279,10 @@ describe('the count line, where the lock will be', () => {
    * halves of what the player needs — that they may plan now, and what will bring the button.
    */
   it('says who is in against the court, and what brings the lock', () => {
-    expect(lockWaitsLine({ in: 2, seats: 4 })).toBe(
+    expect(lockWaitsLine({ members: 2, seats: 4 })).toBe(
       "2 of 4 in — you can plan now, lock when everyone's here",
     );
-    expect(lockWaitsLine({ in: 3, seats: 4 })).toBe(
+    expect(lockWaitsLine({ members: 3, seats: 4 })).toBe(
       "3 of 4 in — you can plan now, lock when everyone's here",
     );
   });
@@ -293,7 +293,7 @@ describe('the count line, where the lock will be', () => {
    * for the shape they would take so the rule is visible where the sentence is, not invented.
    */
   it('would read 2 of 2 for singles, which is a court that always has its game', () => {
-    expect(lockWaitsLine({ in: 2, seats: 2 })).toMatch(/^2 of 2 in — /);
+    expect(lockWaitsLine({ members: 2, seats: 2 })).toMatch(/^2 of 2 in — /);
   });
 });
 

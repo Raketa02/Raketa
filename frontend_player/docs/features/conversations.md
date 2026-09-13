@@ -175,13 +175,15 @@ the lock will be** ([#425](https://github.com/Raketa02/Raketa/issues/425),
 §2, §5). The plan is the challenge's, and the room has carried `challengeId` since it opened, so
 `RoomPlan` is composed unconditionally and no longer needs `gameId` to draw: what the room hands
 down is its challenge, its own `read_at` — _today_ on the day chips, which the card used to read
-off the games list — and, **exactly while `gameId` is absent**, the court's count: `members.length`
-over `courtSeatCount(sport)`, the two facts only this screen holds beside the one that decides
-whether to say them. The card draws them as _2 of 4 in — you can plan now, lock when everyone's
-here_ where the lock button will be; once the room has its game the room passes none and the button
-is drawn, on the same nudge that brings the game (#406, amended: the card was already there, what is
-born on the nudge is the button, the _Details_ door and the header's state word). **The header's
-second line and the door stay the game's** (ADR-0157): a room without one draws the sport alone
-above a card it now has. The count is composed on the screen rather than folded in `domain/`
-because `courtSeatCount` is `shared/ui`'s and the rule of what stands in the button's place is
-`features/plans`' `domain/lock.ts` — the room states two numbers and one fact, and decides nothing.
+off the games list — and **its line-up**, `domain/room.ts`' `lineUpOf`: complete once the room has
+its game, and until then still filling with `members.length` over the sport's seats, the two facts
+only this room holds beside the one that decides which arm it is. The card draws the incomplete arm
+as _2 of 4 in — you can plan now, lock when everyone's here_ where the lock button will be; once the
+room has its game the line-up is complete and the button is drawn, on the same nudge that brings
+the game (#406, amended: the card was already there, what is born on the nudge is the button, the
+_Details_ door and the header's state word). **The header's second line and the door stay the
+game's** (ADR-0157): a room without one draws the sport alone above a card it now has. The fold is
+`domain/`'s and takes the seat count as an argument, because how many stand on a court of this
+sport is `shared/ui`'s drawn knowledge (`courtSeatCount`) and `domain/` is pure; the rule of what
+stands in the button's place is `features/plans`' `domain/lock.ts` — the room states its line-up
+and decides nothing about the lock.

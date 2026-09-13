@@ -26,6 +26,7 @@ import { Card } from '@/shared/ui';
 import { FILL_THE_SEAT, WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 import {
   GATE_USER,
+  PLANS_PATH,
   launchSignedIn,
   planSlotPath,
   stubConversation,
@@ -125,7 +126,9 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
 /**
  * The court's row on `GET /plans` — **the challenge's** (ADR-0164 §1), which the game inherits: the
  * screen joins the game to it by `challenge_id`, and the writes are addressed by the same id. The
- * anchor is the game's `planned_at` once there is a game.
+ * anchor is the game's `planned_at` once there is a game — which is why `stubTheWorld` lists no
+ * row by default: the screen draws the card off the game's own anchor until the row lands, and
+ * every test here that does not stub one is proving it.
  */
 function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
   return {
@@ -165,7 +168,7 @@ afterEach(async () => {
 /** Every list this screen and the room behind it read, and a room to open unless asked otherwise. */
 function stubTheWorld({
   games = [game()],
-  plans = [plan()],
+  plans = [],
   room = true,
   members = PAIR,
   court = { refused: 409, code: 'pairing_is_history' },
@@ -321,6 +324,42 @@ describe('the plan card, editable here', () => {
     for (const name of Object.values(SLOT_NAME)) {
       expect(screen.getByLabelText(`${name}: ${NOT_AGREED_YET}`)).toBeTruthy();
     }
+  });
+
+  /**
+   * **The card is there before the row is** — drawn off the game's own anchor, which is what the
+   * row's will be once it lands (ADR-0164 §4) — and stays as it was when the list answers with the
+   * same empty court. The room cannot do this and draws nothing until its row; the game screen has
+   * the one thing the anchor is derived from.
+   */
+  it('draws the card off the game’s own anchor while the plan list is still coming', async () => {
+    let landed: () => void = () => {};
+    const listLands = new Promise<void>((resolve) => {
+      landed = resolve;
+    });
+    stubTheWorld();
+    transport.on('GET', PLANS_PATH, async () => {
+      await listLands;
+      return json<Wire['PlanListResponse']>({ plans: [plan()] });
+    });
+    await launchSignedIn(`/games/${GAME}`);
+    await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
+
+    // The card, with the lock greyed under it and the horizon the game's: the last day offered
+    // is `planned_at + 7`, Tuesday the 15th.
+    expect(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`)).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: LOCK_THE_PLAN }).props.accessibilityState.disabled,
+    ).toBe(true);
+    fireEvent.press(screen.getByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
+    expect(await screen.findByLabelText(dayChipName('2026-09-15'))).toBeTruthy();
+    expect(screen.queryByLabelText(dayChipName('2026-09-16'))).toBeNull();
+
+    landed();
+    await act(async () => {
+      await listLands;
+    });
+    expect(screen.getByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`)).toBeTruthy();
   });
 
   /**

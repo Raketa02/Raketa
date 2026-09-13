@@ -34,10 +34,13 @@
  *
  * It is handed `(game, plan | undefined)` by the composition that holds both lists, and reads
  * nothing else: the card's clock is the game's `readAt` (ADR-0148 §10), and the horizon is the
- * row's own anchor — the game's `planned_at`, once there is a game (ADR-0164 §4). A row that has
- * not landed draws nothing: the card takes a row and never an absence, because the row is what
- * carries the anchor. No `court` is handed down — a game screen is a court that has its game, so
- * the lock is offered here.
+ * row's own anchor. **While the row has not landed, the card is drawn off the game's own anchor**:
+ * once a game exists its plan's anchor *is* `planned_at` (ADR-0164 §4), so the row this draws in
+ * the meantime — three empty slots, that anchor — is the row the list will answer with for a court
+ * nobody has written on, and the held note and the panel stay where they were. The room cannot do
+ * the same, because a room without a game has nothing to derive the anchor from; there, the row
+ * is what says there is a card to draw. The line-up is complete here by construction — a game
+ * screen is a court that has its game — so the lock is offered.
  */
 
 import { StyleSheet, View } from 'react-native';
@@ -46,6 +49,7 @@ import { LIVE_NOTE, writeStanding } from '@/features/conversations/types';
 import type { Game } from '@/features/games/types';
 import { Note, theme } from '@/shared/ui';
 
+import { LINE_UP_COMPLETE } from '../domain/lock';
 import type { Plan } from '../domain/slots';
 import { usePlanWriteRefusals } from '../hooks/usePlans';
 
@@ -56,8 +60,8 @@ export interface GameScreenPlanProps {
   /** The game whose plan this is — read for its clock. The plan is the challenge's, and it is found by the game's `challengeId` one component up. */
   readonly game: Game;
   /**
-   * The court's row, or `undefined` while the list has not landed — in which case there is nothing
-   * to draw the card from yet, and the block draws nothing rather than a card without its anchor.
+   * The court's row, or `undefined` while the list has not landed — drawn, in the meantime, as
+   * the row it will be: nothing agreed, anchored at the game's `planned_at`.
    */
   readonly plan: Plan | undefined;
 }
@@ -65,7 +69,7 @@ export interface GameScreenPlanProps {
 export function GameScreenPlan({ game, plan }: GameScreenPlanProps) {
   const held = writeStanding(usePlanWriteRefusals()) === 'held';
 
-  if (plan === undefined) return null;
+  const row: Plan = plan ?? { challengeId: game.challengeId, anchor: game.plannedAt };
 
   return (
     <View style={s.block}>
@@ -75,10 +79,10 @@ export function GameScreenPlan({ game, plan }: GameScreenPlanProps) {
         </Note>
       ) : null}
 
-      {/* No `court`: a game screen is a court that has its game, so the lock is offered here. */}
       <PlanCard
-        plan={plan}
+        plan={row}
         readAt={game.readAt}
+        lineUp={LINE_UP_COMPLETE}
         refused={held}
         note={
           <Note variant="info" title={PLAN_PANEL.title}>

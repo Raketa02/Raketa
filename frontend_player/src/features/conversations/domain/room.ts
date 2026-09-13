@@ -27,6 +27,7 @@
  * feature that reads a `seq` at all.
  */
 
+import type { LineUp } from '@/features/plans/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Entry } from './entry';
@@ -84,6 +85,29 @@ export interface EntryPage {
  */
 export interface OpenConversation extends EntryPage {
   readonly room: ConversationRoom;
+}
+
+/**
+ * **The court's line-up, as the plan card reads it** — complete the moment the room has its game,
+ * and still filling until then, with who is in against how many the court takes.
+ *
+ * The room is the one surface that holds the two facts the card's count line needs beside the one
+ * that decides whether to say them at all: its members are the challenge's accepted seats, `gameId`
+ * is whether the court has become a game, and the seat count is the sport's — handed in, because
+ * how many people stand on a court is drawn knowledge (`courtSeatCount`, `shared/ui`) and this
+ * file is pure. **The game is the fact and never the count**
+ * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §1: *has this court become a game* is the line-up having completed): three of four with a game
+ * is a seat left open on a complete line-up, and the lock is offered there, where the server's
+ * refusal is a sentence rather than an absent button (ADR-0164 §5).
+ */
+export function lineUpOf(
+  room: Pick<ConversationRoom, 'gameId'> & { readonly members: readonly unknown[] },
+  seats: number,
+): LineUp {
+  return room.gameId === undefined
+    ? { complete: false, members: room.members.length, seats }
+    : { complete: true };
 }
 
 /**

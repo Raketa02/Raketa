@@ -318,21 +318,33 @@ the games list's on the game screen — and the row a half-built court offers is
 its game will and **widens** when the court fills, never the other way. `GET /plans` lists **one
 row for every court the reader holds an accepted seat on, written or not**, so a row with three
 nulls is the ordinary opening of a room and _no row_ means the list has not landed or the reader
-holds no seat; `PlanCard` therefore takes a `Plan` and never `undefined`, and both `RoomPlan` and
-`GameScreenPlan` draw nothing until the row lands — the row is what says there is a plan to draw
-and carries the anchor to draw it with. The four writes are addressed by the challenge, `usePlan`
+holds no seat; `PlanCard` therefore takes a `Plan` and never `undefined`. **The two surfaces read
+an absent row differently, and the difference is where the anchor can come from**: `RoomPlan`
+draws nothing until the row lands — a room without a game has nothing to derive the anchor from,
+and the row is what says there is a card to draw — while `GameScreenPlan` draws the card off the
+game's own `planned_at` in the meantime, which is exactly what the row's anchor is once a game
+exists (§4), so the game screen keeps the loading state it had: three empty slots, the held note
+and the panel, from the first frame. The four writes are addressed by the challenge, `usePlan`
 looks a court up by it, and the rail and the composed game screen join a game to its plan by
 `game.challengeId` — so a court whose four people filled every slot in the chat lands on Now as
 _Game on_ on its first read, never as _Planning_, and Now still draws nothing for a court that is
-not whole (ADR-0164 §7). **`lockControl` gains a fifth state, `waiting`**, read before the count:
-while the room has no game the button is **absent, not greyed** (#324), and in its place the card
-draws one line, `lockWaitsLine` — _2 of 4 in — you can plan now, lock when everyone's here_, the
-room's members over the sport's seats, handed in as `CourtCount` exactly while the room has no
-game; the room composes the count because it alone holds the members, the sport and `gameId`, and
-this feature decides only that a court still being filled has no lock to draw. A singles room never
+not whole (ADR-0164 §7). **`lockControl` gains a fifth state, `waiting`**, read before the count
+off a named fact rather than an optional count: the card is handed the court's **`LineUp`** —
+`{ complete: true }`, or `{ complete: false, members, seats }` — and while the line-up is
+incomplete the button is **absent, not greyed** (#324), with one line in its place,
+`lockWaitsLine` — _2 of 4 in — you can plan now, lock when everyone's here_, the room's members
+over the sport's seats. **Complete means the court has become a game, never that the count is
+full** (ADR-0165 §1: _has this court become a game_ is the line-up having completed), so a game a
+seat has since been left open on is still complete and still draws the button. The room folds its
+line-up in its own `domain/room.ts` (`lineUpOf`), because it alone holds the members and `gameId`,
+and is handed the sport's seat count by the screen, because how many stand on a court is
+`shared/ui`'s drawn knowledge; the game screen hands `LINE_UP_COMPLETE`. This feature decides only
+that a court still being filled has no lock to draw. A singles room never
 draws the line: two yeses is the whole court, and the room opens with its game. The line becomes
 the button on the nudge that brings the game, over the slots recorded before. A game a seat has
 since been left open on still draws the button, and the server's `the_court_is_not_whole` is
 surfaced in words — _Not everyone's here yet — lock the plan once they are_ — rather than
-pre-empted. `GamesRail` and the ladder are otherwise untouched. No device has drawn the count line;
-it is asked for a look.
+pre-empted. The count line is a sentence with two numerals in it and is drawn as one, `tiny` and
+`muted`, as _you need 2 more_ and _8 days left_ already are: the mono-and-tabular rule is for
+figures that stand alone and would ripple. `GamesRail` and the ladder are otherwise untouched. No
+device has drawn the count line; it is asked for a look.
