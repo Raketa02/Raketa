@@ -20,8 +20,10 @@ was never an outward demand on a context with rules of its own.
 
 **The second row is what makes the Plan a provider without a provider
 register.** ``games`` may not import the Plan (ADR-0145 §4), so it demands the
-moment in its own words and the Plan's adapter signs it — the consumer contracts
-its own demand, which is the rule ``PlanningCourt`` states from the other side.
+moment in its own words — keyed by the challenge the game was opened from, which
+is the plan's own id (``docs/adr/0164`` §1) — and the Plan's adapter signs it:
+the consumer contracts its own demand, which is the rule ``SeatableCourt``
+states from the other side.
 
 **A row carries a builder over the two seams a suite supplies for itself**, on
 ``challenge_demands.py``'s shape and for its reason: the pairing is recomputed

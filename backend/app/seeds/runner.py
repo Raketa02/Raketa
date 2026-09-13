@@ -1204,8 +1204,8 @@ async def run(settings: Settings | None = None) -> SeedReport:
         # played, so this one arranges four more and stops — and it has to run
         # before the outbox is drained, so that the four system lines it writes
         # reach the rooms in the same pass everything else does. It holds a
-        # delivery barrier of its own as well, because a plan line is hung on a
-        # room *through its game* and that is an earlier event.
+        # delivery barrier of its own as well, because a plan line is hung on
+        # the room its challenge opened and that opening is an earlier event.
         plans = await write_the_plans(
             session_factory, settings=settings, now=now
         )

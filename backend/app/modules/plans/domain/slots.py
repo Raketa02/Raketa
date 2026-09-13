@@ -194,12 +194,18 @@ def local_day(at: Instant) -> date:
     return at.astimezone(PLATFORM_ZONE).date()
 
 
-def last_plannable_day(planned_at: Instant) -> date:
+def last_plannable_day(anchor: Instant) -> date:
     """The last local day a plan may name. **The clamp, and it is one line.**
 
-    ``planned_at + PLAN_HORIZON``, read as a local date in the platform zone, so
-    a plan can never name a day past the entry window and the day row shrinks as
-    the week runs out (``docs/adr/0144``).
+    The anchor plus ``PLAN_HORIZON``, read as a local date in the platform zone,
+    so a plan can never name a day past the entry window and the day row shrinks
+    as the week runs out (``docs/adr/0144``). **The anchor is the challenge's
+    send until the game exists, then the game's ``planned_at``**
+    (``docs/adr/0164`` §4): the interlock below is defined once a game exists
+    and undefined before one, and the send is the one instant a half-built court
+    has. It only ever moves later, so a day chosen under the first is still
+    valid under the second and the chips widen when the court fills rather than
+    shrinking.
 
     **``PLAN_HORIZON`` stays in ``games`` and this imports it** (``docs/adr/0148``
     §8). The obvious move is to promote it to the kernel; the reason not to is
@@ -215,13 +221,13 @@ def last_plannable_day(planned_at: Instant) -> date:
     play a fortnight out cannot say so.
     """
 
-    return local_day(instant(planned_at + PLAN_HORIZON))
+    return local_day(instant(anchor + PLAN_HORIZON))
 
 
-def refuse_a_day_past_the_horizon(day: date, *, planned_at: Instant) -> date:
+def refuse_a_day_past_the_horizon(day: date, *, anchor: Instant) -> date:
     """The day, if the horizon reaches it."""
 
-    if day > last_plannable_day(planned_at):
+    if day > last_plannable_day(anchor):
         raise TheDayIsPastTheHorizon()
     return day
 

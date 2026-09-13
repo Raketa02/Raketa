@@ -9,9 +9,10 @@ the reason every aggregate repository in this codebase is: it remembers the
 stream versions it loaded, so it must never outlive the transaction it was built
 for.
 
-**The court is built per request and not per unit of work.** It reads ``games``
-and writes nothing, so unlike the repository beside it there is no transaction it
-could outlive — and the three writes and the one read all want the same one.
+**The courts are built per request and not per unit of work.** They read
+``challenges`` and ``games`` and write nothing, so unlike the repository beside
+them there is no transaction they could outlive — and the four writes and the
+one read all want the same one.
 """
 
 from __future__ import annotations
@@ -30,10 +31,9 @@ from app.api.dependencies import (
 from app.bootstrap.composition import (
     build_plan_hold_query,
     build_plan_repository,
-    build_planning_court,
+    build_plannable_courts,
     build_read_plans,
 )
-from app.modules.games.domain.ports import PlanningCourt
 from app.modules.plans.application.read_plans import ReadPlans
 from app.modules.plans.application.record_a_slot import (
     LockThePlan,
@@ -41,7 +41,11 @@ from app.modules.plans.application.record_a_slot import (
     SetHour,
     SetPlace,
 )
-from app.modules.plans.domain.ports import AccountHoldQuery, PlanRepository
+from app.modules.plans.domain.ports import (
+    AccountHoldQuery,
+    PlannableCourts,
+    PlanRepository,
+)
 
 
 def get_plan_repository(
@@ -53,11 +57,11 @@ def get_plan_repository(
 PlanRepositoryDep = Annotated[PlanRepository, Depends(get_plan_repository)]
 
 
-def get_planning_court(db: DbSession) -> PlanningCourt:
-    return build_planning_court(db)
+def get_plannable_courts(db: DbSession) -> PlannableCourts:
+    return build_plannable_courts(db)
 
 
-PlanningCourtDep = Annotated[PlanningCourt, Depends(get_planning_court)]
+PlannableCourtsDep = Annotated[PlannableCourts, Depends(get_plannable_courts)]
 
 
 def get_plan_hold_query(db: DbSession) -> AccountHoldQuery:
@@ -84,12 +88,12 @@ ReadPlansDep = Annotated[ReadPlans, Depends(get_read_plans)]
 
 def get_set_place(
     plans: PlanRepositoryDep,
-    court: PlanningCourtDep,
+    courts: PlannableCourtsDep,
     holds: PlanHoldQueryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> SetPlace:
-    return SetPlace(plans=plans, court=court, holds=holds, uow=uow, clock=clock)
+    return SetPlace(plans=plans, courts=courts, holds=holds, uow=uow, clock=clock)
 
 
 SetPlaceDep = Annotated[SetPlace, Depends(get_set_place)]
@@ -97,12 +101,12 @@ SetPlaceDep = Annotated[SetPlace, Depends(get_set_place)]
 
 def get_set_day(
     plans: PlanRepositoryDep,
-    court: PlanningCourtDep,
+    courts: PlannableCourtsDep,
     holds: PlanHoldQueryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> SetDay:
-    return SetDay(plans=plans, court=court, holds=holds, uow=uow, clock=clock)
+    return SetDay(plans=plans, courts=courts, holds=holds, uow=uow, clock=clock)
 
 
 SetDayDep = Annotated[SetDay, Depends(get_set_day)]
@@ -110,12 +114,12 @@ SetDayDep = Annotated[SetDay, Depends(get_set_day)]
 
 def get_set_hour(
     plans: PlanRepositoryDep,
-    court: PlanningCourtDep,
+    courts: PlannableCourtsDep,
     holds: PlanHoldQueryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> SetHour:
-    return SetHour(plans=plans, court=court, holds=holds, uow=uow, clock=clock)
+    return SetHour(plans=plans, courts=courts, holds=holds, uow=uow, clock=clock)
 
 
 SetHourDep = Annotated[SetHour, Depends(get_set_hour)]
@@ -123,12 +127,12 @@ SetHourDep = Annotated[SetHour, Depends(get_set_hour)]
 
 def get_lock_the_plan(
     plans: PlanRepositoryDep,
-    court: PlanningCourtDep,
+    courts: PlannableCourtsDep,
     holds: PlanHoldQueryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> LockThePlan:
-    return LockThePlan(plans=plans, court=court, holds=holds, uow=uow, clock=clock)
+    return LockThePlan(plans=plans, courts=courts, holds=holds, uow=uow, clock=clock)
 
 
 LockThePlanDep = Annotated[LockThePlan, Depends(get_lock_the_plan)]

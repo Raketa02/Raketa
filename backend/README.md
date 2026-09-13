@@ -522,10 +522,12 @@ game leaving `AWAITING_ENTRY` is the only thing that freezes the slots*, and a d
 only of played games can draw a plan card in exactly one state. `app/seeds/plans.py` sends
 four tennis courts, answers every seat, and then writes their plans to **nought, one, two
 and three slots** through the three routes a player presses. *Nought* is the row that reads
-oddly and is the point: a plan is born by being used, so no slots means the game carries
-**no plan at all** and is absent from `GET /plans` — the state is asserted as hard as the
-other three, because a layer that quietly reached three of four reads as having reached
-four. It is the one layer that writes in the **present**, and its cost is on the report: four
+oddly and is the point: a plan is born by being used, so no slots means the court carries
+**nothing in the store** and `GET /plans` still lists it — a row with three empty slots and
+its anchor, because a row exists for every court the reader holds an accepted seat on
+([ADR-0164](../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+§4) — the state is asserted as hard as the other three, because a layer that quietly
+reached three of four reads as having reached four. It is the one layer that writes in the **present**, and its cost is on the report: four
 arranged games count toward nothing, because a game inside its entry window is neither
 played nor a ghost.
 

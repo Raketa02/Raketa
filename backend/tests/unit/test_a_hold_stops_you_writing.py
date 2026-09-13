@@ -47,7 +47,6 @@ from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.errors import ConversationNotFound
 from app.modules.conversations.domain.live import Nudge
 from app.modules.conversations.domain.ports import MemberFace
-from app.modules.games.domain.ports import PlannableGame
 from app.modules.plans.application.commands import (
     ReadPlansCommand,
     SetDayCommand,
@@ -57,6 +56,7 @@ from app.modules.plans.application.commands import (
 from app.modules.plans.application.read_plans import ReadPlans
 from app.modules.plans.application.record_a_slot import SetDay, SetHour, SetPlace
 from app.modules.plans.domain.plan import Plan
+from app.modules.plans.domain.ports import PlannableCourt
 from app.shared.domain.errors import AccountHeld
 
 NOW = instant(datetime(2026, 9, 8, 18, 0, tzinfo=timezone.utc))
@@ -64,7 +64,9 @@ HELD = uuid4()
 BESIDE_THEM = uuid4()
 A_STRANGER = uuid4()
 CHALLENGE = uuid4()
-GAME = uuid4()
+#: A court of its own — the plan is the challenge's (``docs/adr/0164`` §1), and
+#: the plan writes below are about a different court from the room above.
+COURT = uuid4()
 
 
 class _FrozenClock:
@@ -459,20 +461,22 @@ async def test_a_message_that_lands_announces_the_rooms_new_length(room, members
 
 
 class _ACourtStillArranging:
-    """``PlanningCourt``, answering about one game that is open to planning."""
+    """``PlannableCourts``, answering about one court that is open to planning."""
 
     async def plannable_for(self, player_id: UUID, *, now):
-        return {GAME: PlannableGame(planned_at=NOW, open_to_planning=True)}
+        return {
+            COURT: PlannableCourt(anchor=NOW, open_to_planning=True, whole=True)
+        }
 
 
 class _OnePlan:
     """The repository, holding one plan and remembering what was appended."""
 
     def __init__(self) -> None:
-        self.plan = Plan.unwritten(GAME)
+        self.plan = Plan.unwritten(COURT)
         self.saved: list[Plan] = []
 
-    async def load(self, game_id: UUID) -> Plan:
+    async def load(self, challenge_id: UUID) -> Plan:
         return self.plan
 
     async def save(self, plan: Plan) -> None:
@@ -480,14 +484,14 @@ class _OnePlan:
 
 
 class _NoPlans:
-    async def for_games(self, game_ids):
+    async def for_challenges(self, challenge_ids):
         return ()
 
 
 def _collaborators(holds, plans: _OnePlan, uow: _Uow) -> dict:
     return {
         "plans": plans,
-        "court": _ACourtStillArranging(),
+        "courts": _ACourtStillArranging(),
         "holds": holds,
         "uow": uow,
         "clock": _FrozenClock(),
@@ -502,7 +506,7 @@ async def test_a_held_member_cannot_set_the_place():
 
     with pytest.raises(AccountHeld) as refused:
         await place.execute(
-            SetPlaceCommand(game_id=GAME, player_id=HELD, place="Zabłocie Sport")
+            SetPlaceCommand(challenge_id=COURT, player_id=HELD, place="Zabłocie Sport")
         )
 
     assert refused.value.code == "account_held"
@@ -516,7 +520,7 @@ async def test_a_held_member_cannot_set_the_day():
 
     with pytest.raises(AccountHeld):
         await day.execute(
-            SetDayCommand(game_id=GAME, player_id=HELD, day=date(2026, 9, 12))
+            SetDayCommand(challenge_id=COURT, player_id=HELD, day=date(2026, 9, 12))
         )
 
     assert plans.saved == []
@@ -528,7 +532,7 @@ async def test_a_held_member_cannot_set_the_hour():
 
     with pytest.raises(AccountHeld):
         await hour.execute(
-            SetHourCommand(game_id=GAME, player_id=HELD, hour=time(18, 0))
+            SetHourCommand(challenge_id=COURT, player_id=HELD, hour=time(18, 0))
         )
 
     assert plans.saved == []
@@ -541,11 +545,12 @@ async def test_a_member_who_is_not_held_writes_the_slot():
     place = SetPlace(**_collaborators(_HoldOn(), plans, uow))
 
     written = await place.execute(
-        SetPlaceCommand(game_id=GAME, player_id=HELD, place="Zabłocie Sport")
+        SetPlaceCommand(challenge_id=COURT, player_id=HELD, place="Zabłocie Sport")
     )
 
-    assert written.place is not None
-    assert written.place.value == "Zabłocie Sport"
+    assert written.plan.place is not None
+    assert written.plan.place.value == "Zabłocie Sport"
+    assert written.anchor == NOW
     assert uow.commits == 1
 
 
@@ -558,8 +563,9 @@ async def test_a_held_member_still_reads_their_plans():
     """
 
     read = ReadPlans(
-        plans=_NoPlans(), court=_ACourtStillArranging(), clock=_FrozenClock()
+        plans=_NoPlans(), courts=_ACourtStillArranging(), clock=_FrozenClock()
     )
 
-    assert await read.execute(ReadPlansCommand(reader_id=HELD)) == ()
+    (row,) = await read.execute(ReadPlansCommand(reader_id=HELD))
+    assert row.plan.challenge_id == COURT and row.plan.slot_count == 0
     assert "holds" not in ReadPlans.__init__.__code__.co_varnames

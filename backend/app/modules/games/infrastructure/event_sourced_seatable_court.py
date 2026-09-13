@@ -9,7 +9,8 @@ nowhere. The departure, the fill and the acceptance all read this one answer, so
 the leaving and the filling cannot come to two verdicts about one instant.
 
 **Keyed by the challenge id**, through ``for_challenge`` — the join the opening's
-idempotence already needed, asked one act later.
+idempotence already needed, asked one act later — and the moment is asked by the
+same id, because a plan is the challenge's (``docs/adr/0164`` §1).
 
 **Nothing is projected and nothing is stored.** A game whose moment has passed
 reads as closed to seating whether or not anything noticed, and a plan moved
@@ -49,7 +50,7 @@ class EventSourcedSeatableCourt:
             return None
         if game.standing_at(now) is not GameStanding.AWAITING_ENTRY:
             return SeatChange.GAME_IS_HISTORY
-        agreed = await self._moments.agreed_point_of(game.id)
+        agreed = await self._moments.agreed_point_of(challenge_id)
         if agreed is not None and now >= agreed:
             return SeatChange.MOMENT_PASSED
         return SeatChange.ADMITTED

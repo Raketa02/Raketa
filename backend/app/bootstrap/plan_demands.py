@@ -17,14 +17,21 @@ this side of the wire reads a plan: ``games`` may not import it
 reads a plan is the **client's** ``domain/``. A context with no consumers
 publishes no port.
 
-**One row, and the port it names is not the obvious one.** The fact this context
-reads about a *game* — *is this player on this game's court, and is that game
-still open to planning* — is ``games``' question about ``games``' record, so it is
-published by that context and contracted on **its** register. What is left here
-is the one fact the Plan asks about a **person**, and it is the fourth spelling
-of a port whose provider does not exist: its empty answer is **measured rather
-than stubbed**, because nobody can be held while nothing on this platform can
-hold anybody.
+**Two rows, and the first is the read that decides who may write.**
+``PlannableCourts`` — *which courts is this player arranging, and which are
+history* — used to be ``games``' question about ``games``' record, published
+there and contracted on its register. A plan is the **challenge's** now
+(``docs/adr/0164`` §3), so the question is about a court that may or may not
+have become a game, neither provider can answer it alone, and it is declared in
+the Plan's own words and answered by an adapter that folds the two providers'
+records — which is ``conversation_demands.py``'s shape exactly, *one rule read
+against two records*. It is contracted here rather than unit-tested only,
+because a stub that agreed with the rule would prove nothing about whether
+``challenges`` and ``games`` actually fold that way. The second row is the one
+fact the Plan asks about a **person**, and it is the fourth spelling of a port
+whose provider does not exist: its empty answer is **measured rather than
+stubbed**, because nobody can be held while nothing on this platform can hold
+anybody.
 
 **A port with nothing registered is a red build**, asserted in the suite against
 ``PLAN_DEMANDS``, because a port added in a hurry would otherwise look contracted
@@ -35,9 +42,12 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from app.bootstrap.composition import build_plan_hold_query
+from app.bootstrap.composition import (
+    build_plan_hold_query,
+    build_plannable_courts,
+)
 from app.bootstrap.matcher_demands import RegisteredImplementation
-from app.modules.plans.domain.ports import AccountHoldQuery
+from app.modules.plans.domain.ports import AccountHoldQuery, PlannableCourts
 
 P = TypeVar("P")
 
@@ -49,10 +59,15 @@ P = TypeVar("P")
 #: between them and this one is who owns the fact. A repository is how this
 #: module loads its own aggregate and a directory is how it finds its own rows;
 #: nobody outside will ever hold either.
-PLAN_DEMANDS: tuple[type, ...] = (AccountHoldQuery,)
+PLAN_DEMANDS: tuple[type, ...] = (PlannableCourts, AccountHoldQuery)
 
 
 PLAN_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
+    RegisteredImplementation(
+        port=PlannableCourts,
+        name="ChallengesAndGamesPlannableCourts",
+        build=build_plannable_courts,
+    ),
     RegisteredImplementation(
         port=AccountHoldQuery,
         name="NoHoldsExist",

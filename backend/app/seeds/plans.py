@@ -14,9 +14,11 @@ is the only thing that freezes the slots*, and a database made only of played
 games can draw a plan card in exactly one state — frozen. So this layer sends
 four more courts, answers every seat, and stops.
 
-**Nought, one, two, three — and *nought* is a game with no plan at all.** A plan
-is born by being used, so the empty state is not an empty record: it is a game
-that appears in ``GET /games`` and nowhere in ``GET /plans``. It is seeded by
+**Nought, one, two, three — and *nought* is a court nobody has written on.** A
+plan is born by being used, so the empty state is not an empty record: it is a
+court that appears in ``GET /plans`` as a row with three empty slots and its
+anchor, because the row is what says there is a plan to draw
+(``docs/adr/0164`` §4), and nothing in the store behind it. It is seeded by
 arranging a game and then deliberately writing nothing on it, which is the only
 way that state exists.
 
@@ -64,7 +66,7 @@ from app.bootstrap.composition import (
     build_event_publisher,
     build_plan_hold_query,
     build_plan_repository,
-    build_planning_court,
+    build_plannable_courts,
     build_read_plans,
     build_unit_of_work,
     build_user_repository,
@@ -266,20 +268,20 @@ async def write_the_plans(
                 now=now,
                 redis=redis,
             )
-            games = {
+            courts = {
                 declared: await _arrange(paths, declared, cohort)
                 for declared in ARRANGED_GAMES
             }
             await _tell_the_rooms_first(session, session_factory)
-            await _fill_the_slots(session, games, cohort, paths=paths, now=now)
+            await _fill_the_slots(session, courts, cohort, paths=paths, now=now)
 
     # **Re-read after the writes**, because what is asserted is what a screen
     # would draw and not what this function believes it wrote.
     async with session_factory() as session:
         drawn = await _every_plan_drawn(session, now=now, cohort=cohort)
     return SeededPlans(
-        arranged=len(games),
-        plans=_refuse_a_card_state_nobody_can_draw(drawn, games),
+        arranged=len(courts),
+        plans=_refuse_a_card_state_nobody_can_draw(drawn, courts),
     )
 
 
@@ -291,7 +293,9 @@ async def write_the_plans(
 async def _arrange(
     paths: ReadPaths, declared: ArrangedGame, cohort: Cohort
 ) -> UUID:
-    """One game, sent and fully accepted, and **never entered**.
+    """One game, sent and fully accepted, and **never entered** — answered as
+    the id of the challenge it was opened from, which is the plan's own
+    (``docs/adr/0164`` §1).
 
     The probe comes before the search, exactly as it does for a played game and
     for the lesson ``pairs.py`` paid for: once a court has been sent the pair is
@@ -319,7 +323,7 @@ async def _arrange(
     # decides whether the game is counted — and a friendly plan is the same plan,
     # so this is a check that the declaration is coherent rather than a rule.
     mode_of(paths, organiser, sport)
-    return standing.id
+    return standing.challenge_id
 
 
 # ---------------------------------------------------------------------------
@@ -333,10 +337,11 @@ async def _tell_the_rooms_first(
 ) -> None:
     """Drain the outbox, so that the next write has a room to write into.
 
-    **A plan line is hung on a room through its game**, which the room learns
-    from ``GamePlanned`` — so every line this layer causes depends on an earlier
-    event having been delivered. The outbox orders by ``(created_at, id)`` and
-    ``created_at`` is transaction-start time: on SQLite that is **one second**, so
+    **A plan line is hung on the room its challenge opened**, which exists once
+    the first ``SeatAccepted`` has been delivered — so every line this layer
+    causes depends on an earlier event having been delivered. The outbox orders
+    by ``(created_at, id)`` and ``created_at`` is transaction-start time: on
+    SQLite that is **one second**, so
     an arrangement and the slot writes that follow it tie and the tie-break is a
     minted uuid (``docs/adr/0097``). Without the barrier every line here is a coin
     flip on the database ``tests/unit/test_seed_runner.py`` runs the whole seed
@@ -358,7 +363,7 @@ async def _tell_the_rooms_first(
 
 async def _fill_the_slots(
     session: AsyncSession,
-    games: dict[ArrangedGame, UUID],
+    courts: dict[ArrangedGame, UUID],
     cohort: Cohort,
     *,
     paths: ReadPaths,
@@ -367,10 +372,10 @@ async def _fill_the_slots(
     """Write each plan up to its declared slot count, in ADR-0144's own order."""
 
     agreed_day = _the_agreed_day(now)
-    for declared, game_id in games.items():
+    for declared, challenge_id in courts.items():
         await agree_up_to(
             session,
-            game_id=game_id,
+            challenge_id=challenge_id,
             slots=declared.slots,
             between=(
                 player_of(paths, cohort, declared.organiser),
@@ -386,7 +391,7 @@ async def _fill_the_slots(
 async def agree_up_to(
     session: AsyncSession,
     *,
-    game_id: UUID,
+    challenge_id: UUID,
     slots: int,
     between: tuple[UUID, UUID],
     day: date,
@@ -416,7 +421,7 @@ async def agree_up_to(
     appends to **one** stream and the repository is what remembers the version it
     last saw; a repository each would be as many answers to *what have I read*,
     and the second append would expect version 0 of a stream it had never loaded.
-    Two plans are two streams, so a fresh set per game is right.
+    Two plans are two streams, so a fresh set per court is right.
 
     **``lock`` is an act and comes last**, after the third slot, because that is
     the only order the aggregate accepts (``docs/adr/0155``). It defaults to
@@ -429,28 +434,36 @@ async def agree_up_to(
         event_store=build_domain_event_store(session),
         events=build_event_publisher(session),
     )
-    court = build_planning_court(session)
+    courts = build_plannable_courts(session)
     holds = build_plan_hold_query(session)
     uow = build_unit_of_work(session)
     one, other = between
     if slots >= 1:
         await SetPlace(
-            plans=plans, court=court, holds=holds, uow=uow, clock=clock
+            plans=plans, courts=courts, holds=holds, uow=uow, clock=clock
         ).execute(
-            SetPlaceCommand(game_id=game_id, player_id=one, place=THE_PLACE)
+            SetPlaceCommand(
+                challenge_id=challenge_id, player_id=one, place=THE_PLACE
+            )
         )
     if slots >= 2:
         await SetDay(
-            plans=plans, court=court, holds=holds, uow=uow, clock=clock
-        ).execute(SetDayCommand(game_id=game_id, player_id=other, day=day))
+            plans=plans, courts=courts, holds=holds, uow=uow, clock=clock
+        ).execute(
+            SetDayCommand(challenge_id=challenge_id, player_id=other, day=day)
+        )
     if slots >= 3:
         await SetHour(
-            plans=plans, court=court, holds=holds, uow=uow, clock=clock
-        ).execute(SetHourCommand(game_id=game_id, player_id=one, hour=hour))
+            plans=plans, courts=courts, holds=holds, uow=uow, clock=clock
+        ).execute(
+            SetHourCommand(challenge_id=challenge_id, player_id=one, hour=hour)
+        )
     if lock:
         await LockThePlan(
-            plans=plans, court=court, holds=holds, uow=uow, clock=clock
-        ).execute(LockThePlanCommand(game_id=game_id, player_id=other))
+            plans=plans, courts=courts, holds=holds, uow=uow, clock=clock
+        ).execute(
+            LockThePlanCommand(challenge_id=challenge_id, player_id=other)
+        )
 
 
 def _the_agreed_day(now: Instant) -> date:
@@ -473,13 +486,13 @@ def _the_agreed_day(now: Instant) -> date:
 async def _every_plan_drawn(
     session: AsyncSession, *, now: Instant, cohort: Cohort
 ) -> dict[UUID, Plan]:
-    """Every plan these games carry, read through ``GET /plans``' own use case.
+    """Every plan these courts carry, read through ``GET /plans``' own use case.
 
-    **Read as a player and never off the table.** The read is scoped to the games
-    the reader is on the court of, so a fixture that queried the store would be
-    asserting something no screen can draw — and reading as *each* organiser is
-    what makes that scoping the thing under test rather than a detail routed
-    around.
+    **Read as a player and never off the table.** The read is scoped to the
+    courts the reader holds an accepted seat on, so a fixture that queried the
+    store would be asserting something no screen can draw — and reading as
+    *each* organiser is what makes that scoping the thing under test rather than
+    a detail routed around.
     """
 
     reader = build_read_plans(session, clock=FixedClock(at=now))
@@ -488,7 +501,7 @@ async def _every_plan_drawn(
         found = await reader.execute(
             ReadPlansCommand(reader_id=await _player_id(session, cohort, handle))
         )
-        drawn.update({plan.game_id: plan for plan in found})
+        drawn.update({row.plan.challenge_id: row.plan for row in found})
     return drawn
 
 
@@ -508,31 +521,42 @@ async def _player_id(
 
 
 def _refuse_a_card_state_nobody_can_draw(
-    drawn: dict[UUID, Plan], games: dict[ArrangedGame, UUID]
+    drawn: dict[UUID, Plan], courts: dict[ArrangedGame, UUID]
 ) -> tuple[str, ...]:
     """*Nought, one, two and three slots are all in this database.*
 
-    **The absence is asserted as hard as the presence**, and that is the point of
-    the nought row: a plan at no slots is a game with **no plan**, so the claim it
-    makes is that the game is arranged, readable, and missing from the plan list.
-    A layer that quietly reached three of the four states would read as having
-    reached four, and the person it misled would be the one about to build the
-    card.
+    **The empty row is asserted as hard as the written ones**, and that is the
+    point of the nought row: a plan at no slots is a court with **nothing
+    written**, so the claim it makes is that the court is arranged, readable,
+    and listed by ``GET /plans`` as a row with three empty slots
+    (``docs/adr/0164`` §4) — a court **missing** from the list would be one the
+    reader holds no accepted seat on, which is a different claim and a wrong
+    one here. A layer that quietly reached three of the four states would read
+    as having reached four, and the person it misled would be the one about to
+    build the card.
     """
 
     lines: list[str] = []
-    for declared, game_id in games.items():
-        plan = drawn.get(game_id)
-        reached = 0 if plan is None else plan.slot_count
+    for declared, challenge_id in courts.items():
+        plan = drawn.get(challenge_id)
+        if plan is None:
+            raise SeedPlanMissing(
+                f"the game against '{declared.side_b[0]}' is arranged and "
+                f"`GET /plans` lists no row for it. A row exists for every "
+                f"court the reader holds an accepted seat on, written or not, "
+                f"so a missing row says the organiser is not on this court — "
+                f"which is a court somebody else wrote in."
+            )
+        reached = plan.slot_count
         if reached != declared.slots:
             raise SeedPlanMissing(
                 f"the game against '{declared.side_b[0]}' was declared at "
                 f"{declared.slots} slot(s) and its plan draws {reached}. "
                 + (
                     "A plan is born by being used, so nought slots means the "
-                    "game carries no plan at all and must be absent from "
-                    "`GET /plans` — a row of three nulls is a state this "
-                    "platform cannot produce."
+                    "court carries no plan in the store and `GET /plans` draws "
+                    "it as a row with three empty slots — a slot written here "
+                    "is a write nothing in this layer made."
                     if declared.slots == 0
                     else "The slot writes go through the routes a player "
                     "presses, so a count that has moved is a refusal one of them "
@@ -548,13 +572,13 @@ def _refuse_a_card_state_nobody_can_draw(
                 + ". **The count and the lock are two facts** "
                 "(`docs/adr/0155`): a complete plan is one everybody *could* "
                 "agree, and the lock is the act that says somebody did — so a "
-                "row that has moved is a refusal `PUT /plans/{game_id}/lock` "
+                "row that has moved is a refusal `PUT /plans/{challenge_id}/lock` "
                 "answered with, and the state it leaves undrawable is the "
                 "`PLAN_LOCKED` line."
             )
         lines.append(_line_for(declared, plan))
-    _refuse_a_run_that_reached_the_same_state_four_times(games)
-    _refuse_a_run_where_nobody_agreed_anything(games)
+    _refuse_a_run_that_reached_the_same_state_four_times(courts)
+    _refuse_a_run_where_nobody_agreed_anything(courts)
     return tuple(lines)
 
 
@@ -596,14 +620,14 @@ def _refuse_a_run_where_nobody_agreed_anything(
         )
 
 
-def _line_for(declared: ArrangedGame, plan: Plan | None) -> str:
+def _line_for(declared: ArrangedGame, plan: Plan) -> str:
     """One row of the report, in the words a developer needs."""
 
     against = " & ".join(declared.side_b)
-    if plan is None:
+    if plan.slot_count == 0:
         return (
             f"{declared.sport.lower()} · {declared.organiser} against {against} "
-            f"· no plan — the game is arranged and nothing is agreed"
+            f"· nothing agreed — the court is listed with three empty slots"
         )
     return (
         f"{declared.sport.lower()} · {declared.organiser} against {against} · "

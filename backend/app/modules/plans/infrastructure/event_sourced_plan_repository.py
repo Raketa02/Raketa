@@ -8,18 +8,19 @@ base deliberately.
 **Its own aggregate type**, spelled here once and nowhere else.
 
 **There is no lookup by payload here, and that is the whole dividend of keying on
-the game's id.** ``games`` matches a serialized challenge id to make its opening
-idempotent and a serialized court to find a player's streams; ``conversations``
-carries a row with two foreign keys. A plan's stream id **is** its game's, so
-*this game's plan* is a stream read and *these games' plans* is an ``IN`` on the
-aggregate id — the two reads a payload match would otherwise have to be written
-and guarded for.
+the challenge's id** (``docs/adr/0164`` §1). ``games`` matches a serialized
+challenge id to make its opening idempotent and a serialized court to find a
+player's streams; ``conversations`` carries a row with two foreign keys. A plan's
+stream id **is** its challenge's, so *this court's plan* is a stream read and
+*these courts' plans* is an ``IN`` on the aggregate id — the two reads a payload
+match would otherwise have to be written and guarded for.
 
 **``load`` answers an unwritten plan rather than ``None``.** A plan is born by
-being used, so *nothing agreed yet* is a plan with nothing in it: the three write
+being used, so *nothing agreed yet* is a plan with nothing in it: the four write
 paths start from it, and a repository that answered ``None`` would make each of
 them spell the birth. The **directory** never returns one, and it needs no filter
-to promise that — a game nobody has agreed anything about has no stream.
+to promise that — a court nobody has agreed anything about has no stream — and
+the list read spells the courts it did not return as unwritten.
 
 **The version is recovered, not taken**, so this must be constructed **per
 request** from the session, exactly as the event store dependency is.
@@ -56,19 +57,19 @@ class EventSourcedPlanRepository:
     ) -> None:
         self._event_store = event_store
         self._events = events
-        # Game id -> the stream version this request has seen. Read by ``save``
+        # Challenge id -> the stream version this request has seen. Read by ``save``
         # as the expected version, and **zero for a plan that does not exist
         # yet** — which is what makes the first recording an append against an
         # empty stream rather than a create.
         self._versions: dict[UUID, int] = {}
 
-    async def load(self, game_id: UUID) -> Plan:
+    async def load(self, challenge_id: UUID) -> Plan:
         stored = await self._event_store.load_stream(
             aggregate_type=PLAN_AGGREGATE,
-            aggregate_id=game_id,
+            aggregate_id=challenge_id,
         )
         plan = (
-            Plan.unwritten(game_id)
+            Plan.unwritten(challenge_id)
             if not stored
             else Plan.from_history(record.event for record in stored)
         )
@@ -113,17 +114,20 @@ class EventSourcedPlanDirectory:
         self._session = session
         self._codec = codec
 
-    async def for_games(self, game_ids: Collection[UUID]) -> tuple[Plan, ...]:
-        """Every plan among these games, folded whole.
+    async def for_challenges(
+        self, challenge_ids: Collection[UUID]
+    ) -> tuple[Plan, ...]:
+        """Every written plan among these courts, folded whole.
 
-        **A game with nothing agreed has no stream and is simply absent** — which
-        is *no plan* spelled once, by the store rather than by a filter.
+        **A court with nothing agreed has no stream and is simply absent** — which
+        is *nothing agreed* spelled once, by the store rather than by a filter;
+        the list read answers an unwritten plan for it.
 
         Ordered by ``version`` within each stream, which is what a fold needs and
         the only order it may be handed: a replay is a sequence and not a set.
         """
 
-        wanted = sorted(set(game_ids))
+        wanted = sorted(set(challenge_ids))
         if not wanted:
             return ()
 

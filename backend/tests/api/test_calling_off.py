@@ -117,7 +117,7 @@ async def test_the_organiser_calls_off_a_reopened_four_and_that_is_the_games_end
         await _leave(client, people["cy"]["token"], challenge_id)
     ).status_code == 200
     placed = await client.put(
-        f"/api/v1/plans/{before['game_id']}/place",
+        f"/api/v1/plans/{challenge_id}/place",
         json={"place": "Zabłocie Sport"},
         headers=world.auth(people["ana"]["token"]),
     )
@@ -163,14 +163,14 @@ async def test_the_organiser_calls_off_a_reopened_four_and_that_is_the_games_end
     # The plan and the pairing are history.
     day = local_day(clock.at) + timedelta(days=2)
     frozen = await client.put(
-        f"/api/v1/plans/{before['game_id']}/day",
+        f"/api/v1/plans/{challenge_id}/day",
         json={"day": day.isoformat()},
         headers=world.auth(people["bo"]["token"]),
     )
     assert frozen.status_code == 409, frozen.text
     assert frozen.json()["code"] == "plan_is_history"
     (plan,) = await _plans(client, people["bo"]["token"])
-    assert plan["game_id"] == before["game_id"], "and still drawn beside the game"
+    assert plan["challenge_id"] == challenge_id, "and still drawn beside the game"
     assert plan["place"] == "Zabłocie Sport"
     pairing = await client.get(
         f"/api/v1/games/{before['game_id']}/pairing",

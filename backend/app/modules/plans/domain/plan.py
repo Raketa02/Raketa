@@ -1,33 +1,43 @@
-"""The Plan aggregate — one game's three slots and its lock, event-sourced.
+"""The Plan aggregate — one court's three slots and its lock, event-sourced.
 
-**Where and when these people are meeting.** It is *one game's*, identified by
-that game's id, and it sits between the two contexts either side of it:
-``challenges`` ends at *everybody has answered* and ``games`` begins at *played*,
-and this belongs to neither (``docs/adr/0144``).
+**Where and when these people are meeting.** It is *one challenge's*, identified
+by that challenge's id (``docs/adr/0164`` §1), and it sits between the two
+contexts either side of it: ``challenges`` ends at *everybody has answered* and
+``games`` begins at *played*, and this belongs to neither (``docs/adr/0144``).
+The game the challenge becomes inherits it.
 
-Five things about it are load-bearing and none is obvious from the code alone.
+Six things about it are load-bearing and none is obvious from the code alone.
 
 **It is born by being used.** There is no opening event, no record at birth and
-no subscriber to ``GamePlanned``: ``unwritten`` is what a game with nothing
-agreed has, and it is a real state rather than a placeholder — the write path
-starts from it, and the read never meets one, because a game nobody has agreed
-anything about has no stream for the directory to return.
+no subscriber to ``SeatAccepted`` or ``GamePlanned``: ``unwritten`` is what a
+court with nothing agreed has, and it is a real state rather than a placeholder
+— the write path starts from it, and so does the read, which answers a row for
+every court the reader may plan whether or not anything was ever written
+(``docs/adr/0164`` §4). A row of three empty slots **is** *nothing agreed*, and
+it is one spelling: the store holds no stream, and the read spells that as an
+unwritten plan rather than as an absence a client would have to tell apart from
+a court it was not shown.
 
 There is **no flag saying whether anything has been agreed**, and the reason is
 that nothing would ask: the write path starts from an unwritten plan whatever it
-holds, and the read spells absence by having no stream to fold. A property that
-only a test reads is a claim about a shape nothing checks.
+holds, and the read folds the streams that exist and answers ``unwritten`` for
+the rest. A property that only a test reads is a claim about a shape nothing
+checks.
 
-**Its id is the game's**, so there is one plan per game for ever. A second id
-would be a second name for the same thing, and it would need a lookup by payload
-to be found; keying on the game's id makes the stream read an equality on the
-aggregate id and makes *one game, one plan* a fact about the store rather than a
-rule a caller keeps.
+**Its id is the challenge's**, so there is one plan per challenge for ever. A
+second id would be a second name for the same thing, and it would need a lookup
+by payload to be found; keying on the challenge's id makes the stream read an
+equality on the aggregate id and makes *one challenge, one plan* a fact about
+the store rather than a rule a caller keeps. One challenge has at most one room
+and at most one game, and both already carry ``challenge_id`` — it is the one id
+every reader shares, which is why the room draws the plan from its opening and
+the game finds it by the challenge it was opened from.
 
 **Nothing derived is stored.** Not the slot count, not the agreed point. Both are
-properties folded from the three values, and ``planned_at`` is **never written**
-— it keeps meaning *when it became a game*, and the plan never writes to
-``games`` at all.
+properties folded from the three values, and neither the anchor nor
+``planned_at`` is ever written — the anchor arrives per write and is measured
+against, ``planned_at`` keeps meaning *when it became a game*, and the plan
+never writes to ``games`` at all.
 
 **Any member may fill or change any slot, any number of times, and a slot is
 never emptied.** There is no history beyond the system lines each change writes
@@ -45,13 +55,22 @@ exactly as it did before; there is no un-agreeing to fear, only re-agreeing
 (``docs/adr/0145`` §5). There is no ``unlock``, for the same reason there is no
 clearing event: the lock is a thing that happened.
 
-**Who may write at all is not decided here.** *Is this player on this game's
-court, and is that game still open to planning* is one question asked of
-``games`` through one port, and the two refusals it produces belong to the use
-case that asks it. What this aggregate refuses is what it can see: the **values**
-— a day past the horizon, an hour nobody offered, a moment that has gone — and,
-since ``docs/adr/0155``, **its own state**, because a lock is guarded on how far
-along the plan is and nothing outside can answer that.
+**The lock waits for the court** (``docs/adr/0164`` §5). Where, day and hour
+are proposals anybody on the court may make and move, whole or not; *we are
+agreed* is said only once everybody who will have to keep it is in. Whether the
+court is whole is a fact the aggregate **borrows**, exactly as ``record_day``
+borrows the anchor, and refuses with a code of its own beside *the plan is not
+complete*. A lock already taken survives the court ceasing to be whole: a
+departure opens a seat and unmakes nothing.
+
+**Who may write at all is not decided here.** *Is this player on this court,
+and is that court still open to planning* is one question asked through one
+port, and the two refusals it produces belong to the use case that asks it. What
+this aggregate refuses is what it can see: the **values** — a day past the
+horizon, an hour nobody offered, a moment that has gone — and, since
+``docs/adr/0155``, **its own state**, because a lock is guarded on how far along
+the plan is and nothing outside can answer that; and, since ``docs/adr/0164``,
+the one fact about the court it is handed for the lock.
 """
 
 from __future__ import annotations
@@ -65,6 +84,7 @@ from uuid import UUID
 from app.kernel import Instant, MinuteOfDay, instant, minute_of_day
 from app.modules.plans.domain.errors import (
     ThatMomentHasAlreadyPassed,
+    TheCourtIsNotWhole,
     ThePlanIsNotComplete,
 )
 from app.modules.plans.domain.events import (
@@ -93,9 +113,9 @@ SLOTS = 3
 
 @dataclass
 class Plan:
-    """One game's plan, rebuilt by folding its stream."""
+    """One challenge's plan, rebuilt by folding its stream."""
 
-    game_id: UUID
+    challenge_id: UUID
     place: Place | None
     day: date | None
     hour: MinuteOfDay | None
@@ -110,9 +130,9 @@ class Plan:
 
     @property
     def id(self) -> UUID:
-        """The stream id, which **is** the game's id."""
+        """The stream id, which **is** the challenge's id."""
 
-        return self.game_id
+        return self.challenge_id
 
     @property
     def slot_count(self) -> int:
@@ -156,22 +176,23 @@ class Plan:
     # -- birth ------------------------------------------------------------
 
     @classmethod
-    def unwritten(cls, game_id: UUID) -> "Plan":
-        """The plan a game with nothing agreed has.
+    def unwritten(cls, challenge_id: UUID) -> "Plan":
+        """The plan a court with nothing agreed has.
 
         **Not a factory for an empty record**, because no record is written: it
-        is the value the repository answers with when a stream is empty, and the
-        first recording below is what brings it into existence.
+        is the value the repository answers with when a stream is empty — and
+        the row the list read answers for a court nobody has written on — and
+        the first recording below is what brings it into existence.
         """
 
-        return cls(game_id=game_id, place=None, day=None, hour=None)
+        return cls(challenge_id=challenge_id, place=None, day=None, hour=None)
 
     @classmethod
     def from_history(cls, events: Iterable[DomainEvent]) -> "Plan":
         """Rebuild from the stream. **Any of the four may be the first event.**
 
-        There is no opening event to construct from, so the game id is read off
-        whichever event happens to be first — every one of them carries it, and
+        There is no opening event to construct from, so the challenge id is read
+        off whichever event happens to be first — every one of them carries it, and
         each of the three recordings can be a birth. A lock cannot be one, but it
         is read as though it could: the fold's job is to make a stream readable,
         not to re-decide what may be in it.
@@ -180,7 +201,7 @@ class Plan:
         plan: Plan | None = None
         for event in events:
             if plan is None:
-                plan = cls.unwritten(_game_of(event))
+                plan = cls.unwritten(_challenge_of(event))
             plan._apply(event)
         if plan is None:
             raise ValueError("a plan cannot be folded from no events at all")
@@ -205,7 +226,7 @@ class Plan:
             return
         self._record_that(
             PlaceRecorded(
-                game_id=self.game_id,
+                challenge_id=self.challenge_id,
                 place=written.value,
                 recorded_by=by,
                 occurred_at=occurred_at,
@@ -213,7 +234,7 @@ class Plan:
         )
 
     def record_day(
-        self, *, day: date, by: UUID, planned_at: Instant, occurred_at: Instant
+        self, *, day: date, by: UUID, anchor: Instant, occurred_at: Instant
     ) -> None:
         """*We are playing on this day.*
 
@@ -221,19 +242,21 @@ class Plan:
         a day past the horizon is not a day this plan may hold at all; then **the
         past combination**, which only exists once an hour is already recorded.
 
-        ``planned_at`` is the game's and arrives from the caller. It is the one
-        fact this aggregate borrows, and it is borrowed rather than stored
-        because the plan never writes to ``games`` and must not hold a copy of
-        anything it does.
+        ``anchor`` is the court's and arrives from the caller — the challenge's
+        send until the game exists, then the game's ``planned_at``
+        (``docs/adr/0164`` §4). It is one of the two facts this aggregate
+        borrows, and it is borrowed rather than stored because the plan never
+        writes to ``challenges`` or ``games`` and must not hold a copy of
+        anything they do.
         """
 
         if day == self.day:
             return
-        refuse_a_day_past_the_horizon(day, planned_at=planned_at)
+        refuse_a_day_past_the_horizon(day, anchor=anchor)
         self._refuse_a_moment_that_has_gone(day=day, hour=self.hour, now=occurred_at)
         self._record_that(
             DayRecorded(
-                game_id=self.game_id,
+                challenge_id=self.challenge_id,
                 day=day.isoformat(),
                 recorded_by=by,
                 occurred_at=occurred_at,
@@ -259,7 +282,7 @@ class Plan:
         )
         self._record_that(
             HourRecorded(
-                game_id=self.game_id,
+                challenge_id=self.challenge_id,
                 minute_of_day=int(offered),
                 recorded_by=by,
                 occurred_at=occurred_at,
@@ -268,19 +291,30 @@ class Plan:
 
     # -- the act ----------------------------------------------------------
 
-    def lock(self, *, by: UUID, occurred_at: Instant) -> None:
+    def lock(
+        self, *, by: UUID, occurred_at: Instant, court_is_whole: bool
+    ) -> None:
         """*We are agreed.* **An act with an actor and a moment.**
 
         ``docs/adr/0155``. It carries no value, because the value is the three
         slots and they are already recorded — a copy here would be the first
         thing to disagree with the slot beside it after a later move.
 
-        **The two answers are deliberately different shapes.** A plan that is
+        **The three answers are deliberately different shapes.** A plan that is
         already locked records nothing: the same act twice lands the same state,
         which is this repository's idempotency language applied to an act rather
-        than to a value, and the first lock's moment is the one that stands. A
-        plan that is **not complete** raises, because a silent no-op there would
-        leave a client believing it had agreed one.
+        than to a value, and the first lock's moment is the one that stands —
+        **whatever the court has become since**, because a departure after the
+        lock unmakes nothing (``docs/adr/0164`` §5). A court that is **not
+        whole** raises, with its own code: *we are agreed* is said only once
+        everybody who will have to keep it is in, and it is asked before the
+        count because the count is a fact about a button the card does not draw
+        until the court is whole. A plan that is **not complete** raises, because
+        a silent no-op there would leave a client believing it had agreed one.
+
+        ``court_is_whole`` is the second fact this aggregate borrows, on
+        ``record_day``'s terms exactly: handed in per act, measured against, and
+        stored nowhere.
 
         **It freezes nothing.** No slot write consults ``locked_at`` — not here
         and nowhere else — so a locked plan is edited exactly as an unlocked one
@@ -289,11 +323,13 @@ class Plan:
 
         if self.is_locked:
             return
+        if not court_is_whole:
+            raise TheCourtIsNotWhole()
         if self.slot_count < SLOTS:
             raise ThePlanIsNotComplete()
         self._record_that(
             PlanLocked(
-                game_id=self.game_id,
+                challenge_id=self.challenge_id,
                 locked_by=by,
                 occurred_at=occurred_at,
             )
@@ -350,16 +386,16 @@ class Plan:
         self.version += 1
 
 
-def _game_of(event: DomainEvent) -> UUID:
-    """Which game an event is about.
+def _challenge_of(event: DomainEvent) -> UUID:
+    """Which challenge an event is about.
 
     Spelled as a walk over the four rather than as an attribute read, so a fifth
-    event added without a game id on it is a red test rather than an
+    event added without a challenge id on it is a red test rather than an
     ``AttributeError`` in a fold.
     """
 
     if isinstance(event, (PlaceRecorded, DayRecorded, HourRecorded, PlanLocked)):
-        return event.game_id
+        return event.challenge_id
     raise ValueError(f"not a plan event: {type(event).__name__}")
 
 

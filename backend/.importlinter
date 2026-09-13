@@ -483,9 +483,10 @@ allow_indirect_imports = true
 # The arrow runs one way and the permitted direction is `plans -> games`
 # (docs/adr/0148 §8): the Plan imports `PLAN_HORIZON`, because its interlock with
 # `ENTRY_GRACE` is the argument and two numbers whose relationship is the argument
-# must not be separated; and it reads `PlanningCourt`, which `games` publishes on
-# its own demands register. Neither direction is a mistake — only the reverse is,
-# and only the reverse is fenced.
+# must not be separated; and its `PlannableCourts` adapter folds a game's standing
+# through `games`' own repository (docs/adr/0164 §3), beside the challenge's. The
+# same arrow runs `plans -> challenges` for the same read. Neither direction is a
+# mistake — only the reverse is, and only the reverse is fenced.
 #
 # It is a rule about one import statement, which is the kind broken by somebody in
 # a hurry: `GameSchema` is the obvious place to hang a plan, a per-game plan read

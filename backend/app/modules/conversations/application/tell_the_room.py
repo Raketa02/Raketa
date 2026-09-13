@@ -332,22 +332,25 @@ class TellTheRoom:
     ) -> None:
         """One slot, one line, and the value is the only thing that travels.
 
-        **Found through the game and not the challenge**, which is what the
-        ``game_id`` on all three plan events buys: a plan exists only for a game,
-        so the room is the one whose line-up completed into it.
+        **Found through the challenge**, which is what the ``challenge_id`` on
+        all four plan events buys (``docs/adr/0164`` §1): a plan is the
+        challenge's and is drawn in the room from its opening, so the room is
+        the one the challenge opened, whether or not a game exists yet.
 
         A room that is not there is a **safe drop and not a coin flip**. A plan
-        cannot be written before its game exists, and the game's own
-        ``GamePlanned`` was published in a strictly earlier transaction — so by
-        the time this arrives the room either knows its game or was never opened
-        at all, and there is nothing to hang the line on and nothing to retry.
+        is written only by somebody holding an accepted seat, and the
+        ``SeatAccepted`` that put them there — the room's own opening, or a
+        later yes into a room already open — was published in a strictly
+        earlier transaction, so by the time this arrives the room has been
+        opened or was destroyed since, and there is nothing to hang the line on
+        and nothing to retry.
 
         **Three codes and one shape.** Which slot it was is the code's business;
         what was written is the value's; and *set* against *changed* is nobody's,
         because they are the same fact told twice.
         """
 
-        room = await self._directory.for_game(event.game_id)
+        room = await self._conversations.for_challenge(event.challenge_id)
         if room is None:
             return
         await self._write_line(
@@ -369,13 +372,12 @@ class TellTheRoom:
         are true and the first thing to disagree with the slot line above it
         after a later move. It is the only plan line with an empty ``values``.
 
-        Found through the game and dropped safely when there is no room, on the
-        slot arm's reasoning exactly — a plan cannot be locked before its game
-        exists, so by the time this arrives the room either knows its game or was
-        never opened at all.
+        Found through the challenge and dropped safely when there is no room, on
+        the slot arm's reasoning exactly — a plan is locked only by somebody
+        holding an accepted seat, and that acceptance was published first.
         """
 
-        room = await self._directory.for_game(event.game_id)
+        room = await self._conversations.for_challenge(event.challenge_id)
         if room is None:
             return
         await self._write_line(

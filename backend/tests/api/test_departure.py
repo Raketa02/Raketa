@@ -220,7 +220,7 @@ async def test_leaving_a_completed_four_reopens_the_seat_and_the_game_survives(
     await world.deliver_the_outbox(session_factory)
     before = await _the_game(client, people["ana"]["token"], challenge_id)
     written = await client.put(
-        f"/api/v1/plans/{before['game_id']}/place",
+        f"/api/v1/plans/{challenge_id}/place",
         json={"place": "Zabłocie Sport"},
         headers=world.auth(people["ana"]["token"]),
     )
@@ -276,17 +276,18 @@ async def test_leaving_a_completed_four_reopens_the_seat_and_the_game_survives(
 
     # The plan is untouched, and still the remaining three's to write.
     (plan,) = await _plans(client, people["bo"]["token"])
-    assert plan["game_id"] == before["game_id"]
+    assert plan["challenge_id"] == challenge_id
+    assert plan["anchor"] == before["planned_at"]
     assert plan["place"] == "Zabłocie Sport"
     day = local_day(clock.at) + timedelta(days=2)
     written = await client.put(
-        f"/api/v1/plans/{before['game_id']}/day",
+        f"/api/v1/plans/{challenge_id}/day",
         json={"day": day.isoformat()},
         headers=world.auth(people["bo"]["token"]),
     )
     assert written.status_code == 200, written.text
     assert await _plans(client, people["cy"]["token"]) == [], (
-        "the plan is the game's, and the leaver is not on its court"
+        "the plan is the challenge's, and the leaver is not on its court"
     )
 
 
@@ -298,9 +299,9 @@ async def test_leaving_a_completed_four_reopens_the_seat_and_the_game_survives(
 STRAIGHT_SETS = {"sets": [{"a": 6, "b": 3}, {"a": 6, "b": 4}]}
 
 
-async def _plan(client, token: str, game_id: str, slot: str, value: dict) -> None:
+async def _plan(client, token: str, challenge_id: str, slot: str, value: dict) -> None:
     written = await client.put(
-        f"/api/v1/plans/{game_id}/{slot}", json=value, headers=world.auth(token)
+        f"/api/v1/plans/{challenge_id}/{slot}", json=value, headers=world.auth(token)
     )
     assert written.status_code == 200, written.text
 
@@ -402,12 +403,11 @@ async def test_a_game_whose_agreed_moment_has_passed_cannot_be_left(
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     challenge_id = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
-    game = await _the_game(client, searcher["token"], challenge_id)
     day = local_day(clock.at) + timedelta(days=2)
     await _plan(
-        client, searcher["token"], game["game_id"], "day", {"day": day.isoformat()}
+        client, searcher["token"], challenge_id, "day", {"day": day.isoformat()}
     )
-    await _plan(client, searcher["token"], game["game_id"], "hour", {"hour": "18:00"})
+    await _plan(client, searcher["token"], challenge_id, "hour", {"hour": "18:00"})
     (plan,) = await _plans(client, searcher["token"])
     agreed = datetime.fromisoformat(plan["agreed_point"])
 
@@ -430,10 +430,9 @@ async def test_a_day_alone_names_the_following_midnight_as_the_moment(
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     challenge_id = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
-    game = await _the_game(client, searcher["token"], challenge_id)
     day = local_day(clock.at) + timedelta(days=1)
     await _plan(
-        client, searcher["token"], game["game_id"], "day", {"day": day.isoformat()}
+        client, searcher["token"], challenge_id, "day", {"day": day.isoformat()}
     )
     (plan,) = await _plans(client, searcher["token"])
     agreed = datetime.fromisoformat(plan["agreed_point"])
@@ -553,9 +552,7 @@ async def test_the_fill_after_a_leave_re_seats_the_same_game(
     challenge_id = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
     await world.deliver_the_outbox(session_factory)
     before = await _the_game(client, searcher["token"], challenge_id)
-    await _plan(
-        client, searcher["token"], before["game_id"], "place", {"place": "Zabłocie"}
-    )
+    await _plan(client, searcher["token"], challenge_id, "place", {"place": "Zabłocie"})
     await world.deliver_the_outbox(session_factory)
     left = await _leave(client, people["cy"]["token"], challenge_id)
     assert left.status_code == 200, left.text
@@ -593,12 +590,13 @@ async def test_the_fill_after_a_leave_re_seats_the_same_game(
             newcomer_id,
         }
         (plan,) = await _plans(client, who["token"])
-        assert plan["game_id"] == before["game_id"] and plan["place"] == "Zabłocie"
+        assert plan["challenge_id"] == challenge_id and plan["place"] == "Zabłocie"
+        assert plan["anchor"] == before["planned_at"], "a re-seat re-dates nothing"
     assert await _games(client, people["cy"]["token"]) == []
-    # The newcomer is on the court now, and the plan is the game's to write.
+    # The newcomer is on the court now, and the plan is the court's to write.
     day = local_day(clock.at) + timedelta(days=2)
     await _plan(
-        client, newcomer["token"], before["game_id"], "day", {"day": day.isoformat()}
+        client, newcomer["token"], challenge_id, "day", {"day": day.isoformat()}
     )
     (plan,) = await _plans(client, searcher["token"])
     assert plan["day"] == day.isoformat()
@@ -641,12 +639,11 @@ async def test_nobody_may_be_seated_into_a_game_whose_moment_has_passed(
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     challenge_id = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
-    game = await _the_game(client, searcher["token"], challenge_id)
     day = local_day(clock.at) + timedelta(days=2)
     await _plan(
-        client, searcher["token"], game["game_id"], "day", {"day": day.isoformat()}
+        client, searcher["token"], challenge_id, "day", {"day": day.isoformat()}
     )
-    await _plan(client, searcher["token"], game["game_id"], "hour", {"hour": "18:00"})
+    await _plan(client, searcher["token"], challenge_id, "hour", {"hour": "18:00"})
     (plan,) = await _plans(client, searcher["token"])
     agreed = datetime.fromisoformat(plan["agreed_point"])
     left = await _leave(client, people["cy"]["token"], challenge_id)

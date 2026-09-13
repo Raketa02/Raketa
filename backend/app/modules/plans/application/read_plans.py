@@ -1,9 +1,10 @@
 """Reading a player's plans back. **The clock is read once, and it does not
 travel.**
 
-Every plan for the games this reader is on the court of, joined by game id — the
-only plan read there is (``docs/adr/0148`` §7). Now issues two reads and joins
-them; the conversation draws the same cached list.
+One row for every court this reader may plan, written or not, joined by
+challenge id — the only plan read there is (``docs/adr/0148`` §7 as amended by
+``docs/adr/0164``). Now issues two reads and joins them by the game's
+``challenge_id``; the conversation draws the same cached list by its own.
 
 **There is no ``read_at`` on the answer, and that is a decision rather than an
 omission** (``docs/adr/0148`` §10). ADR-0143 §7 put an instant at the envelope so
@@ -16,12 +17,12 @@ it to have been folded against, so the card is folded against ``games``'
 ``read_at`` and **Now has one clock by construction** rather than by convention.
 
 The clock is still read *here*, once, and it is spent entirely on the port: which
-games are still open to planning is a standing, and a standing is folded against
+courts are still open to planning is a standing, and a standing is folded against
 an instant. It buys the order and it never reaches the answer.
 
-**Ordered like its owner** — newest arrangement first, on ``games``' own
-``planned_at`` — so the two lists Now joins arrive in the same order and a client
-that renders them side by side does not have to sort one of them itself.
+**Ordered like its owner** — newest arrangement first, on each court's anchor —
+so the two lists Now joins arrive in the same order and a client that renders
+them side by side does not have to sort one of them itself.
 """
 
 from __future__ import annotations
@@ -29,45 +30,57 @@ from __future__ import annotations
 from typing import final
 
 from app.kernel import Clock, instant
-from app.modules.games.domain.ports import PlanningCourt
 from app.modules.plans.application.commands import ReadPlansCommand
+from app.modules.plans.application.plan_row import PlanRow
 from app.modules.plans.domain.plan import Plan
-from app.modules.plans.domain.ports import PlanDirectory
+from app.modules.plans.domain.ports import PlanDirectory, PlannableCourts
 
 
 @final
 class ReadPlans:
-    """Every plan for the games this player is on the court of."""
+    """Every plan for the courts this player holds an accepted seat on."""
 
     def __init__(
-        self, *, plans: PlanDirectory, court: PlanningCourt, clock: Clock
+        self, *, plans: PlanDirectory, courts: PlannableCourts, clock: Clock
     ) -> None:
         self._plans = plans
-        self._court = court
+        self._courts = courts
         self._clock = clock
 
-    async def execute(self, command: ReadPlansCommand) -> tuple[Plan, ...]:
-        """The plans, newest arrangement first.
+    async def execute(self, command: ReadPlansCommand) -> tuple[PlanRow, ...]:
+        """The rows, newest arrangement first.
 
-        **The court is asked first and the plans are asked about its answer**,
-        which is what makes this read gated without a gate: a game the reader was
-        not on the court of never becomes a game id this asks about, so there is
-        no id to refuse and no ``plan_not_found`` on a read path.
+        **The courts are asked first and the plans are asked about their
+        answer**, which is what makes this read gated without a gate: a court
+        the reader holds no accepted seat on never becomes an id this asks
+        about, so there is no id to refuse and no ``plan_not_found`` on a read
+        path.
 
-        **A game with nothing agreed is simply absent.** *No plan* is the state
-        such a game draws, and the directory spells it by having no stream to
-        return — never by a row of three nulls, which a client could not tell
-        from a plan somebody emptied and nothing here can produce.
+        **A court with nothing agreed is a row with three empty slots**
+        (``docs/adr/0164`` §4). The store spells that by having no stream, and
+        this spells it as an unwritten plan — the same value the write path
+        starts from — because the client needed the row for two things, the
+        anchor and the fact that there is a plan to draw, and a missing row
+        would say neither.
         """
 
-        games = await self._court.plannable_for(
+        courts = await self._courts.plannable_for(
             command.reader_id, now=instant(self._clock.now())
         )
-        found = await self._plans.for_games(tuple(games))
+        written = {
+            plan.challenge_id: plan
+            for plan in await self._plans.for_challenges(tuple(courts))
+        }
         return tuple(
             sorted(
-                found,
-                key=lambda plan: (games[plan.game_id].planned_at, plan.game_id),
+                (
+                    PlanRow(
+                        plan=written.get(challenge_id, Plan.unwritten(challenge_id)),
+                        anchor=court.anchor,
+                    )
+                    for challenge_id, court in courts.items()
+                ),
+                key=lambda row: (row.anchor, row.plan.challenge_id),
                 reverse=True,
             )
         )

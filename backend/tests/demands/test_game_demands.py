@@ -430,10 +430,11 @@ def _moments(implementation, session):
 
 
 async def _a_plan_recording(session_factory, *, day, hour):
-    """One game's plan, written through the aggregate: a day, and maybe an hour.
+    """One court's plan, written through the aggregate: a day, and maybe an hour.
 
-    Answers the game id. The game itself is never written — a plan's stream id
-    **is** its game's, and this port is asked about one game and reads the plan.
+    Answers the challenge id. Neither the challenge nor the game is written — a
+    plan's stream id **is** its challenge's (``docs/adr/0164`` §1), and this
+    port is asked by that id and reads the plan.
     """
 
     from datetime import datetime, timezone
@@ -446,21 +447,21 @@ async def _a_plan_recording(session_factory, *, day, hour):
     from app.kernel import instant
     from app.shared.ids import new_uuid
 
-    game_id = new_uuid()
+    challenge_id = new_uuid()
     now = instant(datetime.now(timezone.utc))
     async with session_factory() as session:
         plans = build_plan_repository(
             event_store=build_domain_event_store(session),
             events=build_event_publisher(session),
         )
-        plan = await plans.load(game_id)
+        plan = await plans.load(challenge_id)
         if day is not None:
-            plan.record_day(day=day, by=new_uuid(), planned_at=now, occurred_at=now)
+            plan.record_day(day=day, by=new_uuid(), anchor=now, occurred_at=now)
         if hour is not None:
             plan.record_hour(hour=hour, by=new_uuid(), occurred_at=now)
         await plans.save(plan)
         await session.commit()
-    return game_id
+    return challenge_id
 
 
 @pytest.mark.parametrize("implementation", registered(AgreedMoment))
@@ -473,7 +474,7 @@ async def test_the_implementation_satisfies_the_protocol(
 
 @pytest.mark.parametrize("implementation", registered(AgreedMoment))
 async def test_a_game_with_no_plan_has_no_moment(implementation, session_factory):
-    """A plan is born by being used, so a game nobody has agreed anything about
+    """A plan is born by being used, so a court nobody has agreed anything about
     has no stream — and no moment, which is what admits every seat change."""
 
     from app.shared.ids import new_uuid

@@ -27,7 +27,7 @@ from uuid import UUID
 @final
 @dataclass(frozen=True, slots=True)
 class ReadPlansCommand:
-    """*The plans of every game I am on the court of.*"""
+    """*The plans of every court I hold an accepted seat on.*"""
 
     reader_id: UUID
 
@@ -37,7 +37,7 @@ class ReadPlansCommand:
 class SetPlaceCommand:
     """*We are meeting here.*"""
 
-    game_id: UUID
+    challenge_id: UUID
     player_id: UUID
     place: str
 
@@ -47,7 +47,7 @@ class SetPlaceCommand:
 class SetDayCommand:
     """*We are playing on this day* — a local date in the platform zone."""
 
-    game_id: UUID
+    challenge_id: UUID
     player_id: UUID
     day: date
 
@@ -57,7 +57,7 @@ class SetDayCommand:
 class SetHourCommand:
     """*We are playing at this time* — a local clock time in the platform zone."""
 
-    game_id: UUID
+    challenge_id: UUID
     player_id: UUID
     hour: wall_time
 
@@ -65,14 +65,14 @@ class SetHourCommand:
 @final
 @dataclass(frozen=True, slots=True)
 class LockThePlanCommand:
-    """*We are agreed.* **Who, and which plan** — and deliberately nothing else.
+    """*We are agreed.* **Who, and which court** — and deliberately nothing else.
 
     ``docs/adr/0155``. The three slots are the value and they are already
     recorded; a command carrying one would let a caller lock a plan against a
     version of it nobody is looking at.
     """
 
-    game_id: UUID
+    challenge_id: UUID
     player_id: UUID
 
 

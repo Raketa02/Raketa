@@ -1,51 +1,78 @@
 """The five plan routes, end to end over HTTP — and the thing they sit between.
 
 The whole reachable path in one file: a searcher builds a court, sends it,
-everybody accepts, a game exists — and only then is there anything to plan. That
-ordering is the point of this file rather than a set-up cost.
+somebody says yes — and from that yes there is a plan. The rest of the court
+filling is what moves the anchor and admits the lock, and that ordering is the
+point of this file rather than a set-up cost (``docs/adr/0164``).
 
-Six things are asserted here and nowhere else:
+Eight things are asserted here and nowhere else:
+
+**A plan is the challenge's, and it exists from the first yes.** ``GET /plans``
+lists one row for every court the reader holds an accepted seat on, written or
+not, keyed by ``challenge_id``; an invitee still deciding and somebody who said
+no get no row.
 
 **A plan is born by being used.** There is no route that creates one and none
-that destroys one; a game with nothing agreed is simply absent from the list, and
-the first slot write is the birth.
+that destroys one; a court nobody has written on is a row with three empty
+slots, and the first slot write is the birth in the store.
+
+**The anchor is the send until the game exists, then ``planned_at``**, and it
+only ever moves later — so a day refused before the court fills can be admitted
+after it does.
+
+**The lock waits for the court.** Two of four may set where, day and hour and
+may not agree them for four; the refusal has its own code; the lock is admitted
+once the last seat accepts; and a lock already taken survives a later departure.
 
 **A write of the value already there records nothing and answers 200.** From the
 outside that is indistinguishable from a write that changed something — which is
 the whole idea — so it is asserted through the room the lines land in.
 
 **The four plan codes reach the conversation**, through the outbox, written by a
-context that does not know this one exists.
+context that does not know this one exists — and into a room that has no game
+yet, because the room is the challenge's too.
 
 **Bounded chips the platform offered, never a free instant.** The horizon, the
 grid and the moment that has gone, each refused server-side.
 
 **A plan carries no ``read_at``**, so Now has one clock by construction.
-
-**The count and the lock are two facts** (``docs/adr/0155``). Completing the
-three slots agrees nothing; locking is an act, it writes its own line, it freezes
-nothing, and there is no unlock.
 """
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
+from app.api.dependencies import get_clock
+from app.kernel import Sport, instant
 from app.modules.games.domain.windows import PLAN_HORIZON
-from app.kernel import instant
 from app.modules.plans.domain.slots import (
     PLACE_LENGTH_CAP,
     PLATFORM_ZONE,
+    last_plannable_day,
     local_day,
 )
 from tests.api import matchmaking_world as world
+from tests.unit.fake_event_store import FrozenClock
 
 
 @pytest.fixture
 async def searcher(client):
     return await world.a_searcher(client)
+
+
+@pytest.fixture
+def clock(client):
+    """The API's clock, stopped where this file starts and moved by hand.
+
+    Handed to the application through the dependency a request resolves, so the
+    instant a court fills — and with it the plan's anchor — is the test's own.
+    """
+
+    frozen = FrozenClock(at=datetime.now(timezone.utc))
+    world.override(client, get_clock, lambda: frozen)
+    return frozen
 
 
 async def _a_city(client, session_factory, candidate_source, mu: float) -> dict:
@@ -59,20 +86,12 @@ async def _a_city(client, session_factory, candidate_source, mu: float) -> dict:
     return people
 
 
-async def _an_arranged_game(client, session_factory, candidate_source, searcher):
-    """A game nobody asked for: four seats, all accepted, nothing played yet.
+async def _a_padel_four_sent(client, session_factory, candidate_source, searcher):
+    """A padel four sent to three people, none of whom has answered yet.
 
-    **The only way to reach one**, which is why every test here pays for it: a
-    plan exists for a game, and a game exists because a line-up completed.
-
-    **The outbox is drained before anybody plans anything**, which is what an API
-    process does on its own and what this suite has to do by hand. A slot line is
-    hung on the room *through its game*, so a room that has not yet been told
-    which game it is about has nothing to hang one on — and, unlike the room's
-    opening, there is no second delivery to repair it. In production the two are
-    ordered by the outbox: ``GamePlanned`` is written in the transaction of the
-    last accept and a slot write is a strictly later one. Here they can tie,
-    because SQLite's ``CURRENT_TIMESTAMP`` has one-second granularity.
+    Built from a real search so every seat has an origin, exactly as a phone
+    would send it. The answers are the tests' own, one at a time, because which
+    yes has arrived is the whole of what this file is about.
     """
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
@@ -92,24 +111,77 @@ async def _an_arranged_game(client, session_factory, candidate_source, searcher)
         headers=world.auth(searcher["token"]),
     )
     assert sent.status_code == 201, sent.text
-    for person in people.values():
-        answered = await client.post(
-            f"/api/v1/challenges/{sent.json()['challenge_id']}/accept",
-            headers=world.auth(person["token"]),
-        )
-        assert answered.status_code == 200, answered.text
+    return people, sent.json()["challenge_id"]
 
-    await world.deliver_the_outbox(session_factory)
-    games = await client.get("/api/v1/games", headers=world.auth(searcher["token"]))
+
+async def _accept(client, token: str, challenge_id: str) -> dict:
+    answered = await client.post(
+        f"/api/v1/challenges/{challenge_id}/accept", headers=world.auth(token)
+    )
+    assert answered.status_code == 200, answered.text
+    return answered.json()
+
+
+async def _the_game(client, token: str, challenge_id: str) -> dict:
+    games = await client.get("/api/v1/games", headers=world.auth(token))
     assert games.status_code == 200, games.text
-    (game,) = games.json()["games"]
-    return people, game
+    (game,) = [
+        one for one in games.json()["games"] if one["challenge_id"] == challenge_id
+    ]
+    return game
+
+
+async def _an_arranged_game(client, session_factory, candidate_source, searcher):
+    """A game nobody asked for: four seats, all accepted, nothing played yet.
+
+    **The outbox is drained before anybody plans anything**, which is what an API
+    process does on its own and what this suite has to do by hand. A slot line is
+    hung on the room *through its challenge*, so a room that has not yet been
+    opened by the first acceptance has nothing to hang one on — and, unlike the
+    room's opening, there is no second delivery to repair it. In production the
+    two are ordered by the outbox: ``SeatAccepted`` is written in the accept's
+    transaction and a slot write is a strictly later one. Here they can tie,
+    because SQLite's ``CURRENT_TIMESTAMP`` has one-second granularity.
+    """
+
+    people, challenge_id = await _a_padel_four_sent(
+        client, session_factory, candidate_source, searcher
+    )
+    for person in people.values():
+        await _accept(client, person["token"], challenge_id)
+    await world.deliver_the_outbox(session_factory)
+    return (
+        people,
+        await _the_game(client, searcher["token"], challenge_id),
+        challenge_id,
+    )
 
 
 async def _plans(client, token: str) -> list[dict]:
     response = await client.get("/api/v1/plans", headers=world.auth(token))
     assert response.status_code == 200, response.text
     return response.json()["plans"]
+
+
+async def _plan_of(client, token: str, challenge_id: str) -> dict:
+    (plan,) = [
+        one
+        for one in await _plans(client, token)
+        if one["challenge_id"] == challenge_id
+    ]
+    return plan
+
+
+async def _put(client, token: str, challenge_id: str, slot: str, body: dict):
+    return await client.put(
+        f"/api/v1/plans/{challenge_id}/{slot}", json=body, headers=world.auth(token)
+    )
+
+
+async def _lock(client, challenge_id: str, token: str):
+    return await client.put(
+        f"/api/v1/plans/{challenge_id}/lock", headers=world.auth(token)
+    )
 
 
 def _the_day_it_was_arranged(game: dict) -> date:
@@ -132,46 +204,422 @@ def _a_plannable_day(game: dict) -> str:
     return (_the_day_it_was_arranged(game) + timedelta(days=2)).isoformat()
 
 
+def _instant(text: str) -> datetime:
+    """An instant off the wire, compared as one rather than as its spelling."""
+
+    return datetime.fromisoformat(text)
+
+
+async def _system_lines(client, token: str) -> list[dict]:
+    """Every system line in this player's one room, oldest first."""
+
+    rooms = await client.get("/api/v1/conversations", headers=world.auth(token))
+    assert rooms.status_code == 200, rooms.text
+    (room,) = rooms.json()["conversations"]
+    opened = await client.get(
+        f"/api/v1/conversations/{room['conversation_id']}",
+        headers=world.auth(token),
+    )
+    assert opened.status_code == 200, opened.text
+    return [
+        entry for entry in opened.json()["entries"] if entry["type"] == "system_line"
+    ]
+
+
+# ---------------------------------------------------------------------------
+# From the first yes
+# ---------------------------------------------------------------------------
+
+
+async def test_the_first_yes_lists_the_court_for_both_with_nothing_agreed(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """``docs/adr/0164`` §3–§4 — after the first acceptance on a doubles,
+    ``GET /plans`` lists the court for the organiser and for the one who said
+    yes: three empty slots, nothing locked, and the anchor at the **send**. An
+    invitee still deciding and one who said no get no row, and are told the same
+    thing when they try to write."""
+
+    people, challenge_id = await _a_padel_four_sent(
+        client, session_factory, candidate_source, searcher
+    )
+    sent_at = clock.at
+    clock.at = sent_at + timedelta(hours=1)
+    await _accept(client, people["ana"]["token"], challenge_id)
+    declined = await client.post(
+        f"/api/v1/challenges/{challenge_id}/decline",
+        headers=world.auth(people["cy"]["token"]),
+    )
+    assert declined.status_code == 200, declined.text
+
+    for who in (searcher, people["ana"]):
+        (plan,) = await _plans(client, who["token"])
+        assert _instant(plan.pop("anchor")) == sent_at, "anchored at the send"
+        assert plan == {
+            "challenge_id": challenge_id,
+            "place": None,
+            "day": None,
+            "hour": None,
+            "agreed_point": None,
+            "locked_at": None,
+        }
+    for who in (people["bo"], people["cy"]):
+        assert await _plans(client, who["token"]) == []
+        refused = await _put(
+            client, who["token"], challenge_id, "place", {"place": "Zabłocie Sport"}
+        )
+        assert refused.status_code == 404, refused.text
+        assert refused.json()["code"] == "plan_not_found"
+
+
+async def test_slots_written_before_the_court_is_whole_are_read_back_after_it_fills(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """The plan is the same plan: what two of four agreed is what four read, the
+    line landed in the room that had no game yet, and the anchor on the row moves
+    to the instant the court filled — **later, never earlier**."""
+
+    people, challenge_id = await _a_padel_four_sent(
+        client, session_factory, candidate_source, searcher
+    )
+    sent_at = clock.at
+    await _accept(client, people["ana"]["token"], challenge_id)
+    await world.deliver_the_outbox(session_factory)
+    written = await _put(
+        client,
+        people["ana"]["token"],
+        challenge_id,
+        "place",
+        {"place": "Zabłocie Sport"},
+    )
+    assert written.status_code == 200, written.text
+    assert _instant(written.json()["anchor"]) == sent_at
+    await world.deliver_the_outbox(session_factory)
+    lines = await _system_lines(client, searcher["token"])
+    assert (lines[-1]["code"], lines[-1]["values"]["value"]) == (
+        "PLACE_RECORDED",
+        "Zabłocie Sport",
+    ), "the line lands in a room that has no game yet"
+
+    clock.at = sent_at + timedelta(hours=3)
+    for name in ("bo", "cy"):
+        await _accept(client, people[name]["token"], challenge_id)
+    await world.deliver_the_outbox(session_factory)
+    game = await _the_game(client, searcher["token"], challenge_id)
+
+    for who in [searcher] + list(people.values()):
+        plan = await _plan_of(client, who["token"], challenge_id)
+        assert plan["place"] == "Zabłocie Sport"
+        assert plan["anchor"] == game["planned_at"]
+        assert _instant(plan["anchor"]) > sent_at
+
+
+async def test_the_lock_waits_for_the_court_and_survives_a_later_departure(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """``docs/adr/0164`` §5 — two of four may fill every slot and may not agree
+    them for four: `the_court_is_not_whole`, its own code beside
+    `the_plan_is_not_complete`. Admitted once the last seat accepts. A lock
+    already taken survives somebody leaving afterwards, and asking again on the
+    reopened court is the idempotent `200` it always was."""
+
+    people, challenge_id = await _a_padel_four_sent(
+        client, session_factory, candidate_source, searcher
+    )
+    await _accept(client, people["ana"]["token"], challenge_id)
+    await world.deliver_the_outbox(session_factory)
+    day = (local_day(instant(clock.at)) + timedelta(days=2)).isoformat()
+    for slot, body in (
+        ("place", {"place": "Zabłocie Sport"}),
+        ("day", {"day": day}),
+        ("hour", {"hour": "18:00"}),
+    ):
+        written = await _put(client, people["ana"]["token"], challenge_id, slot, body)
+        assert written.status_code == 200, written.text
+        await world.deliver_the_outbox(session_factory)
+
+    refused = await _lock(client, challenge_id, people["ana"]["token"])
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "the_court_is_not_whole"
+    assert (await _plan_of(client, searcher["token"], challenge_id))[
+        "locked_at"
+    ] is None
+
+    for name in ("bo", "cy"):
+        await _accept(client, people[name]["token"], challenge_id)
+    await world.deliver_the_outbox(session_factory)
+    locked = await _lock(client, challenge_id, people["bo"]["token"])
+    assert locked.status_code == 200, locked.text
+    assert locked.json()["locked_at"] is not None
+    await world.deliver_the_outbox(session_factory)
+
+    left = await client.post(
+        f"/api/v1/challenges/{challenge_id}/departure",
+        headers=world.auth(people["cy"]["token"]),
+    )
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "LINE_UP_INCOMPLETE"
+    plan = await _plan_of(client, searcher["token"], challenge_id)
+    assert plan["locked_at"] == locked.json()["locked_at"], "the lock survives"
+    again = await _lock(client, challenge_id, searcher["token"])
+    assert again.status_code == 200, again.text
+    assert again.json()["locked_at"] == locked.json()["locked_at"]
+    assert await _plans(client, people["cy"]["token"]) == [], (
+        "the leaver is not on the court, so the plan is not theirs"
+    )
+
+
+async def test_a_lock_on_a_whole_court_with_a_slot_empty_is_refused_on_the_count(
+    client, session_factory, candidate_source, searcher
+):
+    """The two refusals are two codes: once the court is whole, an empty slot is
+    `the_plan_is_not_complete` — the greyed button, not the count line."""
+
+    people, game, challenge_id = await _an_arranged_game(
+        client, session_factory, candidate_source, searcher
+    )
+    await _put(client, searcher["token"], challenge_id, "place", {"place": "Zabłocie"})
+
+    refused = await _lock(client, challenge_id, searcher["token"])
+
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "the_plan_is_not_complete"
+
+
+async def test_a_day_past_the_sends_horizon_is_admitted_once_the_court_fills_later(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """``docs/adr/0164`` §4 — before the game exists the horizon runs from the
+    send; once it exists, from ``planned_at``. A court that fills a day after
+    it was sent widens the week by a day, so the day refused before is admitted
+    after — and the anchor is what the row said it was each time."""
+
+    people, challenge_id = await _a_padel_four_sent(
+        client, session_factory, candidate_source, searcher
+    )
+    sent_at = clock.at
+    await _accept(client, people["ana"]["token"], challenge_id)
+    one_past = last_plannable_day(instant(sent_at)) + timedelta(days=1)
+
+    refused = await _put(
+        client,
+        people["ana"]["token"],
+        challenge_id,
+        "day",
+        {"day": one_past.isoformat()},
+    )
+    assert refused.status_code == 400, refused.text
+    assert refused.json()["code"] == "the_day_is_past_the_horizon"
+
+    clock.at = sent_at + timedelta(days=1)
+    for name in ("bo", "cy"):
+        await _accept(client, people[name]["token"], challenge_id)
+    await world.deliver_the_outbox(session_factory)
+    plan = await _plan_of(client, searcher["token"], challenge_id)
+    assert one_past <= last_plannable_day(
+        instant(datetime.fromisoformat(plan["anchor"]))
+    )
+
+    admitted = await _put(
+        client,
+        people["ana"]["token"],
+        challenge_id,
+        "day",
+        {"day": one_past.isoformat()},
+    )
+    assert admitted.status_code == 200, admitted.text
+    assert admitted.json()["day"] == one_past.isoformat()
+
+
+async def test_before_the_first_yes_there_is_no_plan_even_for_the_organiser(
+    client, session_factory, candidate_source, searcher
+):
+    """``docs/adr/0164`` §2 — the plan is drawn in the room, and the room opens
+    on the first yes. The organiser's own seat is accepted from birth and makes
+    no court on its own: a slot written before anybody was in would be a line
+    with no room to land in, so there is no row and the write is refused as a
+    stranger's."""
+
+    _, challenge_id = await _a_padel_four_sent(
+        client, session_factory, candidate_source, searcher
+    )
+
+    assert await _plans(client, searcher["token"]) == []
+    refused = await _put(
+        client, searcher["token"], challenge_id, "place", {"place": "Zabłocie Sport"}
+    )
+    assert refused.status_code == 404, refused.text
+    assert refused.json()["code"] == "plan_not_found"
+
+
+async def test_a_court_that_ended_after_a_yes_is_history_and_still_listed(
+    client, session_factory, candidate_source, searcher
+):
+    """B said yes, the other two said no, the organiser withdrew: the court
+    had a room and is over, so its plan is a row that no longer moves rather
+    than an absence — for the organiser and for B."""
+
+    people, challenge_id = await _a_padel_four_sent(
+        client, session_factory, candidate_source, searcher
+    )
+    await _accept(client, people["ana"]["token"], challenge_id)
+    for name in ("bo", "cy"):
+        declined = await client.post(
+            f"/api/v1/challenges/{challenge_id}/decline",
+            headers=world.auth(people[name]["token"]),
+        )
+        assert declined.status_code == 200, declined.text
+    withdrawn = await client.post(
+        f"/api/v1/challenges/{challenge_id}/withdrawal",
+        headers=world.auth(searcher["token"]),
+    )
+    assert withdrawn.status_code == 200, withdrawn.text
+    assert withdrawn.json()["standing"] == "WITHDRAWN"
+
+    frozen = await _put(
+        client, people["ana"]["token"], challenge_id, "place", {"place": "Zabłocie"}
+    )
+
+    assert frozen.status_code == 409, frozen.text
+    assert frozen.json()["code"] == "plan_is_history"
+    for who in (searcher, people["ana"]):
+        assert [one["challenge_id"] for one in await _plans(client, who["token"])] == [
+            challenge_id
+        ]
+
+
+async def test_a_singles_court_lists_its_plan_as_before_addressed_by_the_challenge(
+    client, session_factory, candidate_source
+):
+    """Singles: the one yes completes the court, so the room opens with its
+    game and the plan is whole from birth — anchored on ``planned_at``, lockable
+    once the three slots are set, keyed by the challenge the game carries."""
+
+    sender = await world.a_searcher(client, "juno", sport=Sport.TENNIS)
+    invitee = await world.a_searcher(client, "milo", sport=Sport.TENNIS)
+    await world.fold_the_log(session_factory, candidate_source)
+    found = await world.search(client, sender["token"], sport=Sport.TENNIS)
+    assert found.status_code == 200, found.text
+    sent = await client.post(
+        "/api/v1/challenges",
+        json={
+            "search_id": found.json()["search"]["search_id"],
+            "court": [
+                {"side": "A", "player_id": str(sender["id"])},
+                {"side": "B", "player_id": str(invitee["id"])},
+            ],
+        },
+        headers=world.auth(sender["token"]),
+    )
+    assert sent.status_code == 201, sent.text
+    challenge_id = sent.json()["challenge_id"]
+    assert (await _accept(client, invitee["token"], challenge_id))["standing"] == "ON"
+    await world.deliver_the_outbox(session_factory)
+    game = await _the_game(client, sender["token"], challenge_id)
+    assert game["challenge_id"] == challenge_id
+
+    (plan,) = await _plans(client, invitee["token"])
+    assert plan["challenge_id"] == challenge_id
+    assert plan["anchor"] == game["planned_at"]
+    for slot, body in (
+        ("place", {"place": "Zabłocie Sport"}),
+        ("day", {"day": _a_plannable_day(game)}),
+        ("hour", {"hour": "18:00"}),
+    ):
+        written = await _put(client, invitee["token"], challenge_id, slot, body)
+        assert written.status_code == 200, written.text
+        await world.deliver_the_outbox(session_factory)
+    locked = await _lock(client, challenge_id, sender["token"])
+    assert locked.status_code == 200, locked.text
+    assert locked.json()["locked_at"] is not None
+
+
+async def test_a_mutual_interest_opening_lists_its_plan_as_before(
+    client, session_factory, candidate_source
+):
+    """The mutual-born singles is ``ON`` the instant it exists, so its room
+    opens with its game and its plan is whole from birth, addressed by the
+    challenge the second yes minted (``docs/adr/0154``)."""
+
+    one = await world.a_searcher(client, "juno", sport=Sport.TENNIS)
+    other = await world.a_searcher(client, "milo", sport=Sport.TENNIS)
+    await world.fold_the_log(session_factory, candidate_source)
+    for sender, towards in ((one, other), (other, one)):
+        found = await world.search(client, sender["token"], sport=Sport.TENNIS)
+        assert found.status_code == 200, found.text
+        said = await world.express_interest(
+            client,
+            sender["token"],
+            player_id=towards["id"],
+            search_id=found.json()["search"]["search_id"],
+            sport=Sport.TENNIS,
+        )
+        assert said.status_code in (200, 201), said.text
+    assert said.json()["mutual"] is True
+    challenge_id = said.json()["challenge_id"]
+    assert challenge_id is not None, "the mutual names the game it has"
+    await world.deliver_the_outbox(session_factory)
+    game = await _the_game(client, one["token"], challenge_id)
+
+    for who in (one, other):
+        (plan,) = await _plans(client, who["token"])
+        assert plan["challenge_id"] == challenge_id
+        assert plan["anchor"] == game["planned_at"]
+        assert plan["place"] is None
+    written = await _put(
+        client, other["token"], challenge_id, "place", {"place": "Zabłocie Sport"}
+    )
+    assert written.status_code == 200, written.text
+
+
 # ---------------------------------------------------------------------------
 # Born by being used
 # ---------------------------------------------------------------------------
 
 
-async def test_a_game_with_nothing_agreed_has_no_plan_at_all(
+async def test_a_court_with_nothing_agreed_is_a_row_with_three_empty_slots(
     client, session_factory, candidate_source, searcher
 ):
-    """``docs/adr/0144`` — *no record at birth, and no plan is what a game with
-    nothing agreed draws.*
+    """``docs/adr/0164`` §4 — no record at birth, and a row with three nulls is
+    what a court with nothing agreed draws, so a client has the anchor and knows
+    there is a plan to draw before anybody has written on it."""
 
-    It is an absence and not a row of three nulls, so a client has one spelling
-    for *nothing agreed* and cannot tell an empty plan from a missing one.
-    """
+    _, game, challenge_id = await _an_arranged_game(
+        client, session_factory, candidate_source, searcher
+    )
 
-    await _an_arranged_game(client, session_factory, candidate_source, searcher)
-
-    assert await _plans(client, searcher["token"]) == []
+    assert await _plans(client, searcher["token"]) == [
+        {
+            "challenge_id": challenge_id,
+            "place": None,
+            "day": None,
+            "hour": None,
+            "agreed_point": None,
+            "anchor": game["planned_at"],
+            "locked_at": None,
+        }
+    ]
 
 
 async def test_the_first_slot_write_is_the_birth_and_answers_the_whole_plan(
     client, session_factory, candidate_source, searcher
 ):
-    _, game = await _an_arranged_game(
+    _, game, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
 
-    written = await client.put(
-        f"/api/v1/plans/{game['game_id']}/place",
-        json={"place": "Zabłocie Sport"},
-        headers=world.auth(searcher["token"]),
+    written = await _put(
+        client, searcher["token"], challenge_id, "place", {"place": "Zabłocie Sport"}
     )
 
     assert written.status_code == 200, written.text
     assert written.json() == {
-        "game_id": game["game_id"],
+        "challenge_id": challenge_id,
         "place": "Zabłocie Sport",
         "day": None,
         "hour": None,
         "agreed_point": None,
+        "anchor": game["planned_at"],
         "locked_at": None,
     }
     assert await _plans(client, searcher["token"]) == [written.json()]
@@ -183,7 +631,8 @@ async def test_there_is_no_route_that_creates_or_destroys_a_plan(app):
     cancellation.
 
     ``lock`` arrived with ``docs/adr/0155`` and ``unlock`` did not: the lock is a
-    thing that happened, so it has a route and its undoing has none.
+    thing that happened, so it has a route and its undoing has none. And every
+    write is addressed by the **challenge's** id (``docs/adr/0164`` §1).
     """
 
     plan_routes = {
@@ -194,11 +643,14 @@ async def test_there_is_no_route_that_creates_or_destroys_a_plan(app):
     }
 
     assert {method for _, method in plan_routes} == {"GET", "PUT"}
-    assert any(path.endswith("/lock") for path, _ in plan_routes)
+    assert {path for path, method in plan_routes if method == "PUT"} == {
+        f"/api/v1/plans/{{challenge_id}}/{slot}"
+        for slot in ("place", "day", "hour", "lock")
+    }
     assert not any(
         segment in path
         for path, _ in plan_routes
-        for segment in ("unlock", "cancel", "clear")
+        for segment in ("unlock", "cancel", "clear", "game_id")
     )
 
 
@@ -214,20 +666,18 @@ async def test_any_member_may_fill_or_change_any_slot(
     friction*. Nothing requires the person who fills a slot to be the person who
     proposed it."""
 
-    people, game = await _an_arranged_game(
+    people, game, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
     day = _a_plannable_day(game)
 
-    first = await client.put(
-        f"/api/v1/plans/{game['game_id']}/day",
-        json={"day": day},
-        headers=world.auth(searcher["token"]),
-    )
-    moved = await client.put(
-        f"/api/v1/plans/{game['game_id']}/day",
-        json={"day": (date.fromisoformat(day) + timedelta(days=1)).isoformat()},
-        headers=world.auth(people["ana"]["token"]),
+    first = await _put(client, searcher["token"], challenge_id, "day", {"day": day})
+    moved = await _put(
+        client,
+        people["ana"]["token"],
+        challenge_id,
+        "day",
+        {"day": (date.fromisoformat(day) + timedelta(days=1)).isoformat()},
     )
 
     assert first.status_code == 200, first.text
@@ -241,19 +691,19 @@ async def test_writing_the_value_already_there_answers_two_hundred(
     """``docs/adr/0148`` §8 — and it records nothing, which the conversation
     below is what actually proves."""
 
-    people, game = await _an_arranged_game(
+    people, _, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
 
-    once = await client.put(
-        f"/api/v1/plans/{game['game_id']}/place",
-        json={"place": "Zabłocie Sport"},
-        headers=world.auth(searcher["token"]),
+    once = await _put(
+        client, searcher["token"], challenge_id, "place", {"place": "Zabłocie Sport"}
     )
-    again = await client.put(
-        f"/api/v1/plans/{game['game_id']}/place",
-        json={"place": "Zabłocie Sport"},
-        headers=world.auth(people["ana"]["token"]),
+    again = await _put(
+        client,
+        people["ana"]["token"],
+        challenge_id,
+        "place",
+        {"place": "Zabłocie Sport"},
     )
 
     assert once.status_code == again.status_code == 200
@@ -275,7 +725,7 @@ async def test_each_slot_writes_one_line_into_the_conversation(
     one thing membership could never supply.
     """
 
-    people, game = await _an_arranged_game(
+    people, game, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
     day = _a_plannable_day(game)
@@ -286,16 +736,12 @@ async def test_each_slot_writes_one_line_into_the_conversation(
     # ordered by a minted uuid. That is a property of the harness rather than of
     # the queue (``docs/adr/0097``), and draining between writes is also what an
     # API process actually does.
-    for path, body in (
+    for slot, body in (
         ("place", {"place": "Zabłocie Sport"}),
         ("day", {"day": day}),
         ("hour", {"hour": "18:00"}),
     ):
-        written = await client.put(
-            f"/api/v1/plans/{game['game_id']}/{path}",
-            json=body,
-            headers=world.auth(searcher["token"]),
-        )
+        written = await _put(client, searcher["token"], challenge_id, slot, body)
         assert written.status_code == 200, written.text
         await world.deliver_the_outbox(session_factory)
 
@@ -315,38 +761,22 @@ async def test_a_repeat_writes_no_second_line(
     """The idempotency that matters is the one a person can see. Without it the
     room fills with *Tomek set the place* three times over."""
 
-    people, game = await _an_arranged_game(
+    people, _, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
 
     for _ in range(3):
-        await client.put(
-            f"/api/v1/plans/{game['game_id']}/place",
-            json={"place": "Zabłocie Sport"},
-            headers=world.auth(searcher["token"]),
+        await _put(
+            client,
+            searcher["token"],
+            challenge_id,
+            "place",
+            {"place": "Zabłocie Sport"},
         )
     await world.deliver_the_outbox(session_factory)
     lines = await _system_lines(client, people["ana"]["token"])
 
     assert [one["code"] for one in lines].count("PLACE_RECORDED") == 1
-
-
-async def _system_lines(client, token: str) -> list[dict]:
-    """Every system line in this player's one room, oldest first."""
-
-    rooms = await client.get("/api/v1/conversations", headers=world.auth(token))
-    assert rooms.status_code == 200, rooms.text
-    (room,) = rooms.json()["conversations"]
-    opened = await client.get(
-        f"/api/v1/conversations/{room['conversation_id']}",
-        headers=world.auth(token),
-    )
-    assert opened.status_code == 200, opened.text
-    return [
-        entry
-        for entry in opened.json()["entries"]
-        if entry["type"] == "system_line"
-    ]
 
 
 # ---------------------------------------------------------------------------
@@ -361,15 +791,17 @@ async def test_a_day_past_the_horizon_is_refused(
     entry window and a card cannot walk from *Game on* to *Never played* while
     the plan still reads *next Saturday*."""
 
-    _, game = await _an_arranged_game(
+    _, game, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
     planned = _the_day_it_was_arranged(game)
 
-    refused = await client.put(
-        f"/api/v1/plans/{game['game_id']}/day",
-        json={"day": (planned + PLAN_HORIZON + timedelta(days=1)).isoformat()},
-        headers=world.auth(searcher["token"]),
+    refused = await _put(
+        client,
+        searcher["token"],
+        challenge_id,
+        "day",
+        {"day": (planned + PLAN_HORIZON + timedelta(days=1)).isoformat()},
     )
 
     assert refused.status_code == 400, refused.text
@@ -385,14 +817,12 @@ async def test_an_hour_nobody_offered_is_refused(
     """``docs/adr/0145`` §9 — *bounded chips the platform offered, never a free
     instant*. The client's grid is a convention; this is what makes it true."""
 
-    _, game = await _an_arranged_game(
+    _, _, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
 
-    refused = await client.put(
-        f"/api/v1/plans/{game['game_id']}/hour",
-        json={"hour": hour},
-        headers=world.auth(searcher["token"]),
+    refused = await _put(
+        client, searcher["token"], challenge_id, "hour", {"hour": hour}
     )
 
     assert refused.status_code == 400, refused.text
@@ -405,19 +835,19 @@ async def test_a_place_that_says_nothing_or_says_too_much_is_refused(
     """**A slot is never emptied**, so a blank value is not a way of clearing
     one; and an over-long note is refused rather than shortened."""
 
-    _, game = await _an_arranged_game(
+    _, _, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
 
-    empty = await client.put(
-        f"/api/v1/plans/{game['game_id']}/place",
-        json={"place": "   "},
-        headers=world.auth(searcher["token"]),
+    empty = await _put(
+        client, searcher["token"], challenge_id, "place", {"place": "   "}
     )
-    too_long = await client.put(
-        f"/api/v1/plans/{game['game_id']}/place",
-        json={"place": "x" * (PLACE_LENGTH_CAP + 1)},
-        headers=world.auth(searcher["token"]),
+    too_long = await _put(
+        client,
+        searcher["token"],
+        challenge_id,
+        "place",
+        {"place": "x" * (PLACE_LENGTH_CAP + 1)},
     )
 
     assert empty.json()["code"] == "the_place_is_empty"
@@ -430,20 +860,16 @@ async def test_a_moment_already_in_the_past_is_refused_in_either_order(
     """``the-words.md`` §22.2 — one refusal naming both remedies, because the day
     and the hour are filled in either order and either can be the second."""
 
-    _, game = await _an_arranged_game(
+    _, game, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
-    yesterday = (date.fromisoformat(game["planned_at"][:10]) - timedelta(days=1))
+    yesterday = date.fromisoformat(game["planned_at"][:10]) - timedelta(days=1)
 
-    await client.put(
-        f"/api/v1/plans/{game['game_id']}/day",
-        json={"day": yesterday.isoformat()},
-        headers=world.auth(searcher["token"]),
+    await _put(
+        client, searcher["token"], challenge_id, "day", {"day": yesterday.isoformat()}
     )
-    refused = await client.put(
-        f"/api/v1/plans/{game['game_id']}/hour",
-        json={"hour": "18:00"},
-        headers=world.auth(searcher["token"]),
+    refused = await _put(
+        client, searcher["token"], challenge_id, "hour", {"hour": "18:00"}
     )
 
     assert refused.status_code == 409, refused.text
@@ -458,23 +884,22 @@ async def test_a_moment_already_in_the_past_is_refused_in_either_order(
 async def test_somebody_who_was_not_on_the_court_is_told_there_is_no_such_plan(
     client, session_factory, candidate_source, searcher
 ):
-    """**One code for two cases** — no such game, and a game that is not yours.
+    """**One code for three cases** — no such challenge, a court that is not
+    yours, and a seat you have not said yes to.
 
     A 403 would answer *is this id real* about four strangers' evening, which is
     ``challenge_not_found``'s argument verbatim.
     """
 
-    _, game = await _an_arranged_game(
+    _, _, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
     _, stranger = await world.a_signed_in_candidate(
         client, session_factory, "stranger", mu=searcher["mu"]
     )
 
-    refused = await client.put(
-        f"/api/v1/plans/{game['game_id']}/place",
-        json={"place": "Zabłocie Sport"},
-        headers=world.auth(stranger),
+    refused = await _put(
+        client, stranger, challenge_id, "place", {"place": "Zabłocie Sport"}
     )
 
     assert refused.status_code == 404, refused.text
@@ -485,21 +910,19 @@ async def test_somebody_who_was_not_on_the_court_is_told_there_is_no_such_plan(
 async def test_a_plan_read_is_scoped_to_your_own_courts_and_needs_no_refusal(
     client, session_factory, candidate_source, searcher
 ):
-    """The read is gated without a gate: a game the reader was not on the court
-    of never becomes a game id it asks about, so there is no id to refuse."""
+    """The read is gated without a gate: a court the reader holds no accepted
+    seat on never becomes an id it asks about, so there is no id to refuse."""
 
-    people, game = await _an_arranged_game(
+    people, _, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
-    await client.put(
-        f"/api/v1/plans/{game['game_id']}/place",
-        json={"place": "Zabłocie Sport"},
-        headers=world.auth(searcher["token"]),
+    await _put(
+        client, searcher["token"], challenge_id, "place", {"place": "Zabłocie Sport"}
     )
 
     for token in [searcher["token"]] + [one["token"] for one in people.values()]:
-        assert [one["game_id"] for one in await _plans(client, token)] == [
-            game["game_id"]
+        assert [one["challenge_id"] for one in await _plans(client, token)] == [
+            challenge_id
         ]
 
 
@@ -514,20 +937,16 @@ async def test_the_agreed_point_appears_the_moment_a_day_does(
     """``docs/adr/0145`` §3 — one value, defined whenever the day is, coarsened
     to the start of the following local day when no hour is recorded."""
 
-    _, game = await _an_arranged_game(
+    _, game, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
     day = _a_plannable_day(game)
 
-    with_a_day = await client.put(
-        f"/api/v1/plans/{game['game_id']}/day",
-        json={"day": day},
-        headers=world.auth(searcher["token"]),
+    with_a_day = await _put(
+        client, searcher["token"], challenge_id, "day", {"day": day}
     )
-    with_an_hour = await client.put(
-        f"/api/v1/plans/{game['game_id']}/hour",
-        json={"hour": "18:00"},
-        headers=world.auth(searcher["token"]),
+    with_an_hour = await _put(
+        client, searcher["token"], challenge_id, "hour", {"hour": "18:00"}
     )
 
     coarse = with_a_day.json()["agreed_point"]
@@ -548,14 +967,12 @@ async def test_an_hour_with_no_day_names_no_moment(
     """An hour alone anchors as little as an empty plan: 18:00 on no day is not a
     moment, and the coarsening rule is about the **day**."""
 
-    _, game = await _an_arranged_game(
+    _, _, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
 
-    written = await client.put(
-        f"/api/v1/plans/{game['game_id']}/hour",
-        json={"hour": "18:00"},
-        headers=world.auth(searcher["token"]),
+    written = await _put(
+        client, searcher["token"], challenge_id, "hour", {"hour": "18:00"}
     )
 
     assert written.json()["hour"] == "18:00:00"
@@ -571,9 +988,7 @@ async def test_the_plan_list_carries_no_read_at(
 
     await _an_arranged_game(client, session_factory, candidate_source, searcher)
 
-    response = await client.get(
-        "/api/v1/plans", headers=world.auth(searcher["token"])
-    )
+    response = await client.get("/api/v1/plans", headers=world.auth(searcher["token"]))
 
     assert set(response.json()) == {"plans"}
 
@@ -588,20 +1003,12 @@ async def test_one_zone_reads_the_same_for_everybody_in_the_room(
     true one. The falsifier is the first shard whose players are somewhere else.
     """
 
-    people, game = await _an_arranged_game(
+    people, game, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
     day = _a_plannable_day(game)
-    await client.put(
-        f"/api/v1/plans/{game['game_id']}/day",
-        json={"day": day},
-        headers=world.auth(searcher["token"]),
-    )
-    await client.put(
-        f"/api/v1/plans/{game['game_id']}/hour",
-        json={"hour": "18:00"},
-        headers=world.auth(people["bo"]["token"]),
-    )
+    await _put(client, searcher["token"], challenge_id, "day", {"day": day})
+    await _put(client, people["bo"]["token"], challenge_id, "hour", {"hour": "18:00"})
 
     seen = {
         (await _plans(client, token))[0]["agreed_point"]
@@ -628,13 +1035,11 @@ async def test_saying_you_played_freezes_the_slots(
     the whole of a game's life.
     """
 
-    _, game = await _an_arranged_game(
+    _, game, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
-    await client.put(
-        f"/api/v1/plans/{game['game_id']}/place",
-        json={"place": "Zabłocie Sport"},
-        headers=world.auth(searcher["token"]),
+    await _put(
+        client, searcher["token"], challenge_id, "place", {"place": "Zabłocie Sport"}
     )
     played = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
@@ -643,10 +1048,8 @@ async def test_saying_you_played_freezes_the_slots(
     )
     assert played.status_code == 200, played.text
 
-    frozen = await client.put(
-        f"/api/v1/plans/{game['game_id']}/place",
-        json={"place": "Hala Sportowa"},
-        headers=world.auth(searcher["token"]),
+    frozen = await _put(
+        client, searcher["token"], challenge_id, "place", {"place": "Hala Sportowa"}
     )
 
     assert frozen.status_code == 409, frozen.text
@@ -660,30 +1063,21 @@ async def test_saying_you_played_freezes_the_slots(
 
 
 async def _a_complete_plan(client, session_factory, candidate_source, searcher):
-    """A game whose three slots are all filled, and nobody has agreed it yet."""
+    """A whole court whose three slots are all filled, and nobody has agreed it
+    yet."""
 
-    people, game = await _an_arranged_game(
+    people, game, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
-    for path, body in (
+    for slot, body in (
         ("place", {"place": "Zabłocie Sport"}),
         ("day", {"day": _a_plannable_day(game)}),
         ("hour", {"hour": "18:00"}),
     ):
-        written = await client.put(
-            f"/api/v1/plans/{game['game_id']}/{path}",
-            json=body,
-            headers=world.auth(searcher["token"]),
-        )
+        written = await _put(client, searcher["token"], challenge_id, slot, body)
         assert written.status_code == 200, written.text
         await world.deliver_the_outbox(session_factory)
-    return people, game
-
-
-async def _lock(client, game_id: str, token: str):
-    return await client.put(
-        f"/api/v1/plans/{game_id}/lock", headers=world.auth(token)
-    )
+    return people, game, challenge_id
 
 
 async def test_a_complete_plan_is_not_a_locked_one(
@@ -693,9 +1087,7 @@ async def test_a_complete_plan_is_not_a_locked_one(
     third slot leaves ``locked_at`` null, because a complete plan is one
     everybody *could* agree and nobody has yet."""
 
-    _, game = await _a_complete_plan(
-        client, session_factory, candidate_source, searcher
-    )
+    await _a_complete_plan(client, session_factory, candidate_source, searcher)
 
     (plan,) = await _plans(client, searcher["token"])
 
@@ -706,11 +1098,11 @@ async def test_a_complete_plan_is_not_a_locked_one(
 async def test_locking_answers_the_plan_carrying_the_moment_it_was_agreed(
     client, session_factory, candidate_source, searcher
 ):
-    people, game = await _a_complete_plan(
+    people, _, challenge_id = await _a_complete_plan(
         client, session_factory, candidate_source, searcher
     )
 
-    locked = await _lock(client, game["game_id"], people["ana"]["token"])
+    locked = await _lock(client, challenge_id, people["ana"]["token"])
 
     assert locked.status_code == 200, locked.text
     body = locked.json()
@@ -729,16 +1121,14 @@ async def test_an_incomplete_plan_refuses_the_lock(
     second lock: a no-op here would leave a client believing it had agreed one.
     """
 
-    _, game = await _an_arranged_game(
+    _, _, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
-    await client.put(
-        f"/api/v1/plans/{game['game_id']}/place",
-        json={"place": "Zabłocie Sport"},
-        headers=world.auth(searcher["token"]),
+    await _put(
+        client, searcher["token"], challenge_id, "place", {"place": "Zabłocie Sport"}
     )
 
-    refused = await _lock(client, game["game_id"], searcher["token"])
+    refused = await _lock(client, challenge_id, searcher["token"])
 
     assert refused.status_code == 409, refused.text
     assert refused.json()["code"] == "the_plan_is_not_complete"
@@ -752,11 +1142,11 @@ async def test_the_lock_writes_the_one_plan_line_that_carries_no_value(
     like every other line. The three slots are the value and the room already has
     a line for each of them."""
 
-    people, game = await _a_complete_plan(
+    people, _, challenge_id = await _a_complete_plan(
         client, session_factory, candidate_source, searcher
     )
 
-    locked = await _lock(client, game["game_id"], people["bo"]["token"])
+    locked = await _lock(client, challenge_id, people["bo"]["token"])
     assert locked.status_code == 200, locked.text
     await world.deliver_the_outbox(session_factory)
 
@@ -774,13 +1164,13 @@ async def test_locking_an_already_locked_plan_answers_two_hundred_and_says_nothi
     twice lands the same state and records nothing. It is not a refusal, and the
     first lock's moment is the one that stands."""
 
-    people, game = await _a_complete_plan(
+    people, _, challenge_id = await _a_complete_plan(
         client, session_factory, candidate_source, searcher
     )
 
-    first = await _lock(client, game["game_id"], searcher["token"])
+    first = await _lock(client, challenge_id, searcher["token"])
     await world.deliver_the_outbox(session_factory)
-    again = await _lock(client, game["game_id"], people["ana"]["token"])
+    again = await _lock(client, challenge_id, people["ana"]["token"])
     await world.deliver_the_outbox(session_factory)
 
     assert first.status_code == again.status_code == 200
@@ -800,16 +1190,14 @@ async def test_a_locked_plan_is_not_a_frozen_one(
     the friction**, as it already is for every slot change.
     """
 
-    people, game = await _a_complete_plan(
+    people, _, challenge_id = await _a_complete_plan(
         client, session_factory, candidate_source, searcher
     )
-    locked = await _lock(client, game["game_id"], searcher["token"])
+    locked = await _lock(client, challenge_id, searcher["token"])
     await world.deliver_the_outbox(session_factory)
 
-    moved = await client.put(
-        f"/api/v1/plans/{game['game_id']}/hour",
-        json={"hour": "19:00"},
-        headers=world.auth(people["ana"]["token"]),
+    moved = await _put(
+        client, people["ana"]["token"], challenge_id, "hour", {"hour": "19:00"}
     )
     await world.deliver_the_outbox(session_factory)
 
@@ -824,17 +1212,17 @@ async def test_somebody_who_was_not_on_the_court_cannot_lock_and_is_told_nothing
     client, session_factory, candidate_source, searcher
 ):
     """The gate first, and it is the slot writes' gate exactly — **one code for
-    two cases**, because a 403 would answer *is this id real* about four
+    three cases**, because a 403 would answer *is this id real* about four
     strangers' evening."""
 
-    _, game = await _a_complete_plan(
+    _, _, challenge_id = await _a_complete_plan(
         client, session_factory, candidate_source, searcher
     )
     _, stranger = await world.a_signed_in_candidate(
         client, session_factory, "stranger", mu=searcher["mu"]
     )
 
-    refused = await _lock(client, game["game_id"], stranger)
+    refused = await _lock(client, challenge_id, stranger)
 
     assert refused.status_code == 404, refused.text
     assert refused.json()["code"] == "plan_not_found"
@@ -847,12 +1235,12 @@ async def test_a_held_account_may_not_lock(
     slot write**, because a lock writes a line other people read. It refuses no
     read: the plan is still there to look at."""
 
-    _, game = await _a_complete_plan(
+    _, _, challenge_id = await _a_complete_plan(
         client, session_factory, candidate_source, searcher
     )
     world.hold_everybody_planning(client)
 
-    refused = await _lock(client, game["game_id"], searcher["token"])
+    refused = await _lock(client, challenge_id, searcher["token"])
 
     assert refused.status_code == 403, refused.text
     assert refused.json()["code"] == "account_held"
@@ -865,7 +1253,7 @@ async def test_a_game_that_is_history_refuses_the_lock(
     """The freeze reaches the lock as it reaches the three slots: once *we
     played* has been said, there is nothing left to agree."""
 
-    _, game = await _a_complete_plan(
+    _, game, challenge_id = await _a_complete_plan(
         client, session_factory, candidate_source, searcher
     )
     played = await client.post(
@@ -875,8 +1263,7 @@ async def test_a_game_that_is_history_refuses_the_lock(
     )
     assert played.status_code == 200, played.text
 
-    refused = await _lock(client, game["game_id"], searcher["token"])
+    refused = await _lock(client, challenge_id, searcher["token"])
 
     assert refused.status_code == 409, refused.text
     assert refused.json()["code"] == "plan_is_history"
-

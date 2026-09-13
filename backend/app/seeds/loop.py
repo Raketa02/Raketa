@@ -42,8 +42,9 @@ exists for.
 
 **And it tells the rooms as it goes**, which no other layer does. Every line this
 layer seeds depends on an earlier event having been delivered first — a membership
-line is written only where a room already existed, and a slot line and a played
-line are hung on a room *through its game*. The outbox orders by a ``created_at``
+line is written only where a room already existed, a slot line is hung on the room
+its challenge opened, and a played line on a room *through its game*. The outbox
+orders by a ``created_at``
 that is one **second** granular on SQLite, so a send, an acceptance and an entry
 written a moment apart tie and the tie-break is a minted uuid: every one of those
 lines would be a coin flip on the database that runs the whole seed in CI. So the
@@ -553,9 +554,10 @@ async def _write_one_game(
     # creates nothing as well as on the one that creates everything.
     mode_of(arranged, organiser, sport)
     # **The room is told the arrangement before anything is hung on it.** A slot
-    # line and a played line are both found *through the game*, which the room
-    # learns from ``GamePlanned`` — so the two writes below need this delivery to
-    # have happened, and on SQLite they cannot get it by luck.
+    # line is found through the room's challenge and a played line *through the
+    # game*, which the room learns from ``GamePlanned`` — so the two writes below
+    # need this delivery to have happened, and on SQLite they cannot get it by
+    # luck.
     await tell()
 
     agreed = await _agree_what_this_card_needs(
@@ -563,7 +565,7 @@ async def _write_one_game(
         declared,
         cohort,
         paths=arranged,
-        game_id=standing.id,
+        challenge_id=standing.challenge_id,
         at=hours_before(now, declared.arranged_hours_ago).now(),
     )
     entered = (
@@ -584,7 +586,7 @@ async def _agree_what_this_card_needs(
     cohort: Cohort,
     *,
     paths: ReadPaths,
-    game_id: UUID,
+    challenge_id: UUID,
     at: Instant,
 ) -> str:
     """Write this row's plan, on the clock the arrangement was made on.
@@ -600,7 +602,7 @@ async def _agree_what_this_card_needs(
         return "nothing is agreed"
     await agree_up_to(
         session,
-        game_id=game_id,
+        challenge_id=challenge_id,
         slots=declared.slots,
         between=(
             player_of(paths, cohort, declared.organiser),
@@ -1112,15 +1114,17 @@ async def _refuse_a_card_the_rail_cannot_draw(
     for handle in _everybody_who_organises_a_game():
         reader = paths.player(email_of(cohort, handle))
         _, games = await paths.read_games.execute(reader)
+        # Keyed by the challenge, which is the plan's own id and the one every
+        # game carries (``docs/adr/0164`` §1) — the join the client makes.
         plans = {
-            plan.game_id: plan
-            for plan in await paths.read_plans.execute(
+            row.plan.challenge_id: row.plan
+            for row in await paths.read_plans.execute(
                 ReadPlansCommand(reader_id=reader)
             )
         }
         for row in games:
             card = _the_card_this_game_draws(
-                row.standing, plans.get(row.game.id), now=row.read_at
+                row.standing, plans.get(row.game.challenge_id), now=row.read_at
             )
             # **The row's own instant for both questions.** The standing was
             # folded against it and the rail's shelf life is measured from it, so

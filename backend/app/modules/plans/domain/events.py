@@ -11,9 +11,12 @@ one fact told twice — so a ``DayChanged`` beside ``DayRecorded`` would be two
 names for one thing and the room would have to know which sentence to write.
 
 **There is no opening event.** A plan is *born by being used*: nothing is written
-at birth, there is no subscriber to ``GamePlanned``, and *no plan* is what a game
-with nothing agreed draws. The first recording is the birth, and the aggregate id
-is the game's.
+at birth, there is no subscriber to ``SeatAccepted`` or to ``GamePlanned``, and
+*nothing agreed* is what a court with nothing agreed draws. The first recording
+is the birth, and the aggregate id is the **challenge's** (``docs/adr/0164`` §1):
+one challenge has at most one room and at most one game, and both already carry
+``challenge_id``, so it is the one id every reader shares — the room draws the
+plan by its own, and the game the challenge becomes inherits it.
 
 **There is still no completion event, and ``PlanLocked`` is emphatically not
 one** — the distinction is the whole of ``docs/adr/0155``. The third recording
@@ -52,7 +55,7 @@ from uuid import UUID
 class PlaceRecorded:
     """Somebody wrote down where. **The value as they typed it**, one line."""
 
-    game_id: UUID
+    challenge_id: UUID
     place: str
     recorded_by: UUID
     occurred_at: datetime
@@ -67,7 +70,7 @@ class DayRecorded:
     every reader's clock for ever.
     """
 
-    game_id: UUID
+    challenge_id: UUID
     day: str
     recorded_by: UUID
     occurred_at: datetime
@@ -83,7 +86,7 @@ class HourRecorded:
     in to it.
     """
 
-    game_id: UUID
+    challenge_id: UUID
     minute_of_day: int
     recorded_by: UUID
     occurred_at: datetime
@@ -102,7 +105,7 @@ class PlanLocked:
     a moment rather than a state the aggregate then enforces.
     """
 
-    game_id: UUID
+    challenge_id: UUID
     locked_by: UUID
     occurred_at: datetime
 

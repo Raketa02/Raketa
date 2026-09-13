@@ -201,8 +201,10 @@ async def _the_card(client, token: str) -> tuple[dict, str]:
 
     read_at, games = await _games(client, token)
     (game,) = games
-    plans = {plan["game_id"]: plan for plan in await _plans(client, token)}
-    return game, _card_name(game, plans.get(game["game_id"]), read_at=read_at)
+    # Joined by the challenge, which is the plan's own id and the one every
+    # game carries (``docs/adr/0164`` §1) — the join the client makes.
+    plans = {plan["challenge_id"]: plan for plan in await _plans(client, token)}
+    return game, _card_name(game, plans.get(game["challenge_id"]), read_at=read_at)
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +308,7 @@ async def test_a_challenge_becomes_a_game_and_the_game_moves_both_levels(
         (sender, "hour", {"hour": "18:00"}, "game-on"),
     ):
         written = await client.put(
-            f"/api/v1/plans/{game_id}/{slot}",
+            f"/api/v1/plans/{challenge_id}/{slot}",
             json=value,
             headers=world.auth(writer["token"]),
         )
@@ -315,7 +317,7 @@ async def test_a_challenge_becomes_a_game_and_the_game_moves_both_levels(
         assert drawn == expected, f"the card after {slot} was written"
 
     (plan,) = await _plans(client, invitee["token"])
-    assert plan["game_id"] == game_id
+    assert plan["challenge_id"] == challenge_id
     assert [plan[slot] is not None for slot in SLOTS] == [True, True, True]
     assert plan["agreed_point"] is not None, "the third slot is the agreement"
 

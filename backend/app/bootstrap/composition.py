@@ -148,7 +148,6 @@ from app.modules.games.domain.ports import (
     GameHistoryQuery,
     GameRepository,
     OpponentVarietyQuery,
-    PlanningCourt,
     PlayerHandles,
     SeatableCourt,
 )
@@ -157,9 +156,6 @@ from app.modules.games.infrastructure.event_sourced_confirmed_results import (
 )
 from app.modules.games.infrastructure.event_sourced_game_history import (
     EventSourcedGameHistory,
-)
-from app.modules.games.infrastructure.event_sourced_planning_court import (
-    EventSourcedPlanningCourt,
 )
 from app.modules.games.infrastructure.event_sourced_seatable_court import (
     EventSourcedSeatableCourt,
@@ -322,6 +318,7 @@ from app.modules.plans.application.read_plans import ReadPlans
 from app.modules.plans.domain.ports import (
     AccountHoldQuery as PlanAccountHoldQuery,
     PlanDirectory,
+    PlannableCourts,
     PlanRepository,
 )
 from app.modules.plans.infrastructure.absent_providers import (
@@ -330,6 +327,9 @@ from app.modules.plans.infrastructure.absent_providers import (
 from app.modules.plans.infrastructure.event_sourced_plan_repository import (
     EventSourcedPlanDirectory,
     EventSourcedPlanRepository,
+)
+from app.modules.plans.infrastructure.plannable_courts import (
+    ChallengesAndGamesPlannableCourts,
 )
 from app.modules.player_profile.domain.ports import (
     PlayIntentDeclarationRepository,
@@ -1155,10 +1155,11 @@ def build_agreed_moment(
     runtime: EventRuntime | None = None,
 ) -> AgreedMoment:
     """*When has this game been agreed for?* — the Plan's answer to ``games``'
-    demand (``docs/adr/0162`` §4).
+    demand (``docs/adr/0162`` §4), keyed by the challenge the game was opened
+    from, which is the plan's own id (``docs/adr/0164`` §1).
 
     Over the Plan's repository rather than its directory, because the question
-    is about one game and ``load`` answers an unwritten plan — whose moment is
+    is about one court and ``load`` answers an unwritten plan — whose moment is
     ``None`` — rather than nothing.
     """
     return PlansAgreedMoment(
@@ -1276,20 +1277,35 @@ def build_game_directory(
     return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
 
 
-def build_planning_court(
+def build_plannable_courts(
     session: AsyncSession,
     *,
     runtime: EventRuntime | None = None,
-) -> PlanningCourt:
-    """*Which games is this player arranging* — ``games``' answer, over the log.
+) -> PlannableCourts:
+    """*Which courts is this player arranging, and which are history* —
+    ``challenges`` and ``games`` folded together, on the Plan's side of both
+    arrows (``docs/adr/0164`` §3).
 
-    The one thing the Plan reads about a game, and the read that decides whether
-    a slot write may land. It is folded rather than projected for the reason
-    every read in that context is: ``open_to_planning`` is a standing, and a
-    stored one would be wrong for the whole gap between an entry window closing
-    and anything noticing.
+    The one thing the Plan reads about a court, and the read that decides
+    whether a write may land. Built here rather than at the surface for the
+    reason ``build_arranging_court`` is: which contexts answer *who is on this
+    court and is it still being arranged* is a wiring choice, and a read path
+    that reached into either itself would put a second author on it. It is
+    folded rather than projected for the reason every read in those contexts
+    is: ``open_to_planning`` and ``whole`` are standings, and a stored one would
+    be wrong for the whole gap between a deadline passing and anything noticing.
+
+    **A second game repository inside one unit of work**, on
+    ``build_settled_game_query``'s argument: this one only ever reads.
     """
-    return EventSourcedPlanningCourt(session, (runtime or get_event_runtime()).codec)
+    return ChallengesAndGamesPlannableCourts(
+        challenges=build_challenge_directory(session, runtime=runtime),
+        games=build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+    )
 
 
 def build_plan_repository(
@@ -1301,7 +1317,7 @@ def build_plan_repository(
     remembers the stream versions it loaded.
 
     **It takes no session**, unlike ``conversations``' — there is no row to lock
-    and no lookup by payload, because a plan's stream id *is* its game's.
+    and no lookup by payload, because a plan's stream id *is* its challenge's.
     """
     return EventSourcedPlanRepository(event_store=event_store, events=events)
 
@@ -1311,7 +1327,8 @@ def build_plan_directory(
     *,
     runtime: EventRuntime | None = None,
 ) -> PlanDirectory:
-    """*Which of these games have a plan* — one ``IN`` over the aggregate ids.
+    """*Which of these courts have a plan written* — one ``IN`` over the
+    aggregate ids.
 
     It reads the rows itself rather than folding through the repository, which is
     the opposite of the conversation directory beside it and for a stated reason:
@@ -1337,14 +1354,14 @@ def build_read_plans(
     clock: Clock,
     runtime: EventRuntime | None = None,
 ) -> ReadPlans:
-    """*Every plan for the games you are on the court of.*
+    """*One row for every court you may plan, written or not.*
 
     Assembled here rather than at the surface because a seed run reads it too,
     and the two must be reading the same thing.
     """
     return ReadPlans(
         plans=build_plan_directory(session, runtime=runtime),
-        court=build_planning_court(session, runtime=runtime),
+        courts=build_plannable_courts(session, runtime=runtime),
         clock=clock,
     )
 

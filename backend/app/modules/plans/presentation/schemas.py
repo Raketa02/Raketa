@@ -29,6 +29,13 @@ than by convention (``docs/adr/0148`` §10).
 and the ladder that reads them is the client's ``domain/``: a card name on the
 wire would be this context deciding what a screen says, and a count would be the
 one derived value that could disagree with the three fields beside it.
+
+**The row is the challenge's, it carries the anchor, and it exists for a court
+nobody has written on** (``docs/adr/0164`` §1, §4). The client needed the game
+for two things — the anchor the day chips run from, and the fact that there was
+a plan to draw — and it now needs it for neither: the room draws the plan by its
+own ``challenge_id`` from its opening, and Now joins a game to its plan by the
+game's.
 """
 
 from __future__ import annotations
@@ -38,6 +45,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.modules.games.domain.windows import PLAN_HORIZON
 from app.modules.plans.domain.slots import (
     EARLIEST_HOUR,
     HOUR_STEP_MINUTES,
@@ -53,24 +61,33 @@ from app.modules.plans.domain.slots import (
 _FIRST_HOUR = as_wall_time(EARLIEST_HOUR).isoformat("minutes")
 _LAST_HOUR = as_wall_time(LATEST_HOUR).isoformat("minutes")
 
+#: How far past the anchor a day may be set, read off ``games``' own number for
+#: the same reason: the words must not drift from the rule.
+_HORIZON_DAYS = PLAN_HORIZON.days
+
 
 class PlanSchema(BaseModel):
-    """One game's plan: three slots and the moment they name.
+    """One court's plan: three slots, the moment they name, and the anchor.
 
-    **Keyed on the game and on nothing else.** A plan has no id of its own —
-    ``game_id`` identifies it, for ever, and a second identity beside that would
-    be a second name for one thing.
+    **Keyed on the challenge and on nothing else.** A plan has no id of its own —
+    ``challenge_id`` identifies it, for ever, and a second identity beside that
+    would be a second name for one thing. The game the challenge becomes carries
+    the same id, which is how Now joins the two.
 
     Each slot is nullable and an empty one is spelled ``null``. **A slot is never
     emptied**, so a ``null`` here is a slot that has never been filled and never a
-    slot somebody cleared; the client draws the slot's name in its place.
+    slot somebody cleared; the client draws the slot's name in its place. A row
+    with all three ``null`` is a court nobody has written on yet, and it is a row
+    because the court is one the reader may plan.
     """
 
-    game_id: UUID = Field(
+    challenge_id: UUID = Field(
         ...,
         description=(
-            "The game this plan is for. **A plan is one game's, for ever** — "
-            "join it against `GET /games` by this."
+            "The challenge this plan is for. **A plan is one challenge's, for "
+            "ever**, and the game it becomes inherits it — join it against "
+            "`GET /conversations` by `challenge_id` and against `GET /games` by "
+            "the game's own `challenge_id`."
         ),
     )
     place: str | None = Field(
@@ -111,6 +128,20 @@ class PlanSchema(BaseModel):
             "conversion the client must not redo."
         ),
     )
+    anchor: datetime = Field(
+        ...,
+        description=(
+            "The instant this plan's horizon runs from: a day may be set up to "
+            f"**{_HORIZON_DAYS} days past it**, and the row of day chips is "
+            "clamped to that. **The challenge's send until the game exists, then the "
+            "game's `planned_at`** — it only ever moves later, so a day chosen "
+            "under the first is still valid under the second and the chips "
+            "widen when the court fills rather than shrinking.\n\n"
+            "Sent rather than derived on the client because the client would "
+            "otherwise need the game to draw a plan, and a court that is not "
+            "whole has none."
+        ),
+    )
     locked_at: datetime | None = Field(
         None,
         description=(
@@ -131,16 +162,17 @@ class PlanSchema(BaseModel):
 
 
 class PlanListResponse(BaseModel):
-    """Every plan for the games you are on the court of.
+    """One row for every court you may plan, written or not.
 
     **No `read_at`, and that is deliberate.** A plan folds nothing against the
     clock, so there is no instant for it to have been folded against — the card
     is folded against `GET /games`' own `read_at`, which is what keeps Now on one
     clock by construction (``docs/adr/0148`` §10).
 
-    **A game with nothing agreed is absent**, not present with three nulls. *No
-    plan* is what such a game draws, and one spelling for it is what stops an
-    empty plan being told apart from a missing one.
+    **A court with nothing agreed is a row with three nulls** (``docs/adr/0164``
+    §4), not an absence: a row is what says there is a plan to draw and what
+    carries the anchor to draw it with, and absence is reserved for one thing —
+    a court you hold no accepted seat on.
     """
 
     plans: list[PlanSchema]
@@ -172,10 +204,10 @@ class SetDayRequest(BaseModel):
     day: date = Field(
         ...,
         description=(
-            "A local day in the platform zone, **clamped to the game's own "
-            "planning horizon** — so a plan can never name a day past the entry "
-            "window, and the row of days a client offers shrinks as the week "
-            "runs out."
+            f"A local day in the platform zone, **clamped to {_HORIZON_DAYS} "
+            "days past the row's `anchor`** — so a plan can never name a day past the "
+            "entry window once there is a game, and the row of days a client "
+            "offers shrinks as the week runs out."
         ),
     )
 

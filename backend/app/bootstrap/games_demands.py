@@ -3,15 +3,20 @@
 **The same shape as ``matcher_demands.py``, and a second file rather than more
 rows in that one.** That register holds the ports the *matcher* declares of
 contexts it does not write; these are the ports a **provider** publishes for
-seven consumers — the card's counted-games block, *Last 5*, the two facts the
+six consumers — the card's counted-games block, *Last 5*, the two facts the
 Player Score ticket reads per player, the confirmed results the rating context
-walks forward (``docs/adr/0139``), the one question a **plan** asks before
-it lets anybody write a slot (``docs/adr/0148`` §8), the record sheet's
-opponent variety, and the one question a **challenge** asks before a seat on
-a court that has been a game may move (``docs/adr/0162`` §4). Rows of both
-kinds in one list would make ``MATCHER_DEMANDS``'s exhaustiveness assertion a
-claim about two different things, and the first person to add a row would have
-to guess which.
+walks forward (``docs/adr/0139``), the record sheet's opponent variety, and the
+one question a **challenge** asks before a seat on a court that has been a game
+may move (``docs/adr/0162`` §4). Rows of both kinds in one list would make
+``MATCHER_DEMANDS``'s exhaustiveness assertion a claim about two different
+things, and the first person to add a row would have to guess which.
+
+**The Plan's question left this list with ``docs/adr/0164``.** *Is this player
+on this game's court, and is that game still open to planning* was published
+here while a plan was the game's; a plan is the challenge's now, the question
+is about a court that may not have become a game yet, and this record cannot
+answer it alone — so it is the Plan's own demand, folded over both records and
+contracted on ``plan_demands.py``.
 
 **A row carries a builder over a session**, not an instance, so the suite cannot
 quietly excuse the implementations with a database behind them — which here is
@@ -32,7 +37,6 @@ from app.bootstrap.composition import (
     build_game_directory,
     build_game_history_query,
     build_opponent_variety_query,
-    build_planning_court,
     build_seatable_court,
 )
 from app.modules.games.domain.ports import (
@@ -40,7 +44,6 @@ from app.modules.games.domain.ports import (
     GameDirectory,
     GameHistoryQuery,
     OpponentVarietyQuery,
-    PlanningCourt,
     SeatableCourt,
 )
 
@@ -56,22 +59,18 @@ from app.modules.games.domain.ports import (
 #: promised — so it is a demand somebody else will execute, and a demand nobody
 #: executes is a demand satisfied by accident.
 #:
-#: **``PlanningCourt`` is here even though it has one consumer**, and that is the
-#: rule rather than an exception: it is the read that decides whether a slot
-#: write may land, so *a demand nobody executes* is exactly the thing it must not
-#: be. The Plan cannot contract it — a consumer contracting its own provider's
-#: port is the consumer marking its own homework — which is why it sits beside
-#: the three the rest of the platform already reads.
-#:
-#: **``SeatableCourt`` is here for the same reason** (``docs/adr/0162`` §4): it
-#: is the read that decides whether a departure, a fill or an acceptance may
-#: land on a court that has been a game, and its one consumer — ``challenges`` —
-#: cannot contract it without marking its own homework.
+#: **``SeatableCourt`` is here even though it has one consumer**, and that is
+#: the rule rather than an exception (``docs/adr/0162`` §4): it is the read that
+#: decides whether a departure, a fill or an acceptance may land on a court that
+#: has been a game, so *a demand nobody executes* is exactly the thing it must
+#: not be. Its one consumer — ``challenges`` — cannot contract it, because a
+#: consumer contracting its own provider's port is the consumer marking its own
+#: homework, which is why it sits beside the four the rest of the platform
+#: already reads.
 GAMES_DEMANDS: tuple[type, ...] = (
     GameHistoryQuery,
     GameDirectory,
     ConfirmedResultLedger,
-    PlanningCourt,
     OpponentVarietyQuery,
     SeatableCourt,
 )
@@ -92,11 +91,6 @@ GAME_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=ConfirmedResultLedger,
         name="EventSourcedConfirmedResults",
         build=build_confirmed_result_ledger,
-    ),
-    RegisteredImplementation(
-        port=PlanningCourt,
-        name="EventSourcedPlanningCourt",
-        build=build_planning_court,
     ),
     RegisteredImplementation(
         port=OpponentVarietyQuery,

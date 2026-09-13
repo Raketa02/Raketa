@@ -55,7 +55,6 @@ from app.modules.games.domain.ports import (
     GameHistoryQuery,
     OpponentVariety,
     OpponentVarietyQuery,
-    PlanningCourt,
     PlayedOutcome,
     SeatChange,
     SeatableCourt,
@@ -1597,118 +1596,6 @@ async def test_the_ledger_reads_the_same_answer_twice(implementation, session):
 
 
 # ---------------------------------------------------------------------------
-# PlanningCourt — the one question the Plan asks before it lets anybody write
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("implementation", registered(PlanningCourt))
-async def test_a_game_still_awaiting_its_entry_is_open_to_planning(
-    implementation, session
-):
-    """``docs/adr/0144`` — the slots are frozen by the game leaving its entry
-    window and by nothing else, so inside it the answer is simply *yes*."""
-
-    port = implementation.build(session)
-    now = instant(datetime.now(timezone.utc))
-    ana, bo = new_uuid(), new_uuid()
-
-    game = await _saved(session, _planned(line_up=_singles(ana, bo), at=_ago(days=1)))
-    found = await port.plannable_for(ana, now=now)
-
-    assert found[game.id].open_to_planning
-    assert found[game.id].planned_at == game.planned_at
-
-
-@pytest.mark.parametrize("implementation", registered(PlanningCourt))
-async def test_a_game_past_its_entry_window_is_history_and_still_answered_about(
-    implementation, session
-):
-    """**Two different refusals, and only one shape can carry both.**
-
-    A game whose entry window closed is *history* — its slots are frozen — and it
-    is still in the answer, because the plan is drawn beside a game whatever its
-    standing. Dropping it here would make *you were not on that court* and *that
-    court is over* the same answer.
-    """
-
-    port = implementation.build(session)
-    now = instant(datetime.now(timezone.utc))
-    ana, bo = new_uuid(), new_uuid()
-
-    game = await _saved(session, _planned(line_up=_singles(ana, bo), at=_ago(days=30)))
-    found = await port.plannable_for(ana, now=now)
-
-    assert game.standing_at(now) is GameStanding.NEVER_PLAYED
-    assert game.id in found
-    assert not found[game.id].open_to_planning
-
-
-@pytest.mark.parametrize("implementation", registered(PlanningCourt))
-async def test_a_game_somebody_said_they_played_is_no_longer_open_to_planning(
-    implementation, session
-):
-    """The other way out of ``AWAITING_ENTRY``, and it freezes the slots too.
-
-    Once somebody has said *we played*, the plan is history — a note about an
-    evening that is over rather than an arrangement anybody is still making.
-    """
-
-    port = implementation.build(session)
-    now = instant(datetime.now(timezone.utc))
-    ana, bo = new_uuid(), new_uuid()
-
-    game = _planned(line_up=_singles(ana, bo), at=_ago(days=1))
-    game.state_result(by=ana, score=_score((6, 4), (6, 3)), occurred_at=_ago(hours=1))
-    await _saved(session, game)
-
-    found = await port.plannable_for(ana, now=now)
-
-    assert not found[game.id].open_to_planning
-
-
-@pytest.mark.parametrize("implementation", registered(PlanningCourt))
-async def test_a_called_off_game_is_history_and_still_answered_about(
-    implementation, session
-):
-    """``docs/adr/0163`` §3 — the fourth end freezes the slots as the other
-    three do, and the plan is still drawn beside the game."""
-
-    port = implementation.build(session)
-    now = instant(datetime.now(timezone.utc))
-    ana, bo = new_uuid(), new_uuid()
-
-    game = await _saved(
-        session,
-        _called_off(line_up=_singles(ana, bo), at=_ago(days=1), leaver=bo, caller=ana),
-    )
-    found = await port.plannable_for(ana, now=now)
-
-    assert game.standing_at(now) is GameStanding.CALLED_OFF
-    assert game.id in found
-    assert not found[game.id].open_to_planning
-
-
-@pytest.mark.parametrize("implementation", registered(PlanningCourt))
-async def test_somebody_who_was_not_on_the_court_is_answered_about_nothing(
-    implementation, session
-):
-    """**Absence is the whole of *you may not write here*.**
-
-    There is no field saying so, because a field has to be read and a missing row
-    cannot be forgotten.
-    """
-
-    port = implementation.build(session)
-    now = instant(datetime.now(timezone.utc))
-    ana, bo, stranger = new_uuid(), new_uuid(), new_uuid()
-
-    game = await _saved(session, _planned(line_up=_singles(ana, bo), at=_ago(days=1)))
-
-    assert await port.plannable_for(stranger, now=now) == {}
-    assert game.id in await port.plannable_for(bo, now=now)
-
-
-# ---------------------------------------------------------------------------
 # OpponentVarietyQuery — the career statistic, unbounded and about one person
 # ---------------------------------------------------------------------------
 
@@ -1913,22 +1800,6 @@ async def test_somebody_who_left_is_no_longer_on_the_court_the_directory_answers
     assert await port.playing(bo) == ()
 
 
-@pytest.mark.parametrize("implementation", registered(PlanningCourt))
-async def test_somebody_who_left_may_no_longer_plan_and_the_plan_stays_open(
-    implementation, session
-):
-    """An open seat does not freeze the plan — the people still on the court
-    may set a slot — and the plan is the game's, so the one who left is not
-    on its court to write it."""
-
-    port = implementation.build(session)
-    now = instant(datetime.now(timezone.utc))
-    game, ana, bo = await _a_game_somebody_left(session, at=_ago(days=1))
-
-    assert (await port.plannable_for(ana, now=now))[game.id].open_to_planning
-    assert await port.plannable_for(bo, now=now) == {}
-
-
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
 async def test_somebody_who_left_is_nobodys_counterpart_and_nobodys_attendee(
     implementation, session
@@ -1960,7 +1831,7 @@ class _AgreedFor:
     def __init__(self, moment: Instant | None) -> None:
         self._moment = moment
 
-    async def agreed_point_of(self, game_id: UUID) -> Instant | None:
+    async def agreed_point_of(self, challenge_id: UUID) -> Instant | None:
         return self._moment
 
 

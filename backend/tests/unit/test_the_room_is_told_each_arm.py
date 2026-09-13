@@ -504,19 +504,20 @@ async def test_the_lock_writes_the_one_plan_line_that_carries_no_value(rooms):
     """``docs/adr/0155`` — the value is the three slots and they are already
     recorded, so this line carries **who and when** and nothing else.
 
-    Found through the game like the three slot lines, and for the same reason:
-    a plan exists only for a game, so the room is the one whose line-up
-    completed into it.
+    Found through the challenge like the three slot lines, and for the same
+    reason: a plan is the challenge's (``docs/adr/0164`` §1), drawn in the room
+    from its opening, so the room is the one the challenge opened — whether or
+    not a game exists yet.
     """
 
-    tell = _teller(rooms, _Games(game_for=CHALLENGE))
+    tell = _teller(rooms)
     await tell(
         SeatAccepted(challenge_id=CHALLENGE, player_id=ANA, occurred_at=NOW),
         _delivery(),
     )
 
     await tell(
-        PlanLocked(game_id=GAME, locked_by=BO, occurred_at=_at(1)),
+        PlanLocked(challenge_id=CHALLENGE, locked_by=BO, occurred_at=_at(1)),
         _delivery(),
     )
 
@@ -527,15 +528,15 @@ async def test_the_lock_writes_the_one_plan_line_that_carries_no_value(rooms):
 
 
 async def test_a_lock_with_no_room_to_write_it_in_is_a_safe_drop(rooms):
-    """The slot arm's reasoning exactly: a plan cannot be written before its game
-    exists, so by the time this arrives the room either knows its game or was
-    never opened at all. There is nothing to hang the line on and nothing to
-    retry."""
+    """The slot arm's reasoning exactly: a plan is locked only by somebody
+    holding an accepted seat, and that acceptance was published first — so by
+    the time this arrives the room was opened, or has been destroyed since.
+    There is nothing to hang the line on and nothing to retry."""
 
     tell = _teller(rooms)
 
     await tell(
-        PlanLocked(game_id=GAME, locked_by=BO, occurred_at=NOW),
+        PlanLocked(challenge_id=CHALLENGE, locked_by=BO, occurred_at=NOW),
         _delivery(),
     )
 

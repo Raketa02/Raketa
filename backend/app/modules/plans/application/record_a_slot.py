@@ -2,9 +2,9 @@
 
 **Three slot use cases and not one with a slot code**, because ADR-0144 has three
 events and *setting a slot and moving one are the same event told with two
-sentences*. What is genuinely shared is the shape — find the game, refuse a hold,
-record, commit — and it is shared by inheritance from one base rather than by
-three copies, which is where a fourth would arrive without the hold.
+sentences*. What is genuinely shared is the shape — find the court, refuse a
+hold, record, commit — and it is shared by inheritance from one base rather than
+by three copies, which is where a fourth would arrive without the hold.
 
 **The fourth act is the lock, and it reuses that base whole** (``docs/adr/0155``).
 It is not a slot write and it records a different kind of fact, but everything
@@ -14,12 +14,23 @@ a slot write*, because a lock writes a line other people read. The fourth arrivi
 without the hold is the thing the base was written to prevent, and this is the
 fourth.
 
-**The gate is one question asked of ``games`` through one port**, and its two
-answers are this context's two refusals: a game the reader is not on the court of
-is ``plan_not_found``, and a game that has left its entry window is
-``plan_is_history``. *The game leaving ``AWAITING_ENTRY`` is the only thing that
-freezes the slots* (``docs/adr/0144``), and it is not a lock — once somebody has
-said *we played*, the plan is history.
+**The gate is one question asked through one port**, and its two answers are
+this context's two refusals: a court the reader holds no accepted seat on is
+``plan_not_found``, and a court that is over is ``plan_is_history``. *The game
+leaving ``AWAITING_ENTRY`` is the only thing that freezes the slots*
+(``docs/adr/0144``) once there is a game, and before there is one the challenge
+ending is (``docs/adr/0164`` §3) — neither is a lock. Once somebody has said *we
+played*, or everybody has said no, the plan is history.
+
+**The lock reads one more thing off the same answer** — whether the court is
+whole — and hands it to the aggregate, which refuses on it with a code of its
+own (``docs/adr/0164`` §5). The slot writes do not consult it: where, day and
+hour are proposals anybody on the court may make and move, whole or not.
+
+**Every answer here is a row**: the plan as it now stands beside the anchor its
+horizon runs from, because a client draws the day chips from the anchor and a
+write that answered the plan alone would send it back to the list for the one
+number it needs.
 
 **A hold refuses all four writes and refuses no read** (``docs/adr/0148`` §9). A
 slot change — and a lock — writes a system line into a room other people are in,
@@ -45,16 +56,21 @@ from uuid import UUID
 
 from app.application.ports import UnitOfWork
 from app.kernel import Clock, Instant, instant
-from app.modules.games.domain.ports import PlannableGame, PlanningCourt
 from app.modules.plans.application.commands import (
     LockThePlanCommand,
     SetDayCommand,
     SetHourCommand,
     SetPlaceCommand,
 )
+from app.modules.plans.application.plan_row import PlanRow
 from app.modules.plans.domain.errors import PlanIsHistory, PlanNotFound
 from app.modules.plans.domain.plan import Plan
-from app.modules.plans.domain.ports import AccountHoldQuery, PlanRepository
+from app.modules.plans.domain.ports import (
+    AccountHoldQuery,
+    PlannableCourt,
+    PlannableCourts,
+    PlanRepository,
+)
 from app.shared.domain.errors import AccountHeld
 
 
@@ -65,32 +81,36 @@ class _RecordASlot:
         self,
         *,
         plans: PlanRepository,
-        court: PlanningCourt,
+        courts: PlannableCourts,
         holds: AccountHoldQuery,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._plans = plans
-        self._court = court
+        self._courts = courts
         self._holds = holds
         self._uow = uow
         self._clock = clock
 
     async def _yours(
-        self, *, game_id: UUID, player_id: UUID, now: Instant
-    ) -> PlannableGame:
-        """That game, if this player is on its court and it is still being
-        arranged.
+        self, *, challenge_id: UUID, player_id: UUID, now: Instant
+    ) -> PlannableCourt:
+        """That court, if this player holds an accepted seat on it and it is
+        still being arranged.
 
         **Two refusals from one question**, and the order is the design. *You
-        were not on that court* comes first and is a 404 carrying one code for
-        two cases — no such game, and a game that is not yours — because
-        separating them would answer *is this id real* about four strangers'
-        evening. *That game is over* is a 409 and is only reachable by somebody
-        who was there.
+        are not on that court* comes first and is a 404 carrying one code for
+        three cases — no such challenge, a court that is not yours, and a seat
+        you were asked to and have not said yes to — because separating them
+        would answer *is this id real* about four strangers' evening, and would
+        tell an invitee still deciding that there is a plan to read
+        (``docs/adr/0164`` §3). *That court is over* is a 409 and is only
+        reachable by somebody who was there.
         """
 
-        found = (await self._court.plannable_for(player_id, now=now)).get(game_id)
+        found = (await self._courts.plannable_for(player_id, now=now)).get(
+            challenge_id
+        )
         if found is None:
             raise PlanNotFound()
         if not found.open_to_planning:
@@ -105,62 +125,63 @@ class _RecordASlot:
         if player_id in await self._holds.held_among((player_id,)):
             raise AccountHeld("This account is under a live hold.")
 
-    async def _saved(self, plan: Plan) -> Plan:
+    async def _saved(self, plan: Plan, *, court: PlannableCourt) -> PlanRow:
         await self._plans.save(plan)
         await self._uow.commit()
-        return plan
+        return PlanRow(plan=plan, anchor=court.anchor)
 
 
 @final
 class SetPlace(_RecordASlot):
     """*We are meeting here.* Short free text, one line, and nothing reads it."""
 
-    async def execute(self, command: SetPlaceCommand) -> Plan:
+    async def execute(self, command: SetPlaceCommand) -> PlanRow:
         at = instant(self._clock.now())
-        await self._yours(
-            game_id=command.game_id, player_id=command.player_id, now=at
+        court = await self._yours(
+            challenge_id=command.challenge_id, player_id=command.player_id, now=at
         )
         await self._not_held(command.player_id)
-        plan = await self._plans.load(command.game_id)
+        plan = await self._plans.load(command.challenge_id)
         plan.record_place(place=command.place, by=command.player_id, occurred_at=at)
-        return await self._saved(plan)
+        return await self._saved(plan, court=court)
 
 
 @final
 class SetDay(_RecordASlot):
-    """*We are playing on this day.* Clamped to the game's own horizon."""
+    """*We are playing on this day.* Clamped to the court's own horizon —
+    measured from the send until the game exists, then from ``planned_at``."""
 
-    async def execute(self, command: SetDayCommand) -> Plan:
+    async def execute(self, command: SetDayCommand) -> PlanRow:
         at = instant(self._clock.now())
-        game = await self._yours(
-            game_id=command.game_id, player_id=command.player_id, now=at
+        court = await self._yours(
+            challenge_id=command.challenge_id, player_id=command.player_id, now=at
         )
         await self._not_held(command.player_id)
-        plan = await self._plans.load(command.game_id)
+        plan = await self._plans.load(command.challenge_id)
         plan.record_day(
             day=command.day,
             by=command.player_id,
-            planned_at=game.planned_at,
+            anchor=court.anchor,
             occurred_at=at,
         )
-        return await self._saved(plan)
+        return await self._saved(plan, court=court)
 
 
 @final
 class SetHour(_RecordASlot):
     """*We are playing at this time.* Thirty-minute steps, 06:00 to 23:00."""
 
-    async def execute(self, command: SetHourCommand) -> Plan:
+    async def execute(self, command: SetHourCommand) -> PlanRow:
         at = instant(self._clock.now())
-        await self._yours(
-            game_id=command.game_id, player_id=command.player_id, now=at
+        court = await self._yours(
+            challenge_id=command.challenge_id, player_id=command.player_id, now=at
         )
         await self._not_held(command.player_id)
-        plan = await self._plans.load(command.game_id)
+        plan = await self._plans.load(command.challenge_id)
         plan.record_hour(
             hour=command.hour, by=command.player_id, occurred_at=at
         )
-        return await self._saved(plan)
+        return await self._saved(plan, court=court)
 
 
 @final
@@ -175,17 +196,23 @@ class LockThePlan(_RecordASlot):
 
     **It takes no value and answers the whole plan**, like the three beside it —
     a client draws the locked state off ``locked_at`` and needs nothing else back.
+
+    **It is the one act that reads whether the court is whole** (``docs/adr/0164``
+    §5), off the same answer the gate already holds, and hands it to the
+    aggregate rather than deciding here: the aggregate is where the lock's
+    other refusal lives, and two refusals of one act belong in one place so
+    their order is one decision.
     """
 
-    async def execute(self, command: LockThePlanCommand) -> Plan:
+    async def execute(self, command: LockThePlanCommand) -> PlanRow:
         at = instant(self._clock.now())
-        await self._yours(
-            game_id=command.game_id, player_id=command.player_id, now=at
+        court = await self._yours(
+            challenge_id=command.challenge_id, player_id=command.player_id, now=at
         )
         await self._not_held(command.player_id)
-        plan = await self._plans.load(command.game_id)
-        plan.lock(by=command.player_id, occurred_at=at)
-        return await self._saved(plan)
+        plan = await self._plans.load(command.challenge_id)
+        plan.lock(by=command.player_id, occurred_at=at, court_is_whole=court.whole)
+        return await self._saved(plan, court=court)
 
 
 __all__ = ["LockThePlan", "SetDay", "SetHour", "SetPlace"]

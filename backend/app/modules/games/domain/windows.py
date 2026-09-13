@@ -40,11 +40,12 @@ PLAN_HORIZON: Final = timedelta(days=7)
 #: as agreement between two numbers that have stopped agreeing.
 #:
 #: What keeps it at a day is ADR-0145 §5's interlock. ADR-0144 clamps the plan's
-#: day chips at ``planned_at + PLAN_HORIZON`` and entry closes one grace after
-#: that, so this number is exactly what makes **every plannable day leave at
-#: least twenty-four hours to say *we played***. Kept as its own constant rather
-#: than folded into *eight days*, because gluing the two would hide both
-#: arguments.
+#: day chips at ``planned_at + PLAN_HORIZON`` once a game exists — before one,
+#: the clamp runs from the challenge's send and this record has no say
+#: (``docs/adr/0164`` §4) — and entry closes one grace after that, so this
+#: number is exactly what makes **every plannable day leave at least
+#: twenty-four hours to say *we played***. Kept as its own constant rather than
+#: folded into *eight days*, because gluing the two would hide both arguments.
 ENTRY_GRACE: Final = timedelta(hours=24)
 
 #: How long a score stands before silence confirms it. ADR-0048's day, kept for

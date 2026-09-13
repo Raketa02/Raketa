@@ -22,15 +22,15 @@ absent from the answer instead.
 **Fewer than five results is a real answer and is never padded.** The card draws
 a gap; a fifth invented row would be the same mistake in a smaller place.
 
-**``PlanningCourt`` is the port that decides who may write a plan**, and it is
-published here rather than declared over there because the question is entirely
-about this record: *is this player on this game's court, and is that game still
-open to planning* (``docs/adr/0148`` §8). It is **one method** and the whole of
-what the Plan reads about a game — the two refusals a slot write can produce, and
-the anchor its horizon is measured from, in one answer. The arrow runs
-``plans -> games`` and never back: ``games`` does not know a plan exists, which
-is ADR-0145 §4's *"beside that context without being let into it"* made checkable
-and enforced in ``.importlinter``.
+**The Plan no longer reads a port published here.** ``PlanningCourt`` — *is
+this player on this game's court, and is that game still open to planning* — was
+published here while a plan was the game's (``docs/adr/0148`` §8). A plan is
+the challenge's now (``docs/adr/0164`` §3), drawn from the room's opening
+before any game exists, so the question is about a court this record cannot
+see on its own; the Plan declares it in its own words and answers it over both
+records. The arrow still runs ``plans -> games`` and never back: ``games`` does
+not know a plan exists, which is ADR-0145 §4's *"beside that context without
+being let into it"* made checkable and enforced in ``.importlinter``.
 **``OpponentVarietyQuery`` is a separate port and not a sixth fact on the history
 read**, and the split is a fence rather than a filing decision. Every read there
 is bounded — five results, five hundred counterparts — because its caller holds
@@ -65,12 +65,14 @@ one it exists for** (``docs/adr/0162`` §4). A player may leave a game, and
 somebody may fill the seat, only while the game is awaiting its entry **and its
 agreed moment is ahead** — and the moment is the Plan's, computed there and
 nowhere else, in a context this one may not import (``.importlinter``,
-ADR-0145 §4). So this context *demands* the moment in its own words, an adapter
-in ``plans/infrastructure/`` signs it, and the guard — standing and moment,
-read together, once — is *published* here for ``challenges``, keyed by the
-challenge id because that is the currency ``challenges`` holds. Nothing about a
-moment is stored on a game: ADR-0137's *no date field anywhere* is still
-exactly true of this record.
+ADR-0145 §4). So this context *demands* the moment in its own words — keyed by
+the challenge the game was opened from, which is the plan's own id
+(``docs/adr/0164`` §1) and a fact every game carries — an adapter in
+``plans/infrastructure/`` signs it, and the guard — standing and moment, read
+together, once — is *published* here for ``challenges``, keyed by the challenge
+id because that is the currency ``challenges`` holds. Nothing about a moment is
+stored on a game: ADR-0137's *no date field anywhere* is still exactly true of
+this record.
 
 **``attendance_for`` and ``result_answering_for`` are the two reads here that
 answer about fewer people than they were asked about**, and the exception proves
@@ -467,70 +469,6 @@ class ConfirmedResultLedger(Protocol):
         ...
 
 
-@final
-@dataclass(frozen=True, slots=True)
-class PlannableGame:
-    """One game somebody may still be arranging, as the Plan needs to see it.
-
-    Three fields, and each is one half of a question the Plan cannot answer for
-    itself.
-
-    ``open_to_planning`` is **the game still being inside its entry window** —
-    ``AWAITING_ENTRY`` and nothing else. It is folded against the caller's own
-    instant like every other standing in this context, so *are the slots frozen*
-    has the same answer at every instant and needs no sweep to become true.
-
-    ``planned_at`` is **when it became a game**, and it is here because the
-    plan's day is clamped to ``planned_at + PLAN_HORIZON``. It is handed over
-    rather than copied: the Plan reads it per write and stores it nowhere, which
-    is what keeps ``planned_at`` meaning one thing in one place.
-
-    **A game absent from the answer is one this reader is not on the court of**,
-    and that is the only shape *you may not write here* takes. There is no field
-    saying so, because a field would have to be read and a missing row cannot be
-    forgotten.
-
-    **It carries no game id**, because the mapping is keyed by one and this
-    context's own rule is that nothing is stored where it can be derived — a
-    second copy of an identity is the first thing that can disagree with itself.
-    """
-
-    planned_at: Instant
-    open_to_planning: bool
-
-
-@runtime_checkable
-class PlanningCourt(Protocol):
-    """*Which games is this player arranging, and which are history?*
-
-    **One port asking one question** (``docs/adr/0144``), and the two refusals a
-    slot write can produce are its two answers: absent from the mapping is
-    ``plan_not_found``, and ``open_to_planning`` false is ``plan_is_history``.
-
-    **It answers about a player and not about a game**, and that is what makes it
-    one method rather than two. The Plan needs the same fact twice — once to
-    decide whether one write may land, and once to know which plans a reader's
-    list may contain — and a port with a per-game arm beside a per-player one
-    would be two ways to reach one answer, free to disagree the day a standing
-    moved between them.
-
-    **Every game the player was on the court of is here, open or not**, because
-    the list read draws a plan beside a game whatever its standing: a game screen
-    reads the plan of a game that was never played, and dropping the history
-    would make the plan vanish from the one screen that still shows it.
-
-    **Cost.** Bounded by how many games this player has ever been on the court
-    of, which is every read in this context and for the same reason: the fold
-    *is* the answer.
-    """
-
-    async def plannable_for(
-        self, player_id: UUID, *, now: Instant
-    ) -> Mapping[UUID, PlannableGame]:
-        """Every game this player was on the court of, keyed by game id."""
-        ...
-
-
 @runtime_checkable
 class AgreedMoment(Protocol):
     """*When has this game been agreed for?* — this context's demand on
@@ -542,14 +480,17 @@ class AgreedMoment(Protocol):
     (``agreed_point``: both slots the agreed instant, the day alone the start
     of the following local day, no day nothing at all).
 
-    **One game and never a collection**, because it is asked on a write path
-    about the one court an act names, and read at the guard rather than
-    stored anywhere.
+    **Keyed by the challenge the game was opened from**, because a plan is the
+    challenge's (``docs/adr/0164`` §1) and every game carries that id — so the
+    caller asks in a currency it already holds and the adapter translates
+    nothing. **One court and never a collection**, because it is asked on a
+    write path about the one court an act names, and read at the guard rather
+    than stored anywhere.
     """
 
-    async def agreed_point_of(self, game_id: UUID) -> Instant | None:
+    async def agreed_point_of(self, challenge_id: UUID) -> Instant | None:
         """The plan's moment, or ``None`` while no day is recorded — which
-        includes a game whose plan has never been written."""
+        includes a court whose plan has never been written."""
         ...
 
 
@@ -999,8 +940,6 @@ __all__ = [
     "GameDirectory",
     "GameHistoryQuery",
     "GameRepository",
-    "PlannableGame",
-    "PlanningCourt",
     "OpponentVariety",
     "OpponentVarietyQuery",
     "PlayedOutcome",
