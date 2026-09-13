@@ -553,28 +553,48 @@ Rules to preserve:
   the acceptance that filled the last seat**, on `MutualChallengeMinting`'s argument: a
   subscriber would have to re-derive *did this accept complete the line-up* by reading
   somebody else's aggregate, and the player who taps the last accept would be told the game
-  is on by a screen that cannot yet show it. **The line-up is frozen until somebody leaves
-  it** ([ADR-0162](../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)):
-  `POST /challenges/{id}/departure` writes `LEFT` over an accepted seat and hands
-  `vacate_seat` over on the same port in the same transaction, so `SeatVacated` opens the
-  seat on the game — drawn `player_id: null`, never dropped — and the next completed line-up
-  hands over a **re-seat** of the same game (`LineUpReseated`, same id, same `planned_at`)
-  rather than the opening of another. A result is refused while a seat is open
-  (`the_court_has_an_open_seat`), every fold reads the current court, and the pairing read
-  omits the forecast, the split and the stakes until it is whole. The **moment guard** is
-  three ports and no arrow moves: `games` demands `AgreedMoment` of the Plan in its own words
-  (signed in `plans/infrastructure/`, contracted on `game_demands.py`), publishes
-  `SeatableCourt` (`games_demands.py`), and `challenges` reads it through its own
-  `SeatableGameQuery` — on the departure, the fill and the acceptance, and only on a court
-  that has been a game. The challenge folds one fact beside its seats for this,
-  `game_opened`, off `SeatLeft`, so a court the organiser is alone on is a game with a seat
-  to fill rather than a lapse. **And withdraw reaches such a court and calls the game off**
+  is on by a screen that cannot yet show it. **A yes can be taken back, and a court is over
+  when one is left**
+  ([ADR-0162](../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md),
+  [ADR-0165](../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)):
+  `POST /challenges/{id}/departure` writes `LEFT` over an accepted seat on any court that
+  still stands — half built, awaiting, or a game; there is no `not_a_game_yet` — and, where
+  the court has become a game, hands `vacate_seat` over on the same port in the same
+  transaction, so `SeatVacated` opens the seat on the game — drawn `player_id: null`, never
+  dropped — and the next completed line-up hands over a **re-seat** of the same game
+  (`LineUpReseated`, same id, same `planned_at`) rather than the opening of another. A result
+  is refused while a seat is open (`the_court_has_an_open_seat`), every fold reads the
+  current court, and the pairing read omits the forecast, the split and the stakes until it
+  is whole. The **moment guard** is three ports and no arrow moves: `games` demands
+  `AgreedMoment` of the Plan in its own words (signed in `plans/infrastructure/`, contracted
+  on `game_demands.py`), publishes `SeatableCourt` (`games_demands.py`), and `challenges`
+  reads it through its own `SeatableGameQuery` — on the departure, the fill and the
+  acceptance, and only on a court that has been a game; a half-built court has no moment
+  to guard. The challenge folds one fact beside its seats for this, `game_opened`, **off
+  the acceptance that completed the line-up** (and the mint of a mutual-born singles) —
+  never off `SeatLeft`, which can now be written on a court that was never a game. **The
+  ending rule is organiser-blind**: `standing.py`'s `deserted` — *at most one player on it
+  and no seat awaiting an answer* — replaces the *no live seat besides the organiser's*
+  clause, and **a departure is a no**, so before a game the fold reaches `DECLINED` and the
+  room ends with its challenge, and the ending is dated by the departure's own instant
+  (`departed_at`, folded off `SeatLeft` for #388's reason). On a game the fold does not end the
+  court; the departure use case asks the same rule after recording itself and, when it
+  fires, hands `call_off` over on the same port right after the seat — `called_by` is the
+  leaver — so the game is `CALLED_OFF`, singles included, and the room is destroyed by
+  `GameCalledOff` reaching it (the second telling whose whole effect is that the room
+  stops existing). The game admits that caller because it folds `departed` off
+  `SeatVacated` — *the people who may act are the people who were on the court*. A decline
+  or a lapse that leaves one player on a game does **not** call it off — only the departure
+  asks the rule — and that court is filled or withdrawn as before. **And withdraw reaches
+  such a court and calls the game off**
   ([ADR-0163](../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)): the withdraw
   hands `call_off` over on the same port in the same transaction, `GameCalledOff` is the
   fourth end — read first by `standing_of`, in `SETTLED`, out of `PLAYED`, and **in no
   tally**, because a ghost is silence and this was an act — and the act is the organiser's
-  or, once the organiser's own seat is open, any remaining player's. A court whose window
-  already closed is withdrawn without the game being told; the ghost stands. **Three ends
+  or, once the organiser's own seat is open, any remaining player's (ADR-0165 §4–§5 move
+  this, and #426 builds it). A court whose window already closed is withdrawn without the
+  game being told; the ghost stands, and so does a game a departure already called off —
+  `CallOffGame` steps over both ends rather than re-ending either. **Three ends
   are folded from the record and the clock and the fourth is announced, and all four are
   never stored** — there is no `ResultConfirmed`, no sweep and no job, because a derived
   standing has exactly one place to be true, and `GameCalledOff` may announce its end

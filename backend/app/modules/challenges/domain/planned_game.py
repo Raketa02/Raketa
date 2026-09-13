@@ -15,8 +15,10 @@ one asks whether anything more will happen to what came of it, and one asks
 whether its seats may still change.
 
 **It fires at the instant a line-up completes, again at the instant somebody
-leaves the game it became** (``docs/adr/0162``), **and again at the instant a
-court that has been a game is withdrawn** (``docs/adr/0163``). The first
+leaves the game it became** (``docs/adr/0162``), **again at the instant a
+court that has been a game is withdrawn** (``docs/adr/0163``), **and again
+when a departure leaves one player on the court** (``docs/adr/0165`` §3),
+which calls the game off on the same sentence the withdrawal uses. The first
 hand-over used to be the only one — *every seat accepted, nobody left to answer,
 and the membership settled for good* — and the membership is no longer settled
 for good: a player may leave a game that has not happened, the seat opens on
@@ -109,16 +111,20 @@ class PlannedGameHandover(Protocol):
     async def call_off(
         self, *, challenge_id: UUID, by: UUID, occurred_at: Instant
     ) -> None:
-        """This challenge has been withdrawn with a seat open, and it had become
-        a game. **That game is called off.**
+        """This court has been ended with a seat open, and it had become a game.
+        **That game is called off.**
 
-        Called only on a court that has been a game, after the aggregate has
-        recorded the withdrawal and decided whose act it is — so ``by`` is the
-        organiser, or a remaining player once the organiser has left, and it is
-        the one record of the actor: ``ChallengeWithdrawn`` carries no player.
-        The other side reads no moment guard for this; what it decides on its
-        own is that **a game already ended by its clock stays the end it is**
-        (``docs/adr/0163`` §6) — a ghost is not un-ghosted, and the withdraw
+        Called only on a court that has been a game, on two occasions. After
+        the aggregate has recorded a withdrawal and decided whose act it is —
+        ``by`` is the organiser, or a remaining player once the organiser has
+        left, and it is the one record of the actor: ``ChallengeWithdrawn``
+        carries no player. And after a departure that left one player on the
+        court with nobody deciding (``docs/adr/0165`` §3), right after
+        :meth:`vacate_seat` for the same person — ``by`` is the leaver, whose
+        departure is what ended it. The other side reads no moment guard for
+        this; what it decides on its own is that **a game already ended stays
+        the end it is** (``docs/adr/0163`` §6) — a ghost is not un-ghosted, a
+        game a departure called off is not called off twice, and the withdraw
         still ends the challenge. It does **not** commit.
         """
         ...

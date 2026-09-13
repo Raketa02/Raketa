@@ -190,17 +190,20 @@ def test_a_seat_leaving_is_one_code_told_by_three_events():
         assert event not in TOLD_ABOUT
 
 
-def test_a_call_off_reaches_the_room_not_at_all_because_the_withdrawal_already_did():
-    """``docs/adr/0163`` §5 — the withdrawal destroys the room in the same
-    transaction, so the game's own end has nobody left to tell. It is refused
-    with a reason rather than dropped, and the withdrawal is still told."""
+def test_a_call_off_draws_nothing_and_destroys_the_room_like_the_withdrawal():
+    """``docs/adr/0165`` §3 — a game is called off by a departure now, with no
+    withdrawal beside it to destroy the room, so the game's own end is the
+    second telling whose whole effect is that the room stops existing. It
+    draws no line for the withdrawal's reason: there is nobody left to read one.
+    Where both arrive — a withdrawal that calls a game off — whichever is
+    delivered first destroys the room and the other finds nothing to do."""
 
     called_off = next(t for t in TELLINGS if t.event is GameCalledOff)
     withdrawn = next(t for t in TELLINGS if t.event is ChallengeWithdrawn)
 
-    assert called_off.line is None and not called_off.reaches_the_room
+    assert called_off.line is None and called_off.reaches_the_room
     assert "destroys" in called_off.why_nothing
-    assert GameCalledOff not in TOLD_ABOUT
+    assert GameCalledOff in TOLD_ABOUT
     assert withdrawn.reaches_the_room and ChallengeWithdrawn in TOLD_ABOUT
 
 

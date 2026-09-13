@@ -1,5 +1,6 @@
 """Leaving a game before it is played — the seat reopens, the game survives, the
-same game is re-seated (``docs/adr/0162``).
+same game is re-seated (``docs/adr/0162``) — and leaving a court before it is
+whole, after which a court is over when one is left (``docs/adr/0165``).
 
 **The first test is the whole of #411's first rule.** A player on a completed four
 leaves it: the challenge reads ``LINE_UP_INCOMPLETE`` with their seat ``LEFT``,
@@ -11,6 +12,10 @@ Everything after it is what the record decided: whose act it is and until when,
 that the fill and the acceptance re-seat the **same** game, that nobody may
 leave, fill or accept once the agreed moment has passed, that two may leave, and
 that singles is the same mechanism with one seat.
+
+**The last section is #424**: a yes taken back before the court is whole, the
+ending rule read organiser-blind, and the departure that leaves one player on
+a game calling it off in its own transaction.
 """
 
 from __future__ import annotations
@@ -145,6 +150,26 @@ async def _entries(client, token: str, conversation_id: str) -> list[dict]:
 
 def _seat_of(court: dict, player_id) -> dict:
     return next(seat for seat in court["seats"] if seat["player_id"] == str(player_id))
+
+
+async def _game_stream(session_factory, game_id: str) -> list[str]:
+    """The game's stream, as event names in order — what the record says
+    happened to it, which no read answers."""
+
+    async with session_factory() as session:
+        return [
+            row.event_type
+            for row in (
+                await session.execute(
+                    select(EventStoreORM)
+                    .where(
+                        EventStoreORM.aggregate_type == "game",
+                        EventStoreORM.aggregate_id == UUID(game_id),
+                    )
+                    .order_by(EventStoreORM.version)
+                )
+            ).scalars()
+        ]
 
 
 def _advance(clock, candidate_source, *, to: datetime) -> None:
@@ -342,33 +367,6 @@ async def test_a_stranger_and_somebody_without_an_accepted_seat_are_told_the_sam
     again = await _leave(client, people["cy"]["token"], challenge_id)
     assert again.status_code == 404, again.text
     assert _refusal(again) == _refusal(unknown)
-
-
-async def test_a_court_that_is_not_a_game_yet_has_nothing_to_leave(
-    client, session_factory, candidate_source, searcher, clock
-):
-    """Leaving a half-built court is a decline, and it is already given."""
-
-    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    court = [
-        {"side": "A", "player_id": str(searcher["id"])},
-        {"side": "A", "player_id": str(people["ana"]["id"])},
-        {"side": "B", "player_id": str(people["bo"]["id"])},
-        {"side": "B"},
-    ]
-    challenge_id = await _send(
-        client, searcher["token"], await _search_id(client, searcher["token"]), court
-    )
-    await _accepted(client, people["ana"]["token"], challenge_id)
-
-    awaiting = await _leave(client, people["ana"]["token"], challenge_id)
-    assert awaiting.status_code == 409, awaiting.text
-    assert awaiting.json()["code"] == "not_a_game_yet"
-
-    await _accepted(client, people["bo"]["token"], challenge_id)
-    incomplete = await _leave(client, searcher["token"], challenge_id)
-    assert incomplete.status_code == 409, incomplete.text
-    assert incomplete.json()["code"] == "not_a_game_yet"
 
 
 async def test_a_game_that_has_happened_is_history_and_nobody_leaves_it(
@@ -614,21 +612,11 @@ async def test_the_fill_after_a_leave_re_seats_the_same_game(
     ]
     assert codes[-3:] == ["SEAT_LEFT", "SEATS_INVITED", "SEAT_ACCEPTED"]
 
-    async with session_factory() as session:
-        names = [
-            row.event_type
-            for row in (
-                await session.execute(
-                    select(EventStoreORM)
-                    .where(
-                        EventStoreORM.aggregate_type == "game",
-                        EventStoreORM.aggregate_id == UUID(before["game_id"]),
-                    )
-                    .order_by(EventStoreORM.version)
-                )
-            ).scalars()
-        ]
-    assert names == ["games.planned", "games.seat_vacated", "games.line_up_reseated"]
+    assert await _game_stream(session_factory, before["game_id"]) == [
+        "games.planned",
+        "games.seat_vacated",
+        "games.line_up_reseated",
+    ]
 
 
 async def test_nobody_may_be_seated_into_a_game_whose_moment_has_passed(
@@ -758,29 +746,28 @@ async def _a_singles_game(client, session_factory, candidate_source, sender, inv
     return challenge_id
 
 
-async def test_in_singles_the_opponent_leaves_and_the_organiser_fills_the_seat(
+async def test_in_singles_there_is_no_fill_after_a_departure(
     client, session_factory, candidate_source, clock
 ):
-    """#411 rule 9 — a two does not end itself. The organiser alone on the court
-    is a game with a seat to fill, not a send nobody answered; the fill locks
-    nobody and seats one; and the newcomer's yes re-seats the same game."""
+    """**#411 rule 9 reversed** (``docs/adr/0165`` §3, and its consequence
+    *singles lose fill-after-departure*). A two whose opponent leaves is over —
+    the game is called off by the departure — so the fill that used to seat a
+    substitute meets a game that is history, and so does the remaining
+    player's own departure."""
 
     sender = await _a_player(client, "juno")
     invitee = await _a_player(client, "milo")
-    substitute = await _a_player(client, "nia")
+    await _a_player(client, "nia")
     await world.fold_the_log(session_factory, candidate_source)
     challenge_id = await _a_singles_game(
         client, session_factory, candidate_source, sender, invitee
     )
-    before = await _the_game(client, sender["token"], challenge_id)
 
     left = await _leave(client, invitee["token"], challenge_id)
     assert left.status_code == 200, left.text
-    assert left.json()["standing"] == "LINE_UP_INCOMPLETE", (
-        "the organiser alone on a court that has been a game is not a lapse"
+    assert (await _the_game(client, sender["token"], challenge_id))["standing"] == (
+        "CALLED_OFF"
     )
-    game = await _the_game(client, sender["token"], challenge_id)
-    assert [seat["player_id"] for seat in game["seats"]] == [str(sender["id"]), None]
 
     filling = await world.lineup(
         client,
@@ -789,8 +776,6 @@ async def test_in_singles_the_opponent_leaves_and_the_organiser_fills_the_seat(
         completing_challenge_id=challenge_id,
     )
     assert filling.status_code == 200, filling.text
-    seated = [seat.get("player_id") for seat in filling.json()["lineup"]["seats"]]
-    assert str(substitute["id"]) in seated and str(invitee["id"]) not in seated
     filled = await client.post(
         f"/api/v1/challenges/{challenge_id}/seats",
         json={
@@ -802,71 +787,11 @@ async def test_in_singles_the_opponent_leaves_and_the_organiser_fills_the_seat(
         },
         headers=world.auth(sender["token"]),
     )
-    assert filled.status_code == 200, filled.text
-    assert (await _accepted(client, substitute["token"], challenge_id))[
-        "standing"
-    ] == "ON"
-    game = await _the_game(client, substitute["token"], challenge_id)
-    assert game["game_id"] == before["game_id"]
-    assert [seat["player_id"] for seat in game["seats"]] == [
-        str(sender["id"]),
-        str(substitute["id"]),
-    ]
-
-
-async def test_in_singles_the_organiser_may_leave_and_the_opponent_fills_the_seat(
-    client, session_factory, candidate_source, clock
-):
-    """*Any player on the court, the organiser included* (#411 rule 1). Once the
-    organiser has left, the court is proposed by nobody and filled by whoever is
-    still on it — the organiser's seat is required on the posted court only
-    while they are on it."""
-
-    sender = await _a_player(client, "juno")
-    invitee = await _a_player(client, "milo")
-    substitute = await _a_player(client, "nia")
-    await world.fold_the_log(session_factory, candidate_source)
-    challenge_id = await _a_singles_game(
-        client, session_factory, candidate_source, sender, invitee
-    )
-    before = await _the_game(client, invitee["token"], challenge_id)
-
-    left = await _leave(client, sender["token"], challenge_id)
-    assert left.status_code == 200, left.text
-    assert left.json()["standing"] == "LINE_UP_INCOMPLETE"
-    assert await _games(client, sender["token"]) == []
-
-    filling = await world.lineup(
-        client,
-        invitee["token"],
-        sport=Sport.TENNIS,
-        completing_challenge_id=challenge_id,
-    )
-    assert filling.status_code == 200, filling.text
-    filled = await client.post(
-        f"/api/v1/challenges/{challenge_id}/seats",
-        json={
-            "search_id": filling.json()["search"]["search_id"],
-            "court": [
-                {"side": seat["side"], "player_id": seat.get("player_id")}
-                for seat in filling.json()["lineup"]["seats"]
-            ],
-        },
-        headers=world.auth(invitee["token"]),
-    )
-    assert filled.status_code == 200, filled.text
-    assert filled.json()["organiser_id"] == str(sender["id"]), (
-        "the organiser is a fact about who sent it, and it does not move"
-    )
-    assert (await _accepted(client, substitute["token"], challenge_id))[
-        "standing"
-    ] == "ON"
-    game = await _the_game(client, invitee["token"], challenge_id)
-    assert game["game_id"] == before["game_id"]
-    assert {seat["player_id"] for seat in game["seats"]} == {
-        str(invitee["id"]),
-        str(substitute["id"]),
-    }
+    assert filled.status_code == 409, filled.text
+    assert filled.json()["code"] == "game_is_history"
+    alone = await _leave(client, sender["token"], challenge_id)
+    assert alone.status_code == 409, alone.text
+    assert alone.json()["code"] == "game_is_history"
 
 
 # ---------------------------------------------------------------------------
@@ -997,3 +922,315 @@ async def test_a_reopened_court_cannot_record_a_result(
     assert (await _the_game(client, searcher["token"], challenge_id))["standing"] == (
         "AWAITING_ENTRY"
     )
+
+
+# ---------------------------------------------------------------------------
+# A yes can be taken back, and a court is over when one is left (ADR-0165)
+# ---------------------------------------------------------------------------
+
+
+async def _a_padel_four_sent_to(client, searcher, people, *names) -> str:
+    """A padel four sent to three people. **Nobody has answered.**"""
+
+    court = [
+        {"side": "A", "player_id": str(searcher["id"])},
+        {"side": "A", "player_id": str(people[names[0]]["id"])},
+        {"side": "B", "player_id": str(people[names[1]]["id"])},
+        {"side": "B", "player_id": str(people[names[2]]["id"])},
+    ]
+    return await _send(
+        client, searcher["token"], await _search_id(client, searcher["token"]), court
+    )
+
+
+async def _declined(client, token: str, challenge_id: str) -> dict:
+    answered = await _answer(client, token, challenge_id, "decline")
+    assert answered.status_code == 200, answered.text
+    return answered.json()
+
+
+async def _the_room(client, token: str, conversation_id: str):
+    return await client.get(
+        f"/api/v1/conversations/{conversation_id}", headers=world.auth(token)
+    )
+
+
+async def test_a_yes_can_be_taken_back_before_the_court_is_whole(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """``docs/adr/0165`` §1 — **the thing 0162 refused.** B and C accepted a
+    padel four, D declined, and B leaves before the court is whole.
+
+    The reply reads B's seat ``LEFT`` and the standing ``LINE_UP_INCOMPLETE``
+    — the organiser and C are still in, and a seat is open; the room reads
+    *B left — that seat is open again* for the people still on it; B is no
+    longer a member and is told ``conversation_not_found``; B is out of the
+    fill's pool (``docs/adr/0150`` §4, asserted rather than built); and there
+    was never a game to tell.
+    """
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    challenge_id = await _a_padel_four_sent_to(
+        client, searcher, people, "ana", "bo", "cy"
+    )
+    await _accepted(client, people["ana"]["token"], challenge_id)
+    await _accepted(client, people["bo"]["token"], challenge_id)
+    await _declined(client, people["cy"]["token"], challenge_id)
+    # Drained before the act, so the line it writes is the room's last.
+    await world.deliver_the_outbox(session_factory)
+    (room,) = await _rooms(client, people["ana"]["token"])
+
+    left = await _leave(client, people["ana"]["token"], challenge_id)
+
+    assert left.status_code == 200, left.text
+    court = left.json()
+    assert court["standing"] == "LINE_UP_INCOMPLETE"
+    assert _seat_of(court, people["ana"]["id"])["answer"] == "LEFT"
+    assert _seat_of(court, people["bo"]["id"])["answer"] == "ACCEPTED"
+    assert _seat_of(court, people["cy"]["id"])["answer"] == "DECLINED"
+    assert court["ended_at"] is None
+    for who in (searcher, people["ana"], people["bo"]):
+        assert await _games(client, who["token"]) == [], "there never was a game"
+
+    # The room carries the line; the leaver is out of it.
+    await world.deliver_the_outbox(session_factory)
+    (still_there,) = await _rooms(client, people["bo"]["token"])
+    assert still_there["conversation_id"] == room["conversation_id"]
+    assert {member["player_id"] for member in still_there["members"]} == {
+        str(searcher["id"]),
+        str(people["bo"]["id"]),
+    }
+    lines = [
+        entry
+        for entry in await _entries(
+            client, people["bo"]["token"], room["conversation_id"]
+        )
+        if entry["type"] == "system_line"
+    ]
+    assert (lines[-1]["code"], lines[-1]["values"], lines[-1]["actor_id"]) == (
+        "SEAT_LEFT",
+        {"departure": "LEFT"},
+        str(people["ana"]["id"]),
+    )
+    assert await _rooms(client, people["ana"]["token"]) == []
+    gone = await _the_room(client, people["ana"]["token"], room["conversation_id"])
+    assert gone.status_code == 404, gone.text
+    assert gone.json()["code"] == "conversation_not_found"
+
+    # The leaver is out of this court's own pool, and so is the one who said no.
+    filling = await world.lineup(
+        client, searcher["token"], completing_challenge_id=challenge_id
+    )
+    assert filling.status_code == 200, filling.text
+    seated = {seat.get("player_id") for seat in filling.json()["lineup"]["seats"]}
+    assert str(people["ana"]["id"]) not in seated, "the one who left is out of the pool"
+    assert str(people["cy"]["id"]) not in seated, "and so is the one who said no"
+    assert str(people["bo"]["id"]) in seated, "the person still on the court is locked"
+
+
+async def test_one_left_with_nobody_deciding_ends_the_court_and_its_room(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """``docs/adr/0165`` §3 — the organiser alone with one seat still deciding
+    is still arranging and the room still reads; the organiser alone once
+    everybody else has declined or left is ``DECLINED``, because a departure
+    is a no, and the room is gone with it — before any sweep has run."""
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    challenge_id = await _a_padel_four_sent_to(
+        client, searcher, people, "ana", "bo", "cy"
+    )
+    await _accepted(client, people["ana"]["token"], challenge_id)
+    await _declined(client, people["bo"]["token"], challenge_id)
+    await world.deliver_the_outbox(session_factory)
+    (room,) = await _rooms(client, searcher["token"])
+
+    # ana leaves; cy is still deciding, so nothing has ended.
+    left = await _leave(client, people["ana"]["token"], challenge_id)
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "AWAITING_ANSWERS"
+    assert left.json()["ended_at"] is None
+    await world.deliver_the_outbox(session_factory)
+    (still_there,) = await _rooms(client, searcher["token"])
+    assert still_there["conversation_id"] == room["conversation_id"]
+    assert (
+        await _the_room(client, searcher["token"], room["conversation_id"])
+    ).status_code == 200
+
+    # cy declines: the organiser is alone with nobody deciding.
+    declined = await _declined(client, people["cy"]["token"], challenge_id)
+    assert declined["standing"] == "DECLINED", "a departure is a no"
+    assert declined["ended_at"] is not None
+    assert await _rooms(client, searcher["token"]) == []
+    gone = await _the_room(client, searcher["token"], room["conversation_id"])
+    assert gone.status_code == 404, gone.text
+    assert gone.json()["code"] == "conversation_not_found"
+    detail = await client.get(
+        f"/api/v1/challenges/{challenge_id}", headers=world.auth(searcher["token"])
+    )
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["standing"] == "DECLINED"
+
+
+async def test_the_ending_rule_is_organiser_blind(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """The organiser is a player in the rule: B alone after the organiser left,
+    with nobody deciding, is ``DECLINED`` too — a case that could not exist
+    while the organiser could not leave."""
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    challenge_id = await _a_padel_four_sent_to(
+        client, searcher, people, "ana", "bo", "cy"
+    )
+    await _accepted(client, people["ana"]["token"], challenge_id)
+    await _declined(client, people["bo"]["token"], challenge_id)
+    await _declined(client, people["cy"]["token"], challenge_id)
+    await world.deliver_the_outbox(session_factory)
+    (room,) = await _rooms(client, people["ana"]["token"])
+
+    left = await _leave(client, searcher["token"], challenge_id)
+
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "DECLINED"
+    assert left.json()["organiser_id"] == str(searcher["id"]), (
+        "a fact about who sent it"
+    )
+    assert await _rooms(client, people["ana"]["token"]) == []
+    gone = await _the_room(client, people["ana"]["token"], room["conversation_id"])
+    assert gone.status_code == 404, gone.text
+
+
+async def test_in_singles_the_opponent_leaving_calls_the_game_off(
+    client, session_factory, candidate_source, clock
+):
+    """``docs/adr/0165`` §3 — **#411 rule 9 reversed.** A two whose opponent
+    leaves is over: the game reads ``CALLED_OFF`` on ``GET /games`` with no
+    further act, the record shows the seat vacated and then the end, and the
+    room is gone. The challenge stands, with nobody to fill the seat for."""
+
+    sender = await _a_player(client, "juno")
+    invitee = await _a_player(client, "milo")
+    await world.fold_the_log(session_factory, candidate_source)
+    challenge_id = await _a_singles_game(
+        client, session_factory, candidate_source, sender, invitee
+    )
+    await world.deliver_the_outbox(session_factory)
+    before = await _the_game(client, sender["token"], challenge_id)
+    (room,) = await _rooms(client, sender["token"])
+    assert room["game_id"] == before["game_id"]
+
+    left = await _leave(client, invitee["token"], challenge_id)
+
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "LINE_UP_INCOMPLETE"
+    game = await _the_game(client, sender["token"], challenge_id)
+    assert game["game_id"] == before["game_id"]
+    assert game["standing"] == "CALLED_OFF"
+    assert game["called_off_at"] is not None
+    assert [seat["player_id"] for seat in game["seats"]] == [str(sender["id"]), None]
+    assert await _games(client, invitee["token"]) == []
+    assert await _game_stream(session_factory, before["game_id"]) == [
+        "games.planned",
+        "games.seat_vacated",
+        "games.called_off",
+    ]
+
+    await world.deliver_the_outbox(session_factory)
+    for who in (sender, invitee):
+        assert await _rooms(client, who["token"]) == []
+    gone = await _the_room(client, sender["token"], room["conversation_id"])
+    assert gone.status_code == 404, gone.text
+    assert gone.json()["code"] == "conversation_not_found"
+
+
+async def test_in_singles_the_organiser_leaving_calls_the_game_off_too(
+    client, session_factory, candidate_source, clock
+):
+    """Organiser-blind on a game as well: the opponent alone is one player with
+    nobody deciding, and the game is called off by the organiser's departure."""
+
+    sender = await _a_player(client, "juno")
+    invitee = await _a_player(client, "milo")
+    await world.fold_the_log(session_factory, candidate_source)
+    challenge_id = await _a_singles_game(
+        client, session_factory, candidate_source, sender, invitee
+    )
+
+    left = await _leave(client, sender["token"], challenge_id)
+
+    assert left.status_code == 200, left.text
+    game = await _the_game(client, invitee["token"], challenge_id)
+    assert game["standing"] == "CALLED_OFF"
+    assert [seat["player_id"] for seat in game["seats"]] == [None, str(invitee["id"])]
+    assert await _games(client, sender["token"]) == []
+
+
+async def test_in_doubles_the_third_departure_calls_it_off_and_the_first_two_open_seats(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """Doubles fill down to two on the court; the departure that leaves one is
+    the one that ends it. The first two only open seats — the game is still
+    awaiting its entry with a seat to fill — and the third calls it off."""
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    challenge_id = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
+    before = await _the_game(client, searcher["token"], challenge_id)
+
+    for name, open_seats in (("cy", 1), ("bo", 2)):
+        left = await _leave(client, people[name]["token"], challenge_id)
+        assert left.status_code == 200, left.text
+        game = await _the_game(client, searcher["token"], challenge_id)
+        assert game["standing"] == "AWAITING_ENTRY"
+        assert [seat["player_id"] for seat in game["seats"]].count(None) == open_seats
+
+    third = await _leave(client, people["ana"]["token"], challenge_id)
+
+    assert third.status_code == 200, third.text
+    assert third.json()["standing"] == "LINE_UP_INCOMPLETE"
+    game = await _the_game(client, searcher["token"], challenge_id)
+    assert game["game_id"] == before["game_id"]
+    assert game["standing"] == "CALLED_OFF"
+    assert [seat["player_id"] for seat in game["seats"]].count(None) == 3
+    for name in ("ana", "bo", "cy"):
+        assert await _games(client, people[name]["token"]) == []
+
+
+async def test_the_moment_guard_is_asked_only_where_there_is_a_game(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """The moment guard is asked exactly where it was (``docs/adr/0162`` §4): on
+    a court that has been a game. A half-built court can carry a plan with a
+    day and an hour (``docs/adr/0164``), and has no moment to guard — the
+    departure is admitted after it as before it."""
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    day = local_day(clock.at) + timedelta(days=2)
+
+    game = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
+    await _plan(client, searcher["token"], game, "day", {"day": day.isoformat()})
+    await _plan(client, searcher["token"], game, "hour", {"hour": "18:00"})
+    (plan,) = [
+        one
+        for one in await _plans(client, searcher["token"])
+        if one["challenge_id"] == game
+    ]
+    agreed = datetime.fromisoformat(plan["agreed_point"])
+
+    half_built = await _a_padel_four_sent_to(
+        client, searcher, people, "dee", "eve", "ana"
+    )
+    await _accepted(client, people["dee"]["token"], half_built)
+    await _plan(
+        client, people["dee"]["token"], half_built, "day", {"day": day.isoformat()}
+    )
+    await _plan(client, people["dee"]["token"], half_built, "hour", {"hour": "18:00"})
+
+    _advance(clock, candidate_source, to=agreed + timedelta(minutes=1))
+    on_the_game = await _leave(client, people["bo"]["token"], game)
+    assert on_the_game.status_code == 409, on_the_game.text
+    assert on_the_game.json()["code"] == "game_moment_has_passed"
+
+    on_the_court = await _leave(client, people["dee"]["token"], half_built)
+    assert on_the_court.status_code == 200, on_the_court.text
+    assert _seat_of(on_the_court.json(), people["dee"]["id"])["answer"] == "LEFT"

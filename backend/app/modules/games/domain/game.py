@@ -22,7 +22,8 @@ with an open seat is still awaiting its entry. What an open seat changes is who
 may act, and that a result is refused until the seat is filled.
 
 **And a court with a seat open can be called off** (``docs/adr/0163``). ``call_off``
-is the third act told by ``challenges`` — in the transaction of the withdrawal —
+is the third act told by ``challenges`` — in the transaction of the withdrawal,
+or of the departure that left one player on the court (``docs/adr/0165`` §3) —
 and the only act here that announces an end: ``CALLED_OFF`` is the fourth end, a
 decision a person took, folded off ``GameCalledOff`` and read before the clock.
 It is neither an evening nor a ghost, and every read that counts either leaves
@@ -123,6 +124,15 @@ class Game:
     #: ``Challenge.withdrawn_at``'s exact shape and for its reason: an instant
     #: rather than a flag, because the client shelves the ending card from it.
     called_off_at: Instant | None
+    #: Whose leaving opened the seats that are open now. Folded off
+    #: ``SeatVacated`` and emptied by a re-seat — a re-seat is a whole court,
+    #: and nobody's departure is still on it. **It exists for one act**: the
+    #: departure that leaves one player on the court calls the game off, told by
+    #: ``challenges`` in the departure's own transaction, and ``called_by`` is
+    #: the leaver (``docs/adr/0165`` §3) — who has, by then, been vacated. *The
+    #: people who may act are the people who were on the court*, and somebody
+    #: whose seat is the open one was.
+    departed: frozenset[UUID]
     #: At most one per side. A ``Mapping`` rather than a list, because the cap is
     #: the shape: there is nowhere here to put a third score.
     proposals: dict[GameSide, Proposal]
@@ -229,17 +239,22 @@ class Game:
         """Somebody on the court ends a game that has a seat open. **Its end.**
 
         Told by ``challenges`` in the transaction of the withdrawal
-        (``docs/adr/0163`` §2), which has already decided whose act it is — the
-        organiser's, or any remaining player's once the organiser has left.
-        What this refuses is the aggregate's own invariant, kept whether or not
-        the caller already guarantees it: **a game awaiting its entry with a seat
-        open**, and nothing else. A court standing whole that will not play lets
-        its window lapse into *Never played*; a game already ended by its clock
-        is never un-ended, because the platform has drawn that card. And the
-        caller is on the court, on the one rule every act here shares.
+        (``docs/adr/0163`` §2), which has already decided whose act it is — or
+        of the departure that left one player on the court (``docs/adr/0165``
+        §3), where ``by`` is the leaver. What this refuses is the aggregate's
+        own invariant, kept whether or not the caller already guarantees it:
+        **a game awaiting its entry with a seat open**, and nothing else. A
+        court standing whole that will not play lets its window lapse into
+        *Never played*; a game already ended by its clock is never un-ended,
+        because the platform has drawn that card. And the caller **was on the
+        court**: on it now, or the one whose leaving opened a seat that is still
+        open — the one rule every act here shares, read at the width this act
+        needs, since the leaver has been vacated by the time the court is told
+        their departure emptied it.
         """
 
-        self._side_of(by)
+        if by not in self.line_up.players and by not in self.departed:
+            raise YouWereNotOnThisCourt()
         if (
             self.standing_at(occurred_at) is not GameStanding.AWAITING_ENTRY
             or self.line_up.is_complete
@@ -524,6 +539,7 @@ class Game:
         game.window = None
         game.played_at = None
         game.called_off_at = None
+        game.departed = frozenset()
         game.proposals = {}
         game.acceptance = None
         game._events = EventRecorder()
@@ -546,8 +562,10 @@ class Game:
             self.planned_at = instant(event.occurred_at)
         elif isinstance(event, SeatVacated):
             self.line_up = self.line_up.vacated_by(event.player_id)
+            self.departed |= {event.player_id}
         elif isinstance(event, LineUpReseated):
             self.line_up = LineUp.from_codes(event.seatings)
+            self.departed = frozenset()
         elif isinstance(event, GameCalledOff):
             self.called_off_at = instant(event.occurred_at)
         elif isinstance(event, GamePlayed):

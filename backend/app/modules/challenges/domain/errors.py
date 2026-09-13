@@ -286,31 +286,14 @@ class OnlyAHalfBuiltLineUpIsWithdrawn(ConflictError):
         super().__init__("Only a half-built line-up can be withdrawn.")
 
 
-class NotAGameYet(ConflictError):
-    """A departure asked of a court that has not become a game.
-
-    Leaving a half-built court is a **decline**, and it is already given: an
-    invitee who has not answered says no, and one who has is in a court that is
-    still being arranged rather than in a game. The departure is the act for the
-    one standing where nothing else lets a person out — ``ON`` — and it is asked
-    of no other (``docs/adr/0162`` §1).
-
-    **One code for two standings**: ``AWAITING_ANSWERS`` and
-    ``LINE_UP_INCOMPLETE`` are one sentence here — *this is not a game yet*.
-    """
-
-    code = "not_a_game_yet"
-
-    def __init__(self) -> None:
-        super().__init__("This challenge has not become a game yet.")
-
-
 class TheGameIsHistory(ConflictError):
     """A seat asked to change on a court whose game has happened, or never will.
 
     The departure, the fill and the acceptance all meet it, on a court that had
-    become a game: after *we played*, and after the entry window closed on
-    silence, the line-up is the record of an evening and nothing on it moves.
+    become a game: after *we played*, after the entry window closed on silence,
+    and after the game was called off — by a withdrawal, or by the departure
+    that left one player on it (``docs/adr/0165`` §3) — the line-up is the
+    record of an evening and nothing on it moves.
     **Not ``challenge_is_over``**, deliberately: the challenge is still ``ON``
     and the person is looking at a game, so the refusal names the game.
     """

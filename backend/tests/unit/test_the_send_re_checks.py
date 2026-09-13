@@ -492,7 +492,7 @@ async def test_a_mutual_between_two_admissible_players_opens_the_game(
         stored = await _repository(session).load(minted)
         assert stored is not None
         assert stored.players_in_it_at(SENT_AT) == frozenset()
-        assert stored.has_become_a_game_at(SENT_AT)
+        assert stored.has_become_a_game()
         assert all(seat.is_accepted() for seat in stored.seats)
 
 

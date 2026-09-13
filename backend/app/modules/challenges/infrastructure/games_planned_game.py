@@ -12,7 +12,8 @@ line-up is*.
 identical strings on both sides on purpose, so the mapping here is a pass-through
 rather than a table; a table would be a place for the two spellings to drift.
 Three sentences now (``docs/adr/0163``): the opening, the departure, and the
-withdrawal that calls the game off.
+call-off — by a withdrawal, or by the departure that left one player on the
+court (``docs/adr/0165`` §3).
 """
 
 from __future__ import annotations

@@ -925,10 +925,13 @@ class HalfBuiltLineUp:
             f"{sorted(set(self.seated_ids) & self.answered_and_gone)}",
         )
         # **Empty is a court the filler is alone on, and it is a real court**
-        # (``docs/adr/0162`` §6): a singles opponent who left leaves the
-        # organiser alone with a game to fill, and a doubles court three people
-        # left the same. It used to be refused here, when ``LINE_UP_INCOMPLETE``
-        # needed a second person; a court that has been a game does not.
+        # (``docs/adr/0162`` §6). Rarer since ``docs/adr/0165`` §3 — the
+        # departure that leaves one player on a game now calls it off — but
+        # still reached: a court whose others left while a newcomer was still
+        # deciding, whose newcomer then said no, leaves the filler alone with
+        # a game to fill. It used to be refused here, when
+        # ``LINE_UP_INCOMPLETE`` needed a second person; a court that has been
+        # a game does not.
 
 
 @runtime_checkable

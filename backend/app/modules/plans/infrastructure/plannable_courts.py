@@ -76,7 +76,7 @@ class ChallengesAndGamesPlannableCourts:
         for challenge in await self._challenges.seating(player_id):
             game = (
                 await self._games.for_challenge(challenge.challenge_id)
-                if challenge.has_become_a_game_at(now)
+                if challenge.has_become_a_game()
                 else None
             )
             court = plannable_court_of(challenge, game, player_id=player_id, now=now)

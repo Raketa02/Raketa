@@ -16,9 +16,11 @@ which is what makes the answer to *is this still open* the same at every instant
 different facts.** The occupant stays on the seat with the answer that emptied
 it, because *who said no* and *who said nothing* is the whole of the **answers
 challenges** strand, and a seat that forgot which one happened could not tell
-them apart. *Who left* is the third (``docs/adr/0162``): written on an
-**accepted** seat of a court that had become a game, recorded and not yet
-scored, and kept apart from the other two for the day something prices it.
+them apart. *Who left* is the third (``docs/adr/0162``, and before the court
+is whole too since ``docs/adr/0165``): written on an **accepted** seat,
+recorded and not yet scored, and kept apart from the other two for the day
+something prices it — though the fold reads it as a *no* when it asks how a
+court ended, because somebody made a judgement about these people.
 
 **One string per seat on the wire.** The event codec coerces scalars only: a
 ``tuple[Seat, ...]`` would come back out of storage as a list of dicts and the
@@ -77,11 +79,11 @@ class SeatAnswer(str, Enum):
     is a Strand over challenges that got an answer inside their window, and it is
     unmeasurable if silence is filed as judgement.
 
-    ``LEFT`` is the one answer written **over** another (``docs/adr/0162``): an
-    accepted seat, on a court whose line-up had completed into a game, whose
-    occupant has since left it. It opens the seat exactly as the other two do and
-    is neither of them — leaving a game you agreed to is not declining an
-    invitation, and nothing prices it yet.
+    ``LEFT`` is the one answer written **over** another (``docs/adr/0162``,
+    ``docs/adr/0165`` §1): an accepted seat whose occupant has since left it,
+    on a court that had become a game or on one that had not. It opens the
+    seat exactly as the other two do and is neither of them — leaving a court
+    you agreed to is not declining an invitation, and nothing prices it yet.
     """
 
     ACCEPTED = "ACCEPTED"

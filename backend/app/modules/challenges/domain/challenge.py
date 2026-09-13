@@ -22,25 +22,31 @@ deadline, challenging yourself, a challenge with no invitee, a court that is not
 the sport's, removing somebody who is already in the game, a send with nobody
 new to invite, a withdraw that is not the organiser's — or, once the organiser
 has left, not a remaining player's — or is asked of a standing that has some
-other end already, and a departure from a court that is not a game. Everything
-else this context knows is derived.
+other end already, and a departure from a seat that is not an accepted one of
+yours, or from a court that has ended. Everything else this context knows is
+derived.
 
 **One act here announces its own conclusion, and exactly one may**
 (``docs/adr/0142``). ``withdraw`` records the only standing no arrangement of the
 seats could reach; every other transition changes a seat and lets the fold
 answer.
 
-**A game's line-up is frozen until somebody leaves it** (``docs/adr/0162``).
-``leave`` is the one act on a court that has been a game: it writes ``LEFT``
-over an accepted seat, the fold re-derives ``LINE_UP_INCOMPLETE``, and the game
-this court became is told in the same transaction. The next completed line-up
-re-seats that game rather than opening another. A court that has been a game
-holds one fact beside its seats — ``game_opened`` — because the fold must not
-end it the day the organiser is alone on it. **And its exit is the withdraw**
-(``docs/adr/0163``): a reopened court is ``LINE_UP_INCOMPLETE``, the withdraw
-is that standing's act, and the game is called off one layer up in the same
-transaction — by the organiser, or by any remaining player once the organiser's
-own seat is open.
+**A yes can be taken back, and a court is over when one is left**
+(``docs/adr/0165``). ``leave`` writes ``LEFT`` over an accepted seat on any
+court that still stands — half built, awaiting, or a game (``docs/adr/0162``)
+— and the fold re-derives what remains. **The ending rule is organiser-blind**:
+a court is over when at most one player is on it and no seat is awaiting an
+answer, and before a game that reaches the two endings the seats have, with a
+departure counting as a no. A court that has been a game holds one fact beside
+its seats — ``game_opened``, folded off the acceptance that completed its
+line-up — because the fold must not end it the day one person is alone on it:
+a game stands, and the departure that deserts it calls the game off one layer
+up, in the same transaction, through the port the departure already uses. The
+next completed line-up re-seats that game rather than opening another. **And
+its other exit is the withdraw** (``docs/adr/0163``): a reopened court is
+``LINE_UP_INCOMPLETE``, the withdraw is that standing's act, and the game is
+called off one layer up — by the organiser, or by any remaining player once
+the organiser's own seat is open.
 
 **What it does not refuse, and states as an invariant instead:** *an acceptance
 is to the game, not to the side.* The membership is settled; the arrangement is
@@ -52,7 +58,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Iterable, Sequence
+from typing import Iterable, Mapping, Sequence
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
@@ -64,7 +70,6 @@ from app.modules.challenges.domain.errors import (
     CannotChallengeYourself,
     NobodyIsAskedTwice,
     NobodyNewToInvite,
-    NotAGameYet,
     NotYourSeat,
     OnePersonToASeat,
     OnlyAHalfBuiltLineUpIsWithdrawn,
@@ -96,6 +101,7 @@ from app.modules.challenges.domain.standing import (
     ARRANGING,
     ENDED,
     Standing,
+    deserted,
     ended_at_of,
     standing_of,
 )
@@ -147,12 +153,25 @@ class Challenge:
     withdrawn_at: Instant | None = None
     #: Whether this court's line-up has ever completed into a game. **The second
     #: thing about a challenge that is not in its seats** (``docs/adr/0162``
-    #: §2), folded off ``SeatLeft`` — the one event that can only be written on
-    #: a court that was ``ON`` — and read by the fold so that a court the
-    #: organiser is alone on is a game with a seat to fill rather than a send
-    #: nobody answered. Off the seats it would be lost the moment a re-seat gave
-    #: the departed's position to somebody else.
+    #: §2), folded off the acceptance that completed the line-up — the instant
+    #: the hand-over opens the game — and off the mint of a mutual-born singles,
+    #: which is complete at birth (``docs/adr/0165`` §2). It used to be folded
+    #: off ``SeatLeft``, on the argument that a departure could only be written
+    #: on a court that was ``ON``; a yes can be taken back before the court is
+    #: whole now, so ``SeatLeft`` says somebody left and nothing more. Read by
+    #: the fold so that a court one person is alone on is a game with a seat to
+    #: fill rather than a send nobody answered. Off the seats it would be lost
+    #: the moment a re-seat gave the departed's position to somebody else.
     game_opened: bool = False
+    #: When each person who left this court did so, folded off ``SeatLeft`` and
+    #: stored nowhere else — ``withdrawn_at``'s shape, for its reason
+    #: ([#388](https://github.com/Raketa02/Raketa/issues/388)): a departure can
+    #: end a court that has not been a game (``docs/adr/0165`` §3), and the
+    #: ending's instant must not move when a sweep appends a lapse afterwards.
+    #: A seat holds no instant for it — the deadline on a ``LEFT`` seat was met,
+    #: not missed — so this is where the fold reads it. Keyed by player because
+    #: nobody is asked twice on one challenge, so nobody leaves it twice.
+    departed_at: Mapping[UUID, Instant] = field(default_factory=dict)
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -297,15 +316,16 @@ class Challenge:
         )
 
     def leave(self, player_id: UUID, *, occurred_at: Instant) -> None:
-        """One person leaves a game they had agreed to. It reopens **their** seat.
+        """One person leaves a court they had agreed to. It reopens **their** seat.
 
-        **A court that has been a game, and nothing else** (``docs/adr/0162``
-        §1): ``ON``, or reopened since and not yet re-seated — because two
-        people may leave, and the court the second one leaves is already half
-        built. Leaving a court that was never a game is a decline, and it is
-        already given; an ended challenge has nobody to leave. The standing is
-        asked before the seat, so somebody on a court that is not a game is told
-        that rather than told about their seat.
+        **Any court that still stands** (``docs/adr/0165`` §1): a game
+        (``docs/adr/0162``), a court reopened since and not yet re-seated, and
+        — new — a court that has never been a game, whole or not. ``0162`` §1
+        held that leaving a half-built court was a decline already given; it is
+        given to an invitee who has not answered, and was not given to one who
+        had. An ended challenge has nobody to leave, and the standing is asked
+        before the seat so that somebody on an ended court is told that rather
+        than told about their seat.
 
         **An accepted seat, and nobody else's.** The seat must be this player's
         and must hold their yes: a seat that is awaiting, declined, lapsed or
@@ -314,13 +334,17 @@ class Challenge:
 
         What it does not ask is whether the game's moment has passed, because
         that is a fact about a **plan**, which this context cannot read. The use
-        case asks the game, through a port, before it gets here.
+        case asks the game, through a port, before it gets here — and only
+        where there is a game; a half-built court has no moment to guard.
+
+        What the fold makes of the departure is the fold's: before a game, one
+        person left alone with nobody deciding is ``DECLINED``; on a game the
+        court stands ``LINE_UP_INCOMPLETE`` and :meth:`is_deserted_at` is what
+        the use case asks to call the game off.
         """
 
         if self.standing_at(occurred_at) in ENDED:
             raise TheChallengeIsOver()
-        if not self.has_become_a_game_at(occurred_at):
-            raise NotAGameYet()
         seat = self.seat_of(player_id)
         if seat is None or not seat.is_accepted():
             raise NotYourSeat()
@@ -420,10 +444,12 @@ class Challenge:
         """Whether this player may withdraw: they are still live on the court,
         and they are the organiser — or the organiser no longer is.
 
-        On a court that was never a game the organiser is live from birth and
-        nobody can leave it, so this is *the organiser and nobody else*, which
-        is ``docs/adr/0142`` §2 unchanged; the fallback exists only where a
-        departure does.
+        The organiser is live from birth, so while they are on the court this
+        is *the organiser and nobody else*, which is ``docs/adr/0142`` §2
+        unchanged; the fallback exists only where a departure does — and a
+        departure now reaches a court that was never a game too
+        (``docs/adr/0165`` §1). What the withdraw *is* on such a court is
+        ``0165`` §4's, built by #426, and not this ticket's.
         """
 
         seat = self.seat_of(player_id)
@@ -506,7 +532,6 @@ class Challenge:
 
         return standing_of(
             self.seats,
-            organiser_id=self.organiser_id,
             now=now,
             withdrawn=self.withdrawn_at is not None,
             game_opened=self.game_opened,
@@ -519,19 +544,19 @@ class Challenge:
         caller with one reading of the clock cannot get a standing from one
         instant and an ending from another.
 
-        **Two of the three endings are exact and the decline is an upper bound**,
-        which ``standing.py`` explains and the wire repeats — a field documented
-        as an instant while serving a bound is how a later reader invents
-        exactness that was never there.
+        **Three of the four endings are exact and the decline is an upper
+        bound**, which ``standing.py`` explains and the wire repeats — a field
+        documented as an instant while serving a bound is how a later reader
+        invents exactness that was never there.
         """
 
         return ended_at_of(
             self.seats,
-            organiser_id=self.organiser_id,
             now=now,
             updated_at=self.updated_at,
             withdrawn_at=self.withdrawn_at,
             game_opened=self.game_opened,
+            departed_at=self.departed_at,
         )
 
     def organiser_seat_required(self, now: Instant) -> UUID | None:
@@ -551,14 +576,16 @@ class Challenge:
             return self.organiser_id
         return None
 
-    def has_become_a_game_at(self, now: Instant) -> bool:
+    def has_become_a_game(self) -> bool:
         """Whether this challenge's line-up completed and handed over a game.
 
         ``ON``, or a court that has been ``ON`` and lost somebody since
         (``docs/adr/0162``) — which is *every seat accepted*, the moment the
         hand-over fires, and the game it opened stands whether or not a seat has
         since reopened. A singles challenge born of two yeses is ``ON`` the
-        instant it exists and no accept ever happens on it.
+        instant it exists and no accept ever happens on it. **It takes no
+        clock** (``docs/adr/0165`` §2): the fact is folded off the completion
+        itself and nothing about the passing of time can make or unmake it.
 
         **It is one end of the mutual mint's idempotence key** (``docs/adr/0152``
         §4): *has a mutual between these two already minted a game in this sport,
@@ -573,7 +600,22 @@ class Challenge:
         two arranging something* that the pair rule already answers.
         """
 
-        return self.game_opened or self.standing_at(now) is Standing.ON
+        return self.game_opened
+
+    def is_deserted_at(self, now: Instant) -> bool:
+        """Whether at most one player is on this court and nobody is deciding —
+        **the ending rule** (``docs/adr/0165`` §3), asked of a court that has
+        been a game.
+
+        Before a game the fold reads the same rule and the answer is a standing;
+        on a game the fold does not end the court (``docs/adr/0162`` §2), and
+        this is how the departure asks it after recording itself, to hand
+        ``call_off`` to ``games`` in the same transaction. The rule is written
+        once, in ``standing.py``, so the two readers cannot come to two answers
+        about one court.
+        """
+
+        return deserted(self.seats, now=now)
 
     def is_being_arranged_at(self, now: Instant) -> bool:
         """Whether these people are **still arranging a game** — the pair rule.
@@ -681,6 +723,7 @@ class Challenge:
         challenge.answered = frozenset()
         challenge.withdrawn_at = None
         challenge.game_opened = False
+        challenge.departed_at = {}
         challenge._events = EventRecorder()
         return challenge
 
@@ -707,10 +750,15 @@ class Challenge:
             self.organiser_id = event.organiser_id
             self.seats = tuple(Seat.from_code(code) for code in event.seats)
             self.opened_at = instant(event.occurred_at)
+            # A mutual-born singles is complete at birth, and a game from it.
+            self._note_a_completed_line_up()
             self._touch(event.occurred_at)
             return
         if isinstance(event, SeatAccepted):
             self._answer(event.player_id, SeatAnswer.ACCEPTED)
+            # The acceptance that fills the last seat is the instant the
+            # hand-over opens the game (``docs/adr/0165`` §2).
+            self._note_a_completed_line_up()
             self._touch(event.occurred_at)
             return
         if isinstance(event, SeatDeclined):
@@ -722,12 +770,13 @@ class Challenge:
             self._touch(event.occurred_at)
             return
         if isinstance(event, SeatLeft):
-            # Written on an ``ON`` court and nowhere else, so it is also the
-            # record that this court's line-up completed into a game — which
-            # the seats stop being able to say the moment the departed's
-            # position is given to somebody else.
+            # Somebody left, and that is all the fold learns from it: whether
+            # this court had become a game was noted at the completion.
             self._answer(event.player_id, SeatAnswer.LEFT)
-            self.game_opened = True
+            self.departed_at = {
+                **self.departed_at,
+                event.player_id: instant(event.occurred_at),
+            }
             self._touch(event.occurred_at)
             return
         if isinstance(event, SeatsInvited):
@@ -749,6 +798,14 @@ class Challenge:
             for seat in self.seats
         )
         self.answered |= {player_id}
+
+    def _note_a_completed_line_up(self) -> None:
+        """Every seat accepted: the line-up has completed, and a game is opened
+        from it in the same transaction. Once true it stays true — a departure
+        opens a seat on that game rather than un-opening it."""
+
+        if all(seat.is_accepted() for seat in self.seats):
+            self.game_opened = True
 
     def _touch(self, occurred_at: datetime) -> None:
         self.updated_at = instant(occurred_at)

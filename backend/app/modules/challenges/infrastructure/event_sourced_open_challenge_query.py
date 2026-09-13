@@ -132,7 +132,7 @@ class EventSourcedOpenChallengeQuery:
             challenge = Challenge.from_history(events)
             if challenge.sport is not sport:
                 continue
-            if challenge.has_become_a_game_at(now):
+            if challenge.has_become_a_game():
                 minted.append(challenge)
         return tuple(
             challenge.id

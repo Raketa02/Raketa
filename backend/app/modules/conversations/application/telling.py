@@ -28,9 +28,13 @@ written (``docs/adr/0155``).
    and everybody having accepted is exactly such an arrangement. **So there is no
    *Game on* line.** ``ChallengeWithdrawn`` is refused because the withdrawal
    destroys the room in the same act and there is nobody left to read it. That
-   reason is now true: the destruction is ``docs/adr/0153``'s and is built, and
-   the withdrawal is the one telling here whose whole effect is that the room
-   stops existing.
+   reason is now true: the destruction is ``docs/adr/0153``'s and is built. And
+   ``GameCalledOff`` is refused for the same reason and does the same thing
+   (``docs/adr/0165`` §3): a departure that leaves one player on a game calls it
+   off with no withdrawal beside it, so the game's own end is the **second**
+   telling here whose whole effect is that the room stops existing. Where both
+   arrive — a withdrawal that calls a game off — whichever is delivered first
+   destroys the room and the other finds nothing to do.
 
    **``PlanLocked`` is what that test looks like from the other side.** No
    arrangement of the three slots reaches *these people have agreed* — nobody
@@ -43,13 +47,14 @@ written (``docs/adr/0155``).
    in one place.
 
 **A refused line is not a refused telling**, and here that is load-bearing
-twice. ``GamePlanned`` still reaches the room and draws nothing, because
+three times. ``GamePlanned`` still reaches the room and draws nothing, because
 ``GamePlayed`` names a game and nothing else and the room's own end is derived
 from ``GamePlanned``'s moment (``docs/adr/0153`` §2); dropping the delivery
 because nothing renders would drop the anchor with it. ``ChallengeWithdrawn``
-draws nothing and arrives for a stronger reason still — it is what **destroys**
-the room, so a refusal read as *do not deliver this* would leave every withdrawn
-court a readable room for ever.
+and ``GameCalledOff`` draw nothing and arrive for a stronger reason still — each
+is what **destroys** the room, so a refusal read as *do not deliver this* would
+leave every withdrawn court, and every game a departure called off, a readable
+room for ever.
 
 **On the count.** ``the-words.md`` §23.1 is headed *the six events that publish
 nothing* and its own table names **ten** of them, four of which it groups on
@@ -228,11 +233,13 @@ TELLINGS: tuple[Telling, ...] = (
     Telling(
         event=GameCalledOff,
         line=None,
-        reaches_the_room=False,
+        reaches_the_room=True,
         why_nothing=(
-            "the challenge's own withdrawal **destroys** the room in the same "
-            "transaction, so there is nobody left to read a line and no room "
-            "to be a length — the news is on the challenge screen and the card"
+            "the call-off **destroys** the room, so there is nobody left to "
+            "read a line and no room to be a length — the news is on the "
+            "challenge screen and the card. It reaches the room because a "
+            "departure can call a game off with no withdrawal beside it "
+            "(`docs/adr/0165` §3), and then this is the telling that destroys"
         ),
     ),
     Telling(

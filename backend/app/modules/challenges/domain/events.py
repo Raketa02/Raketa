@@ -165,13 +165,15 @@ class SeatLapsed:
 
 @dataclass(frozen=True)
 class SeatLeft:
-    """One person left a game they had agreed to. It reopens **their** seat.
+    """One person left a court they had agreed to. It reopens **their** seat.
 
-    Written on an **accepted** seat of a challenge that is ``ON`` and on no
-    other, which is what makes it carry a second fact for free: a court this was
-    written on had become a game, and the fold keeps that (``game_opened``) so a
-    court the organiser is left alone on is a game with a seat to fill rather
-    than a send nobody answered.
+    Written on an **accepted** seat of a challenge that still stands — a game,
+    or a court that is not whole yet (``docs/adr/0165`` §1). It used to be
+    written on an ``ON`` court and on no other, and carried *this court had
+    become a game* for free; the fold now notes that at the completion itself
+    and learns from this event only what it says. Its instant is folded too,
+    because a departure can end a court that was never a game and the ending
+    is dated by it.
 
     A decision and not a judgement about an invitation — it is kept apart from
     ``SeatDeclined`` for the same reason a lapse is, and it is **recorded and

@@ -167,13 +167,39 @@ def test_a_game_already_called_off_cannot_be_called_off_again():
 
 
 def test_only_somebody_on_the_court_can_call_it_off():
+    """A stranger cannot, and neither can somebody whose seat has since been
+    given to somebody else — a re-seat is a whole court, and the people who
+    may act on it are the people on it."""
+
     game = _a_reopened_game()
 
     with pytest.raises(YouWereNotOnThisCourt):
         game.call_off(by=EVE, occurred_at=at(2))
-    with pytest.raises(YouWereNotOnThisCourt):
-        game.call_off(by=CY, occurred_at=at(2))
     assert game.standing_at(at(2)) is GameStanding.AWAITING_ENTRY
+
+    game.reseat(_four(ANA, BO, EVE, DEE), occurred_at=at(3))
+    game.vacate(DEE, occurred_at=at(4))
+    with pytest.raises(YouWereNotOnThisCourt):
+        game.call_off(by=CY, occurred_at=at(5))
+
+
+def test_somebody_whose_seat_is_the_open_one_may_call_it_off():
+    """``docs/adr/0165`` §3 — the departure that leaves one player on a game
+    calls it off, and ``called_by`` is the leaver, who has been vacated by then.
+    **What the aggregate enforces is one step wider than that rule**: anybody
+    whose leaving opened a seat that is still open, because the game cannot tell
+    which departure emptied the court — an open seat and an asked one look the
+    same here — and the narrower rule is the challenge's, which is the only
+    caller. The record is honest about who, and the sentence the others read is
+    the client's to word."""
+
+    game = _a_reopened_game()
+
+    game.call_off(by=CY, occurred_at=at(2))
+
+    assert game.standing_at(at(2)) is GameStanding.CALLED_OFF
+    event = game.pull_events()[-1]
+    assert isinstance(event, GameCalledOff) and event.called_by == CY
 
 
 def test_a_called_off_game_refuses_every_act():
@@ -254,13 +280,35 @@ async def test_a_game_that_has_already_ended_by_its_clock_is_stepped_over():
     assert ghost.called_off_at is None
 
 
-async def test_only_a_ghost_is_stepped_over_and_any_other_end_raises():
-    """The leniency is one standing wide: a game that reached any other end
-    is unreachable from a challenge the withdraw admits, so the aggregate's
-    refusal fires and rolls the withdrawal back."""
+async def test_a_game_already_called_off_is_stepped_over_and_keeps_its_end():
+    """``docs/adr/0165`` §3 — a departure calls a game off with the challenge
+    still standing ``LINE_UP_INCOMPLETE``, so a withdraw can reach a game that
+    is already ``CALLED_OFF``. It is the ghost's case again: the withdraw is
+    about the challenge, and the end the game reached — with the departure's
+    instant and actor on it — stays the end it is."""
 
     game = _a_reopened_game()
-    game.call_off(by=ANA, occurred_at=at(2))
+    game.call_off(by=CY, occurred_at=at(2))
+    games = _Remembering(game)
+
+    await CallOffGame(games=games).execute(
+        CallOffGameCommand(challenge_id=game.challenge_id, called_by=ANA),
+        occurred_at=at(3),
+    )
+
+    assert game.standing_at(at(3)) is GameStanding.CALLED_OFF
+    assert game.called_off_at == at(2), "the first end stands"
+    assert game.version == 3, "nothing was appended"
+
+
+async def test_only_the_two_ends_a_reopened_court_can_reach_are_stepped_over():
+    """The leniency is two standings wide and no wider: a played game has a
+    whole court, and a whole court is a challenge that is ``ON``, which the
+    withdraw refuses — so a played game here is a broken precondition, and the
+    aggregate's refusal fires and rolls the withdrawal back."""
+
+    game = _a_game()
+    game.state_result(by=ANA, score=_score(), occurred_at=at(1))
     games = _Remembering(game)
 
     with pytest.raises(NotAGameToCallOff):

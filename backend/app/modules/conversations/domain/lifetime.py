@@ -58,10 +58,11 @@ read ``games``, and ``.importlinter`` holds the reverse shut.
 destroys the room **in the same act** and writes no line, because there is
 nobody left to read one — so there is no room left to derive an instant for.
 **A withdrawal now reaches a room that already holds its game**
-(``docs/adr/0163``) — a reopened court is called off through it — and nothing
-here reads ``game_id`` on that path: the destruction is the teller's, in the
-act, and the anchors below are only ever consulted on a read of a room that
-still exists.
+(``docs/adr/0163``) — a reopened court is called off through it — **and so does
+a call-off on its own** (``docs/adr/0165`` §3), told by the departure that left
+one player on the court; nothing here reads ``game_id`` on either path: the
+destruction is the teller's, in the act, and the anchors below are only ever
+consulted on a read of a room that still exists.
 """
 
 from __future__ import annotations

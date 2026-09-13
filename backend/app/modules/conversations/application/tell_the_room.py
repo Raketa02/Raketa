@@ -29,10 +29,12 @@ delivery rather than to a client.
 **What is refused, and why, is in ``telling.py``** — as a table, so the six the
 prose says publish nothing are named in one place a test can walk.
 
-**One arm writes nothing into the room and takes the room away.** A withdrawal
-**destroys** it (``docs/adr/0153`` §2), so the telling that draws the least is
-the one with the largest effect — which is why its row in ``telling.py`` reaches
-the room while refusing a line, and why a reader who took *refused* to mean *not
+**Two arms write nothing into the room and take the room away.** A withdrawal
+**destroys** it (``docs/adr/0153`` §2), and so does the game being called off
+(``docs/adr/0165`` §3) — a departure that leaves one player on a game calls it
+off with no withdrawal beside it. The tellings that draw the least are the ones
+with the largest effect — which is why their rows in ``telling.py`` reach the
+room while refusing a line, and why a reader who took *refused* to mean *not
 delivered* would leave every withdrawn court a readable room for ever.
 
 **A line nudges the room and an opening does not**, which is the nudge's own
@@ -98,7 +100,7 @@ from app.modules.conversations.domain.ports import (
     ConversationRepository,
     PlayedCourt,
 )
-from app.modules.games.domain.events import GamePlanned, GamePlayed
+from app.modules.games.domain.events import GameCalledOff, GamePlanned, GamePlayed
 from app.modules.plans.domain.events import (
     DayRecorded,
     HourRecorded,
@@ -177,6 +179,8 @@ class TellTheRoom:
             )
         elif isinstance(event, ChallengeWithdrawn):
             await self._withdrawn(event)
+        elif isinstance(event, GameCalledOff):
+            await self._called_off(event)
         elif isinstance(event, GamePlanned):
             await self._note_game(event)
         elif isinstance(event, GamePlayed):
@@ -283,6 +287,31 @@ class TellTheRoom:
         """
 
         room = await self._conversations.for_challenge(event.challenge_id)
+        if room is None:
+            return
+        await self._conversations.destroy(room.conversation_id)
+
+    async def _called_off(self, event: GameCalledOff) -> None:
+        """The game this room was for is called off. **The room is destroyed,
+        and writes no line** (``docs/adr/0165`` §3) — the withdrawal's arm,
+        reached through the game.
+
+        A call-off arrives with a withdrawal beside it (``docs/adr/0163``) or
+        alone, told by the departure that left one player on the court. Beside
+        a withdrawal, whichever of the two is delivered first destroys the room
+        and this finds nothing; alone, this is the only telling that will. A
+        room that is not there is that redelivery, or a game this context was
+        never told about, and both want exactly nothing done. No nudge, for the
+        withdrawal's reason: there is no room to be a length.
+
+        **Found through the game, and the room always knows it by now.** A
+        call-off is written in a strictly later transaction than the game's
+        opening — a seat has to have been vacated first — so by the time this
+        is delivered the room has either been told its game or was never
+        opened at all.
+        """
+
+        room = await self._directory.for_game(event.game_id)
         if room is None:
             return
         await self._conversations.destroy(room.conversation_id)

@@ -2,9 +2,11 @@
 
 **The exit exists exactly where nothing else ends it** (``docs/adr/0142``).
 ``AWAITING_ANSWERS`` ends itself when the clocks run out. ``ON`` has become a
-game. ``LINE_UP_INCOMPLETE`` — somebody in, a seat open, nobody deciding — never
-ends on its own, and nobody holds an exit: the acceptor is refused by the
-already-answered rule and the organiser has had no act at all. This is that act.
+game. ``LINE_UP_INCOMPLETE`` — two or more in, a seat open, nobody deciding —
+never ends on its own. This is the act that ends it. (An acceptor can now take
+their yes back, ``docs/adr/0165`` §1, and a court left with one person on it
+ends by itself; what the withdraw *is* once that is so is ``0165`` §4's, built
+by #426.)
 
 **And on a court that has been a game, it is the exit that reaches the game**
 (``docs/adr/0163``). A reopened court is ``LINE_UP_INCOMPLETE`` again once
@@ -78,7 +80,7 @@ class WithdrawChallenge(AChallengeOfYours):
         challenge = await self._yours(command.challenge_id, command.player_id)
         challenge.withdraw(command.player_id, occurred_at=at)
         standing = await self._written(challenge, at)
-        if challenge.has_become_a_game_at(at):
+        if challenge.has_become_a_game():
             # **The game is told in this transaction**, so the ``WITHDRAWN`` on
             # the challenge and the end on the game commit together or neither
             # does. A court that never became a game hands over nothing.

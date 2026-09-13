@@ -50,7 +50,7 @@ async def refuse_a_court_closed_to_seating(
     and one that has a game is admitted unless the game says otherwise.
     """
 
-    if not challenge.has_become_a_game_at(at):
+    if not challenge.has_become_a_game():
         return
     if challenge.standing_at(at) in ENDED:
         return

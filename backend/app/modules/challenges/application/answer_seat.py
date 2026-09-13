@@ -21,8 +21,8 @@ call rather than an event, exactly as a mutual yes opening a challenge is.
 
 **A decline is not a cancellation.** It reopens exactly the seat it was given and
 the people who already agreed are still in — and if the last of them leaves, the
-standing settles on its own, because what remains is the organiser alone on an
-empty court.
+standing settles on its own, because what remains is one person on an empty
+court (``docs/adr/0165`` §3, organiser-blind).
 
 **What both answers share is not here.** Loading a challenge of yours, folding
 the standing the write produced and reading the court back is

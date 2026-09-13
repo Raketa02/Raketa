@@ -600,8 +600,16 @@ async def withdraw_challenge(
     responses={
         status.HTTP_200_OK: {
             "description": (
-                "Your seat is open again, and the challenge as it now stands at "
-                "`LINE_UP_INCOMPLETE`. The game survives with that seat empty."
+                "Your seat is open again, and the challenge as it now stands. "
+                "`LINE_UP_INCOMPLETE` where the others are in — on a game, that "
+                "game survives with your seat empty; `AWAITING_ANSWERS` where "
+                "somebody is still deciding; and `DECLINED` where you were the "
+                "last but one on a court that was never a game and nobody is "
+                "deciding — **a court is over when at most one player is on it "
+                "and no seat is awaiting an answer**, and a departure is a no. "
+                "On a game the challenge stands and the **game** is called off "
+                "instead, in this same request: `GET /games` reads it "
+                "`CALLED_OFF`, and the room is gone."
             )
         },
         status.HTTP_404_NOT_FOUND: {
@@ -626,17 +634,17 @@ async def withdraw_challenge(
         status.HTTP_409_CONFLICT: {
             "model": ErrorResponse,
             "description": (
-                "`not_a_game_yet` — this court has not become a game. Leaving a "
-                "half-built court is a decline, and it is already given. **One "
-                "code for two standings**, `AWAITING_ANSWERS` and "
-                "`LINE_UP_INCOMPLETE`, on a court that was never a game.\n\n"
                 "`challenge_is_over` — this challenge has ended.\n\n"
-                "`game_is_history` — the game has happened, or its entry window "
-                "closed on silence. The line-up is the record of an evening, and "
-                "nothing on it moves.\n\n"
+                "`game_is_history` — the game has happened, was called off, or "
+                "its entry window closed on silence. The line-up is the record "
+                "of an evening, and nothing on it moves.\n\n"
                 "`game_moment_has_passed` — the moment the plan agreed has "
                 "passed. Leaving would mean nothing now, and a no-show cannot "
-                "vacate a seat to block the result."
+                "vacate a seat to block the result. **Only where there is a "
+                "game**: a half-built court may carry a plan naming a moment, "
+                "and has no moment to guard.\n\n"
+                "There is no `not_a_game_yet` any more: a yes can be taken back "
+                "before the court is whole."
             ),
         },
         status.HTTP_503_SERVICE_UNAVAILABLE: _REFUSALS[
@@ -645,15 +653,26 @@ async def withdraw_challenge(
     },
     summary="Leave the game",
     description=(
-        "**You are out of a game you had agreed to.** Your seat reopens on the "
-        "challenge, the game survives with that seat drawn empty, and the people "
-        "still on it keep what they agreed — the plan, the room, the record. "
-        "Anyone still on the court may fill your seat the way a half-built "
-        "court is filled, and the newcomer's yes re-seats the **same** game.\n\n"
-        "**Any player on the court, the organiser included**, while the game is "
-        "awaiting its entry and its agreed moment is ahead — or no moment is "
-        "agreed yet. Once the moment has passed, leaving means nothing and is "
-        "refused.\n\n"
+        "**You are out of a court you had agreed to** — a game, or a court "
+        "that is not whole yet. Your seat reopens on the challenge; where the "
+        "court had become a game, that game survives with your seat drawn "
+        "empty, and the people still on it keep what they agreed — the plan, "
+        "the room, the record. Anyone still on the court may fill your seat "
+        "the way a half-built court is filled, and the newcomer's yes re-seats "
+        "the **same** game.\n\n"
+        "**Any player on the court, the organiser included**, while the court "
+        "stands — and, on a game, while it is awaiting its entry and its agreed "
+        "moment is ahead or no moment is agreed yet. Once the moment has "
+        "passed, leaving means nothing and is refused; a court that is not a "
+        "game has no moment to guard.\n\n"
+        "**A court is over when at most one player is on it and no seat is "
+        "awaiting an answer**, and the organiser is a player in that rule. "
+        "Before a game the challenge ends by itself — as `DECLINED`, because a "
+        "departure is a no — and its room with it. On a game, the departure "
+        "that leaves one player on it **calls the game off** in this request: "
+        "`GET /games` reads `CALLED_OFF`, the room is gone, and the challenge "
+        "stands with nobody to fill the seat for. Singles included: an opponent "
+        "who leaves calls the game off.\n\n"
         "**You are out of this court's own pool for as long as it stands.** "
         "Nobody is asked twice on one challenge; being asked again is a **new** "
         "challenge. Every other search reaches you at once — the pair rule "

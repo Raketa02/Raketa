@@ -350,7 +350,7 @@ async def test_a_half_built_doubles_mutual_holds_the_pair(session_factory):
         stored = await _challenges(session).load(first)
         assert stored is not None
         assert stored.is_being_arranged_at(MINTED_AT)
-        assert not stored.has_become_a_game_at(MINTED_AT)
+        assert not stored.has_become_a_game()
         assert await build_open_challenge_query(session).open_pairs_among(
             [ALICE, BOB], now=GHOSTED
         ) == frozenset({frozenset({ALICE, BOB})})

@@ -9,20 +9,18 @@ destroyed, the plan and the pairing are history, and a score is refused.
 Everything after it is what the record decided: whose act it is once the
 organiser has left; that a full court has no such exit; that a court that never
 became a game withdraws exactly as before, with no game to tell; that the pair is
-released; that singles is the same mechanism; and that a court whose window has
-already closed is withdrawn with the ghost left standing.
+released; that in singles the departure itself calls the game off and the
+withdraw that follows steps over that end (``docs/adr/0165`` §3); and that a
+court whose window has already closed is withdrawn with the ghost left standing.
 """
 
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from uuid import UUID
 
 import pytest
-from sqlalchemy import select
 
 from app.api.dependencies import get_clock
-from app.infrastructure.events.event_store_model import EventStoreORM
 from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
 from app.modules.plans.domain.slots import local_day
 from tests.api import matchmaking_world as world
@@ -34,6 +32,7 @@ from tests.api.test_departure import (
     _a_singles_game,
     _accepted,
     _advance,
+    _game_stream,
     _games,
     _leave,
     _plans,
@@ -70,23 +69,6 @@ async def _withdraw(client, token: str, challenge_id: str):
     return await client.post(
         f"/api/v1/challenges/{challenge_id}/withdrawal", headers=world.auth(token)
     )
-
-
-async def _game_stream(session_factory, game_id: str) -> list[str]:
-    async with session_factory() as session:
-        return [
-            row.event_type
-            for row in (
-                await session.execute(
-                    select(EventStoreORM)
-                    .where(
-                        EventStoreORM.aggregate_type == "game",
-                        EventStoreORM.aggregate_id == UUID(game_id),
-                    )
-                    .order_by(EventStoreORM.version)
-                )
-            ).scalars()
-        ]
 
 
 # ---------------------------------------------------------------------------
@@ -341,12 +323,15 @@ async def test_the_pair_may_challenge_each_other_again_afterwards(
     assert released.status_code == 201, released.text
 
 
-async def test_in_singles_the_opponent_leaves_and_the_remaining_player_calls_it_off(
+async def test_in_singles_the_withdraw_after_the_departures_call_off_steps_over_it(
     client, session_factory, candidate_source, clock
 ):
-    """#411 rule 9 — a two does not end itself, and its one remaining player may
-    end it. Here the remaining player is the organiser; the fallback is the
-    same mechanism with one seat."""
+    """**#411 rule 9 reversed** (``docs/adr/0165`` §3) — a two whose opponent
+    leaves is over by the departure, with no act from the remaining player.
+    The challenge still stands ``LINE_UP_INCOMPLETE`` with nobody to fill the
+    seat for, and its exit is still the withdraw: admitted, ending the
+    challenge, with the game keeping the end the departure gave it — no second
+    ``GameCalledOff`` — exactly as a ghost is stepped over."""
 
     sender = await _a_player(client, "juno")
     invitee = await _a_player(client, "milo")
@@ -355,24 +340,39 @@ async def test_in_singles_the_opponent_leaves_and_the_remaining_player_calls_it_
         client, session_factory, candidate_source, sender, invitee
     )
     before = await _the_game(client, sender["token"], challenge_id)
-    assert (await _leave(client, invitee["token"], challenge_id)).status_code == 200
-
-    called_off = await _withdraw(client, sender["token"], challenge_id)
-
-    assert called_off.status_code == 200, called_off.text
-    assert called_off.json()["standing"] == "WITHDRAWN"
-    game = await _the_game(client, sender["token"], challenge_id)
-    assert game["game_id"] == before["game_id"]
-    assert game["standing"] == "CALLED_OFF"
-    assert [seat["player_id"] for seat in game["seats"]] == [str(sender["id"]), None]
+    left = await _leave(client, invitee["token"], challenge_id)
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "LINE_UP_INCOMPLETE"
+    called_off = await _the_game(client, sender["token"], challenge_id)
+    assert called_off["standing"] == "CALLED_OFF"
+    assert [seat["player_id"] for seat in called_off["seats"]] == [
+        str(sender["id"]),
+        None,
+    ]
     assert await _games(client, invitee["token"]) == []
 
+    withdrawn = await _withdraw(client, sender["token"], challenge_id)
 
-async def test_in_singles_the_organiser_leaves_and_the_opponent_calls_it_off(
+    assert withdrawn.status_code == 200, withdrawn.text
+    assert withdrawn.json()["standing"] == "WITHDRAWN"
+    after = await _the_game(client, sender["token"], challenge_id)
+    assert after["game_id"] == before["game_id"]
+    assert after["standing"] == "CALLED_OFF"
+    assert after["called_off_at"] == called_off["called_off_at"], "the first end stands"
+    assert await _game_stream(session_factory, before["game_id"]) == [
+        "games.planned",
+        "games.seat_vacated",
+        "games.called_off",
+    ]
+
+
+async def test_in_singles_the_opponent_may_withdraw_once_the_organiser_left(
     client, session_factory, candidate_source, clock
 ):
-    """The fallback on a two: the organiser left, so the opponent alone on the
-    court holds the exit."""
+    """Organiser-blind on a game: the organiser's departure leaves the opponent
+    alone and calls the game off. The opponent holds the exit by the fallback
+    (``docs/adr/0163`` §1) and the withdraw ends the challenge, the game
+    keeping its end."""
 
     sender = await _a_player(client, "juno")
     invitee = await _a_player(client, "milo")
@@ -381,11 +381,14 @@ async def test_in_singles_the_organiser_leaves_and_the_opponent_calls_it_off(
         client, session_factory, candidate_source, sender, invitee
     )
     assert (await _leave(client, sender["token"], challenge_id)).status_code == 200
+    assert (await _the_game(client, invitee["token"], challenge_id))["standing"] == (
+        "CALLED_OFF"
+    )
 
-    called_off = await _withdraw(client, invitee["token"], challenge_id)
+    withdrawn = await _withdraw(client, invitee["token"], challenge_id)
 
-    assert called_off.status_code == 200, called_off.text
-    assert called_off.json()["standing"] == "WITHDRAWN"
+    assert withdrawn.status_code == 200, withdrawn.text
+    assert withdrawn.json()["standing"] == "WITHDRAWN"
     assert (await _the_game(client, invitee["token"], challenge_id))["standing"] == (
         "CALLED_OFF"
     )

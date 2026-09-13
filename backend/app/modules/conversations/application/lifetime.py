@@ -23,10 +23,11 @@ room ends, which is the one way membership is allowed to fail and must not be
 how a lifetime succeeds.
 
 **The port is asked about rooms without a game and about nothing else.** A room
-with a game keeps the game's clock untouched, and a withdrawal that calls a
-game off destroys its room in the act — so a challenge's ending is never the
-reason a room with a game stops, and asking would be a stream fold per room for
-an answer nothing reads.
+with a game keeps the game's clock untouched, and a call-off — by a withdrawal,
+or by the departure that left one player on the court (``docs/adr/0165`` §3) —
+destroys its room in the act — so a challenge's ending is never the reason a
+room with a game stops, and asking would be a stream fold per room for an
+answer nothing reads.
 
 **The cost is a second fold of the same small stream.** A room without a game
 has its challenge folded here for *over* and again in ``Membership`` for *who is

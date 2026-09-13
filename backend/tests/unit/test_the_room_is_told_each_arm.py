@@ -47,7 +47,12 @@ from app.modules.conversations.domain.entries import (
     SystemLine,
     SystemLineCode,
 )
-from app.modules.games.domain.events import GamePlanned, GamePlayed, ResultProposed
+from app.modules.games.domain.events import (
+    GameCalledOff,
+    GamePlanned,
+    GamePlayed,
+    ResultProposed,
+)
 from app.modules.plans.domain.events import PlanLocked
 
 NOW = datetime(2026, 9, 8, 18, 0, tzinfo=timezone.utc)
@@ -386,6 +391,43 @@ async def test_a_redelivered_withdrawal_is_a_no_op(rooms):
 
     await tell(withdrawn, _delivery())
     await tell(withdrawn, _delivery())
+
+    assert rooms.by_id == {}
+
+
+# -- the call-off ----------------------------------------------------------
+
+
+async def test_a_call_off_destroys_the_room_and_writes_no_line(rooms, nudges):
+    """``docs/adr/0165`` §3 — the departure that leaves one player on a game
+    calls it off with no withdrawal beside it, so the game's own end is what
+    destroys the room: found through the game it was told about, no line, no
+    nudge, exactly as the withdrawal does it."""
+
+    tell = _teller(rooms, _Games(game_for=CHALLENGE), nudges=nudges)
+    await tell(
+        SeatAccepted(challenge_id=CHALLENGE, player_id=ANA, occurred_at=NOW),
+        _delivery(),
+    )
+    assert rooms.only.game_id == GAME
+
+    await tell(
+        GameCalledOff(game_id=GAME, called_by=ANA, occurred_at=_at(5)), _delivery()
+    )
+
+    assert rooms.by_id == {}
+    assert nudges.published == []
+
+
+async def test_a_call_off_for_a_game_with_no_room_does_nothing(rooms):
+    """A redelivery after the withdrawal beside it already destroyed the room,
+    or a game this context cannot be told about: nothing to do either way."""
+
+    tell = _teller(rooms)
+    called_off = GameCalledOff(game_id=GAME, called_by=ANA, occurred_at=NOW)
+
+    await tell(called_off, _delivery())
+    await tell(called_off, _delivery())
 
     assert rooms.by_id == {}
 
