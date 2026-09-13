@@ -87,6 +87,7 @@ from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
 from app.modules.conversations.application.destroy_ended_conversations import (
     DestroyEndedConversations,
 )
+from app.modules.conversations.application.lifetime import Lifetime
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.application.tell_the_room import TellTheRoom
 from app.modules.conversations.domain.ports import (
@@ -2202,25 +2203,50 @@ def build_membership(
     )
 
 
+def build_lifetime(
+    session: AsyncSession,
+    *,
+    arranging: ArrangingCourt | None = None,
+    runtime: EventRuntime | None = None,
+) -> Lifetime:
+    """*Which of these rooms are over* — the game's clock off the room's own
+    stream, and the challenge's end off ``challenges`` (``docs/adr/0164`` §6).
+
+    ``arranging`` is takeable for the reason ``build_membership``'s is: a
+    request asks the same port for membership, for the list's *find*, and now
+    for *is it over*, and three courts over one session would be three aggregate
+    repositories each remembering its own stream versions. One per request,
+    handed in.
+    """
+    return Lifetime(
+        arranging=arranging or build_arranging_court(session, runtime=runtime)
+    )
+
+
 def build_a_room_of_yours(
     *,
     conversations: ConversationRepository,
     membership: Membership,
+    lifetime: Lifetime,
     clock: Clock,
 ) -> ARoomOfYours:
     """*This room, if you are in it* — the seam every act on one room shares.
 
-    Built from the two collaborators rather than from a session, because both are
-    already request-scoped and a second copy of either would be a second answer
-    to *who is in this*.
+    Built from the three collaborators rather than from a session, because all
+    are already request-scoped and a second copy of any would be a second answer
+    to *who is in this* or *is this over*.
 
-    **The clock is the third, and it is what makes the lifetime a read.** A room
+    **The clock is the fourth, and it is what makes the lifetime a read.** A room
     past its end answers ``conversation_not_found`` whether or not the sweep has
-    run (``docs/adr/0153`` §5), and this is the one seam every act on one room
-    passes through — so there is a single place that answer is decided.
+    run (``docs/adr/0153`` §5). *Over* is decided in ``Lifetime`` — the one
+    seam the list and the sweep decide it through too — and this is the one seam
+    every act on **one** room passes through, so the refusal has a single place.
     """
     return ARoomOfYours(
-        conversations=conversations, membership=membership, clock=clock
+        conversations=conversations,
+        membership=membership,
+        lifetime=lifetime,
+        clock=clock,
     )
 
 
@@ -2242,6 +2268,11 @@ def build_destroy_ended_conversations(
     The repository and the directory are **one pair over one session**, as every
     other reader of the two is: the directory folds through the repository, so a
     second one would be a second set of remembered stream versions.
+
+    **It reads ``challenges`` too**, through the lifetime seam every read
+    decides a room's end through: a room without a game is over when its
+    challenge is (``docs/adr/0164`` §6), and a sweep that folded the room's own
+    stream alone would never delete one.
     """
     resolved = runtime or get_event_runtime()
     conversations = build_conversation_repository(
@@ -2254,6 +2285,7 @@ def build_destroy_ended_conversations(
             session=session, conversations=conversations
         ),
         conversations=conversations,
+        lifetime=build_lifetime(session, runtime=resolved),
         unit_of_work=build_unit_of_work(session),
         clock=clock,
     )

@@ -801,10 +801,11 @@ process and no second deployable.
   [ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)).
   **Correctness depends on neither.** Every read of the interest ledger is bounded
   by `now`, so a lapsed yes lifts nobody and counts against nobody's cap whether
-  or not it has been swept; and a room's end is a fold over its own stream, so
-  every route on it answers `conversation_not_found` past that instant and every
-  list has already dropped it. What the expiry loop buys is a table the size of
-  what is live plus one figure that could not be bought later — *yeses that
+  or not it has been swept; and a room's end is derived on every read — the
+  game's clock off its own stream, or its challenge being over, asked of
+  `challenges` — so every route on it answers `conversation_not_found` past that
+  instant and every list has already dropped it. What the expiry loop buys is a
+  table the size of what is live plus one figure that could not be bought later — *yeses that
   expired having never lifted anybody*, `INTEREST_TTL`'s only day-one falsifier,
   which a lapsed row leaves no trace to compute. What the sweep buys is that the
   destruction is **real**, which is the whole difference between a room that is

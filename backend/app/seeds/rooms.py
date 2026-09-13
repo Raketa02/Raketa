@@ -79,6 +79,7 @@ from app.bootstrap.composition import (
     build_destroy_ended_conversations,
     build_domain_event_store,
     build_event_publisher,
+    build_lifetime,
     build_member_faces,
     build_membership,
     build_nobody_is_following,
@@ -347,10 +348,12 @@ async def read_the_entries(
         event_store=build_domain_event_store(session),
         events=build_event_publisher(session),
     )
+    arranging = build_arranging_court(session)
     entries = ReadEntries(
         rooms=build_a_room_of_yours(
             conversations=conversations,
-            membership=build_membership(session),
+            membership=build_membership(session, arranging=arranging),
+            lifetime=build_lifetime(session, arranging=arranging),
             clock=FixedClock(at=now),
         ),
         faces=build_member_faces(session, settings=settings),
@@ -624,7 +627,7 @@ def _read_conversations(
         event_store=build_domain_event_store(session),
         events=build_event_publisher(session),
     )
-    # One court for both questions it is asked, exactly as a request has one.
+    # One court for the three questions it is asked, exactly as a request has one.
     arranging = build_arranging_court(session)
     return ReadConversations(
         directory=build_conversation_directory(
@@ -632,6 +635,7 @@ def _read_conversations(
         ),
         arranging=arranging,
         membership=build_membership(session, arranging=arranging),
+        lifetime=build_lifetime(session, arranging=arranging),
         faces=build_member_faces(session, settings=settings),
         clock=FixedClock(at=now),
     )
@@ -645,10 +649,12 @@ def _send_message(
         event_store=build_domain_event_store(session),
         events=build_event_publisher(session),
     )
+    arranging = build_arranging_court(session)
     return SendMessage(
         rooms=build_a_room_of_yours(
             conversations=conversations,
-            membership=build_membership(session),
+            membership=build_membership(session, arranging=arranging),
+            lifetime=build_lifetime(session, arranging=arranging),
             clock=FixedClock(at=now),
         ),
         conversations=conversations,

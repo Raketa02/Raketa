@@ -22,11 +22,14 @@ appears at all was decided against an instant.
 §5). The end is derived and the sweep exists to make the destruction real rather
 than to make the answer right, so the list drops a room the moment it is over —
 and a run of the sweep changes which rows the store returns and never which rows
-this answers with.
+this answers with. *Over* is two facts read through one seam: a room with a game
+ends on the game's clock, and a room without one ends with its challenge
+(``docs/adr/0164`` §6), which is why the drop costs a read of ``challenges``
+for those rooms and nothing for the rest.
 
-**Three set reads for a whole list.** The rooms, then membership over two records,
-then the faces of everybody in any of them **and everybody a last entry names**.
-Never one question per room.
+**Four set reads for a whole list.** The rooms, then which of them are over,
+then membership over two records, then the faces of everybody in any of them
+**and everybody a last entry names**. Never one question per room.
 
 **A row names its people, and they are not only its members**
 ([#408](https://github.com/Raketa02/Raketa/issues/408)). The person a
@@ -45,10 +48,10 @@ from uuid import UUID
 from app.kernel import Clock, Instant, Sport
 from app.modules.conversations.application.commands import ReadConversationsCommand
 from app.modules.conversations.application.faces import faces_in
+from app.modules.conversations.application.lifetime import Lifetime
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.entries import Entry, Message, people_named
-from app.modules.conversations.domain.lifetime import has_ended
 from app.modules.conversations.domain.ports import (
     ArrangingCourt,
     ConversationDirectory,
@@ -102,12 +105,14 @@ class ReadConversations:
         directory: ConversationDirectory,
         arranging: ArrangingCourt,
         membership: Membership,
+        lifetime: Lifetime,
         faces: MemberFaces,
         clock: Clock,
     ) -> None:
         self._directory = directory
         self._arranging = arranging
         self._membership = membership
+        self._lifetime = lifetime
         self._faces = faces
         self._clock = clock
 
@@ -125,10 +130,11 @@ class ReadConversations:
             await self._arranging.accepted_by(command.reader_id)
         )
         # **Dropped before membership is asked**, exactly as ``ARoomOfYours``
-        # drops one: the end is a fold over the room's own stream and is already
-        # in hand, while membership is two reads into other contexts — and a room
-        # that is over is one nobody needs them for.
-        standing = tuple(room for room in rooms if not has_ended(room, now=now))
+        # drops one: a room with a game answers off its own stream, a room
+        # without one costs one question about the whole list — and a room that
+        # is over is one nobody needs membership for.
+        ended = await self._lifetime.ended_among(rooms, now=now)
+        standing = tuple(room for room in rooms if room.conversation_id not in ended)
         members = await self._membership.of(standing)
 
         mine = tuple(

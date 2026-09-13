@@ -212,16 +212,16 @@ class TellTheRoom:
     async def _open(self, challenge_id: UUID, occurred_at: datetime) -> None:
         """Open the room, and **ask whether it is already about a game.**
 
-        **A destroyed room's challenge may open a new one, and that is the
-        intent.** A half-built court whose last departure ended its room can be
-        filled again later (``docs/adr/0150``), and the acceptance that follows
-        finds nothing and opens a fresh room — a new episode for a new
-        arrangement, rather than no room at all for a court people are actively
-        building. The cost is stated rather than hidden: **the old backlog does
-        not come back**, because it was destroyed rather than delisted, and the
-        member who accepted before the destruction returns to an empty room. A
-        *withdrawn* challenge cannot reach here at all — it is ``ENDED``, so
-        ``Challenge.invite`` refuses and no further acceptance exists to deliver.
+        **A room is opened once per challenge and a fill continues it**
+        (``docs/adr/0164`` §6). A half-built court whose room is still standing
+        can be filled for as long as the challenge stands (``docs/adr/0150``),
+        and the acceptance that follows finds the room already there and writes
+        its line into the backlog the others have been reading — a room without
+        a game lives exactly as long as its challenge, so there is no ending a
+        later acceptance could have arrived after. A *withdrawn* challenge
+        cannot reach here at all — it is ``ENDED``, so ``Challenge.invite``
+        refuses and no further acceptance exists to deliver. What does reach here
+        with no room to find is the **first** acceptance, which is the opening.
 
         That second half is not belt and braces. The accept that fills the last
         seat writes ``SeatAccepted`` and ``GamePlanned`` in one transaction, and

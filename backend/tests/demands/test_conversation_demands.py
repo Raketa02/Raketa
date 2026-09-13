@@ -33,6 +33,7 @@ from app.bootstrap.conversation_demands import (
 )
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport, instant
+from app.modules.challenges.domain.answer_window import ANSWER_WINDOW
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.challenges.domain.seats import SeatPlan, Side
@@ -190,7 +191,8 @@ async def test_a_player_finds_every_challenge_they_accepted_a_seat_on(
     implementation, session, challenges
 ):
     """The list read's *find*, and it is a fact about seats rather than about a
-    standing — a room whose challenge concluded a minute ago is still a room."""
+    standing — whether each room found is over is ``over_among``'s question,
+    asked beside it and never folded into it."""
 
     organiser, ana, bo, cy = (new_uuid() for _ in range(4))
     challenge = _a_padel_challenge(organiser, (ana, bo, cy))
@@ -229,6 +231,108 @@ async def test_a_challenge_it_cannot_answer_about_is_absent_rather_than_empty(
     court: ArrangingCourt = implementation.build(session)
 
     assert await court.accepted_on((new_uuid(),)) == {}
+
+
+# ---------------------------------------------------------------------------
+# ArrangingCourt — whether the challenge is over
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(ArrangingCourt))
+async def test_a_court_somebody_accepted_stands_whoever_else_said_no(
+    implementation, session, challenges
+):
+    """``docs/adr/0164`` §6 — a room without a game lives as long as its
+    challenge, and a challenge with somebody other than the organiser still in
+    it is not over: two *no*s around one *yes* leave a half-built court, not an
+    ended one."""
+
+    organiser, ana, bo, cy = (new_uuid() for _ in range(4))
+    challenge = _a_padel_challenge(organiser, (ana, bo, cy))
+    challenge.accept(ana, occurred_at=_at(1))
+    challenge.decline(bo, occurred_at=_at(2))
+    challenge.decline(cy, occurred_at=_at(3))
+    await _saved(challenges, session, challenge)
+    court: ArrangingCourt = implementation.build(session)
+
+    over = await court.over_among((challenge.challenge_id,), now=_at(30 * 24))
+
+    assert over == frozenset()
+
+
+@pytest.mark.parametrize("implementation", registered(ArrangingCourt))
+async def test_a_court_everybody_declined_is_over(implementation, session, challenges):
+    organiser, ana, bo, cy = (new_uuid() for _ in range(4))
+    challenge = _a_padel_challenge(organiser, (ana, bo, cy))
+    for who, hour in ((ana, 1), (bo, 2), (cy, 3)):
+        challenge.decline(who, occurred_at=_at(hour))
+    await _saved(challenges, session, challenge)
+    court: ArrangingCourt = implementation.build(session)
+
+    assert await court.over_among((challenge.challenge_id,), now=_at(4)) == {
+        challenge.challenge_id
+    }
+
+
+@pytest.mark.parametrize("implementation", registered(ArrangingCourt))
+async def test_a_court_whose_windows_all_passed_is_over_before_any_sweep(
+    implementation, session, challenges
+):
+    """A lapse is a deadline passing and is true whether or not the lapse loop
+    has recorded it — which is why ``now`` travels with the question."""
+
+    organiser, ana, bo, cy = (new_uuid() for _ in range(4))
+    challenge = await _saved(
+        challenges, session, _a_padel_challenge(organiser, (ana, bo, cy))
+    )
+    court: ArrangingCourt = implementation.build(session)
+
+    still_asked = await court.over_among((challenge.challenge_id,), now=_at(1))
+    lapsed = await court.over_among(
+        (challenge.challenge_id,),
+        now=_at(int(ANSWER_WINDOW.total_seconds() // 3600) + 1),
+    )
+
+    assert still_asked == frozenset()
+    assert lapsed == {challenge.challenge_id}
+
+
+@pytest.mark.parametrize("implementation", registered(ArrangingCourt))
+async def test_a_withdrawn_court_is_over(implementation, session, challenges):
+    organiser, ana, bo, cy = (new_uuid() for _ in range(4))
+    challenge = _a_padel_challenge(organiser, (ana, bo, cy))
+    challenge.accept(ana, occurred_at=_at(1))
+    challenge.decline(bo, occurred_at=_at(2))
+    challenge.decline(cy, occurred_at=_at(3))
+    challenge.withdraw(organiser, occurred_at=_at(4))
+    await _saved(challenges, session, challenge)
+    court: ArrangingCourt = implementation.build(session)
+
+    assert await court.over_among((challenge.challenge_id,), now=_at(5)) == {
+        challenge.challenge_id
+    }
+
+
+@pytest.mark.parametrize("implementation", registered(ArrangingCourt))
+async def test_a_whole_list_answers_the_ones_that_are_over_and_omits_the_unknown(
+    implementation, session, challenges
+):
+    organiser, ana, bo, cy = (new_uuid() for _ in range(4))
+    standing = _a_padel_challenge(organiser, (ana, bo, cy))
+    standing.accept(ana, occurred_at=_at(1))
+    await _saved(challenges, session, standing)
+    others = (new_uuid(), new_uuid(), new_uuid())
+    over = _a_padel_challenge(new_uuid(), others)
+    for hour, who in enumerate(others, start=1):
+        over.decline(who, occurred_at=_at(hour))
+    await _saved(challenges, session, over)
+    court: ArrangingCourt = implementation.build(session)
+
+    found = await court.over_among(
+        (standing.challenge_id, over.challenge_id, new_uuid()), now=_at(4)
+    )
+
+    assert found == {over.challenge_id}
 
 
 # ---------------------------------------------------------------------------

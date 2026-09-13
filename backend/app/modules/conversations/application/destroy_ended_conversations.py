@@ -11,10 +11,14 @@ states in its docstring.
 
 **It reads candidates and never conclusions.** The directory answers *every room
 that still stands*, because a store that could answer *which rooms have ended*
-would be the stored ``ends_at`` ``docs/adr/0153`` §5 refuses — the fold is the
-only place the end is true, so the fold is where the decision is taken. What
-keeps the walk affordable is the thing being swept: a conversation is destroyed
-rather than kept, so the table is the size of what is live.
+would be the stored ``ends_at`` ``docs/adr/0153`` §5 refuses — the end is only
+ever derived, so the derivation is where the decision is taken. It is taken
+through ``Lifetime``, the seam every read decides it through: a room with a
+game is over on the game's clock, folded off its own stream, and a room without
+one is over when its challenge is (``docs/adr/0164`` §6), asked of ``challenges``
+— so what this destroys is exactly what the list has already dropped. What keeps
+the walk affordable is the thing being swept: a conversation is destroyed rather
+than kept, so the table is the size of what is live.
 
 **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): deleting
 a room twice deletes it once, and two processes racing over the same walk leave
@@ -38,7 +42,7 @@ from typing import final
 
 from app.application.ports import UnitOfWork
 from app.kernel import Clock
-from app.modules.conversations.domain.lifetime import has_ended
+from app.modules.conversations.application.lifetime import Lifetime
 from app.modules.conversations.domain.ports import (
     ConversationDirectory,
     ConversationRepository,
@@ -69,11 +73,13 @@ class DestroyEndedConversations:
         *,
         directory: ConversationDirectory,
         conversations: ConversationRepository,
+        lifetime: Lifetime,
         unit_of_work: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._directory = directory
         self._conversations = conversations
+        self._lifetime = lifetime
         self._uow = unit_of_work
         self._clock = clock
 
@@ -92,10 +98,9 @@ class DestroyEndedConversations:
 
         now = self._clock.now()
         rooms = await self._directory.every_room()
-        destroyed = 0
+        ended = await self._lifetime.ended_among(rooms, now=now)
         for room in rooms:
-            if has_ended(room, now=now):
+            if room.conversation_id in ended:
                 await self._conversations.destroy(room.conversation_id)
-                destroyed += 1
         await self._uow.commit()
-        return SweptRooms(walked=len(rooms), destroyed=destroyed)
+        return SweptRooms(walked=len(rooms), destroyed=len(ended))

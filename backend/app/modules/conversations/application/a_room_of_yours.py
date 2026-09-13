@@ -9,13 +9,16 @@ room past its end, answer identically. Separating them would tell a caller
 whether a stranger's conversation id is real, one probe at a time —
 ``challenge_not_found``'s argument verbatim (``docs/adr/0148`` §9), and the
 reason there is no 403 anywhere here. The third arrived with
-``docs/adr/0153`` §5 and needed no new code: *never existed*, *destroyed* and
-*past its end but not yet swept* are one answer for one reason.
+``docs/adr/0153`` §5: *never existed*, *destroyed* and *past its end but not
+yet swept* are one answer for one reason.
 
 **The end is read here rather than in a sweep**, and that is the whole of the
 lifetime's correctness. The sweep makes the destruction real; this makes the
 answer right, whether or not the sweep has ever run — the same split
 ``challenges``' ``lapse`` and ``entry_closes_at``'s own docstring both state.
+It is read through ``Lifetime`` rather than off the room alone, because a room
+without a game ends with its **challenge** (``docs/adr/0164`` §6), and that is
+a fact about another record.
 
 **Two doors, and the difference is the lock.** ``to_read`` serves a response;
 ``to_append`` takes the conversation row ``FOR UPDATE`` first, because that is
@@ -43,10 +46,10 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Clock
+from app.modules.conversations.application.lifetime import Lifetime
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.errors import ConversationNotFound
-from app.modules.conversations.domain.lifetime import has_ended
 from app.modules.conversations.domain.ports import ConversationRepository
 
 
@@ -68,10 +71,12 @@ class ARoomOfYours:
         *,
         conversations: ConversationRepository,
         membership: Membership,
+        lifetime: Lifetime,
         clock: Clock,
     ) -> None:
         self._conversations = conversations
         self._membership = membership
+        self._lifetime = lifetime
         self._clock = clock
 
     async def to_read(self, conversation_id: UUID, reader_id: UUID) -> ARoom:
@@ -89,11 +94,11 @@ class ARoomOfYours:
     async def _yours(self, room: Conversation | None, reader_id: UUID) -> ARoom:
         if room is None:
             raise ConversationNotFound()
-        # **Before membership, and it costs nothing to be there.** The end is a
-        # fold over the room's own stream, which is already in hand; membership
-        # is two reads into other contexts, and a room that is over is one
-        # nobody needs them for.
-        if has_ended(room, now=self._clock.now()):
+        # **Before membership.** A room with a game answers off its own stream,
+        # which is already in hand; a room without one costs a read of its
+        # challenge — and a room that is over is one nobody needs membership
+        # for, so the read that decides it is the first.
+        if await self._lifetime.has_ended(room, now=self._clock.now()):
             raise ConversationNotFound()
         members = await self._membership.of_one(room)
         if reader_id not in members:

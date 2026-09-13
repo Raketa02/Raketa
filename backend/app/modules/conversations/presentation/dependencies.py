@@ -47,6 +47,7 @@ from app.bootstrap.composition import (
     build_conversation_hold_query,
     build_conversation_repository,
     build_follow_conversation,
+    build_lifetime,
     build_member_faces,
     build_membership,
     build_nudge_publisher,
@@ -60,6 +61,7 @@ from app.modules.conversations.application.commands import FollowConversationCom
 from app.modules.conversations.application.follow_conversation import (
     FollowConversation,
 )
+from app.modules.conversations.application.lifetime import Lifetime
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.application.record_typing import RecordTyping
 from app.modules.conversations.application.read_conversation import ReadConversation
@@ -135,6 +137,15 @@ def get_membership(db: DbSession, arranging: ArrangingCourtDep) -> Membership:
 MembershipDep = Annotated[Membership, Depends(get_membership)]
 
 
+def get_lifetime(db: DbSession, arranging: ArrangingCourtDep) -> Lifetime:
+    """Over the request's one court, for the reason membership is: *is it over*
+    is the third question a request puts to the same port."""
+    return build_lifetime(db, arranging=arranging)
+
+
+LifetimeDep = Annotated[Lifetime, Depends(get_lifetime)]
+
+
 def get_member_faces(db: DbSession, settings: SettingsDep) -> MemberFaces:
     """Per request, and **not** per unit of work.
 
@@ -152,6 +163,7 @@ def get_read_conversations(
     directory: ConversationDirectoryDep,
     arranging: ArrangingCourtDep,
     membership: MembershipDep,
+    lifetime: LifetimeDep,
     faces: MemberFacesDep,
     clock: ClockDep,
 ) -> ReadConversations:
@@ -159,6 +171,7 @@ def get_read_conversations(
         directory=directory,
         arranging=arranging,
         membership=membership,
+        lifetime=lifetime,
         faces=faces,
         clock=clock,
     )
@@ -170,11 +183,15 @@ ReadConversationsDep = Annotated[ReadConversations, Depends(get_read_conversatio
 def get_a_room_of_yours(
     conversations: ConversationRepositoryDep,
     membership: MembershipDep,
+    lifetime: LifetimeDep,
     clock: ClockDep,
 ) -> ARoomOfYours:
     """Per request, because the repository it holds is."""
     return build_a_room_of_yours(
-        conversations=conversations, membership=membership, clock=clock
+        conversations=conversations,
+        membership=membership,
+        lifetime=lifetime,
+        clock=clock,
     )
 
 

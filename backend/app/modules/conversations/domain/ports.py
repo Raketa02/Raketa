@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
-from app.kernel import Sport, invariant
+from app.kernel import Instant, Sport, invariant
 from app.modules.conversations.domain.conversation import Conversation
 
 
@@ -146,12 +146,20 @@ class ConversationDirectory(Protocol):
 
 @runtime_checkable
 class ArrangingCourt(Protocol):
-    """Who has agreed to be on a **challenge's** court right now. ``challenges``'.
+    """Who has agreed to be on a **challenge's** court right now — and whether
+    that challenge is over. ``challenges``'.
 
-    The first half of *one rule read against two records*. It answers about
-    accepted seats and nothing else: not who was invited, not who declined, and
-    not what the challenge's standing is — a standing is a fold this context has
-    no business performing on somebody else's record.
+    The first half of *one rule read against two records*. Its membership read
+    answers about accepted seats: not who was invited, not who declined, and
+    never the challenge's standing — a standing is a fold this context has no
+    business performing on somebody else's record.
+
+    **The one question beside membership is *is it over*, and it is a yes or a
+    no rather than a standing** (``docs/adr/0164`` §6). A room without a game
+    has ended exactly when its challenge has, so the room's lifetime asks that
+    of the same port its membership comes from; the adapter folds the standing
+    with ``challenges``' own fold and answers with the set that is over, and
+    the six-valued standing never crosses the port.
     """
 
     async def accepted_on(
@@ -172,11 +180,30 @@ class ArrangingCourt(Protocol):
     async def accepted_by(self, player_id: UUID) -> frozenset[UUID]:
         """Every challenge this player has accepted a seat on, whatever it is now.
 
-        **A fact about seats and never about a standing.** An ended challenge's
-        room is destroyed by the sweep rather than filtered out here, so a
-        narrowing on the standing would be this context folding somebody else's
-        record — and would silently drop rooms whose challenge concluded a minute
-        ago and whose members are still talking.
+        **A fact about seats and never about a standing.** Whether each of those
+        rooms is over is :meth:`over_among`'s question, asked by the lifetime
+        seam for the list and the sweep alike — so a narrowing here would be a
+        second place for one answer to be decided, and it would decide it about
+        rooms with a game too, whose end is the game's and not the challenge's.
+        """
+        ...
+
+    async def over_among(
+        self, challenge_ids: Collection[UUID], *, now: Instant
+    ) -> frozenset[UUID]:
+        """Which of these challenges are **over** at this instant — ``DECLINED``,
+        ``LAPSED`` or ``WITHDRAWN`` — as ``challenges`` folds it. **One call.**
+
+        ``now`` travels with the question because a lapse is a deadline passing
+        and is true before any sweep has recorded it; a reader between the two
+        gets the same answer either side. The set rather than a mapping to a
+        standing, because the standing is that context's vocabulary and a room
+        has one question about it.
+
+        A challenge absent from the answer is one this reader may not be told
+        about, or one that still stands; the two are one answer on purpose,
+        since membership already drops the first and the second is the room
+        living.
         """
         ...
 

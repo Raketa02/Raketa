@@ -38,6 +38,7 @@ from app.modules.conversations.application.commands import (
     SendMessageCommand,
 )
 from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
+from app.modules.conversations.application.lifetime import Lifetime
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.application.read_conversation import ReadConversation
 from app.modules.conversations.application.read_entries import ReadEntries
@@ -100,6 +101,9 @@ class _TheCourt:
             challenge_id: frozenset({HELD, BESIDE_THEM})
             for challenge_id in challenge_ids
         }
+
+    async def over_among(self, challenge_ids: Collection[UUID], *, now):
+        return frozenset()
 
     async def accepted_by(self, player_id: UUID):
         return frozenset({CHALLENGE})
@@ -168,6 +172,10 @@ def membership() -> Membership:
     return Membership(arranging=_TheCourt(), played=_NoGames())
 
 
+#: Every room here stands — the hold is what is under test, not the lifetime.
+_standing = Lifetime(arranging=_TheCourt())
+
+
 class _Nudges:
     """The live channel, recording what the room announced about itself."""
 
@@ -190,7 +198,10 @@ def _send(
     repository = conversations or _OneRoom(room)
     return SendMessage(
         rooms=ARoomOfYours(
-            conversations=repository, membership=membership, clock=_FrozenClock()
+            conversations=repository,
+            membership=membership,
+            lifetime=_standing,
+            clock=_FrozenClock(),
         ),
         conversations=repository,
         holds=holds,
@@ -256,6 +267,7 @@ def _typing(room: Conversation, membership: Membership, holds) -> tuple:
             rooms=ARoomOfYours(
                 conversations=_OneRoom(room),
                 membership=membership,
+                lifetime=_standing,
                 clock=_FrozenClock(),
             ),
             holds=holds,
@@ -341,7 +353,10 @@ async def test_a_held_member_still_reads_the_room(room, membership):
 
     read = ReadConversation(
         rooms=ARoomOfYours(
-            conversations=_OneRoom(room), membership=membership, clock=_FrozenClock()
+            conversations=_OneRoom(room),
+            membership=membership,
+            lifetime=_standing,
+            clock=_FrozenClock(),
         ),
         faces=_Faces(),
         clock=_FrozenClock(),
@@ -361,7 +376,10 @@ async def test_a_held_member_still_pages_backward(room, membership):
 
     page = await ReadEntries(
         rooms=ARoomOfYours(
-            conversations=_OneRoom(room), membership=membership, clock=_FrozenClock()
+            conversations=_OneRoom(room),
+            membership=membership,
+            lifetime=_standing,
+            clock=_FrozenClock(),
         ),
         faces=_Faces(),
     ).execute(

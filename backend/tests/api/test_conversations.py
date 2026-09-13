@@ -26,6 +26,8 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.api.dependencies import get_clock
+from app.modules.conversations.domain.lifetime import CONVERSATION_GRACE
+from app.modules.games.domain.windows import entry_closes_at
 from tests.api import matchmaking_world as world
 from tests.unit.fake_event_store import FrozenClock
 
@@ -623,14 +625,173 @@ async def _decline(client, challenge_id: str, token: str) -> None:
     assert answered.status_code == 200, answered.text
 
 
-@pytest.fixture
-async def a_room_that_ends(client, session_factory, a_room):
-    """The same room, with its court declined to a standstill.
+async def _room_read(client, conversation_id: str, token: str):
+    return await client.get(
+        f"/api/v1/conversations/{conversation_id}", headers=world.auth(token)
+    )
 
-    A departure is the last thing that happened to this arrangement, so the room
-    ends one ``CONVERSATION_GRACE`` after it (``docs/adr/0153`` §3) — the
-    unanchored case, reached over HTTP rather than described.
+
+@pytest.fixture
+def clock(client):
+    """The API's clock, stopped where the test starts and moved by hand.
+
+    A room's end is derived from what it was told, so the only way to reach it
+    is to be somewhere later. It is the **API's** clock that moves, which is what
+    a real tomorrow moves — nothing in the database is rewritten, and the room
+    that was readable a line ago is the same room.
     """
+
+    frozen = FrozenClock(at=datetime.now(timezone.utc))
+    world.override(client, get_clock, lambda: frozen)
+    return frozen
+
+
+def _advance(clock, candidate_source, *, to: datetime) -> None:
+    """Walk the clock forward to ``to``, and the candidate index with it.
+
+    The staleness ladder reads the gap between the clock and the index's
+    *caught up at*, so a clock walked three days forward on its own would put
+    every ⚡ after it past the twenty-four-hour refusal — the fixture testing the
+    ladder rather than the room. The index is moved by the same amount, which is
+    what its own loop would have done.
+    """
+
+    # ``rewind`` moves *caught up at* backwards by its argument, so a negative
+    # gap moves it forward in step with the clock.
+    world.rewind_the_index(candidate_source, clock.at - to)
+    clock.at = to
+
+
+def _days_later(clock, candidate_source, days: int) -> None:
+    _advance(clock, candidate_source, to=clock.at + timedelta(days=days))
+
+
+@pytest.mark.parametrize(
+    "answers",
+    [
+        pytest.param((("accept", "bo"), ("decline", "cy")), id="yes-then-no"),
+        pytest.param((("decline", "cy"), ("accept", "bo")), id="no-then-yes"),
+    ],
+)
+async def test_a_no_does_not_end_a_room_with_people_still_in_it(
+    client, session_factory, candidate_source, clock, a_room, answers
+):
+    """``docs/adr/0164`` §6 — *B yes → D yes → C no* used to close the room two
+    days later while three people were still talking in it, and *B yes → C no →
+    D yes* never did. A room without a game now lives exactly as long as its
+    challenge, whatever order the answers came in."""
+
+    for act, who in answers:
+        answer = _accept if act == "accept" else _decline
+        await answer(client, a_room["challenge_id"], a_room["people"][who]["token"])
+        # Drained after each answer, so the two orders are two orders: the
+        # outbox orders on a ``created_at`` that is one second granular on
+        # SQLite and tie-breaks on a minted uuid.
+        await world.deliver_the_outbox(session_factory)
+    conversation_id = a_room["room"]["conversation_id"]
+
+    _days_later(clock, candidate_source, 3)
+
+    for who in (a_room["searcher"], a_room["people"]["ana"], a_room["people"]["bo"]):
+        (row,) = await _rooms(client, who["token"])
+        assert row["conversation_id"] == conversation_id
+        assert len(row["members"]) == 3
+        read = await _room_read(client, conversation_id, who["token"])
+        assert read.status_code == 200, read.text
+        lines = [
+            (entry["code"], entry["actor_id"])
+            for entry in read.json()["entries"]
+            if entry["type"] == "system_line"
+        ]
+        assert ("SEAT_LEFT", str(a_room["people"]["cy"]["id"])) in lines
+    assert await _rooms(client, a_room["people"]["cy"]["token"]) == []
+
+
+async def test_a_fill_after_a_no_continues_the_same_room_with_its_history(
+    client, session_factory, candidate_source, clock, searcher
+):
+    """``docs/adr/0164`` §6 — the organiser fills C's seat days later and the
+    newcomer accepts into **the same room**, reading how the others got there.
+    The shelf used to have destroyed it and the fill opened a fresh room with no
+    history."""
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    dee_id, dee_token = await world.a_signed_in_candidate(
+        client, session_factory, "dee", mu=searcher["mu"] + 0.1
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+    found = await world.search(client, searcher["token"])
+    assert found.status_code == 200, found.text
+    sent = await client.post(
+        "/api/v1/challenges",
+        json={
+            "search_id": found.json()["search"]["search_id"],
+            "court": [
+                {"side": "A", "player_id": str(searcher["id"])},
+                {"side": "A", "player_id": str(people["ana"]["id"])},
+                {"side": "B", "player_id": str(people["bo"]["id"])},
+                {"side": "B", "player_id": str(people["cy"]["id"])},
+            ],
+        },
+        headers=world.auth(searcher["token"]),
+    )
+    assert sent.status_code == 201, sent.text
+    challenge_id = sent.json()["challenge_id"]
+    for who in ("ana", "bo"):
+        await _accept(client, challenge_id, people[who]["token"])
+    # Drained before the *no*, so the line it writes is the room's last: the
+    # outbox orders on a ``created_at`` that is one second granular on SQLite.
+    await world.deliver_the_outbox(session_factory)
+    await _decline(client, challenge_id, people["cy"]["token"])
+    await world.deliver_the_outbox(session_factory)
+    (before,) = await _rooms(client, searcher["token"])
+    assert before["last_entry"]["code"] == "SEAT_LEFT"
+
+    _days_later(clock, candidate_source, 3)
+    filling = await world.lineup(
+        client, searcher["token"], completing_challenge_id=challenge_id
+    )
+    assert filling.status_code == 200, filling.text
+    filled = await client.post(
+        f"/api/v1/challenges/{challenge_id}/seats",
+        json={
+            "search_id": filling.json()["search"]["search_id"],
+            "court": [
+                {"side": seat["side"], "player_id": seat.get("player_id")}
+                for seat in filling.json()["lineup"]["seats"]
+            ],
+        },
+        headers=world.auth(searcher["token"]),
+    )
+    assert filled.status_code == 200, filled.text
+    assert str(dee_id) in {seat["player_id"] for seat in filled.json()["seats"]}
+    await world.deliver_the_outbox(session_factory)
+    await _accept(client, challenge_id, dee_token)
+    await world.deliver_the_outbox(session_factory)
+
+    (row,) = await _rooms(client, dee_token)
+    assert row["conversation_id"] == before["conversation_id"], "the same room"
+    assert row["game_id"] is not None, "the court is whole, and it became a game"
+    codes = [
+        entry["code"]
+        for entry in await _entries(client, row, {"searcher": {"token": dee_token}})
+        if entry["type"] == "system_line"
+    ]
+    assert codes == [
+        "SEAT_ACCEPTED",
+        "SEAT_LEFT",
+        "SEATS_INVITED",
+        "SEAT_ACCEPTED",
+    ], "the newcomer reads the lines that were there before them"
+
+
+# -- the end, before anything sweeps ---------------------------------------
+
+
+@pytest.fixture
+async def a_half_built_room(client, session_factory, a_room):
+    """The same room, with the two undecided seats declined — so the challenge is
+    ``LINE_UP_INCOMPLETE`` and the organiser holds the exit."""
 
     for who in ("bo", "cy"):
         await _decline(client, a_room["challenge_id"], a_room["people"][who]["token"])
@@ -641,45 +802,43 @@ async def a_room_that_ends(client, session_factory, a_room):
     return a_room
 
 
-def the_day_after_next(client) -> None:
-    """Move the clock past every grace in this file, and nothing else.
-
-    The room's end is derived from what it was told, so the only way to reach it
-    is to be somewhere later. It is the **API's** clock that moves, which is what
-    a real tomorrow moves — nothing in the database is rewritten, and the room
-    that was readable a line ago is the same room.
-
-    Shared with the stream suite, which needs the same instant against the same
-    grace: a second spelling of *later than 48 hours* is how two files start
-    disagreeing about which side of the boundary they are testing.
-    """
-
-    at = FrozenClock(at=datetime.now(timezone.utc) + timedelta(hours=49))
-    world.override(client, get_clock, lambda: at)
+async def _withdrawn(client, a_room) -> None:
+    withdrawn = await client.post(
+        f"/api/v1/challenges/{a_room['challenge_id']}/withdrawal",
+        headers=world.auth(a_room["searcher"]["token"]),
+    )
+    assert withdrawn.status_code == 200, withdrawn.text
 
 
-async def test_a_room_past_its_end_is_gone_from_the_list(client, a_room_that_ends):
-    """``docs/adr/0153`` §5 — *destroyed, not delisted*, and the read is the
-    truth whether or not a sweep has run."""
+async def test_a_room_is_gone_the_instant_its_challenge_is_over_and_nothing_has_swept(
+    client, a_half_built_room
+):
+    """``docs/adr/0164`` §6, and ``docs/adr/0153`` §5's *past its end but not
+    yet swept* made literal: the withdrawal commits and the outbox has **not**
+    delivered, so the row still stands in the store — and every read already
+    answers as if it did not, because a room without a game has ended exactly
+    when its challenge has, derived on the read."""
 
-    token = a_room_that_ends["searcher"]["token"]
-    assert len(await _rooms(client, token)) == 1
+    conversation_id = a_half_built_room["room"]["conversation_id"]
+    await _withdrawn(client, a_half_built_room)
 
-    the_day_after_next(client)
-
-    assert await _rooms(client, token) == []
+    for who in (a_half_built_room["searcher"], a_half_built_room["people"]["ana"]):
+        assert await _rooms(client, who["token"]) == []
+        gone = await _room_read(client, conversation_id, who["token"])
+        assert gone.status_code == 404, gone.text
+        assert gone.json()["code"] == "conversation_not_found"
 
 
 @pytest.mark.parametrize("route", ["", "/entries"])
 async def test_every_read_on_an_ended_room_answers_not_found(
-    client, a_room_that_ends, route
+    client, a_half_built_room, route
 ):
     """``docs/adr/0153`` §5 — **one code for three cases**: never existed,
     destroyed, and past its end but not yet swept."""
 
-    conversation_id = a_room_that_ends["room"]["conversation_id"]
-    token = a_room_that_ends["searcher"]["token"]
-    the_day_after_next(client)
+    conversation_id = a_half_built_room["room"]["conversation_id"]
+    token = a_half_built_room["searcher"]["token"]
+    await _withdrawn(client, a_half_built_room)
 
     response = await client.get(
         f"/api/v1/conversations/{conversation_id}{route}", headers=world.auth(token)
@@ -690,14 +849,14 @@ async def test_every_read_on_an_ended_room_answers_not_found(
 
 
 async def test_nobody_can_say_anything_in_a_room_past_its_end(
-    client, a_room_that_ends
+    client, a_half_built_room
 ):
     """The send is gated by the same seam every read is, so there is one place
     the answer is decided."""
 
-    conversation_id = a_room_that_ends["room"]["conversation_id"]
-    token = a_room_that_ends["searcher"]["token"]
-    the_day_after_next(client)
+    conversation_id = a_half_built_room["room"]["conversation_id"]
+    token = a_half_built_room["searcher"]["token"]
+    await _withdrawn(client, a_half_built_room)
 
     said = await _say(
         client, conversation_id, token, "still there?", _A_CLIENT_MESSAGE_ID
@@ -707,61 +866,107 @@ async def test_nobody_can_say_anything_in_a_room_past_its_end(
     assert said.json()["code"] == "conversation_not_found"
 
 
-async def test_the_room_stands_right_up_to_its_end(client, a_room_that_ends):
-    """The grace is not a rounding: a room a day after the departure is a room
-    two people can still be in."""
-
-    conversation_id = a_room_that_ends["room"]["conversation_id"]
-    token = a_room_that_ends["searcher"]["token"]
-
-    response = await client.get(
-        f"/api/v1/conversations/{conversation_id}", headers=world.auth(token)
-    )
-
-    assert response.status_code == 200, response.text
-
-
 # -- the withdrawal --------------------------------------------------------
 
 
 async def test_a_withdrawal_destroys_the_room_in_the_same_act(
-    client, session_factory, a_room_that_ends
+    client, session_factory, a_half_built_room
 ):
     """``docs/adr/0153`` §2 — the withdrawal destroys it and writes no line,
     because there is nobody left to read one. The news is on the challenge
     screen."""
 
-    token = a_room_that_ends["searcher"]["token"]
-    conversation_id = a_room_that_ends["room"]["conversation_id"]
+    token = a_half_built_room["searcher"]["token"]
+    conversation_id = a_half_built_room["room"]["conversation_id"]
 
-    withdrawn = await client.post(
-        f"/api/v1/challenges/{a_room_that_ends['challenge_id']}/withdrawal",
-        headers=world.auth(token),
-    )
-    assert withdrawn.status_code == 200, withdrawn.text
+    await _withdrawn(client, a_half_built_room)
     await world.deliver_the_outbox(session_factory)
 
     assert await _rooms(client, token) == []
-    gone = await client.get(
-        f"/api/v1/conversations/{conversation_id}", headers=world.auth(token)
-    )
+    gone = await _room_read(client, conversation_id, token)
     assert gone.status_code == 404, gone.text
     assert gone.json()["code"] == "conversation_not_found"
 
 
 async def test_a_withdrawn_room_is_gone_for_everybody_who_was_in_it(
-    client, session_factory, a_room_that_ends
+    client, session_factory, a_half_built_room
 ):
     """It is destroyed rather than hidden from the organiser: the member who
     accepted loses the room too, and reads the news on the challenge."""
 
-    ana = a_room_that_ends["people"]["ana"]["token"]
+    ana = a_half_built_room["people"]["ana"]["token"]
     assert len(await _rooms(client, ana)) == 1
 
-    await client.post(
-        f"/api/v1/challenges/{a_room_that_ends['challenge_id']}/withdrawal",
-        headers=world.auth(a_room_that_ends["searcher"]["token"]),
-    )
+    await _withdrawn(client, a_half_built_room)
     await world.deliver_the_outbox(session_factory)
 
     assert await _rooms(client, ana) == []
+
+
+# -- the game's clock, untouched -------------------------------------------
+
+
+async def _a_game_in_the_room(client, session_factory, a_room) -> dict:
+    """Both undecided seats accept: the court is whole and the room has its game."""
+
+    for who in ("bo", "cy"):
+        await _accept(client, a_room["challenge_id"], a_room["people"][who]["token"])
+    await world.deliver_the_outbox(session_factory)
+    (row,) = await _rooms(client, a_room["searcher"]["token"])
+    assert row["game_id"] is not None
+    return row
+
+
+async def test_a_room_whose_game_was_played_ends_a_grace_after_we_played(
+    client, session_factory, candidate_source, clock, a_room
+):
+    """``docs/adr/0153`` §2, untouched by ``docs/adr/0164``: forty-eight hours
+    after somebody said *we played*, and not a moment before."""
+
+    row = await _a_game_in_the_room(client, session_factory, a_room)
+    token = a_room["searcher"]["token"]
+    played = await client.post(
+        f"/api/v1/games/{row['game_id']}/result",
+        json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
+        headers=world.auth(token),
+    )
+    assert played.status_code == 200, played.text
+    await world.deliver_the_outbox(session_factory)
+    said_at = clock.at
+
+    _advance(
+        clock,
+        candidate_source,
+        to=said_at + CONVERSATION_GRACE - timedelta(seconds=1),
+    )
+    standing = await _room_read(client, row["conversation_id"], token)
+    assert standing.status_code == 200, standing.text
+
+    _advance(clock, candidate_source, to=said_at + CONVERSATION_GRACE)
+    assert await _rooms(client, token) == []
+    gone = await _room_read(client, row["conversation_id"], token)
+    assert gone.status_code == 404, gone.text
+    assert gone.json()["code"] == "conversation_not_found"
+
+
+async def test_a_never_played_games_room_ends_when_its_entry_window_closes(
+    client, session_factory, candidate_source, clock, a_room
+):
+    """``docs/adr/0153`` §2 — the instant *we played* stops being sayable and the
+    game becomes a ghost, the room goes with it."""
+
+    row = await _a_game_in_the_room(client, session_factory, a_room)
+    token = a_room["searcher"]["token"]
+    games = await client.get("/api/v1/games", headers=world.auth(token))
+    assert games.status_code == 200, games.text
+    (game,) = games.json()["games"]
+    closes_at = entry_closes_at(datetime.fromisoformat(game["planned_at"]))
+
+    _advance(clock, candidate_source, to=closes_at - timedelta(seconds=1))
+    standing = await _room_read(client, row["conversation_id"], token)
+    assert standing.status_code == 200, standing.text
+
+    _advance(clock, candidate_source, to=closes_at)
+    assert await _rooms(client, token) == []
+    gone = await _room_read(client, row["conversation_id"], token)
+    assert gone.status_code == 404, gone.text

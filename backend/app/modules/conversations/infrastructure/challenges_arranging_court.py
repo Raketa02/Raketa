@@ -5,6 +5,15 @@ and nothing else: not who was invited, not who declined, and never a standing �
 a standing is a fold over somebody else's seats and this context has no business
 performing one.
 
+**And one question about the challenge's end, which is ``challenges``' own fold
+and stays it** (``docs/adr/0164`` §6). A room without a game has ended exactly
+when its challenge is over, so *which of these are over* is asked here — and
+answered by ``Challenge.standing_at`` against ``challenges``' own ``ENDED``, so
+the fold that decides *over* has exactly one author and this adapter re-derives
+none of it. The standing is read here, in the adapter, and nowhere further in:
+what crosses the port is a set of ids, so the application layer never learns
+what a standing is.
+
 **It reads through ``ChallengeRepository`` and ``ChallengeDirectory`` rather than
 a query port of its own**, on ``games_settled_game.py``'s argument one arrow over:
 the joins already exist there, and a second read declaring the same join would be
@@ -18,15 +27,16 @@ and somebody who accepted has not un-agreed by anybody else's window closing.
 
 from __future__ import annotations
 
-from typing import Collection, Mapping, final
+from typing import AsyncIterator, Collection, Mapping, final
 from uuid import UUID
 
-from app.kernel import Sport
+from app.kernel import Instant, Sport
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.ports import (
     ChallengeDirectory,
     ChallengeRepository,
 )
+from app.modules.challenges.domain.standing import ENDED
 
 
 @final
@@ -45,13 +55,10 @@ class ChallengesArrangingCourt:
     async def accepted_on(
         self, challenge_ids: Collection[UUID]
     ) -> Mapping[UUID, frozenset[UUID]]:
-        courts: dict[UUID, frozenset[UUID]] = {}
-        for challenge_id in sorted(set(challenge_ids)):
-            challenge = await self._challenges.load(challenge_id)
-            if challenge is None:
-                continue
-            courts[challenge_id] = _accepted(challenge)
-        return courts
+        return {
+            challenge.challenge_id: _accepted(challenge)
+            async for challenge in self._each(challenge_ids)
+        }
 
     async def accepted_by(self, player_id: UUID) -> frozenset[UUID]:
         return frozenset(
@@ -63,6 +70,38 @@ class ChallengesArrangingCourt:
     async def sport_of(self, challenge_id: UUID) -> Sport | None:
         challenge = await self._challenges.load(challenge_id)
         return None if challenge is None else challenge.sport
+
+    async def over_among(
+        self, challenge_ids: Collection[UUID], *, now: Instant
+    ) -> frozenset[UUID]:
+        """Which of these have ended — ``DECLINED``, ``LAPSED`` or ``WITHDRAWN``.
+
+        **One fold per challenge, and it is the same fold every other reader of
+        a challenge performs**: a lapse is true here the instant a window passes,
+        before any sweep, because ``standing_at`` reads the seats against
+        ``now``. A challenge the store does not hold is simply not over.
+        """
+
+        return frozenset(
+            {
+                challenge.challenge_id
+                async for challenge in self._each(challenge_ids)
+                if challenge.standing_at(now) in ENDED
+            }
+        )
+
+    async def _each(self, challenge_ids: Collection[UUID]) -> AsyncIterator[Challenge]:
+        """Every one of these the store holds, loaded once each.
+
+        **Sorted, because a set is never the source of a traversal**
+        (``docs/adr/0105`` §1) — nothing downstream can observe the order, which
+        is exactly why the rule is stated on the walk rather than on the answer.
+        """
+
+        for challenge_id in sorted(set(challenge_ids)):
+            challenge = await self._challenges.load(challenge_id)
+            if challenge is not None:
+                yield challenge
 
 
 def _accepted(challenge: Challenge) -> frozenset[UUID]:

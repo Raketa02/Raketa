@@ -347,7 +347,8 @@ Rules to preserve:
   ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)),
   the second that deletes anything and the only one that deletes an **aggregate** — a room
   and its whole stream, *destroyed, not delisted*. Correctness does not depend on it: a
-  room's end is a fold over its own stream, so every route on it answers
+  room's end is derived on every read — the game's clock off its own stream, or its
+  challenge being over, asked of `challenges` — so every route on it answers
   `conversation_not_found` past that instant and every list has already dropped it, whether
   or not anything has swept. What it buys is that the destruction is **real**, which is the
   whole difference between a room that is over and a record with no end. Like the lapse
@@ -667,16 +668,26 @@ Rules to preserve:
   telling**: `GamePlanned` reaches the room, draws nothing, and is where the room learns its
   game — as does `ChallengeWithdrawn`, whose whole effect is that the room stops existing.
   **A room is for the episode, and its end is derived**
-  ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)):
-  the earliest of `entry_closes_at(planned_at)`, `GamePlayed` plus `CONVERSATION_GRACE`, and
-  the challenge concluding without a game plus the same grace — with a withdrawal destroying
-  it in the same act. Both anchors are facts the room is **already told**, so it costs no new
-  event, no new field and no new telling, and the anchor is `Game.planned_at` and never the
-  plan's agreed point, which two people could walk forward by tapping a chip. There is no
-  `ends_at` column: the instant moves as the room is told things, so **past its end every
-  route answers `conversation_not_found` whether or not the sweep has run** — the sweep makes
-  the destruction real, not the answer right — and `ARoomOfYours` is the one seam that
-  decides it. `CONVERSATION_GRACE` is **48 h and belongs here, not to `games`**: there is no
+  ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
+  [ADR-0164](../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+  §6). A room **with a game** ends on the earliest of `entry_closes_at(planned_at)` and
+  `GamePlayed` plus `CONVERSATION_GRACE` — both facts the room is **already told**, so it
+  costs no new event, no new field and no new telling, and the anchor is `Game.planned_at`
+  and never the plan's agreed point, which two people could walk forward by tapping a chip.
+  A room **without a game has ended exactly when its challenge is over** — `DECLINED`,
+  `LAPSED`, `WITHDRAWN` — read on every read through `ArrangingCourt.over_among`, the port
+  its membership already comes from: the adapter folds the standing with `challenges`' own
+  `ENDED` and a set of ids crosses the port, so the application layer never learns what a
+  standing is; a withdrawal destroys it in the same act. **There is no departure shelf.** ADR-0153 §3's *48 h after the last
+  membership line when it was a departure* read the order the answers arrived in — `B yes →
+  D yes → C no` closed a room under the three people still in it, `B yes → C no → D yes`
+  never did — and a fill after it opened a fresh room with no history; a fill now continues
+  the **same** room. There is no `ends_at` column: the instant moves as the room is told
+  things, so **past its end every route answers `conversation_not_found` whether or not the
+  sweep has run** — the sweep makes the destruction real, not the answer right — and
+  `application/lifetime.py` is the one seam that decides *over*, for the list, the sweep and
+  `ARoomOfYours` alike, asking the port about the rooms without a game and nothing about the
+  rest. `CONVERSATION_GRACE` is **48 h and belongs here, not to `games`**: there is no
   interlock with `ENTRY_GRACE`, and its falsifier is written down with it.
   Three things about the lifetime are worth holding separately from the rule.
   **`conversations` imports `games`, and that arrow is the second one to run this way** —
@@ -687,11 +698,11 @@ Rules to preserve:
   **The destruction appends no event and that is not the ledgers' exemption** — it is the end
   of an event-sourced aggregate rather than one that skips event sourcing, and a
   `ConversationDestroyed` on the stream it deletes would be a record of the destruction
-  inside the thing destroyed. **And the unanchored arm leans on a coincidence of two 48-hour
-  numbers**: a departure only concludes a court while `ANSWER_WINDOW <= CONVERSATION_GRACE`,
-  so lengthening the first past the second would let a half-built court be destroyed while
-  somebody may still accept into it. It is stated in `lifetime.py` rather than checked,
-  because checking it would mean folding `challenges`' seats.
+  inside the thing destroyed. **And the coupling `domain/lifetime.py` used to state between
+  `ANSWER_WINDOW` and `CONVERSATION_GRACE` went with the shelf it existed for** — it kept a
+  departure from destroying a court somebody was still entitled to accept into, and a room
+  that lives as long as its challenge cannot be destroyed under an open seat by any number.
+  `lifetime.py` says so where the coupling was written down.
 - **A plan is the challenge's, and it is born by being used**
   ([ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md),
   [ADR-0145](../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md),

@@ -7,8 +7,9 @@ to: renaming ``MessageSent`` must never change what is already in the store.
 and the game are state this room folds and nothing renders; the message and the
 system line are the stream.
 
-**No name here says a room has ended.** The lifetime is derived from facts the
-room was already told (``docs/adr/0153``), and a durable *closed* would be a
+**No name here says a room has ended.** The lifetime is derived — off the room's
+own stream for a room with a game, off its challenge for one without
+(``docs/adr/0153``, ``docs/adr/0164`` §6) — and a durable *closed* would be a
 second place for it to be true — the one a subscriber would believe for the whole
 gap between an instant passing and a sweep running.
 
