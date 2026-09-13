@@ -2,7 +2,10 @@
 
 - **Status:** Accepted — **its *There is no lock* section superseded by
   [ADR-0155](0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)**, and
-  nothing else in this record. The title is left as it stands rather than renamed, because the
+  **its *A plan is the game's* section superseded 2026-09-13 by
+  [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)**: a plan is the **challenge's**, drawn in the room from its opening, and the lock — not the
+  slots — waits for the court to be whole. The three slots, the zone, the conversion and the
+  record's shape all stand. The title is left as it stands rather than renamed, because the
   file is linked from a dozen others.
 - **Date:** 2026-09-07
 - **Extends [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)**, which drew the
@@ -61,6 +64,13 @@ coordinates.**
 
 ### A plan is the game's, it is its own context, and it is born by being used
 
+> **Superseded 2026-09-13 by [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md).** A plan is the plan of one **challenge**, identified by that
+> challenge's id, and the game the challenge becomes inherits it; the room draws it from its
+> opening, with whoever is in. *Two of four may not write down Saturday at 18:00* was right about
+> the promise and, once ADR-0155 made the lock the promise, wrong about the slots: two of four
+> may write it down and may not **lock** it. The guard §5.3 asked for is implemented there, for
+> the first time reachable. *Its own context* and *born by being used* stand.
+
 **We will make a Plan the plan of one game, identified by that game's id.** One plan per game for
 ever; a second id would be a second name for the same thing. It is **its own bounded context** —
 `challenges`' subject ends at *everybody has answered* and `games`' begins at *played*, and both
@@ -96,7 +106,9 @@ no assent is recorded anywhere, and a slot is set by whoever tapped last.
 Two consequences are stated rather than left to be found:
 
 - **§5.3's guard — *a four cannot be locked by two* — is not implemented, because it cannot be
-  reached.** There is no lock to guard and no plan before the line-up completes. The prototype
+  reached.** There is no lock to guard and no plan before the line-up completes. *(Superseded
+  2026-09-13 by [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md) §5: there is a plan before the line-up completes, so the guard is
+  implemented — `the_court_is_not_whole`.)* The prototype
   needed the guard only because its `planReady` never looked at the line-up.
 - **§5.3's second sentence is deleted, not rewritten.** *"Somebody has to book the court — whoever
   does becomes the owner"* has no moment left to be posted at.

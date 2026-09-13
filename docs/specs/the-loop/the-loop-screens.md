@@ -65,8 +65,8 @@ map adds nine routes and two fields, across four contexts.
 | **`GET /api/v1/conversations/{id}/entries?before_seq=&limit=`** | a page backward, no header. `limit` 50 default, `le=100` | ADR-0148 |
 | **`POST /api/v1/conversations/{id}/messages`** | the created message. `client_message_id` in the **body** | ADR-0148 |
 | **`GET /api/v1/conversations/{id}/stream`** | `text/event-stream`; the frame is `{v, conversation_id, last_seq}` and nothing else | [ADR-0147](../../adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md) |
-| **`GET /api/v1/plans`** | every plan for games you are on the court of. **No `read_at`** | ADR-0148 |
-| **`PUT /api/v1/plans/{game_id}/place` · `/day` · `/hour`** | one route per slot, because ADR-0144 has three events | ADR-0148 |
+| **`GET /api/v1/plans`** | one row per **court you may plan**, written or not, keyed by `challenge_id` and carrying the horizon anchor. **No `read_at`** | ADR-0148, [ADR-0164](../../adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md) |
+| **`PUT /api/v1/plans/{challenge_id}/place` · `/day` · `/hour` · `/lock`** | one route per slot, because ADR-0144 has three events; the lock is ADR-0155's act, refused while the court is not whole | ADR-0148, ADR-0164 |
 
 **Two reads for the Chats tab, never one**, and **two reads plus a client-side join for Now** —
 ADR-0148's own costs, restated here because a build session reading only this file would otherwise
@@ -308,14 +308,14 @@ nothing on the wire carries a side.
 | `AWAITING_ANSWERS` · invitee, unanswered | §13 *They're waiting on you* | **yes** | **`I'm in`** · **`Not this time`** |
 | `AWAITING_ANSWERS` · invitee, accepted | §13.2 *You're in. Waiting on {n} answers…* | **yes** | **Open the chat** *(the door, below)* |
 | `AWAITING_ANSWERS` · invitee, declined / lapsed | §13.2's **two sentences** — *You said no…* / *Your day ran out…* | no | none |
-| `AWAITING_ANSWERS` · organiser | §13 *Waiting on {n} answers* | **yes** | **Open the chat** *(the door, below)* |
-| `LINE_UP_INCOMPLETE` · member | §13 *{n} in, {m} seats open…* / *You're in. {m} seats open…* | **yes** | **⚡ Fill the seats** · **Open the chat** · **Withdraw** *(organiser only)* |
+| `AWAITING_ANSWERS` · organiser | §13 *Waiting on {n} answers* | **yes** | **Open the chat** *(the door, below)* · **Remove the challenge** *(while nobody besides the organiser holds an accepted seat — ADR-0165 §4)* |
+| `LINE_UP_INCOMPLETE` · member | §13 *{n} in, {m} seats open…* / *You're in. {m} seats open…* | **yes** | **⚡ Fill the seats** · **Open the chat** · **Leave the game** *(any member — ADR-0165 §1)* |
 | `LINE_UP_INCOMPLETE` · reader who left | §13's **two new sentences** — §2.5 | no | none |
 | `DECLINED` · both | §13 *{name} said no…* / *You said no* | no | none |
 | `LAPSED` · both | §13 *{name}'s day ran out…* / *Your day ran out* | no | none |
 | `WITHDRAWN` · both | §13 *You withdrew this* / *{name} withdrew this — that court is closed* | no | none |
 | `ON` · both | §13 *Everybody's in* / *You're in — everybody's in* | no | **Open the chat** *(the door, below)* |
-| `LINE_UP_INCOMPLETE` · member, **a court somebody left** | §13 *{n} in, {m} seats open…* — the same sentence, on a court that has been a game | **yes** | **⚡ Fill the seats** · **Open the chat** · **Call it off** *(the organiser — or, once the organiser has left, any remaining player;* [ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)*)* |
+| `LINE_UP_INCOMPLETE` · member, **a court somebody left** | §13 *{n} in, {m} seats open…* — the same sentence, on a court that has been a game | **yes** | **⚡ Fill the seats** · **Open the chat** · **Call it off** *(any player on the court — ADR-0165 §5)* |
 | `LINE_UP_INCOMPLETE` · reader who **left the game** | §13's two sentences for a reader who left, read as *You left* | no | none |
 
 **A reopened court is the half-built court again, and it is reached from the game**
@@ -326,8 +326,8 @@ which this table draws exactly as it draws one a decline reopened: the fill is t
 door is the same door. Two rows are added rather than the existing two widened, because one thing
 differs: **the withdraw on a court that has been a game calls the game off**
 ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), same day) — the same
-route, the sheet reworded (`the-words.md` §22.3), and the control is the organiser's or, once the
-organiser's own seat is open, any remaining player's. It was refused for the length of one record,
+route, the sheet reworded (`the-words.md` §22.3), and the control is any player's on the court
+(ADR-0165 §5 — it was the organiser's first, with a fallback, for one record). It was refused for the length of one record,
 with `not_a_half_built_line_up`; that refusal is gone. The seat that left is drawn with its
 answer, as a declined seat is.
 
@@ -534,16 +534,17 @@ file by name. It binds every control on every screen in this document, not only 
 
 ### 2.5 `LINE_UP_INCOMPLETE`, and the reader who has left
 
-**Three controls, in the order grow · talk · end** (ADR-0150), and only the organiser sees three —
-on a court that was never a game. On a court that has been one, the third falls back
-([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md) §1).
+**Three controls, in the order grow · talk · end** (ADR-0150), and everybody on the court sees
+three. *Withdraw* is gone from this arm — a court somebody has joined is nobody's to end for the
+others ([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §4) — and the third is **Leave the game** on a court that was never a game, or
+**Call it off** on one that has been, which is any player's (ADR-0165 §3, §5).
 
 | Control | Who | What it does |
 | --- | --- | --- |
 | **⚡ Fill the seats** | any live member | runs the fill and **pushes a builder holding a full court and a fresh search** |
 | **Open the chat** | any live member | `/chats/conversation/[conversationId]` |
-| **Withdraw** | the organiser only | opens the sheet — §2.6 |
-| **Call it off** | on a court that has been a game: the organiser, or once the organiser has left, any remaining player | the same route and the same sheet, reworded — `the-words.md` §22.9; the game is called off in the act |
+| **Leave the game** | any live member, on a court that was never a game | `POST …/departure` — the seat opens; the same sheet the Chats list's swipe opens (ADR-0165 §6). On a game the control is the game screen's, as #411 rule 8 has it |
+| **Call it off** | on a court that has been a game: **any player on the court** (ADR-0165 §5) | the withdraw's route and the withdraw's sheet, reworded — `the-words.md` §22.9; the game is called off in the act |
 
 **⚡ is the entry point, and items 1 and 2 of that ticket had one answer.** Pressing it is *Find a
 game*'s own shape — press, the search runs, the builder arrives with a court on it — which
@@ -582,13 +583,13 @@ sentences out of scope, and #337 had already amended two of §13's rows.
 **Why they are drawn no card block is §2.2's**, not this section's: the rule is the reader's and
 spans both live standings, so it is argued once where the card block is defined.
 
-**The row stays for the reader whose day ran out, and leaves at once for the reader who said no**
-(amended 2026-09-11). `GET /challenges` is *every challenge you hold a seat in* and a departed seat
+**The row stays for the reader whose day ran out, and leaves at once for the reader who said no
+or who left** (amended 2026-09-11, and for the departure by [ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §6). `GET /challenges` is *every challenge you hold a seat in* and a departed seat
 is still a seat, which is the reason [`the-words.md`](../matchmaking/the-words.md) §13.1 gives for
 keeping the row — a row that vanished would take the only available explanation with it. That
 argument is about an explanation, and it is what §1.1's shelf life is for: a row is kept to tell
-the reader something they did not do. A **decline is the reader's own act**, so *You said no* tells
-them nothing, and their row goes with the tap — on a singles court their no ended and on a doubles
+the reader something they did not do. A **decline is the reader's own act** — and so is a departure — so *You said no* and *You left*
+tell them nothing, and their row goes with the tap — on a singles court their no ended and on a doubles
 court that carries on without them alike (`belongsOnTheInbox`); the organiser's row for the same no
 keeps its day, because to them it *is* news. A **lapse** nobody chose, and *Your day ran out. They
 are still filling the court.* is kept to be read exactly as before. The screen still resolves for a
@@ -602,12 +603,16 @@ challenged again immediately, in any sport, by anybody. What keeps them out of *
 
 ### 2.6 The withdraw
 
-**Whole-challenge, irreversible, organiser only, and in `LINE_UP_INCOMPLETE` and nowhere else.**
-It destroys the conversation (ADR-0142), so it is the second irreversible act in this app that
-reaches other people — and it takes the shape the first one already has. *Organiser only* holds
-on a court that was never a game; on a court that has been one, the act calls the game off and
-falls back to any remaining player once the organiser has left
-([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md)).
+**Whole-challenge, irreversible, organiser only, and exactly while nobody besides the organiser
+holds an accepted seat** — before any answer included, and again once everybody who joined has
+left; refused while anybody else is in
+([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §4, reversing ADR-0142 §2's *where*). Its name is **Remove the challenge**, and it has
+two doors: this screen's arm where nobody has joined, and the organiser's row in Chats by the
+same swipe a conversation row answers with *Leave the game* (ADR-0165 §6). It destroys the
+conversation where one exists (ADR-0142), so it is the second irreversible act in this app that
+reaches other people — and it takes the shape the first one already has. On a court that has been
+a game the same route is **Call it off**, and it is any player's
+([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), ADR-0165 §5).
 
 **A sheet, on `SH.propose`'s exact shape**: a real modal (9.1) with `accessibilityViewIsModal`,
 hidden siblings and Android back; a title naming the **moment** rather than the act, so the act is
@@ -638,7 +643,9 @@ The room is destroyed at the **earliest** of:
 
 - **`entry_closes_at`** — the instant *we played* stops being sayable;
 - **`GamePlayed` plus `CONVERSATION_GRACE`**, which is **48 h**;
-- **the challenge concluding without ever producing a game**, plus the same grace;
+- **the challenge being over**, for a room that never produced a game — exactly then, with no
+  grace ([ADR-0164](../../adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md) §6,
+  which retired ADR-0153 §3's departure shelf);
 - **the withdrawal**, which destroys it in the same act and writes no line (§3.4).
 
 **The end is derived and never stored**, from facts the room is already told — `Game.planned_at`
@@ -690,11 +697,12 @@ challenge screen beside it and the game screen behind its own *Details* door all
   client-side ladder** and its endings, `gameCardName` folded from the two lists every room with a
   game already reads for its pinned plan card, in `features/plans`' own lower-case word. *Card
   name, never standing*; the row below keeps §6 in full. **A room with no game draws the sport
-  alone** — `game_id` is nullable, a `LINE_UP_INCOMPLETE` room has no game and no plan, and no state
-  is invented for it.
+  alone** — `game_id` is nullable, a `LINE_UP_INCOMPLETE` room has no game, and no state is
+  invented for it. It **does** have a plan, drawn under this header from the room's opening
+  ([ADR-0164](../../adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md), §3.2); the state word is the game's ladder and waits for the game.
 - **Details is drawn only when there is a game.** `GET /conversations` carries a **nullable
-  `game_id`**, so a `LINE_UP_INCOMPLETE` conversation — which has no game and no plan — has no
-  Details button and nothing to open. Drawing a dead control would be the disabled control #324
+  `game_id`**, so a `LINE_UP_INCOMPLETE` conversation — which has no game, though it has a plan —
+  has no Details button and nothing to open. Drawing a dead control would be the disabled control #324
   refused.
 
 ### 3.2 The plan card is pinned, and it is the count, the chips and the lock
@@ -703,8 +711,9 @@ challenge screen beside it and the game screen behind its own *Details* door all
 content, and the chat opens scrolled to the bottom, so it is the first thing off-screen in any
 conversation longer than a screen. That is #322's finding 1, and this file is where it is answered.
 
-> **The plan card is pinned under the header. It is an eyebrow and a counter, the three slot
-> chips, and *Lock the plan* — and nothing else.**
+> **The plan card is pinned under the header, from the room's opening. It is an eyebrow and a
+> counter, the three slot chips, and *Lock the plan* — or, while the room has no game, the one
+> line that says where the lock will be — and nothing else.**
 
 **Pinned**, because every chat opens at its newest entry (that is what a cursor is for), so a card
 in the scroll is a card you have to hunt for — and the plan is the thing the room exists to fill.
@@ -724,6 +733,15 @@ and left the panel exactly where it was.
 │ │          Lock the plan             │ │
 │ └────────────────────────────────────┘ │
 └────────────────────────────────────────┘
+
+┌────────────────────────────────────────┐   the same card while the room has no game
+│ THE PLAN                    1 of 3 set │   ([ADR-0164](../../adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md) §5): the button is absent, and
+│                                        │   its place is the count line
+│ [ Where ] [ Sunday ] [    Hour     ]   │
+│                                        │
+│ 2 of 4 in — you can plan now, lock     │
+│ when everyone's here                   │
+└────────────────────────────────────────┘
 ```
 
 **The eyebrow and the counter.** `THE PLAN` is an `eyebrow` — a region you are reading, never
@@ -733,7 +751,11 @@ schema's own docstring refuses a count on the wire as the one derived value that
 with the three fields beside it. **Once locked, the counter reads `Locked`** — a word, because
 the pill does not change colour and a colour would not be enough if it did.
 
-**`Lock the plan`.** Greyed and not pressable while any slot is empty; coral and live once all
+**`Lock the plan`.** **Absent — not greyed — while the room has no game**, and in its place one
+line, `N of M in — you can plan now, lock when everyone's here`, N the room's members and M the
+court's seats (ADR-0164 §5; #324's rule, and the line is the note). When the last seat accepts the
+line becomes the button, on the same nudge that brings the game (#406). Once there: greyed and not
+pressable while any slot is empty; coral and live once all
 three are set, the one control on the card in 6.1's `primary`; **busy with its own word** while
 the lock goes out; and **gone** once it has landed rather than 6.1's `settled` — a second lock
 records nothing and answers `200`, so a control still offering the act would be one that provably
@@ -750,12 +772,14 @@ other entry. **And the card follows the line on every phone in the room**
 ([#405](https://github.com/Raketa02/Raketa/issues/405)): the nudge that brings *tomek.p set the
 place* re-reads the plan beside the stream, so the chip, the counter and the lock say what the
 line says with nothing pressed — one outbox tick after the tap, which is the line's own latency.
-**And the card is born on the phone in the room** ([#406](https://github.com/Raketa02/Raketa/issues/406)):
-the same nudge re-reads the game, so a court that completes while somebody is looking at the room
-draws its card, its *Details* door and its state word there and then, rather than on the next
-foregrounding. Each refusal is its own sentence by its **code**: `the_plan_is_not_complete`, which
+**And the lock is born on the phone in the room** ([#406](https://github.com/Raketa02/Raketa/issues/406),
+amended by ADR-0164 — the card was there from the opening): the same nudge re-reads the game, so a
+court that completes while somebody is looking at the room draws its lock button, its *Details*
+door and its state word there and then, rather than on the next foregrounding. Each refusal is its own sentence by its **code**: `the_plan_is_not_complete`, which
 the greyed button makes unreachable and the card handles anyway because the button is UX and the
-server is the correctness mechanism; `plan_is_history`; `plan_not_found`; and `account_held`,
+server is the correctness mechanism; `the_court_is_not_whole` (ADR-0164 §5), which the absent button makes
+unreachable and the card handles the same way; `plan_is_history`; `plan_not_found`;
+and `account_held`,
 which is the room's one amber note over greyed controls and never a coral sentence on the card.
 
 **One panel, one home; one plan, two primitives.** #338 §7: **`Chip`s here, where the plan is
@@ -768,7 +792,7 @@ order, the order people discuss them in and of decreasing negotiability.
 | Slot | Empty | Filled | The input |
 | --- | --- | --- | --- |
 | **Where** | `Where` | the value | short free text, one line, capped at 120 — **no id, no lookup, no autocomplete, no reuse, no geocode** |
-| **Day** | `Day` | the weekday | **seven chips, today + 6**, clamped to `planned_at + PLAN_HORIZON` and shrinking as the week runs out |
+| **Day** | `Day` | the weekday | **seven chips, today + 6**, clamped to the plan row's anchor + `PLAN_HORIZON` — the send until the game exists, then `planned_at` (ADR-0164 §4) — and shrinking as the week runs out |
 | **Hour** | `Hour` | the clock time | **30-minute steps, 06:00–23:00**, validated server-side |
 
 **Any member may fill or change any slot, any number of times, and a lock does not stop that.**
@@ -777,8 +801,8 @@ who and what. **A slot is never emptied and a plan is never unmade.**
 
 **There is a lock, and it is an act rather than a state**
 ([ADR-0155](../../adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md),
-superseding ADR-0144's *there is no lock*). Once all three slots are set, any member may agree the
-plan — `PUT /plans/{game_id}/lock` — and the whole of what that does is post `{name} locked the
+superseding ADR-0144's *there is no lock*). Once all three slots are set **and the court is whole**, any
+member may agree the plan — `PUT /plans/{challenge_id}/lock` — and the whole of what that does is post `{name} locked the
 plan` into the room, so the other three see the arrangement was agreed rather than merely
 completed. **The count and the lock are two facts**: three filled slots is a plan everybody *could*
 agree, and this says somebody did. The backend sends `locked_at` and no adjective.
@@ -787,7 +811,9 @@ agree, and this says somebody did. The backend sends `locked_at` and no adjectiv
 plan stays locked and the move writes its own line. **`locked by everybody` stays deleted** — a
 phrase the prototype's own data cannot support, since assent is recorded per act and not per
 person, and a lock is one person saying *we are agreed* rather than four. §5.3's *a four cannot be
-locked by two* is still unreachable, because there is no plan before the line-up completes.
+locked by two* is **implemented** (ADR-0164 §5): there is a plan before the line-up completes, the
+server refuses the lock while the court is not whole, and the card draws the count line where the
+button will be.
 
 **A combination already in the past is refused when the second of the two slots is filled**, in
 written copy rather than by a disabled control, because the day and the hour are filled in either
@@ -864,7 +890,8 @@ arrangement of the seats could reach it*.
 - **There is no *Game on* line**, and the prototype writes that phrase four different ways.
   `GamePlanned` is refused on exactly ADR-0142 §3's test: everybody having accepted is an
   arrangement of the seats, so the line-up completing is reachable from the record. What a player
-  sees instead is the **plan card appearing** and membership stopping — drawn, not announced.
+  sees instead is the **lock button appearing** on a card that was there from the opening
+  (ADR-0164), and membership stopping — drawn, not announced.
   **The event still arrives**: §3's end is derived from its `occurred_at`, so a refused line is not
   a refused telling.
 - **The withdrawal writes nothing**, because there is nobody left to read it. The room is

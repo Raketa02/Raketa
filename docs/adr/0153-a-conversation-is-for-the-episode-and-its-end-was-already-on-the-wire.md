@@ -1,6 +1,8 @@
 # ADR-0153 — A conversation is for the episode, and its end was already on the wire
 
-- **Status:** Accepted
+- **Status:** Accepted — **§3 superseded 2026-09-13 by [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md) §6**: a room without a game has
+  ended exactly when its challenge is over, and not a grace after its last departure. §2's clock
+  for a room with a game, and §4's grace after *we played*, stand.
 - **Date:** 2026-09-07
 - **Answers [#347](https://github.com/Raketa02/Raketa/issues/347)**, which
   [ADR-0149](0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md) §3 filed as a
@@ -98,6 +100,13 @@ refusal now does a second job: it keeps the room's end fixed at birth, so the en
 than it was, only earlier.
 
 ### 3. The room that never becomes a game gets the same number, and stops living for ever
+
+> **Superseded 2026-09-13 by [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md) §6.** The number went, because the anchor read the *order* the
+> answers came in — `B yes → D yes → C no` closed the room two days later while three people were
+> talking in it, `B yes → C no → D yes` never did — and it only ever fired on rooms that still had
+> accepted players in them. A room without a game now has ended exactly when its **challenge** is
+> over, derived on every read from the challenge's own standing; what ends a challenge that never
+> becomes a game is [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §3. The room still stops living for ever, and no longer by a clock.
 
 ADR-0145 named the case and declined it: *"a conversation opened on a first acceptance whose
 challenge then lapses or is declined to death has no plan, no game and no withdrawal."* #359 was

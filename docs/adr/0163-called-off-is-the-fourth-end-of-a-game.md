@@ -1,6 +1,8 @@
 # ADR-0163 — *Called off* is the fourth end of a game
 
-- **Status:** Accepted
+- **Status:** Accepted — **§1's *whose act* superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §5**: any player on
+  the court, with no organiser-first clause and no fallback; and a game is also called off
+  **by the departure** that leaves one player on it (ADR-0165 §3). §2–§7 stand.
 - **Date:** 2026-09-12
 - **Supersedes, by named sentence:**
   [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)'s *"a game reaches exactly
@@ -90,6 +92,12 @@ in neither tally, the way a game still inside its window goes in neither.
 ## Decision
 
 ### 1. Whose act — the organiser, or once the organiser has left, anybody still on the court
+
+> **Superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §5.** *The caller is still live on the court, and is the
+> organiser or the organiser is not* loses its second clause: **the caller is on the court.** The
+> organiser holds no power over a court somebody else has joined, on the author's rule that
+> nobody does. One code, the same sentence, its second clause gone. The interim on
+> `game_opened` and `ChallengeWithdrawn` carrying no player are as below.
 
 `Challenge.withdraw` admits the organiser, as today, **or any live member once the organiser's
 own seat is no longer live** — `LEFT`, or given away to a newcomer after a departure, which

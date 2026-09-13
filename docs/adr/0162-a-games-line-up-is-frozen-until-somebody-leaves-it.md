@@ -1,6 +1,11 @@
 # ADR-0162 — A game's line-up is frozen until somebody leaves it
 
-- **Status:** Accepted
+- **Status:** Accepted — **three sentences superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)**: §1's *a court that
+  has been a game — `ON`, or reopened since and not yet re-seated* (a yes can be taken back
+  before the court is whole), §1's
+  *a challenge folds `game_opened` off `SeatLeft`* (it folds it off the line-up completing), and
+  §1's and §9's *the last person may leave too … and it lapses into Never played* (the departure
+  that leaves one on a game calls it off). §2–§8 stand.
 - **Date:** 2026-09-12
 - **Supersedes, by named sentence:**
   [ADR-0142](0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md) §2's
@@ -94,6 +99,15 @@ must not break: *if `games` ever imports the Plan, this clause has been broken.*
 ## Decision
 
 ### 1. `POST /challenges/{id}/departure` — the act, on the challenge, in ADR-0142 §4's noun shape
+
+> **Three sentences below are superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md).** *A court that has been a game — `ON`, or
+> reopened since and not yet re-seated* — the departure is admitted on a half-built court too, because *leaving a
+> half-built court is a decline, and it is already given* is true before you answer and false
+> after (§1 there). *A challenge folds `game_opened` off it* — it folds it off the acceptance that
+> completes the line-up, since a `SeatLeft` no longer implies a court that was `ON` (§2 there).
+> *The last person may leave too … and it lapses into Never played* — the departure that leaves
+> at most one player on a game, with nobody still deciding, calls it off in the same transaction
+> (§3 there). The event, its shape, the seat it writes, the pool and the pair rule stand.
 
 No body; answers `ChallengeSchema` as the court now stands. **Whose act, asked first**: the
 caller holds an **accepted** seat, and otherwise the refusal is `404 challenge_not_found` —

@@ -1056,16 +1056,20 @@ where, money, results or the conversation itself belongs here.
 - **Seat** — one position on the challenge's court: a **Side** and either an occupant or nothing.
   The seats are a fixed list of `2 × seats_per_side(sport)`, so *which side is short* is a fact
   the challenge holds rather than one a reader has to count. A seat is **open** when nobody is in
-  it, or when its occupant declined, lapsed, or — on a court that has become a **Game** —
-  **left** ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)).
+  it, or when its occupant declined, lapsed, or **left**
+  ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md); before the
+  court is whole too, since [ADR-0165](docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)).
   The occupant stays on the seat with the answer that emptied it, because the three are three
   different facts.
-- **Departure** — a player **leaving a game they had agreed to**, before it is played
-  ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)). Lands on the
-  challenge, as a fourth answer, `LEFT`, written over an accepted seat: the seat reopens, the
-  **Standing** is *Line-up incomplete* again, and the game is told in the same transaction. Any
-  player on the court may leave, the organiser included, while the game awaits its entry and its
-  agreed moment is ahead; after the moment it is refused, so a no-show cannot vacate a seat to
+- **Departure** — a player **leaving a court they had agreed to**, before it is played
+  ([ADR-0162](docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md); before the
+  court is whole too, since
+  [ADR-0165](docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)).
+  Lands on the challenge, as a fourth answer, `LEFT`, written over an accepted seat: the seat
+  reopens, the **Standing** is *Line-up incomplete* again, and — where the court has become a
+  game — the game is told in the same transaction. Any player on the court may leave, the
+  organiser included; on a game, while it awaits its entry and its agreed moment is ahead —
+  after the moment it is refused, so a no-show cannot vacate a seat to
   block the result. Two may leave. The one who left is out of this court's own pool for good and
   a stranger to the others again on the instant. **Recorded and not yet scored.**
 - **Organiser** — the player who sent it. They hold a seat like anybody else, and it is
@@ -1082,19 +1086,22 @@ where, money, results or the conversation itself belongs here.
   *Challenge for you* are not two standings — they are one standing read from two sides.
   `LINE_UP_INCOMPLETE` is reached **after `ON`** too, by a **Departure**: the court is half built
   again, the pair is held again, and the next completed line-up re-seats the same **Game**.
-- **Withdraw** — the organiser **ending** a half-built line-up, for everybody on it
-  ([ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)).
-  Legal while the **Standing** is *Line-up incomplete* and nowhere else, because that is the one
-  standing nothing else ends: the acceptor's seat is answered so they cannot leave it, and nobody
-  is deciding so no clock will run out. **Whole-challenge, and it removes nobody** — a withdraw
-  that emptied one seat would be the organiser taking out somebody who already agreed.
-  **Irreversible**: asking the same people again is a *new* Challenge, with fresh deadlines and
-  its own record of who has answered. **It reaches a court that has been a game**
+- **Withdraw** — the organiser **removing** a challenge nobody else has joined
+  ([ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md),
+  its *where* moved by
+  [ADR-0165](docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)).
+  Legal exactly while **nobody besides the organiser holds an accepted seat** — before anybody
+  has answered, and again once everybody who joined has left — and refused while anybody else is
+  in: a court somebody has joined is nobody's to end for the others, and it is **over by itself**
+  when at most one player is on it and no seat is still deciding. The player-facing name is
+  *Remove the challenge*. **Whole-challenge, and it removes nobody** — a withdraw that emptied one
+  seat would be the organiser taking out somebody who already agreed. **Irreversible**: asking the
+  same people again is a *new* Challenge, with fresh deadlines and its own record of who has
+  answered — and that re-ask is the risk ADR-0142 refused and ADR-0165 accepts with a falsifier.
+  **It reaches a court that has been a game**
   ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)): a reopened court is
   *Line-up incomplete* again, the withdraw is its exit, and the **Game** is **called off** in the
-  same act. There the act is the organiser's **or, once the organiser's own seat is open, any
-  player still on the court's** — the people who agreed did nothing wrong and one of them has to
-  hold the exit.
+  same act — *Call it off*, and there the act is **any player's on the court**.
   The word is *withdraw* and not **stand down**, which this file owns platform-wide for a term
   that cannot be evaluated; *call off* is what the withdraw does to the **Game**.
 - **Call off** — what a **Withdraw** does to the **Game** a reopened court became
@@ -1314,7 +1321,9 @@ Settled by [ADR-0146](docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-i
 [#332](https://github.com/Raketa02/Raketa/issues/332), with its lifetime from
 [ADR-0153](docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
 which moved
-[ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)'s.
+[ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)'s
+— narrowed by ADR-0164 §6: a room **without a game** has ended exactly when its challenge is
+over, and a room with one keeps the game's clock.
 **Built.** The module exists, the four routes are on the player contract, a room is opened and
 grown through the outbox by contexts that do not know it exists, and it is **destroyed** once the
 episode it was opened for is over — derived on every read, and made real by an hourly sweep
@@ -1368,8 +1377,9 @@ Nothing about when, where, money or the result belongs here — it is **told** a
   moment other than this one.
 - **Lifetime** — a conversation lasts as long as the **episode** it was opened for, and is then
   **destroyed, not delisted**. It ends at the earliest of: the entry window closing, so *we played*
-  can no longer be said; a grace after somebody says they played; a grace after the challenge ends
-  without ever producing a game. A withdrawal destroys it in the same act
+  can no longer be said; a grace after somebody says they played; and, for a room that never
+  produced a game, **the challenge being over** — exactly then, with no grace (ADR-0164 §6). A
+  withdrawal destroys it in the same act
   ([ADR-0153](docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)),
   a room whose court has been a game included — the game being **called off** is told to the
   room by nothing, because the withdrawal has already destroyed it
@@ -1400,23 +1410,28 @@ Settled by [ADR-0144](docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-th
 [ADR-0146](docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md), and given a
 **Lock** by
 [ADR-0155](docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md),
-which supersedes ADR-0144's *There is no lock* and nothing else in it.
+which supersedes ADR-0144's *There is no lock* and nothing else in it — and **re-keyed to the
+challenge** by [ADR-0164](docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md), which supersedes ADR-0144's *a plan is the game's* and its *no plan before
+the line-up completes*, and nothing else in it.
 
-**Where and when these people are meeting.** It is **one game's**, identified by that game's id,
-and it is **born by being used** — no record at birth, no opening event, and *no plan* is what a
-game with nothing agreed draws. `challenges` ends at *everybody has answered* and `games` begins
-at *played*; this sits between them and belongs to neither.
+**Where and when these people are meeting.** It is **one challenge's**, identified by that
+challenge's id — the one id its room and its game already share — and the game the challenge
+becomes inherits it. It is **born by being used** — no record at birth, no opening event, and *no
+plan* is what a court with nothing agreed draws — and it is drawn in the room **from the room's
+opening**, with whoever is in: `challenges` ends at *everybody has answered* and `games` begins
+at *played*; this sits beside the first and before the second, and belongs to neither.
 
 The word will one day collide with Around's *plans*. It is taken anyway, on this file's own rule:
 **the cost of a shared word is paid by whoever arrives second**.
 
 - **Plan** — three slots, in the order people discuss them and of decreasing negotiability:
-  **where · day · hour**. One plan per game, for ever.
+  **where · day · hour**. One plan per challenge, for ever; the game it becomes inherits it.
 - **Where** — short free text, one line, capped. **Never a court**: no id, no lookup, no
   autocomplete, no reuse, no geocode, and nothing anywhere reads it. A note between the people on
   the court.
-- **Day** — a local date, chosen from **seven chips, today + 6**, clamped so a plan can never name
-  a day past the game's entry window.
+- **Day** — a local date, chosen from **seven chips, today + 6**, clamped to a week past the
+  plan's **anchor** — the challenge's send until the game exists, then the game's `planned_at`,
+  only ever later — so a plan can never name a day past the game's entry window.
 - **Hour** — a minute of the local day, in **30-minute steps, 06:00–23:00**. It is **the
   agreement itself**, not a guess at a booking: nothing on this platform will ever hold a booking,
   so nothing can contradict it (ADR-0145).
@@ -1433,6 +1448,9 @@ The word will one day collide with Around's *plans*. It is taken anyway, on this
   itself where a completed plan may not. **It freezes nothing**: any member may still move any
   slot afterwards, the plan stays locked, and the move writes its own line. **There is no
   unlock**, for the same reason a slot is never emptied — the lock is a thing that happened.
+  **And it waits for the court**: refused while the court is not whole (ADR-0164 §5), because
+  *we are agreed* is said only once everybody who will have to keep it is in — the slots are
+  proposals anybody on the court may make and move; the lock is the promise.
 
 **Invariants**
 

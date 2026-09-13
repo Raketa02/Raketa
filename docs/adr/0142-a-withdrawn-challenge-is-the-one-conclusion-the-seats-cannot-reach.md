@@ -1,6 +1,9 @@
 # ADR-0142 — A withdrawn challenge is the one conclusion the seats cannot reach
 
-- **Status:** Accepted
+- **Status:** Accepted — **§2's *where* superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §4**: the withdraw is
+  admitted exactly while nobody besides the organiser holds an accepted seat — before any answer
+  included — and refused once anybody has joined. §1, §3, §4 and §5 stand; §2's whole-challenge,
+  irreversible, organiser-only shape stands where the act still exists.
 - **Date:** 2026-09-07
 - **Extends [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)**, which cites
   `challenges`' *nothing announces a conclusion the seats already imply* and applies it to a
@@ -80,6 +83,15 @@ player, which `AnAcceptedPlayerMayNotBeRemoved` refuses and keeps refusing — *
 already agreed did nothing wrong*. A withdrawn challenge does not come back; re-asking the same
 people is a **new** challenge, with fresh deadlines and its own `answered` set, which is what it
 actually is.
+
+> **Both halves of §2's *where* are superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §4.** *In
+> `LINE_UP_INCOMPLETE` and nowhere else* becomes *while nobody besides the organiser holds an
+> accepted seat*: a court somebody has joined is nobody's to end for the others — the organiser
+> leaves it like anybody else, and it is over by itself when one is left with nobody deciding
+> (ADR-0165 §3). And **the Phase 1 refusal below is reversed**: the organiser may remove a
+> challenge nobody has answered. The argument for refusing it was correct and is overruled, not
+> refuted — the withdraw-and-resend vector is accepted as a named risk with its falsifier, and a
+> cross-challenge cool-down is the follow-up if it fires.
 
 **The Phase 1 withdraw is refused, and the reason is recorded so it stops being re-proposed.**
 Before anybody answers, the seats lapse within 24 h and release the pair on their own, no

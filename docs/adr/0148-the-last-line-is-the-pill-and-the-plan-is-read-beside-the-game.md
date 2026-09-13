@@ -1,6 +1,8 @@
 # ADR-0148 — The last line is the pill, and the plan is read beside the game rather than inside it
 
-- **Status:** Accepted
+- **Status:** Accepted — **§7's join key and §8's addressing amended 2026-09-13 by [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)**: the
+  plan is keyed by `challenge_id`, `GET /plans` lists every court the reader may plan, and the
+  four writes are `PUT /plans/{challenge_id}/…`. *Read beside the game, never inside it* stands.
 - **Date:** 2026-09-07
 - **Extends [ADR-0146](0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md)** into the
   contract: that record made a system line *a code and its values, never a Message with a `kind`*,
@@ -174,6 +176,11 @@ is out of scope, so **nothing marks a conversation read and no field carries it.
 
 ### 7. The plan is read beside the game, never inside it
 
+> **Amended 2026-09-13 by [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md).** `GET /plans` lists one row for every **court** the reader may
+> plan, written or not, keyed by `challenge_id` and carrying the horizon anchor; Now and the chat
+> join by the challenge id a game and a room both carry. Still the only plan read, still beside
+> the game.
+
 **`GET /plans` — every plan for the games you are on the court of — and it is the only plan read.**
 Now issues two reads and joins by game id; the chat screen draws the same cached list.
 
@@ -185,6 +192,11 @@ surfaces rather than two shapes for one fact.
 The list is ordered and lifetimed like its owner, and it carries **no `read_at`** — see §10.
 
 ### 8. Three writes, one per slot; two refusals
+
+> **Amended 2026-09-13 by [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md).** The four writes are addressed by `challenge_id`; the day's
+> clamp is `PLAN_HORIZON` past the row's anchor — the send until the game exists, then
+> `planned_at` — and the lock gains `the_court_is_not_whole`. `PLAN_HORIZON` still lives in
+> `games` and `plans` still imports it, in the direction below.
 
 > **Amended by [ADR-0155](0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md).**
 > This heading read *no lock*. There is a fourth write route, `PUT /plans/{game_id}/lock`, and it

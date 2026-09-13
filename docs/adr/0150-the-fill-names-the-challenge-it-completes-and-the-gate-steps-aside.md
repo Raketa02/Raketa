@@ -1,6 +1,8 @@
 # ADR-0150 — The fill names the challenge it completes, and the gate steps aside for that one court
 
-- **Status:** Accepted
+- **Status:** Accepted — **§1's *only the organiser may end it* superseded 2026-09-13 by
+  [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §4–§5**: nobody ends a court somebody else has joined, and *Call it off* is any player's.
+  *Any live member may complete the line-up* stands.
 - **Date:** 2026-09-07
 - **Extends [ADR-0142](0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)**,
   which fixed the pair rule's predicate as *a pair is held while the challenge is
@@ -73,6 +75,11 @@ neither complete nor leave.
 > they left; the organiser's seat is required on the posted court only while the organiser is
 > still on it. *Only the organiser may withdraw* stands, and the fallback once the organiser has
 > left is [#417](https://github.com/Raketa02/Raketa/issues/417)'s.
+>
+> **And *only the organiser may end it* is superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §4–§5**: the withdraw
+> is admitted exactly while nobody besides the organiser holds an accepted seat, a court somebody
+> has joined ends by itself when one is left with nobody deciding, and *Call it off* on a game is
+> any player's. The fill is untouched.
 
 The aggregate needs no change for this: `invite` never asked who was inviting, only that the
 organiser still holds a seat. What moves is the **searcher** — the seat origins cite the search
