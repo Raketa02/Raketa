@@ -48,7 +48,6 @@ from app.bootstrap.player_score_demands import (
 from app.engines.matchfit.core import ReliabilityStrand
 from app.kernel import Instant, Sport, instant
 from app.modules.challenges.domain.challenge import Challenge
-from app.modules.challenges.domain.events import ChallengeWithdrawn
 from app.modules.challenges.domain.seats import SeatPlan, court_sides
 from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.games.domain.game import Game
@@ -218,43 +217,36 @@ async def _refills(
     await session.commit()
 
 
-async def _withdraws(
-    session,
-    challenge: Challenge,
-    *,
-    at: Instant,
-    past_the_standing_rule: bool = False,
+async def _leaves(
+    session, challenge: Challenge, player_id: UUID, *, at: Instant
 ) -> None:
-    """The organiser ends a half-built line-up.
+    """Somebody takes their yes back (``docs/adr/0165`` §1)."""
 
-    ``past_the_standing_rule`` records the event straight onto the aggregate's
-    own recorder, stepping around the one rule ``withdraw`` enforces — and it is
-    here for exactly one demand. A withdraw is legal only in
-    ``LINE_UP_INCOMPLETE``, which is reached only when no seat is awaiting, so
-    **no legal withdrawal can catch an invitation whose day is still running**
-    and the state ``docs/adr/0142`` §5 legislates for cannot be built through
-    ``withdraw`` at all.
+    repository = _challenges(session)
+    loaded = await repository.load(challenge.id)
+    assert loaded is not None
+    loaded.leave(player_id, occurred_at=at)
+    await repository.save(loaded)
+    await session.commit()
 
-    It is still a state this read has to be right about. This is a walk over
-    **history**, not a fold of the aggregate, and a denominator that came out
-    right only because a rule in another module happens to order two rungs a
-    particular way is one that goes wrong silently the day that order is
-    revisited.
 
-    Everything else about the write is the ordinary path — the aggregate's own
-    fold, the repository, the codec and the store — so what is exercised is the
-    read and not a fixture's idea of one.
+async def _withdraws(session, challenge: Challenge, *, at: Instant) -> None:
+    """The organiser removes a challenge nobody else is on (``docs/adr/0165``
+    §4) — whatever seats are still deciding.
+
+    This helper used to carry a ``past_the_standing_rule`` switch that recorded
+    the event straight onto the recorder, because no legal withdrawal could
+    catch an invitation whose day was still running and the state
+    ``docs/adr/0142`` §5 legislates for could not be built through ``withdraw``
+    at all. It can now, so the write is the ordinary path — the aggregate's own
+    rule, its fold, the repository, the codec and the store — and what is
+    exercised is the read and not a fixture's idea of one.
     """
 
     repository = _challenges(session)
     loaded = await repository.load(challenge.id)
     assert loaded is not None
-    if past_the_standing_rule:
-        loaded._record_that(
-            ChallengeWithdrawn(challenge_id=loaded.id, occurred_at=at)
-        )
-    else:
-        loaded.withdraw(loaded.organiser_id, occurred_at=at)
+    loaded.withdraw(loaded.organiser_id, occurred_at=at)
     await repository.save(loaded)
     await session.commit()
 
@@ -750,16 +742,17 @@ async def test_a_day_that_ran_out_before_the_withdraw_is_still_silence(
 ):
     """**A withdrawal does not erase a lapse that had already happened.**
 
-    A padel four: one invitee accepts, the other says nothing until their day
-    runs out, and only then — with nobody deciding and a seat still open — does
-    the organiser end it. The second invitee was silent for the whole of their
-    own window, and that is the fact *answers challenges* exists to price. The
-    exemption is narrow on purpose, and this is the side of it that must not
-    move.
+    A padel four: one invitee accepts and later takes it back, the organiser
+    offers the seat they left on to somebody new, the other invitee says
+    nothing until their day runs out, and — with the newcomer still deciding
+    and nobody else on the court — the organiser removes it. The second invitee
+    was silent for the whole of their own window, and that is the fact
+    *answers challenges* exists to price. The exemption is narrow on purpose,
+    and this is the side of it that must not move.
     """
 
     port = implementation.build(session)
-    organiser, answerer, silent = new_uuid(), new_uuid(), new_uuid()
+    organiser, answerer, silent, newcomer = (new_uuid() for _ in range(4))
     challenge = await _invited(
         session,
         organiser=organiser,
@@ -768,6 +761,15 @@ async def test_a_day_that_ran_out_before_the_withdraw_is_still_silence(
         at=_ago(days=4),
     )
     await _answers(session, challenge, answerer, yes=True, at=_ago(days=4))
+    await _leaves(session, challenge, answerer, at=_ago(days=3))
+    await _refills(
+        session,
+        challenge,
+        organiser=organiser,
+        still_in=(silent,),
+        replacement=newcomer,
+        at=_ago(days=2, hours=12),
+    )
     await _withdraws(session, challenge, at=_ago(days=1))
 
     scores = await port.scores_for([answerer, silent], now=_now())
@@ -791,8 +793,11 @@ async def test_a_challenge_that_stopped_existing_charges_nobody_a_lapse(
 
     Absent, and not a nought: they were never given the chance to answer, so the
     record they get for it is no record at all — exactly as the organiser's own
-    seat has none. The acceptance beside it is untouched, which is what says the
-    withdrawal dropped an invitation rather than a challenge's whole history.
+    seat has none. The acceptance beside it is untouched — the answerer took it
+    back before the organiser could remove the court, since a court somebody
+    has joined is nobody's to remove, and a yes taken back is still an answer
+    given — which is what says the withdrawal dropped an invitation rather than
+    a challenge's whole history.
     """
 
     port = implementation.build(session)
@@ -805,9 +810,8 @@ async def test_a_challenge_that_stopped_existing_charges_nobody_a_lapse(
         at=_ago(days=4),
     )
     await _answers(session, challenge, answerer, yes=True, at=_ago(days=4))
-    await _withdraws(
-        session, challenge, at=_ago(days=3), past_the_standing_rule=True
-    )
+    await _leaves(session, challenge, answerer, at=_ago(days=3, hours=12))
+    await _withdraws(session, challenge, at=_ago(days=3))
 
     scores = await port.scores_for([answerer, deciding], now=_now())
 

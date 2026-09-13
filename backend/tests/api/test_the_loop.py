@@ -32,8 +32,9 @@ fails in this repository rather than on somebody's phone. The client owns the
 **Two journeys, because the doubles path is a different shape.** The first is a
 singles game from a send to two moved Levels. The second is the half-built court:
 a line-up nobody finished, the ⚡ that names the challenge it completes, a second
-acceptance growing the room, and the withdraw that destroys it — the one
-conclusion the seats cannot reach (``docs/adr/0142``).
+acceptance growing the room, the withdraw refused because somebody has joined
+(``docs/adr/0165`` §4), and the departures that end it — the last one alone with
+nobody deciding is over, and the room goes with its challenge.
 
 Its counterpart is ``app/seeds/`` — the same states, reached by ``make seed`` and
 asserted there. **That half needs a database and does not run in CI. This half
@@ -405,7 +406,7 @@ async def _answer(client, token: str, challenge_id: str, act: str) -> dict:
     return response.json()
 
 
-async def test_a_half_built_court_is_filled_a_room_grows_and_a_withdraw_ends_it(
+async def test_a_half_built_court_is_filled_a_room_grows_and_the_last_one_left_ends_it(
     client, session_factory, candidate_source, journey_clock
 ):
     """**The doubles path, which is a different shape and not a longer one.**
@@ -414,14 +415,16 @@ async def test_a_half_built_court_is_filled_a_room_grows_and_a_withdraw_ends_it(
     ``LINE_UP_INCOMPLETE`` and — until ``docs/adr/0150`` — the search meant to
     finish the court excluded, by construction, everybody who had accepted it. So
     the fill **names the challenge it completes**, the room grows with each further
-    acceptance rather than opening a second one, and the organiser's withdraw is
-    the one conclusion the seats cannot reach.
+    acceptance rather than opening a second one, and a court somebody has joined
+    is nobody's to end for the others (``docs/adr/0165`` §4): the organiser's
+    withdraw is refused, everybody leaves like anybody else, and the court is
+    over by itself when one is left with nobody deciding (``0165`` §3).
 
-    The last two steps are in this order because the platform requires it: a
-    withdraw is legal in ``LINE_UP_INCOMPLETE`` and nowhere else, so a court that
-    is awaiting an answer has to stop awaiting one first. The person whose no does
-    that is the **reader who has left** — still on the court, still able to read
-    it, and drawn no card by it.
+    The steps are in this order because the platform requires it: a court is
+    over when at most one player is on it **and no seat is awaiting an answer**,
+    so a court that is awaiting one has to stop awaiting it first. The person
+    whose no does that is the **reader who has left** — still on the court,
+    still able to read it, and drawn no card by it.
     """
 
     organiser = await world.a_searcher(client)
@@ -552,18 +555,42 @@ async def test_a_half_built_court_is_filled_a_room_grows_and_a_withdraw_ends_it(
         "and they are not in the room: membership is the live members"
     )
 
-    # --- and the organiser ends it -------------------------------------------
-    ended = await client.post(
+    # --- and nobody ends it for the others: they leave one by one, and the
+    # --- last one alone ends it ---------------------------------------------
+    refused = await client.post(
         f"/api/v1/challenges/{challenge_id}/withdrawal",
         headers=world.auth(organiser["token"]),
     )
-    assert ended.status_code == 200, ended.text
-    assert ended.json()["standing"] == "WITHDRAWN"
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "somebody_has_joined", (
+        "a court somebody has joined is nobody's to end for the others"
+    )
+    organiser_out = await client.post(
+        f"/api/v1/challenges/{challenge_id}/departure",
+        headers=world.auth(organiser["token"]),
+    )
+    assert organiser_out.status_code == 200, organiser_out.text
+    assert organiser_out.json()["standing"] == "LINE_UP_INCOMPLETE", (
+        "the organiser is a player in the ending rule: two are still on it"
+    )
+    await world.deliver_the_outbox(session_factory)
+    assert await _rooms(client, organiser["token"]) == []
+    (room,) = await _rooms(client, newcomer["token"])
+    assert room["conversation_id"] == conversation_id, "the same room, still standing"
+    ana_out = await client.post(
+        f"/api/v1/challenges/{challenge_id}/departure",
+        headers=world.auth(people["ana"]["token"]),
+    )
+    assert ana_out.status_code == 200, ana_out.text
+    assert ana_out.json()["standing"] == "DECLINED", (
+        "the newcomer is alone with nobody deciding, and a departure is a no"
+    )
 
     await world.deliver_the_outbox(session_factory)
     for one in (organiser, people["ana"], newcomer):
         assert await _rooms(client, one["token"]) == [], (
-            "a withdrawal destroys the room in the same act (`docs/adr/0153`)"
+            "a room without a game lives exactly as long as its challenge "
+            "(`docs/adr/0164` §6)"
         )
         gone = await client.get(
             f"/api/v1/conversations/{conversation_id}",
@@ -572,6 +599,6 @@ async def test_a_half_built_court_is_filled_a_room_grows_and_a_withdraw_ends_it(
         assert gone.status_code == 404, gone.text
         assert gone.json()["code"] == "conversation_not_found"
         still_there = await _challenge(client, one["token"], challenge_id)
-        assert still_there["standing"] == "WITHDRAWN", (
+        assert still_there["standing"] == "DECLINED", (
             "the challenge stays and explains where the room went"
         )

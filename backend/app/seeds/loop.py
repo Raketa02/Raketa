@@ -1490,7 +1490,7 @@ def costs(seeded: SeededLoop) -> tuple[str, ...]:
         f"but this one's, where in the nearest ring they would be rows the "
         f"protagonist's own screens are read from.",
         "`THE_COURT_SOMEBODY_LEFT` **never ends**, which is the point of it — a "
-        "half-built line-up is where ⚡ *Fill the seats* and the withdraw are "
+        "half-built line-up is where ⚡ *Fill the seats* and *Leave the game* are "
         "drawn — so the pairs it holds are held for the life of the database. Its "
         "four members are in the furthest ring for that reason.",
         "the fill invites one member and they say **no**, which leaves that pair "

@@ -11,10 +11,9 @@ an open seat from one that is asked — hands the call-off over right after the
 seat.
 
 **Whose act it is was decided one context over.** The challenge admitted the
-withdraw — the organiser's, or any remaining player's once the organiser has
-left — or recorded the departure, and what the aggregate refuses on its own is
-its own invariant: a game awaiting its entry with a seat open, and somebody who
-was on the court.
+withdraw — any player's on the court (``docs/adr/0165`` §5) — or recorded the
+departure, and what the aggregate refuses on its own is its own invariant: a
+game awaiting its entry with a seat open, and somebody who was on the court.
 
 **A ghost is stepped over, and so is a game already called off — and those are
 the two leniencies here** (``docs/adr/0163`` §6, ``docs/adr/0165`` §3). A

@@ -62,11 +62,14 @@ class Standing(str, Enum):
     DECLINED = "DECLINED"
     #: Over, and nobody said anything.
     LAPSED = "LAPSED"
-    #: Over, and the organiser ended it. **The one value here that no
-    #: arrangement of the seats reaches**: nobody said no and nobody was silent,
-    #: so it can reuse neither ending, and a court that was withdrawn still
-    #: holds the acceptance that put it in ``LINE_UP_INCOMPLETE``. It arrives on
-    #: the fold from ``ChallengeWithdrawn`` and from nowhere else.
+    #: Over, and somebody ended it — the organiser removing a challenge nobody
+    #: else had joined, or a player calling off the game a reopened court became
+    #: (``docs/adr/0165`` §4–§5). **The one value here that no arrangement of
+    #: the seats reaches**: nobody said no and nobody was silent, so it can
+    #: reuse neither ending, and a removed challenge may still hold seats whose
+    #: day is running while a called-off court still holds the acceptances that
+    #: made it a game. It arrives on the fold from ``ChallengeWithdrawn`` and
+    #: from nowhere else.
     #:
     #: **Not ``STOOD_DOWN``.** The root ``CONTEXT.md`` owns *stands down*
     #: platform-wide for a term that cannot be evaluated, and one word means one
@@ -83,16 +86,17 @@ class Standing(str, Enum):
 #:
 #: **``WITHDRAWN`` is the third, and it is a third *kind* of ending** rather than
 #: a spelling of either of the other two (``docs/adr/0142`` §4). A decline is
-#: somebody's judgement and a lapse is somebody's silence; a withdrawal is the
-#: organiser ending an arrangement nobody was going to complete. Filing it as
-#: either would restate a decision as one of the two facts *answers challenges*
-#: exists to keep apart.
+#: somebody's judgement and a lapse is somebody's silence; a withdrawal is a
+#: person ending an arrangement — the organiser removing a send nobody joined,
+#: or a player calling off a game with a seat open. Filing it as either would
+#: restate a decision as one of the two facts *answers challenges* exists to
+#: keep apart.
 #:
 #: **The mutual mint used to read it and no longer does** (``docs/adr/0152``).
 #: It asked *does a challenge already stand between these two*, which for a
 #: mutual-born challenge answers *yes* for the life of the database: every seat
-#: is accepted at birth, so it can never lapse, never decline, and 0142 §2
-#: denies ``ON`` the withdraw exit. A guard about whether an act was already
+#: is accepted at birth, so it can never lapse, never decline, and a whole
+#: court has no withdraw exit. A guard about whether an act was already
 #: performed had inherited a *state*'s eternity. What the mint asks now is
 #: :data:`ARRANGING` — the same question the send asks — plus one of its own
 #: about the game the last mutual minted.
@@ -144,12 +148,13 @@ def standing_of(
     The order of the questions is the design, and each rung is a decision:
 
     **Was it withdrawn?** The one question here that is not about the seats, and
-    it is asked first because every other answer is still *yes*: the acceptance
-    that put this court in ``LINE_UP_INCOMPLETE`` is still on it, so a fold that
-    read the seats first would answer with the standing the organiser has just
-    ended. ``withdrawn`` is **stated by every caller and never defaulted**, so a
-    second reader of this function has to say which challenge it is asking about
-    rather than inheriting an answer.
+    it is asked first because every other answer is still *yes*: a removed send
+    still holds seats whose day is running, and a called-off court still holds
+    the acceptances that made it a game, so a fold that read the seats first
+    would answer with the standing somebody has just ended. ``withdrawn`` is
+    **stated by every caller and never defaulted**, so a second reader of this
+    function has to say which challenge it is asking about rather than
+    inheriting an answer.
 
     **Is the court deserted?** *At most one player on it, and nobody still
     deciding* (``docs/adr/0165`` §3, :func:`deserted`). A court with two or more

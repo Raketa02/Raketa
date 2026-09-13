@@ -509,9 +509,10 @@ Rules to preserve:
   screen a player reaches after choosing somebody. And **`POST /challenges/{id}/seats`** is
   the send's shape minus the mint: it re-verifies the send's five facts with the pair rule
   excepting this one court by id, resolves origins for the **newly seated only**, and calls
-  `Challenge.invite`. **Any live member may fill; only the organiser may withdraw** — the
-  case that decides it is the mutual-born doubles challenge, `LINE_UP_INCOMPLETE` from birth
-  with an "organiser" who is only whoever's yes arrived second. The mode is **inherited, or
+  `Challenge.invite`. **Any live member may fill; a court that was never a game is nobody's to
+  withdraw once somebody else has joined it** (ADR-0165 §4, below) — the case that decides the fill is the mutual-born doubles
+  challenge, `LINE_UP_INCOMPLETE` from birth with an "organiser" who is only whoever's yes
+  arrived second. The mode is **inherited, or
   resolved from the filler's declared Play intent** on the deck's own rule, and the **window
   is never re-stamped**, so a mutual-born challenge stays window-less for life. The cost is
   recorded rather than softened, on the port and on the two routes that meet it: **a lapsed
@@ -585,16 +586,32 @@ Rules to preserve:
   stops existing). The game admits that caller because it folds `departed` off
   `SeatVacated` — *the people who may act are the people who were on the court*. A decline
   or a lapse that leaves one player on a game does **not** call it off — only the departure
-  asks the rule — and that court is filled or withdrawn as before. **And withdraw reaches
-  such a court and calls the game off**
+  asks the rule — and that court is filled or called off as before. **The withdraw is two
+  acts on one route, told apart by whether the court has been a game** (ADR-0165 §4–§5,
+  #426). On a court that was never a game it is ***Remove the challenge***: the organiser's,
+  admitted **exactly while nobody besides the organiser holds an accepted seat** — before
+  anybody has answered, and again once everybody who joined has left, whatever seats are
+  still deciding — and refused with `somebody_has_joined` the moment one person is in, since
+  a court somebody has joined is nobody's to end for the others; from there the organiser
+  leaves like anybody else. ADR-0142 §2's pre-answer refusal is reversed, and the
+  withdraw-and-resend it guarded against is an accepted risk with its falsifier named. Two
+  things follow from a removed challenge holding seats whose day is still running, and both
+  are asserted: an answer on one meets `challenge_is_over` (the seat's own refusals first,
+  then the challenge's), and neither `seats_awaiting_answers` nor the lapse loop counts
+  it — the read asks the fold, and `Challenge.lapse` records no day the removal cut short,
+  which is ADR-0142 §5 on the write side. **On a court that has been a game it is *Call it
+  off*, and it reaches the game**
   ([ADR-0163](../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)): the withdraw
   hands `call_off` over on the same port in the same transaction, `GameCalledOff` is the
   fourth end — read first by `standing_of`, in `SETTLED`, out of `PLAYED`, and **in no
-  tally**, because a ghost is silence and this was an act — and the act is the organiser's
-  or, once the organiser's own seat is open, any remaining player's (ADR-0165 §4–§5 move
-  this, and #426 builds it). A court whose window already closed is withdrawn without the
-  game being told; the ghost stands, and so does a game a departure already called off —
-  `CallOffGame` steps over both ends rather than re-ending either. **Three ends
+  tally**, because a ghost is silence and this was an act — and the act is **any player's on
+  the court**, an accepted seat, with no organiser-first rule and no fallback; only in
+  `LINE_UP_INCOMPLETE` (`not_a_half_built_line_up` on a whole court or with a fill still
+  pending). `withdraw_is_the_organisers` keeps its code for both acts — *the act is not
+  yours* — and an ended challenge is `challenge_is_over` on both, as everywhere else. A
+  court whose window already closed is withdrawn without the game being told; the ghost
+  stands, and so does a game a departure already called off — `CallOffGame` steps over
+  both ends rather than re-ending either. **Three ends
   are folded from the record and the clock and the fourth is announced, and all four are
   never stored** — there is no `ResultConfirmed`, no sweep and no job, because a derived
   standing has exactly one place to be true, and `GameCalledOff` may announce its end

@@ -310,11 +310,14 @@ async def test_nobody_who_answered_this_challenge_is_a_candidate_for_its_own_fil
 # ---------------------------------------------------------------------------
 
 
-async def test_any_live_member_may_fill_and_only_the_organiser_may_withdraw(
+async def test_any_live_member_may_fill_and_a_member_may_not_withdraw(
     client, session_factory, candidate_source, searcher
 ):
     """Growing a court and ending one are different acts with different
-    permissions (``docs/adr/0150`` §1)."""
+    permissions (``docs/adr/0150`` §1): the fill is every live member's, and
+    removing a court that was never a game is the organiser's alone — and
+    nobody's once somebody has joined (``docs/adr/0165`` §4), so the member
+    who filled it is told the act is not theirs."""
 
     # **A full searcher rather than a folded-in candidate**, because this is the
     # one test where somebody who is not the organiser runs a search of their
@@ -389,10 +392,14 @@ async def test_a_challenge_that_is_not_yours_to_fill_is_one_code_for_three_cases
     a_strangers = await world.lineup(
         client, people["dee"]["token"], completing_challenge_id=challenge_id
     )
-    await client.post(
-        f"/api/v1/challenges/{challenge_id}/withdrawal",
-        headers=world.auth(searcher["token"]),
+    # The one who joined leaves: the organiser is alone with nobody deciding,
+    # and the court is over by itself (``docs/adr/0165`` §3).
+    left = await client.post(
+        f"/api/v1/challenges/{challenge_id}/departure",
+        headers=world.auth(people["ana"]["token"]),
     )
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "DECLINED"
     ended = await world.lineup(
         client, searcher["token"], completing_challenge_id=challenge_id
     )

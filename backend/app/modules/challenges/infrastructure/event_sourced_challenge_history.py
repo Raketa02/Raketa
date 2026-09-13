@@ -66,6 +66,7 @@ from app.modules.challenges.domain.ports import (
     SharedChallenge,
 )
 from app.modules.challenges.domain.seats import Seat, SeatAnswer
+from app.modules.challenges.domain.standing import ENDED
 from app.modules.challenges.infrastructure.challenge_streams import (
     stream_of,
     streams_seating,
@@ -191,10 +192,16 @@ class EventSourcedChallengeHistory:
         **Keyed on exactly the set it was asked about**, and a zero is measured:
         the seats were counted and none of them was theirs to answer.
 
-        No standing is consulted, and none is needed. A seat that is awaiting at
-        ``now`` is one whose holder is still wanted, and a challenge holding one
-        has not ended by construction — so asking the standing as well would be
-        a second reading of the same seats.
+        **The standing is consulted, for one ending.** A seat that is awaiting
+        at ``now`` is one whose holder is still wanted — unless its organiser
+        removed the challenge while the seat's day was still running
+        (``docs/adr/0165`` §4), which is the one ending the seats cannot show:
+        a decline and a lapse leave nothing awaiting, and a withdrawal leaves
+        the seats exactly as they were. This read used to say *a challenge
+        holding an awaiting seat has not ended by construction*, and the
+        pre-answer removal broke the construction — so it asks the fold rather
+        than inheriting the answer, at the cost of one fold per stream it was
+        already replaying.
         """
 
         wanted = set(player_ids)
@@ -205,6 +212,8 @@ class EventSourcedChallengeHistory:
         streams = await streams_seating(self._session, self._codec, wanted)
         for events in streams.values():
             challenge = Challenge.from_history(events)
+            if challenge.standing_at(now) in ENDED:
+                continue
             for seat in challenge.seats:
                 if seat.player_id in wanted and seat.is_awaiting_at(now):
                     counts[seat.player_id] += 1
@@ -353,15 +362,20 @@ def _invitations_in(
     absence from this mapping means, and it is what the organiser's own seat
     already is.
 
-    **Nothing in the aggregate can reach that state today, and the rule is here
-    anyway.** A withdraw is legal only in ``LINE_UP_INCOMPLETE``
-    (``challenge.py``), and that standing is reached only when no seat is
-    awaiting — so at the instant of a legal withdrawal every unanswered
-    invitation is already past its deadline. This read is ``player_score``'s and
-    is a **walk over history**, not a fold of the aggregate: it must be right
-    about a stream, and a denominator that was right only because a rule in
-    another module happened to order two rungs a particular way is a denominator
-    that goes wrong silently the day that order is revisited.
+    **The rule was here before the aggregate could reach the state, and now it
+    can.** A withdraw used to be legal only in ``LINE_UP_INCOMPLETE``, which is
+    reached only when no seat is awaiting — so at the instant of a legal
+    withdrawal every unanswered invitation was already past its deadline, and
+    this rule was written for a stream nothing could write. ``docs/adr/0165``
+    §4 admits the withdraw before anybody has answered, so a removed challenge
+    now holds invitations whose day was still running, and this is the walk
+    that keeps them out of the denominator; the aggregate's own ``lapse`` draws
+    the same line on the write side and records none of them. This read is
+    ``player_score``'s and is a **walk over history**, not a fold of the
+    aggregate: it must be right about a stream, and a denominator that was
+    right only because a rule in another module happened to order two rungs a
+    particular way is a denominator that goes wrong silently the day that order
+    is revisited — which is the day that arrived.
     """
 
     invitations: dict[tuple[UUID, Instant], Instant | None] = {}

@@ -582,8 +582,29 @@ def _break_the_block_read(client) -> None:
 
 
 # ---------------------------------------------------------------------------
-# The withdraw — the one conclusion the seats cannot reach
+# The withdraw — *Remove the challenge*, while nobody has joined (ADR-0165 §4)
 # ---------------------------------------------------------------------------
+
+
+async def _withdraw(client, token: str, challenge_id: str):
+    return await client.post(
+        f"/api/v1/challenges/{challenge_id}/withdrawal", headers=world.auth(token)
+    )
+
+
+async def _a_court_nobody_has_answered(
+    client, session_factory, candidate_source, searcher
+) -> tuple[str, dict]:
+    """A padel four just sent: three people deciding, nobody in but the
+    organiser. `AWAITING_ANSWERS`, and the state ``docs/adr/0142`` §2 refused
+    the withdraw in — reversed by ``docs/adr/0165`` §4."""
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    search_id, court = await _a_court(client, searcher)
+    challenge_id = (
+        await _send(client, searcher["token"], search_id, court)
+    ).json()["challenge_id"]
+    return challenge_id, people
 
 
 async def _a_court_nobody_will_finish(
@@ -593,9 +614,8 @@ async def _a_court_nobody_will_finish(
 
     One yes and two noes leaves the organiser and the acceptor in, two seats
     open and nothing awaiting — `LINE_UP_INCOMPLETE`, reached through the routes
-    alone, with no clock moved and nothing swept. It is the state that never
-    ends: the acceptor's seat is answered so they cannot leave it, and until now
-    the organiser had no act at all.
+    alone. It is the state the withdraw was written for, and the state it is
+    now refused in: somebody has joined, and the court is as much theirs.
     """
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
@@ -613,42 +633,112 @@ async def _a_court_nobody_will_finish(
     return challenge_id, people
 
 
-async def test_the_organiser_withdraws_and_the_reply_is_the_redraw(
+async def test_the_organiser_removes_a_challenge_nobody_has_answered(
     client, session_factory, candidate_source, searcher
 ):
-    """The route answers with the challenge as it now stands, at `WITHDRAWN` —
-    and the seats it draws are the seats it had, because a withdraw ends the
-    arrangement and never takes one person out of it."""
+    """**The Phase 1 withdraw, admitted.** The reply is the redraw, at
+    `WITHDRAWN`, with every seat exactly as it was — three questions still on
+    the court with their deadlines — and the invitees are told the same: the
+    row reads `WITHDRAWN`, the detail draws no card, and a yes or a no meets
+    `challenge_is_over` rather than opening a room for a court that is over."""
 
-    challenge_id, people = await _a_court_nobody_will_finish(
+    challenge_id, people = await _a_court_nobody_has_answered(
         client, session_factory, candidate_source, searcher
     )
+    not_theirs = await _withdraw(client, people["cy"]["token"], challenge_id)
+    assert not_theirs.status_code == 403, not_theirs.text
+    assert not_theirs.json()["code"] == "withdraw_is_the_organisers"
 
-    withdrawn = await client.post(
-        f"/api/v1/challenges/{challenge_id}/withdrawal",
-        headers=world.auth(searcher["token"]),
-    )
+    withdrawn = await _withdraw(client, searcher["token"], challenge_id)
 
     assert withdrawn.status_code == 200, withdrawn.text
     body = withdrawn.json()
     assert body["standing"] == "WITHDRAWN"
-    seats = {seat["player_id"]: seat for seat in body["seats"]}
-    assert seats[str(people["ana"]["id"])]["answer"] == "ACCEPTED"
+    assert body["ended_at"] is not None
+    invited = [
+        seat for seat in body["seats"] if seat["player_id"] != str(searcher["id"])
+    ]
+    assert [seat["answer"] for seat in invited] == [None, None, None]
+    assert all(seat["answer_by"] is not None for seat in invited)
+
+    for name, act in (("ana", "accept"), ("bo", "decline")):
+        (row,) = await _challenges(client, people[name]["token"])
+        assert row["standing"] == "WITHDRAWN"
+        detail = await client.get(
+            f"/api/v1/challenges/{challenge_id}",
+            headers=world.auth(people[name]["token"]),
+        )
+        assert detail.status_code == 200, detail.text
+        assert detail.json()["standing"] == "WITHDRAWN"
+        assert all("card" not in seat for seat in detail.json()["seats"])
+        assert "pairing_absence" not in detail.json()
+        refused = await client.post(
+            f"/api/v1/challenges/{challenge_id}/{act}",
+            headers=world.auth(people[name]["token"]),
+        )
+        assert refused.status_code == 409, refused.text
+        assert refused.json()["code"] == "challenge_is_over"
+
+
+async def test_a_court_somebody_has_joined_is_nobodys_to_remove_for_the_others(
+    client, session_factory, candidate_source, searcher
+):
+    """``docs/adr/0165`` §4 — B accepts and the organiser's removal is refused
+    with a named code; B leaves while C and D are still deciding and the
+    organiser is alone again, so it is admitted again. The room B's yes opened
+    is destroyed in the act, though B had already left it."""
+
+    challenge_id, people = await _a_court_nobody_has_answered(
+        client, session_factory, candidate_source, searcher
+    )
+    accepted = await client.post(
+        f"/api/v1/challenges/{challenge_id}/accept",
+        headers=world.auth(people["ana"]["token"]),
+    )
+    assert accepted.status_code == 200, accepted.text
+    assert accepted.json()["standing"] == "AWAITING_ANSWERS"
+    await world.deliver_the_outbox(session_factory)
+    rooms = await client.get(
+        "/api/v1/conversations", headers=world.auth(searcher["token"])
+    )
+    assert len(rooms.json()["conversations"]) == 1, rooms.text
+
+    refused = await _withdraw(client, searcher["token"], challenge_id)
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "somebody_has_joined"
+    assert str(people["ana"]["id"]) not in refused.text, "the refusal names nobody"
+
+    left = await client.post(
+        f"/api/v1/challenges/{challenge_id}/departure",
+        headers=world.auth(people["ana"]["token"]),
+    )
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "AWAITING_ANSWERS", "C and D are still deciding"
+
+    withdrawn = await _withdraw(client, searcher["token"], challenge_id)
+
+    assert withdrawn.status_code == 200, withdrawn.text
+    assert withdrawn.json()["standing"] == "WITHDRAWN"
+    seats = {seat["player_id"]: seat for seat in withdrawn.json()["seats"]}
+    assert seats[str(people["ana"]["id"])]["answer"] == "LEFT"
+    assert seats[str(people["bo"]["id"])]["answer"] is None
+    await world.deliver_the_outbox(session_factory)
+    rooms = await client.get(
+        "/api/v1/conversations", headers=world.auth(searcher["token"])
+    )
+    assert rooms.json()["conversations"] == []
 
 
 async def test_a_withdrawn_challenge_keeps_its_row_and_says_what_it_is(
     client, session_factory, candidate_source, searcher
 ):
     """A list that quietly dropped this morning's is a list that lies — and the
-    person who accepted has to be able to find out the court is closed."""
+    person who was asked has to be able to find out the court is closed."""
 
-    challenge_id, people = await _a_court_nobody_will_finish(
+    challenge_id, people = await _a_court_nobody_has_answered(
         client, session_factory, candidate_source, searcher
     )
-    await client.post(
-        f"/api/v1/challenges/{challenge_id}/withdrawal",
-        headers=world.auth(searcher["token"]),
-    )
+    await _withdraw(client, searcher["token"], challenge_id)
 
     hers = await _challenges(client, people["ana"]["token"])
 
@@ -659,63 +749,61 @@ async def test_an_invitee_is_told_the_withdraw_is_the_organisers(
     client, session_factory, candidate_source, searcher
 ):
     """**403 and not 404**: they hold a seat on this court and can already see
-    it, so pretending it is not there would be the wrong refusal."""
+    it, so pretending it is not there would be the wrong refusal. Somebody who
+    joined and somebody who said no are told the same — and told it before
+    anything about the court is read, so the one who joined never hears
+    `somebody_has_joined`. Somebody still deciding is told it in the removal
+    test above."""
 
     challenge_id, people = await _a_court_nobody_will_finish(
         client, session_factory, candidate_source, searcher
     )
 
-    refused = await client.post(
-        f"/api/v1/challenges/{challenge_id}/withdrawal",
-        headers=world.auth(people["ana"]["token"]),
-    )
-
-    assert refused.status_code == 403
-    assert refused.json()["code"] == "withdraw_is_the_organisers"
+    for name in ("ana", "bo"):
+        refused = await _withdraw(client, people[name]["token"], challenge_id)
+        assert refused.status_code == 403, refused.text
+        assert refused.json()["code"] == "withdraw_is_the_organisers"
 
 
-async def test_a_challenge_still_being_answered_has_no_withdraw(
+async def test_a_court_that_ended_by_itself_has_no_withdraw(
     client, session_factory, candidate_source, searcher
 ):
-    """The seats lapse on their own inside the window, so the only thing a
-    withdraw would add here is a resend on a fresh clock — which
-    `nobody_is_asked_twice` is scoped to one aggregate and cannot see."""
+    """One yes, two noes, and the yes taken back: the organiser is alone with
+    nobody deciding, and the court is over as `DECLINED` — by itself, a
+    departure being a no. The withdraw meets the word every act uses for an
+    ended challenge, and never a word about who has joined."""
 
-    await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    search_id, court = await _a_court(client, searcher)
-    challenge_id = (
-        await _send(client, searcher["token"], search_id, court)
-    ).json()["challenge_id"]
-
-    refused = await client.post(
-        f"/api/v1/challenges/{challenge_id}/withdrawal",
-        headers=world.auth(searcher["token"]),
+    challenge_id, people = await _a_court_nobody_will_finish(
+        client, session_factory, candidate_source, searcher
     )
+    left = await client.post(
+        f"/api/v1/challenges/{challenge_id}/departure",
+        headers=world.auth(people["ana"]["token"]),
+    )
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "DECLINED"
 
-    assert refused.status_code == 409
-    assert refused.json()["code"] == "not_a_half_built_line_up"
+    refused = await _withdraw(client, searcher["token"], challenge_id)
+
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "challenge_is_over"
 
 
 async def test_a_withdrawal_does_not_come_back(
     client, session_factory, candidate_source, searcher
 ):
-    """Irreversible: re-asking the same people is a **new** challenge."""
+    """Irreversible: re-asking the same people is a **new** challenge, and a
+    second press is refused as an ended challenge refuses everything."""
 
-    challenge_id, _ = await _a_court_nobody_will_finish(
+    challenge_id, _ = await _a_court_nobody_has_answered(
         client, session_factory, candidate_source, searcher
     )
-    await client.post(
-        f"/api/v1/challenges/{challenge_id}/withdrawal",
-        headers=world.auth(searcher["token"]),
-    )
+    assert (await _withdraw(client, searcher["token"], challenge_id)).status_code == 200
 
-    again = await client.post(
-        f"/api/v1/challenges/{challenge_id}/withdrawal",
-        headers=world.auth(searcher["token"]),
-    )
+    again = await _withdraw(client, searcher["token"], challenge_id)
 
     assert again.status_code == 409
-    assert again.json()["code"] == "not_a_half_built_line_up"
+    assert again.json()["code"] == "challenge_is_over"
 
 
 async def test_a_stranger_cannot_withdraw_and_is_told_nothing_exists(
@@ -724,15 +812,12 @@ async def test_a_stranger_cannot_withdraw_and_is_told_nothing_exists(
     """One code for two cases, exactly as the answers refuse: separating them
     would answer *is this id real* about a stranger's evening."""
 
-    challenge_id, _ = await _a_court_nobody_will_finish(
+    challenge_id, _ = await _a_court_nobody_has_answered(
         client, session_factory, candidate_source, searcher
     )
     _, outsider = await world.register(client, "zed")
 
-    refused = await client.post(
-        f"/api/v1/challenges/{challenge_id}/withdrawal",
-        headers=world.auth(outsider),
-    )
+    refused = await _withdraw(client, outsider, challenge_id)
 
     assert refused.status_code == 404
     assert refused.json()["code"] == "challenge_not_found"
@@ -779,13 +864,10 @@ async def test_an_ended_row_carries_the_instant_its_shelf_life_is_measured_from(
     them.
     """
 
-    challenge_id, people = await _a_court_nobody_will_finish(
+    challenge_id, people = await _a_court_nobody_has_answered(
         client, session_factory, candidate_source, searcher
     )
-    await client.post(
-        f"/api/v1/challenges/{challenge_id}/withdrawal",
-        headers=world.auth(searcher["token"]),
-    )
+    assert (await _withdraw(client, searcher["token"], challenge_id)).status_code == 200
 
     response = await client.get(
         "/api/v1/challenges", headers=world.auth(people["ana"]["token"])

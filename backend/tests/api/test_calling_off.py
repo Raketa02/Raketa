@@ -1,17 +1,19 @@
 """Calling a game off — the withdraw grown to a reopened court, and *Called off*
-the fourth end (``docs/adr/0163``).
+the fourth end (``docs/adr/0163``), for **any player on the court**
+(``docs/adr/0165`` §5).
 
 **The first test is the whole of #411's fourth rule.** The organiser withdraws a
 four somebody left: the challenge reads ``WITHDRAWN``, the game the others read
 is ``CALLED_OFF`` with the instant on it and its window gone, the room is
 destroyed, the plan and the pairing are history, and a score is refused.
 
-Everything after it is what the record decided: whose act it is once the
-organiser has left; that a full court has no such exit; that a court that never
-became a game withdraws exactly as before, with no game to tell; that the pair is
-released; that in singles the departure itself calls the game off and the
-withdraw that follows steps over that end (``docs/adr/0165`` §3); and that a
-court whose window has already closed is withdrawn with the ghost left standing.
+Everything after it is what the record decided: that any player on the court
+holds the act and somebody off it does not; that a full court has no such exit;
+that a court that never became a game is *removed* by its organiser and never
+called off, and not once somebody has joined; that the pair is released; that in
+singles the departure itself calls the game off and the withdraw that follows
+steps over that end (``docs/adr/0165`` §3); and that a court whose window has
+already closed is withdrawn with the ghost left standing.
 """
 
 from __future__ import annotations
@@ -32,9 +34,11 @@ from tests.api.test_departure import (
     _a_singles_game,
     _accepted,
     _advance,
+    _fill_from_the_builder,
     _game_stream,
     _games,
     _leave,
+    _newly_invited,
     _plans,
     _refusal,
     _rooms,
@@ -182,7 +186,7 @@ async def test_the_organiser_calls_off_a_reopened_four_and_that_is_the_games_end
     )
     again = await _withdraw(client, searcher["token"], challenge_id)
     assert again.status_code == 409, again.text
-    assert again.json()["code"] == "not_a_half_built_line_up"
+    assert again.json()["code"] == "challenge_is_over"
 
 
 # ---------------------------------------------------------------------------
@@ -190,48 +194,94 @@ async def test_the_organiser_calls_off_a_reopened_four_and_that_is_the_games_end
 # ---------------------------------------------------------------------------
 
 
-async def test_once_the_organiser_has_left_any_remaining_player_may_call_it_off(
+async def test_any_player_on_the_court_may_call_it_off_and_somebody_off_it_may_not(
     client, session_factory, candidate_source, searcher, clock
 ):
-    """``docs/adr/0163`` §1 — the organiser's fallback, and the refusal that
-    stands where the organiser is still in: asked first, one code."""
+    """``docs/adr/0165`` §5 — the organiser's seat buys nothing, and there is no
+    fallback to wait for. On a game with a seat open a non-organiser's
+    withdrawal calls the game off; somebody who left the court, the organiser
+    who left it, and a newcomer still deciding on the open seat are each told
+    the act is not theirs — one code, asked before anything about the court."""
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
 
-    # The organiser is still in: a member is told the act is not theirs.
+    # The organiser is still in, and a member calls it off.
     organiser_in = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
+    await world.deliver_the_outbox(session_factory)
+    before = await _the_game(client, searcher["token"], organiser_in)
+    (room,) = await _rooms(client, people["ana"]["token"])
     assert (
         await _leave(client, people["cy"]["token"], organiser_in)
     ).status_code == 200
-    refused = await _withdraw(client, people["ana"]["token"], organiser_in)
-    assert refused.status_code == 403, refused.text
-    assert refused.json()["code"] == "withdraw_is_the_organisers"
-    assert (await _the_game(client, people["ana"]["token"], organiser_in))[
-        "standing"
-    ] == "AWAITING_ENTRY"
-    # Called off by the organiser, so the pair is released for the next court —
-    # a reopened court holds it, and a fresh search would leave ana and bo out.
-    assert (await _withdraw(client, searcher["token"], organiser_in)).status_code == 200
-
-    # The organiser has left: a remaining player holds the exit — and the one
-    # who left does not.
-    organiser_out = await _a_completed_four(
-        client, searcher, people, "ana", "bo", "dee"
-    )
-    assert (await _leave(client, searcher["token"], organiser_out)).status_code == 200
-    not_remaining = await _withdraw(client, searcher["token"], organiser_out)
-    assert not_remaining.status_code == 403, not_remaining.text
-    assert not_remaining.json()["code"] == "withdraw_is_the_organisers"
-    called_off = await _withdraw(client, people["bo"]["token"], organiser_out)
+    off_the_court = await _withdraw(client, people["cy"]["token"], organiser_in)
+    assert off_the_court.status_code == 403, off_the_court.text
+    assert off_the_court.json()["code"] == "withdraw_is_the_organisers"
+    called_off = await _withdraw(client, people["ana"]["token"], organiser_in)
     assert called_off.status_code == 200, called_off.text
     assert called_off.json()["standing"] == "WITHDRAWN"
     assert called_off.json()["organiser_id"] == str(searcher["id"]), (
         "the organiser is a fact about who sent it, and it does not move"
     )
+    for who in (searcher, people["ana"], people["bo"]):
+        game = await _the_game(client, who["token"], organiser_in)
+        assert game["game_id"] == before["game_id"]
+        assert game["standing"] == "CALLED_OFF"
+    await world.deliver_the_outbox(session_factory)
+    for who in (searcher, people["ana"], people["bo"]):
+        assert await _rooms(client, who["token"]) == []
+    gone = await client.get(
+        f"/api/v1/conversations/{room['conversation_id']}",
+        headers=world.auth(searcher["token"]),
+    )
+    assert gone.status_code == 404, gone.text
+
+    # The organiser has left: they no longer hold it, and a player still on
+    # the court does.
+    organiser_out = await _a_completed_four(
+        client, searcher, people, "ana", "bo", "dee"
+    )
+    assert (await _leave(client, searcher["token"], organiser_out)).status_code == 200
+    not_on_it = await _withdraw(client, searcher["token"], organiser_out)
+    assert not_on_it.status_code == 403, not_on_it.text
+    assert not_on_it.json()["code"] == "withdraw_is_the_organisers"
+    called_off = await _withdraw(client, people["bo"]["token"], organiser_out)
+    assert called_off.status_code == 200, called_off.text
     for who in (people["ana"], people["bo"], people["dee"]):
         assert (await _the_game(client, who["token"], organiser_out))["standing"] == (
             "CALLED_OFF"
         )
+
+
+async def test_a_newcomer_still_deciding_on_the_open_seat_may_not_call_it_off(
+    client, session_factory, candidate_source, searcher, clock
+):
+    """*On the court* is an accepted seat. A fill puts a question to somebody;
+    until they say yes they have not joined, so the act is not theirs — and
+    while their answer is owed the court is not half built either, so a player
+    on it is refused with the standing's own code."""
+
+    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    challenge_id = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
+    assert (
+        await _leave(client, people["cy"]["token"], challenge_id)
+    ).status_code == 200
+    # The organiser runs the fill: a folded-in candidate carries no declaration
+    # for a search to be scored against, and any live member may fill.
+    filled = await _fill_from_the_builder(client, searcher["token"], challenge_id)
+    assert filled["standing"] == "AWAITING_ANSWERS"
+    (newcomer_id,) = _newly_invited(filled)
+    newcomer = next(one for one in people.values() if str(one["id"]) == newcomer_id)
+
+    not_theirs = await _withdraw(client, newcomer["token"], challenge_id)
+    assert not_theirs.status_code == 403, not_theirs.text
+    assert not_theirs.json()["code"] == "withdraw_is_the_organisers"
+
+    not_yet = await _withdraw(client, people["bo"]["token"], challenge_id)
+    assert not_yet.status_code == 409, not_yet.text
+    assert not_yet.json()["code"] == "not_a_half_built_line_up"
+    assert (await _the_game(client, people["bo"]["token"], challenge_id))[
+        "standing"
+    ] == "AWAITING_ENTRY"
 
 
 async def test_a_full_court_has_no_such_exit(
@@ -252,10 +302,14 @@ async def test_a_full_court_has_no_such_exit(
     )
 
 
-async def test_a_court_that_never_became_a_game_withdraws_exactly_as_before(
+async def test_a_court_that_never_became_a_game_is_removed_and_never_called_off(
     client, session_factory, candidate_source, searcher, clock
 ):
-    """The regression: no game, no hand-over, the organiser's alone."""
+    """The other act on this route, and the game-side rule does not leak into
+    it: with two people in, the organiser is refused because somebody has
+    joined — not because the court is whole — and a member is refused the act
+    outright rather than admitted as *any player*. Removing a challenge nobody
+    has answered is ``test_challenges.py``'s."""
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     court = [
@@ -274,11 +328,15 @@ async def test_a_court_that_never_became_a_game_withdraws_exactly_as_before(
     assert not_theirs.status_code == 403, not_theirs.text
     assert not_theirs.json()["code"] == "withdraw_is_the_organisers"
 
-    withdrawn = await _withdraw(client, searcher["token"], challenge_id)
-    assert withdrawn.status_code == 200, withdrawn.text
-    assert withdrawn.json()["standing"] == "WITHDRAWN"
+    joined = await _withdraw(client, searcher["token"], challenge_id)
+    assert joined.status_code == 409, joined.text
+    assert joined.json()["code"] == "somebody_has_joined"
     for who in (searcher, people["ana"], people["bo"]):
         assert await _games(client, who["token"]) == [], "there never was a game"
+        detail = await client.get(
+            f"/api/v1/challenges/{challenge_id}", headers=world.auth(who["token"])
+        )
+        assert detail.json()["standing"] == "LINE_UP_INCOMPLETE"
 
 
 # ---------------------------------------------------------------------------
@@ -370,9 +428,9 @@ async def test_in_singles_the_opponent_may_withdraw_once_the_organiser_left(
     client, session_factory, candidate_source, clock
 ):
     """Organiser-blind on a game: the organiser's departure leaves the opponent
-    alone and calls the game off. The opponent holds the exit by the fallback
-    (``docs/adr/0163`` §1) and the withdraw ends the challenge, the game
-    keeping its end."""
+    alone and calls the game off. The opponent is on the court and so holds
+    the exit (``docs/adr/0165`` §5), and the withdraw ends the challenge, the
+    game keeping its end."""
 
     sender = await _a_player(client, "juno")
     invitee = await _a_player(client, "milo")
@@ -477,8 +535,9 @@ async def test_the_refusals_name_nobody_and_carry_nothing(
         await _leave(client, people["cy"]["token"], challenge_id)
     ).status_code == 200
 
-    refused = await _withdraw(client, people["ana"]["token"], challenge_id)
+    refused = await _withdraw(client, people["cy"]["token"], challenge_id)
 
     assert refused.status_code == 403
     assert set(_refusal(refused)) == {"code", "message"}
     assert str(searcher["id"]) not in refused.text
+    assert str(people["ana"]["id"]) not in refused.text

@@ -201,38 +201,37 @@ class NobodyIsAskedTwice(ConflictError):
 
 
 class TheWithdrawIsTheOrganisers(ForbiddenError):
-    """Somebody on the court asked to end the whole challenge, and the act is
+    """Somebody holding a seat asked to end the whole challenge, and the act is
     not theirs.
 
     Forbidden rather than not-found, for ``NotYourSeat``'s reason: the challenge
     exists and the caller can see it, and what is being refused is an act on
     everybody else's arrangement.
 
-    **One code for three cases, and the code keeps its name** (``docs/adr/0163``
-    §1). On a court that was never a game the withdraw is the organiser's alone;
-    on a court that has been a game it falls back, once the organiser's own seat
-    is open, to any remaining player — so a non-organiser on a court whose
-    organiser is still in, somebody whose own seat is no longer live on a court
-    whose organiser has left, and the organiser who left it themselves, are all
-    told the same thing: *the act is not yours*. The sentence gained its second
-    clause; the code did not move, because a shipped client already switches on
-    it.
+    **One code for two acts, and the code keeps its name** (``docs/adr/0165``
+    §4–§5). On a court that was never a game the act is *Remove the challenge*
+    and it is the organiser's alone — an invitee, whether they joined or are
+    still deciding, is told so before anything about the court is read. On a
+    court that has been a game the act is *Call it off* and it is **any
+    player's on the court**: the organiser's seat buys nothing there, and
+    somebody who left, the organiser who left, and a newcomer still deciding on
+    a fill are all told the same thing — *the act is not yours*. The sentence
+    lost its fallback clause when ``0165`` §5 made the call-off everybody's;
+    the code did not move, because a shipped client already switches on it.
 
-    **The invitee is not offered a smaller version of it either.** Leaving a
-    seat you have already answered is refused by ``TheSeatIsAlreadyAnswered``
-    while the court is being arranged — once it has become a game, leaving is
-    its own act (``docs/adr/0162``) and still not a withdraw; a withdraw is
-    whole-challenge, and a per-seat one would be the organiser removing an
-    accepted player, which ``AnAcceptedPlayerMayNotBeRemoved`` exists to say no
-    to.
+    **The invitee is not offered a smaller version of it either.** Somebody who
+    joined leaves the court instead (``docs/adr/0165`` §1), and that is not a
+    withdraw: a withdraw is whole-challenge, and a per-seat one would be the
+    organiser removing an accepted player, which
+    ``AnAcceptedPlayerMayNotBeRemoved`` exists to say no to.
     """
 
     code = "withdraw_is_the_organisers"
 
     def __init__(self) -> None:
         super().__init__(
-            "Only the organiser may withdraw a challenge — or, once the organiser "
-            "has left the game it became, anybody still on its court."
+            "Only the organiser may remove a challenge, and only somebody on the "
+            "court may call off the game it became."
         )
 
 
@@ -241,8 +240,9 @@ class TheFillIsTheLiveMembers(ForbiddenError):
 
     **The mirror of the withdraw's refusal, one act over** (``docs/adr/0150``
     §1). Growing a court and ending one are different acts with different
-    permissions: the withdraw is the organiser's, and the fill is every **live**
-    member's — accepted, or still deciding.
+    permissions: the withdraw is the organiser's while nobody has joined and
+    nobody's once somebody has (``docs/adr/0165`` §4), and the fill is every
+    **live** member's — accepted, or still deciding.
 
     A declined or lapsed invitee still holds their seat and still sees the
     challenge on their own list, which is why this is a `403` and not a `404`:
@@ -259,31 +259,67 @@ class TheFillIsTheLiveMembers(ForbiddenError):
         )
 
 
+class SomebodyHasJoinedTheCourt(ConflictError):
+    """The organiser asked to remove a challenge somebody else has joined.
+
+    **A court somebody has joined is nobody's to end for the others**
+    (``docs/adr/0165`` §4). The withdraw is admitted exactly while nobody
+    besides the organiser holds an accepted seat — before anybody has answered,
+    and again once everybody who joined has left — and refused the moment one
+    person is in, whatever the other seats still owe. From here the organiser
+    leaves like anybody else (``docs/adr/0165`` §1), and the court is over by
+    itself when at most one player is on it and nobody is still deciding
+    (``docs/adr/0165`` §3).
+
+    **It reads the seats and never the standing.** ``AWAITING_ANSWERS`` with
+    one yes on it and ``LINE_UP_INCOMPLETE`` are refused alike, because what
+    matters is that a person agreed, not what the others owe — and a court that
+    was never a game cannot be half built without somebody having joined it, so
+    on such a court this is the whole of what the old *not a half-built
+    line-up* refusal has become.
+
+    **Not on a court that has been a game.** There the act is *Call it off*,
+    admitted for any player while a seat is open (``docs/adr/0165`` §5), and
+    the people on it are exactly who may end it.
+    """
+
+    code = "somebody_has_joined"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Somebody has joined this challenge, so it is no longer yours to "
+            "remove — leave it instead."
+        )
+
+
 class OnlyAHalfBuiltLineUpIsWithdrawn(ConflictError):
-    """A withdraw asked of a challenge that has some other end already.
+    """A call-off asked of a court that has been a game and is not half built.
 
-    **The exit exists exactly where nothing else ends it** (``docs/adr/0142``
-    §2). ``AWAITING_ANSWERS`` ends itself when the clocks run out; ``ON`` has
-    become a game, and ending the challenge would not touch it; the three endings
-    have ended. ``LINE_UP_INCOMPLETE`` is the one standing that never ends on its
-    own and where nobody else holds an exit, so it is the one that gets the act.
+    **The exit exists exactly where nothing else ends it**, and on a court that
+    has been a game that is ``LINE_UP_INCOMPLETE`` (``docs/adr/0163`` §2, kept by
+    ``docs/adr/0165`` §5): a seat is open and nobody is deciding on it. A whole
+    court — ``ON`` — has no seat to call the game off for, and a full court that
+    will not play lets its window lapse into *Never played* as it always has; a
+    court whose open seat a newcomer is still deciding on — ``AWAITING_ANSWERS``
+    after a fill — is not half built yet, and becomes so again the moment they
+    say no or their day runs out.
 
-    **One code for five standings, deliberately.** They are one sentence — *this
-    is not a half-built line-up* — and splitting them would be five ways of
-    saying that the caller is looking at a standing it has already been told.
+    **One code for the two, deliberately.** They are one sentence — *this is not
+    a half-built line-up* — and the fold has already told the caller which.
 
-    **A court that has been a game and had a seat reopened is not among them.**
-    It is ``LINE_UP_INCOMPLETE`` too, and it *is* withdrawn here
-    (``docs/adr/0163``): the game it became is called off in the same
-    transaction, so the withdraw no longer ends a challenge while its game goes
-    on standing — which was the one reason ``docs/adr/0162`` §2 refused it with
-    this code for a day.
+    **Never on a court that was never a game.** There the act is *Remove the
+    challenge*, and its refusal is ``SomebodyHasJoinedTheCourt``: a court that
+    was never a game cannot be half built without somebody having joined, so
+    the question this code answers does not arise. An ended challenge is
+    refused with ``TheChallengeIsOver`` on both kinds of court — the same word
+    every other act here uses for one, and it used to be this code for the
+    withdraw alone.
     """
 
     code = "not_a_half_built_line_up"
 
     def __init__(self) -> None:
-        super().__init__("Only a half-built line-up can be withdrawn.")
+        super().__init__("Only a game with a seat open can be called off.")
 
 
 class TheGameIsHistory(ConflictError):
@@ -326,8 +362,12 @@ class TheGameMomentHasPassed(ConflictError):
 class TheChallengeIsOver(ConflictError):
     """Something was asked of a challenge nobody is left in.
 
-    Its seats are open and its standing is settled; filling one would be a
-    proposal to a different set of people, which is a **new** challenge.
+    Its standing is settled: filling a seat would be a proposal to a different
+    set of people, which is a **new** challenge; leaving it or withdrawing it
+    would end what has ended; and answering a seat on a challenge its organiser
+    removed while the seat's day was still running (``docs/adr/0165`` §4) would
+    say yes to a court that is over. **One code for the three endings**,
+    whichever act met them.
     """
 
     code = "challenge_is_over"

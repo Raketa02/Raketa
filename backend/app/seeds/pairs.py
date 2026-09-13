@@ -325,7 +325,7 @@ async def _write(paths: ReadPaths, *, cohort: Cohort) -> SeededPairs:
             "record to read its own claims off."
         )
     inboxes = await _fill_the_inboxes(paths, cohort=cohort)
-    withdrawn = await _withdraw_a_half_built_court(paths, cohort=cohort)
+    withdrawn = await _remove_a_court_nobody_answered(paths, cohort=cohort)
     # **After the withdrawn court, and the order matters.** That layer walks the
     # same organisers and stops on the first who can reach anybody; leaving two
     # courts standing first would put an open challenge in its way and send it
@@ -1137,8 +1137,8 @@ def _refuse_a_search_that_showed_nobody(
 # ---------------------------------------------------------------------------
 
 
-async def _withdraw_a_half_built_court(paths: ReadPaths, *, cohort: Cohort) -> str:
-    """One cohort member ends a padel court somebody else had already accepted.
+async def _remove_a_court_nobody_answered(paths: ReadPaths, *, cohort: Cohort) -> str:
+    """One cohort member removes a padel court they sent before anybody answered.
 
     **`WITHDRAWN` is the only standing this database cannot reach by waiting.**
     The other five arrive from the seats and the clock — a send is awaiting, an
@@ -1147,14 +1147,21 @@ async def _withdraw_a_half_built_court(paths: ReadPaths, *, cohort: Cohort) -> s
     decision a person took, and the only way a screen ever sees it is if
     somebody takes it.
 
+    **Before anybody answers, because that is where the act now lives**
+    (``docs/adr/0165`` §4). A court somebody has joined is nobody's to end for
+    the others, so the withdraw is admitted exactly while nobody besides the
+    organiser holds an accepted seat — and a court sent to one person who then
+    accepted, which is what this fixture used to end, is the one state it is
+    refused in. The invitee's row reads *{name} withdrew this — that court is
+    closed* (`the-words.md` §13), on a seat they never answered.
+
     **Neither seat is the protagonist's, and that is the constraint that picks
-    the pair.** A court she organised would need somebody to accept it, and an
-    accepted seat that then releases is `PREVIOUS_ACCEPT` on her own card —
-    which `app/seeds/screens.py` asserts is absent from this cohort, by name and
-    with the reason. A court she was *invited* to is `they-challenged-you`'s and
-    is named for a seat that is still hers to answer. So this is two cohort
-    members, exactly as the inboxes are, for the same reason: a state that is
-    nobody's relationship belongs to the population and not to the eleven.
+    the pair.** A court she was *invited* to is `they-challenged-you`'s and is
+    named for a seat that is still hers to answer, and a court she organised
+    would put a removed challenge on the screens every assertion is read from.
+    So this is two cohort members, exactly as the inboxes are, for the same
+    reason: a state that is nobody's relationship belongs to the population and
+    not to the eleven.
 
     **Idempotent by the state it writes rather than by a key.** A withdrawn
     court is an ending, so the pair it held is released and a second run would
@@ -1198,11 +1205,6 @@ async def _withdraw_a_half_built_court(paths: ReadPaths, *, cohort: Cohort) -> s
             record=record,
             invitees=(invitee.email,),
         )
-        await paths.accept.execute(
-            AnswerSeatCommand(
-                challenge_id=challenge_id, player_id=paths.player(invitee.email)
-            )
-        )
         withdrawn = await paths.withdraw.execute(
             WithdrawChallengeCommand(
                 challenge_id=challenge_id, player_id=organiser_id
@@ -1212,12 +1214,12 @@ async def _withdraw_a_half_built_court(paths: ReadPaths, *, cohort: Cohort) -> s
             raise EdgeRefused(
                 f"{organiser.handle} withdrew challenge {challenge_id} and it "
                 f"reads {withdrawn.standing.value}. The court was a padel four "
-                f"with one acceptance on it, which is the one standing a "
-                f"withdraw is legal in."
+                f"nobody had answered, which is a state the withdraw is "
+                f"admitted in."
             )
         return (
-            f"withdrawn · {organiser.handle} ended challenge {challenge_id}, "
-            f"which {invitee.handle} had accepted a seat on; it reads "
+            f"withdrawn · {organiser.handle} removed challenge {challenge_id} "
+            f"before {invitee.handle} answered the seat on it; it reads "
             f"{withdrawn.standing.value} and the pair is released"
         )
     raise EdgeRefused(
@@ -1235,9 +1237,10 @@ async def _leave_two_half_built_courts(
     """Two courts left standing at ``LINE_UP_INCOMPLETE``, each proved fillable.
 
     **The state the builder is re-entered from, and the one screen no other
-    layer leaves behind.** The withdrawn court above *ends* one; these two are
-    left half built on purpose, because ⚡ *Fill the seats* is drawn on exactly
-    this standing and a database with none of them cannot draw the screen at all.
+    layer leaves behind.** The withdrawn court above ends a send before it
+    reaches one; these two are left half built on purpose, because ⚡ *Fill the
+    seats* is drawn on exactly this standing and a database with none of them
+    cannot draw the screen at all.
 
     **Two, because they are two different challenges wearing one standing**
     (``docs/adr/0150``). A court somebody **sent** carries a mode, a window and
@@ -1248,10 +1251,9 @@ async def _leave_two_half_built_courts(
     fill*, so a fixture holding only the first would leave that rule untested by
     anything a person can sign in and look at.
 
-    **Neither court is the protagonist's**, on the withdrawn court's own
-    constraint: a court she organised needs somebody to accept it, and an
-    accepted seat is ``PREVIOUS_ACCEPT`` on her own card, which ``screens.py``
-    asserts is absent from this cohort by name.
+    **Neither court is the protagonist's**: a court she organised needs somebody
+    to accept it, and an accepted seat is ``PREVIOUS_ACCEPT`` on her own card,
+    which ``screens.py`` asserts is absent from this cohort by name.
 
     **The proof is the ⚡ and never the send.** Running the fill writes a search
     row and nothing outbound — *searching, browsing, seating and swapping produce

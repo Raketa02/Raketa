@@ -482,10 +482,12 @@ async def test_a_non_member_is_refused_before_the_response_starts(
 
 
 async def _ended_but_not_yet_swept(client, a_room, session_factory) -> None:
-    """The two undecided seats say no and the organiser withdraws — and the
-    outbox is **not** delivered afterwards, so the row still stands in the
-    store while the challenge it lives as long as is over
-    (``docs/adr/0164`` §6). *Past its end but not yet swept*, literally.
+    """The two undecided seats say no and the one who accepted leaves: the
+    organiser is alone with nobody deciding, so the challenge is over by
+    itself (``docs/adr/0165`` §3) — and the outbox is **not** delivered
+    afterwards, so the row still stands in the store while the challenge it
+    lives as long as is over (``docs/adr/0164`` §6). *Past its end but not yet
+    swept*, literally.
     """
 
     for who in ("bo", "cy"):
@@ -497,11 +499,12 @@ async def _ended_but_not_yet_swept(client, a_room, session_factory) -> None:
     await world.deliver_the_outbox(
         session_factory, live_channel=a_room["live_channel"]
     )
-    withdrawn = await client.post(
-        f"/api/v1/challenges/{a_room['challenge_id']}/withdrawal",
-        headers=world.auth(a_room["searcher"]["token"]),
+    left = await client.post(
+        f"/api/v1/challenges/{a_room['challenge_id']}/departure",
+        headers=world.auth(a_room["people"]["ana"]["token"]),
     )
-    assert withdrawn.status_code == 200, withdrawn.text
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "DECLINED"
 
 
 async def test_a_room_past_its_end_is_refused_before_the_response_starts(

@@ -415,6 +415,15 @@ async def _answers(session, challenge: Challenge, player_id: UUID, *, yes: bool,
     await repository.save(loaded)
 
 
+async def _removed(session, challenge: Challenge, *, at: Instant) -> None:
+    """The organiser removes a challenge nobody has joined (``docs/adr/0165`` §4)."""
+
+    repository = _repository(session)
+    loaded = await repository.load(challenge.id)
+    loaded.withdraw(loaded.organiser_id, occurred_at=at)
+    await repository.save(loaded)
+
+
 async def _refill(
     session, challenge: Challenge, *, seating: UUID, beside: UUID, at: Instant
 ) -> None:
@@ -803,6 +812,42 @@ async def test_the_count_is_unanswered_invited_seats_and_nothing_else(
         # One live seat, and one whose day ran out with nothing having swept it.
         waiting: 1,
     }
+
+
+@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
+async def test_a_seat_on_a_challenge_its_organiser_removed_waits_on_nobody(
+    implementation, session
+):
+    """A removed challenge holds seats whose day is still running
+    (``docs/adr/0165`` §4), and an invitee is not slow to answer a question
+    nobody is asking any more.
+
+    The old contract said a seat awaiting at ``now`` sat on a challenge that had
+    not ended *by construction*; the pre-answer removal broke the construction,
+    so the read now asks the standing rather than inheriting the answer.
+    """
+
+    port = implementation.build(session)
+    organiser, asked, also_asked = (new_uuid() for _ in range(3))
+    removed = await _sent(
+        session,
+        organiser=organiser,
+        invitees=(asked, also_asked),
+        sport=Sport.PADEL,
+        at=_ago(minutes=20),
+    )
+    await _removed(session, removed, at=_ago(minutes=10))
+    await _sent(
+        session,
+        organiser=new_uuid(),
+        invitees=(also_asked,),
+        sport=Sport.TENNIS,
+        at=_ago(minutes=5),
+    )
+
+    counts = await port.open_challenge_counts([asked, also_asked])
+
+    assert dict(counts) == {asked: 0, also_asked: 1}
 
 
 @pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))

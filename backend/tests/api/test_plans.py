@@ -455,9 +455,11 @@ async def test_before_the_first_yes_there_is_no_plan_even_for_the_organiser(
 async def test_a_court_that_ended_after_a_yes_is_history_and_still_listed(
     client, session_factory, candidate_source, searcher
 ):
-    """B said yes, the other two said no, the organiser withdrew: the court
-    had a room and is over, so its plan is a row that no longer moves rather
-    than an absence — for the organiser and for B."""
+    """B said yes, the other two said no, and the organiser left: B is alone
+    with nobody deciding, so the court is over by itself (``docs/adr/0165``
+    §3). It had a room, so its plan is a row that no longer moves rather than
+    an absence — for B, who is still on it; the organiser left it, and has no
+    row to be history."""
 
     people, challenge_id = await _a_padel_four_sent(
         client, session_factory, candidate_source, searcher
@@ -469,12 +471,12 @@ async def test_a_court_that_ended_after_a_yes_is_history_and_still_listed(
             headers=world.auth(people[name]["token"]),
         )
         assert declined.status_code == 200, declined.text
-    withdrawn = await client.post(
-        f"/api/v1/challenges/{challenge_id}/withdrawal",
+    left = await client.post(
+        f"/api/v1/challenges/{challenge_id}/departure",
         headers=world.auth(searcher["token"]),
     )
-    assert withdrawn.status_code == 200, withdrawn.text
-    assert withdrawn.json()["standing"] == "WITHDRAWN"
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "DECLINED"
 
     frozen = await _put(
         client, people["ana"]["token"], challenge_id, "place", {"place": "Zabłocie"}
@@ -482,10 +484,14 @@ async def test_a_court_that_ended_after_a_yes_is_history_and_still_listed(
 
     assert frozen.status_code == 409, frozen.text
     assert frozen.json()["code"] == "plan_is_history"
-    for who in (searcher, people["ana"]):
-        assert [one["challenge_id"] for one in await _plans(client, who["token"])] == [
-            challenge_id
-        ]
+    hers = await _plans(client, people["ana"]["token"])
+    assert [one["challenge_id"] for one in hers] == [challenge_id]
+    assert await _plans(client, searcher["token"]) == []
+    gone = await _put(
+        client, searcher["token"], challenge_id, "place", {"place": "Zabłocie"}
+    )
+    assert gone.status_code == 404, gone.text
+    assert gone.json()["code"] == "plan_not_found"
 
 
 async def test_a_singles_court_lists_its_plan_as_before_addressed_by_the_challenge(

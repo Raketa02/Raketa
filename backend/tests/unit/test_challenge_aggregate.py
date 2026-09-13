@@ -58,6 +58,7 @@ from app.modules.challenges.domain.errors import (
     NotYourSeat,
     OnePersonToASeat,
     OnlyAHalfBuiltLineUpIsWithdrawn,
+    SomebodyHasJoinedTheCourt,
     TheAnswerWindowHasPassed,
     TheChallengeIsOver,
     TheCourtIsNotThisSports,
@@ -1141,16 +1142,19 @@ def test_a_decline_is_not_a_lapse():
 
 
 # ---------------------------------------------------------------------------
-# The withdraw
+# The withdraw — *Remove the challenge*, while nobody has joined
 # ---------------------------------------------------------------------------
 
 
 def a_court_nobody_will_finish() -> Challenge:
     """A padel four with one acceptance on it and nobody left deciding.
 
-    ``LINE_UP_INCOMPLETE``, and the one standing a withdraw is legal in: the
-    acceptor is in and cannot leave, two seats are open, and nothing about this
-    challenge will ever end it.
+    ``LINE_UP_INCOMPLETE``: the acceptor is in, two seats are open, and nothing
+    about this challenge will ever end it on its own. It is the state the
+    withdraw was written for (``docs/adr/0142`` §2) and the state it is now
+    **refused** in (``docs/adr/0165`` §4): somebody has joined, so the court is
+    as much theirs as the organiser's, and its exit is the departure — the
+    organiser's included.
     """
 
     challenge = a_padel_challenge()
@@ -1160,39 +1164,105 @@ def a_court_nobody_will_finish() -> Challenge:
     return challenge
 
 
-def test_the_organiser_withdraws_a_line_up_nobody_will_finish():
+def a_court_the_organiser_is_alone_on_again() -> Challenge:
+    """A padel four somebody joined and then left, with the others still deciding.
+
+    ALICE accepted and took her yes back; BOB and CAROL have not answered. The
+    court is ``AWAITING_ANSWERS`` with nobody besides the organiser on it, which
+    is the second of the two states the withdraw is admitted in — and the one
+    with a room to destroy, since ALICE's yes opened one.
+    """
+
+    challenge = a_padel_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+    challenge.leave(ALICE, occurred_at=at(2))
+    return challenge
+
+
+def test_the_organiser_removes_a_challenge_nobody_has_answered():
+    """``docs/adr/0165`` §4 reverses ``docs/adr/0142`` §2's Phase 1 refusal:
+    before anybody answers, the challenge is the organiser's to remove, and the
+    re-ask that refusal guarded against is an accepted risk with its falsifier
+    named there."""
+
+    challenge = a_padel_challenge()
+    assert challenge.standing_at(at(1)) is Standing.AWAITING_ANSWERS
+
+    challenge.withdraw(ORGANISER, occurred_at=at(1))
+
+    assert challenge.standing_at(at(1)) is Standing.WITHDRAWN
+    assert isinstance(challenge.pull_events()[-1], ChallengeWithdrawn)
+
+
+def test_the_organiser_removes_a_court_they_are_alone_on_again():
+    """Somebody joined and left; the others are still deciding. Nobody besides
+    the organiser holds an accepted seat, so the act is admitted again — the
+    seats still awaiting an answer notwithstanding."""
+
+    challenge = a_court_the_organiser_is_alone_on_again()
+    assert challenge.standing_at(at(3)) is Standing.AWAITING_ANSWERS
+
+    challenge.withdraw(ORGANISER, occurred_at=at(3))
+
+    assert challenge.standing_at(at(3)) is Standing.WITHDRAWN
+    assert isinstance(challenge.pull_events()[-1], ChallengeWithdrawn)
+
+
+def test_a_court_somebody_has_joined_is_nobodys_to_end_for_the_others():
+    """The refusal ``docs/adr/0165`` §4 puts where ``docs/adr/0142`` §2 put the
+    act. The people who agreed did nothing wrong, so from here the organiser
+    leaves like anybody else and the court ends by itself when one is left."""
+
     challenge = a_court_nobody_will_finish()
+
+    with pytest.raises(SomebodyHasJoinedTheCourt):
+        challenge.withdraw(ORGANISER, occurred_at=at(4))
+
     assert challenge.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
 
-    challenge.withdraw(ORGANISER, occurred_at=at(4))
 
-    assert challenge.standing_at(INSIDE) is Standing.WITHDRAWN
-    assert isinstance(challenge.pull_events()[-1], ChallengeWithdrawn)
+def test_one_yes_beside_seats_still_deciding_is_somebody_having_joined():
+    """The rule reads the seats and never the standing: ``AWAITING_ANSWERS``
+    with one acceptance on it is refused exactly as ``LINE_UP_INCOMPLETE`` is,
+    because what matters is that a person is in, not what the others owe."""
+
+    challenge = a_padel_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+    assert challenge.standing_at(at(2)) is Standing.AWAITING_ANSWERS
+
+    with pytest.raises(SomebodyHasJoinedTheCourt):
+        challenge.withdraw(ORGANISER, occurred_at=at(2))
 
 
 def test_a_withdrawn_challenge_stays_withdrawn_at_every_instant():
     """It is not a deadline and there is no clock in it.
 
     The other two endings arrive because time passed or somebody answered; this
-    one arrived because a person decided, so a year of clock moves nothing.
+    one arrived because a person decided, so a year of clock moves nothing —
+    and the seats still awaiting an answer when it was removed never lapse it
+    into something else.
     """
 
-    challenge = a_court_nobody_will_finish()
-    challenge.withdraw(ORGANISER, occurred_at=at(4))
+    challenge = a_court_the_organiser_is_alone_on_again()
+    challenge.withdraw(ORGANISER, occurred_at=at(3))
 
-    assert challenge.standing_at(at(4)) is Standing.WITHDRAWN
+    assert challenge.standing_at(at(3)) is Standing.WITHDRAWN
     assert challenge.standing_at(at(24 * 365)) is Standing.WITHDRAWN
 
 
 def test_the_withdraw_is_the_organisers_and_an_invitee_is_told_so():
-    """**Forbidden and not not-found**: they can see this challenge already."""
+    """**Forbidden and not not-found**: they can see this challenge already.
+    Whoever they are — somebody who joined, somebody still deciding."""
 
-    challenge = a_court_nobody_will_finish()
-
+    joined = a_court_nobody_will_finish()
     with pytest.raises(TheWithdrawIsTheOrganisers):
-        challenge.withdraw(ALICE, occurred_at=at(4))
+        joined.withdraw(ALICE, occurred_at=at(4))
+    assert joined.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
 
-    assert challenge.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+    deciding = a_padel_challenge()
+    with pytest.raises(TheWithdrawIsTheOrganisers):
+        deciding.withdraw(BOB, occurred_at=at(1))
+    assert deciding.standing_at(at(1)) is Standing.AWAITING_ANSWERS
 
 
 def test_whose_act_it_is_is_asked_before_what_the_standing_is():
@@ -1201,30 +1271,54 @@ def test_whose_act_it_is_is_asked_before_what_the_standing_is():
     Asking the standing first would answer *is this challenge withdrawable* for
     somebody who may not withdraw it either way — the send's own rule, that a
     fact about the caller is checked ahead of anything it would have to read.
+    Here that means an invitee on a court somebody joined hears *not yours*
+    and never *somebody has joined*.
     """
 
     challenge = a_padel_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
 
     with pytest.raises(TheWithdrawIsTheOrganisers):
-        challenge.withdraw(ALICE, occurred_at=at(1))
+        challenge.withdraw(BOB, occurred_at=at(2))
+    with pytest.raises(TheWithdrawIsTheOrganisers):
+        challenge.withdraw(ALICE, occurred_at=at(2))
 
 
-def test_a_withdraw_is_refused_while_an_answer_is_still_owed():
-    """`AWAITING_ANSWERS` ends itself, and the act's one unique power there
-    would be a resend handing the same person a fresh clock.
-
-    ``NobodyIsAskedTwice`` is scoped to one aggregate and cannot see a
-    withdraw-and-resend, which is why this is refused rather than allowed early.
-    """
+def test_an_organiser_who_left_no_longer_holds_the_exit():
+    """The organiser is a player in the ending rule (``docs/adr/0165`` §3), and
+    in this one: the act is the organiser's **on the court**, and a seat they
+    left is not on it. A court they walked out of is proposed by nobody and
+    ends by its own clocks."""
 
     challenge = a_padel_challenge()
+    challenge.leave(ORGANISER, occurred_at=at(1))
+    assert challenge.standing_at(at(2)) is Standing.AWAITING_ANSWERS
 
-    with pytest.raises(OnlyAHalfBuiltLineUpIsWithdrawn):
-        challenge.withdraw(ORGANISER, occurred_at=at(1))
+    with pytest.raises(TheWithdrawIsTheOrganisers):
+        challenge.withdraw(ORGANISER, occurred_at=at(2))
+
+
+def test_a_challenge_that_ended_by_itself_has_no_withdraw():
+    """The organiser alone with nobody deciding is over already — ``DECLINED``
+    where somebody left or said no, ``LAPSED`` where everybody was silent — and
+    an ended challenge is refused as every other act refuses one, with
+    ``challenge_is_over`` and never with a word about who has joined."""
+
+    declined = a_court_nobody_will_finish()
+    declined.leave(ALICE, occurred_at=at(4))
+    assert declined.standing_at(at(5)) is Standing.DECLINED
+    with pytest.raises(TheChallengeIsOver):
+        declined.withdraw(ORGANISER, occurred_at=at(5))
+
+    lapsed = a_padel_challenge()
+    assert lapsed.standing_at(OUTSIDE) is Standing.LAPSED
+    with pytest.raises(TheChallengeIsOver):
+        lapsed.withdraw(ORGANISER, occurred_at=OUTSIDE)
 
 
 def test_a_completed_line_up_has_no_withdraw():
-    """`ON` has become a game, and ending the challenge would not touch it."""
+    """`ON` has become a game, and a whole court has no seat to call it off
+    for: a full court that will not play lets its window lapse."""
 
     challenge = a_tennis_challenge()
     challenge.accept(ALICE, occurred_at=at(1))
@@ -1233,96 +1327,143 @@ def test_a_completed_line_up_has_no_withdraw():
         challenge.withdraw(ORGANISER, occurred_at=at(2))
 
 
-def test_a_challenge_that_already_ended_has_no_withdraw():
-    challenge = a_tennis_challenge()
-    challenge.decline(ALICE, occurred_at=at(1))
-
-    with pytest.raises(OnlyAHalfBuiltLineUpIsWithdrawn):
-        challenge.withdraw(ORGANISER, occurred_at=at(2))
-
-
 def test_a_withdrawal_does_not_come_back():
-    """Irreversible, and the second press is refused by the same rule as the
-    first would be on any other standing: this is not a half-built line-up."""
+    """Irreversible, and the second press is refused by the rule every act
+    refuses an ended challenge with: it is over."""
 
-    challenge = a_court_nobody_will_finish()
-    challenge.withdraw(ORGANISER, occurred_at=at(4))
+    challenge = a_court_the_organiser_is_alone_on_again()
+    challenge.withdraw(ORGANISER, occurred_at=at(3))
 
-    with pytest.raises(OnlyAHalfBuiltLineUpIsWithdrawn):
-        challenge.withdraw(ORGANISER, occurred_at=at(5))
+    with pytest.raises(TheChallengeIsOver):
+        challenge.withdraw(ORGANISER, occurred_at=at(4))
 
 
 def test_a_withdraw_ends_the_whole_challenge_and_removes_nobody():
-    """**The accepted-player invariant is untouched.**
+    """**The seats are left exactly as they were.**
 
-    Per-seat would be the organiser taking out somebody who already agreed,
-    which ``AnAcceptedPlayerMayNotBeRemoved`` refuses and keeps refusing. So the
-    seats are left exactly as they were: the person who accepted still accepted,
-    and what ended is the arrangement.
+    Per-seat would be the organiser taking out somebody, which
+    ``AnAcceptedPlayerMayNotBeRemoved`` refuses and keeps refusing. So the seat
+    that was left still reads ``LEFT``, and the two still deciding still hold
+    their question and their deadline: what ended is the arrangement, and
+    ``standing_at`` reads the withdrawal before it reads any of them.
     """
 
-    challenge = a_court_nobody_will_finish()
+    challenge = a_court_the_organiser_is_alone_on_again()
     before = challenge.seats
 
-    challenge.withdraw(ORGANISER, occurred_at=at(4))
+    challenge.withdraw(ORGANISER, occurred_at=at(3))
 
     assert challenge.seats == before
-    assert challenge.seat_of(ALICE).answer is SeatAnswer.ACCEPTED
+    assert challenge.seat_of(ALICE).answer is SeatAnswer.LEFT
+    assert challenge.seat_of(BOB).answer is None
+    assert challenge.seat_of(BOB).answer_by == instant(SENT_AT + ANSWER_WINDOW)
 
 
 def test_a_withdrawn_challenge_releases_its_pair():
-    """The permanence this act exists to end.
+    """A send holds its pairs for as long as an answer is owed — up to a day —
+    and removing it releases them on the instant. ``WITHDRAWN`` is in ``ENDED``
+    and in nothing else, so the arranging stops and everybody on the court is a
+    stranger again."""
 
-    A half-built four held its pair for the life of the database — the acceptor
-    unreachable in every sport, with nobody holding an exit. ``WITHDRAWN`` is in
-    ``ENDED`` and in nothing else, so the arranging stops and everybody on the
-    court is a stranger again.
-    """
+    challenge = a_padel_challenge()
+    assert challenge.players_in_it_at(at(1)) == frozenset(
+        {ORGANISER, ALICE, BOB, CAROL}
+    )
 
-    challenge = a_court_nobody_will_finish()
-    assert challenge.players_in_it_at(INSIDE) == frozenset({ORGANISER, ALICE})
-
-    challenge.withdraw(ORGANISER, occurred_at=at(4))
+    challenge.withdraw(ORGANISER, occurred_at=at(1))
 
     assert Standing.WITHDRAWN in ENDED
     assert Standing.WITHDRAWN not in ARRANGING
-    assert not challenge.is_being_arranged_at(INSIDE)
-    assert challenge.players_in_it_at(INSIDE) == frozenset()
+    assert not challenge.is_being_arranged_at(at(1))
+    assert challenge.players_in_it_at(at(1)) == frozenset()
 
 
 def test_a_withdrawn_challenge_never_became_a_game():
     """It ended without reaching ``ON``, so it minted nothing and holds nobody
     on either question the aggregate answers."""
 
-    challenge = a_court_nobody_will_finish()
-    challenge.withdraw(ORGANISER, occurred_at=at(4))
+    challenge = a_padel_challenge()
+    challenge.withdraw(ORGANISER, occurred_at=at(1))
 
     assert not challenge.has_become_a_game()
 
 
 def test_a_withdrawn_challenge_takes_no_more_invitations():
-    """Its seats are open and its standing is settled; filling one would be a
-    proposal to a different set of people, which is a **new** challenge."""
+    """Its standing is settled; filling a seat would be a proposal to a
+    different set of people, which is a **new** challenge."""
 
-    challenge = a_court_nobody_will_finish()
-    challenge.withdraw(ORGANISER, occurred_at=at(4))
+    challenge = a_court_the_organiser_is_alone_on_again()
+    challenge.withdraw(ORGANISER, occurred_at=at(3))
 
     with pytest.raises(TheChallengeIsOver):
         challenge.invite(
             (
                 SeatPlan(side=Side.A, player_id=ORGANISER),
-                SeatPlan(side=Side.A, player_id=ALICE),
-                invited(STRANGER, Side.B, 7),
-                invited(new_uuid(), Side.B, 8),
+                invited(STRANGER, Side.A, 7),
+                SeatPlan(side=Side.B, player_id=BOB),
+                SeatPlan(side=Side.B, player_id=CAROL),
             ),
             by=challenge.organiser_id,
             occurred_at=at(5),
         )
 
 
+def test_a_withdrawn_challenge_takes_no_more_answers():
+    """**A reach that did not exist, and the refusal it needs.** The withdraw
+    used to be legal only where no seat was awaiting, so an answer on a
+    withdrawn challenge always met the seat's own refusal first. A removed send
+    holds seats still inside their window, and a yes on one of them would open
+    a room for a court that is over — so the seat that has nothing of its own
+    to refuse is refused as every act refuses an ended challenge.
+
+    **The seat's own facts still come first.** A seat whose day ran out is told
+    that whether the challenge stands or not, because the same act refused two
+    ways depending on the other seats is the thing ``_answerable_seat``'s order
+    exists to prevent.
+    """
+
+    challenge = a_padel_challenge()
+    challenge.withdraw(ORGANISER, occurred_at=at(1))
+
+    with pytest.raises(TheChallengeIsOver):
+        challenge.accept(ALICE, occurred_at=at(2))
+    with pytest.raises(TheChallengeIsOver):
+        challenge.decline(BOB, occurred_at=at(2))
+    with pytest.raises(TheAnswerWindowHasPassed):
+        challenge.accept(CAROL, occurred_at=OUTSIDE)
+    assert challenge.seat_of(ALICE).answer is None
+    assert challenge.standing_at(at(2)) is Standing.WITHDRAWN
+
+
+def test_a_sweep_records_no_lapse_for_a_day_the_removal_cut_short():
+    """``docs/adr/0142`` §5 on the write side: an invitation whose challenge was
+    removed before its day ran out is neither answered nor lapsed. The seat's
+    day still passes on the clock — the seat reads as lapsed, and nothing
+    downstream of a withdrawn challenge minds — but the sweep writes no record
+    of it, because the record is the denominator *answers challenges* counts
+    and this was not silence.
+
+    A day that had **already** run out when the organiser removed the challenge
+    was silence, and is recorded as before — which is what makes ``0142`` §5
+    and ``event_sourced_challenge_history.py``'s walk agree seat by seat.
+    """
+
+    challenge = a_staggered_padel_court()
+    assert challenge.seat_of(ALICE).is_lapsed_at(at(49))
+    assert challenge.seat_of(BOB).is_awaiting_at(at(49))
+
+    challenge.withdraw(ORGANISER, occurred_at=at(49))
+
+    assert challenge.lapse(now=at(60)) == 1
+    assert challenge.seat_of(ALICE).answer is SeatAnswer.LAPSED
+    assert challenge.seat_of(BOB).answer is None
+    assert challenge.seat_of(CAROL).answer is None
+    assert challenge.lapse(now=at(61)) == 0
+
+
 def test_a_withdrawal_replays_into_itself():
-    challenge = a_court_nobody_will_finish()
-    challenge.withdraw(ORGANISER, occurred_at=at(4))
+    challenge = a_court_the_organiser_is_alone_on_again()
+    challenge.withdraw(ORGANISER, occurred_at=at(3))
 
     assert replayed(challenge) == challenge
 
@@ -1472,17 +1613,16 @@ def test_a_withdrawal_is_dated_by_the_act_and_not_by_what_happened_after_it():
     the decision carries its own instant (``docs/adr/0142``).
 
     And it is emphatically **not** the last thing that happened to the stream. A
-    withdraw is legal only in ``LINE_UP_INCOMPLETE``, which is reached while a
-    seat's day has already run out with nothing in it and nothing having swept
+    withdraw is admitted while seats are still awaiting an answer, and one of
+    them may already have run out with nothing in it and nothing having swept
     it — so a sweep can append a ``SeatLapsed`` *after* a legal withdrawal, and
     does here. ``event_sourced_challenge_history.py`` writes the same
     reachability down for its own denominator's sake.
     """
 
-    challenge = a_padel_challenge()
-    challenge.accept(ALICE, occurred_at=at(1))
-    challenge.decline(BOB, occurred_at=at(2))
-    assert challenge.standing_at(at(49)) is Standing.LINE_UP_INCOMPLETE
+    challenge = a_staggered_padel_court()
+    assert challenge.seat_of(ALICE).is_lapsed_at(at(49)), "unswept"
+    assert challenge.standing_at(at(49)) is Standing.AWAITING_ANSWERS
 
     challenge.withdraw(ORGANISER, occurred_at=at(49))
 
@@ -1499,7 +1639,7 @@ def test_the_withdrawal_instant_survives_a_replay():
     aggregate answers what the live one did — the shape ``opened_at`` already
     has, and the reason ``withdrawn`` stopped being a bare ``bool``."""
 
-    challenge = a_court_nobody_will_finish()
+    challenge = a_court_the_organiser_is_alone_on_again()
     challenge.withdraw(ORGANISER, occurred_at=at(4))
 
     assert replayed(challenge).ended_at(at(5)) == at(4)
@@ -1666,7 +1806,7 @@ def test_an_ended_court_and_a_seat_that_is_not_yours_cannot_be_left():
         game.leave(CAROL, occurred_at=at(3))
 
 
-def test_a_court_that_has_been_a_game_is_withdrawn_by_the_organiser():
+def test_a_court_that_has_been_a_game_is_called_off_by_the_organiser():
     """``docs/adr/0163`` §1 — the withdraw reaches a reopened court. The game is
     told one layer up; here the challenge ends as any withdrawn one does, with
     the seats left as they were and the pair released."""
@@ -1685,48 +1825,90 @@ def test_a_court_that_has_been_a_game_is_withdrawn_by_the_organiser():
     assert isinstance(challenge.pull_events()[-1], ChallengeWithdrawn)
 
 
-def test_once_the_organiser_has_left_any_remaining_player_holds_the_exit():
-    """``docs/adr/0163`` §1 — the organiser's fallback. A court whose organiser
-    is gone would otherwise have an exit nobody holds."""
+def test_any_player_on_a_court_that_has_been_a_game_holds_the_exit():
+    """``docs/adr/0165`` §5 — *Call it off* is any player's on the court, with
+    the organiser still in and no fallback to wait for. A group that has given
+    up on a game ends it in one act rather than three departures."""
 
     challenge = a_completed_four()
-    challenge.leave(ORGANISER, occurred_at=at(2))
+    challenge.leave(CAROL, occurred_at=at(2))
     assert challenge.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
 
     challenge.withdraw(BOB, occurred_at=at(3))
 
     assert challenge.standing_at(INSIDE) is Standing.WITHDRAWN
+    assert challenge.ended_at(INSIDE) == at(3)
 
 
-def test_the_fallback_is_asked_first_and_reads_no_standing():
-    """A non-organiser on a court whose organiser is still in is told the act is
-    not theirs before the fold is consulted — and so is somebody whose own seat
-    is no longer live, because *remaining* means live."""
+def test_somebody_off_the_court_is_told_the_act_is_not_theirs_and_reads_no_standing():
+    """*On the court* means an accepted seat: somebody who left, a stranger, the
+    organiser who left, and a newcomer still deciding on a fill are all told
+    the act is not theirs — before the fold is consulted, so the one still
+    deciding hears *not yours* and never which standing they could not end."""
 
-    organiser_in = a_completed_four()
-    organiser_in.leave(CAROL, occurred_at=at(2))
+    left = a_completed_four()
+    left.leave(ORGANISER, occurred_at=at(2))
+    left.leave(CAROL, occurred_at=at(3))
     with pytest.raises(TheWithdrawIsTheOrganisers):
-        organiser_in.withdraw(ALICE, occurred_at=at(3))
-    assert organiser_in.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
-
-    organiser_out = a_completed_four()
-    organiser_out.leave(ORGANISER, occurred_at=at(2))
-    organiser_out.leave(CAROL, occurred_at=at(3))
+        left.withdraw(CAROL, occurred_at=at(4))
     with pytest.raises(TheWithdrawIsTheOrganisers):
-        organiser_out.withdraw(CAROL, occurred_at=at(4))
+        left.withdraw(STRANGER, occurred_at=at(4))
+    # **The organiser who left is not on the court either**: the exit belongs
+    # to the people still on it, and a stranger to them now does not end their
+    # game.
     with pytest.raises(TheWithdrawIsTheOrganisers):
-        organiser_out.withdraw(STRANGER, occurred_at=at(4))
-    # **The organiser who left is not a remaining player either**: the exit
-    # fell back to the people still on the court, and a stranger to them now
-    # does not get to end their game.
+        left.withdraw(ORGANISER, occurred_at=at(4))
+    assert left.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+
+    filling = a_completed_four()
+    filling.leave(CAROL, occurred_at=at(2))
+    filling.invite(
+        (
+            SeatPlan(side=Side.A, player_id=ORGANISER),
+            SeatPlan(side=Side.A, player_id=ALICE),
+            SeatPlan(side=Side.B, player_id=BOB),
+            invited(STRANGER, Side.B, 4),
+        ),
+        by=ALICE,
+        occurred_at=at(3),
+    )
+    assert filling.standing_at(at(4)) is Standing.AWAITING_ANSWERS
     with pytest.raises(TheWithdrawIsTheOrganisers):
-        organiser_out.withdraw(ORGANISER, occurred_at=at(4))
-    assert organiser_out.standing_at(INSIDE) is Standing.LINE_UP_INCOMPLETE
+        filling.withdraw(STRANGER, occurred_at=at(4))
 
 
-def test_the_fallback_holds_after_the_organisers_seat_was_given_away():
+def test_a_game_is_called_off_only_while_a_seat_is_open_and_nobody_is_deciding():
+    """The game's own invariant, kept on the challenge's side: a whole court has
+    no seat to call it off for, and a court whose open seat somebody is deciding
+    on is not half built yet — one code for the two, because they are one
+    sentence and the fold already told the caller which."""
+
+    whole = a_completed_four()
+    with pytest.raises(OnlyAHalfBuiltLineUpIsWithdrawn):
+        whole.withdraw(ALICE, occurred_at=at(2))
+    assert whole.standing_at(INSIDE) is Standing.ON
+
+    filling = a_completed_four()
+    filling.leave(CAROL, occurred_at=at(2))
+    filling.invite(
+        (
+            SeatPlan(side=Side.A, player_id=ORGANISER),
+            SeatPlan(side=Side.A, player_id=ALICE),
+            SeatPlan(side=Side.B, player_id=BOB),
+            invited(STRANGER, Side.B, 4),
+        ),
+        by=ALICE,
+        occurred_at=at(3),
+    )
+    with pytest.raises(OnlyAHalfBuiltLineUpIsWithdrawn):
+        filling.withdraw(ALICE, occurred_at=at(4))
+    assert filling.standing_at(at(4)) is Standing.AWAITING_ANSWERS
+
+
+def test_the_exit_is_held_after_the_organisers_seat_was_given_away():
     """A re-seat gives the departed's position to the newcomer, so the organiser
-    holds no seat at all — and is no more in than when their seat said ``LEFT``."""
+    holds no seat at all — and whoever is on the court holds the exit exactly as
+    they did while the organiser's seat still said ``LEFT``."""
 
     challenge = a_completed_four()
     challenge.leave(ORGANISER, occurred_at=at(2))
@@ -1749,9 +1931,10 @@ def test_the_fallback_holds_after_the_organisers_seat_was_given_away():
     assert challenge.standing_at(INSIDE) is Standing.WITHDRAWN
 
 
-def test_a_reopened_court_is_the_only_one_a_non_organiser_may_end():
-    """The Phase 1 reason stands where it applies: a court that was never a
-    game is the organiser's alone to withdraw, whatever its seats say."""
+def test_a_court_that_has_been_a_game_is_the_only_one_a_non_organiser_may_end():
+    """*Call it off* is any player's; *Remove the challenge* is the organiser's.
+    A court that was never a game is the organiser's alone to withdraw, whatever
+    its seats say — and somebody who joined it leaves it instead."""
 
     challenge = a_court_nobody_will_finish()
 

@@ -50,6 +50,7 @@ from app.kernel import Instant, Sport, instant
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.challenges.domain.seats import SeatPlan, Side
+from app.modules.challenges.domain.standing import Standing
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.windows import entry_closes_at
@@ -275,27 +276,34 @@ async def test_a_court_that_ended_after_a_yes_is_history_and_still_listed(
 ):
     """The plan is drawn beside whatever the court became, so a court that had
     a room and ended is a row that is no longer open rather than an absence —
-    while a send nobody said yes to never had a room and is listed for nobody."""
+    while a send nobody said yes to never had a room and is listed for nobody.
+
+    The ending is the organiser leaving: B said yes, the other two said no, and
+    B alone with nobody deciding is over (``docs/adr/0165`` §3) — a court
+    somebody has joined is nobody's to withdraw. So the row is B's, who is still
+    on it, and the organiser who left has none.
+    """
 
     organiser, ana, bo, cy = (new_uuid() for _ in range(4))
-    withdrawn = _a_padel_four(organiser, (ana, bo, cy))
-    withdrawn.accept(ana, occurred_at=_at(1))
+    ended = _a_padel_four(organiser, (ana, bo, cy))
+    ended.accept(ana, occurred_at=_at(1))
     for who in (bo, cy):
-        withdrawn.decline(who, occurred_at=_at(2))
-    withdrawn.withdraw(organiser, occurred_at=_at(3))
-    await _saved(challenges, session, withdrawn)
+        ended.decline(who, occurred_at=_at(2))
+    ended.leave(organiser, occurred_at=_at(3))
+    assert ended.standing_at(_at(4)) is Standing.DECLINED
+    await _saved(challenges, session, ended)
     nobody_came = _a_padel_four(organiser, (ana, bo, cy))
     for who in (ana, bo, cy):
         nobody_came.decline(who, occurred_at=_at(1))
     await _saved(challenges, session, nobody_came)
     courts: PlannableCourts = implementation.build(session)
 
-    found = await courts.plannable_for(organiser, now=_at(4))
+    found = await courts.plannable_for(ana, now=_at(4))
 
-    assert set(found) == {withdrawn.challenge_id}
-    assert found[withdrawn.challenge_id].open_to_planning is False
-    assert found[withdrawn.challenge_id].whole is False
-    assert set(await courts.plannable_for(ana, now=_at(4))) == {withdrawn.challenge_id}
+    assert set(found) == {ended.challenge_id}
+    assert found[ended.challenge_id].open_to_planning is False
+    assert found[ended.challenge_id].whole is False
+    assert await courts.plannable_for(organiser, now=_at(4)) == {}
 
 
 @pytest.mark.parametrize("implementation", registered(PlannableCourts))

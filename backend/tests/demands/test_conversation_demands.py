@@ -299,12 +299,15 @@ async def test_a_court_whose_windows_all_passed_is_over_before_any_sweep(
 
 @pytest.mark.parametrize("implementation", registered(ArrangingCourt))
 async def test_a_withdrawn_court_is_over(implementation, session, challenges):
+    """The organiser alone again — the one who joined left, the others still
+    deciding — removes the court (``docs/adr/0165`` §4): a room existed, and it
+    is over with its challenge."""
+
     organiser, ana, bo, cy = (new_uuid() for _ in range(4))
     challenge = _a_padel_challenge(organiser, (ana, bo, cy))
     challenge.accept(ana, occurred_at=_at(1))
-    challenge.decline(bo, occurred_at=_at(2))
-    challenge.decline(cy, occurred_at=_at(3))
-    challenge.withdraw(organiser, occurred_at=_at(4))
+    challenge.leave(ana, occurred_at=_at(2))
+    challenge.withdraw(organiser, occurred_at=_at(3))
     await _saved(challenges, session, challenge)
     court: ArrangingCourt = implementation.build(session)
 

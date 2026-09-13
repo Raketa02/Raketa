@@ -41,9 +41,9 @@ class CallOffGameCommand:
     """The court was ended with a seat open, so the game it became is called
     off. ``challenges`` sends this in the transaction of the withdrawal, or of
     the departure that left one player on the court (``docs/adr/0165`` §3), and
-    nothing else does. ``called_by`` is whoever held the exit — the organiser,
-    or a remaining player once the organiser has left — or the leaver whose
-    departure emptied the court."""
+    nothing else does. ``called_by`` is whoever held the exit — any player on
+    the court (``docs/adr/0165`` §5) — or the leaver whose departure emptied
+    the court."""
 
     challenge_id: UUID
     called_by: UUID

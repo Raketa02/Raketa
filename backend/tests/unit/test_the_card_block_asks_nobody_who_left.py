@@ -274,14 +274,21 @@ async def test_the_organiser_is_asked_about_everybody_still_in():
 
 async def test_an_ended_challenge_asks_about_nobody_whoever_reads_it():
     """The rule that was already there, as the control: the card block belongs to
-    an arrangement being decided, and it stops when the deciding does."""
+    an arrangement being decided, and it stops when the deciding does.
 
-    challenge = a_court_still_being_filled()
+    The ending here is the organiser removing the court once the one who had
+    joined left it (``docs/adr/0165`` §4), with the fourth seat still deciding —
+    so the reader whose day is still running is drawn no card either, and no
+    card is computed for a court that is over.
+    """
+
+    challenge = a_court_still_being_filled(silent_seat=True)
     challenge.decline(DEPARTED, occurred_at=at(2))
-    challenge.withdraw(ORGANISER, occurred_at=at(3))
+    challenge.leave(ACCEPTED, occurred_at=at(3))
+    challenge.withdraw(ORGANISER, occurred_at=at(4))
 
-    for reader in (ORGANISER, ACCEPTED, DEPARTED):
-        answer, pairings = await _read(challenge, by=reader, now=at(4))
+    for reader in (ORGANISER, ACCEPTED, DEPARTED, SILENT):
+        answer, pairings = await _read(challenge, by=reader, now=at(5))
 
         assert answer.standing is Standing.WITHDRAWN
         assert pairings.asked_about == []

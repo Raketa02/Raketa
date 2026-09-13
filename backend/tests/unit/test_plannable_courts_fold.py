@@ -182,21 +182,25 @@ def test_the_anchor_only_ever_moves_later():
 # ---------------------------------------------------------------------------
 
 
-def test_a_court_that_ended_after_a_yes_is_history_for_who_was_on_it():
-    """B said yes, the other two said no, the organiser withdrew: the court
-    had a room, so it is history for the two who were in it rather than gone."""
+def test_a_court_that_ended_after_a_yes_is_history_for_who_is_still_on_it():
+    """B said yes, the other two said no, and the organiser left: B is alone
+    with nobody deciding, and the court is over by itself (``docs/adr/0165``
+    §3). It had a room, so it is history for B, who is still on it, rather than
+    gone — and nothing for the organiser, who left it, exactly as any court
+    somebody left is nothing to them. A court somebody has joined is nobody's
+    to withdraw, so this is how such a court ends."""
 
     challenge = _a_padel_four()
     challenge.accept(ANA, occurred_at=_at(1))
     for who in (BO, CY):
         challenge.decline(who, occurred_at=_at(2))
-    challenge.withdraw(ORGANISER, occurred_at=_at(3))
-    assert challenge.standing_at(_at(4)) is Standing.WITHDRAWN
+    challenge.leave(ORGANISER, occurred_at=_at(3))
+    assert challenge.standing_at(_at(4)) is Standing.DECLINED
 
-    for who in (ORGANISER, ANA):
-        assert _fold(challenge, None, who, now=_at(4)) == PlannableCourt(
-            anchor=SENT_AT, open_to_planning=False, whole=False
-        )
+    assert _fold(challenge, None, ANA, now=_at(4)) == PlannableCourt(
+        anchor=SENT_AT, open_to_planning=False, whole=False
+    )
+    assert _fold(challenge, None, ORGANISER, now=_at(4)) is None
 
 
 def test_a_game_past_its_entry_window_is_history_and_still_answered_about():

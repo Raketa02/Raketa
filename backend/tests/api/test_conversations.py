@@ -791,7 +791,8 @@ async def test_a_fill_after_a_no_continues_the_same_room_with_its_history(
 @pytest.fixture
 async def a_half_built_room(client, session_factory, a_room):
     """The same room, with the two undecided seats declined — so the challenge is
-    ``LINE_UP_INCOMPLETE`` and the organiser holds the exit."""
+    ``LINE_UP_INCOMPLETE``, and one departure from over: the organiser and
+    ``ana`` are the last two on it, and nobody is deciding."""
 
     for who in ("bo", "cy"):
         await _decline(client, a_room["challenge_id"], a_room["people"][who]["token"])
@@ -802,25 +803,31 @@ async def a_half_built_room(client, session_factory, a_room):
     return a_room
 
 
-async def _withdrawn(client, a_room) -> None:
-    withdrawn = await client.post(
-        f"/api/v1/challenges/{a_room['challenge_id']}/withdrawal",
-        headers=world.auth(a_room["searcher"]["token"]),
+async def _over(client, a_room) -> None:
+    """``ana`` takes her yes back: the organiser is alone with nobody deciding,
+    and the challenge is over by itself — ``DECLINED``, a departure being a no
+    (``docs/adr/0165`` §3). A court somebody has joined is nobody's to
+    withdraw, so this is how a half-built court without a game ends."""
+
+    left = await client.post(
+        f"/api/v1/challenges/{a_room['challenge_id']}/departure",
+        headers=world.auth(a_room["people"]["ana"]["token"]),
     )
-    assert withdrawn.status_code == 200, withdrawn.text
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "DECLINED"
 
 
 async def test_a_room_is_gone_the_instant_its_challenge_is_over_and_nothing_has_swept(
     client, a_half_built_room
 ):
     """``docs/adr/0164`` §6, and ``docs/adr/0153`` §5's *past its end but not
-    yet swept* made literal: the withdrawal commits and the outbox has **not**
-    delivered, so the row still stands in the store — and every read already
-    answers as if it did not, because a room without a game has ended exactly
-    when its challenge has, derived on the read."""
+    yet swept* made literal: the departure that ends the court commits and the
+    outbox has **not** delivered, so the row still stands in the store — and
+    every read already answers as if it did not, because a room without a game
+    has ended exactly when its challenge has, derived on the read."""
 
     conversation_id = a_half_built_room["room"]["conversation_id"]
-    await _withdrawn(client, a_half_built_room)
+    await _over(client, a_half_built_room)
 
     for who in (a_half_built_room["searcher"], a_half_built_room["people"]["ana"]):
         assert await _rooms(client, who["token"]) == []
@@ -838,7 +845,7 @@ async def test_every_read_on_an_ended_room_answers_not_found(
 
     conversation_id = a_half_built_room["room"]["conversation_id"]
     token = a_half_built_room["searcher"]["token"]
-    await _withdrawn(client, a_half_built_room)
+    await _over(client, a_half_built_room)
 
     response = await client.get(
         f"/api/v1/conversations/{conversation_id}{route}", headers=world.auth(token)
@@ -856,7 +863,7 @@ async def test_nobody_can_say_anything_in_a_room_past_its_end(
 
     conversation_id = a_half_built_room["room"]["conversation_id"]
     token = a_half_built_room["searcher"]["token"]
-    await _withdrawn(client, a_half_built_room)
+    await _over(client, a_half_built_room)
 
     said = await _say(
         client, conversation_id, token, "still there?", _A_CLIENT_MESSAGE_ID
@@ -869,38 +876,81 @@ async def test_nobody_can_say_anything_in_a_room_past_its_end(
 # -- the withdrawal --------------------------------------------------------
 
 
+@pytest.fixture
+async def a_room_the_organiser_is_alone_in_again(client, session_factory, a_room):
+    """The same room, with ``ana``'s yes taken back while ``bo`` and ``cy`` are
+    still deciding — so the challenge is ``AWAITING_ANSWERS`` with nobody
+    besides the organiser on it, which is the one state a room exists in and
+    the withdraw is admitted (``docs/adr/0165`` §4)."""
+
+    left = await client.post(
+        f"/api/v1/challenges/{a_room['challenge_id']}/departure",
+        headers=world.auth(a_room["people"]["ana"]["token"]),
+    )
+    assert left.status_code == 200, left.text
+    assert left.json()["standing"] == "AWAITING_ANSWERS"
+    await world.deliver_the_outbox(session_factory)
+    rows = await _rooms(client, a_room["searcher"]["token"])
+    assert len(rows) == 1, rows
+    assert [member["player_id"] for member in rows[0]["members"]] == [
+        str(a_room["searcher"]["id"])
+    ], "a room of one, still standing"
+    assert rows[0]["last_entry"]["code"] == "SEAT_LEFT"
+    return a_room
+
+
+async def _withdrawn(client, a_room) -> None:
+    withdrawn = await client.post(
+        f"/api/v1/challenges/{a_room['challenge_id']}/withdrawal",
+        headers=world.auth(a_room["searcher"]["token"]),
+    )
+    assert withdrawn.status_code == 200, withdrawn.text
+    assert withdrawn.json()["standing"] == "WITHDRAWN"
+
+
 async def test_a_withdrawal_destroys_the_room_in_the_same_act(
-    client, session_factory, a_half_built_room
+    client, session_factory, a_room_the_organiser_is_alone_in_again
 ):
     """``docs/adr/0153`` §2 — the withdrawal destroys it and writes no line,
     because there is nobody left to read one. The news is on the challenge
-    screen."""
+    screen. **Before the outbox delivers** the room is already over on the
+    read, as any ended challenge's is; **after**, it is destroyed rather than
+    delisted."""
 
-    token = a_half_built_room["searcher"]["token"]
-    conversation_id = a_half_built_room["room"]["conversation_id"]
+    token = a_room_the_organiser_is_alone_in_again["searcher"]["token"]
+    conversation_id = a_room_the_organiser_is_alone_in_again["room"]["conversation_id"]
 
-    await _withdrawn(client, a_half_built_room)
+    await _withdrawn(client, a_room_the_organiser_is_alone_in_again)
+
+    assert await _rooms(client, token) == []
     await world.deliver_the_outbox(session_factory)
-
     assert await _rooms(client, token) == []
     gone = await _room_read(client, conversation_id, token)
     assert gone.status_code == 404, gone.text
     assert gone.json()["code"] == "conversation_not_found"
 
 
-async def test_a_withdrawn_room_is_gone_for_everybody_who_was_in_it(
+async def test_a_withdrawal_is_refused_while_somebody_is_in_the_room(
     client, session_factory, a_half_built_room
 ):
-    """It is destroyed rather than hidden from the organiser: the member who
-    accepted loses the room too, and reads the news on the challenge."""
+    """A court somebody has joined is nobody's to end for the others
+    (``docs/adr/0165`` §4): the organiser's withdrawal is refused, and the room
+    the two of them are in stands exactly as it was."""
 
-    ana = a_half_built_room["people"]["ana"]["token"]
-    assert len(await _rooms(client, ana)) == 1
+    token = a_half_built_room["searcher"]["token"]
+    conversation_id = a_half_built_room["room"]["conversation_id"]
 
-    await _withdrawn(client, a_half_built_room)
+    refused = await client.post(
+        f"/api/v1/challenges/{a_half_built_room['challenge_id']}/withdrawal",
+        headers=world.auth(token),
+    )
+
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "somebody_has_joined"
     await world.deliver_the_outbox(session_factory)
-
-    assert await _rooms(client, ana) == []
+    for who in (a_half_built_room["searcher"], a_half_built_room["people"]["ana"]):
+        (row,) = await _rooms(client, who["token"])
+        assert row["conversation_id"] == conversation_id
 
 
 # -- the game's clock, untouched -------------------------------------------

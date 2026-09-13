@@ -116,9 +116,9 @@ class PlannedGameHandover(Protocol):
 
         Called only on a court that has been a game, on two occasions. After
         the aggregate has recorded a withdrawal and decided whose act it is —
-        ``by`` is the organiser, or a remaining player once the organiser has
-        left, and it is the one record of the actor: ``ChallengeWithdrawn``
-        carries no player. And after a departure that left one player on the
+        ``by`` is a player on the court (``docs/adr/0165`` §5), and it is the
+        one record of the actor: ``ChallengeWithdrawn`` carries no player. And
+        after a departure that left one player on the
         court with nobody deciding (``docs/adr/0165`` §3), right after
         :meth:`vacate_seat` for the same person — ``by`` is the leaver, whose
         departure is what ended it. The other side reads no moment guard for

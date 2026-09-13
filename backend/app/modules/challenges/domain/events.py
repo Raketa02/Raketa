@@ -187,7 +187,8 @@ class SeatLeft:
 
 @dataclass(frozen=True)
 class ChallengeWithdrawn:
-    """The organiser ended a line-up nobody was going to complete.
+    """The organiser removed a challenge nobody else had joined — or a player on
+    a court that has been a game called it off (``docs/adr/0165`` §4–§5).
 
     **The one event here that is not about a seat**, which is exactly what makes
     it the exemption rather than a breach: a fact about a seat is a fact the fold
@@ -198,13 +199,13 @@ class ChallengeWithdrawn:
     stream from the opening event, and a second copy of *who* would be a second
     place for it to be true — the failure ``SeatLapsed`` avoids by carrying the
     one player a whole-court event could not otherwise name. On a court that
-    has been a game the act may be a remaining player's (``docs/adr/0163`` §1),
-    and there the actor is on the **game's** record, ``GameCalledOff.called_by``,
+    has been a game the act is any player's on it (``docs/adr/0165`` §5), and
+    there the actor is on the **game's** record, ``GameCalledOff.called_by``,
     written in the same transaction; the one path where nobody records it — a
-    court whose game had already ended by its clock — is costed in that record.
-    Whole-challenge and irreversible: there is no ``ChallengeReopened`` beside
-    this, because re-asking the same people is a **new** challenge with fresh
-    deadlines and its own ``answered`` set.
+    court whose game had already ended by its clock — is costed in
+    ``docs/adr/0163``. Whole-challenge and irreversible: there is no
+    ``ChallengeReopened`` beside this, because re-asking the same people is a
+    **new** challenge with fresh deadlines and its own ``answered`` set.
     """
 
     challenge_id: UUID

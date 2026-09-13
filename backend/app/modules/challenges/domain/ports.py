@@ -1051,11 +1051,15 @@ class ChallengeHistoryQuery(Protocol):
     ) -> Mapping[UUID, int]:
         """How many seats are waiting on each of these players' answers.
 
-        **Invited, unanswered, inside their own window, across every sport.** Not
-        challenges they organised — an organiser with eight sends out is
-        over-committed but is not slow to answer, and docking them would sink the
-        exact behaviour the product exists to produce — and not seats they have
-        already accepted, which are waiting on nobody.
+        **Invited, unanswered, inside their own window, across every sport, on
+        a challenge that still stands.** Not challenges they organised — an
+        organiser with eight sends out is over-committed but is not slow to
+        answer, and docking them would sink the exact behaviour the product
+        exists to produce — not seats they have already accepted, which are
+        waiting on nobody, and not a seat on a challenge its organiser removed
+        while that seat's day was still running (``docs/adr/0165`` §4), which
+        is waiting on nobody either: the seat reads as awaiting and the court
+        is over, and the court decides.
 
         Across every sport because the pair rule is, and because the ruleset's own
         falsifier for this signal is *answer rate by open-challenge bucket*: only
@@ -1113,8 +1117,10 @@ class ChallengeHistoryQuery(Protocol):
         ``NoChallengeOfYoursHasThatId`` already makes one surface over.
 
         **Any live member, and never only the organiser** (§1). Growing a court
-        and ending one are different acts with different permissions: the withdraw
-        is the organiser's, and the fill is everybody's who is still on the court.
+        and ending one are different acts with different permissions: removing
+        a court is the organiser's while nobody has joined and nobody's once
+        somebody has (``docs/adr/0165`` §4), and the fill is everybody's who is
+        still on the court.
         A mutual-born doubles challenge decides it — it is ``LINE_UP_INCOMPLETE``
         from birth with an "organiser" who is only whoever's yes arrived second,
         and making that arbitrary tiebreak the only person who can finish the four

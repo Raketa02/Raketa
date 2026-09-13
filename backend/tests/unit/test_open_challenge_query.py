@@ -679,13 +679,12 @@ async def test_a_declining_seat_releases_its_pair_on_a_court_that_still_stands(
 
 
 async def test_a_withdrawn_court_releases_the_pair_it_was_holding(session_factory):
-    """The other side of that line, and the permanence the withdraw exists to end.
+    """The other side of that line, and the early release the withdraw buys.
 
-    A half-built four holds its pair with no expiry: nobody is deciding, so
-    nothing lapses, and the acceptor cannot leave a seat they have answered.
-    Before ``docs/adr/0142`` that was for ever and in **every** sport. A
-    withdrawal is an ending, so the arranging stops and both of them are
-    strangers again.
+    A send holds its pair for as long as an answer is owed — up to the whole
+    window, whether or not the invitee ever looks. Removing it
+    (``docs/adr/0165`` §4) is an ending, so the arranging stops on the instant
+    and both of them are strangers again.
     """
 
     async with session_factory() as session:
@@ -703,8 +702,7 @@ async def test_a_withdrawn_court_releases_the_pair_it_was_holding(session_factor
             ),
             occurred_at=SENT_AT,
         )
-        challenge.accept(ALICE, occurred_at=at(1))
-        challenge.withdraw(ORGANISER, occurred_at=at(2))
+        challenge.withdraw(ORGANISER, occurred_at=at(1))
         await _record(session, challenge)
 
         pairs = await build_open_challenge_query(session).open_pairs_among(
@@ -719,7 +717,13 @@ async def test_the_same_people_may_be_asked_again_once_it_is_withdrawn(
 ):
     """**A new challenge, and that is what it is.** Fresh deadlines and its own
     record of who has answered — the send is not a resurrection of the one that
-    was withdrawn, and nothing here reopens anything."""
+    was withdrawn, and nothing here reopens anything.
+
+    This is the re-ask ``docs/adr/0142`` §2 refused the pre-answer withdraw
+    over and ``docs/adr/0165`` §4 accepts as a named risk: remove, then ask the
+    same person again on a fresh clock. Nothing in this context can see it
+    across two aggregates, and the falsifier is the ADR's.
+    """
 
     async with session_factory() as session:
         challenge = Challenge.sent(
@@ -736,7 +740,6 @@ async def test_the_same_people_may_be_asked_again_once_it_is_withdrawn(
             ),
             occurred_at=SENT_AT,
         )
-        challenge.accept(ALICE, occurred_at=at(1))
         await _record(session, challenge)
 
         with pytest.raises(AnOpenChallengeStandsWithThisPair):
@@ -752,7 +755,7 @@ async def test_the_same_people_may_be_asked_again_once_it_is_withdrawn(
         # are the same one: a second would not know the version it read.
         repository = _repository(session)
         loaded = await repository.load(challenge.id)
-        loaded.withdraw(ORGANISER, occurred_at=at(2))
+        loaded.withdraw(ORGANISER, occurred_at=at(1))
         await repository.save(loaded)
         await session.commit()
 
