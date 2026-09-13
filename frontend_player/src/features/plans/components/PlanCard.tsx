@@ -42,14 +42,28 @@
  * counter, `Locked`, and never a colour (Part 13). **`locked by everybody` stays a phrase the data
  * cannot support**: nothing records assent from anyone but the one person who tapped.
  *
- * **The control has four states and `domain/lock.ts` folds them** — greyed below three, live at
- * three, busy while the lock goes out, and **gone** once it has landed rather than 6.1's
- * `settled`, because a second lock records nothing and answers `200`, so a control still offering
- * it would be one that provably does nothing. That file also holds the answer to #324's rule on
- * the greyed control — *a note above it has already said why* — which is that **the counter is the
- * note**: drawn always, directly above the button in sighted and spoken order alike, and stating
- * exactly the count the act is guarded on. The label carries no reason, on the author's own
- * decision.
+ * **The control has five states and `domain/lock.ts` folds them** — **waiting** while the room
+ * has no game, greyed below three, live at three, busy while the lock goes out, and **gone** once
+ * it has landed rather than 6.1's `settled`, because a second lock records nothing and answers
+ * `200`, so a control still offering it would be one that provably does nothing. That file also
+ * holds the answer to #324's rule on the greyed control — *a note above it has already said why*
+ * — which is that **the counter is the note**: drawn always, directly above the button in sighted
+ * and spoken order alike, and stating exactly the count the act is guarded on. The label carries
+ * no reason, on the author's own decision.
+ *
+ * ## The lock waits for the court, and the card is drawn from the room's opening
+ *
+ * [ADR-0164](../../../../../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+ * made the plan the **challenge's**: the room pins this card the moment it opens, with two of four
+ * in, and where, day and hour are proposals anybody on the court may make and move. What waits is
+ * the lock — *we are agreed* is said only once everybody who will have to keep it is in — so while
+ * the room has no game the button is **absent, not greyed** (#324), and in its place the surface
+ * hands this card the court's count and the card draws one line, `2 of 4 in — you can plan now,
+ * lock when everyone's here`, which is the note an absent control is owed. The line becomes the
+ * button on the nudge that brings the game (#406). The day chips run from **the row's anchor** —
+ * the send until the game exists, then `planned_at` — so the card needs no game to draw them, and
+ * *today* is the surface's own instant: the room's `read_at` here, the games list's on the game
+ * screen.
  *
  * **A lock freezes nothing.** Any member may fill or change any slot, any number of times, before
  * a lock and after one — there is no rate limit, *the line is the friction*, and a move after a
@@ -79,12 +93,13 @@
  *   app's default here, because a slot carries no deadline anybody chose and a day recorded on
  *   reconnect is the same day it would have been.
  *
- * ## The clock is the game's, and there is exactly one of it
+ * ## The clock is the surface's, and there is exactly one of it
  *
- * `readAt` and `plannedAt` both come off `GET /games`, so *today* and the horizon are read against
- * one fold — which is the whole of what makes `today + 6` and `planned_at + PLAN_HORIZON`
- * comparable. `GET /plans` deliberately carries no `read_at`: a plan folds nothing against the
- * clock, so there is no second instant for this card to have used by mistake (ADR-0148 §10).
+ * `readAt` is the instant the surface behind this card was folded against — the room's `read_at`
+ * in the chat, the games list's on the game screen — and it is *today* on the day row. `GET /plans`
+ * deliberately carries no `read_at`: a plan folds nothing against the clock, so there is no second
+ * instant for this card to have used by mistake (ADR-0148 §10). The horizon is the row's own
+ * `anchor`, which is not a clock but a fact about the court, and it only ever moves later.
  *
  * ## Held greys the chips and the button, and never removes the card
  *
@@ -110,7 +125,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { BottomSheet, Button, Card, Chip, Note, theme } from '@/shared/ui';
 
-import { lockControl } from '../domain/lock';
+import { lockControl, type CourtCount } from '../domain/lock';
 import { HOURS_OFFERED, PLAN_SLOTS, offeredDays, type Plan, type PlanSlot } from '../domain/slots';
 import { useLockPlan, useSetSlot } from '../hooks/usePlans';
 
@@ -125,6 +140,7 @@ import {
   SLOT_SHEET_TITLE,
   THE_PLAN,
   counterLabel,
+  lockWaitsLine,
   planHeadingName,
   slotChipLabel,
   slotChipName,
@@ -139,13 +155,20 @@ interface SlotWrite {
 }
 
 export interface PlanCardProps {
-  readonly gameId: string;
-  /** When the last seat accepted. The horizon is measured from it. */
-  readonly plannedAt: string;
-  /** The instant the game list was folded against — **the one clock on this card**. */
+  /**
+   * The row this card draws — the court's plan, keyed by its challenge, carrying the anchor the
+   * day row runs from. **A row and never an absence**: a court with nothing agreed is a row with
+   * three empty slots, and a surface with no row yet has nothing to draw this card from.
+   */
+  readonly plan: Plan;
+  /** The instant the surface was folded against — **the one clock on this card**, *today*. */
   readonly readAt: string;
-  /** What has been agreed, and `undefined` where nothing has. The two are one state. */
-  readonly plan: Plan | undefined;
+  /**
+   * **Who is in against how many the court takes — given exactly while the room has no game.**
+   * The lock waits for the court (ADR-0164 §5): with this the button is absent and the count line
+   * stands where it will be; without it the button is drawn. The game screen never passes one.
+   */
+  readonly court?: CourtCount;
   /** The account may not write here. Every chip greys, and the screen owns the one note. */
   readonly refused?: boolean;
   /**
@@ -157,14 +180,8 @@ export interface PlanCardProps {
   readonly note?: ReactNode;
 }
 
-export function PlanCard({
-  gameId,
-  plannedAt,
-  readAt,
-  plan,
-  refused = false,
-  note,
-}: PlanCardProps) {
+export function PlanCard({ plan, readAt, court, refused = false, note }: PlanCardProps) {
+  const { challengeId, anchor } = plan;
   const write = useSetSlot();
   const lock = useLockPlan();
 
@@ -208,7 +225,10 @@ export function PlanCard({
   const paused = PLAN_SLOTS.some((slot) => going[slot].isPaused) || lock.isPaused;
 
   /** What the button is — and whether it is drawn at all. `domain/lock.ts` is the fold. */
-  const control = lockControl(plan, { pending: lock.isPending });
+  const control = lockControl(plan, {
+    pending: lock.isPending,
+    ...(court === undefined ? {} : { court }),
+  });
 
   /**
    * The chip each editor was opened from, so focus goes back to it.
@@ -249,13 +269,13 @@ export function PlanCard({
   function open(slot: PlanSlot): void {
     clearRefusals();
 
-    if (slot === 'where' && draft === undefined) setDraft(plan?.place ?? '');
+    if (slot === 'where' && draft === undefined) setDraft(plan.place ?? '');
     setSheet({ slot, open: true });
   }
 
   function lockThePlan(): void {
     clearRefusals();
-    lock.mutate({ gameId });
+    lock.mutate({ challengeId });
   }
 
   const close = () => setSheet((held) => ({ ...held, open: false }));
@@ -306,11 +326,18 @@ export function PlanCard({
           chips as its remedies, so it stays directly under them — and above the lock. */}
       {note}
 
+      {/* Waiting while the room has no game — the count line in the button's place, the note an
+          absent control is owed. `tiny` and `muted`, as the counter's register: it is a fact about
+          the court and not a status, and the one act it names is ahead of the player, not on it. */}
+      {control === 'waiting' && court !== undefined ? (
+        <Text style={s.waiting}>{lockWaitsLine(court)}</Text>
+      ) : null}
+
       {/* Gone once locked, and greyed under the counter or the room's note — never with a reason
           of its own on the label. `primary` because this is the one act on the card that asks:
           the chips are values and this is the agreement. The card's column stretches it to the
           content width, which is what the mock draws. */}
-      {control === 'gone' ? null : (
+      {control === 'gone' || control === 'waiting' ? null : (
         <Button
           label={LOCK_THE_PLAN}
           busyLabel={LOCKING}
@@ -337,7 +364,7 @@ export function PlanCard({
             onRecord={() => {
               close();
               write.place.mutate(
-                { gameId, written: draft ?? '' },
+                { challengeId, written: draft ?? '' },
                 // Thrown away only once it has landed, so the next open reads the value the
                 // server answered with and a refused one keeps what was typed.
                 { onSuccess: () => setDraft(undefined) },
@@ -348,11 +375,11 @@ export function PlanCard({
 
         {sheet.slot === 'day' ? (
           <DayChips
-            days={offeredDays({ readAt, plannedAt })}
-            {...(plan?.day === undefined ? {} : { agreed: plan.day })}
+            days={offeredDays({ readAt, anchor })}
+            {...(plan.day === undefined ? {} : { agreed: plan.day })}
             onPick={(day) => {
               close();
-              write.day.mutate({ gameId, day });
+              write.day.mutate({ challengeId, day });
             }}
           />
         ) : null}
@@ -360,10 +387,10 @@ export function PlanCard({
         {sheet.slot === 'hour' ? (
           <HourChips
             hours={HOURS_OFFERED}
-            {...(plan?.hour === undefined ? {} : { agreed: plan.hour })}
+            {...(plan.hour === undefined ? {} : { agreed: plan.hour })}
             onPick={(hour) => {
               close();
-              write.hour.mutate({ gameId, hour });
+              write.hour.mutate({ challengeId, hour });
             }}
           />
         ) : null}
@@ -387,6 +414,8 @@ const s = StyleSheet.create({
     backgroundColor: theme.color.line2,
   },
   counterLabel: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted },
+  // The count line, in the counter's own register — a fact about the court, read and not operated.
+  waiting: { ...theme.type.tiny, color: theme.color.muted },
   // Wrapping rather than scrolling: three chips fit a phone, and the one that can grow is the
   // place — drawn without its court, and taking a second line rather than a gesture on the rare
   // occasion that is still too long.

@@ -1,19 +1,26 @@
 /**
- * The lock — the count it is guarded on, and the control's four states as a pure function of the
- * plan ([ADR-0155](../../../../../docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)).
+ * The lock — the count it is guarded on, and the control's five states as a pure function of the
+ * plan and the court
+ * ([ADR-0155](../../../../../docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md),
+ * [ADR-0164](../../../../../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+ * §5).
  *
  * **The count and the lock are two facts**, and that is what is asserted: three filled slots is a
- * plan everybody *could* agree, and only `lockedAt` says somebody did.
+ * plan everybody *could* agree, and only `lockedAt` says somebody did. **And the lock waits for the
+ * court**: while the room has no game the control is not drawn at all, whatever the count.
  */
 
 import type { Plan } from './slots';
 import { SLOTS, isLocked, lockControl, slotCount } from './lock';
 
-const GAME = '11111111-0000-4000-8000-000000000001';
+const CHALLENGE = '11111111-0000-4000-8000-000000000001';
 
 function plan(over: Partial<Plan> = {}): Plan {
-  return { gameId: GAME, ...over };
+  return { challengeId: CHALLENGE, anchor: '2026-09-12T07:00:00Z', ...over };
 }
+
+/** Two of a padel four are in, and the room has no game. */
+const TWO_OF_FOUR = { in: 2, seats: 4 } as const;
 
 const COMPLETE = plan({ place: 'Zabłocie Sport', day: '2026-09-13', hour: '18:00' });
 
@@ -66,5 +73,25 @@ describe('the control', () => {
 
     expect(lockControl(locked, { pending: false })).toBe('gone');
     expect(lockControl(locked, { pending: true })).toBe('gone');
+  });
+
+  /**
+   * **The lock waits for the court** (ADR-0164 §5): while the room has no game the control is not
+   * drawn — absent, never greyed, on #324's rule — and the count line stands where it will be. The
+   * count of slots says nothing here: three of three set by two of four is still a plan nobody may
+   * agree for four.
+   */
+  it('waits for the court while the room has no game, whatever the count', () => {
+    expect(lockControl(undefined, { pending: false, court: TWO_OF_FOUR })).toBe('waiting');
+    expect(lockControl(plan({ day: '2026-09-13' }), { pending: false, court: TWO_OF_FOUR })).toBe(
+      'waiting',
+    );
+    expect(lockControl(COMPLETE, { pending: false, court: TWO_OF_FOUR })).toBe('waiting');
+  });
+
+  /** The court handed in is the whole of the rule: a room with its game passes none. */
+  it('is offered the moment the room has its game', () => {
+    expect(lockControl(COMPLETE, { pending: false, court: undefined })).toBe('live');
+    expect(lockControl(plan(), { pending: false, court: undefined })).toBe('greyed');
   });
 });

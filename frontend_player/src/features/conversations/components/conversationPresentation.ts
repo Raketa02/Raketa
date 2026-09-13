@@ -280,8 +280,9 @@ export function headerTitle(handles: readonly string[], budget: number): string 
  * says why that is a different thing.
  *
  * **A room with no game draws the sport alone.** `game_id` is nullable, a `LINE_UP_INCOMPLETE`
- * room has no game and no plan, and that is the same nothing the absent *Details* door draws from
- * the same field — no state is drawn for it and none is invented. The same is true while the
+ * room has no game — a plan, since ADR-0164, but no rung to name — and that is the same nothing
+ * the absent *Details* door draws from the same field; no state is drawn for it and none is
+ * invented. The same is true while the
  * games list is still coming, and for a standing this build cannot name.
  */
 export function headerSubline(sportName: string, state: string | undefined): string {
@@ -294,8 +295,9 @@ const LINE_JOIN = ' · ';
 /**
  * **The door to the game**, and the visible half of it is the design's word.
  *
- * Drawn only where there is a game: a `LINE_UP_INCOMPLETE` room has no game and no plan, so
- * there is nothing to open and **no door is drawn rather than a dead one**. The spoken half is
+ * Drawn only where there is a game: a `LINE_UP_INCOMPLETE` room has no game, so there is
+ * nothing to open and **no door is drawn rather than a dead one** — its plan is on the card
+ * pinned under this header. The spoken half is
  * `conversationAccessibility.ts`', and the two differ on purpose.
  */
 export const DETAILS = 'Details';

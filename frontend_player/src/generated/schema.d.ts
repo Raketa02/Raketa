@@ -951,9 +951,11 @@ export interface paths {
         put?: never;
         /**
          * Leave the game
-         * @description **You are out of a game you had agreed to.** Your seat reopens on the challenge, the game survives with that seat drawn empty, and the people still on it keep what they agreed — the plan, the room, the record. Anyone still on the court may fill your seat the way a half-built court is filled, and the newcomer's yes re-seats the **same** game.
+         * @description **You are out of a court you had agreed to** — a game, or a court that is not whole yet. Your seat reopens on the challenge; where the court had become a game, that game survives with your seat drawn empty, and the people still on it keep what they agreed — the plan, the room, the record. Anyone still on the court may fill your seat the way a half-built court is filled, and the newcomer's yes re-seats the **same** game.
          *
-         *     **Any player on the court, the organiser included**, while the game is awaiting its entry and its agreed moment is ahead — or no moment is agreed yet. Once the moment has passed, leaving means nothing and is refused.
+         *     **Any player on the court, the organiser included**, while the court stands — and, on a game, while it is awaiting its entry and its agreed moment is ahead or no moment is agreed yet. Once the moment has passed, leaving means nothing and is refused; a court that is not a game has no moment to guard.
+         *
+         *     **A court is over when at most one player is on it and no seat is awaiting an answer**, and the organiser is a player in that rule. Before a game the challenge ends by itself — as `DECLINED`, because a departure is a no — and its room with it. On a game, the departure that leaves one player on it **calls the game off** in this request: `GET /games` reads `CALLED_OFF`, the room is gone, and the challenge stands with nobody to fill the seat for. Singles included: an opponent who leaves calls the game off.
          *
          *     **You are out of this court's own pool for as long as it stands.** Nobody is asked twice on one challenge; being asked again is a **new** challenge. Every other search reaches you at once — the pair rule released you the moment you left.
          *
@@ -1249,9 +1251,11 @@ export interface paths {
         };
         /**
          * Your plans
-         * @description **A plan is one game's, and this is the only plan read.** Join it against `GET /games` by `game_id` — the plan is not a field on a game, because a game is a record of an evening and a plan is an agreement about a future, and the two contexts do not read each other.
+         * @description **A plan is one challenge's, and this is the only plan read.** One row for every court you hold an accepted seat on — arranging, whole, or over — keyed by `challenge_id`. The room draws it by its own `challenge_id` from the moment it opens; Now joins it to a game by the game's `challenge_id`. The plan is not a field on either, because a game is a record of an evening and a plan is an agreement about a future, and the contexts do not read each other.
          *
-         *     **A game with nothing agreed is absent from this list.** *No plan* is what it draws, and it is one spelling: a plan is born by being used, so there is no empty row for a game nobody has arranged anything on yet.
+         *     **A court with nothing agreed is a row with three nulls, and it carries the anchor.** Absence means one thing only: you hold no accepted seat on that court. An invitee still deciding gets no row; somebody who left gets no row.
+         *
+         *     **`anchor` is what the day chips run from** — the challenge's send until the game exists, then the game's `planned_at`, only ever later.
          *
          *     **There is no `read_at` here, deliberately.** A plan folds nothing against the clock — its day and hour are wall-clock facts, drawn literally and never counted down — so there is no instant for it to have been folded against. Fold the card against `GET /games`' `read_at`, which keeps every clock on that screen the same one.
          *
@@ -1266,7 +1270,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/plans/{game_id}/place": {
+    "/api/v1/plans/{challenge_id}/place": {
         parameters: {
             query?: never;
             header?: never;
@@ -1282,7 +1286,7 @@ export interface paths {
          *
          *     **This is a note and never a court.** No id, no lookup, no autocomplete, no reuse, no geocode — and nothing anywhere reads it. One club will be spelled four ways and nothing will notice, which is what refusing a venue record costs.
          */
-        put: operations["set_place_api_v1_plans__game_id__place_put"];
+        put: operations["set_place_api_v1_plans__challenge_id__place_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1290,7 +1294,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/plans/{game_id}/day": {
+    "/api/v1/plans/{challenge_id}/day": {
         parameters: {
             query?: never;
             header?: never;
@@ -1302,11 +1306,11 @@ export interface paths {
          * Set the day you are playing
          * @description **A local day in the platform's one zone**, so one arrangement reads the same on every phone in it.
          *
-         *     **Clamped to the game's own horizon**, which is what keeps a plan from naming a day on which *we played* can no longer be said — and what leaves every plannable day at least twenty-four hours to say it.
+         *     **Clamped to 7 days past the row's `anchor`** — the send until the game exists, then `planned_at` — which is what keeps a plan from naming a day on which *we played* can no longer be said, and what leaves every plannable day at least twenty-four hours to say it once there is a game. The anchor only moves later, so a day set before the court was whole stays valid after.
          *
          *     **Writing the day already there records nothing and answers `200`.**
          */
-        put: operations["set_day_api_v1_plans__game_id__day_put"];
+        put: operations["set_day_api_v1_plans__challenge_id__day_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1314,7 +1318,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/plans/{game_id}/hour": {
+    "/api/v1/plans/{challenge_id}/hour": {
         parameters: {
             query?: never;
             header?: never;
@@ -1330,7 +1334,7 @@ export interface paths {
          *
          *     **Writing the hour already there records nothing and answers `200`.**
          */
-        put: operations["set_hour_api_v1_plans__game_id__hour_put"];
+        put: operations["set_hour_api_v1_plans__challenge_id__hour_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1338,7 +1342,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/plans/{game_id}/lock": {
+    "/api/v1/plans/{challenge_id}/lock": {
         parameters: {
             query?: never;
             header?: never;
@@ -1348,7 +1352,9 @@ export interface paths {
         get?: never;
         /**
          * Agree the plan
-         * @description **We are agreed.** Any member may lock, once all three slots are set — and locking is an **act** rather than a fourth slot: a complete plan is one everybody *could* agree, and this says somebody did. It writes a system line into the room, which is the whole of what it does.
+         * @description **We are agreed.** Any member may lock, once the court is whole and all three slots are set — and locking is an **act** rather than a fourth slot: a complete plan is one everybody *could* agree, and this says somebody did. It writes a system line into the room, which is the whole of what it does.
+         *
+         *     **The lock waits for the court.** Two of four may set where, day and hour; they may not agree them for four. While a seat is open or unanswered the answer is `the_court_is_not_whole`, and the card draws the count line where this button will be.
          *
          *     **It takes no body.** The value is the three slots and they are already recorded; sending one back would be the second place that fact is true.
          *
@@ -1358,7 +1364,7 @@ export interface paths {
          *
          *     **Locking a plan that is already locked answers `200` and records nothing**, and the first lock's `locked_at` is the one that stands.
          */
-        put: operations["lock_the_plan_api_v1_plans__game_id__lock_put"];
+        put: operations["lock_the_plan_api_v1_plans__challenge_id__lock_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -4311,16 +4317,17 @@ export interface components {
         PhotoReviewDecision: "allowed" | "flagged";
         /**
          * PlanListResponse
-         * @description Every plan for the games you are on the court of.
+         * @description One row for every court you may plan, written or not.
          *
          *     **No `read_at`, and that is deliberate.** A plan folds nothing against the
          *     clock, so there is no instant for it to have been folded against — the card
          *     is folded against `GET /games`' own `read_at`, which is what keeps Now on one
          *     clock by construction (``docs/adr/0148`` §10).
          *
-         *     **A game with nothing agreed is absent**, not present with three nulls. *No
-         *     plan* is what such a game draws, and one spelling for it is what stops an
-         *     empty plan being told apart from a missing one.
+         *     **A court with nothing agreed is a row with three nulls** (``docs/adr/0164``
+         *     §4), not an absence: a row is what says there is a plan to draw and what
+         *     carries the anchor to draw it with, and absence is reserved for one thing —
+         *     a court you hold no accepted seat on.
          */
         PlanListResponse: {
             /** Plans */
@@ -4328,23 +4335,26 @@ export interface components {
         };
         /**
          * PlanSchema
-         * @description One game's plan: three slots and the moment they name.
+         * @description One court's plan: three slots, the moment they name, and the anchor.
          *
-         *     **Keyed on the game and on nothing else.** A plan has no id of its own —
-         *     ``game_id`` identifies it, for ever, and a second identity beside that would
-         *     be a second name for one thing.
+         *     **Keyed on the challenge and on nothing else.** A plan has no id of its own —
+         *     ``challenge_id`` identifies it, for ever, and a second identity beside that
+         *     would be a second name for one thing. The game the challenge becomes carries
+         *     the same id, which is how Now joins the two.
          *
          *     Each slot is nullable and an empty one is spelled ``null``. **A slot is never
          *     emptied**, so a ``null`` here is a slot that has never been filled and never a
-         *     slot somebody cleared; the client draws the slot's name in its place.
+         *     slot somebody cleared; the client draws the slot's name in its place. A row
+         *     with all three ``null`` is a court nobody has written on yet, and it is a row
+         *     because the court is one the reader may plan.
          */
         PlanSchema: {
             /**
-             * Game Id
+             * Challenge Id
              * Format: uuid
-             * @description The game this plan is for. **A plan is one game's, for ever** — join it against `GET /games` by this.
+             * @description The challenge this plan is for. **A plan is one challenge's, for ever**, and the game it becomes inherits it — join it against `GET /conversations` by `challenge_id` and against `GET /games` by the game's own `challenge_id`.
              */
-            game_id: string;
+            challenge_id: string;
             /**
              * Place
              * @description Where these people are meeting, as somebody typed it. **Short free text, one line** — never an id, a lookup, an autocomplete, a reuse or a geocode, and **nothing anywhere reads it**. It is a note between the people on the court and never a place the platform knows.
@@ -4367,6 +4377,14 @@ export interface components {
              *     Coarsened **later, never earlier**, so nobody is asked for a result before they could have played. It is sent because it is a timezone conversion the client must not redo.
              */
             agreed_point?: string | null;
+            /**
+             * Anchor
+             * Format: date-time
+             * @description The instant this plan's horizon runs from: a day may be set up to **7 days past it**, and the row of day chips is clamped to that. **The challenge's send until the game exists, then the game's `planned_at`** — it only ever moves later, so a day chosen under the first is still valid under the second and the chips widen when the court fills rather than shrinking.
+             *
+             *     Sent rather than derived on the client because the client would otherwise need the game to draw a plan, and a court that is not whole has none.
+             */
+            anchor: string;
             /**
              * Locked At
              * @description The moment somebody agreed this plan, or `null` while nobody has.
@@ -5641,11 +5659,11 @@ export interface components {
          *     is a Strand over challenges that got an answer inside their window, and it is
          *     unmeasurable if silence is filed as judgement.
          *
-         *     ``LEFT`` is the one answer written **over** another (``docs/adr/0162``): an
-         *     accepted seat, on a court whose line-up had completed into a game, whose
-         *     occupant has since left it. It opens the seat exactly as the other two do and
-         *     is neither of them — leaving a game you agreed to is not declining an
-         *     invitation, and nothing prices it yet.
+         *     ``LEFT`` is the one answer written **over** another (``docs/adr/0162``,
+         *     ``docs/adr/0165`` §1): an accepted seat whose occupant has since left it,
+         *     on a court that had become a game or on one that had not. It opens the
+         *     seat exactly as the other two do and is neither of them — leaving a court
+         *     you agreed to is not declining an invitation, and nothing prices it yet.
          * @enum {string}
          */
         SeatAnswer: "ACCEPTED" | "DECLINED" | "LAPSED" | "LEFT";
@@ -5812,7 +5830,7 @@ export interface components {
             /**
              * Day
              * Format: date
-             * @description A local day in the platform zone, **clamped to the game's own planning horizon** — so a plan can never name a day past the entry window, and the row of days a client offers shrinks as the week runs out.
+             * @description A local day in the platform zone, **clamped to 7 days past the row's `anchor`** — so a plan can never name a day past the entry window once there is a game, and the row of days a client offers shrinks as the week runs out.
              */
             day: string;
         };
@@ -8423,7 +8441,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Your seat is open again, and the challenge as it now stands at `LINE_UP_INCOMPLETE`. The game survives with that seat empty. */
+            /** @description Your seat is open again, and the challenge as it now stands. `LINE_UP_INCOMPLETE` where the others are in — on a game, that game survives with your seat empty; `AWAITING_ANSWERS` where somebody is still deciding; and `DECLINED` where you were the last but one on a court that was never a game and nobody is deciding — **a court is over when at most one player is on it and no seat is awaiting an answer**, and a departure is a no. On a game the challenge stands and the **game** is called off instead, in this same request: `GET /games` reads it `CALLED_OFF`, and the room is gone. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -8451,13 +8469,13 @@ export interface operations {
                 };
             };
             /**
-             * @description `not_a_game_yet` — this court has not become a game. Leaving a half-built court is a decline, and it is already given. **One code for two standings**, `AWAITING_ANSWERS` and `LINE_UP_INCOMPLETE`, on a court that was never a game.
+             * @description `challenge_is_over` — this challenge has ended.
              *
-             *     `challenge_is_over` — this challenge has ended.
+             *     `game_is_history` — the game has happened, was called off, or its entry window closed on silence. The line-up is the record of an evening, and nothing on it moves.
              *
-             *     `game_is_history` — the game has happened, or its entry window closed on silence. The line-up is the record of an evening, and nothing on it moves.
+             *     `game_moment_has_passed` — the moment the plan agreed has passed. Leaving would mean nothing now, and a no-show cannot vacate a seat to block the result. **Only where there is a game**: a half-built court may carry a plan naming a moment, and has no moment to guard.
              *
-             *     `game_moment_has_passed` — the moment the plan agreed has passed. Leaving would mean nothing now, and a no-show cannot vacate a seat to block the result.
+             *     There is no `not_a_game_yet` any more: a yes can be taken back before the court is whole.
              */
             409: {
                 headers: {
@@ -8978,7 +8996,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Every plan for the games you are on the court of, newest arrangement first. */
+            /** @description One row for every court you may plan, written or not, newest arrangement first. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -8989,12 +9007,12 @@ export interface operations {
             };
         };
     };
-    set_place_api_v1_plans__game_id__place_put: {
+    set_place_api_v1_plans__challenge_id__place_put: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                game_id: string;
+                challenge_id: string;
             };
             cookie?: never;
         };
@@ -9035,7 +9053,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `plan_not_found` — **one code for two cases**: there is no game with that id, or there is one and you were not on its court. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening. */
+            /** @description `plan_not_found` — **one code for three cases**: there is no challenge with that id, there is one and you were never on its court, or you were asked and have not said yes. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening — and an invitee still deciding is not shown the plan at all. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -9044,7 +9062,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over. */
+            /** @description `plan_is_history` — the court is over, so its slots are frozen: its game left its entry window, or, before any game, the challenge itself ended. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -9064,12 +9082,12 @@ export interface operations {
             };
         };
     };
-    set_day_api_v1_plans__game_id__day_put: {
+    set_day_api_v1_plans__challenge_id__day_put: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                game_id: string;
+                challenge_id: string;
             };
             cookie?: never;
         };
@@ -9088,7 +9106,7 @@ export interface operations {
                     "application/json": components["schemas"]["PlanSchema"];
                 };
             };
-            /** @description `the_day_is_past_the_horizon` — past this game's planning window. The days a client offers are clamped to the same bound and shrink as the week runs out; **inside the entry grace there is no day left to set at all**, and the only act remaining is *We played*. */
+            /** @description `the_day_is_past_the_horizon` — past 7 days from the row's `anchor`. The days a client offers are clamped to the same bound and shrink as the week runs out; once there is a game, **inside the entry grace there is no day left to set at all**, and the only act remaining is *We played*. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9106,7 +9124,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `plan_not_found` — **one code for two cases**: there is no game with that id, or there is one and you were not on its court. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening. */
+            /** @description `plan_not_found` — **one code for three cases**: there is no challenge with that id, there is one and you were never on its court, or you were asked and have not said yes. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening — and an invitee still deciding is not shown the plan at all. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -9116,7 +9134,7 @@ export interface operations {
                 };
             };
             /**
-             * @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.
+             * @description `plan_is_history` — the court is over, so its slots are frozen: its game left its entry window, or, before any game, the challenge itself ended. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.
              *
              *     `that_moment_has_already_passed` — the day and the hour together name a moment that has gone. **Raised when the second of the two is filled, in either order**, and it names neither: the platform has no opinion about which one is wrong, so change whichever you meant.
              */
@@ -9139,12 +9157,12 @@ export interface operations {
             };
         };
     };
-    set_hour_api_v1_plans__game_id__hour_put: {
+    set_hour_api_v1_plans__challenge_id__hour_put: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                game_id: string;
+                challenge_id: string;
             };
             cookie?: never;
         };
@@ -9181,7 +9199,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `plan_not_found` — **one code for two cases**: there is no game with that id, or there is one and you were not on its court. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening. */
+            /** @description `plan_not_found` — **one code for three cases**: there is no challenge with that id, there is one and you were never on its court, or you were asked and have not said yes. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening — and an invitee still deciding is not shown the plan at all. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -9191,7 +9209,7 @@ export interface operations {
                 };
             };
             /**
-             * @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.
+             * @description `plan_is_history` — the court is over, so its slots are frozen: its game left its entry window, or, before any game, the challenge itself ended. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.
              *
              *     `that_moment_has_already_passed` — the day and the hour together name a moment that has gone. **Raised when the second of the two is filled, in either order**, and it names neither: the platform has no opinion about which one is wrong, so change whichever you meant.
              */
@@ -9214,12 +9232,12 @@ export interface operations {
             };
         };
     };
-    lock_the_plan_api_v1_plans__game_id__lock_put: {
+    lock_the_plan_api_v1_plans__challenge_id__lock_put: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                game_id: string;
+                challenge_id: string;
             };
             cookie?: never;
         };
@@ -9243,7 +9261,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `plan_not_found` — **one code for two cases**: there is no game with that id, or there is one and you were not on its court. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening. */
+            /** @description `plan_not_found` — **one code for three cases**: there is no challenge with that id, there is one and you were never on its court, or you were asked and have not said yes. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening — and an invitee still deciding is not shown the plan at all. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -9253,7 +9271,9 @@ export interface operations {
                 };
             };
             /**
-             * @description `plan_is_history` — the game left its entry window, so its slots are frozen. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.
+             * @description `plan_is_history` — the court is over, so its slots are frozen: its game left its entry window, or, before any game, the challenge itself ended. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.
+             *
+             *     `the_court_is_not_whole` — a seat is still open or unanswered. **The lock waits for the court**: where, day and hour may be set by whoever is in, and *we are agreed* is said only once everybody who will have to keep it is in. The card draws the count line where the lock button will be — `2 of 4 in — you can plan now, lock when everyone's here` — and never a greyed button, which is why this is its own code. Asked before the count. A lock already taken survives a later departure and answers `200` again.
              *
              *     `the_plan_is_not_complete` — a slot is still empty. **A refusal and not a silent `200`**, which is deliberately the opposite shape from locking a plan that is already locked: a no-op here would leave you believing you had agreed one. It is a conflict rather than a `400` because the request carried nothing at all — what is wrong is the state of the plan.
              */

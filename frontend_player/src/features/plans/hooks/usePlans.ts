@@ -4,8 +4,8 @@
  *
  * | | |
  * | --- | --- |
- * | `usePlans` | `GET /plans` — every plan for a game you are on the court of |
- * | `usePlan` | one plan **out of that list**, because there is no `GET /plans/{id}` |
+ * | `usePlans` | `GET /plans` — one row for every court you may plan, written or not |
+ * | `usePlan` | one court's plan **out of that list**, by its challenge, because there is no `GET /plans/{id}` |
  * | `useSetSlot` | the three slot `PUT`s, as one hook holding three mutations |
  * | `useLockPlan` | `PUT /plans/{id}/lock` — the act, beside the three values |
  * | `usePlanWriteRefusals` | every refusal a plan write has met, off the mutation cache |
@@ -21,7 +21,7 @@
  * so the chip shows pending and the value it draws stays the one the server last answered with.
  *
  * **The reply is written in rather than refetched.** `PUT` answers with *the plan as it now
- * stands*, which is the whole of what this list holds about that game — so a read to learn what
+ * stands*, which is the whole of what this list holds about that court — so a read to learn what
  * the reply already said would be a request asking a question this client can answer. That is not
  * optimism: nothing is drawn until the server has spoken.
  *
@@ -97,23 +97,27 @@ export function usePlans() {
 }
 
 /**
- * One game's plan, found in the list — and `undefined` where there is none.
+ * One court's plan, found in the list by its challenge — and `undefined` where there is none.
  *
- * **That absence is the ordinary state rather than a failure**: a plan is born by being used, so
- * a game nobody has arranged anything on has no row here at all, and *no plan* is what the card
- * draws as three empty slots. A game id this player is not on the court of has no row either, and
- * the two are deliberately one answer — `plan_not_found` is one code for two cases on the wire for
- * the same reason.
+ * **The row is the ordinary state and its absence is not a failure**: since ADR-0164 the list
+ * carries a row for every court the reader holds an accepted seat on, written or not, so a court
+ * nobody has arranged anything on is a row with three empty slots. No row is the list not having
+ * landed, or a court this player holds no seat on — an invitee still deciding, somebody who left —
+ * and those are deliberately one answer, as `plan_not_found` is one code for three cases on the
+ * wire for the same reason.
  *
- * A game id of `undefined` is a room whose line-up has not completed, which has no game and
- * therefore no plan. The read still runs, because it is the list every other surface shares.
+ * A challenge id of `undefined` is a caller whose own read has not landed — the game a card is
+ * folded for, say. The read still runs, because it is the list every other surface shares.
  */
-export function usePlan(gameId: string | undefined) {
+export function usePlan(challengeId: string | undefined) {
   const plans = usePlans();
 
   return {
     ...plans,
-    plan: gameId === undefined ? undefined : plans.data?.find((one) => one.gameId === gameId),
+    plan:
+      challengeId === undefined
+        ? undefined
+        : plans.data?.find((one) => one.challengeId === challengeId),
   };
 }
 
@@ -185,9 +189,9 @@ export function usePlanWriteRefusals(): readonly AppError[] {
   return refusals.filter((refusal): refusal is AppError => refusal instanceof AppError);
 }
 
-/** The list with one plan replaced, or appended where the game had none. */
+/** The list with one court's plan replaced, or appended where the list had no row for it. */
 function withPlan(plans: readonly Plan[], plan: Plan): readonly Plan[] {
-  return plans.some((one) => one.gameId === plan.gameId)
-    ? plans.map((one) => (one.gameId === plan.gameId ? plan : one))
+  return plans.some((one) => one.challengeId === plan.challengeId)
+    ? plans.map((one) => (one.challengeId === plan.challengeId ? plan : one))
     : [...plans, plan];
 }

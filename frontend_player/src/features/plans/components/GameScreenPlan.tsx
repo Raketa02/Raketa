@@ -33,8 +33,11 @@
  * no counterpart here; *We played* is the screen's and meets a hold on its own terms.
  *
  * It is handed `(game, plan | undefined)` by the composition that holds both lists, and reads
- * nothing else: the card's clock is the game's `readAt`, and the horizon is measured from its
- * `plannedAt` (ADR-0148 §10).
+ * nothing else: the card's clock is the game's `readAt` (ADR-0148 §10), and the horizon is the
+ * row's own anchor — the game's `planned_at`, once there is a game (ADR-0164 §4). A row that has
+ * not landed draws nothing: the card takes a row and never an absence, because the row is what
+ * carries the anchor. No `court` is handed down — a game screen is a court that has its game, so
+ * the lock is offered here.
  */
 
 import { StyleSheet, View } from 'react-native';
@@ -50,14 +53,19 @@ import { PlanCard } from './PlanCard';
 import { PLAN_PANEL } from './planPresentation';
 
 export interface GameScreenPlanProps {
-  /** The game this plan belongs to. A plan has no id of its own, for ever. */
+  /** The game whose plan this is — read for its clock. The plan is the challenge's, and it is found by the game's `challengeId` one component up. */
   readonly game: Game;
-  /** What has been agreed, and `undefined` where nothing has. The two are one state. */
+  /**
+   * The court's row, or `undefined` while the list has not landed — in which case there is nothing
+   * to draw the card from yet, and the block draws nothing rather than a card without its anchor.
+   */
   readonly plan: Plan | undefined;
 }
 
 export function GameScreenPlan({ game, plan }: GameScreenPlanProps) {
   const held = writeStanding(usePlanWriteRefusals()) === 'held';
+
+  if (plan === undefined) return null;
 
   return (
     <View style={s.block}>
@@ -67,11 +75,10 @@ export function GameScreenPlan({ game, plan }: GameScreenPlanProps) {
         </Note>
       ) : null}
 
+      {/* No `court`: a game screen is a court that has its game, so the lock is offered here. */}
       <PlanCard
-        gameId={game.gameId}
-        plannedAt={game.plannedAt}
-        readAt={game.readAt}
         plan={plan}
+        readAt={game.readAt}
         refused={held}
         note={
           <Note variant="info" title={PLAN_PANEL.title}>

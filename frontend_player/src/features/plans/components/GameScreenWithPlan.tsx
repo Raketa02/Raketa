@@ -71,13 +71,13 @@
  * here**: the organiser is a challenge fact, and the control joins it off that feature's own list
  * — so this file never learns what an organiser is, and `GET /games` never carries one.
  *
- * **A plan read still in flight leads with the plan, and that is the same answer as no plan.**
- * `GET /plans` has no row for a game nobody has arranged anything on, so *not yet arrived* and
- * *nothing agreed* reach `entryLeadOf` identically — which is the semantics `slots.ts` already
- * relies on. The cost is one case: a deep link straight to a game whose moment has passed shows
- * the plan lead until the second list lands, and then the grid arrives. Both lists are read
- * together by every surface that can *reach* this screen by tapping, so that case is the link and
- * not the journey.
+ * **A plan read still in flight leads with the plan, and that is the same answer as nothing
+ * agreed.** *Not yet arrived* and *three empty slots* reach `entryLeadOf` identically — which is
+ * the semantics `slots.ts` already relies on — and the plan is found **by the game's challenge**
+ * (ADR-0164 §1), the id it was opened from. The cost is one case: a deep link straight to a game
+ * whose moment has passed shows the plan lead until the second list lands, and then the grid
+ * arrives. Both lists are read together by every surface that can *reach* this screen by tapping,
+ * so that case is the link and not the journey.
  */
 
 import { useCurrentUser } from '@/features/auth/types';
@@ -100,7 +100,8 @@ export interface GameScreenWithPlanProps {
 
 export function GameScreenWithPlan({ gameId }: GameScreenWithPlanProps) {
   const { game, refetch } = useGame(gameId);
-  const { plan } = usePlan(gameId);
+  // The plan is the challenge's (ADR-0164 §1): the game finds it by the id it was opened from.
+  const { plan } = usePlan(game?.challengeId);
   const rooms = useChatDoors();
   const playerId = useCurrentUser().data?.id;
 

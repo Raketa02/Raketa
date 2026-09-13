@@ -15,14 +15,28 @@
  * here decides a slot and nothing in `slots.ts` reads the lock — which is the client half of
  * *locking freezes nothing*: a slot write does not read `locked_at` and never will.
  *
- * ## Four states, and one of them is an absence
+ * ## Five states, and two of them are absences
  *
  * | | |
  * | --- | --- |
+ * | `waiting` | the room has no game — the control is not drawn, and the count line stands where it will be |
  * | `greyed` | a slot is still empty — the act is refused and the counter above says why |
  * | `live` | all three are set and nobody has locked |
  * | `busy` | the lock is going out — pending, never optimistic |
  * | `gone` | the plan is locked, and the control is removed rather than settled |
+ *
+ * **The lock waits for the court**
+ * ([ADR-0164](../../../../../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+ * §5). Where, day and hour are proposals anybody on the court may make and move; *we are agreed*
+ * is said only once everybody who will have to keep it is in. So while the room has no game the
+ * control is **absent, never greyed** — #324's rule: a greyed button would promise an act the
+ * server refuses with `the_court_is_not_whole`, and no count of slots would unlock it — and in its
+ * place the surface draws one line, `2 of 4 in — you can plan now, lock when everyone's here`,
+ * which is the note #324 owes. The count of members over seats is the surface's to state, because
+ * the room knows who is in and the sport knows how many it takes; what this file decides is only
+ * that a court still being filled has no lock to draw. It is read before the count, as the server
+ * asks its refusals in that order. A game with a seat later left open still draws the button — the
+ * room has its game — and the server's refusal is surfaced in words if it is ever reached.
  *
  * **Gone rather than 6.1's `settled`**, and the argument is §6.1's own test read against the
  * wire. `settled` is for a control whose act *is still available*: pressing it again obtains the
@@ -42,7 +56,7 @@
  * second sentence — *set all three first* — would restate `1 of 3 set` one line lower, which is
  * §1.6's count problem in two spellings and the reason the author struck it from the label.
  *
- * A hold is not one of the four: it greys the control under the **room's** note, exactly as it
+ * A hold is not one of the five: it greys the control under the **room's** note, exactly as it
  * greys the chips, and the component reads it beside this rather than through it.
  */
 
@@ -61,14 +75,25 @@ export function isLocked(plan: Plan | undefined): boolean {
   return plan?.lockedAt !== undefined;
 }
 
-/** What the control is, read off the plan and the write in flight. See the module note. */
-export type LockControl = 'greyed' | 'live' | 'busy' | 'gone';
+/**
+ * **Who is in against how many the court takes** — the two numbers the count line says, handed to
+ * the card exactly while the room has no game. `in` is the room's members, `seats` is the sport's
+ * court; neither is this feature's to count.
+ */
+export interface CourtCount {
+  readonly in: number;
+  readonly seats: number;
+}
+
+/** What the control is, read off the plan, the court and the write in flight. See the module note. */
+export type LockControl = 'waiting' | 'greyed' | 'live' | 'busy' | 'gone';
 
 export function lockControl(
   plan: Plan | undefined,
-  { pending }: { readonly pending: boolean },
+  { pending, court }: { readonly pending: boolean; readonly court?: CourtCount },
 ): LockControl {
   if (isLocked(plan)) return 'gone';
+  if (court !== undefined) return 'waiting';
   if (pending) return 'busy';
 
   return slotCount(plan) === SLOTS ? 'live' : 'greyed';

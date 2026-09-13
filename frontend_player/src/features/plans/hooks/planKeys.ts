@@ -19,7 +19,7 @@
 
 export const planKeys = {
   all: ['plans'] as const,
-  /** Every plan for a game you are on the court of. Not keyed by game: one list, not several. */
+  /** One row per court you may plan, written or not. Not keyed by court: one list, not several. */
   list: () => [...planKeys.all, 'list'] as const,
   /**
    * **The key every plan write is made under** — a *mutation* key, `conversationKeys.sending`'s
@@ -27,7 +27,7 @@ export const planKeys = {
    *
    * It is what `useMutationState` filters on to find the refusals the room folds *held* from: a
    * hold is a fact about the **account**, so the room needs every write on its screen and four of
-   * the five are this feature's. **Not keyed per game**, deliberately — a hold met on one plan is
+   * the five are this feature's. **Not keyed per court**, deliberately — a hold met on one plan is
    * true in every room, and the one thing read off this key is the account's standing.
    */
   writing: () => [...planKeys.all, 'writing'] as const,

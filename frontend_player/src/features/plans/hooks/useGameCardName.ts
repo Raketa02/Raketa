@@ -28,7 +28,7 @@ import { usePlan } from './usePlans';
 
 export function useGameCardName(gameId: string | undefined): GameCardName | undefined {
   const { game } = useGame(gameId);
-  const { plan } = usePlan(gameId);
+  const { plan } = usePlan(game?.challengeId);
 
   return game === undefined ? undefined : gameCardName(game, plan);
 }

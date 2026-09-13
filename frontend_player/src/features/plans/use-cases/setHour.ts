@@ -11,11 +11,11 @@ import type { Plan } from '../domain/slots';
 import { toPlan } from '../mappers/planMappers';
 
 export interface SetHourAsk {
-  readonly gameId: string;
+  readonly challengeId: string;
   /** `HH:MM`, off `HOURS_OFFERED`. */
   readonly hour: string;
 }
 
-export function setHour({ gameId, hour }: SetHourAsk): Promise<Plan> {
-  return putHour(gameId, { hour }).then(toPlan);
+export function setHour({ challengeId, hour }: SetHourAsk): Promise<Plan> {
+  return putHour(challengeId, { hour }).then(toPlan);
 }

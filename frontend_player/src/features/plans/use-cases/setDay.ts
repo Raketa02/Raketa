@@ -11,11 +11,11 @@ import type { Plan } from '../domain/slots';
 import { toPlan } from '../mappers/planMappers';
 
 export interface SetDayAsk {
-  readonly gameId: string;
+  readonly challengeId: string;
   /** `YYYY-MM-DD`, off `offeredDays`. */
   readonly day: string;
 }
 
-export function setDay({ gameId, day }: SetDayAsk): Promise<Plan> {
-  return putDay(gameId, { day }).then(toPlan);
+export function setDay({ challengeId, day }: SetDayAsk): Promise<Plan> {
+  return putDay(challengeId, { day }).then(toPlan);
 }

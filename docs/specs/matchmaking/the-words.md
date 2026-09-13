@@ -1786,25 +1786,36 @@ fields and never sent:
 | The counter | `N of 3 set` · `Locked` once somebody has |
 | The button | `Lock the plan` — **always**, and never with the reason appended |
 | The button, busy | `Locking…` — its own word, because nothing is being saved |
+| The count line, where the button will be | `N of M in — you can plan now, lock when everyone's here` — while the room has no game ([ADR-0164](../../adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md) §5, [#425](https://github.com/Raketa02/Raketa/issues/425)) |
 
 **The reason is not on the label because it is on the counter.** The mock read *Lock it in · set
 all three first*; the counter directly above already reads `1 of 3 set`, and a second sentence
 would be the same count in a second spelling. **Once locked the button is gone**, not settled:
 a second lock records nothing and answers `200`, so the counter's one word carries the whole
-fact. The lock's own refusal has a sentence by its code —
+fact. The lock's own refusals have a sentence each by their code —
 `Set all three before locking the plan.` for `the_plan_is_not_complete`, which the greyed button
-makes unreachable and the card writes anyway — and `plan_not_found` gets `This plan is not one
-you can change.`; `plan_is_history` and `account_held` say what they already said for a slot.
+makes unreachable and the card writes anyway; `Not everyone's here yet — lock the plan once they
+are.` for `the_court_is_not_whole`, which the absent button makes unreachable from a room with no
+game and which a game a seat has since been left open on can still meet, so it names what will
+change rather than a control — and `plan_not_found` gets `This plan is not one you can change.`;
+`plan_is_history` and `account_held` say what they already said for a slot.
+
+**The count line is the note an absent control is owed.** While the room has no game the button
+is not drawn — absent, never greyed, on #324's rule — and in its place one line, `2 of 4 in — you
+can plan now, lock when everyone's here`: `N` the room's members, `M` the sport's seats, and both
+halves of what the player needs — that they may plan now, and exactly what brings the button. It
+becomes the button on the nudge that brings the game. `2 of 2 in` is a sentence this app never
+draws: a singles room opens with its game.
 
 **`locked by everybody` stays deleted.** It is a phrase the prototype's own data cannot support —
 no assent is recorded per person, and a lock is one person saying *we are agreed*, not four. And
 **there is no *unlock* to word**, because the lock is a thing that happened: any member may still
 move a slot, the plan stays locked, and the move writes its own line.
 
-**§5.3's guard (*a four cannot be locked by two*) still has no sentence**, and one half of its
-reason survives: there is a lock now, but there is still no plan before the line-up completes, so
-the state it refuses stays unreachable. What *is* refusable is a lock on a plan with a slot still
-empty, and that is a code — `the_plan_is_not_complete` — rather than copy here.
+**§5.3's guard (*a four cannot be locked by two*) has its sentences now** (ADR-0164 §5): there is
+a plan before the line-up completes, so the state it refuses is reachable — and the card answers it
+before the server has to, with the count line where the button would be. The refusal itself is a
+code, `the_court_is_not_whole`, with the sentence above for the one court that can still meet it.
 
 **And *"whoever books becomes the owner"* is deleted rather than rewritten.** Decision 3 said the
 sentence would be rewritten; ADR-0144 found it has no moment left to be posted at. A sentence with

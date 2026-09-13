@@ -59,7 +59,8 @@ export function toPlan(schema: PlanSchema): Plan {
   const hour = toClockFace(schema.hour ?? undefined);
 
   return {
-    gameId: schema.game_id,
+    challengeId: schema.challenge_id,
+    anchor: schema.anchor,
     ...(schema.place == null ? {} : { place: schema.place }),
     ...(day !== undefined && CALENDAR_DAY.test(day) ? { day } : {}),
     ...(hour === undefined ? {} : { hour }),

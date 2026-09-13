@@ -44,9 +44,11 @@ export interface ConversationRoom {
   /**
    * The game its line-up completed into, and **absent until it does**.
    *
-   * The whole of what decides whether the header draws *Details*: a `LINE_UP_INCOMPLETE` room
-   * has no game and no plan, so there is nothing for that door to open and **no door is drawn
-   * rather than a dead one** ([#324](https://github.com/Raketa02/Raketa/issues/324)).
+   * The whole of what decides whether the header draws *Details* and its state word, and whether
+   * the plan card draws its lock: a `LINE_UP_INCOMPLETE` room has no game, so there is nothing for
+   * that door to open and **no door is drawn rather than a dead one**
+   * ([#324](https://github.com/Raketa02/Raketa/issues/324)). It does have a plan — the
+   * challenge's, drawn from the room's opening (ADR-0164 §2) — whose lock waits for the court.
    */
   readonly gameId?: string;
   /** The instant the header and the page were folded — **one instant for both**. */

@@ -305,3 +305,34 @@ on it and `played_at` never is, so the card is shelved a day from the act; the t
 dot and the state word were #418's, and the line under the slots is the standing's one word. The
 card's door and the screen's acts have not been drawn on a device; asked for a look, and for a
 words decision on the ending card, whose tag and line both read _Called off_.
+
+**The plan is the challenge's, the card is pinned from the room's opening, and the lock waits for
+the court** ([#425](https://github.com/Raketa02/Raketa/issues/425), the client half of
+[ADR-0164](../../../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md),
+spec [#420](https://github.com/Raketa02/Raketa/issues/420)). `Plan` is keyed by `challengeId` — the
+one id a room and its game both carry — and gains `anchor`, the instant the day row runs from: the
+challenge's send until the game exists, then the game's `planned_at`, sent on the row rather than
+derived because a room with no game has no `planned_at` to derive it from. So `offeredDays` takes
+`{ readAt, anchor }`, _today_ is **the surface's own instant** — the room's `read_at` in the chat,
+the games list's on the game screen — and the row a half-built court offers is shorter than the one
+its game will and **widens** when the court fills, never the other way. `GET /plans` lists **one
+row for every court the reader holds an accepted seat on, written or not**, so a row with three
+nulls is the ordinary opening of a room and _no row_ means the list has not landed or the reader
+holds no seat; `PlanCard` therefore takes a `Plan` and never `undefined`, and both `RoomPlan` and
+`GameScreenPlan` draw nothing until the row lands — the row is what says there is a plan to draw
+and carries the anchor to draw it with. The four writes are addressed by the challenge, `usePlan`
+looks a court up by it, and the rail and the composed game screen join a game to its plan by
+`game.challengeId` — so a court whose four people filled every slot in the chat lands on Now as
+_Game on_ on its first read, never as _Planning_, and Now still draws nothing for a court that is
+not whole (ADR-0164 §7). **`lockControl` gains a fifth state, `waiting`**, read before the count:
+while the room has no game the button is **absent, not greyed** (#324), and in its place the card
+draws one line, `lockWaitsLine` — _2 of 4 in — you can plan now, lock when everyone's here_, the
+room's members over the sport's seats, handed in as `CourtCount` exactly while the room has no
+game; the room composes the count because it alone holds the members, the sport and `gameId`, and
+this feature decides only that a court still being filled has no lock to draw. A singles room never
+draws the line: two yeses is the whole court, and the room opens with its game. The line becomes
+the button on the nudge that brings the game, over the slots recorded before. A game a seat has
+since been left open on still draws the button, and the server's `the_court_is_not_whole` is
+surfaced in words — _Not everyone's here yet — lock the plan once they are_ — rather than
+pre-empted. `GamesRail` and the ladder are otherwise untouched. No device has drawn the count line;
+it is asked for a look.

@@ -696,8 +696,10 @@ what this client had to invent to draw the room
 
 ### The plan
 
-Nine client-only concepts, all of them in `features/plans/`. The domain terms — Plan, Slot, the
-three recordings — are [ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)'s
+Ten client-only concepts, all of them in `features/plans/`. The domain terms — Plan, Slot, the
+three recordings — are [ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)'s,
+re-keyed on the **challenge** and given an **anchor** by
+[ADR-0164](../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md),
 and are owed to the root glossary by [#332](https://github.com/Raketa02/Raketa/issues/332); what
 follows is only what this client had to invent to let a room fill one in
 ([#366](https://github.com/Raketa02/Raketa/issues/366)).
@@ -707,11 +709,13 @@ follows is only what this client had to invent to let a room fill one in
   people discuss them in and of **decreasing negotiability**, and it is what _in slot order_ means
   everywhere that phrase appears. _Avoid_: a second spelling of it, and _part of day_ — that was
   the source's second slot and it is not one.
-- **The day row** — the days a plan may still name: **today + 6, clamped to
-  `planned_at + PLAN_HORIZON`**, so it shrinks as the week runs out and is **empty** inside the
-  entry grace. Both instants come off `GET /games`' `read_at`, which is what makes the two
-  comparable. _Avoid_: a calendar, a date picker, and "expired" — the row shrinking is not a
-  deadline passing.
+- **The day row** — the days a plan may still name: **today + 6, clamped to the row's
+  `anchor + PLAN_HORIZON`**, so it shrinks as the week runs out and is **empty** inside the entry
+  grace. _Today_ is the surface's own `read_at` — the room's in the chat, the games list's on the
+  game screen — and the anchor rides on the plan row: the challenge's send until the game exists,
+  then `planned_at`, only ever later, so the row **widens** when the court fills. _Avoid_: a
+  calendar, a date picker, "expired" — the row shrinking is not a deadline passing — and deriving
+  the anchor from a game, which a room without one does not have.
 - **The hour row** — the thirty-five half hours between 06:00 and 23:00. _Bounded chips the
   platform offered, never a free instant_: the grid is a convention and
   `the_hour_is_not_offered` is what makes it true. _Avoid_: a wheel, a free-text time, and
@@ -721,6 +725,15 @@ follows is only what this client had to invent to let a room fill one in
   because it is read. It goes **busy with the value it already had** while its write is going out.
   _Avoid_: "lock", a locked border, a `locked by everybody` pill and a complete state — filling the
   third slot **is** the lock and there is nothing left to draw about one.
+- **The count line** — `2 of 4 in — you can plan now, lock when everyone's here`, drawn **where
+  the lock button will be, exactly while the room has no game** (ADR-0164 §5): the room's members
+  over the sport's seats, handed to the card as a `CourtCount` and read by `lockControl` as its
+  `waiting` state, before the slot count. It is the note #324 owes an absent control — the button
+  is **absent, never greyed** — and it becomes the button on the nudge that brings the game. A
+  singles room never draws it, because two yeses is the whole court and the room opens with its
+  game. _Avoid_: a disabled lock with a reason on it, counting seats from the plan, and drawing it
+  on a game with a seat left open — that court has its game and the button, and the server's
+  `the_court_is_not_whole` is a sentence.
 - **The quick chip** — one of at most three questions above the room's composer, **one per
   unfilled plan slot in slot order plus _On my way_ when the agreed day is today**. A chip **posts
   words and changes nothing**: filling the slot it asks about would record an agreement nobody had

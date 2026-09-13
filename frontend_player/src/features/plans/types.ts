@@ -1,14 +1,18 @@
 /**
  * The `plans` feature's only public surface.
  *
- * **A plan is one game's, for ever** — three slots, `where · day · hour`, filled from the chat by
- * anybody on the court and changed as many times as they like
- * ([ADR-0144](../../../../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)) —
- * and, once all three are set, **locked** by any of them, which is an act rather than a fourth
- * slot: it posts `{name} locked the plan` into the room and freezes nothing
+ * **A plan is one challenge's, for ever** — three slots, `where · day · hour`, filled from the chat
+ * by anybody on the court from the moment the room opens and changed as many times as they like
+ * ([ADR-0144](../../../../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md) as
+ * re-keyed by
+ * [ADR-0164](../../../../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md))
+ * — and, once all three are set **and the court is whole**, **locked** by any of them, which is an
+ * act rather than a fourth slot: it posts `{name} locked the plan` into the room and freezes
+ * nothing
  * ([ADR-0155](../../../../docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)).
- * What remains of the prototype's locked state — a border and a `locked by everybody` pill — stays
- * deleted; the button came back with a destination.
+ * The game the challenge becomes inherits the plan by the id it was opened from, which is how Now
+ * and the game screen find it. What remains of the prototype's locked state — a border and a
+ * `locked by everybody` pill — stays deleted; the button came back with a destination.
  *
  * **What is exported is what has a caller**, which today is the room: the card it pins under its
  * header, the plan itself, which the room's quick chips read to know which questions are still
@@ -35,11 +39,13 @@
 export { GamesRail, type GamesRailProps } from './components/GamesRail';
 
 /**
- * **The plan card, pinned under a room's header** — the three slot chips, and nothing else.
+ * **The plan card, pinned under a room's header from its opening** — the counter, the three slot
+ * chips, and the lock or, while the room has no game, the count line where the lock will be.
  *
- * Handed a game id and whether the account may write; it does the join over the two lists the app
- * already holds. A room whose line-up has not completed has no game and therefore no plan, so the
- * screen draws none rather than handing this an id it does not have.
+ * Handed the room's challenge, its clock, whether the account may write and — exactly while the
+ * room has no game — the court's count, members over seats; it finds the row in the list the app
+ * already holds. Drawn in **every** room (ADR-0164 §2): the plan is the challenge's, and two of
+ * four may plan before the others are in. What waits is the lock.
  */
 export { RoomPlan, type RoomPlanProps } from './components/RoomPlan';
 
@@ -58,7 +64,8 @@ export { RoomPlan, type RoomPlanProps } from './components/RoomPlan';
 export { GameScreenWithPlan, type GameScreenWithPlanProps } from './components/GameScreenWithPlan';
 
 /**
- * **One game's plan**, for a surface that reads what has been agreed without drawing the card.
+ * **One court's plan, by its challenge**, for a surface that reads what has been agreed without
+ * drawing the card.
  *
  * The room's quick chips are the one caller: *one chip per unfilled slot, in slot order, plus `On
  * my way` when the agreed day is today*, which is a question about the plan asked by a control
@@ -99,7 +106,7 @@ export { planKeys } from './hooks/planKeys';
 export { quickChips, type QuickChip } from './domain/quickChips';
 export { QUICK_CHIP } from './components/planPresentation';
 
-/** What a plan is: three slots and the moment they name. */
+/** What a plan is: three slots, the moment they name, and the anchor its horizon runs from. */
 export type { Plan, PlanSlot } from './domain/slots';
 
 /**

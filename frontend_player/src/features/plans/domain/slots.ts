@@ -10,13 +10,20 @@
  *
  * ## Two grids, and neither is a rule this client invented
  *
- * **The day row is `today + 6`, clamped to `planned_at + PLAN_HORIZON`** — so it shrinks as the
- * week runs out, and inside the entry grace it is empty. **The hour row is 30-minute steps between
- * 06:00 and 23:00.** Both numbers live on the server, which refuses `the_day_is_past_the_horizon`
- * and `the_hour_is_not_offered`: *"the grid a client draws is a convention, and this refusal is
- * what makes it true."* What is here is that convention, held equal to the server's by
- * `slots.test.ts` and by the refusals themselves — a client drawing a wider grid would be offering
- * a chip that cannot be pressed to any effect.
+ * **The day row is `today + 6`, clamped to the row's `anchor + PLAN_HORIZON`** — so it shrinks as
+ * the week runs out, and inside the entry grace it is empty. **The hour row is 30-minute steps
+ * between 06:00 and 23:00.** Both numbers live on the server, which refuses
+ * `the_day_is_past_the_horizon` and `the_hour_is_not_offered`: *"the grid a client draws is a
+ * convention, and this refusal is what makes it true."* What is here is that convention, held equal
+ * to the server's by `slots.test.ts` and by the refusals themselves — a client drawing a wider grid
+ * would be offering a chip that cannot be pressed to any effect.
+ *
+ * **The anchor rides on the plan row**
+ * ([ADR-0164](../../../../../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+ * §4): the challenge's send until the game exists, then the game's `planned_at`, and it only ever
+ * moves later — so the row a half-built court offers is shorter than the one its game will, and
+ * widens rather than shrinking when the court fills. It is sent rather than derived because a room
+ * with no game has no `planned_at` to derive it from, and the chips are drawn there all the same.
  *
  * **`PLAN_HORIZON` is mirrored rather than derived**, and the alternative is worse rather than
  * unavailable: `entry_closes_at` is `planned_at + PLAN_HORIZON + ENTRY_GRACE`, so subtracting a
@@ -25,18 +32,20 @@
  *
  * ## Nothing here reads a clock
  *
- * Every instant arrives as an argument, and the one it arrives as is `GET /games`' `read_at`
+ * Every instant arrives as an argument, and *today* arrives as the surface's own `read_at` — the
+ * room's in the chat, the games list's on the game screen
  * ([ADR-0148](../../../../../docs/adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md)
  * §10): a plan folds nothing against the clock — *its day and hour are wall-clock facts, drawn
  * literally and never counted down* — so `GET /plans` carries no `read_at` of its own and there is
- * no instant here for `Date.now()` to disagree with. **The horizon and *today* come off the same
- * fold**, which is what makes `today + 6` and `planned_at + 7` comparable at all.
+ * no instant here for `Date.now()` to disagree with.
  *
  * ## A slot is never emptied
  *
  * An absent value is a slot that has **never been filled**, never one somebody cleared — so there
- * is no third state to tell apart, and *no plan* answers exactly as an empty one, because
- * `GET /plans` has no row for a game nobody has arranged anything on yet.
+ * is no third state to tell apart, and *no plan* answers exactly as an empty one. Since ADR-0164
+ * `GET /plans` lists a row for every court the reader may plan, written or not, so *no row* means
+ * the list has not landed or the reader holds no seat — and a row with three nulls is the ordinary
+ * opening of a room.
  */
 
 import { daysAfter, platformDay } from '@/shared/date/platformZone';
@@ -48,13 +57,24 @@ export type PlanSlot = 'where' | 'day' | 'hour';
 export const PLAN_SLOTS: readonly PlanSlot[] = ['where', 'day', 'hour'];
 
 /**
- * One game's plan — three slots and the moment they name.
+ * One court's plan — three slots, the moment they name, and the anchor its horizon runs from.
  *
- * **Keyed on the game and on nothing else**: a plan has no id of its own, for ever, and a second
- * identity beside that would be a second name for one thing.
+ * **Keyed on the challenge and on nothing else**
+ * ([ADR-0164](../../../../../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+ * §1): a plan has no id of its own, for ever, and a second identity beside that would be a second
+ * name for one thing. One challenge has at most one room and at most one game, and both carry
+ * `challengeId` — so the room finds its plan by its own id from the moment it opens, and a game
+ * finds the same plan by the id it was opened from.
  */
 export interface Plan {
-  readonly gameId: string;
+  readonly challengeId: string;
+  /**
+   * **The instant the day horizon runs from** — the challenge's send until the game exists, then
+   * the game's `planned_at`, and it only ever moves later (ADR-0164 §4). Carried on the row rather
+   * than derived here, because a room with no game has no `planned_at` to derive it from, and the
+   * day chips are drawn there all the same.
+   */
+  readonly anchor: string;
   /** Where they are meeting, as somebody typed it. Never a court and never an id. */
   readonly place?: string;
   /** The local day in the platform's zone, `YYYY-MM-DD`. */
@@ -97,7 +117,7 @@ const LATEST_HOUR_MINUTE = 23 * 60;
 
 const MINUTES_PER_HOUR = 60;
 
-/** How far past `planned_at` a plan may name a day. `games`' own `PLAN_HORIZON`, in days. */
+/** How far past the row's anchor a plan may name a day. `games`' own `PLAN_HORIZON`, in days. */
 const PLAN_HORIZON_DAYS = 7;
 
 /** How many days the row offers, counting today. */
@@ -124,13 +144,13 @@ export function unfilledSlots(plan: Plan | undefined): readonly PlanSlot[] {
 }
 
 /**
- * **The last local day this plan may name** — `planned_at + PLAN_HORIZON`, as a platform day.
+ * **The last local day this plan may name** — `anchor + PLAN_HORIZON`, as a platform day.
  *
  * The instant is advanced first and converted after, exactly as the server does it, so the two
  * agree across a clock change rather than only in the middle of a season.
  */
-export function lastPlannableDay(plannedAt: string): string | undefined {
-  const at = Date.parse(plannedAt);
+export function lastPlannableDay(anchor: string): string | undefined {
+  const at = Date.parse(anchor);
   if (Number.isNaN(at)) return undefined;
 
   return platformDay(new Date(at + PLAN_HORIZON_DAYS * MS_PER_DAY).toISOString());
@@ -139,19 +159,22 @@ export function lastPlannableDay(plannedAt: string): string | undefined {
 /**
  * **The days a plan may still be moved to** — today and the six after it, clamped to the horizon.
  *
- * Both instants come off one fold, so *today* and the horizon are read against one clock. An
- * unreadable instant offers nothing, which is the same nothing the horizon having passed offers:
- * in both cases there is no day this client can honestly put on a chip.
+ * *Today* is the surface's own instant — the room's `read_at` in the chat, the games list's on the
+ * game screen — and the horizon is the row's anchor, which is the send while the court is filling
+ * and `planned_at` once it has filled: **the row is shorter before the game exists and widens when
+ * it does**, never the other way, so nothing already chosen becomes invalid. An unreadable instant
+ * offers nothing, which is the same nothing the horizon having passed offers: in both cases there
+ * is no day this client can honestly put on a chip.
  */
 export function offeredDays({
   readAt,
-  plannedAt,
+  anchor,
 }: {
   readonly readAt: string;
-  readonly plannedAt: string;
+  readonly anchor: string;
 }): readonly string[] {
   const today = platformDay(readAt);
-  const last = lastPlannableDay(plannedAt);
+  const last = lastPlannableDay(anchor);
   if (today === undefined || last === undefined) return [];
 
   return Array.from({ length: DAYS_OFFERED }, (_, step) => daysAfter(today, step)).filter(

@@ -34,7 +34,11 @@ function game(over: Partial<Game> = {}): Game {
 }
 
 function plan(over: Partial<Plan> = {}): Plan {
-  return { gameId: GAME_ID, ...over };
+  return {
+    challengeId: '22222222-0000-4000-8000-000000000002',
+    anchor: '2026-09-08T09:00:00Z',
+    ...over,
+  };
 }
 
 /** The same court after the opponent left: their seat open, nobody in it. */

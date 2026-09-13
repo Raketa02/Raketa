@@ -10,10 +10,21 @@ import type { Wire } from '@/test-support/transport';
 
 import { toPlan, toPlans } from './planMappers';
 
-const GAME = '11111111-0000-4000-8000-000000000001';
+const CHALLENGE = '11111111-0000-4000-8000-000000000001';
+
+/** Friday the 11th of September 2026, 09:00 in Warsaw — when the challenge was sent. */
+const SENT_AT = '2026-09-11T07:00:00Z';
 
 function schema(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
-  return { game_id: GAME, place: null, day: null, hour: null, agreed_point: null, ...over };
+  return {
+    challenge_id: CHALLENGE,
+    anchor: SENT_AT,
+    place: null,
+    day: null,
+    hour: null,
+    agreed_point: null,
+    ...over,
+  };
 }
 
 describe('a plan', () => {
@@ -28,7 +39,8 @@ describe('a plan', () => {
     );
 
     expect(plan).toEqual({
-      gameId: GAME,
+      challengeId: CHALLENGE,
+      anchor: SENT_AT,
       place: 'Zabłocie Sport, court 3',
       day: '2026-09-13',
       hour: '18:00',
@@ -36,10 +48,26 @@ describe('a plan', () => {
     });
   });
 
+  /**
+   * **Keyed by the challenge, and the anchor rides on the row** (ADR-0164 §1, §4): the one id the
+   * room and the game share, and the instant the day chips run from — the send until the game
+   * exists, then `planned_at` — carried rather than derived, so a room with no game can draw them.
+   */
+  it('is keyed by the challenge and carries the horizon anchor', () => {
+    const plan = toPlan(schema({ anchor: '2026-09-12T07:00:00Z' }));
+
+    expect(plan.challengeId).toBe(CHALLENGE);
+    expect(plan.anchor).toBe('2026-09-12T07:00:00Z');
+    expect(plan).not.toHaveProperty('gameId');
+  });
+
   /** `null` is *this response said nothing*, and a slot is never emptied — so absent it is. */
   it('collapses every null to absent', () => {
-    expect(toPlan(schema())).toEqual({ gameId: GAME });
-    expect(toPlan(schema({ locked_at: null }))).toEqual({ gameId: GAME });
+    expect(toPlan(schema())).toEqual({ challengeId: CHALLENGE, anchor: SENT_AT });
+    expect(toPlan(schema({ locked_at: null }))).toEqual({
+      challengeId: CHALLENGE,
+      anchor: SENT_AT,
+    });
   });
 
   /** The one value on a plan that is not a slot: the moment somebody said *we are agreed*. */
@@ -72,8 +100,8 @@ describe('a plan', () => {
 
 describe('the list', () => {
   it('is kept in the order it was answered', () => {
-    const plans = toPlans({ plans: [schema(), schema({ game_id: 'second' })] });
+    const plans = toPlans({ plans: [schema(), schema({ challenge_id: 'second' })] });
 
-    expect(plans.map((plan) => plan.gameId)).toEqual([GAME, 'second']);
+    expect(plans.map((plan) => plan.challengeId)).toEqual([CHALLENGE, 'second']);
   });
 });

@@ -20,6 +20,7 @@ import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { gameKeys } from '@/features/games/types';
+import { planKeys } from '@/features/plans/types';
 import { offlineMessage } from '@/shared/errors';
 import {
   CHALLENGES_PATH,
@@ -473,6 +474,37 @@ describe('the two refusals that are not a sentence', () => {
       expect(queryClient.getQueryState(gameKeys.list())?.isInvalidated).toBe(true),
     );
   });
+
+  /**
+   * **And the plan list**, on the same reasoning: a yes is what gives the reader an accepted seat
+   * and so a row on `GET /plans` (ADR-0164 §3), and the list read before the yes held none for a
+   * court they were still deciding about. The room this lands in pins the card from its first
+   * frame because the list is marked here, rather than thirty seconds later when it goes stale.
+   */
+  it('marks the plan list out of date, because a yes gives the reader a row on it', async () => {
+    await openTheChallenge();
+
+    queryClient.setQueryData(planKeys.list(), []);
+    expect(queryClient.getQueryState(planKeys.list())?.isInvalidated).toBe(false);
+
+    transport.on('POST', `${DETAIL_PATH}/accept`, () =>
+      json<Wire['ChallengeSchema']>(
+        row({
+          standing: 'ON',
+          seats: [
+            { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+            { side: 'B', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
+          ],
+        }),
+      ),
+    );
+
+    fireEvent.press(await screen.findByRole('button', { name: IM_IN }));
+
+    await waitFor(() =>
+      expect(queryClient.getQueryState(planKeys.list())?.isInvalidated).toBe(true),
+    );
+  });
 });
 
 describe('the room an acceptance opens', () => {
@@ -709,8 +741,20 @@ describe('the room an acceptance opens', () => {
 
     transport.on('POST', `${DETAIL_PATH}/accept`, () => {
       // Everything the accept opened, as the reads after it find them: the game is inline
-      // with the accept, the room's membership is derived live, and its `game_id` is noted.
+      // with the accept, the room's membership is derived live, its `game_id` is noted — and
+      // the court's plan row is the reader's now, because a yes is what gives them a seat on it
+      // (ADR-0164 §3). The list held no row a moment ago, so the accept has to re-read it.
       stubGames(transport, [game], READ_AT);
+      stubPlans(transport, [
+        {
+          challenge_id: CHALLENGE_ID,
+          anchor: READ_AT,
+          place: null,
+          day: null,
+          hour: null,
+          agreed_point: null,
+        },
+      ]);
       stubConversations(transport, [{ ...listed(OLA_TOO), sport: 'PADEL', game_id: GAME }]);
       stubConversation(transport, {
         read_at: READ_AT,
@@ -737,7 +781,9 @@ describe('the room an acceptance opens', () => {
       timeout: 5000,
     });
 
-    // The plan card, pinned under the header: three slots, nothing agreed.
+    // The plan card, pinned under the header: three slots, nothing agreed — off the row the yes
+    // earned the reader, which the list read before it did not hold (the mark that re-reads it
+    // is pinned above, beside the games list's).
     expect(await screen.findByLabelText('Where: Not agreed yet')).toBeTruthy();
 
     // And Now, one tab over, has the game with the rail's word on it. The bar stands down in a

@@ -8,11 +8,11 @@
 import { quickChips } from './quickChips';
 import type { Plan } from './slots';
 
-const GAME = '11111111-0000-4000-8000-000000000001';
+const CHALLENGE = '11111111-0000-4000-8000-000000000001';
 
-/** A plan holding whatever the case is about. `gameId` is identity and no rule here reads it. */
+/** A plan holding whatever the case is about. The key and the anchor are identity; no rule here reads them. */
 function plan(over: Partial<Plan> = {}): Plan {
-  return { gameId: GAME, ...over };
+  return { challengeId: CHALLENGE, anchor: '2026-09-08T09:00:00Z', ...over };
 }
 
 const DEVICE_ZONE = process.env.TZ;

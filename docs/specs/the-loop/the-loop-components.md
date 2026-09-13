@@ -202,9 +202,11 @@ an order.
 
 ### 3.2 Three writes, three use-cases, one per slot
 
-`PUT /plans/{game_id}/place` · `/day` · `/hour`, because ADR-0144 has **three events**. **A write of
-the value already there records nothing and answers `200`** — the server's rule, and the client
-neither pre-empts it nor optimistically renders it.
+`PUT /plans/{challenge_id}/place` · `/day` · `/hour`, because ADR-0144 has **three events** — and
+the plan is the challenge's, so the room writes them from its opening
+([ADR-0164](../../adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+§1). **A write of the value already there records nothing and answers `200`** — the server's rule,
+and the client neither pre-empts it nor optimistically renders it.
 
 **No optimistic write.** A slot change writes a system line other people read, and *pending, never
 optimistic* is this map's rule for everything that reaches another person. The chip shows pending;

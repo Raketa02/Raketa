@@ -158,7 +158,8 @@ const TWO_SHORT: Wire['GameSchema']['seats'] = [
 
 function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
   return {
-    game_id: GAME,
+    challenge_id: CHALLENGE,
+    anchor: '2026-09-08T09:00:00Z',
     place: null,
     day: null,
     hour: null,

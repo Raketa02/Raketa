@@ -113,6 +113,20 @@ function room(
 
 const GAME = 'aaaaaaaa-0000-4000-8000-000000000009';
 
+/** The court's row on `GET /plans` — the challenge's, there from the room's opening. */
+function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
+  return {
+    challenge_id: CHALLENGE,
+    anchor: READ_AT,
+    place: null,
+    day: null,
+    hour: null,
+    agreed_point: null,
+    locked_at: null,
+    ...over,
+  };
+}
+
 /** The room's game, as `GET /games` lists it — arranged, the day still ahead. */
 function game(standing: Wire['GameSchema']['standing'] = 'AWAITING_ENTRY'): Wire['GameSchema'] {
   return {
@@ -278,6 +292,7 @@ describe('the nudge', () => {
    */
   it('brings the slot another member set — the line and the chip together', async () => {
     stubGames(transport, [game()], READ_AT);
+    stubPlans(transport, [plan()]);
     await openTheRoom({ ...room(), game_id: GAME });
     await screen.findByLabelText('Where: Not agreed yet');
 
@@ -289,16 +304,7 @@ describe('the nudge', () => {
       actor_id: TOMEK,
       values: { value: 'Zabłocie Sport' },
     };
-    stubPlans(transport, [
-      {
-        game_id: GAME,
-        place: 'Zabłocie Sport',
-        day: null,
-        hour: null,
-        agreed_point: null,
-        locked_at: null,
-      },
-    ]);
+    stubPlans(transport, [plan({ place: 'Zabłocie Sport' })]);
     stubConversation(transport, { ...room(), game_id: GAME, entries: [set] });
     act(() => channel.nudge(ROOM));
 
@@ -324,15 +330,13 @@ describe('the nudge', () => {
    * nothing.
    */
   it('moves the header’s state word when the last slot lands', async () => {
-    const agreed = (over: Partial<Wire['PlanSchema']>): Wire['PlanSchema'] => ({
-      game_id: GAME,
-      place: 'Zabłocie Sport',
-      day: '2026-09-13',
-      hour: null,
-      agreed_point: '2026-09-12T22:00:00Z',
-      locked_at: null,
-      ...over,
-    });
+    const agreed = (over: Partial<Wire['PlanSchema']>): Wire['PlanSchema'] =>
+      plan({
+        place: 'Zabłocie Sport',
+        day: '2026-09-13',
+        agreed_point: '2026-09-12T22:00:00Z',
+        ...over,
+      });
     stubGames(transport, [game()], READ_AT);
     stubPlans(transport, [agreed({})]);
     await openTheRoom({ ...room(), game_id: GAME });
@@ -347,16 +351,19 @@ describe('the nudge', () => {
   });
 
   /**
-   * **A court that fills while you are in the room draws its card**
-   * ([#406](https://github.com/Raketa02/Raketa/issues/406)). The last acceptance's line arrives on
-   * the nudge and the re-read room now carries a game — but the card is `(game, plan)`, and the
-   * game is looked up in `GET /games`, which was last read on the way in. So the nudge re-reads
-   * that list too, and the card, the *Details* door and the header's state word are born here
-   * rather than on the next foregrounding.
+   * **A court that fills while you are in the room draws its door and its state word**
+   * ([#406](https://github.com/Raketa02/Raketa/issues/406), amended by ADR-0164 — the card was
+   * there from the opening). The last acceptance's line arrives on the nudge and the re-read room
+   * now carries a game — but the header's rung is folded over `GET /games`, which was last read
+   * on the way in. So the nudge re-reads that list too, and the *Details* door and the state word
+   * are born here rather than on the next foregrounding; the card's lock button is born on the
+   * same nudge, and `planCard.test.tsx` holds that half.
    */
-  it('draws the card, the door and the state word once the court completes', async () => {
+  it('draws the door and the state word once the court completes, over the card already there', async () => {
+    stubPlans(transport, [plan()]);
     await openTheRoom();
     await screen.findByLabelText(COMPOSER_LABEL);
+    expect(await screen.findByLabelText('Where: Not agreed yet')).toBeTruthy();
     expect(screen.queryByLabelText(OPEN_THE_GAME)).toBeNull();
 
     stubGames(transport, [game()], READ_AT);
@@ -376,11 +383,11 @@ describe('the nudge', () => {
     });
     act(() => channel.nudge(ROOM));
 
-    expect(await screen.findByLabelText('Where: Not agreed yet')).toBeTruthy();
-    expect(screen.getByLabelText(OPEN_THE_GAME)).toBeTruthy();
+    expect(await screen.findByLabelText(OPEN_THE_GAME)).toBeTruthy();
     expect(
       screen.getByText(headerSubline(sportLabel('padel'), cardStateWord('planning'))),
     ).toBeTruthy();
+    expect(screen.getByLabelText('Where: Not agreed yet')).toBeTruthy();
   });
 
   /**
@@ -665,11 +672,11 @@ describe('held', () => {
       ],
       READ_AT,
     );
-    stubPlans(transport, []);
+    stubPlans(transport, [plan()]);
     stubConversations(transport, [{ ...LISTED, game_id: GAME }]);
     stubConversation(transport, { ...room(), game_id: GAME });
     stubEntries(transport, ROOM);
-    transport.on('PUT', planSlotPath(GAME, 'day'), () => errorResponse(403, 'account_held'));
+    transport.on('PUT', planSlotPath(CHALLENGE, 'day'), () => errorResponse(403, 'account_held'));
 
     await launchSignedIn();
     fireEvent.press(await screen.findByLabelText(/^Chats/));

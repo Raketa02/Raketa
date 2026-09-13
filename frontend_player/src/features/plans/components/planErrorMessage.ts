@@ -16,7 +16,7 @@
  * which of the two is wrong — and **names no value**, because the sentence is true whichever pair
  * produced it. It is drawn under the chip row, where both remedies are one tap away.
  *
- * ## The lock's own refusal is unreachable through the UI, and handled anyway
+ * ## The lock's own refusals are unreachable through the UI, and handled anyway
  *
  * `the_plan_is_not_complete` is the server's guard on the lock, and the button is greyed below
  * three slots — but **the button is UX and the server is the correctness mechanism**, and a slot
@@ -24,10 +24,16 @@
  * disagree about *complete* exactly as they can about a horizon. The sentence names the remedy in
  * the counter's own terms and no slot, because the platform has not said which one.
  *
- * `plan_not_found` is one code for two cases — no plan yet, or not your court — and it is here for
- * the lock rather than for the slots, which write a plan into being: a lock on a game nobody has
- * arranged anything on is refused by the count first, so what is left is a court you have left
- * while this card was open.
+ * `the_court_is_not_whole` is the guard asked before it (ADR-0164 §5) — **the lock waits for the
+ * court** — and the button is absent while the room has no game, with the count line in its place.
+ * It is reachable all the same on a game a seat has since been left open on, where the button is
+ * drawn and the server still refuses; the sentence says what will change, in the count line's own
+ * words, rather than naming a control.
+ *
+ * `plan_not_found` is one code for three cases — no such challenge, never your court, or asked and
+ * not yet answered — and it is here for the lock rather than for the slots, which write a plan
+ * into being: a lock on a court nobody has arranged anything on is refused by the count first, so
+ * what is left is a court you have left while this card was open.
  *
  * ## Two codes are here because a mirrored number can drift, and two are not here at all
  *
@@ -68,10 +74,18 @@ const BY_CODE: Readonly<Record<string, string>> = {
   /** Refused whole, never truncated — so the remedy is the sender's and it is a short one. */
   the_place_is_too_long: 'That is longer than a place can be. Shorten it and set it again.',
 
+  /**
+   * **The lock waits for the court** (ADR-0164 §5), in the count line's own words. Unreachable
+   * from a room with no game, where the button is absent; a game with a seat later left open still
+   * draws the button, and this is what the server says to it. The remedy is not the player's to
+   * act on, so the sentence names what will change rather than what to press.
+   */
+  the_court_is_not_whole: "Not everyone's here yet — lock the plan once they are.",
+
   /** The lock's guard, in the counter's own terms. Names no slot: the platform has not said. */
   the_plan_is_not_complete: 'Set all three before locking the plan.',
 
-  /** One code for two cases, and neither is retried: the court has gone from under this card. */
+  /** One code for three cases, and none is retried: the court has gone from under this card. */
   plan_not_found: 'This plan is not one you can change.',
 };
 

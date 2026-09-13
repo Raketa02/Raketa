@@ -128,6 +128,11 @@ export function useAnswerSeat() {
       // The room the **first** acceptance opens, and the one every later acceptance grows. It
       // is a list this response says nothing about, so it is fetched rather than patched.
       void client.invalidateQueries({ queryKey: conversationKeys.list() });
+      // And the court's plan, which a yes is what gives the reader a row on (ADR-0164 §3): the
+      // room this lands in pins the card from its first frame, and the list held no row for a
+      // court the reader was still deciding about. `planKeys` is read from `features/plans` for
+      // this one line, as the leave and the withdraw already read it.
+      void client.invalidateQueries({ queryKey: planKeys.list() });
     },
   });
 }

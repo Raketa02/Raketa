@@ -5,21 +5,27 @@
  * One of the two layers allowed to read generated types, and the only place these paths are
  * written down.
  *
- * ## One list beside `GET /games`, joined by game id
+ * ## One list beside the rooms and the games, joined by challenge id
  *
- * The plan is **not** a field on a game and never will be
+ * The plan is **not** a field on a game or on a room and never will be
  * ([ADR-0148](../../../../../docs/adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md)
  * §8): *a game is a record of an evening and a plan is an agreement about a future, and the two
  * contexts do not read each other.* So the join is the client's, and it is one extra list rather
- * than one read per card.
+ * than one read per card — **keyed by `challenge_id`**
+ * ([ADR-0164](../../../../../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+ * §1), the one id a room and its game both carry, so the room reads its plan by its own id from
+ * the moment it opens and a game reads the same plan by the id it was opened from.
  *
- * **A game with nothing agreed is absent from the list**, not present with three nulls — *a plan
- * is born by being used* — so *no plan* and *nothing agreed* are one state on the wire as well as
- * in `domain/slots.ts`.
+ * **One row for every court the reader holds an accepted seat on, written or not** — a court with
+ * nothing agreed is a row with three nulls and the anchor, not an absence. Absence means one thing
+ * only: no accepted seat on that court — an invitee still deciding gets no row, and neither does
+ * somebody who left.
  *
  * **There is no `read_at` on the answer, deliberately.** A plan folds nothing against the clock,
- * so there is no instant for it to have been folded against; the card folds against `GET /games`'
- * own `read_at`, which is what keeps every clock on a surface the same one.
+ * so there is no instant for it to have been folded against; the card folds against the surface's
+ * own `read_at` — the room's in the chat, the games list's on the game screen — which is what keeps
+ * every clock on a surface the same one. The row's `anchor` is not a clock: it is where the day
+ * horizon runs from, and it only ever moves later.
  *
  * ## Four writes and no `Idempotency-Key`
  *
@@ -52,7 +58,7 @@ export interface Cancellable {
   readonly signal?: AbortSignal;
 }
 
-/** **Every plan for the games you are on the court of**, newest arrangement first. */
+/** **One row for every court you may plan, written or not**, newest arrangement first. */
 export function getPlans({ signal }: Cancellable = {}): Promise<PlanListResponse> {
   return httpRequest<PlanListResponse>({
     method: 'GET',
@@ -69,30 +75,30 @@ export function getPlans({ signal }: Cancellable = {}): Promise<PlanListResponse
  * `the_place_is_empty` and past the cap is `the_place_is_too_long`. **Neither is silently fixed**
  * on either side of the wire.
  */
-export function putPlace(gameId: string, body: SetPlaceRequest): Promise<PlanSchema> {
+export function putPlace(challengeId: string, body: SetPlaceRequest): Promise<PlanSchema> {
   return httpRequest<PlanSchema>({
     method: 'PUT',
-    path: `/api/v1/plans/${gameId}/place`,
+    path: `/api/v1/plans/${challengeId}/place`,
     body,
     authenticated: true,
   });
 }
 
 /** *We are playing on this day.* A local day in the platform zone, clamped to the horizon. */
-export function putDay(gameId: string, body: SetDayRequest): Promise<PlanSchema> {
+export function putDay(challengeId: string, body: SetDayRequest): Promise<PlanSchema> {
   return httpRequest<PlanSchema>({
     method: 'PUT',
-    path: `/api/v1/plans/${gameId}/day`,
+    path: `/api/v1/plans/${challengeId}/day`,
     body,
     authenticated: true,
   });
 }
 
 /** *We are playing at this time.* A clock time on the offered grid, validated server-side. */
-export function putHour(gameId: string, body: SetHourRequest): Promise<PlanSchema> {
+export function putHour(challengeId: string, body: SetHourRequest): Promise<PlanSchema> {
   return httpRequest<PlanSchema>({
     method: 'PUT',
-    path: `/api/v1/plans/${gameId}/hour`,
+    path: `/api/v1/plans/${challengeId}/hour`,
     body,
     authenticated: true,
   });
@@ -103,14 +109,16 @@ export function putHour(gameId: string, body: SetHourRequest): Promise<PlanSchem
  *
  * **No body**: the value is the three slots and they are already recorded, so sending one back
  * would be the second place that fact is true. A `PUT` for the reason the slot routes are — the
- * same act twice lands the same state. Refused `the_plan_is_not_complete` while a slot is empty,
- * a **409 rather than a silent `200`**, because a no-op there would leave this client believing it
- * had agreed a plan it had not (ADR-0155 §3).
+ * same act twice lands the same state. Refused `the_court_is_not_whole` while a seat is open or
+ * unanswered — **the lock waits for the court** (ADR-0164 §5), asked first — and
+ * `the_plan_is_not_complete` while a slot is empty, each a **409 rather than a silent `200`**,
+ * because a no-op there would leave this client believing it had agreed a plan it had not
+ * (ADR-0155 §3).
  */
-export function putLock(gameId: string): Promise<PlanSchema> {
+export function putLock(challengeId: string): Promise<PlanSchema> {
   return httpRequest<PlanSchema>({
     method: 'PUT',
-    path: `/api/v1/plans/${gameId}/lock`,
+    path: `/api/v1/plans/${challengeId}/lock`,
     authenticated: true,
   });
 }

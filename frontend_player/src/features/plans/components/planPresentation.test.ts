@@ -29,6 +29,7 @@ import {
   counterLabel,
   dayChipLabel,
   dayChipName,
+  lockWaitsLine,
   planHeadingName,
   planTagsName,
   slotChipLabel,
@@ -37,10 +38,10 @@ import {
   spokenSlotValue,
 } from './planPresentation';
 
-const GAME = '11111111-0000-4000-8000-000000000001';
+const CHALLENGE = '11111111-0000-4000-8000-000000000001';
 
 function plan(over: Partial<Plan> = {}): Plan {
-  return { gameId: GAME, ...over };
+  return { challengeId: CHALLENGE, anchor: '2026-09-12T07:00:00Z', ...over };
 }
 
 describe('an unfilled slot', () => {
@@ -269,6 +270,30 @@ describe('the heading', () => {
         plan({ place: 'x', day: '2026-09-13', hour: '18:00', lockedAt: '2026-09-12T10:00:00Z' }),
       ),
     ).toBe('The plan, Locked');
+  });
+});
+
+describe('the count line, where the lock will be', () => {
+  /**
+   * ADR-0164 §5's own sentence, verbatim: the room's members over the court's seats, and both
+   * halves of what the player needs — that they may plan now, and what will bring the button.
+   */
+  it('says who is in against the court, and what brings the lock', () => {
+    expect(lockWaitsLine({ in: 2, seats: 4 })).toBe(
+      "2 of 4 in — you can plan now, lock when everyone's here",
+    );
+    expect(lockWaitsLine({ in: 3, seats: 4 })).toBe(
+      "3 of 4 in — you can plan now, lock when everyone's here",
+    );
+  });
+
+  /**
+   * **`2 of 2 in` is a sentence this app never draws.** A singles room opens with its game — two
+   * yeses is the whole court — so the line is only ever a doubles court's; the words are pinned
+   * for the shape they would take so the rule is visible where the sentence is, not invented.
+   */
+  it('would read 2 of 2 for singles, which is a court that always has its game', () => {
+    expect(lockWaitsLine({ in: 2, seats: 2 })).toMatch(/^2 of 2 in — /);
   });
 });
 

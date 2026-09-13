@@ -103,8 +103,17 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   };
 }
 
+/** The court's row on `GET /plans` — the challenge's, which the game inherits (ADR-0164 §1). */
 function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
-  return { game_id: GAME, place: null, day: null, hour: null, agreed_point: null, ...over };
+  return {
+    challenge_id: CHALLENGE,
+    anchor: PLANNED_AT,
+    place: null,
+    day: null,
+    hour: null,
+    agreed_point: null,
+    ...over,
+  };
 }
 
 /** The whole plan, agreed for a day that is still ahead — the *Game on* arm's own values. */
@@ -140,7 +149,7 @@ afterEach(async () => {
 /** Every list this screen and the room behind it read, and a room to open unless asked otherwise. */
 function stubTheWorld({
   games = [game()],
-  plans = [],
+  plans = [plan()],
   room = true,
 }: {
   readonly games?: readonly Wire['GameSchema'][];
@@ -243,7 +252,15 @@ describe('the three plan arms', () => {
     expect(screen.getByLabelText(`${SLOT_NAME.day}: Saturday`)).toBeTruthy();
     expect(screen.getByLabelText(`${SLOT_NAME.hour}: 18:00`)).toBeTruthy();
     expect(
-      screen.getByText(counterLabel({ gameId: GAME, place: 'x', day: 'd', hour: 'h' })),
+      screen.getByText(
+        counterLabel({
+          challengeId: CHALLENGE,
+          anchor: PLANNED_AT,
+          place: 'x',
+          day: 'd',
+          hour: 'h',
+        }),
+      ),
     ).toBeTruthy();
     expect(screen.queryByText(NOTHING_IS_LEFT_TO_AGREE)).toBeNull();
   });
@@ -452,7 +469,15 @@ describe('one component, two routes', () => {
     expect(await screen.findByText(PLAN_PANEL.title)).toBeTruthy();
     expect(screen.getByLabelText(`${SLOT_NAME.day}: Saturday`)).toBeTruthy();
     expect(
-      screen.getByText(counterLabel({ gameId: GAME, place: 'x', day: 'd', hour: 'h' })),
+      screen.getByText(
+        counterLabel({
+          challengeId: CHALLENGE,
+          anchor: PLANNED_AT,
+          place: 'x',
+          day: 'd',
+          hour: 'h',
+        }),
+      ),
     ).toBeTruthy();
   });
 

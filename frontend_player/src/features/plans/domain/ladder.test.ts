@@ -14,10 +14,10 @@ import type { Game } from '@/features/games/types';
 import { agreedPoint, momentHasPassed, rungOf } from './ladder';
 import type { Plan } from './slots';
 
-const GAME = '11111111-0000-4000-8000-000000000001';
+const CHALLENGE = '11111111-0000-4000-8000-000000000001';
 
 function plan(over: Partial<Plan> = {}): Plan {
-  return { gameId: GAME, ...over };
+  return { challengeId: CHALLENGE, anchor: '2026-09-08T09:00:00Z', ...over };
 }
 
 /** 09:00 UTC on the 12th is the 12th in Warsaw, whatever the phone thinks. */

@@ -41,9 +41,10 @@
  * supersedes §6 for this one surface with that distinction as its argument.
  *
  * **A room with no game draws the sport alone.** `game_id` is nullable, so a `LINE_UP_INCOMPLETE`
- * room has no game and no plan; no state is drawn for it and none is invented, which is the same
- * nothing the absent *Details* door draws from the same field. The state is handed in as a word by
- * the screen, which is where the two reads it is folded from are already made.
+ * room has no game — it has a plan, since ADR-0164, but the rung ladder is the game's — so no
+ * state is drawn for it and none is invented, which is the same nothing the absent *Details* door
+ * draws from the same field. The state is handed in as a word by the screen, which is where the
+ * two reads it is folded from are already made.
  *
  * ## The two lines are the other way up from 10.3's eyebrow
  *
@@ -55,8 +56,8 @@
  *
  * ## Details is drawn only when there is a game
  *
- * `game_id` is nullable, so a `LINE_UP_INCOMPLETE` room has no game and no plan — **nothing for
- * this door to open**, and a control drawn over that nothing is the disabled control
+ * `game_id` is nullable, so a `LINE_UP_INCOMPLETE` room has no game — **nothing for this door
+ * to open**, whatever its plan says, and a control drawn over that nothing is the disabled control
  * [#324](https://github.com/Raketa02/Raketa/issues/324) refused. The rule lives beside the
  * drawing rather than at the call site so there is no arrangement of props that draws a dead one.
  *

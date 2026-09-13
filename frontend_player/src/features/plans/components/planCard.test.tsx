@@ -42,7 +42,7 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-import { HOURS_OFFERED } from '../domain/slots';
+import { HOURS_OFFERED, type Plan } from '../domain/slots';
 
 import { planErrorMessage } from './planErrorMessage';
 import {
@@ -50,6 +50,7 @@ import {
   LOCKING,
   LOCK_THE_PLAN,
   NO_DAY_LEFT_TO_SET,
+  lockWaitsLine,
   PLAN_PANEL,
   QUICK_CHIP,
   RECORD_PLACE,
@@ -74,6 +75,9 @@ const GAME = 'aaaaaaaa-0000-4000-8000-000000000009';
 /** Saturday the 12th of September 2026, 09:00 in Warsaw — the day the line-up completed. */
 const PLANNED_AT = '2026-09-12T07:00:00Z';
 
+/** Wednesday the 9th, 09:00 in Warsaw — when the challenge was sent, three days before. */
+const SENT_AT = '2026-09-09T07:00:00Z';
+
 const PADEL_RATING: Wire['RatingResponse'] = {
   sport: 'PADEL',
   mu: 2.71,
@@ -91,9 +95,12 @@ const PAIR: Wire['ConversationMemberSchema'][] = [
   { player_id: TOMEK, nickname: 'tomek.p' },
 ];
 
-function room(gameId: string | null = GAME): Wire['ConversationResponse'] {
+function room(
+  gameId: string | null = GAME,
+  readAt: string = PLANNED_AT,
+): Wire['ConversationResponse'] {
   return {
-    read_at: PLANNED_AT,
+    read_at: readAt,
     conversation_id: ROOM,
     challenge_id: CHALLENGE,
     game_id: gameId,
@@ -121,9 +128,11 @@ function game(): Wire['GameSchema'] {
   };
 }
 
+/** The row `GET /plans` lists for this court — with nothing agreed, and anchored at the filling. */
 function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
   return {
-    game_id: GAME,
+    challenge_id: CHALLENGE,
+    anchor: PLANNED_AT,
     place: null,
     day: null,
     hour: null,
@@ -131,6 +140,11 @@ function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
     locked_at: null,
     ...over,
   };
+}
+
+/** The same row as this feature reads it — for the deck's own functions. */
+function agreed(over: Partial<Plan> = {}): Plan {
+  return { challengeId: CHALLENGE, anchor: PLANNED_AT, ...over };
 }
 
 /** All three set, and the lock still to say so. */
@@ -142,7 +156,7 @@ const COMPLETE: Partial<Wire['PlanSchema']> = {
 
 const LOCKED_AT = '2026-09-12T10:00:00Z';
 
-const lockPath = `/api/v1/plans/${GAME}/lock`;
+const lockPath = `/api/v1/plans/${CHALLENGE}/lock`;
 
 /** The refusal's own sentence, off the deck — never a raw string. */
 const refusalSentence = (status: number, code: string) =>
@@ -170,20 +184,31 @@ afterEach(async () => {
 /**
  * Land in the app, open Chats, tap the one row — the walk every assertion here starts with.
  *
- * `readAt` is the **games** list's instant, because that is the one clock this card is folded
- * against: `GET /plans` carries none, deliberately.
+ * `readAt` is **the room's** instant, because that is *today* on this card in the chat — and the
+ * games list is folded at the same instant, so the header's rung and the card agree. `GET /plans`
+ * carries none, deliberately. `agreed` defaults to the row every court the reader may plan has —
+ * three nulls and the anchor — since ADR-0164 an absence there means the list has not landed.
  */
 async function openTheRoom({
-  agreed,
+  agreed = plan(),
   gameId = GAME,
   readAt = PLANNED_AT,
+  listLands,
 }: {
   readonly agreed?: Wire['PlanSchema'];
   readonly gameId?: string | null;
   readonly readAt?: string;
+  /** Holds `GET /plans` until this resolves — for the one test about the list not having landed. */
+  readonly listLands?: Promise<unknown>;
 } = {}) {
   stubGames(transport, gameId === null ? [] : [game()], readAt);
-  stubPlans(transport, agreed === undefined ? [] : [agreed]);
+  if (listLands === undefined) stubPlans(transport, [agreed]);
+  else {
+    transport.on('GET', PLANS_PATH, async () => {
+      await listLands;
+      return json<Wire['PlanListResponse']>({ plans: [agreed] });
+    });
+  }
   stubConversations(transport, [
     {
       conversation_id: ROOM,
@@ -195,7 +220,7 @@ async function openTheRoom({
       last_entry: null,
     },
   ]);
-  stubConversation(transport, room(gameId));
+  stubConversation(transport, room(gameId, readAt));
   stubEntries(transport, ROOM);
 
   await launchSignedIn();
@@ -248,18 +273,16 @@ describe('the card', () => {
     await openTheRoom({ agreed: plan({ day: '2026-09-13' }) });
 
     const heading = await screen.findByRole('header', {
-      name: planHeadingName({ gameId: GAME, day: '2026-09-13' }),
+      name: planHeadingName(agreed({ day: '2026-09-13' })),
     });
     expect(within(heading).getByText(THE_PLAN)).toBeTruthy();
-    expect(
-      within(heading).getByText(counterLabel({ gameId: GAME, day: '2026-09-13' })),
-    ).toBeTruthy();
+    expect(within(heading).getByText(counterLabel(agreed({ day: '2026-09-13' })))).toBeTruthy();
   });
 
   it('counts nought where nothing has been agreed', async () => {
     await openTheRoom();
 
-    expect(await screen.findByText(counterLabel(undefined))).toBeTruthy();
+    expect(await screen.findByText(counterLabel(agreed()))).toBeTruthy();
   });
 
   /**
@@ -290,16 +313,41 @@ describe('the card', () => {
   });
 
   /**
-   * A room whose line-up has not completed has **no game and no plan**, so there is nothing to
-   * pin — the same nothing the header's absent *Details* draws, from the same field.
+   * **The card is drawn from the room's opening** (ADR-0164 §2, #425): a room whose court is
+   * still filling has a plan — the challenge's — and pins it with three empty slots and, where
+   * the lock will be, the count line: two of a padel four are in. The header still draws the
+   * sport alone and no *Details* door, which `conversationScreen.test.tsx` holds.
    */
-  it('is not drawn at all where the room has no game', async () => {
+  it('is drawn with three empty slots and the count line where the room has no game', async () => {
     await openTheRoom({ gameId: null });
+
+    expect(await screen.findByLabelText(`${SLOT_NAME.where}: ${NOT_AGREED_YET}`)).toBeTruthy();
+    expect(screen.getByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`)).toBeTruthy();
+    expect(screen.getByLabelText(`${SLOT_NAME.hour}: ${NOT_AGREED_YET}`)).toBeTruthy();
+    expect(screen.getByText(counterLabel(agreed()))).toBeTruthy();
+    expect(screen.getByText(lockWaitsLine({ in: 2, seats: 4 }))).toBeTruthy();
+    expect(screen.queryByRole('button', { name: LOCK_THE_PLAN })).toBeNull();
+  });
+
+  /**
+   * **A row that has not landed draws nothing** — the row is what says there is a plan to draw
+   * and carries the anchor to draw it with, and a card that announced its own loading would be
+   * chrome flickering above a stream.
+   */
+  it('is not drawn until the plan list has landed', async () => {
+    let landed: () => void = () => {};
+    const listLands = new Promise<void>((resolve) => {
+      landed = resolve;
+    });
+    await openTheRoom({ gameId: null, listLands });
 
     // The room is up once its header names the other person — whole, in the spoken name, which
     // is the conversation's own deck and not this feature's to spell; the start is enough here.
     await screen.findByRole('header', { name: /^tomek\.p/ });
     expect(screen.queryByText(SLOT_NAME.day)).toBeNull();
+
+    landed();
+    expect(await screen.findByText(SLOT_NAME.day)).toBeTruthy();
   });
 });
 
@@ -317,7 +365,21 @@ describe('the day row', () => {
     expect(screen.getAllByLabelText(dayChipName('2026-09-12'))).toHaveLength(1);
   });
 
-  /** The row is clamped to `planned_at + PLAN_HORIZON` and shrinks as the week runs out. */
+  /**
+   * **The horizon is the row's anchor** (ADR-0164 §4) — the send while the court is filling, so a
+   * room with no game offers a shorter row than its game will, and the same seven once it fills.
+   * *Today* is the room's own `read_at`.
+   */
+  it('runs from the send while the room has no game', async () => {
+    await openTheRoom({ gameId: null, agreed: plan({ anchor: SENT_AT }) });
+
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
+
+    expect(await screen.findByLabelText(dayChipName('2026-09-16'))).toBeTruthy();
+    expect(screen.queryByLabelText(dayChipName('2026-09-17'))).toBeNull();
+  });
+
+  /** The row is clamped to `anchor + PLAN_HORIZON` and shrinks as the week runs out. */
   it('shrinks as the horizon runs out', async () => {
     await openTheRoom({ readAt: '2026-09-16T07:00:00Z' });
 
@@ -367,17 +429,35 @@ describe('the hour row', () => {
 });
 
 describe('recording a slot', () => {
-  it('sends the day and closes the row behind it', async () => {
-    await openTheRoom();
-    transport.on('PUT', planSlotPath(GAME, 'day'), () => json(plan({ day: '2026-09-13' })));
+  /**
+   * **The writes are the challenge's** (ADR-0164 §1): a room with no game records a slot on the
+   * same route its game will, and the chip reads the reply like any other.
+   */
+  it('records a slot in a room with no game, on the challenge-addressed route', async () => {
+    await openTheRoom({ gameId: null });
+    transport.on('PUT', planSlotPath(CHALLENGE, 'day'), () => json(plan({ day: '2026-09-13' })));
 
     fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
     fireEvent.press(await screen.findByLabelText(dayChipName('2026-09-13')));
 
     await waitFor(() =>
-      expect(transport.requestsTo('PUT', planSlotPath(GAME, 'day'))).toHaveLength(1),
+      expect(transport.requestsTo('PUT', planSlotPath(CHALLENGE, 'day'))).toHaveLength(1),
     );
-    expect(transport.requestsTo('PUT', planSlotPath(GAME, 'day'))[0]?.body).toEqual({
+    await waitFor(() => expect(screen.getByLabelText(`${SLOT_NAME.day}: Sunday`)).toBeTruthy());
+    expect(screen.getByText(counterLabel(agreed({ day: '2026-09-13' })))).toBeTruthy();
+  });
+
+  it('sends the day and closes the row behind it', async () => {
+    await openTheRoom();
+    transport.on('PUT', planSlotPath(CHALLENGE, 'day'), () => json(plan({ day: '2026-09-13' })));
+
+    fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
+    fireEvent.press(await screen.findByLabelText(dayChipName('2026-09-13')));
+
+    await waitFor(() =>
+      expect(transport.requestsTo('PUT', planSlotPath(CHALLENGE, 'day'))).toHaveLength(1),
+    );
+    expect(transport.requestsTo('PUT', planSlotPath(CHALLENGE, 'day'))[0]?.body).toEqual({
       day: '2026-09-13',
     });
     await waitFor(() => expect(screen.getByLabelText(`${SLOT_NAME.day}: Sunday`)).toBeTruthy());
@@ -394,7 +474,7 @@ describe('recording a slot', () => {
     const held = new Promise<Wire['PlanSchema']>((resolve) => {
       answer = resolve;
     });
-    transport.on('PUT', planSlotPath(GAME, 'day'), async () => json(await held));
+    transport.on('PUT', planSlotPath(CHALLENGE, 'day'), async () => json(await held));
 
     fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
     fireEvent.press(await screen.findByLabelText(dayChipName('2026-09-13')));
@@ -414,7 +494,7 @@ describe('recording a slot', () => {
    */
   it('draws a past combination as a sentence, not as a closed chip', async () => {
     await openTheRoom({ agreed: plan({ day: '2026-09-13' }) });
-    transport.on('PUT', planSlotPath(GAME, 'hour'), () =>
+    transport.on('PUT', planSlotPath(CHALLENGE, 'hour'), () =>
       errorResponse(409, 'that_moment_has_already_passed'),
     );
 
@@ -434,7 +514,7 @@ describe('recording a slot', () => {
   /** Any member may change any slot, any number of times — the line is the friction. */
   it('lets a filled slot be changed again', async () => {
     await openTheRoom({ agreed: plan({ day: '2026-09-13' }) });
-    transport.on('PUT', planSlotPath(GAME, 'day'), () => json(plan({ day: '2026-09-14' })));
+    transport.on('PUT', planSlotPath(CHALLENGE, 'day'), () => json(plan({ day: '2026-09-14' })));
 
     fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: Sunday`));
     fireEvent.press(await screen.findByLabelText(dayChipName('2026-09-14')));
@@ -445,14 +525,16 @@ describe('recording a slot', () => {
   /** The place is tidied on the way out — one line, and never truncated. */
   it('sends the place as one line', async () => {
     await openTheRoom();
-    transport.on('PUT', planSlotPath(GAME, 'place'), () => json(plan({ place: 'Zabłocie Sport' })));
+    transport.on('PUT', planSlotPath(CHALLENGE, 'place'), () =>
+      json(plan({ place: 'Zabłocie Sport' })),
+    );
 
     fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.where}: ${NOT_AGREED_YET}`));
     fireEvent.changeText(await screen.findByLabelText(SLOT_NAME.where), '  Zabłocie   Sport ');
     fireEvent.press(screen.getByText(RECORD_PLACE));
 
     await waitFor(() =>
-      expect(transport.requestsTo('PUT', planSlotPath(GAME, 'place'))[0]?.body).toEqual({
+      expect(transport.requestsTo('PUT', planSlotPath(CHALLENGE, 'place'))[0]?.body).toEqual({
         place: 'Zabłocie Sport',
       }),
     );
@@ -475,8 +557,56 @@ describe('the lock', () => {
   const lockButton = () => screen.getByRole('button', { name: LOCK_THE_PLAN });
 
   /** The counter's own sentence for a plan with every slot set and no lock. */
-  const ALL_THREE = counterLabel({ gameId: GAME, place: 'x', day: '2026-09-13', hour: '18:00' });
-  const TWO = counterLabel({ gameId: GAME, place: 'x', day: '2026-09-13' });
+  const ALL_THREE = counterLabel(agreed({ place: 'x', day: '2026-09-13', hour: '18:00' }));
+  const TWO = counterLabel(agreed({ place: 'x', day: '2026-09-13' }));
+
+  /**
+   * **The lock waits for the court** (ADR-0164 §5): while the room has no game the button is
+   * **absent, not disabled**, and in its place stands the count line — the room's members over
+   * the sport's seats. Two of a padel four are in, so `2 of 4`.
+   */
+  it('is absent while the room has no game, with the count line where it will be', async () => {
+    await openTheRoom({ gameId: null, agreed: plan(COMPLETE) });
+
+    expect(await screen.findByText(lockWaitsLine({ in: 2, seats: 4 }))).toBeTruthy();
+    expect(screen.queryByRole('button', { name: LOCK_THE_PLAN })).toBeNull();
+    expect(screen.queryByText(LOCK_THE_PLAN)).toBeNull();
+  });
+
+  /**
+   * **The line becomes the button on the nudge that brings the game** (#406 as amended by
+   * ADR-0164): the last acceptance's line arrives, the re-read room carries a game, and the
+   * re-read games list says so — the slots recorded before are still shown, because it is the
+   * same plan.
+   */
+  it('appears when the court fills, over the slots recorded before', async () => {
+    await openTheRoom({
+      gameId: null,
+      agreed: plan({ place: 'Zabłocie Sport', day: '2026-09-13' }),
+    });
+    await screen.findByText(lockWaitsLine({ in: 2, seats: 4 }));
+
+    stubGames(transport, [game()], PLANNED_AT);
+    stubConversation(transport, {
+      ...room(),
+      entries: [
+        {
+          type: 'system_line',
+          seq: 1,
+          code: 'SEAT_ACCEPTED',
+          occurred_at: PLANNED_AT,
+          actor_id: TOMEK,
+          values: {},
+        },
+      ],
+    });
+    act(() => channel.nudge(ROOM));
+
+    expect(await screen.findByRole('button', { name: LOCK_THE_PLAN })).toBeTruthy();
+    expect(screen.queryByText(lockWaitsLine({ in: 2, seats: 4 }))).toBeNull();
+    expect(screen.getByLabelText('Where: Zabłocie Sport')).toBeTruthy();
+    expect(screen.getByLabelText(`${SLOT_NAME.day}: Sunday`)).toBeTruthy();
+  });
 
   /**
    * **Greyed and not pressable while any slot is empty** — 6.1's `disabled`, announced — and the
@@ -513,7 +643,7 @@ describe('the lock', () => {
     expect(screen.queryByText(ALL_THREE)).toBeNull();
     expect(
       screen.getByRole('header', {
-        name: planHeadingName({ gameId: GAME, lockedAt: LOCKED_AT }),
+        name: planHeadingName(agreed({ lockedAt: LOCKED_AT })),
       }),
     ).toBeTruthy();
   });
@@ -562,7 +692,7 @@ describe('the lock', () => {
    */
   it('leaves every slot editable, and the plan stays locked after a move', async () => {
     await openTheRoom({ agreed: plan({ ...COMPLETE, locked_at: LOCKED_AT }) });
-    transport.on('PUT', planSlotPath(GAME, 'day'), () =>
+    transport.on('PUT', planSlotPath(CHALLENGE, 'day'), () =>
       json(plan({ ...COMPLETE, day: '2026-09-14', locked_at: LOCKED_AT })),
     );
 
@@ -595,6 +725,20 @@ describe('the lock', () => {
       expect(lockButton().props.accessibilityState.disabled).toBe(false);
     });
 
+    /**
+     * The absent button makes it unreachable from a room with no game; a game with a seat later
+     * left open still draws the button, and the server's answer is a sentence rather than silence.
+     */
+    it('by a court that is not whole, in its own sentence', async () => {
+      await openTheRoom({ agreed: plan(COMPLETE) });
+      transport.on('PUT', lockPath, () => errorResponse(409, 'the_court_is_not_whole'));
+
+      fireEvent.press(await screen.findByRole('button', { name: LOCK_THE_PLAN }));
+
+      expect(await screen.findByText(refusalSentence(409, 'the_court_is_not_whole'))).toBeTruthy();
+      expect(lockButton().props.accessibilityState.disabled).toBe(false);
+    });
+
     it('by a game that is over, in the sentence every plan write shares', async () => {
       await openTheRoom({ agreed: plan(COMPLETE) });
       transport.on('PUT', lockPath, () => errorResponse(409, 'plan_is_history'));
@@ -617,11 +761,12 @@ describe('the lock', () => {
     it('by each code in a different sentence', () => {
       const sentences = [
         refusalSentence(409, 'the_plan_is_not_complete'),
+        refusalSentence(409, 'the_court_is_not_whole'),
         refusalSentence(409, 'plan_is_history'),
         refusalSentence(404, 'plan_not_found'),
       ];
 
-      expect(new Set(sentences).size).toBe(3);
+      expect(new Set(sentences).size).toBe(4);
       expect(sentences).not.toContain(refusalSentence(409, 'a_code_this_build_has_never_seen'));
     });
 
@@ -682,7 +827,7 @@ describe('a held account', () => {
    */
   it('is told by a slot write, not only by the send', async () => {
     await openTheRoom({ agreed: plan({ day: '2026-09-13' }) });
-    transport.on('PUT', planSlotPath(GAME, 'hour'), () => errorResponse(403, 'account_held'));
+    transport.on('PUT', planSlotPath(CHALLENGE, 'hour'), () => errorResponse(403, 'account_held'));
 
     fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.hour}: ${NOT_AGREED_YET}`));
     fireEvent.press(await screen.findByText('18:00'));
@@ -747,7 +892,7 @@ describe('what another member set arrives on the nudge', () => {
     act(() => channel.nudge(ROOM));
 
     expect(await screen.findByLabelText('Where: Zabłocie Sport')).toBeTruthy();
-    expect(screen.getByText(counterLabel({ gameId: GAME, place: 'Zabłocie Sport' }))).toBeTruthy();
+    expect(screen.getByText(counterLabel(agreed({ place: 'Zabłocie Sport' })))).toBeTruthy();
   });
 
   /**
@@ -805,7 +950,7 @@ describe('what another member set arrives on the nudge', () => {
       read = held.then((plans) => json<Wire['PlanListResponse']>({ plans }));
       return read;
     });
-    transport.on('PUT', planSlotPath(GAME, 'hour'), () =>
+    transport.on('PUT', planSlotPath(CHALLENGE, 'hour'), () =>
       json(plan({ day: '2026-09-13', hour: '18:00:00' })),
     );
 
@@ -849,11 +994,11 @@ describe('what another member set arrives on the nudge', () => {
       ).toBe(true),
     );
 
-    transport.on('PUT', planSlotPath(GAME, 'day'), () => json(plan({ day: '2026-09-14' })));
+    transport.on('PUT', planSlotPath(CHALLENGE, 'day'), () => json(plan({ day: '2026-09-14' })));
     fireEvent.press(screen.getByLabelText(dayChipName('2026-09-14')));
 
     await waitFor(() =>
-      expect(transport.requestsTo('PUT', planSlotPath(GAME, 'day'))[0]?.body).toEqual({
+      expect(transport.requestsTo('PUT', planSlotPath(CHALLENGE, 'day'))[0]?.body).toEqual({
         day: '2026-09-14',
       }),
     );
@@ -882,10 +1027,12 @@ describe('what another member set arrives on the nudge', () => {
 
     expect(screen.getByDisplayValue('Hala Cracovia')).toBeTruthy();
 
-    transport.on('PUT', planSlotPath(GAME, 'place'), () => json(plan({ place: 'Hala Cracovia' })));
+    transport.on('PUT', planSlotPath(CHALLENGE, 'place'), () =>
+      json(plan({ place: 'Hala Cracovia' })),
+    );
     fireEvent.press(screen.getByText(RECORD_PLACE));
     await waitFor(() =>
-      expect(transport.requestsTo('PUT', planSlotPath(GAME, 'place'))[0]?.body).toEqual({
+      expect(transport.requestsTo('PUT', planSlotPath(CHALLENGE, 'place'))[0]?.body).toEqual({
         place: 'Hala Cracovia',
       }),
     );

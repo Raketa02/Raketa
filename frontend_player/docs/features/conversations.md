@@ -104,10 +104,11 @@ the second store this app does not have. A refusal **puts the words back in the 
 retry is the control that failed. **The quick chips post words and change nothing** — one per
 unfilled slot in slot order, plus _On my way_ only when the agreed day is today, which is what
 caps the row at three rather than four, and each asks the question its slot is about and names no
-weekday, no part of a day and no venue. The plan they are asked about arrives with
-[#366](https://github.com/Raketa02/Raketa/issues/366); until then the room has no plan **and no
-surface on which a slot could be filled**, which is the same state `GET /plans` spells by having
-no row at all. _**Open the chat**_ joined the challenge screen's half-built arm in the middle of
+weekday, no part of a day and no venue. The plan they are asked about arrived with
+[#366](https://github.com/Raketa02/Raketa/issues/366), and since
+[#425](https://github.com/Raketa02/Raketa/issues/425) it is read by the room's own `challengeId`
+from the moment the room opens, so the chips ask about exactly the slots the pinned card shows
+empty. _**Open the chat**_ joined the challenge screen's half-built arm in the middle of
 grow · talk · end, and where it goes is a **client join over the player's own rooms** — ADR-0149
 §3's shape, failing soft, because no route serves a challenge its conversation.
 
@@ -167,3 +168,20 @@ player who stops typing stops beating and the server's expiry does the rest — 
 so no request outlives its screen, **silent** when it fails, and closed with the composer under a
 hold. It is not a `useMutation`, because a paused heartbeat resuming on reconnect would say _typing_
 about a person who left a minute ago.
+
+**The plan card is pinned in every room from its opening, and the room hands it the count where
+the lock will be** ([#425](https://github.com/Raketa02/Raketa/issues/425),
+[ADR-0164](../../../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+§2, §5). The plan is the challenge's, and the room has carried `challengeId` since it opened, so
+`RoomPlan` is composed unconditionally and no longer needs `gameId` to draw: what the room hands
+down is its challenge, its own `read_at` — _today_ on the day chips, which the card used to read
+off the games list — and, **exactly while `gameId` is absent**, the court's count: `members.length`
+over `courtSeatCount(sport)`, the two facts only this screen holds beside the one that decides
+whether to say them. The card draws them as _2 of 4 in — you can plan now, lock when everyone's
+here_ where the lock button will be; once the room has its game the room passes none and the button
+is drawn, on the same nudge that brings the game (#406, amended: the card was already there, what is
+born on the nudge is the button, the _Details_ door and the header's state word). **The header's
+second line and the door stay the game's** (ADR-0157): a room without one draws the sport alone
+above a card it now has. The count is composed on the screen rather than folded in `domain/`
+because `courtSeatCount` is `shared/ui`'s and the rule of what stands in the button's place is
+`features/plans`' `domain/lock.ts` — the room states two numbers and one fact, and decides nothing.

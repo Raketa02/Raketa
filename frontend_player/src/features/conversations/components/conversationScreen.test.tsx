@@ -129,8 +129,17 @@ function game(): Wire['GameSchema'] {
   };
 }
 
+/** The court's row on `GET /plans` — the challenge's, there from the room's opening. */
 function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
-  return { game_id: GAME, place: null, day: null, hour: null, agreed_point: null, ...over };
+  return {
+    challenge_id: CHALLENGE,
+    anchor: READ_AT,
+    place: null,
+    day: null,
+    hour: null,
+    agreed_point: null,
+    ...over,
+  };
 }
 
 /** A title budget no room in these tests needs, so a line is asserted on its words alone. */
@@ -216,7 +225,10 @@ describe('the header', () => {
     expect(within(header).queryByText(/tomek\.p/)).toBeNull();
   });
 
-  /** A `LINE_UP_INCOMPLETE` room has no game and no plan, and the line says the sport and stops. */
+  /**
+   * A `LINE_UP_INCOMPLETE` room has no game, and the line says the sport and stops. It has a plan
+   * — the challenge's — and the card is pinned under this header from the opening (ADR-0164 §2).
+   */
   it('draws the sport alone under the people where there is no game', async () => {
     await openTheRoom();
 
@@ -249,12 +261,17 @@ describe('the header', () => {
   });
 
   /**
-   * The game id is nullable, so a room whose line-up is still filling has no game and no plan —
-   * nothing for this door to open, and a drawn dead control is the disabled control #324 refused.
+   * The game id is nullable, so a room whose line-up is still filling has no game — nothing for
+   * this door to open, and a drawn dead control is the disabled control #324 refused. It has a
+   * plan, and `planCard.test.tsx` holds what the card draws in its place: the count line where
+   * the lock will be.
    */
   it('draws no Details where there is no game', async () => {
+    stubPlans(transport, [plan()]);
     await openTheRoom();
 
+    // The card is up — the room is complete — and the door is not.
+    expect(await screen.findByRole('button', { name: QUICK_CHIP.where })).toBeTruthy();
     expect(screen.queryByLabelText(OPEN_THE_GAME)).toBeNull();
   });
 
@@ -583,10 +600,11 @@ describe('a refused send', () => {
 
 describe('the quick chips', () => {
   /**
-   * One per unfilled slot in slot order, and no *On my way*: this build reads no plan, and a room
-   * with nothing agreed is the state `GET /plans` spells by having no row at all.
+   * One per unfilled slot in slot order, and no *On my way*: a room with nothing agreed is a row
+   * with three nulls on `GET /plans`, and the chips read the same row the card does.
    */
   it('asks the three questions and names nothing', async () => {
+    stubPlans(transport, [plan()]);
     await openTheRoom();
 
     expect(await screen.findByRole('button', { name: QUICK_CHIP.where })).toBeTruthy();

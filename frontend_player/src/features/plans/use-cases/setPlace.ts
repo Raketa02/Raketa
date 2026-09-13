@@ -16,11 +16,11 @@ import { tidyPlace, type Plan } from '../domain/slots';
 import { toPlan } from '../mappers/planMappers';
 
 export interface SetPlaceAsk {
-  readonly gameId: string;
+  readonly challengeId: string;
   /** As the player typed it. Tidied on the way out, never on the way back. */
   readonly written: string;
 }
 
-export function setPlace({ gameId, written }: SetPlaceAsk): Promise<Plan> {
-  return putPlace(gameId, { place: tidyPlace(written) }).then(toPlan);
+export function setPlace({ challengeId, written }: SetPlaceAsk): Promise<Plan> {
+  return putPlace(challengeId, { place: tidyPlace(written) }).then(toPlan);
 }

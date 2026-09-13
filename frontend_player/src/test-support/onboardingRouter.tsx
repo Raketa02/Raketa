@@ -444,16 +444,18 @@ export function stubPairing(
 export const PLANS_PATH = '/api/v1/plans';
 
 /**
- * Your plans, as `GET /plans` answers — **one row per game somebody has agreed something about.**
+ * Your plans, as `GET /plans` answers — **one row per court you hold an accepted seat on, written
+ * or not**, keyed by `challenge_id` and carrying the anchor its day row runs from (ADR-0164).
  *
  * There is **no `read_at` on this envelope**, deliberately: a plan folds nothing against the clock,
  * so a suite that wants *today* to be a particular day sets `stubGames`' instant instead — the card
  * is folded against the game list's, which is what keeps every clock on a surface the same one.
  *
  * Stubbed on every launch beside the games and the rooms, for the reason those two are: the plan
- * card is pinned in every room that has a game, so a suite that opens one would otherwise fail at
+ * card is pinned in every room from its opening, so a suite that opens one would otherwise fail at
  * the socket with a name that points at `fetch` rather than at the card
- * ([#366](https://github.com/Raketa02/Raketa/issues/366)).
+ * ([#366](https://github.com/Raketa02/Raketa/issues/366)). Defaulted to no rows, which draws no
+ * card at all — a suite that wants the card stubs the court's row.
  *
  * Defaulted to nothing, which is not an empty plan but **no plan** — *a plan is born by being
  * used*, so a game nobody has arranged anything on has no row here at all and the card draws three
@@ -463,9 +465,9 @@ export function stubPlans(transport: Transport, plans: readonly Wire['PlanSchema
   transport.on('GET', PLANS_PATH, () => json<Wire['PlanListResponse']>({ plans: [...plans] }));
 }
 
-/** The path one game's slot answers on, for a suite that wants to record one. */
-export const planSlotPath = (gameId: string, slot: 'place' | 'day' | 'hour') =>
-  `${PLANS_PATH}/${gameId}/${slot}`;
+/** The path one court's slot answers on — addressed by its challenge — for a suite that records one. */
+export const planSlotPath = (challengeId: string, slot: 'place' | 'day' | 'hour') =>
+  `${PLANS_PATH}/${challengeId}/${slot}`;
 
 /** The path `GET /challenges` answers on, for a suite that wants to say what is in the list. */
 export const CHALLENGES_PATH = '/api/v1/challenges';

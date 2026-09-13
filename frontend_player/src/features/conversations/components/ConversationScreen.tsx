@@ -64,24 +64,33 @@
  * Three slot chips from `features/plans` ([#366](https://github.com/Raketa02/Raketa/issues/366)),
  * pinned rather than emitted into the stream: every chat opens at its newest entry, so a card in
  * the scroll is a card you have to hunt for — and the plan is the thing the room exists to fill.
+ * **Pinned in every room, from its opening**
+ * ([ADR-0164](../../../../../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
+ * §2, [#425](https://github.com/Raketa02/Raketa/issues/425)): the plan is the challenge's, the room
+ * has carried `challengeId` since it opened, so two of four can start on where and when without
+ * waiting on the others. What the room hands down beside the id is its own clock — *today* on the
+ * day chips is this read's `read_at` — and, exactly while it has no game, **the court's count**:
+ * its members over the sport's seats, which the card draws as the line where the lock will be.
+ * The lock waits for the court, and the header's second line and the *Details* door still wait
+ * with it: those are the game's (ADR-0157), and a room without one draws the sport alone above a
+ * card it now has.
  *
  * **#364 anticipated a slot the route would fill and that shape was not taken**, which is recorded
- * here rather than left to be re-derived. Two facts about the room reach the card and neither is
- * knowable outside this component: which game the room completed into, which comes off the read
- * this screen mounts, and whether the account is **held**, which is the fold below. A slot filled
- * from the route would therefore have had to be a render prop taking a boolean, over a route that
- * had joined the room itself to find the game id — three props and a second join to avoid one
- * import through a feature's public surface, which this feature already makes to `features/games`
- * for the *Details* door.
+ * here rather than left to be re-derived. The facts about the room that reach the card are not
+ * knowable outside this component: which court it is arranging and whether that court has its
+ * game, which come off the read this screen mounts, and whether the account is **held**, which is
+ * the fold below. A slot filled from the route would therefore have had to be a render prop taking
+ * a boolean, over a route that had joined the room itself — several props and a second join to
+ * avoid one import through a feature's public surface, which this feature already makes to
+ * `features/games` for the *Details* door.
  *
  * **The arrow that matters is a different one and is untouched.** ADR-0149 §1 fixes
  * `features/plans` → `features/games` and refuses the reverse; nothing anywhere refuses a room
  * composing the card that edits its own plan, and `plans` learns nothing about a conversation.
  *
  * The same read answers the quick chips: *one chip per unfilled slot, in slot order, plus `On my
- * way` when the agreed day is today*. A room whose line-up has not completed has **no game and no
- * plan**, which is `GET /plans`' own spelling for a game nothing has been agreed on — three
- * questions, no *On my way*, and no card at all.
+ * way` when the agreed day is today* — read off the room's challenge, so a room whose line-up has
+ * not completed asks about exactly the slots its card shows empty.
  *
  * ## The room owns its chrome: the top inset, and the bottom one because the bar stands down
  *
@@ -129,7 +138,7 @@ import {
 } from '@/features/plans/types';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { playerName } from '@/shared/formatting/playerName';
-import { Note, theme } from '@/shared/ui';
+import { Note, courtSeatCount, theme } from '@/shared/ui';
 
 import { liveState, writeStanding } from '../domain/liveState';
 import { personNamed, type ConversationPerson } from '../domain/membership';
@@ -227,9 +236,22 @@ function Room({
   /**
    * What has been agreed — read here for the **quick chips**, which ask about the slots that are
    * still empty. The card below reads it again through its own join, and that is one query and
-   * one cache: `GET /plans` is a list, and both readers are looking up the same row in it.
+   * one cache: `GET /plans` is a list, and both readers are looking up the same row in it — by
+   * the room's challenge, which it has from its opening (ADR-0164 §1).
    */
-  const { plan } = usePlan(room.gameId);
+  const { plan } = usePlan(room.challengeId);
+
+  /**
+   * **Who is in against how many the court takes, while the room has no game** — the two numbers
+   * the card's count line says where the lock will be (ADR-0164 §5). The members are the
+   * challenge's accepted seats and the seats are the sport's court, and the room is the one
+   * surface that holds both beside the fact that decides whether to say them at all: `gameId`.
+   * Once the court has its game the card is handed none, and draws the button.
+   */
+  const court =
+    room.gameId === undefined
+      ? { in: room.members.length, seats: courtSeatCount(room.sport) }
+      : undefined;
 
   /**
    * Where the game stands, for the header's second line — *the same state as the card in Now*
@@ -344,9 +366,14 @@ function Room({
 
         {/* Pinned under the header rather than emitted into the stream, which is the whole of
           §3.2's finding: the chat opens at its newest entry, so a card in the scroll is the first
-          thing off-screen. A room with no game has no plan and draws none — the same nothing the
-          header's absent *Details* draws, from the same field. */}
-        {room.gameId === undefined ? null : <RoomPlan gameId={room.gameId} refused={held} />}
+          thing off-screen. In every room, from its opening — the plan is the challenge's — and
+          the count where the lock will be until the room has its game. */}
+        <RoomPlan
+          challengeId={room.challengeId}
+          readAt={room.readAt}
+          {...(court === undefined ? {} : { court })}
+          refused={held}
+        />
 
         <FlatList
           // Named so a suite can scroll it: paging backward is a fact about what reaching the end

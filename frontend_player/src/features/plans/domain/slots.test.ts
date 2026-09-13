@@ -22,13 +22,16 @@ import {
   type Plan,
 } from './slots';
 
-const GAME = '11111111-0000-4000-8000-000000000001';
+const CHALLENGE = '11111111-0000-4000-8000-000000000001';
 
-/** Saturday the 12th of September 2026, 09:00 in Warsaw. */
+/** Saturday the 12th of September 2026, 09:00 in Warsaw — the day the court filled. */
 const PLANNED_AT = '2026-09-12T07:00:00Z';
 
+/** Wednesday the 9th, 09:00 in Warsaw — when the challenge was sent, three days before. */
+const SENT_AT = '2026-09-09T07:00:00Z';
+
 function plan(over: Partial<Plan> = {}): Plan {
-  return { gameId: GAME, ...over };
+  return { challengeId: CHALLENGE, anchor: PLANNED_AT, ...over };
 }
 
 describe('the slots', () => {
@@ -64,7 +67,7 @@ describe('the slots', () => {
 describe('the day row', () => {
   /** Seven chips, today + 6 — and *today* is the platform's, never the device's. */
   it('offers today and the six days after it', () => {
-    expect(offeredDays({ readAt: PLANNED_AT, plannedAt: PLANNED_AT })).toEqual([
+    expect(offeredDays({ readAt: PLANNED_AT, anchor: PLANNED_AT })).toEqual([
       '2026-09-12',
       '2026-09-13',
       '2026-09-14',
@@ -75,9 +78,25 @@ describe('the day row', () => {
     ]);
   });
 
-  /** `planned_at + PLAN_HORIZON`, read as a local day — the clamp, mirrored from the server. */
-  it('stops at the game’s own horizon', () => {
+  /** `anchor + PLAN_HORIZON`, read as a local day — the clamp, mirrored from the server. */
+  it('stops at the row’s own horizon', () => {
     expect(lastPlannableDay(PLANNED_AT)).toBe('2026-09-19');
+  });
+
+  /**
+   * **Before the game exists the anchor is the send** (ADR-0164 §4), so a room whose court is still
+   * filling offers a shorter row — and the same seven days once it fills, because the anchor only
+   * ever moves later and nothing already chosen becomes invalid.
+   */
+  it('runs from the send while the court is filling, and widens when it fills', () => {
+    expect(offeredDays({ readAt: PLANNED_AT, anchor: SENT_AT })).toEqual([
+      '2026-09-12',
+      '2026-09-13',
+      '2026-09-14',
+      '2026-09-15',
+      '2026-09-16',
+    ]);
+    expect(offeredDays({ readAt: PLANNED_AT, anchor: PLANNED_AT })).toHaveLength(7);
   });
 
   /**
@@ -85,7 +104,7 @@ describe('the day row', () => {
    * than merely seven long: a day past the horizon is one `PUT /plans/{id}/day` refuses.
    */
   it('shrinks a day at a time as the horizon runs out', () => {
-    const days = (readAt: string) => offeredDays({ readAt, plannedAt: PLANNED_AT });
+    const days = (readAt: string) => offeredDays({ readAt, anchor: PLANNED_AT });
 
     expect(days('2026-09-13T07:00:00Z')).toHaveLength(7);
     expect(days('2026-09-14T07:00:00Z')).toHaveLength(6);
@@ -99,12 +118,12 @@ describe('the day row', () => {
    * row of no chips is the honest drawing of it.
    */
   it('offers nothing at all once the horizon has passed', () => {
-    expect(offeredDays({ readAt: '2026-09-20T07:00:00Z', plannedAt: PLANNED_AT })).toEqual([]);
+    expect(offeredDays({ readAt: '2026-09-20T07:00:00Z', anchor: PLANNED_AT })).toEqual([]);
   });
 
   it('offers nothing where either instant is unreadable', () => {
-    expect(offeredDays({ readAt: 'Saturday', plannedAt: PLANNED_AT })).toEqual([]);
-    expect(offeredDays({ readAt: PLANNED_AT, plannedAt: '' })).toEqual([]);
+    expect(offeredDays({ readAt: 'Saturday', anchor: PLANNED_AT })).toEqual([]);
+    expect(offeredDays({ readAt: PLANNED_AT, anchor: '' })).toEqual([]);
   });
 });
 

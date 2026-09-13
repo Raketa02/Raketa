@@ -141,14 +141,17 @@ export function GamesRail({ empty }: GamesRailProps) {
           >
             {rows.map((game) => {
               // The same key the door uses, and the same soft failure: no room is no bubble
-              // and no faces, and the seats draw their posters.
+              // and no faces, and the seats draw their posters. The plan is keyed by it too
+              // (ADR-0164 §1): a game finds its plan by the challenge it was opened from — and
+              // the row a court's four people wrote in the chat is already there on the card's
+              // first read, so it lands as *Game on* and never as *Planning*.
               const room = rooms.get(game.challengeId);
 
               return (
                 <GameCard
                   key={game.gameId}
                   game={game}
-                  plan={plans.data?.find((one) => one.gameId === game.gameId)}
+                  plan={plans.data?.find((one) => one.challengeId === game.challengeId)}
                   playerId={playerId}
                   conversationId={room?.conversationId}
                   faces={room?.faces ?? NO_FACES}

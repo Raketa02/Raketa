@@ -122,9 +122,15 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   };
 }
 
+/**
+ * The court's row on `GET /plans` — **the challenge's** (ADR-0164 §1), which the game inherits: the
+ * screen joins the game to it by `challenge_id`, and the writes are addressed by the same id. The
+ * anchor is the game's `planned_at` once there is a game.
+ */
 function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
   return {
-    game_id: GAME,
+    challenge_id: CHALLENGE,
+    anchor: PLANNED_AT,
     place: null,
     day: null,
     hour: null,
@@ -159,7 +165,7 @@ afterEach(async () => {
 /** Every list this screen and the room behind it read, and a room to open unless asked otherwise. */
 function stubTheWorld({
   games = [game()],
-  plans = [],
+  plans = [plan()],
   room = true,
   members = PAIR,
   court = { refused: 409, code: 'pairing_is_history' },
@@ -318,6 +324,24 @@ describe('the plan card, editable here', () => {
   });
 
   /**
+   * **The plan is found by the game's challenge** (ADR-0164 §1): a row under another challenge is
+   * not this game's, however its slots read, and the row under this one is — so the card draws
+   * what the court's four people wrote in the chat before the court was whole.
+   */
+  it('draws the plan the game’s challenge id finds, and no other', async () => {
+    await openFromNow({
+      plans: [
+        plan({ challenge_id: 'ffffffff-0000-4000-8000-000000000099', place: 'Somewhere else' }),
+        plan({ place: 'Zabłocie Sport', day: '2026-09-13' }),
+      ],
+    });
+
+    expect(await screen.findByLabelText('Where: Zabłocie Sport')).toBeTruthy();
+    expect(screen.getByLabelText(`${SLOT_NAME.day}: Sunday`)).toBeTruthy();
+    expect(screen.queryByText('Somewhere else')).toBeNull();
+  });
+
+  /**
    * **A chip opens its sheet and writes through the slot — pending, never optimistic.** The chip
    * goes busy with the value it already had, and the new one is drawn only once the server has
    * answered, exactly as in the room.
@@ -329,7 +353,7 @@ describe('the plan card, editable here', () => {
     const held = new Promise<Wire['PlanSchema']>((resolve) => {
       answer = resolve;
     });
-    transport.on('PUT', planSlotPath(GAME, 'day'), async () => json(await held));
+    transport.on('PUT', planSlotPath(CHALLENGE, 'day'), async () => json(await held));
 
     fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
     fireEvent.press(await screen.findByLabelText(dayChipName('2026-09-13')));
@@ -340,7 +364,7 @@ describe('the plan card, editable here', () => {
 
     answer(plan({ day: '2026-09-13' }));
     await waitFor(() => expect(screen.getByLabelText(`${SLOT_NAME.day}: Sunday`)).toBeTruthy());
-    expect(transport.requestsTo('PUT', planSlotPath(GAME, 'day'))[0]?.body).toEqual({
+    expect(transport.requestsTo('PUT', planSlotPath(CHALLENGE, 'day'))[0]?.body).toEqual({
       day: '2026-09-13',
     });
   });
@@ -376,7 +400,7 @@ describe('the plan card, editable here', () => {
    */
   it('greys every chip under one note when the account is held', async () => {
     await openFromNow();
-    transport.on('PUT', planSlotPath(GAME, 'day'), () => errorResponse(403, 'account_held'));
+    transport.on('PUT', planSlotPath(CHALLENGE, 'day'), () => errorResponse(403, 'account_held'));
 
     fireEvent.press(await screen.findByLabelText(`${SLOT_NAME.day}: ${NOT_AGREED_YET}`));
     fireEvent.press(await screen.findByLabelText(dayChipName('2026-09-13')));
@@ -559,7 +583,15 @@ describe('Game on', () => {
     expect(screen.getByLabelText(`${SLOT_NAME.day}: Saturday`)).toBeTruthy();
     expect(screen.getByLabelText(`${SLOT_NAME.hour}: 18:00`)).toBeTruthy();
     expect(
-      screen.getByText(counterLabel({ gameId: GAME, place: 'x', day: 'd', hour: 'h' })),
+      screen.getByText(
+        counterLabel({
+          challengeId: CHALLENGE,
+          anchor: PLANNED_AT,
+          place: 'x',
+          day: 'd',
+          hour: 'h',
+        }),
+      ),
     ).toBeTruthy();
 
     const lock = screen.getByRole('button', { name: LOCK_THE_PLAN });
@@ -573,7 +605,7 @@ describe('Game on', () => {
   /** The lock goes out from here too, and the counter reads Locked once it has landed. */
   it('locks the plan from here', async () => {
     await openFromNow({ plans: [WHOLE] });
-    const lockPath = `/api/v1/plans/${GAME}/lock`;
+    const lockPath = `/api/v1/plans/${CHALLENGE}/lock`;
     transport.on('PUT', lockPath, () => json({ ...WHOLE, locked_at: '2026-09-12T10:00:00Z' }));
 
     fireEvent.press(await screen.findByRole('button', { name: LOCK_THE_PLAN }));
@@ -582,7 +614,11 @@ describe('Game on', () => {
     await act(async () => {});
     expect(
       await screen.findByRole('header', {
-        name: planHeadingName({ gameId: GAME, lockedAt: '2026-09-12T10:00:00Z' }),
+        name: planHeadingName({
+          challengeId: CHALLENGE,
+          anchor: PLANNED_AT,
+          lockedAt: '2026-09-12T10:00:00Z',
+        }),
       }),
     ).toBeTruthy();
   });

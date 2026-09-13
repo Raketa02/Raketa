@@ -94,8 +94,17 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   };
 }
 
+/** The court's row on `GET /plans` — the challenge's, which the game inherits (ADR-0164 §1). */
 function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
-  return { game_id: GAME, place: null, day: null, hour: null, agreed_point: null, ...over };
+  return {
+    challenge_id: CHALLENGE,
+    anchor: PLANNED_AT,
+    place: null,
+    day: null,
+    hour: null,
+    agreed_point: null,
+    ...over,
+  };
 }
 
 let transport: Transport;
@@ -282,6 +291,12 @@ describe('the four rungs, folded at read time', () => {
     expect(bars()).toEqual([DIM, DIM, DIM]);
   });
 
+  /**
+   * **A game opened over a full plan lands as *Game on* on its first read** (ADR-0164 §7): the
+   * plan is the challenge's, its four people filled every slot in the chat before the court was
+   * whole, and the card joins the game to that row by the challenge it was opened from — so the
+   * rail never draws *Planning* for a plan that is already made.
+   */
   it('is Game on once all three are filled and the day is ahead, with three bright bars', async () => {
     await nameOf(
       plan({
@@ -300,6 +315,19 @@ describe('the four rungs, folded at read time', () => {
     expect(screen.queryByText(NOT_AGREED_YET)).toBeNull();
     // Every card but Planning is drawn on the soft default — the same bar in the same colour.
     expect(bars()).toEqual(Array(3).fill(ACCENT['game-on'].bar));
+  });
+
+  /**
+   * **Now is games only** (ADR-0164 §7). A court that is not whole has a plan — its row is on the
+   * list, and the room draws it — and no game, so the rail draws nothing for it: not a card, and
+   * not a count.
+   */
+  it('draws no card for a court that is not whole, whatever its plan says', async () => {
+    await landOnNow({ games: [], plans: [plan({ place: 'Zabłocie Sport', day: '2026-09-19' })] });
+
+    expect(await screen.findByText(gamesHeading(0))).toBeTruthy();
+    expect(screen.queryByText(CARD_TAG.planning!)).toBeNull();
+    expect(screen.queryByText('Zabłocie Sport')).toBeNull();
   });
 
   it('is Today on the agreed day, whatever is still to agree', async () => {

@@ -57,6 +57,7 @@ import {
 import { gameErrorMessage } from './gameErrorMessage';
 
 const GAME_ID = '8f14e45f-ceea-467a-9dd1-4bd9c39d4a58';
+const CHALLENGE_ID = 'cccccccc-0000-4000-8000-000000000003';
 const RESULT_PATH = `${GAMES_PATH}/${GAME_ID}/result`;
 const ACCEPTANCE_PATH = `${RESULT_PATH}/acceptance`;
 
@@ -71,7 +72,7 @@ const THEIR_HANDLE = 'tomek.p';
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   return {
     game_id: GAME_ID,
-    challenge_id: 'cccccccc-0000-4000-8000-000000000003',
+    challenge_id: CHALLENGE_ID,
     sport: 'PADEL',
     kind: 'COUNTED',
     standing: 'AWAITING_ENTRY',
@@ -230,7 +231,8 @@ describe('the grid on an entry arm', () => {
     // The agreed point is behind the fold, which is the rung that lands a card on the grid.
     stubPlans(transport, [
       {
-        game_id: GAME_ID,
+        challenge_id: CHALLENGE_ID,
+        anchor: '2026-09-01T09:00:00Z',
         place: 'Zabłocie Sport',
         day: '2026-09-04',
         hour: '20:00',
@@ -293,7 +295,8 @@ describe('entering a result', () => {
     // is still said.
     stubPlans(transport, [
       {
-        game_id: GAME_ID,
+        challenge_id: CHALLENGE_ID,
+        anchor: '2026-09-01T09:00:00Z',
         place: 'Zabłocie Sport',
         day: '2026-09-04',
         hour: '20:00',

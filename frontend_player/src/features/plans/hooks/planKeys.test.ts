@@ -20,7 +20,7 @@ describe('the keys', () => {
   });
 
   /**
-   * Not keyed per game, deliberately: the one thing read off it is the account's standing, and a
+   * Not keyed per court, deliberately: the one thing read off it is the account's standing, and a
    * hold met on one plan is true in every room.
    */
   it('make every write under one key, whichever game it is about', () => {
