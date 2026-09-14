@@ -126,6 +126,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useCurrentUser } from '@/features/auth/types';
@@ -145,6 +146,7 @@ import { liveState, writeStanding } from '../domain/liveState';
 import { personNamed, type ConversationPerson } from '../domain/membership';
 import { lineUpOf, namesItsAuthors, type OpenConversation } from '../domain/room';
 import { roomIsGone } from '../domain/roomGone';
+import { roomEnding } from '../domain/roomOver';
 import {
   mayPost,
   newClientMessageId,
@@ -153,6 +155,7 @@ import {
   type StreamEntry,
 } from '../domain/stream';
 import { typists } from '../domain/typing';
+import { conversationKeys } from '../hooks/conversationKeys';
 import { useConversation, useSendMessage, useSendingMessages } from '../hooks/useConversation';
 import { useLiveConversation } from '../hooks/useLiveConversation';
 import { useTypingHeartbeat } from '../hooks/useTypingHeartbeat';
@@ -161,7 +164,12 @@ import { Bubble } from './Bubble';
 import { Composer } from './Composer';
 import { ConversationHeader } from './ConversationHeader';
 import { conversationErrorMessage } from './conversationErrorMessage';
-import { LIVE_NOTE, systemLineSentence, typingLine } from './conversationPresentation';
+import {
+  LIVE_NOTE,
+  roomOverLine,
+  systemLineSentence,
+  typingLine,
+} from './conversationPresentation';
 import { DaySeparator } from './DaySeparator';
 import { RoomAbsent } from './RoomAbsent';
 import { SystemLine } from './SystemLine';
@@ -189,16 +197,25 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
   const me = useCurrentUser().data?.id;
 
   /**
-   * **A room that is gone takes the screen with it**, and this is the read that finds out.
+   * **A room that is gone before anything was read takes the screen with it**; one that goes
+   * while it is on screen stays, as it was, and says so.
    *
-   * The room can be destroyed while the reader is looking at it — a withdraw does it in the same
-   * act — so what discovers it is the app's own focus refetch rather than the read this screen
-   * mounted on. In an effect because it is a **navigation**, and a router call made during a
-   * render is a side effect in the one place React does not allow one.
+   * The room can end while the reader is looking at it — the last other member leaves, and the
+   * nudge that tells this phone is answered by `conversation_not_found` — so what discovers it is
+   * a re-read rather than the read this screen mounted on. That used to leave the screen too, and
+   * a player reading a room was on the list a moment later with the room gone from under them
+   * ([#429](https://github.com/Raketa02/Raketa/issues/429)). What is held is still the
+   * room as it last was, so it is drawn as it was, closed, with one sentence in the composer's
+   * place (`domain/roomOver.ts`); the rows are gone when the player goes back, which is the
+   * return's own re-read. Only a room nothing was ever read from has nothing to keep on screen,
+   * and leaves — a stale row opened into a room that is not there. In an effect because it is a
+   * **navigation**, and a router call made during a render is a side effect in the one place
+   * React does not allow one.
    */
+  const over = roomIsGone(error);
   useEffect(() => {
-    if (roomIsGone(error)) router.back();
-  }, [error]);
+    if (over && data === undefined) router.back();
+  }, [over, data]);
 
   if (data === undefined || me === undefined) {
     // **Who the reader is counts as still coming**, exactly as it does on the challenge screen:
@@ -213,6 +230,7 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
     <Room
       opened={data}
       playerId={me}
+      over={over}
       onPageBack={() => {
         if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
       }}
@@ -223,14 +241,18 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
 function Room({
   opened,
   playerId,
+  over,
   onPageBack,
 }: {
   readonly opened: OpenConversation;
   readonly playerId: string;
+  /** The room has ended since this was read. Drawn as it was, and nothing here writes. */
+  readonly over: boolean;
   readonly onPageBack: () => void;
 }) {
   const { room, entries, people } = opened;
 
+  const client = useQueryClient();
   const send = useSendMessage(room.conversationId);
   const sending = useSendingMessages(room.conversationId, playerId);
 
@@ -274,6 +296,8 @@ function Room({
   const planRefusals = usePlanWriteRefusals();
   const state = liveState(channel, writeStanding([send.error, ...planRefusals]));
   const held = state === 'held';
+  /** What the reader is told in the composer's place once the room has ended. */
+  const ending = over ? roomEnding(room, playerId) : undefined;
 
   /**
    * **Somebody is typing**, as a sentence — or nothing, which is how the bubble goes away.
@@ -285,14 +309,14 @@ function Room({
    * need not be ([#409](https://github.com/Raketa02/Raketa/issues/409)). Not query cache state:
    * the frame is the fact.
    */
-  const typingSentence = typingLine(typists(typing, playerId), room.members);
+  const typingSentence = over ? undefined : typingLine(typists(typing, playerId), room.members);
 
   /**
    * The heartbeat, called from the composer's own keystrokes and from nowhere else — a keystroke
    * is the one event that means *the words are changing*, and the box being greyed under a hold
    * is the courtesy over `refused`, which is the mechanism.
    */
-  const heartbeat = useTypingHeartbeat(room.conversationId, { refused: held });
+  const heartbeat = useTypingHeartbeat(room.conversationId, { refused: held || over });
 
   /**
    * What is in the box.
@@ -321,7 +345,7 @@ function Room({
    * Every other code the send can be refused with is a thing about *this message*, and it keeps
    * the note beside the control that failed.
    */
-  const sendRefusal = held ? null : send.error;
+  const sendRefusal = held || over ? null : send.error;
 
   function post(text: string): void {
     if (!mayPost(text)) return;
@@ -333,10 +357,12 @@ function Room({
       {
         // The words go back in the box, because the retry is the control that failed and there
         // is nothing to retry with if the message is gone. A room that has gone is the one
-        // refusal with nothing to retry at all, and it takes the screen with it.
+        // refusal with nothing to retry at all: the read is asked again, and it is the read that
+        // closes the room — one place decides that, and a send racing the nudge is not it.
         onError: (failed) => {
-          if (roomIsGone(failed)) router.back();
-          else setDraft(text);
+          if (roomIsGone(failed)) {
+            void client.invalidateQueries({ queryKey: conversationKeys.room(room.conversationId) });
+          } else setDraft(text);
         },
       },
     );
@@ -365,12 +391,14 @@ function Room({
           §3.2's finding: the chat opens at its newest entry, so a card in the scroll is the first
           thing off-screen. In every room, from its opening — the plan is the challenge's — and
           the count where the lock will be until the room has its game. */}
-        <RoomPlan
-          challengeId={room.challengeId}
-          readAt={room.readAt}
-          lineUp={lineUp}
-          refused={held}
-        />
+        {over ? null : (
+          <RoomPlan
+            challengeId={room.challengeId}
+            readAt={room.readAt}
+            lineUp={lineUp}
+            refused={held}
+          />
+        )}
 
         <FlatList
           // Named so a suite can scroll it: paging backward is a fact about what reaching the end
@@ -390,7 +418,8 @@ function Room({
           )}
           contentContainerStyle={s.stream}
           keyboardShouldPersistTaps="handled"
-          onEndReached={onPageBack}
+          // A room that has ended has nothing to page back into: the read would say so.
+          onEndReached={over ? undefined : onPageBack}
           onEndReachedThreshold={0.4}
           // The header of an inverted list is its **newest** end, which is where a next bubble
           // would land — so the indicator takes that place and scrolls with the backlog, and is
@@ -424,7 +453,7 @@ function Room({
           standing fact about the channel that goes true and false on its own roughly every quarter
           of an hour, and `alert` there would interrupt a player four times an hour to say nothing
           they need to act on. */}
-        {state === 'live' ? null : (
+        {state === 'live' || over ? null : (
           <View style={s.standing}>
             <Note variant="amber" accessibilityRole={held ? 'alert' : undefined}>
               {LIVE_NOTE[state]}
@@ -432,18 +461,27 @@ function Room({
           </View>
         )}
 
-        {/* One block — the chips, the field and Send — with one door out: Send and every chip
-            post through the same `post`, so a chip send is an ordinary send (#402). */}
-        <Composer
-          text={draft}
-          onChange={(text) => {
-            setDraft(text);
-            heartbeat.beat();
-          }}
-          chips={quickChips(plan, room.readAt)}
-          onPost={post}
-          refused={held}
-        />
+        {/* The room has ended: the stream stays as it was, and where the composer stood one
+            sentence says so — a fact, so neither amber nor coral, and announced, because it is
+            the one thing that happened while the reader was looking and it happened to them. */}
+        {ending !== undefined ? (
+          <View style={s.standing}>
+            <Note accessibilityRole="alert">{roomOverLine(ending)}</Note>
+          </View>
+        ) : (
+          /* One block — the chips, the field and Send — with one door out: Send and every chip
+             post through the same `post`, so a chip send is an ordinary send (#402). */
+          <Composer
+            text={draft}
+            onChange={(text) => {
+              setDraft(text);
+              heartbeat.beat();
+            }}
+            chips={quickChips(plan, room.readAt)}
+            onPost={post}
+            refused={held}
+          />
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

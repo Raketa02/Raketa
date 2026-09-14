@@ -405,6 +405,11 @@ record it just wrote — the four it seated came off _that_ search's rows, and `
 anybody the cited search never showed. From the first locked seat the engine optimises **for
 the group** and `optimised_for` says so, which the court renders in the voice a provisional
 figure uses: it is a consequence of an act the player took, said before they discover it.
+**And not on a challenge's fill** ([#429](https://github.com/Raketa02/Raketa/issues/429)): the
+engine answers `GROUP` for any locked seat, and on that journey the locked seats are the people
+who _said yes_ — nobody the organiser picked, and no trade made around them; the four are a court
+being finished. So `optimisedForLine` is handed `completing` and says nothing for it, and the
+ordinary builder keeps the line, which is `the-play-screens.md` §11.2's standing obligation.
 
 **Every arrangement crosses, so re-arranging costs nothing and only membership round-trips.**
 `ForecastResponse` returns all three pairings of a four, each with its own forecast, and

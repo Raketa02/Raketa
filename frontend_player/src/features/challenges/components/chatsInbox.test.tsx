@@ -24,6 +24,9 @@ import {
   GATE_USER,
   launchSignedIn,
   stubChallenges,
+  stubConversation,
+  stubConversations,
+  stubEntries,
   stubGate,
 } from '@/test-support/onboardingRouter';
 import {
@@ -298,6 +301,57 @@ describe('the row', () => {
     );
   });
 
+  /**
+   * **A court still being filled names the people still on it**
+   * ([#429](https://github.com/Raketa02/Raketa/issues/429)): B said yes, C and D said no, and the
+   * row drew three faces and *+2* over *2 in, 2 seats open* — a four that was a two. The seats
+   * given up keep their occupants on the wire; the row is who you would play with.
+   */
+  it('names only the people still on a court being filled — one face, and no count', async () => {
+    const oneIn = mySend({
+      sport: 'PADEL',
+      standing: 'LINE_UP_INCOMPLETE',
+      seats: [
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
+        { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.p' },
+        { side: 'B', player_id: EWA, answer: 'DECLINED', answer_by: at(20), nickname: 'ewa.m' },
+        { side: 'B', player_id: OLA, answer: 'DECLINED', answer_by: at(20), nickname: 'ola.k' },
+      ],
+    });
+
+    await openChats([oneIn]);
+
+    const row = await screen.findByLabelText(/^tomek\.p, Padel/);
+    expect(row.props.accessibilityLabel).not.toContain('ewa.m');
+    expect(screen.getByText('tomek.p')).toBeTruthy();
+    expect(screen.queryByText(/\+\d/)).toBeNull();
+  });
+
+  /**
+   * **And a court that ended on somebody leaving it, with me the one left, has no row at all**
+   * ([#429](https://github.com/Raketa02/Raketa/issues/429)): B took the yes back after C and D
+   * said no, so the court is over (`DECLINED` — a departure is a no) with nobody committed to it
+   * but me. The room the yes opened is where that was told; the row has no news to keep a day.
+   */
+  it('drops a court that ended on somebody leaving, with me the one left on it', async () => {
+    const theyAllWent = mySend({
+      sport: 'PADEL',
+      standing: 'DECLINED',
+      ended_at: at(-1),
+      seats: [
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
+        { side: 'A', player_id: TOMEK, answer: 'LEFT', answer_by: at(20), nickname: 'tomek.p' },
+        { side: 'B', player_id: EWA, answer: 'DECLINED', answer_by: at(20), nickname: 'ewa.m' },
+        { side: 'B', player_id: OLA, answer: 'DECLINED', answer_by: at(20), nickname: 'ola.k' },
+      ],
+    });
+
+    await openChats([theyAllWent]);
+
+    expect(await screen.findByText(CHATS_COPY.emptyChallenges)).toBeTruthy();
+    expect(screen.queryByLabelText(/tomek\.p/)).toBeNull();
+  });
+
   /** A nickname is not shortenable, so the list gives way by dropping whole names. */
   it('drops whole handles rather than shortening one, and says how many it dropped', async () => {
     const four = challenge({
@@ -321,6 +375,93 @@ describe('the row', () => {
 
     expect(row).toBeTruthy();
     expect(await screen.findByText('ewa.magdalena.wisniewska +2')).toBeTruthy();
+  });
+});
+
+describe('coming back to the list', () => {
+  /**
+   * **The return re-reads the standing** ([#429](https://github.com/Raketa02/Raketa/issues/429)
+   * A5, A6). The section stays mounted under the room the tab pushes over it, a room's nudge
+   * never touches this list by design (`useLiveConversation`), and popping the stack is neither a
+   * mount nor a foreground — so the row read *Waiting on 2 answers* under a room in which the
+   * player had just read *C said no*, and only a tab switch, which remounts, repaired it. The
+   * return is the moment the row is looked at again, and it is what marks the list stale.
+   */
+  it('re-reads the challenges when the player comes back from a room', async () => {
+    const ROOM = 'eeeeeeee-0000-4000-8000-00000000000e';
+    const members = [
+      { player_id: ME, nickname: 'me_' },
+      { player_id: EWA, nickname: 'ewa.m' },
+    ];
+    const four = (olaAnswer: 'DECLINED' | null) =>
+      mySend({
+        sport: 'PADEL',
+        seats: [
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
+          { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+          { side: 'B', player_id: TOMEK, answer: null, answer_by: at(20), nickname: 'tomek.p' },
+          { side: 'B', player_id: OLA, answer: olaAnswer, answer_by: at(20), nickname: 'ola.k' },
+        ],
+      });
+    stubConversations(transport, [
+      {
+        conversation_id: ROOM,
+        challenge_id: four(null).challenge_id,
+        game_id: null,
+        sport: 'PADEL',
+        members,
+        people: members,
+        last_entry: null,
+      },
+    ]);
+    stubConversation(transport, {
+      read_at: READ_AT,
+      conversation_id: ROOM,
+      challenge_id: four(null).challenge_id,
+      game_id: null,
+      sport: 'PADEL',
+      members,
+      people: members,
+      entries: [],
+    });
+    stubEntries(transport, ROOM);
+    await openChats([four(null)]);
+
+    const waitingOnTwo = standingLine({
+      side: 'organiser',
+      standing: 'AWAITING_ANSWERS',
+      awaiting: 2,
+    });
+    expect(
+      (await screen.findByLabelText(/^ewa\.m, tomek\.p and ola\.k, Padel/)).props
+        .accessibilityLabel,
+    ).toContain(waitingOnTwo);
+
+    fireEvent.press(screen.getByLabelText(/^ewa\.m, Padel/));
+    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
+
+    // While the player is in the room, ola.k says no. The room hears it as a line; the list
+    // will say so the next time it is asked — and nothing has asked it.
+    stubChallenges(transport, [four('DECLINED')], READ_AT);
+    const reads = transport.requestsTo('GET', CHALLENGES_PATH).length;
+
+    fireEvent.press(screen.getByLabelText('Back'));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+
+    // The re-read row: one fewer answer waited on, and — a seat given up is not drawn on a court
+    // still being filled — ola.k no longer among the people it names.
+    const waitingOnOne = standingLine({
+      side: 'organiser',
+      standing: 'AWAITING_ANSWERS',
+      awaiting: 1,
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText(/^ewa\.m and tomek\.p, Padel/).props.accessibilityLabel,
+      ).toContain(waitingOnOne),
+    );
+    expect(screen.queryByLabelText(/ola\.k, Padel/)).toBeNull();
+    expect(transport.requestsTo('GET', CHALLENGES_PATH)).toHaveLength(reads + 1);
   });
 });
 

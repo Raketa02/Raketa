@@ -348,3 +348,12 @@ pre-empted. The count line is a sentence with two numerals in it and is drawn as
 `muted`, as _you need 2 more_ and _8 days left_ already are: the mono-and-tabular rule is for
 figures that stand alone and would ripple. `GamesRail` and the ladder are otherwise untouched. No
 device has drawn the count line; it is asked for a look.
+
+**The court's ground is clipped to its radius and the seats are not**
+([#429](https://github.com/Raketa02/Raketa/issues/429)). At `court.card` the near-right seat of a
+doubles court stands at 110 of 132, and the three letters under it end six points past the
+court's bottom edge — with the clip on the court itself they were drawn cut through the glyphs, on
+the one seat of four. `Court` now clips its ground layer alone; a seat is the caller's child that
+the court only places, so the caption hangs where the geometry puts it, onto the card's own
+`night`, which is the colour the ground ends on. No number changed. No device has drawn it since;
+it is asked for a look.

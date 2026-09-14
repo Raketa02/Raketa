@@ -11,9 +11,10 @@
  * and a terminal sentence drawn over a room that lands a frame later is the failure that rule is
  * about from the other side.
  *
- * A room that is **gone** never reaches this: `roomIsGone` leaves the screen instead, which is
- * §3.7's own answer. What lands here is a read that failed for some other reason, and a record
- * whose sport this build cannot name.
+ * A room that is **gone** never reaches this: one nothing was ever read from leaves the screen,
+ * which is §3.7's own answer, and one that went while it was on screen stays, drawn as it was
+ * with a sentence in the composer's place (`domain/roomOver.ts`). What lands here is a read that
+ * failed for some other reason, and a record whose sport this build cannot name.
  *
  * **It takes the top inset, and only that one.** The header it draws stands where the room's
  * will, and a header under the clock for the length of a read is the same bug for the length of

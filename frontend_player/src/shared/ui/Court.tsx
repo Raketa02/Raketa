@@ -165,77 +165,94 @@ export function Court({ sport, width, summary, caption, sideLabels, children }: 
        */}
       <View accessible accessibilityLabel={summary} style={s.summary} />
 
-      <Svg
-        width={width}
-        height={height}
-        viewBox={`0 0 ${SPACE.width} ${SPACE.height}`}
-        style={StyleSheet.absoluteFill}
-      >
-        <Defs>
-          <LinearGradient id={ground} x1="0" y1="0" x2="0.5" y2="0.87">
-            <Stop offset="0" stopColor={theme.sport[sport]} />
-            <Stop offset="1" stopColor={theme.color.night} />
-          </LinearGradient>
-          <LinearGradient id={captionBand} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={theme.color.night} stopOpacity={0} />
-            <Stop offset="1" stopColor={theme.color.courtScrim} />
-          </LinearGradient>
-        </Defs>
+      {/*
+       * **The ground is clipped to its radius; the seats are not.** The clip used to sit on the
+       * court itself, and it cropped what a seat hangs below its face: at `card` (88) the
+       * near-right seat of a doubles court stands at 110 of 132, and the three letters under
+       * it end six points past the court's bottom edge — drawn cut in half through the glyphs.
+       * A seat is the caller's child and the court only places it, so nothing here decides
+       * where its caption may end; the rounded corners are the ground's, and the ground is the
+       * one layer that needs them.
+       */}
+      <View style={s.ground}>
+        <Svg
+          width={width}
+          height={height}
+          viewBox={`0 0 ${SPACE.width} ${SPACE.height}`}
+          style={StyleSheet.absoluteFill}
+        >
+          <Defs>
+            <LinearGradient id={ground} x1="0" y1="0" x2="0.5" y2="0.87">
+              <Stop offset="0" stopColor={theme.sport[sport]} />
+              <Stop offset="1" stopColor={theme.color.night} />
+            </LinearGradient>
+            <LinearGradient id={captionBand} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={theme.color.night} stopOpacity={0} />
+              <Stop offset="1" stopColor={theme.color.courtScrim} />
+            </LinearGradient>
+          </Defs>
 
-        {/* The hue, then one scrim pass over it. Pinned at .93, which is what makes 2.5's
-            four ratios finite rather than one per Sport per screen. */}
-        <Rect x={0} y={0} width={SPACE.width} height={SPACE.height} fill={`url(#${ground})`} />
-        <Rect x={0} y={0} width={SPACE.width} height={SPACE.height} fill={theme.color.courtScrim} />
+          {/* The hue, then one scrim pass over it. Pinned at .93, which is what makes 2.5's
+              four ratios finite rather than one per Sport per screen. */}
+          <Rect x={0} y={0} width={SPACE.width} height={SPACE.height} fill={`url(#${ground})`} />
+          <Rect
+            x={0}
+            y={0}
+            width={SPACE.width}
+            height={SPACE.height}
+            fill={theme.color.courtScrim}
+          />
 
-        {lines.wall === undefined ? null : (
-          <Rect {...box(lines.wall)} fill={theme.color.surface} fillOpacity={LINE.wall} />
-        )}
+          {lines.wall === undefined ? null : (
+            <Rect {...box(lines.wall)} fill={theme.color.surface} fillOpacity={LINE.wall} />
+          )}
 
-        <Rect
-          {...box(lines.bound)}
-          fill="none"
-          stroke={theme.color.surface}
-          strokeOpacity={LINE.bound}
-          strokeWidth={LINE.boundWidth}
-        />
+          <Rect
+            {...box(lines.bound)}
+            fill="none"
+            stroke={theme.color.surface}
+            strokeOpacity={LINE.bound}
+            strokeWidth={LINE.boundWidth}
+          />
 
-        {lines.across === undefined ? null : (
-          <>
-            {lines.across.glow ? (
+          {lines.across === undefined ? null : (
+            <>
+              {lines.across.glow ? (
+                <Path
+                  d={lines.across.d}
+                  stroke={theme.color.surface}
+                  strokeOpacity={LINE.netGlow}
+                  strokeWidth={LINE.netGlowWidth}
+                />
+              ) : null}
               <Path
                 d={lines.across.d}
                 stroke={theme.color.surface}
-                strokeOpacity={LINE.netGlow}
-                strokeWidth={LINE.netGlowWidth}
+                strokeOpacity={LINE.net}
+                strokeWidth={LINE.netWidth}
               />
-            ) : null}
-            <Path
-              d={lines.across.d}
-              stroke={theme.color.surface}
-              strokeOpacity={LINE.net}
-              strokeWidth={LINE.netWidth}
-            />
-          </>
-        )}
+            </>
+          )}
 
-        <Path
-          d={lines.inner}
-          fill="none"
-          stroke={theme.color.surface}
-          strokeOpacity={LINE.inner}
-          strokeWidth={LINE.innerWidth}
-        />
-
-        {caption === undefined ? null : (
-          <Rect
-            x={0}
-            y={SPACE.height - CAPTION_BAND}
-            width={SPACE.width}
-            height={CAPTION_BAND}
-            fill={`url(#${captionBand})`}
+          <Path
+            d={lines.inner}
+            fill="none"
+            stroke={theme.color.surface}
+            strokeOpacity={LINE.inner}
+            strokeWidth={LINE.innerWidth}
           />
-        )}
-      </Svg>
+
+          {caption === undefined ? null : (
+            <Rect
+              x={0}
+              y={SPACE.height - CAPTION_BAND}
+              width={SPACE.width}
+              height={CAPTION_BAND}
+              fill={`url(#${captionBand})`}
+            />
+          )}
+        </Svg>
+      </View>
 
       {sideLabels === undefined ? null : (
         <View
@@ -296,7 +313,10 @@ export function Court({ sport, width, summary, caption, sideLabels, children }: 
 const CAPTION_BAND = SPACE.height / 5;
 
 const s = StyleSheet.create({
-  court: {
+  // The box: a width and its 1,32. It clips nothing — see the note at the ground.
+  court: {},
+  ground: {
+    ...StyleSheet.absoluteFillObject,
     borderRadius: theme.radius.court,
     overflow: 'hidden',
     // The ground is also the view's own fill, so a box still laying out shows the court's

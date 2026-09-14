@@ -23,7 +23,9 @@ import {
   GATE_USER,
   launchSignedIn,
   stubChallenges,
+  stubConversation,
   stubConversations,
+  stubEntries,
   stubGate,
 } from '@/test-support/onboardingRouter';
 import {
@@ -278,6 +280,52 @@ describe('the row', () => {
     for (const pill of [/^Planning$/, /^Game on$/, /^Confirm the result$/, /^Settle up$/]) {
       expect(screen.queryByText(pill)).toBeNull();
     }
+  });
+});
+
+describe('coming back to the list', () => {
+  /**
+   * **The return re-reads the rooms** ([#429](https://github.com/Raketa02/Raketa/issues/429)
+   * A5, A6). The list stays mounted under the room, the room's nudge never touches it by design
+   * (`roomLiveness.test.tsx` pins that), and popping the stack is neither a mount nor a
+   * foreground — so a row's last line was the one *before* the line the player had just read
+   * in the room, and only a tab switch, which remounts, repaired it. The return is the moment
+   * the row is looked at again, and it is what marks the list stale.
+   */
+  it('re-reads the rooms when the player comes back from one', async () => {
+    const members = [member(ME, 'me_'), member(TOMEK, 'tomek.p')];
+    stubConversation(transport, {
+      read_at: '2026-09-08T12:00:00Z',
+      conversation_id: ROOM,
+      challenge_id: 'ffffffff-0000-4000-8000-000000000006',
+      game_id: null,
+      sport: 'SQUASH',
+      members,
+      people: members,
+      entries: [],
+    });
+    stubEntries(transport, ROOM);
+    await openChats([room({ last_entry: systemLine('SEAT_ACCEPTED', {}) })]);
+    await screen.findByText('Squash · tomek.p is in');
+
+    fireEvent.press(screen.getByLabelText(/^tomek\.p, Squash/));
+    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
+
+    // While the player is in the room somebody says no. The room hears it as a line; the list
+    // will say so the next time it is asked — and nothing has asked it.
+    stubConversations(transport, [
+      room({
+        people: [...members, member(BO, 'bo')],
+        last_entry: systemLine('SEAT_LEFT', { departure: 'DECLINED' }, BO),
+      }),
+    ]);
+    const reads = transport.requestsTo('GET', CONVERSATIONS_PATH).length;
+
+    fireEvent.press(screen.getByLabelText('Back'));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+
+    expect(await screen.findByText('Squash · bo said no — that seat is open again')).toBeTruthy();
+    expect(transport.requestsTo('GET', CONVERSATIONS_PATH)).toHaveLength(reads + 1);
   });
 });
 

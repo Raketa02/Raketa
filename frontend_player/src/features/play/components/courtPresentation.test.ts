@@ -94,4 +94,16 @@ describe('whom the answer was optimised for', () => {
       expect(() => optimisedForLine(optimised)).not.toThrow();
     }
   });
+
+  /**
+   * The engine answers `GROUP` for any locked seat, and on a challenge's fill the locked
+   * seats are the people who said yes — nobody the organiser picked, and no trade the engine
+   * made around them. So the fill says nothing, whatever the envelope says.
+   */
+  it('says nothing on a fill that is completing a challenge, whatever the envelope says', () => {
+    for (const optimised of [...OPTIMISED_FOR, null]) {
+      expect(optimisedForLine(optimised, true)).toBeUndefined();
+    }
+    expect(optimisedForLine('GROUP', false)).toBeDefined();
+  });
 });

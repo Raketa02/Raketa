@@ -84,10 +84,12 @@ import {
   type SystemLineCode,
 } from '../domain/entry';
 import {
+  personName,
   personNamed,
   type ConversationMember,
   type ConversationPerson,
 } from '../domain/membership';
+import type { RoomEnding } from '../domain/roomOver';
 
 /**
  * How much room the surface drawing this line has — **the whole of what the row does
@@ -404,3 +406,28 @@ export function typingLine(
 
 /** How many typists are named before the sentence counts them instead. §22.5: two. */
 const TYPISTS_NAMED_UP_TO = 2;
+
+/**
+ * **The chat has ended, and the room is still on screen** — §22.5's fourth state, one sentence
+ * in the composer's place ([#429](https://github.com/Raketa02/Raketa/issues/429)).
+ *
+ * It names who left where the room can say so (`domain/roomOver.ts` says when it can), in the
+ * words the stream's own line would have used — *{name} left* is §23's — and finishes with what
+ * the room can no longer do. It does **not** say *that seat is open again*, because it is not:
+ * the court is over. Where the reader was alone the sentence says the other true thing, that
+ * nobody else is coming; and a room with a game says only that the chat has ended, because why
+ * is the game card's to say.
+ *
+ * The register is a fact, not a warning and not a refusal: nothing here is reversible and nothing
+ * was refused, so it is neither amber nor coral.
+ */
+export function roomOverLine(ending: RoomEnding): string {
+  switch (ending.kind) {
+    case 'they-left':
+      return `${sentenceList(ending.members.map((member) => playerName(personName(member))))} left — this chat has ended.`;
+    case 'nobody-else-coming':
+      return 'Nobody else is coming — this chat has ended.';
+    case 'ended':
+      return 'This chat has ended.';
+  }
+}

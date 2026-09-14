@@ -1011,6 +1011,12 @@ it.
   feeds. One listener for the whole app (docs/architecture.md Part 13), so _foreground_ has
   one meaning rather than one per screen. _Avoid_: a second `AppState` listener in a
   feature — that is the one that disagrees about what `inactive` means.
+- **Returned to** — a screen coming back to the top of its stack, as `useOnReturn` reports
+  it: the navigator's focus **after a blur**. A stack keeps the screen under the top one
+  mounted, so a pop is neither a mount nor a foreground and nothing re-reads on it unless the
+  screen says so. _Avoid_: "focused" for this — `useFocusEffect` fires on the way in as well,
+  and a mount is not a return; and teaching `focusManager` to mean it, which would refetch
+  every query in the app on every pop.
 
 - **New Architecture** — React Native's Fabric/TurboModules runtime, enabled
   (`newArchEnabled`). A dependency blocking it is technical debt with a plan, not an

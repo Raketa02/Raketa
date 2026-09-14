@@ -123,6 +123,25 @@ describe('the ground', () => {
     );
   });
 
+  /**
+   * **The ground is clipped to its radius, and the box is not.** A seat is the caller's child
+   * and the court only places it; at `card` the near-right seat of a doubles court stands so
+   * low that the three letters under it end past the court's bottom edge, and a clip on the
+   * box drew them cut through the glyphs. The rounded corners belong to the one layer that
+   * needs them.
+   */
+  it('clips the ground to its corners and never the seats', () => {
+    renderCourt('padel', 4);
+
+    const styles = screen.UNSAFE_queryAllByType(View).map((node) => flatten(node.props.style));
+    const box = styles.find((style) => style?.width === WIDTH);
+    const ground = styles.find((style) => style?.borderRadius === theme.radius.court);
+
+    expect(box?.overflow).toBeUndefined();
+    expect(ground?.overflow).toBe('hidden');
+    expect(ground?.position).toBe('absolute');
+  });
+
   it('has a per-instance gradient id, so one screen drawing two padel courts is not one', () => {
     render(
       <>

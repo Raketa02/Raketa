@@ -43,8 +43,9 @@ export function ConversationGameDetails({ conversationId }: ConversationGameDeta
   const { data, isPending, error } = useConversation(conversationId);
   const gameId = data?.room.gameId;
 
-  // A room that has gone takes this screen with it too — the door and what is behind it are one
-  // read, so they answer a destroyed room the same way. §3.7.
+  // A room that has gone takes this screen with it — the door and what is behind it are one
+  // read. It lands on the room beneath, which is the screen that keeps what it held and says the
+  // chat has ended (§3.7 as amended by #429); there is nothing of the game left to draw here.
   useEffect(() => {
     if (roomIsGone(error)) router.back();
   }, [error]);

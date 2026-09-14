@@ -16,10 +16,11 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useCurrentUser } from '@/features/auth/types';
 import type { AppError } from '@/shared/errors';
+import { useOnReturn } from '@/shared/lib/platform';
 
 import type { Conversation } from '../domain/conversation';
 import { facesOf } from '../domain/membership';
@@ -56,10 +57,23 @@ export function useConversations() {
  * `rows` is empty until there is both a list and a reader — the same shape `useChallengeInbox`
  * has, and for the same reason: a row is drawn *about the other people in it*, so drawing one
  * before the reader is known would put the reader's own face in their own row for a frame.
+ *
+ * **Coming back to the section re-reads it**, as the challenge inbox's does and for the same
+ * reason ([#429](https://github.com/Raketa02/Raketa/issues/429) A5, A6): the section stays
+ * mounted under the room, a room's nudge never touches this list by design
+ * (`useLiveConversation`), and *back* is neither a mount nor a foreground — so a row's last line
+ * was the one before the line the player had just read in the room. The return is the moment the
+ * row is looked at again, so it is the moment the list is marked stale; the thirty-second
+ * `staleTime` above is about serving the list on a mount, and is untouched.
  */
 export function useConversationRows() {
   const conversations = useConversations();
   const playerId = useCurrentUser().data?.id;
+  const client = useQueryClient();
+
+  useOnReturn(() => {
+    void client.invalidateQueries({ queryKey: conversationKeys.list() });
+  });
 
   return {
     ...conversations,

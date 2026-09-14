@@ -406,3 +406,23 @@ no end act at all and the game's own screen, reached from Now, is where the game
 One design-system consequence, in 6.15: _Remove the challenge_ is longer than the reveal was sized
 for, so the revealed control's label centres and wraps to a second line, which the row's full height
 holds; the width does not grow per caller. Not seen on a device.
+
+**A row still being filled names the people still on it, and a court that ended on somebody
+leaving it leaves the inbox with its room**
+([#429](https://github.com/Raketa02/Raketa/issues/429)). `othersOn` drew every occupied seat: B in,
+C and D having said no, the row drew three faces and _+2_ over _2 in, 2 seats open_ — a four that
+was a two. A seat given up keeps its occupant on the wire because the record says who was asked,
+but a row is _who you would play with_, so on `AWAITING_ANSWERS` and `LINE_UP_INCOMPLETE` the
+seats `GIVES_UP_THE_SEAT` names are dropped and a seat still deciding stays; an ended row names
+everybody it asked, because it is history rather than a line-up and _{name} said no_ under a row
+that no longer drew them would name nobody on a singles court. And `belongsOnTheInbox` has a
+fourth row that goes at once: `DECLINED` with the reader's seat accepted and some seat `LEFT` — the
+court B joined and then walked out of, leaving the reader alone with nobody deciding (ADR-0165 §3:
+_a departure is a no_). The room the yes opened is where that was told, and what is left is a court
+with nobody committed to it but the reader — nothing to fill, nobody to ask again about, and no
+news on the row the room's going does not already say. A court everybody merely **declined** is not
+this and keeps #388's day: nobody was ever in it with the reader, and _that seat is open again_ is
+the news. Stated so it can be argued with: the ended row for such a court would have read
+_{name} said no_ naming the **first** decline rather than the one who left, and was the one place
+the organiser away from the room would have learned of the departure; the row goes because the
+user walking #429 found it wrong, and the sentence it would need does not exist in §13.

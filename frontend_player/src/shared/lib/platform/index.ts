@@ -11,7 +11,10 @@
  * Expo native module — nothing below it needs replacing for a test, only pressing
  * (`src/test-support/hardwareBack.ts`). It lives here for the reason `useOnForeground` does:
  * *what the device does* is one directory, and a screen reaching for `BackHandler` itself is
- * the second answer to a question this module already has one of.
+ * the second answer to a question this module already has one of. `useOnReturn` sits beside
+ * the two of them as the third answer to *did we just come back* — the navigator's focus
+ * after a blur, where `useOnForeground` is the app's — so a screen never has to decide for
+ * itself what a pop means.
  *
  * Each of those modules is importable **only from inside its own file**, which is what
  * makes their behaviour readable in one sitting and their callers testable at all. The
@@ -29,6 +32,7 @@
 
 export { useOnForeground, wireFocusManager } from './appState';
 export { useHardwareBack } from './hardwareBack';
+export { useOnReturn } from './screenReturn';
 export { openAppSettings } from './appSettings';
 export { KEYBOARD_AVOIDANCE } from './keyboard';
 export { useIsOnline, wireOnlineManager } from './networkState';

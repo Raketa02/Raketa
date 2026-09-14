@@ -681,7 +681,12 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
 
   const sportName = sport === undefined ? undefined : sportLabel(sport);
   const profile = profileSurface.data;
-  const optimised = optimisedForLine(record?.envelope.optimisedFor ?? null);
+  // Silent on a challenge's fill: the seats the engine filled around are the people who said
+  // yes, not people the organiser picked — the rule is `optimisedForLine`'s own.
+  const optimised = optimisedForLine(
+    record?.envelope.optimisedFor ?? null,
+    completing !== undefined,
+  );
 
   /**
    * ⚡'s own week. The fill is a **new search for the same origin**, so it runs on the week the

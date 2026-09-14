@@ -19,6 +19,7 @@ import {
   belongsOnTheInbox,
   challengeInbox,
   challengesWaiting,
+  othersOn,
   stoppedBeingArrangedAt,
   yoursToClear,
 } from './challengeInbox';
@@ -371,6 +372,124 @@ describe('a removal of my own', () => {
     );
 
     expect(belongsOnTheInbox(calledOff, ME)).toBe(true);
+  });
+});
+
+describe('a court that ended on somebody leaving it, with me the one left', () => {
+  /**
+   * B said yes, C and D said no, and B took the yes back: the organiser is alone with nobody
+   * deciding, so the court is over — `DECLINED`, because a departure is a no (ADR-0165 §3) —
+   * and the seat that was taken back reads `LEFT`. The room the first yes opened is where the
+   * departure was told, and what is left is a court with nobody committed to it but the reader:
+   * nothing to fill and nobody to ask again about, so the row goes with the room rather than
+   * keeping a day as news ([#429](https://github.com/Raketa02/Raketa/issues/429)).
+   */
+  it('leaves at once, for the reader left on it', () => {
+    const theyAllWent = challenge(
+      { organiserId: ME, standing: 'DECLINED', sport: 'padel', endedAt: at(-1) },
+      [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: EWA, answer: 'LEFT', nickname: 'ewa.m' },
+        { playerId: 'ola', answer: 'DECLINED', nickname: 'ola.k' },
+        { playerId: 'tomek', answer: 'DECLINED', nickname: 'tomek.p' },
+      ],
+    );
+
+    expect(belongsOnTheInbox(theyAllWent, ME)).toBe(false);
+    expect(challengeInbox([theyAllWent], ME)).toEqual([]);
+  });
+
+  /** The ending rule is organiser-blind, and so is this: an invitee left alone reads the same. */
+  it('leaves at once for an invitee the organiser walked out on', () => {
+    const organiserLeft = challenge({ standing: 'DECLINED', endedAt: at(-1) }, [
+      { playerId: EWA, answer: 'LEFT', nickname: 'ewa.m' },
+      { playerId: ME, answer: 'ACCEPTED' },
+    ]);
+
+    expect(belongsOnTheInbox(organiserLeft, ME)).toBe(false);
+  });
+
+  /**
+   * A court everybody merely **declined** is not this: nobody was ever in it with the reader,
+   * and *{name} said no — that seat is open again* is the news #388 keeps a day.
+   */
+  it('is not a court everybody declined, whose row keeps its day', () => {
+    const allSaidNo = challenge(
+      { organiserId: ME, standing: 'DECLINED', sport: 'padel', endedAt: at(-1) },
+      [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: EWA, answer: 'DECLINED', nickname: 'ewa.m' },
+        { playerId: 'ola', answer: 'DECLINED', nickname: 'ola.k' },
+        { playerId: 'tomek', answer: 'DECLINED', nickname: 'tomek.p' },
+      ],
+    );
+
+    expect(belongsOnTheInbox(allSaidNo, ME)).toBe(true);
+  });
+
+  /** And not a reader whose own seat was never accepted — their day ran out, and that is theirs to read. */
+  it('is not a court the reader lapsed on, whose row keeps its day', () => {
+    const myDayRanOut = challenge({ standing: 'DECLINED', endedAt: at(-1) }, [
+      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: 'ola', answer: 'LEFT', nickname: 'ola.k' },
+      { playerId: ME, answer: 'LAPSED', answerBy: at(-2) },
+      {},
+    ]);
+
+    expect(belongsOnTheInbox(myDayRanOut, ME)).toBe(true);
+  });
+});
+
+describe('who a row names', () => {
+  /**
+   * A court still being filled names the people still on it: a seat given up — a no, a day run
+   * out, a yes taken back — keeps its occupant on the wire, and drew two faces of people who said
+   * no under *2 in, 2 seats open* ([#429](https://github.com/Raketa02/Raketa/issues/429)). A
+   * seat still deciding stays: they were asked and have not said no.
+   */
+  it('drops the seats that were given up while the court is still being filled', () => {
+    const filling = challenge({ organiserId: ME, standing: 'LINE_UP_INCOMPLETE', sport: 'padel' }, [
+      { playerId: ME, answer: 'ACCEPTED' },
+      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: 'ola', answer: 'DECLINED', nickname: 'ola.k' },
+      { playerId: 'tomek', answer: 'LAPSED', nickname: 'tomek.p' },
+    ]);
+    const awaiting = challenge({ organiserId: ME, standing: 'AWAITING_ANSWERS', sport: 'padel' }, [
+      { playerId: ME, answer: 'ACCEPTED' },
+      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: 'ola', answer: 'DECLINED', nickname: 'ola.k' },
+      { playerId: 'tomek', answerBy: at(20), nickname: 'tomek.p' },
+      { playerId: 'kuba', answer: 'LEFT', nickname: 'kuba.z' },
+    ]);
+
+    expect(othersOn(filling, ME).map((seat) => seat.playerId)).toEqual([EWA]);
+    expect(othersOn(awaiting, ME).map((seat) => seat.playerId)).toEqual([EWA, 'tomek']);
+  });
+
+  /** An ended court is history rather than a line-up, and names everybody it asked. */
+  it('names everybody asked once the court has ended, so a singles no still has a face', () => {
+    const declined = challenge({ organiserId: ME, standing: 'DECLINED', endedAt: at(-1) }, [
+      { playerId: ME, answer: 'ACCEPTED' },
+      { playerId: EWA, answer: 'DECLINED', nickname: 'ewa.m' },
+    ]);
+    const on = challenge({ organiserId: ME, standing: 'ON' }, [
+      { playerId: ME, answer: 'ACCEPTED' },
+      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+    ]);
+
+    expect(othersOn(declined, ME).map((seat) => seat.playerId)).toEqual([EWA]);
+    expect(othersOn(on, ME).map((seat) => seat.playerId)).toEqual([EWA]);
+  });
+
+  it('never names the reader, and never an empty seat', () => {
+    const court = challenge({ organiserId: ME, standing: 'LINE_UP_INCOMPLETE', sport: 'padel' }, [
+      { playerId: ME, answer: 'ACCEPTED' },
+      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      {},
+      {},
+    ]);
+
+    expect(othersOn(court, ME).map((seat) => seat.playerId)).toEqual([EWA]);
   });
 });
 

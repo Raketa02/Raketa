@@ -54,7 +54,7 @@
  */
 
 import { nobodyHasJoined, ownSeat, type Challenge, type ChallengeSeat } from './challenge';
-import type { SeatAnswer, Standing } from './standing';
+import { GIVES_UP_THE_SEAT, type SeatAnswer, type Standing } from './standing';
 
 /**
  * How long a finished challenge keeps its row — **24 h, and it is not the conversation's.**
@@ -218,6 +218,7 @@ export function belongsOnTheInbox(challenge: Challenge, playerId: string): boole
   const ownAnswer = ownSeat(challenge, playerId)?.answer;
   if (ownAnswer !== undefined && OWN_ACT_LEAVES_AT_ONCE[ownAnswer]) return false;
   if (removedByTheReader(challenge, playerId)) return false;
+  if (endedOnADepartureLeavingTheReader(challenge, playerId)) return false;
   if (challenge.standing === undefined) return true;
   if (STILL_BEING_ARRANGED[challenge.standing]) return true;
 
@@ -237,6 +238,30 @@ function removedByTheReader(challenge: Challenge, playerId: string): boolean {
     challenge.standing === 'WITHDRAWN' &&
     challenge.organiserId === playerId &&
     nobodyHasJoined(challenge)
+  );
+}
+
+/**
+ * **A court that ended on somebody leaving it, with the reader the one left on it** — and the
+ * fourth row that goes at once rather than keeping its day.
+ *
+ * The shelf life keeps an ending a day because it is *news*: *{name} said no — that seat is open
+ * again* tells the organiser the pair rule has released and they may ask again. A court that
+ * somebody **joined and then walked out of** ends differently — the room the first yes opened is
+ * where the departure was told, and what is left is a court with nobody committed to it but the
+ * reader: nothing to fill, nobody to ask again about, and no news on the row that the room's
+ * going does not already say. So it leaves with the room. Read off the wire as the ending rule
+ * writes it ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §3: *a departure is a no*, so the standing is `DECLINED`; `deserted` leaves at most one
+ * accepted seat, which is the reader's; and the seat that was taken back reads `LEFT`, the one
+ * answer written over another). A court everybody merely **declined** is not this — nobody was
+ * ever in it with the reader, and its row keeps its day as before.
+ */
+function endedOnADepartureLeavingTheReader(challenge: Challenge, playerId: string): boolean {
+  return (
+    challenge.standing === 'DECLINED' &&
+    ownSeat(challenge, playerId)?.answer === 'ACCEPTED' &&
+    challenge.seats.some((seat) => seat.answer === 'LEFT')
   );
 }
 
@@ -305,10 +330,25 @@ export type OccupiedSeat = ChallengeSeat & { readonly playerId: string };
  * to you it is the organiser and whoever else they asked. An empty seat is nobody and is not in
  * the list, which is the one place a court's *"an empty seat is a seat"* does not apply — a row
  * names people, and a hole is not one.
+ *
+ * **A court still being filled names the people still on it.** A seat that has been given up —
+ * a no, a day run out, a yes taken back — keeps its occupant on the wire, because the record
+ * says who was asked; but a row is *who you would play with*, and two faces of people who said
+ * no under a line reading *2 in, 2 seats open* drew a four that was a two
+ * ([#429](https://github.com/Raketa02/Raketa/issues/429)). A seat still deciding stays: they
+ * were asked and have not said no. **An ended court names everybody it asked**, because its row
+ * is history rather than a line-up — *{name} said no* under a row that no longer drew the
+ * person who said it would name nobody at all on a singles court.
  */
 export function othersOn(challenge: Challenge, playerId: string): readonly OccupiedSeat[] {
+  const stillBeingFilled =
+    challenge.standing !== undefined && STILL_BEING_ARRANGED[challenge.standing];
+
   return challenge.seats.filter(
-    (seat): seat is OccupiedSeat => seat.playerId !== undefined && seat.playerId !== playerId,
+    (seat): seat is OccupiedSeat =>
+      seat.playerId !== undefined &&
+      seat.playerId !== playerId &&
+      !(stillBeingFilled && seat.answer !== undefined && GIVES_UP_THE_SEAT[seat.answer]),
   );
 }
 

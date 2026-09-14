@@ -18,6 +18,7 @@ import {
   entryLine,
   headerSubline,
   headerTitle,
+  roomOverLine,
   systemLineSentence,
   typingLine,
 } from './conversationPresentation';
@@ -338,5 +339,55 @@ describe('somebody is typing', () => {
 
   it('says nothing about nobody', () => {
     expect(typingLine([], MEMBERS)).toBeUndefined();
+  });
+});
+
+/**
+ * **The chat has ended, and the room is still on screen** — §22.5's fourth state. It names who
+ * left in the stream's own words and never says the seat is open again, because the court is
+ * over; alone, it says the other true thing; with a game, only that it ended.
+ */
+describe('the chat has ended', () => {
+  it('names who left, whole, and says the chat has ended', () => {
+    const line = roomOverLine({
+      kind: 'they-left',
+      members: [{ playerId: 'tomek', nickname: 'tomek.p' }],
+    });
+
+    expect(line).toBe('tomek.p left — this chat has ended.');
+  });
+
+  it('joins two who left with §22.6’s final and', () => {
+    const line = roomOverLine({
+      kind: 'they-left',
+      members: [
+        { playerId: 'tomek', nickname: 'tomek.p' },
+        { playerId: 'ola', nickname: 'ola.k' },
+      ],
+    });
+
+    expect(line).toBe('tomek.p and ola.k left — this chat has ended.');
+  });
+
+  it('draws the unknown player for a member the platform can no longer name', () => {
+    expect(roomOverLine({ kind: 'they-left', members: [{ playerId: 'x' }] })).toMatch(/^\? left/);
+  });
+
+  it('never says the seat is open again — the court is over', () => {
+    for (const ending of [
+      { kind: 'they-left' as const, members: [{ playerId: 'tomek', nickname: 'tomek.p' }] },
+      { kind: 'nobody-else-coming' as const },
+      { kind: 'ended' as const },
+    ]) {
+      expect(roomOverLine(ending)).not.toMatch(/open again/);
+      expect(roomOverLine(ending)).toMatch(/this chat has ended\.$/i);
+    }
+  });
+
+  it('says nobody else is coming where the reader was alone, and only that it ended with a game', () => {
+    expect(roomOverLine({ kind: 'nobody-else-coming' })).toBe(
+      'Nobody else is coming — this chat has ended.',
+    );
+    expect(roomOverLine({ kind: 'ended' })).toBe('This chat has ended.');
   });
 });

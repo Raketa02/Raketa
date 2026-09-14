@@ -47,6 +47,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
+import { useOnReturn } from '@/shared/lib/platform';
 
 import { useCurrentUser } from '@/features/auth/types';
 
@@ -143,10 +144,26 @@ function useChallengeList(enabled = true) {
  * `rows` is empty until there is both a list and a reader. Who the reader is comes from
  * `useCurrentUser`, exactly as the Now tab's games list picks its own seat out of a court:
  * no route serves a player their own id, and every rule here is about *your* seat.
+ *
+ * **Coming back to the section re-reads it** ([#429](https://github.com/Raketa02/Raketa/issues/429)
+ * A5, A6). `staleTime: 0` says the list is never *served* stale, and it is not — on a mount, on
+ * a foreground. But the section stays **mounted** under the room and the challenge screen the
+ * tab pushes over it, and an answer that lands while the player is in the room reaches the
+ * room as a line and the list not at all: the nudge re-reads what the room draws and, by
+ * design, never this list (`useLiveConversation`). *Back* is neither a mount nor a foreground,
+ * so the row read *Waiting on 2 answers* under a room that had just said one of them was in.
+ * The return is the moment somebody is looking at the row again, so the return is what marks
+ * the list stale — one request, and only then, where re-reading on every nudge would be one
+ * per inbound message for a row nobody is looking at.
  */
 export function useChallengeInbox() {
   const challenges = useChallengeList();
   const playerId = useCurrentUser().data?.id;
+  const client = useQueryClient();
+
+  useOnReturn(() => {
+    void client.invalidateQueries({ queryKey: challengeKeys.list() });
+  });
 
   return {
     ...challenges,

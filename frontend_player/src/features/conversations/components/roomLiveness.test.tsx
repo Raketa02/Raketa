@@ -55,6 +55,7 @@ import {
   LIVE_NOTE,
   SEND,
   headerSubline,
+  roomOverLine,
   systemLineSentence,
   typingLine,
 } from './conversationPresentation';
@@ -433,6 +434,88 @@ describe('the nudge', () => {
     await settled();
 
     expect(transport.requests.length).toBe(before);
+  });
+});
+
+describe('a room that ends while it is on screen', () => {
+  /**
+   * **The room stays as it was, closed, and says who left**
+   * ([#429](https://github.com/Raketa02/Raketa/issues/429)). The last other member leaves: the
+   * challenge is over in the same commit and the room with it, so the nudge's re-read is answered
+   * by `conversation_not_found` — the *left* line was written into a room nobody can read. The
+   * screen used to leave on that answer, and a player reading a room was on the list a moment
+   * later with the room gone from under them. Now what was held is drawn as it was, the composer
+   * gives way to one sentence, and the sentence names who left — folded from the members the room
+   * last read (`domain/roomOver.ts`).
+   */
+  it('stays as it was, closes, and says who left', async () => {
+    await openTheRoom(room([message(1, TOMEK, 'six works for me')]));
+    await screen.findByLabelText('tomek.p: six works for me');
+
+    transport.on('GET', conversationPath(ROOM), () => errorResponse(404, 'conversation_not_found'));
+    act(() => channel.nudge(ROOM));
+
+    const sentence = roomOverLine({
+      kind: 'they-left',
+      members: [{ playerId: TOMEK, nickname: 'tomek.p' }],
+    });
+    expect(await screen.findByText(sentence)).toBeTruthy();
+    expect(sentence).toMatch(/^tomek\.p left/);
+    expect(screen).toHavePathname(`/chats/conversation/${ROOM}`);
+    // The stream is still there to be read; nothing here writes any more.
+    expect(screen.getByLabelText('tomek.p: six works for me')).toBeTruthy();
+    expect(screen.queryByLabelText(COMPOSER_LABEL)).toBeNull();
+    expect(screen.queryByRole('button', { name: SEND })).toBeNull();
+    expect(screen.queryByRole('button', { name: QUICK_CHIP.where })).toBeNull();
+  });
+
+  it('is gone from the list when the player goes back', async () => {
+    await openTheRoom();
+    transport.on('GET', conversationPath(ROOM), () => errorResponse(404, 'conversation_not_found'));
+    act(() => channel.nudge(ROOM));
+    await screen.findByText(/left — this chat has ended\.$/);
+
+    stubConversations(transport, []);
+    fireEvent.press(screen.getByLabelText('Back'));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+
+    await waitFor(() => expect(screen.queryByLabelText(/^tomek\.p/)).toBeNull());
+  });
+
+  /** The reader was alone — somebody had left while a seat was deciding — and the last no came. */
+  it('says nobody else is coming where the reader was alone', async () => {
+    await openTheRoom(room([], [{ player_id: ME, nickname: 'me_' }]));
+    transport.on('GET', conversationPath(ROOM), () => errorResponse(404, 'conversation_not_found'));
+    act(() => channel.nudge(ROOM));
+
+    expect(await screen.findByText(roomOverLine({ kind: 'nobody-else-coming' }))).toBeTruthy();
+    expect(screen).toHavePathname(`/chats/conversation/${ROOM}`);
+  });
+
+  /** A room with a game is over for a reason the game's card says, and this room says only that it ended. */
+  it('says only that the chat has ended where the room had its game', async () => {
+    stubGames(transport, [game()], READ_AT);
+    await openTheRoom({ ...room(), game_id: GAME });
+    transport.on('GET', conversationPath(ROOM), () => errorResponse(404, 'conversation_not_found'));
+    act(() => channel.nudge(ROOM));
+
+    expect(await screen.findByText(roomOverLine({ kind: 'ended' }))).toBeTruthy();
+    expect(screen.queryByText(/left — this chat has ended/)).toBeNull();
+  });
+
+  /** The not-live line has nothing to add to a room that has ended, and is not drawn over it. */
+  it('draws neither the plan card nor the not-live line once it has ended', async () => {
+    stubPlans(transport, [plan()]);
+    await openTheRoom();
+    await screen.findByLabelText('Where: Not agreed yet');
+
+    transport.on('GET', conversationPath(ROOM), () => errorResponse(404, 'conversation_not_found'));
+    act(() => channel.nudge(ROOM));
+    await screen.findByText(/left — this chat has ended\.$/);
+    act(() => channel.lose(ROOM));
+
+    expect(screen.queryByLabelText('Where: Not agreed yet')).toBeNull();
+    expect(screen.queryByText(LIVE_NOTE['not-live'])).toBeNull();
   });
 });
 

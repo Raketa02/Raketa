@@ -100,11 +100,15 @@
  * stack, so invalidating it would refetch every room's row on every inbound message, for a line
  * nobody is looking at — and it is the same shape of cost ADR-0147 already prices per message.
  *
- * What that leaves is real and small: **a row's last line can be one message behind when a player
- * comes back to the list**, because popping the stack is not a focus event and an active query
- * does not refetch on staleness alone. It is the state #363 shipped with — a message from somebody
- * else has never moved a row without a refetch — so this ticket does not make it worse, and it is
- * one line to reverse here the day the trade looks wrong.
+ * What that left was real and, it turned out, not small: **a row was one line behind when a
+ * player came back to the list** — *Waiting on 2 answers* under a room that had just said one of
+ * the two was in ([#429](https://github.com/Raketa02/Raketa/issues/429) A5, A6) — because popping
+ * the stack is not a focus event and an active query does not refetch on staleness alone. The
+ * answer was not to reverse the line above. **The return re-reads the list**: each section's hook
+ * marks its own list stale on `useOnReturn` (`useChallengeInbox`, `useConversationRows`), which
+ * is one request at the moment somebody is looking at the row again, where re-reading on the
+ * nudge would be one per inbound message for a row nobody is looking at. The nudge still touches
+ * nothing but what the room draws, and `roomLiveness.test.tsx` still says so.
  *
  * ## Play's posture is not in question here
  *

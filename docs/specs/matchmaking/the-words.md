@@ -1934,6 +1934,19 @@ a `Note` above the composer and the third sits in the stream (§24.6).
 | held | `Your account is on hold. You can read here, but not write.` |
 | typing, one | `{name} is typing…` |
 | typing, more | `{name} and {name} are typing…` · `{n} people are typing…` |
+| ended, they left | `{name} left — this chat has ended.` · `{name} and {name} left — this chat has ended.` |
+| ended, alone | `Nobody else is coming — this chat has ended.` |
+| ended, with a game | `This chat has ended.` |
+
+**The ended sentences are the fourth state, and they stand where the composer stood** (added
+2026-09-14, [#429](https://github.com/Raketa02/Raketa/issues/429); `the-loop-screens.md` §3.7). A
+room without a game is over the instant its challenge is, so the *{name} left* line of §23 is
+written into a room nobody can read; the screen that held the room says it instead, in §23's own
+words, and **never** *that seat is open again* — the court is over. Who left is folded from the
+members the room last read and ADR-0165 §3's ending rule, not read off a line: with others in the
+room every other member left, alone the last seat deciding said no, and with a game the room says
+only that it ended, because why is the game card's to say. A fact rather than a warning or a
+refusal, so it is neither amber nor coral.
 
 **The typing sentences name people and never a count of one**, because the client already holds the
 handles the frame's `player_ids` point at and a name is what the room is about. Three or more

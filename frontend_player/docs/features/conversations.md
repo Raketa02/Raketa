@@ -211,3 +211,36 @@ said they are out of the room, which is where the withdraw's _invalidate rather 
 turns over. The caller names the court and which rows that touches is decided here, so what crosses
 the seam is still an act on a list and never the shape of one; the re-read that follows confirms the
 removal rather than causing it.
+
+**Coming back to the tab re-reads both lists**
+([#429](https://github.com/Raketa02/Raketa/issues/429) A5, A6). The tab stays **mounted** under
+the room and the challenge screen it pushes, a room's nudge never touches either list by design,
+and _back_ is neither a mount nor a foreground — so after _C said no_ landed as a line in the room,
+the challenge row still read _Waiting on 2 answers_ and the conversation row the line before the
+one just read, until a tab switch happened to remount the tab. Each section's hook marks its own
+list stale on `useOnReturn` — `shared/lib/platform`'s answer to _did we just come back to this
+screen_, the navigator's focus after a blur, beside `useOnForeground`'s app focus — so it is one
+request per list at the moment somebody is looking at the rows again, where re-reading on the
+nudge would be one per inbound message for a row nobody is looking at. The nudge's rule is
+unchanged and `roomLiveness.test.tsx` still pins it; the mount posture — `staleTime: 0` on the
+challenges, thirty seconds on the rooms — is untouched, because a return is not a mount.
+
+**A room that ends while it is on screen stays on screen, closed, and says who left**
+([#429](https://github.com/Raketa02/Raketa/issues/429), `the-loop-screens.md` §3.7 amended). A
+room without a game is over the instant its challenge is (ADR-0164 §6): when the last other member
+leaves, the challenge folds `DECLINED` in the same commit, the _{name} left_ line is written by the
+outbox into a room nobody can read, and the nudge's re-read is answered `conversation_not_found`.
+The screen answered that by leaving — a player reading a room was on the list a moment later with
+the room gone from under them, which read as the app acting on their behalf. Now `roomIsGone` on a
+read **with pages held** keeps the room: the stream as it was, the header, and in the composer's
+place §22.5's fourth sentence, drawn as a plain `Note` and announced. Nothing writes — no composer,
+no chips, no plan card, no not-live line, no paging back — and a send that races the nudge and is
+told the room is gone re-asks the read rather than deciding anything itself, so one place closes
+the room. **Who left is a fold, not a line** (`domain/roomOver.ts`): the members the room last read
+against ADR-0165 §3's ending rule. With others in the room, every other member left — an accepted
+seat changes only by being taken back, a withdrawal is refused once anybody has joined, and the
+reader's own departure is made from the list; alone, the last seat deciding said no; with a game,
+the room says only that it ended, because why is the game card's to say. The fold's falsifier is
+written on it: a new way for a room without a game to end that is not a departure. A room
+**nothing was ever read from** still leaves — a stale row into a room that is not there — and the
+rows are gone when the player goes back, which the return's re-read above shows.

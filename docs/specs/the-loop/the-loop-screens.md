@@ -1100,9 +1100,23 @@ destruction real, not to make the answer right, which is the rule `challenges`' 
 §5). Never existed, destroyed, and past its end but not yet swept are one answer, and the client
 cannot tell them apart because there is nothing it should do differently.
 
-**A client holding a cursor into a destroyed conversation leaves the screen**, on
-`challenge_not_found`'s own arm in §2.4's table. It does **not** retry, and the deletion is **not
-inferable from a gap in the sequence**, because there is no sequence left to have a gap in.
+**A client that never read the conversation leaves the screen**, on `challenge_not_found`'s own
+arm in §2.4's table — a stale row opened into a room that is not there. It does **not** retry, and
+the deletion is **not inferable from a gap in the sequence**, because there is no sequence left to
+have a gap in.
+
+**A client holding the conversation when it ends stays on it** (amended 2026-09-14,
+[#429](https://github.com/Raketa02/Raketa/issues/429)). A room without a game is over the instant
+its challenge is (ADR-0164 §6), so when the last other member leaves, the *{name} left* line is
+written into a room nobody can read and the nudge's re-read is answered `conversation_not_found`
+— and a screen that left on that answer put the player on the list a moment later with the room
+gone from under them. Instead the screen keeps what it held: the stream as it was, the header, and
+in the composer's place one sentence, §22.5's *{name} left — this chat has ended.* Nothing writes
+— no composer, no chips, no plan card, no not-live line — and the rows are gone when the player
+goes back, which the list's return re-read shows. Who left is folded from the members the room
+last read and the ending rule (ADR-0165 §3): with others in the room, every other member left;
+alone, the last seat deciding said no (*Nobody else is coming — this chat has ended.*); with a
+game, only that it ended, because why is the game card's to say.
 
 ---
 

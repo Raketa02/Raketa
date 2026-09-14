@@ -16,7 +16,9 @@ that opened one is a screen no suite can put in front of a severed stream. Hand-
 live in `src/test-support/platform.ts`, and a screen reaches each through `useLocation()` /
 `useImagePicking()` / `useLiveStream()` — contexts whose
 default is the device, so only a test ever supplies anything else. Beside them sit the two
-lifecycle wirings and `useOnForeground`, the app's one answer to _did we just come back_.
+lifecycle wirings and `useOnForeground`, the app's one answer to _did we just come back_ — and
+`useOnReturn`, the same question asked of a **screen**: the navigator's focus after a blur, which
+is what a pop is, and which neither `AppState` nor a mount reports.
 **Location is foreground only** — nothing asks for, checks or starts a background one — and
 a fix is **coarsened to about a kilometre the moment it is read**, so the precise reading
 never reaches a store, a screen or a crash report.

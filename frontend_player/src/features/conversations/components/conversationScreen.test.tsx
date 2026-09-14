@@ -569,21 +569,27 @@ describe('a refused send', () => {
   });
 
   /**
-   * §3.7: **a client holding a cursor into a destroyed conversation leaves the screen.** One code
-   * for three cases, and there is no retry that changes any of them.
+   * §3.7 as amended by [#429](https://github.com/Raketa02/Raketa/issues/429): **a room that ends
+   * while it is on screen stays on screen, closed.** A send answered `conversation_not_found` is
+   * a send racing the nudge, and it does not decide the room is over — the read does, so the send
+   * asks the read again and the read closes the room. One code for three cases, and there is no
+   * retry that changes any of them.
    */
-  it('leaves the screen when the room has gone', async () => {
+  it('closes the room in place when a send finds it has gone', async () => {
     await openTheRoom();
     await screen.findByLabelText(COMPOSER_LABEL);
 
     transport.on('POST', `${conversationPath(ROOM)}/messages`, () =>
       errorResponse(404, 'conversation_not_found'),
     );
+    transport.on('GET', conversationPath(ROOM), () => errorResponse(404, 'conversation_not_found'));
 
     fireEvent.changeText(screen.getByLabelText(COMPOSER_LABEL), 'anyone there?');
     fireEvent.press(screen.getByRole('button', { name: SEND }));
 
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    expect(await screen.findByText(/left — this chat has ended\.$/)).toBeTruthy();
+    expect(screen).toHavePathname(`/chats/conversation/${ROOM}`);
+    expect(screen.queryByLabelText(COMPOSER_LABEL)).toBeNull();
   });
 
   it('leaves the screen when the read finds the room has gone', async () => {

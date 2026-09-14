@@ -104,7 +104,22 @@ const OPTIMISED: Readonly<Record<OptimisedFor, string | null>> = {
 /**
  * What the court says about who the answer was for. `undefined` where there is nothing to say
  * — which is `SEARCHER`, and a code this build has never seen (`SearchEnvelope.optimisedFor`).
+ *
+ * **And nothing on a fill that is completing a challenge**, whatever the envelope says. The
+ * engine answers `GROUP` for any locked seat, and on that journey the locked seats are the
+ * people who *said yes*, never people the organiser picked — so the sentence would be false
+ * in its first clause, and its second is a caveat about a court that already exists: the four
+ * are not a choice the engine made around somebody, they are the line-up being finished.
+ * The ordinary builder keeps the line, because there the locked seat is an act the player
+ * took (`the-play-screens.md` §11.2's standing obligation).
+ *
+ * @param completing whether the builder is filling a challenge's open seats rather than
+ *   building a court of its own — `BuilderScreen` reads it off the record's origin.
  */
-export function optimisedForLine(optimised: OptimisedFor | null): string | undefined {
+export function optimisedForLine(
+  optimised: OptimisedFor | null,
+  completing = false,
+): string | undefined {
+  if (completing) return undefined;
   return optimised === null ? undefined : (OPTIMISED[optimised] ?? undefined);
 }

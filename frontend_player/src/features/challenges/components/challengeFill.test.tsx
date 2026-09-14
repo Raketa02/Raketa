@@ -31,7 +31,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { offlineMessage } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
-import { endPlaySession } from '@/features/play/types';
+import { endPlaySession, optimisedForLine } from '@/features/play/types';
 import { PROPOSE_SHEET_TITLE, SEND_CHALLENGE_LABEL } from '../types';
 import {
   CHALLENGES_PATH,
@@ -621,6 +621,19 @@ describe('the court it pushes', () => {
     await fillTheSeats();
 
     expect(screen.queryByRole('button', { name: 'Start over' })).toBeNull();
+  });
+
+  /**
+   * **No note about whom the answer was optimised for.** The engine answers `GROUP` for any
+   * locked seat — `filledCourt()` says so — and on this journey the locked seats are the people
+   * who said yes, not people the organiser picked, so the ordinary builder's caveat would be
+   * false here and is not drawn.
+   */
+  it('says nothing about the answer being optimised for the group', async () => {
+    await openTheChallenge();
+    await fillTheSeats();
+
+    expect(screen.queryByText(optimisedForLine('GROUP') ?? '')).toBeNull();
   });
 });
 
