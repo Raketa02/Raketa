@@ -10,6 +10,7 @@
  */
 
 import type { Game } from '@/features/games/types';
+import { setDeviceZone } from '@/test-support/deviceZone';
 
 import { agreedPoint, momentHasPassed, rungOf } from './ladder';
 import type { Plan } from './slots';
@@ -113,11 +114,11 @@ describe('the four clock rungs, read in order', () => {
     const held = process.env.TZ;
 
     const read = zones.map((zone) => {
-      process.env.TZ = zone;
+      setDeviceZone(zone);
       return rungOf(plan({ day: '2026-09-12' }), FULL);
     });
 
-    process.env.TZ = held;
+    setDeviceZone(held);
     expect(read).toEqual(['today', 'today', 'today']);
   });
 

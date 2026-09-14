@@ -5,6 +5,8 @@
  * two things this rule adds — which slots are dropped, and when the fallback is offered.
  */
 
+import { setDeviceZone } from '@/test-support/deviceZone';
+
 import { quickChips } from './quickChips';
 import type { Plan } from './slots';
 
@@ -20,7 +22,7 @@ const DEVICE_ZONE = process.env.TZ;
 // Restored here rather than at the end of the test that moves it: a failing expectation would
 // otherwise leak a zone into every suite after this one, and those are the suites about days.
 afterEach(() => {
-  process.env.TZ = DEVICE_ZONE;
+  setDeviceZone(DEVICE_ZONE);
 });
 
 /** 09:00 UTC on the 12th is the 12th in Warsaw, whatever the phone thinks. */
@@ -58,7 +60,7 @@ describe('the fallback', () => {
   it('reads today in the platform zone, never the device one', () => {
     const zones = ['Pacific/Kiritimati', 'Pacific/Midway', 'UTC'];
     const read = zones.map((zone) => {
-      process.env.TZ = zone;
+      setDeviceZone(zone);
       return quickChips(plan({ day: '2026-09-12' }), '2026-09-12T21:00:00Z');
     });
 
