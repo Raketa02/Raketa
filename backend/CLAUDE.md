@@ -431,19 +431,41 @@ Rules to preserve:
   about one of you* and the field would have to go; §3 of the record is where that is
   written down. `mutual_born_challenges_that_became_games` answers **newest first** for it, so
   the row named to a player is not set iteration order (ADR-0105).
-- **The deck reads a declaration, and a pass is a statement about my deck**
-  ([ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md),
+- **The deck reads no declaration, and a pass is a statement about my deck**
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md),
+  [ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md),
   `the-two-contracts.md` §6). `POST /api/v1/deck` takes **the sport and the week this one
   deal runs on** and creates a search: there is no mode on the wire in either direction,
-  because the deck resolves the weight vector backend-side from the viewer's declared Play
-  intent — `NO_PREFERENCE → fun`, never a third vector — and `search.intent_read` records
-  **the declaration as it stood**, so a later change to the mapping does not rewrite
-  history. Its order is its whole variety (three bands, then `PASS_SUPPRESS`); the
-  **relaxation ladder does not reach it** — the week is the only ask beside the sport, and
-  it is an ask like the shortlist's: it writes nothing, and the deal comes back carrying
-  `KEEP_THESE_TIMES`, which is the offer to save it; and a spent deal deals again — a new
-  `search_id`, the same exclusions plus everybody dealt within `DEALT_MEMORY`, so only a
-  *fresh* deal that came back empty is the honest empty state.
+  because **every deal scores under the fun ruler for every viewer**, declared or not —
+  `INHERITED_ON_THE_DECK` in `matchmaking/domain/deck.py`, a fact about the surface and
+  never a function of anything the viewer said, so `play_intent_not_declared` is never
+  raised here and `search.intent_read` records **the declaration as it stood** for history
+  alone, `NULL` for a viewer who never made one (migration `0022`). **The intent term
+  stands down for every pairing on the deck** — `STOOD_DOWN_ON_THE_DECK` on the
+  `SearchContext`, threaded to the engine as `stood_down` so the term is never read and
+  says `NOT_READ_ON_THIS_SURFACE`, the fourth `DegradedReason`, which is neither side's gap
+  — so a declaration moves nobody, up or down, and one pair has two Fits: Find a game is
+  untouched. Its order is its whole variety (**two bands** — the lifted, the person who said
+  yes among them by rank key and unmarked beyond `inclusion_reason`, then the rest — then
+  `PASS_SUPPRESS`); the **relaxation ladder does not reach it** — the week is the only ask
+  beside the sport, and it is an ask like the shortlist's: it writes nothing, and the deal
+  comes back carrying `KEEP_THESE_TIMES`, which is the offer to save it; and a spent deal
+  deals again — a new `search_id`, the same exclusions plus everybody dealt within
+  `DEALT_MEMORY`, so only a *fresh* deal that came back empty is the honest empty state.
+  **The fourth exclusion is the cool-off** (ADR-0169 §6): somebody the viewer has a live
+  challenge or game with, and for `deck_cool_off_days` — a ruleset row of its own,
+  released as `2026.09.15-a` at the pass window's thirty, nought in the two datasets that
+  never knew it — after the court is behind them. It is read through `SharedCourtQuery`,
+  the **seventh** matcher demand, answered over `games`' own directory by
+  `infrastructure/games_shared_courts.py` and failing **soft** like the suppression cache;
+  **deck only** — Find a game keeps ADR-0142 §1's release. **And the envelope says two
+  numbers no other surface can**: `pool.remaining`, the eligible beyond the hand, and
+  `pool.want_to_play_you`, the live yeses that would be dealt with the dealt memory
+  deliberately not applied — a fold over the lift's own read and never a second one, so
+  the chip and the hand cannot disagree. Both are omitted on every other surface and on a
+  read-back, and the latter is the **one count** ADR-0109 §2's sentence is narrowed to
+  admit: `tests/unit/test_no_response_carries_an_inbox.py` refuses every other spelling of
+  incoming interest on every response type, and a list anywhere.
   `POST /api/v1/passes` is **write-only and answers `204`**: no route returns a pass, to
   anyone, in any shape, and `PASS_SUPPRESS` crosses the wire in **no shape at all**. It
   has three boundaries, all the opposite of a block's — deck only, one-directional, never

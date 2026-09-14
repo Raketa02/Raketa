@@ -30,6 +30,13 @@ vectors, so a matcher penalty can appear or lift through no action of the
 player's. The offline diff is what that claim is argued on, and it is committed
 beside this file.
 
+**It was edited once after release, and for a shape rather than a number**
+(``docs/adr/0169`` §6, released as ``2026.09.15-a``). ``InterestRules`` gained
+``deck_cool_off_days``, a required row, and this dataset says **nought** about
+it — *no window after a shared court* is what its deck did — on the precedent
+``2026.08.26-a`` set for the sixth strand: a shape moving under a frozen file is
+not a number moving in it.
+
 **This file is frozen.** A number moves in a *new* dataset with a *new* name, and
 the pull request carries the offline diff plus one line per changed constant: the
 hypothesis, and what would falsify it. Editing a released ruleset would make every
@@ -721,5 +728,12 @@ RULESET = Ruleset(
         ttl_days=21,
         outstanding_cap_per_sport=20,
         pass_suppress_days=30,
+        # Nought, and nought is the honest number: this dataset ran while the
+        # row did not exist, and *no window after a court* is what its deck
+        # did. The shape changed under it, on the precedent ``docs/adr/0160``
+        # set when the sixth strand widened a vector this file validates as
+        # exhaustive — the row is ``docs/adr/0169`` §6's; the edit is that
+        # record's kind of edit, and the header above says so.
+        deck_cool_off_days=0,
     ),
 )

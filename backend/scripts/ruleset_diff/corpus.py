@@ -42,7 +42,10 @@ from app.modules.matchmaking.domain.candidate_index import (
     Partition,
 )
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
-from app.modules.matchmaking.domain.deck import DeckExclusions, mode_for_intent
+from app.modules.matchmaking.domain.deck import (
+    INHERITED_ON_THE_DECK,
+    DeckExclusions,
+)
 from app.modules.matchmaking.domain.geography import Point
 from app.modules.matchmaking.domain.search_context import (
     LiveGateFacts,
@@ -183,11 +186,13 @@ def searches(population: Population, ruleset: Ruleset) -> Iterator[Search]:
             SearchSurface.FILL_SEATS,
             SearchSurface.DECK,
         ):
-            # **The deck has no mode**: it reads the player's own declaration and
-            # scores against that (`the-engine.md` §9.11), which is the whole
-            # reason `search.mode` is null exactly when the surface is a deck.
+            # **The deck has no mode and reads no declaration**: every deal
+            # scores under the fun ruler (`docs/adr/0169` §2), which is the
+            # whole reason `search.mode` is null exactly when the surface is a
+            # deck. The intent term stands down there too — the context knows
+            # its surface, so `deal` needs telling nothing.
             mode = (
-                mode_for_intent(PlayIntent(member.declared_intent), ruleset.intent)
+                INHERITED_ON_THE_DECK
                 if surface is SearchSurface.DECK
                 else SearchMode.COMPETITIVE
             )
@@ -325,12 +330,19 @@ def _exclusions(member: Member, rows: tuple[CandidateRow, ...]) -> DeckExclusion
     others = [row for row in rows if row.player_id != str(member.player_id)]
     if not others:
         return DeckExclusions(
-            suppressed=frozenset(), already_asked=frozenset(), already_dealt=frozenset()
+            suppressed=frozenset(),
+            already_asked=frozenset(),
+            already_dealt=frozenset(),
+            cooling_off=frozenset(),
         )
     return DeckExclusions(
         suppressed=frozenset({UUID(others[0].player_id)}),
         already_asked=frozenset(),
         already_dealt=frozenset(),
+        # Nobody in the corpus has a game with anybody: the population is
+        # inputs only, and a court is an outcome. The cool-off is exercised
+        # at its own seam (`tests/unit/test_deck_deal.py`), not here.
+        cooling_off=frozenset(),
     )
 
 

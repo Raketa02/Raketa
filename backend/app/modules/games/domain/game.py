@@ -409,6 +409,34 @@ class Game:
 
         return self.standing_at(now) in PLAYED
 
+    def became_history_at(self, now: Instant) -> Instant | None:
+        """When this game stopped being ahead of the people on it, or ``None``.
+
+        **The one moment ``GAME_IS_HISTORY`` is dated from**, folded here so a
+        seat change, a chat exit, a pairwise record and a deck's cool-off cannot
+        come to four dates for one game. Three endings and one clock: the entry
+        that said *we played*, whatever was agreed about the score afterwards;
+        the window closing on silence, which is a ghost; and the call-off, which
+        is an act and is dated from nothing but itself. ``None`` is *awaiting
+        its entry* — the game is still ahead, whether or not its agreed moment
+        has passed, because a plan whose moment has passed can still be moved.
+        """
+
+        standing = self.standing_at(now)
+        if standing is GameStanding.CALLED_OFF:
+            # ``called_off_at`` is set for exactly this standing, which is folded
+            # from nothing else; the fallback is unreachable and stated rather
+            # than asserted, because a read is a bad place to raise about a
+            # stream somebody else wrote.
+            return self.called_off_at or now
+        if standing is GameStanding.NEVER_PLAYED:
+            return entry_closes_at(self.planned_at)
+        if standing in PLAYED:
+            # ``played_at`` is set for every standing in ``PLAYED`` — the entry
+            # that records *we played* is the only thing that can set it.
+            return self.played_at or self.planned_at
+        return None
+
     def confirmed_score_at(self, now: Instant) -> Score | None:
         """The agreed score, or ``None`` while nothing has settled on one.
 

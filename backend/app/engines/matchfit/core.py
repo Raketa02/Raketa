@@ -103,13 +103,20 @@ class Term(str, Enum):
 
 
 class DegradedReason(str, Enum):
-    """Whose gap a stood-down term is. **Three values, and one line drawn.**
+    """Whose gap a stood-down term is. **Four values, and one line drawn twice.**
 
     ``floor.py`` draws that line to decide a number — *the gate counts
     person-specific gaps and never platform-wide absence* — and until now it was
     drawn nowhere else, so the one list that crosses the wire held *reliability
     is not a thing here yet* and *they have not said what kind of evening they
     want* as the same fact, twenty times a search.
+
+    The fourth value is the line drawn a second time, from the other side: a
+    term the **search** declined to read is nobody's gap either — not the
+    platform's, which has the provider, and not the person's, who may well have
+    declared — and the deck is the surface that does it (``docs/adr/0169`` §2).
+    Filing that under either existing code would print a sentence about a person
+    that is false of them.
 
     **It is a code and not a sentence**, on ``docs/adr/0106``'s rule: a client
     writing *"they haven't declared"* off a bare ``Term`` would be an engine rule
@@ -137,6 +144,12 @@ class DegradedReason(str, Enum):
     #: Their side is empty: no declared intent, no tag in this column, or no
     #: usable record.
     NOTHING_FROM_THEM = "NOTHING_FROM_THEM"
+    #: The search did not ask. **Named by the caller and never chosen by a term
+    #: function**, which cannot know which surface it is scoring for:
+    #: ``read_terms`` writes it for exactly the terms the caller stood down, and
+    #: the term is not read at all rather than read and discarded. The deck is
+    #: the surface that does it, so that a declaration moves nobody there.
+    NOT_READ_ON_THIS_SURFACE = "NOT_READ_ON_THIS_SURFACE"
 
 
 class LevelDirection(str, Enum):

@@ -30,6 +30,7 @@ from app.bootstrap.composition import (
     build_challenge_repository,
     build_domain_event_store,
     build_event_publisher,
+    build_game_repository,
     build_skill_rating_repository,
 )
 from app.bootstrap.matcher_demands import (
@@ -80,8 +81,14 @@ from app.modules.matchmaking.domain.ports import (
     RatioStrand,
     SentFromSearch,
     SentOutsideASearch,
+    SharedCourt,
+    SharedCourtQuery,
     SportsmanshipStrand,
 )
+from app.modules.games.domain.game import Game
+from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
+from app.modules.games.domain.results import Score, SetScore
+from app.modules.games.domain.windows import entry_closes_at
 from app.modules.matchmaking.application.outward_reads import read_demand
 from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.domain.skill_rating import SkillRating
@@ -1642,6 +1649,223 @@ async def test_a_court_every_seat_accepted_is_nobody_to_arrange_with_any_more(
 
 
 # ---------------------------------------------------------------------------
+# SharedCourtQuery — the deck's cool-off, read off ``games``' own record
+# ---------------------------------------------------------------------------
+
+# **The provider ships and the arrangement belongs to the port.** Every fact
+# here is a game fact — a court is ahead until somebody says *we played*, calls
+# it off, or lets the entry window close on it — so these arrange real games
+# through the ``Game`` aggregate and never an ``INSERT`` (``docs/adr/0029``),
+# and read the three ends back through whatever signed the contract.
+
+
+def _games(session):
+    return build_game_repository(
+        session=session,
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    )
+
+
+def _singles(one: UUID, other: UUID) -> LineUp:
+    return LineUp.of(
+        (
+            Seating(side=GameSide.A, player_id=one),
+            Seating(side=GameSide.B, player_id=other),
+        )
+    )
+
+
+def _four(a: UUID, b: UUID, c: UUID, d: UUID) -> LineUp:
+    return LineUp.of(
+        (
+            Seating(side=GameSide.A, player_id=a),
+            Seating(side=GameSide.A, player_id=b),
+            Seating(side=GameSide.B, player_id=c),
+            Seating(side=GameSide.B, player_id=d),
+        )
+    )
+
+
+def _a_game(*, line_up: LineUp, planned_at: Instant) -> Game:
+    return Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=Sport.PADEL,
+        kind=GameKind.COUNTED,
+        window=Window.TODAY,
+        line_up=line_up,
+        occurred_at=planned_at,
+    )
+
+
+async def _saved(session, game: Game) -> Game:
+    """Every act on the aggregate first, then one save: the store's version
+    check is what makes a second save of the same in-memory game a conflict."""
+
+    await _games(session).save(game)
+    await session.commit()
+    return game
+
+
+def _a_score() -> Score:
+    return Score.of((SetScore(a=6, b=4), SetScore(a=6, b=3)))
+
+
+def _by_counterpart(courts) -> dict[UUID, SharedCourt]:
+    return {court.counterpart_id: court for court in courts}
+
+
+@pytest.mark.parametrize("implementation", registered(SharedCourtQuery))
+async def test_a_court_still_ahead_is_ahead_and_names_everybody_on_it(
+    implementation, session
+):
+    """A game planned and not yet played is a court the searcher is *with* each
+    of the other three on — partner and opponents alike, because a pair is
+    anybody you were on a court with."""
+
+    me, partner, one, other = new_uuid(), new_uuid(), new_uuid(), new_uuid()
+    await _saved(
+        session,
+        _a_game(line_up=_four(me, partner, one, other), planned_at=_ago(hours=2)),
+    )
+
+    courts = _by_counterpart(await implementation.build(session).shared_courts(me))
+
+    assert set(courts) == {partner, one, other}
+    assert all(court.ahead for court in courts.values())
+    assert all(court.behind_since is None for court in courts.values())
+
+
+@pytest.mark.parametrize("implementation", registered(SharedCourtQuery))
+async def test_the_three_ends_each_date_the_court_behind_them(
+    implementation, session
+):
+    """Played dates from the entry that said *we played*; called off from the
+    call-off; never played from the entry window closing on silence — the
+    three ends ``GAME_IS_HISTORY`` is dated from, and none of them the plan's
+    own instant. A plan whose agreed moment has passed and whose window is
+    still open is *ahead* here, which is ``docs/adr/0169`` §6's *awaiting a
+    result*: the pair is held for as long as the court stands, and the window
+    runs from the moment it stopped standing."""
+
+    me, played, called_off, ghosted = new_uuid(), new_uuid(), new_uuid(), new_uuid()
+    entered_at = _ago(days=2)
+    game = _a_game(line_up=_singles(me, played), planned_at=_ago(days=3))
+    game.state_result(by=me, score=_a_score(), occurred_at=entered_at)
+    await _saved(session, game)
+
+    # A four somebody left and the searcher then called off, with ``called_off``
+    # still seated: the call-off is what put the court behind the two of them.
+    ended_at = _ago(days=1)
+    leaver = new_uuid()
+    game = _a_game(
+        line_up=_four(me, called_off, leaver, new_uuid()), planned_at=_ago(days=4)
+    )
+    game.vacate(leaver, occurred_at=_ago(days=1, hours=1))
+    game.call_off(by=me, occurred_at=ended_at)
+    await _saved(session, game)
+
+    planned_at = _ago(days=20)
+    await _saved(session, _a_game(line_up=_singles(me, ghosted), planned_at=planned_at))
+
+    courts = _by_counterpart(await implementation.build(session).shared_courts(me))
+
+    assert courts[played].behind_since == entered_at
+    assert courts[called_off].behind_since == ended_at
+    assert courts[ghosted].behind_since == entry_closes_at(planned_at)
+    assert not any(court.ahead for court in courts.values())
+    assert leaver not in courts, "a seat somebody left is no court of theirs"
+
+
+@pytest.mark.parametrize("implementation", registered(SharedCourtQuery))
+async def test_one_row_per_person_and_a_court_ahead_wins_over_one_behind(
+    implementation, session
+):
+    """A pair with a game behind them and another ahead are *with* each other:
+    the row is the ahead court. Two behind them is the later of the two."""
+
+    me, again, twice = new_uuid(), new_uuid(), new_uuid()
+    game = _a_game(line_up=_singles(me, again), planned_at=_ago(days=10))
+    game.state_result(by=me, score=_a_score(), occurred_at=_ago(days=9))
+    await _saved(session, game)
+    await _saved(
+        session, _a_game(line_up=_singles(me, again), planned_at=_ago(hours=1))
+    )
+
+    later = _ago(days=1)
+    for entered_at in (_ago(days=5), later):
+        game = _a_game(line_up=_singles(me, twice), planned_at=_ago(days=6))
+        game.state_result(by=me, score=_a_score(), occurred_at=entered_at)
+        await _saved(session, game)
+
+    courts = await implementation.build(session).shared_courts(me)
+
+    assert [court.counterpart_id for court in courts].count(again) == 1
+    assert _by_counterpart(courts)[again].ahead
+    assert _by_counterpart(courts)[twice].behind_since == later
+
+
+@pytest.mark.parametrize("implementation", registered(SharedCourtQuery))
+async def test_a_seat_the_searcher_left_is_no_court_of_theirs(
+    implementation, session
+):
+    """Somebody who left a game is not *with* the people still on it, and a
+    stranger to every court answers empty rather than erroring."""
+
+    me, stayed, third, fourth = new_uuid(), new_uuid(), new_uuid(), new_uuid()
+    game = _a_game(line_up=_four(me, stayed, third, fourth), planned_at=_ago(days=1))
+    game.vacate(me, occurred_at=_ago(hours=3))
+    await _saved(session, game)
+
+    port = implementation.build(session)
+    assert await port.shared_courts(me) == ()
+    assert await port.shared_courts(new_uuid()) == ()
+    assert {court.counterpart_id for court in await port.shared_courts(stayed)} == {
+        third,
+        fourth,
+    }
+
+
+@pytest.mark.parametrize("implementation", registered(SharedCourtQuery))
+async def test_the_rows_come_newest_first_and_an_ahead_court_first_of_all(
+    implementation, session
+):
+    """The order is the bound's meaning, as the pairwise history's is."""
+
+    me, old, recent, ahead = new_uuid(), new_uuid(), new_uuid(), new_uuid()
+    for other, planned_at, entered_at in (
+        (old, _ago(days=21), _ago(days=20)),
+        (recent, _ago(days=3), _ago(days=2)),
+    ):
+        game = _a_game(line_up=_singles(me, other), planned_at=planned_at)
+        game.state_result(by=me, score=_a_score(), occurred_at=entered_at)
+        await _saved(session, game)
+    await _saved(
+        session, _a_game(line_up=_singles(me, ahead), planned_at=_ago(hours=1))
+    )
+
+    courts = await implementation.build(session).shared_courts(me)
+
+    assert [court.counterpart_id for court in courts] == [ahead, recent, old]
+
+
+def test_a_shared_court_carries_the_other_person_and_a_moment_or_none():
+    """Two fields and nothing about the game: no id to fetch it with, no side,
+    no score. The deck needs *who* and *since when*, and a row carrying more
+    would be a row a later caller acts on."""
+
+    assert {field.name for field in fields(SharedCourt)} == {
+        "counterpart_id",
+        "behind_since",
+    }
+    ahead = SharedCourt(counterpart_id=new_uuid(), behind_since=None)
+    assert ahead.ahead
+    behind = SharedCourt(counterpart_id=new_uuid(), behind_since=_ago(days=1))
+    assert not behind.ahead
+
+
+# ---------------------------------------------------------------------------
 # The register itself
 # ---------------------------------------------------------------------------
 
@@ -1750,6 +1974,16 @@ def test_the_two_gates_fail_closed_and_the_three_terms_fail_soft():
     assert FAIL_POSTURE[MatchHistoryQuery] is FailPosture.SOFT
     assert FAIL_POSTURE[PlayerScoreQuery] is FailPosture.SOFT
     assert FAIL_POSTURE[AtStakeQuery] is FailPosture.SOFT
+
+
+async def test_the_deck_s_cool_off_fails_soft_and_is_neither_a_gate_nor_a_term():
+    """A courtesy about the viewer's own deck, so it stands down like the
+    suppression ledger does: an outage repeats the card of somebody they
+    already know, and never empties a deal in a city that has people in it."""
+
+    assert FAIL_POSTURE[SharedCourtQuery] is FailPosture.SOFT
+    assert SharedCourtQuery in MATCHER_DEMANDS
+    assert await read_demand(SharedCourtQuery, _unreadable, stood_down=()) == ()
 
 
 def test_the_court_a_fill_names_fails_closed_and_is_not_a_gate():

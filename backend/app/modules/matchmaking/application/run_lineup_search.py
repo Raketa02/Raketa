@@ -539,9 +539,12 @@ class RunLineupSearch:
         the court's rather than the filler's.
 
         *A challenge born without one* — deck-born, and every mutual-born court —
-        resolves one from the **filler's** declared Play intent on the deck's own
-        rule, ``NO_PREFERENCE → fun`` (``docs/adr/0150`` §5). **No mode picker
-        appears anywhere**, and ADR-0100 keeps its silence.
+        resolves one from the **filler's** declared Play intent on the rule
+        ``mode_for_intent`` keeps, ``NO_PREFERENCE → fun`` (``docs/adr/0150``
+        §5). It was the deck's rule when that record was written; the deck now
+        runs on one ruler for everybody (``docs/adr/0169`` §2) and the mapping
+        lives on here. **No mode picker appears anywhere**, and ADR-0100 keeps
+        its silence.
         """
 
         inherited = court.mode

@@ -365,6 +365,33 @@ class PoolSchema(BaseModel):
         True,
         description="Always true. It travels so the count cannot be misread.",
     )
+    remaining: int = Field(
+        OMITTED,
+        ge=0,
+        description=(
+            "**On a deal only.** How many people are eligible for your deck "
+            "beyond this hand — after every deck exclusion, and not in the "
+            "cards you were just dealt. It is what lets a counter say *N left* "
+            "and be true of the whole pool rather than of ten; it drops by a "
+            "hand as hands are dealt. Omitted on every other surface and on a "
+            "read-back, where a count about a pool that has moved on would be "
+            "a number about nothing."
+        ),
+    )
+    want_to_play_you: int = Field(
+        OMITTED,
+        ge=0,
+        description=(
+            "**On a deal only.** How many people have a live *Let's play* "
+            "towards you in this sport that would be dealt to you: every gate "
+            "passed, not passed on by you within the pass window, not cooling "
+            "off after a court you shared, and not already mutual. Somebody "
+            "dealt this morning and unanswered still counts — the dealt "
+            "memory is not applied. **A count and never a list**: nothing on "
+            "any route names who. `0` is a measured nought, so a chip drawn "
+            "from it is drawn at one and above."
+        ),
+    )
 
 
 class RungOfferSchema(BaseModel):
@@ -761,9 +788,12 @@ class DegradedTermSchema(BaseModel):
         description=(
             "Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` — the term "
             "has no provider on this platform at all), yours "
-            "(`NOTHING_FROM_YOU`), or theirs (`NOTHING_FROM_THEM`). The last "
-            "deliberately covers every reason a record could not be read, "
-            "because separating them would publish activity recency."
+            "(`NOTHING_FROM_YOU`), theirs (`NOTHING_FROM_THEM`), or the "
+            "surface's (`NOT_READ_ON_THIS_SURFACE` — the deck reads no intent "
+            "for anybody, so the term stood down for every card and says "
+            "nothing about either of you). `NOTHING_FROM_THEM` deliberately "
+            "covers every reason a record could not be read, because "
+            "separating them would publish activity recency."
         ),
     )
 

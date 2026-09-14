@@ -166,6 +166,9 @@ from app.modules.games.infrastructure.event_sourced_game_repository import (
     EventSourcedGameRepository,
 )
 from app.modules.games.infrastructure.users_handles import UsersHandles
+from app.modules.matchmaking.infrastructure.games_shared_courts import (
+    GamesSharedCourts,
+)
 from app.modules.matchmaking.infrastructure.games_match_history import (
     GamesPlayedAndChallengesAnswered,
 )
@@ -208,6 +211,7 @@ from app.modules.matchmaking.domain.ports import (
     HalfBuiltCourtQuery,
     MatchHistoryQuery,
     PlayerScoreQuery,
+    SharedCourtQuery,
 )
 from app.modules.matchmaking.application.fail_closed_gates import (
     FailClosedGates,
@@ -1403,6 +1407,21 @@ def build_half_built_court_query(session: AsyncSession) -> HalfBuiltCourtQuery:
     return ChallengesHalfBuiltCourts(
         build_challenge_history_query(session), build_clock()
     )
+
+
+def build_shared_court_query(session: AsyncSession) -> SharedCourtQuery:
+    """The courts the deck's cool-off reads, answered by ``games`` and translated.
+
+    **One provider and one contract**: every fact on this read is a game fact —
+    who is on the court, and whether it is behind them yet — so nothing
+    composes with it, and it reads ``games``' own directory rather than a
+    second published port (``docs/adr/0169`` §6).
+
+    The clock is built here rather than taken, for the reason the history's is:
+    *is this court still ahead of them* is a fact about the instant the read
+    happens, and a caller holding one could hold a stale one.
+    """
+    return GamesSharedCourts(build_game_directory(session), build_clock())
 
 
 def build_rated_player_query(

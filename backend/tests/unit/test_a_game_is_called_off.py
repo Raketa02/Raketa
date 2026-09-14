@@ -324,3 +324,47 @@ async def test_a_call_off_for_a_challenge_with_no_game_is_a_broken_precondition(
             CallOffGameCommand(challenge_id=new_uuid(), called_by=ANA),
             occurred_at=at(1),
         )
+
+
+# ---------------------------------------------------------------------------
+# When a game became history — one moment, dated once
+# ---------------------------------------------------------------------------
+
+
+def test_a_game_became_history_at_the_entry_the_window_or_the_call_off():
+    """``GAME_IS_HISTORY`` has one date, and every reader of it reads this.
+
+    The seat change refuses on the standing, the deck's cool-off and the
+    pairwise record run from the moment — so the moment is folded on the
+    aggregate, once. Three endings: the entry that said *we played* whatever
+    the score does afterwards, the window closing on a plan nobody claimed,
+    and the call-off, dated from nothing but itself.
+    """
+
+    played = _a_game()
+    played.state_result(by=ANA, score=_score(), occurred_at=at(2))
+    assert played.became_history_at(at(3)) == at(2)
+    # Whatever happens to the score afterwards, the game went behind them at
+    # the entry: a proposal window closing does not re-date the evening.
+    assert played.became_history_at(at(48)) == at(2)
+
+    ghost = _a_game()
+    window_closes = instant(PLANNED_AT + PLAN_HORIZON + ENTRY_GRACE)
+    assert ghost.became_history_at(instant(window_closes + timedelta(hours=1))) == (
+        window_closes
+    )
+
+    called_off = _a_reopened_game()
+    called_off.call_off(by=ANA, occurred_at=at(2))
+    assert called_off.became_history_at(at(3)) == at(2)
+
+
+def test_a_game_awaiting_its_entry_is_not_history_whatever_its_moment_says():
+    """``None`` while the game is ahead — a plan whose agreed moment has passed
+    can still be moved, so the seat change's ``MOMENT_PASSED`` is a different
+    answer from this one and is not folded here."""
+
+    game = _a_game()
+    assert game.became_history_at(at(1)) is None
+    assert game.became_history_at(instant(PLANNED_AT + PLAN_HORIZON)) is None
+    assert game.standing_at(at(1)) is GameStanding.AWAITING_ENTRY

@@ -1611,8 +1611,8 @@
         "tags": [
           "deck"
         ],
-        "summary": "Match me",
-        "description": "Deals one batch of cards: one judgement at a time, no mode to pick and no setup.\n\n**No mode, in either direction.** The deck reads your own declared Play intent for the sport \u2014 *no preference* still gives you a working deck \u2014 and no mode crosses the wire either way.\n\n**Send `availability_override` if the player edited their week** on the Play screen, and the deal runs on it; omit it and the grid on the profile is used. It writes nothing: the deal comes back with a `KEEP_THESE_TIMES` prompt, and saving is a separate request the player makes. **A cleared week is a legal value** \u2014 unticking every cell deals a deck rather than being refused.\n\n**A spent deal deals again.** Post again for a new deal with a new `search_id`; running out of cards is not running out of people, and only a fresh deal that comes back empty means the pool is thin.\n\n**The order is the deck's variety**: people who already said *Let's play* to you, then the liveliest, then the rest. There is no re-sort \u2014 `sorts_available` is empty here, because a deck is one card at a time.\n\n**No widening is offered.** `rung_offers` is `null` on a deal: the relaxation ladder belongs to the shortlist.\n\n**Read it back** through `GET /api/v1/searches/{id}`, in this same shape.",
+        "summary": "Deal the deck",
+        "description": "Deals one batch of cards: one judgement at a time, no mode to pick and no setup.\n\n**No mode, in either direction, and no declaration read.** Every deal scores under the same ruler for every viewer \u2014 shared tags lead, overlap second, a wide level window \u2014 whatever either of you declared, and a player who never declared is dealt without being asked to. On every card `INTENT_ALIGNMENT` is in `degraded_terms` as `NOT_READ_ON_THIS_SURFACE`, which is the surface's doing and says nothing about the person.\n\n**Send `availability_override` if the player edited their week**, and the deal runs on it; omit it and the grid on the profile is used. It writes nothing: the deal comes back with a `KEEP_THESE_TIMES` prompt, and saving is a separate request the player makes. **A cleared week is a legal value** \u2014 unticking every cell deals a deck rather than being refused.\n\n**A spent deal deals again.** Post again for a new deal with a new `search_id`; running out of cards is not running out of people, and only a fresh deal that comes back empty means the pool is thin. `pool.remaining` says how many eligible people are beyond this hand, and drops as hands are dealt.\n\n**`pool.want_to_play_you`** says how many people have a live *Let's play* towards you that would be dealt \u2014 a count, never a list, and `0` when nobody is waiting. Somebody who said yes to you is dealt **unmarked**: they carry `inclusion_reason: INTEREST_LIFT` and nothing else says so, and they sit where their lift puts them rather than first by rule.\n\n**Somebody you already have a court with is not dealt** \u2014 a live challenge or game, and for the cool-off after it is behind you, which is a ruleset window (thirty days at release) and never crosses the wire. Find a game still lists them.\n\n**The order is the deck's variety**: the people Liveness lifted, the ones who said yes among them, then the rest. There is no re-sort \u2014 `sorts_available` is empty here, because a deck is one card at a time.\n\n**No widening is offered.** `rung_offers` is `null` on a deal: the relaxation ladder belongs to the shortlist.\n\n**Read it back** through `GET /api/v1/searches/{id}`, in this same shape, minus the two counts \u2014 they are true of the moment the hand was dealt.",
         "operationId": "deal_the_deck_api_v1_deck_post",
         "requestBody": {
           "content": {
@@ -1646,7 +1646,7 @@
             }
           },
           "409": {
-            "description": "`sport_not_rated` \u2014 you hold no rating for this sport.\n\n`play_intent_not_declared` \u2014 the deck has no mode to read, so it reads your declaration; without one there is nothing at all to go on. **Answering *no preference* is an answer** and gives you a working deck.\n\n`player_profile_not_committed` \u2014 there is no profile to read a radius, a grid or an area from.",
+            "description": "`sport_not_rated` \u2014 you hold no rating for this sport.\n\n`player_profile_not_committed` \u2014 there is no profile to read a radius, a grid or an area from.\n\n**Never `play_intent_not_declared`**: the deck reads no declaration, so a player who never made one is dealt without being asked to.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5457,10 +5457,11 @@
         "enum": [
           "NOT_YET_ON_THIS_PLATFORM",
           "NOTHING_FROM_YOU",
-          "NOTHING_FROM_THEM"
+          "NOTHING_FROM_THEM",
+          "NOT_READ_ON_THIS_SURFACE"
         ],
         "title": "DegradedReason",
-        "description": "Whose gap a stood-down term is. **Three values, and one line drawn.**\n\n``floor.py`` draws that line to decide a number \u2014 *the gate counts\nperson-specific gaps and never platform-wide absence* \u2014 and until now it was\ndrawn nowhere else, so the one list that crosses the wire held *reliability\nis not a thing here yet* and *they have not said what kind of evening they\nwant* as the same fact, twenty times a search.\n\n**It is a code and not a sentence**, on ``docs/adr/0106``'s rule: a client\nwriting *\"they haven't declared\"* off a bare ``Term`` would be an engine rule\nin TypeScript, and *\"nobody has a record yet\"* becomes silently false the day\n``matches`` ships, with no gate that catches it.\n\n**``NOTHING_FROM_THEM`` deliberately swallows reliability's three causes** \u2014\nno record, the last observation past the horizon, no strand clearing the\nobservation bar. Separating them would publish activity recency, which\n``docs/adr/0106`` \u00a75 refuses by name, so the refusal is held by the shape of\nthis vocabulary rather than by a reviewer noticing it in a later ticket.\n\n**``NOTHING_FROM_YOU`` wins a tie** \u2014 both grids blank, neither side tagged \u2014\nbecause it is the only one of the two a reader can act on."
+        "description": "Whose gap a stood-down term is. **Four values, and one line drawn twice.**\n\n``floor.py`` draws that line to decide a number \u2014 *the gate counts\nperson-specific gaps and never platform-wide absence* \u2014 and until now it was\ndrawn nowhere else, so the one list that crosses the wire held *reliability\nis not a thing here yet* and *they have not said what kind of evening they\nwant* as the same fact, twenty times a search.\n\nThe fourth value is the line drawn a second time, from the other side: a\nterm the **search** declined to read is nobody's gap either \u2014 not the\nplatform's, which has the provider, and not the person's, who may well have\ndeclared \u2014 and the deck is the surface that does it (``docs/adr/0169`` \u00a72).\nFiling that under either existing code would print a sentence about a person\nthat is false of them.\n\n**It is a code and not a sentence**, on ``docs/adr/0106``'s rule: a client\nwriting *\"they haven't declared\"* off a bare ``Term`` would be an engine rule\nin TypeScript, and *\"nobody has a record yet\"* becomes silently false the day\n``matches`` ships, with no gate that catches it.\n\n**``NOTHING_FROM_THEM`` deliberately swallows reliability's three causes** \u2014\nno record, the last observation past the horizon, no strand clearing the\nobservation bar. Separating them would publish activity recency, which\n``docs/adr/0106`` \u00a75 refuses by name, so the refusal is held by the shape of\nthis vocabulary rather than by a reviewer noticing it in a later ticket.\n\n**``NOTHING_FROM_YOU`` wins a tie** \u2014 both grids blank, neither side tagged \u2014\nbecause it is the only one of the two a reader can act on."
       },
       "DegradedTermSchema": {
         "properties": {
@@ -5469,7 +5470,7 @@
           },
           "reason": {
             "$ref": "#/components/schemas/DegradedReason",
-            "description": "Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` \u2014 the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), or theirs (`NOTHING_FROM_THEM`). The last deliberately covers every reason a record could not be read, because separating them would publish activity recency."
+            "description": "Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` \u2014 the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), theirs (`NOTHING_FROM_THEM`), or the surface's (`NOT_READ_ON_THIS_SURFACE` \u2014 the deck reads no intent for anybody, so the term stood down for every card and says nothing about either of you). `NOTHING_FROM_THEM` deliberately covers every reason a record could not be read, because separating them would publish activity recency."
           }
         },
         "type": "object",
@@ -7549,6 +7550,18 @@
             "title": "Post Gate",
             "description": "Always true. It travels so the count cannot be misread.",
             "default": true
+          },
+          "remaining": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Remaining",
+            "description": "**On a deal only.** How many people are eligible for your deck beyond this hand \u2014 after every deck exclusion, and not in the cards you were just dealt. It is what lets a counter say *N left* and be true of the whole pool rather than of ten; it drops by a hand as hands are dealt. Omitted on every other surface and on a read-back, where a count about a pool that has moved on would be a number about nothing."
+          },
+          "want_to_play_you": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Want To Play You",
+            "description": "**On a deal only.** How many people have a live *Let's play* towards you in this sport that would be dealt to you: every gate passed, not passed on by you within the pass window, not cooling off after a court you shared, and not already mutual. Somebody dealt this morning and unanswered still counts \u2014 the dealt memory is not applied. **A count and never a list**: nothing on any route names who. `0` is a measured nought, so a chip drawn from it is drawn at one and above."
           }
         },
         "type": "object",

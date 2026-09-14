@@ -110,8 +110,10 @@ def _mode_declared_by(
     declares padel *competitive* and tennis *for fun*, a relationship account
     declares competitive throughout, and a cohort member takes whatever the
     intent cycle gave them. So the mode is read off the searcher's declaration
-    through ``mode_for_intent`` — the deck's own rule, so a fixture and a deal
-    cannot come to two answers about what ``NO_PREFERENCE`` inherits.
+    through ``mode_for_intent`` — the rule a court born without a mode resolves
+    one by (``docs/adr/0150`` §5; it was the deck's until ``docs/adr/0169``
+    §2), so a fixture and a fill cannot come to two answers about what
+    ``NO_PREFERENCE`` inherits.
 
     A sport the searcher never declared is refused **by name**: it is a search
     the platform would have nothing to score, and a `KeyError` here would name a

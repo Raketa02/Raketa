@@ -588,7 +588,8 @@ class TelemetryRules:
 
 @dataclass(frozen=True)
 class InterestRules:
-    """The three numbers behind *Let's play*, a pass, and how many yeses stand.
+    """The four numbers behind *Let's play*, a pass, how many yeses stand, and
+    how long a shared court keeps somebody out of the deck.
 
     ``ttl_days`` matters because **an interest lift is the only guaranteed
     inclusion left**: a human's own *Let's play* may admit a candidate below the
@@ -605,11 +606,22 @@ class InterestRules:
     ``outstanding_cap_per_sport`` decides whether a player may **act**. It hides
     nobody and its bite is visible the instant it lands, which is why it is an
     ordinary ruleset row rather than one of the product numbers beside it.
+
+    ``deck_cool_off_days`` hides somebody the viewer is already **with** — a
+    live challenge or game between them, and this many days after the court is
+    behind them (``docs/adr/0169`` §6). A deck is for meeting people, and a
+    rematch is arranged in the chat the two already have. Deck only: Find a
+    game keeps ``docs/adr/0142`` §1's release. A row of its own rather than a
+    reading of ``pass_suppress_days``, deliberately equal to it today and free
+    to part from it; **nought is a legal value** and is what a released ruleset
+    that never knew the row says — no window after a court, while a court still
+    ahead is held out whatever the number.
     """
 
     ttl_days: int
     outstanding_cap_per_sport: int
     pass_suppress_days: int
+    deck_cool_off_days: int
 
 
 @dataclass(frozen=True)
@@ -1290,4 +1302,8 @@ def _validate_interest(interest: InterestRules) -> None:
     invariant(
         interest.outstanding_cap_per_sport >= 1,
         f"outstanding interest cap: {interest.outstanding_cap_per_sport}",
+    )
+    invariant(
+        interest.deck_cool_off_days >= 0,
+        f"deck cool-off days: {interest.deck_cool_off_days}",
     )

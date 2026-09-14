@@ -163,7 +163,7 @@ def sorts_available(
 
     For the deck: a deck is one card at a time, so there is no list in the
     player's hand for a control to reorder, and its **order is its whole
-    variety** — three bands plus ``PASS_SUPPRESS`` (``the-two-contracts.md`` §6).
+    variety** — two bands plus ``PASS_SUPPRESS`` (``the-two-contracts.md`` §6).
     A control that resorted a deal would be offering to undo the one thing the
     surface does. The surface decides it here rather than at each caller, because
     the search that has just run and the same deal read back a month later must

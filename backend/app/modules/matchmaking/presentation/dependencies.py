@@ -61,6 +61,7 @@ from app.bootstrap.composition import (
     build_player_score_query,
     build_ruleset,
     build_search_store,
+    build_shared_court_query,
     build_prompt_decline_ledger,
     build_prompt_ledger,
     build_suppression_ledger,
@@ -361,12 +362,16 @@ def get_run_deck_deal(
     interest: InterestLedgerDep,
     passes: PassLedgerDep,
 ) -> RunDeckDeal:
-    """The deck, assembled per request. **Three ledgers the shortlist has not.**
+    """The deck, assembled per request. **Three ledgers and one port the
+    shortlist has not.**
 
     The suppression cache and the pass record are the deck's alone — a pass
     reaches no other surface — and the interest ledger is here for the deck's own
     *already asked* exclusion, which is a read of the player's **own outgoing**
-    rows rather than the lift's read of incoming ones the workbench makes.
+    rows rather than the lift's read of incoming ones the workbench makes. The
+    court port is the cool-off's (``docs/adr/0169`` §6), read on this surface
+    and on no other, and it is built from the composition root like every
+    outward port so the seed's deal and a request's read the same courts.
 
     There is no prompt ledger: a deal raises no question, because the two a
     search can raise are about a grid it improvised and a widening it keeps
@@ -381,6 +386,7 @@ def get_run_deck_deal(
         suppression=suppression,
         interest=interest,
         passes=passes,
+        courts=build_shared_court_query(db),
     )
 
 

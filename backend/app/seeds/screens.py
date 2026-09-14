@@ -499,11 +499,12 @@ def _refuse_a_reason_line_that_cannot_be_drawn(
 def _refuse_a_deck_that_deals_nothing(record: SearchRecord, *, spent: bool) -> str:
     """*The deck deals >= N cards.*
 
-    A different surface and not a second read of the same one: the deck resolves
-    its weight vector from the viewer's **declaration** rather than from a mode,
-    orders on three bands, and applies exclusions no shortlist has. A cohort that
-    fills a list and empties a deal is a cohort that has proved half of what it
-    promised.
+    A different surface and not a second read of the same one: the deck scores
+    under **one ruler** for every viewer and reads no declaration, orders on two
+    bands, and applies exclusions no shortlist has — a cool-off among them, which
+    is why ``pool_history.py`` keeps the two faces the deck must deal past it. A
+    cohort that fills a list and empties a deal is a cohort that has proved half
+    of what it promised.
 
     **Read off the deal this run already made** rather than off a fresh one.
     ``DEALT_MEMORY`` is a day, so a second deal deals the remainder — and a

@@ -14,7 +14,10 @@ reason that line was drawn where it was.
 **There is no incoming list here, and there is no shape one could arrive in.**
 ``docs/adr/0109`` refuses an inbox: a one-sided yes was banked under a promise of
 silence, and the only way somebody else's yes reaches its recipient is as a
-mutual — which they can only see because they said yes first.
+mutual — which they can only see because they said yes first. The one thing
+that promise was narrowed by is a **count**, and it crosses on the deal's pool
+and not here (``docs/adr/0169`` §4, ``PoolSchema.want_to_play_you``): how many
+are waiting, never who.
 
 **Nothing here says how full anybody's inbox is.** Challenge load prints as a
 coarse code on a candidate row and nowhere else; a number about somebody else's

@@ -79,6 +79,7 @@ from app.bootstrap.composition import (
     build_read_plans,
     build_ruleset,
     build_search_store,
+    build_shared_court_query,
     build_skill_rating_repository,
     build_suppression_ledger,
     build_unit_of_work,
@@ -384,6 +385,7 @@ async def read_paths(
             suppression=suppression,
             interest=interest,
             passes=passes,
+            courts=build_shared_court_query(session),
         ),
         lineup=RunLineupSearch(
             workbench=workbench,

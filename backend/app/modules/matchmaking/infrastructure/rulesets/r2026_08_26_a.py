@@ -37,6 +37,13 @@ still sum to a hundred, and ``min_observations`` is the same three it always was
 now spelled once per strand because the field's shape moved under it. A *number*
 moving would still be a new dataset; a vocabulary widening is not one.
 
+**And a third time, for the deck's cool-off** (``docs/adr/0169`` §6, released as
+``2026.09.15-a``). ``InterestRules`` gained ``deck_cool_off_days`` — a required
+row, because a ruleset with a hole in it is one the validator cannot read as a
+whole — and this dataset says **nought**: *no window after a shared court* is
+what its deck did, and a number it never ran under would be a lie of the other
+kind. The same rule as the strand's edit above: the shape moved, no number did.
+
 No recorded search read either of the two struck weights, or any of the others:
 reliability has stood down platform-wide for every search this version has run,
 because ``NoPlayerScoresExist`` answered its provider. The precedent for editing
@@ -711,5 +718,12 @@ RULESET = Ruleset(
         ttl_days=21,
         outstanding_cap_per_sport=20,
         pass_suppress_days=30,
+        # Nought, and nought is the honest number: this dataset ran while the
+        # row did not exist, and *no window after a court* is what its deck
+        # did. The shape changed under it, on the precedent ``docs/adr/0160``
+        # set when the sixth strand widened a vector this file validates as
+        # exhaustive — the row is ``docs/adr/0169`` §6's; the edit is that
+        # record's kind of edit, and the header above says so.
+        deck_cool_off_days=0,
     ),
 )

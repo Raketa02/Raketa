@@ -135,13 +135,19 @@ def handle_of(address: str, cohort: Cohort = COHORT) -> str:
 #: is
 #: now most of them, which is what a record looks like in production anyway.
 #:
-#: **Thirty days, and the bound is a real one.** A game may not predate the profile of
-#: somebody who played it, the relationship accounts commit at forty, and the refusal
-#: below reads both — so this is the widest window every named account can be seated in
-#: without the ceiling becoming somebody's commit date. Four cohort members commit
-#: inside
-#: it and are refused out of the older courts by that same rule rather than by a list.
-THE_RECORD_GOES_BACK_DAYS: Final = 30
+#: **Thirty-nine days, and the bound is a real one.** A game may not predate the
+#: profile of somebody who played it, the relationship accounts commit at forty, and the
+#: refusal below reads both — so the ceiling has to stay short of forty, and it stood at
+#: thirty until the deck's **cool-off** arrived (``docs/adr/0169`` §6): somebody the
+#: protagonist has a court with inside thirty days of it being *behind* them is not in
+#: her deck, and ``you-passed-them`` is the one face her deck **must** deal, because a
+#: pass has no non-deal constructor. So the three courts they share sit beyond the
+#: cool-off — and the ghost among them a week further back still, because a ghost goes
+#: behind its players when its entry window closes, eight days after the plan, and it
+#: is that moment the cool-off runs from. The bound is exactly wide enough to hold it.
+#: Four cohort members commit inside the window and are refused out of the older courts
+#: by the commit-date rule rather than by a list.
+THE_RECORD_GOES_BACK_DAYS: Final = 39
 
 #: **The courts inside the sportsmanship card's own week, and the only ones anybody may
 #: be asked about.** Read down the endings rather than the scores.
@@ -166,11 +172,15 @@ THE_RATEABLE_WEEK: Final[tuple[PlayedGame, ...]] = (
         side_b=("cohort-a-07", "the-one-sport-player"),
         won_by="A",
     ),
+    # The fourth seat used to be ``your-yes-makes-it-mutual``, and cannot be: a court
+    # inside the deck's cool-off would hold them out of the deal whose card is their
+    # whole claim (``docs/adr/0169`` §6), so their courts sit past it and the two
+    # stars they were given move with the seat.
     PlayedGame(
         sport=Sport.PADEL.value,
         played_days_ago=7,
         side_a=(PROTAGONIST_HANDLE, "said-yes-to-you"),
-        side_b=("they-turned-down-your-court", "your-yes-makes-it-mutual"),
+        side_b=("they-turned-down-your-court", "in-your-line-up-still-deciding"),
         won_by="B",
     ),
     # **The court `cohort-a-16` sends, and the only one she is not on.** `cohort-a-06`
@@ -185,11 +195,14 @@ THE_RATEABLE_WEEK: Final[tuple[PlayedGame, ...]] = (
         won_by="B",
     ),
     # **The one nobody answered.** The score stands — silence confirms it — so the
-    # square is drawn and the dock lands on the two it was put to.
+    # square is drawn and the dock lands on the two it was put to. Her partner used
+    # to be ``you-passed-them``, and cannot be: a court inside the deck's cool-off
+    # would hold them out of the very deal that has to deal them (``docs/adr/0169``
+    # §6), so the one star she gives moves with the seat.
     PlayedGame(
         sport=Sport.PADEL.value,
         played_days_ago=4,
-        side_a=(PROTAGONIST_HANDLE, "you-passed-them"),
+        side_a=(PROTAGONIST_HANDLE, "you-challenged-them"),
         side_b=("you-said-yes-to-them", "cohort-a-13"),
         won_by="A",
         answered=False,
@@ -439,9 +452,14 @@ THE_RECORD_GOES_BACK: Final[tuple[PlayedGame, ...]] = (
         side_b=("the-one-sport-player", "they-turned-down-your-court"),
         won_by="B",
     ),
+    # **The three courts ``you-passed-them`` is on sit past the deck's cool-off**
+    # (``docs/adr/0169`` §6, ``THE_RECORD_GOES_BACK_DAYS``): a face she played inside
+    # thirty days is not dealt, and this is the one face the pass fixture needs dealt.
+    # Their record is as full as anybody's — a record is unbounded — and *Last 5* on
+    # every other seat here reads the same five games in a different order.
     PlayedGame(
         sport=Sport.PADEL.value,
-        played_days_ago=14,
+        played_days_ago=31,
         side_a=(PROTAGONIST_HANDLE, "you-passed-them"),
         side_b=("your-yes-makes-it-mutual", "you-said-yes-to-them"),
         won_by="A",
@@ -454,10 +472,12 @@ THE_RECORD_GOES_BACK: Final[tuple[PlayedGame, ...]] = (
         won_by="B",
     ),
     # **The first ghost.** Nobody claimed the evening and the entry window closed over
-    # it.
+    # it. Past the cool-off with the other two ``you-passed-them`` courts — and a
+    # week further back than they are, because the moment a ghost goes behind its
+    # players is the window closing, eight days after the plan.
     PlayedGame(
         sport=Sport.PADEL.value,
-        played_days_ago=16,
+        played_days_ago=39,
         side_a=(PROTAGONIST_HANDLE, "they-challenged-you"),
         side_b=("in-your-line-up-and-accepted", "you-passed-them"),
         won_by=None,
@@ -489,7 +509,7 @@ THE_RECORD_GOES_BACK: Final[tuple[PlayedGame, ...]] = (
     ),
     PlayedGame(
         sport=Sport.PADEL.value,
-        played_days_ago=20,
+        played_days_ago=33,
         side_a=(PROTAGONIST_HANDLE, "your-yes-makes-it-mutual"),
         side_b=("you-passed-them", "they-turned-down-your-court"),
         won_by="B",
@@ -581,9 +601,15 @@ WHAT_THE_POOL_SAID: Final[Mapping[str, Mapping[str, int]]] = {
     "cohort-a-13": {PROTAGONIST_HANDLE: 3, "you-said-yes-to-them": 2},
     "the-one-sport-player": {PROTAGONIST_HANDLE: 2, "cohort-a-07": 3},
     "said-yes-to-you": {PROTAGONIST_HANDLE: 5},
-    "you-passed-them": {PROTAGONIST_HANDLE: 1},
+    # The bottom of the scale, on the seat that took ``you-passed-them``'s place in
+    # the rateable week: their own courts are past the deck's cool-off now, which is
+    # also past the card's week, so nobody may be asked about them.
+    "you-challenged-them": {PROTAGONIST_HANDLE: 1},
     "you-said-yes-to-them": {PROTAGONIST_HANDLE: 4, "cohort-a-13": 5},
-    "your-yes-makes-it-mutual": {PROTAGONIST_HANDLE: 5, "said-yes-to-you": 4},
+    # ``your-yes-makes-it-mutual``'s two, on the seat that took theirs in the
+    # rateable week: their own courts are past the deck's cool-off, and past the
+    # card's week with it.
+    "in-your-line-up-still-deciding": {PROTAGONIST_HANDLE: 5, "said-yes-to-you": 4},
 }
 
 

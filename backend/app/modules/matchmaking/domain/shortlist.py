@@ -343,9 +343,16 @@ def score_all(
         # **The platform's own gaps are named here and not in the engine.** A
         # term function reports whichever side of the pairing was empty; a term
         # with no provider at all is nobody's gap, and ``absent`` is a fact about
-        # this wiring rather than about the numbers.
+        # this wiring rather than about the numbers. The terms the **surface**
+        # declines to read are the third kind, and the engine is told those
+        # before it reads, so they are never read at all.
         fit = attributed(
-            engine.score(searcher=searcher, candidate=fenced, ruleset=ruleset),
+            engine.score(
+                searcher=searcher,
+                candidate=fenced,
+                ruleset=ruleset,
+                stood_down=context.stood_down_terms,
+            ),
             context.absent_terms,
         )
         modified = ModifiedFit(
@@ -368,6 +375,7 @@ def score_all(
                     ruleset,
                     context.absent_terms,
                     newcomer=_is_new(candidate.row, context),
+                    stood_down=context.stood_down_terms,
                     # **The one lift that admits.** It is read here, at stage 5,
                     # rather than at stage 6 where the other liveness facts are:
                     # the floor is what it exempts from, and a candidate the
@@ -493,6 +501,11 @@ def _reciprocal(
         searcher=them,
         candidate=_searcher_as_candidate(row, context, searcher),
         ruleset=context.ruleset,
+        # **Stood down in both directions.** The deck reads no intent for a
+        # pairing, and the reverse pairing is the same pairing read from the
+        # other chair: a term the surface declined to ask must not reach the
+        # reciprocity signal by the back door.
+        stood_down=context.stood_down_terms,
     )
     return Reciprocal(fit_ab=row.modified.points, fit_ba=reverse.points, mode=mode)
 
@@ -517,7 +530,11 @@ def _searcher_as_candidate(
     return ScorableCandidate(
         player_id=str(facts.player_id),
         level=LevelReading(mu=facts.mu, sigma=facts.sigma),
-        declared_intent=facts.declared_intent.value,
+        # ``None`` for a viewer who never declared, which only the deck admits
+        # — and the deck stands the term down before it could read it.
+        declared_intent=(
+            None if facts.declared_intent is None else facts.declared_intent.value
+        ),
         tags=facts.tags,
         grid=searcher.grid,
         radius_km=float(facts.radius_km),
