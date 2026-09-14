@@ -92,3 +92,36 @@ export function handleStem(name: string): string {
 
 /** The two characters a handle separates words with. See `handleStem`. */
 const WORD_BREAK = /[.\s]/;
+
+/**
+ * **Two initials, for a poster** — `Tomek.K` drawn as `TK`, `dorota_w` as `DO`, `x` as `X`.
+ *
+ * **This one *is* an exception to ADR-0107 §4, and it is argued as one rather than smuggled
+ * under the rule** —
+ * [ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §3. `handleStem` above is a prefix somebody typed; two initials are a derived form, which is
+ * what [#338](https://github.com/Raketa02/Raketa/issues/338) §5 refused on the Chats rows. What
+ * §4 protects is a **sentence** — *addressing a person by a name they never gave it* — and this
+ * is a **drawing**: it goes over the generated poster on the yes screen's tile, where the
+ * gradient alone cannot say who at tile size, and over nothing else. **The fence has four
+ * sides**: never spoken, never in copy or a toast, never over a photograph, never on any other
+ * surface. The tile's spoken name is the whole handle, and the screen's sentence is built from
+ * whole handles — so nobody is ever addressed as `TK`.
+ *
+ * The cut is `handleStem`'s own word breaks — a dot or a space, so the two rules stay one — and
+ * `_` and `-` stay inside a word for the same reason they do there: `dorota_w` is one word and
+ * its first two characters are what it has to give. A handle that opens with a break keeps what
+ * follows it, because an initial for nothing is not an initial. Upper-cased **here**, for the
+ * drawing, and the handle itself is never touched.
+ */
+export function handleInitials(name: string): string {
+  const words = name.split(WORD_BREAK).filter((word) => word !== '');
+  const letters =
+    words.length >= 2
+      ? words.slice(0, INITIALS).map((word) => word.slice(0, 1))
+      : [(words[0] ?? name).slice(0, INITIALS)];
+  return letters.join('').toUpperCase();
+}
+
+/** How many a poster carries — two, as the mock draws them. */
+const INITIALS = 2;

@@ -39,7 +39,9 @@ component that ignores the theme fails `pnpm lint` rather than review.
 The audit describes an HTML file, and **its phone frame, dark stage, scenario rail, time bar
 and 900px breakpoint are harness — they do not ship.** The app _is_ the phone. Never build a
 frame, a stage or a scenario switcher, and never use the four stage colours (`#08222B`
-`#071C24` `#0B2B36` `#24505E`) — they are not in the theme.
+`#071C24` `#0B2B36` `#24505E`) — they are not in the theme. **The one dark screen is the yes
+screen**, on two colours of its own (`yesGroundCentre`, `yesGroundEdge`) that ADR-0167 fences
+as that screen's alone; it is not a dark mode and not a licence for a second dark surface.
 
 ## The four React Native traps
 
@@ -86,9 +88,12 @@ frame, a stage or a scenario switcher, and never use the four stage colours (`#0
   operate.** They are not interchangeable — and **`eyebrow` is the section heading**, in
   `muted`, uppercase. `h2` titles a card and never a section; five shipped surfaces got this
   wrong before the rule was written down.
-- **There is no sans role above `h1`.** `display` (26/700) existed for the Now card's weekday
-  figure and retired with it (#413, Part 16); a word that wants to be that large is a Part 16
-  decision, not a `fontSize`.
+- **There is no sans role above `h1` to reach for.** `display` (26/700) existed for the Now
+  card's weekday figure and retired with it (#413, Part 16); `yesWord` (32/800) exists for the
+  yes screen's one word and nothing else (ADR-0167, Part 16). A word that wants to be that
+  large is a Part 16 decision, not a `fontSize` and not a second use of `yesWord`.
+- **The pill is the chip's**, and the yes screen's two buttons through `Button`'s `shape` —
+  the one exception, fenced. Everywhere else a button is 10pt.
 
 This design system covers `frontend_player/` **only.** The club app has its own; the palettes
 converge because it is one brand, but the values are never shared.

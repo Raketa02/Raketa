@@ -490,7 +490,6 @@ export {
   SEEN_EVERYBODY_TITLE,
   WIDEN_IN_YOU,
   interestToast,
-  mutualChallengeToast,
   mutualToast,
   outgoingYeses,
   passedToast,

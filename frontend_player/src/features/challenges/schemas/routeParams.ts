@@ -45,3 +45,53 @@ export function parseChallengeRouteParams(
  * the game screen and the Now card push it too, through `FillTheSeat`.
  */
 export const fillRoute = (challengeId: string) => `/chats/challenge/${challengeId}/fill` as const;
+
+/**
+ * **The yes screen, under the challenge it is about** — `…/yes?which=challenge` after *I'm in*,
+ * `…/yes?which=mutual` after the deck's *Let's play* come back mutual and naming a chat
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §1, [#433](https://github.com/Raketa02/Raketa/issues/433),
+ * [#434](https://github.com/Raketa02/Raketa/issues/434)).
+ *
+ * Keyed by the challenge id — both entries end in a challenge, so the screen reads everything
+ * it draws from the one the cache holds — with one parameter saying **which yes** it is, which
+ * decides the word, the picture and where *Later* lands. A route param is not app state, so
+ * the parameter is a closed union and a value outside it is a link this app cannot read: the
+ * route leaves rather than drawing a screen about nothing.
+ *
+ * Two members, and the union is what keys the two faces: the word and the sentence are
+ * `Record`s over it in the presentation deck, so a third yes fails to compile until it has its
+ * words, rather than drawing the wrong ones.
+ */
+export const WHICH_YES = ['challenge', 'mutual'] as const;
+
+export type WhichYes = (typeof WHICH_YES)[number];
+
+export const yesRouteParams = challengeRouteParams.extend({
+  which: z.enum(WHICH_YES),
+});
+
+export type YesRouteParams = z.infer<typeof yesRouteParams>;
+
+/** `undefined` when the link cannot be trusted. The route decides what that looks like. */
+export function parseYesRouteParams(
+  params: Record<string, string | string[] | undefined>,
+): YesRouteParams | undefined {
+  const result = yesRouteParams.safeParse(params);
+  return result.success ? result.data : undefined;
+}
+
+/** Where a yes lands, spelled once for the two surfaces that push it: the challenge screen, and the deck's yes. */
+export const yesRoute = (challengeId: string, which: WhichYes) =>
+  ({ pathname: `/chats/challenge/${challengeId}/yes`, params: { which } }) as const;
+
+/**
+ * **The Chats list** — where the yes screen's *Later* lands, and what the room is opened over.
+ *
+ * The shell's `SHELL_TAB_ROOT.chats`, spelled here for the same reason `fillRoute` is: every
+ * `/chats/challenge/…` path is this feature's, and a pop to their parent is this feature's move
+ * — a `dismissTo` down the stack rather than the shell's reset, which lays a stack down and
+ * ends a Play session on the way. The two route files under it already redirect a bad link
+ * here by the same literal.
+ */
+export const CHATS_LIST_ROUTE = '/chats' as const;

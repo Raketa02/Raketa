@@ -16,16 +16,30 @@
  *   deck it sits above.
  */
 
-import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { router } from 'expo-router';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { onlineManager } from '@tanstack/react-query';
 
+import { LATER, MATCHED_WORD, matchedAnnouncement } from '@/features/challenges/types';
+import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import {
+  pressHardwareBack,
+  stopWatchingHardwareBack,
+  watchHardwareBack,
+} from '@/test-support/hardwareBack';
+import {
+  CHALLENGES_PATH,
+  CONVERSATIONS_PATH,
+  GATE_USER,
   launchSignedIn,
+  stubConversation,
+  stubConversations,
+  stubEntries,
   stubGate,
   stubInterest,
   stubProfileOptions,
@@ -56,7 +70,6 @@ import {
   SEEN_EVERYBODY_TITLE,
   WIDEN_IN_YOU,
   interestToast,
-  mutualChallengeToast,
   mutualToast,
   outgoingYeses,
   passedToast,
@@ -229,6 +242,87 @@ function expressed(
   };
 }
 
+const ME = GATE_USER.id;
+const MAREK = 'aaaaaaaa-0000-4000-8000-000000000001';
+const CHALLENGE = 'cccccccc-0000-4000-8000-00000000000c';
+const ROOM = 'cccccccc-0000-4000-8000-000000000007';
+const GAME = 'cccccccc-0000-4000-8000-000000000009';
+const READ_AT = '2026-09-01T18:00:00Z';
+
+const YES_SCREEN = `/chats/challenge/${CHALLENGE}/yes`;
+const THE_ROOM = `/chats/conversation/${ROOM}`;
+
+/**
+ * **The challenge the mutual named**, as `GET /challenges/{id}` answers when the yes screen asks
+ * for it — the deck never held it. In tennis the two of them face each other and the court is
+ * `ON` from birth; in padel they are partners on one side with the other still to fill
+ * (ADR-0154 §2). Neither seat carries a card: a mutual-born court is drawn on posters here.
+ */
+function matched(sport: 'TENNIS' | 'PADEL'): Wire['ChallengeDetailResponse'] {
+  const marek = { player_id: MAREK, answer: 'ACCEPTED' as const, nickname: 'Marek Z.' };
+  const me = { player_id: ME, answer: 'ACCEPTED' as const, nickname: 'ada' };
+  const nobody = { player_id: null, answer: null, answer_by: null, nickname: null };
+  return {
+    read_at: READ_AT,
+    challenge_id: CHALLENGE,
+    sport,
+    mode: null,
+    window: null,
+    organiser_id: MAREK,
+    standing: sport === 'TENNIS' ? 'ON' : 'LINE_UP_INCOMPLETE',
+    opened_at: READ_AT,
+    seats:
+      sport === 'TENNIS'
+        ? [
+            { side: 'A', ...marek },
+            { side: 'B', ...me },
+          ]
+        : [
+            { side: 'A', ...marek },
+            { side: 'A', ...me },
+            { side: 'B', ...nobody },
+            { side: 'B', ...nobody },
+          ],
+  };
+}
+
+const MAREK_AND_ME = [
+  { player_id: MAREK, nickname: 'Marek Z.' },
+  { player_id: ME, nickname: 'ada' },
+];
+
+/** The room the mutual's challenge opened, listed and openable. */
+function theRoomIsThere(sport: 'TENNIS' | 'PADEL', gameId: string | null) {
+  stubConversations(transport, [
+    {
+      conversation_id: ROOM,
+      challenge_id: CHALLENGE,
+      game_id: gameId,
+      sport,
+      members: MAREK_AND_ME,
+      people: MAREK_AND_ME,
+      last_entry: null,
+    },
+  ]);
+  stubConversation(transport, {
+    read_at: READ_AT,
+    conversation_id: ROOM,
+    challenge_id: CHALLENGE,
+    game_id: gameId,
+    sport,
+    members: MAREK_AND_ME,
+    people: MAREK_AND_ME,
+    entries: [],
+  });
+  stubEntries(transport, ROOM);
+}
+
+/** The spoken *Matched!* for the one card every walk says yes to. */
+const MATCHED_SPOKEN = matchedAnnouncement({
+  yours: [{ kind: 'person', playerId: ME, nickname: 'ada' }],
+  theirs: [{ kind: 'person', playerId: MAREK, nickname: 'Marek Z.' }],
+});
+
 let transport: Transport;
 
 beforeEach(() => {
@@ -248,6 +342,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  stopWatchingHardwareBack();
   transport.restore();
   onlineManager.setOnline(true);
   queryClient.clear();
@@ -574,40 +669,35 @@ describe('yes and no', () => {
     });
   });
 
-  it('says a one-sided yes is silent, because nobody is told', async () => {
+  /**
+   * **Today's sentence, verbatim, and nowhere to go**: nothing pretends the other person has
+   * been told, and a one-sided yes is not a screen (ADR-0167 §1).
+   */
+  it('says a one-sided yes is silent, because nobody is told, and stays on the deck', async () => {
     await openDeck();
     fireEvent.press(await screen.findByLabelText("Let's play, Marek Z."));
 
     await waitFor(() => expect(toasts()).toEqual([interestToast('Marek Z.')]));
+    expect(screen).toHavePathname('/play/deck');
   });
 
   /**
    * The one thing a yes tells you about the other person, and it is earned: they said it
    * first. The sentence comes off the **response** rather than off the press, which is why
    * the two arms are two runs — a client cannot know which it was until the answer lands.
+   *
+   * **And a mutual naming nothing is today's toast, verbatim, and no screen**: the pair
+   * already have a game being arranged, or a gate refused — one answer, two causes,
+   * deliberately not told apart (ADR-0154 §3) — and a full-screen celebration must never
+   * overstate what happened (ADR-0167 §1).
    */
-  it('tells a mutual to both sides, and says nothing about a game it was not given', async () => {
+  it('tells a mutual naming no chat to both sides, verbatim, and stays on the deck', async () => {
     transport.on('POST', INTEREST, () => json(expressed(true)));
     await openDeck();
     fireEvent.press(await screen.findByLabelText("Let's play, Marek Z."));
 
     await waitFor(() => expect(toasts()).toEqual([mutualToast('Marek Z.')]));
-  });
-
-  /**
-   * The other arm, and the reason the field exists (ADR-0154). A mutual that opened a game —
-   * or landed on one an earlier mutual opened and nobody has finished with — says where it
-   * is, instead of leaving a player told *you both said yes* and looking for a game nobody
-   * mentioned.
-   */
-  it('says where the game is when the tap came back with one', async () => {
-    transport.on('POST', INTEREST, () =>
-      json(expressed(true, 3, 'cccccccc-0000-4000-8000-00000000000c')),
-    );
-    await openDeck();
-    fireEvent.press(await screen.findByLabelText("Let's play, Marek Z."));
-
-    await waitFor(() => expect(toasts()).toEqual([mutualChallengeToast('Marek Z.')]));
+    expect(screen).toHavePathname('/play/deck');
   });
 
   it('names the person a pass was about', async () => {
@@ -658,6 +748,191 @@ describe('yes and no', () => {
 
     expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
     expect(transport.requestsTo('POST', INTEREST)).toHaveLength(0);
+  });
+});
+
+/**
+ * **A mutual naming a challenge opens the yes screen** — *Matched!* — and the mutual-with-chat
+ * toast is retired ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §1, §4; [#434](https://github.com/Raketa02/Raketa/issues/434)). Walked end to end: the deck,
+ * the reply, the screen, and each of its two doors back out.
+ */
+describe('a mutual that named a challenge', () => {
+  const TWO_CARDS = deal({
+    candidates: [card('Marek Z.', MAREK), card('Ana K.', 'aaaaaaaa-0000-4000-8000-000000000002')],
+  });
+
+  /** A deal of two, and *Let's play* on the first, answered mutual with the named challenge. */
+  async function sayYesToMarek(sport: 'TENNIS' | 'PADEL') {
+    transport.on('POST', DECK, () => json(TWO_CARDS));
+    transport.on('POST', INTEREST, () => json(expressed(true, 3, CHALLENGE), 201));
+    transport.on('GET', `${CHALLENGES_PATH}/${CHALLENGE}`, () => json(matched(sport)));
+    if (sport === 'TENNIS') {
+      // Declared in both, so the chip deals rather than asking what kind of game.
+      stubProfileSurface(transport, {
+        availability: [{ day: 2, part: 'EVENING' }],
+        search_radius_km: 12,
+        play_intents: { PADEL: 'FOR_FUN', TENNIS: 'COMPETITIVE' },
+      });
+    }
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+    if (sport === 'TENNIS') {
+      fireEvent.press(screen.getByLabelText('Tennis'));
+      await waitFor(() => expect(dealBodies()).toEqual([{ sport: 'PADEL' }, { sport: 'TENNIS' }]));
+    }
+    fireEvent.press(await screen.findByLabelText("Let's play, Marek Z."));
+    await waitFor(() => expect(screen).toHavePathname(YES_SCREEN));
+    // The pathname moves a beat before the screen is on the tree.
+    await screen.findByTestId('yes-screen');
+  }
+
+  const yesScreen = () => within(screen.getByTestId('yes-screen'));
+  /** The initials are hidden from assistive technology on purpose; a query about the drawing says so. */
+  const HIDDEN_TOO = { includeHiddenElements: true } as const;
+
+  it.each(['TENNIS', 'PADEL'] as const)(
+    'opens the yes screen as a mutual’s, with two tiles and no vs, in %s',
+    async (sport) => {
+      await sayYesToMarek(sport);
+
+      expect(screen).toHaveSearchParams(expect.objectContaining({ which: 'mutual' }));
+      expect(screen.queryAllByRole('tab')).toHaveLength(0);
+      // The picture as a sentence — *Matched! You and Marek Z.* — and the word on the screen.
+      expect(await yesScreen().findByRole('header', { name: MATCHED_SPOKEN })).toBeTruthy();
+      expect(yesScreen().getByText(MATCHED_WORD)).toBeTruthy();
+      // You and them, and nothing else: no `vs`, and no empty seat — not even in padel, where
+      // the court has a side still to fill.
+      expect(yesScreen().getAllByTestId('yes-tile-poster')).toHaveLength(2);
+      expect(yesScreen().queryAllByTestId('yes-tile-empty')).toHaveLength(0);
+      expect(yesScreen().queryByText('vs', HIDDEN_TOO)).toBeNull();
+      // And the retired sentence is not said: the screen is the whole of what a mutual says.
+      expect(toasts()).toEqual([]);
+      expect(yesScreen().getByRole('button', { name: OPEN_THE_CHAT })).toBeTruthy();
+      expect(yesScreen().getByRole('button', { name: LATER })).toBeTruthy();
+    },
+  );
+
+  it('goes back to the deck on Later, with the next card up', async () => {
+    await sayYesToMarek('PADEL');
+    fireEvent.press(yesScreen().getByRole('button', { name: LATER }));
+
+    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+    expect(await screen.findByLabelText(/^Ana K\./)).toBeTruthy();
+    expect(screen.queryByLabelText(/^Marek Z\./)).toBeNull();
+    // The same deal, found rather than dealt again.
+    expect(dealBodies()).toHaveLength(1);
+  });
+
+  it('is what the device’s back does', async () => {
+    watchHardwareBack();
+    await sayYesToMarek('PADEL');
+
+    let claimed = false;
+    act(() => {
+      claimed = pressHardwareBack();
+    });
+
+    expect(claimed).toBe(true);
+    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+    expect(await screen.findByLabelText(/^Ana K\./)).toBeTruthy();
+  });
+
+  /**
+   * **The same landing as after a challenge's yes — `[Chats list, the room]` — reached by the
+   * tab's own move.** The list is nowhere under the deck, so the shell lays it down and the room
+   * is pushed over it: back from the room is the list with nothing behind it, and Play, entered
+   * again, finds the deal it dealt on rather than dealing a second one. A tennis mutual is `ON`
+   * from birth, so the door waits for the row to carry its game, as the challenge's does.
+   */
+  it('opens the room under the Chats tab, back is the Chats list, and Play keeps its held deal', async () => {
+    await sayYesToMarek('TENNIS');
+    theRoomIsThere('TENNIS', GAME);
+
+    fireEvent.press(yesScreen().getByRole('button', { name: OPEN_THE_CHAT }));
+    await waitFor(() => expect(screen).toHavePathname(THE_ROOM), { timeout: 5000 });
+
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    expect(screen.getAllByRole('tab')).toHaveLength(5);
+    // The list is the bottom of the stack: no deck, no celebration behind it.
+    expect(router.canGoBack()).toBe(false);
+
+    // Play, entered again, holds the deal — the next card is up and nothing was dealt.
+    fireEvent.press(screen.getByLabelText('Play'));
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    await screen.findByLabelText('Tuesday evening');
+    fireEvent.press(screen.getByLabelText(MATCH_ME_TITLE));
+    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+    expect(await screen.findByLabelText(/^Ana K\./)).toBeTruthy();
+    expect(dealBodies()).toEqual([{ sport: 'PADEL' }, { sport: 'TENNIS' }]);
+  });
+
+  /**
+   * **Past the bound the door is the list, from the deck too** — and the list is reached by the
+   * tab's own move alone, with no room to push over it: a worker that is down or behind must not
+   * dead-end the player on a celebration, and the row will appear where they land.
+   */
+  it('lands on the Chats list when the room is not listed within the bound, with the deck gone', async () => {
+    const before = transport.requestsTo('GET', CONVERSATIONS_PATH).length;
+    await sayYesToMarek('PADEL');
+    fireEvent.press(yesScreen().getByRole('button', { name: OPEN_THE_CHAT }));
+
+    // Not at once: the list is asked its whole bound first, and the tap waits on the button.
+    await waitFor(() =>
+      expect(
+        transport.requestsTo('GET', CONVERSATIONS_PATH).length - before,
+      ).toBeGreaterThanOrEqual(3),
+    );
+    expect(screen).toHavePathname(YES_SCREEN);
+
+    await waitFor(() => expect(screen).toHavePathname('/chats'), { timeout: 9000 });
+    expect(screen.getAllByRole('tab')).toHaveLength(5);
+    expect(router.canGoBack()).toBe(false);
+  }, 12000);
+
+  /**
+   * **A slow reply must not swallow the moment.** The yes is optimistic and the reply may land
+   * after the player has moved on — here made in a tunnel, held until the connection returns
+   * (`networkMode: 'online'`), and answered once they have gone to Chats and the deck is off the
+   * stack. The screen still opens, wherever they are, because the push lives with the mutation
+   * and not with the screen that fired it (ADR-0167 §1).
+   *
+   * Offline rather than a reply simply slow to come: the harness runs every pending timer on
+   * every navigation, so a request in flight across the tab press would be timed out by the
+   * walk itself rather than answered late by the server.
+   */
+  it('opens the yes screen when the reply lands after the deck was left', async () => {
+    transport.on('POST', DECK, () => json(TWO_CARDS));
+    transport.on('GET', `${CHALLENGES_PATH}/${CHALLENGE}`, () => json(matched('PADEL')));
+    let answer = (_response: Response) => {};
+    transport.on('POST', INTEREST, () => new Promise<Response>((resolve) => (answer = resolve)));
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    act(() => onlineManager.setOnline(false));
+    fireEvent.press(screen.getByLabelText("Let's play, Marek Z."));
+    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+
+    // Gone to Chats before the reply: the deck is off the stack, and nothing has been sent.
+    fireEvent.press(screen.getByLabelText(/^Chats/));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    expect(transport.requestsTo('POST', INTEREST)).toHaveLength(0);
+
+    // The connection returns, the yes goes, and the reply lands on Chats.
+    act(() => onlineManager.setOnline(true));
+    await waitFor(() => expect(transport.requestsTo('POST', INTEREST)).toHaveLength(1));
+    await act(async () => {
+      answer(json(expressed(true, 3, CHALLENGE), 201));
+    });
+
+    await waitFor(() => expect(screen).toHavePathname(YES_SCREEN));
+    await screen.findByTestId('yes-screen');
+    expect(await yesScreen().findByRole('header', { name: MATCHED_SPOKEN })).toBeTruthy();
+    expect(toasts()).toEqual([]);
+    // And *Later* is a pop to wherever the reply found them.
+    fireEvent.press(yesScreen().getByRole('button', { name: LATER }));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
   });
 });
 

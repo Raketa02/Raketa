@@ -440,3 +440,88 @@ says the sentence then — a departed seat is still a seat — so what went is t
 words. **_Not this time_ is deliberately not this**: a no stays on its sentence (`challengeScreen.test.tsx`
 pins it), because it is not behind a sheet and #429 did not ask; the same argument applies to it,
 and it is one `router.back` in `send` if it should.
+
+**A yes lands on the yes screen, and the room is opened by a tap**
+([#433](https://github.com/Raketa02/Raketa/issues/433),
+[ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)).
+_`I'm in` goes to the room_ is retired: the reply is still the redraw, and then the challenge screen
+**pushes the yes screen** — `/chats/challenge/{id}/yes?which=challenge`, this feature's own, keyed by
+the challenge and by one Zod-checked _which yes_ — a challenge's here; a mutual's, _Matched!_, is
+the deck's door and the last paragraph of this record
+([#434](https://github.com/Raketa02/Raketa/issues/434)). The screen is the app's one
+dark ground: the reader's tile, `vs`, the other side's — on a padel four the partner's tile or an
+outlined empty seat beside the reader's — the one lime word **Challenge!** whatever standing the
+reply came back with, and two pills. It **reads everything it draws from the challenge the cache
+holds** (`useHeldChallenge`, `staleTime: Infinity` over the detail entry the reply was just written
+into, so no second read and no re-fold mid-entrance): `domain/yesScreen.ts` folds the seats in wire
+order into the reader's side first and the reader first within it, and **a seat is a person only
+when its occupant has accepted** — deciding, declined, lapsed, left and nobody are one empty seat,
+which is the room's own membership rule, so the picture and the row he lands on next agree. A bad
+or foreign parameter draws the ground alone and leaves for the Chats list. **A tile is the face the
+app already draws** — `PlayerPhoto`'s `face` box at the two sizes the mocks measure — with two
+additions for this screen: `handleInitials` over a **poster** (never over a photograph; ADR-0167 §3's
+one drawing exempt from ADR-0107 §4, on a four-sided fence the presentation deck holds — never
+spoken, never in copy), and the outlined empty seat. The other players' photographs come off the
+seat cards; **the reader's own comes off their own record** through `player_record`'s `useOwnFace`
+— a new feature edge the boundary script holds open — read once **per open** rather than cached for
+the session, because the signed link lives five minutes and a cached one would be drawn as a blank
+tile on the second yes of an evening; the entrance waits for that read, so no tile swaps mid-slide,
+and the poster stands in if it does not answer — it waits for the **link**, not the bytes:
+`PlayerPhoto` draws a photograph as a bare `Image` with nothing beneath it while it loads, so a
+photo tile on a slow connection can still fill in mid-slide, which is that primitive's and not this
+screen's. **The awaited door moved here and runs from the moment the screen opens**: `useAwaitedChatDoor` unchanged in what it waits for — the room, or the
+room and its game when the reply was `ON` — and now answering `expired` as well, with its
+six-second bound **run from the first answer after the wait began** rather than from the wait's own
+beginning (the reasons, the harness's included, are on `roomOpening.ts`). _Open the chat_ is `busy` until the room is known and never
+disabled: it lands as **[Chats list, the room]** — `dismissTo` the list, then the push, so back from
+the room is the list and never the celebration — and past the bound it lands on the list, where the
+row will appear. _Later_ and Android back (`useHardwareBack`) `dismissTo` the list, the challenge
+screen popped with it; the iOS swipe-back is off on the route (`TabShell`), because a swipe that
+popped to the challenge screen would land somewhere _Later_ never does. **It moves once**, on
+`motion.yesEntrance` — the sides slide in and meet, the word rises, the doors fade in last, one
+success haptic as the word lands through the app's first haptics port — and under reduced motion it
+is simply there and silent; under a screen reader it is simply there and buzzes once, because a
+buzz is not a picture. The listener gets the picture as one header sentence built from whole
+handles — _Challenge! You and Ola.N against Kuba.W and Zofia.B_, _an empty seat_ where one is —
+announced as the faces land; the doors sit outside it. **What did not move**: `Not this time` goes
+nowhere, and the challenge screen's own _Open the chat_ on later visits is `useChatDoor` read once,
+on every arm whose reader the room would hold, exactly as before. The four walks that pinned
+_accept pushes the room_ are rewritten to the new exits in `yesScreen.test.tsx`; the theme's
+values — two ground colours, `yesWord`, `size.yesTile`, the button's `shape`, the entrance — and
+their Part 16 rows travelled in the same commit. The measurements are the mocks' and not the
+record's prose: the word is 32 rather than _about 30_, the ground's two bytes are what the mocks
+render rather than the stage colours the spec expected, and the pills are drawn at the existing 40
+where the mock measures 38. **`expo-haptics` is a native module, so a development build has to be
+rebuilt** (`pnpm ios` / `pnpm android`) before the screen buzzes; `npx expo install --check` and
+`pnpm doctor` both agree with the SDK. **Not seen on a device** — the author checks the screen
+against the three mocks.
+
+**The yes screen's second face — a mutual's, _Matched!_**
+([#434](https://github.com/Raketa02/Raketa/issues/434),
+[ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+§1, §4). `which=mutual` is the second member of the route's _which yes_, and **the two faces are
+keyed once**: the word (`YES_WORD`), the sentence (`YES_SENTENCE`) and, on the screen, the fold,
+the `vs` and the two moves out (`FACE`) are each a `Record` over the union, so a third yes fails
+to compile in three places rather than falling into an `else` arm. The deck pushes it from its
+mutation's own success handler (the play record says why), and **the challenge is fetched on
+open**: `useHeldChallenge`'s `staleTime: Infinity` reads what is held and fetches only where
+nothing is, which after a challenge's yes is never and after a mutual's is always, since the deck
+never held it — and the entrance waits for it as it waits for the faces. **The picture is
+`pairForReader`**: you first, then everybody else who has said yes, and **no empty seat in every
+sport** — a padel mutual is a four-seat court with a side still to fill, and the fold draws two
+faces off it, sized as two (`tilesIn` counts the picture, not the court). It is _everybody who has
+said yes_ and not _the one this tap was about_, deliberately: the reply names _the challenge these
+two have_ — the one it minted, or the one an earlier mutual opened that is not finished with
+(ADR-0154 §1) — and the screen holds the challenge and not the card, so a court an earlier mutual
+opened that has since filled draws everybody who is in, under _Matched!_ and with no `vs`. On the
+mutual that minted it that is exactly two, which is every walk the suites take; the grown court is
+a decision the ticket did not make and this record does, on the line that a picture of who is in
+is the honest picture and picking two of four would be picking. The listener hears _Matched! You
+and Marek.P_ — `matchedAnnouncement`, whole handles, joined with _and_ and never _against_. **The
+exits by face.** After a mutual's yes, _Later_ and the device's back are a plain pop, and the
+Chats list where there is nothing to pop to — a cold link to the route, which
+`yesScreen.test.tsx` walks; _Open the chat_ lands as `[Chats list, the room]` through the shell's
+`openTab`, the second caller that surface has, and past the bound on the list alone — the deck's
+suite walks both. The challenge's face is untouched: `dismissTo` down to the list under the
+challenge screen for both moves, as before. `LATER`, `MATCHED_WORD` and `matchedAnnouncement`
+cross the feature's surface for the deck's suite and nothing else.

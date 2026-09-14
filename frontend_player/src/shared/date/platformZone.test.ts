@@ -8,12 +8,14 @@
  * would break are the ones about days.
  */
 
+import { setDeviceZone } from '@/test-support/deviceZone';
+
 import { daysAfter, platformDay, weekdayOf } from './platformZone';
 
 const DEVICE_ZONE = process.env.TZ;
 
 afterEach(() => {
-  process.env.TZ = DEVICE_ZONE;
+  setDeviceZone(DEVICE_ZONE);
 });
 
 describe('which weekday a calendar day is', () => {
@@ -31,7 +33,7 @@ describe('which weekday a calendar day is', () => {
   it('does not move with the device zone', () => {
     const zones = ['UTC', 'Pacific/Kiritimati', 'Pacific/Midway', 'Europe/Warsaw'];
     const read = zones.map((zone) => {
-      process.env.TZ = zone;
+      setDeviceZone(zone);
       return weekdayOf('2026-09-12');
     });
 
@@ -51,7 +53,7 @@ describe('which day an instant falls on', () => {
   it('reads the platform zone and never the device one', () => {
     const zones = ['UTC', 'Pacific/Kiritimati', 'Pacific/Midway', 'America/Los_Angeles'];
     const read = zones.map((zone) => {
-      process.env.TZ = zone;
+      setDeviceZone(zone);
       return platformDay('2026-09-12T21:30:00Z');
     });
 
@@ -124,7 +126,7 @@ describe('a day and a number of days after it', () => {
   it('does not move with the device zone or with a clock change', () => {
     const zones = ['UTC', 'Pacific/Kiritimati', 'Pacific/Midway', 'America/Los_Angeles'];
     const read = zones.map((zone) => {
-      process.env.TZ = zone;
+      setDeviceZone(zone);
       return daysAfter('2026-03-28', 2);
     });
 

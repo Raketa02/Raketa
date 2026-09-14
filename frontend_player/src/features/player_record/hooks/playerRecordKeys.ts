@@ -78,4 +78,13 @@ export const playerRecordKeys = {
       subject.kind === 'me' ? 'me' : subject.playerId,
       sport ?? 'their-most-played',
     ] as const,
+  /**
+   * **The reader's own face** — `useOwnFace`, the yes screen's one read of this feature.
+   *
+   * Its own entry rather than `detail({ kind: 'me' }, undefined)`, because the two are different
+   * questions of one route: the sheet holds a whole record and is closed with it, and this holds
+   * a URL and is read once per open of a screen the sheet is never on. Sharing the entry would
+   * have one observer's `select` and `gcTime` deciding for the other.
+   */
+  ownFace: () => [...playerRecordKeys.all, 'me', 'face'] as const,
 };

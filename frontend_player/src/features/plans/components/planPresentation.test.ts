@@ -7,6 +7,8 @@
  * spoken one never is.
  */
 
+import { setDeviceZone } from '@/test-support/deviceZone';
+
 import type { Plan } from '../domain/slots';
 
 import {
@@ -131,11 +133,11 @@ describe('the day, as the card draws it', () => {
   /** 22:30 UTC on the 8th is already the 9th in Warsaw, whatever the phone thinks. */
   it('reads today in the platform zone, never the device one', () => {
     const held = process.env.TZ;
-    process.env.TZ = 'Pacific/Midway';
+    setDeviceZone('Pacific/Midway');
     try {
       expect(cardDay('2026-08-09', '2026-08-08T22:30:00Z').name).toBe(TODAY);
     } finally {
-      process.env.TZ = held;
+      setDeviceZone(held);
     }
   });
 });

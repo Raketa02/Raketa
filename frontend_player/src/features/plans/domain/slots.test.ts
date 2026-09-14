@@ -8,6 +8,8 @@
  * day row **shrinks** rather than offering a day that would be refused.
  */
 
+import { setDeviceZone } from '@/test-support/deviceZone';
+
 import {
   HOURS_OFFERED,
   PLACE_CAP,
@@ -151,14 +153,14 @@ describe('whether a day is today', () => {
     const held = process.env.TZ;
 
     const read = zones.map((zone) => {
-      process.env.TZ = zone;
+      setDeviceZone(zone);
       return [
         dayIsToday('2026-09-12', '2026-09-12T21:00:00Z'),
         dayIsToday('2026-09-13', '2026-09-12T23:00:00Z'),
       ];
     });
 
-    process.env.TZ = held;
+    setDeviceZone(held);
     expect(read).toEqual([
       [true, true],
       [true, true],

@@ -31,24 +31,26 @@
  * with the app's own focus refetch, so a redraw can take **I'm in** away while the player is
  * looking at it. A mis-tap prevented beats a mis-tap refused.
  *
- * ## `I'm in` goes to the room, and the door is drawn wherever the join answers
+ * ## `I'm in` goes to the yes screen, and the door is drawn wherever the join answers
  *
  * Accepting is the one act in the app whose whole point is a room to talk in — the singles
  * room with the person who challenged you, the doubles room the people already in are already
  * talking in, its history included, because membership is derived and never cut at the moment
- * you joined. So the reply is still the redraw, and then **the screen goes to the room**: the
- * door is ADR-0149 §3's join over the player's rooms, and the room is opened off the outbox
- * *after* the accept has answered, so it is **waited for** on a short bounded cadence
- * (`useAwaitedChatDoor`, `domain/roomOpening`) rather than read once and missed. A push and not a
- * replace — *back* returns here, to the standing in the first person, exactly as it does from
- * the `filling` arm's own door. Where the room has not opened by the bound the screen simply
- * stays, and it now draws **Open the chat on every arm the join answers on**, not only the
- * half-built court's: *no door rather than a dead one* is the rule, and a room the list holds is
- * a door on every arm whose reader is in it — an accepted seat waiting on the others, a court
- * that is on, the organiser once the first yes has landed. Whether the reader is in it is the
- * **fold's** answer (`readerIsInTheRoom`) and not the list's alone: a decline or a withdraw
- * invalidates the list rather than patching it, so for a beat it can still hold a room the
- * reader has just left, and the `answer` arm's reader has not said yes to any.
+ * you joined. The reply is still the redraw, and then **the screen pushes the yes screen**
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §1, [#433](https://github.com/Raketa02/Raketa/issues/433)): the faces, one word, two doors,
+ * and the room is opened only by a tap on *Open the chat* there. This screen no longer walks
+ * into the room by itself. The awaited door — the bounded rooms-list poll, and the rule that a
+ * yes which completed the court waits for the row to carry its game — **moved into the yes
+ * screen** and runs from the moment it opens; what stays here is the door on later visits, which
+ * is ADR-0149 §3's join over the player's rooms read once (`useChatDoor`). It is drawn **on every
+ * arm the join answers on**, not only the half-built court's: *no door rather than a dead one*
+ * is the rule, and a room the list holds is a door on every arm whose reader is in it — an
+ * accepted seat waiting on the others, a court that is on, the organiser once the first yes has
+ * landed. Whether the reader is in it is the **fold's** answer (`readerIsInTheRoom`) and not the
+ * list's alone: a decline or a withdraw invalidates the list rather than patching it, so for a
+ * beat it can still hold a room the reader has just left, and the `answer` arm's reader has not
+ * said yes to any.
  *
  * ## A half-built court is grown here, and nobody ends it for the others
  *
@@ -108,7 +110,7 @@
  * distance, the reasons, the concern and what is at stake.
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -119,12 +121,7 @@ import {
   forecastHeading,
   useFillChallengeSeats,
 } from '@/features/play/types';
-import {
-  CONVERSATION_ROUTE,
-  OPEN_THE_CHAT,
-  useAwaitedChatDoor,
-  type RoomExpectation,
-} from '@/features/conversations/types';
+import { CONVERSATION_ROUTE, OPEN_THE_CHAT, useChatDoor } from '@/features/conversations/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { ShellScreen } from '@/features/shell/types';
 import { useCurrentUser } from '@/features/auth/types';
@@ -136,7 +133,7 @@ import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import { Button, Note, theme } from '@/shared/ui';
 
 import { actRefusal } from '../domain/actRefusal';
-import { fillRoute } from '../schemas/routeParams';
+import { fillRoute, yesRoute } from '../schemas/routeParams';
 import {
   acceptedPlayers,
   challengeArm,
@@ -217,17 +214,6 @@ function Arrangement({
   const online = useIsOnline();
 
   /**
-   * **Whether `I'm in` has been answered, and what its room is being waited for to hold.**
-   *
-   * Route-local like `pressed`, and for the same reason: it is a fact about a press. Set on the
-   * accept's reply and cleared by the push — or by the bound, inside the hook, after which the
-   * screen stays and draws the door whenever the list next holds the room. **The reply decides
-   * what is waited for**: `ON` means this yes completed the court and a game exists, so the wait
-   * is for the room to carry it, and the plan card is on screen when the room is.
-   */
-  const [goingToTheRoom, setGoingToTheRoom] = useState<RoomExpectation | false>(false);
-
-  /**
    * **Where *Open the chat* goes**, or nothing — the client join ADR-0149 §3 settles, read here
    * because this is the surface that draws the door.
    *
@@ -237,24 +223,10 @@ function Arrangement({
    * reached by somebody accepting, and the absence is a list that has not landed yet rather than
    * a state anybody has to explain.
    *
-   * **Waited for after an accept**, because the room that acceptance opens is written off the
-   * outbox after the reply and the one re-read the reply triggers can land before it exists.
+   * Read once and never waited for: the room an accept opens is waited for on the yes screen
+   * (ADR-0167 §1), and this door is the one drawn on every later visit.
    */
-  const { door: chat, arrived } = useAwaitedChatDoor(detail.challengeId, goingToTheRoom);
-
-  /**
-   * The push itself — once, the moment the join answers, and only while a press asked for it.
-   *
-   * An effect rather than a line in `onSuccess`, because the door is not in the reply: it lands
-   * on a later read of another feature's list, and the render that holds it is the first place
-   * both facts are true at once.
-   */
-  const inTheRoom = readerIsInTheRoom(arm);
-  useEffect(() => {
-    if (goingToTheRoom === false || !arrived || chat === undefined || !inTheRoom) return;
-    setGoingToTheRoom(false);
-    router.push({ pathname: CONVERSATION_ROUTE, params: { conversationId: chat } });
-  }, [goingToTheRoom, arrived, chat, inTheRoom]);
+  const chat = useChatDoor(detail.challengeId);
 
   /**
    * Which of the two is in flight, so the pressed control is the one that goes busy.
@@ -318,17 +290,15 @@ function Arrangement({
       { challengeId: detail.challengeId, act },
       {
         onSettled: () => setPressed(undefined),
-        // Only a yes has a room to go to: a no leaves the reader outside whatever room the
-        // others keep, and the redraw's sentence is the whole of what it draws. A yes that
-        // completed the court waits for the room to know its game, which `ON` says exists.
-        onSuccess: (answered) =>
-          setGoingToTheRoom(
-            act !== 'accept'
-              ? false
-              : answered.standing === 'ON'
-                ? 'the-room-and-its-game'
-                : 'the-room',
-          ),
+        // Only a yes lands somewhere: a no leaves the reader outside whatever room the others
+        // keep, and the redraw's sentence is the whole of what it draws. A yes lands on the yes
+        // screen the instant it is answered — whatever standing it came back with, even when
+        // it completed the court — and the room is that screen's to wait for (ADR-0167 §1).
+        // In the caller's own `onSuccess`, which runs after the hook's: the reply is in the
+        // cache by the time the route changes, so the yes screen reads it as held.
+        onSuccess: () => {
+          if (act === 'accept') router.push(yesRoute(detail.challengeId, 'challenge'));
+        },
         onError: actOn,
       },
     );

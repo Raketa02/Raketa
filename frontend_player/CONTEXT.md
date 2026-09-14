@@ -709,6 +709,28 @@ what this client had to invent to draw the room
   "swipe to leave" — the swipe reveals a word and the sheet behind it acts; a row that slides to
   show nothing; a gesture library.
 
+### The yes screen
+
+One client-only concept, in `features/challenges/`
+([ADR-0167](../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)).
+_Yes_ is what the app already calls both acts — _I'm in_ is a yes, _Let's play_ is a yes that met
+another — and this is the screen a yes lands on.
+
+- **The yes screen** — the one-shot, full-phone screen a yes lands on the instant it is
+  answered: the faces on the court reader first, one lime word, two pills, on the app's one
+  dark ground, with the tab bar stood down. Keyed by the challenge and by **which yes** it is —
+  a challenge's, whose word is _Challenge!_, whose picture is the court in two sides with a `vs`,
+  and whose _Later_ is the Chats list; a mutual's, whose word is _Matched!_, whose picture is you
+  and them with no `vs` and no empty seat in every sport, and whose _Later_ is a pop
+  ([#434](https://github.com/Raketa02/Raketa/issues/434)) — and it reads everything it draws
+  from the challenge the query cache holds, fetching it on open where the deck never held it. Its
+  two doors are the only ways out: _Open the chat_ waits on the button for the room and lands as
+  `[Chats list, the room]`; _Later_ goes back. **A tile** is the face the app draws everywhere,
+  with two initials over a poster and an outlined empty seat as its two additions; **the spoken
+  sentence** is the picture as one header, built from whole handles. _Avoid_: "the celebration"
+  or "the moment" (not terms), "the match screen" (the word is copy on one face of it and never a
+  noun for a game), pushing it from anywhere but a yes, and re-showing it — every exit removes it.
+
 ### The plan
 
 Eleven client-only concepts, all of them in `features/plans/`. The domain terms — Plan, Slot, the

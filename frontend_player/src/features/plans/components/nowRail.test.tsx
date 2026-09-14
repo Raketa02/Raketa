@@ -35,6 +35,7 @@ import {
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
+import { setDeviceZone } from '@/test-support/deviceZone';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
 import { GAME_CARD_NAMES } from '../domain/gameCard';
@@ -368,13 +369,13 @@ describe('the four rungs, folded at read time', () => {
   /** *Today* is the games list's own day, in the platform zone — never the device's. */
   it('says Today in the platform zone, never the device one', async () => {
     const held = process.env.TZ;
-    process.env.TZ = 'Pacific/Midway';
+    setDeviceZone('Pacific/Midway');
     try {
       await nameOf(plan({ day: '2026-09-12', agreed_point: '2026-09-12T22:00:00Z' }));
 
       expect(await screen.findByText(TODAY)).toBeTruthy();
     } finally {
-      process.env.TZ = held;
+      setDeviceZone(held);
     }
   });
 

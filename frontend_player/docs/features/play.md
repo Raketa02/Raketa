@@ -331,9 +331,10 @@ replaced mid-flight cannot leave a stale id behind — by construction, never sy
 [#370](https://github.com/Raketa02/Raketa/issues/370)). The tap answers with the challenge the
 two of them have — the one it just opened, or the one an earlier mutual opened that nobody has
 finished with — which is what ended a player being told _you both said yes_ and left looking for
-a game nobody mentioned. `mutualChallengeToast` names **Chats** and calls the thing nothing at all: a mutual-born court
+a game nobody mentioned. `mutualChallengeToast` — since retired into the yes screen, the last
+paragraph of this record — named **Chats** and called the thing nothing at all: a mutual-born court
 is `ON` in singles and a side short in doubles, so _your game is on_ and _your game_ are both
-wrong for half the sports, while _they are in your Chats now_ is true either way. There is no
+wrong for half the sports, while _they are in your Chats now_ is true either way. There was no
 deep link because a toast carries no action here and the row is already the door. **`challengeId: null` keeps the older sentence exactly**, down to the
 wording it had before the field existed: it is one answer covering _the pair already have a game
 being arranged_ and _a gate refused_, the wire does not say which and will not, and drawing the
@@ -618,3 +619,41 @@ off the generated union**, since transport does not reach `components/` and the 
 already fails the build if the contract drops a member. It widened rather than renaming `SEARCH_SWITCH` to a `PLAY_SWITCH` true of
 both surfaces: the code is stored verbatim on the backend's `PlayIntentDeclared` and read back
 as itself, so a rename is an event migration bought on a field nothing branches on.
+
+**A mutual naming a chat is the yes screen now, and the toast that stood in for it retires**
+([#434](https://github.com/Raketa02/Raketa/issues/434),
+[ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+§1, §4). Tomek taps _Let's play_ on Marek's card; the card flies as it does; the reply comes back
+`mutual` **and names a challenge**, and the phone becomes the challenges feature's yes screen as
+**a mutual's** — `/chats/challenge/{id}/yes?which=mutual`, _Matched!_, the second face recorded at
+the end of the challenges record — wherever Tomek is by then: the next card, another tab. **The
+push lives with the mutation and not with the press.** `useSayYes`'s own `onSuccess` pushes
+`yesRoute(challengeId, 'mutual')`, because the callbacks handed to `mutate()` are dropped the
+moment the deck unmounts and the yes is optimistic, so a reply that lands after the player has
+moved on would otherwise land on nobody — _a slow reply must not swallow the moment_. The card's
+flight is not waited for, and a refused yes still returns the card exactly as before. **Why the
+picture has no `vs`, and the deck is the place to say it**: the deck deals one person, and a
+mutual is two people who chose each other — in tennis they will be opponents and in padel
+partners with a side to fill, and both are true of the two of them, so the screen draws only
+_you two_ and leaves the court's shape to the chat one tap later; a `vs` here would call a padel
+partner an opponent a second before the room calls him a partner. **The doors, from the deck.**
+_Later_ and Android back **pop** — to the deck's next card, or to wherever the reply found the
+player. _Open the chat_ waits on the button for the room exactly as after a challenge and lands
+as **[Chats list, the room]** by **the tab's own move** (`openTab`), since the list is nowhere
+under the deck: the shell lays `[Chats list]` down, the Play session ending on the way as it does
+on any tab press, and the room is pushed over it, so back from the room is the list with nothing
+behind it. **Play keeps its held deck** in the sense the shell already gives a tab press: the deal
+is Query's, keyed by the ask, so Play entered again on the same ask finds the same hand with the
+next card up and deals nothing — and a deal dealt on an improvised week is a different ask once
+the session has ended, exactly as it is after pressing the column. **What retires is one
+sentence.** _You both said yes — {name} is in your Chats now_ is gone with its test; `yesToast`
+answers `undefined` for a mutual naming a challenge, and that is a decision and not a gap. The
+other two — a one-sided yes, and a mutual naming no chat — keep their words to the letter and stay
+toasts raised from the press, with `deckPresentation.test.ts` pinning both verbatim and
+`deck.test.tsx` asserting neither moves off the deck: a full-screen celebration must never
+overstate what happened, and a mutual naming nothing is one answer covering two causes the wire
+will not tell apart (ADR-0154 §3). **Under the router harness one walk is written as an offline
+yes** — made in a tunnel, held by `networkMode: 'online'`, answered once the player has gone to
+Chats — because the harness runs every pending timer on every navigation, and a reply merely slow
+to arrive across a tab press is timed out by the walk rather than answered late by the server.
+**Not seen on a device** — the author checks the screen against `2_match_from_matchme.png`.

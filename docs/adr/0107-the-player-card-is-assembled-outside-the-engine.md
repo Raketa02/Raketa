@@ -175,6 +175,14 @@ apply* spelling, and the client draws the poster.
 
 ### 4. There is no name, so nothing may shorten one
 
+> **Amended 2026-09-14 by [ADR-0167](0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+> §3: one drawing is exempt, and it is named in full.** The yes screen draws **two initials over a
+> generated poster** — never over a photograph, never spoken, never in copy, and on no other
+> surface; the tile's accessible name is the whole handle. The rule below stands for every
+> sentence, every spoken name and every other drawing — `handleStem` and the seat's caption were
+> admitted *inside* it, and the Chats rows keep [#338](https://github.com/Raketa02/Raketa/issues/338)
+> §5's refusal of a monogram. The argument, and the fence, are ADR-0167's.
+
 The card carries a **Nickname**. `users` holds no real name and no given name, and a nickname
 is a single opaque handle — 2–64 characters of `[A-Za-z0-9_.-]`.
 

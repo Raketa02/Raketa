@@ -50,6 +50,16 @@
  * tile, tick-box row) — because volt is already the brightest value in the palette, and a
  * seventh hex invented to satisfy *the variant's pressed fill* would be a colour added to
  * describe a press.
+ *
+ * **`shape` is a seventh option and it is not a variant**
+ * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §2). 4.2's rule is *the chip — the only true pill*, and every button is a 10pt rounded
+ * rectangle; the yes screen's two doors are pills, and the record opens that one exception on
+ * this screen rather than adding a second primitive. It is a shape and not a variant because
+ * it changes the corner and nothing else: *Open the chat* is the `volt` button in a pill and
+ * *Later* the `onDark` one, each with its own fill, label and press exactly as above. The
+ * default is 4.2's corner, so nothing that exists changes, and the next surface that wants a
+ * pill reopens the record rather than reaching for the prop.
  */
 
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -64,6 +74,9 @@ export type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'settled' | 'volt
  */
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
 
+/** 4.2's 10pt corner, or the chip's pill — the yes screen's exception. See the module note. */
+export type ButtonShape = 'rounded' | 'pill';
+
 export interface ButtonProps {
   readonly label: string;
   /**
@@ -77,6 +90,8 @@ export interface ButtonProps {
   readonly onPress: () => void;
   readonly variant?: ButtonVariant;
   readonly size?: ButtonSize;
+  /** Defaults to the rounded rectangle every button is. `pill` is one screen's, by record. */
+  readonly shape?: ButtonShape;
   readonly disabled?: boolean;
   /** Blocks presses and swaps the label. A busy button is not a disabled button. */
   readonly busy?: boolean;
@@ -103,6 +118,7 @@ export function Button({
   onPress,
   variant = 'primary',
   size = 'md',
+  shape = 'rounded',
   disabled = false,
   busy = false,
   busyLabel,
@@ -130,6 +146,7 @@ export function Button({
       style={({ pressed }) => [
         s.base,
         HEIGHT[size],
+        SHAPE[shape],
         FILL[variant],
         gloss !== undefined ? s.glossed : undefined,
         pressed && !blocked ? PRESSED[variant] : undefined,
@@ -151,7 +168,6 @@ export function Button({
 
 const s = StyleSheet.create({
   base: {
-    borderRadius: theme.radius.btn,
     paddingHorizontal: theme.space.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -166,6 +182,11 @@ const s = StyleSheet.create({
   labelBoxGlossed: { gap: theme.space.xxs },
   gloss: { ...theme.type.tiny },
   blocked: { opacity: 0.4 },
+});
+
+const SHAPE = StyleSheet.create({
+  rounded: { borderRadius: theme.radius.btn },
+  pill: { borderRadius: theme.radius.pill },
 });
 
 const HEIGHT = StyleSheet.create({

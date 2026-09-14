@@ -35,6 +35,16 @@ export type {
 export { playerRecordKeys } from './hooks/playerRecordKeys';
 
 /**
+ * **The reader's own face**, for the yes screen
+ * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §3): the photograph off their own record, or nothing, and whether the read is in. The one
+ * surface that draws the reader as a tile rather than as a seat, and the one read `challenges`
+ * makes of this feature — a new edge, held open by `scripts/test-import-boundaries.sh`. A URL
+ * crosses and nothing else about the record does.
+ */
+export { useOwnFace, type OwnFace } from './hooks/useOwnFace';
+
+/**
  * The sheet's own words, exported for its suite.
  *
  * A test asserting a sentence it has spelled itself is a test that passes the day the sentence

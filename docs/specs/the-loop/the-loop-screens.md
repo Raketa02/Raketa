@@ -349,17 +349,22 @@ the list — invalidated rather than patched by the reply that took them out —
 room for a beat; the unanswered invitee has said yes to none. A door is drawn only where both say
 so.
 
-**`I'm in` goes to the room.** Accepting is the one act whose whole point is a room to talk in —
-the singles room with the person who challenged you, or the doubles room the people already in
-are already talking in, its history included, because membership is derived and never cut at the
-moment you joined. The reply is still the redraw (§2.4), and then the screen pushes the room. The
-room is written by the teller off the outbox **after** the accept has answered, so the door is
-**waited for** on a short bounded cadence rather than read once and missed; past the bound the
-screen stays, and draws the door when the list next holds the room. **What is waited for is the
-reply's to say**: `ON` means this yes completed the court and a game exists — opened inline with
-the accept — while the room is told which a moment later and nothing nudges when it is, so the
-wait is for the room to carry its game and the plan card is on screen when the room is. *Not this
-time* goes nowhere.
+**`I'm in` lands on the yes screen, and the room is opened by a tap**
+([ADR-0167](../../adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md) §1;
+it was *`I'm in` goes to the room* until then). Accepting is the one act whose whole point is a
+room to talk in — the singles room with the person who challenged you, or the doubles room the
+people already in are already talking in, its history included, because membership is derived and
+never cut at the moment you joined. The reply is still the redraw (§2.4), and then the screen
+pushes **the yes screen** — the faces, *Challenge!*, two pills — and nothing walks into the room:
+*Open the chat* opens it, and *Later* goes to the Chats list, popping this screen with it. The
+room is written by the teller off the outbox **after** the accept has answered, so behind that
+button the door is **waited for** on a short bounded cadence rather than read once and missed;
+past the bound the tap lands on the Chats list, where the row will appear, and this screen draws
+the door on a later visit when the list holds the room. **What is waited for is the reply's to
+say**: `ON` means this yes completed the court and a game exists — opened inline with the accept —
+while the room is told which a moment later and nothing nudges when it is, so the wait is for the
+room to carry its game and the plan card is on screen when the room is. *Not this time* goes
+nowhere.
 
 **`AWAITING_ANSWERS` is three rows for the invitee, because the side alone cannot key it.**
 `standing_of` holds this standing while **any** seat is awaiting, so a padel four sits in it with

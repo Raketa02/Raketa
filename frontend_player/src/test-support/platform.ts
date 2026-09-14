@@ -1,5 +1,5 @@
 /**
- * Hand-written fakes for the three platform ports.
+ * Hand-written fakes for the four platform ports.
  *
  * Beside `transport.ts` and for the same reason: a test states what the world outside the
  * app does, and everything inside it runs for real. The socket is one such edge; the OS
@@ -42,6 +42,7 @@
 
 import type {
   FollowLive,
+  HapticsPort,
   ImagePickingPort,
   LiveStreamPort,
   LiveStreamStatus,
@@ -313,6 +314,30 @@ export function fakeLiveStream(): FakeLiveStream {
   };
 
   return fake;
+}
+
+/**
+ * The motor, as a test can count it.
+ *
+ * The one fake here that records rather than behaves, and it is honest about why: a buzz has no
+ * state a screen reads back, so the only fact about one is whether it happened and how often.
+ * *Exactly one as the word lands, and none under reduced motion* is a claim about a count.
+ */
+export interface FakeHaptics extends HapticsPort {
+  /** Every buzz asked for, in order. One kind today. */
+  readonly felt: readonly 'success'[];
+}
+
+export function fakeHaptics(): FakeHaptics {
+  const felt: 'success'[] = [];
+  return {
+    get felt() {
+      return felt;
+    },
+    success: () => {
+      felt.push('success');
+    },
+  };
 }
 
 /** One picked image, for a test that needs a picture and does not care which. */

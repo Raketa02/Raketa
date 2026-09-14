@@ -10,7 +10,7 @@
  * to draw. What a sentence says is untouched.
  */
 
-import { handleStem, playerName } from './playerName';
+import { handleInitials, handleStem, playerName } from './playerName';
 
 const LONG = 'niepokonany wojownik z warszawy grający wieczorami';
 
@@ -66,5 +66,41 @@ describe('the handle a box draws', () => {
     const whole = 'Sergio.Sabater';
 
     expect(playerName({ kind: 'player', nickname: whole })).toBe(whole);
+  });
+});
+
+/**
+ * **Two initials over a poster, and nowhere else** —
+ * [ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §3's one exception to the rule the suites above hold. It is a drawing and never a sentence: the
+ * cut is tested here, and that no sentence carries it is the yes screen's own suite's to hold.
+ */
+describe('the initials a poster draws', () => {
+  it('takes the first letter of each word, split where a handle separates words, at most two', () => {
+    expect(handleInitials('Tomek.K')).toBe('TK');
+    expect(handleInitials('Marek Z.')).toBe('MZ');
+    expect(handleInitials('Ola.N')).toBe('ON');
+    expect(handleInitials('Paula.Casals.Nadal')).toBe('PC');
+  });
+
+  it('takes the first two characters of a one-word handle, because a dash or an underscore is inside a word', () => {
+    expect(handleInitials('dorota_w')).toBe('DO');
+    expect(handleInitials('anne-marie')).toBe('AN');
+    expect(handleInitials('cyryl')).toBe('CY');
+  });
+
+  it('gives a one-character handle its one', () => {
+    expect(handleInitials('x')).toBe('X');
+  });
+
+  it('keeps what follows a break a handle opens with, rather than an initial for nothing', () => {
+    // `.leading` is one word once the empty part is dropped; `.tomek.k` is two.
+    expect(handleInitials('.leading')).toBe('LE');
+    expect(handleInitials('.tomek.k')).toBe('TK');
+  });
+
+  it('upper-cases for drawing only, and leaves the handle a sentence says untouched', () => {
+    expect(handleInitials('ewa.m')).toBe('EM');
+    expect(playerName({ kind: 'player', nickname: 'ewa.m' })).toBe('ewa.m');
   });
 });
