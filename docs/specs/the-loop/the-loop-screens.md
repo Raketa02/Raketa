@@ -599,7 +599,12 @@ argument is about an explanation, and it is what §1.1's shelf life is for: a ro
 the reader something they did not do. A **decline is the reader's own act** — and so is a departure — so *You said no* and *You left*
 tell them nothing, and their row goes with the tap — on a singles court their no ended and on a doubles
 court that carries on without them alike (`belongsOnTheInbox`); the organiser's row for the same no
-keeps its day, because to them it *is* news. A **lapse** nobody chose, and *Your day ran out. They
+keeps its day, because to them it *is* news. **And the screen the departure was confirmed on goes
+with the row** (amended 2026-09-14, [#429](https://github.com/Raketa02/Raketa/issues/429)): *Leave
+the game* and §2.6's *Remove the challenge*, confirmed here, leave the screen on the reply and
+land on the Chats list, which holds no row for the court — the redraw into *You left* / *You
+withdrew this* with nothing to press was a stop on the way out of a thing the reader had just
+stopped being part of. The screen still resolves for a stale route and says that sentence then. A **lapse** nobody chose, and *Your day ran out. They
 are still filling the court.* is kept to be read exactly as before. The screen still resolves for a
 declined challenge by its route (#390), and the record is untouched.
 

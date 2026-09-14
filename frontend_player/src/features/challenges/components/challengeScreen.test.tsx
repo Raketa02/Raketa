@@ -1065,24 +1065,26 @@ describe('*Remove the challenge* on the arranging arm', () => {
     expect(transport.requestsTo('POST', WITHDRAWAL_PATH)).toEqual([]);
   });
 
-  /** Pending, never optimistic, and the reply is the redraw: the screen says *You withdrew this*. */
-  it('calls the withdrawal route on confirm and redraws into the ending, with nothing to press', async () => {
+  /**
+   * Pending, never optimistic, and **the reply is the exit**
+   * ([#429](https://github.com/Raketa02/Raketa/issues/429)): the act closed the court and the
+   * organiser's own removal leaves the inbox on the same reply, so the screen leaves rather than
+   * redrawing into *You withdrew this* with nothing to press — the departure's own rule, for its
+   * reason. The list underneath holds no row for it.
+   */
+  it('calls the withdrawal route on confirm and leaves the screen, landing on Chats with the row gone', async () => {
     transport.on('POST', WITHDRAWAL_PATH, () => json(REMOVED));
     await openMySend();
 
     fireEvent.press(await screen.findByRole('button', { name: REMOVE_THE_CHALLENGE }));
     await screen.findByText(REMOVE_SHEET_TITLE);
+    stubChallenges(transport, [REMOVED], READ_AT);
     fireEvent.press(screen.getByRole('button', { name: REMOVE_THE_CHALLENGE }));
 
-    expect(
-      await screen.findByText(
-        standingLine({ side: 'organiser', standing: 'WITHDRAWN', player: { kind: 'unknown' } }),
-      ),
-    ).toBeTruthy();
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
     expect(transport.requestsTo('POST', WITHDRAWAL_PATH)).toHaveLength(1);
+    await waitFor(() => expect(screen.queryByLabelText(/, Padel, /)).toBeNull());
     expect(screen.queryByText(REMOVE_SHEET_TITLE)).toBeNull();
-    expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
-    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
   });
 
   /**

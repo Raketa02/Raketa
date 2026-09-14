@@ -65,11 +65,17 @@ export interface DepartureDoorProps {
    * door.
    */
   readonly onRefusal?: (error: AppError) => void;
+  /**
+   * What the surface does once the reply has landed — `useActDoor`'s: nothing on the list, whose
+   * row goes on the reply; the challenge screen leaves, because the reader is no longer on what
+   * it draws.
+   */
+  readonly onDone?: () => void;
   /** The surface, drawn around the door it is handed. */
   readonly children: (door: ActDoor) => ReactNode;
 }
 
-export function DepartureDoor({ challengeId, onRefusal, children }: DepartureDoorProps) {
+export function DepartureDoor({ challengeId, onRefusal, onDone, children }: DepartureDoorProps) {
   const leave = useLeaveGame();
   const online = useIsOnline();
   const { door, confirming, close, confirm } = useActDoor({
@@ -78,6 +84,7 @@ export function DepartureDoor({ challengeId, onRefusal, children }: DepartureDoo
     label: LEAVE_THE_GAME,
     actionName: LEAVE_ACTION,
     onRefusal,
+    onDone,
   });
 
   return (

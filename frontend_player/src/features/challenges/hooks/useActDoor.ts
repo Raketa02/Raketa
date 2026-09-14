@@ -93,6 +93,18 @@ export interface ActDoorAsk {
    * `| undefined` so a door hands its own optional prop straight through.
    */
   readonly onRefusal?: ((error: AppError) => void) | undefined;
+  /**
+   * **What the surface does once the reply has landed** — after the sheet has closed, and only
+   * on success. The list does nothing: its row goes on the reply, and the list is what is left.
+   * The challenge screen **leaves**: the act took the reader off the court, or closed it, and the
+   * screen's own redraw was §13.1's sentence about their own seat — *You left*, *You withdrew
+   * this* — with nothing to press, over a row the tap had already taken from the inbox. A player
+   * who confirmed an exit was left on a screen about a thing they had just stopped being part of
+   * ([#429](https://github.com/Raketa02/Raketa/issues/429)). The screen still resolves for a
+   * stale route, and the sentence is still what it says then; what goes is the stop on the way
+   * out. `| undefined` for the reason `onRefusal` is.
+   */
+  readonly onDone?: (() => void) | undefined;
 }
 
 /** What a door gets back: the thing it hands the surface, and the three things its sheet needs. */
@@ -113,6 +125,7 @@ export function useActDoor({
   label,
   actionName,
   onRefusal,
+  onDone,
 }: ActDoorAsk): ActDoorHandle {
   const reReadCourtLists = useReReadCourtLists();
 
@@ -147,7 +160,10 @@ export function useActDoor({
 
   function confirm(): void {
     act.mutate(challengeId, {
-      onSuccess: () => setConfirming(false),
+      onSuccess: () => {
+        setConfirming(false);
+        onDone?.();
+      },
       onError: (error) => {
         owed.current = actRefusal(error).kind === 'SAY_SO' ? undefined : error;
       },

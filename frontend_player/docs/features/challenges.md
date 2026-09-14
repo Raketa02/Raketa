@@ -426,3 +426,17 @@ the news. Stated so it can be argued with: the ended row for such a court would 
 _{name} said no_ naming the **first** decline rather than the one who left, and was the one place
 the organiser away from the room would have learned of the departure; the row goes because the
 user walking #429 found it wrong, and the sentence it would need does not exist in §13.
+
+**An exit confirmed on the challenge screen leaves the screen**
+([#429](https://github.com/Raketa02/Raketa/issues/429)). _Leave the game_ and _Remove the
+challenge_ redrew the screen from their reply into §13.1's sentence about the reader's own seat —
+_You left. They are still waiting on answers._, _You withdrew this_ — with nothing to press, on a
+court the reader had just stopped being part of and whose row the same reply had already taken from
+the inbox: a stop on the way out. `useActDoor` gains `onDone`, what the surface does once the reply
+has landed and the sheet has closed; the list passes nothing, because its row goes on the reply and
+the list is what is left, and the challenge screen passes `router.back`, landing on Chats whose
+return re-read shows no row in either section. The screen still resolves for a stale route and
+says the sentence then — a departed seat is still a seat — so what went is the stop, not the
+words. **_Not this time_ is deliberately not this**: a no stays on its sentence (`challengeScreen.test.tsx`
+pins it), because it is not behind a sheet and #429 did not ask; the same argument applies to it,
+and it is one `router.back` in `send` if it should.

@@ -79,11 +79,13 @@ export interface RemovalDoorProps {
    * door.
    */
   readonly onRefusal?: (error: AppError) => void;
+  /** What the surface does once the reply has landed — `DepartureDoor`'s prop, for its reason. */
+  readonly onDone?: () => void;
   /** The surface, drawn around the door it is handed. */
   readonly children: (door: ActDoor) => ReactNode;
 }
 
-export function RemovalDoor({ challengeId, onRefusal, children }: RemovalDoorProps) {
+export function RemovalDoor({ challengeId, onRefusal, onDone, children }: RemovalDoorProps) {
   const remove = useWithdrawChallenge();
   const online = useIsOnline();
   const { door, confirming, close, confirm } = useActDoor({
@@ -92,6 +94,7 @@ export function RemovalDoor({ challengeId, onRefusal, children }: RemovalDoorPro
     label: REMOVE_THE_CHALLENGE,
     actionName: REMOVE_ACTION,
     onRefusal,
+    onDone,
   });
 
   return (

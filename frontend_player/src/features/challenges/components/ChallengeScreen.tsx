@@ -433,11 +433,16 @@ function Arrangement({
    * taking yourself off a court is never the primary act on a screen about arranging one. The
    * sheet, the act, its words and its refusals are `DepartureDoor`'s — the same door a Chats row
    * reveals — and what this screen adds is its own answer to a refusal: the detail re-read, so a
-   * court that ended under the press re-folds into its ending's sentence.
+   * court that ended under the press re-folds into its ending's sentence. **And its own answer to
+   * the reply: it leaves.** The act took the reader off the court, and the row they came in by
+   * has gone from the inbox on the same reply; what this screen would draw them is §13.1's *You
+   * left* with nothing to press, a stop on the way out of a thing they have just stopped being
+   * part of ([#429](https://github.com/Raketa02/Raketa/issues/429)). The screen still resolves
+   * for a stale route, and says that sentence then.
    */
   const leave =
     (arm.kind === 'arranging' || arm.kind === 'filling') && arm.mayLeave ? (
-      <DepartureDoor challengeId={detail.challengeId} onRefusal={actOn}>
+      <DepartureDoor challengeId={detail.challengeId} onRefusal={actOn} onDone={router.back}>
         {(door) => (
           <View ref={door.control}>
             <Button
@@ -461,11 +466,13 @@ function Arrangement({
    * out — though on this arm the fold never draws both. The sheet, the act, its words and its
    * refusals are `RemovalDoor`'s — the same door the organiser's Chats row reveals — and the
    * detail re-read after a refusal is this screen's, as it is for the leave: *somebody's in now*
-   * re-folds the arm into the one that offers *Leave the game* instead.
+   * re-folds the arm into the one that offers *Leave the game* instead. And on the reply it
+   * leaves, as the departure does and for its reason: *You withdrew this* with nothing to press
+   * is the same stop on the way out.
    */
   const remove =
     arm.kind === 'arranging' && arm.mayRemove ? (
-      <RemovalDoor challengeId={detail.challengeId} onRefusal={actOn}>
+      <RemovalDoor challengeId={detail.challengeId} onRefusal={actOn} onDone={router.back}>
         {(door) => (
           <View ref={door.control}>
             <Button

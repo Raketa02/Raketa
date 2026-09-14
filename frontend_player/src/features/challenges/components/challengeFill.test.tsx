@@ -448,8 +448,14 @@ describe('*Leave the game*', () => {
     expect(transport.requestsTo('POST', DEPARTURE_PATH)).toEqual([]);
   });
 
-  /** The reply is the redraw: the reader's seat reads `LEFT`, and the screen says *You left*. */
-  it('redraws from the reply into the sentence for a reader who left, with nothing to press', async () => {
+  /**
+   * **The reply is the exit** ([#429](https://github.com/Raketa02/Raketa/issues/429)). The act
+   * took the reader off the court and the row they came in by goes from the inbox on the same
+   * reply; the screen used to redraw into §13.1's *You left* with nothing to press — a stop on
+   * the way out of a thing they had just stopped being part of. Now it leaves, and the list
+   * underneath is what is left: no row for this court, in either section.
+   */
+  it('leaves the screen on the reply, landing on Chats with the row gone', async () => {
     const left: Wire['SeatSchema'][] = [
       { side: 'A', player_id: ME, answer: 'LEFT', nickname: 'me_' },
       { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
@@ -463,7 +469,28 @@ describe('*Leave the game*', () => {
     // One label on the control and on the sheet's act, and what is under the sheet is hidden
     // while it is up — so the second press can only reach the act.
     await screen.findByText(LEAVE_FROM_THE_LIST_BODY);
+    // What the list reads on its return: the seat is `LEFT`, and a departure of one's own goes.
+    stubChallenges(transport, [row({ seats: left })], READ_AT);
     fireEvent.press(screen.getByRole('button', { name: LEAVE_THE_GAME }));
+
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    await waitFor(() => expect(screen.queryByLabelText(/, Padel, /)).toBeNull());
+    expect(screen.queryByText(LEAVE_SHEET_TITLE)).toBeNull();
+  });
+
+  /**
+   * The screen still resolves for a stale route — a departed seat is still a seat — and says
+   * §13.1's sentence then, with nothing to press. What went is the stop on the way out.
+   */
+  it('still says You left, with nothing to press, to a reader who opens it afterwards', async () => {
+    const left: Wire['SeatSchema'][] = [
+      { side: 'A', player_id: ME, answer: 'LEFT', nickname: 'me_' },
+      { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
+      { side: 'B' },
+      { side: 'B' },
+    ];
+
+    await openTheChallengeByRoute(detail({ seats: left }), row({ seats: left }));
 
     expect(
       await screen.findByText(
