@@ -4,13 +4,14 @@
 #
 #   bash scripts/test-import-boundaries.sh      # or: pnpm test:boundaries
 #
-# Five modules may be imported from exactly one place, or from nowhere at all:
+# Six modules may be imported from exactly one place, or from nowhere at all:
 #
 #   expo-secure-store                            → src/shared/lib/auth
 #   @react-native-async-storage/async-storage    → nowhere; it is unencrypted
 #   expo-location                                → platform/location.ts
 #   expo-image-picker                            → platform/imagePicking.ts
 #   react-native-sse                             → platform/liveStream.ts
+#   expo-haptics                                 → platform/haptics.ts
 #
 # And one is banned everywhere *except* a feature's api/ and mappers/ layers, plus the
 # one file above that is an api/ layer without a feature to live in:
@@ -127,6 +128,7 @@ OBSERVABILITY='src/shared/lib/observability/placeholder.ts'
 LOCATION_PORT='src/shared/lib/platform/location.ts'
 PICKING_PORT='src/shared/lib/platform/imagePicking.ts'
 LIVE_PORT='src/shared/lib/platform/liveStream.ts'
+HAPTICS_PORT='src/shared/lib/platform/haptics.ts'
 OTHER_PLATFORM_FILE='src/shared/lib/platform/appState.ts'
 
 # Where a generated wire type is legitimately read: the two layers of a feature, and the
@@ -140,6 +142,7 @@ GAMES_SCREEN='src/features/games/components/Placeholder.tsx'
 GAMES_WIRE='src/features/games/mappers/placeholder.ts'
 GAMES_DOMAIN='src/features/games/domain/placeholder.ts'
 PLANS_SCREEN='src/features/plans/components/Placeholder.tsx'
+CHALLENGES_SCREEN='src/features/challenges/components/Placeholder.tsx'
 
 echo "the keychain — expo-secure-store belongs to src/shared/lib/auth"
 expect_blocked expo-secure-store "$FEATURE" 'src/shared/lib/auth'
@@ -196,6 +199,20 @@ expect_blocked react-native-sse "$OTHER_PLATFORM_FILE" 'liveStream.ts'
 expect_allowed react-native-sse "$LIVE_PORT"
 
 echo
+echo "the motor — expo-haptics belongs to platform/haptics.ts"
+expect_blocked expo-haptics "$FEATURE" 'haptics.ts'
+expect_blocked expo-haptics "$SCREEN" 'haptics.ts'
+expect_blocked expo-haptics "$TEST" 'haptics.ts'
+expect_blocked expo-haptics "$AUTH" 'haptics.ts'
+# One file wide, as the others are: the three ports beside it may not buzz.
+expect_blocked expo-haptics "$LOCATION_PORT" 'haptics.ts'
+expect_blocked expo-haptics "$LIVE_PORT" 'haptics.ts'
+expect_blocked expo-haptics "$OTHER_PLATFORM_FILE" 'haptics.ts'
+expect_allowed expo-haptics "$HAPTICS_PORT"
+# And the port itself is still under every other ban.
+expect_blocked expo-location "$HAPTICS_PORT" 'src/shared/lib/platform'
+
+echo
 echo "generated wire types — api/ and mappers/, plus the live channel's frame"
 expect_blocked @/generated/schema "$FEATURE" "api/ or mappers/"
 expect_blocked @/generated/schema "$SCREEN" "api/ or mappers/"
@@ -231,6 +248,10 @@ expect_allowed @/features/play/types "$GAMES_SCREEN"
 expect_allowed @/features/player_record/types "$GAMES_SCREEN"
 # And the deep path is still what it always was: a feature never reaches past another's types.ts.
 expect_blocked @/features/play/components/balancePresentation "$GAMES_SCREEN" 'types.ts'
+# The yes screen's one new edge (ADR-0166 §3): `challenges` reads the reader's own face through
+# `player_record`'s public surface, and nothing deeper.
+expect_allowed @/features/player_record/types "$CHALLENGES_SCREEN"
+expect_blocked @/features/player_record/hooks/useOwnFace "$CHALLENGES_SCREEN" 'types.ts'
 
 echo
 printf '%s passed, %s failed\n' "$pass" "$fail"

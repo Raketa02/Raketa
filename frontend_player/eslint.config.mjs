@@ -89,6 +89,15 @@ const liveStreamImport = {
     'from src/test-support/platform.ts in a test. See docs/adr/0147.',
 };
 
+const hapticsImport = {
+  group: ['expo-haptics'],
+  message:
+    'Only src/shared/lib/platform/haptics.ts may import expo-haptics. A native module cannot be ' +
+    'driven from a test, and *exactly one buzz, and none under reduced motion* is a rule a fake ' +
+    'can count — use the HapticsPort from @/shared/lib/platform, and fakeHaptics() from ' +
+    'src/test-support/platform.ts in a test. See docs/adr/0166 §2.',
+};
+
 const observabilityVendorImports = {
   group: ['@sentry/*', 'posthog-*', '@amplitude/*', 'mixpanel-*'],
   message:
@@ -146,6 +155,7 @@ const CORE_PATTERNS = [
   locationImport,
   imagePickerImport,
   liveStreamImport,
+  hapticsImport,
   observabilityVendorImports,
 ];
 
@@ -314,7 +324,7 @@ export default [
     rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS) },
   },
 
-  // --- the four sanctioned exceptions -----------------------------------------
+  // --- the five sanctioned exceptions -----------------------------------------
   {
     // The single chokepoint for credentials (ADR-0008).
     files: ['src/shared/lib/auth/**'],
@@ -349,6 +359,12 @@ export default [
     rules: {
       'no-restricted-imports': restrict(sharedPatternsExcept(liveStreamImport, generatedImports)),
     },
+  },
+  {
+    // The motor — one verb, one file, the same one-file-wide exemption as the two native ports
+    // above it.
+    files: ['src/shared/lib/platform/haptics.ts'],
+    rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(hapticsImport)) },
   },
   {
     // The single place fetch is configured.

@@ -107,3 +107,29 @@ describe('the gloss', () => {
     expect(drawn(false).alignItems).toBe('center');
   });
 });
+
+/**
+ * **The pill is the chip's alone, and this is the one exception** — the yes screen's two doors
+ * ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §2, Part 16 2026-09-14). A shape option on the one primitive rather than a second one, so
+ * the pill differs from every other button by its corner and by nothing else.
+ */
+describe('the pill shape (6.1, amended)', () => {
+  it('is 4.2’s 10pt corner unless asked for, and the chip’s pill when it is', () => {
+    render(<Button label="Later" variant="onDark" onPress={jest.fn()} />);
+    expect(drawn(false).borderRadius).toBe(theme.radius.btn);
+
+    screen.unmount();
+
+    render(<Button label="Later" variant="onDark" shape="pill" onPress={jest.fn()} />);
+    expect(drawn(false).borderRadius).toBe(theme.radius.pill);
+  });
+
+  it('changes the corner and nothing else about the variant', () => {
+    render(<Button label="Open the chat" variant="volt" shape="pill" onPress={jest.fn()} />);
+
+    expect(drawn(false).backgroundColor).toBe(theme.color.volt);
+    expect(label().color).toBe(theme.color.ink);
+    expect(drawn(true).opacity).toBe(0.7);
+  });
+});

@@ -114,3 +114,17 @@ that a low average costs nothing, so a reader may take a `2,0 / 5` for a penalty
 issued. The sentences are kept in `recordPresentation` against the day that reading matters. And a subject nobody has rated draws **no block
 at all**: a fourth absence asking a fourth question, since rating is a favour and nothing
 anywhere records that a card was ignored.
+
+**The reader's own face crosses the seam, and nothing else about the record does**
+([#433](https://github.com/Raketa02/Raketa/issues/433),
+[ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+§3). `useOwnFace` reads the ungated `/players/me/record` and selects the photograph's signed link,
+or nothing, with whether the read is in — for the yes screen, the one surface that draws the reader
+as a tile rather than as a seat, because nothing carries a player's own photograph onto a court and
+this is the one route that serves it. Its own key beside `detail`, and **the record's own options
+whole** (`PLAYER_RECORD_QUERY_OPTIONS`): one cold read per open, no retry, nothing cached between
+opens — the spec said _cached for the session_, and the link lives five minutes, so a session-long
+cache would draw a dead link as a blank tile on the second yes of an evening, which is worse than
+the poster; and `gcTime: 0` is what makes _no tile swaps mid-entrance_ true, since nothing stale is
+there to be drawn first. `challenges → player_record` is a new feature edge, through this surface,
+held open by `scripts/test-import-boundaries.sh`.

@@ -6,15 +6,21 @@
 > a ticket adds or changes a shared port, verb or primitive. Index: [`README.md`](README.md).
 
 `src/shared/lib/platform/` owns everything the app knows about the device: the Query
-focus and online wirings, and three **platform ports** — `LocationPort` over `expo-location`,
-`ImagePickingPort` over `expo-image-picker` and `LiveStreamPort` over `react-native-sse`. Each
+focus and online wirings, and four **platform ports** — `LocationPort` over `expo-location`,
+`ImagePickingPort` over `expo-image-picker`, `LiveStreamPort` over `react-native-sse` and
+`HapticsPort` over `expo-haptics`. Each
 is the only importer of its module, for the reason `shared/lib/auth` is the only importer of
 the keychain, plus one more: a native module has no JS implementation underneath it, so a
 feature that imports one cannot be tested at all — and **the third one is here on that second
 argument alone**, because its far side is a socket rather than a native module and a screen
-that opened one is a screen no suite can put in front of a severed stream. Hand-written fakes
+that opened one is a screen no suite can put in front of a severed stream. **The fourth is one
+verb wide** — `success()`, the yes screen's one buzz as its word lands
+([ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+§2), the first haptic in the app — and it is a port rather than a line in a component on the
+first argument: _exactly one, and none under reduced motion_ is a count a fake can hold where a
+mock could only record. Hand-written fakes
 live in `src/test-support/platform.ts`, and a screen reaches each through `useLocation()` /
-`useImagePicking()` / `useLiveStream()` — contexts whose
+`useImagePicking()` / `useLiveStream()` / `useHaptics()` — contexts whose
 default is the device, so only a test ever supplies anything else. Beside them sit the two
 lifecycle wirings and `useOnForeground`, the app's one answer to _did we just come back_ — and
 `useOnReturn`, the same question asked of a **screen**: the navigator's focus after a blur, which
@@ -117,6 +123,17 @@ handed nothing to reveal attaches no responder and draws nothing behind the card
 contract [#428](https://github.com/Raketa02/Raketa/issues/428)'s challenge row reuses, revealing
 _Remove the challenge_ only while nobody has joined. `test-support/swipe.ts` is the finger a test
 moves, and it says why the handlers are called directly and in the responder system's own order
-rather than through `fireEvent`. The rest arrive with the features that need them. **Build outward from the structure below** rather than reaching
+rather than through `fireEvent`. **The button gained a `shape`, and the face two additions, for one
+screen** ([#433](https://github.com/Raketa02/Raketa/issues/433),
+[ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+§2–§3): `Button`'s `shape` is `rounded` by default and `pill` for the yes screen's two doors — a
+radius option on the one primitive rather than a second one, changing the corner and nothing else,
+which is 4.2's _the chip — the only true pill_ with one fenced exception — and the yes screen's tile
+is `PlayerPhoto`'s `face` box at two measured sizes with initials drawn over a **poster** and an
+outlined empty seat drawn beside it, both in `features/challenges/components/YesTile.tsx` rather
+than here, because the poster's initials are that screen's one licensed drawing and a face
+elsewhere is still a photograph or a poster and nothing over it. `handleInitials` sits beside
+`handleStem` in `shared/formatting/playerName.ts`, with the four-sided fence on it. The rest arrive
+with the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.

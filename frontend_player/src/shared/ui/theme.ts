@@ -161,6 +161,29 @@ const color = {
    *  with nothing left in it) and the pin is the next step that has room — a ratio one
    *  rounding away from failing is one the next tuning of anything takes under. */
   photoScrim: 'rgba(10,52,65,0.70)',
+
+  /** THE YES SCREEN'S GROUND — the app's ONE dark screen, and no other surface's
+   *  ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+   *  §2, docs/design-system.md Part 16 2026-09-14). The design system stays paper-only and
+   *  15.4's *there is no dark mode* stands: this is one ground and not a theme, drawn as a
+   *  radial glow from the centre value out to the edge value with the SVG the poster already
+   *  uses. The record calls them the prototype's dropped stage colours, knowingly readmitted —
+   *  the design wins — and the next dark surface argues for its own record rather than reusing
+   *  these two. Not a `Soft`, not an `Ink`, not a `Line`: nothing writes on them but the one
+   *  screen's own children, which are the on-dark tokens above.
+   *
+   *  MEASURED off the three mocks at 1x, and NOT the stage colours' bytes: the spec expected
+   *  `#08222B` `#071C24` `#0B2B36` `#24505E` to the byte, and the rendered mocks do not hold
+   *  them — the brightest ground pixel is `#1F3B47`–`#203C48` in all three and the darkest
+   *  `#14252C`–`#15252D`, which is what is recorded, since a value is written for what was
+   *  drawn (the author confirms against the mock's source at the look). Hue 198°, which is
+   *  `night`'s family (194°) at a lower saturation. What sits on them, computed: `volt` 9,30 on
+   *  the centre and 12,59 on the edge; white 11,66 / 15,78; white on `onDarkFill` over the
+   *  centre 6,94 (the *Later* label); `onDarkEyebrow` over the centre 4,41, which is under AA
+   *  and is carried by a word — `vs` — that is decorative and never spoken. Derived in
+   *  yesGround.test.ts. */
+  yesGroundCentre: '#203C48',
+  yesGroundEdge: '#14252C',
 } as const;
 
 /**
@@ -284,12 +307,24 @@ const font = {
  * `letterSpacing` and `lineHeight` are in POINTS, pre-converted from the prototype's em.
  */
 const type = {
-  /** There is no sans role above `h1`. `display` (26 / 700) was added on 2026-09-08 for one
-   *  thing — the Now card's figure slot holding a weekday — and retired with that slot on
-   *  2026-09-12 (#413): the day is an `h2` row now. A token nothing references is a lie about
-   *  the system (docs/design-system.md Part 14 #1), and the next sans word above 19 is a decision
-   *  to make again rather than a role to reach for. */
+  /** `h1` is the largest sans role a SURFACE reaches for. `display` (26 / 700) was added on
+   *  2026-09-08 for one thing — the Now card's figure slot holding a weekday — and retired with
+   *  that slot on 2026-09-12 (#413): the day is an `h2` row now. A token nothing references is a
+   *  lie about the system (docs/design-system.md Part 14 #1), and the next sans word above 19 is
+   *  a decision to make again rather than a role to reach for — which is what `yesWord` below is:
+   *  a decision made for one word, with one use, and not `display` back under a new name. */
   h1: { fontFamily: font.sans[700], fontSize: 19, letterSpacing: -0.57, lineHeight: 24 },
+  /** THE YES SCREEN'S ONE WORD — *Challenge!*, *Matched!* — and nothing else's
+   *  ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+   *  §2). The heaviest weight the app loads, and a size measured off the mocks rather than taken
+   *  from the record's *about 30*: `Challenge!` is 164–168pt wide with a 25–27pt cap in the two
+   *  challenge mocks and `Matched!` 145 x 24 in the third, and Archivo 800 at 32 sets the first
+   *  at 169 and the second at 147 — the width is matched, and the mock's face has a taller cap
+   *  than Archivo's. Tracking continues the sans ramp past `display`'s -0.035em: -0.040em at 32
+   *  is -1,28. Line height 36, on 3.3's own reasoning for a sans word with ascenders.
+   *  ONE USE. A second surface that wants a word this size reopens ADR-0166 §2 rather than
+   *  reaching for this role, which is the whole of why it is named for the screen. */
+  yesWord: { fontFamily: font.sans[800], fontSize: 32, letterSpacing: -1.28, lineHeight: 36 },
   h2: { fontFamily: font.sans[700], fontSize: 15, letterSpacing: -0.38, lineHeight: 20 },
   /** The onboarding question itself. The prototype's 650 maps to 700. */
   question: { fontFamily: font.sans[700], fontSize: 15, letterSpacing: -0.38, lineHeight: 20 },
@@ -598,6 +633,21 @@ const size = {
    *  surface, exactly as 6.11's is: a 23pt track is well under the 44pt minimum, and a
    *  `hitSlop` around it would leave the words beside it inert. */
   switch: { track: 40, height: 23, knob: 18, row: 44 },
+  /** The yes screen's tile — a face at this screen's two sizes, and the initials over a poster
+   *  ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+   *  §2, §3). MEASURED off the mocks at 1x: 64 x 64 in the singles mock, 54 x 54 in the doubles
+   *  one — a step smaller, because four of them and a `vs` have to sit across the narrowest
+   *  phone's 290pt of content (4 x 54 + 6 + 2 x 15 + the word is 262). The corner is NOT here:
+   *  it fits at 19,6–20,8 on the 64 tile and 17,2–17,7 on the 54, which is a third of the box
+   *  either way — `playerPhotoRadius`'s own ratio — so the tile is `PlayerPhoto`'s `face` box at
+   *  these sizes and no second radius exists to drift from the first.
+   *
+   *  `initials` is the SHARE of the tile the two letters are set at — 22pt in the 64 tile and
+   *  18–19 in the 54, both 0,34 of the box — kept as a ratio for `RADIUS_RATIO`'s reason: two
+   *  sizes of one drawn object, and a point value per size is two numbers to keep in step. It
+   *  is the one font size in the app computed from a box, and it is computed inside the tile
+   *  that owns the box; a type role for it would be a role with a size per caller. */
+  yesTile: { singles: 64, doubles: 54, initials: 0.34 },
   /** The swipe row — 6.15. A list row that slides left to REVEAL one control behind it, and
    *  the two numbers that are the gesture's own rather than the row's.
    *
@@ -948,16 +998,20 @@ const shadow = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Motion — one entrance, one sheet, one popover, one fade, one ripple, one pulse, and one settle.
-// Nothing else moves.
+// Motion — one entrance, one sheet, one popover, one fade, one ripple, one pulse, one settle, and
+// the yes screen's entrance, which is the first and the fade composed. Nothing else moves.
 // Press feedback is immediate (Pressable's `pressed`), not animated: the prototype's
 // 120ms is a mouse-hover transition and has no touch equivalent.
 //
 // Every one of these is skipped when AccessibilityInfo.isReduceMotionEnabled is true.
 // ---------------------------------------------------------------------------
 
+/** The two durations the yes screen's entrance is composed from — see `motion.yesEntrance`. */
+const FADE = 200;
+const RISE = 300;
+
 const motion = {
-  fade: 200,
+  fade: FADE,
   /**
    * One ring, expanding out of nothing and fading as it goes — one of **two looping animations
    * in the app**, and the first motion token whose duration is a cycle rather than a
@@ -984,7 +1038,7 @@ const motion = {
    * reduced motion gets the weaker of the two signals.
    */
   typing: 1200,
-  rise: 300,
+  rise: RISE,
   sheet: 260,
   popover: 130,
   /**
@@ -995,6 +1049,26 @@ const motion = {
    * presentation, where the card is drawn at rest.
    */
   settle: 160,
+  /**
+   * The yes screen's entrance — **one beat, composed of the durations above and no new one**
+   * ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+   * §2). The two sides slide in from the edges and meet at the centre over one `rise`; the word
+   * rises in over a second `rise`, starting half-way through the first so it lands as the sides
+   * meet; the buttons fade in last over one `fade`, once the word has landed. 650 ms end to end,
+   * which is the record's *about 600*, and the one success haptic fires as the word lands.
+   * Nothing loops. Skipped whole under reduced motion, where everything is simply there and
+   * nothing buzzes — and under a running screen reader (§20.11's collapse), where the haptic
+   * still fires once, because a buzz is not a picture.
+   */
+  yesEntrance: {
+    sides: RISE,
+    word: RISE,
+    /** When the word starts, after the sides do. */
+    wordAfter: RISE / 2,
+    buttons: FADE,
+    /** When the buttons start: the moment the word lands. */
+    buttonsAfter: RISE / 2 + RISE,
+  },
   /** The prototype's cubic-bezier(.2,.8,.2,1) — decelerating. */
   easeDecel: { x1: 0.2, y1: 0.8, x2: 0.2, y2: 1 },
   /** How long a state is SHOWN — the one thing here that reduced motion does not skip.

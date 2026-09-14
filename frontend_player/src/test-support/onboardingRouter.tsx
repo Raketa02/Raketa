@@ -23,6 +23,7 @@ import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import AroundRoute from '@/app/(app)/(tabs)/around';
 import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/index';
 import ChallengeFillRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/fill';
+import YesRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/yes';
 import ChatsRoute from '@/app/(app)/(tabs)/chats';
 import ConversationRoute from '@/app/(app)/(tabs)/chats/conversation/[conversationId]';
 import ConversationGameRoute from '@/app/(app)/(tabs)/chats/conversation/[conversationId]/details';
@@ -102,6 +103,9 @@ export const ONBOARDING_ROUTES = {
   // The builder, at its **second route** — `features/play`'s own screen under the challenge it
   // is completing, so the Chats column stays lit and *back* is correct by construction.
   '(app)/(tabs)/chats/challenge/[challengeId]/fill': ChallengeFillRoute,
+  // The yes screen, under the challenge it is about — pushed the instant *I'm in* is answered,
+  // and the second route the bar stands down on (ADR-0166).
+  '(app)/(tabs)/chats/challenge/[challengeId]/yes': YesRoute,
   // And a conversation beside it, under its own static segment for the same reason: two ids of
   // two different things cannot share one `/chats/[id]`. Spelled `…/index` exactly as the file
   // tree spells it, because the shell names this route to give it the push transition and

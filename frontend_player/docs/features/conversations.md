@@ -244,3 +244,18 @@ the room says only that it ended, because why is the game card's to say. The fol
 written on it: a new way for a room without a game to end that is not a departure. A room
 **nothing was ever read from** still leaves — a stale row into a room that is not there — and the
 rows are gone when the player goes back, which the return's re-read above shows.
+
+**The awaited door is the yes screen's now, answers `expired`, and runs its bound from the first
+answer** ([#433](https://github.com/Raketa02/Raketa/issues/433),
+[ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+§1). `useAwaitedChatDoor` waits for the same two things it did — the room, or the room and its game
+when the yes completed the court — on the same cadence and the same six-second bound, and has one
+caller, the yes screen, which runs it from the moment it opens and lands _Open the chat_ on the room
+when `arrived` and on the Chats list when `expired`; the challenge screen reads `useChatDoor` once
+for its door on later visits. One thing about the bound is stated rather than assumed: it is armed
+by the **first answer after the wait began** — a page or a refusal, read off the result's two
+instants — and not at the wait's own beginning, so a list slow to answer at all is not charged
+against the worker that writes the room; and, honestly, because the screen is pushed the instant a
+yes lands and the router harness runs every pending timer on that push, a bound armed at mount had
+fired before the screen could be looked at under test and never on a phone. On a warm phone the two
+instants are a few hundred milliseconds apart.

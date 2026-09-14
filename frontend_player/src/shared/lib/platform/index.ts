@@ -2,7 +2,7 @@
  * The platform module: everything this app knows about the device it is running on.
  *
  * App lifecycle and connectivity are *wirings* — called once by the bootstrap sequence,
- * after which nothing consults them again. The three ports below are the other kind: an
+ * after which nothing consults them again. The four ports below are the other kind: an
  * interface a feature depends on, with one implementation that talks to the device and one
  * fake that a test drives (`src/test-support/platform.ts`).
  *
@@ -24,6 +24,10 @@
  * second of the two reasons the other two are: a transport cannot be driven from a test either,
  * and one file owning the app's only long-lived connection is what keeps *close it on background*
  * and *reconnect with a fresh credential* in one place instead of in a screen.
+ *
+ * **The fourth is the motor**, one verb wide, and it is here for the first reason: a buzz is a
+ * native module with nothing under it in a test, and *exactly one, and none under reduced
+ * motion* is a rule a fake can count where a mock could only record.
  *
  * `permissionStateOf` is deliberately *not* re-exported. Reading a native response is the
  * ports' own work, and a caller with a use for it is a caller that got hold of a native
@@ -65,3 +69,5 @@ export {
   useLiveStream,
   type LiveStreamProviderProps,
 } from './LiveStreamProvider';
+export { deviceHaptics, type HapticsPort } from './haptics';
+export { HapticsProvider, useHaptics, type HapticsProviderProps } from './HapticsProvider';

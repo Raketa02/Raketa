@@ -135,29 +135,33 @@ export type RoomExpectation = 'the-room' | 'the-room-and-its-game';
  * Chats tab reads whatever this found; `refetchInterval` is the mechanism because it is Query's
  * own and stops itself, where a hand-rolled loop would be a request outliving the screen.
  *
- * Two answers, because they are two facts. `door` is the join as it stands — a room the list
+ * Three answers, because they are three facts. `door` is the join as it stands — a room the list
  * holds, whatever else it knows — and is what a button is drawn from. `arrived` is whether the
  * expectation is met, and is what a push waits for: a room listed without its game is a door
- * and not yet an arrival.
+ * and not yet an arrival. `expired` is whether the bound has passed with the expectation unmet,
+ * and is what the yes screen's *Open the chat* lands on the Chats list from
+ * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §1): *no door rather than a dead one*, and past the bound the door is the list.
  *
  * The bound is held here rather than by the caller because it is a fact about the wait and not
- * about the screen: a caller says what it expects, and this says when to stop asking. `awaiting`
- * going false resets it, so a second press waits its own full bound.
+ * about the screen: a caller says what it expects, and this says when to stop asking. **It runs
+ * from the first answer after the wait began** — a page or a refusal, read off the result's two
+ * instants — for the reasons `roomOpening.ts` gives; `awaiting` changing begins a new wait, so a
+ * second press waits its own full bound.
  */
 export function useAwaitedChatDoor(
   challengeId: string,
   awaiting: RoomExpectation | false,
-): { readonly door: string | undefined; readonly arrived: boolean } {
+): { readonly door: string | undefined; readonly arrived: boolean; readonly expired: boolean } {
+  // When this wait began, and whether its bound has passed. Both reset when the wait does.
+  const [startedAt, setStartedAt] = useState(() => Date.now());
   const [expired, setExpired] = useState(false);
-
   useEffect(() => {
+    setStartedAt(Date.now());
     setExpired(false);
-    if (awaiting === false) return undefined;
-    const bound = setTimeout(() => setExpired(true), ROOM_OPENING_BOUND_MS);
-    return () => clearTimeout(bound);
   }, [awaiting]);
 
-  const { data } = useQuery<readonly Conversation[], AppError>({
+  const { data, dataUpdatedAt, errorUpdatedAt } = useQuery<readonly Conversation[], AppError>({
     queryKey: conversationKeys.list(),
     queryFn: ({ signal }) => readConversations({ signal }),
     refetchInterval: (query) =>
@@ -166,9 +170,22 @@ export function useAwaitedChatDoor(
         : false,
   });
 
+  // The list has been heard from since the wait began — a page or a refusal, either counts.
+  const answered = awaiting !== false && Math.max(dataUpdatedAt, errorUpdatedAt) >= startedAt;
+  useEffect(() => {
+    if (!answered) return undefined;
+    const bound = setTimeout(() => setExpired(true), ROOM_OPENING_BOUND_MS);
+    return () => clearTimeout(bound);
+    // `answered` flips once per wait, so the bound is armed once and not once per answer; the
+    // wait itself is the other thing that re-arms it.
+  }, [answered, awaiting]);
+
+  const arrived = awaiting !== false && met(data, challengeId, awaiting);
+
   return {
     door: doorIn(data, challengeId),
-    arrived: awaiting !== false && met(data, challengeId, awaiting),
+    arrived,
+    expired: awaiting !== false && expired && !arrived,
   };
 }
 

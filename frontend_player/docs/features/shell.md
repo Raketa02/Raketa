@@ -43,3 +43,18 @@ the only way back to the beginning and the shell arriving is what gave it a home
 the right would read as going deeper on the gesture whose meaning is that nothing was kept,
 and the push kept for the four Play screens, which genuinely are ones — Find a game is entered,
 and the deck, the builder and the pool are each pushed over what stays underneath them.
+
+**The bar stands down on a second route — the yes screen under a challenge**
+([#433](https://github.com/Raketa02/Raketa/issues/433),
+[ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+§2). `barStandsDown` names it in full beside the room — `chats`, `challenge`, the id, `yes`, and
+nothing after — and for the opposite reason: the room replaces the bar with its composer, and the
+yes screen replaces it with nothing, because the screen is the whole phone and its two pills are the
+only doors the record gives it; a bar under it would be a way out it does not have. Same mechanism
+— not rendered, not hidden, nothing animates — and the screen takes both safe-area edges on its own
+frame as the room does. The builder at `…/fill` beside it keeps its bar, which is why the match is
+still the whole shape and not a prefix. `TabShell` names the route for one option only: **the iOS
+swipe-back is off**, because a swipe that popped to the challenge screen underneath would land
+somewhere _Later_ never does; it keeps the shell's own `none` transition deliberately, since the
+screen has one motion of its own and a push sliding in under it would be a second. The column stays
+lit.

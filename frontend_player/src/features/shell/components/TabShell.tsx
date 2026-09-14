@@ -49,12 +49,14 @@
  * underneath, and leaving should read as coming back out. **This is the one thing in the shell
  * that has not been seen on a device.**
  *
- * ## The bar stands down inside a conversation, and standing down is not being drawn
+ * ## The bar stands down inside a conversation and on the yes screen, and standing down is not being drawn
  *
  * One screen replaces the bar with its composer, so the keyboard and the stream get the whole
- * screen ([#400](https://github.com/Raketa02/Raketa/issues/400)). Which screen is
- * `barStandsDown`'s answer, read off the same pathname the active column is — the shell learns
- * that *a route* stands the bar down and nothing about what a conversation is. What it does with
+ * screen ([#400](https://github.com/Raketa02/Raketa/issues/400)); a second — the yes screen —
+ * replaces it with nothing, because the screen is the whole phone and its two doors are the only
+ * ways out ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §2). Which screens is `barStandsDown`'s answer, read off the same pathname the active column
+ * is — the shell learns that *a route* stands the bar down and nothing about what either is. What it does with
  * the answer is **not render** the bar rather than hide it: the bar is a flex sibling of the
  * navigator, so a bar that was present and invisible would still take `TAB_BAR_HEIGHT` and the
  * bottom inset, and the composer would sit that far above the keyboard. Nothing animates it away
@@ -126,10 +128,21 @@ export function TabShell() {
           name="chats/challenge/[challengeId]/fill"
           options={{ animation: 'default' }}
         />
+        {/* And the yes screen under a challenge — pushed over the challenge screen the instant
+            *I'm in* is answered, and the one route whose **swipe-back is off**: a swipe that
+            popped to the challenge screen underneath would land somewhere *Later* never does
+            ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+            §1). It keeps the shell's own `none`, deliberately: the screen has one motion of its
+            own, and a push that slid in under it would be a second. The bar stands down on it,
+            below, as it does in the room. */}
+        <Stack.Screen
+          name="chats/challenge/[challengeId]/yes"
+          options={{ gestureEnabled: false }}
+        />
         {/* And so is a conversation: it is pushed over the Chats inbox, the list stays
             underneath, and backing out returns to the row it was tapped from — the challenge
             screen's argument, one row kind over ([#400](https://github.com/Raketa02/Raketa/issues/400)).
-            It is also the one screen the bar stands down on, below. */}
+            It is one of the two screens the bar stands down on, below. */}
         <Stack.Screen
           name="chats/conversation/[conversationId]/index"
           options={{ animation: 'default' }}

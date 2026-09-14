@@ -97,6 +97,27 @@ export function useChallenge(challengeId: string) {
 }
 
 /**
+ * **The same challenge, as the cache holds it** — the yes screen's read
+ * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §1: *the screen reads everything it draws from the challenge the query cache holds*).
+ *
+ * The same entry as {@link useChallenge} and the opposite posture on it. That one zeroes
+ * `staleTime` because *the offer may expire under the finger, and it is let to*; this one is
+ * pushed the instant an accept has answered, over a screen that just wrote the reply into this
+ * very entry — so a second observer that re-read on mount would send the request the redraw
+ * exists to make unnecessary, and a picture that re-folded mid-entrance would be a tile swapping
+ * under the animation the record forbids to swap. `staleTime: Infinity` is *read what is held,
+ * and fetch only if nothing is* — which is what a cold deep link to the route gets.
+ */
+export function useHeldChallenge(challengeId: string) {
+  return useQuery<ChallengeDetail | undefined, AppError>({
+    queryKey: challengeKeys.detail(challengeId),
+    queryFn: ({ signal }) => readChallenge(challengeId, { signal }),
+    staleTime: Infinity,
+  });
+}
+
+/**
  * `I'm in` and `Not this time`.
  *
  * `CHALLENGE_MUTATION_OPTIONS` is spread whole rather than partly: it is one decision about every

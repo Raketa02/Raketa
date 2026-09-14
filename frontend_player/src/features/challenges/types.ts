@@ -107,6 +107,23 @@ export { useInviteSeats } from './hooks/useChallenge';
 export { parseChallengeRouteParams, type ChallengeRouteParams } from './schemas/routeParams';
 
 /**
+ * **The yes screen** — mounted by `/chats/challenge/[challengeId]/yes`
+ * ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md),
+ * [#433](https://github.com/Raketa02/Raketa/issues/433)): the screen a yes lands on — the
+ * faces, one word, two doors — pushed by the challenge screen the instant *I'm in* is answered,
+ * and by the deck's mutual once [#434](https://github.com/Raketa02/Raketa/issues/434) gives it
+ * its second face. The route hands over the id and *which yes*, both checked first; the fold,
+ * the tile, the entrance and the words stay internal.
+ */
+export { YesScreen, type YesScreenProps } from './components/YesScreen';
+export {
+  parseYesRouteParams,
+  yesRoute,
+  type WhichYes,
+  type YesRouteParams,
+} from './schemas/routeParams';
+
+/**
  * The court a send carries — the shape the builder hands over, and the only type of this
  * feature's that crosses the seam.
  *
