@@ -522,12 +522,12 @@ else — and returns one deal: an ordered batch of cards, one `search` row, one 
 shared by every card in the deal.
 
 **The three refusals this body is written under are a mode, a widening and a pass window,
-and a grid is none of them.** *Match me* is reached from the screen the week is edited on,
-so a deal that ignored the edit would rank on a week the player had just replaced; the
-client cannot compute the difference itself, because a search that took a times rung ran on
-a grid with a slot the player never ticked and only the backend holds that. Like the
-shortlist's, it is an **ask and never a correction**: it writes no profile, and the offer to
-keep it — `KEEP_THESE_TIMES` — rides back on the response of the route that used it.
+and a grid is none of them.** The week is still an ask and never a correction — it writes no
+profile, and `KEEP_THESE_TIMES` rides back on the response of the route that used it. **The
+premise that made it worth asking is gone** ([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1): the deck is reached from its own tab and
+no longer from the screen the week is edited on, so a deal from Players runs on the profile's
+week and raises no prompt; the override stays in the body for the day a caller has a week to
+send.
 
 **A deal is at most `DECK_DEAL_MAX` cards, 10**, and a spent deal deals again — a new request, a
 new `search_id`, the same exclusions plus everybody already dealt. **Exhausting a deal is not
@@ -535,20 +535,22 @@ exhausting the pool**: the honest empty state belongs to a fresh deal that came 
 never to a player who has seen ten of forty.
 
 **One-at-a-time is how the deck is shown, not how it is computed.** §9.11's ordering policy —
-people who already said yes, then high liveness above the floor, then the rest — is a property of
-a whole deal and cannot be evaluated one card at a time. **Its third band is no longer spread:**
-§9.11's λ = 14 is struck with the stage it belonged to
+the lifted by rank key, the person who said yes to you among them and unmarked, then the rest
+([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4) — is a property of a whole deal and cannot be evaluated one card at a time. **No band is
+spread:** §9.11's λ = 14 is struck with the stage it belonged to
 ([ADR-0126](../../adr/0126-position-moves-on-a-fact-about-the-player-never-about-the-list.md)), so
-the deck's variety is that three-band order and `PASS_SUPPRESS`, and nothing in a deal moves on a
+the deck's variety is that two-band order and its exclusions, and nothing in a deal moves on a
 fact about the other cards. Per-card searches would also make the deck the highest-volume writer in the system
 by an order of magnitude for no analytic gain: the interesting unit is the deal, and *which
 card was accepted* is `position` on `search_candidate`, which already exists.
 
-**The weight vector is resolved backend-side and no mode crosses the wire.** The deck reads
-the viewer's declared `PlayIntent` for that sport: `COMPETITIVE → comp`, `FOR_FUN → fun`,
-**`NO_PREFERENCE → fun`**, not a third ruleset. The client deriving that mapping would be a
-domain rule in TypeScript; the response echoing a `mode` would fight the telemetry constraint
-that `mode` is `NULL` exactly when `surface = DECK`.
+**The weight vector is `fun` for every viewer and no mode crosses the wire** ([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §2, superseding
+the `COMPETITIVE → comp`, `NO_PREFERENCE → fun` mapping that stood here). The deck reads no
+declaration; `INTENT_ALIGNMENT` stands down on it. The response echoing a `mode` would still
+fight the telemetry constraint that `mode` is `NULL` exactly when `surface = DECK`, and
+`intent_read` below still records what the viewer had declared, for history rather than for the
+vector. The envelope gains **`pool.remaining`** and **`pool.want_to_play_you`** (ADR-0169 §4,
+§5).
 
 > **Amendment to [`search-telemetry.md`](search-telemetry.md), found here.** That constraint
 > left the deck's own weight vector **unrecorded**: nothing on the `search` row says which

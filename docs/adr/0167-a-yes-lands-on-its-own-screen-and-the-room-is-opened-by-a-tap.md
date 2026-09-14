@@ -1,6 +1,8 @@
 # ADR-0167 — A yes lands on its own screen, and the room is opened by a tap
 
-- **Status:** Accepted
+- **Status:** Accepted — **§2's *the next dark screen argues for its own record, here* answered
+  2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §7: the deck card is the second dark surface, a surface and not a
+  screen, fenced as this one is.
 - **Date:** 2026-09-14
 - **Supersedes, by named sentence,**
   [`the-loop-screens.md`](../specs/the-loop/the-loop-screens.md) §2.1's *"`I'm in` goes to the

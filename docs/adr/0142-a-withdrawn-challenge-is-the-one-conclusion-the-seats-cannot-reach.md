@@ -4,6 +4,9 @@
   admitted exactly while nobody besides the organiser holds an accepted seat — before any answer
   included — and refused once anybody has joined. §1, §3, §4 and §5 stand; §2's whole-challenge,
   irreversible, organiser-only shape stands where the act still exists.
+  **§1's *whether a pair with an unplayed game may arrange a second one is not decided here*
+  decided for the deck only, 2026-09-14, by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §6** — a thirty-day cool-off after a shared
+  court; the shortlist keeps §1's release.
 - **Date:** 2026-09-07
 - **Extends [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)**, which cites
   `challenges`' *nothing announces a conclusion the seats already imply* and applies it to a

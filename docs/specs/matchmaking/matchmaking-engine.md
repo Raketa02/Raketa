@@ -1415,22 +1415,28 @@ service. The calibration modifier and the variety strand both reward it, and the
 what is happening: *"They're new — this game does most of its work for them."* Most people are
 glad to be asked; nobody likes finding out afterwards.
 
-### 9.11 The deck — *Match me*
+### 9.11 The deck — on Players
 
-The deck has no search mode to read, so it is scored against **the viewer's own declared
-intent** for that sport (§6). This is one of the places a declaration is strictly better than
-an inference: without a stored answer the deck has nothing at all to go on. A player whose
-padel profile says `COMPETITIVE` should be seeing competitive players in the padel deck.
+> **Rewritten 2026-09-14 by [ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md).** The paragraph that stood here scored the deck against the
+> viewer's declared intent and dealt the people who said yes to you first, named. Both are
+> superseded there by name (§2, §4); the exclusions gained one (§6).
+
+The deck has no search mode to read, **and reads no declaration either**: it is a discovery
+surface and scores every deal under the `fun` vector with `INTENT_ALIGNMENT` stood down, so a
+declaration moves nobody on it, up or down. A player whose padel profile says `COMPETITIVE`
+sees the same padel deck as one whose profile says `FOR_FUN`, and a different Fit for the same
+person than Find a game shows — the social one.
 
 **The deck's ordering policy is its own, and it is not the list's:**
 
-1. **People who have already said yes to you** — an instant match is one tap away.
-2. **High-liveness candidates** above the quality floor.
-3. **The rest, spread for variety** — λ raised to 14, because a deck of eleven near-identical
-   profiles feels broken even when every card is well matched.
+1. **The lifted** above the quality floor, by rank key — where the person who already said yes
+   to you sits on their `+14`, **unmarked**, early but never in a fixed slot.
+2. **The rest.**
 
-Plus the deck's own exclusions: already passed within `PASS_SUPPRESS`, already asked, already
-has an open game with you.
+The spread the third band once had is struck (ADR-0126). Plus the deck's own exclusions:
+already passed within `PASS_SUPPRESS`, already asked, already has a live challenge or game with
+you, and within `DECK_COOL_OFF` of one being behind you — all of which `POST /deck/reset` clears
+for a sport, the yeses excepted.
 
 ---
 

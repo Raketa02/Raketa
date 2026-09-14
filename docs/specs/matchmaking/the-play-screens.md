@@ -453,12 +453,36 @@ last seat and the provisional figure and the arranged figure are the same number
 
 ---
 
-## 7. Match me — the deck
+## 7. The deck — on Players
+
+> **Rewritten 2026-09-14 by [ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md).** The deck left Play for a tab of its own, **Players**, and
+> the sentences this section carried about the declaration, the two buttons, *Show them again*
+> and the empty state are superseded there by name. What stands below is marked; what moved is
+> stated in one line each and argued in the record.
 
 `POST /deck`, sport only. One deal, one `search_id`, an ordered batch of at most
-**`DECK_DEAL_MAX` = 10** cards. The weight vector is resolved backend-side from the viewer's
-declared intent, `NO_PREFERENCE → fun`, and no `mode` crosses
-([`the-two-contracts.md`](the-two-contracts.md) §6).
+**`DECK_DEAL_MAX` = 10** cards; the client asks for the next hand when two remain, so the stack
+never visibly runs dry while people remain. **The weight vector is `FOR_FUN` for every viewer**
+— the deck is discovery, reads no declaration, raises no `play_intent_not_declared`, and stands
+`INTENT_ALIGNMENT` down for every pairing — and no `mode` crosses
+([`the-two-contracts.md`](the-two-contracts.md) §6, ADR-0169 §2). The envelope carries two
+numbers the screen prints: **`pool.remaining`** (eligible after every deck exclusion, not in this
+hand — *N left*) and **`pool.want_to_play_you`** (live yeses towards the viewer in this sport
+that would be dealt — the volt chip, not drawn at zero; ADR-0169 §4).
+
+**Two bands, not three.** The person who said yes to you is no longer dealt first and is no
+longer named on the card: they sort among the lifted by rank key, where their `+14` already sits,
+so they tend to land early and never in a fixed slot; their admission under the quality floor
+stands (ADR-0169 §4).
+
+**A swipe is an answer.** Right is *Let's play*, left is *Not today*, stamped at 95 px; ✕, i and
+🎾 do the same two things and open the player record; the buttons are the accessible path and are
+never removed (ADR-0169 §3). At the cap a right swipe on somebody who has not said yes settles
+and says so; on somebody who has, it matches — **the cap exempts a yes that closes a mutual**.
+
+**A deck-only cool-off.** Somebody you have a live challenge or game with, and for
+`deck_cool_off_days = 30` after it is behind you, is not dealt (ADR-0169 §6). The shortlist keeps
+ADR-0142 §1's release.
 
 **A spent deal deals again**, as a new request with a new `search_id`. The screen runs out of
 cards long before the pool does, and only a fresh deal that comes back empty is the empty state.
@@ -497,10 +521,14 @@ passed — so the Origin key alone does not pay for it after all. The row is kep
 suppression stays the Redis TTL, derived from it (`the-engine.md` §12). The gate is the cache,
 the evidence is the row.
 
-**There is still no *Show them again*.** The prototype offers a button clearing every pass at once.
-It makes `PASS_SUPPRESS` unmeasurable and makes the suppression a suggestion, and it solves a
-problem a real pool does not have. The **exhausted pool** is the honest empty state: the pool
-description, and the count of the player's **own outgoing** yeses still waiting.
+**There is a *Show them again*, and it is one route.** `POST /deck/reset` with the sport clears
+that sport's pass suppression, the day's dealt memory and the cool-off at once, `204`; the
+durable pass record stays, so a re-shown card is still a re-show (ADR-0169 §5). #231's
+objection is accepted as the cost: `PASS_SUPPRESS`'s falsifier now excludes resets from its
+sample. **Two endings**: *You have seen everybody* (people in range, all excluded) draws the
+mock with the reset and *Try the radar*; *Nobody in range* keeps its own sentence and
+*widen it in You*, without the reset. The sentence's number — *your yeses stay live for 21
+days* — is read from `ttl_days` on `GET /interest`'s rows, never held by the client.
 
 **A mutual yes is told to both, and arranging the game is theirs.** The challenge belongs to
 `matches`, which is out of scope — so the product says *both of you said yes* and stops,
@@ -508,9 +536,12 @@ recorded as a demand against `matches` in
 [ADR-0098](../../adr/0098-matcher-demands-as-executable-contracts.md)'s shape. Sitting on a
 mutual yes would be the product declining to do the one thing it just got permission for.
 
-**`GET /interest` returns outgoing and mutuals. Incoming-and-not-mutual never crosses**
-([ADR-0109](../../adr/0109-a-read-back-names-what-it-withholds.md)). A one-sided yes reaches
-its recipient only as an interest lift, in a search they chose to run.
+**`GET /interest` returns outgoing and mutuals — with `ttl_days` beside `cap`. Incoming-and-
+not-mutual crosses as one count and in no other shape**
+([ADR-0109](../../adr/0109-a-read-back-names-what-it-withholds.md) §2 as narrowed by ADR-0169
+§4): `pool.want_to_play_you` on the deal envelope names nobody; the list and the badge stay
+refused. A one-sided yes reaches its recipient otherwise only as an interest lift, in a search
+they chose to run — where it is a tag and a nudge and never a pin (ADR-0169 §8).
 
 **There is no notification.** Nothing in this repository can push anything, so two people who
 both said yes find out by opening the app. Said out loud rather than designed around; the push

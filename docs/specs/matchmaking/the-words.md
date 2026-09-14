@@ -571,9 +571,12 @@ two-word tag went* — which was the right reading of the sentence it had been h
 wrong conclusion, because the two-word form was never gone: it is the twin's, and *two facts
 with one tag* is exactly what licenses taking it. So the competitive card draws **`Wants to
 play you` as a volt tag beside the handle**, bound to `INTEREST_LIFT` and worded by
-`INTEREST_RECEIVED`; the social and deck cards keep the sentence under the name. Neither is a
-new field, and the twin's own sentence can still only reach a card as the reason fallback —
-which the competitive card never takes (§5).
+`INTEREST_RECEIVED`; **the social card draws the same two-word tag, and the deck card draws
+nothing** ([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4, §8 — the liker is unmarked on the deck, and the sentence under the name is
+retired on both list cards in favour of the tag). A second tag joins it on the list cards,
+**`You said yes`** — client-side, from the reader's own outgoing list, no code and no nudge.
+Neither is a new field, and the twin's own sentence can still only reach a card as the reason
+fallback — which the competitive card never takes (§5).
 
 **The tag has a coral sibling, and the volt one replaces it**
 ([#310](https://github.com/Raketa02/Raketa/issues/310)). *Best match* is the client's own two
@@ -1439,12 +1442,17 @@ truncation question**, which is recorded there rather than held by both.
 
 ### 20.5 The deck
 
-The deck card is §20.3's card with two buttons instead of one.
+> **Rewritten 2026-09-14 by [ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §3.** The deck card is its own card now — the mock's, full
+> bleed, dark wash, three round buttons and a drag — and this section's *two buttons* and *§E2
+> records the two buttons as what exists today* are superseded by name. Its other half stands
+> and is the rule the swipe ships under.
 
 | | |
 | --- | --- |
-| **Not today** | `button`. `Not today, {name}` |
-| **Let's play** | `button`. `Let's play, {name}` — the 🎾 hidden, per §E6: *"otherwise it announces as 'tennis ball let's play'"* |
+| **✕ Not today** | `button`. `Not today, {name}` |
+| **i Details** | `button`. `{name}'s record` — opens the player record sheet; so does a long-press on the card |
+| **🎾 Let's play** | `button`. `Let's play, {name}` — the 🎾 hidden, per §E6: *"otherwise it announces as 'tennis ball let's play'"* |
+| **The stamps** | not elements: `LET'S PLAY` and `NOT TODAY` are drawn, never spoken; the spoken result of the answer is |
 
 **When a card leaves, two things happen and both are deliberate.** §E3's first finding is that
 focus is destroyed on every render and nothing restores it, so today a listener is dropped at
@@ -1452,9 +1460,10 @@ the root with no idea what happened. The toast announces the act; an explicit
 `setAccessibilityFocus` moves focus to the incoming card's body. #228 §12 made both actions
 optimistic, so the next card is already there to receive it.
 
-**If the swipe of UI Open decision #9 ships, it is never the only path.** VoiceOver and
-TalkBack consume the drag before the card sees it, so a swipe-only deck is one a listener
-cannot answer. §E2 records the two buttons as what exists today; they stay.
+**The swipe shipped, and it is never the only path.** VoiceOver and TalkBack consume the drag
+before the card sees it, so a swipe-only deck is one a listener cannot answer. The three
+buttons are the accessible path and are never removed; the test that pinned *no gesture
+dependency* now pins *the buttons remain*.
 
 ### 20.6 The sheets — three, not five
 

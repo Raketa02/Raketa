@@ -1,6 +1,8 @@
 # ADR-0109 — A read-back names what it withholds, and a silent yes stays silent
 
-- **Status:** Accepted
+- **Status:** Accepted — **§2's *not as a count* superseded 2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §4: one
+  integer on the deal envelope, `pool.want_to_play_you`, names nobody and crosses nowhere else.
+  *Not as a list, not as a badge* and §1 stand.
 - **Date:** 2026-08-26
 
 ## Context

@@ -1,6 +1,8 @@
 # ADR-0128 — A pass is a statement about my deck; a block is a statement about a person
 
-- **Status:** Accepted
+- **Status:** Accepted — **the Context's *there is no Show them again* and §4 superseded
+  2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §5: a route clears a sport's pass suppression, dealt memory and
+  cool-off at once; the durable record stays. §1–§3 and §5 stand.
 - **Date:** 2026-08-27
 
 ## Context

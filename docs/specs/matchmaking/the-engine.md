@@ -700,16 +700,19 @@ exceeding it** — cubic enumeration makes `K = 32` cost the whole line-up budge
 **One deal, one `search_id`, an ordered batch of cards.** One-at-a-time is how the deck is
 *shown*, not how it is computed: §9.11's ordering policy is a property of a whole deal.
 
-**The deck has no `mode`** — a check constraint, not a convention — and reads the viewer's
-declared Play intent instead: `COMPETITIVE → comp`, `FOR_FUN → fun`, **`NO_PREFERENCE → fun`**,
-never a third vector. The mapping is resolved backend-side and no mode crosses the wire; `search`
-records `intent_read` — **the declaration as it stood**, not the vector it mapped to, so a later
-change to the mapping does not rewrite history.
+**The deck has no `mode`** — a check constraint, not a convention — **and reads no declaration
+either** ([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §2, superseding the mapping this paragraph carried): every deal scores under
+`fun`'s vector, `INTENT_ALIGNMENT` stands down for every pairing on this surface, and
+`play_intent_not_declared` is never raised by it. `search` still records `intent_read` — the
+declaration as it stood — so what a viewer had declared when dealt is not lost, and a later
+change to this rule does not rewrite history.
 
 **The relaxation ladder does not reach the deck.** Its own exclusions — passed within
-`PASS_SUPPRESS`, already asked, already has an open game with you — are gates, and their numbers
-are set ([#194](https://github.com/Raketa02/Raketa/issues/194)): **`PASS_SUPPRESS = 30 days`,
-`INTEREST_TTL = 21 days`, `OUTSTANDING_INTEREST_CAP = 20` per sport.**
+`PASS_SUPPRESS`, already asked, already has an open game with you, and **in the deck's cool-off**
+— are gates, and their numbers are set ([#194](https://github.com/Raketa02/Raketa/issues/194),
+[ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §6): **`PASS_SUPPRESS = 30 days`, `INTEREST_TTL = 21 days`, `OUTSTANDING_INTEREST_CAP = 20`
+per sport, `DECK_COOL_OFF = 30 days`** — the last a deck-only window after a shared challenge or
+game is behind the pair, deliberately equal to the pass window and cleared with it.
 
 **`PASS_SUPPRESS` is deck-only, one-directional, and never escalates**
 ([ADR-0128](../../adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)). It reaches no
@@ -738,16 +741,19 @@ already dealt. Exhausting a *deal* is not exhausting the *pool*, and the two wer
 until this was asked: the honest empty state belongs to a fresh deal that came back with nothing,
 never to a player who has seen ten of forty.
 
-**The deck's ordering is its own and its variety is that order** — people who already said yes,
-then high liveness, then the rest — plus `PASS_SUPPRESS`. §9.11's raised λ is struck with the
+**The deck's ordering is its own and its variety is that order** — **two bands** since [ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4:
+the lifted (where the person who already said yes to you sits by rank key, unmarked, on their
+`+14`), then the rest — plus `PASS_SUPPRESS`. §9.11's raised λ is struck with the
 stage it belonged to (§9): a card at a time makes order the whole experience, which is the
 stronger case for a spread and still not strong enough to buy a move nobody can be given a reason
 for.
 
-**A pass is write-only**, carries the Origin key, and **no route ever returns one**. There is no
-*Show them again*: it voids a 30-day suppression on one tap, makes the constant unmeasurable, and
-solves a problem a real pool does not have. **The exhausted deck is the honest empty state** plus
-the count of the player's own outgoing yeses.
+**A pass is write-only**, carries the Origin key, and **no route ever returns one**. **There is a
+*Show them again*** ([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §5): `POST /deck/reset` clears a sport's suppression, dealt memory and
+cool-off in one act, `204`, and the durable record stays — the constant's falsifier now excludes
+resets from its sample, which is the cost #231 named and the author accepted. **The exhausted
+deck is still the honest empty state**, and it now says how many are left before it is reached:
+`pool.remaining` on the envelope, and `pool.want_to_play_you` for the chip.
 
 ---
 

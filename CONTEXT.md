@@ -373,6 +373,13 @@ of the code because this file asks for them in that order.
 - **Profile photo** — the first of a player's photos, and the one a player card shows. A
   player may hold up to three or none; none is not an absence but a **generated court
   poster**, derived from their identity so it is stable across devices.
+- **Intro** — **one line a player writes about themselves**: at most 100 characters, no line
+  breaks, any language, one per player, and **optional** — a player who wrote none has none,
+  not an empty one. The first player-authored free text the platform shows to a stranger, and
+  the fence is at the write: a phone number, an email, a URL or a handle is **refused**, because
+  the realistic abuse of a line shown before a game exists is contact leaving the app. It reaches
+  a **Player card** and a player record and nowhere a person is merely named; it is never scored
+  ([ADR-0170](docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)). _Avoid_: "bio", "tagline", "about", "status".
 - **On-court check** — what the platform concluded about whether a photograph shows a racket
   sport, decided at the upload and stored with it
   ([ADR-0129](docs/adr/0129-the-photo-check-is-a-sidecar-the-backend-asks.md)). **It soft-warns
@@ -793,10 +800,16 @@ appears here.
   three different numbers. The cap is **per sport**, **hard** — the write is refused, never
   quietly aged away — and **shown before it bites**, because a cap the player cannot see is a
   refusal they cannot predict.
+- **Want to play you** — a **count, never a list**: the number of people whose live **Interest**
+  towards a player in a sport *would be dealt to them* — every gate passed, not passed on within
+  the pass window, not in the **Cool-off**, not already mutual. It rides on a deal and names
+  nobody; the chip prints it and is not drawn at zero. The one shape in which an incoming yes
+  crosses to its recipient other than as a lift ([ADR-0169](docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4, narrowing
+  [ADR-0109](docs/adr/0109-a-read-back-names-what-it-withholds.md) §2 by this one integer).
 - **Deal** — one invocation of the **deck**: a bounded, ordered batch of cards, shown one at a
-  time. The deal is the unit, not the card, because the deck's ordering — people who already said
-  yes, then liveness, then the rest — is a property of a whole deal and cannot be evaluated a card
-  at a time. A **spent deal** is not an empty pool: it deals again, as a new **Search**, and only a
+  time. The deal is the unit, not the card, because the deck's ordering — the lifted by rank key,
+  the person who already said yes to you among them and unmarked, then the rest ([ADR-0169](docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4) — is a
+  property of a whole deal and cannot be evaluated a card at a time. A **spent deal** is not an empty pool: it deals again, as a new **Search**, and only a
   fresh deal that comes back with nothing is the **pool description**.
 - **Ruleset version** — the name of the frozen set of numbers a search used. **Engine version**
   is its sibling and means the *maths* changed. Stamped on every search, so a Fit stays
@@ -887,7 +900,15 @@ appears here.
   costs the other person nothing, literally; and it **never escalates** — a second pass buys the
   same 30 days, because a pass that hardens toward permanence is a Block nobody consented to. The
   **suppression** lapses at 30 days; the **record** of the pass does not, because a lapsed
-  suppression leaves no trace that a re-shown card is a re-show.
+  suppression leaves no trace that a re-shown card is a re-show. **A reset clears the suppression** — *Show them
+  again*, one route, one sport, together with the day's dealt memory and the Cool-off — and
+  leaves the record ([ADR-0169](docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §5).
+- **Cool-off** — the deck's own window after a shared court: somebody a player has a live
+  **Challenge** or **Game** with, and for 30 days after it is behind them, is **not dealt** to
+  them. Deck only — a search keeps
+  [ADR-0142](docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
+  §1's release, because a rematch is arranged in the chat the two already have and a deck is for
+  meeting people. Equal to the pass window on purpose, and cleared with it ([ADR-0169](docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §6).
 - **Exposure** — how often a player has been **shown** in somebody's answer, counted per sport
   per week. It exists so that the same ten people do not sit at the top of every list: a player
   shown to nobody this week is lifted, and one shown far more often than most is sunk. Both are
@@ -915,13 +936,14 @@ appears here.
   allowed to: as a **reason** about the pairing's chances — *usually answers within a day* — never
   as a fact about a stranger's phone. This product has no presence indicator
   ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
-- **A bio.** No player-authored free text reaches a card. The Social tag vocabulary is closed for
-  the same reason, and the sentence a player might write about themselves is a moderation surface
-  before it is a feature.
-- **An interest inbox** — any list, count or badge of who has said *Let's play* to you. The signal
+- **A bio.** Superseded 2026-09-14 by **Intro** ([ADR-0170](docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)): one line, fenced at the write, is the
+  moderation story the refusal asked for. What is still refused is a paragraph, a second field,
+  and any free text that is scored.
+- **An interest inbox** — any **list or badge** of who has said *Let's play* to you. The signal
   exists only on the promise that it is silent, and a yes given under that promise is not consent
   to appear in somebody's inbox
-  ([ADR-0109](docs/adr/0109-a-read-back-names-what-it-withholds.md)).
+  ([ADR-0109](docs/adr/0109-a-read-back-names-what-it-withholds.md)). **A count is the one
+  exception** — **Want to play you**, above — and it names nobody ([ADR-0169](docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4).
 
 **Invariants**
 - **A term that cannot be evaluated stands down. A gate that cannot be evaluated excludes.**

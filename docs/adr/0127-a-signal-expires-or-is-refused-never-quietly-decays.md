@@ -1,6 +1,7 @@
 # ADR-0127 — A signal expires or it is refused; it never quietly decays
 
-- **Status:** Accepted
+- **Status:** Accepted — **§6 amended 2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §5: `ttl_days` crosses beside
+  `cap`, so a sentence prints the number the client may not hold. The three numbers stand.
 - **Date:** 2026-08-27
 
 ## Context

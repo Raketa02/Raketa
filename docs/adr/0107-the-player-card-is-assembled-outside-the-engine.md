@@ -1,6 +1,8 @@
 # ADR-0107 — The player card is assembled outside the engine, and its contents are a closed list
 
-- **Status:** Accepted
+- **Status:** Accepted — **§2's closed list amended and §3's first refusal (*no bio*) taken up
+  2026-09-14 by [ADR-0170](0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)**: one field, `intro`, with the moderation story §3 asked for. §3's
+  second refusal and §4 stand (§4 with ADR-0167 §3's one exception).
 - **Date:** 2026-08-26
 
 ## Context

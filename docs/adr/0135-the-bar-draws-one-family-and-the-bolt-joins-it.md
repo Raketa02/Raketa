@@ -1,6 +1,7 @@
 # ADR-0135 — The tab bar draws one family, and the bolt joins it
 
-- **Status:** Accepted
+- **Status:** Accepted — ***`map-pin` for Around* superseded 2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §1: the
+  tab is **Players** and draws `users`. One family, and `radar` still not drawn, stand.
 - **Date:** 2026-08-29
 - **Closes:** [ADR-0012](0012-player-app-design-system.md)'s one deliberately-open item — *"The glyph set for tab icons is deliberately still open. The system specifies the 16pt box and the position; `@expo/vector-icons` ships with Expo and is the likely answer, but choosing it is a separate decision"*
 - **Answers:** [#238](https://github.com/Raketa02/Raketa/issues/238) — *Five glyphs, and the set they come from*, on [#217](https://github.com/Raketa02/Raketa/issues/217)
