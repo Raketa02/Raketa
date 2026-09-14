@@ -25,6 +25,8 @@ import {
   SLOT_NAME,
   STILL_TO_AGREE,
   THE_PLAN,
+  TODAY,
+  cardDay,
   checklistLines,
   counterLabel,
   dayChipLabel,
@@ -83,16 +85,58 @@ describe('the day', () => {
   });
 
   /**
-   * **The Now card's name speaks the date beside the weekday** — the one reader that asks for
-   * it, because it is the one surface that draws one ([#413](https://github.com/Raketa02/Raketa/issues/413)).
+   * **The Now card's name speaks the day as the card draws it** — the date beside the weekday,
+   * and *Today* on the day — the one reader that hands in its instant, because it is the one
+   * surface that draws either ([#413](https://github.com/Raketa02/Raketa/issues/413), ADR-0166).
    * `dayDate` itself is `shared/date/calendarDay.test.ts`'s.
    */
-  it('is spoken with its date only where a surface asks', () => {
+  it('is spoken with its date only where a surface hands in its instant', () => {
     const agreed = plan({ day: '2026-08-09' });
 
     expect(spokenSlotValue(agreed, 'day')).toBe('Sunday');
-    expect(spokenSlotValue(agreed, 'day', { date: true })).toBe('Sunday 9 Aug');
-    expect(spokenSlotValue(undefined, 'day', { date: true })).toBe(NOT_AGREED_YET);
+    expect(spokenSlotValue(agreed, 'day', { readAt: '2026-08-01T09:00:00Z' })).toBe('Sunday 9 Aug');
+    expect(spokenSlotValue(undefined, 'day', { readAt: '2026-08-01T09:00:00Z' })).toBe(
+      NOT_AGREED_YET,
+    );
+  });
+
+  it('is spoken as Today on the day the surface was read, and as the weekday otherwise', () => {
+    const agreed = plan({ day: '2026-08-09' });
+
+    expect(spokenSlotValue(agreed, 'day', { readAt: '2026-08-09T09:00:00Z' })).toBe('Today 9 Aug');
+    expect(spokenSlotValue(agreed, 'day', { readAt: '2026-08-08T09:00:00Z' })).toBe('Sunday 9 Aug');
+    // The chip in the room and the tag on the game screen hand in no instant: a weekday, always.
+    expect(spokenSlotValue(agreed, 'day')).toBe('Sunday');
+  });
+});
+
+/**
+ * **The day as the Now card draws it** — two parts, the word and the date, because the row
+ * draws them in two roles and speaks them as one. *Today* is the calendar's word and not a
+ * card's name (ADR-0166).
+ */
+describe('the day, as the card draws it', () => {
+  it('is the weekday and the date', () => {
+    expect(cardDay('2026-08-09', '2026-08-01T09:00:00Z')).toEqual({
+      name: 'Sunday',
+      date: '9 Aug',
+    });
+  });
+
+  it('is Today and the date on the day the list was read', () => {
+    expect(cardDay('2026-08-09', '2026-08-09T09:00:00Z')).toEqual({ name: TODAY, date: '9 Aug' });
+    expect(TODAY).toBe('Today');
+  });
+
+  /** 22:30 UTC on the 8th is already the 9th in Warsaw, whatever the phone thinks. */
+  it('reads today in the platform zone, never the device one', () => {
+    const held = process.env.TZ;
+    process.env.TZ = 'Pacific/Midway';
+    try {
+      expect(cardDay('2026-08-09', '2026-08-08T22:30:00Z').name).toBe(TODAY);
+    } finally {
+      process.env.TZ = held;
+    }
   });
 });
 

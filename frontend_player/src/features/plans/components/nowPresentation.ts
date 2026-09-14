@@ -96,7 +96,8 @@ export function gamesHeading(count: number): string {
 export const CARD_TAG: Readonly<Record<GameCardName, string | undefined>> = {
   planning: 'Planning',
   'game-on': 'Game on',
-  today: 'Today',
+  // No *Today*: the day of the game is the day row's to say, under whichever of these two the
+  // plan has earned (ADR-0166).
   'needs-result': 'Needs result',
   // The fifth rung, above the clock (#411 rule 5): a seat somebody left, drawn empty on the
   // court beside it. The errand and not the shape — the court says how many.
@@ -117,14 +118,13 @@ export const CARD_TAG: Readonly<Record<GameCardName, string | undefined>> = {
  * meanings stops meaning either. That argument holds: the sport moved to a **word** in the header,
  * so on this card the dot has one meaning, and it is the stage's. Three colours for three facts —
  * `arranging` while the game is still in the players' hands (a plan to finish, a seat to fill, a
- * result to enter, an answer owed), `mint` where it is settled (the plan complete, the day here,
- * the score counted), and the quiet hairline on the three endings nobody scored. A card with no tag
- * has no dot to colour.
+ * result to enter, an answer owed), `mint` where it is settled (the plan complete, the score
+ * counted), and the quiet hairline on the three endings nobody scored. A card with no tag has no
+ * dot to colour.
  */
 export const STAGE_DOT: Readonly<Record<GameCardName, string | undefined>> = {
   planning: theme.color.arranging,
   'game-on': theme.color.mint,
-  today: theme.color.mint,
   'needs-result': theme.color.arranging,
   'needs-a-player': theme.color.arranging,
   confirm: theme.color.arranging,
@@ -155,7 +155,6 @@ export const STAGE_DOT: Readonly<Record<GameCardName, string | undefined>> = {
 const CARD_STATE_WORD: Readonly<Record<GameCardName, string | undefined>> = {
   planning: 'planning',
   'game-on': 'game on',
-  today: 'today',
   'needs-result': 'needs result',
   'needs-a-player': 'needs a player',
   confirm: 'confirm the result',
@@ -190,8 +189,8 @@ export interface CardAccent {
  * lime — which gives volt a meaning on this card it had nowhere else: a bright bar is a slot
  * everybody has agreed. It stays off `primary`; 1.2's coral list is closed.
  *
- * **Mint on everything else, as a soft default.** The real look of the other eight cards is not
- * in #410 — the author supplies it — and until then every card is drawn by this shell in the
+ * **Mint on everything else, as a soft default.** The real look of the other cards is not in
+ * #410 — the author supplies it — and until then every card is drawn by this shell in the
  * palette's settled colour so the rail does not mix two visual languages, and a game flipping to
  * *Game on* under your thumb does not jump layouts.
  *
@@ -207,7 +206,6 @@ export interface CardAccent {
 export const ACCENT: Readonly<Record<GameCardName, CardAccent>> = {
   planning: { bar: theme.color.volt, button: 'volt' },
   'game-on': { bar: theme.color.mint, button: 'settled' },
-  today: { bar: theme.color.mint, button: 'settled' },
   'needs-result': { bar: theme.color.mint, button: 'settled' },
   'needs-a-player': { bar: theme.color.mint, button: 'settled' },
   confirm: { bar: theme.color.mint, button: 'settled' },
@@ -313,7 +311,7 @@ export interface CardFacts {
 export const FINISH_THE_PLAN = 'Finish the plan';
 
 /**
- * **The wide door's verb, per name** — §22.7's three, one per rung, *Finish the plan* on the
+ * **The wide door's verb, per name** — §22.7's three, one per door, *Finish the plan* on the
  * card whose door is `open` but whose errand is not
  * ([#413](https://github.com/Raketa02/Raketa/issues/413)), and *Fill the seat* on the one whose
  * door is the fill.
@@ -335,7 +333,6 @@ const DOOR_LABEL: Readonly<Record<GameCardName, string | undefined>> = {
   // that leads with its plan, so the word is `shared/vocabulary/theActsWords.ts`' rather than
   // either feature's — the two of them reach each other at load time, and a word read across that
   // seam while a module is being evaluated reads a half-built one.
-  today: WE_PLAYED,
   'needs-result': WE_PLAYED,
   confirm: 'Confirm the result',
   counted: undefined,
@@ -354,19 +351,20 @@ export function doorLabel(name: GameCardName): string | undefined {
 // ---------------------------------------------------------------------------
 
 /**
- * **One slot, spoken** — `Where, Zabłocie Sport, court 3` · `Day, Sunday 9 Aug` · `Time, 19:00` ·
- * `Day, Not agreed yet`.
+ * **One slot, spoken** — `Where, Zabłocie Sport, court 3` · `Day, Sunday 9 Aug` · `Day, Today
+ * 14 Sep` · `Time, 19:00` · `Day, Not agreed yet`.
  *
  * `planTagsName`'s register one surface over: the slot is named because a listener hears three
  * values in a row and has nothing to attach them to, and the comma rather than a colon because
  * this is prose and the chip's is a control's name. The value is `spokenSlotValue`'s — the one
- * spelling every spoken slot reads — asked for **with its date**, because this is the one surface
- * that draws one. The **place is spoken whole**, comma and court and all (§20.4) — the drawn row
- * shortens it, and this is the half the drawing cannot keep. The card's own labels are used, so a
- * listener hears *Time* where the card draws `TIME`.
+ * spelling every spoken slot reads — asked for **as the card draws it**, with its date and with
+ * *Today* on the day, because this is the one surface that draws either; `readAt` is the games
+ * list's instant, the card's one clock. The **place is spoken whole**, comma and court and all
+ * (§20.4) — the drawn row shortens it, and this is the half the drawing cannot keep. The card's
+ * own labels are used, so a listener hears *Time* where the card draws `TIME`.
  */
-export function cardSlotSpoken(plan: Plan | undefined, slot: PlanSlot): string {
-  return `${SLOT_EYEBROW[slot]}, ${spokenSlotValue(plan, slot, { date: true })}`;
+export function cardSlotSpoken(plan: Plan | undefined, slot: PlanSlot, readAt: string): string {
+  return `${SLOT_EYEBROW[slot]}, ${spokenSlotValue(plan, slot, { readAt })}`;
 }
 
 /**
@@ -411,7 +409,7 @@ export function gameCardLabel({
     CARD_TAG[name],
     sportSpoken(game, sportName),
     openSeatsSpoken(game),
-    ...PLAN_SLOTS.map((slot) => cardSlotSpoken(plan, slot)),
+    ...PLAN_SLOTS.map((slot) => cardSlotSpoken(plan, slot, game.readAt)),
     cardLine(name, { game, plan, playerId }),
   ]
     .filter((part): part is string => part !== undefined)

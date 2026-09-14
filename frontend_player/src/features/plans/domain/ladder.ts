@@ -1,39 +1,47 @@
 /**
- * **The five rungs a game's card is named by, read in order** — and the single most drift-prone
+ * **The four rungs a game's card is named by, read in order** — and the single most drift-prone
  * thing on the map
  * ([`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §3.3).
  *
  * ```
  * 1. a seat is open                          → Needs a player
  * 2. the agreed point exists and has passed  → Needs result
- * 3. the agreed day is today                 → Today
- * 4. all three slots filled                  → Game on
- * 5. otherwise                               → Planning
+ * 3. all three slots filled                  → Game on
+ * 4. otherwise                               → Planning
  * ```
  *
  * **Read in order, and the clock outranks the checklist**
  * ([ADR-0145](../../../../../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md)
  * §3). The conditions overlap on purpose — a game arranged for tonight has three slots filled
- * *and* is today *and* will shortly have a point behind it — so the order is what resolves them,
- * and rungs 4 and 5 are reached only when the point has not passed and the day is not today.
- * #329's *"and the agreed moment still ahead"* is implied by the ladder rather than restated as a
- * condition of its own.
+ * *and* will shortly have a point behind it — so the order is what resolves them, and rungs 3
+ * and 4 are reached only while the point is still ahead. #329's *"and the agreed moment still
+ * ahead"* is implied by the ladder rather than restated as a condition of its own.
+ *
+ * **There is no rung for the day itself**
+ * ([ADR-0166](../../../../../docs/adr/0166-the-day-row-says-today-and-no-card-does.md)). ADR-0145
+ * §3 had one — *the agreed day is today → Today*, above the checklist — and it named a card after
+ * the calendar rather than after what the plan had reached, so a game with no hour and no place
+ * read *Today* on the morning it was to be played, in the settled colour, leading with *We
+ * played*. The calendar is the day row's to say: `Today 14 Sep` is drawn under whichever tag the
+ * plan has earned, and *We played* leads only once the agreed point has passed. The test that was
+ * the rung is `slots.ts`' `dayIsToday`, read by the day row and by the chip row's fallback.
  *
  * **And the open seat outranks the clock** (#411 rule 5,
  * [ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)).
  * A seat somebody left is a fact about the **court** and not about the plan: the game cannot be
  * played, and the server refuses to record it, until somebody is in that seat — so *Needs result*
- * over a short court would ask for a score nobody could enter, and *Today* would announce a game
- * that has a gap in it. The plan survives underneath (rule 6); it is the rung that changes.
+ * over a short court would ask for a score nobody could enter, and *Game on* would announce a
+ * game that has a gap in it. The plan survives underneath (rule 6); it is the rung that changes.
  * Nothing on the wire names it: the standing stays `AWAITING_ENTRY` and the seat is
  * `player_id: null`, and this is the one place the two are read together.
  *
- * **It is here because five card names, two tickets and one amendment all key on it.**
+ * **It is here because four card names, two tickets and two amendments all key on it.**
  * [#324](https://github.com/Raketa02/Raketa/issues/324) and
  * [#329](https://github.com/Raketa02/Raketa/issues/329) each keyed a rule on the agreed point
- * without the two ever being checked against each other, and #324's second amendment dropped
- * *Today*'s three-slot requirement — so this is one function, in `domain/`, and every surface
- * reads it: the rail, the card, the gloss, and the game screen's arm.
+ * without the two ever being checked against each other, #324's second amendment dropped a
+ * rung's three-slot requirement, and ADR-0166 dropped the rung — so this is one function, in
+ * `domain/`, and every surface reads it: the rail, the card, the gloss, and the game screen's
+ * arm.
  *
  * ## It folds against the games list's instant and against nothing else
  *
@@ -52,22 +60,21 @@
  */
 
 import type { Game } from '@/features/games/types';
-import { platformDay } from '@/shared/date/platformZone';
 
 import { unfilledSlots, type Plan } from './slots';
 
 /**
- * **The five rungs, in the order they are read**, and the type derived from them rather than
+ * **The four rungs, in the order they are read**, and the type derived from them rather than
  * declared beside them — `SPORTS` → `Sport`'s own shape, so the list and the union cannot
  * disagree about what a rung is.
  */
-export const RUNGS = ['needs-a-player', 'needs-result', 'today', 'game-on', 'planning'] as const;
+export const RUNGS = ['needs-a-player', 'needs-result', 'game-on', 'planning'] as const;
 
 /** A card's name is one of these or an ending's. */
 export type Rung = (typeof RUNGS)[number];
 
 /**
- * Whether a card name is one of the five — **the ladder's own membership test.**
+ * Whether a card name is one of the four — **the ladder's own membership test.**
  *
  * Exported because the gloss is *one rule for four rungs*, and a hand-written cascade over the
  * rungs is the shape that goes quietly wrong when another arrives: it would fall through to the
@@ -78,7 +85,7 @@ export function isRung(name: string): name is Rung {
 }
 
 /**
- * **The moment this plan names** — the value the ladder's first rung is about.
+ * **The moment this plan names** — the value the ladder's first clock rung is about.
  *
  * > The agreed instant when the day and the hour are both recorded; the **start of the following
  * > local day** when only the day is; **nothing** when no day is.
@@ -121,7 +128,6 @@ export type CourtRead = Pick<Game, 'readAt' | 'seats'>;
 export function rungOf(plan: Plan | undefined, court: CourtRead): Rung {
   if (court.seats.some((seat) => seat.playerId === undefined)) return 'needs-a-player';
   if (momentHasPassed(plan, court.readAt)) return 'needs-result';
-  if (plan?.day !== undefined && plan.day === platformDay(court.readAt)) return 'today';
   if (unfilledSlots(plan).length === 0) return 'game-on';
 
   return 'planning';

@@ -14,10 +14,12 @@ claim: **every state the loop's five screens draw is in this database**
 - **The Now rail's cards.** ``plans.py`` reaches *planning* and *game on*, and the
   played history reaches *counted* and *uncounted* — but every game it writes was
   played days ago and an ended card leaves the rail after **twenty-four hours**,
-  so neither of those two was ever *drawn*. And nothing anywhere reached *today*,
-  *needs result*, *confirm* or *never played*: the first two need a plan agreed on
-  a **backdated** clock, the third a score nobody has answered yet, and the fourth
-  an arrangement old enough to have ghosted.
+  so neither of those two was ever *drawn*. And nothing anywhere reached *needs
+  result*, *confirm* or *never played*: the first needs a plan agreed on a
+  **backdated** clock, the second a score nobody has answered yet, and the third
+  an arrangement old enough to have ghosted. Nor had anything reached the day of
+  its own game — a *planning* card whose day row reads *Today* rather than a
+  weekday (``docs/adr/0166``), which needs a plan agreed for the day it is read on.
 - **The six challenge standings, on both sides.** Five were somewhere in the
   eleven or the inboxes already; ``LAPSED`` was reachable only by *waiting*, which
   a fixture cannot do, so it is written on a clock three days old.
@@ -214,7 +216,8 @@ class RailGame:
         return self.side_a + self.side_b
 
 
-#: The five games this layer arranges, one per card no other layer draws.
+#: The five games this layer arranges — one per card no other layer draws, and one
+#: for the day of the game, which no other layer's plan names.
 #:
 #: **Tennis singles throughout, organised by the member the played history and the
 #: plans already organise with**, which is the cheapest shape that reaches five
@@ -228,11 +231,14 @@ class RailGame:
 #: ``SECOND_SPORT_BECAUSE_THEY_PLAYED`` feeds the *draw*, and a row here that
 #: needed one would move the committed population for a fixture about cards.
 RAIL_GAMES: tuple[RailGame, ...] = (
-    # *Today*: agreed for today, and the hour deliberately **not** agreed — #324's
-    # second amendment dropped *Today*'s three-slot requirement, so `Still to
-    # agree: the hour` on the morning of the game is the case that justifies it.
+    # *Planning*, on the day of the game: agreed for today, and the hour
+    # deliberately **not** agreed. There is no *Today* card (``docs/adr/0166``) —
+    # the day row says it, `Today 14 Sep` where a weekday would be, under the tag
+    # the plan has earned — and a plan with a day and no hour on the morning of the
+    # game is the case that shows why: it is still *Planning*, with a dim `TIME`
+    # bar, and it says so rather than announcing the game as settled.
     RailGame(
-        card="today",
+        card="planning",
         sport=Sport.TENNIS.value,
         arranged_hours_ago=0,
         side_a=("cohort-d-01",),
@@ -1042,12 +1048,13 @@ async def assert_the_loop(
 
 #: Every card the Now rail can draw, **and what reaches each one**. The names are
 #: the client's own (``features/plans/domain/gameCard.ts``), and the two absences
-#: at the bottom are stated here because a fixture that quietly reached seven of
-#: nine would read as having reached nine.
+#: at the bottom are stated here because a fixture that quietly reached six of
+#: eight would read as having reached eight.
 #:
 #: - ``planning`` and ``game-on`` come from ``app/seeds/plans.py``'s four
-#:   arranged games — the slot counts walk the card from empty to complete;
-#: - the five in :data:`RAIL_GAMES` come from this layer;
+#:   arranged games — the slot counts walk the card from empty to complete — and
+#:   ``planning`` once more from this layer, on the day of its game;
+#: - the four others in :data:`RAIL_GAMES` come from this layer;
 #: - ``uncounted`` is a **state without a card**, and the arithmetic says so: a
 #:   game is unscored only once **both** sides' proposal windows have closed, and
 #:   a window is a day long — so the earliest unscored instant is a day after the
@@ -1065,7 +1072,6 @@ async def assert_the_loop(
 THE_RAIL_DRAWS: tuple[str, ...] = (
     "planning",
     "game-on",
-    "today",
     "needs-result",
     "confirm",
     "counted",
@@ -1195,8 +1201,10 @@ def _the_card_this_game_draws(
     """The client's own fold: the standing first, and only then the four rungs.
 
     An ending is an ending whatever the plan says, which is the seam #324 and #329
-    kept crossing — a game whose score is being argued about is not *Today*
-    because its plan happens to name today.
+    kept crossing — a game whose score is being argued about is not *Game on*
+    because its plan happens to be whole. **And the day is not a rung**
+    (``docs/adr/0166``): a plan agreed for today is *game on* or *planning* by its
+    slots, and the calendar is the card's day row's to say.
 
     **There is a second transcription of this fold and it is deliberate.**
     ``tests/api/test_the_loop.py`` folds the same ladder over the **wire**, which
@@ -1215,8 +1223,6 @@ def _the_card_this_game_draws(
         }[standing]
     if plan is not None and plan.agreed_point is not None and plan.agreed_point <= now:
         return "needs-result"
-    if plan is not None and plan.day == local_day(now):
-        return "today"
     if plan is not None and plan.slot_count == SLOTS:
         return "game-on"
     return "planning"
@@ -1504,9 +1510,9 @@ def costs(seeded: SeededLoop) -> tuple[str, ...]:
         "copies agree: a rung reordered or a shelf life moved in "
         "`features/plans/domain/gameCard.ts` leaves this claim quietly asserting "
         "the old ladder. What it still catches is the half that actually rots — a "
-        "**state** becoming unreachable — and the transcription is nine lines with "
+        "**state** becoming unreachable — and the transcription is eight lines with "
         "the owning file named beside it.",
-        "two of the nine cards are **stated absences** rather than reached states, "
+        "two of the eight cards are **stated absences** rather than reached states, "
         "and they are stated here as well as in the docstring: `uncounted` has no "
         "drawable card at all, since a game is unscored only once both proposal "
         "windows have closed and that is a day after the entry — exactly when an "

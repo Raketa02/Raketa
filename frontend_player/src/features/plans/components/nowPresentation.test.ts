@@ -32,7 +32,7 @@ import {
   sportSpoken,
   sportWord,
 } from './nowPresentation';
-import { NOT_AGREED_YET, SLOT_EYEBROW } from './planPresentation';
+import { NOT_AGREED_YET, SLOT_EYEBROW, TODAY } from './planPresentation';
 
 const GAME_ID = '11111111-0000-4000-8000-000000000001';
 const READ_AT = '2026-09-12T09:00:00Z';
@@ -101,7 +101,7 @@ describe('the stage dot', () => {
   });
 
   it('is mint where the game is settled', () => {
-    for (const name of ['game-on', 'today', 'counted'] as const) {
+    for (const name of ['game-on', 'counted'] as const) {
       expect(STAGE_DOT[name]).toBe(theme.color.mint);
     }
   });
@@ -149,7 +149,6 @@ describe('the card’s name in a line', () => {
   it.each([
     ['planning', 'planning'],
     ['game-on', 'game on'],
-    ['today', 'today'],
     ['needs-result', 'needs result'],
     ['needs-a-player', 'needs a player'],
     ['called-off', 'called off'],
@@ -180,10 +179,22 @@ describe('the door’s word', () => {
     expect(doorOf('planning')).toBe(doorOf('game-on'));
   });
 
-  it('keeps the act’s own verb on the two score-led rungs and on the argument', () => {
-    expect(doorLabel('today')).toBe(WE_PLAYED);
+  it('keeps the act’s own verb on the score-led rung and on the argument', () => {
     expect(doorLabel('needs-result')).toBe(WE_PLAYED);
     expect(doorLabel('confirm')).toBe('Confirm the result');
+  });
+
+  /**
+   * **No card says *Today*, and none but *Needs result* leads with *We played*** (ADR-0166): the
+   * day of the game is the day row's to say, and *you played* leads only once the agreed point is
+   * behind the fold. A table that grew the name back would draw a tag the ADR retired.
+   */
+  it('has no Today card, so the day of the game leads with the plan until the hour has passed', () => {
+    expect((GAME_CARD_NAMES as readonly string[]).includes('today')).toBe(false);
+    expect(Object.keys(CARD_TAG)).not.toContain('today');
+    expect(GAME_CARD_NAMES.filter((name) => doorLabel(name) === WE_PLAYED)).toEqual([
+      'needs-result',
+    ]);
   });
 
   /**
@@ -247,12 +258,12 @@ describe('the line under the slots', () => {
     playerId: 'me',
   });
 
-  it('is nothing on the three rungs whose account is the slots', () => {
+  it('is nothing on the two rungs whose account is the slots', () => {
     expect(cardLine('planning', facts())).toBeUndefined();
+    expect(cardLine('planning', facts({}, plan({ day: '2026-09-12' })))).toBeUndefined();
     expect(
       cardLine('game-on', facts({}, plan({ place: 'x', day: '2026-09-19', hour: '18:00' }))),
     ).toBeUndefined();
-    expect(cardLine('today', facts({}, plan({ day: '2026-09-12' })))).toBeUndefined();
   });
 
   it('is the time left when a result is owed', () => {
@@ -283,29 +294,43 @@ describe('the line under the slots', () => {
 
 /**
  * **The three slots, spoken** — each named and then what it holds, in `planTagsName`'s own
- * register: the place whole, the day with its date, the hour as drawn, and *Not agreed yet* where
- * nothing is.
+ * register: the place whole, the day with its date and as *Today* on the day, the hour as drawn,
+ * and *Not agreed yet* where nothing is.
  */
 describe('a slot, spoken', () => {
   it('names the slot and speaks the place whole, comma and court and all', () => {
-    expect(cardSlotSpoken(plan({ place: 'Zabłocie Sport, court 3' }), 'where')).toBe(
+    expect(cardSlotSpoken(plan({ place: 'Zabłocie Sport, court 3' }), 'where', READ_AT)).toBe(
       `${SLOT_EYEBROW.where}, Zabłocie Sport, court 3`,
     );
   });
 
   it('speaks the day as the weekday and its date', () => {
-    expect(cardSlotSpoken(plan({ day: '2026-08-09' }), 'day')).toBe(
+    expect(cardSlotSpoken(plan({ day: '2026-08-09' }), 'day', READ_AT)).toBe(
       `${SLOT_EYEBROW.day}, Sunday 9 Aug`,
     );
   });
 
+  /** As the row draws it (ADR-0166): the word replaces the weekday and the date stays. */
+  it('speaks the day as Today and its date, on the day the list was read', () => {
+    expect(cardSlotSpoken(plan({ day: '2026-09-12' }), 'day', READ_AT)).toBe(
+      `${SLOT_EYEBROW.day}, ${TODAY} 12 Sep`,
+    );
+    expect(cardSlotSpoken(plan({ day: '2026-09-13' }), 'day', READ_AT)).toBe(
+      `${SLOT_EYEBROW.day}, Sunday 13 Sep`,
+    );
+  });
+
   it('speaks the hour as it is drawn, under the card’s word for it', () => {
-    expect(cardSlotSpoken(plan({ hour: '19:00' }), 'hour')).toBe(`${SLOT_EYEBROW.hour}, 19:00`);
+    expect(cardSlotSpoken(plan({ hour: '19:00' }), 'hour', READ_AT)).toBe(
+      `${SLOT_EYEBROW.hour}, 19:00`,
+    );
   });
 
   it('says a slot nobody has filled is not agreed yet, in the drawn words', () => {
-    expect(cardSlotSpoken(undefined, 'where')).toBe(`${SLOT_EYEBROW.where}, ${NOT_AGREED_YET}`);
-    expect(cardSlotSpoken(plan(), 'hour')).toBe(`${SLOT_EYEBROW.hour}, ${NOT_AGREED_YET}`);
+    expect(cardSlotSpoken(undefined, 'where', READ_AT)).toBe(
+      `${SLOT_EYEBROW.where}, ${NOT_AGREED_YET}`,
+    );
+    expect(cardSlotSpoken(plan(), 'hour', READ_AT)).toBe(`${SLOT_EYEBROW.hour}, ${NOT_AGREED_YET}`);
   });
 });
 

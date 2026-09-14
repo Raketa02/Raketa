@@ -1984,7 +1984,7 @@ rather than as one sentence — [`the-loop-screens.md`](../the-loop/the-loop-scr
 | Slot | Label | Settled | Not settled |
 | --- | --- | --- | --- |
 | where | `WHERE` | the place, without its court; spoken whole | `Not agreed yet` |
-| day | `DAY` | `Sunday` `9 Aug` — the weekday whole and the date beside it | `Not agreed yet` |
+| day | `DAY` | `Sunday` `9 Aug` — the weekday whole and the date beside it; **`Today` `14 Sep` on the day of the game** ([ADR-0166](../../adr/0166-the-day-row-says-today-and-no-card-does.md)), judged against the games list's `read_at`, and only here — the chip in the room and the tag on the game screen keep the weekday. *Today* only: no *Tomorrow*, no *Yesterday* | `Not agreed yet` |
 | hour | `TIME` | `19:00` | `Not agreed yet` |
 
 **`TIME` is the card's word for the `hour` slot**, as the design draws it; the chip in the room
@@ -2000,7 +2000,7 @@ writes *singles* or *doubles*: the court says the format.
 
 | Rung | Under the slots |
 | --- | --- |
-| **Planning** · **Game on** · **Today** | nothing — the slots are the whole account |
+| **Planning** · **Game on** | nothing — the slots are the whole account |
 | **Needs result** | `{duration} left` |
 | everything that is not a rung | `gameStandingLine`'s sentence, cited |
 
@@ -2103,7 +2103,7 @@ stale tap re-reads and says nothing, `challenge_not_found` leaves the screen, an
 `challengeErrorMessage`'s sentence as for every write in that feature.
 
 **The rung**: **`Needs a player`** is the card's word for a court somebody left, above *Needs
-result*, *Today* and *Game on*; the state word one line over is `needs a player`, so the room's
+result* and *Game on*; the state word one line over is `needs a player`, so the room's
 header reads `Padel · needs a player`. The wide door says **`Fill the seat`** (§22.7, §22.9).
 **`We played` is withheld** while the seat is open, and no sentence replaces it: the empty seat on
 the card is the whole of the explanation.
@@ -2435,7 +2435,7 @@ never a standing (ADR-0157) — and a room with no game stops at the sport.
 | Element | Role | Announces |
 | --- | --- | --- |
 | `YOUR GAMES · n` | `header` | the heading and its count |
-| A game card's body | — | **one element, no role, no action** — the tag, the sport, then the three slots as sentences: `Planning. Padel. Where, Zabłocie Sport, court 3. Day, Not agreed yet. Time, Not agreed yet.` — and the line under the slots where the card keeps one. **On a court somebody left, the open seat is said after the sport** — `Needs a player. Padel. An open seat. Where, …` · `2 open seats.` — because the court is hidden from a listener and the tag names the errand, not the shape (#418) |
+| A game card's body | — | **one element, no role, no action** — the tag, the sport, then the three slots as sentences: `Planning. Padel. Where, Zabłocie Sport, court 3. Day, Not agreed yet. Time, Not agreed yet.` · `Game on. Padel. Where, Zabłocie Sport. Day, Today 14 Sep. Time, 18:00.` — and the line under the slots where the card keeps one. **On a court somebody left, the open seat is said after the sport** — `Needs a player. Padel. An open seat. Where, …` · `2 open seats.` — because the court is hidden from a listener and the tag names the errand, not the shape (#418) |
 | The wide door | `button` | its own verb — `Finish the plan`, `Open`, `Fill the seat`, `We played`, `Confirm the result` |
 | The bubble | `button` | `Open the chat` — **the same words as every other chat door** |
 | The rail's dots | — | **one element, `Game {i} of {n}`, and no role** — 7.9's own shape (*"one element, one label — never one per segment"*), and not pressable, so it announces a position rather than offering an action |

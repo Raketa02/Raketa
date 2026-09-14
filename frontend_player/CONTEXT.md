@@ -609,7 +609,7 @@ not restated here; what follows is only what this client had to invent to draw t
 - **The entry lead** — which of two things an `AWAITING_ENTRY` arm leads with: **the plan** while
   the moment is still ahead, **the score** once it is here — and **the plan** while a seat is
   open, whatever the clock says. One standing over two landings, which is what §5.2 means by
-  _Planning_ arriving at the Planning arm and _Today_ arriving at the score grid. It is folded in
+  _Planning_ arriving at the Planning arm and _Needs result_ arriving at the score grid. It is folded in
   `features/plans` — the ladder reads a plan, and now the court — and **derived from the card's
   own door**, so the two cannot disagree: _the verb names what you arrive at_. It changes **what
   leads and never what is offered**: _We played_ is available on every arm with a full court, one
@@ -799,20 +799,22 @@ only what this client had to invent to draw what is happening today and next
 ([#367](https://github.com/Raketa02/Raketa/issues/367),
 [#413](https://github.com/Raketa02/Raketa/issues/413)).
 
-- **The ladder** — the five rungs a game's card is named by, **read in order**, in
+- **The ladder** — the four rungs a game's card is named by, **read in order**, in
   `domain/ladder.ts`: _a seat is open_ → **Needs a player**, _the agreed point has passed_ →
-  **Needs result**, _the agreed day is today_ → **Today**, _all three slots filled_ → **Game
-  on**, otherwise **Planning**. The conditions overlap on purpose and the order is what resolves
-  them: **the clock outranks the checklist**
+  **Needs result**, _all three slots filled_ → **Game on**, otherwise **Planning**. The
+  conditions overlap on purpose and the order is what resolves them: **the clock outranks the
+  checklist**
   ([ADR-0145](../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md) §3),
-  so rungs 4 and 5 are reached only when the point has not passed and the day is not today — and
+  so rungs 3 and 4 are reached only while the point is still ahead — **the calendar is not a
+  rung** ([ADR-0166](../docs/adr/0166-the-day-row-says-today-and-no-card-does.md)): a game on its
+  own day is _Game on_ or _Planning_ by its slots, and the day row says _Today_ — and
   **the open seat outranks the clock**
   ([ADR-0162](../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), #411 rule
   5): a court somebody left cannot be played or recorded until somebody is in that seat, so the
   rung is read off the court before the plan is asked anything. _Avoid_: restating _and the moment
-  still ahead_ as a condition of its own — the order already says it — reading a rung anywhere
-  but here, and asking the wire for the rung: nothing on it names one, and `player_id: null` is
-  the whole of what it says.
+  still ahead_ as a condition of its own — the order already says it — a _Today_ rung or any
+  card named after the calendar, reading a rung anywhere but here, and asking the wire for the
+  rung: nothing on it names one, and `player_id: null` is the whole of what it says.
 - **The open seat** — a seat somebody has **left** and nobody has filled: `player_id: null` on
   the wire, `playerId` absent here, and **still a seat** — it keeps its place and its side, the
   court keeps its size, and every surface that draws the court draws it empty: the builder's
@@ -854,8 +856,8 @@ only what this client had to invent to draw what is happening today and next
   layout that changes shape rather than content between two names.
 - **The stage dot** — the tag's dot on this card is **the stage's, not the sport's**: `arranging`
   while the game is still in the players' hands (Planning, Needs a player, Needs result, Confirm
-  the result), `mint` where it is settled (Game on, Today, Counted), the quiet hairline on the
-  three endings nobody scored. It is legal because **the sport is the word beside it** — `PADEL`,
+  the result), `mint` where it is settled (Game on, Counted), the quiet hairline on the three
+  endings nobody scored. It is legal because **the sport is the word beside it** — `PADEL`,
   `PADEL · FRIENDLY` — and nothing writes _singles_ or _doubles_: the court says the format.
   _Avoid_: a sport dot here, urgency as the pill's variant, and a dot on a card that names no
   sport.
@@ -864,8 +866,13 @@ only what this client had to invent to draw what is happening today and next
   not**: a settled slot draws its value big and white — the place without its court, `Sunday`
   `9 Aug`, the hour in mono — and an unsettled one draws _Not agreed yet_ small and grey. The card
   fills with brightness as the plan does. `TIME` is the card's word for the `hour` slot; the
-  chat's chip keeps `Hour`. _Avoid_: a figure, a line, a gloss, a countdown on any of them, and a
-  row that shrinks when its slot is empty.
+  chat's chip keeps `Hour`. **On the day of the game the day row reads `Today` `14 Sep`**
+  ([ADR-0166](../docs/adr/0166-the-day-row-says-today-and-no-card-does.md)) — `dayIsToday` in
+  `slots.ts`, the plan's day against the platform day of the games list's `read_at`, the one
+  definition the quick chips' _On my way_ also reads; the card is the only surface that says it,
+  and _Today_ is the only word it says. _Avoid_: a figure, a line, a gloss, a countdown on any of
+  them, a row that shrinks when its slot is empty, _Tomorrow_ or _Yesterday_, and _Today_ on the
+  chat's chip or the game screen's tag.
 - **The accent** — one table by name for the settled bar's colour **and** the wide door's variant:
   `volt` on Planning (_the plan is settled here_ — a meaning volt has on this card and nowhere
   else), mint on everything else as the soft default. _Avoid_: a volt bar over a mint door, and

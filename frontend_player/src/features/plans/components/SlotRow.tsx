@@ -25,7 +25,11 @@
  * line* through `placeWithoutTheCourt`. The whole place is the text's own label as the ticket
  * asks, and it is inert while the card's body is the element: what a listener actually hears is
  * the body's name, which speaks the place whole (`cardSlotSpoken`). The **day**
- * is the weekday whole in `h2` and the date beside it in `tiny`: `Sunday` `9 Aug`. The **hour** is
+ * is the weekday whole in `h2` and the date beside it in `tiny`: `Sunday` `9 Aug` — and on the day
+ * itself the word is *Today*: `Today` `14 Sep`
+ * ([ADR-0166](../../../../../docs/adr/0166-the-day-row-says-today-and-no-card-does.md)). That is
+ * why this row takes `readAt`: the day is the one slot whose drawing depends on when it is read,
+ * and the instant is the games list's, the card's one clock — never the phone's. The **hour** is
  * `num.m`, because [1.4](../../../../docs/design-system.md#14-numbers-are-monospaced-always) is
  * categorical that numbers are monospaced always, and it is the mono role whose optical size sits
  * beside `h2`'s. Which drawing it is comes off the slot's name — a component branching on `/^\d/`
@@ -39,22 +43,23 @@
 
 import { StyleSheet, Text, View } from 'react-native';
 
-import { dayDate } from '@/shared/date/calendarDay';
 import { placeWithoutTheCourt } from '@/shared/formatting/placeName';
 import { theme } from '@/shared/ui';
 
 import { slotValue, type Plan, type PlanSlot } from '../domain/slots';
 
-import { NOT_AGREED_YET, SLOT_EYEBROW, dayChipName } from './planPresentation';
+import { NOT_AGREED_YET, SLOT_EYEBROW, cardDay } from './planPresentation';
 
 export interface SlotRowProps {
   readonly slot: PlanSlot;
   readonly plan: Plan | undefined;
+  /** The instant the games list was folded at — *today*, for the day row. */
+  readonly readAt: string;
   /** The bar's colour where the slot is settled — the card's accent, from `ACCENT[name]`. */
   readonly accent: string;
 }
 
-export function SlotRow({ slot, plan, accent }: SlotRowProps) {
+export function SlotRow({ slot, plan, readAt, accent }: SlotRowProps) {
   const value = slotValue(plan, slot);
 
   return (
@@ -70,7 +75,7 @@ export function SlotRow({ slot, plan, accent }: SlotRowProps) {
           {value === undefined ? (
             <Text style={s.unsettled}>{NOT_AGREED_YET}</Text>
           ) : (
-            <SettledValue slot={slot} value={value} />
+            <SettledValue slot={slot} value={value} readAt={readAt} />
           )}
         </View>
       </View>
@@ -78,7 +83,15 @@ export function SlotRow({ slot, plan, accent }: SlotRowProps) {
   );
 }
 
-function SettledValue({ slot, value }: { readonly slot: PlanSlot; readonly value: string }) {
+function SettledValue({
+  slot,
+  value,
+  readAt,
+}: {
+  readonly slot: PlanSlot;
+  readonly value: string;
+  readonly readAt: string;
+}) {
   if (slot === 'where') {
     return (
       <Text style={s.place} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={value}>
@@ -88,13 +101,15 @@ function SettledValue({ slot, value }: { readonly slot: PlanSlot; readonly value
   }
 
   if (slot === 'day') {
+    const day = cardDay(value, readAt);
+
     return (
       <View style={s.day}>
         <Text style={s.weekday} numberOfLines={1}>
-          {dayChipName(value)}
+          {day.name}
         </Text>
         <Text style={s.date} numberOfLines={1}>
-          {dayDate(value)}
+          {day.date}
         </Text>
       </View>
     );

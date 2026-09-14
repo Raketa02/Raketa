@@ -1,6 +1,10 @@
 # ADR-0145 — The hour is the agreement, and no booking will ever contradict it
 
-- **Status:** Accepted
+- **Status:** Accepted — **§3's *Today* rung superseded 2026-09-14 by
+  [ADR-0166](0166-the-day-row-says-today-and-no-card-does.md)**: the ladder is four rungs and the
+  calendar is not one of them; the clock §3 made drawable is drawn in the card's day row as
+  `Today 14 Sep`, under whichever tag the plan has earned. The hour as the agreement, the agreed
+  point, *Needs result* and the ordering all stand.
 - **Date:** 2026-09-07
 - **Extends [ADR-0144](0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)**, which
   decided the Plan's shape — three slots, *where · day · hour* — and said in as many words that
@@ -123,6 +127,12 @@ value, defined whenever the day is, coarsened rather than absent when the hour i
 coarsened **later, never earlier**, so nobody is ever asked for a result before they could have
 played. It needs no new arithmetic: the coarse case is `slot_start` at the next day's offset and
 minute zero, which is the same function ADR-0144 already routes every conversion through.
+
+> **Rung 2 below is superseded 2026-09-14 by
+> [ADR-0166](0166-the-day-row-says-today-and-no-card-does.md).** There is no *Today* card: a game
+> on its own day is *Game on* or *Planning* by its slots, and the day row says `Today 14 Sep` in
+> place of the weekday. The purchase this section argues for — a plan makes the clock drawable —
+> is kept; what moved is where the clock is drawn, out of the slot that names the stage.
 
 **The card ladder becomes four rungs read in order, and the clock outranks the checklist:**
 

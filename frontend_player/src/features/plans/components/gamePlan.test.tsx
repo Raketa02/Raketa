@@ -266,8 +266,9 @@ describe('the three plan arms', () => {
   });
 
   /**
-   * *Today* and *Needs result* are one arm here: the plan, and how long is left to say you played
-   * — which is the screen's own clock, folded from `entry_closes_at` against the list's `read_at`.
+   * *Needs result* is the arm that leads with the score: the plan, and how long is left to say
+   * you played — which is the screen's own clock, folded from `entry_closes_at` against the
+   * list's `read_at`.
    */
   it('draws the plan and the window left, once the agreed point has passed', async () => {
     await openFromNow({
@@ -312,8 +313,8 @@ describe('the three plan arms', () => {
 
 describe('the plan is read-only on the score lead', () => {
   /**
-   * §5.4's fifth correction, and ADR-0149 §4 under it — narrowed by #414 to the two rungs that
-   * lead with the score, where the plan is context for a score rather than the errand: *a control
+   * §5.4's fifth correction, and ADR-0149 §4 under it — narrowed by #414 to the rung that leads
+   * with the score, where the plan is context for a score rather than the errand: *a control
    * that cannot be operated must not offer the affordance of one.* §24.5 makes the three one
    * element, which is the reason `Tag` was chosen over `Chip` in the first place.
    */
@@ -331,9 +332,10 @@ describe('the plan is read-only on the score lead', () => {
   });
 
   it('says an unfilled slot is not agreed yet rather than offering a way to fill it', async () => {
-    // The agreed day is today, so the score leads — with the place and the hour still to agree.
+    // A day-only plan whose point has passed: the score leads, with the place and the hour still
+    // to agree — and past its point nothing offers to fill them.
     await openFromNow({
-      plans: [plan({ day: '2026-09-12', agreed_point: '2026-09-12T22:00:00Z' })],
+      plans: [plan({ day: '2026-09-11', agreed_point: '2026-09-11T22:00:00Z' })],
     });
 
     const spoken = await screen.findByLabelText(new RegExp(`^${PLAN_SPOKEN_LEAD}`));
@@ -388,9 +390,9 @@ describe('the two acts on an entry arm', () => {
 
 describe('the two landings inside one standing', () => {
   /**
-   * §5.2: *Planning* and *Game on* arrive at **the Planning arm**, *Today* and *Needs result* at
-   * **the score grid** — and *the verb names what you arrive at*, so the card's door and the
-   * screen's landing are one fact rather than two tables.
+   * §5.2: *Planning* and *Game on* arrive at **the Planning arm**, *Needs result* at **the score
+   * grid** — and *the verb names what you arrive at*, so the card's door and the screen's landing
+   * are one fact rather than two tables.
    */
   it('leads with the plan where the moment is still ahead, and keeps the grid a press away', async () => {
     await openFromNow({ plans: [WHOLE] });
@@ -420,14 +422,22 @@ describe('the two landings inside one standing', () => {
     expect(screen.queryByText(WE_PLAYED)).toBeNull();
   });
 
-  /** The agreed **day** is today, so the moment is here even with an hour still to agree. */
-  it('leads with the score on the agreed day', async () => {
+  /**
+   * **The agreed day being today is not a landing** (ADR-0166): the moment is still ahead, so the
+   * plan leads and the grid is the same press away it is on any other day. The day is said on the
+   * card's day row, not by where the screen lands.
+   */
+  it('leads with the plan on the agreed day while the moment is still ahead', async () => {
     await openFromNow({
       plans: [plan({ day: '2026-09-12', agreed_point: '2026-09-12T22:00:00Z' })],
     });
 
-    expect(await screen.findByText('Send this score')).toBeTruthy();
-    expect(screen.queryByText(WE_PLAYED)).toBeNull();
+    expect(await screen.findByText(PLAN_PANEL.title)).toBeTruthy();
+    expect(screen.queryByText('Send this score')).toBeNull();
+
+    fireEvent.press(screen.getByText(WE_PLAYED));
+
+    expect(screen.getByText('Send this score')).toBeTruthy();
   });
 });
 
@@ -435,7 +445,7 @@ describe('the checklist, on the score lead', () => {
   /**
    * Three lines, capped, in one order — what is true now, what is still to agree, what it moves.
    * The third is **cited, not written**: `worthLine`'s built and tested sentence. Drawn on the
-   * two rungs that lead with the score; on the plan lead the card and the counter carry it (#414).
+   * rung that leads with the score; on the plan lead the card and the counter carry it (#414).
    */
   it('is three lines in one order, the third of them cited', async () => {
     await openFromNow({ plans: [PASSED] });

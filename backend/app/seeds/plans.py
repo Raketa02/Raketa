@@ -411,11 +411,12 @@ async def agree_up_to(
     it.
 
     **One wiring, two callers.** This layer's four plans walk the card from empty
-    to complete, and ``app/seeds/loop.py`` writes two more on a **backdated**
-    clock to reach the two rungs a plan agreed for *today* and one agreed for
-    *yesterday* draw. The three use cases and the one-repository rule below are
-    the same either way, and a second copy of them is a second opinion about
-    which order a plan is written in.
+    to complete, and ``app/seeds/loop.py`` writes two more: one agreed for *today*,
+    on which a *Planning* card's day row reads *Today* (``docs/adr/0166``), and one
+    on a **backdated** clock agreed for a day now behind us, which is the *Needs
+    result* rung. The three use cases and the one-repository rule below are the
+    same either way, and a second copy of them is a second opinion about which
+    order a plan is written in.
 
     **One repository per call, and it matters that it is one.** The writes are
     appends to **one** stream and the repository is what remembers the version it
