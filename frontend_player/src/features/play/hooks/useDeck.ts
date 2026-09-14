@@ -57,7 +57,9 @@
  */
 
 import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 
+import { yesRoute } from '@/features/challenges/types';
 import type { AppError } from '@/shared/errors';
 
 import { dealDeck, type DeckAsk, type DeckOutcome } from '../use-cases/dealDeck';
@@ -168,7 +170,8 @@ export function useDeckProgress(): DeckProgress {
 }
 
 /**
- * *Let's play* — and the outstanding-yes count, updated from the tap's own answer.
+ * *Let's play* — the outstanding-yes count, updated from the tap's own answer, and **the yes
+ * screen, when the answer is a mutual naming a chat.**
  *
  * `ExpressedInterestResponse` carries where the sport stands **after** this tap, so the number
  * the deck's ending sentence prints moves without a second round trip: Part 7's *"prefer
@@ -188,16 +191,40 @@ export function useDeckProgress(): DeckProgress {
  * and Query leaves the entry alone: writing `{padel: 3}` as the whole answer would mark a
  * one-sport map fresh for the stale time, and every other sport would read as nought until it
  * expired. A patch is a patch of something.
+ *
+ * ## A mutual naming a challenge is a screen, pushed from here and not from the press
+ *
+ * When the reply says `mutual` **and** names a challenge, the yes screen is pushed for it as a
+ * mutual's — *Matched!* — over wherever the player is by then
+ * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §1, [#434](https://github.com/Raketa02/Raketa/issues/434)). It is pushed from **this**
+ * `onSuccess` and deliberately not from the screen's per-press callback: the callbacks handed to
+ * `mutate()` are dropped the moment the component that called it unmounts, and the yes is
+ * optimistic — the card flies on the press and the reply may land after the player has moved to
+ * the next card, or to another tab. A slow reply must not swallow the moment, so the push lives
+ * with the mutation, which outlives the screen. The card's flight is not waited for: a screen
+ * over a card still leaving is the screen the record asks for, and *Later* pops back to a deck
+ * that has finished advancing.
+ *
+ * **The other two answers stay sentences, and stay with the press.** A one-sided yes and a
+ * mutual naming no chat are toasts the screen raises from its own callback, exactly as before —
+ * a full-screen celebration must never overstate what happened, and a toast about a card the
+ * player has already left behind is not owed to them the way the screen is.
+ *
+ * The route is the challenges feature's, read through its surface: both entries to the yes
+ * screen end in a challenge, and the mutual reply names the one it opened (ADR-0154).
  */
 export function useSayYes() {
   const client = useQueryClient();
 
   return useMutation<InterestExpressed, AppError, CardAnswer>({
     mutationFn: sayYes,
-    onSuccess: ({ outstanding }) => {
+    onSuccess: ({ outstanding, mutual, challengeId }) => {
       client.setQueryData<OutstandingInterest>(searchKeys.interest(), (held) =>
         held === undefined ? undefined : { ...held, ...outstanding },
       );
+
+      if (mutual && challengeId !== null) router.push(yesRoute(challengeId, 'mutual'));
     },
   });
 }

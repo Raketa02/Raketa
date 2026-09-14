@@ -432,8 +432,9 @@ user walking #429 found it wrong, and the sentence it would need does not exist 
 [ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)).
 _`I'm in` goes to the room_ is retired: the reply is still the redraw, and then the challenge screen
 **pushes the yes screen** — `/chats/challenge/{id}/yes?which=challenge`, this feature's own, keyed by
-the challenge and by one Zod-checked _which yes_ whose only member today is a challenge's (a
-mutual's is [#434](https://github.com/Raketa02/Raketa/issues/434)'s). The screen is the app's one
+the challenge and by one Zod-checked _which yes_ — a challenge's here; a mutual's, _Matched!_, is
+the deck's door and the last paragraph of this record
+([#434](https://github.com/Raketa02/Raketa/issues/434)). The screen is the app's one
 dark ground: the reader's tile, `vs`, the other side's — on a padel four the partner's tile or an
 outlined empty seat beside the reader's — the one lime word **Challenge!** whatever standing the
 reply came back with, and two pills. It **reads everything it draws from the challenge the cache
@@ -480,3 +481,33 @@ where the mock measures 38. **`expo-haptics` is a native module, so a developmen
 rebuilt** (`pnpm ios` / `pnpm android`) before the screen buzzes; `npx expo install --check` and
 `pnpm doctor` both agree with the SDK. **Not seen on a device** — the author checks the screen
 against the three mocks.
+
+**The yes screen's second face — a mutual's, _Matched!_**
+([#434](https://github.com/Raketa02/Raketa/issues/434),
+[ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+§1, §4). `which=mutual` is the second member of the route's _which yes_, and **the two faces are
+keyed once**: the word (`YES_WORD`), the sentence (`YES_SENTENCE`) and, on the screen, the fold,
+the `vs` and the two moves out (`FACE`) are each a `Record` over the union, so a third yes fails
+to compile in three places rather than falling into an `else` arm. The deck pushes it from its
+mutation's own success handler (the play record says why), and **the challenge is fetched on
+open**: `useHeldChallenge`'s `staleTime: Infinity` reads what is held and fetches only where
+nothing is, which after a challenge's yes is never and after a mutual's is always, since the deck
+never held it — and the entrance waits for it as it waits for the faces. **The picture is
+`pairForReader`**: you first, then everybody else who has said yes, and **no empty seat in every
+sport** — a padel mutual is a four-seat court with a side still to fill, and the fold draws two
+faces off it, sized as two (`tilesIn` counts the picture, not the court). It is _everybody who has
+said yes_ and not _the one this tap was about_, deliberately: the reply names _the challenge these
+two have_ — the one it minted, or the one an earlier mutual opened that is not finished with
+(ADR-0154 §1) — and the screen holds the challenge and not the card, so a court an earlier mutual
+opened that has since filled draws everybody who is in, under _Matched!_ and with no `vs`. On the
+mutual that minted it that is exactly two, which is every walk the suites take; the grown court is
+a decision the ticket did not make and this record does, on the line that a picture of who is in
+is the honest picture and picking two of four would be picking. The listener hears _Matched! You
+and Marek.P_ — `matchedAnnouncement`, whole handles, joined with _and_ and never _against_. **The
+exits by face.** After a mutual's yes, _Later_ and the device's back are a plain pop, and the
+Chats list where there is nothing to pop to — a cold link to the route, which
+`yesScreen.test.tsx` walks; _Open the chat_ lands as `[Chats list, the room]` through the shell's
+`openTab`, the second caller that surface has, and past the bound on the list alone — the deck's
+suite walks both. The challenge's face is untouched: `dismissTo` down to the list under the
+challenge screen for both moves, as before. `LATER`, `MATCHED_WORD` and `matchedAnnouncement`
+cross the feature's surface for the deck's suite and nothing else.

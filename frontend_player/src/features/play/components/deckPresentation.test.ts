@@ -5,6 +5,9 @@
  * unmeasurable and the suppression a suggestion — the pass sentence states the **deck-only**
  * boundary ADR-0128 asks for, the footer promise names the gesture and its target rather than
  * the record sheets K-7 removed, and nothing here invents a familiar form of anybody's name.
+ *
+ * **And a mutual naming a chat has no sentence here any more** (ADR-0166 §1): it is the yes
+ * screen, pushed by the mutation, and the two sentences a yes still raises are pinned verbatim.
  */
 
 import { poolDescription } from './searchPresentation';
@@ -13,10 +16,10 @@ import {
   MATCH_ME_TITLE,
   WIDEN_IN_YOU,
   interestToast,
-  mutualChallengeToast,
   mutualToast,
   outgoingYeses,
   passedToast,
+  yesToast,
 } from './deckPresentation';
 
 const EVERY_SENTENCE = [
@@ -27,7 +30,6 @@ const EVERY_SENTENCE = [
   passedToast('Marek Z.'),
   interestToast('Marek Z.'),
   mutualToast('Marek Z.'),
-  mutualChallengeToast('Marek Z.'),
 ];
 
 describe('the segment', () => {
@@ -106,9 +108,9 @@ describe('the empty states', () => {
   });
 });
 
-describe('the four toasts', () => {
+describe('the three toasts', () => {
   it('names the whole handle and never a familiar form', () => {
-    for (const sentence of [passedToast, interestToast, mutualToast, mutualChallengeToast]) {
+    for (const sentence of [passedToast, interestToast, mutualToast]) {
       expect(sentence('Marek Z.')).toContain('Marek Z.');
     }
   });
@@ -123,6 +125,9 @@ describe('the four toasts', () => {
   });
 
   it('never promises that a one-sided yes was delivered', () => {
+    expect(interestToast('Marek Z.')).toBe(
+      'Noted — Marek Z. sees it the next time they look for a game',
+    );
     expect(interestToast('Marek Z.')).not.toMatch(/told|sent|notified/i);
   });
 });
@@ -137,20 +142,24 @@ describe('what the deck never says', () => {
 
 describe('a mutual with a game, and a mutual without one', () => {
   /**
-   * ADR-0154. The tap now answers with the game these two have, when there is one — so the
-   * mutual that opened a game and the mutual that did not stopped being the same sentence.
+   * ADR-0154. The tap answers with the game these two have, when there is one — so the mutual
+   * that opened a game and the mutual that did not stopped being the same sentence; and since
+   * ADR-0166 the first is not a sentence at all.
    */
 
-  it('says where to go when the tap named a challenge, and calls it no kind of thing', () => {
-    const said = mutualChallengeToast('Marek Z.');
+  it('has no toast for a mutual that named a challenge, because that yes is a screen', () => {
+    expect(yesToast('Marek Z.', { mutual: true, challengeId: 'c' })).toBeUndefined();
+  });
 
-    expect(said).toMatch(/both said yes/);
-    expect(said).toContain('Marek Z.');
-    expect(said).toMatch(/Chats/);
-    // A singles mutual is `ON` and a doubles one is a side short, so the noun would be wrong
-    // for half the sports: *a half-built court is not a game the pair have, it is a game they
-    // are still making* (ADR-0154 §2).
-    expect(said).not.toMatch(/\bgame\b|\bcourt\b/i);
+  it('picks the two sentences that remain by the answer, and never by the press', () => {
+    expect(yesToast('Marek Z.', { mutual: false, challengeId: null })).toEqual({
+      message: interestToast('Marek Z.'),
+      tone: 'base',
+    });
+    expect(yesToast('Marek Z.', { mutual: true, challengeId: null })).toEqual({
+      message: mutualToast('Marek Z.'),
+      tone: 'ok',
+    });
   });
 
   it('keeps the older sentence exactly where no game was named', () => {

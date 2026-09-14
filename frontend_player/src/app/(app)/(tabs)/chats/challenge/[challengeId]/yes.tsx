@@ -6,12 +6,14 @@ import { YesScreen, parseYesRouteParams } from '@/features/challenges/types';
  * **The yes screen** — the screen a yes lands on, under the challenge it is about
  * ([ADR-0166](../../../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)).
  *
- * Pushed over the challenge screen the instant *I'm in* is answered, and genuinely a push: it
- * is one-shot, and every exit dismisses it — *Later* down to the Chats list with the challenge
- * screen, *Open the chat* down to the list and then into the room. It is a stack screen and not
- * a modal, the shell stands its bar down on it as it does in the room, and its swipe-back is
- * off (`TabShell`), because a swipe that popped to the challenge screen underneath would land
- * somewhere *Later* never does.
+ * Pushed over the challenge screen the instant *I'm in* is answered, and over wherever the
+ * player is the instant the deck's *Let's play* comes back mutual and naming a chat
+ * ([#434](https://github.com/Raketa02/Raketa/issues/434)); genuinely a push either way: it is
+ * one-shot, and every exit removes it — *Later* down to the Chats list with the challenge screen
+ * after a challenge's yes and a plain pop after a mutual's, *Open the chat* to the list and then
+ * into the room. It is a stack screen and not a modal, the shell stands its bar down on it as it
+ * does in the room, and its swipe-back is off (`TabShell`), because a swipe that popped to the
+ * challenge screen underneath would land somewhere *Later* never does.
  *
  * Two params, both checked first: the challenge id, for the reasons its sibling route states,
  * and **which yes** this is — a closed union, because a route param is not app state and a

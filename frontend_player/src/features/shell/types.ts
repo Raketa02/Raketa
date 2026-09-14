@@ -67,13 +67,17 @@ export { enterPlay } from './components/shellNavigation';
 /**
  * Open a flanking tab from a screen inside another one.
  *
- * One caller today and it is a **link to where a fact lives**: Find a game's standing
+ * Two callers. The first is a **link to where a fact lives**: Find a game's standing
  * declaration line offers *Change*, and what it changes is on the You tab beside the other
  * durable facts strangers read ([#294](https://github.com/Raketa02/Raketa/issues/294),
- * [#296](https://github.com/Raketa02/Raketa/issues/296)). It is the tab bar's own move rather
- * than a second one — the shell has one navigation and every arrival replaces — so a player
- * sent here lands where pressing the column would have put them, and **the Play session ends
- * on the way**, which is what leaving Play has always meant.
+ * [#296](https://github.com/Raketa02/Raketa/issues/296)). The second is **the yes screen's
+ * *Open the chat* after a mutual** ([#434](https://github.com/Raketa02/Raketa/issues/434),
+ * ADR-0166 §1): the room has to land as `[Chats list, the room]` and the list is nowhere under
+ * the deck, so the screen lays the Chats tab down and pushes the room over it — *from the deck
+ * this switches the tab; Play keeps its held deck*. It is the tab bar's own move rather than a
+ * second one — the shell has one navigation and every arrival replaces — so a player sent here
+ * lands where pressing the column would have put them, and **the Play session ends on the
+ * way**, which is what leaving Play has always meant.
  *
  * `enterPlay` stays separately exported rather than folding into this: it is the one door
  * another feature opens *into* Play, and it is two screens deep.

@@ -1,6 +1,7 @@
 /**
  * Everything **Match me** says: the segment above it, the two sentences under the card, the
- * two empty states, and the three toasts an answer raises.
+ * two empty states, and the three toasts an answer raises — and the one answer that is a screen
+ * rather than a sentence.
  *
  * §1's mechanism throughout — code → message, never message → message — and nothing here is a
  * template inlined in a component.
@@ -155,36 +156,29 @@ export function mutualToast(name: string): string {
 }
 
 /**
- * A mutual the platform **has a game for**, which is the ordinary one.
- *
- * The tap answers with the challenge these two now have — the one it just opened, or the one
- * an earlier mutual opened that is not finished with — so the screen can stop leaving a player
- * to wonder where it went (ADR-0154 §1).
- *
- * **It names Chats and calls the thing nothing at all.** A mutual-born singles court is `ON`
- * from birth, and a doubles one is a side short — *"a half-built court is not a game the pair
- * have, it is a game they are still making"* — so both *your game is on* and *your game* are
- * wrong for half the sports. What is true either way is that the two of them now share a row
- * and a room in that tab, and that is the whole of what this says. There is no deep link
- * because a toast carries no action here; the row is the door, and it is already there.
- */
-export function mutualChallengeToast(name: string): string {
-  return `You both said yes — ${name} is in your Chats now`;
-}
-
-/**
- * Which of the three a yes earned, decided **here** rather than at the press.
+ * Which of the two sentences a yes earned — or **no sentence**, because the third answer is a
+ * screen — decided **here** rather than at the press.
  *
  * The screen holds the answer and this module holds the sentences, so choosing between them
  * belongs here — a branch at the call site would be a fourth place that has to know a mutual
- * without a game keeps the older words. It takes the answer's own shape, so a fourth arm
+ * without a game keeps the older words. It takes the answer's own shape, so a further arm
  * arrives as a field rather than as another nested conditional.
+ *
+ * **A mutual the platform has a game for is `undefined` here, and that is a decision and not a
+ * gap** ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * §1, [#434](https://github.com/Raketa02/Raketa/issues/434)). *You both said yes — {name} is in
+ * your Chats now* was the sentence for it, and it retired into **the yes screen** — *Matched!*,
+ * the two of you side by side, and the room one tap away — which the yes mutation pushes on the
+ * reply (`hooks/useDeck`) rather than the press raising a toast: a grey line that is gone in
+ * three seconds was the wrong size for the one tap in the app that changed something. The two
+ * sentences that remain keep their words to the letter: a one-sided yes, and a mutual naming
+ * no chat, must never be overstated into a celebration.
  */
 export function yesToast(
   name: string,
   said: { readonly mutual: boolean; readonly challengeId: string | null },
-): { readonly message: string; readonly tone: ToastTone } {
+): { readonly message: string; readonly tone: ToastTone } | undefined {
   if (!said.mutual) return { message: interestToast(name), tone: 'base' };
   if (said.challengeId === null) return { message: mutualToast(name), tone: 'ok' };
-  return { message: mutualChallengeToast(name), tone: 'ok' };
+  return undefined;
 }

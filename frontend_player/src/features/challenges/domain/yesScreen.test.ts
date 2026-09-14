@@ -8,7 +8,7 @@
  */
 
 import type { DetailSeat } from './challengeDetail';
-import { sidesForReader, withOwnFace } from './yesScreen';
+import { pairForReader, sidesForReader, tilesIn, withOwnFace } from './yesScreen';
 
 const ME = '11111111-2222-4333-8444-555555555555';
 const EWA = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -122,6 +122,113 @@ describe('who is a face and who is an empty seat', () => {
 
     expect(sidesForReader(court, ME)).toBeUndefined();
     expect(sidesForReader(court, KUBA)).toBeUndefined();
+  });
+});
+
+/**
+ * **The mutual's picture is you and them, and nobody else** — the accepted people of the challenge
+ * the reply named, reader first, with no empty seat in it whatever the sport: in tennis the two are
+ * opponents on two sides, in padel partners on one side with the other still to fill, and the
+ * picture says only *you two* either way (ADR-0166 §4).
+ */
+describe('the pair, reader first', () => {
+  it('draws the two of you on a tennis court, the reader first whichever side they hold', () => {
+    const court = [
+      seat({ playerId: EWA, nickname: 'Marek.P', answer: 'ACCEPTED' }),
+      seat({ playerId: ME, nickname: 'me_', answer: 'ACCEPTED' }),
+    ];
+
+    expect(pairForReader(court, ME)).toEqual({
+      yours: [{ kind: 'person', playerId: ME, nickname: 'me_' }],
+      theirs: [{ kind: 'person', playerId: EWA, nickname: 'Marek.P' }],
+    });
+  });
+
+  it('draws the two of you on a padel court, and never the side still to fill', () => {
+    const court = [
+      seat({ playerId: ME, nickname: 'me_', answer: 'ACCEPTED' }),
+      seat({ playerId: EWA, nickname: 'Marek.P', answer: 'ACCEPTED' }),
+      seat({}),
+      seat({}),
+    ];
+
+    const pair = pairForReader(court, ME);
+
+    expect(pair).toEqual({
+      yours: [{ kind: 'person', playerId: ME, nickname: 'me_' }],
+      theirs: [{ kind: 'person', playerId: EWA, nickname: 'Marek.P' }],
+    });
+    expect([...pair!.yours, ...pair!.theirs].every((one) => one.kind === 'person')).toBe(true);
+    // Two tiles off a four-seat court: the picture sizes them, not the court.
+    expect(tilesIn(pair!)).toBe(2);
+    expect(tilesIn(sidesForReader(court, ME)!)).toBe(4);
+  });
+
+  it('carries their photograph off the seat card, as the sides do', () => {
+    const pair = pairForReader(
+      [
+        seat({ playerId: ME, nickname: 'me_', answer: 'ACCEPTED' }),
+        seat({
+          playerId: EWA,
+          nickname: 'Marek.P',
+          answer: 'ACCEPTED',
+          card: {
+            person: {
+              nickname: 'Marek.P',
+              photoUrl: 'https://photos.example/marek',
+              areaCode: 'WAW-C',
+              level: 2.7,
+              band: 'Established',
+              range: { low: 2.5, high: 2.9 },
+            },
+            pairing: { fit: 70, terms: [], degradedTerms: [], concerns: [] },
+          },
+        }),
+      ],
+      ME,
+    );
+
+    expect(pair?.theirs[0]).toEqual({
+      kind: 'person',
+      playerId: EWA,
+      nickname: 'Marek.P',
+      photoUrl: 'https://photos.example/marek',
+    });
+  });
+
+  /**
+   * A court an earlier mutual opened may have grown since — the reply names *the challenge these
+   * two have*, not always the one this tap minted (ADR-0154 §1). Everybody who has said yes is
+   * drawn, because a picture of who is in is the honest picture; a seat still deciding is not.
+   */
+  it('draws everybody who has said yes on a court that has grown, and nobody deciding', () => {
+    const pair = pairForReader(
+      [
+        seat({ playerId: ME, nickname: 'me_', answer: 'ACCEPTED' }),
+        seat({ playerId: EWA, nickname: 'Marek.P', answer: 'ACCEPTED' }),
+        seat({ playerId: KUBA, nickname: 'Kuba.W', answer: 'ACCEPTED' }),
+        seat({ playerId: OLA, nickname: 'Ola.N' }),
+      ],
+      ME,
+    );
+
+    expect(pair?.yours.map((one) => (one.kind === 'person' ? one.playerId : one.kind))).toEqual([
+      ME,
+    ]);
+    expect(pair?.theirs.map((one) => (one.kind === 'person' ? one.playerId : one.kind))).toEqual([
+      EWA,
+      KUBA,
+    ]);
+  });
+
+  it('is nothing for a reader who holds no seat, or one they have not accepted', () => {
+    const court = [
+      seat({ playerId: EWA, nickname: 'Marek.P', answer: 'ACCEPTED' }),
+      seat({ playerId: ME, nickname: 'me_' }),
+    ];
+
+    expect(pairForReader(court, ME)).toBeUndefined();
+    expect(pairForReader(court, KUBA)).toBeUndefined();
   });
 });
 

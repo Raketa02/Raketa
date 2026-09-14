@@ -109,11 +109,12 @@ export { parseChallengeRouteParams, type ChallengeRouteParams } from './schemas/
 /**
  * **The yes screen** — mounted by `/chats/challenge/[challengeId]/yes`
  * ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md),
- * [#433](https://github.com/Raketa02/Raketa/issues/433)): the screen a yes lands on — the
+ * [#433](https://github.com/Raketa02/Raketa/issues/433),
+ * [#434](https://github.com/Raketa02/Raketa/issues/434)): the screen a yes lands on — the
  * faces, one word, two doors — pushed by the challenge screen the instant *I'm in* is answered,
- * and by the deck's mutual once [#434](https://github.com/Raketa02/Raketa/issues/434) gives it
- * its second face. The route hands over the id and *which yes*, both checked first; the fold,
- * the tile, the entrance and the words stay internal.
+ * and by the deck's yes the instant *Let's play* comes back mutual and naming a chat. The route
+ * hands over the id and *which yes*, both checked first; `yesRoute` is what the deck pushes;
+ * the fold, the tile, the entrance and the words stay internal.
  */
 export { YesScreen, type YesScreenProps } from './components/YesScreen';
 export {
@@ -122,6 +123,17 @@ export {
   type WhichYes,
   type YesRouteParams,
 } from './schemas/routeParams';
+
+/**
+ * **The yes screen's second face's words, exported for the suite that walks it from the deck.**
+ *
+ * `deck.test.tsx` drives *Let's play* through the real route tree and asserts what the phone says
+ * when the reply comes back mutual — the word, the sentence and the second door — and a test
+ * spelling *Matched!* as a literal is a red build for the ticket that rewords it, which is the
+ * rule every copy deck in this app is read through. Nothing in `src/` outside this feature reads
+ * any of the three.
+ */
+export { LATER, MATCHED_WORD, matchedAnnouncement } from './components/yesScreenPresentation';
 
 /**
  * The court a send carries — the shape the builder hands over, and the only type of this

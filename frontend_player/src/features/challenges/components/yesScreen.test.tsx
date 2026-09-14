@@ -618,6 +618,32 @@ describe('Later', () => {
   });
 });
 
+/**
+ * **A mutual's *Later* is a pop** — and the list where there is nothing to pop to. The deck's
+ * suite walks the pop; what is walked here is the cold link to the route, which is not a yes
+ * anybody just said and lands on the list the row will appear on.
+ */
+describe('a mutual’s yes, reached cold', () => {
+  it('lands on the Chats list from Later when there is nothing to pop to', async () => {
+    const matched = { ...detail({ standing: 'ON', seats: accepted(SINGLES) }) };
+    transport.on('GET', DETAIL_PATH, () => json(matched));
+    stubChallenges(transport, [row({ standing: 'ON', seats: accepted(SINGLES) })], READ_AT);
+    stubConversations(transport, []);
+
+    await launchSignedIn(`${YES_SCREEN}?which=mutual`);
+    await waitFor(() => expect(screen).toHavePathname(YES_SCREEN));
+    await screen.findByTestId('yes-screen');
+    expect(screen).toHaveSearchParams(expect.objectContaining({ which: 'mutual' }));
+    expect(yesScreen().queryByText('vs', HIDDEN_TOO)).toBeNull();
+    expect(router.canGoBack()).toBe(false);
+
+    fireEvent.press(yesScreen().getByRole('button', { name: LATER }));
+
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    expect(tabs()).toHaveLength(5);
+  });
+});
+
 describe('a padel four', () => {
   const OLA_SEAT: Seat = {
     side: 'A',

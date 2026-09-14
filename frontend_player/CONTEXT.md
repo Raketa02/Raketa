@@ -719,9 +719,11 @@ another — and this is the screen a yes lands on.
 - **The yes screen** — the one-shot, full-phone screen a yes lands on the instant it is
   answered: the faces on the court reader first, one lime word, two pills, on the app's one
   dark ground, with the tab bar stood down. Keyed by the challenge and by **which yes** it is —
-  a challenge's, whose word is _Challenge!_ and whose _Later_ is the Chats list; a mutual's,
-  whose word is _Matched!_ and whose _Later_ is a pop, once [#434](https://github.com/Raketa02/Raketa/issues/434)
-  builds it — and it reads everything it draws from the challenge the query cache holds. Its
+  a challenge's, whose word is _Challenge!_, whose picture is the court in two sides with a `vs`,
+  and whose _Later_ is the Chats list; a mutual's, whose word is _Matched!_, whose picture is you
+  and them with no `vs` and no empty seat in every sport, and whose _Later_ is a pop
+  ([#434](https://github.com/Raketa02/Raketa/issues/434)) — and it reads everything it draws
+  from the challenge the query cache holds, fetching it on open where the deck never held it. Its
   two doors are the only ways out: _Open the chat_ waits on the button for the room and lands as
   `[Chats list, the room]`; _Later_ goes back. **A tile** is the face the app draws everywhere,
   with two initials over a poster and an outlined empty seat as its two additions; **the spoken

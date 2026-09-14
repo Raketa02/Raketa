@@ -343,10 +343,16 @@ export function DeckScreen() {
     }
 
     yes.mutate(card, {
-      // **Three sentences, and the third is not a third state.** Which one is the copy
-      // module's to decide (ADR-0154 §3, §5) — a mutual that named a game says where it is,
-      // and one that named none keeps the words a mutual had before the field existed.
-      onSuccess: (said) => showToast(yesToast(name, said)),
+      // **Two sentences, and the third answer is a screen.** Which one is the copy module's to
+      // decide (ADR-0154 §3, §5): a one-sided yes, or a mutual that named no game keeping the
+      // words a mutual had before the field existed. A mutual that named one is the yes screen,
+      // and it is pushed by the mutation's own success handler (`hooks/useDeck`) and not from
+      // here — this callback is dropped the moment the deck is left, and the reply may land
+      // after it has been.
+      onSuccess: (said) => {
+        const toast = yesToast(name, said);
+        if (toast !== undefined) showToast(toast);
+      },
       onError: () => cardReturned(card.searchId, card.playerId),
     });
   };
