@@ -10,6 +10,7 @@ import type { Challenge, ChallengeSeat } from './challenge';
 import {
   challengeStands,
   holdsTheExit,
+  mayRemove,
   pairAlreadyPlaying,
   playersStillIn,
   standingFactsFor,
@@ -99,9 +100,10 @@ describe('which challenges still hold a pair', () => {
 });
 
 /**
- * **Who may call a game off** — the withdraw's own rule, read on the client so the control is drawn
- * only where the act would be accepted (ADR-0163, #411 rule 4): the reader is still on the court,
- * and they are the organiser — or the organiser no longer is.
+ * **Who may call a game off** — any player on the court
+ * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §5, [#428](https://github.com/Raketa02/Raketa/issues/428)): the reader holds an accepted seat,
+ * and nothing about who organised it. The organiser-first rule and its fallback are gone.
  */
 describe('who holds the exit', () => {
   /** A padel four that became a game and lost Cyryl; Bea organised it. */
@@ -116,15 +118,10 @@ describe('who holds the exit', () => {
       organiserId: BEA,
     }) satisfies Challenge;
 
-  it('is the organiser’s while the organiser is on the court, and nobody else’s', () => {
+  it('is any player’s on the court, the organiser or not', () => {
     expect(holdsTheExit(reopened(), BEA)).toBe(true);
-    expect(holdsTheExit(reopened(), ME)).toBe(false);
-    expect(holdsTheExit(reopened(), 'dorota')).toBe(false);
-  });
-
-  it('falls back to any remaining player once the organiser has left', () => {
-    expect(holdsTheExit(reopened('LEFT'), ME)).toBe(true);
-    expect(holdsTheExit(reopened('LEFT'), 'dorota')).toBe(true);
+    expect(holdsTheExit(reopened(), ME)).toBe(true);
+    expect(holdsTheExit(reopened(), 'dorota')).toBe(true);
   });
 
   it('is nobody’s who has left, the organiser included', () => {
@@ -132,15 +129,79 @@ describe('who holds the exit', () => {
     expect(holdsTheExit(reopened('LEFT'), CYRYL)).toBe(false);
   });
 
-  it('is nobody’s who holds no seat on it', () => {
-    expect(holdsTheExit(reopened('LEFT'), 'stranger')).toBe(false);
+  it('is nobody’s who holds no seat on it, or a seat still deciding', () => {
+    expect(holdsTheExit(reopened(), 'stranger')).toBe(false);
+    expect(
+      holdsTheExit(
+        {
+          ...reopened(),
+          seats: [...reopened().seats.slice(0, 3), { playerId: 'newcomer' }],
+        },
+        'newcomer',
+      ),
+    ).toBe(false);
+  });
+});
+
+/**
+ * **Who may remove a challenge** — the organiser, exactly while nobody besides them holds an
+ * accepted seat, whatever seats are still deciding (ADR-0165 §4, #428). Pinned across organiser /
+ * invitee / joined / not joined, which is the row's reveal decision and the arranging arm's.
+ */
+describe('who may remove the challenge', () => {
+  /** My padel four, just sent: three people asked, nobody has answered. */
+  const justSent = challenge('AWAITING_ANSWERS', [
+    { playerId: ME, answer: 'ACCEPTED' },
+    { playerId: BEA, answerBy: '2026-09-06T09:00:00Z' },
+    { playerId: CYRYL, answerBy: '2026-09-06T09:00:00Z' },
+    { playerId: 'dorota', answerBy: '2026-09-06T09:00:00Z' },
+  ]);
+
+  it('is the organiser’s while nobody has answered', () => {
+    expect(mayRemove(justSent, ME)).toBe(true);
   });
 
-  /** A court the organiser holds no seat on cannot be read; the answer fails soft, never open. */
-  it('falls back to nobody when the organiser’s own seat cannot be found', () => {
-    const noOrganiserSeat = { ...reopened(), organiserId: 'somebody-else' };
+  it('is never an invitee’s, answered or not', () => {
+    expect(mayRemove(justSent, BEA)).toBe(false);
+    expect(mayRemove({ ...justSent, organiserId: BEA }, ME)).toBe(false);
+  });
 
-    expect(holdsTheExit(noOrganiserSeat, ME)).toBe(false);
+  it('is nobody’s once somebody has joined, however many are still deciding', () => {
+    const joined: Challenge = {
+      ...justSent,
+      seats: [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: BEA, answer: 'ACCEPTED' },
+        { playerId: CYRYL, answerBy: '2026-09-06T09:00:00Z' },
+        { playerId: 'dorota', answerBy: '2026-09-06T09:00:00Z' },
+      ],
+    };
+
+    expect(mayRemove(joined, ME)).toBe(false);
+    expect(mayRemove(joined, BEA)).toBe(false);
+  });
+
+  /** A yes taken back leaves the organiser alone again, and the act comes back with it. */
+  it('is the organiser’s again once everybody who joined has left, with others still deciding', () => {
+    const aloneAgain: Challenge = {
+      ...justSent,
+      seats: [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: BEA, answer: 'LEFT' },
+        { playerId: CYRYL, answer: 'DECLINED' },
+        { playerId: 'dorota', answerBy: '2026-09-06T09:00:00Z' },
+      ],
+    };
+
+    expect(mayRemove(aloneAgain, ME)).toBe(true);
+  });
+
+  it('is nobody’s once the challenge has ended, or on a standing this build cannot read', () => {
+    for (const standing of ['DECLINED', 'LAPSED', 'WITHDRAWN'] as const) {
+      expect(mayRemove({ ...justSent, standing }, ME)).toBe(false);
+    }
+    const { standing: _unread, ...unreadable } = justSent;
+    expect(mayRemove(unreadable, ME)).toBe(false);
   });
 });
 

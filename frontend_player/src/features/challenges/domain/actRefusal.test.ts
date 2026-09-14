@@ -27,9 +27,11 @@ const READ_IT_BACK = [
   // The two answers': the window closed under the finger, and the two-devices case.
   'answer_window_has_passed',
   'seat_already_answered',
-  // The withdraw's: this court has some other end already, and the reader is not the organiser.
+  // The withdraw's: this court has some other end already, the reader is not the organiser, and
+  // — since ADR-0165 §4 — somebody joined under the finger, so it is no longer theirs to remove.
   'not_a_half_built_line_up',
   'withdraw_is_the_organisers',
+  'somebody_has_joined',
   // The fill's: the reader left the court while they were building on it, and it ended under
   // the builder.
   'fill_is_the_live_members',

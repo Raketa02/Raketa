@@ -700,10 +700,14 @@ what this client had to invent to draw the room
   list's scroll. A row rests **closed** or **revealed** and never in between. The Chats
   conversation row reveals _Leave the game_, which is the departure's door (`DepartureDoor`,
   `features/challenges`', **composed in by the shell** because neither feature may import the
-  other), and the same act is the card's **accessibility action**, because a swipe is a gesture a
-  screen reader consumes. _Avoid_: "swipe to delete" or "swipe to leave" — the
-  swipe reveals a word and the sheet behind it acts; a row that slides to show nothing; a gesture
-  library.
+  other); the organiser's challenge row, **while nobody has joined**, reveals _Remove the
+  challenge_ (`RemovalDoor`, the same feature's own, so nothing is composed); every other row
+  reveals nothing and does not move. Both doors are one shape — an `ActDoor` a surface draws
+  however a door looks there, on `useActDoor`, which holds when the sheet is up and that a
+  refusal's re-read is paid on dismissal — and the same act is the card's **accessibility
+  action**, because a swipe is a gesture a screen reader consumes. _Avoid_: "swipe to delete" or
+  "swipe to leave" — the swipe reveals a word and the sheet behind it acts; a row that slides to
+  show nothing; a gesture library.
 
 ### The plan
 
@@ -882,10 +886,10 @@ only what this client had to invent to draw what is happening today and next
   every one a **challenge** act reached from a game, composed by `plans` through
   `challenges/types.ts` and handed its one rule as `offered`. `Fill the seat` (primary, where
   _We played_ would be, while the moment is ahead), `Call it off` (secondary, while a seat is open,
-  for whoever holds the exit — the organiser, or anyone left once the organiser's own seat is open,
-  a fact `CallOff` joins off the challenge list itself), `Leave this game` (last, while the moment
-  is ahead). _Avoid_: `plans` learning what an organiser is, an act mounted and unmounted by its
-  rule rather than handed it, and any of these on the card or in the chat.
+  for **any player on the court** — an accepted seat, a fact `CallOff` joins off the challenge
+  list itself; ADR-0165 §5), `Leave this game` (last, while the moment is ahead). _Avoid_: `plans`
+  learning what a seat's answer is, an act mounted and unmounted by its rule rather than handed
+  it, and any of these on the card or in the chat.
 
 ### The sportsmanship card
 

@@ -133,7 +133,7 @@ export { LeaveGame, type LeaveGameProps } from './components/LeaveGame';
  * is the cycle Part 1 calls a defect. The challenge screen takes the same door on its two live
  * arms, so the act is met once, three ways.
  */
-export { DepartureDoor, type DepartureDoorProps, type LeaveDoor } from './components/DepartureDoor';
+export { DepartureDoor, type DepartureDoorProps } from './components/DepartureDoor';
 
 /**
  * **The fill, for the game screen and the Now card** — the challenge screen's ⚡ pressed on a game

@@ -1837,33 +1837,59 @@ plan names the day, so the handles and *arranged n ago* the other arms' eyebrow 
 the same facts twice. The words drawn on that screen are otherwise the decided ones — `The plan`,
 `N of 3 set` · `Locked`, `Lock the plan`, the panel above, `Open the chat`, `We played`.
 
-### 22.3 The withdraw
+### 22.3 The withdraw — *Remove the challenge*
 
 **The second irreversible act in this app that reaches other people, and it takes the shape the
 first one already has** — `SH.propose`'s: a title naming the **moment** rather than the act, so the
 act is named once by the control that carries it out, and a dismissal **named by what it does**.
 
+**Since [ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+§4 the withdraw is admitted exactly while nobody besides the organiser holds an accepted seat, and
+its name is *Remove the challenge*** — met on the organiser's Chats row by the swipe §22.10's
+conversation row answers with *Leave the game*, and on the challenge screen's arm where nobody has
+joined (built by [#428](https://github.com/Raketa02/Raketa/issues/428)). One label on the revealed
+control, on the screen's button and on the sheet's act, on `Send the challenge`'s precedent; the
+visible label is the whole sentence, so it is the accessible name too.
+
 | | |
 | --- | --- |
-| Sheet title | `Before you withdraw` |
-| Body | `Everybody who accepted loses this court.` |
-| Body | `The conversation goes with it, and what people wrote is deleted.` |
-| Body | `This cannot be undone.` |
-| The act | `Withdraw the challenge` |
-| In flight | `Withdrawing…` |
+| The revealed control, and the screen's button | `Remove the challenge` |
+| Sheet title | `Before you remove it` |
+| Body | `It disappears for the people you asked, too.` |
+| The act | `Remove the challenge` |
+| In flight | `Removing…`, on the sheet's act |
 | Dismissal | `Keep it open` |
 
-**The second body line is the one that earns the sheet.** ADR-0142 chose **destroyed, not
-delisted** — *"on a platform where standings are derived and nothing else is deleted, this is the
-one place deletion is the honest implementation"* — and a confirmation that did not say so would be
-hiding the only consequence the player cannot undo.
+**One line, and it is the one ADR-0165 §6 asks for: it is gone for the invitees too** — the
+consequence the organiser cannot see from their own list, and the one that reaches other people.
+The word is *remove* because what the act does to a court nobody has joined is take a send back:
+nothing anybody agreed to is lost, and the people asked simply stop being asked. It says nothing
+about the pair rule releasing: that is a fact about what becomes possible afterwards, and a
+confirmation is not the place to sell a consequence.
 
-**The visible control that opens it says `Withdraw`**; its accessible name says what it withdraws
-(§24). And the sheet says nothing about the pair rule releasing: that is a fact about what becomes
-possible afterwards, and a confirmation is not the place to sell a consequence.
+**A refusal is said on the sheet, in words**, on §22.10's line — a row has no fold for a re-read to
+land on, so the sheet stays up and says why, and the lists are re-read once it is dismissed:
 
-**On a court that has been a game the same sheet is reworded, and the act is the same route**
-([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #411 rule 4): the game is
+| Code | The sentence |
+| --- | --- |
+| `somebody_has_joined` | `Somebody's in now, so it's no longer yours to remove.` |
+| `challenge_is_over` | `This one is already over.` — §22.10's own sentence, named once |
+| anything else | `challengeErrorMessage`'s sentence; the route's other codes cannot reach a row drawn only to the organiser of a court nobody has joined |
+
+**The row goes on the reply**: an own removal is the reader's own act in the sense an own *no* and
+an own *left* are, so *You withdrew this* is never drawn on their row; to the people asked it is
+§13's sixth sentence, kept its day as news.
+
+**Retired with #428**: the withdraw's three body lines — *Everybody who accepted loses this court* /
+*The conversation goes with it, and what people wrote is deleted* / *This cannot be undone* — its
+title *Before you withdraw*, its act *Withdraw the challenge*, its control *Withdraw* with the
+spoken name *Withdraw this challenge*, and *Withdrawing…*. They named a court people had joined,
+which nobody ends for the others any more. ADR-0142's *destroyed, not delisted* still holds where a
+room exists — the court the organiser is alone in again — and the second line moved with the
+reading that needed it to §22.9, where the room is a game's.
+
+**On a court that has been a game the same route is *Call it off*, and it is any player's**
+([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), ADR-0165 §5): the game is
 called off in the act, so the sheet names the game rather than the court. Its words are §22.9's,
 settled with the ending's and the fill door's by [#419](https://github.com/Raketa02/Raketa/issues/419).
 
@@ -2089,11 +2115,13 @@ busy under its own label while the search runs, as the challenge screen's ⚡ do
 builder.
 
 **The control** is **`Call it off`** — `secondary`, above *Leave this game*, drawn only while a seat
-is open and for whoever holds the exit: the organiser, or, once the organiser's own seat is open,
-any remaining player. Not gated by the moment — the withdraw is not — so on a short court past its
-moment it is the one act left. **The visible control and the sheet's act carry one label**, on
-`Send the challenge`'s precedent: the act is named once, and what is under the sheet is hidden while
-it is up.
+is open and for **any player on the court** — an accepted seat
+([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+§5, [#428](https://github.com/Raketa02/Raketa/issues/428); it was the organiser's first, with a
+fallback to whoever was left, for one record). Not gated by the moment — the withdraw is not — so
+on a short court past its moment it is the one act left. **The visible control and the sheet's act
+carry one label**, on `Send the challenge`'s precedent: the act is named once, and what is under the
+sheet is hidden while it is up.
 
 **The sheet** is the withdraw's (§22.3), reworded for a court that has been a game:
 
@@ -2113,9 +2141,9 @@ it had no client to build** — `Everybody still in loses this game.` / `Call th
 open` — three of the four changed on purpose: the first line drops *still in* because the sheet is
 read by somebody who is, the act is the control's own word so it is named once, and the dismissal
 is `Keep it` rather than the withdraw's `Keep it open`, because a game is not open the way a court
-is. The second body line is the withdraw's own, unchanged — ADR-0142's *destroyed, not delisted*
-holds here too, and a confirmation that did not say so would be hiding the only consequence nobody
-can undo. The first names what the act ends: not *this court*, which is the challenge's word, but *this
+is. The second body line was the withdraw's own, and since #428 retired the withdraw's deck it lives
+here alone — ADR-0142's *destroyed, not delisted* holds on a game's room, and a confirmation that
+did not say so would be hiding the only consequence nobody can undo. The first names what the act ends: not *this court*, which is the challenge's word, but *this
 game*, because that is what the people still in it lose. Nothing here says the pair rule releases,
 on §22.3's own line. A refused call-off draws no new copy: a stale tap re-reads and says nothing,
 `challenge_not_found` leaves the screen, and `account_held` is `challengeErrorMessage`'s sentence.

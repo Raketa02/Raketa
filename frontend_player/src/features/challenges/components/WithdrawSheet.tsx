@@ -1,5 +1,10 @@
 /**
- * **The withdraw's confirmation** — `SH.propose`'s exact shape, a second time.
+ * **The withdrawal's confirmation** — `SH.propose`'s exact shape, a second time, and since
+ * [#428](https://github.com/Raketa02/Raketa/issues/428) one sheet for the two acts the route
+ * carries: *Remove the challenge* while nobody has joined, and *Call it off* on a court that has
+ * been a game
+ * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §4, §5).
  *
  * The second irreversible act in this app that reaches other people, and it takes the shape the
  * first one already has ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md)
@@ -9,72 +14,57 @@
  * than on the first action**, because that action is the destructive one and landing focus there
  * would make the worst outcome the cheapest to trigger (§20.6).
  *
- * All five of those are `BottomSheet`'s already, which is the whole reason this file is short:
- * what a second sheet on that shape owes is its four sentences and the name of its act.
+ * All five of those are `BottomSheet`'s already, which is the whole reason this file is short.
  *
- * ## The same sheet, reworded, on a court that has been a game
+ * ## One sheet, two decks, and neither is the default
  *
- * The withdraw reaches a reopened court and calls the game off in the act
- * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)), and the
- * confirmation is **this sheet with different words** rather than a fourth copy of its shape: the
- * act is the same route, the second body line — the room goes with it — is the same consequence,
- * and what changes is what the people still in it lose. So the deck is a prop, defaulting to the
- * withdraw's own; `CallOff` hands in `callOffPresentation.ts`', and the challenge screen hands in
- * nothing ([#419](https://github.com/Raketa02/Raketa/issues/419)).
+ * The route is one and the sheet is one; what changes is what the people on the court lose, and
+ * that is a **deck handed in** (`WithdrawWords`) rather than a fourth copy of the shape. `CallOff`
+ * hands in `callOffPresentation.ts`' — the game, and the room that goes with it; `RemovalDoor`
+ * hands in the removal's, from `challengeDetailPresentation.ts` — a send taken back, gone for the
+ * people asked too. The withdraw's own three lines, which named a court people had joined, are
+ * retired with the reading that drew them: nobody ends such a court for the others any more. So
+ * `words` is required, and a caller that forgot would fail to compile rather than say the wrong
+ * thing about what its act ends.
  *
- * ## The second body line is what earns the sheet
+ * ## Two surfaces, one sheet, and what the second one needed
  *
- * ADR-0142 chose **destroyed, not delisted** — the conversation and everything written in it go
- * with the challenge — and a confirmation that did not say so would be hiding the only
- * consequence the player cannot undo. It is the one line here that is not a restatement of
- * *irreversible*.
+ * On the **game screen** the sheet draws no refusal and no pending state, on `ProposeSheet`'s own
+ * line: confirming dismisses it, and everything the act then does happens on the control that
+ * opened it — pending on that control, a refusal beside it, where the player can act on it. A sheet
+ * that stayed up holding a failure would be a modal over the sentence that explains it.
  *
- * ## What it does not draw
- *
- * **No refusal, and no pending state**, on `ProposeSheet`'s own line: confirming here dismisses
- * the sheet, and everything the withdraw then does happens on the control that opened it —
- * pending on that control, and a refusal beside it, where the player can act on it. A sheet that
- * stayed up holding a failure would be a modal over the sentence that explains it.
- *
- * **And it says nothing about the pair rule releasing.** That is a fact about what becomes
- * possible afterwards, and a confirmation is not the place to sell a consequence
- * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22.3).
+ * From a **Chats row**, and on the challenge screen's arm that borrows the row's door, there is no
+ * such control: the button a swipe reveals closes with the row the moment it is pressed, and a list
+ * row has no sentence to explain a refusal with. So there the sheet **is** the surface — it stays
+ * up while the act is in flight, its act goes busy under the deck's own word, and a refusal is said
+ * on it in words with the act still there to press again. The three props that carry that are
+ * optional and absent on the game screen, so that surface's sheet is unchanged — `LeaveSheet`'s
+ * exact line, one act over.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
 
-import { BottomSheet, Button, theme, type FocusTarget } from '@/shared/ui';
+import { offlineMessage } from '@/shared/errors';
+import { BottomSheet, Button, Note, theme, type FocusTarget } from '@/shared/ui';
 
-import {
-  WITHDRAW_SHEET_BODY,
-  WITHDRAW_SHEET_CLOSE_LABEL,
-  WITHDRAW_SHEET_TITLE,
-  WITHDRAW_THE_CHALLENGE,
-} from './challengeDetailPresentation';
-
-/** The four sentences and the act's name — one deck per surface, and the shape is this sheet's. */
+/** The sentences and the act's name — one deck per act, and the shape is this sheet's. */
 export interface WithdrawWords {
   readonly title: string;
   readonly body: readonly string[];
   readonly act: string;
+  /** The act while it is in flight — read only where the sheet stays up to carry it. */
+  readonly inFlight: string;
   readonly closeLabel: string;
 }
-
-/** The withdraw's own words, and the default: a half-built court, ended. */
-const WITHDRAW_WORDS: WithdrawWords = {
-  title: WITHDRAW_SHEET_TITLE,
-  body: WITHDRAW_SHEET_BODY,
-  act: WITHDRAW_THE_CHALLENGE,
-  closeLabel: WITHDRAW_SHEET_CLOSE_LABEL,
-};
 
 export interface WithdrawSheetProps {
   readonly visible: boolean;
   readonly onClose: () => void;
-  /** Confirming. The caller dismisses the sheet and runs the withdraw — see the module note. */
+  /** Confirming. The caller runs the act — and, on the game screen, dismisses the sheet. */
   readonly onWithdraw: () => void;
-  /** What the sheet says. The withdraw's own unless the surface is a game that is being called off. */
-  readonly words?: WithdrawWords;
+  /** What the sheet says: the removal's deck, or a game being called off. */
+  readonly words: WithdrawWords;
   /**
    * The control the sheet was opened from. Focus returns there on close.
    *
@@ -83,14 +73,23 @@ export interface WithdrawSheetProps {
    * front of an act they have just declined to take.
    */
   readonly returnFocusTo: FocusTarget;
+  /** The act is in flight — the list's sheet stays up and says so on its act. */
+  readonly busy?: boolean;
+  /** The act was refused — the list's sheet says why, in words, with the act still there. */
+  readonly refusal?: string;
+  /** No connection — the act greys under one amber note, as every act in this feature does. */
+  readonly offline?: boolean;
 }
 
 export function WithdrawSheet({
   visible,
   onClose,
   onWithdraw,
-  words = WITHDRAW_WORDS,
+  words,
   returnFocusTo,
+  busy = false,
+  refusal,
+  offline = false,
 }: WithdrawSheetProps) {
   return (
     <BottomSheet
@@ -108,8 +107,31 @@ export function WithdrawSheet({
         ))}
       </View>
 
+      {/* The sentence a refused act writes — on this sheet only where the surface has nowhere
+          else to write it. `alert`, because it appeared without being asked for. */}
+      {refusal === undefined ? null : (
+        <View style={s.note}>
+          <Note variant="coral" accessibilityRole="alert">
+            {refusal}
+          </Note>
+        </View>
+      )}
+
+      {offline ? (
+        <View style={s.note}>
+          <Note variant="amber">{offlineMessage('does-not-resume')}</Note>
+        </View>
+      ) : null}
+
       <View style={s.action}>
-        <Button label={words.act} size="lg" onPress={onWithdraw} />
+        <Button
+          label={words.act}
+          size="lg"
+          busy={busy}
+          busyLabel={words.inFlight}
+          disabled={offline}
+          onPress={onWithdraw}
+        />
       </View>
     </BottomSheet>
   );
@@ -118,5 +140,6 @@ export function WithdrawSheet({
 const s = StyleSheet.create({
   block: { paddingTop: theme.space.sm, gap: theme.space.xs },
   body: { ...theme.type.tiny, color: theme.color.ink },
+  note: { paddingTop: theme.space.sm },
   action: { paddingTop: theme.space.md },
 });

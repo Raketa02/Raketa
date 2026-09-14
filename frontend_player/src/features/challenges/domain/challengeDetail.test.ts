@@ -211,9 +211,12 @@ describe('the card block', () => {
 });
 
 /**
- * **Grow · talk · end**, and the two permissions are different
+ * **Grow · talk · leave**, and nobody ends it
  * ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
- * §1): any live member may complete the line-up, and only the organiser may end it.
+ * §1, [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §4): any live member may complete the line-up, and a court somebody has joined is nobody's to
+ * end for the others — the organiser leaves it like anybody else, and it ends by itself when one
+ * is left.
  */
 describe('a half-built court', () => {
   const HALF_BUILT: readonly DetailSeat[] = [
@@ -223,22 +226,12 @@ describe('a half-built court', () => {
     {},
   ];
 
-  it('lets any live member fill it, and only the organiser end it', () => {
+  it('lets any live member fill it and leave it, and offers the organiser no end', () => {
     const invitee = challengeArm(detail('LINE_UP_INCOMPLETE', HALF_BUILT, BEA), ME);
     const organiser = challengeArm(detail('LINE_UP_INCOMPLETE', HALF_BUILT, ME), ME);
 
-    expect(invitee).toEqual({
-      kind: 'filling',
-      facts: expect.anything(),
-      mayEnd: false,
-      mayLeave: true,
-    });
-    expect(organiser).toEqual({
-      kind: 'filling',
-      facts: expect.anything(),
-      mayEnd: true,
-      mayLeave: true,
-    });
+    expect(invitee).toEqual({ kind: 'filling', facts: expect.anything(), mayLeave: true });
+    expect(organiser).toEqual({ kind: 'filling', facts: expect.anything(), mayLeave: true });
   });
 
   /**
@@ -294,17 +287,27 @@ describe('the way out before the court is whole', () => {
     const invitee = challengeArm(detail('AWAITING_ANSWERS', waiting, BEA), ME);
     const organiser = challengeArm(detail('AWAITING_ANSWERS', waiting, ME), ME);
 
-    expect(invitee).toEqual({ kind: 'arranging', facts: expect.anything(), mayLeave: true });
-    expect(organiser).toEqual({ kind: 'arranging', facts: expect.anything(), mayLeave: true });
+    expect(invitee).toEqual({
+      kind: 'arranging',
+      facts: expect.anything(),
+      mayLeave: true,
+      mayRemove: false,
+    });
+    expect(organiser).toEqual({
+      kind: 'arranging',
+      facts: expect.anything(),
+      mayLeave: true,
+      mayRemove: false,
+    });
   });
 
   /**
-   * **A court of one has nothing to leave.** The organiser alone, with everybody still deciding,
-   * is on no court with anybody — their exit there is *Remove the challenge* (ADR-0165 §4,
-   * [#428](https://github.com/Raketa02/Raketa/issues/428)), and a *Leave the game* beside it
-   * would be two doors out of an empty room.
+   * **A court of one has nothing to leave, and is the organiser's to remove.** The organiser
+   * alone, with everybody still deciding, is on no court with anybody — their exit there is
+   * *Remove the challenge* (ADR-0165 §4, [#428](https://github.com/Raketa02/Raketa/issues/428)),
+   * and a *Leave the game* beside it would be two doors out of an empty room.
    */
-  it('is not offered to an organiser nobody has joined yet', () => {
+  it('is not offered to an organiser nobody has joined yet, who may remove it instead', () => {
     const arm = challengeArm(
       detail('AWAITING_ANSWERS', [
         { playerId: ME, answer: 'ACCEPTED' },
@@ -313,10 +316,15 @@ describe('the way out before the court is whole', () => {
       ME,
     );
 
-    expect(arm).toEqual({ kind: 'arranging', facts: expect.anything(), mayLeave: false });
+    expect(arm).toEqual({
+      kind: 'arranging',
+      facts: expect.anything(),
+      mayLeave: false,
+      mayRemove: true,
+    });
   });
 
-  it('is not offered to an organiser whose every invitee has already given the seat up', () => {
+  it('is not offered to an organiser whose every invitee has already given the seat up, who may remove it', () => {
     const arm = challengeArm(
       detail('AWAITING_ANSWERS', [
         { playerId: ME, answer: 'ACCEPTED' },
@@ -327,7 +335,35 @@ describe('the way out before the court is whole', () => {
       ME,
     );
 
-    expect(arm).toEqual({ kind: 'arranging', facts: expect.anything(), mayLeave: false });
+    expect(arm).toEqual({
+      kind: 'arranging',
+      facts: expect.anything(),
+      mayLeave: false,
+      mayRemove: true,
+    });
+  });
+
+  /** The two are one question asked from two sides: the organiser removes or leaves, never both. */
+  it('never offers the organiser both doors, on any court', () => {
+    const courts: readonly (readonly DetailSeat[])[] = [
+      [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: BEA, answerBy: '2026-09-07T09:00:00Z' },
+      ],
+      [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: BEA, answer: 'ACCEPTED' },
+        { playerId: CYRYL, answerBy: '2026-09-07T09:00:00Z' },
+        {},
+      ],
+    ];
+
+    for (const seats of courts) {
+      const arm = challengeArm(detail('AWAITING_ANSWERS', seats), ME);
+      expect(arm.kind).toBe('arranging');
+      if (arm.kind !== 'arranging') continue;
+      expect(arm.mayLeave && arm.mayRemove).toBe(false);
+    }
   });
 });
 

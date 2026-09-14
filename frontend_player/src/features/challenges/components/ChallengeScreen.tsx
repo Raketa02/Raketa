@@ -1,6 +1,6 @@
 /**
- * **One challenge, the two answers, and the two acts on a half-built court** — the screen a row
- * in the Chats inbox opens.
+ * **One challenge, the two answers, and the way out of every court that is still being arranged**
+ * — the screen a row in the Chats inbox opens.
  *
  * A **state-keyed surface over the six standings and two sides**, and never a `GameStanding`: a
  * challenge with no acceptance has no game to key a screen on, which is why there are two
@@ -50,29 +50,42 @@
  * invalidates the list rather than patching it, so for a beat it can still hold a room the
  * reader has just left, and the `answer` arm's reader has not said yes to any.
  *
- * ## A half-built court is grown here and ended here, and they are different permissions
+ * ## A half-built court is grown here, and nobody ends it for the others
  *
- * **Any live member may complete the line-up; only the organiser may end it**
+ * **Any live member may complete the line-up**
  * ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
- * §1). Growing a court and ending one are different acts, and the commonest half-built court has
- * no organiser worth the name: a challenge born of two mutual yeses seats its pair on one side
- * and its "organiser" is only whoever said yes second, so making that tiebreak the only person
- * who can finish a padel four would leave the other looking at a court they can neither complete
- * nor leave.
+ * §1): growing a court and ending one are different acts, and the commonest half-built court has
+ * no organiser worth the name — a challenge born of two mutual yeses seats its pair on one side
+ * and its "organiser" is only whoever said yes second. And since
+ * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §4 **a court somebody has joined is nobody's to end for the others**: *Withdraw* has left the
+ * filling arm ([#428](https://github.com/Raketa02/Raketa/issues/428)), the organiser leaves it
+ * like anybody else, and it ends by itself when one is left with nobody deciding. The end a court
+ * that has been a game keeps — *Call it off*, any player's — is drawn on the **game** screen and
+ * not here, because this read carries no fact for whether a court has been a game.
  *
  * ## And it is left here — by anybody, before the court is whole
  *
  * ***Leave the game*** on both live arms
- * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
- * §1, [#427](https://github.com/Raketa02/Raketa/issues/427)): an accepted seat waiting on the
- * others, and a member of a court that is filling — the organiser included, because the
+ * (ADR-0165 §1, [#427](https://github.com/Raketa02/Raketa/issues/427)): an accepted seat waiting
+ * on the others, and a member of a court that is filling — the organiser included, because the
  * organiser is a player in that rule. Whether it is drawn is the fold's `mayLeave`, and the one
  * case it withholds is a court of one: the organiser nobody has joined has nothing to leave, and
- * their exit there is #428's *Remove the challenge*. It is the same door the Chats list's swipe
- * reveals — `DepartureDoor`, this feature's own, which draws the sheet and holds the act — so the
- * act is met once, however the reader arrived at it. **Last among the controls**, after the
- * withdraw: on the game screen the act that ends the game for everybody sits above the act that
- * takes one person out of it, and the same order holds here.
+ * their exit there is the removal below. It is the same door the Chats list's swipe reveals —
+ * `DepartureDoor`, this feature's own, which draws the sheet and holds the act — so the act is
+ * met once, however the reader arrived at it. **Last among the controls**, on the game screen's
+ * own order: the act that ends it for everybody sits above the act that takes one person out.
+ *
+ * ## Or removed here — by the organiser, while nobody has joined
+ *
+ * ***Remove the challenge*** on the arranging arm (ADR-0165 §4, #428), to the organiser exactly
+ * while nobody besides them holds an accepted seat — before anybody has answered, and again once
+ * everybody who joined has left, whatever seats are still deciding. It is the withdraw under the
+ * name the record gives it now, and it is met as a **door** rather than as the control this
+ * screen used to draw: `RemovalDoor`, the same one the organiser's Chats row reveals, which draws
+ * the withdrawal's sheet in the removal's words and says a refusal on it. Whether it is drawn is
+ * the fold's `mayRemove`, which is `mayLeave`'s question asked from the other side — a court of
+ * one is removed, a court with somebody is left, and the organiser never sees both.
  *
  * **⚡ runs the fill and pushes the builder; the send is a separate press, on that screen, and it
  * pops back here** — which is why nothing in this flow calls `resetShellStack`. `landOnNow`'s
@@ -95,7 +108,7 @@
  * distance, the reasons, the concern and what is at stake.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -120,7 +133,7 @@ import { offlineMessage, recoveryMessage, type AppError } from '@/shared/errors'
 import { useIsOnline } from '@/shared/lib/platform';
 import { durationLeft } from '@/shared/formatting/durations';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
-import { Button, Note, behindOverlay, theme } from '@/shared/ui';
+import { Button, Note, theme } from '@/shared/ui';
 
 import { actRefusal } from '../domain/actRefusal';
 import { fillRoute } from '../schemas/routeParams';
@@ -131,12 +144,11 @@ import {
   seatsAwaiting,
   type ChallengeDetail,
 } from '../domain/challengeDetail';
-import { useAnswerSeat, useChallenge, useWithdrawChallenge } from '../hooks/useChallenge';
+import { useAnswerSeat, useChallenge } from '../hooks/useChallenge';
 import type { SeatAnswerAct } from '../use-cases/answerSeat';
 
 import { actOnRefusal } from './actOnRefusal';
 import { ChallengeCard } from './ChallengeCard';
-import { WITHDRAW_CHALLENGE_NAME } from './challengeAccessibility';
 import { challengeErrorMessage } from './challengeErrorMessage';
 import { DepartureDoor } from './DepartureDoor';
 import {
@@ -144,8 +156,6 @@ import {
   IM_IN,
   NOT_THIS_TIME,
   NO_CHALLENGE_HERE,
-  WITHDRAW,
-  WITHDRAWING,
   pairingAbsenceLine,
 } from './challengeDetailPresentation';
 import {
@@ -154,7 +164,7 @@ import {
   standingLine,
   yourAnswerWindowLine,
 } from './challengePresentation';
-import { WithdrawSheet } from './WithdrawSheet';
+import { RemovalDoor } from './RemovalDoor';
 
 export interface ChallengeScreenProps {
   /** Validated by `schemas/routeParams.ts` before it reaches here; the route does that. */
@@ -204,7 +214,6 @@ function Arrangement({
   const arm = challengeArm(detail, playerId);
   const answer = useAnswerSeat();
   const fill = useFillChallengeSeats();
-  const withdraw = useWithdrawChallenge();
   const online = useIsOnline();
 
   /**
@@ -256,47 +265,39 @@ function Arrangement({
    */
   const [pressed, setPressed] = useState<SeatAnswerAct>();
 
-  /**
-   * Whether the withdraw's confirmation is up, and **the control it hands focus back to.**
-   *
-   * Route-local for `pressed`'s reason, and the ref is Part 13's rule for every overlay in this
-   * app: without it a listener who declines the app's second irreversible act is returned to the
-   * top of the screen with no idea what happened.
-   */
-  const [confirming, setConfirming] = useState(false);
-  const withdrawControl = useRef<View>(null);
-
   const cards = arm.kind === 'answer' || arm.kind === 'arranging' || arm.kind === 'filling';
   const sentence = arm.kind === 'unreadable' ? OUT_OF_DATE_GAP : standingLine(arm.facts);
 
   /**
-   * **The whole of what a refused act on this screen costs it**, read once for all three.
+   * **The whole of what a refused act on this screen costs it**, read once for the two acts whose
+   * refusal is said *on the screen*.
    *
-   * The three mutations refuse in the same three ways, so one reading is one sentence — and
-   * holding a refusal per control would be three places for *say it* and *read it again* to be
-   * decided.
+   * The two mutations refuse in the same three ways, so one reading is one sentence — and holding
+   * a refusal per control would be two places for *say it* and *read it again* to be decided. The
+   * two doors — the leave and the removal — say their refusals on their own sheets, and re-read
+   * this detail through `actOn` once the sheet is dismissed.
    *
    * **The order is a precedence and the acts are not**, which is why {@link beginAnAct} clears
-   * all three before every press. A mutation's `error` **outlives its flight**: without the
-   * clear, an answer refused ten minutes ago would still be first in this chain and would state
-   * its sentence over a withdraw that has just failed for a different reason. Reading *the
-   * error of whichever act was last pressed* by holding a fourth piece of state would be the
-   * same fact written twice; resetting is the fact itself.
+   * both before every press. A mutation's `error` **outlives its flight**: without the clear, an
+   * answer refused ten minutes ago would still be first in this chain and would state its
+   * sentence over a fill that has just failed for a different reason. Reading *the error of
+   * whichever act was last pressed* by holding a third piece of state would be the same fact
+   * written twice; resetting is the fact itself.
    */
-  const failed: AppError | null = answer.error ?? fill.error ?? withdraw.error;
+  const failed: AppError | null = answer.error ?? fill.error;
   const refusal = failed === null ? undefined : actRefusal(failed);
 
   /**
-   * **A refusal belongs to the press that caused it**, so a new press throws all three away.
+   * **A refusal belongs to the press that caused it**, so a new press throws both away — and a
+   * door opened does too, so a sheet never rises over a stale sentence.
    *
    * `BuilderScreen`'s own line before its send, arriving here because this screen grew from one
-   * act to three: the sentence beneath the controls is read off whichever mutation still holds
+   * act to several: the sentence beneath the controls is read off whichever mutation still holds
    * an error, and a stale one is a screen explaining something the player is no longer doing.
    */
   function beginAnAct(): void {
     answer.reset();
     fill.reset();
-    withdraw.reset();
   }
 
   /**
@@ -372,13 +373,6 @@ function Arrangement({
     );
   }
 
-  /** The end, and the only one a half-built line-up has. The sheet is what asks. */
-  function endIt(): void {
-    beginAnAct();
-    setConfirming(false);
-    withdraw.mutate(detail.challengeId, { onError: actOn });
-  }
-
   // The court's own forecast, off whichever card carries one: it is the same figure on all of
   // them, so the first is the answer rather than a choice.
   const forecast = detail.seats.flatMap((seat) => seat.card?.pairing.forecast ?? [])[0];
@@ -423,7 +417,7 @@ function Arrangement({
       <Button
         label={OPEN_THE_CHAT}
         variant="secondary"
-        disabled={fill.isPending || withdraw.isPending}
+        disabled={fill.isPending}
         onPress={() =>
           router.push({
             pathname: CONVERSATION_ROUTE,
@@ -435,11 +429,11 @@ function Arrangement({
 
   /**
    * ***Leave the game***, or nothing — the departure's door, on the two arms whose reader holds a
-   * seat on a court that is not whole and is on it with somebody (`mayLeave`). `secondary`, for
-   * the withdraw's reason: taking yourself off a court is never the primary act on a screen about
-   * arranging one. The sheet, the act, its words and its refusals are `DepartureDoor`'s — the same
-   * door a Chats row reveals — and what this screen adds is its own answer to a refusal: the
-   * detail re-read, so a court that ended under the press re-folds into its ending's sentence.
+   * seat on a court that is not whole and is on it with somebody (`mayLeave`). `secondary`:
+   * taking yourself off a court is never the primary act on a screen about arranging one. The
+   * sheet, the act, its words and its refusals are `DepartureDoor`'s — the same door a Chats row
+   * reveals — and what this screen adds is its own answer to a refusal: the detail re-read, so a
+   * court that ended under the press re-folds into its ending's sentence.
    */
   const leave =
     (arm.kind === 'arranging' || arm.kind === 'filling') && arm.mayLeave ? (
@@ -449,7 +443,7 @@ function Arrangement({
             <Button
               label={door.label}
               variant="secondary"
-              disabled={!online || fill.isPending || withdraw.isPending}
+              disabled={!online || fill.isPending}
               onPress={() => {
                 beginAnAct();
                 door.open();
@@ -460,22 +454,46 @@ function Arrangement({
       </DepartureDoor>
     ) : null;
 
+  /**
+   * ***Remove the challenge***, or nothing — the removal's door, on the arranging arm to the
+   * organiser nobody has joined (`mayRemove`). `secondary` too, and **above the leave** where
+   * both could stand: the act that ends it for everybody sits above the act that takes one person
+   * out — though on this arm the fold never draws both. The sheet, the act, its words and its
+   * refusals are `RemovalDoor`'s — the same door the organiser's Chats row reveals — and the
+   * detail re-read after a refusal is this screen's, as it is for the leave: *somebody's in now*
+   * re-folds the arm into the one that offers *Leave the game* instead.
+   */
+  const remove =
+    arm.kind === 'arranging' && arm.mayRemove ? (
+      <RemovalDoor challengeId={detail.challengeId} onRefusal={actOn}>
+        {(door) => (
+          <View ref={door.control}>
+            <Button
+              label={door.label}
+              variant="secondary"
+              disabled={!online}
+              onPress={() => {
+                beginAnAct();
+                door.open();
+              }}
+            />
+          </View>
+        )}
+      </RemovalDoor>
+    ) : null;
+
   return (
-    <>
-      {/* The sheet is a **sibling** of the screen it covers, never a child: `behindOverlay`
-          hides everything inside the element carrying it, and an overlay rendered in there
-          would hide itself along with the screen. */}
-      <View style={s.root} {...behindOverlay(confirming)}>
-        <ShellScreen
-          title={CHALLENGE_SCREEN_TITLE}
-          eyebrow={sportLabel(detail.sport)}
-          onBack={router.back}
-          action={
-            arm.kind === 'filling' ? (
-              /* **Grow · talk · end**, in that order, and only the organiser sees three
+    <ShellScreen
+      title={CHALLENGE_SCREEN_TITLE}
+      eyebrow={sportLabel(detail.sport)}
+      onBack={router.back}
+      action={
+        arm.kind === 'filling' ? (
+          /* **Grow · talk · leave**, in that order, and everybody on the court sees the three
              ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md)
-             §1). `LINE_UP_INCOMPLETE` *is not a waiting room*: the people who are in are in,
-             so what this arm offers is finishing the court rather than waiting for it.
+             §1, ADR-0165 §4). `LINE_UP_INCOMPLETE` *is not a waiting room*: the people who are in
+             are in, so what this arm offers is finishing the court rather than waiting for it —
+             and nobody ends it for the others.
 
              ***Open the chat*** is the middle one, and it is the conversation's own door: the
              words are that feature's, so the three surfaces that draw one cannot say three
@@ -484,163 +502,135 @@ function Arrangement({
              **no door rather than a dead one** — which on this standing means once the list has
              landed. It is `secondary` because there is one primary act on this screen and it is
              finishing the court; opening a room you are already in is not it. */
-              <View style={s.answers}>
-                {said}
-                {offline}
+          <View style={s.answers}>
+            {said}
+            {offline}
 
-                <Button
-                  label={FILL_THE_SEATS}
-                  size="lg"
-                  busy={fill.isPending}
-                  disabled={!online || withdraw.isPending}
-                  onPress={fillTheSeats}
-                />
+            <Button
+              label={FILL_THE_SEATS}
+              size="lg"
+              busy={fill.isPending}
+              disabled={!online}
+              onPress={fillTheSeats}
+            />
 
-                {door}
+            {door}
 
-                {/* A `View` around the button, because focus has to land on a **host element** this
-                component holds a ref to and `Button` is a component — `BottomSheet`'s own shape
-                for its heading, and `BuilderScreen`'s for the send. */}
-                {arm.mayEnd ? (
-                  <View ref={withdrawControl}>
-                    <Button
-                      label={WITHDRAW}
-                      accessibilityLabel={WITHDRAW_CHALLENGE_NAME}
-                      variant="secondary"
-                      busy={withdraw.isPending}
-                      busyLabel={WITHDRAWING}
-                      disabled={!online || fill.isPending}
-                      onPress={() => setConfirming(true)}
-                    />
-                  </View>
-                ) : null}
-
-                {leave}
-              </View>
-            ) : arm.kind === 'answer' ? (
-              <View style={s.answers}>
-                {/* The deadline **stated, never counted down** — folded against the response's own
+            {leave}
+          </View>
+        ) : arm.kind === 'answer' ? (
+          <View style={s.answers}>
+            {/* The deadline **stated, never counted down** — folded against the response's own
                 `read_at` and never against this phone's clock. It gates nothing: the buttons
                 beside it are drawn from the standing the platform sent. */}
-                {arm.answerBy === undefined ? null : (
-                  <Text style={s.line}>
-                    {yourAnswerWindowLine(durationLeft(arm.answerBy, detail.readAt))}
-                  </Text>
-                )}
+            {arm.answerBy === undefined ? null : (
+              <Text style={s.line}>
+                {yourAnswerWindowLine(durationLeft(arm.answerBy, detail.readAt))}
+              </Text>
+            )}
 
-                {said}
-                {offline}
+            {said}
+            {offline}
 
-                <View style={s.pair}>
-                  <Button
-                    label={NOT_THIS_TIME}
-                    variant="secondary"
-                    style={s.answerControl}
-                    busy={pressed === 'decline'}
-                    disabled={!online || answer.isPending}
-                    onPress={() => send('decline')}
-                  />
-                  <Button
-                    label={IM_IN}
-                    style={s.answerControl}
-                    busy={pressed === 'accept'}
-                    disabled={!online || answer.isPending}
-                    onPress={() => send('accept')}
-                  />
-                </View>
-              </View>
-            ) : door === null && leave === null ? undefined : (
-              /* The arms with no act of their own — an accepted seat waiting on the others, a
-                 court that is on, the organiser once the first yes has landed — and a room the
-                 list holds. The door is what they offer, and only while it exists; the arranging
-                 arm offers the way out beside it, to a reader on a court with somebody. */
-              <View style={s.answers}>
-                {/* The one greyed control this arm can hold is the leave, so the note that says
-                    why is drawn only where it is. */}
-                {leave === null ? null : offline}
-                {door}
-                {leave}
-              </View>
-            )
-          }
-        >
-          <Text style={s.standing}>{sentence}</Text>
+            <View style={s.pair}>
+              <Button
+                label={NOT_THIS_TIME}
+                variant="secondary"
+                style={s.answerControl}
+                busy={pressed === 'decline'}
+                disabled={!online || answer.isPending}
+                onPress={() => send('decline')}
+              />
+              <Button
+                label={IM_IN}
+                style={s.answerControl}
+                busy={pressed === 'accept'}
+                disabled={!online || answer.isPending}
+                onPress={() => send('accept')}
+              />
+            </View>
+          </View>
+        ) : door === null && leave === null && remove === null ? undefined : (
+          /* The arms with no act of their own — an accepted seat waiting on the others, a court
+             that is on, the organiser waiting on answers — and a room the list holds. The door is
+             what they offer, and only while it exists; the arranging arm offers the way out
+             beside it: the removal to the organiser nobody has joined, the leave to a reader on a
+             court with somebody, and never both. */
+          <View style={s.answers}>
+            {/* The greyed controls this arm can hold are the two doors, so the note that says
+                why is drawn only where one is. */}
+            {leave === null && remove === null ? null : offline}
+            {door}
+            {remove}
+            {leave}
+          </View>
+        )
+      }
+    >
+      <Text style={s.standing}>{sentence}</Text>
 
-          {/* The organiser's own reading of the wait: §14's second sentence, once per seat, because
+      {/* The organiser's own reading of the wait: §14's second sentence, once per seat, because
           the window is the seat's and a seat invited later starts its own day. */}
-          {arm.kind === 'arranging' && arm.facts.side === 'organiser'
-            ? seatsAwaiting(detail).map((seat, at) => (
-                <Text key={`awaiting-${at}`} style={s.line}>
-                  {answerWindowLine({
-                    player: seat.player,
-                    duration: durationLeft(seat.answerBy, detail.readAt),
-                  })}
-                </Text>
-              ))
-            : null}
-
-          {/* The arrangement always answers, whatever the pairing could do — so the absence is a
-          sentence in the cards' place and never a refusal to draw the screen. */}
-          {cards && detail.pairingAbsence !== undefined ? (
-            <Text style={s.line}>
-              {pairingAbsenceLine(detail.pairingAbsence, sportLabel(detail.sport))}
+      {arm.kind === 'arranging' && arm.facts.side === 'organiser'
+        ? seatsAwaiting(detail).map((seat, at) => (
+            <Text key={`awaiting-${at}`} style={s.line}>
+              {answerWindowLine({
+                player: seat.player,
+                duration: durationLeft(seat.answerBy, detail.readAt),
+              })}
             </Text>
-          ) : null}
+          ))
+        : null}
 
-          {cards && forecast !== undefined ? (
-            <View style={s.forecast}>
-              <Text style={s.forecastHeading}>{forecastHeading(detail.seats.length)}</Text>
-              {/* §B9's balance word beside the figure, because Part 13 forbids colour alone — and
+      {/* The arrangement always answers, whatever the pairing could do — so the absence is a
+          sentence in the cards' place and never a refusal to draw the screen. */}
+      {cards && detail.pairingAbsence !== undefined ? (
+        <Text style={s.line}>
+          {pairingAbsenceLine(detail.pairingAbsence, sportLabel(detail.sport))}
+        </Text>
+      ) : null}
+
+      {cards && forecast !== undefined ? (
+        <View style={s.forecast}>
+          <Text style={s.forecastHeading}>{forecastHeading(detail.seats.length)}</Text>
+          {/* §B9's balance word beside the figure, because Part 13 forbids colour alone — and
               here there is no tint at all, so the word is the whole of it. `balanceReading` and
               not `balanceLabel`: the difference is one separator, and it is the difference
               between the two registers — a middot is a visual join, a comma is the pause a
               spoken clause needs. */}
-              <Text style={s.line}>{balanceReading(forecast.pct)}</Text>
+          <Text style={s.line}>{balanceReading(forecast.pct)}</Text>
 
-              {/* The word and its caveat are **two nodes and not one sentence**, which is
+          {/* The word and its caveat are **two nodes and not one sentence**, which is
               `BuilderScreen`'s own shape: the caveat is the assumption's own line beneath the
               figure, and a join written here would be copy with no home in a deck. `null` covers
               *nothing was assumed* and *a code this build has no words for* alike, and the word
               above is what says there was one either way. */}
-              {forecast.provisional ? <Text style={s.line}>{PROVISIONAL_WORD}</Text> : null}
-              {forecast.provisional && forecast.assumption !== null ? (
-                <Text style={s.line}>{forecastAssumption(forecast.assumption)}</Text>
-              ) : null}
-            </View>
+          {forecast.provisional ? <Text style={s.line}>{PROVISIONAL_WORD}</Text> : null}
+          {forecast.provisional && forecast.assumption !== null ? (
+            <Text style={s.line}>{forecastAssumption(forecast.assumption)}</Text>
           ) : null}
+        </View>
+      ) : null}
 
-          {cards
-            ? detail.seats.flatMap((seat, at) =>
-                seat.card === undefined || seat.playerId === undefined
-                  ? []
-                  : [
-                      <ChallengeCard
-                        key={`seat-${at}`}
-                        playerId={seat.playerId}
-                        card={seat.card}
-                        seats={detail.seats.length}
-                      />,
-                    ],
-              )
-            : null}
-        </ShellScreen>
-      </View>
-
-      {/* The withdraw's confirmation — `SH.propose`'s exact shape, a second time. Confirming
-          dismisses it and runs the act, whose pending state and whose refusal both belong to
-          the control that opened it rather than to a modal over the sentence explaining it. */}
-      <WithdrawSheet
-        visible={confirming}
-        onClose={() => setConfirming(false)}
-        onWithdraw={endIt}
-        returnFocusTo={withdrawControl}
-      />
-    </>
+      {cards
+        ? detail.seats.flatMap((seat, at) =>
+            seat.card === undefined || seat.playerId === undefined
+              ? []
+              : [
+                  <ChallengeCard
+                    key={`seat-${at}`}
+                    playerId={seat.playerId}
+                    card={seat.card}
+                    seats={detail.seats.length}
+                  />,
+                ],
+          )
+        : null}
+    </ShellScreen>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1 },
   // The sibling state-keyed surface's own role: `GameScreen` draws its standing line at `h2`
   // over `ink`, and two screens whose whole job is stating a standing state it the same way.
   standing: { ...theme.type.h2, color: theme.color.ink },

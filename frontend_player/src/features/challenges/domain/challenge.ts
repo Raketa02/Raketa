@@ -157,35 +157,63 @@ export function playersStillIn(challenge: Challenge): readonly string[] {
 }
 
 /**
- * **Whether this reader holds the exit** — the withdraw's own rule, read on the client so *Call it
- * off* is drawn only where the act would be accepted
- * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md), #411 rule
- * 4): the reader is still on the court, and they are the organiser — **or the organiser no longer
- * is.** A court whose organiser has left would otherwise have an exit nobody holds, and the people
- * who agreed did nothing wrong; an organiser who has left is not a remaining player, because the
- * exit fell back to the people still on the court.
+ * **Whether this reader holds the exit** — *Call it off*'s own rule, read on the client so the
+ * control is drawn only where the act would be accepted
+ * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §5, [#428](https://github.com/Raketa02/Raketa/issues/428)): **the reader is on the court** — an
+ * accepted seat — and nothing about who organised it. ADR-0163 §1's organiser-first rule and its
+ * fallback are gone: a group that has given up on a game ends it in one act, whoever presses.
  *
- * **On a court that was never a game this is *the organiser and nobody else***, ADR-0142 §2
- * unchanged — the organiser is live from birth and nobody can leave it — so the fallback exists
- * only where a departure does. Read off the cheap list rather than the detail, because the tab
- * bar already holds that list for its badge and the fact is on every row of it: `organiserId`,
- * and each seat's answer. Nothing here reads the standing; that the caller may not end this court
- * is true regardless of what the fold says, exactly as the server checks it.
+ * Read off the cheap list rather than the detail, because the tab bar already holds that list for
+ * its badge and the fact is on every row of it. Nothing here reads the standing — that the caller
+ * is not on the court is true regardless of what the fold says, exactly as the server checks it —
+ * and whether the court has a seat open is the composer's to say. Somebody who left, the organiser
+ * who left, and a newcomer still deciding on a fill are all *no*, as the route tells them.
  */
-export function holdsTheExit(
-  challenge: Pick<Challenge, 'organiserId' | 'seats'>,
+export function holdsTheExit(challenge: Pick<Challenge, 'seats'>, playerId: string): boolean {
+  return challenge.seats.some((seat) => seat.playerId === playerId && seat.answer === 'ACCEPTED');
+}
+
+/**
+ * **Whether this reader may remove the challenge** — the withdraw while nobody has joined
+ * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §4, [#428](https://github.com/Raketa02/Raketa/issues/428)): the reader is the organiser, the
+ * challenge is still being arranged, and **nobody besides them holds an accepted seat** —
+ * whatever seats are still deciding, before any answer included, and again once everybody who
+ * joined has left. The moment somebody is in it is nobody's to end for the others, and from then
+ * on the organiser leaves like anybody else.
+ *
+ * It is the row's reveal decision on the Chats list and the arranging arm's on the challenge
+ * screen, so it is one function read twice rather than a swipe and a button remembering the same
+ * rule. Read off the cheap list, as {@link holdsTheExit} is, because the row is drawn from it. A
+ * standing this build cannot read answers **no**: an app that cannot say what a challenge is
+ * cannot offer to end it — the opposite direction from the pair rule, and the right one for an
+ * act.
+ */
+export function mayRemove(
+  challenge: Pick<Challenge, 'organiserId' | 'standing' | 'seats'>,
   playerId: string,
 ): boolean {
-  const seatOf = (id: string) => challenge.seats.find((seat) => seat.playerId === id);
+  if (playerId !== challenge.organiserId) return false;
+  if (challenge.standing === undefined || ENDED[challenge.standing]) return false;
+  return nobodyHasJoined(challenge);
+}
 
-  if (seatOf(playerId)?.answer !== 'ACCEPTED') return false;
-  if (playerId === challenge.organiserId) return true;
-
-  // The fallback needs the organiser's seat to have been given up — read, never assumed: a
-  // court the organiser holds no seat on is not one this side can answer for, so nobody is
-  // offered an act the server would refuse.
-  const organiser = seatOf(challenge.organiserId)?.answer;
-  return organiser !== undefined && GIVES_UP_THE_SEAT[organiser];
+/**
+ * **Nobody besides the organiser holds an accepted seat** — the court is the organiser's alone,
+ * whatever seats are still deciding and whoever has already given theirs up.
+ *
+ * The half of {@link mayRemove} that survives the ending: the inbox reads it on a `WITHDRAWN` row
+ * to tell a removal — the organiser's own act, by construction — from a game called off with
+ * others on the court (`challengeInbox.ts`).
+ */
+export function nobodyHasJoined(challenge: Pick<Challenge, 'organiserId' | 'seats'>): boolean {
+  return !challenge.seats.some(
+    (seat) =>
+      seat.playerId !== undefined &&
+      seat.playerId !== challenge.organiserId &&
+      seat.answer === 'ACCEPTED',
+  );
 }
 
 /**

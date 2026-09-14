@@ -298,10 +298,10 @@ game the two re-reads find nothing changed. Success **stays** — the screen is 
 still exists, with an ending now — and re-folds into the called-off arm off the games list.
 `actRefusal` needed no new code: `withdraw_is_the_organisers`, `not_a_half_built_line_up` and
 `challenge_is_over` were already re-reads. **Not done here**: the challenge screen's own withdraw on
-a court that has been a game still says `Withdraw` with the court's words and still draws it for
-the organiser alone (`mayEnd`), where the server would accept a remaining player's once the
-organiser has left; `the-loop-screens.md` §2's arms table names _Call it off_ there, and that
-surface is a follow-up.
+a court that has been a game still said `Withdraw` with the court's words and still drew it for
+the organiser alone (`mayEnd`); [#428](https://github.com/Raketa02/Raketa/issues/428) took that
+control off the filling arm altogether and gave _Call it off_ to any player on the court — the
+paragraph below.
 
 **_Leave the game_ from the Chats list and from the challenge screen, before the court is whole**
 ([#427](https://github.com/Raketa02/Raketa/issues/427),
@@ -347,3 +347,62 @@ list** (that feature's `dropRoomOfChallenge`), so both of the leaver's rows are 
 and not a round trip later — _gone without a refetch_ — and then re-reads the four lists as before,
 because the reply is one court and the lists are every court. The game screen's `LeaveGame` is
 unchanged.
+
+**_Remove the challenge_ from the Chats list and the challenge screen while nobody has joined, and
+_Call it off_ for anyone on the court**
+([#428](https://github.com/Raketa02/Raketa/issues/428),
+[ADR-0165](../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+§4–§6). The withdrawal route carries two acts now, told apart by whether the court has been a game,
+and the client meets each where its reader stands. **_Remove the challenge_ is the withdraw while
+nobody has joined**: the organiser's, exactly while nobody besides them holds an accepted seat —
+before anybody has answered, and again once everybody who joined has left, whatever seats are
+still deciding — and nobody's the moment somebody is in. That rule is `mayRemove` on the cheap
+`Challenge`, beside `holdsTheExit`, and it is read twice from one function: the organiser's
+**challenge row** asks it to decide whether it swipes at all, and the fold's `arranging` arm
+carries it as `mayRemove` beside `mayLeave`, which for the organiser is the same question asked
+from the other side — a court of one is removed, a court with somebody is left, and the arm never
+offers both (`challengeDetail.test.ts` pins it). `mayEnd` leaves the `filling` arm with the
+withdraw: a court somebody has joined is nobody's to end for the others, so that arm is grow · talk ·
+leave and the organiser sees what everybody sees. **The row is 6.15's `SwipeRow`, this feature's
+own**, so nothing is composed in from the shell as the conversation row's act has to be: the act
+behind the revealed button is `RemovalDoor`, a second door on `DepartureDoor`'s shape — a render
+prop handing the surface an `ActDoor` and drawing the withdrawal's sheet beside it — and the
+challenge screen draws the same door as a `secondary` button on the arranging arm, between _Open
+the chat_ and where _Leave the game_ would be. What the two doors have in common — when the sheet is
+up, where focus returns, and that a refusal's re-read is **owed and paid on dismissal** so the words
+are read before the row they are about can go — moved out of `DepartureDoor` into
+`hooks/useActDoor.ts`, because a rule written twice drifts; each door is now its act, its sheet and
+its words. **The sheet is `WithdrawSheet` handed a new deck, and the withdraw's own deck is
+retired**: `words` is required, `CallOff` hands in the game's and `RemovalDoor` the removal's —
+_Before you remove it_; one line, _It disappears for the people you asked, too._, which is the one
+consequence ADR-0165 §6 asks the sheet to name and the one the organiser cannot see from their own
+list; `Remove the challenge` on the door and on the act, on `Leave the game`'s precedent; `Keep it
+open`; `Removing…` on the sheet's act — and the sheet grew `busy`, `refusal` and `offline` as
+`LeaveSheet` did, because from a row the sheet is the surface. `WITHDRAW`, `WITHDRAWING`, the
+withdraw's title, three body lines, act and dismissal, and `WITHDRAW_CHALLENGE_NAME` are gone;
+nothing drew them. **A refusal is said in words on the sheet** — `REMOVE_REFUSED`: _Somebody's in
+now, so it's no longer yours to remove._ for `somebody_has_joined`, the one refusal a stale row
+invites, and the departure's own `THIS_ONE_IS_OVER` for `challenge_is_over`, named once in
+`leaveGamePresentation.ts` because two sheets say it — over `challengeErrorMessage`'s fallback; the
+route's other three codes cannot reach a row `mayRemove` drew and earn no words. `actRefusal` gains
+`somebody_has_joined` as a re-read, so on the challenge screen the arm re-folds into the one that
+offers _Leave the game_ once the sheet is dismissed. **The row goes on the reply**:
+`useWithdrawChallenge` writes the reply into the challenge list as `useLeaveGame` does, and the
+inbox drops an own removal at once — `removedByTheReader` in `challengeInbox.ts`, a `WITHDRAWN`
+challenge the reader organised on which nobody besides them had joined (`nobodyHasJoined`, the half
+of `mayRemove` that survives the ending), which is the organiser's own act by construction, the
+third sentence after _You said no_ and _You left_ that tells the reader nothing. A game **called
+off** reads `WITHDRAWN` too and is deliberately not this: others had joined, and since anybody may
+call it off the standing alone cannot say it was the reader's act, so that row keeps its day. The
+room a court the organiser was alone in again still had is invalidated rather than patched, on the
+withdraw's own line. **_Call it off_ is any player's on the court**: `holdsTheExit` is now _the
+reader holds an accepted seat_, ADR-0163 §1's organiser-first rule and its fallback gone, and
+`CallOff` on the game screen is otherwise unchanged — the composer still hands in only _a seat is
+open_, and the _Called off_ ending draws as it did. **Not drawn on the challenge screen**: the arms
+table names _Call it off_ on a reopened court's filling arm, but the challenge read carries no fact
+for whether a court has been a game (the-loop-screens §2.5's own note on the leave), so that arm has
+no end act at all and the game's own screen, reached from Now, is where the game is called off.
+**The invitee's row for a removed challenge is §13's sixth sentence unchanged**, kept its day as news.
+One design-system consequence, in 6.15: _Remove the challenge_ is longer than the reveal was sized
+for, so the revealed control's label centres and wraps to a second line, which the row's full height
+holds; the width does not grow per caller. Not seen on a device.

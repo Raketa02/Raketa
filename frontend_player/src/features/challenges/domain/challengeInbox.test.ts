@@ -316,6 +316,64 @@ describe('a departure of my own', () => {
   });
 });
 
+describe('a removal of my own', () => {
+  /**
+   * **A removed challenge is the organiser's own act, by construction** — nobody else may remove
+   * one, and only while nobody besides them holds an accepted seat (ADR-0165 §4,
+   * [#428](https://github.com/Raketa02/Raketa/issues/428)) — so *You withdrew this* tells them
+   * nothing, and the row goes with the tap as an own *no* and an own *left* do.
+   */
+  it('leaves at once, whatever seats were still deciding when it was removed', () => {
+    const iRemovedIt = challenge(
+      { organiserId: ME, standing: 'WITHDRAWN', sport: 'padel', openedAt: at(-4), endedAt: at(-1) },
+      [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: EWA, answerBy: at(20), nickname: 'ewa.m' },
+        { playerId: 'ola', answer: 'DECLINED', answerBy: at(20), nickname: 'ola.k' },
+        {},
+      ],
+    );
+
+    expect(belongsOnTheInbox(iRemovedIt, ME)).toBe(false);
+    expect(challengeInbox([iRemovedIt], ME)).toEqual([]);
+  });
+
+  /** To the people asked, the same removal is news — §13's sixth row — and their row keeps its day. */
+  it('is news to an invitee, whose row stays its day', () => {
+    const theyRemovedIt = challenge({ standing: 'WITHDRAWN', openedAt: at(-4), endedAt: at(-1) }, [
+      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: ME, answerBy: at(20) },
+    ]);
+
+    expect(belongsOnTheInbox(theyRemovedIt, ME)).toBe(true);
+  });
+
+  /**
+   * **A game called off is not a removal**, though the standing is the same word: others had
+   * joined, and since anybody on the court may call it off the organiser did not necessarily act.
+   * Their row keeps its day, as it does for a departure.
+   */
+  it('is not a court called off with others on it, whose row keeps its day for the organiser', () => {
+    const calledOff = challenge(
+      {
+        organiserId: ME,
+        standing: 'WITHDRAWN',
+        sport: 'padel',
+        openedAt: at(-30),
+        endedAt: at(-1),
+      },
+      [
+        { playerId: ME, answer: 'ACCEPTED' },
+        { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+        { playerId: 'ola', answer: 'ACCEPTED', nickname: 'ola.k' },
+        { playerId: 'tomek', answer: 'LEFT', nickname: 'tomek.p' },
+      ],
+    );
+
+    expect(belongsOnTheInbox(calledOff, ME)).toBe(true);
+  });
+});
+
 describe('the order', () => {
   const soon = askedMe({ challengeId: 'soon' });
   const later = challenge({ challengeId: 'later' }, [

@@ -7,8 +7,8 @@
  * a sentence chosen off a code.
  *
  * **It is named for the acts and not for the answers**, because there are five of them now and
- * they refuse in the same three ways: `I'm in`, `Not this time`, `Withdraw`, the fill on the
- * builder this screen pushes — and, on the **game** screen, *Leave this game*. What they share is
+ * they refuse in the same three ways: `I'm in`, `Not this time`, `Remove the challenge`, the fill
+ * on the builder this screen pushes — and, on the **game** screen, *Leave this game*. What they share is
  * a subject: every one of these codes says *this challenge is not what the screen thought it
  * was*, and the honest answer to that is to read it again. For the departure the read is the
  * games list, because that is what its screen folds from; the fold is the same.
@@ -19,6 +19,7 @@
  * | `seat_already_answered` | **Re-read and redraw.** Answered elsewhere — the two-devices case. |
  * | `not_a_half_built_line_up` | **Re-read and redraw.** The withdraw's own: this court has some other end already. |
  * | `withdraw_is_the_organisers` | **Re-read and redraw.** The control was drawn for a side the reader is not on. |
+ * | `somebody_has_joined` | **Re-read and redraw.** *Remove the challenge*'s own (ADR-0165 §4): somebody said yes under the finger, and the arm re-folds to *Leave the game*. |
  * | `fill_is_the_live_members` | **Re-read and redraw.** The reader left this court while they were building on it. |
  * | `challenge_is_over` | **Re-read and redraw.** It ended under the builder, or under the leave. |
  * | `not_a_game_yet` | **Re-read and redraw.** The departure's own: this court was never a game. |
@@ -83,6 +84,7 @@ const READ_IT_BACK: ReadonlySet<string> = new Set([
   'seat_already_answered',
   'not_a_half_built_line_up',
   'withdraw_is_the_organisers',
+  'somebody_has_joined',
   'fill_is_the_live_members',
   'challenge_is_over',
   'not_a_game_yet',

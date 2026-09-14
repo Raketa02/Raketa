@@ -54,6 +54,22 @@
  * six coral uses and says *nothing else*, the tab badge holds the sixth, and a coral stripe on
  * every row with a live clock is coral on most of a section at once. 1.3 reads amber as *watch
  * this — reversible, not yet wrong*, which is exactly a live answer window.
+ *
+ * ## The organiser's row, while nobody has joined, swipes left to reveal one thing
+ *
+ * *Remove the challenge* ([#428](https://github.com/Raketa02/Raketa/issues/428),
+ * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §4, §6) — on the conversation row's own shape, 6.15's `SwipeRow` around the card, and the act
+ * behind the revealed button a **door** that draws its own sheet: `RemovalDoor`, this feature's,
+ * so nothing is composed in from outside as the conversation row's act has to be. **Which rows
+ * move is `mayRemove`'s answer** — the reader organised it, it is still being arranged, and nobody
+ * besides them holds an accepted seat — read off the row the list already holds, so no read is
+ * made to decide it and the same rule gates the challenge screen's button. Every other challenge
+ * row reveals nothing: an invitee's, the organiser's once somebody has joined, an ended one still
+ * on its shelf — *no dead controls* (#324), and a row handed nothing to reveal does not move at all.
+ *
+ * **A swipe is never the only path.** The same door is the card's `accessibilityAction`, under
+ * the act's own word, and the card is what the sheet returns focus to.
  */
 
 import { router } from 'expo-router';
@@ -62,14 +78,16 @@ import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { sportLabel } from '@/features/onboarding/types';
 import { handleLine } from '@/shared/formatting/handleList';
 import { playerName } from '@/shared/formatting/playerName';
-import { PlayerPhoto, PressableCard, theme } from '@/shared/ui';
+import { PlayerPhoto, PressableCard, SwipeRow, theme } from '@/shared/ui';
 
-import { seatName, type Challenge } from '../domain/challenge';
+import { mayRemove, seatName, type Challenge } from '../domain/challenge';
 import { othersOn } from '../domain/challengeInbox';
+import type { ActDoor } from '../hooks/useActDoor';
 
 import { challengeRowLabel } from './challengeAccessibility';
 import { challengeRowLine, rowHasAClockOfYours } from './challengePresentation';
 import { FACE_OVERLAP, ROW_FACE, handleBudget } from './challengeRowGeometry';
+import { RemovalDoor } from './RemovalDoor';
 
 /**
  * Where a row goes. Both segments under `/chats` carry a static kind above the id, because a
@@ -93,9 +111,13 @@ export function ChallengeRow({ challenge, playerId }: ChallengeRowProps) {
   const sport = sportLabel(challenge.sport);
   const line = challengeRowLine(challenge, playerId);
 
-  return (
+  /** The card — the door to the challenge — around whatever act it is handed, or around nothing. */
+  const card = (door?: ActDoor) => (
     <PressableCard
+      ref={door?.control}
       accessibilityLabel={challengeRowLabel(handles, sport, line)}
+      accessibilityActions={door === undefined ? undefined : [door.action]}
+      onAccessibilityAction={door?.onAccessibilityAction}
       onPress={() =>
         router.push({ pathname: CHALLENGE_ROUTE, params: { challengeId: challenge.challengeId } })
       }
@@ -126,6 +148,16 @@ export function ChallengeRow({ challenge, playerId }: ChallengeRowProps) {
         />
       ) : null}
     </PressableCard>
+  );
+
+  if (!mayRemove(challenge, playerId)) return card();
+
+  return (
+    <RemovalDoor challengeId={challenge.challengeId}>
+      {(door) => (
+        <SwipeRow reveal={{ label: door.label, onPress: door.open }}>{card(door)}</SwipeRow>
+      )}
+    </RemovalDoor>
   );
 }
 

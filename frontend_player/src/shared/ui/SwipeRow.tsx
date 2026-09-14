@@ -47,6 +47,15 @@
  * `accessibilityAction`, which is how a listener reaches it. Revealed, the control is an ordinary
  * button with its word on its face.
  *
+ * ## A longer word wraps, and the control holds it
+ *
+ * `reveal` was sized so *Leave the game* sits on one line with `space.md` either side; *Remove
+ * the challenge* ([#428](https://github.com/Raketa02/Raketa/issues/428)) does not fit that and
+ * wraps to two, which the row's full height holds. The label is centred so the second line sits
+ * under the first rather than left of it, and the width does not grow for the word: `reveal` is how
+ * far the card travels, and a control that widened per caller would move the card different
+ * distances on neighbouring rows.
+ *
  * ## `reveal` absent means the row does not move
  *
  * No responder is attached and nothing is drawn behind the card: *a swipe that reveals nothing on
@@ -188,5 +197,14 @@ const s = StyleSheet.create({
     backgroundColor: theme.color.night,
   },
   controlPressed: { backgroundColor: theme.color.night2 },
-  controlLabel: { ...theme.type.btn, color: theme.color.surface },
+  // Centred, because a word longer than the reveal wraps to a second line — *Remove the
+  // challenge* does (#428) — and the control is the row's full height, which holds two; a
+  // second line left-aligned under a centred first would read as a mistake. The width does not
+  // grow for it: `reveal` is how far the card travels, not how long a word may be.
+  controlLabel: {
+    ...theme.type.btn,
+    color: theme.color.surface,
+    textAlign: 'center',
+    paddingHorizontal: theme.space.sm,
+  },
 });

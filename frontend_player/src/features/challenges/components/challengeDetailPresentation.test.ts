@@ -6,15 +6,25 @@
  * disappears, and the two absences that must never collapse into one.
  */
 
+import { AppError } from '@/shared/errors';
+
 import { PAIRING_ABSENCES } from '../domain/challengeDetail';
 
+import { challengeErrorMessage } from './challengeErrorMessage';
 import {
   IM_IN,
   NOT_THIS_TIME,
+  REMOVE_SHEET_BODY,
+  REMOVE_SHEET_CLOSE_LABEL,
+  REMOVE_SHEET_TITLE,
+  REMOVE_THE_CHALLENGE,
+  REMOVING,
   challengeCardLabel,
   identityRow,
   pairingAbsenceLine,
+  removeRefusalMessage,
 } from './challengeDetailPresentation';
+import { LEAVE_REFUSED } from './leaveGamePresentation';
 
 const PERSON = {
   nickname: 'bea.k',
@@ -32,6 +42,45 @@ describe('the two answers', () => {
   it('names no state the act cannot produce', () => {
     expect(IM_IN).toBe("I'm in");
     expect(NOT_THIS_TIME).toBe('Not this time');
+  });
+});
+
+/**
+ * ***Remove the challenge*** — the withdraw's words while nobody has joined
+ * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §4, §6; [#428](https://github.com/Raketa02/Raketa/issues/428)), pinned as the ticket asks.
+ */
+describe('the removal', () => {
+  it('names the act once, on the revealed control and on the sheet, and the moment on the title', () => {
+    expect(REMOVE_THE_CHALLENGE).toBe('Remove the challenge');
+    expect(REMOVE_SHEET_TITLE).toBe('Before you remove it');
+    expect(REMOVE_SHEET_TITLE).not.toContain(REMOVE_THE_CHALLENGE);
+    expect(REMOVING).toBe('Removing…');
+  });
+
+  /** ADR-0165 §6: the sheet says it is gone for the invitees too — one line, and no more. */
+  it('says on the sheet that it is gone for the people asked, too', () => {
+    expect(REMOVE_SHEET_BODY).toEqual(['It disappears for the people you asked, too.']);
+  });
+
+  it('names the dismissal by what it does', () => {
+    expect(REMOVE_SHEET_CLOSE_LABEL).toBe('Keep it open');
+  });
+
+  const refused = (code: string) =>
+    new AppError('conflict', 'business-conflict', 'test failure', { code });
+
+  /** The two refusals a nobody-joined row can meet each have a sentence; the rest fall through. */
+  it('has words of its own for somebody having joined and for a court that is over', () => {
+    expect(removeRefusalMessage(refused('somebody_has_joined'))).toBe(
+      "Somebody's in now, so it's no longer yours to remove.",
+    );
+    expect(removeRefusalMessage(refused('challenge_is_over'))).toBe(
+      LEAVE_REFUSED['challenge_is_over'],
+    );
+    expect(removeRefusalMessage(refused('account_held'))).toBe(
+      challengeErrorMessage(refused('account_held')),
+    );
   });
 });
 

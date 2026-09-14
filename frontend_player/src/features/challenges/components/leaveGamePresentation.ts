@@ -14,18 +14,19 @@
  * ## The withdraw's shape, and the difference that reworded it
  *
  * `WithdrawSheet`'s exact shape a third time — a title naming the **moment** rather than the act,
- * three body lines, the act named once on the control that carries it out, a dismissal named by
- * what it does. What differs is what the sheet has to say: the withdraw destroys the court and
- * the room, and its second line exists to say so; a departure destroys **nothing** — the others
- * keep the game, the plan and the room
+ * body lines, the act named once on the control that carries it out, a dismissal named by what it
+ * does. What differs is what the sheet has to say: the call-off ends the game and the room, and its
+ * second line exists to say so (§22.9; the withdraw's own deck, which said the same of a court, is
+ * retired with #428); a departure destroys **nothing** — the others keep the game, the plan and
+ * the room
  * ([ADR-0162](../../../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md))
  * — so the first line says what survives, and the second says the one thing the leaver gives up:
  * `already_asked_at` keeps them out of this court's pool for as long as it stands, and nobody is
  * asked twice on one challenge.
  *
- * **Nothing here says the pair rule releases**, on `WITHDRAW_SHEET_BODY`'s own line: that is a
- * fact about what becomes possible afterwards, and a confirmation is not the place to sell a
- * consequence.
+ * **Nothing here says the pair rule releases**, on the withdraw's own line (`the-words.md` §22.3):
+ * that is a fact about what becomes possible afterwards, and a confirmation is not the place to
+ * sell a consequence.
  */
 
 import type { AppError } from '@/shared/errors';
@@ -35,9 +36,9 @@ import { challengeErrorMessage } from './challengeErrorMessage';
 /**
  * The control, on the game screen — **quiet, destructive, and last**, behind the sheet below.
  *
- * The visible label is the whole sentence, so it is the accessible name too: unlike `Withdraw`,
- * which says one word and names what it withdraws to a listener, there is no shorter form that a
- * reader would want.
+ * The visible label is the whole sentence, so it is the accessible name too: unlike the retired
+ * `Withdraw`, which said one word and named what it withdrew to a listener, there is no shorter
+ * form that a reader would want.
  */
 export const LEAVE_THIS_GAME = 'Leave this game';
 
@@ -86,6 +87,13 @@ export const LEAVE_FROM_THE_LIST_BODY =
   "Your seat opens for someone else and you'll leave the chat.";
 
 /**
+ * *This one is already over* — `challenge_is_over`'s sentence, **named once** because two sheets
+ * say it: the departure's here, and the removal's (`challengeDetailPresentation.ts`), which meets
+ * the same fact about the same court through another door ([#428](https://github.com/Raketa02/Raketa/issues/428)).
+ */
+export const THIS_ONE_IS_OVER = 'This one is already over.';
+
+/**
  * **What the sheet says when the departure is refused** — the four codes the route documents,
  * each a sentence, over `challengeErrorMessage`'s fallback for everything else.
  *
@@ -105,7 +113,7 @@ export const LEAVE_FROM_THE_LIST_BODY =
  */
 export const LEAVE_REFUSED: Readonly<Record<string, string>> = {
   game_moment_has_passed: "The time you agreed has passed, so there's nothing to leave now.",
-  challenge_is_over: 'This one is already over.',
+  challenge_is_over: THIS_ONE_IS_OVER,
   game_is_history: 'This game has already happened, or never will.',
   challenge_not_found: "You don't hold a seat on this court.",
 };

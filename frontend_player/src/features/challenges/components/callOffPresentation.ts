@@ -13,13 +13,14 @@
  * ## The withdraw's shape, and the two lines that change
  *
  * A title naming the **moment**, three body lines, the act named once on the control that carries
- * it out, a dismissal named by what it does. The second body line is the withdraw's own — *the
- * conversation goes with it* — because ADR-0142's *destroyed, not delisted* holds here too, and a
- * confirmation that did not say so would be hiding the only consequence nobody can undo. The first
- * line names what the act ends: not *this court*, which is the challenge's word, but *this game*,
- * because that is what the people still in it lose.
+ * it out, a dismissal named by what it does. The second body line was the withdraw's own — *the
+ * conversation goes with it* — and since [#428](https://github.com/Raketa02/Raketa/issues/428)
+ * retired the withdraw's deck it lives here alone: ADR-0142's *destroyed, not delisted* holds on a
+ * game's room, and a confirmation that did not say so would be hiding the only consequence nobody
+ * can undo. The first line names what the act ends: not *this court*, which is the challenge's
+ * word, but *this game*, because that is what the people still in it lose.
  *
- * **Nothing here says the pair rule releases**, on `WITHDRAW_SHEET_BODY`'s own line.
+ * **Nothing here says the pair rule releases**, on the withdraw's own line (`the-words.md` §22.3).
  */
 
 /**
@@ -41,8 +42,8 @@ export const CALL_OFF_SHEET_TITLE = 'Before you call it off';
 
 /**
  * The three bodies, in order: what everybody loses, what goes with it, and that it cannot be
- * undone. The second is the withdraw's own line, unchanged, because the room is destroyed in the
- * act exactly as it is for any withdrawal.
+ * undone. The second was the withdraw's own line, kept here because the room is destroyed in the
+ * act exactly as it was for any withdrawal.
  */
 export const CALL_OFF_SHEET_BODY = [
   'Everybody loses this game.',

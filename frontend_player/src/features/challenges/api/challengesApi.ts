@@ -162,9 +162,10 @@ export function postDecline(challengeId: string): Promise<ChallengeSchema> {
  * sport, the kind of evening, and the **window**, which is stamped when a challenge is sent and
  * never again ([ADR-0150](../../../../../docs/adr/0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md) §6).
  *
- * **Any live member may do this; only the organiser may withdraw.** Growing a court and ending
- * one are different acts, and a challenge born of two mutual yeses has an organiser who is only
- * whoever said yes second.
+ * **Any live member may do this; ending a court is a different act** — removing one that was
+ * never a game is the organiser's while nobody has joined and nobody's once somebody has, and
+ * calling off the game a court became is any player's on it (ADR-0165 §4–§5). A challenge born of
+ * two mutual yeses has an organiser who is only whoever said yes second.
  *
  * **The whole court goes, not the new seats.** An acceptance is to the game and not to the side,
  * so somebody already in may be moved across the net and may never be taken out.
@@ -182,20 +183,23 @@ export function postSeats(challengeId: string, body: FillSeatsRequest): Promise<
 }
 
 /**
- * **The exit for a line-up nobody is going to complete**, and the only one.
- *
- * `LINE_UP_INCOMPLETE` and nowhere else; whole-challenge, and it never removes one person;
- * irreversible, with no route back — asking the same people again is a **new** challenge
+ * **Two acts on one route, told apart by whether the court has been a game**
+ * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §4–§5). *Remove the challenge*: the organiser's, admitted exactly while nobody besides them
+ * holds an accepted seat — before anybody has answered, whatever seats are still deciding — and
+ * refused with `somebody_has_joined` once anybody is in. *Call it off*: on a court that has been a
+ * game, any player's on it, while a seat is open; the game reaches `CALLED_OFF` in the act.
+ * Whole-challenge either way, and it never removes one person; irreversible, with no route back —
+ * asking the same people again is a **new** challenge
  * ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)).
- * Nobody who was still deciding is charged a lapse for it, and it is the only thing that
- * releases somebody who let their day run out.
+ * Nobody who was still deciding is charged a lapse for it.
  *
  * **A noun and not a verb**, because what this creates is the withdrawal — the one thing in this
  * context a fold of the seats could never produce. The reply is `ChallengeSchema` at `WITHDRAWN`,
  * which is the server's own derived standing and therefore the redraw.
  *
  * **No `signal`**, for the send's reason rather than the read's: it destroys the conversation in
- * the same transaction, so a cancelled one has already deleted what people wrote.
+ * the same transaction where one exists, so a cancelled one has already deleted what people wrote.
  */
 export function postWithdrawal(challengeId: string): Promise<ChallengeSchema> {
   return httpRequest<ChallengeSchema>({

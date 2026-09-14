@@ -53,7 +53,7 @@
  * opened, which is exact.
  */
 
-import { ownSeat, type Challenge, type ChallengeSeat } from './challenge';
+import { nobodyHasJoined, ownSeat, type Challenge, type ChallengeSeat } from './challenge';
 import type { SeatAnswer, Standing } from './standing';
 
 /**
@@ -182,7 +182,7 @@ const OWN_ACT_LEAVES_AT_ONCE: Readonly<Record<SeatAnswer, boolean>> = {
 
 /**
  * Whether this row belongs on the inbox at all: still being arranged, or its news still fresh —
- * **and never a challenge the reader themselves said no to, or walked out of.**
+ * **and never a challenge the reader themselves said no to, walked out of, or removed.**
  *
  * Two rows stay whatever their age, and it is one rule read twice: **a row the app cannot
  * describe or cannot date is not a row it may decide is finished.** A standing this build cannot
@@ -199,12 +199,25 @@ const OWN_ACT_LEAVES_AT_ONCE: Readonly<Record<SeatAnswer, boolean>> = {
  * stays its day, because to them it *is* news. A lapse is not either: nobody chose it, and *Your
  * day ran out* is kept to be read exactly as before ({@link OWN_ACT_LEAVES_AT_ONCE}).
  *
+ * **And so does a removal of your own** ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §4, [#428](https://github.com/Raketa02/Raketa/issues/428)), which is not a seat's answer and so
+ * is read off the standing: a `WITHDRAWN` challenge the reader organised on which nobody besides
+ * them had joined ({@link removedByTheReader}). It is theirs by construction — only the organiser
+ * may remove, and only while nobody has joined — so *You withdrew this* is the third sentence
+ * that tells the reader nothing; to the people asked it is news, and their row keeps its day. A
+ * game **called off** reads `WITHDRAWN` too and is deliberately not this: others had joined, and
+ * since anybody on the court may call it off, the standing alone cannot say it was the reader's
+ * act, so that row keeps its day as a departure's does. The one court both readings fit — a game
+ * whose others all left, called off by the last departure — would have read *You withdrew this*
+ * for a day, which is false there; its ending is the game card's news, drawn as *Called off*.
+ *
  * The record is untouched: `GET /challenges` still holds the seat, the screen still resolves for
  * a stale route, and only the row departs.
  */
 export function belongsOnTheInbox(challenge: Challenge, playerId: string): boolean {
   const ownAnswer = ownSeat(challenge, playerId)?.answer;
   if (ownAnswer !== undefined && OWN_ACT_LEAVES_AT_ONCE[ownAnswer]) return false;
+  if (removedByTheReader(challenge, playerId)) return false;
   if (challenge.standing === undefined) return true;
   if (STILL_BEING_ARRANGED[challenge.standing]) return true;
 
@@ -212,6 +225,19 @@ export function belongsOnTheInbox(challenge: Challenge, playerId: string): boole
   if (stoppedAt === undefined) return true;
 
   return Date.parse(challenge.readAt) - Date.parse(stoppedAt) < ENDED_ROW_SHELF_LIFE_MS;
+}
+
+/**
+ * **A removal of the reader's own** — `WITHDRAWN`, organised by them, and nobody besides them
+ * had joined. The withdraw's own guard (`mayRemove`) read on the ending it produced: the seats
+ * come back exactly as they were, so the court that could be removed is the court that was.
+ */
+function removedByTheReader(challenge: Challenge, playerId: string): boolean {
+  return (
+    challenge.standing === 'WITHDRAWN' &&
+    challenge.organiserId === playerId &&
+    nobodyHasJoined(challenge)
+  );
 }
 
 /**

@@ -4,14 +4,15 @@
  * §13's seventeen standing sentences are `challengePresentation.ts`' and are read from here
  * unchanged: this screen states the standing exactly as the row above it does, which is what
  * stops a row and the screen behind it describing one challenge two ways. What is added here is
- * the copy the screen itself brought — the two answers, the three controls a half-built court
- * carries, the withdraw's own sheet, the identity row, the two absences, and the one spoken name
- * §24.3 specifies.
+ * the copy the screen itself brought — the two answers, the fill, the removal and its sheet, the
+ * identity row, the two absences, and the one spoken name §24.3 specifies.
  *
  * The split against `challengePresentation.ts` is the one §22 states: that file is the **shared**
  * deck — §13, §14 and §21, read by the inbox row as well as by this screen — and this one is the
  * surface's, holding what no other surface says. `SH.propose`'s strings live there because the
- * court draws that sheet; the withdraw's live here because nothing but this screen draws it.
+ * court draws that sheet; the removal's live here because the two places that say them — this
+ * screen's arm, and the organiser's row on the Chats list, which is a door to it — are both this
+ * feature's, and the row says them through the same door the screen does.
  *
  * ## The two answers name no state the act cannot produce
  *
@@ -56,8 +57,12 @@
 
 import type { AtStake } from '@/features/play/types';
 import { PLAYER_SCORE_BLOCK, levelRow, metaLine, stakeClauses } from '@/features/play/types';
+import type { AppError } from '@/shared/errors';
 
 import type { CourtPerson, PairingAbsence } from '../domain/challengeDetail';
+
+import { challengeErrorMessage } from './challengeErrorMessage';
+import { THIS_ONE_IS_OVER } from './leaveGamePresentation';
 
 /**
  * The invitee's yes. See the module note: the label is the standing sentence in the first
@@ -98,51 +103,87 @@ export const NO_CHALLENGE_HERE = 'No challenge of yours has this address.';
 export const FILL_THE_SEATS = 'Fill the seats';
 
 /**
- * **The end**, and the only one a half-built line-up has
- * ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)).
+ * **The end, while nobody has joined** — *Remove the challenge*, the withdraw as
+ * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §4 leaves it: the organiser's, exactly while nobody besides them holds an accepted seat, and
+ * nobody's once somebody has ([#428](https://github.com/Raketa02/Raketa/issues/428);
+ * [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22.3).
  *
- * The word is the record's own: not *cancel* or *call off*, which belong to the plan, and not
- * *stand down*, which the root `CONTEXT.md` owns platform-wide for a term that cannot be
- * evaluated. The **visible** control says `Withdraw`; its accessible name says what it withdraws
- * (§24.3), and that is `challengeAccessibility.ts`'.
+ * **The word is the record's** — *remove*, because what the act does to a court nobody has joined
+ * is take a send back: nothing anybody agreed to is lost, and the people asked simply stop being
+ * asked. Not *withdraw*, which named the same route while it ended courts people had joined and
+ * whose words are retired with that reading; not *cancel* or *call off*, which belong to a game;
+ * not *stand down*, which the root `CONTEXT.md` owns platform-wide.
+ *
+ * **One label on the revealed control, on the screen's button and on the sheet's act**, on `Send
+ * the challenge`'s and `Leave the game`'s precedent: the act is named once, and what is under the
+ * sheet is hidden while it is up, so the first press can only reach the door and the second can
+ * only reach the act. The visible label is the whole sentence, so it is the accessible name too —
+ * unlike *Withdraw*, which said one word and named what it withdrew to a listener.
  */
-export const WITHDRAW = 'Withdraw';
+export const REMOVE_THE_CHALLENGE = 'Remove the challenge';
 
-/** The withdraw while it is in flight, on the control that carries it out. §22.3. */
-export const WITHDRAWING = 'Withdrawing…';
+/** The removal while it is in flight, on the sheet's act — the list's sheet stays up. §22.3. */
+export const REMOVING = 'Removing…';
 
 /**
  * `SH.propose`'s shape, a second time — **the title names the moment rather than the act.**
  *
- * So the act is named exactly once, by {@link WITHDRAW_THE_CHALLENGE} on the control that carries
- * it out. Focus lands here on the way in and **not** on the first action, because that action is
- * the destructive one and landing focus there would make the worst outcome the cheapest to
- * trigger (§20.6).
+ * So the act is named exactly once, by {@link REMOVE_THE_CHALLENGE} on the act that carries it
+ * out. Focus lands here on the way in and **not** on the first action, because that action is the
+ * destructive one and landing focus there would make the worst outcome the cheapest to trigger
+ * (§20.6).
  */
-export const WITHDRAW_SHEET_TITLE = 'Before you withdraw';
+export const REMOVE_SHEET_TITLE = 'Before you remove it';
 
 /**
- * The three bodies, in order — and **the second one is what earns the sheet.**
+ * **One line, and it is the one ADR-0165 §6 asks for: it is gone for the invitees too.** The
+ * consequence the organiser cannot see from their own list — their row goes either way — and the
+ * one that reaches other people: somebody deciding on this challenge finds nothing to answer.
  *
- * ADR-0142 chose **destroyed, not delisted**: *"on a platform where standings are derived and
- * nothing else is deleted, this is the one place deletion is the honest implementation"* — so a
- * confirmation that did not say so would be hiding the only consequence the player cannot undo.
- *
- * **It says nothing about the pair rule releasing.** That is a fact about what becomes possible
- * afterwards, and a confirmation is not the place to sell a consequence
- * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22.3).
+ * Not the withdraw's three. *Everybody who accepted loses this court* is false here by
+ * construction, since nobody has; *the conversation goes with it* is true only on the court the
+ * organiser is alone in again, and a sentence about a room the reader may never have seen is not
+ * what the sheet is for; and *this cannot be undone* is kept off it because what a removal ends
+ * is a send, and asking the same people again is a new challenge rather than an undo. **It says
+ * nothing about the pair rule releasing**, on the withdraw's own line (§22.3).
  */
-export const WITHDRAW_SHEET_BODY = [
-  'Everybody who accepted loses this court.',
-  'The conversation goes with it, and what people wrote is deleted.',
-  'This cannot be undone.',
-] as const;
+export const REMOVE_SHEET_BODY = ['It disappears for the people you asked, too.'] as const;
 
-/** The act, on the sheet that confirms it. §22.3. */
-export const WITHDRAW_THE_CHALLENGE = 'Withdraw the challenge';
+/**
+ * The sheet's dismissal, **named by what it does** — never just *Close*. The withdraw's own word,
+ * because a challenge awaiting answers is exactly what *open* means here.
+ */
+export const REMOVE_SHEET_CLOSE_LABEL = 'Keep it open';
 
-/** The sheet's dismissal, **named by what it does** — never just *Close*. §22.3. */
-export const WITHDRAW_SHEET_CLOSE_LABEL = 'Keep it open';
+/**
+ * **What the sheet says when the removal is refused** — the two codes a nobody-joined row can
+ * meet, each a sentence, over `challengeErrorMessage`'s fallback for everything else
+ * (`LEAVE_REFUSED`'s shape, one act over).
+ *
+ * `somebody_has_joined` is the one a stale row invites: somebody said yes between the read and
+ * the press, and the court is nobody's to end for the others any more. `challenge_is_over` is the
+ * departure's sentence, borrowed rather than respelled — it is the same fact about the same court,
+ * whichever door met it. The route documents three more, and none of them reaches this sheet from
+ * a row drawn by `mayRemove`: `withdraw_is_the_organisers` needs a reader who is not the
+ * organiser, `not_a_half_built_line_up` a court that has been a game, and `challenge_not_found` a
+ * seat the reader does not hold — so they fall through to the feature's sentence rather than
+ * earning words nobody can reach.
+ */
+export const REMOVE_REFUSED: Readonly<Record<string, string>> = {
+  somebody_has_joined: "Somebody's in now, so it's no longer yours to remove.",
+  challenge_is_over: THIS_ONE_IS_OVER,
+};
+
+/**
+ * The sentence a refused removal writes on the sheet: the deck's own where the code has one, and
+ * the feature's sentence for every other write otherwise — `account_held`, a connection that was
+ * not there, a code this build has never seen.
+ */
+export function removeRefusalMessage(error: AppError): string {
+  const own = error.code === undefined ? undefined : REMOVE_REFUSED[error.code];
+  return own ?? challengeErrorMessage(error);
+}
 
 /** What a Player Score is out of, spelled rather than assumed — and spoken, never drawn. */
 const PLAYER_SCORE_DENOMINATOR = 100;

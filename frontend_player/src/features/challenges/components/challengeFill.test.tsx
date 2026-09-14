@@ -11,7 +11,8 @@
  *
  * What is asserted is the set of claims a build session could quietly undo:
  *
- * - **Any live member may fill; only the organiser may end it.** Two permissions, one arm.
+ * - **Any live member may fill, and nobody ends it for the others** — since ADR-0165 §4 the
+ *   organiser has no *Withdraw* on a court somebody has joined ([#428](https://github.com/Raketa02/Raketa/issues/428)).
  * - **⚡ names the challenge and says nothing else about the court** — no sport, no mode, no
  *   locked seats, because all three are read off the challenge and refused beside it.
  * - **It pushes the builder under the challenge**, at `/chats/challenge/[id]/fill`, so the Chats
@@ -19,7 +20,6 @@
  * - **An accepted seat is not a control**: no clear badge, no press, no pool, and no sentence —
  *   and *Start over* is absent rather than disabled.
  * - **The send is `POST …/seats` and it pops back**, and nothing in the flow resets the shell.
- * - **The withdraw is a real sheet, pending never optimistic, and the reply is the redraw.**
  * - **The reader who has left reads a sentence about their own seat**, and their row stays.
  */
 
@@ -35,7 +35,6 @@ import { endPlaySession } from '@/features/play/types';
 import { PROPOSE_SHEET_TITLE, SEND_CHALLENGE_LABEL } from '../types';
 import {
   CHALLENGES_PATH,
-  CONVERSATIONS_PATH,
   GATE_USER,
   launchSignedIn,
   stubChallenges,
@@ -59,15 +58,10 @@ import { OPEN_THE_CHAT } from '@/features/conversations/types';
 
 import { challengeErrorMessage } from './challengeErrorMessage';
 import { standingLine } from './challengePresentation';
-import {
-  FILL_THE_SEATS,
-  WITHDRAW,
-  WITHDRAW_SHEET_BODY,
-  WITHDRAW_SHEET_TITLE,
-  WITHDRAW_THE_CHALLENGE,
-} from './challengeDetailPresentation';
+import { FILL_THE_SEATS, REMOVE_THE_CHALLENGE } from './challengeDetailPresentation';
 import {
   LEAVE_FROM_THE_LIST_BODY,
+  LEAVE_SHEET_CLOSE_LABEL,
   LEAVE_SHEET_TITLE,
   LEAVE_THE_GAME,
   leaveRefusalMessage,
@@ -86,7 +80,6 @@ const READ_AT = '2026-09-08T12:00:00Z';
 
 const DETAIL_PATH = `${CHALLENGES_PATH}/${CHALLENGE_ID}`;
 const SEATS_PATH = `${DETAIL_PATH}/seats`;
-const WITHDRAWAL_PATH = `${DETAIL_PATH}/withdrawal`;
 const LINEUPS_PATH = '/api/v1/lineups';
 const FORECASTS_PATH = '/api/v1/forecasts';
 
@@ -351,22 +344,27 @@ async function pressSend() {
 
 describe('the three controls', () => {
   /**
-   * ADR-0150 §1. Growing a court and ending one are different acts, and the commonest half-built
-   * court has an organiser who is only whoever said yes second — so leaving the other member
-   * unable to finish a padel four would be an arbitrary tiebreak deciding whose game it is.
+   * ADR-0150 §1, ADR-0165 §4. Growing a court and ending one are different acts, and a court
+   * somebody has joined is nobody's to end for the others: the organiser has the fill and the
+   * leave like anybody else, and **neither *Remove* nor *Withdraw*** — the acceptance criterion
+   * [#428](https://github.com/Raketa02/Raketa/issues/428) names for once somebody has joined.
    */
-  it('offers the fill to any live member and the withdraw to the organiser alone', async () => {
+  it('offers the fill to any live member, and the organiser no way to end it', async () => {
     await openTheChallenge();
 
     expect(await screen.findByRole('button', { name: FILL_THE_SEATS })).toBeTruthy();
-    expect(screen.getByLabelText('Withdraw this challenge')).toBeTruthy();
+    expect(screen.getByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
+    expect(screen.queryByText(/withdraw/i)).toBeNull();
+    expect(screen.queryByLabelText(/withdraw/i)).toBeNull();
   });
 
-  it('offers a member who is not the organiser the fill and no way to end it', async () => {
+  it('offers a member who is not the organiser the same two acts', async () => {
     await openTheChallenge(detail({ organiser_id: BEA }), row({ organiser_id: BEA }));
 
     expect(await screen.findByRole('button', { name: FILL_THE_SEATS })).toBeTruthy();
-    expect(screen.queryByLabelText('Withdraw this challenge')).toBeNull();
+    expect(screen.getByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
   });
 
   /**
@@ -400,7 +398,7 @@ describe('the three controls', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: FILL_THE_SEATS })).toBeNull();
-    expect(screen.queryByLabelText('Withdraw this challenge')).toBeNull();
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
   });
 
   /** Every act on this screen fails offline and none is sent later — one note above the pair. */
@@ -480,7 +478,6 @@ describe('*Leave the game*', () => {
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: FILL_THE_SEATS })).toBeNull();
     expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
-    expect(screen.queryByLabelText('Withdraw this challenge')).toBeNull();
   });
 
   /** A refusal is said on the sheet, in the departure's own words, and the screen stays. */
@@ -687,80 +684,35 @@ describe('the send', () => {
   });
 });
 
-describe('the withdraw', () => {
-  /** §22.3, and the second body line is the one that earns the sheet. */
-  it('confirms on a sheet that names what the withdraw destroys', async () => {
-    await openTheChallenge();
-
-    fireEvent.press(await screen.findByLabelText('Withdraw this challenge'));
-
-    expect(await screen.findByText(WITHDRAW_SHEET_TITLE)).toBeTruthy();
-    expect(screen.getByText(WITHDRAW_SHEET_BODY[1])).toBeTruthy();
-    expect(screen.getByRole('button', { name: WITHDRAW_THE_CHALLENGE })).toBeTruthy();
-    expect(transport.requestsTo('POST', WITHDRAWAL_PATH)).toEqual([]);
-  });
-
+describe('a refusal belongs to the press that caused it', () => {
   /**
-   * **Pending, never optimistic, and the reply is the redraw**: the route returns the challenge
-   * as it now stands at `WITHDRAWN`, so the screen states it without asking again.
+   * A mutation's `error` outlives its flight, so the sentence under the controls is read off
+   * whichever act still holds one — and without a clear on every press, a fill refused a minute
+   * ago would state its sentence under a sheet about a different act. The leave's door clears
+   * the screen's acts when it opens, as the withdraw's control did before it left this arm.
    */
-  it('redraws from the reply, and the conversation goes with it', async () => {
-    transport.on('POST', WITHDRAWAL_PATH, () =>
-      json(row({ standing: 'WITHDRAWN', seats: court() })),
-    );
-
-    await openTheChallenge();
-
-    fireEvent.press(await screen.findByLabelText('Withdraw this challenge'));
-    fireEvent.press(await screen.findByRole('button', { name: WITHDRAW_THE_CHALLENGE }));
-
-    expect(
-      await screen.findByText(
-        standingLine({ side: 'organiser', standing: 'WITHDRAWN', player: { kind: 'unknown' } }),
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByRole('button', { name: FILL_THE_SEATS })).toBeNull();
-
-    // Destroyed, not delisted — so the Chats list is invalidated rather than patched, and the
-    // room's own read is made again.
-    await waitFor(() =>
-      expect(transport.requestsTo('GET', CONVERSATIONS_PATH).length).toBeGreaterThan(1),
-    );
-  });
-
-  /**
-   * **A refusal belongs to the press that caused it.** A mutation's `error` outlives its flight,
-   * so the sentence under the controls is read off whichever act still holds one — and without
-   * a clear on every press, a fill refused a minute ago states its sentence over a withdraw that
-   * has just failed for a different reason and is being answered by a **re-read**.
-   */
-  it('drops the sentence a previous act left behind', async () => {
+  it('drops the sentence a previous act left behind when a door is opened', async () => {
     transport.on('POST', LINEUPS_PATH, () => errorResponse(403, 'account_held'));
-    transport.on('POST', WITHDRAWAL_PATH, () => errorResponse(409, 'not_a_half_built_line_up'));
 
     await openTheChallenge();
 
     fireEvent.press(await screen.findByRole('button', { name: FILL_THE_SEATS }));
-    const held = await screen.findByText(challengeErrorMessage(refusal('account_held')));
-    expect(held).toBeTruthy();
+    expect(await screen.findByText(challengeErrorMessage(refusal('account_held')))).toBeTruthy();
 
-    fireEvent.press(screen.getByLabelText('Withdraw this challenge'));
-    fireEvent.press(await screen.findByRole('button', { name: WITHDRAW_THE_CHALLENGE }));
+    fireEvent.press(screen.getByRole('button', { name: LEAVE_THE_GAME }));
+    await screen.findByText(LEAVE_SHEET_TITLE);
 
-    // The withdraw's own refusal re-reads and says nothing, so the fill's stale sentence is the
-    // only thing that could still be on screen.
+    // The clear is the observer's, and it lands on the next tick; the sheet is up over a screen
+    // that no longer says it, and it is still gone once the sheet is dismissed.
     await waitFor(() =>
-      expect(screen.queryByText(challengeErrorMessage(refusal('account_held')))).toBeNull(),
+      expect(
+        screen.queryByText(challengeErrorMessage(refusal('account_held')), {
+          includeHiddenElements: true,
+        }),
+      ).toBeNull(),
     );
-  });
-
-  /** The visible control is one word, and the accessible name says what it withdraws (§24.3). */
-  it('says what it withdraws to a listener and one word to a reader', async () => {
-    await openTheChallenge();
-
-    const control = await screen.findByLabelText('Withdraw this challenge');
-
-    expect(screen.getByText(WITHDRAW)).toBeTruthy();
-    expect(control.props.accessibilityLabel).toBe('Withdraw this challenge');
+    fireEvent.press(screen.getByRole('button', { name: LEAVE_SHEET_CLOSE_LABEL }));
+    await waitFor(() => expect(screen.queryByText(LEAVE_SHEET_TITLE)).toBeNull());
+    expect(screen.queryByText(challengeErrorMessage(refusal('account_held')))).toBeNull();
   });
 });

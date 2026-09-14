@@ -4,12 +4,13 @@
  *
  * [#419](https://github.com/Raketa02/Raketa/issues/419) §2's acceptance criteria for the act are
  * assertions in this file and opinions nowhere else — the control is drawn on the *Needs a player*
- * arm alone, above *Leave this game*, for the organiser and, once the organiser has left, for
- * anyone still on the court, and for nobody else; the sheet says the four things `the-words.md`
- * §22.9 fixes for a court that has been a game; a call-off in flight is busy and never optimistic;
- * success re-reads every list the act touched and **stays**, so the screen re-folds into the
- * called-off arm; and each refusal code costs the screen exactly what `actRefusal.ts` says it does.
- * The ending's card is `nowRail.test.tsx`'s and its screen is `result.test.tsx`'s.
+ * arm alone, above *Leave this game*, for **any player on the court** and for nobody else
+ * ([#428](https://github.com/Raketa02/Raketa/issues/428), ADR-0165 §5 — the organiser-first rule
+ * and its fallback are gone); the sheet says the four things `the-words.md` §22.9 fixes for a
+ * court that has been a game; a call-off in flight is busy and never optimistic; success re-reads
+ * every list the act touched and **stays**, so the screen re-folds into the called-off arm; and
+ * each refusal code costs the screen exactly what `actRefusal.ts` says it does. The ending's card
+ * is `nowRail.test.tsx`'s and its screen is `result.test.tsx`'s.
  *
  * The words are the deck's — `callOffPresentation.ts` — and the refusal sentence is
  * `challengeErrorMessage`'s, as it is for every write in this feature.
@@ -281,18 +282,62 @@ describe('who may call it off', () => {
     expect(control.props.accessibilityState.busy).toBe(false);
   });
 
-  it('is not drawn for anybody else while the organiser is on the court', async () => {
+  /**
+   * **And any other player's, with the organiser still on the court** (ADR-0165 §5,
+   * [#428](https://github.com/Raketa02/Raketa/issues/428)): Tomek organised this one, and I can
+   * call it off — the acceptance criterion in as many words, through to the ending.
+   */
+  it('is drawn for a player who is not the organiser, and calls the game off when pressed', async () => {
+    transport.on('POST', WITHDRAWAL_PATH, () => {
+      stubGames(transport, [CALLED_OFF], READ_AT);
+      return json(WITHDRAWN);
+    });
     await openTheGame();
 
-    await screen.findByRole('button', { name: LEAVE_THIS_GAME });
-    expect(screen.queryByRole('button', { name: CALL_IT_OFF })).toBeNull();
+    expect(await screen.findByRole('button', { name: CALL_IT_OFF })).toBeTruthy();
+    await callItOff();
+
+    expect(await screen.findByText(IT_WAS_CALLED_OFF)).toBeTruthy();
+    expect(transport.requestsTo('POST', WITHDRAWAL_PATH)).toHaveLength(1);
   });
 
-  /** ADR-0163: once the organiser's own seat is open, the exit falls back to whoever is left. */
+  /** Still the rule once the organiser has left: whoever is left on the court holds it. */
   it('is drawn for any remaining player once the organiser has left', async () => {
     await openTheGame({ games: [game({ seats: TWO_SHORT })], challenges: [ORGANISER_LEFT] });
 
     expect(await screen.findByRole('button', { name: CALL_IT_OFF })).toBeTruthy();
+  });
+
+  /** On the court means an accepted seat: a reader whose own seat reads `LEFT` is not on it. */
+  it('is not drawn for a reader who has left the court', async () => {
+    await openTheGame({
+      games: [game({ seats: TWO_SHORT })],
+      challenges: [
+        row({
+          seats: [
+            { side: 'A', player_id: ME, nickname: 'me_', answer: 'LEFT', answer_by: null },
+            {
+              side: 'A',
+              player_id: KASIA,
+              nickname: 'kasia_w',
+              answer: 'ACCEPTED',
+              answer_by: null,
+            },
+            {
+              side: 'B',
+              player_id: TOMEK,
+              nickname: 'tomek.p',
+              answer: 'ACCEPTED',
+              answer_by: null,
+            },
+            { side: 'B', player_id: MAREK, nickname: 'marekb', answer: 'LEFT', answer_by: null },
+          ],
+        }),
+      ],
+    });
+
+    await screen.findByRole('button', { name: LEAVE_THIS_GAME });
+    expect(screen.queryByRole('button', { name: CALL_IT_OFF })).toBeNull();
   });
 
   /**

@@ -21,7 +21,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { gameKeys } from '@/features/games/types';
 import { planKeys } from '@/features/plans/types';
-import { offlineMessage } from '@/shared/errors';
+import { AppError, offlineMessage } from '@/shared/errors';
 import {
   CHALLENGES_PATH,
   CONVERSATIONS_PATH,
@@ -45,7 +45,16 @@ import {
 } from '@/test-support/transport';
 
 import { standingLine, yourAnswerWindowLine } from './challengePresentation';
-import { IM_IN, NOT_THIS_TIME, pairingAbsenceLine } from './challengeDetailPresentation';
+import {
+  IM_IN,
+  NOT_THIS_TIME,
+  REMOVE_SHEET_BODY,
+  REMOVE_SHEET_CLOSE_LABEL,
+  REMOVE_SHEET_TITLE,
+  REMOVE_THE_CHALLENGE,
+  pairingAbsenceLine,
+  removeRefusalMessage,
+} from './challengeDetailPresentation';
 import { LEAVE_FROM_THE_LIST_BODY, LEAVE_THE_GAME } from './leaveGamePresentation';
 
 const ME = GATE_USER.id;
@@ -981,5 +990,147 @@ describe('*Leave the game* on the arranging arm', () => {
 
     expect(await screen.findByRole('button', { name: IM_IN })).toBeTruthy();
     expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
+  });
+});
+
+describe('*Remove the challenge* on the arranging arm', () => {
+  const OLA = 'dddddddd-0000-4000-8000-000000000003';
+  const WITHDRAWAL_PATH = `${DETAIL_PATH}/withdrawal`;
+
+  /** My padel four, just sent: two asked, nobody has answered. */
+  const mySend = {
+    sport: 'PADEL' as const,
+    organiser_id: ME,
+    standing: 'AWAITING_ANSWERS' as const,
+    seats: [
+      { side: 'A' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
+      { side: 'A' as const, player_id: EWA, answer: null, answer_by: at(20), nickname: 'ewa.m' },
+      { side: 'B' as const, player_id: OLA, answer: null, answer_by: at(20), nickname: 'ola.k' },
+      { side: 'B' as const, player_id: null, answer: null, nickname: null },
+    ],
+  };
+
+  /** The same court once Ewa has said yes: the organiser is a player now, and leaves like one. */
+  const joined = {
+    ...mySend,
+    seats: [
+      { side: 'A' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
+      { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, nickname: 'ewa.m' },
+      { side: 'B' as const, player_id: OLA, answer: null, answer_by: at(20), nickname: 'ola.k' },
+      { side: 'B' as const, player_id: null, answer: null, nickname: null },
+    ],
+  };
+
+  /** What the route says back: the challenge as it now stands, every seat exactly as it was. */
+  const REMOVED: Wire['ChallengeSchema'] = {
+    ...row(mySend),
+    standing: 'WITHDRAWN',
+    ended_at: READ_AT,
+  };
+
+  const refused = (code: string) =>
+    new AppError('conflict', 'business-conflict', 'test failure', { code });
+
+  async function openMySend(court: typeof mySend = mySend) {
+    stubChallenges(transport, [row(court)], READ_AT);
+    transport.on('GET', DETAIL_PATH, () => json(detail(court)));
+
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText(/^Chats/));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    fireEvent.press(await screen.findByLabelText(/, Padel, /));
+    await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`));
+  }
+
+  /**
+   * **The organiser's, while nobody has joined** (ADR-0165 §4,
+   * [#428](https://github.com/Raketa02/Raketa/issues/428)) — the arm that had no organiser act
+   * at all draws one, and it opens the withdrawal's sheet in the removal's words.
+   */
+  it('is drawn for an organiser nobody has joined, and opens the sheet that says it is gone for the invitees too', async () => {
+    await openMySend();
+
+    expect(
+      await screen.findByText(
+        standingLine({ side: 'organiser', standing: 'AWAITING_ANSWERS', awaiting: 2 }),
+      ),
+    ).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: REMOVE_THE_CHALLENGE }));
+
+    expect(await screen.findByText(REMOVE_SHEET_TITLE)).toBeTruthy();
+    for (const line of REMOVE_SHEET_BODY) expect(screen.getByText(line)).toBeTruthy();
+    expect(screen.getByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeTruthy();
+    expect(screen.getByRole('button', { name: REMOVE_SHEET_CLOSE_LABEL })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
+    expect(transport.requestsTo('POST', WITHDRAWAL_PATH)).toEqual([]);
+  });
+
+  /** Pending, never optimistic, and the reply is the redraw: the screen says *You withdrew this*. */
+  it('calls the withdrawal route on confirm and redraws into the ending, with nothing to press', async () => {
+    transport.on('POST', WITHDRAWAL_PATH, () => json(REMOVED));
+    await openMySend();
+
+    fireEvent.press(await screen.findByRole('button', { name: REMOVE_THE_CHALLENGE }));
+    await screen.findByText(REMOVE_SHEET_TITLE);
+    fireEvent.press(screen.getByRole('button', { name: REMOVE_THE_CHALLENGE }));
+
+    expect(
+      await screen.findByText(
+        standingLine({ side: 'organiser', standing: 'WITHDRAWN', player: { kind: 'unknown' } }),
+      ),
+    ).toBeTruthy();
+    expect(transport.requestsTo('POST', WITHDRAWAL_PATH)).toHaveLength(1);
+    expect(screen.queryByText(REMOVE_SHEET_TITLE)).toBeNull();
+    expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
+    expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
+  });
+
+  /**
+   * **Once somebody has joined, neither *Remove* nor *Withdraw*** — the acceptance criterion in
+   * as many words. The organiser is a player now, and the arm offers the player's door instead.
+   */
+  it('is not drawn once somebody has joined, and neither is any withdraw', async () => {
+    await openMySend(joined);
+
+    expect(await screen.findByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
+    expect(screen.queryByText(/withdraw/i)).toBeNull();
+    expect(screen.queryByLabelText(/withdraw/i)).toBeNull();
+  });
+
+  /** And never to an invitee, answered or not. */
+  it('is not drawn to an invitee', async () => {
+    await openTheChallenge();
+
+    expect(await screen.findByRole('button', { name: IM_IN })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
+  });
+
+  /**
+   * **A refusal is said on the sheet, and the detail is re-read once it is dismissed**: somebody
+   * said yes under the finger, so the arm re-folds into the one that offers *Leave the game*.
+   */
+  it('says why on the sheet when somebody has joined under the finger, and re-folds on Keep it open', async () => {
+    transport.on('POST', WITHDRAWAL_PATH, () => {
+      // The server's truth from here on: Ewa is in.
+      transport.on('GET', DETAIL_PATH, () => json(detail(joined)));
+      stubChallenges(transport, [row(joined)], READ_AT);
+      return errorResponse(409, 'somebody_has_joined');
+    });
+    await openMySend();
+
+    fireEvent.press(await screen.findByRole('button', { name: REMOVE_THE_CHALLENGE }));
+    await screen.findByText(REMOVE_SHEET_TITLE);
+    fireEvent.press(screen.getByRole('button', { name: REMOVE_THE_CHALLENGE }));
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByText(removeRefusalMessage(refused('somebody_has_joined')))).toBeTruthy();
+    expect(screen.getByText(REMOVE_SHEET_TITLE)).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: REMOVE_SHEET_CLOSE_LABEL }));
+
+    expect(await screen.findByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: REMOVE_THE_CHALLENGE })).toBeNull();
+    expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE_ID}`);
   });
 });

@@ -226,6 +226,14 @@ because the sentence carries the fact.
 - **No stripe on the organiser's row.** The clock is live but it is not yours to clear, and the
   stripe marks what the badge counts.
 
+**The organiser's row swipes left to reveal *Remove the challenge*, while nobody has joined**
+([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+§6, [#428](https://github.com/Raketa02/Raketa/issues/428)) — §1.3's gesture on this row, and the
+same sheet §2.6 describes; the rule that decides whether a row moves is the withdraw's own (§2.6),
+read off the row the list already holds. Every other challenge row reveals nothing and does not
+move: an invitee's, the organiser's once somebody has joined, an ended one on its shelf. An own
+removal leaves the inbox at once, as an own *no* and an own *left* do (§2.5).
+
 ### 1.3 The conversation row
 
 **Faces · the whole handles · the sport · the last entry, one line, tail-truncated.** Fully
@@ -315,7 +323,7 @@ nothing on the wire carries a side.
 | `LAPSED` · both | §13 *{name}'s day ran out…* / *Your day ran out* | no | none |
 | `WITHDRAWN` · both | §13 *You withdrew this* / *{name} withdrew this — that court is closed* | no | none |
 | `ON` · both | §13 *Everybody's in* / *You're in — everybody's in* | no | **Open the chat** *(the door, below)* |
-| `LINE_UP_INCOMPLETE` · member, **a court somebody left** | §13 *{n} in, {m} seats open…* — the same sentence, on a court that has been a game | **yes** | **⚡ Fill the seats** · **Open the chat** · **Call it off** *(any player on the court — ADR-0165 §5)* |
+| `LINE_UP_INCOMPLETE` · member, **a court somebody left** | §13 *{n} in, {m} seats open…* — the same sentence, on a court that has been a game | **yes** | **⚡ Fill the seats** · **Open the chat** · **Leave the game** *(this read cannot tell a reopened court from one that was never a game, so it draws the same door — §2.5)*. **Call it off** *(any player on the court — ADR-0165 §5)* is the **game screen's** (§5.1), not this arm's — #428, §2.5 |
 | `LINE_UP_INCOMPLETE` · reader who **left the game** | §13's two sentences for a reader who left, read as *You left* | no | none |
 
 **A reopened court is the half-built court again, and it is reached from the game**
@@ -544,7 +552,7 @@ others ([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-
 | **⚡ Fill the seats** | any live member | runs the fill and **pushes a builder holding a full court and a fresh search** |
 | **Open the chat** | any live member | `/chats/conversation/[conversationId]` |
 | **Leave the game** | any live member, on a court that was never a game | `POST …/departure` — the seat opens; the same sheet the Chats list's swipe opens (ADR-0165 §6, `the-words.md` §22.10). On a game the control is the game screen's, as #411 rule 8 has it — but the challenge read carries no fact for whether a court has been a game, so #427 draws this on every filling court the reader is on with somebody, and on one that has been a game the moment guard is told in words on the sheet rather than by hiding a control the read cannot see the moment for |
-| **Call it off** | on a court that has been a game: **any player on the court** (ADR-0165 §5) | the withdraw's route and the withdraw's sheet, reworded — `the-words.md` §22.9; the game is called off in the act |
+| **Call it off** | on a court that has been a game: **any player on the court** (ADR-0165 §5) | the withdraw's route and the withdraw's sheet, reworded — `the-words.md` §22.9; the game is called off in the act. **The control is the game screen's** (§5.1): this read carries no fact for whether a court has been a game — the row above — so #428 draws no end act on this arm at all, and the game's own screen, reached from Now, is where it is called off |
 
 **⚡ is the entry point, and items 1 and 2 of that ticket had one answer.** Pressing it is *Find a
 game*'s own shape — press, the search runs, the builder arrives with a court on it — which
@@ -620,7 +628,7 @@ named once by the control that carries it out; a dismissal **named by what it do
 landing on the title rather than on the first action**, because that action is the destructive one
 and landing focus there would make the worst outcome the cheapest to trigger (§20.6).
 
-Its four sentences are [`the-words.md`](../matchmaking/the-words.md) §22.3.
+Its sentences are [`the-words.md`](../matchmaking/the-words.md) §22.3 — one body line since #428, and a refusal said on the sheet in words.
 
 **It fails when offline like every other act in this feature** (§2.4), and it is **pending, never
 optimistic**: the route returns the challenge as it now stands, at `WITHDRAWN`, and the screen

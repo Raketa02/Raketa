@@ -13,16 +13,20 @@
  *
  * ## Who may, and it is answered here
  *
- * The organiser's — or, once the organiser's own seat is open, any remaining player's (#411 rule
- * 4). The organiser is a **challenge** fact and a game carries none, so the answer is a join:
- * `useHoldsTheExit` reads the challenge list the tab bar already holds, keyed by the game's
- * `challengeId`, and folds `holdsTheExit` over the row for the reader it looks up itself, as the
- * list's other readers do. It is asked **inside** this component
- * rather than by the composer, so `features/plans` never learns what an organiser is: what the
- * composer hands in is the one rule that is its own — *a seat is open* — and this feature adds
- * the one that is its own. Both fail soft into no control, and the join is over a list the app
- * already keeps rather than a detail read for one boolean — asked only while `offered`, so a
- * full court's screen does not refetch that list for an answer it would not draw.
+ * **Any player on the court** — an accepted seat
+ * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §5, [#428](https://github.com/Raketa02/Raketa/issues/428)); ADR-0163 §1's organiser-first rule
+ * and its fallback are gone, so a group that has given up on a game ends it in one act, whoever
+ * presses. Whether the reader is on the court is a **challenge** fact — a game's seats say who is
+ * seated, and the challenge's say who accepted, which is the record the route checks — so the
+ * answer is a join: `useHoldsTheExit` reads the challenge list the tab bar already holds, keyed by
+ * the game's `challengeId`, and folds `holdsTheExit` over the row for the reader it looks up
+ * itself, as the list's other readers do. It is asked **inside** this component rather than by the
+ * composer, so `features/plans` never learns what a seat's answer is: what the composer hands in
+ * is the one rule that is its own — *a seat is open* — and this feature adds the one that is its
+ * own. Both fail soft into no control, and the join is over a list the app already keeps rather
+ * than a detail read for one boolean — asked only while `offered`, so a full court's screen does
+ * not refetch that list for an answer it would not draw.
  *
  * ## Only while a seat is open, and not only while the moment is ahead
  *
@@ -87,11 +91,12 @@ import {
 import { challengeErrorMessage } from './challengeErrorMessage';
 import { WithdrawSheet, type WithdrawWords } from './WithdrawSheet';
 
-/** The withdraw's sheet, in the words of a game being called off. */
+/** The withdrawal's sheet, in the words of a game being called off. */
 const CALL_OFF_WORDS: WithdrawWords = {
   title: CALL_OFF_SHEET_TITLE,
   body: CALL_OFF_SHEET_BODY,
   act: CALL_IT_OFF,
+  inFlight: CALLING_IT_OFF,
   closeLabel: CALL_OFF_SHEET_CLOSE_LABEL,
 };
 

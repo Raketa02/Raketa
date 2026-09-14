@@ -6,7 +6,7 @@
  * | `useChallenge` | `GET /challenges/{id}` — the arrangement, the people and the pairing |
  * | `useAnswerSeat` | `POST …/accept` and `…/decline` — **pending, never optimistic** |
  * | `useInviteSeats` | `POST …/seats` — ⚡'s send, from the builder this screen pushes |
- * | `useWithdrawChallenge` | `POST …/withdrawal` — the organiser's, and the only end a half-built court has; **on a court that has been a game, whoever holds the exit's, and the game is called off in the act** |
+ * | `useWithdrawChallenge` | `POST …/withdrawal` — ***Remove the challenge***, the organiser's while nobody has joined; **on a court that has been a game, *Call it off*, any player's, and the game is called off in the act** (ADR-0165 §4–§5) |
  * | `useLeaveGame` | `POST …/departure` — any player's: from the **game** screen while the moment is ahead, and from a **Chats** row or the challenge screen before the court is whole (#427) |
  * | `useReReadCourtLists` | what a **refused** departure re-reads, once its words have been read — the two lists a court is drawn on |
  *
@@ -170,19 +170,28 @@ export function useInviteSeats() {
 }
 
 /**
- * **The withdraw** — the one act on the challenge screen that ends something rather than answering
- * it, and ***Call it off*** on the game screen, which is the same act on the same route
- * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)).
+ * **The withdrawal** — ***Remove the challenge*** from the organiser's Chats row and the challenge
+ * screen while nobody has joined, and ***Call it off*** on the game screen, which is the same act
+ * on the same route on a court that has been a game
+ * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md),
+ * [ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ * §4–§5).
  *
  * Pending, never optimistic: the route returns the challenge as it now stands at `WITHDRAWN`, so
  * the screen redraws from the reply exactly as the two answers do, and `redrawnFrom` drops the
  * card block by ADR-0143 §8's rule rather than by a round trip.
  *
+ * **The reply is written into the challenge list too** ([#428](https://github.com/Raketa02/Raketa/issues/428)),
+ * on `useLeaveGame`'s line: the inbox drops an own removal at once (`belongsOnTheInbox`), so the
+ * organiser's row is gone the moment the reply lands and not a round trip later — and on a
+ * call-off the row reads the server's own `WITHDRAWN` a beat early, which the re-read confirms.
+ *
  * **The conversation is gone, not delisted**, so the Chats list is **invalidated rather than
  * patched** ([ADR-0142](../../../../../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)):
  * there is nothing in this reply about a room, and a client that removed the row itself would be
  * asserting a deletion it was not told about. The same argument the accept above makes in the
- * other direction.
+ * other direction — and the one place it differs from the departure, whose reply *does* say the
+ * reader is out of the room.
  *
  * **And the game, and its plan** — since a withdraw can reach a court that has been a game and
  * call it off in the act, and neither list is in the reply. Declared here rather than at the one
@@ -201,6 +210,13 @@ export function useWithdrawChallenge() {
     onSuccess: (withdrawn, challengeId) => {
       client.setQueryData<ChallengeDetail | undefined>(challengeKeys.detail(challengeId), (held) =>
         held === undefined ? held : redrawnFrom(held, withdrawn),
+      );
+
+      // The organiser's row, on the reply (#428): the inbox drops an own removal at once.
+      client.setQueryData<readonly Challenge[] | undefined>(challengeKeys.list(), (held) =>
+        held?.map((row) =>
+          row.challengeId === challengeId ? rowRedrawnFrom(row, withdrawn) : row,
+        ),
       );
 
       void client.invalidateQueries({ queryKey: challengeKeys.list() });

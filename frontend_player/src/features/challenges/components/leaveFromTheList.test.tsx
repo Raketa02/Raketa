@@ -240,8 +240,11 @@ describe('the swipe', () => {
     expect(screen.queryByRole('button', { name: LEAVE_THE_GAME })).toBeNull();
   });
 
-  /** The obligation is a door to the challenge screen, and in this ticket it reveals nothing. */
-  it('reveals nothing on the challenge row beside it', async () => {
+  /**
+   * The obligation beside it is an **invitee's** challenge row, and an invitee's row reveals
+   * nothing — the organiser's, while nobody has joined, is `removeFromTheList.test.tsx`'s (#428).
+   */
+  it('reveals nothing on the invitee’s challenge row beside it', async () => {
     await openChats();
 
     const row = padelChallenge();
