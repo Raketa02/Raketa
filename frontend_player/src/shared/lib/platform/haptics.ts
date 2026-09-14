@@ -2,7 +2,7 @@
  * The vibration motor, behind a port. **The only module that imports `expo-haptics`.**
  *
  * The first haptic in the app arrived with the yes screen
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §2): one soft success buzz as the word lands. It is the fourth port and not a line in a
  * component, on the three others' argument: a native module has no JS implementation
  * underneath it, so a screen that imports one is a screen no suite can put in front of — and

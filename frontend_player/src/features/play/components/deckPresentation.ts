@@ -165,7 +165,7 @@ export function mutualToast(name: string): string {
  * arrives as a field rather than as another nested conditional.
  *
  * **A mutual the platform has a game for is `undefined` here, and that is a decision and not a
- * gap** ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * gap** ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §1, [#434](https://github.com/Raketa02/Raketa/issues/434)). *You both said yes — {name} is in
  * your Chats now* was the sentence for it, and it retired into **the yes screen** — *Matched!*,
  * the two of you side by side, and the room one tap away — which the yes mutation pushes on the

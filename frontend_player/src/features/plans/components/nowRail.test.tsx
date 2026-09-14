@@ -35,13 +35,14 @@ import {
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
+import { setDeviceZone } from '@/test-support/deviceZone';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
 import { GAME_CARD_NAMES } from '../domain/gameCard';
 import { PLAN_SLOTS } from '../domain/slots';
 
 import { ACCENT, CARD_TAG, FINISH_THE_PLAN, doorLabel, gamesHeading } from './nowPresentation';
-import { NOT_AGREED_YET, SLOT_EYEBROW } from './planPresentation';
+import { NOT_AGREED_YET, SLOT_EYEBROW, TODAY } from './planPresentation';
 
 const ME = GATE_USER.id;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -330,12 +331,52 @@ describe('the four rungs, folded at read time', () => {
     expect(screen.queryByText('Zabłocie Sport')).toBeNull();
   });
 
-  it('is Today on the agreed day, whatever is still to agree', async () => {
+  /**
+   * **The day of the game is the day row's to say, and no card's** (ADR-0166). A day-only plan on
+   * the day is *Planning* — the plan is not made — with `Today` where the weekday would be and
+   * the date beside it, and a dim bar under the two slots still to agree, which is the alarm
+   * #324's second amendment wanted, said by the slots rather than by a name.
+   */
+  it('is Planning on the agreed day while something is still to agree, and the day row says Today', async () => {
     await nameOf(plan({ day: '2026-09-12', agreed_point: '2026-09-12T22:00:00Z' }));
 
-    expect(await screen.findByText(CARD_TAG.today!)).toBeTruthy();
-    // #324's second amendment: a Today card may genuinely have no hour, and the dim bar is the alarm.
+    expect(await screen.findByText(CARD_TAG.planning!)).toBeTruthy();
+    expect(screen.getByText(TODAY)).toBeTruthy();
+    expect(screen.getByText('12 Sep')).toBeTruthy();
+    expect(screen.queryByText('Saturday')).toBeNull();
     expect(screen.getAllByText(NOT_AGREED_YET)).toHaveLength(2);
+    expect(bars()).toEqual([DIM, ACCENT.planning.bar, DIM]);
+  });
+
+  it('is Game on on the agreed day once all three are filled, and the day row says Today', async () => {
+    await nameOf(
+      plan({
+        place: 'Zabłocie Sport',
+        day: '2026-09-12',
+        hour: '18:00',
+        agreed_point: '2026-09-12T16:00:00Z',
+      }),
+    );
+
+    expect(await screen.findByText(CARD_TAG['game-on']!)).toBeTruthy();
+    expect(screen.getByText(TODAY)).toBeTruthy();
+    expect(screen.getByText('12 Sep')).toBeTruthy();
+    expect(screen.queryByText('Saturday')).toBeNull();
+    // The card leads with the plan, not the score: *We played* is one press in, on the screen.
+    expect(screen.getByRole('button', { name: doorLabel('game-on')! })).toBeTruthy();
+  });
+
+  /** *Today* is the games list's own day, in the platform zone — never the device's. */
+  it('says Today in the platform zone, never the device one', async () => {
+    const held = process.env.TZ;
+    setDeviceZone('Pacific/Midway');
+    try {
+      await nameOf(plan({ day: '2026-09-12', agreed_point: '2026-09-12T22:00:00Z' }));
+
+      expect(await screen.findByText(TODAY)).toBeTruthy();
+    } finally {
+      setDeviceZone(held);
+    }
   });
 
   it('is Needs result once the agreed point has passed, with the window left on it', async () => {
@@ -427,7 +468,6 @@ describe('every other name, on the same shell', () => {
 
   it.each([
     ['game-on', game(), plan(FULL), undefined],
-    ['today', game(), plan({ day: '2026-09-12', agreed_point: '2026-09-12T22:00:00Z' }), undefined],
     [
       'confirm',
       game({

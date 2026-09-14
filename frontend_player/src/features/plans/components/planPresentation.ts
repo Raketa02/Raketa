@@ -40,7 +40,11 @@
  *
  * The **day** is drawn as a weekday, short on a chip in a row of seven and whole everywhere a
  * sentence names one — `dayLabel` and `dayName`, the tables the availability grid already spells,
- * rather than a fourth list of names. The **hour** is the clock face as the platform stores it.
+ * rather than a fourth list of names — **and as *Today* on the Now card, on the day itself**
+ * ([ADR-0166](../../../../../docs/adr/0166-the-day-row-says-today-and-no-card-does.md)). The
+ * card is the one surface that draws a date beside the weekday and the one that folds against
+ * the games list's instant, so it is the one that can say the day has come; a chip in a row of
+ * seven weekdays stays a weekday. The **hour** is the clock face as the platform stores it.
  * The **place** is what somebody typed, which is why it is the only one that can overflow: it is
  * drawn through #335's *shorter value, not a second line* and **spoken whole**, which is §20.4 one
  * surface over. How many characters a chip may draw once the comma is gone is a measurement no
@@ -65,6 +69,7 @@ import type { QuickChip } from '../domain/quickChips';
 import {
   PLACE_CAP,
   PLAN_SLOTS,
+  dayIsToday,
   slotValue,
   unfilledSlots,
   type Plan,
@@ -114,6 +119,29 @@ export function dayChipName(day: string): string {
   return weekday === undefined ? day : dayName(weekday);
 }
 
+/** The day of the game, on the day of the game — what the Now card draws in place of a weekday. */
+export const TODAY = 'Today';
+
+/** The day as the Now card draws it: the word in `h2`, and the date in `tiny` beside it. */
+export interface CardDay {
+  readonly name: string;
+  readonly date: string;
+}
+
+/**
+ * **The day as the Now card draws it** — the weekday, or *Today* on the day itself, and the date
+ * beside either: `Sunday` `9 Aug` · `Today` `14 Sep`.
+ *
+ * *Today* is the calendar's word here and not a card's name (ADR-0166): the ladder had a rung by
+ * that name once, and it named a card after the day rather than after what the plan had reached.
+ * The test is `slots.ts`' `dayIsToday`, against the instant the games list was folded at and
+ * never the phone's clock — the card's own rule for every fact on it. Two parts rather than one
+ * string because the card draws them in two roles and speaks them as one.
+ */
+export function cardDay(day: string, readAt: string): CardDay {
+  return { name: dayIsToday(day, readAt) ? TODAY : dayChipName(day), date: dayDate(day) };
+}
+
 /** What the chip **draws**: the value where there is one, and the slot's own name where not. */
 export function slotChipLabel(plan: Plan | undefined, slot: PlanSlot): string {
   const value = slotValue(plan, slot);
@@ -147,22 +175,26 @@ export function slotChipName(
  *
  * The one place a slot's **spoken** value is spelled, read by the chip in the room, by the
  * read-only tags on the game screen, and by the Now card's own name. They differ in their
- * punctuation and in one thing more — **the card asks for the date beside the weekday**, because
- * it draws one ([#413](https://github.com/Raketa02/Raketa/issues/413)) and the other two do not —
- * so the difference is an option here rather than a second copy: *the day is a weekday and the
- * place is never shortened* spelled twice is exactly the drift `slots.ts` exists to prevent one
- * layer down.
+ * punctuation and in one thing more — **the card speaks the day as it draws it**, the date beside
+ * the weekday because it draws one ([#413](https://github.com/Raketa02/Raketa/issues/413)) and
+ * *Today* on the day because it folds against an instant (ADR-0166), and the other two do
+ * neither — so the difference is the card's `readAt` handed in here rather than a second copy:
+ * *the day is a weekday and the place is never shortened* spelled twice is exactly the drift
+ * `slots.ts` exists to prevent one layer down.
  */
 export function spokenSlotValue(
   plan: Plan | undefined,
   slot: PlanSlot,
-  { date = false }: { readonly date?: boolean } = {},
+  { readAt }: { readonly readAt?: string } = {},
 ): string {
   const value = slotValue(plan, slot);
   if (value === undefined) return NOT_AGREED_YET;
   if (slot !== 'day') return value;
+  if (readAt === undefined) return dayChipName(value);
 
-  return date ? `${dayChipName(value)} ${dayDate(value)}` : dayChipName(value);
+  const { name, date } = cardDay(value, readAt);
+
+  return `${name} ${date}`;
 }
 
 /**

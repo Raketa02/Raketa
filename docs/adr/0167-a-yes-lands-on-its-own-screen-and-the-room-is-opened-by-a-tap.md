@@ -1,4 +1,4 @@
-# ADR-0166 — A yes lands on its own screen, and the room is opened by a tap
+# ADR-0167 — A yes lands on its own screen, and the room is opened by a tap
 
 - **Status:** Accepted
 - **Date:** 2026-09-14

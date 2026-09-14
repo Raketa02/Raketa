@@ -140,7 +140,7 @@ export type RoomExpectation = 'the-room' | 'the-room-and-its-game';
  * expectation is met, and is what a push waits for: a room listed without its game is a door
  * and not yet an arrival. `expired` is whether the bound has passed with the expectation unmet,
  * and is what the yes screen's *Open the chat* lands on the Chats list from
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §1): *no door rather than a dead one*, and past the bound the door is the list.
  *
  * The bound is held here rather than by the caller because it is a fact about the wait and not

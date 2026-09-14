@@ -1,7 +1,7 @@
 /**
  * **The yes screen's ground, computed** — the two colours the theme fences as that screen's
  * alone, and every ratio their comments state
- * ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §2, [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking) 2026-09-14).
  *
  * The ground is the app's one dark screen and 2.5's table has no row for it, so this is the row:

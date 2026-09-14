@@ -36,9 +36,10 @@
  * ## *Today* is the platform's, and it is folded against `read_at`
  *
  * The plan's day is a **local date in the platform's one zone**, so *is it today* is that date
- * against the platform day of the instant the room was folded — never against `Date.now()`, on
- * `durationLeft`'s rule, and never against the device's zone, on the day separator's. A phone in
- * Los Angeles must not offer *On my way* a day late.
+ * against the platform day of the instant the room was folded — `slots.ts`' `dayIsToday`, the
+ * one definition the card's day row also reads — never against `Date.now()`, on `durationLeft`'s
+ * rule, and never against the device's zone, on the day separator's. A phone in Los Angeles must
+ * not offer *On my way* a day late.
  *
  * **The instant is the room's here and the game's on the card**, and that is not a slip: this
  * question is asked of the read the chips are drawn beside, and the card's is asked of the read
@@ -52,9 +53,7 @@
  * here as `undefined`, and three questions is the right answer to either.
  */
 
-import { platformDay } from '@/shared/date/platformZone';
-
-import { unfilledSlots, type Plan, type PlanSlot } from './slots';
+import { dayIsToday, unfilledSlots, type Plan, type PlanSlot } from './slots';
 
 /** The four chips this row can hold, of which at most three are ever offered at once. */
 export type QuickChip = PlanSlot | 'on-my-way';
@@ -62,7 +61,6 @@ export type QuickChip = PlanSlot | 'on-my-way';
 /** The chips to offer, in slot order. Empty when everything is agreed and the day is not today. */
 export function quickChips(plan: Plan | undefined, readAt: string): readonly QuickChip[] {
   const unfilled: readonly QuickChip[] = unfilledSlots(plan);
-  const today = plan?.day !== undefined && plan.day === platformDay(readAt);
 
-  return today ? [...unfilled, 'on-my-way'] : unfilled;
+  return dayIsToday(plan?.day, readAt) ? [...unfilled, 'on-my-way'] : unfilled;
 }

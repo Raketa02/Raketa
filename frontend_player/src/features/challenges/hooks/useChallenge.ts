@@ -98,7 +98,7 @@ export function useChallenge(challengeId: string) {
 
 /**
  * **The same challenge, as the cache holds it** — the yes screen's read
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §1: *the screen reads everything it draws from the challenge the query cache holds*).
  *
  * The same entry as {@link useChallenge} and the opposite posture on it. That one zeroes

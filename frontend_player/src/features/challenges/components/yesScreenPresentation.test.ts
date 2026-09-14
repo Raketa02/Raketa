@@ -62,7 +62,7 @@ describe('the spoken sentence', () => {
 });
 
 /**
- * **The mutual's sentence says only *you two*** (ADR-0166 §4): in tennis the two are opponents,
+ * **The mutual's sentence says only *you two*** (ADR-0167 §4): in tennis the two are opponents,
  * in padel partners with a side to fill, and both are true of the two people — so the sentence
  * never says *against*, never names an empty seat, and never calls the thing a game or a court.
  */

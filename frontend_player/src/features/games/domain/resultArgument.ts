@@ -83,8 +83,8 @@ export type ResultAct = 'enter' | 'correct' | 'accept' | 'counter';
  * `AWAITING_ENTRY` is one standing and
  * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5.2 lands two
  * different cards on two different things inside it: *Planning* and *Game on* arrive at **the
- * Planning arm**, and *Today* and *Needs result* arrive at **the score grid**. What tells them
- * apart is the four-rung ladder, which reads a **plan** — and this feature may never learn one
+ * Planning arm**, and *Needs result* arrives at **the score grid**. What tells them apart is the
+ * four-rung ladder, which reads a **plan** — and this feature may never learn one
  * exists (ADR-0149 §1). So the fold happens in `features/plans`, where the ladder lives and where
  * [`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §3.3 says
  * *"every surface reads it — the rail, the card, the gloss, and the game screen's arm"*, and what

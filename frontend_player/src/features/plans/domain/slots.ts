@@ -144,6 +144,22 @@ export function unfilledSlots(plan: Plan | undefined): readonly PlanSlot[] {
 }
 
 /**
+ * **Whether this day is the one a surface was folded at** — *today*, as the platform's day of the
+ * surface's own `read_at`: the games list's on the Now card, the room's beside the quick chips.
+ * Never `Date.now()`, on `durationLeft`'s rule, and never the device's zone, on the day
+ * separator's — a phone in Los Angeles must not say *Today* a day late.
+ *
+ * One definition for its two readers, the card's day row and the chip row's fallback. It was the
+ * ladder's third rung once, and the rung is gone
+ * ([ADR-0166](../../../../../docs/adr/0166-the-day-row-says-today-and-no-card-does.md)): a card
+ * *named* after the calendar said less than the day row can, which is `Today 14 Sep` under
+ * whichever tag the plan has earned. No day is not today.
+ */
+export function dayIsToday(day: string | undefined, readAt: string): boolean {
+  return day !== undefined && day === platformDay(readAt);
+}
+
+/**
  * **The last local day this plan may name** — `anchor + PLAN_HORIZON`, as a platform day.
  *
  * The instant is advanced first and converted after, exactly as the server does it, so the two

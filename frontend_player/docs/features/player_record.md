@@ -117,7 +117,7 @@ anywhere records that a card was ignored.
 
 **The reader's own face crosses the seam, and nothing else about the record does**
 ([#433](https://github.com/Raketa02/Raketa/issues/433),
-[ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+[ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
 §3). `useOwnFace` reads the ungated `/players/me/record` and selects the photograph's signed link,
 or nothing, with whether the read is in — for the yes screen, the one surface that draws the reader
 as a tile rather than as a seat, because nothing carries a player's own photograph onto a court and

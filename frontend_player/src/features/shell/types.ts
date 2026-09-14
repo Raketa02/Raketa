@@ -72,7 +72,7 @@ export { enterPlay } from './components/shellNavigation';
  * durable facts strangers read ([#294](https://github.com/Raketa02/Raketa/issues/294),
  * [#296](https://github.com/Raketa02/Raketa/issues/296)). The second is **the yes screen's
  * *Open the chat* after a mutual** ([#434](https://github.com/Raketa02/Raketa/issues/434),
- * ADR-0166 §1): the room has to land as `[Chats list, the room]` and the list is nowhere under
+ * ADR-0167 §1): the room has to land as `[Chats list, the room]` and the list is nowhere under
  * the deck, so the screen lays the Chats tab down and pushes the room over it — *from the deck
  * this switches the tab; Play keeps its held deck*. It is the tab bar's own move rather than a
  * second one — the shell has one navigation and every arrival replaces — so a player sent here

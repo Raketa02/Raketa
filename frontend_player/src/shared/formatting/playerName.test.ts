@@ -71,7 +71,7 @@ describe('the handle a box draws', () => {
 
 /**
  * **Two initials over a poster, and nowhere else** —
- * [ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * [ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §3's one exception to the rule the suites above hold. It is a drawing and never a sentence: the
  * cut is tested here, and that no sentence carries it is the yes screen's own suite's to hold.
  */

@@ -1,6 +1,6 @@
 /**
  * **The picture the yes screen draws** — who stands on which side, and who is a face
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §1, §3, §4; [#433](https://github.com/Raketa02/Raketa/issues/433),
  * [#434](https://github.com/Raketa02/Raketa/issues/434)).
  *
@@ -88,7 +88,7 @@ function tile(seat: DetailSeat): YesSeat {
 }
 
 /**
- * **The mutual's picture — you and them, and nobody else** (ADR-0166 §4).
+ * **The mutual's picture — you and them, and nobody else** (ADR-0167 §4).
  *
  * The accepted people of the challenge the reply named, the reader first, with no empty seat in
  * it whatever the sport: in tennis the two are opponents on two sides, in padel partners on one

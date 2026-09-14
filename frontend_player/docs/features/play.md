@@ -622,7 +622,7 @@ as itself, so a rename is an event migration bought on a field nothing branches 
 
 **A mutual naming a chat is the yes screen now, and the toast that stood in for it retires**
 ([#434](https://github.com/Raketa02/Raketa/issues/434),
-[ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+[ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
 §1, §4). Tomek taps _Let's play_ on Marek's card; the card flies as it does; the reply comes back
 `mutual` **and names a challenge**, and the phone becomes the challenges feature's yes screen as
 **a mutual's** — `/chats/challenge/{id}/yes?which=mutual`, _Matched!_, the second face recorded at

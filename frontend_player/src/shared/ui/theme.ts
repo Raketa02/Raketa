@@ -163,7 +163,7 @@ const color = {
   photoScrim: 'rgba(10,52,65,0.70)',
 
   /** THE YES SCREEN'S GROUND — the app's ONE dark screen, and no other surface's
-   *  ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+   *  ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
    *  §2, docs/design-system.md Part 16 2026-09-14). The design system stays paper-only and
    *  15.4's *there is no dark mode* stands: this is one ground and not a theme, drawn as a
    *  radial glow from the centre value out to the edge value with the SVG the poster already
@@ -315,14 +315,14 @@ const type = {
    *  a decision made for one word, with one use, and not `display` back under a new name. */
   h1: { fontFamily: font.sans[700], fontSize: 19, letterSpacing: -0.57, lineHeight: 24 },
   /** THE YES SCREEN'S ONE WORD — *Challenge!*, *Matched!* — and nothing else's
-   *  ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+   *  ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
    *  §2). The heaviest weight the app loads, and a size measured off the mocks rather than taken
    *  from the record's *about 30*: `Challenge!` is 164–168pt wide with a 25–27pt cap in the two
    *  challenge mocks and `Matched!` 145 x 24 in the third, and Archivo 800 at 32 sets the first
    *  at 169 and the second at 147 — the width is matched, and the mock's face has a taller cap
    *  than Archivo's. Tracking continues the sans ramp past `display`'s -0.035em: -0.040em at 32
    *  is -1,28. Line height 36, on 3.3's own reasoning for a sans word with ascenders.
-   *  ONE USE. A second surface that wants a word this size reopens ADR-0166 §2 rather than
+   *  ONE USE. A second surface that wants a word this size reopens ADR-0167 §2 rather than
    *  reaching for this role, which is the whole of why it is named for the screen. */
   yesWord: { fontFamily: font.sans[800], fontSize: 32, letterSpacing: -1.28, lineHeight: 36 },
   h2: { fontFamily: font.sans[700], fontSize: 15, letterSpacing: -0.38, lineHeight: 20 },
@@ -634,7 +634,7 @@ const size = {
    *  `hitSlop` around it would leave the words beside it inert. */
   switch: { track: 40, height: 23, knob: 18, row: 44 },
   /** The yes screen's tile — a face at this screen's two sizes, and the initials over a poster
-   *  ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+   *  ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
    *  §2, §3). MEASURED off the mocks at 1x: 64 x 64 in the singles mock, 54 x 54 in the doubles
    *  one — a step smaller, because four of them and a `vs` have to sit across the narrowest
    *  phone's 290pt of content (4 x 54 + 6 + 2 x 15 + the word is 262). The corner is NOT here:
@@ -1051,7 +1051,7 @@ const motion = {
   settle: 160,
   /**
    * The yes screen's entrance — **one beat, composed of the durations above and no new one**
-   * ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+   * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
    * §2). The two sides slide in from the edges and meet at the centre over one `rise`; the word
    * rises in over a second `rise`, starting half-way through the first so it lands as the sides
    * meet; the buttons fade in last over one `fade`, once the word has landed. 650 ms end to end,

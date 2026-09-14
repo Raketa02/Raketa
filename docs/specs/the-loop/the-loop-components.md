@@ -215,17 +215,22 @@ the line arrives through the stream like any other entry.
 ### 3.3 The ladder is `domain/`, and it is the one thing that must not drift
 
 ```ts
-// features/plans/domain/ladder.ts — five rungs, read in order
+// features/plans/domain/ladder.ts — four rungs, read in order
 1. a seat is open                          → Needs a player
 2. the agreed point exists and has passed  → Needs result
-3. the agreed day is today                 → Today
-4. all three slots filled                  → Game on
-5. otherwise                               → Planning
+3. all three slots filled                  → Game on
+4. otherwise                               → Planning
 ```
 
-**Read in order, and the clock outranks the checklist** (ADR-0145 §3). Rungs 4 and 5 are reached
-only when the point has not passed and the day is not today, so #329's *"and the agreed moment
-still ahead"* is implied by the ladder rather than restated in a row. **And the open seat outranks
+**Read in order, and the clock outranks the checklist** (ADR-0145 §3). Rungs 3 and 4 are reached
+only while the point is still ahead, so #329's *"and the agreed moment still ahead"* is implied
+by the ladder rather than restated in a row. **There is no rung for the day itself**
+([ADR-0166](../../adr/0166-the-day-row-says-today-and-no-card-does.md)): ADR-0145 §3 had one,
+above the checklist, and it named a card after the calendar rather than after what the plan had
+reached — so a day-only plan on the morning of its game drew a settled tag over a dim `TIME` bar.
+The calendar is the card's day row's to say, `Today 14 Sep` under whichever tag the plan has
+earned, and the test that was the rung is `slots.ts`' `dayIsToday`, read by the day row and by the
+quick chips' *On my way*. **And the open seat outranks
 the clock** ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md),
 #411 rule 5, built by [#418](https://github.com/Raketa02/Raketa/issues/418)): `rungOf` reads the
 court — the seats and the instant off the games list, `CourtRead` — before it reads the plan,
@@ -247,10 +252,10 @@ Later rather than earlier, so nobody is asked for a result before they could hav
 against the clock, so there is no instant for it to have been folded against, and **Now has one
 clock by construction** rather than by a rule anyone remembers.
 
-**This is the single most drift-prone thing on the map**: five card names, two tickets that each
-keyed a rule on it, and one amendment already spent closing the hole between them. It is one
-function, it is `domain/`, and every surface reads it — the rail, the card and its tables, and the
-game screen's arm.
+**This is the single most drift-prone thing on the map**: four card names, two tickets that each
+keyed a rule on it, one amendment already spent closing the hole between them and one record spent
+removing a rung. It is one function, it is `domain/`, and every surface reads it — the rail, the
+card and its tables, and the game screen's arm.
 
 ### 3.4 The Now rail is `features/plans`', and the game screen is `features/games`'
 

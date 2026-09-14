@@ -95,7 +95,7 @@ const hapticsImport = {
     'Only src/shared/lib/platform/haptics.ts may import expo-haptics. A native module cannot be ' +
     'driven from a test, and *exactly one buzz, and none under reduced motion* is a rule a fake ' +
     'can count — use the HapticsPort from @/shared/lib/platform, and fakeHaptics() from ' +
-    'src/test-support/platform.ts in a test. See docs/adr/0166 §2.',
+    'src/test-support/platform.ts in a test. See docs/adr/0167 §2.',
 };
 
 const observabilityVendorImports = {

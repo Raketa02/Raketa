@@ -8,7 +8,7 @@
  * ([`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §3.4).
  * The join is the rail's, over three lists.
  *
- * ## One shell for nine names, and no switch
+ * ## One shell for ten names, and no switch
  *
  * Every slot that differs by name is a **table lookup** on `GameCardName` — the tag's word, the
  * stage's dot, the accent and the door's verb, all in `nowPresentation.ts` — and the shell itself
@@ -16,7 +16,7 @@
  * drawn by the same shell on the soft defaults #410 fixed, so the rail does not mix two visual
  * languages and a game flipping to *Game on* under your thumb does not jump layouts. When a
  * name's own design arrives it will be a row in those tables, or per-name **content** inside this
- * one shell — never a tenth card.
+ * one shell — never an eleventh card.
  *
  * ## Two doors, and the body is not a third
  *
@@ -159,7 +159,13 @@ export function GameCard({
         <View style={s.plan}>
           <View style={s.slots}>
             {PLAN_SLOTS.map((slot) => (
-              <SlotRow key={slot} slot={slot} plan={plan} accent={accent.bar} />
+              <SlotRow
+                key={slot}
+                slot={slot}
+                plan={plan}
+                readAt={game.readAt}
+                accent={accent.bar}
+              />
             ))}
           </View>
 

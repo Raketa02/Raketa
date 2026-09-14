@@ -66,7 +66,12 @@ say what has happened. **It says what happened, and a rung is not that.** Two of
 facts about the **clock**: *Today* is true of a room in which nothing has been said since Tuesday,
 and *Needs result* is true of one where nobody has spoken since the game. No system line carries
 either, because no act produces them — they are a reading of the plan against `read_at`, which the
-stream, as a record of acts, cannot hold. The last line on the row is the last thing somebody
+stream, as a record of acts, cannot hold.
+
+> **One of the two examples is gone, 2026-09-14, with
+> [ADR-0166](0166-the-day-row-says-today-and-no-card-does.md)**: there is no *Today* rung, so the
+> header never says `· today`. The argument stands on *Needs result* alone — still a reading of the
+> plan against `read_at`, still carried by no line — and the header still draws the card's name. The last line on the row is the last thing somebody
 *did*; the header's line is where the game *stands*, and inside a room a player is past the door
 and asking the second question. The fact is not in two places, because the stream never had it.
 

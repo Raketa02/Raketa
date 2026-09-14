@@ -8,10 +8,13 @@
  * day row **shrinks** rather than offering a day that would be refused.
  */
 
+import { setDeviceZone } from '@/test-support/deviceZone';
+
 import {
   HOURS_OFFERED,
   PLACE_CAP,
   PLAN_SLOTS,
+  dayIsToday,
   isFilled,
   lastPlannableDay,
   mayRecordPlace,
@@ -124,6 +127,45 @@ describe('the day row', () => {
   it('offers nothing where either instant is unreadable', () => {
     expect(offeredDays({ readAt: 'Saturday', anchor: PLANNED_AT })).toEqual([]);
     expect(offeredDays({ readAt: PLANNED_AT, anchor: '' })).toEqual([]);
+  });
+});
+
+/**
+ * **Whether a day is the day a surface was folded at** — the one definition the card's day row
+ * and the chip row's fallback both read (ADR-0166). It was the ladder's third rung; what is held
+ * here is what that rung's own test held, moved with the rule.
+ */
+describe('whether a day is today', () => {
+  it('is, when the day is the platform day of the instant the surface was read at', () => {
+    expect(dayIsToday('2026-09-12', PLANNED_AT)).toBe(true);
+    expect(dayIsToday('2026-09-13', PLANNED_AT)).toBe(false);
+    expect(dayIsToday('2026-09-11', PLANNED_AT)).toBe(false);
+  });
+
+  it('is not, where no day is agreed or the instant cannot be read', () => {
+    expect(dayIsToday(undefined, PLANNED_AT)).toBe(false);
+    expect(dayIsToday('2026-09-12', 'Saturday')).toBe(false);
+  });
+
+  /** 23:00 UTC on the 12th is already the 13th in Warsaw, whatever the phone thinks. */
+  it('reads today in the platform zone, never the device one', () => {
+    const zones = ['Pacific/Kiritimati', 'Pacific/Midway', 'UTC'];
+    const held = process.env.TZ;
+
+    const read = zones.map((zone) => {
+      setDeviceZone(zone);
+      return [
+        dayIsToday('2026-09-12', '2026-09-12T21:00:00Z'),
+        dayIsToday('2026-09-13', '2026-09-12T23:00:00Z'),
+      ];
+    });
+
+    setDeviceZone(held);
+    expect(read).toEqual([
+      [true, true],
+      [true, true],
+      [true, true],
+    ]);
   });
 });
 

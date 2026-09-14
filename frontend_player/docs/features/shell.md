@@ -46,7 +46,7 @@ and the deck, the builder and the pool are each pushed over what stays underneat
 
 **The bar stands down on a second route — the yes screen under a challenge**
 ([#433](https://github.com/Raketa02/Raketa/issues/433),
-[ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+[ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
 §2). `barStandsDown` names it in full beside the room — `chats`, `challenge`, the id, `yes`, and
 nothing after — and for the opposite reason: the room replaces the bar with its composer, and the
 yes screen replaces it with nothing, because the screen is the whole phone and its two pills are the

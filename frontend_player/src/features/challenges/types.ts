@@ -108,7 +108,7 @@ export { parseChallengeRouteParams, type ChallengeRouteParams } from './schemas/
 
 /**
  * **The yes screen** — mounted by `/chats/challenge/[challengeId]/yes`
- * ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md),
+ * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md),
  * [#433](https://github.com/Raketa02/Raketa/issues/433),
  * [#434](https://github.com/Raketa02/Raketa/issues/434)): the screen a yes lands on — the
  * faces, one word, two doors — pushed by the challenge screen the instant *I'm in* is answered,

@@ -350,7 +350,7 @@ room for a beat; the unanswered invitee has said yes to none. A door is drawn on
 so.
 
 **`I'm in` lands on the yes screen, and the room is opened by a tap**
-([ADR-0166](../../adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md) §1;
+([ADR-0167](../../adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md) §1;
 it was *`I'm in` goes to the room* until then). Accepting is the one act whose whole point is a
 room to talk in — the singles room with the person who challenged you, or the doubles room the
 people already in are already talking in, its history included, because membership is derived and
@@ -604,7 +604,12 @@ argument is about an explanation, and it is what §1.1's shelf life is for: a ro
 the reader something they did not do. A **decline is the reader's own act** — and so is a departure — so *You said no* and *You left*
 tell them nothing, and their row goes with the tap — on a singles court their no ended and on a doubles
 court that carries on without them alike (`belongsOnTheInbox`); the organiser's row for the same no
-keeps its day, because to them it *is* news. A **lapse** nobody chose, and *Your day ran out. They
+keeps its day, because to them it *is* news. **And the screen the departure was confirmed on goes
+with the row** (amended 2026-09-14, [#429](https://github.com/Raketa02/Raketa/issues/429)): *Leave
+the game* and §2.6's *Remove the challenge*, confirmed here, leave the screen on the reply and
+land on the Chats list, which holds no row for the court — the redraw into *You left* / *You
+withdrew this* with nothing to press was a stop on the way out of a thing the reader had just
+stopped being part of. The screen still resolves for a stale route and says that sentence then. A **lapse** nobody chose, and *Your day ran out. They
 are still filling the court.* is kept to be read exactly as before. The screen still resolves for a
 declined challenge by its route (#390), and the record is untouched.
 
@@ -1150,8 +1155,9 @@ stated: a game arranged this morning for next Saturday sits ahead of one arrange
 is tonight.**
 
 **Endings keep a card for 24 h and then leave** — #335's number and #335's argument one tab over.
-It also keeps the day line honest: inside 24 h a weekday is only ever *Today* or *Yesterday*, so
-the format never grows a fallback for a game ten days old. **Cost: after 24 h a finished game and
+It also keeps the day row honest: inside 24 h the agreed day is at most a day behind the read, so
+`Monday 14 Sep` — or `Today 14 Sep` on the day itself (ADR-0166) — is always a day in the same
+week, and the format never grows a fallback for a game ten days old. **Cost: after 24 h a finished game and
 its score are unreachable in this build.** That is a history surface, it belongs to You, and it is
 on the map's fog rather than built here.
 
@@ -1181,12 +1187,12 @@ below only as what each slot replaced.
 
 | | |
 | --- | --- |
-| **Tag** | #324's card name, on 6.4's `on-dark` pill. Affordable here because ADR-0148 §6's refusal was about a **cross-context read**, and a game card reads its own standing. **The dot is the stage's** — `arranging` while the game is in the players' hands (Planning, Needs result, Confirm the result), `mint` where it is settled (Game on, Today, Counted), the quiet hairline on the two endings nobody scored — and it is legal because the sport is the **word** beside it. *Replaces*: the sport dot and the pill's `warn` / `ok` variant |
+| **Tag** | #324's card name, on 6.4's `on-dark` pill. Affordable here because ADR-0148 §6's refusal was about a **cross-context read**, and a game card reads its own standing. **The dot is the stage's** — `arranging` while the game is in the players' hands (Planning, Needs result, Confirm the result), `mint` where it is settled (Game on, Counted), the quiet hairline on the two endings nobody scored — and it is legal because the sport is the **word** beside it. *Replaces*: the sport dot and the pill's `warn` / `ok` variant |
 | **Sport word** | `PADEL`, `PADEL · FRIENDLY`, top right, uppercase, muted on dark. `FRIENDLY` is the marked case (ADR-0150). **Nothing writes *singles* or *doubles*: the court says the format.** *Replaces*: the eyebrow — `SINGLES` / `DOUBLES` went with the court saying it, `YOU OWN IT` went with ownership |
 | **Slots** | Three rows in the app's own order — **where · day · hour** (`slots.ts` is the one place that order lives) — each a 3pt bar, a label (`WHERE` / `DAY` / `TIME`) and a value. **A settled slot draws its value big and white with a bright bar; an unsettled one draws `Not agreed yet` small and grey with a dim bar.** The card fills with brightness as the plan does. WHERE is `placeWithoutTheCourt`, one line, tail-ellipsised, spoken whole; DAY is the weekday whole and **the date beside it** — `Sunday` `9 Aug` — which §5.4 #6 refused and the design reinstates; TIME is `plan.hour`, mono, and nothing else — no duration exists. *Replaces*: the figure, the line and the gloss (§4.3) |
 | **Line** | One small line under the slots, kept so no card loses a fact it drew before: ***Needs result*'s window** — `{duration} left`, folded from `entry_closes_at` against `read_at`, obeying nothing — and **the endings' standing**, `gameStandingLine`'s own sentence. Nothing on the three plan-led rungs: the slots are their whole account |
 | **Court** | 7.12 at `card` **88**, measured against the mock at 1×, beside the slots. **Each seat is the person's photograph** where the room has one and the generated poster otherwise; **three letters under every seat, yours included** — the `volt` ring is the only *this is you* mark, so the `you` caption went. No sport caption on the ground: the sport is the word in the header |
-| **Footer** | **The wide door** — the next thing to do, and its wording changes with the stage: `Finish the plan` on Planning, `Open` on Game on, `We played` on Today and Needs result, `Confirm the result` on the argument, and **none on an ending** — in the card's accent, `volt` on Planning and mint on everything else, over 7.7's `marginTop: auto` with no hairline. **The bubble** beside it opens the room, only where there is one. *Replaces*: the named door over a hairline, and the ✉ |
+| **Footer** | **The wide door** — the next thing to do, and its wording changes with the stage: `Finish the plan` on Planning, `Open` on Game on, `We played` on Needs result, `Confirm the result` on the argument, and **none on an ending** — in the card's accent, `volt` on Planning and mint on everything else, over 7.7's `marginTop: auto` with no hairline. **The bubble** beside it opens the room, only where there is one. *Replaces*: the named door over a hairline, and the ✉ |
 
 **The card body is not pressable.** The two buttons are the only doors, which reverses §5.2's *the
 card body goes wherever the button goes*: there is nothing left for a body door to agree or
@@ -1220,7 +1226,7 @@ now be the column said again in prose.
 
 | Rung | What the card says instead |
 | --- | --- |
-| **Planning** · **Game on** · **Today** | the three slots, bright where agreed and dim where not — nothing under them |
+| **Planning** · **Game on** | the three slots, bright where agreed and dim where not — nothing under them. **On the day of the game the day row reads `Today 14 Sep`** in place of the weekday ([ADR-0166](../../adr/0166-the-day-row-says-today-and-no-card-does.md)): the calendar is the day row's to say, and no card is named after it |
 | **Needs result** | the slots, and `{duration} left` under them, folded from `entry_closes_at` against `read_at` |
 | **Needs a player** | the slots, and nothing under them — the **empty seat on the court** is the whole of what this rung adds, and the spoken name says `An open seat` after the sport ([#418](https://github.com/Raketa02/Raketa/issues/418)) |
 | everything that is not a rung | the slots, and `gameStandingLine`'s sentence under them |
@@ -1230,7 +1236,7 @@ now be the column said again in prose.
 built by [#418](https://github.com/Raketa02/Raketa/issues/418)). A seat somebody left is a fact
 about the **court** and not about the plan, and the game cannot be played — or recorded — until
 somebody is in it; so `rungOf` reads the court before the clock, and **Needs a player** outranks
-*Needs result*, *Today* and *Game on* alike. Nothing on the wire names it: the standing stays
+*Needs result* and *Game on* alike. Nothing on the wire names it: the standing stays
 `AWAITING_ENTRY` and the seat is `player_id: null`, and the ladder is the one place the two are
 read together. The server's own *Never played* still wins — a window that closed on a short court
 closed all the same. The tag is `Needs a player`, the dot is `arranging` (the game is back in the
@@ -1254,9 +1260,11 @@ server derives the standing. The endings keep `features/games`' own sentence, th
 screen behind the card says. The checklist on the game screen (§5.3) is unchanged and is still the
 one place the whole list is printed as prose.
 
-***Today*'s alarm survives in a different shape.** #324's second amendment dropped *Today*'s
-three-slot requirement, so a *Today* card may genuinely have no hour — and a dim `TIME` bar on the
-morning of the game says so more loudly than four words did.
+**The alarm on the morning of the game is the slots'.** #324's second amendment dropped *Today*'s
+three-slot requirement so that a day-only plan would draw its card on the day; ADR-0166 then
+dropped *Today* itself, because a card named after the calendar said the game was settled when the
+plan was not. What remains is the louder shape: on the morning of the game a plan with no hour is
+*Planning*, volt, with `Today 14 Sep` under a bright bar and a dim `TIME` bar beneath it.
 
 ### 4.4 The empty state
 
@@ -1289,7 +1297,6 @@ the same game depending which day they tap it.
 | **Planning** | the card at the top, the court's pairing, the plan **editable** — chips, counter, lock, the panel inside | **Open the chat** |
 | **Game on** | the same layout, the plan whole and the lock live | **Open the chat** |
 | **Needs a player** | the same layout with the empty seat on the card and an *Open seat* row on the players card, no forecast (the pairing omits it), the plan still editable — and **no *We played*** while the seat is open ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), #418); **Fill the seat** where *We played* would be, **Call it off** for whoever holds the exit ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419) | **Fill the seat** — while the agreed moment is ahead; **Open the chat** otherwise |
-| **Today** | the plan, whole, in `Tag`s | **We played** |
 | **Needs result** | the plan, and how long is left to say you played | **We played** |
 | **Confirm the result** ×4 | built — #314, untouched | built |
 | **Counted** | the agreed score, the outcome, the worth line | none |
@@ -1414,7 +1421,7 @@ the rail — the card is the record for the day it stays.
 | — | **Withdrawn** | Chats row | — | `/chats/challenge/[id]`, `WITHDRAWN` |
 | 5 | **Planning** | Now card | `Finish the plan` | `/games/[gameId]`, the Planning arm — the same door as Game on's, under the word for the errand |
 | 3 | **Game on** | Now card | `Open` | `/games/[gameId]`, the Game on arm |
-| 11 | **Today** | Now card | `We played` | `/games/[gameId]`, the score grid |
+| 11 | ~~**Today**~~ | — | — | **retired by [ADR-0166](../../adr/0166-the-day-row-says-today-and-no-card-does.md)** — a game on its own day is row 3 or row 5 by its slots, and its day row says `Today 14 Sep` |
 | 12 | **Needs result** | Now card | `We played` | `/games/[gameId]`, the score grid |
 | 13 | **Confirm the result** ×4 | Now card | `Confirm the result` | `/games/[gameId]`, the confirm arm, both controls inline |
 | 14 | **Counted** | Now card | — | nowhere — no door, and the body is not one |

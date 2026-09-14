@@ -49,7 +49,7 @@ export const fillRoute = (challengeId: string) => `/chats/challenge/${challengeI
 /**
  * **The yes screen, under the challenge it is about** — `…/yes?which=challenge` after *I'm in*,
  * `…/yes?which=mutual` after the deck's *Let's play* come back mutual and naming a chat
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §1, [#433](https://github.com/Raketa02/Raketa/issues/433),
  * [#434](https://github.com/Raketa02/Raketa/issues/434)).
  *

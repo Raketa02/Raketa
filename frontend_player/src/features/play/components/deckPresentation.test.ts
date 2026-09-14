@@ -6,7 +6,7 @@
  * boundary ADR-0128 asks for, the footer promise names the gesture and its target rather than
  * the record sheets K-7 removed, and nothing here invents a familiar form of anybody's name.
  *
- * **And a mutual naming a chat has no sentence here any more** (ADR-0166 §1): it is the yes
+ * **And a mutual naming a chat has no sentence here any more** (ADR-0167 §1): it is the yes
  * screen, pushed by the mutation, and the two sentences a yes still raises are pinned verbatim.
  */
 
@@ -144,7 +144,7 @@ describe('a mutual with a game, and a mutual without one', () => {
   /**
    * ADR-0154. The tap answers with the game these two have, when there is one — so the mutual
    * that opened a game and the mutual that did not stopped being the same sentence; and since
-   * ADR-0166 the first is not a sentence at all.
+   * ADR-0167 the first is not a sentence at all.
    */
 
   it('has no toast for a mutual that named a challenge, because that yes is a screen', () => {

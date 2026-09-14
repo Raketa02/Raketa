@@ -97,7 +97,7 @@ export function tabForPathname(pathname: string): TabBarKey {
  * second is the **yes screen** under a challenge, where nothing replaces the bar and that is the
  * point: the screen is the whole phone — the faces, one word, two doors — and a bar under it
  * would be a way out the record says it does not have
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §2). It is a fact about **which screen the player is on** and so belongs beside
  * `tabForPathname`, which is the other thing the shell reads off a route — and it is pure for
  * the same reason that one is: stated here it can be read back without a renderer, and the

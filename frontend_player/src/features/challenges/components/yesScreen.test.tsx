@@ -2,7 +2,7 @@
  * **The yes screen, walked the way a player walks it**: the real route tree, the real shell, the
  * challenge screen it is pushed over, and only `fetch` faked — `challengeScreen.test.tsx`'s own
  * seam, which is where these walks began as *the room an acceptance opens*
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md),
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md),
  * [#433](https://github.com/Raketa02/Raketa/issues/433)).
  *
  * The four tests that pinned *accept pushes the room* are rewritten here to the new exits: a yes

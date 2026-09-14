@@ -1,6 +1,6 @@
 /**
  * **The yes screen's ground** — the app's one dark screen, drawn as a radial glow
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §2).
  *
  * Two colours and nothing else: the glow's centre and its edge, both the theme's and both

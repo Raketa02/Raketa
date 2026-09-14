@@ -1,16 +1,20 @@
 /**
- * **The five rungs, and that they are read in order.**
+ * **The four rungs, and that they are read in order.**
  *
  * Most of the assertions here are about *precedence* rather than about a rung's own condition,
  * because that is the whole of what the ladder is: a game whose agreed point has passed is
- * `Needs result` even with an empty plan, a game arranged for today is `Today` even with three
- * slots filled, and a court with a seat open is `Needs a player` whatever the plan and the clock
- * say. The conditions overlap on purpose and the order is what resolves them
+ * `Needs result` even with an empty plan, and a court with a seat open is `Needs a player`
+ * whatever the plan and the clock say. The conditions overlap on purpose and the order is what
+ * resolves them
  * ([`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §3.3).
+ *
+ * **And the day is not a rung** (ADR-0166): a game arranged for today is *Game on* or *Planning*
+ * by its slots exactly as a game arranged for Saturday is, and the calendar is the day row's to
+ * say. The assertions below on the agreed day are there to hold that — the shape of the hole the
+ * rung would leave if it came back.
  */
 
 import type { Game } from '@/features/games/types';
-import { setDeviceZone } from '@/test-support/deviceZone';
 
 import { agreedPoint, momentHasPassed, rungOf } from './ladder';
 import type { Plan } from './slots';
@@ -50,7 +54,7 @@ describe('the agreed point', () => {
   });
 });
 
-describe('the four clock rungs, read in order', () => {
+describe('the three clock rungs, read in order', () => {
   it('is Planning where something is still to agree and no clock has run', () => {
     expect(rungOf(undefined, FULL)).toBe('planning');
     expect(rungOf(plan({ place: 'Zabłocie Sport' }), FULL)).toBe('planning');
@@ -68,14 +72,17 @@ describe('the four clock rungs, read in order', () => {
   });
 
   /**
-   * #324's second amendment dropped *Today*'s three-slot requirement: its test is *the agreed
-   * day is today*, so a Today card may genuinely have no hour and no place.
+   * The agreed day being today changes nothing about the rung: it is the plan's slots that name
+   * the card, and the day row that says *Today*. A day-only plan on the day is *Planning* with a
+   * dim `TIME` bar under a day row reading *Today* — which is the alarm #324's second amendment
+   * wanted, said by the slots rather than by a name.
    */
-  it('is Today on the agreed day, whatever else is still to agree', () => {
-    expect(rungOf(plan({ day: '2026-09-12' }), FULL)).toBe('today');
+  it('is Planning on the agreed day while something is still to agree', () => {
+    expect(rungOf(plan({ day: '2026-09-12' }), FULL)).toBe('planning');
+    expect(rungOf(plan({ place: 'Zabłocie Sport', day: '2026-09-12' }), FULL)).toBe('planning');
   });
 
-  it('outranks Game on with Today, because the clock outranks the checklist', () => {
+  it('is Game on on the agreed day once all three are filled and the hour is still ahead', () => {
     const full = plan({
       place: 'Zabłocie Sport',
       day: '2026-09-12',
@@ -83,7 +90,7 @@ describe('the four clock rungs, read in order', () => {
       agreedPoint: '2026-09-12T16:00:00Z',
     });
 
-    expect(rungOf(full, FULL)).toBe('today');
+    expect(rungOf(full, FULL)).toBe('game-on');
   });
 
   it('is Needs result the moment the agreed point has passed, whatever the day says', () => {
@@ -101,25 +108,12 @@ describe('the four clock rungs, read in order', () => {
    * The point is the *start of the following local day* where only a day is agreed, so a game
    * with no hour is never asked for a result on the day it is being played.
    */
-  it('leaves a day-only game on Today until its own point has passed', () => {
+  it('leaves a day-only game on Planning until its own point has passed', () => {
     const tonight = plan({ day: '2026-09-12', agreedPoint: '2026-09-12T22:00:00Z' });
     const yesterday = plan({ day: '2026-09-11', agreedPoint: '2026-09-11T22:00:00Z' });
 
-    expect(rungOf(tonight, FULL)).toBe('today');
+    expect(rungOf(tonight, FULL)).toBe('planning');
     expect(rungOf(yesterday, FULL)).toBe('needs-result');
-  });
-
-  it('reads today in the platform zone, never the device one', () => {
-    const zones = ['Pacific/Kiritimati', 'Pacific/Midway', 'UTC'];
-    const held = process.env.TZ;
-
-    const read = zones.map((zone) => {
-      setDeviceZone(zone);
-      return rungOf(plan({ day: '2026-09-12' }), FULL);
-    });
-
-    setDeviceZone(held);
-    expect(read).toEqual(['today', 'today', 'today']);
   });
 
   it('treats an instant it cannot read as one that has not passed', () => {
@@ -143,8 +137,18 @@ describe('the open seat, above the clock', () => {
     );
   });
 
-  it('is Needs a player on the agreed day, and once the agreed point has passed', () => {
-    expect(rungOf(plan({ day: '2026-09-12' }), SHORT)).toBe('needs-a-player');
+  it('is Needs a player with the plan whole, and once the agreed point has passed', () => {
+    expect(
+      rungOf(
+        plan({
+          place: 'Zabłocie Sport',
+          day: '2026-09-12',
+          hour: '18:00',
+          agreedPoint: '2026-09-12T16:00:00Z',
+        }),
+        SHORT,
+      ),
+    ).toBe('needs-a-player');
     expect(rungOf(plan({ agreedPoint: '2026-09-11T18:00:00Z' }), SHORT)).toBe('needs-a-player');
   });
 });

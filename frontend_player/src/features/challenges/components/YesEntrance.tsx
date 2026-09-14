@@ -1,7 +1,7 @@
 /**
  * **The yes screen's one motion** — the two sides slide in from the edges and meet, the word
  * rises in, the buttons fade in last, and one soft buzz lands with the word
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §2). It moves once; nothing loops.
  *
  * ## The durations are the theme's, composed and not invented

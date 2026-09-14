@@ -15,7 +15,7 @@ feature that imports one cannot be tested at all — and **the third one is here
 argument alone**, because its far side is a socket rather than a native module and a screen
 that opened one is a screen no suite can put in front of a severed stream. **The fourth is one
 verb wide** — `success()`, the yes screen's one buzz as its word lands
-([ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+([ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
 §2), the first haptic in the app — and it is a port rather than a line in a component on the
 first argument: _exactly one, and none under reduced motion_ is a count a fake can hold where a
 mock could only record. Hand-written fakes
@@ -125,7 +125,7 @@ _Remove the challenge_ only while nobody has joined. `test-support/swipe.ts` is 
 moves, and it says why the handlers are called directly and in the responder system's own order
 rather than through `fireEvent`. **The button gained a `shape`, and the face two additions, for one
 screen** ([#433](https://github.com/Raketa02/Raketa/issues/433),
-[ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+[ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
 §2–§3): `Button`'s `shape` is `rounded` by default and `pill` for the yes screen's two doors — a
 radius option on the one primitive rather than a second one, changing the corner and nothing else,
 which is 4.2's _the chip — the only true pill_ with one fenced exception — and the yes screen's tile

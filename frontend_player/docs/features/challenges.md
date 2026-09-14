@@ -427,9 +427,23 @@ _{name} said no_ naming the **first** decline rather than the one who left, and 
 the organiser away from the room would have learned of the departure; the row goes because the
 user walking #429 found it wrong, and the sentence it would need does not exist in §13.
 
+**An exit confirmed on the challenge screen leaves the screen**
+([#429](https://github.com/Raketa02/Raketa/issues/429)). _Leave the game_ and _Remove the
+challenge_ redrew the screen from their reply into §13.1's sentence about the reader's own seat —
+_You left. They are still waiting on answers._, _You withdrew this_ — with nothing to press, on a
+court the reader had just stopped being part of and whose row the same reply had already taken from
+the inbox: a stop on the way out. `useActDoor` gains `onDone`, what the surface does once the reply
+has landed and the sheet has closed; the list passes nothing, because its row goes on the reply and
+the list is what is left, and the challenge screen passes `router.back`, landing on Chats whose
+return re-read shows no row in either section. The screen still resolves for a stale route and
+says the sentence then — a departed seat is still a seat — so what went is the stop, not the
+words. **_Not this time_ is deliberately not this**: a no stays on its sentence (`challengeScreen.test.tsx`
+pins it), because it is not behind a sheet and #429 did not ask; the same argument applies to it,
+and it is one `router.back` in `send` if it should.
+
 **A yes lands on the yes screen, and the room is opened by a tap**
 ([#433](https://github.com/Raketa02/Raketa/issues/433),
-[ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)).
+[ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)).
 _`I'm in` goes to the room_ is retired: the reply is still the redraw, and then the challenge screen
 **pushes the yes screen** — `/chats/challenge/{id}/yes?which=challenge`, this feature's own, keyed by
 the challenge and by one Zod-checked _which yes_ — a challenge's here; a mutual's, _Matched!_, is
@@ -445,7 +459,7 @@ when its occupant has accepted** — deciding, declined, lapsed, left and nobody
 which is the room's own membership rule, so the picture and the row he lands on next agree. A bad
 or foreign parameter draws the ground alone and leaves for the Chats list. **A tile is the face the
 app already draws** — `PlayerPhoto`'s `face` box at the two sizes the mocks measure — with two
-additions for this screen: `handleInitials` over a **poster** (never over a photograph; ADR-0166 §3's
+additions for this screen: `handleInitials` over a **poster** (never over a photograph; ADR-0167 §3's
 one drawing exempt from ADR-0107 §4, on a four-sided fence the presentation deck holds — never
 spoken, never in copy), and the outlined empty seat. The other players' photographs come off the
 seat cards; **the reader's own comes off their own record** through `player_record`'s `useOwnFace`
@@ -484,7 +498,7 @@ against the three mocks.
 
 **The yes screen's second face — a mutual's, _Matched!_**
 ([#434](https://github.com/Raketa02/Raketa/issues/434),
-[ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+[ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
 §1, §4). `which=mutual` is the second member of the route's _which yes_, and **the two faces are
 keyed once**: the word (`YES_WORD`), the sentence (`YES_SENTENCE`) and, on the screen, the fold,
 the `vs` and the two moves out (`FACE`) are each a `Record` over the union, so a third yes fails

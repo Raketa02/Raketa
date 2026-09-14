@@ -58,7 +58,7 @@ describe('which tab a route is inside', () => {
  * **Two routes stand the bar down, and each is named in full.** The conversation is the screen
  * whose composer replaces the bar ([#400](https://github.com/Raketa02/Raketa/issues/400)), and
  * the yes screen under a challenge is the one the bar would be a way out of that the record
- * says it does not have ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * says it does not have ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §2). The inbox they are pushed over, the challenge screen, the builder under it and the game
  * screen behind the room's own *Details* door all keep theirs — so a `/chats/*` match would be
  * four screens too wide, and a prefix match would take the bar off the game screen at

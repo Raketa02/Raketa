@@ -9,8 +9,8 @@
  *
  * The fold is two questions in one order. **The standing decides first**: an ending is an ending
  * whatever the plan says, and only `AWAITING_ENTRY` reaches {@link rungOf}. That is the seam #329
- * and #324 kept crossing — a game whose score is being argued about is not *Today* because its
- * plan happens to name today, and a plan is not consulted about a game that never happened.
+ * and #324 kept crossing — a game whose score is being argued about is not *Game on* because its
+ * plan happens to be whole, and a plan is not consulted about a game that never happened.
  *
  * ## `import type`, and the arrow it keeps
  *
@@ -29,7 +29,7 @@ import type { Plan } from './slots';
 
 /**
  * Every card the Now rail can draw, in the order the rungs are read and the endings arrive: the
- * five rungs, the argument, the four endings, and the gap.
+ * four rungs, the argument, the four endings, and the gap.
  *
  * **`confirm` is one name over four arms.** §5.2 lists *Confirm the result* four times because
  * `GameScreen` has four `AWAITING_ANSWER` arms behind it; the card is the same card in all four,
@@ -49,8 +49,8 @@ export const GAME_CARD_NAMES = [
 
 /**
  * Every card the Now rail can draw, **derived from the list above** rather than declared beside
- * it, so a tenth name cannot exist in one and not the other. The four rungs come from the ladder
- * itself, which is what makes *the ladder names four of these* a fact of the types.
+ * it, so an eleventh name cannot exist in one and not the other. The four rungs come from the
+ * ladder itself, which is what makes *the ladder names four of these* a fact of the types.
  */
 export type GameCardName = (typeof GAME_CARD_NAMES)[number];
 
@@ -104,7 +104,8 @@ export function gameCardName(game: Game, plan: Plan | undefined): GameCardName {
  * The door this card carries, and `undefined` where it carries none.
  *
  * A `Record` keyed by the union rather than a `switch`, for the reason every other table in this
- * app is one: a tenth card name fails `pnpm typecheck` here rather than quietly drawing no door.
+ * app is one: an eleventh card name fails `pnpm typecheck` here rather than quietly drawing no
+ * door.
  */
 const DOOR: Readonly<Record<GameCardName, GameDoor | undefined>> = {
   // The plan is read on the screen, so the two planning rungs open it and say so.
@@ -113,8 +114,9 @@ const DOOR: Readonly<Record<GameCardName, GameDoor | undefined>> = {
   // The plan survives a departure (#411 rule 6), and the seat is dealt with in the builder: the
   // door runs the fill and pushes it, the flow the challenge screen already has (#419).
   'needs-a-player': 'fill',
-  // *We played* is available in every `AWAITING_ENTRY` arm; these are the two that lead with it.
-  today: 'we-played',
+  // *We played* is available in every `AWAITING_ENTRY` arm; this is the one that leads with it —
+  // the agreed point is behind the fold, so *you played* is the likeliest true sentence. A game
+  // on the day itself is *Game on* or *Planning* and reaches it one press in (ADR-0166).
   'needs-result': 'we-played',
   confirm: 'confirm',
   counted: undefined,
@@ -132,11 +134,11 @@ export function doorOf(name: GameCardName): GameDoor | undefined {
  * **What the game screen's entry arm leads with** — the card's own door, read as a landing.
  *
  * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5.2 lands
- * *Planning* and *Game on* on the plan and *Today* and *Needs result* on the score grid, and it
- * says why the two tables cannot disagree: **the verb names what you arrive at.** So this is
- * derived from {@link doorOf} rather than written beside it — a second `Record` over the four
- * rungs is a second opinion about where a button goes, and the one that drifted would send a
- * player to a screen that is not what its own button promised.
+ * *Planning* and *Game on* on the plan and *Needs result* on the score grid, and it says why the
+ * two tables cannot disagree: **the verb names what you arrive at.** So this is derived from
+ * {@link doorOf} rather than written beside it — a second `Record` over the four rungs is a
+ * second opinion about where a button goes, and the one that drifted would send a player to a
+ * screen that is not what its own button promised.
  *
  * It is here rather than in `features/games` because it reads the ladder, which reads a plan
  * (ADR-0149 §1); what crosses back into that feature is the word and never the rung

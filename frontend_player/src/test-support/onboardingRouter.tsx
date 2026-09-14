@@ -104,7 +104,7 @@ export const ONBOARDING_ROUTES = {
   // is completing, so the Chats column stays lit and *back* is correct by construction.
   '(app)/(tabs)/chats/challenge/[challengeId]/fill': ChallengeFillRoute,
   // The yes screen, under the challenge it is about — pushed the instant *I'm in* is answered,
-  // and the second route the bar stands down on (ADR-0166).
+  // and the second route the bar stands down on (ADR-0167).
   '(app)/(tabs)/chats/challenge/[challengeId]/yes': YesRoute,
   // And a conversation beside it, under its own static segment for the same reason: two ids of
   // two different things cannot share one `/chats/[id]`. Spelled `…/index` exactly as the file

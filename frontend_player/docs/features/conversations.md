@@ -247,7 +247,7 @@ rows are gone when the player goes back, which the return's re-read above shows.
 
 **The awaited door is the yes screen's now, answers `expired`, and runs its bound from the first
 answer** ([#433](https://github.com/Raketa02/Raketa/issues/433),
-[ADR-0166](../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+[ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
 §1). `useAwaitedChatDoor` waits for the same two things it did — the room, or the room and its game
 when the yes completed the court — on the same cadence and the same six-second bound, and has one
 caller, the yes screen, which runs it from the moment it opens and lands _Open the chat_ on the room

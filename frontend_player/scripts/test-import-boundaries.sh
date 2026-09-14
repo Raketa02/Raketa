@@ -248,7 +248,7 @@ expect_allowed @/features/play/types "$GAMES_SCREEN"
 expect_allowed @/features/player_record/types "$GAMES_SCREEN"
 # And the deep path is still what it always was: a feature never reaches past another's types.ts.
 expect_blocked @/features/play/components/balancePresentation "$GAMES_SCREEN" 'types.ts'
-# The yes screen's one new edge (ADR-0166 §3): `challenges` reads the reader's own face through
+# The yes screen's one new edge (ADR-0167 §3): `challenges` reads the reader's own face through
 # `player_record`'s public surface, and nothing deeper.
 expect_allowed @/features/player_record/types "$CHALLENGES_SCREEN"
 expect_blocked @/features/player_record/hooks/useOwnFace "$CHALLENGES_SCREEN" 'types.ts'

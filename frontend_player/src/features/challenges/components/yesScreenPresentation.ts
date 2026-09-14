@@ -1,6 +1,6 @@
 /**
  * What the yes screen says — **two words, a small `vs`, two spoken sentences, and a door**
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §1, §4; [#433](https://github.com/Raketa02/Raketa/issues/433),
  * [#434](https://github.com/Raketa02/Raketa/issues/434)).
  *
@@ -12,7 +12,7 @@
  *
  * ## The sentence is built from whole handles, and never from the initials
  *
- * The tile draws two initials over a poster, and that drawing is ADR-0166 §3's one exception
+ * The tile draws two initials over a poster, and that drawing is ADR-0167 §3's one exception
  * to ADR-0107 §4 — argued on the line that a drawing invents no sentence. **This file is where
  * that line is held**: the announcement names everybody by the handle they typed, says *an
  * empty seat* where one is, and says `?` for a seat the record cannot name, which is
@@ -37,7 +37,7 @@ import type { WhichYes } from '../schemas/routeParams';
 /** The one lime word after *I'm in*. */
 export const CHALLENGE_WORD = 'Challenge!';
 
-/** The one lime word after a mutual — and the one place the app says it (ADR-0166 §4). */
+/** The one lime word after a mutual — and the one place the app says it (ADR-0167 §4). */
 export const MATCHED_WORD = 'Matched!';
 
 /**
@@ -75,7 +75,7 @@ export function yesAnnouncement(sides: YesSides): string {
 /**
  * The mutual's announcement and header label — *Matched! You and Marek.P* — you, then everybody
  * else who has said yes, joined with *and* and nothing else. There is no *against* because the
- * picture takes no side, and no empty seat because the picture draws none (ADR-0166 §4).
+ * picture takes no side, and no empty seat because the picture draws none (ADR-0167 §4).
  */
 export function matchedAnnouncement(sides: YesSides): string {
   const you = playerName({ kind: 'you' });

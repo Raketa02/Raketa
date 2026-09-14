@@ -196,7 +196,7 @@ export function useDeckProgress(): DeckProgress {
  *
  * When the reply says `mutual` **and** names a challenge, the yes screen is pushed for it as a
  * mutual's — *Matched!* — over wherever the player is by then
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §1, [#434](https://github.com/Raketa02/Raketa/issues/434)). It is pushed from **this**
  * `onSuccess` and deliberately not from the screen's per-press callback: the callbacks handed to
  * `mutate()` are dropped the moment the component that called it unmounts, and the yes is

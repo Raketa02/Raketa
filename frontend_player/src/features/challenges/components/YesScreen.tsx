@@ -1,6 +1,6 @@
 /**
  * **The yes screen** — the screen a yes lands on: the faces, one word, two doors
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md);
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md);
  * [#433](https://github.com/Raketa02/Raketa/issues/433),
  * [#434](https://github.com/Raketa02/Raketa/issues/434)).
  *
@@ -69,7 +69,7 @@
  * One header whose label is the whole picture as a sentence — *Challenge! You and Ola.N against
  * Kuba.W and Zofia.B*, *and an empty seat* where one is; *Matched! You and Marek.P* — announced
  * once as the faces land, and built from whole handles: the initials over a poster are a
- * drawing and reach no sentence (ADR-0166 §3). The tiles and the `vs` merge into it, and the
+ * drawing and reach no sentence (ADR-0167 §3). The tiles and the `vs` merge into it, and the
  * two doors are the only other elements on the screen.
  *
  * ## The shell stands its bar down, and the screen takes both edges
@@ -256,7 +256,7 @@ const FACE: Readonly<Record<WhichYes, Face>> = {
    * so its first move is **the tab's own** (`openTab`): the shell lays `[Chats list]` down and
    * ends the Play session on the way exactly as a press of the column would, while the deal it
    * dealt on stays held in the cache for the next visit — *from the deck this switches the tab;
-   * Play keeps its held deck* (ADR-0166 §1).
+   * Play keeps its held deck* (ADR-0167 §1).
    */
   mutual: {
     fold: pairForReader,

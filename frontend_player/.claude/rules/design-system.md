@@ -40,7 +40,7 @@ The audit describes an HTML file, and **its phone frame, dark stage, scenario ra
 and 900px breakpoint are harness — they do not ship.** The app _is_ the phone. Never build a
 frame, a stage or a scenario switcher, and never use the four stage colours (`#08222B`
 `#071C24` `#0B2B36` `#24505E`) — they are not in the theme. **The one dark screen is the yes
-screen**, on two colours of its own (`yesGroundCentre`, `yesGroundEdge`) that ADR-0166 fences
+screen**, on two colours of its own (`yesGroundCentre`, `yesGroundEdge`) that ADR-0167 fences
 as that screen's alone; it is not a dark mode and not a licence for a second dark surface.
 
 ## The four React Native traps
@@ -90,7 +90,7 @@ as that screen's alone; it is not a dark mode and not a licence for a second dar
   wrong before the rule was written down.
 - **There is no sans role above `h1` to reach for.** `display` (26/700) existed for the Now
   card's weekday figure and retired with it (#413, Part 16); `yesWord` (32/800) exists for the
-  yes screen's one word and nothing else (ADR-0166, Part 16). A word that wants to be that
+  yes screen's one word and nothing else (ADR-0167, Part 16). A word that wants to be that
   large is a Part 16 decision, not a `fontSize` and not a second use of `yesWord`.
 - **The pill is the chip's**, and the yes screen's two buttons through `Button`'s `shape` —
   the one exception, fenced. Everywhere else a button is 10pt.

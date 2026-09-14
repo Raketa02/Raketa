@@ -94,8 +94,8 @@
  * ## Three plan arms, and the one word that tells them apart
  *
  * §5.2 lands two different cards on two different things inside one standing: *Planning* and *Game
- * on* arrive at **the plan**, *Today* and *Needs result* at **the score grid**. The ladder that
- * tells them apart reads a plan, so the fold is `features/plans`' and what arrives here is
+ * on* arrive at **the plan**, *Needs result* at **the score grid**. The ladder that tells them
+ * apart reads a plan, so the fold is `features/plans`' and what arrives here is
  * `EntryLead` — a word in this feature's own vocabulary rather than a rung in somebody else's.
  *
  * **It changes what leads and never what is offered.** *We played* is available on **every** entry
@@ -410,7 +410,7 @@ function Argument({
   const outcome = argument.kind === 'confirmed' ? outcomeLine(argument.outcome) : undefined;
   // The entry window is the standing line's clause on all four entry arms, so the block never
   // draws over one: a 40pt figure counting down to *recorded as one that never happened* is not
-  // what a game six days away is about, and on the two score-led arms the grid is over it anyway.
+  // what a game six days away is about, and on the score-led arm the grid is over it anyway.
   const clock = open === undefined && !entryArm ? clockLine(argument, game.readAt) : undefined;
   const sending = state.isPending && !state.isPaused;
   // Two mutations, one at a time by construction — the grid is either open or it is not — so one

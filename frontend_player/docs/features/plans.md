@@ -357,3 +357,33 @@ the one seat of four. `Court` now clips its ground layer alone; a seat is the ca
 the court only places, so the caption hangs where the geometry puts it, onto the card's own
 `night`, which is the colour the ground ends on. No number changed. No device has drawn it since;
 it is asked for a look.
+
+**The day row says _Today_, and no card does**
+([ADR-0166](../../../docs/adr/0166-the-day-row-says-today-and-no-card-does.md)). The ladder is
+**four** rungs now — _a seat is open_ → Needs a player, _the agreed point has passed_ → Needs
+result, _all three slots filled_ → Game on, otherwise Planning — and the calendar is not one of
+them. ADR-0145 §3's _the agreed day is today_ → Today, above the checklist and since #324's second
+amendment needing no hour and no place, named a card after the day rather than after what the plan
+had reached: a day-only plan on the morning of its game drew a settled tag, a mint dot and
+_We played_ over a dim `TIME` bar, and the same plan a day earlier drew Planning. The day was
+already on the card — #413's day row prints `Monday` `14 Sep` — so the tag was that fact said
+again in the one slot meant to name the stage. What §3 bought, _a plan makes the clock drawable_, is
+kept and moved: `SlotRow` draws **`Today` `14 Sep`** in place of the weekday when the plan's day is
+the platform day of the games list's `read_at`, and speaks it the same way. The test is
+`dayIsToday` in `domain/slots.ts`, defined **once** and read twice — by the day row through
+`planPresentation.ts`' `cardDay`, and by `quickChips.ts`' _On my way_, which had its own copy of
+the comparison; `spokenSlotValue`'s `{ date }` option became `{ readAt }`, because the card is now
+the one surface that draws the date **and** the one that says the day has come, and both come off
+the same instant. **Only the card, and only _Today_**: the room's chip and the game screen's tag keep
+the weekday (a chip saying _Today_ in a row of `Mon Tue Wed` is a different kind of word, and the
+chip opens that row), and there is no _Tomorrow_ or _Yesterday_ — this folds a state into the day
+row, and _Tomorrow_ was never a state. The one thing a player notices: **_We played_ leads only once
+the agreed point has passed.** A game on its own day reads `Open` or `Finish the plan` and lands on
+the plan lead, where _We played_ is the quiet door under _Open the chat_ exactly as on any other
+day; a Game on card that led with _We played_ when the day is today would be the Today state under
+another name. `CARD_TAG`, `STAGE_DOT`, `CARD_STATE_WORD`, `ACCENT` and `DOOR_LABEL` each lost a
+row in one commit, `nowPresentation.test.ts` holds the name absent by name, and the backend's two
+transcriptions of the ladder (`app/seeds/loop.py`, `tests/api/test_the_loop.py`) dropped the rung
+with the client — the seed's _Today_ fixture now reaches Planning on the day of its game, which is
+the card this record is about. Nothing on the wire moved. No device has drawn the row; it is asked
+for a look.

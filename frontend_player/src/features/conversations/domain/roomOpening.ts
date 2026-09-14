@@ -46,7 +46,7 @@ export const ROOM_OPENING_BOUND_MS = 6000;
  *
  * Stated because it is also what lets the wait be seen under test: the screen that waits is
  * pushed the instant a yes is answered
- * ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §1), and the router harness runs every pending timer on every navigation, up to the longest —
  * so a bound armed at mount, before the push settles, has fired before the screen is looked at.
  * An answer lands after that, and a bound armed from it is the one a phone would arm.

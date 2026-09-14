@@ -110,7 +110,7 @@ describe('the gloss', () => {
 
 /**
  * **The pill is the chip's alone, and this is the one exception** — the yes screen's two doors
- * ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §2, Part 16 2026-09-14). A shape option on the one primitive rather than a second one, so
  * the pill differs from every other button by its corner and by nothing else.
  */

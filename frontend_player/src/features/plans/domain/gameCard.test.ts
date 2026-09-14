@@ -46,7 +46,10 @@ const SHORT: Game['seats'] = [{ side: 'A', playerId: 'me', nickname: 'me' }, { s
 
 describe('which card a game draws', () => {
   it('reads the ladder only while an entry is still awaited', () => {
-    expect(gameCardName(game(), plan({ day: '2026-09-12' }))).toBe('today');
+    expect(gameCardName(game(), plan({ day: '2026-09-12' }))).toBe('planning');
+    expect(gameCardName(game(), plan({ agreedPoint: '2026-09-11T18:00:00Z' }))).toBe(
+      'needs-result',
+    );
   });
 
   /**
@@ -56,9 +59,12 @@ describe('which card a game draws', () => {
    */
   it('is Needs a player while a seat is open, whatever the plan and the clock say', () => {
     expect(gameCardName(game({ seats: SHORT }), undefined)).toBe('needs-a-player');
-    expect(gameCardName(game({ seats: SHORT }), plan({ day: '2026-09-12' }))).toBe(
-      'needs-a-player',
-    );
+    expect(
+      gameCardName(
+        game({ seats: SHORT }),
+        plan({ place: 'Zabłocie Sport', day: '2026-09-12', hour: '18:00' }),
+      ),
+    ).toBe('needs-a-player');
     expect(
       gameCardName(game({ seats: SHORT }), plan({ agreedPoint: '2026-09-11T18:00:00Z' })),
     ).toBe('needs-a-player');
@@ -92,7 +98,6 @@ describe('the door each card carries', () => {
   it('is §5.2’s table, and every name is in it', () => {
     expect(GAME_CARD_NAMES.map(doorOf)).toEqual([
       'fill',
-      'we-played',
       'we-played',
       'open',
       'open',
@@ -194,19 +199,31 @@ describe('how long an ending keeps a card', () => {
 
 describe('what the game screen’s entry arm leads with', () => {
   /**
-   * §5.2 lands *Planning* and *Game on* on the plan and *Today* and *Needs result* on the score
-   * grid — and *the verb names what you arrive at*, so this is read off the card's own door rather
-   * than written beside it. Two tables would be two opinions about where one button goes.
+   * §5.2 lands *Planning* and *Game on* on the plan and *Needs result* on the score grid — and
+   * *the verb names what you arrive at*, so this is read off the card's own door rather than
+   * written beside it. Two tables would be two opinions about where one button goes.
    */
-  it('is the plan while the moment is still ahead', () => {
+  it('is the plan while the moment is still ahead, on the agreed day included', () => {
     expect(entryLeadOf(game(), undefined)).toBe('the-plan');
     expect(
       entryLeadOf(game(), plan({ place: 'Zabłocie Sport', day: '2026-09-19', hour: '18:00' })),
     ).toBe('the-plan');
+    // ADR-0166: the day of the game leads with the plan; *We played* is a press away on it.
+    expect(entryLeadOf(game(), plan({ day: '2026-09-12' }))).toBe('the-plan');
+    expect(
+      entryLeadOf(
+        game(),
+        plan({
+          place: 'Zabłocie Sport',
+          day: '2026-09-12',
+          hour: '18:00',
+          agreedPoint: '2026-09-12T16:00:00Z',
+        }),
+      ),
+    ).toBe('the-plan');
   });
 
-  it('is the score on the agreed day, and once the agreed point has passed', () => {
-    expect(entryLeadOf(game(), plan({ day: '2026-09-12' }))).toBe('the-score');
+  it('is the score once the agreed point has passed', () => {
     expect(entryLeadOf(game(), plan({ agreedPoint: '2026-09-11T18:00:00Z' }))).toBe('the-score');
   });
 

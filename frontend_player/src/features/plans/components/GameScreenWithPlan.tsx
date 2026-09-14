@@ -14,8 +14,8 @@
  * ## It folds the arm as well as filling the slot
  *
  * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5.2 lands
- * *Planning* and *Game on* on **the plan** and *Today* and *Needs result* on **the score grid** —
- * two landings inside one standing — and
+ * *Planning* and *Game on* on **the plan** and *Needs result* on **the score grid** — two
+ * landings inside one standing — and
  * [`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §3.3 says
  * the ladder is read by *"the rail, the card, the gloss, **and the game screen's arm**"*. The
  * ladder reads a plan, so the arm is folded here and **a word crosses back**, never a rung:

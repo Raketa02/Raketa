@@ -54,7 +54,7 @@
  * One screen replaces the bar with its composer, so the keyboard and the stream get the whole
  * screen ([#400](https://github.com/Raketa02/Raketa/issues/400)); a second — the yes screen —
  * replaces it with nothing, because the screen is the whole phone and its two doors are the only
- * ways out ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ways out ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §2). Which screens is `barStandsDown`'s answer, read off the same pathname the active column
  * is — the shell learns that *a route* stands the bar down and nothing about what either is. What it does with
  * the answer is **not render** the bar rather than hide it: the bar is a flex sibling of the
@@ -131,7 +131,7 @@ export function TabShell() {
         {/* And the yes screen under a challenge — pushed over the challenge screen the instant
             *I'm in* is answered, and the one route whose **swipe-back is off**: a swipe that
             popped to the challenge screen underneath would land somewhere *Later* never does
-            ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+            ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
             §1). It keeps the shell's own `none`, deliberately: the screen has one motion of its
             own, and a push that slid in under it would be a second. The bar stands down on it,
             below, as it does in the room. */}

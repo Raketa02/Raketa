@@ -80,10 +80,12 @@ def _card_name(game: dict, plan: dict | None, *, read_at: datetime) -> str:
 
     A transcription of ``features/plans/domain/gameCard.ts`` and the ladder it
     reads, kept in the same order: **the standing decides first**, and only
-    ``AWAITING_ENTRY`` reaches the four rungs. It is spelled here rather than
-    imported because it lives in the other app and the two may never import each
-    other — what crosses between them is the contract, and what this asserts is
-    that the contract still carries the three facts the fold reads.
+    ``AWAITING_ENTRY`` reaches the rungs. It is spelled here rather than imported
+    because it lives in the other app and the two may never import each other —
+    what crosses between them is the contract, and what this asserts is that the
+    contract still carries the two facts the fold reads. **The day is not a rung**
+    (``docs/adr/0166``): the calendar is the card's day row's to say, so nothing
+    here reads ``read_at`` as a day.
 
     ``read_at`` is ``GET /games``' own instant and there is deliberately no second
     one: ``GET /plans`` carries none, so the rail folds against one clock by
@@ -95,7 +97,7 @@ def _card_name(game: dict, plan: dict | None, *, read_at: datetime) -> str:
     client actually reads, and the half that can lose a field without any domain
     test noticing. Neither can be written in terms of the other without an adapter
     between a dict and an aggregate; what keeps them together is that the ladder
-    is nine lines and both name the file that owns it.
+    is eight lines and both name the file that owns it.
     """
 
     standing = game["standing"]
@@ -109,9 +111,6 @@ def _card_name(game: dict, plan: dict | None, *, read_at: datetime) -> str:
     agreed = None if plan is None else plan["agreed_point"]
     if agreed is not None and datetime.fromisoformat(agreed) <= read_at:
         return "needs-result"
-    today = local_day(instant(read_at)).isoformat()
-    if plan is not None and plan["day"] == today:
-        return "today"
     if plan is not None and all(plan[slot] is not None for slot in SLOTS):
         return "game-on"
     return "planning"

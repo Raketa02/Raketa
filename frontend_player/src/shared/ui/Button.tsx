@@ -52,7 +52,7 @@
  * describe a press.
  *
  * **`shape` is a seventh option and it is not a variant**
- * ([ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §2). 4.2's rule is *the chip — the only true pill*, and every button is a 10pt rounded
  * rectangle; the yes screen's two doors are pills, and the record opens that one exception on
  * this screen rather than adding a second primitive. It is a shape and not a variant because

@@ -4,7 +4,7 @@ import { YesScreen, parseYesRouteParams } from '@/features/challenges/types';
 
 /**
  * **The yes screen** — the screen a yes lands on, under the challenge it is about
- * ([ADR-0166](../../../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)).
+ * ([ADR-0167](../../../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)).
  *
  * Pushed over the challenge screen the instant *I'm in* is answered, and over wherever the
  * player is the instant the deck's *Let's play* comes back mutual and naming a chat

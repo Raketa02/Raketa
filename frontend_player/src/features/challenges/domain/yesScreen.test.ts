@@ -129,7 +129,7 @@ describe('who is a face and who is an empty seat', () => {
  * **The mutual's picture is you and them, and nobody else** — the accepted people of the challenge
  * the reply named, reader first, with no empty seat in it whatever the sport: in tennis the two are
  * opponents on two sides, in padel partners on one side with the other still to fill, and the
- * picture says only *you two* either way (ADR-0166 §4).
+ * picture says only *you two* either way (ADR-0167 §4).
  */
 describe('the pair, reader first', () => {
   it('draws the two of you on a tennis court, the reader first whichever side they hold', () => {

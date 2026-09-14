@@ -671,7 +671,7 @@ describe('yes and no', () => {
 
   /**
    * **Today's sentence, verbatim, and nowhere to go**: nothing pretends the other person has
-   * been told, and a one-sided yes is not a screen (ADR-0166 §1).
+   * been told, and a one-sided yes is not a screen (ADR-0167 §1).
    */
   it('says a one-sided yes is silent, because nobody is told, and stays on the deck', async () => {
     await openDeck();
@@ -689,7 +689,7 @@ describe('yes and no', () => {
    * **And a mutual naming nothing is today's toast, verbatim, and no screen**: the pair
    * already have a game being arranged, or a gate refused — one answer, two causes,
    * deliberately not told apart (ADR-0154 §3) — and a full-screen celebration must never
-   * overstate what happened (ADR-0166 §1).
+   * overstate what happened (ADR-0167 §1).
    */
   it('tells a mutual naming no chat to both sides, verbatim, and stays on the deck', async () => {
     transport.on('POST', INTEREST, () => json(expressed(true)));
@@ -753,7 +753,7 @@ describe('yes and no', () => {
 
 /**
  * **A mutual naming a challenge opens the yes screen** — *Matched!* — and the mutual-with-chat
- * toast is retired ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * toast is retired ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §1, §4; [#434](https://github.com/Raketa02/Raketa/issues/434)). Walked end to end: the deck,
  * the reply, the screen, and each of its two doors back out.
  */
@@ -896,7 +896,7 @@ describe('a mutual that named a challenge', () => {
    * after the player has moved on — here made in a tunnel, held until the connection returns
    * (`networkMode: 'online'`), and answered once they have gone to Chats and the deck is off the
    * stack. The screen still opens, wherever they are, because the push lives with the mutation
-   * and not with the screen that fired it (ADR-0166 §1).
+   * and not with the screen that fired it (ADR-0167 §1).
    *
    * Offline rather than a reply simply slow to come: the harness runs every pending timer on
    * every navigation, so a request in flight across the tab press would be timed out by the

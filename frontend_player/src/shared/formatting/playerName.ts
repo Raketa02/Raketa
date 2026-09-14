@@ -98,7 +98,7 @@ const WORD_BREAK = /[.\s]/;
  *
  * **This one *is* an exception to ADR-0107 §4, and it is argued as one rather than smuggled
  * under the rule** —
- * [ADR-0166](../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * [ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §3. `handleStem` above is a prefix somebody typed; two initials are a derived form, which is
  * what [#338](https://github.com/Raketa02/Raketa/issues/338) §5 refused on the Chats rows. What
  * §4 protects is a **sentence** — *addressing a person by a name they never gave it* — and this

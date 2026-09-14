@@ -1,6 +1,6 @@
 /**
  * **A tile is a face** — the one the app already draws, at this screen's sizes, with two
- * additions ([ADR-0166](../../../../../docs/adr/0166-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
+ * additions ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §3).
  *
  * `PlayerPhoto`'s `face` box, which is what a court seat draws: the photograph when the app has
