@@ -1,6 +1,11 @@
 # ADR-0165 — The exits: a yes can be taken back, and a court is over when one is left
 
-- **Status:** Accepted
+- **Status:** Accepted — **one sentence narrowed 2026-09-14 by
+  [ADR-0168](0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md)**: *"nobody is in
+  the chat separately from being on the court … so **leave the chat** can only mean **leave the game**"*
+  holds while a seat on the court can still be left or taken, and not after — once the game's
+  agreed moment has passed, or the game has been played, a member may **leave the chat** and keep
+  the seat they played in. Everything else here stands, rule 1 included.
 - **Date:** 2026-09-13
 - **Supersedes, by named sentence:**
   [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) §1's *"a court that

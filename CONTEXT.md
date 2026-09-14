@@ -1071,7 +1071,9 @@ where, money, results or the conversation itself belongs here.
   organiser included; on a game, while it awaits its entry and its agreed moment is ahead —
   after the moment it is refused, so a no-show cannot vacate a seat to
   block the result. Two may leave. The one who left is out of this court's own pool for good and
-  a stranger to the others again on the instant. **Recorded and not yet scored.**
+  a stranger to the others again on the instant. **Recorded and not yet scored.** After the moment,
+  the exit that is still open is the room's — **Leaving the chat**, which moves no seat
+  ([ADR-0168](docs/adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md)).
 - **Organiser** — the player who sent it. They hold a seat like anybody else, and it is
   **accepted from birth**, because they are the one proposing. That is what makes *"every seat
   accepted"* the whole of the completion rule, with no special case for singles.
@@ -1349,7 +1351,21 @@ Nothing about when, where, money or the result belongs here — it is **told** a
 - **Member** — somebody who has agreed to be on this court **right now**. **Derived, never
   stored**, from whichever record the room is currently about: the challenge's accepted seats until
   the line-up completes, the game's frozen line-up after. One rule read against two records, not
-  two rules.
+  two rules. **Minus the members who have left the chat, for as long as the game is behind them**
+  ([ADR-0168](docs/adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md)) — the
+  one membership fact a room stores, a subtraction only, whose effect is read against the game on
+  every read: a room can never hold somebody the court does not.
+- **Leaving the chat** — a member's own exit from the room, **not a Departure**: no seat moves.
+  Admitted exactly where the seat change is refused — the game's agreed moment has passed, or the
+  game has happened or never will — and refused while the game is ahead, where leaving the chat
+  still means leaving the game
+  ([ADR-0168](docs/adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md), narrowing
+  [ADR-0165](docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)).
+  Recorded once on the room's own stream, told to the others as *{name} left the chat*, and never
+  undone by a message; a plan moved ahead again puts the leaver back, because a game that is ahead
+  is a game they are in. The leaver's row goes by membership; the room is untouched for everybody
+  else and ends on its own clock. _Avoid_: *leave the conversation*, *archive*, *hide*, *mute* —
+  none of them is this, and the last three do not exist.
 - **Message** — what a player typed. Content, crossing as-is, with an author in the ordinary
   sense.
 - **System line** — what happened, as a **code and its values**, rendered by the client. **Not a
@@ -1383,7 +1399,10 @@ Nothing about when, where, money or the result belongs here — it is **told** a
   ([ADR-0153](docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)),
   a room whose court has been a game included — the game being **called off** is told to the
   room by nothing, because the withdrawal has already destroyed it
-  ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)).
+  ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)). **A member leaving the
+  chat is not on this list**: their row goes by membership, and the room lives to its clock for
+  everybody else
+  ([ADR-0168](docs/adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md)).
 
 **Invariants**
 

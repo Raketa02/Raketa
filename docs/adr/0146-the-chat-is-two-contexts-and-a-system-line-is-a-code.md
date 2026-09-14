@@ -1,6 +1,10 @@
 # ADR-0146 — The chat is two contexts, and a system line is a code rather than a message
 
-- **Status:** Accepted
+- **Status:** Accepted — **§7 narrowed 2026-09-14 by
+  [ADR-0168](0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md)**: the roster is
+  still derived from the court, and the room now stores **one subtraction from it** — its members'
+  own exits, admissible only once the line-up can no longer move, and effective only while it
+  stays so, which is read against `games` on every read rather than kept here.
 - **Date:** 2026-09-07
 - **Completes [ADR-0144](0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)**, which made
   a Plan *"its own bounded context"* and then deferred: *"the context's name, its events' spelling

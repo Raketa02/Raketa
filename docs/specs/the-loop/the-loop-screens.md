@@ -162,7 +162,11 @@ open again* says the pair rule has released and you may send again, which
 made possible for the first time. News has a shelf life; nothing is lost and nothing lies, because
 the list still holds them. **A no of the reader's own is not news to them, and its row leaves with
 the tap** rather than after a day — §2.5 has the argument, and it is this paragraph's read from the
-other side.
+other side. **And a completed court's row — *You're in — everybody's in* — is drawn only while the
+reader still has the room for it** (amended 2026-09-14, [ADR-0168](../../adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md) §5): a court
+filling is news, and once the chat for that court is over — by the clock, or by the reader leaving
+it — it is news to nobody. So the row goes with the reader's own *Leave the chat*, and, for the
+others, with a room that ended before the row's day did — which only a same-evening game does.
 
 **The instant it is subtracted from is on the wire, and one standing here is not on the list**
 ([#388](https://github.com/Raketa02/Raketa/issues/388), [#395](https://github.com/Raketa02/Raketa/issues/395)).
@@ -238,6 +242,14 @@ removal leaves the inbox at once, as an own *no* and an own *left* do (§2.5).
 
 **Faces · the whole handles · the sport · the last entry, one line, tail-truncated.** Fully
 clickable, opening `/chats/conversation/[conversationId]`.
+
+**A swipe reveals one button, and its word follows the game** (amended 2026-09-14,
+ [ADR-0168](../../adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md) §5): **Leave the game** while the game is ahead — *planning*, *game on*, *needs a
+player*, and every room without a game — and **Leave the chat** once it is behind — *needs
+result*, *confirm*, *counted*, *uncounted* — read off the same card name the room's header folds
+for its state word. The two acts are complementary by construction: the exit from the room is
+admitted exactly where the seat change is refused. §22.10's refusal sentences stay for the stale
+case and stop being the ordinary one.
 
 **No pill.** ADR-0148 §6's *the last line is what a pill would have said* is a product argument and
 not only a wire one, and the design's pill could now only be derived client-side off the games
@@ -556,7 +568,7 @@ others ([ADR-0165](../../adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-
 | --- | --- | --- |
 | **⚡ Fill the seats** | any live member | runs the fill and **pushes a builder holding a full court and a fresh search** |
 | **Open the chat** | any live member | `/chats/conversation/[conversationId]` |
-| **Leave the game** | any live member, on a court that was never a game | `POST …/departure` — the seat opens; the same sheet the Chats list's swipe opens (ADR-0165 §6, `the-words.md` §22.10). On a game the control is the game screen's, as #411 rule 8 has it — but the challenge read carries no fact for whether a court has been a game, so #427 draws this on every filling court the reader is on with somebody, and on one that has been a game the moment guard is told in words on the sheet rather than by hiding a control the read cannot see the moment for |
+| **Leave the game** | any live member, on a court that was never a game | `POST …/departure` — the seat opens; the same sheet the Chats list's swipe opens (ADR-0165 §6, `the-words.md` §22.10). On a game the control is the game screen's, as #411 rule 8 has it — but the challenge read carries no fact for whether a court has been a game, so #427 draws this on every filling court the reader is on with somebody, and on one that has been a game the moment guard is told in words on the sheet rather than by hiding a control the read cannot see the moment for. **From the Chats list the same swipe reveals *Leave the chat* instead once the game is behind the reader** — [ADR-0168](../../adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md) §5, §1.3 — a member's own exit from the room that moves no seat |
 | **Call it off** | on a court that has been a game: **any player on the court** (ADR-0165 §5) | the withdraw's route and the withdraw's sheet, reworded — `the-words.md` §22.9; the game is called off in the act. **The control is the game screen's** (§5.1): this read carries no fact for whether a court has been a game — the row above — so #428 draws no end act on this arm at all, and the game's own screen, reached from Now, is where it is called off |
 
 **⚡ is the entry point, and items 1 and 2 of that ticket had one answer.** Pressing it is *Find a
@@ -665,6 +677,12 @@ The room is destroyed at the **earliest** of:
   grace ([ADR-0164](../../adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md) §6,
   which retired ADR-0153 §3's departure shelf);
 - **the withdrawal**, which destroys it in the same act and writes no line (§3.4).
+
+**A member leaving the chat is not on this list** (amended 2026-09-14, [ADR-0168](../../adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md) §4): their row
+goes by membership — the one membership fact a room stores, a subtraction only, effective while the
+game is behind them and read against the game on every read — and the room lives to its clock for
+everybody else, who read *{name} left the chat* and keep the faces in the header. A plan moved ahead
+again puts the leaver back; a message never does.
 
 **The end is derived and never stored**, from facts the room is already told — `Game.planned_at`
 **is** `GamePlanned.occurred_at`, and §3.4 already has both reaching the room — so it costs no new
@@ -1126,7 +1144,10 @@ in the composer's place one sentence, §22.5's *{name} left — this chat has en
 goes back, which the list's return re-read shows. Who left is folded from the members the room
 last read and the ending rule (ADR-0165 §3): with others in the room, every other member left;
 alone, the last seat deciding said no (*Nobody else is coming — this chat has ended.*); with a
-game, only that it ended, because why is the game card's to say.
+game, only that it ended, because why is the game card's to say. **A device holding the room
+when its own member leaves the chat elsewhere is this case too** ([ADR-0168](../../adr/0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md) §5): the stream,
+the header, and *This chat has ended.* — the leaver is the one person who does not need telling
+why.
 
 ---
 
