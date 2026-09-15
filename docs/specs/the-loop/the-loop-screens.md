@@ -1266,11 +1266,18 @@ somebody is in it; so `rungOf` reads the court before the clock, and **Needs a p
 `AWAITING_ENTRY` and the seat is `player_id: null`, and the ladder is the one place the two are
 read together. The server's own *Never played* still wins — a window that closed on a short court
 closed all the same. The tag is `Needs a player`, the dot is `arranging` (the game is back in the
-players' hands), the wide door is **`Fill the seat`** — the challenge screen's own fill, run from
-the card and landing in the builder ([#419](https://github.com/Raketa02/Raketa/issues/419)), drawn
-**only while the agreed moment is ahead** because nobody may be seated into a game whose moment is
-gone; past it the card has the bubble alone — and the empty seat is drawn as the builder draws
-one: a dashed outline, no plus, no caption, no ring.
+players' hands), the wide door is **`Fill the seat`** — **opening the game screen**, the same
+screen the room's *Details* opens, where the fill is the arm's primary act (amended 2026-09-15,
+[#429](https://github.com/Raketa02/Raketa/issues/429) F1: [#419](https://github.com/Raketa02/Raketa/issues/419)
+had it run the fill from the card and land in the builder, and the QA walk found *Build a doubles*
+the wrong screen for a game that already exists — so no card door runs anything any more). **It is
+drawn in the dot's own `arranging`**, 6.1's seventh button variant, on the author's call from the
+same walk: the tag says the game is back in the players' hands and a settled-green door under it
+said the opposite of the errand it named; the bars stay the settled colour, because an agreed slot
+is a fact about the plan. Drawn **only while the agreed moment is ahead** because nobody may be
+seated into a game whose moment is gone and the screen offers no fill then; past it the card has
+the bubble alone — and the empty seat is drawn as the builder draws one: a dashed outline, no
+plus, no caption, no ring.
 
 **Called off** ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), built by
 [#419](https://github.com/Raketa02/Raketa/issues/419)) is the fourth ending on the same shell: the
@@ -1458,7 +1465,7 @@ the rail — the card is the record for the day it stays.
 | — | the conversation | Details | — | `/chats/conversation/[id]/details`, the arm the standing derives |
 | — | **Planning** · **Game on** | the game screen | `Open the chat` — `dark`, `lg`, full width | `/chats/conversation/[conversationId]` — the join, failing soft |
 | — | **Planning** · **Game on** | the game screen | `We played` — `secondary`, beneath | the score grid, opened over the plan; the pinned footer returns with it |
-| — | **Needs a player** | Now card | `Fill the seat` — while the agreed moment is ahead; none past it | the fill (`POST /lineups`, naming the challenge), then `/chats/challenge/[challengeId]/fill` — the builder, whose send pops back to the rail. **The one door that runs something before it navigates**, and it still reaches nobody ([#419](https://github.com/Raketa02/Raketa/issues/419), [ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)) |
+| — | **Needs a player** | Now card | `Fill the seat` — `arranging`, the dot's own colour; while the agreed moment is ahead, none past it | `/games/[gameId]`, the arm whose primary act is the fill — like every other door, it navigates and runs nothing ([#429](https://github.com/Raketa02/Raketa/issues/429) F1; [#419](https://github.com/Raketa02/Raketa/issues/419) had it run the fill and land in the builder) |
 | — | **Needs a player** | the game screen | `Open the chat` — and **no `We played`** while the seat is open | `/chats/conversation/[conversationId]` |
 | — | **Needs a player** | the game screen | `Fill the seat` — `primary`, `lg`, where *We played* would be, while the agreed moment is ahead | the same fill and the same builder, popping back to the screen (#419) |
 | — | **Needs a player** | the game screen | `Call it off` — `secondary`, above the leave, for whoever holds the exit | the sheet, then `POST /challenges/{id}/withdrawal`, then **stays** — the screen re-folds into *Called off* off the re-read ([ADR-0163](../../adr/0163-called-off-is-the-fourth-end-of-a-game.md), #419) |

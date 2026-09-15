@@ -183,9 +183,9 @@ export interface CardAccent {
  * **The accent by name** — the colour a settled slot's bar is drawn in, and the variant of the
  * wide door beneath the slots ([#413](https://github.com/Raketa02/Raketa/issues/413)).
  *
- * One table for both, so a card cannot draw a volt bar over a mint door: the bar says *the plan
- * is settled here* and the button says what to do next, and they are one accent because they are
- * one card. **Volt on Planning** — the card that is about settling the plan, and the design's own
+ * One table for both, so a card's bar and door are decided together rather than by two tables
+ * drifting: the bar says *the plan is settled here* and the button says what to do next, and
+ * where they differ it is a decision written on the row, never two rows read apart. **Volt on Planning** — the card that is about settling the plan, and the design's own
  * lime — which gives volt a meaning on this card it had nowhere else: a bright bar is a slot
  * everybody has agreed. It stays off `primary`; 1.2's coral list is closed.
  *
@@ -193,6 +193,16 @@ export interface CardAccent {
  * #410 — the author supplies it — and until then every card is drawn by this shell in the
  * palette's settled colour so the rail does not mix two visual languages, and a game flipping to
  * *Game on* under your thumb does not jump layouts.
+ *
+ * **Except the door on *Needs a player*, which is the stage dot's own colour** — the author's
+ * call from the QA walk ([#429](https://github.com/Raketa02/Raketa/issues/429) F1): the tag
+ * says the game is back in the players' hands with an `arranging` dot, and a settled-green door
+ * under it said the opposite of the errand it named. So the row splits, on purpose and in one
+ * place: the **bar** stays the settled colour, because a bright bar says *this slot is agreed*
+ * and that is a fact about the plan, which survives the departure (#411 rule 6); the **button**
+ * is `arranging`, 6.1's seventh variant, because it names what is still open. *Needs result*
+ * and *Confirm the result* carry the same dot over the settled door and are left as they are
+ * until their own look arrives.
  *
  * **`settled`, and not a `mint` variant invented beside it.** 6.1's `settled` is the mint button
  * and the only one: its fill is `mintInk`, which is what Rule C requires under a white label, and
@@ -207,7 +217,7 @@ export const ACCENT: Readonly<Record<GameCardName, CardAccent>> = {
   planning: { bar: theme.color.volt, button: 'volt' },
   'game-on': { bar: theme.color.mint, button: 'settled' },
   'needs-result': { bar: theme.color.mint, button: 'settled' },
-  'needs-a-player': { bar: theme.color.mint, button: 'settled' },
+  'needs-a-player': { bar: theme.color.mint, button: 'arranging' },
   confirm: { bar: theme.color.mint, button: 'settled' },
   counted: { bar: theme.color.mint, button: 'settled' },
   uncounted: { bar: theme.color.mint, button: 'settled' },

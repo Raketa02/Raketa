@@ -106,8 +106,10 @@ const color = {
    *  result*, *Confirm the result*). Mint is the settled stage and `onDarkHair` the quiet
    *  endings; this is the third dot, and the meaning is named rather than the hue (#413).
    *
-   *  ON DARK ONLY. It is drawn on `night`, inside the on-dark tag, and nowhere on paper — so
-   *  there is no soft, no ink and no line: nothing writes on a 6pt dot and nothing borders it.
+   *  ON DARK ONLY. It is drawn on `night`, inside the on-dark tag and as the Now card's *Fill
+   *  the seat* fill (6.1's `arranging` button, #429), and nowhere on paper — so there is no
+   *  soft and no line. Nothing borders it; the one thing that writes on it writes in `ink`,
+   *  7,05:1, because white on it is 2,48:1 (Button.tsx).
    *
    *  (!) MEASURED, then lifted. Mock 1 draws the dot at #87641A — hue 40,7°, which is `amber`
    *  (39,5°) within a degree and within a step of lightness, at 2,45 on `night` and 1,61 on the

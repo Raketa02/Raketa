@@ -284,18 +284,26 @@ drawn any of it; the rung, the empty seat and the control are asked for a look.
 ([#419](https://github.com/Raketa02/Raketa/issues/419), the fourth child of
 [#411](https://github.com/Raketa02/Raketa/issues/411),
 [ADR-0163](../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)). `GAME_DOORS` gains
-`fill` and _Needs a player_ carries it: the card's wide door on that rung is `Fill the seat` — the
-challenge screen's own fill, run from the card and landing in the builder under the challenge —
-and it is **`features/challenges`' `FillTheSeat` drawn in the door's place**, with the card's
-accent and the door's width, rather than a button here that knows what a fill is. The card hands
-it the game's `challengeId`, its sport, the people the game's seats hold (`seatedOthers`, read off
-`features/games` beside `openSeats`) and one rule, **only while the agreed moment is ahead** —
-`momentHasPassed` off the plan and the games list's instant, the same test the leave reads —
-because nobody may be seated into a game whose moment is gone; past it the card draws the bubble
-alone rather than a door whose send would be refused. The word is `theActsWords.ts`', for
-`WE_PLAYED`'s reason: two features say it and the control is composed into the card, so it can
-live in neither. `GameCard` gains `onReRead` for the one refusal that is a re-read, handed the
-rail's own games read. **The game screen's `courtActs` slot now holds three**, in the design's
+`fill` and _Needs a player_ carries it: the card's wide door on that rung is `Fill the seat`, drawn
+**only while the agreed moment is ahead** — `momentHasPassed` off the plan and the games list's
+instant, the same test the leave reads — because nobody may be seated into a game whose moment is
+gone; past it the card draws the bubble alone rather than a door naming an act the screen will not
+offer. The word is `theActsWords.ts`', for `WE_PLAYED`'s reason: two features say it. **Where the
+door goes changed on the QA walk** ([#429](https://github.com/Raketa02/Raketa/issues/429) F1):
+#419 had it run the challenge screen's own fill from the card and land in the builder —
+`features/challenges`' `FillTheSeat` drawn in the door's place, handed the game's `challengeId`,
+its sport, `seatedOthers` and the rule, with `GameCard` carrying an `onReRead` for the one refusal
+that is a re-read — and the author found _Build a doubles_ the wrong screen for a game that
+already exists. The door now **opens the game screen**, the same screen the room's _Details_
+opens, where the fill is the arm's primary act; the card knows nothing about a fill again, every
+door on it navigates and writes nothing, and `onReRead` went with the control. **It is drawn in
+the stage dot's own colour**, the author's call from the same walk: `ACCENT['needs-a-player']` is
+`{ bar: mint, button: 'arranging' }` — 6.1's seventh variant, `ink` on `arranging` at 7,05:1 —
+because the tag says the game is back in the players' hands and a settled-green door under it said
+the opposite of the errand it named. The bar stays `mint`: an agreed slot is a fact about the plan,
+which survives the departure. _Needs result_ and _Confirm the result_ carry the same dot over the
+settled door and keep it until their own look arrives. **The game screen's `courtActs` slot now
+holds three**, in the design's
 order: `FillTheSeat` as the arm's primary act where _We played_ would be, `CallOff` above the
 leave, `LeaveGame` last — each handed its one rule as `offered`. This composition states what is
 its own to state — a seat is open (`openSeats`), the moment is ahead — and **never learns what an

@@ -2070,7 +2070,7 @@ writing:
 | --- | --- |
 | `Open the chat` | the challenge screen, the game screen, and the Now card's bubble — **one act, one spelling**; on the card it is the spoken name of an icon-only door |
 | `⚡ Fill the seats` | the challenge screen's `LINE_UP_INCOMPLETE` arm, and it is the builder's own label for the identical act |
-| `Fill the seat` | the Now card's wide door on **Needs a player**, and the game screen's primary act on that arm — **the same act, singular** ([#419](https://github.com/Raketa02/Raketa/issues/419)): one per surface, because a challenge screen is about a court still being built with as many seats open as the send left, and this door is about a game that had every seat and lost one. Two seats may be open (#411 rule 3); the door still names the errand one seat at a time, as the tag does. The one door that runs something before it navigates — the fill mints a search — and it still reaches nobody. `theActsWords.ts`', because two features say it |
+| `Fill the seat` | the Now card's wide door on **Needs a player**, and the game screen's primary act on that arm — **the same act, singular** ([#419](https://github.com/Raketa02/Raketa/issues/419)): one per surface, because a challenge screen is about a court still being built with as many seats open as the send left, and this door is about a game that had every seat and lost one. Two seats may be open (#411 rule 3); the door still names the errand one seat at a time, as the tag does. On the card it is a door like the others — it opens the game screen and runs nothing ([#429](https://github.com/Raketa02/Raketa/issues/429) F1; it ran the fill from the card until then); on the screen it is the act, which mints a search and still reaches nobody. `theActsWords.ts`', because two features say it |
 | `Finish the plan` · `Open` · `We played` · `Confirm the result` | the Now card's wide door, one per name — [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §5.2. **`Finish the plan` is Planning's word for the same door Game on opens with `Open`** ([#413](https://github.com/Raketa02/Raketa/issues/413)): the destination is the same and the errand is not. *Finish* and not *Lock*, because the lock is an act with its own control on that screen (ADR-0155) |
 
 **And one ending with no door**: **`Called off`** is the card's word for `GameStanding.CALLED_OFF`
@@ -2135,9 +2135,10 @@ with #416.
 by [#419](https://github.com/Raketa02/Raketa/issues/419)).
 
 **The door** is **`Fill the seat`** — §22.7's row: the card's wide door and the screen's primary act
-on *Needs a player*, one word for one press, drawn only while the agreed moment is ahead. It goes
-busy under its own label while the search runs, as the challenge screen's ⚡ does, and lands in the
-builder.
+on *Needs a player*, one word for one press, drawn only while the agreed moment is ahead. The
+card's opens the game screen, in the stage dot's own `arranging`
+([#429](https://github.com/Raketa02/Raketa/issues/429) F1); the screen's goes busy under its own
+label while the search runs, as the challenge screen's ⚡ does, and lands in the builder.
 
 **The control** is **`Call it off`** — `secondary`, above *Leave this game*, drawn only while a seat
 is open and for **any player on the court** — an accepted seat

@@ -61,11 +61,14 @@ export type GameCardName = (typeof GAME_CARD_NAMES)[number];
  * `undefined` is a card with nothing to press, which the four endings and the gap all are: a
  * control offering an act that state cannot take would be the app naming a thing it cannot do.
  *
- * **`fill` is the one door that runs something before it navigates** — the fill the challenge
- * screen's *⚡ Fill the seats* runs, which mints a search and pushes the builder onto its answer
- * ([#419](https://github.com/Raketa02/Raketa/issues/419)). It still reaches nobody: the send is a
- * separate press on the builder, and the rule above is about the game, which the door leaves as
- * it found it.
+ * **`fill` names the door on a court somebody left, and it navigates like the other three.** It
+ * ran the fill from the card and landed in the builder when it arrived
+ * ([#419](https://github.com/Raketa02/Raketa/issues/419)); the QA walk found that a card door
+ * landing in *Build a doubles* is the wrong screen for a game that already exists, and it now
+ * opens the game screen — the same screen the room's *Details* opens — where the fill is the
+ * arm's primary act ([#429](https://github.com/Raketa02/Raketa/issues/429) F1). So the rule
+ * above holds for every door without an exception: each carries a verb, navigates, and writes
+ * nothing.
  */
 export const GAME_DOORS = ['open', 'we-played', 'confirm', 'fill'] as const;
 
@@ -111,8 +114,8 @@ const DOOR: Readonly<Record<GameCardName, GameDoor | undefined>> = {
   // The plan is read on the screen, so the two planning rungs open it and say so.
   planning: 'open',
   'game-on': 'open',
-  // The plan survives a departure (#411 rule 6), and the seat is dealt with in the builder: the
-  // door runs the fill and pushes it, the flow the challenge screen already has (#419).
+  // The plan survives a departure (#411 rule 6), and the seat is dealt with on the game screen,
+  // whose primary act on this rung is the fill (#419, landed there by #429 F1).
   'needs-a-player': 'fill',
   // *We played* is available in every `AWAITING_ENTRY` arm; this is the one that leads with it —
   // the agreed point is behind the fold, so *you played* is the likeliest true sentence. A game

@@ -51,6 +51,17 @@
  * seventh hex invented to satisfy *the variant's pressed fill* would be a colour added to
  * describe a press.
  *
+ * **`arranging` is a seventh variant, and it is volt's shape a second time** (added for the Now
+ * card's *Fill the seat*, [#429](https://github.com/Raketa02/Raketa/issues/429) F1). The card's
+ * tag carries a stage dot in `arranging` — *the game is still in the players' hands* — and the
+ * door under it was the settled green, which said the opposite of the errand it named. The
+ * theme's own note on the colour said *nothing writes on a 6pt dot*; a button is the first thing
+ * that does, and the arithmetic is volt's: white on it is 2,48:1 and fails, `ink` on it is
+ * 7,05:1, so the label is `ink` and never white. Its press is `opacity: .7` for volt's own
+ * reason — the colour has no darker companion, and one invented to describe a press would be a
+ * hex added for nothing. It is drawn on the dark card and nowhere else, where the theme fences
+ * the colour.
+ *
  * **`shape` is a seventh option and it is not a variant**
  * ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
  * §2). 4.2's rule is *the chip — the only true pill*, and every button is a 10pt rounded
@@ -66,7 +77,8 @@ import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } fro
 
 import { theme } from './theme';
 
-export type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'settled' | 'volt' | 'onDark';
+export type ButtonVariant =
+  'primary' | 'dark' | 'secondary' | 'settled' | 'volt' | 'arranging' | 'onDark';
 
 /**
  * 32 tertiary-in-card · 34 default · 40 screen action · 42 the primary action on a
@@ -207,6 +219,7 @@ const FILL = StyleSheet.create({
   },
   settled: { backgroundColor: theme.color.mintInk },
   volt: { backgroundColor: theme.color.volt },
+  arranging: { backgroundColor: theme.color.arranging },
 });
 
 const PRESSED = StyleSheet.create({
@@ -217,6 +230,8 @@ const PRESSED = StyleSheet.create({
   settled: { backgroundColor: theme.color.mint },
   // Not a fill. Volt has no darker companion and does not get one invented for a press.
   volt: { opacity: 0.7 },
+  // Volt's rule, for the same reason.
+  arranging: { opacity: 0.7 },
 });
 
 const LABEL = StyleSheet.create({
@@ -226,11 +241,13 @@ const LABEL = StyleSheet.create({
   secondary: { color: theme.color.ink },
   settled: { color: theme.color.surface },
   volt: { color: theme.color.ink },
+  // `ink` and never white: 2,48:1 against 7,05:1 — the module note.
+  arranging: { color: theme.color.ink },
 });
 
 /**
  * The gloss's ink, per variant — **the label's own colour wherever the system has no measured
- * secondary against that fill**, which is five of the six.
+ * secondary against that fill**, which is five of the seven.
  *
  * A `Record` over the union rather than a partial table: a variant with no gloss ink would
  * draw a second line in whatever `theme.type.tiny` inherits, which is nothing, and the failure
@@ -244,4 +261,5 @@ const GLOSS = StyleSheet.create({
   secondary: { color: theme.color.muted },
   settled: { color: theme.color.surface },
   volt: { color: theme.color.ink },
+  arranging: { color: theme.color.ink },
 });
