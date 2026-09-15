@@ -187,22 +187,40 @@ profile editor that later edits the same values.
   _Avoid_: "paused run", "saved run" — both suggest a server-side state, and there is
   none; "abandoned run" — that **is** a server-side transition and is the permanent way
   out, where this is the temporary one.
-- **Social step** — one of the **seven** screens of onboarding's **second part**: tags,
-  photos, availability, location, radius, gender, opt-in, in that order. The step names are
-  the route segments, so `/radius` is the screen that asks for a Search radius and there is
-  no second spelling of the seven. The order is not arbitrary at two points: **location
-  before radius**, because a distance is a distance _from_ somewhere, and **gender with the
-  matching constraints rather than with the tags**, because a preference over who you play
-  with narrows who is put in front of you rather than describing you. **The opt-in is
-  always last** — it is the consent that ends the part and the step that carries the finish.
-  **The part is the unit, not the step** — back and forward move freely between steps and
-  never cross out of the part, the first step has no back control, and the last is followed
-  by the profile commit rather than by an eighth screen
+- **Social step** — one of the **eight** screens of onboarding's **second part**: tags,
+  intro, photos, availability, location, radius, gender, opt-in, in that order. The step
+  names are the route segments, so `/radius` is the screen that asks for a Search radius and
+  there is no second spelling of the eight. The order is not arbitrary at three points: **the
+  intro straight after the tags**, because the tags ask what kind of player somebody is in the
+  platform's words and the line is the same question in their own
+  ([ADR-0170](../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)
+  §5); **location before radius**, because a distance is a distance _from_ somewhere; and
+  **gender with the matching constraints rather than with the tags**, because a preference
+  over who you play with narrows who is put in front of you rather than describing you. **The
+  opt-in is always last** — it is the consent that ends the part and the step that carries
+  the finish. **The part is the unit, not the step** — back and forward move freely between
+  steps and never cross out of the part, the first step has no back control, and the last is
+  followed by the profile commit rather than by a ninth screen
   ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). _Avoid_: "wizard
   step", "page"; also "onboarding step" for a question in the questionnaire — that is a
   **position** in a run, and the two move by different rules.
+- **Intro shape refusal** — the two of `intro_not_admitted`'s three reasons that are facts
+  about the string itself, `too_long` and `multiline`, which the intro step reads off the
+  Profile draft and shuts _Next_ on before anything is sent — in the **same three-member
+  vocabulary** the wire's refusal carries, so one sentence table serves the refusal the step
+  pre-empts and the one the commit brings back. The third, `contains_contact`, is **the
+  server's pattern and never this app's**: a copy of it would be a staler one on every phone
+  the day it is tuned from a refusal, so it lands at the commit, six screens later, and the
+  step says the rule up front instead. Counted in **code points**, as the server's `len`
+  counts, and trimmed first, as the server trims. The [Intro](../CONTEXT.md) itself is the
+  root glossary's. _Avoid_: "validation" — the client validates nothing, it pre-empts two
+  refusals whose authority stays on the server; "content filter" — nothing here reads what
+  the line says.
 - **Profile draft** — every answer the second part has collected, held **on the client**
-  until the one commit that ends the part. In memory, never persisted, and never sent
+  until the one commit that ends the part. Three of its fields start **empty** because empty
+  is a real answer — no photo, a blank week, and the intro box with nothing in it — and the
+  intro is held **as typed**, untrimmed, so a round trip finds the box as it was left; what
+  the commit carries is the trimmed line, or no field at all. In memory, never persisted, and never sent
   anywhere before that commit — which is what makes moving between steps free and what makes
   leaving mid-part restart at step one. Its absence is a state: no draft means the player is
   not in the part, which is how a link naming a step in the middle is told from a player who
@@ -245,7 +263,7 @@ profile editor that later edits the same values.
   invariant; two would be two things to reset and a sync somebody forgets. _Avoid_: "photo
   state", "upload queue" — the queue is one promise chain inside the step's hook, and it is
   not what this holds.
-- **Profile options** — the **one read** the seven steps are drawn from: the Social tag
+- **Profile options** — the **one read** the eight steps are drawn from: the Social tag
   vocabulary with its grouping, how many tags a profile must hold, and the Search radius
   bounds. Reference data owned by TanStack Query, fetched once for the whole part, and the
   reason no client restates a vocabulary or a bound the commit re-validates against. Ids and

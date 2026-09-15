@@ -736,7 +736,9 @@ them is the chip's. `deckCardFacts` reads the card once for both registers and
 `deckCardPresentation` holds its words: the meta line's third clause is `RECENT_ACTIVITY`'s own
 words lower-cased and drawn only on the code (ADR-0107 §3 intact — never _active now_), the
 intro is `card.intro` inside the drawing's own quotation marks and the gap closes where there is
-none (ADR-0170; the field crosses now, mapped and omitted where absent), the tags are
+none (ADR-0170; the field crosses now, mapped and omitted where absent — and
+[#445](https://github.com/Raketa02/Raketa/issues/445) holds the shortlist and pool cards to
+never drawing it, drawn or spoken, whatever the card carries), the tags are
 `socialTagOverlap` re-ordered **shared first** by `domain/deckTags` so the volt one is never cut
 off, and the tiles are always four — _Balance_ from `predicted_balance.pct`, _Reliability_ the
 Player Score, _Overlap_ the shared-slot count, _Shared tags_ the count — with a dash where a

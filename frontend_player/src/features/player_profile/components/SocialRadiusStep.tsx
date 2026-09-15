@@ -1,5 +1,5 @@
 /**
- * Step five of onboarding's second part: **how far will you travel?**
+ * Step six of onboarding's second part: **how far will you travel?**
  *
  * It comes immediately after *where do you play*, so the question makes sense when it
  * arrives: a distance is a distance *from* somewhere, and the screen before this one is

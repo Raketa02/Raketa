@@ -13,6 +13,7 @@
  */
 
 export { SocialTagsStep } from './components/SocialTagsStep';
+export { SocialIntroStep } from './components/SocialIntroStep';
 export { SocialPhotosStep } from './components/SocialPhotosStep';
 export { SocialAvailabilityStep } from './components/SocialAvailabilityStep';
 export { SocialLocationStep } from './components/SocialLocationStep';

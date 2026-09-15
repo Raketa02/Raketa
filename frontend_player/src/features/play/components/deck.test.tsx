@@ -29,7 +29,7 @@ import { onlineManager } from '@tanstack/react-query';
 
 import { LATER, MATCHED_WORD, matchedAnnouncement } from '@/features/challenges/types';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
-import { RECORD_TITLE, fitRowLabel } from '@/features/player_record/types';
+import { RECORD_TITLE, fitRowLabel, recordCloseLabel } from '@/features/player_record/types';
 import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -1161,6 +1161,59 @@ describe('the record', () => {
     fireEvent(await screen.findByLabelText(MAREK_CARD), 'longPress');
 
     expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
+  });
+
+  /**
+   * **The intro, on the card and on the sheet** — quoted, where they wrote one, and the gap
+   * closed where they did not (ADR-0170 §4, [#445](https://github.com/Raketa02/Raketa/issues/445)).
+   * Both surfaces read the same field off two different routes: the card's is the search
+   * record's, the sheet's is the profile's.
+   */
+  it('draws the intro on the card and under the name on the record, and neither where there is none', async () => {
+    const LINE = 'Two games in. Moved here in September, still learning the city.';
+    transport.on('POST', DECK, () =>
+      json(
+        deal({
+          candidates: [
+            card('Marek Z.', MAREK, {
+              player_card: { ...card('Marek Z.', MAREK).player_card, intro: LINE },
+            }),
+            card('Ana K.', ANA),
+          ],
+        }),
+      ),
+    );
+    transport.on('GET', `${PLAYERS}/${MAREK}/record?sport=PADEL`, () =>
+      json({ ...mareksRecord(), intro: LINE }),
+    );
+    transport.on('GET', `${PLAYERS}/${ANA}/record?sport=PADEL`, () =>
+      json({ ...mareksRecord(), nickname: 'Ana K.' }),
+    );
+    await openDeck();
+
+    // On the card: inside the drawing's marks, and spoken as their own words.
+    expect(await screen.findByText(`“${LINE}”`)).toBeTruthy();
+    expect(marek().props.accessibilityLabel).toContain(`“${LINE}”`);
+
+    // On the sheet, under the name — the header is one element, spoken handle first and the
+    // line inside its marks straight after.
+    fireEvent(marek(), 'longPress');
+    await screen.findByText(RECORD_TITLE);
+    expect(await screen.findByLabelText(new RegExp(`^Marek Z\\.\\. “${LINE}”`))).toBeTruthy();
+    expect(screen.getByText(`“${LINE}”`)).toBeTruthy();
+
+    // And Ana, who wrote none: the card closes the gap rather than drawing empty marks, and
+    // so does her sheet — the identity line sits straight under the handle.
+    fireEvent.press(screen.getByLabelText(recordCloseLabel(false)));
+    fireEvent.press(screen.getByLabelText('Not today, Marek Z.'));
+    await screen.findByLabelText(ANA_CARD);
+    expect(screen.getByLabelText(ANA_CARD).props.accessibilityLabel).not.toContain('“');
+
+    fireEvent(screen.getByLabelText(ANA_CARD), 'longPress');
+    await screen.findByText(RECORD_TITLE);
+    const header = await screen.findByLabelText(/^Ana K\.\. /);
+    expect(header.props.accessibilityLabel).not.toContain('“');
+    expect(screen.queryByText(/“/)).toBeNull();
   });
 
   /** The Fit breakdown is one row further in: the sheet's fit row opens it, and never the card. */

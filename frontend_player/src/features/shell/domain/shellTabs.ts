@@ -87,7 +87,7 @@ const TAB_FOR_SEGMENT: Readonly<Partial<Record<string, TabBarKey>>> = {
  *
  * A path the shell does not own answers `now`, because the shell's own root is the only
  * honest answer to a question it should never be asked: everything outside `(tabs)` —
- * sign-in, the questionnaire, the seven profile steps — draws no bar at all.
+ * sign-in, the questionnaire, the eight profile steps — draws no bar at all.
  */
 export function tabForPathname(pathname: string): TabBarKey {
   const [, segment = ''] = pathname.split('/');

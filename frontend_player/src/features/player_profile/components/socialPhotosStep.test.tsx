@@ -101,7 +101,10 @@ async function reachThePhotosStep() {
   fireEvent.press(await screen.findByLabelText('Plays to win'));
   fireEvent.press(screen.getByLabelText('Here to improve'));
   fireEvent.press(await screen.findByLabelText('Continue'));
+  await waitFor(() => expect(screen).toHavePathname('/intro'));
 
+  // Nothing written: the intro is optional, and *Next* on an empty box carries none.
+  fireEvent.press(screen.getByLabelText('Next'));
   await waitFor(() => expect(screen).toHavePathname('/photos'));
   await screen.findByText('Your court photos');
 }

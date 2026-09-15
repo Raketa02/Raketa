@@ -1,7 +1,7 @@
 /**
  * The end of the part: **every answer at once, or nothing at all.**
  *
- * The draft is six answers a player builds up over six screens, and three of its fields are
+ * The draft is the answers a player builds up over eight screens, and four of its fields are
  * legitimately absent while they are doing it. A commit is the opposite kind of value —
  * it is what `POST /players/me/profile` carries, and every one of those three has to be
  * there. `ProfileCommit` is that value, and `readyToCommit` is the only way to build one.
@@ -11,11 +11,15 @@
  * mapper simply cannot hold a missing answer — nothing downstream has to remember to check,
  * and no future caller can assemble a body out of a half-answered draft.
  *
- * ## Three are the fields the draft spells `| undefined`, and the fourth is the week
+ * ## Four are the fields the draft spells `| undefined`, and the fifth is the week
  *
- * **Photos are the only genuinely empty answer left.** A player may hold none, and reading
- * an empty list as *unanswered* would block them on a question they have already answered
- * (`ProfileDraft` — *empty and absent are different*). The week used to be read the same
+ * **Photos and the intro are the genuinely empty answers.** A player may hold no photograph
+ * and may write no line, and reading an empty list or an empty box as *unanswered* would
+ * block them on a question they have already answered (`ProfileDraft` — *empty and absent
+ * are different*). The intro goes one step further than the photos: an empty box is not
+ * sent as an empty string but **left out of the commit**, because the wire reads the two as
+ * one answer and the app sends the one that cannot be mistaken for a line
+ * (`introToSend`). The week used to be read the same
  * way and no longer is: ADR-0102 gave the grid a floor of one, because silence about when
  * somebody usually plays is never scored — so an empty week is a question still to be
  * answered rather than an answer of *no preference*. It is the one `MissingAnswer` that is
@@ -56,6 +60,7 @@
 import type { AppError } from '@/shared/errors';
 
 import { weekStanding } from './availabilityWeek';
+import { introToSend } from './intro';
 import { uploadsInFlight, type ProfilePhoto } from './photoCollection';
 import type { Gender, GenderPreference } from './gender';
 import type { AvailabilitySlot, LocationArea, ProfileDraft, ProposalsOptIn } from './ProfileDraft';
@@ -65,11 +70,17 @@ import type { SocialStep } from './socialSteps';
 /**
  * Every answer the second part collects, with nothing left to be absent.
  *
- * The same six fields as `ProfileDraft` and three of them narrowed — which is the whole
+ * The same fields as `ProfileDraft` and four of them narrowed — which is the whole
  * difference between *what a player is part-way through saying* and *what is sent*.
  */
 export interface ProfileCommit {
   readonly socialTagIds: readonly SocialTagId[];
+  /**
+   * The line they wrote, trimmed — **present only where there is one.** The one optional
+   * field here, and optional in the other direction from the draft's: there it is a box
+   * that may be empty, here it is a line or no field at all.
+   */
+  readonly intro?: string;
   readonly photoIds: readonly string[];
   readonly availability: readonly AvailabilitySlot[];
   readonly location: LocationArea;
@@ -148,13 +159,17 @@ export function readyToCommit(draft: ProfileDraft | undefined): CommitReadiness 
     return { kind: 'incomplete', missing };
   }
 
+  const intro = introToSend(draft.intro);
+
   return {
     kind: 'ready',
     commit: {
-      // Named one by one rather than spread: a seventh answer added to the draft should
+      // Named one by one rather than spread: a ninth answer added to the draft should
       // have to be carried here deliberately, not arrive at the wire because a spread
       // picked it up.
       socialTagIds: draft.socialTagIds,
+      // Left out rather than carried empty — see the module note.
+      ...(intro === undefined ? {} : { intro }),
       photoIds: draft.photoIds,
       availability: draft.availability,
       location,

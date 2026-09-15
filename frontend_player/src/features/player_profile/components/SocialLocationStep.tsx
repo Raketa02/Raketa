@@ -1,5 +1,5 @@
 /**
- * Step four of onboarding's second part: **where do you play?**
+ * Step five of onboarding's second part: **where do you play?**
  *
  * It sits immediately before the radius on purpose. A permission prompt is the
  * highest-friction moment in the whole flow, and asking it here means the *next* screen —
@@ -18,7 +18,7 @@
  * Location is what search and matchmaking are worked out from — a player without an area
  * cannot find anyone and cannot be found — so this step insists, and says exactly what
  * declining costs, in the note *and* on the control that leaves. But it still leaves: being
- * stuck on step four of six behind a permission the player can change at any time is not a
+ * stuck on step five of eight behind a permission the player can change at any time is not a
  * setup flow, and the area is editable from the profile afterwards.
  *
  * ## Nothing here decides anything

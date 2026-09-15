@@ -79,7 +79,10 @@ async function reachTheRadiusStep(served?: Wire['PlayerProfileOptionsResponse'])
   fireEvent.press(await screen.findByLabelText('Plays to win'));
   fireEvent.press(screen.getByLabelText('Here to improve'));
   fireEvent.press(await screen.findByLabelText('Continue'));
+  await waitFor(() => expect(screen).toHavePathname('/intro'));
 
+  // Nothing written: the intro is optional, and *Next* on an empty box carries none.
+  fireEvent.press(screen.getByLabelText('Next'));
   await waitFor(() => expect(screen).toHavePathname('/photos'));
   fireEvent.press(screen.getByLabelText('Continue'));
 

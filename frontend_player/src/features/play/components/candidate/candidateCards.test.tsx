@@ -1085,6 +1085,39 @@ describe('what floats', () => {
   });
 });
 
+/**
+ * **The intro is the deck card's and the record sheet's, and never Find a game's**
+ * ([ADR-0170](../../../../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)
+ * §4). Those two surfaces show one person; these two cards are about the game, and the line
+ * is about the person. The field crosses on every card the same way, so the only thing that
+ * keeps it off the shortlist and the pool is these two components declining to draw it — which
+ * is what is held here, drawn and spoken.
+ */
+describe('the intro', () => {
+  const LINE = 'Will travel for a hard game.';
+  const withIntro = (): Partial<Candidate> => ({ card: { ...candidate().card, intro: LINE } });
+
+  it('is not drawn or spoken on the shortlist card, whatever the card carries', () => {
+    drawCompetitive(withIntro());
+
+    expect(screen.queryByText(/Will travel/)).toBeNull();
+    expect(screen.queryByText(/“/)).toBeNull();
+    for (const node of screen.getAllByLabelText(/Marek/)) {
+      expect(String(node.props.accessibilityLabel)).not.toContain(LINE);
+    }
+  });
+
+  it('is not drawn or spoken on the pool card either', () => {
+    drawSocial(withIntro());
+
+    expect(screen.queryByText(/Will travel/)).toBeNull();
+    expect(screen.queryByText(/“/)).toBeNull();
+    for (const node of screen.getAllByLabelText(/Marek/)) {
+      expect(String(node.props.accessibilityLabel)).not.toContain(LINE);
+    }
+  });
+});
+
 describe('what each control announces', () => {
   it('speaks the card body in §20.3’s order, which is not the order it is drawn', () => {
     drawSocial();

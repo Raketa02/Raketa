@@ -38,6 +38,7 @@ import SignInRoute from '@/app/(auth)/sign-in';
 import AvailabilityRoute from '@/app/(onboarding)/availability';
 import DataRoute from '@/app/(onboarding)/data';
 import DoneRoute from '@/app/(onboarding)/done';
+import IntroRoute from '@/app/(onboarding)/intro';
 import LocationRoute from '@/app/(onboarding)/location';
 import OnboardingLayout from '@/app/(onboarding)/_layout';
 import OptInRoute from '@/app/(onboarding)/opt-in';
@@ -131,6 +132,7 @@ export const ONBOARDING_ROUTES = {
   // The second part, in order. They are routes rather than one route with a param so the
   // sequence is visible in the file tree, the way the authorization boundary is.
   '(onboarding)/tags': TagsRoute,
+  '(onboarding)/intro': IntroRoute,
   '(onboarding)/photos': PhotosRoute,
   '(onboarding)/availability': AvailabilityRoute,
   '(onboarding)/location': LocationRoute,

@@ -1,5 +1,5 @@
 /**
- * Step three of onboarding's second part: **when do you usually play?**
+ * Step four of onboarding's second part: **when do you usually play?**
  *
  * Seven days by three parts of the day, and that is the finest precision this step may
  * produce. There is no clock time, no hour picker and no date picker on this screen, and
@@ -38,7 +38,7 @@
  *
  * ## The week lives in the draft
  *
- * Every press writes through to the part's client-held draft, so walking to step four and
+ * Every press writes through to the part's client-held draft, so walking to step five and
  * back finds the same cells ticked. Nothing is sent anywhere: the draft is in memory until
  * the one commit at the end of the part
  * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).

@@ -52,10 +52,10 @@ nothing. `commitStanding` and `mayFinish` own when the finish opens — a rule, 
 `disabled={…}` expression — and `readyToCommit` under them is what makes a partial commit
 unrepresentable. Three things hold the finish shut. **No Location area**: location is a core
 requirement for discovery, `CommitPlayerProfileRequest` requires it, and the last step asks
-once more with the way back one press away rather than trapping a player on step four behind
+once more with the way back one press away rather than trapping a player on step five behind
 an OS prompt. **A blank availability grid**: the week has a floor of one cell since
 ADR-0102, so silence about when somebody plays is asked for rather than scored as a zero —
-step three already refuses to continue on one, and this is the same rule read at the end.
+step four already refuses to continue on one, and this is the same rule read at the end.
 **A photo still going up**: uploads outlive the step that started them, and the
 body names photos by the ids the server gave back, so committing mid-upload would silently
 drop a picture the player watched arrive. That one asks for nothing and opens itself.
@@ -64,3 +64,52 @@ A failed commit whose `code` names an answer — `availability_grid_empty` today
 that answer rather than as _try again_, with the control back to the step that takes it: the
 commit re-validates every rule a picker enforced, and re-sending the identical body would
 fail identically.
+
+**The intro — one line, a visible Skip, and the fence said before it is met**
+([#445](https://github.com/Raketa02/Raketa/issues/445),
+[ADR-0170](../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)).
+`SOCIAL_STEPS` gained `intro` between `tags` and `photos` — _you've picked your tags; now say it
+in your own words_ — so the part is eight steps and the opt-in is still last. The step is one
+`TextField` that grows to a few lines, a counter to 100 in the number role — **the design
+system's first**, admitted by a §6.13 amendment (Part 16, 2026-09-15) on one condition: a
+counter is drawn only on a field whose cap is a refusal rather than a `maxLength` — a line of
+small print, and _Next_ over _Skip_. **The cap is drawn as a refusal rather than as a `maxLength`**,
+which is `WhereField`'s argument carried over: a `maxLength` swallows the tail of a paste, and a
+shortened line is one the person who typed it believes they wrote whole, in front of every
+stranger who reads it. So the box takes everything, the counter keeps counting past a hundred,
+the refusal's own sentence appears under the box and _Next_ is shut until it is not — with the
+sentence as its hint, because a blocked control names what is wrong. **Two of the three refusals
+are shape and the client sees them coming**: `domain/intro` reads `too_long` and `multiline` off
+the draft in the same three-member vocabulary the wire's `intro_not_admitted` carries, counting
+in **code points** as the server's `len` does so a hundred emoji are a hundred and not two
+hundred, and trimming first so a return after the last word is not a second line. **The counter
+counts the same trimmed line**, not the raw box, so it can never read `104 / 100` beside an open
+_Next_ — the spaces around a line are not part of it, and a counter that counted them would be
+arguing with the rule it is there to show. The return key dismisses the keyboard rather than
+breaking the line (`submitBehavior`), because the ordinary way of producing the second refusal
+should not produce it. And because this is the first step of the part that types,
+`SocialStepLayout` now wraps the scroller and the pinned action bar in `KeyboardAvoidingView`
+under `KEYBOARD_AVOIDANCE` — the value the sign-in, sign-up and conversation screens already
+use — so _Next_, _Skip_, the counter and the refusal are not under the keyboard on iOS while
+the line is being written; on the seven steps with no keyboard it does nothing. `contains_contact` is the
+server's pattern and is deliberately not restated on the client — a copy would be a staler one
+on every phone the day it is tuned from a refusal — so it lands at the commit, six screens
+later, and that is why **the rule is said up front**, under the box, in the refusal's own words:
+the opposite of the photos step's silence about its check, for the opposite reason. The check on
+a photo is wrong about some share of what it flags; the rule on a line is never wrong about a
+phone number. **Skip is visible whatever is in the box, and it clears**: _skip_ means _no
+intro_, a skip that sent what happened to be typed would be the one thing the word does not
+say, and walking back after one finds the box empty. _Next_ on an empty box carries the same
+nothing. The draft holds the line **as typed**, untrimmed, so a round trip finds the box as it
+was left; the commit carries `introToSend`'s reading — trimmed, or **no field at all**, never
+`''` or `null`, because the wire reads all three as one answer and the body sends the one that
+cannot be read as a line. `stepTheCommitRefused` replaced `answerTheCommitRefused`: a refusal
+that names a step is one shape for two kinds — an answer the server found missing, and a line
+it would not admit — and the intro's is the one this screen will actually meet. It is drawn as
+the reason's sentence in the failure note, never _try again_, with _Change your intro_ under it
+back to `/intro` and the line still in the box; a reason this build has no words for keeps the
+way back and says `OUT_OF_DATE_GAP`. Nothing is editable after the commit — the intro follows
+the tags and the photo, and becomes editable the day all three do (ADR-0170 §5). **Not seen on a
+device**: whether four lines is the right ceiling for the box, whether the counter sits right
+under it, and whether the action bar rises cleanly over the iOS keyboard, are the author's to
+check.
