@@ -22,6 +22,7 @@
  */
 
 import { act, render, screen } from '@testing-library/react-native';
+import { useEffect } from 'react';
 import { Text, type ViewStyle } from 'react-native';
 
 import { HapticsProvider } from '@/shared/lib/platform';
@@ -30,6 +31,7 @@ import { fakeHaptics } from '@/test-support/platform';
 import { dragTo, release, swipe } from '@/test-support/swipe';
 
 import { DeckStage, type DeckExit, type DragVerdict } from './DeckStage';
+import { STACK } from './deckStageGeometry';
 
 /** How long a card takes to leave. Longer than the component's own 240, so a flight completes. */
 const PAST_THE_FLIGHT = 400;
@@ -41,7 +43,23 @@ interface StageOver {
   readonly onLeft?: jest.Mock;
   readonly onAnswer?: jest.Mock<DragVerdict, [DeckExit]>;
   readonly collapsed?: boolean;
-  readonly behind?: readonly string[];
+  /** The people on the stage, the top card first. */
+  readonly cards?: readonly string[];
+}
+
+/** Every mount of a face, in order — so a card promoted in place can be told from one redrawn. */
+let mounted: string[] = [];
+
+/** A card: the one element on the top, and hidden behind — the stage decides which. */
+function Face({ name }: { readonly name: string }) {
+  useEffect(() => {
+    mounted.push(name);
+  }, [name]);
+  return (
+    <Text accessibilityLabel={name} accessibilityRole="button">
+      {name}
+    </Text>
+  );
 }
 
 function drawStage({
@@ -49,7 +67,7 @@ function drawStage({
   onLeft = jest.fn(),
   onAnswer = jest.fn<DragVerdict, [DeckExit]>(() => 'taken'),
   collapsed = false,
-  behind = [],
+  cards = ['Marek Z.'],
 }: StageOver = {}) {
   const haptics = fakeHaptics();
   const tree = (over: Partial<StageOver>) => (
@@ -59,14 +77,8 @@ function drawStage({
           leaving={'leaving' in over ? over.leaving : leaving}
           onLeft={onLeft}
           onAnswer={onAnswer}
-          behind={(over.behind ?? behind).map((name) => (
-            <Text key={name}>{name}</Text>
-          ))}
-        >
-          <Text accessibilityLabel="Marek Z." accessibilityRole="button">
-            Marek Z.
-          </Text>
-        </DeckStage>
+          cards={(over.cards ?? cards).map((name) => ({ key: name, card: <Face name={name} /> }))}
+        />
       </HapticsProvider>
     </ReducedMotionProvider>
   );
@@ -79,20 +91,39 @@ function drawStage({
   };
 }
 
-const card = () => screen.getByLabelText('Marek Z.');
+const card = (name = 'Marek Z.') => screen.getByLabelText(name);
+
+/** The stamps and the cards behind are hidden from assistive technology on purpose; a query about the drawing says so. */
+const HIDDEN_TOO = { includeHiddenElements: true } as const;
 
 /** The stage's own animated view is the responder's — the nearest `View` above the card. */
-function topCard(): { readonly props: { readonly style: unknown } } {
-  let node = card().parent;
+function topCard(name?: string): { readonly props: { readonly style: unknown } } {
+  let node = card(name).parent;
   while (node !== null && node.props.onMoveShouldSetResponder === undefined) node = node.parent;
   if (node === null) throw new Error('no stage above the card');
   return node;
 }
 
+function styleOf(view: { readonly props: { readonly style: unknown } }): ViewStyle {
+  const styles = [view.props.style].flat(3) as (ViewStyle | undefined)[];
+  return Object.assign({}, ...styles.filter((entry) => entry !== undefined)) as ViewStyle;
+}
+
 function transformOf(): readonly Record<string, unknown>[] {
-  const styles = [topCard().props.style].flat(3) as (ViewStyle | undefined)[];
-  const style = styles.find((entry) => entry?.transform !== undefined);
-  return (style?.transform ?? []) as readonly Record<string, unknown>[];
+  return (styleOf(topCard()).transform ?? []) as readonly Record<string, unknown>[];
+}
+
+/**
+ * Where a card stands in the stack — the nearest view above the face carrying a transform,
+ * which is the stage's own wrapper whether the card is the top one or behind it.
+ */
+function standingOf(name: string): { readonly translateY: number; readonly scale: number } {
+  let node = screen.getByLabelText(name, HIDDEN_TOO).parent;
+  while (node !== null && styleOf(node).transform === undefined) node = node.parent;
+  if (node === null) throw new Error(`no stage above ${name}`);
+  const transform = styleOf(node).transform as readonly Record<string, unknown>[];
+  const read = (key: string) => Number(transform.find((entry) => key in entry)?.[key]);
+  return { translateY: read('translateY'), scale: read('scale') };
 }
 
 /** An `Animated.Value` renders as itself; what matters is the number it currently holds. */
@@ -101,9 +132,6 @@ const valueOf = (transform: Record<string, unknown> | undefined, key: string): u
 
 const translateX = () => Number(valueOf(transformOf()[0], 'translateX'));
 
-/** The stamps and the cards behind are hidden from assistive technology on purpose; a query about the drawing says so. */
-const HIDDEN_TOO = { includeHiddenElements: true } as const;
-
 function stampOpacity(said: DeckExit): number {
   const styles = [screen.getByTestId(`deck-stamp-${said}`, HIDDEN_TOO).props.style].flat(3) as (
     { opacity?: unknown } | undefined
@@ -111,7 +139,10 @@ function stampOpacity(said: DeckExit): number {
   return Number(styles.find((entry) => entry?.opacity !== undefined)?.opacity);
 }
 
-beforeEach(() => jest.useFakeTimers());
+beforeEach(() => {
+  jest.useFakeTimers();
+  mounted = [];
+});
 afterEach(() => jest.useRealTimers());
 
 describe('a card leaving on a button', () => {
@@ -169,6 +200,97 @@ describe('a card that comes back', () => {
 
     expect(translateX()).toBe(0);
     expect(valueOf(transformOf()[3], 'rotate')).toBe('0deg');
+  });
+});
+
+describe('a card that has gone', () => {
+  /**
+   * The screen hears `onLeft` and clears `leaving` on the spot, and advances the deck a tick
+   * later — the held deal notifies on its own schedule. Between the two the same stage is drawn
+   * with nothing leaving, and a card put back straight there is the answered card flashing at
+   * the centre of the stage for a frame before the next one replaces it. Straight is for a card
+   * that **came back**; a card that has gone stays where it went until it is taken away.
+   */
+  it('stays off the stage when the screen clears `leaving`, rather than snapping back', () => {
+    const { onLeft, rerender } = drawStage({ leaving: 'no' });
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    expect(onLeft).toHaveBeenCalledTimes(1);
+    const flown = translateX();
+    expect(flown).toBeLessThan(0);
+
+    rerender({ leaving: undefined });
+
+    expect(translateX()).toBe(flown);
+  });
+});
+
+describe('the card behind becoming the top card', () => {
+  /**
+   * The card under the one that left was on the stage the whole time, and it has to go on
+   * being the same drawn thing as it comes forward: a card redrawn from nothing is a photograph
+   * decoded again and faded in again, over the person who was plainly there a frame ago.
+   */
+  it('is the same element, promoted in place, and not one drawn again', () => {
+    const { rerender } = drawStage({ cards: ['Marek Z.', 'Ana K.'], leaving: 'yes' });
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+
+    rerender({ leaving: undefined, cards: ['Ana K.'] });
+
+    // Deepest first is the paint order, so Ana mounted before Marek — and only the once.
+    expect(mounted).toEqual(['Ana K.', 'Marek Z.']);
+    expect(screen.getByLabelText('Ana K.')).toBeTruthy();
+    expect(screen.queryByLabelText('Marek Z.', HIDDEN_TOO)).toBeNull();
+  });
+
+  /** It was visible behind; it stays visible. Nothing to fade in, because nothing went away. */
+  it('is drawn in full from its first frame, never faded in', () => {
+    const { rerender } = drawStage({ cards: ['Marek Z.', 'Ana K.'], leaving: 'yes' });
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+
+    rerender({ leaving: undefined, cards: ['Ana K.'] });
+
+    expect(styleOf(topCard('Ana K.')).opacity ?? 1).toBe(1);
+  });
+
+  /**
+   * The same object coming forward: on the frame it becomes the top card it stands exactly
+   * where it stood behind — one step down, one shrink smaller — and the rise brings it to rest.
+   * A top card that started from rest would jump a step up and back down as it took over.
+   */
+  it('comes forward from the place it stood, and comes to rest', () => {
+    const { rerender } = drawStage({ cards: ['Marek Z.', 'Ana K.'], leaving: 'yes' });
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    expect(standingOf('Ana K.')).toEqual({ translateY: STACK.step, scale: 1 - STACK.shrink });
+
+    rerender({ leaving: undefined, cards: ['Ana K.'] });
+    expect(standingOf('Ana K.')).toEqual({ translateY: STACK.step, scale: 1 - STACK.shrink });
+
+    act(() => jest.advanceTimersByTime(theme.motion.rise + 50));
+    expect(standingOf('Ana K.')).toEqual({ translateY: 0, scale: 1 });
+  });
+
+  /** The whole stack advances as one motion: the card behind the new top card comes forward too. */
+  it('brings the cards behind it forward on the same beat', () => {
+    const { rerender } = drawStage({ cards: ['Marek Z.', 'Ana K.', 'Ola W.'], leaving: 'yes' });
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    expect(standingOf('Ola W.').translateY).toBe(2 * STACK.step);
+
+    rerender({ leaving: undefined, cards: ['Ana K.', 'Ola W.'] });
+    expect(standingOf('Ola W.').translateY).toBe(2 * STACK.step);
+
+    act(() => jest.advanceTimersByTime(theme.motion.rise + 50));
+    expect(standingOf('Ola W.')).toEqual({ translateY: STACK.step, scale: 1 - STACK.shrink });
+  });
+
+  /** The new top card takes the drag: the finger lands on the person now under it. */
+  it('takes the drag once it is the top card', () => {
+    const { onAnswer, rerender } = drawStage({ cards: ['Marek Z.', 'Ana K.'], leaving: 'yes' });
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+
+    rerender({ leaving: undefined, cards: ['Ana K.'] });
+    swipe(card('Ana K.'), -commit);
+
+    expect(onAnswer).toHaveBeenCalledWith('no');
   });
 });
 
@@ -293,7 +415,7 @@ describe('the haptic', () => {
 
 describe('the cards behind', () => {
   it('draws the real cards it is handed, behind the top one', () => {
-    drawStage({ behind: ['Ana K.', 'Ola W.'] });
+    drawStage({ cards: ['Marek Z.', 'Ana K.', 'Ola W.'] });
 
     expect(screen.getByText('Ana K.', HIDDEN_TOO)).toBeTruthy();
     expect(screen.getByText('Ola W.', HIDDEN_TOO)).toBeTruthy();
@@ -301,7 +423,7 @@ describe('the cards behind', () => {
 
   /** The top card is the one element; a listener does not hear the queue. */
   it('hides them from assistive technology', () => {
-    drawStage({ behind: ['Ana K.'] });
+    drawStage({ cards: ['Marek Z.', 'Ana K.'] });
 
     expect(screen.queryByText('Ana K.')).toBeNull();
     let behind = screen.getByText('Ana K.', HIDDEN_TOO).parent;

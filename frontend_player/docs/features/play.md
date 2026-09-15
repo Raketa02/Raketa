@@ -791,6 +791,21 @@ gesture dependency_ became _the three buttons remain and answer_. **i and the lo
 area, the tag overlap and `pairing: { fit, onExplain }` — so _why this Fit_ lives behind the
 sheet's fit row; the direct long-press → `WhyFitSheet` is gone.
 
+**A release reveals the card under it, and nothing blinks.** The stage is never remounted per
+card: every card on it is one keyed element for as long as it is on the stage, with a `drag` and
+an `arrival` of its own, and when the top card has gone the card behind becomes the top card
+_as the element it already was_ — its photograph is not decoded again, nothing fades in over it,
+and on the frame it takes over it stands exactly where it stood behind, from where the arrival
+(`motion.rise`, a move and never a fade) brings it and the whole stack forward as one motion
+(`stackLift`, `stackScale`). `DeckCard` holds its side: one `Pressable` in front and behind,
+inert and no element behind, so taking on the long press does not throw the drawing away. And a
+card that has **gone** stays where it went until the deal takes it away — the screen clears
+`leaving` the moment it hears `onLeft` and advances the deck a tick later, and the _comes back
+straight_ reset is for a card a refusal returned, not for one on its way out. Each of the three
+was a blink between the release and the card under it: the answered card flashing back at the
+centre, the next card starting from `opacity: 0` over the third, and its photograph mounting
+again.
+
 **The stamp and the card leaving are the feedback, so the pass toast and the one-sided yes toast
 retire**; `passedToast` and `interestToast` survive only as the spoken result of every answer —
 `passedAnnouncement` on the press, `interestAnnouncement` on the reply — through

@@ -359,6 +359,27 @@ describe('the one element', () => {
     expect(screen.queryByRole('button')).toBeNull();
     expect(screen.getByText('Filip N.')).toBeTruthy();
   });
+
+  /**
+   * The stage promotes the card behind in place when the top one has gone, and the card has to
+   * hold its side of that: the same tree with and without the long press, so that taking on the
+   * action does not throw the drawing away — a photograph decoded again over the person who was
+   * plainly there is the blink the release is meant not to have.
+   */
+  it('takes on the long press as the same element, and nothing in it is drawn again', () => {
+    const behind = <DeckCard candidate={candidate()} envelope={ENVELOPE} sportName="Padel" />;
+    const view = render(behind);
+    const drawn = screen.getByText('Filip N.');
+
+    view.rerender(
+      <DeckCard candidate={candidate()} envelope={ENVELOPE} sportName="Padel" onLongPress={noop} />,
+    );
+
+    // Identity, not equality: the question is whether it is the same node, and a node that
+    // was thrown away cannot be printed by the matcher either.
+    expect(Object.is(screen.getByText('Filip N.'), drawn)).toBe(true);
+    expect(screen.getByRole('button')).toBeTruthy();
+  });
 });
 
 describe('the three buttons under the stage', () => {

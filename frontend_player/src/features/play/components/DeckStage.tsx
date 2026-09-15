@@ -56,6 +56,27 @@
  * from assistive technology, because the top card is the one element and a listener does not
  * hear the queue.
  *
+ * ## The card behind is promoted in place, and nothing blinks
+ *
+ * **Every card on the stage is one element for as long as it is on the stage**, keyed by the
+ * caller, and the stage is never remounted per card. When the top card has gone the caller
+ * hands the stage the same list one shorter, and the card that was behind becomes the top card
+ * *as the element it already was*: its photograph is not decoded again, its wrapper is not
+ * faded in again, and on the frame it takes over it stands exactly where it stood behind — one
+ * step down, one shrink smaller — from where the arrival brings it to rest. So each card owns
+ * its own `drag` and `arrival`, created at nought the first time the card is drawn and dropped
+ * when it leaves the list: the card that flew stays where it flew until the caller takes it
+ * away, and the card coming forward starts from rest, and neither has to wait for the other.
+ * The cards behind draw off the **top card's** arrival too, one step further back at nought,
+ * so a card leaving is followed by the whole stack coming forward as one motion
+ * (`deckStageGeometry`'s `stackLift` and `stackScale`).
+ *
+ * This is what the three things a remount did in the same frame were: the answered card put
+ * back straight by the *comes back straight* rule, because the screen clears `leaving` a tick
+ * before the deck advances; the next card starting from `opacity: 0` and fading in over the
+ * third card; and its photograph mounting again. Each read as a blink between the release and
+ * the card under it.
+ *
  * ## The durations live here rather than in the theme
  *
  * `theme.motion` is *"one entrance, one sheet, one popover, one fade"* and holds the shared
@@ -63,8 +84,9 @@
  * is the court's own and belongs beside the animation it drives"*. The flight is the same case
  * — one surface, one pair of animations, numbers that mean nothing anywhere else — and the
  * settle borrows `motion.settle`, because a card coming to rest under a lifted finger is the
- * swipe row's own beat. The arrival borrows `motion.rise`: a card appearing is the entrance
- * every other surface already uses, and here it rises from the place the card behind it stood.
+ * swipe row's own beat. The arrival borrows `motion.rise` for its length only: it is a **move
+ * and never a fade**, because the card arriving was on the stage already, behind the one that
+ * left, and a fade would take away the very card the release is meant to reveal.
  */
 
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -78,6 +100,8 @@ import {
   claimsTheDrag,
   committed,
   crossedThreshold,
+  stackLift,
+  stackScale,
   stampOpacity,
   tilt,
   wayOf,
@@ -100,13 +124,6 @@ const LEAVING_MS = 240;
  * the card lifts a little with it; all of it would make a horizontal gesture wander.
  */
 const LIFT_SHARE = 0.3;
-
-/**
- * The stack behind the top card: each card behind sits one `step` lower and `shrink` smaller
- * than the one in front, and the top card **arrives** from the first step — the place the card
- * behind it stood — so a card advancing reads as the same object coming forward.
- */
-const STACK = { step: theme.space.sm, shrink: 0.05 } as const;
 
 /**
  * The stamps' own drawing: a 3pt outline, a 12° tilt away from the card's centre, inset a large
@@ -140,29 +157,68 @@ export interface DeckStageProps {
    * animation's courtesy.
    */
   readonly onLeft: () => void;
-  /** The top card. */
-  readonly children: ReactNode;
-  /** The cards behind, nearest first — real cards or nothing, never placeholders. */
-  readonly behind?: readonly ReactNode[];
+  /**
+   * The cards on the stage, the top card first and then the cards behind, nearest first — real
+   * cards or nothing, never placeholders. **Keyed by the caller**, by the person on the deal
+   * they came off: the key is what lets a card that was behind become the top card as the same
+   * element, and what gives each card its own motion.
+   */
+  readonly cards: readonly StagedCard[];
 }
 
-export function DeckStage({ leaving, onAnswer, onLeft, children, behind = [] }: DeckStageProps) {
+/** One card on the stage, and what tells it from every other across renders. */
+export interface StagedCard {
+  readonly key: string;
+  readonly card: ReactNode;
+}
+
+/**
+ * One card's own motion — where the finger or the flight has put it, how far it has arrived,
+ * and whether it has **gone**: a card that has gone stays where it went when the screen clears
+ * `leaving`, where a card that came back is put straight.
+ */
+interface Motion {
+  readonly drag: Animated.ValueXY;
+  readonly arrival: Animated.Value;
+  gone: boolean;
+}
+
+export function DeckStage({ leaving, onAnswer, onLeft, cards }: DeckStageProps) {
   const collapsed = useCollapsedPresentation();
   const haptics = useHaptics();
-  // One value per phase, and each drives every transform in it: a card is one object moving,
-  // where four values would be four things able to be halfway through different animations.
-  // `drag` is where the finger has put the card, and the flight continues from there.
-  const drag = useRef(new Animated.ValueXY()).current;
-  const arrival = useRef(new Animated.Value(0)).current;
+  /**
+   * Each card's motion, by its key, for as long as it is on the stage. One value per phase, and
+   * each drives every transform in it: a card is one object moving, where four values would be
+   * four things able to be halfway through different animations. `drag` is where the finger has
+   * put the card, and the flight continues from there. Under collapsed presentation a card has
+   * arrived the moment it is drawn, so the cards behind stand in their places from the start.
+   */
+  const motions = useRef(new Map<string, Motion>()).current;
+  const motionOf = (key: string): Motion => {
+    const held = motions.get(key);
+    if (held !== undefined) return held;
+    const made: Motion = {
+      drag: new Animated.ValueXY(),
+      arrival: new Animated.Value(collapsed ? 1 : 0),
+      gone: false,
+    };
+    motions.set(key, made);
+    return made;
+  };
+  const top = cards[0];
+  const motion = top === undefined ? undefined : motionOf(top.key);
+
   // Refs rather than dependencies: the pan handlers are created once and must not close over a
   // render's values, and the handlers close over the card that was answered — re-running the
   // flight because a parent re-rendered would restart a card mid-exit.
-  const now = useRef({ leaving, collapsed, onAnswer, onLeft, haptics });
-  now.current = { leaving, collapsed, onAnswer, onLeft, haptics };
+  const now = useRef({ leaving, collapsed, onAnswer, onLeft, haptics, motion });
+  now.current = { leaving, collapsed, onAnswer, onLeft, haptics, motion };
   /** Whether the motor has ticked in this gesture — once per gesture, on the first crossing. */
   const ticked = useRef(false);
 
   const settle = useRef(() => {
+    const { drag } = now.current.motion ?? {};
+    if (drag === undefined) return;
     if (now.current.collapsed) {
       drag.setValue({ x: 0, y: 0 });
       return;
@@ -185,7 +241,7 @@ export function DeckStage({ leaving, onAnswer, onLeft, children, behind = [] }: 
         ticked.current = false;
       },
       onPanResponderMove: (_event, gesture) => {
-        drag.setValue({ x: gesture.dx, y: gesture.dy * LIFT_SHARE });
+        now.current.motion?.drag.setValue({ x: gesture.dx, y: gesture.dy * LIFT_SHARE });
         if (!ticked.current && crossedThreshold(gesture.dx)) {
           ticked.current = true;
           if (!now.current.collapsed) now.current.haptics.light();
@@ -201,101 +257,118 @@ export function DeckStage({ leaving, onAnswer, onLeft, children, behind = [] }: 
     }),
   ).current;
 
+  /** The cards that have left the list take their motion with them. */
+  const keys = cards.map((card) => card.key).join('\n');
   useEffect(() => {
+    const staged = new Set(keys.split('\n'));
+    for (const key of [...motions.keys()]) if (!staged.has(key)) motions.delete(key);
+  }, [keys, motions]);
+
+  // The arrival: once per top card rather than once per render, from where it stood behind.
+  useEffect(() => {
+    if (motion === undefined) return;
     if (collapsed) {
-      arrival.setValue(1);
+      motion.arrival.setValue(1);
       return;
     }
 
-    const rise = Animated.timing(arrival, {
+    const rise = Animated.timing(motion.arrival, {
       toValue: 1,
       duration: theme.motion.rise,
       useNativeDriver: true,
     });
     rise.start();
     return () => rise.stop();
-  }, [collapsed, arrival]);
+  }, [collapsed, motion]);
 
   useEffect(() => {
+    if (motion === undefined) return;
     if (leaving === undefined) {
       // **A card that comes back comes back straight.** An answer refused puts the card on
       // screen again, and a stopped `Animated.Value` keeps whatever fraction of the flight it
       // reached — so without this the returned card sits shifted and turned, mid-exit, on the
-      // one path the screen documents as recoverable.
-      drag.setValue({ x: 0, y: 0 });
+      // one path the screen documents as recoverable. **A card that has gone is not a card that
+      // came back**: the screen clears `leaving` the moment it hears, and advances the deck a
+      // tick later, and a card put straight in between is the answered card flashing at the
+      // centre of the stage before the next one replaces it.
+      if (!motion.gone) motion.drag.setValue({ x: 0, y: 0 });
       return;
     }
 
     if (collapsed) {
+      motion.gone = true;
       now.current.onLeft();
       return;
     }
 
-    const flight = Animated.timing(drag.x, {
+    const flight = Animated.timing(motion.drag.x, {
       toValue: wayOf(leaving) * theme.size.deckSwipe.flight,
       duration: LEAVING_MS,
       useNativeDriver: true,
     });
     flight.start(({ finished }) => {
-      if (finished) now.current.onLeft();
+      if (!finished) return;
+      motion.gone = true;
+      now.current.onLeft();
     });
 
     // Unmounted mid-flight — the deal was replaced, or the tab was left. Stopping is what
     // keeps the callback from firing into a screen that is no longer there.
     return () => flight.stop();
-  }, [leaving, collapsed, drag]);
+  }, [leaving, collapsed, motion]);
+
+  if (top === undefined || motion === undefined) return <View style={s.stage} />;
 
   return (
     <View style={s.stage}>
       {/* Deepest first, so the nearer card paints over the further one and the top card over
-          both. Hidden from assistive technology: the top card is the one element. */}
-      {[...behind].reverse().map((card, fromTheBack) => {
-        const depth = behind.length - fromTheBack;
+          both — the same keyed elements in a new order when a card leaves, which is what keeps
+          the card coming forward the card it was. The cards behind are hidden from assistive
+          technology: the top card is the one element. Every card draws off the top card's
+          arrival, one step further back until it has arrived. */}
+      {[...cards].reverse().map(({ key, card }, fromTheBack) => {
+        const depth = cards.length - 1 - fromTheBack;
+        const lift = motion.arrival.interpolate(stackLift(depth));
+        const scale = motion.arrival.interpolate(stackScale(depth));
+        if (depth > 0) {
+          return (
+            <Animated.View
+              key={key}
+              style={[s.card, { transform: [{ translateY: lift }, { scale }] }]}
+              pointerEvents="none"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            >
+              {card}
+            </Animated.View>
+          );
+        }
         return (
-          <View
-            key={depth}
+          <Animated.View
+            key={key}
+            {...responder.panHandlers}
             style={[
               s.card,
               {
                 transform: [
-                  { translateY: depth * STACK.step },
-                  { scale: 1 - depth * STACK.shrink },
+                  { translateX: motion.drag.x },
+                  { translateY: Animated.add(motion.drag.y, lift) },
+                  { scale },
+                  { rotate: motion.drag.x.interpolate(tilt()) },
                 ],
               },
             ]}
-            pointerEvents="none"
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
           >
             {card}
-          </View>
+
+            {/* The two stamps: feedback, never controls. Invisible at rest, full at the
+                threshold, and hidden from assistive technology because a listener answers with
+                the buttons. */}
+            <Stamp said="yes" opacity={motion.drag.x.interpolate(stampOpacity('yes'))} />
+            <Stamp said="no" opacity={motion.drag.x.interpolate(stampOpacity('no'))} />
+          </Animated.View>
         );
       })}
-
-      <Animated.View
-        {...responder.panHandlers}
-        // Remounted per card by the caller's `key`, so the arrival runs once per person rather
-        // than once per render, and the drag starts from rest.
-        style={[
-          s.card,
-          {
-            opacity: arrival,
-            transform: [
-              { translateX: drag.x },
-              { translateY: Animated.add(drag.y, arrival.interpolate(LIFT_IN)) },
-              { scale: arrival.interpolate(SCALE_IN) },
-              { rotate: drag.x.interpolate(tilt()) },
-            ],
-          },
-        ]}
-      >
-        {children}
-
-        {/* The two stamps: feedback, never controls. Invisible at rest, full at the threshold,
-            and hidden from assistive technology because a listener answers with the buttons. */}
-        <Stamp said="yes" opacity={drag.x.interpolate(stampOpacity('yes'))} />
-        <Stamp said="no" opacity={drag.x.interpolate(stampOpacity('no'))} />
-      </Animated.View>
     </View>
   );
 }
@@ -332,9 +405,6 @@ function Stamp({
     </Animated.View>
   );
 }
-
-const LIFT_IN = { inputRange: [0, 1], outputRange: [STACK.step, 0] };
-const SCALE_IN = { inputRange: [0, 1], outputRange: [1 - STACK.shrink, 1] };
 
 const s = StyleSheet.create({
   // The height the phone gives the deck: every card in the stack takes the stage's box.

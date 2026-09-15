@@ -47,9 +47,11 @@
  * pill and the mark merge into it (§20.1) — and its **action is the long press**, which opens
  * the record sheet: the reading the card cannot fit, with the Fit's breakdown one row further
  * in. The three buttons below the stage are the other three elements. A card **behind** the
- * top one has no action and is hidden from assistive technology by the stage; it is drawn by
- * the same component with no `onLongPress`, so a card behind and the card in front are one
- * drawing.
+ * top one has no action and is no element — and is hidden from assistive technology by the
+ * stage besides; it is drawn by the same component with no `onLongPress`, so a card behind and
+ * the card in front are one drawing. **The same tree, too**: the stage promotes the card behind
+ * in place when the top one has gone, and it takes on the action as the element it already was,
+ * so its photograph is not decoded again over the person who was plainly there a frame ago.
  *
  * ## The gesture is the stage's, and the card knows nothing of it
  *
@@ -174,25 +176,26 @@ export function DeckCard({ candidate, envelope, sportName, onLongPress, bodyRef 
     </>
   );
 
+  const inFront = onLongPress !== undefined;
+
   return (
     <View style={s.card}>
       {/* The clip is a second view rather than a style on the card, because a shadow and an
           `overflow: hidden` on one layer are a shadow drawn against a clipped bound — the same
-          reason the sheet and the toast keep their own. A card behind has no action and is no
-          element: a plain view, the same drawing. */}
-      {onLongPress === undefined ? (
-        <View style={s.clip}>{drawing}</View>
-      ) : (
-        <Pressable
-          ref={bodyRef}
-          style={s.clip}
-          accessibilityRole="button"
-          accessibilityLabel={facts.label}
-          onLongPress={onLongPress}
-        >
-          {drawing}
-        </Pressable>
-      )}
+          reason the sheet and the toast keep their own. One pressable whether the card is in
+          front or behind, and never a plain view for the card behind: a different element would
+          throw the drawing away on the frame the card comes forward. Behind, it is inert and no
+          element — not accessible, no role, nothing to press. */}
+      <Pressable
+        ref={bodyRef}
+        style={s.clip}
+        accessible={inFront}
+        accessibilityLabel={facts.label}
+        disabled={!inFront}
+        {...(inFront ? { accessibilityRole: 'button' as const, onLongPress } : {})}
+      >
+        {drawing}
+      </Pressable>
     </View>
   );
 }

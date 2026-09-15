@@ -29,6 +29,14 @@
  * The two buttons' own order, and the same sign the leaving animation has always used: the
  * direction is the whole of what the answer changes, and it is held as a sign rather than as
  * two interpolations so the one mid-flight when a refusal returns the card is the one reset.
+ *
+ * ## The stack, and how it advances
+ *
+ * Each card behind the top one sits one `step` lower and one `shrink` smaller than the one in
+ * front, and **the whole stack draws one step further back while the top card is arriving**:
+ * the top card arrives from the place the card behind it stood, and the card behind it from the
+ * place the one behind *that* stood, so a card leaving is followed by every card coming forward
+ * as one motion, and nothing jumps.
  */
 
 import { theme } from '@/shared/ui/theme';
@@ -102,6 +110,33 @@ export function tilt(): Interpolation<string> {
   return {
     inputRange: [-2 * COMMIT, 0, 2 * COMMIT],
     outputRange: [`-${TILT}deg`, '0deg', `${TILT}deg`],
+    extrapolate: 'clamp',
+  };
+}
+
+/**
+ * The stack behind the top card: each card behind sits one `step` lower and `shrink` smaller
+ * than the one in front — see the module note.
+ */
+export const STACK = { step: theme.space.sm, shrink: 0.05 } as const;
+
+/**
+ * From the top card's arrival (nought to one) to where a card at `depth` stands — one step
+ * further back at nought, in its own place at one. Depth nought is the top card.
+ */
+export function stackLift(depth: number): Interpolation<number> {
+  return {
+    inputRange: [0, 1],
+    outputRange: [(depth + 1) * STACK.step, depth * STACK.step],
+    extrapolate: 'clamp',
+  };
+}
+
+/** From the top card's arrival to a card's size at `depth` — one shrink smaller at nought. */
+export function stackScale(depth: number): Interpolation<number> {
+  return {
+    inputRange: [0, 1],
+    outputRange: [1 - (depth + 1) * STACK.shrink, 1 - depth * STACK.shrink],
     extrapolate: 'clamp',
   };
 }

@@ -476,11 +476,13 @@ export function DeckScreen() {
               sportName === undefined ||
               left === undefined ? null : (
                 <View style={s.deck}>
+                  {/* Never keyed by the card: the stage keeps every card mounted and promotes
+                      the one behind in place when the top one has gone, so the card under a
+                      released swipe is the element it already was — its photograph is not
+                      decoded again and nothing fades in over it. The cards are keyed instead,
+                      by the person on the deal they came off, and only the top one is the
+                      door to the record and the place focus goes. */}
                   <DeckStage
-                    // Keyed by the card — the person on the deal they came off — so the arrival
-                    // runs once per card rather than once per render, the drag starts from
-                    // rest, and the ref below always points at what is on screen.
-                    key={cardKey(showing)}
                     leaving={
                       leaving !== undefined && isTheCard(leaving.card, showing)
                         ? leaving.said
@@ -488,23 +490,20 @@ export function DeckScreen() {
                     }
                     onAnswer={(said) => answer(said, showing)}
                     onLeft={() => cardLeft(showing)}
-                    behind={behind.map((card) => (
-                      <DeckCard
-                        key={cardKey(card)}
-                        candidate={card.candidate}
-                        envelope={dealt.envelope}
-                        sportName={sportName}
-                      />
-                    ))}
-                  >
-                    <DeckCard
-                      candidate={showing.candidate}
-                      envelope={dealt.envelope}
-                      sportName={sportName}
-                      bodyRef={body}
-                      onLongPress={() => setReading(showing.candidate)}
-                    />
-                  </DeckStage>
+                    cards={[showing, ...behind].map((card, depth) => ({
+                      key: cardKey(card),
+                      card: (
+                        <DeckCard
+                          candidate={card.candidate}
+                          envelope={dealt.envelope}
+                          sportName={sportName}
+                          {...(depth === 0
+                            ? { bodyRef: body, onLongPress: () => setReading(card.candidate) }
+                            : {})}
+                        />
+                      ),
+                    }))}
+                  />
 
                   {/* The counter, floating over the card's foot: what is left in the whole
                       pool, and how many yeses there are to give. */}
