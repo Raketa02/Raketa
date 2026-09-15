@@ -2257,8 +2257,9 @@ every author and actor the page names, resolved in the same read, and a page car
 | a day recorded | `plans` | `{name} set the day · {value}` |
 | an hour recorded | `plans` | `{name} set the time · {value}` |
 | the plan was locked | `plans` · `PlanLocked` | `{name} locked the plan` |
+| a side was formed | `challenges` · `ChallengeOpenedFromMutualInterest`, **doubles only** | `You two are a side. Fill the seats to find your opponents.` |
 
-**Eight codes, and the leave code is one with the answer as a value** — #221's *"that seat is open
+**Nine codes, and the leave code is one with the answer as a value** — #221's *"that seat is open
 again"* is the same news each way, and the facts stay apart in the value rather than in a
 second code. **A lapse is still not a decline**, which is §13's rule holding one layer down —
 and since [ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) there
@@ -2285,6 +2286,17 @@ and a slot moved afterwards keeps it and writes its own line.
 second class. ADR-0144: *"unlike a lapse and a decline, which do the same thing to the line-up and
 are different facts, these are the same fact told twice."*
 
+**`SIDE_FORMED` is the one line a room is *born* with, and only a doubles room**
+([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8). Two yeses
+that meet in padel seat both people on one side of a court with a whole side still to fill — half
+a game — and nothing in the room said so, so that room opens with this at `seq` 1. A singles
+mutual is a whole court and gets no line: there the mutual is still the opening, as §23.1 has it.
+It **names no actor** — the first code to use the `null` the contract always allowed — because it
+is about both of them and neither in particular, and it carries no values. **And it is not a
+*Game on* line by another door**: it announces no standing and is re-derived from nothing — an
+introduction of the shape the pair were dealt into, true once at birth and never again asked of
+the seats — so *no system line announces a derived standing* holds as it did.
+
 **A place line renders the place without the court when it does not fit.** #335: when a system line
 overflows a Chats row, **the fix is a shorter value, not a second line** — one rule for both row
 kinds instead of two.
@@ -2297,7 +2309,7 @@ different rules do it.**
 | Event | Why nothing |
 | --- | --- |
 | `ChallengeSent` | no conversation exists yet — nowhere to write |
-| `ChallengeOpenedFromMutualInterest` | it **is** the opening; `seq` 1 is whatever happens next |
+| `ChallengeOpenedFromMutualInterest` | it **is** the opening; `seq` 1 is whatever happens next — **on a singles court**. On a doubles court it is the opening *and* half a game, and writes `SIDE_FORMED` (§23) |
 | `GamePlanned` | **the seats already imply it** |
 | `challenges.withdrawn` | it **destroys** the room in the same act |
 | `games.seat_vacated` · `games.line_up_reseated` | the challenge's own `SeatLeft` and the acceptance that completed the court draw the lines, and membership reads the game's line-up live — a room told twice would write a second line |
@@ -2311,8 +2323,8 @@ everybody having accepted is exactly such an arrangement. What a player sees ins
 card appearing** and membership stopping — drawn, not announced.
 
 **A refused line is not a refused telling, and here that is load-bearing.** `GamePlanned` still
-reaches the room and draws nothing, which is the shape `ChallengeOpenedFromMutualInterest` and
-`challenges.withdrawn` already have — and `Game.planned_at` **is** `GamePlanned.occurred_at`, which
+reaches the room and draws nothing, which is the shape a singles `ChallengeOpenedFromMutualInterest`
+and `challenges.withdrawn` already have — and `Game.planned_at` **is** `GamePlanned.occurred_at`, which
 is where the room's own end is derived from
 ([ADR-0153](../../adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)
 §2). Dropping the delivery because nothing renders would drop the anchor with it.

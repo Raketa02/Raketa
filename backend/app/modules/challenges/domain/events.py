@@ -105,10 +105,25 @@ class ChallengeOpenedFromMutualInterest:
     because you now have an open game together* is true the moment the mutual is
     detected, and a challenge that had to be answered would make it not yet true.
 
-    It carries **no mode and no window**: nobody picked a kind of evening and no
-    grid was proposed from. The pair are seated in the court's first two
-    positions, which puts them one per side in a singles sport and both on one
-    side in a doubles one — half a game, with a side still to fill.
+    It carries **no window**: no grid was proposed from. The pair are seated in
+    the court's first two positions, which puts them one per side in a singles
+    sport and both on one side in a doubles one — half a game, with a side still
+    to fill.
+
+    **It carries a mode, and the mode is a friendly or nothing**
+    (``docs/adr/0169`` §8). Nobody *picked* a kind of evening — the deck asks
+    for none — but each of the pair may have declared one for the sport, and
+    the mint reads both: ``FOR_FUN`` when either declared *for fun*, ``None``
+    otherwise, which the hand-over resolves to counted. *Competitive* never
+    appears here, because two competitive declarers get a counted game by the
+    absence and not by a stamp; the aggregate refuses it.
+
+    **Nullable with a default, and only for rows written before it existed** —
+    the same addition ``SeatsInvited.invited_by`` argues for below rather than
+    a version 2. A row with no ``mode`` key was minted when every mutual was
+    counted, and ``None`` is exactly what those rows already meant: nothing
+    stored is reinterpreted, and the fold read ``None`` off this event before
+    the field was on it.
 
     ``organiser_id`` is the player whose yes closed the loop. Nothing about the
     standing turns on it while both seats are accepted; it is the seat the
@@ -121,6 +136,7 @@ class ChallengeOpenedFromMutualInterest:
     other_player_id: UUID
     seats: tuple[str, ...]
     occurred_at: datetime
+    mode: str | None = None
 
     def __post_init__(self) -> None:
         _retuple(self, "seats")

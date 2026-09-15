@@ -174,10 +174,18 @@ def mode_for_intent(intent: PlayIntent, rules: IntentRules) -> SearchMode:
 
     **Not the deck's any more** (``docs/adr/0169`` §2): the deck runs on the
     ruler above for everybody and reads no declaration. What still resolves a
-    vector from a declaration is a court born *without* a mode — deck-born and
-    mutual-born — whose fill and whose card take the player's own declaration
-    on this rule (``docs/adr/0150`` §5): ``COMPETITIVE → comp``, ``FOR_FUN →
-    fun``, **``NO_PREFERENCE → fun``**.
+    vector from a declaration is a court born *without* a mode — deck-born, and
+    mutual-born where neither of the pair declared *for fun* (``docs/adr/0169``
+    §8 stamps ``FOR_FUN`` on the mint otherwise, and a stamped mode is kept) —
+    whose fill and whose card take the player's own declaration on this rule
+    (``docs/adr/0150`` §5): ``COMPETITIVE → comp``, ``FOR_FUN → fun``,
+    **``NO_PREFERENCE → fun``**.
+
+    **This mapping is the matcher's and the mint does not read it.** *No
+    preference → fun* picks a weight vector for a search; what a mutual's game
+    *is* honours a stated wish, where *no preference* chooses nothing — so
+    ``challenges`` declares its own port for that read rather than importing
+    this (``challenges/domain/friendly_choice.py``).
 
     **``NO_PREFERENCE`` never selects a weight vector, it inherits one**, and
     with no tab, no mode and no request field there is nothing to inherit from —

@@ -45,6 +45,7 @@ from app.bootstrap.composition import (
     build_challenge_repository,
     build_domain_event_store,
     build_event_publisher,
+    build_friendly_choice_query,
     build_game_repository,
     build_open_challenge_query,
     build_planned_game_handover,
@@ -115,6 +116,7 @@ def _mint(
         safety=a_safe_court([ALICE, BOB]),
         clock=FrozenClock(at),
         planned_games=build_planned_game_handover(session),
+        friendly_choices=build_friendly_choice_query(session),
     )
 
 

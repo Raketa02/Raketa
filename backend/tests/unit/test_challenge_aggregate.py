@@ -1016,10 +1016,13 @@ def test_a_plan_may_not_carry_an_invitation_for_somebody_already_in():
 # ---------------------------------------------------------------------------
 
 
-def a_mutual(sport: Sport = Sport.TENNIS) -> Challenge:
+def a_mutual(
+    sport: Sport = Sport.TENNIS, *, mode: SearchMode | None = None
+) -> Challenge:
     return Challenge.opened_from_mutual_interest(
         challenge_id=new_uuid(),
         sport=sport,
+        mode=mode,
         organiser_id=ORGANISER,
         other_player_id=ALICE,
         occurred_at=SENT_AT,
@@ -1036,13 +1039,37 @@ def test_a_mutual_yes_opens_a_challenge_born_accepted_with_no_deadline():
     assert challenge.standing_at(OUTSIDE) is Standing.ON
 
 
-def test_a_mutual_carries_no_mode_and_no_window():
-    """Nobody picked a kind of evening and no grid was proposed from."""
+def test_a_mutual_carries_no_window_and_by_default_no_mode():
+    """No grid was proposed from, and nobody *picked* a kind of evening — so the
+    absence resolves to counted, exactly as it does on the deck."""
 
     challenge = replayed(a_mutual())
 
     assert challenge.mode is None
     assert challenge.window is None
+
+
+def test_a_mutual_may_carry_a_friendly_and_it_survives_the_replay():
+    """``docs/adr/0169`` §8 — *counted unless either declared for fun*. The mint
+    resolves the mode from the two declarations; what the aggregate promises is
+    that a friendly minted is a friendly folded, so the hand-over that reads
+    ``mode`` off the replayed challenge opens the game the pair asked for."""
+
+    challenge = replayed(a_mutual(mode=SearchMode.FOR_FUN))
+
+    assert challenge.mode is SearchMode.FOR_FUN
+    assert challenge.window is None
+
+
+def test_a_mutual_is_a_friendly_or_nothing_and_never_competitive():
+    """The rule has two outcomes — ``FOR_FUN`` when either chose a friendly,
+    absent otherwise — and *competitive* is not one of them: two competitive
+    declarers get a counted game by the absence, not by a mode. A caller
+    stamping ``COMPETITIVE`` on a mutual has misread the rule, and that is a
+    broken precondition rather than a state."""
+
+    with pytest.raises(InvariantViolated):
+        a_mutual(mode=SearchMode.COMPETITIVE)
 
 
 def test_a_one_to_one_padel_challenge_is_half_a_game():
@@ -1060,6 +1087,7 @@ def test_a_mutual_with_yourself_is_refused():
         Challenge.opened_from_mutual_interest(
             challenge_id=new_uuid(),
             sport=Sport.TENNIS,
+            mode=None,
             organiser_id=ORGANISER,
             other_player_id=ORGANISER,
             occurred_at=SENT_AT,
@@ -2159,6 +2187,7 @@ def test_has_become_a_game_is_folded_off_completion_and_not_off_a_departure():
     singles = Challenge.opened_from_mutual_interest(
         challenge_id=new_uuid(),
         sport=Sport.TENNIS,
+        mode=None,
         organiser_id=ORGANISER,
         other_player_id=ALICE,
         occurred_at=SENT_AT,
@@ -2167,6 +2196,7 @@ def test_has_become_a_game_is_folded_off_completion_and_not_off_a_departure():
     doubles = Challenge.opened_from_mutual_interest(
         challenge_id=new_uuid(),
         sport=Sport.PADEL,
+        mode=None,
         organiser_id=ORGANISER,
         other_player_id=ALICE,
         occurred_at=SENT_AT,

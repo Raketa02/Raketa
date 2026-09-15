@@ -907,7 +907,7 @@ event list would write a line for each.
 | `challenges` | `SeatsInvited` | ✅ |
 | `challenges` | `SeatDeclined` · `SeatLapsed` | ✅ — **one code, the answer as a value** |
 | `challenges` | `ChallengeSent` | ✗ — no conversation exists yet |
-| `challenges` | `ChallengeOpenedFromMutualInterest` | ✗ — it **is** the opening |
+| `challenges` | `ChallengeOpenedFromMutualInterest` | ✗ — it **is** the opening; **✅ on a doubles court**, `SIDE_FORMED` at `seq` 1 (ADR-0169 §8) |
 | `challenges` | `challenges.withdrawn` | ✗ — it **destroys** the room |
 | `games` | `GamePlayed` | ✅ |
 | `games` | `GamePlanned` | ✗ — the seats already imply it |

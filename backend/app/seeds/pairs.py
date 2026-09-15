@@ -1349,8 +1349,15 @@ async def _a_mutual_born_court(paths: ReadPaths, *, cohort: Cohort) -> str:
 
     **`LINE_UP_INCOMPLETE` from birth, with a whole side still open.** The pair
     take the court's first two positions, which in a doubles sport is both of
-    them on side A — no mode, no window, and both seats accepted before anybody
-    was asked anything.
+    them on side A — no window, and both seats accepted before anybody was
+    asked anything. **The mode is whatever the two declarations make it**
+    (``docs/adr/0169`` §8): ``FOR_FUN`` when either of the pair declared padel
+    *for fun*, absent otherwise — so the report prints it rather than asserting
+    one, because which pair the walk lands on is the cohort's business.
+
+    **And its room is born with the side line.** A doubles mutual's room opens
+    with ``SIDE_FORMED`` at ``seq`` 1 — the one code no other fixture reaches,
+    which is why ``loop.py``'s every-code claim names this function.
 
     **The fill is run as the player whose yes arrived *first*, deliberately.**
     The other one is the organiser, in the only sense the aggregate means it —
@@ -1439,7 +1446,8 @@ async def _a_mutual_born_court(paths: ReadPaths, *, cohort: Cohort) -> str:
         return (
             f"mutual-born · {first.handle} and {second.handle} said *Let's play* "
             f"to each other and court {minted.id} opened with both of them on "
-            f"side A; it reads {Standing.LINE_UP_INCOMPLETE.value} with no mode "
+            f"side A; it reads {Standing.LINE_UP_INCOMPLETE.value} with "
+            f"{'no mode' if minted.mode is None else 'mode ' + minted.mode.value} "
             f"and no window; {filled}"
         )
     raise EdgeRefused(

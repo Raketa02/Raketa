@@ -222,8 +222,11 @@ class ChallengeSchema(BaseModel):
         default=None,
         description=(
             "The kind of evening it was sent for. ``null`` when the surface it "
-            "came from has none — the deck asks nobody to pick one — and on "
-            "every challenge born of a mutual yes."
+            "came from has none — the deck asks nobody to pick one. **A "
+            "challenge born of a mutual yes is `FOR_FUN` when either of the "
+            "pair declared *for fun* for the sport, and `null` otherwise** "
+            "(ADR-0169 §8) — never `COMPETITIVE`, because two competitive "
+            "declarers get a counted game by the absence and not by a stamp."
         ),
     )
     window: Window | None = Field(
@@ -662,7 +665,9 @@ class ChallengeDetailResponse(BaseModel):
         default=None,
         description=(
             "The kind of evening it was sent for. ``null`` when the surface it "
-            "came from has none, and on every challenge born of a mutual yes."
+            "came from has none; on a challenge born of a mutual yes, `FOR_FUN` "
+            "when either of the pair declared *for fun* for the sport and "
+            "`null` otherwise (ADR-0169 §8)."
         ),
     )
     window: Window | None = Field(

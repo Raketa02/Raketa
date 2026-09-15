@@ -4217,7 +4217,7 @@
                 "type": "null"
               }
             ],
-            "description": "The kind of evening it was sent for. ``null`` when the surface it came from has none, and on every challenge born of a mutual yes."
+            "description": "The kind of evening it was sent for. ``null`` when the surface it came from has none; on a challenge born of a mutual yes, `FOR_FUN` when either of the pair declared *for fun* for the sport and `null` otherwise (ADR-0169 \u00a78)."
           },
           "window": {
             "anyOf": [
@@ -4313,7 +4313,7 @@
                 "type": "null"
               }
             ],
-            "description": "The kind of evening it was sent for. ``null`` when the surface it came from has none \u2014 the deck asks nobody to pick one \u2014 and on every challenge born of a mutual yes."
+            "description": "The kind of evening it was sent for. ``null`` when the surface it came from has none \u2014 the deck asks nobody to pick one. **A challenge born of a mutual yes is `FOR_FUN` when either of the pair declared *for fun* for the sport, and `null` otherwise** (ADR-0169 \u00a78) \u2014 never `COMPETITIVE`, because two competitive declarers get a counted game by the absence and not by a stamp."
           },
           "window": {
             "anyOf": [
@@ -9512,7 +9512,7 @@
           "code": {
             "type": "string",
             "title": "Code",
-            "description": "What happened, as a machine code the client renders a sentence from. Eight: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**.\n\n**A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news each way \u2014 and a lapse is still not a decline, which is what `values.departure` keeps apart. Somebody **leaving a game they had agreed to** is the third way, since ADR-0162, and the one whose actor was a member until this very line.\n\n**A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.\n\n**`PLAN_LOCKED` is the Plan's fourth and it carries no values at all.** The three slots are the value and the room already holds a line for each. It is an act rather than a slot \u2014 a complete plan is one everybody *could* agree, and this says somebody did \u2014 and there is no unlocked code, because a slot moved afterwards keeps the lock and writes its own line.\n\n**There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping \u2014 drawn, not announced."
+            "description": "What happened, as a machine code the client renders a sentence from. Nine: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**, and **`SIDE_FORMED`**.\n\n**`SIDE_FORMED` is the one line a room is born with, and only a doubles room** (ADR-0169 \u00a78). Two yeses that met in a doubles sport seat both people on one side with a whole side still to fill, and this says so at `seq` 1: *You two are a side. Fill the seats to find your opponents.* A singles mutual's room carries no such line. It names no actor and carries no values.\n\n**A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news each way \u2014 and a lapse is still not a decline, which is what `values.departure` keeps apart. Somebody **leaving a game they had agreed to** is the third way, since ADR-0162, and the one whose actor was a member until this very line.\n\n**A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.\n\n**`PLAN_LOCKED` is the Plan's fourth and it carries no values at all.** The three slots are the value and the room already holds a line for each. It is an act rather than a slot \u2014 a complete plan is one everybody *could* agree, and this says somebody did \u2014 and there is no unlocked code, because a slot moved afterwards keeps the lock and writes its own line.\n\n**There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping \u2014 drawn, not announced."
           },
           "occurred_at": {
             "type": "string",
@@ -9531,7 +9531,7 @@
               }
             ],
             "title": "Actor Id",
-            "description": "Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** \u2014 the handle is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: the actor of a `SEAT_LEFT` line is by definition no longer one, and `people` is where the read put their face."
+            "description": "Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** \u2014 the handle is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: the actor of a `SEAT_LEFT` line is by definition no longer one, and `people` is where the read put their face. `null` on `SIDE_FORMED`, which is about both people on the side and names neither."
           },
           "values": {
             "additionalProperties": {
@@ -9539,7 +9539,7 @@
             },
             "type": "object",
             "title": "Values",
-            "description": "What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the three plan codes each carry `value` \u2014 the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED` and `GAME_PLAYED` carry nothing."
+            "description": "What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the three plan codes each carry `value` \u2014 the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED`, `GAME_PLAYED` and `SIDE_FORMED` carry nothing."
           }
         },
         "type": "object",

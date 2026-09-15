@@ -68,6 +68,7 @@ from app.modules.challenges.application.court_safety import CourtSafety
 from app.modules.challenges.application.open_from_mutual_interest import (
     OpenChallengeFromMutualInterest,
 )
+from app.modules.challenges.domain.friendly_choice import FriendlyChoiceQuery
 from app.modules.challenges.domain.planned_game import PlannedGameHandover
 from app.modules.challenges.domain.seatable_game import SeatableGameQuery
 from app.modules.challenges.domain.settled_game import SettledGameQuery
@@ -79,6 +80,9 @@ from app.modules.challenges.infrastructure.games_seatable_game import (
 )
 from app.modules.challenges.infrastructure.games_settled_game import (
     GamesSettledGame,
+)
+from app.modules.challenges.infrastructure.profile_friendly_choice import (
+    ProfileFriendlyChoice,
 )
 from app.modules.games.application.call_off_game import CallOffGame
 from app.modules.games.application.open_planned_game import OpenPlannedGame
@@ -900,6 +904,34 @@ def build_mutual_challenge_minting(
             safety=build_court_safety(session),
             clock=build_clock(),
             planned_games=build_planned_game_handover(session, runtime=runtime),
+            friendly_choices=build_friendly_choice_query(session, runtime=runtime),
+        )
+    )
+
+
+def build_friendly_choice_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> FriendlyChoiceQuery:
+    """*Which of these two declared* for fun *in this sport?* — what the mutual
+    mint reads to decide the kind of game it opens (``docs/adr/0169`` §8).
+
+    Built on ``player_profile``'s own declaration repository rather than on the
+    matcher's ``mode_for_intent``: the arrow runs ``matchmaking -> challenges``
+    and never back, and the two mappings answer different questions anyway —
+    that one picks a weight vector and lets *no preference* inherit the fun
+    ruler, this one honours a stated wish and lets *no preference* choose
+    nothing.
+
+    **A second declaration repository inside one unit of work** beside whatever
+    the request built, and safe for ``build_settled_game_query``'s reason: it
+    only ever **reads**, and two readers may hold a version of one stream.
+    """
+    return ProfileFriendlyChoice(
+        build_play_intent_declaration_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
         )
     )
 

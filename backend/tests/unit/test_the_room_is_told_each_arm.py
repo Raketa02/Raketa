@@ -190,30 +190,99 @@ def nudges() -> _Nudges:
 # -- the openings ----------------------------------------------------------
 
 
-async def test_a_mutual_born_challenge_opens_the_room_and_writes_no_line(rooms):
-    """``the-words.md`` §23.1 — it **is** the opening. Both seats are accepted
-    from birth, so there was never a moment with one person in the room."""
-
-    await _teller(rooms)(
-        ChallengeOpenedFromMutualInterest(
-            challenge_id=CHALLENGE,
-            sport=Sport.PADEL.value,
-            organiser_id=ORGANISER,
-            other_player_id=ANA,
-            seats=(),
-            occurred_at=NOW,
-        ),
-        _delivery(),
+def _a_mutual(sport: Sport) -> ChallengeOpenedFromMutualInterest:
+    return ChallengeOpenedFromMutualInterest(
+        challenge_id=CHALLENGE,
+        sport=sport.value,
+        organiser_id=ORGANISER,
+        other_player_id=ANA,
+        seats=(),
+        occurred_at=NOW,
     )
+
+
+class _ACourtIn:
+    """``ArrangingCourt`` for a room in one sport — the arm tests' court above
+    answers padel, and the mutual arm is the one place the sport decides."""
+
+    def __init__(self, sport: Sport) -> None:
+        self._sport = sport
+
+    async def accepted_on(self, challenge_ids):
+        return {challenge_id: frozenset({ORGANISER}) for challenge_id in challenge_ids}
+
+    async def accepted_by(self, player_id):
+        return frozenset({CHALLENGE})
+
+    async def sport_of(self, challenge_id):
+        return self._sport if challenge_id == CHALLENGE else None
+
+
+async def test_a_singles_mutual_opens_the_room_and_writes_no_line(rooms):
+    """``the-words.md`` §23.1 — it **is** the opening. Both seats are accepted
+    from birth, so there was never a moment with one person in the room; and a
+    two-seat court is whole, so there is nothing to say about it either."""
+
+    tell = TellTheRoom(
+        conversations=rooms,
+        directory=rooms,
+        arranging=_ACourtIn(Sport.TENNIS),
+        played=_Games(game_for=CHALLENGE),
+        nudges=_Nudges(),
+    )
+
+    await tell(_a_mutual(Sport.TENNIS), _delivery())
 
     assert rooms.only.challenge_id == CHALLENGE
     assert rooms.only.entries == ()
 
 
-async def test_a_mutual_delivered_twice_opens_one_room(rooms):
+async def test_a_doubles_mutual_is_born_with_the_side_line(rooms, nudges):
+    """``docs/adr/0169`` §8 — *a padel mutual says it is half a game.* The room
+    opens with ``SIDE_FORMED`` as its first line: no actor, because the line is
+    about both of them, and no values, because the client owns the words. The
+    line nudges the room like every line, so a phone already on the list is
+    told there is one entry to read."""
+
+    await _teller(rooms, nudges=nudges)(_a_mutual(Sport.PADEL), _delivery())
+
+    (line,) = rooms.lines
+    assert line.seq == 1
+    assert line.code is SystemLineCode.SIDE_FORMED
+    assert line.actor_id is None
+    assert line.values == {}
+    assert line.occurred_at == NOW
+    assert [nudge.last_seq for nudge in nudges.published] == [1]
+
+
+async def test_a_doubles_mutual_delivered_twice_opens_one_room_with_one_line(rooms):
+    """A redelivery finds the room and the line it already wrote — the line is
+    keyed on the outbox row, so the same row twice lands the same state."""
+
     tell = _teller(rooms)
-    event = ChallengeOpenedFromMutualInterest(
-        challenge_id=CHALLENGE,
+    delivery = _delivery()
+
+    await tell(_a_mutual(Sport.PADEL), delivery)
+    await tell(_a_mutual(Sport.PADEL), delivery)
+
+    assert len(rooms.by_id) == 1
+    assert [line.code for line in rooms.lines] == [SystemLineCode.SIDE_FORMED]
+
+
+async def test_a_doubles_mutual_this_context_cannot_be_told_about_writes_nothing():
+    """No room, no line — the side line is written into the room the mutual
+    opened, and a challenge with no sport opens none."""
+
+    rooms = _Rooms()
+    tell = TellTheRoom(
+        conversations=rooms,
+        directory=rooms,
+        arranging=_ACourtIn(Sport.PADEL),
+        played=_Games(),
+        nudges=_Nudges(),
+    )
+    unknown = ChallengeOpenedFromMutualInterest(
+        challenge_id=uuid4(),
         sport=Sport.PADEL.value,
         organiser_id=ORGANISER,
         other_player_id=ANA,
@@ -221,10 +290,9 @@ async def test_a_mutual_delivered_twice_opens_one_room(rooms):
         occurred_at=NOW,
     )
 
-    await tell(event, _delivery())
-    await tell(event, _delivery())
+    await tell(unknown, _delivery())
 
-    assert len(rooms.by_id) == 1
+    assert rooms.by_id == {}
 
 
 async def test_a_challenge_this_context_cannot_be_told_about_opens_nothing(rooms):

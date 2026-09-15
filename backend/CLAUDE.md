@@ -553,7 +553,16 @@ Rules to preserve:
   challenge, `LINE_UP_INCOMPLETE` from birth with an "organiser" who is only whoever's yes
   arrived second. The mode is **inherited, or
   resolved from the filler's declared Play intent** on the deck's own rule, and the **window
-  is never re-stamped**, so a mutual-born challenge stays window-less for life. The cost is
+  is never re-stamped**, so a mutual-born challenge stays window-less for life. **A mutual's
+  own mode is decided at the mint, and it is a friendly or nothing** (ADR-0169 §8): the mint
+  reads both declarations for the sport through `FriendlyChoiceQuery` — a port in
+  `challenges`' words, adapted over `player_profile`'s declaration repository and never over
+  the matcher's `mode_for_intent`, whose *no preference → fun* is about weight vectors and
+  not about anybody's evening — and stamps `FOR_FUN` when either chose one; *competitive*,
+  *no preference* and *undeclared* all leave it absent and the hand-over reads counted.
+  The aggregate refuses `COMPETITIVE` on a mutual, and the event's `mode` is nullable with a
+  default rather than a version 2, on `SeatsInvited.invited_by`'s argument: a row without it
+  was minted when every mutual was counted, and `None` is what it already meant. The cost is
   recorded rather than softened, on the port and on the two routes that meet it: **a lapsed
   invitee is out of that challenge's own pool for as long as it stands** — `already_asked_at`
   feeding `NobodyIsAskedTwice`, per aggregate, and asking them again is a **new** challenge. It is
@@ -743,6 +752,16 @@ Rules to preserve:
   a line for each. There is no *Game on* line. And **a refused line is not a refused
   telling**: `GamePlanned` reaches the room, draws nothing, and is where the room learns its
   game — as does `ChallengeWithdrawn`, whose whole effect is that the room stops existing.
+  **One row carries a code *and a condition*, and it is the only one**: a mutual is the
+  opening, and on a doubles court it is also half a game — both people on one side, a side
+  still to fill — so that room is born with `SIDE_FORMED` at `seq` 1, the first code that
+  names no actor, while a singles mutual's room gets no line (ADR-0169 §8). `Telling.only_when`
+  carries that condition as a **predicate and its sentence together**, and `line_drawn_by` is
+  how the handler asks — so the table stays the whole truth about what ships, and a row reworded
+  cannot ship the old line green. It is not a *Game on* line by the other door: it announces no
+  standing and is re-derived from nothing, an introduction written once at birth. The
+  doubles/singles fact is `challenges`' own `seats_per_side`, read off the event's sport in the
+  table and never respelled.
   **A room is for the episode, and its end is derived**
   ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
   [ADR-0164](../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)

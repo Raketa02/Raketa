@@ -404,6 +404,7 @@ async def _mutual(session, *, one: UUID, other: UUID, at: Instant) -> Challenge:
     challenge = Challenge.opened_from_mutual_interest(
         challenge_id=new_uuid(),
         sport=Sport.PADEL,
+        mode=None,
         organiser_id=one,
         other_player_id=other,
         occurred_at=at,
