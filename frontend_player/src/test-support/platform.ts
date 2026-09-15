@@ -324,18 +324,21 @@ export function fakeLiveStream(): FakeLiveStream {
  * *Exactly one as the word lands, and none under reduced motion* is a claim about a count.
  */
 export interface FakeHaptics extends HapticsPort {
-  /** Every buzz asked for, in order. One kind today. */
-  readonly felt: readonly 'success'[];
+  /** Every buzz asked for, in order. Two kinds: the yes screen's success, the deck's light tick. */
+  readonly felt: readonly ('success' | 'light')[];
 }
 
 export function fakeHaptics(): FakeHaptics {
-  const felt: 'success'[] = [];
+  const felt: ('success' | 'light')[] = [];
   return {
     get felt() {
       return felt;
     },
     success: () => {
       felt.push('success');
+    },
+    light: () => {
+      felt.push('light');
     },
   };
 }

@@ -53,6 +53,13 @@
  * first stop has to be the line that says what the screen is, not an element with a role and no
  * words in it. With a title the eyebrow stays above and outside, exactly as before.
  *
+ * **And a header with neither is headed by nothing.** The Players tab's header is its
+ * *Deck | Radar* toggle in the lead slot and a chip in the right one, with no words of its own
+ * ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1). There the heading element is not drawn at all rather than drawn empty: an element
+ * carrying a role and no words is a stop a listener lands on and hears nothing from, and the
+ * toggle's own segments are the first thing the screen has to say.
+ *
  * The eyebrow labels a region you are READING. It is not `flab`, which labels a control
  * you are about to OPERATE — the two are not interchangeable (design-system 3.3).
  */
@@ -129,22 +136,23 @@ export function ScreenHeader({
             listener lands on the whole. A label only where the screen supplied one — absent, the
             platform reads the texts as drawn, and a header labelled with its own title would
             answer for it in every `getByLabelText` that means the control beside it. Where there
-            is no title the eyebrow is what is inside it, and is the heading. */}
-        <View
-          accessible
-          accessibilityRole="header"
-          {...(titleLabel === undefined ? {} : { accessibilityLabel: titleLabel })}
-          style={s.named}
-        >
-          {title === undefined ? (
-            eyebrow !== undefined ? (
+            is no title the eyebrow is what is inside it, and is the heading — and where there is
+            neither, there is no element: the slots are the header (see the module note). */}
+        {title === undefined && eyebrow === undefined ? null : (
+          <View
+            accessible
+            accessibilityRole="header"
+            {...(titleLabel === undefined ? {} : { accessibilityLabel: titleLabel })}
+            style={s.named}
+          >
+            {title === undefined ? (
               <Text style={s.eyebrow}>{eyebrow}</Text>
-            ) : null
-          ) : (
-            <Text style={s.title}>{title}</Text>
-          )}
-          {subline !== undefined ? <Text style={s.subline}>{subline}</Text> : null}
-        </View>
+            ) : (
+              <Text style={s.title}>{title}</Text>
+            )}
+            {subline !== undefined ? <Text style={s.subline}>{subline}</Text> : null}
+          </View>
+        )}
       </View>
 
       {right !== undefined ? <View style={s.right}>{right}</View> : null}

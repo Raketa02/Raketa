@@ -27,6 +27,8 @@ would make a reader check two places to be sure they had them all.
 | ``AccountHoldQuery`` | ``cases`` | ``NoHoldsExist`` |
 | ``AtStakeQuery`` | ``rating``'s update rule | a **real adapter** — the rule ships |
 | ``AccountStatusQuery`` | ``users`` | a **real adapter** — the provider ships |
+| ``HalfBuiltCourtQuery`` | ``challenges`` | a **real adapter** — the fill's court |
+| ``SharedCourtQuery`` | ``games`` | a **real adapter** — the deck's cool-off |
 
 **The rule that decides every shape below:** *a gate may be honestly empty; a
 term may never be honestly neutral*, and the test is whether a zero would be
@@ -843,6 +845,77 @@ class HalfBuiltCourtQuery(Protocol):
 
 
 # ---------------------------------------------------------------------------
+# SharedCourtQuery — ``games``
+# ---------------------------------------------------------------------------
+
+
+@final
+@dataclass(frozen=True)
+class SharedCourt:
+    """One person the searcher has a game with, and whether it is behind them yet.
+
+    **The deck's cool-off reads this and nothing else reads it**
+    (``docs/adr/0169`` §6). *Somebody you are already with is not in your deck,
+    and stays out for thirty days after* — so what the matcher needs about a
+    court is two facts and never the game: who the other person is, and the
+    instant the court went behind them, or that it has not.
+
+    ``behind_since`` is the moment ``docs/adr/0168`` lets a member leave the
+    chat, read off the game: the entry that said *we played*, the call-off, or
+    the entry window closing on silence. It is ``None`` while the court is still
+    ahead — planned, on, awaiting its entry — and an ahead court is the answer
+    whatever else stands between the two, because a second game arranged before
+    the first is settled is a court they are *with* each other on.
+
+    It is not :class:`PairwiseCounterpart`, deliberately. That row dates a ghost
+    from its plan and files a call-off nowhere (``docs/adr/0163`` §3), both by
+    decisions of their own about what *happened between you*; the cool-off asks
+    a different question — *when did this court stop being ahead of you* — and
+    a row answering the first cannot be bent to the second without one of the
+    two decisions quietly reversing.
+    """
+
+    counterpart_id: UUID
+    behind_since: Instant | None
+
+    @property
+    def ahead(self) -> bool:
+        return self.behind_since is None
+
+
+@runtime_checkable
+class SharedCourtQuery(Protocol):
+    """Every game between the searcher and anybody, as *ahead* or *behind since*.
+
+    **One row per person, newest first, at most ``PAIRWISE_COUNTERPART_BOUND``**
+    — the same bound and the same order the pairwise history keeps, over the
+    same people, so a counterpart cut off by it is one with five hundred more
+    recent courts ahead of them and outside any window the deck could ask about.
+    A person the searcher has more than one game with is one row: an ahead court
+    if any is ahead, otherwise the latest ``behind_since``.
+
+    **Read at the deal and on no other surface.** Find a game keeps
+    ``docs/adr/0142`` §1's release — a search is a question about the city, and
+    somebody you played on Saturday is a fine partner for next week's four. The
+    deck is for meeting people, and a rematch is arranged in the chat the two
+    already have.
+
+    **It fails soft**, like the history beside it: an outage repeats a card of
+    somebody the viewer already knows, which is embarrassment and never danger,
+    and standing down is the posture a courtesy takes (``FAIL_POSTURE``).
+    """
+
+    async def shared_courts(self, searcher_id: UUID) -> tuple[SharedCourt, ...]:
+        """Who this searcher has a game with, and where each stands — bounded.
+
+        The provider reads its own clock for *ahead*: whether a court is behind
+        somebody is a fact about this instant, and a caller that could supply
+        the instant could supply a stale one — ``open_challenges``' rule.
+        """
+        ...
+
+
+# ---------------------------------------------------------------------------
 # How each demand fails
 # ---------------------------------------------------------------------------
 
@@ -915,9 +988,16 @@ FAIL_POSTURE: Mapping[type, FailPosture] = {
     # excluding the people it was meant to seat around, and hand the player a
     # court with strangers where their own line-up should have been.
     HalfBuiltCourtQuery: FailPosture.CLOSED,
+    # **Soft, and it is not a term either.** The cool-off is a courtesy about
+    # the viewer's own deck, and *a gate that cannot be evaluated excludes*
+    # applied to it would empty a deal in a city that has people in it — the
+    # suppression ledger's argument, one read over. The backstop is the same
+    # one the open-challenge gate leans on: a card repeated is a card, never a
+    # court somebody is seated on behind their back.
+    SharedCourtQuery: FailPosture.SOFT,
 }
 
-#: The six outward ports, as the suite in ``tests/demands/`` walks them.
+#: The seven outward ports, as the suite in ``tests/demands/`` walks them.
 #:
 #: Declared as data rather than left to a reader to collect, so that *a port with
 #: no registered implementation* is a question something can ask. A demand nobody
@@ -936,4 +1016,5 @@ MATCHER_DEMANDS: tuple[type, ...] = (
     AccountHoldQuery,
     AccountStatusQuery,
     HalfBuiltCourtQuery,
+    SharedCourtQuery,
 )

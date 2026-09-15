@@ -281,6 +281,13 @@ class RecordedCard:
     review: PhotoReviewDecision | None
     area_code: str
     social_tags: tuple[str, ...]
+    #: The line they had written about themselves when this search ran, or
+    #: ``None`` where they had written none (``docs/adr/0170``) — **omitted on
+    #: the wire, never an empty string**. Recorded off the index row like the
+    #: tags, so a read-back quotes the line as it stood at the deal (§3): today
+    #: it cannot have changed since, and the day editing arrives this is the
+    #: record that keeps it from being re-read.
+    intro: str | None
     #: Their Level as RacketSkill published it *then*.
     level: float
     band: str
@@ -543,11 +550,13 @@ class SearchRecord:
     searcher_id: UUID
     sport: Sport
     #: ``NULL`` exactly when the surface is the deck, which has no mode and
-    #: scores against a declared Play intent instead.
+    #: scores under one ruler for everybody (``docs/adr/0169`` §2).
     mode: SearchMode | None
-    #: The mirror of ``mode``'s constraint: non-null exactly on the deck. It
-    #: records the **declaration as it stood**, never the vector it mapped to, so
-    #: a later change to the mapping does not rewrite history.
+    #: Set only on the deck, where it records the **declaration as it stood** —
+    #: never a vector, and ``None`` for a viewer who never declared, because the
+    #: deck reads no declaration and refuses nobody for lacking one. It is
+    #: history and nothing the deal does with it; on every other surface the
+    #: mode is the request's and the column is null.
     intent_read: PlayIntent | None
     surface: SearchSurface
     initiation: SearchInitiation
@@ -630,7 +639,7 @@ class SearchRecord:
             f"a {self.surface.value} search with mode {self.mode}",
         )
         invariant(
-            (self.intent_read is not None) == on_the_deck,
+            self.intent_read is None or on_the_deck,
             f"a {self.surface.value} search with intent_read {self.intent_read}",
         )
         invariant(

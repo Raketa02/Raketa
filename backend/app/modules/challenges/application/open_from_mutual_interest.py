@@ -71,6 +71,19 @@ run, and a tennis game born of two yeses would leave no record that it was ever
 arranged. The line-up completing is the trigger, not the tapping, so it is
 checked wherever a line-up can complete; in a doubles sport this challenge is
 half a game and the accept path takes it from here.
+
+**What kind of game is decided here, and it is counted unless either declared
+*for fun*** (``docs/adr/0169`` §8). The deck asks nobody to pick a kind of
+evening, so a mutual has no mode of its own to carry — but each of the pair may
+have declared one for the sport, and that is a wish about *their* evening rather
+than a term in anybody's ranking. So the mint reads both declarations through
+``FriendlyChoiceQuery`` — in this context's own words, never through the
+matcher's mapping — and stamps ``FOR_FUN`` when either chose a friendly. Two
+competitive declarers, a *no preference*, an undeclared: all leave the mode
+absent, and the hand-over's existing derivation makes the game counted, *a
+friendly is a thing people choose*. The read is made **after every gate**, so a
+refused mint reads nothing, and it is not caught: a read that could not answer
+must not become a counted game nobody chose (the port says why).
 """
 
 from __future__ import annotations
@@ -78,6 +91,7 @@ from __future__ import annotations
 from typing import final
 from uuid import UUID
 
+from app.engines.matchfit.core import SearchMode
 from app.kernel import Clock, instant
 from app.modules.challenges.application.completed_line_up import hand_over
 from app.modules.challenges.application.commands import (
@@ -86,6 +100,7 @@ from app.modules.challenges.application.commands import (
 from app.modules.challenges.application.court_safety import CourtSafety
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.errors import TheGatesCouldNotBeEvaluated
+from app.modules.challenges.domain.friendly_choice import FriendlyChoiceQuery
 from app.modules.challenges.domain.planned_game import PlannedGameHandover
 from app.modules.challenges.domain.ports import (
     ChallengeRepository,
@@ -109,6 +124,7 @@ class OpenChallengeFromMutualInterest:
         safety: CourtSafety,
         clock: Clock,
         planned_games: PlannedGameHandover,
+        friendly_choices: FriendlyChoiceQuery,
     ) -> None:
         self._challenges = challenges
         self._open_challenges = open_challenges
@@ -116,6 +132,7 @@ class OpenChallengeFromMutualInterest:
         self._safety = safety
         self._clock = clock
         self._planned_games = planned_games
+        self._friendly_choices = friendly_choices
 
     async def execute(self, command: OpenFromMutualInterestCommand) -> UUID | None:
         """**The game these two have**, or ``None`` when there is none to name.
@@ -205,9 +222,18 @@ class OpenChallengeFromMutualInterest:
                 # rather than set iteration order.
                 return unfinished[0]
 
+        # **Counted unless either declared for fun** (``docs/adr/0169`` §8).
+        # Read once every gate has admitted the pair, in the sport the yes was
+        # said in: a friendly is what either of them asked for, and an absence
+        # — competitive, no preference, never declared — is left absent for the
+        # hand-over to read as counted.
+        chose_a_friendly = await self._friendly_choices.chose_a_friendly_among(
+            pair, sport=command.sport
+        )
         challenge = Challenge.opened_from_mutual_interest(
             challenge_id=new_uuid(),
             sport=command.sport,
+            mode=SearchMode.FOR_FUN if chose_a_friendly else None,
             organiser_id=command.player_id,
             other_player_id=command.other_player_id,
             occurred_at=at,

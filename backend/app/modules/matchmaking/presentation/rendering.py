@@ -122,7 +122,16 @@ def render_deal(answer: DeckAnswer, photos: PhotoLinks) -> ShortlistResponse:
 
     return ShortlistResponse(
         search=_envelope(
-            answer.record, answer.sorts_available, prompts=answer.prompts
+            answer.record,
+            answer.sorts_available,
+            prompts=answer.prompts,
+            # **The two numbers only a deal can say** (``docs/adr/0169`` §4,
+            # §5), on the envelope's pool because they are facts about the
+            # pool — and passed rather than read off the record, because
+            # neither is recorded: both are true of this moment and of no
+            # later one, which is why the read-back omits them.
+            remaining=answer.remaining,
+            want_to_play_you=answer.want_to_play_you,
         ),
         candidates=[_candidate(row, photos) for row in answer.record.returned],
     )
@@ -368,19 +377,29 @@ def _envelope(
     *,
     prompts: tuple[RaisedPrompt, ...] | None = None,
     optimised_for: OptimisedFor = OptimisedFor.SEARCHER,
+    remaining: int | None = None,
+    want_to_play_you: int | None = None,
 ) -> SearchEnvelope:
-    """The search's own facts, and the two that are about *now*.
+    """The search's own facts, and the four that are about *now*.
 
     ``prompts`` is ``None`` for *do not mention it at all* — the read-back, where
     a month-old question would be asked about a value that has since moved — and
     a list on the `POST`, where an empty one honestly says the search raised
-    none.
+    none. ``remaining`` and ``want_to_play_you`` are ``None`` on the same
+    argument for every surface but the deal, and omitted from the pool rather
+    than sent as null: a shortlist did not count nought people waiting, it did
+    not count.
     """
 
     pool = record.pool_description
     fields: dict[str, Any] = {}
     if prompts is not None:
         fields["prompts"] = [_prompt(raised) for raised in prompts]
+    counts: dict[str, Any] = {}
+    if remaining is not None:
+        counts["remaining"] = remaining
+    if want_to_play_you is not None:
+        counts["want_to_play_you"] = want_to_play_you
     # **Omitted rather than sent as null**, which is this module's own first
     # spelling: a search recorded before the area was kept did not measure a
     # nothing, it recorded nothing at all — and a card handed an empty code would
@@ -406,6 +425,7 @@ def _envelope(
             players_in_range=pool.players_in_range,
             window=pool.window,
             post_gate=pool.post_gate,
+            **counts,
         ),
         radius_clamp=record.radius_clamp_bit,
         sorts_available=list(sorts),
@@ -593,6 +613,10 @@ def _card(card: RecordedCard, photo_url: str | None) -> PlayerCardSchema:
         # `CandidateRow.range_low`.
         "range": {"low": card.range_low, "high": card.range_high},
     }
+    if card.intro is not None:
+        # Omitted where nothing was written, never `""`: a player who skipped
+        # has no line, not an empty one (`docs/adr/0170` §1).
+        fields["intro"] = card.intro
     if card.photo_id is not None and photo_url is not None:
         fields["photo_id"] = card.photo_id
         fields["photo_url"] = photo_url

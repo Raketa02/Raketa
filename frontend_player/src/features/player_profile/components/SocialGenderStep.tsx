@@ -1,5 +1,5 @@
 /**
- * Step six of onboarding's second part: **who do you want to play with?**
+ * Step seven of onboarding's second part: **who do you want to play with?**
  *
  * Two controls and one decision. The first asks the player their own answer; the second
  * asks who they are willing to be matched with, and the second is unanswerable in isolation

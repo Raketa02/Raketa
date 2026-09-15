@@ -30,11 +30,22 @@ describe('which tab a route is inside', () => {
   });
 
   it('keeps Play lit on every screen inside Play', () => {
-    // None of these exist yet; they are the deck, the builder and the pool, and the day
-    // they land is the day a whole-path comparison would go dark on arrival.
-    expect(tabForPathname('/play/deck')).toBe('play');
-    expect(tabForPathname('/play/four')).toBe('play');
-    expect(tabForPathname('/play/pickpool')).toBe('play');
+    // The builder and the pool, and any depth Play grows next: a whole-path comparison would
+    // go dark on the second screen.
+    expect(tabForPathname('/play/builder')).toBe('play');
+    expect(tabForPathname('/play/pool')).toBe('play');
+    expect(tabForPathname('/play/anything-next')).toBe('play');
+  });
+
+  /**
+   * The deck left Play for a tab of its own
+   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §1): `/players` is Players' root, and nothing under `/play/…` is the deck any more.
+   */
+  it('reads Players off its root, and never off a route under Play', () => {
+    expect(tabForPathname('/players')).toBe('players');
+    expect(SHELL_TAB_ROOT.players).toBe('/players');
+    expect(Object.values(SHELL_TAB_ROOT)).not.toContain('/around');
   });
 
   /**

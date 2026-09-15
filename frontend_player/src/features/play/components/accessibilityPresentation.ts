@@ -78,6 +78,7 @@ import { balanceLabel } from './balancePresentation';
 import { GAP_WORD } from './builderPresentation';
 import { WITHHELD_SEAT_LINE, unfilledSeatLine } from './courtPresentation';
 import {
+  DECK_ANSWER_WORDS,
   levelRow,
   metaLine,
   type LevelRowFacts,
@@ -310,17 +311,63 @@ export function rungOfferLabel(offer: string, price: string): string {
   return `${offer}, ${price}`;
 }
 
-/** The deck card's two buttons. It is §20.3's card with two actions instead of one. */
+/**
+ * The deck card's **spoken name** — the same rule as `candidateCardLabel`, read on a card that
+ * makes no case.
+ *
+ * Identifying facts, in the order the card draws them, because there is no argument to move
+ * behind them: the deck card draws no reason line and no concern (ADR-0169 §7 — the tiles, the
+ * tags and the intro are the card), so §20.3's one divergence from visual order does not reach
+ * it. The intro is spoken inside its quotation marks, so a listener hears it as the person's
+ * own words rather than the card's; the tiles are spoken as clauses and a tile with no figure
+ * says nothing (`deckTileClauses`).
+ *
+ * The card is **one element**, the body, whose action is the long press that opens the record;
+ * the three buttons below the stage are three more, each named for the person
+ * (`deckAnswerLabels`). The fit pill, the mark and the stamps are not elements: the first two
+ * merge, and the stamps are hidden because they are feedback for a thumb.
+ */
+export interface DeckCardSpokenFacts {
+  readonly name: string;
+  readonly fit: number;
+  readonly level: LevelRowFacts;
+  /** `ON_COURT_CLAUSE`, or nothing — the drawing surface's one answer, spoken. */
+  readonly onCourt?: string;
+  /** The deck's meta line, already composed — with its third clause where the deal said so. */
+  readonly meta?: string;
+  /** The intro, already quoted, or nothing where they wrote none. */
+  readonly intro?: string;
+  readonly socialTags: readonly string[];
+  readonly tiles: readonly string[];
+}
+
+export function deckCardLabel(facts: DeckCardSpokenFacts): string {
+  return sentences([
+    facts.name,
+    fitSentence(facts.fit),
+    levelRow(facts.level),
+    facts.onCourt ?? '',
+    facts.meta ?? '',
+    facts.intro ?? '',
+    ...facts.socialTags,
+    ...facts.tiles,
+  ]);
+}
+
+/** The deck's three buttons. It is §20.3's card with three actions beside it instead of one. */
 export interface DeckAnswerLabels {
   readonly pass: string;
   readonly accept: string;
+  /** `Marek Z.’s record` — the *i*, and the long press's own name. */
+  readonly record: string;
 }
 
 /**
  * `Not today, Marek` · `Let's play, Marek`.
  *
- * The 🎾 is hidden, per §E6 — *"otherwise it announces as 'tennis ball let's play'"* — and,
- * like the ✦, it is hidden by never entering the sentence rather than by a rule about glyphs.
+ * The ball is hidden, per §E6 — *"otherwise it announces as 'tennis ball let's play'"* — and,
+ * like the ✦, it is hidden by never entering the sentence rather than by a rule about glyphs:
+ * it is a drawing with no words in it (`DeckBall`).
  *
  * **There is no gesture to announce.** [#231](https://github.com/Raketa02/Raketa/issues/231)
  * §3 decided UI Open decision #9 against a swipe, so the deck's contract is two named buttons
@@ -328,7 +375,11 @@ export interface DeckAnswerLabels {
  * reader who could not perform one.
  */
 export function deckAnswerLabels(name: string): DeckAnswerLabels {
-  return { pass: `Not today, ${name}`, accept: `Let's play, ${name}` };
+  return {
+    pass: `${DECK_ANSWER_WORDS.pass}, ${name}`,
+    accept: `${DECK_ANSWER_WORDS.accept}, ${name}`,
+    record: `${name}’s record`,
+  };
 }
 
 /**

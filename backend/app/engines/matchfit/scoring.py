@@ -121,4 +121,5 @@ class MatchFit(Protocol):
         candidate: ScorableCandidate,
         ruleset: Ruleset,
         seat: Seat = Seat.OPPONENT,
+        stood_down: frozenset[Term] = frozenset(),
     ) -> Fit: ...

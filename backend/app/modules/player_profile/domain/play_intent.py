@@ -79,9 +79,11 @@ class PlayIntentSurface(str, Enum):
     #: screen is deliberately *not* one of these values. It names *that* screen
     #: alone; the other Play surface has ``DECK``.
     SEARCH_SWITCH = "SEARCH_SWITCH"
-    #: The deck's sport chips, landing on a sport that is rated and undeclared.
-    #: The same interstitial as the search screen's, drawn on the other Play
-    #: surface — one component with two callers, and two codes rather than one.
+    #: The deck's sport chips, landing on a sport that is rated and undeclared
+    #: — **as it was**. The deck reads no declaration since ``docs/adr/0169``
+    #: §2 and draws no interstitial, so nothing emits this code any more; it
+    #: stays in the closed five for the events that carry it, because a code
+    #: already in a stream has to keep meaning what it meant when written.
     DECK = "DECK"
     #: The daily backstop, for the player who switched once, declined once and
     #: then searched in the new mode for a month.

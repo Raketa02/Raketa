@@ -91,9 +91,13 @@
  * an **admission** rather than a bonus — so re-applying it here would score the wire's own
  * ranking a second time. `poolOrder` sorts on the printed number and nothing else.
  *
- * **The pin is not that.** `poolOrder`'s module note is where the difference is argued and this
- * is the pointer to it, because a reader arriving on the trail of #231 arrives here first
- * ([#310](https://github.com/Raketa02/Raketa/issues/310)).
+ * **Nor a pin.** For a while a liker was forced to the top of the served order
+ * ([#310](https://github.com/Raketa02/Raketa/issues/310)); ADR-0169 §8 removed it — *a yes
+ * informs; it never takes over* — and `poolOrder`'s module note is where both the bonus and the
+ * pin are argued against, because a reader arriving on the trail of #231 arrives here first.
+ * What a yes does on this screen is a **tag**, in either direction: *Wants to play you* off the
+ * row's admitting code, and *You said yes* off the reader's own outgoing list, which this screen
+ * reads from the same `GET /interest` the deck reads and asks one person at a time.
  *
  * **The cell a times rung adds — which is recorded here and drawn nowhere near here.** #223 §8
  * requires that the offered slot **visibly ticks**, marked as this-search-only, because
@@ -128,11 +132,13 @@ import type { Candidate, RelaxedAsk, RungOffer } from '../domain/candidate';
 import { arrangementFor, seatOccupant, seatingToDraw, seatsFilled } from '../domain/forecast';
 import { carriedOnto } from '../domain/lineup';
 import { poolLadder } from '../domain/poolLadder';
+import { saidYesTo } from '../domain/outgoingInterest';
 import { bestMatchId, orderPool, pickable, poolSortRow } from '../domain/poolOrder';
 import { alreadyAsked } from '../domain/raisedPrompt';
 import type { SortOption } from '../domain/vocabulary';
 import { sentWeekForOrigin } from '../domain/workingWeek';
 import { useForecast, useSearchRecord } from '../hooks/useBuilder';
+import { useOutgoingInterest } from '../hooks/useInterest';
 import { useReadSearchBack, useTakeRung } from '../hooks/usePool';
 import { usePlaySession } from '../store/playSession.store';
 
@@ -232,6 +238,12 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
    */
   const rereadCourt = useReadSearchBack();
   const climb = useTakeRung();
+  /**
+   * The reader's own yeses, for the one tag this screen draws from them. The same read the
+   * deck holds, and nothing here waits for it: a row is drawn without the tag until the list
+   * lands, and gains it without moving (ADR-0169 §8).
+   */
+  const outgoing = useOutgoingInterest();
 
   const origin = record?.origin;
   const sport = origin?.sport;
@@ -288,14 +300,18 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
   const noSeatLeft = replacing === undefined && seatsFilled(seated) >= seats;
 
   // Two readings of the same rows, and the **served** order is the input to both: `orderPool`
-  // pins off it, and `bestMatchId`'s tie-break is *the row the server served first*, which is
-  // a statement about that order rather than about whichever array ends up drawn.
+  // hands it back untouched, and `bestMatchId`'s tie-break is *the row the server served
+  // first*, which is a statement about that order rather than about whichever array ends up
+  // drawn.
   const offered = pickable(record?.candidates ?? [], members);
   const drawn = orderPool(offered, sort);
   // Answered for every pool and drawn on the competitive one, because the coral tag lives in the
   // competitive card's identity row and the social card has no slot beside the handle for one
-  // (#309). A for-fun pool is pinned and explained and simply carries no *best match*.
+  // (#309). A for-fun pool carries its two interest tags and simply no *best match*.
   const bestMatch = bestMatchId(offered, sort);
+  // *You said yes* — the reader's own list, asked one person at a time, in the search's sport.
+  const saidYes = (candidate: Candidate) =>
+    sport !== undefined && saidYesTo(outgoing.data, sport, candidate.playerId);
 
   /**
    * **Whether the court is bound to some other search than the one this list is.**
@@ -637,6 +653,7 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
                     /* Which row wears the coral tag is the ordering rule's answer and never a
                        card's: a component handed one candidate cannot know it is the highest. */
                     bestMatch={candidate.playerId === bestMatch}
+                    saidYes={saidYes(candidate)}
                     action="ADD_TO_COURT"
                     onAction={() => add(candidate)}
                     actionDisabled={noSeatLeft}
@@ -647,6 +664,7 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
                     key={candidate.playerId}
                     candidate={candidate}
                     envelope={record.envelope}
+                    saidYes={saidYes(candidate)}
                     action="ADD_TO_COURT"
                     onAction={() => add(candidate)}
                     actionDisabled={noSeatLeft}

@@ -134,7 +134,11 @@
  * removed the hot pill and the sentence beside it, applied once more to what was left.
  *
  * So the screen ends on the control and nothing else. It is the one way through for a
- * competitive game; *Match me* is the other half of `PlaySegment` and reaches the deck.
+ * competitive game. *Match me* was the other half of a segment above this screen and reached
+ * the deck; the deck is the Players tab now and the segment is gone with it — Play opens on
+ * Find a game and nothing in the app links to a deck route under Play
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1).
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -187,7 +191,6 @@ import { searchWeekCellLabel } from './accessibilityPresentation';
 import { PromptSheet, type AfterThePrompt } from './PromptSheet';
 import { SportChips } from './SportChips';
 import { useHeldWait } from './heldWait';
-import { PlaySegment } from './PlaySegment';
 import { playErrorMessage } from './playErrorMessage';
 import { SearchingLatch } from './SearchingLatch';
 import { poolRankingStatus } from './searchingPresentation';
@@ -532,12 +535,6 @@ export function FindAGameScreen() {
               />
             </View>
           ) : null}
-
-          {/* Play's two ways through the tab. It is drawn on both screens rather than in the
-              shell, because it names two **views** and the shell's bar names tabs — and it is
-              inside one of them ([#270](https://github.com/Raketa02/Raketa/issues/270)). It
-              carries no count any more, so neither screen holds a read for its sake. */}
-          <PlaySegment active="find" />
 
           {standing.kind === 'no-rated-sport' && ratings.isSuccess ? (
             <Note>{NO_RATED_SPORT_LINE}</Note>

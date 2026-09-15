@@ -98,8 +98,11 @@
  *
  * **Part 13 is discharged by the tag and never by the border.** *"A border carries no word and
  * this signal has one"* was the 2026-08-31 conclusion and it is still true — which is why the
- * outline is bound to `tag?.variant === 'volt'` rather than to `inclusionReason`: the border is
- * the second copy of a cue that is already a word, and it cannot appear where the word does not.
+ * outline is bound to `tag?.kind === 'wants-to-play-you'` rather than to `inclusionReason`: the
+ * border is the second copy of a cue that is already a word, and it cannot appear where the
+ * word does not. Bound to the tag's **kind** rather than its colour since ADR-0169 §8 put a
+ * second interest tag on the row — *You said yes*, the reader's own act, a plain tag with no
+ * border — so nothing that is ever made volt inherits an outline it did not argue for.
  *
  * ## Three accessibility elements, and the third is the one that became visible
  *
@@ -198,6 +201,14 @@ export interface CandidateCardProps {
    * that decides it is wired — a tag drawn on every card is worse than no tag at all.
    */
   readonly bestMatch?: boolean;
+  /**
+   * Whether the reader has a live yes towards this person in the search's sport — **the
+   * reader's own list's answer** (`saidYesTo`), never this card's
+   * ([ADR-0169](../../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §8). Defaulted to `false` for `bestMatch`'s reason: a tag drawn on every card is worse than
+   * no tag at all.
+   */
+  readonly saidYes?: boolean;
 }
 
 export function CandidateCard({
@@ -210,6 +221,7 @@ export function CandidateCard({
   actionDisabled = false,
   onWhyFit,
   bestMatch = false,
+  saidYes = false,
 }: CandidateCardProps) {
   const tags = socialTagOverlap(candidate);
   // Both taken here and handed down twice — once to be drawn and once to be spoken — which is
@@ -232,17 +244,19 @@ export function CandidateCard({
   });
   const levelFit = evidenceOf(candidate, 'level_fit');
   const balance = evidenceOf(candidate, 'predicted_balance');
-  const tag = candidateTag({ inclusionReason: candidate.inclusionReason, bestMatch });
+  const tag = candidateTag({ inclusionReason: candidate.inclusionReason, saidYes, bestMatch });
 
   return (
     /* The border is bound to the **tag it accompanies** rather than to the code beneath it, so
        the two cannot drift: the green outline appears on exactly the card whose handle says
        *Wants to play you*, and it travels with that tag through every re-sort because both are
-       read off this one candidate. Part 13 is satisfied by the tag, not by the border — the
-       colour is never the cue, it is the second copy of a cue that is already a word. */
+       read off this one candidate. Bound to the tag's **kind** and not its colour, so *You said
+       yes* — the reader's own act, a plain tag — draws none. Part 13 is satisfied by the tag,
+       not by the border — the colour is never the cue, it is the second copy of a cue that is
+       already a word. */
     <PressableCard
       style={s.card}
-      marked={tag?.variant === 'volt'}
+      marked={tag?.kind === 'wants-to-play-you'}
       onPress={onWhyFit}
       accessibilityLabel={facts.label}
     >

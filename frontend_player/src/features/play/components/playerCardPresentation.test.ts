@@ -91,28 +91,50 @@ describe('the meta line', () => {
 });
 
 describe('the tag beside the handle', () => {
-  it('says nothing at all where neither fact is true', () => {
+  it('says nothing at all where none of the three facts is true', () => {
     // The row is the identity row and not a tag rail: most people on a list are neither the
-    // best match nor somebody who already said yes, and a tag drawn for them would be a word
-    // that means *nothing in particular*.
-    expect(candidateTag({ bestMatch: false })).toBeUndefined();
+    // best match nor anybody a yes has passed between, and a tag drawn for them would be a
+    // word that means *nothing in particular*.
+    expect(candidateTag({ saidYes: false, bestMatch: false })).toBeUndefined();
   });
 
   it('marks the best match in coral', () => {
-    expect(candidateTag({ bestMatch: true })).toEqual({ label: 'Best match', variant: 'hot' });
+    expect(candidateTag({ saidYes: false, bestMatch: true })).toEqual({
+      kind: 'best-match',
+      label: 'Best match',
+      variant: 'hot',
+    });
   });
 
   it('says the interest lift in volt, and it replaces best match where both apply', () => {
     // *"because it's the stronger fact"* — the coral one is about where somebody sits in a
     // list this player is reading, and the volt one is about a decision somebody else made.
-    expect(candidateTag({ inclusionReason: 'INTEREST_LIFT', bestMatch: false })).toEqual({
-      label: 'Wants to play you',
-      variant: 'volt',
-    });
-    expect(candidateTag({ inclusionReason: 'INTEREST_LIFT', bestMatch: true })).toEqual({
-      label: 'Wants to play you',
-      variant: 'volt',
-    });
+    const wants = { kind: 'wants-to-play-you', label: 'Wants to play you', variant: 'volt' };
+
+    expect(
+      candidateTag({ inclusionReason: 'INTEREST_LIFT', saidYes: false, bestMatch: false }),
+    ).toEqual(wants);
+    expect(
+      candidateTag({ inclusionReason: 'INTEREST_LIFT', saidYes: false, bestMatch: true }),
+    ).toEqual(wants);
+  });
+
+  /**
+   * ADR-0169 §8: an outgoing yes is a tag only — the reader's own act, off their own list, and
+   * a fact about a person rather than about a list, so it outranks the coral tag as the volt
+   * one does. It is **not** volt: volt is *they want you*, and a border travels with that word
+   * alone.
+   */
+  it('says the reader’s own yes as a plain tag, over best match and never over the lift', () => {
+    const said = { kind: 'you-said-yes', label: 'You said yes', variant: 'base' };
+
+    expect(candidateTag({ saidYes: true, bestMatch: false })).toEqual(said);
+    expect(candidateTag({ saidYes: true, bestMatch: true })).toEqual(said);
+    // Both true is a mutual, and a mutual is not on the list; should one ever be, *Wants to
+    // play you* wins.
+    expect(
+      candidateTag({ inclusionReason: 'INTEREST_LIFT', saidYes: true, bestMatch: false })?.kind,
+    ).toBe('wants-to-play-you');
   });
 
   it('takes the admitting code’s words from its liveness twin, which is one tag and not two', () => {
@@ -120,9 +142,9 @@ describe('the tag beside the handle', () => {
     // with ONE tag. The tag is bound to the admitting code; the words are the twin's, and the
     // twin's own sentence can only reach a card as the reason fallback, which the competitive
     // card never takes.
-    expect(candidateTag({ inclusionReason: 'INTEREST_LIFT', bestMatch: false })?.label).toBe(
-      livenessLine('INTEREST_RECEIVED'),
-    );
+    expect(
+      candidateTag({ inclusionReason: 'INTEREST_LIFT', saidYes: false, bestMatch: false })?.label,
+    ).toBe(livenessLine('INTEREST_RECEIVED'));
   });
 });
 

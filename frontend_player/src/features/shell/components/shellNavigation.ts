@@ -8,13 +8,15 @@
  * the only way to notice is to do it deliberately. So the shell is a plain `Stack` and every
  * tab press **replaces** what is on it.
  *
- * ## One function, and now all four of its callers
+ * ## One function, and all three of its callers
  *
- * `resetShellStack` is the whole mechanism, and what calls it are the four halves of the rule:
- * a flanking tab lays down one screen, ⚡Play lays down two, the *Find a game* segment
- * re-enters the tab from inside it ([#268](https://github.com/Raketa02/Raketa/issues/268)) —
- * re-entering is arriving, not going back — and **the send lays down `[Now]`**, which is *a
- * sent game is gone for good* ([#274](https://github.com/Raketa02/Raketa/issues/274)).
+ * `resetShellStack` is the whole mechanism, and what calls it are the three halves of the rule:
+ * a flanking tab lays down one screen, ⚡Play lays down two, and **the send lays down `[Now]`**,
+ * which is *a sent game is gone for good* ([#274](https://github.com/Raketa02/Raketa/issues/274)).
+ * There was a fourth for as long as the deck lived under Play — the *Find a game* segment
+ * re-entered the tab from inside it ([#268](https://github.com/Raketa02/Raketa/issues/268)),
+ * re-entering being arriving rather than going back — and it left with the segment when the
+ * deck moved to its own tab (ADR-0169 §1).
  * **A Play session ends exactly when this function runs**, which is the definition
  * [#264](https://github.com/Raketa02/Raketa/issues/264) is owed — and the thing it does:
  * every path through this function calls `endPlaySession`, so the working copy and the line-up
@@ -125,9 +127,11 @@ function startOf(tab: TabBarKey): string {
 /**
  * Play's entry: **Find a game, whichever Play screen was last open**, with Now behind it.
  *
- * Separate from `openTab` because it is the half of the shell another feature calls. The
- * segmented control's *Find a game* is the same operation as pressing ⚡, which is why a
- * player on the deck who taps it does not go back — they arrive.
+ * Once the half of the shell another feature called — the segmented control's *Find a game*
+ * was the same operation as pressing ⚡, which is why a player on the deck who tapped it did
+ * not go back but arrived. The segment went with the deck's move to Players (ADR-0169 §1), so
+ * this is now the bar's own move for one column, kept named because Play's start is the one
+ * that is two screens deep.
  */
 export function enterPlay(): void {
   resetShellStack(PLAY_STACK);

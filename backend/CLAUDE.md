@@ -95,24 +95,26 @@ Rules to preserve:
 - **State changes emit domain events.** Use cases persist them through
   `DomainEventStore.append` and enqueue them on the transactional outbox in the same
   transaction; handlers perform side effects after commit. **One deliberate exception,
-  and it is the matchmaking module's four durable ledgers** — the `search` record,
-  `interest`, the **pass** record and the **prompt decline** (`the-engine.md` §12:
-  *nothing here is event-sourced*, and an interest is *durable without being an aggregate
-  with a life story*). All four are small facts with no life story, and **nothing
-  *subscribes* to one being written**: a lift is a read on the next search, the
-  suppression a pass writes is a cache its use case fills after the commit rather than a
-  subscriber, and a decline is read by one filter on the next search. The one thing a
+  and it is the matchmaking module's five durable ledgers** — the `search` record,
+  `interest`, the **pass** record, the **prompt decline** and the **deck reset**
+  (`the-engine.md` §12: *nothing here is event-sourced*, and an interest is *durable
+  without being an aggregate with a life story*). All five are small facts with no life
+  story, and **nothing *subscribes* to one being written**: a lift is a read on the next
+  search, the suppression a pass writes is a cache its use case fills after the commit
+  rather than a subscriber, a decline is read by one filter on the next search, and a
+  reset is one moment the next deal reads three ways. The one thing a
   write here does cause is a **call, never a subscription** — a second *Let's play*
   facing the first opens a challenge **inline, in the same transaction** through a port
   `challenges` signs (#251), because *that player has left the deck for good* is a
   promise that must not wait for a poller. The exemption is about the interest row
   needing no event of its own, and that is unchanged.
-  The authority naming all four is `the-engine.md` §12;
-  ADR-0128 decides what a pass *is* and says nothing about event sourcing, and ADR-0094
+  The authority naming all five is `the-engine.md` §12;
+  ADR-0128 decides what a pass *is* and says nothing about event sourcing, ADR-0094
   says of the decline in its own words that *declining a prompt is not a domain fact and
   earns no event* — its amendment moved the suppression out of Redis and kept that
-  sentence literally. A new context does **not** inherit this — it needs the same argument made in
-  an ADR.
+  sentence literally — and the reset argued for itself in ADR-0169's amendment of
+  2026-09-15, which is the rule: a new one does **not** inherit this — it needs the same
+  argument made in an ADR.
 - **Seeds execute use cases, never SQL.** `app/seeds/` creates deterministic development
   accounts through the same use cases a request runs, wired from the composition root, so
   a seeded aggregate has the event stream and the outbox rows a real one has. A structural
@@ -431,19 +433,41 @@ Rules to preserve:
   about one of you* and the field would have to go; §3 of the record is where that is
   written down. `mutual_born_challenges_that_became_games` answers **newest first** for it, so
   the row named to a player is not set iteration order (ADR-0105).
-- **The deck reads a declaration, and a pass is a statement about my deck**
-  ([ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md),
+- **The deck reads no declaration, and a pass is a statement about my deck**
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md),
+  [ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md),
   `the-two-contracts.md` §6). `POST /api/v1/deck` takes **the sport and the week this one
   deal runs on** and creates a search: there is no mode on the wire in either direction,
-  because the deck resolves the weight vector backend-side from the viewer's declared Play
-  intent — `NO_PREFERENCE → fun`, never a third vector — and `search.intent_read` records
-  **the declaration as it stood**, so a later change to the mapping does not rewrite
-  history. Its order is its whole variety (three bands, then `PASS_SUPPRESS`); the
-  **relaxation ladder does not reach it** — the week is the only ask beside the sport, and
-  it is an ask like the shortlist's: it writes nothing, and the deal comes back carrying
-  `KEEP_THESE_TIMES`, which is the offer to save it; and a spent deal deals again — a new
-  `search_id`, the same exclusions plus everybody dealt within `DEALT_MEMORY`, so only a
-  *fresh* deal that came back empty is the honest empty state.
+  because **every deal scores under the fun ruler for every viewer**, declared or not —
+  `INHERITED_ON_THE_DECK` in `matchmaking/domain/deck.py`, a fact about the surface and
+  never a function of anything the viewer said, so `play_intent_not_declared` is never
+  raised here and `search.intent_read` records **the declaration as it stood** for history
+  alone, `NULL` for a viewer who never made one (migration `0022`). **The intent term
+  stands down for every pairing on the deck** — `STOOD_DOWN_ON_THE_DECK` on the
+  `SearchContext`, threaded to the engine as `stood_down` so the term is never read and
+  says `NOT_READ_ON_THIS_SURFACE`, the fourth `DegradedReason`, which is neither side's gap
+  — so a declaration moves nobody, up or down, and one pair has two Fits: Find a game is
+  untouched. Its order is its whole variety (**two bands** — the lifted, the person who said
+  yes among them by rank key and unmarked beyond `inclusion_reason`, then the rest — then
+  `PASS_SUPPRESS`); the **relaxation ladder does not reach it** — the week is the only ask
+  beside the sport, and it is an ask like the shortlist's: it writes nothing, and the deal
+  comes back carrying `KEEP_THESE_TIMES`, which is the offer to save it; and a spent deal
+  deals again — a new `search_id`, the same exclusions plus everybody dealt within
+  `DEALT_MEMORY`, so only a *fresh* deal that came back empty is the honest empty state.
+  **The fourth exclusion is the cool-off** (ADR-0169 §6): somebody the viewer has a live
+  challenge or game with, and for `deck_cool_off_days` — a ruleset row of its own,
+  released as `2026.09.15-a` at the pass window's thirty, nought in the two datasets that
+  never knew it — after the court is behind them. It is read through `SharedCourtQuery`,
+  the **seventh** matcher demand, answered over `games`' own directory by
+  `infrastructure/games_shared_courts.py` and failing **soft** like the suppression cache;
+  **deck only** — Find a game keeps ADR-0142 §1's release. **And the envelope says two
+  numbers no other surface can**: `pool.remaining`, the eligible beyond the hand, and
+  `pool.want_to_play_you`, the live yeses that would be dealt with the dealt memory
+  deliberately not applied — a fold over the lift's own read and never a second one, so
+  the chip and the hand cannot disagree. Both are omitted on every other surface and on a
+  read-back, and the latter is the **one count** ADR-0109 §2's sentence is narrowed to
+  admit: `tests/unit/test_no_response_carries_an_inbox.py` refuses every other spelling of
+  incoming interest on every response type, and a list anywhere.
   `POST /api/v1/passes` is **write-only and answers `204`**: no route returns a pass, to
   anyone, in any shape, and `PASS_SUPPRESS` crosses the wire in **no shape at all**. It
   has three boundaries, all the opposite of a block's — deck only, one-directional, never
@@ -453,6 +477,21 @@ Rules to preserve:
   outage repeats a card and never empties a deal. Two telemetry columns exist for the one
   falsifier `PASS_SUPPRESS` has — `search.n_excluded_by_suppression` and
   `search_candidate.suppression_lapsed`, both **deck deals only**, both check-constrained.
+  **And a pass can be cleared, by one route that touches none of the three stores it
+  clears** (ADR-0169 §5 and its amendment, #440). `POST /api/v1/deck/reset` is *Show them
+  again*: it writes **one moment** to the `deck_reset` table — per player, per sport,
+  append-only, the module's fifth durable ledger — and the next deal reads that moment
+  three ways (`domain/deck.py`: `cleared_by_reset` over the pass record, `dealt_memory_from`
+  over the search record, `cooling_off` over the courts). The Redis keys are left to
+  lapse and the deal subtracts what the record says was cleared, because a reset that had
+  to reach the cache could fail soft and answer a `204` that was a lie. *Already asked*
+  is not cleared, a court still ahead is held out whatever was pressed, and the
+  `suppression_lapsed` flag is **not** widened to a reset re-show — the reset row beside
+  the pass record is what names those. **The cap steps aside for a yes that closes a
+  mutual** (ADR-0169 §3): `express_interest` reads the other side's yes *before* the cap,
+  and a yes that is answered the instant it is written was never outstanding. And
+  `ttl_days` crosses beside `cap` on every `outstanding` row, read off the ruleset at
+  response time, so the deck's ending can print *21* without the client holding it.
   **`application/search_workbench.py` is the seam the two surfaces share** — read the
   searcher, bind the snapshot and every live gate fact, attach the card and the at-stake
   block, record, commit, note exposure — so a shortlist and a deal cannot come to two
@@ -514,7 +553,16 @@ Rules to preserve:
   challenge, `LINE_UP_INCOMPLETE` from birth with an "organiser" who is only whoever's yes
   arrived second. The mode is **inherited, or
   resolved from the filler's declared Play intent** on the deck's own rule, and the **window
-  is never re-stamped**, so a mutual-born challenge stays window-less for life. The cost is
+  is never re-stamped**, so a mutual-born challenge stays window-less for life. **A mutual's
+  own mode is decided at the mint, and it is a friendly or nothing** (ADR-0169 §8): the mint
+  reads both declarations for the sport through `FriendlyChoiceQuery` — a port in
+  `challenges`' words, adapted over `player_profile`'s declaration repository and never over
+  the matcher's `mode_for_intent`, whose *no preference → fun* is about weight vectors and
+  not about anybody's evening — and stamps `FOR_FUN` when either chose one; *competitive*,
+  *no preference* and *undeclared* all leave it absent and the hand-over reads counted.
+  The aggregate refuses `COMPETITIVE` on a mutual, and the event's `mode` is nullable with a
+  default rather than a version 2, on `SeatsInvited.invited_by`'s argument: a row without it
+  was minted when every mutual was counted, and `None` is what it already meant. The cost is
   recorded rather than softened, on the port and on the two routes that meet it: **a lapsed
   invitee is out of that challenge's own pool for as long as it stands** — `already_asked_at`
   feeding `NobodyIsAskedTwice`, per aggregate, and asking them again is a **new** challenge. It is
@@ -704,6 +752,16 @@ Rules to preserve:
   a line for each. There is no *Game on* line. And **a refused line is not a refused
   telling**: `GamePlanned` reaches the room, draws nothing, and is where the room learns its
   game — as does `ChallengeWithdrawn`, whose whole effect is that the room stops existing.
+  **One row carries a code *and a condition*, and it is the only one**: a mutual is the
+  opening, and on a doubles court it is also half a game — both people on one side, a side
+  still to fill — so that room is born with `SIDE_FORMED` at `seq` 1, the first code that
+  names no actor, while a singles mutual's room gets no line (ADR-0169 §8). `Telling.only_when`
+  carries that condition as a **predicate and its sentence together**, and `line_drawn_by` is
+  how the handler asks — so the table stays the whole truth about what ships, and a row reworded
+  cannot ship the old line green. It is not a *Game on* line by the other door: it announces no
+  standing and is re-derived from nothing, an introduction written once at birth. The
+  doubles/singles fact is `challenges`' own `seats_per_side`, read off the event's sport in the
+  table and never respelled.
   **A room is for the episode, and its end is derived**
   ([ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
   [ADR-0164](../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)

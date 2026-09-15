@@ -81,6 +81,9 @@ export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
   return {
     isSelf: response.is_self,
     nickname: response.nickname,
+    // Verbatim, and absent where absent. Nothing trims, shortens or defaults it: what
+    // crosses is what they wrote, fenced on the way in and never on the way out.
+    ...(response.intro === undefined ? {} : { intro: response.intro }),
     ...(response.photo_url === undefined ? {} : { photoUrl: response.photo_url }),
     // The mark is a fact about **a photograph**: a player with none is drawn the generated
     // poster, which has nothing to have passed. The pair is read together and once.

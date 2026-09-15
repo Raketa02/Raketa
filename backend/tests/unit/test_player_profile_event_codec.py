@@ -20,6 +20,7 @@ from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
+    IntroWritten,
     LocationChanged,
     PhotosChanged,
     PlayerProfileCreated,
@@ -59,6 +60,7 @@ EVENTS = [
     SearchRadiusChanged(player_id=PLAYER, search_radius_km=25, occurred_at=AT),
     GenderChanged(player_id=PLAYER, gender="MAN", occurred_at=AT),
     GenderPreferenceChanged(player_id=PLAYER, gender_preference="ANY", occurred_at=AT),
+    IntroWritten(player_id=PLAYER, intro="Moved from Wrocław in May.", occurred_at=AT),
     ProposalsOptInAnswered(
         player_id=PLAYER,
         accepted=True,

@@ -239,6 +239,22 @@ export function pairingAbsenceLine(absence: PairingAbsence, sportName: string): 
   }
 }
 
+/**
+ * **An invitation a swipe produced says so** — one line under the organiser's card, drawn when
+ * the organiser is in the reader's own outgoing list for the challenge's sport
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8).
+ *
+ * It is the reader's **own act** and nothing else: *why the engine picked them* is what ADR-0143
+ * refuses to tell an invitee and this line does not touch it, because Ania saying yes to Karol
+ * on Players is a fact she already holds. Client-side, off the same `GET /interest` the deck
+ * reads; no code crosses for it. The handle is whole (ADR-0107), and *Players* is the tab's own
+ * drawn name, as `NOW_COPY` points at *Play* by its word.
+ */
+export function saidYesOnPlayersLine(organiserName: string): string {
+  return `You said yes to ${organiserName} on Players`;
+}
+
 export interface ChallengeCardFacts {
   readonly person: CourtPerson;
   readonly fit: number;

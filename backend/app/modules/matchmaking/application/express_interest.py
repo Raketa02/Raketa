@@ -13,10 +13,16 @@ the search's is.
    A second tap creates nothing, spends no cap slot and — the part that matters —
    does **not** re-date the expiry, because a button that says it costs nothing
    must not be a way to keep a yes alive for ever.
-3. It checks the **cap**, and refuses at it. Nothing of the player's is quietly
-   shortened to make room (``docs/adr/0127`` §3).
-4. It writes the row, and then reads whether the yes is **mutual**.
-5. When it is, it **opens the challenge inline** and commits the two together.
+3. It reads whether the yes is **mutual** — whether the other person's own live
+   yes already stands — and then checks the **cap**, refusing at it. Nothing of
+   the player's is quietly shortened to make room (``docs/adr/0127`` §3). **A
+   yes that closes a mutual is exempt** (``docs/adr/0169`` §3): it is answered
+   the instant it is written and gives the slot straight back, so it is never
+   outstanding and the cap has nothing to count. A stranger's is refused as
+   before — the exemption is about the pair, not the player.
+4. It writes the row.
+5. When the yes is mutual, it **opens the challenge inline** and commits the two
+   together.
 
 **The mutual read moved before the commit, and the reason is a promise.** E7 says
 *that player has left the deck for good, because you now have an open game
@@ -141,17 +147,25 @@ class ExpressInterest:
             sport=command.sport,
             now=now,
         )
+        mutual = await self._theirs_stands(command, now=now)
         if standing is not None:
             yes, created = standing, False
         else:
-            standing_count = await self._counted(
-                command.from_player_id, command.sport, now
-            )
-            if standing_count.reached:
-                raise OutstandingInterestCapReached(
-                    f"you already have {standing_count.outstanding} outstanding "
-                    f"*Let's play* yeses for {command.sport.value}"
+            # **The cap steps aside for a yes that closes a mutual**
+            # (``docs/adr/0169`` §3). It is never outstanding — answered the
+            # instant it is written — so the count would not grow by it, and
+            # refusing it would block the one yes two people already want.
+            # The count is read only where it can bite, so a cap refusal is
+            # still one read of one rule.
+            if not mutual:
+                standing_count = await self._counted(
+                    command.from_player_id, command.sport, now
                 )
+                if standing_count.reached:
+                    raise OutstandingInterestCapReached(
+                        f"you already have {standing_count.outstanding} "
+                        f"outstanding *Let's play* yeses for {command.sport.value}"
+                    )
             yes = Interest(
                 from_player_id=command.from_player_id,
                 to_player_id=command.to_player_id,
@@ -163,7 +177,7 @@ class ExpressInterest:
             await self._interest.record(yes)
             created = True
 
-        answer = await self._answer(yes, now=now, created=created)
+        answer = await self._answer(yes, now=now, created=created, mutual=mutual)
         # **The mint hangs off the mutual and never off ``created``.** It is the
         # second yes that makes a game, and whether *this* tap wrote a row is a
         # different question: a repeat tap on a pair whose mint was refused is
@@ -187,8 +201,35 @@ class ExpressInterest:
         await self._uow.commit()
         return answer
 
+    async def _theirs_stands(
+        self, command: ExpressInterestCommand, *, now: datetime
+    ) -> bool:
+        """Whether the other person's own live yes to this one already stands.
+
+        A :meth:`find` in the **other** direction, which is the only shape in
+        which somebody else's yes may be looked at: it answers about one named
+        pair, on a request the recipient of that yes made themselves, and it can
+        say nothing about anybody who has not been said yes to.
+
+        Read **once**, before the cap and before the write, because two things
+        turn on it — whether the cap is checked at all, and what the answer says
+        — and a second read between them would be a second chance for the two to
+        disagree. It is what the two rows say and is **not** narrowed to *a game
+        was opened*: the mutual is true either way, and reporting it as false
+        because a gate refused would tell the sender something about the other
+        person that no refusal here is allowed to say.
+        """
+
+        theirs = await self._interest.find(
+            from_player_id=command.to_player_id,
+            to_player_id=command.from_player_id,
+            sport=command.sport,
+            now=now,
+        )
+        return theirs is not None
+
     async def _answer(
-        self, yes: Interest, *, now: datetime, created: bool
+        self, yes: Interest, *, now: datetime, created: bool, mutual: bool
     ) -> ExpressedInterest:
         """The yes, the pair the cap is shown through, and whether it came back.
 
@@ -196,35 +237,19 @@ class ExpressInterest:
         from the number the cap was checked against: the two are the same query,
         and a caller adding one to the other would be a second definition of
         *outstanding* — the one thing ``docs/adr/0127`` §4 says the player must be
-        able to predict a refusal from.
-
-        The mutual read is a :meth:`find` in the **other** direction, which is
-        the only shape in which somebody else's yes may be looked at: it answers
-        about one named pair, on a request the recipient of that yes made
-        themselves, and it can say nothing about anybody who has not been said
-        yes to.
+        able to predict a refusal from. After a yes that closed a mutual it has
+        not grown, which is the whole reason the cap stepped aside.
 
         **Nothing here writes.** The mint the mutual causes is in
         :meth:`execute`, beside the commit it shares a transaction with, because
         a method called to build a response is not where the second write of a
         transaction belongs.
-
-        ``mutual`` is what the two rows say and is **not** narrowed to *a game
-        was opened*: the mutual is true either way, and reporting it as false
-        because a gate refused would tell the sender something about the other
-        person that no refusal here is allowed to say.
         """
 
-        theirs = await self._interest.find(
-            from_player_id=yes.to_player_id,
-            to_player_id=yes.from_player_id,
-            sport=yes.sport,
-            now=now,
-        )
         return ExpressedInterest(
             interest=yes,
             outstanding=await self._counted(yes.from_player_id, yes.sport, now),
-            mutual=theirs is not None,
+            mutual=mutual,
             created=created,
             # **Nothing is named from here.** Whether these two have a game is
             # the other context's answer and it is not asked until
@@ -247,4 +272,5 @@ class ExpressInterest:
             sport=sport,
             outstanding=counts.get(sport, 0),
             cap=self._ruleset.interest.outstanding_cap_per_sport,
+            ttl_days=self._ruleset.interest.ttl_days,
         )

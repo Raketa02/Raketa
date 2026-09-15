@@ -58,3 +58,39 @@ swipe-back is off**, because a swipe that popped to the challenge screen underne
 somewhere _Later_ never does; it keeps the shell's own `none` transition deliberately, since the
 screen has one motion of its own and a push sliding in under it would be a second. The column stays
 lit.
+
+**The second column is Players, and it is the deck** ([#443](https://github.com/Raketa02/Raketa/issues/443),
+[ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1).
+It was Around — a placeholder promising _players and courts near you_, drawn with `map-pin`
+after `radar` was refused for a tab with no scan behind it (ADR-0135) — and the rename is
+**whole**: key `players`, label _Players_, Feather `users` (`user` is You's, and the family
+finding stands), route `/players`, and the harness's route table with it, because a
+half-rename is the thing a later session trips over. Around's line retired with the tab; nothing
+had been decided about courts and they get their own home when they arrive. The Chats panel's
+note that _when you count yourself into something tonight_ was Around's now says the phrase has
+**no tab**, which is what it has. The screen at the root is `features/play`'s own `DeckScreen`,
+named by its route file exactly as Find a game is — the tab has no words of its own for the
+shell to compose anything under, and `tabScreens.tsx` holds two entries now, one of them still
+a placeholder. **A single-screen root like the other flanking tabs**: the shell keeps no
+per-tab history, so Players opens on the deck every time and the held deal is what makes that
+cheap; the toggle on it is the screen's own state and lands on Deck on every arrival for the
+same reason. What the bar and the header changed to carry it — the glyph, the label cap, a
+header with no heading, and the two slots `ShellScreen` now forwards — is
+[`_shared.md`](_shared.md)'s.
+
+**Play lost its depth by one, and the reset a caller.** `/play/deck` is gone with the segment
+that reached it and the `Stack.Screen` that gave it the push transition
+([#443](https://github.com/Raketa02/Raketa/issues/443), ADR-0169 §1), and `enterPlay` is no
+longer exported from the shell's surface: the _Find a game_ half of that segment was the reset's
+fourth caller and its only outside one, and `resetShellStack` has three callers again — a
+flanking tab, ⚡Play and the send. The Play stack is still `[Now, Find a game]`, and the builder
+is the depth a test pushes to show a press from inside the tab still lays it down.
+
+**The Players header's right slot is the chip, and its page fills**
+([#444](https://github.com/Raketa02/Raketa/issues/444),
+[ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4,
+§7). The slot #443 left empty carries _2 want to play you_ — a volt pill the deck draws from the
+deal's `pool.want_to_play_you`, at one and above and never at nought, so a header with nothing
+waiting has nothing in the slot. `ShellScreen` gained `fill` for the same tab, forwarded and not
+designed: the deck's stage takes the height the phone gives it, with the three round buttons in
+the pinned `action` slot below it.

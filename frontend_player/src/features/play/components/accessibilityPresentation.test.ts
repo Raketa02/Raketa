@@ -103,7 +103,7 @@ describe('the deck', () => {
 
     expect(pass).toBe('Not today, Marek');
     expect(accept).toBe("Let's play, Marek");
-    expect(accept).not.toContain('🎾');
+    expect(accept).not.toMatch(/🎾|ball/);
   });
 });
 

@@ -37,6 +37,7 @@ from app.bootstrap.composition import (
     build_challenge_repository,
     build_domain_event_store,
     build_event_publisher,
+    build_friendly_choice_query,
     build_open_challenge_query,
     build_planned_game_handover,
     build_settled_game_query,
@@ -438,6 +439,7 @@ def _mint(session, *, safety=None, at=SENT_AT) -> OpenChallengeFromMutualInteres
         safety=safety or a_safe_court([ALICE, BOB]),
         clock=FrozenClock(at),
         planned_games=build_planned_game_handover(session),
+        friendly_choices=build_friendly_choice_query(session),
     )
 
 

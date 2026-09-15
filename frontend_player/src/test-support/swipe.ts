@@ -139,15 +139,13 @@ export function yieldsToTheList(card: Node): boolean {
 }
 
 /**
- * A whole swipe on `card`: down, the move that claims it, the travel that counts, and up.
+ * A finger that has **not let go**: down, the move that claims it, and the travel — with the card
+ * still under the thumb. What a stamp fading in with the drag is asserted against, since a whole
+ * swipe has released before anything can be looked at. `release` lifts it.
  *
- * The claiming move travels exactly the intent distance in the swipe's direction; the grant
- * that follows is where the card starts following the finger, so **`travel` is what the finger
- * does after the row has claimed it** and is what the reveal threshold is measured against.
- *
- * @returns whether the row claimed the swipe. A row that does not swipe is left untouched.
+ * @returns whether the surface claimed the drag. A surface that does not drag is left untouched.
  */
-export function swipe(card: Node, travel: number): boolean {
+export function dragTo(card: Node, travel: number): boolean {
   const surface = gestureSurfaceOf(card);
   if (surface === undefined) return false;
 
@@ -161,6 +159,33 @@ export function swipe(card: Node, travel: number): boolean {
 
   deliver(surface, 'onResponderGrant', finger(START, claimed));
   deliver(surface, 'onResponderMove', finger(claimed, end));
-  deliver(surface, 'onResponderRelease', finger(end, end));
+  held.set(card, end);
+  return true;
+}
+
+/** The finger lifts where `dragTo` left it. */
+export function release(card: Node): void {
+  const surface = gestureSurfaceOf(card);
+  const at = held.get(card);
+  if (surface === undefined || at === undefined) return;
+  held.delete(card);
+  deliver(surface, 'onResponderRelease', finger(at, at));
+}
+
+/** Where each finger `dragTo` has not yet lifted is resting, so `release` lifts it from there. */
+const held = new Map<Node, Point>();
+
+/**
+ * A whole swipe on `card`: down, the move that claims it, the travel that counts, and up.
+ *
+ * The claiming move travels exactly the intent distance in the swipe's direction; the grant
+ * that follows is where the card starts following the finger, so **`travel` is what the finger
+ * does after the row has claimed it** and is what the reveal threshold is measured against.
+ *
+ * @returns whether the row claimed the swipe. A row that does not swipe is left untouched.
+ */
+export function swipe(card: Node, travel: number): boolean {
+  if (!dragTo(card, travel)) return false;
+  release(card);
   return true;
 }

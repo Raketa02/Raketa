@@ -536,12 +536,18 @@ class RunLineupSearch:
 
         *A challenge born with a mode* — **it keeps it.** A competitive court
         must not have its last seat filled by a for-fun search, and the mode is
-        the court's rather than the filler's.
+        the court's rather than the filler's. A mutual-born court whose mint
+        stamped ``FOR_FUN`` — either of the pair declared the sport *for fun*
+        (``docs/adr/0169`` §8) — is born with one and keeps it the same way.
 
-        *A challenge born without one* — deck-born, and every mutual-born court —
-        resolves one from the **filler's** declared Play intent on the deck's own
-        rule, ``NO_PREFERENCE → fun`` (``docs/adr/0150`` §5). **No mode picker
-        appears anywhere**, and ADR-0100 keeps its silence.
+        *A challenge born without one* — deck-born, and a mutual-born court
+        neither of whose pair declared *for fun* — resolves one from the
+        **filler's** declared Play intent on the rule
+        ``mode_for_intent`` keeps, ``NO_PREFERENCE → fun`` (``docs/adr/0150``
+        §5). It was the deck's rule when that record was written; the deck now
+        runs on one ruler for everybody (``docs/adr/0169`` §2) and the mapping
+        lives on here. **No mode picker appears anywhere**, and ADR-0100 keeps
+        its silence.
         """
 
         inherited = court.mode

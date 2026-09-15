@@ -128,3 +128,37 @@ cache would draw a dead link as a blank tile on the second yes of an evening, wh
 the poster; and `gcTime: 0` is what makes _no tile swaps mid-entrance_ true, since nothing stale is
 there to be drawn first. `challenges → player_record` is a new feature edge, through this surface,
 held open by `scripts/test-import-boundaries.sh`.
+
+**The deck is the sheet's third door, and the header's mark gained its tick**
+([#444](https://github.com/Raketa02/Raketa/issues/444),
+[ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §3,
+§7). The Players deck opens this sheet from its **i** button and from a long press on the card,
+with the deck's pairing in hand — subject, sport, distance, the reader's own area, the tag
+overlap and `pairing: { fit, onExplain }` — so _why this Fit_ lives behind the fit row exactly
+as it does from the builder's forecast card, and the deck's previous direct long-press to the
+Fit breakdown is gone: a face opens the person, and the pairing's arithmetic is a row inside what
+that opens. Nothing on the sheet changed for it; the props it already took were the props the
+deck had. The header's `PhotoPanel` draws the on-court mark with a drawn tick before its words
+now, at `space.md` down the panel rather than `space.xs`, because one mark has one drawing and
+the deck card draws it too (`_shared.md`).
+
+**The intro sits under the name, and only there**
+([#445](https://github.com/Raketa02/Raketa/issues/445),
+[ADR-0170](../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)
+§3, §4). `intro` crosses on `PlayerRecordResponse`, omitted where they wrote none and never an
+empty string, and the mapper carries it verbatim — nothing trims, shortens or defaults it,
+because it was fenced on the way in and is never touched on the way out. The header draws it
+between the handle and the identity line, inside the drawing's own quotation marks
+(`introLine`), in the deck card's role for the same line on paper instead of over a photograph
+and in `muted`, because it is what they said and not what the platform measured. **Upright**,
+for the deck card's reason: this app loads no italic Archivo, and a `fontStyle` on a custom
+family is ignored on Android and synthesised on iOS, so the marks carry _their words_. Never
+truncated — the cap at the write is what makes an ellipsis unnecessary. The header is still one
+element, and `recordHeaderLabel` speaks the line inside its marks straight after the handle, so
+a listener hears it as the person's own words and never as a second name. A player who wrote
+none draws nothing, and the identity line closes up under the handle. The marks are spelled here
+rather than imported from `play`'s `quotedIntro`: a feature may not deep-import another's copy,
+and a second caller is not the third. **Present on your own record as on anybody else's** — it is
+what strangers read, shown back to you — and nowhere else on this sheet or any other: not a
+seat, not a Chats row, not a conversation header, not a challenge card, and not Find a game's
+shortlist or pool cards, which `candidateCards.test.tsx` holds to it.

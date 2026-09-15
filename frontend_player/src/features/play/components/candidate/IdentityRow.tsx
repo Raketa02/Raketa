@@ -3,15 +3,17 @@
  *
  * ## Why this is not `CardHead`
  *
- * The two are the same object on the social and deck cards and stopped being one here
+ * The two were the same object on all three cards and stopped being one here
  * ([#309](https://github.com/Raketa02/Raketa/issues/309)). `CardHead` lays out a name with the
- * **fit pill** on the same line and the interest lift as a sentence beneath; this card puts the
- * **tag** on that line and the pill on a row of its own. Configuring one component to do both
- * would take two flags to say which, which is
+ * **fit pill** on the same line and the interest tag beneath; this card puts the **tag** on
+ * that line and the pill on a row of its own. Configuring one component to do both would take
+ * two flags to say which, which is
  * [`the-play-components.md`](../../../../../../docs/specs/matchmaking/the-play-components.md)
  * §3's `surface === …` arriving in a smaller spelling — and the three cards are three
- * components for exactly this reason. The other two are untouched, and `CardHead`'s own note
- * records which card left it and why.
+ * components for exactly this reason. `CardHead` has since taken the same tags under its name
+ * line ([ADR-0169](../../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8 — both tags on both card styles), and its own note records why the two heads are still
+ * two.
  *
  * ## The tag reverses #231's open decision #14, on the evidence that decision was missing
  *
@@ -20,8 +22,9 @@
  * and the wrong conclusion. The two-word form was never gone: `INTEREST_RECEIVED` and
  * `INTEREST_LIFT` fire for the same person and are *two facts with one tag*
  * ([`the-words.md`](../../../../../../docs/specs/matchmaking/the-words.md) §10), so the tag is
- * bound to the admitting code and takes the twin's words. `candidateTag` owns that, and the
- * precedence over the coral one with it.
+ * bound to the admitting code and takes the twin's words. `candidateTag` owns that, the second
+ * interest tag — *You said yes*, the reader's own act off their own list — and the precedence
+ * of both over the coral one.
  *
  * **The row announces nothing.** §20.1 merges it into the card body, whose spoken name opens
  * with the same handle. The tag's own words are the one thing on this row that does *not*

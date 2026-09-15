@@ -3,7 +3,7 @@
  *
  * The eyebrow says the player is still setting up **and how far through they are**, which
  * part one deliberately cannot do — a questionnaire's length is decided one answer at a
- * time, so its eyebrow counts sports instead. This part is seven steps whatever anybody
+ * time, so its eyebrow counts sports instead. This part is eight steps whatever anybody
  * answers, so the count is honest and the player can see the end.
  *
  * `asks` is one sentence about the single decision that step is for. It stays one sentence
@@ -28,6 +28,17 @@ const COPY: Readonly<Record<SocialStep, StepCopy>> = {
   tags: {
     title: 'What kind of player are you?',
     asks: 'The tags another player would recognise you by, from a fixed list.',
+  },
+  intro: {
+    /**
+     * **It follows the tags and says so.** The tags asked the same question in the
+     * platform's words; this is the one step where a player answers in their own, and the
+     * title is the invitation ADR-0170 §5 wrote — *you've picked your tags; now say it in
+     * your own words*. Not *Your intro*: that is the box's label, and a title that named the
+     * field would be a heading over a form rather than a question.
+     */
+    title: 'Say it in your own words',
+    asks: 'One line about you — your intro — or nothing at all.',
   },
   photos: {
     title: 'Your court photos',

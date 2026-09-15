@@ -28,7 +28,13 @@ from app.modules.challenges.domain.events import (
     SeatsInvited,
 )
 from app.modules.conversations.application.membership import Membership
-from app.modules.conversations.application.telling import TELLINGS, TOLD_ABOUT
+from app.kernel import InvariantViolated
+from app.modules.conversations.application.telling import (
+    TELLINGS,
+    TOLD_ABOUT,
+    line_drawn_by,
+    line_for,
+)
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.games.domain.events import (
@@ -101,16 +107,21 @@ def test_each_event_that_publishes_nothing_names_its_reason(telling):
     assert telling.why_nothing
 
 
-def test_the_eleven_that_write_nothing_are_the_eleven_the_words_names():
+def test_the_ten_that_write_nothing_are_the_ten_the_words_names():
     """``the-words.md`` §23.1 is headed *the six events that publish nothing* and
-    its own table names eleven of them, four grouped on one row as *the result
+    its own table names eleven, four grouped on one row as *the result
     argument*, two on one row as *the game's line-up moving*, and the call-off
     on a row of its own (``docs/adr/0163``). The discrepancy is in the source;
-    this asserts the events."""
+    this asserts the events.
+
+    The mutual keeps its row there and left this list with ``docs/adr/0169``
+    §8: on a doubles court it writes the side line, so here it is a row with a
+    code and a condition rather than a refusal — ten refusals, see the test
+    below.
+    """
 
     assert {telling.event for telling in WRITES_NOTHING} == {
         ChallengeSent,
-        ChallengeOpenedFromMutualInterest,
         ChallengeWithdrawn,
         GamePlanned,
         SeatVacated,
@@ -138,13 +149,72 @@ def test_a_refused_line_is_not_a_refused_telling():
     a game and nothing else."""
 
     planned = next(t for t in TELLINGS if t.event is GamePlanned)
+
+    assert planned.reaches_the_room and planned.line is None
+    assert GamePlanned in TOLD_ABOUT
+
+
+def test_a_mutual_born_doubles_court_says_it_is_half_a_game():
+    """``docs/adr/0169`` §8 — *a padel mutual says it is half a game.* The room
+    a doubles mutual opens is born with one line, ``SIDE_FORMED``, and a
+    singles one with none: the mutual is still the opening, and the condition
+    is on the row so that a builder reading the table cannot take the code for
+    an unconditional one and a reader of a tennis room for a missing one."""
+
     mutual = next(
         t for t in TELLINGS if t.event is ChallengeOpenedFromMutualInterest
     )
 
-    assert planned.reaches_the_room and planned.line is None
-    assert mutual.reaches_the_room and mutual.line is None
-    assert GamePlanned in TOLD_ABOUT
+    assert mutual.line is SystemLineCode.SIDE_FORMED
+    assert mutual.reaches_the_room
+    assert mutual.only_when is not None and "doubles" in mutual.only_when.stated
+    assert ChallengeOpenedFromMutualInterest in TOLD_ABOUT
+
+
+def test_a_condition_belongs_to_a_line_and_never_to_a_refusal():
+    """``only_when`` is the third thing a row can say, and it is only sayable
+    of a row that writes: a refusal is already unconditional, and a row that
+    named both would be a line and its own refusal at once."""
+
+    conditional = [t for t in TELLINGS if t.only_when is not None]
+
+    assert [t.event for t in conditional] == [ChallengeOpenedFromMutualInterest]
+    assert all(t.line is not None for t in conditional)
+
+
+def _a_mutual_in(sport: Sport) -> ChallengeOpenedFromMutualInterest:
+    return ChallengeOpenedFromMutualInterest(
+        challenge_id=uuid4(),
+        sport=sport.value,
+        organiser_id=uuid4(),
+        other_player_id=uuid4(),
+        seats=(),
+        occurred_at=NOW,
+    )
+
+
+def test_the_condition_is_a_predicate_the_handler_runs_and_not_a_sentence():
+    """The table is the whole truth about what ships only if the condition it
+    states is the condition that decides — so the row carries the predicate
+    beside the sentence, and ``line_drawn_by`` is what the handler asks. A
+    row reworded to *singles only* cannot ship the doubles line green."""
+
+    assert line_drawn_by(_a_mutual_in(Sport.PADEL)) is SystemLineCode.SIDE_FORMED
+    assert line_drawn_by(_a_mutual_in(Sport.BADMINTON)) is SystemLineCode.SIDE_FORMED
+    assert line_drawn_by(_a_mutual_in(Sport.TENNIS)) is None
+    assert line_drawn_by(_a_mutual_in(Sport.SQUASH)) is None
+
+
+def test_a_conditional_line_cannot_be_asked_for_unconditionally():
+    """``line_for`` answers the code a row always writes; a row that writes only
+    sometimes has to be asked through ``line_drawn_by``, or the condition on it
+    would be a sentence nobody runs."""
+
+    with pytest.raises(InvariantViolated):
+        line_for(_a_mutual_in(Sport.PADEL))
+    assert line_for(
+        SeatAccepted(challenge_id=uuid4(), player_id=uuid4(), occurred_at=NOW)
+    ) is SystemLineCode.SEAT_ACCEPTED
 
 
 def test_the_withdrawal_draws_nothing_and_has_the_largest_effect_of_any_telling():
@@ -263,7 +333,7 @@ def test_there_is_no_code_for_a_slot_being_changed():
     codes = {code.value for code in SystemLineCode}
 
     assert not any("CHANGED" in code or "MOVED" in code for code in codes)
-    assert len(codes) == 8
+    assert len(codes) == 9
 
 
 def test_there_is_no_code_for_a_plan_being_unlocked():

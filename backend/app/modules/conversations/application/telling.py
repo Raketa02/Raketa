@@ -22,6 +22,27 @@ written (``docs/adr/0155``).
    One rule gives all three membership codes one shape: an acceptance, an
    invitation and a departure each write a line **only when there was already a
    room to write it in**.
+
+   **The mutual is the one opening that may also write, and only on a doubles
+   court** (``docs/adr/0169`` §8). Two yeses in padel seat both people on one
+   side with a whole side still to fill, and nothing in the room said so — so
+   that room is born with ``SIDE_FORMED`` at ``seq`` 1. A singles mutual is a
+   whole court and stays exactly what it was: the opening, and no line. The
+   row below carries the code **and the condition**, because a table that
+   said only ``SIDE_FORMED`` would have a builder expecting one in every
+   tennis room and a reader of one taking its absence for a bug — and the
+   condition is a **predicate the handler runs** (``line_drawn_by``) with the
+   sentence beside it, not a sentence alone, so the table and the line that
+   ships cannot part company on the one row where they could.
+
+   **It is not rule 2's case, and the difference is what the line says.** Rule
+   2 refuses a line for a *standing* — a conclusion the fold reaches from the
+   seats, which has exactly one place to be true. ``SIDE_FORMED`` announces no
+   standing and is re-derived from nothing: it is the room's introduction of
+   the shape the pair were dealt into, true once at birth and never again
+   asked of the seats, which is why it is written once, only there, and by
+   the opening rather than by anything the seats later do. *No system line
+   announces a derived standing* holds as it did.
 2. **No system line announces a conclusion the record already implies.**
    ``GamePlanned`` is refused on ``docs/adr/0142`` §3's own test — *an event may
    announce a conclusion only when no arrangement of the seats could reach it* —
@@ -72,8 +93,9 @@ is read off the game live rather than told.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import final
+from typing import Any, Callable, final
 
+from app.kernel import Sport
 from app.modules.challenges.domain.events import (
     ChallengeOpenedFromMutualInterest,
     ChallengeSent,
@@ -85,6 +107,7 @@ from app.modules.challenges.domain.events import (
     SeatsInvited,
 )
 from app.kernel import invariant
+from app.modules.challenges.domain.seats import seats_per_side
 from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.games.domain.events import (
     GameCalledOff,
@@ -107,6 +130,23 @@ from app.modules.plans.domain.events import (
 
 @final
 @dataclass(frozen=True, slots=True)
+class Condition:
+    """Under what a line that is otherwise drawn is drawn — **the predicate and
+    the sentence, kept together.**
+
+    ``holds`` is what the handler runs against the event; ``stated`` is what a
+    reader of the table reads. One object rather than a string, because a
+    condition that lived in prose here and in code in the handler would be two
+    spellings of one rule, and the row reworded to *singles only* would ship
+    the doubles line green.
+    """
+
+    holds: Callable[[Any], bool]
+    stated: str
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class Telling:
     """One published event, and what this context does about it.
 
@@ -117,12 +157,31 @@ class Telling:
     ``reaches_the_room`` is a **third** state and not a synonym for either. An
     event may write no line and still have to arrive — see the module docstring
     on ``GamePlanned``.
+
+    ``only_when`` is sayable of a row that writes, and of no other: the
+    condition under which the line is drawn, where there is one, so that the
+    table stays the whole truth about what ships. A refusal is already
+    unconditional, and a row that carried both would be a line and its own
+    refusal at once. A row that carries one is asked through
+    :func:`line_drawn_by` and refuses :func:`line_for`.
     """
 
     event: type
     line: SystemLineCode | None
     reaches_the_room: bool
     why_nothing: str | None = None
+    only_when: Condition | None = None
+
+
+def _on_a_doubles_court(event: ChallengeOpenedFromMutualInterest) -> bool:
+    """Whether the mutual seated its pair on one side with a side still to fill.
+
+    **The court's own fact**, read through ``challenges``' ``seats_per_side``
+    rather than respelled here — the spelling belongs to whoever owns the
+    value, exactly as the hour on a plan line is spelled by the Plan.
+    """
+
+    return seats_per_side(Sport(event.sport)) > 1
 
 
 #: Every event either half of the loop publishes, and this room's answer to it.
@@ -185,9 +244,17 @@ TELLINGS: tuple[Telling, ...] = (
     ),
     Telling(
         event=ChallengeOpenedFromMutualInterest,
-        line=None,
+        line=SystemLineCode.SIDE_FORMED,
         reaches_the_room=True,
-        why_nothing="it **is** the opening; `seq` 1 is whatever happens next",
+        only_when=Condition(
+            holds=_on_a_doubles_court,
+            stated=(
+                "the court is a doubles one — the pair are a side with a whole "
+                "side still to fill, and nothing else in the room says so. On a "
+                "singles court it **is** the opening and writes nothing; `seq` 1 "
+                "is whatever happens next"
+            ),
+        ),
     ),
     Telling(
         event=GamePlanned,
@@ -279,7 +346,8 @@ _BY_EVENT: dict[type, Telling] = {telling.event: telling for telling in TELLINGS
 
 
 def line_for(event: object) -> SystemLineCode:
-    """The code this event writes. **Read from the table, never respelled.**
+    """The code this event **always** writes. **Read from the table, never
+    respelled.**
 
     The handler needs the code and the table already holds it, so this is what
     stops the two parting company — a row edited to refuse a line while the
@@ -288,12 +356,42 @@ def line_for(event: object) -> SystemLineCode:
 
     It raises rather than answering ``None`` for an event that writes nothing:
     the handler asks only on the arms that write, so a lookup that came back
-    empty would be a caller bug and not a state.
+    empty would be a caller bug and not a state. And it raises for a row whose
+    line is **conditional**, for the same reason from the other side: a handler
+    that took the code off such a row without running its condition would be
+    the sentence-nobody-runs this table exists to refuse. That row is asked
+    through :func:`line_drawn_by`.
     """
 
+    telling = _a_row_that_writes(event)
+    invariant(
+        telling.only_when is None,
+        f"{type(event).__name__} writes a line only when "
+        f"{getattr(telling.only_when, 'stated', '')} — ask line_drawn_by",
+    )
+    return telling.line  # type: ignore[return-value]
+
+
+def line_drawn_by(event: object) -> SystemLineCode | None:
+    """The code this event writes **for this event**, or ``None`` when the row's
+    condition does not hold for it.
+
+    The conditional row's read: the predicate on the row is run here and
+    nowhere else, so the table decides and the handler only asks. A row with no
+    condition answers exactly as :func:`line_for` does; a row that writes
+    nothing is the same caller bug there as here.
+    """
+
+    telling = _a_row_that_writes(event)
+    if telling.only_when is not None and not telling.only_when.holds(event):
+        return None
+    return telling.line
+
+
+def _a_row_that_writes(event: object) -> Telling:
     telling = _BY_EVENT[type(event)]
     invariant(
         telling.line is not None,
         f"{type(event).__name__} writes no line: {telling.why_nothing}",
     )
-    return telling.line  # type: ignore[return-value]
+    return telling

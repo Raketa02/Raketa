@@ -1,7 +1,7 @@
 /**
- * Step seven of onboarding's second part: **may we suggest games?**
+ * Step eight of onboarding's second part: **may we suggest games?**
  *
- * The last of the seven, and the only one that collects **consent**. Everything else the part
+ * The last of the eight, and the only one that collects **consent**. Everything else the part
  * asks for is a preference — a preference can be wrong, corrected, or left blank, and none
  * of those is a moral event. This one is a record of what a person agreed to, which is why
  * it is the step with the frozen copy, the pinned version identifier and no third control.
@@ -51,9 +51,9 @@
  *
  * ## This is where the part is written, and it is the only place that is
  *
- * The answer and its copy version go into the client-held draft like the six before it, and
+ * The answer and its copy version go into the client-held draft like the seven before it, and
  * then the finish sends **the whole of it in one request**
- * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)). Not seven
+ * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)). Not eight
  * writes: a partial commit — the tags saved and the consent lost — is the worst outcome this
  * part has available to it.
  *
@@ -64,14 +64,17 @@
  * short of is the area — the location step names that cost when a player passes it, and this
  * is where it is collected, with the way back one press away.
  *
- * There is a third, and it is the seam between the two: **a failure whose code names an
- * answer.** The commit re-validates every rule a picker enforced, so `availability_grid_empty`
+ * There is a third, and it is the seam between the two: **a failure whose code names a
+ * step.** The commit re-validates every rule a picker enforced, so `availability_grid_empty`
  * can arrive from a build that predates the week's floor or from a replayed request — and
  * *try again* is then the one sentence that is not true, because the identical body fails
  * identically. It is drawn as the failure it is, in the words of the answer it names, with
- * the same control back to the step that takes it. The finish stays pressable, exactly as it
- * does after any other correctable refusal; what changes is that the screen no longer
- * promises that pressing it is enough.
+ * the same control back to the step that takes it. `intro_not_admitted` is the other code
+ * that names a step, and the one this screen will actually meet: the fence on the line is
+ * the server's pattern, so a phone number typed on step two is refused here, six screens
+ * later, in the sentence its reason names and with *Change your intro* under it
+ * (ADR-0170 §2). The finish stays pressable, exactly as it does after any other correctable
+ * refusal; what changes is that the screen no longer promises that pressing it is enough.
  *
  * The sequencing is `useCommitProfile`'s and the rule about what a complete part is is
  * `readyToCommit`'s. What is left here is what a player sees and touches.
@@ -98,9 +101,9 @@ import {
   UPLOADING_HINT,
   UPLOADING_TITLE,
   answerStillWanted,
-  answerTheCommitRefused,
+  stepTheCommitRefused,
 } from './commitPresentation';
-import { pathThatAsks } from './socialStepRoutes';
+import { SOCIAL_STEP_PATH, pathThatAsks } from './socialStepRoutes';
 import {
   OPT_IN_ANSWERS,
   OPT_IN_EYEBROW,
@@ -119,20 +122,20 @@ import { SocialStepLayout } from './SocialStepLayout';
  *
  * **Not the ratings summary — the player has already seen it.** It is the screen the second
  * part is now entered *from*, so landing back on it after the commit would show a player the
- * same account of the same walk twice, with the second one following six questions that had
+ * same account of the same walk twice, with the second one following seven questions that had
  * nothing to do with it.
  *
  * A route literal rather than an import, and that is the boundary working. What follows the
  * commit is onboarding's, and this feature owns the profile rather than the flow that
  * collects it. Written here, beside the one press that goes there, rather than in
- * `socialStepRoutes`: that table is the seven steps, and the seven steps stop before this.
+ * `socialStepRoutes`: that table is the eight steps, and the eight steps stop before this.
  */
 const AFTER_THE_PART = '/data';
 
 /**
  * Why the finish will not move, for whoever cannot see that it will not.
  *
- * Three closed reasons and they are genuinely different: an answer one of the six earlier
+ * Three closed reasons and they are genuinely different: an answer one of the seven earlier
  * steps asks for, a photo still arriving, and the question on this very screen. Only the
  * last is `optInPresentation`'s — reaching for *choose yes or no above to finish* in either
  * of the other two would tell a player to do something they have already done.
@@ -161,7 +164,7 @@ export function SocialOptInStep() {
    * is not a value that can be built at all.
    *
    * The last press wins, plainly: `recordAnswer` replaces the field, so changing your mind
-   * before finishing costs nothing and leaves the other five answers alone. Every press
+   * before finishing costs nothing and leaves the other answers alone. Every press
    * writes, including a press on the control already selected — re-affirming an answer is
    * itself a fact about consent, and the step is not the place to decide it is not worth
    * recording.
@@ -180,15 +183,18 @@ export function SocialOptInStep() {
    */
   const wanted = answerStillWanted(commit.kind === 'incomplete' ? commit.missing : []);
   /**
-   * The same question, asked by the server instead of by the draft.
+   * The same question, asked by the server instead of by the draft — or a line the server
+   * would not admit.
    *
    * **The commit re-validates what the pickers already enforced** — a disabled control is
    * absent from a replayed request and from an older build — so a refusal naming an answer
    * is a real thing to render rather than an impossible one. When it arrives it replaces
    * the generic *try again*: retrying the identical body fails identically, and what the
-   * player needs is the step that takes the answer.
+   * player needs is the step that takes the answer. The intro's refusal is the one the
+   * client genuinely cannot see coming — the fence is the server's pattern — and it is drawn
+   * the same way: the reason's sentence, and the way back to the step.
    */
-  const refused = commit.kind === 'failed' ? answerTheCommitRefused(commit.error) : undefined;
+  const refused = commit.kind === 'failed' ? stepTheCommitRefused(commit.error) : undefined;
   /**
    * Whether the finish takes a press. **The rule is `mayFinish`'s**, and the only thing left
    * here is drawing it.
@@ -221,7 +227,7 @@ export function SocialOptInStep() {
                   fixes it is a step behind this one. Nothing was lost either way. */}
               {refused === undefined
                 ? `${recoveryMessage(commit.error)} ${COMMIT_FAILED_BODY}`
-                : refused.copy.body}
+                : refused.body}
             </Note>
           ) : null}
 
@@ -247,10 +253,10 @@ export function SocialOptInStep() {
               control, which is the half a player cannot do without. */}
           {refused !== undefined ? (
             <Button
-              label={refused.copy.label}
+              label={refused.label}
               variant="secondary"
               size="lg"
-              onPress={() => router.replace(pathThatAsks(refused.answer))}
+              onPress={() => router.replace(SOCIAL_STEP_PATH[refused.step])}
             />
           ) : null}
 
@@ -268,7 +274,7 @@ export function SocialOptInStep() {
             label={OPT_IN_FINISH_LABEL}
             size="lg"
             // Closed until answered, open on either answer — and closed again for a part
-            // that is short of something the seven steps must carry. Both are `readyToCommit`
+            // that is short of something the eight steps must carry. Both are `readyToCommit`
             // reporting, so *no* can never be mistaken for *not yet*.
             disabled={!open}
             // Blocked while the request is in flight, which is the courtesy. The defence is

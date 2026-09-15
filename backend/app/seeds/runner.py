@@ -526,6 +526,7 @@ async def _ensure_profile(
             proposals_opt_in=profile.proposals_opt_in,
             consent_copy_version=SEED_CONSENT_COPY_VERSION,
             consent_surface=ConsentSurface.ONBOARDING,
+            intro=profile.intro,
         )
     )
     for sport, intent in profile.intents:
@@ -945,6 +946,7 @@ def _profile_of(
         ),
         latitude=member.latitude,
         longitude=member.longitude,
+        intro=member.intro,
     )
 
 

@@ -16,10 +16,12 @@
  * as a new member of the generated union, and this file stops compiling rather than letting
  * the tag disappear from the picker of the next build anybody ships.
  *
- * **The boundary runs both ways.** `toCommitRequest` is the outbound half: the part's six
+ * **The boundary runs both ways.** `toCommitRequest` is the outbound half: the part's
  * answers, in the app's own words, becoming the one body that ends it. It takes a value that
  * cannot hold a missing answer (`domain/profileCommit`), so the mapping is a renaming and
- * nothing else — no default, no omission, no field decided here.
+ * nothing else — no default, no omission, no field decided here. The intro is the one field
+ * that may be absent, and its absence was decided by the commit rather than here: the body
+ * carries it where the commit does and leaves it out where the commit did.
  */
 
 import type { components } from '@/generated/schema';
@@ -312,6 +314,10 @@ const WIRE_GENDER_PREFERENCE: Readonly<Record<GenderPreference, WireGenderPrefer
 export function toCommitRequest(commit: ProfileCommit): CommitPlayerProfileRequest {
   return {
     social_tag_ids: [...commit.socialTagIds],
+    // Present exactly when the commit holds one. Never `null` and never `''`: the wire
+    // reads both as *no intro*, and a body that spelled the absence three ways would be a
+    // body a later reader could tell apart by accident.
+    ...(commit.intro === undefined ? {} : { intro: commit.intro }),
     photo_ids: [...commit.photoIds],
     availability: toWireSlots(commit.availability),
     location: { latitude: commit.location.latitude, longitude: commit.location.longitude },

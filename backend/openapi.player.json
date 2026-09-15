@@ -631,7 +631,7 @@
           "player-profile"
         ],
         "summary": "Commit every answer from onboarding's second part",
-        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**The availability grid is required**, at least one of its twenty-one cells. Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served \u2014 it is fixed, and a client holds it as a constant.\n\n**The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.\n\n**`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer \u2014 there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.",
+        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**The availability grid is required**, at least one of its twenty-one cells. Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served \u2014 it is fixed, and a client holds it as a constant.\n\n**The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.\n\n**`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer \u2014 there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.\n\n**`intro` is optional and fenced at the write.** One line about yourself, at most a hundred characters, any language; a player who skips sends nothing and has no intro rather than an empty one. A line carrying a phone number, an email, a URL or an `@handle` is refused with `intro_not_admitted` before anything is stored. It crosses on the player card and on the record, and is not echoed here.",
         "operationId": "commit_player_profile_api_v1_players_me_profile_post",
         "security": [
           {
@@ -685,7 +685,7 @@
             }
           },
           "400": {
-            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`search_radius_out_of_bounds` \u2014 outside the served range, or off its step.\n\n`availability_grid_empty` \u2014 nothing ticked on the week. At least one of the twenty-one cells; the minimum is exactly one and is not served.\n\n`proposals_opt_in_not_answered` \u2014 the answer was `null`. Ask the question; do not send `false` on the player's behalf.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.",
+            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`search_radius_out_of_bounds` \u2014 outside the served range, or off its step.\n\n`availability_grid_empty` \u2014 nothing ticked on the week. At least one of the twenty-one cells; the minimum is exactly one and is not served.\n\n`proposals_opt_in_not_answered` \u2014 the answer was `null`. Ask the question; do not send `false` on the player's behalf.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.\n\n`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1510,7 +1510,7 @@
           "interest"
         ],
         "summary": "Your Let's play yeses",
-        "description": "**Outgoing and mutuals only.** There is no inbox: a yes nobody has answered stays silent, in both directions, which is what makes saying yes low-stakes. You are never told that somebody declined you, and you are never shown who said yes to you unless you said it back.\n\n**Every outgoing row carries its own `expires_at`**, so the screen can show what is still live without knowing the window.\n\n**`outstanding` carries the count and the cap for every sport**, before you are near either \u2014 a cap you cannot see is a refusal you cannot predict. Render these; never hardcode the number.",
+        "description": "**Outgoing and mutuals only.** There is no inbox: a yes nobody has answered stays silent, in both directions, which is what makes saying yes low-stakes. You are never told that somebody declined you, and you are never shown who said yes to you unless you said it back.\n\n**Every outgoing row carries its own `expires_at`**, so the screen can show what is still live without knowing the window.\n\n**`outstanding` carries the count, the cap and `ttl_days` for every sport**, before you are near either \u2014 a cap you cannot see is a refusal you cannot predict, and how long a yes lives is the number the deck's ending prints. Render these; never hardcode the numbers.",
         "operationId": "read_interest_api_v1_interest_get",
         "responses": {
           "200": {
@@ -1611,8 +1611,8 @@
         "tags": [
           "deck"
         ],
-        "summary": "Match me",
-        "description": "Deals one batch of cards: one judgement at a time, no mode to pick and no setup.\n\n**No mode, in either direction.** The deck reads your own declared Play intent for the sport \u2014 *no preference* still gives you a working deck \u2014 and no mode crosses the wire either way.\n\n**Send `availability_override` if the player edited their week** on the Play screen, and the deal runs on it; omit it and the grid on the profile is used. It writes nothing: the deal comes back with a `KEEP_THESE_TIMES` prompt, and saving is a separate request the player makes. **A cleared week is a legal value** \u2014 unticking every cell deals a deck rather than being refused.\n\n**A spent deal deals again.** Post again for a new deal with a new `search_id`; running out of cards is not running out of people, and only a fresh deal that comes back empty means the pool is thin.\n\n**The order is the deck's variety**: people who already said *Let's play* to you, then the liveliest, then the rest. There is no re-sort \u2014 `sorts_available` is empty here, because a deck is one card at a time.\n\n**No widening is offered.** `rung_offers` is `null` on a deal: the relaxation ladder belongs to the shortlist.\n\n**Read it back** through `GET /api/v1/searches/{id}`, in this same shape.",
+        "summary": "Deal the deck",
+        "description": "Deals one batch of cards: one judgement at a time, no mode to pick and no setup.\n\n**No mode, in either direction, and no declaration read.** Every deal scores under the same ruler for every viewer \u2014 shared tags lead, overlap second, a wide level window \u2014 whatever either of you declared, and a player who never declared is dealt without being asked to. On every card `INTENT_ALIGNMENT` is in `degraded_terms` as `NOT_READ_ON_THIS_SURFACE`, which is the surface's doing and says nothing about the person.\n\n**Send `availability_override` if the player edited their week**, and the deal runs on it; omit it and the grid on the profile is used. It writes nothing: the deal comes back with a `KEEP_THESE_TIMES` prompt, and saving is a separate request the player makes. **A cleared week is a legal value** \u2014 unticking every cell deals a deck rather than being refused.\n\n**A spent deal deals again.** Post again for a new deal with a new `search_id`; running out of cards is not running out of people, and only a fresh deal that comes back empty means the pool is thin. `pool.remaining` says how many eligible people are beyond this hand, and drops as hands are dealt.\n\n**`pool.want_to_play_you`** says how many people have a live *Let's play* towards you that would be dealt \u2014 a count, never a list, and `0` when nobody is waiting. Somebody who said yes to you is dealt **unmarked**: they carry `inclusion_reason: INTEREST_LIFT` and nothing else says so, and they sit where their lift puts them rather than first by rule.\n\n**Somebody you already have a court with is not dealt** \u2014 a live challenge or game, and for the cool-off after it is behind you, which is a ruleset window (thirty days at release) and never crosses the wire. Find a game still lists them.\n\n**The order is the deck's variety**: the people Liveness lifted, the ones who said yes among them, then the rest. There is no re-sort \u2014 `sorts_available` is empty here, because a deck is one card at a time.\n\n**No widening is offered.** `rung_offers` is `null` on a deal: the relaxation ladder belongs to the shortlist.\n\n**Read it back** through `GET /api/v1/searches/{id}`, in this same shape, minus the two counts \u2014 they are true of the moment the hand was dealt.",
         "operationId": "deal_the_deck_api_v1_deck_post",
         "requestBody": {
           "content": {
@@ -1646,7 +1646,7 @@
             }
           },
           "409": {
-            "description": "`sport_not_rated` \u2014 you hold no rating for this sport.\n\n`play_intent_not_declared` \u2014 the deck has no mode to read, so it reads your declaration; without one there is nothing at all to go on. **Answering *no preference* is an answer** and gives you a working deck.\n\n`player_profile_not_committed` \u2014 there is no profile to read a radius, a grid or an area from.",
+            "description": "`sport_not_rated` \u2014 you hold no rating for this sport.\n\n`player_profile_not_committed` \u2014 there is no profile to read a radius, a grid or an area from.\n\n**Never `play_intent_not_declared`**: the deck reads no declaration, so a player who never made one is dealt without being asked to.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1657,6 +1657,66 @@
           },
           "503": {
             "description": "`matchmaking_unavailable`, `gate_data_unavailable`, `index_too_stale`, `search_not_recorded` \u2014 four distinct codes at one status, so a client can tell a transient outage from a refusal about *you*.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/deck/reset": {
+      "post": {
+        "tags": [
+          "deck"
+        ],
+        "summary": "Show them again",
+        "description": "Deals your deck whole again, for one sport.\n\n**Three things lift at once, and only for this sport**: every *Not today* you gave, the people you were dealt today, and the cool-off on anybody you have had a court with. The next `POST /deck` deals all of them. What stays: the people you have a live *Let's play* on are still yours to wait on, another sport's deck is untouched, and the record that you once passed on somebody is kept \u2014 a card you see again is still one you have seen.\n\n**Idempotent.** Pressing it twice in a row is one press.\n\n**Nobody is told**, and nothing is returned. The only place a reset shows is your own next deal.",
+        "operationId": "show_them_again_api_v1_deck_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetDeckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Cleared. **Nothing is returned** \u2014 the next deal is where the difference shows."
+          },
+          "403": {
+            "description": "`account_held` \u2014 this account is under a live hold.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`sport_not_rated` \u2014 you hold no rating for this sport, so there is no deck of yours to deal again.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4157,7 +4217,7 @@
                 "type": "null"
               }
             ],
-            "description": "The kind of evening it was sent for. ``null`` when the surface it came from has none, and on every challenge born of a mutual yes."
+            "description": "The kind of evening it was sent for. ``null`` when the surface it came from has none; on a challenge born of a mutual yes, `FOR_FUN` when either of the pair declared *for fun* for the sport and `null` otherwise (ADR-0169 \u00a78)."
           },
           "window": {
             "anyOf": [
@@ -4253,7 +4313,7 @@
                 "type": "null"
               }
             ],
-            "description": "The kind of evening it was sent for. ``null`` when the surface it came from has none \u2014 the deck asks nobody to pick one \u2014 and on every challenge born of a mutual yes."
+            "description": "The kind of evening it was sent for. ``null`` when the surface it came from has none \u2014 the deck asks nobody to pick one. **A challenge born of a mutual yes is `FOR_FUN` when either of the pair declared *for fun* for the sport, and `null` otherwise** (ADR-0169 \u00a78) \u2014 never `COMPETITIVE`, because two competitive declarers get a counted game by the absence and not by a stamp."
           },
           "window": {
             "anyOf": [
@@ -4394,6 +4454,18 @@
             "$ref": "#/components/schemas/GenderPreference",
             "description": "Who this player is willing to be matched with. Optional, and `ANY` when it is not sent.\n\n**It is mutual and durable.** It governs what reaches this player as well as what this player sees, so narrowing it makes them invisible to the excluded side entirely \u2014 including to searchers who asked for anybody. The client must say so at the moment of setting; learning it from silence is not acceptable. A single search may narrow this further and nothing may widen past it.",
             "default": "ANY"
+          },
+          "intro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intro",
+            "description": "One line about yourself \u2014 your **intro** \u2014 or nothing. Optional: a player who skips the step sends nothing (or `null`, or whitespace, which is the same), and has no intro rather than an empty one.\n\nTrimmed, then held to **at most 100 characters** and **one line**, in any language. Refused with `intro_not_admitted` and one coarse `details.reason` \u2014 `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle` \u2014 so the client can say what to change without the server explaining what it matched. Nothing else is read.\n\n**Not editable yet** (ADR-0170 \u00a75): this commit is its only write, with the tags and the photo it sits between. It crosses on the player card and on the record, and this response does not echo it."
           }
         },
         "type": "object",
@@ -4406,7 +4478,7 @@
           "gender"
         ],
         "title": "CommitPlayerProfileRequest",
-        "description": "Every answer from onboarding's second part, in one body.\n\n**Photos are the only field with a default**, because holding none is a\nlegitimate answer to *add some photos*. Everything else is something this\nrequest must actually carry \u2014 a location, a radius, a tag selection, an\nanswer to the proposals question, and **a week with something ticked in it**\n(``docs/adr/0102``).\n\nThe week's *floor* is not spelled here, and that is the same decision the tag\nselection's is: an empty list passes this schema and is refused by the domain\nwith ``availability_grid_empty``, so the client gets a code it can branch on\nand a recovery it can offer, rather than a 422 that can only say some field\nsomewhere was wrong."
+        "description": "Every answer from onboarding's second part, in one body.\n\n**Photos and the intro are the fields with a default**, because holding no\nphotograph is a legitimate answer to *add some photos* and writing nothing\nis a legitimate answer to *say it in your own words* (``docs/adr/0170``).\nEverything else is something this request must actually carry \u2014 a\nlocation, a radius, a tag selection, an answer to the proposals question,\nand **a week with something ticked in it** (``docs/adr/0102``).\n\nThe week's *floor* is not spelled here, and that is the same decision the tag\nselection's is: an empty list passes this schema and is refused by the domain\nwith ``availability_grid_empty``, so the client gets a code it can branch on\nand a recovery it can offer, rather than a 422 that can only say some field\nsomewhere was wrong."
       },
       "ConcernSchema": {
         "properties": {
@@ -5457,10 +5529,11 @@
         "enum": [
           "NOT_YET_ON_THIS_PLATFORM",
           "NOTHING_FROM_YOU",
-          "NOTHING_FROM_THEM"
+          "NOTHING_FROM_THEM",
+          "NOT_READ_ON_THIS_SURFACE"
         ],
         "title": "DegradedReason",
-        "description": "Whose gap a stood-down term is. **Three values, and one line drawn.**\n\n``floor.py`` draws that line to decide a number \u2014 *the gate counts\nperson-specific gaps and never platform-wide absence* \u2014 and until now it was\ndrawn nowhere else, so the one list that crosses the wire held *reliability\nis not a thing here yet* and *they have not said what kind of evening they\nwant* as the same fact, twenty times a search.\n\n**It is a code and not a sentence**, on ``docs/adr/0106``'s rule: a client\nwriting *\"they haven't declared\"* off a bare ``Term`` would be an engine rule\nin TypeScript, and *\"nobody has a record yet\"* becomes silently false the day\n``matches`` ships, with no gate that catches it.\n\n**``NOTHING_FROM_THEM`` deliberately swallows reliability's three causes** \u2014\nno record, the last observation past the horizon, no strand clearing the\nobservation bar. Separating them would publish activity recency, which\n``docs/adr/0106`` \u00a75 refuses by name, so the refusal is held by the shape of\nthis vocabulary rather than by a reviewer noticing it in a later ticket.\n\n**``NOTHING_FROM_YOU`` wins a tie** \u2014 both grids blank, neither side tagged \u2014\nbecause it is the only one of the two a reader can act on."
+        "description": "Whose gap a stood-down term is. **Four values, and one line drawn twice.**\n\n``floor.py`` draws that line to decide a number \u2014 *the gate counts\nperson-specific gaps and never platform-wide absence* \u2014 and until now it was\ndrawn nowhere else, so the one list that crosses the wire held *reliability\nis not a thing here yet* and *they have not said what kind of evening they\nwant* as the same fact, twenty times a search.\n\nThe fourth value is the line drawn a second time, from the other side: a\nterm the **search** declined to read is nobody's gap either \u2014 not the\nplatform's, which has the provider, and not the person's, who may well have\ndeclared \u2014 and the deck is the surface that does it (``docs/adr/0169`` \u00a72).\nFiling that under either existing code would print a sentence about a person\nthat is false of them.\n\n**It is a code and not a sentence**, on ``docs/adr/0106``'s rule: a client\nwriting *\"they haven't declared\"* off a bare ``Term`` would be an engine rule\nin TypeScript, and *\"nobody has a record yet\"* becomes silently false the day\n``matches`` ships, with no gate that catches it.\n\n**``NOTHING_FROM_THEM`` deliberately swallows reliability's three causes** \u2014\nno record, the last observation past the horizon, no strand clearing the\nobservation bar. Separating them would publish activity recency, which\n``docs/adr/0106`` \u00a75 refuses by name, so the refusal is held by the shape of\nthis vocabulary rather than by a reviewer noticing it in a later ticket.\n\n**``NOTHING_FROM_YOU`` wins a tie** \u2014 both grids blank, neither side tagged \u2014\nbecause it is the only one of the two a reader can act on."
       },
       "DegradedTermSchema": {
         "properties": {
@@ -5469,7 +5542,7 @@
           },
           "reason": {
             "$ref": "#/components/schemas/DegradedReason",
-            "description": "Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` \u2014 the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), or theirs (`NOTHING_FROM_THEM`). The last deliberately covers every reason a record could not be read, because separating them would publish activity recency."
+            "description": "Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` \u2014 the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), theirs (`NOTHING_FROM_THEM`), or the surface's (`NOT_READ_ON_THIS_SURFACE` \u2014 the deck reads no intent for anybody, so the term stood down for every card and says nothing about either of you). `NOTHING_FROM_THEM` deliberately covers every reason a record could not be read, because separating them would publish activity recency."
           }
         },
         "type": "object",
@@ -6979,13 +7052,20 @@
             "minimum": 1.0,
             "title": "Cap",
             "description": "The most you may have in flight for this sport at once. **Read it from here, never hardcode it** \u2014 it is ruleset configuration and may move between releases."
+          },
+          "ttl_days": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Ttl Days",
+            "description": "How many days a yes you send in this sport stays live before it lapses. **Read it from here, never hardcode it** \u2014 it is the same ruleset number that dates every `expires_at`, sent so a screen can say *your yeses stay live for N days* without holding N. Every yes still carries its own `expires_at`; render that for a row, and this for the sentence."
           }
         },
         "type": "object",
         "required": [
           "sport",
           "outstanding",
-          "cap"
+          "cap",
+          "ttl_days"
         ],
         "title": "OutstandingSchema",
         "description": "How many yeses you have in flight for one sport, and the cap in force.\n\n**Outstanding means sent, unexpired and not yet mutual** \u2014 a mutual has been\nanswered and is no longer in flight. The pair travels together on every read,\nbecause a cap you cannot see is a refusal you cannot predict."
@@ -7226,6 +7306,11 @@
             "title": "Social Tags",
             "description": "The Social tag ids they hold"
           },
+          "intro": {
+            "type": "string",
+            "title": "Intro",
+            "description": "One line this player wrote about themselves \u2014 their **intro** \u2014 verbatim: at most 100 characters, no line breaks, in whatever language they wrote it. **Omitted where they wrote none**, and never an empty string: the intro is optional and a player who skipped has no line, so the card closes up rather than drawing a blank quotation.\n\n**A fact about the person, assembled by `player_profile`** \u2014 the one field this closed list has gained, under its own admission rule: it is what its subject published, it does not change with who is looking, and it is projected to the candidate index like the tags. It is **never scored**: no term reads it and the scorer's fence refuses the word.\n\n**Fenced at the write, not here.** A line carrying a phone number, an email, a URL or an `@handle` was refused before it was stored, so what arrives is a line about a player and not a way to reach one. What it says is theirs; a line you object to is what a block is for.\n\n**Drawn on the deck card and the record sheet, and not on Find a game's cards** \u2014 those are about the game, and the line is about the person. Never spoken as the player's name and never truncated: the cap is what makes an ellipsis unnecessary."
+          },
           "level": {
             "type": "number",
             "title": "Level",
@@ -7273,7 +7358,7 @@
           "range"
         ],
         "title": "PlayerCardSchema",
-        "description": "Who this person is, on a card. **A closed list with two permanent gaps.**\n\nNo bio and no free text of any kind, ever; and **no activity recency at any\ngranularity** \u2014 not a timestamp, not *active today*, not a green dot.\nLiveness reaches a screen the one way it is sanctioned to: as a reason code.\n\n**The last three fields are the record block, and every one of them is\nomitted rather than nought.** They are what the platform has watched this\nperson do \u2014 a Player Score, a count of counted games and a run of form \u2014 and\na nought printed for somebody it has watched do nothing would be a claim\nwhere there is a gap. ``last_five`` is the one that has to keep the recency\nrule while carrying five events: it is **outcomes in order and no dates**,\nwhich is a run of form rather than a statement about when anybody was last\nhere."
+        "description": "Who this person is, on a card. **A closed list with one permanent gap.**\n\n**No activity recency at any granularity** \u2014 not a timestamp, not *active\ntoday*, not a green dot. Liveness reaches a screen the one way it is\nsanctioned to: as a reason code. The other gap the list was closed with \u2014\n*no bio, and no free-text field of any kind* \u2014 was opened by exactly one\nfield, `intro`, on the terms that refusal set: its own decision with a\nmoderation story attached (``docs/adr/0170``). Still no bio, no paragraph,\nno second field, and no free text that is scored.\n\n**The last three fields are the record block, and every one of them is\nomitted rather than nought.** They are what the platform has watched this\nperson do \u2014 a Player Score, a count of counted games and a run of form \u2014 and\na nought printed for somebody it has watched do nothing would be a claim\nwhere there is a gap. ``last_five`` is the one that has to keep the recency\nrule while carrying five events: it is **outcomes in order and no dates**,\nwhich is a run of form rather than a statement about when anybody was last\nhere."
       },
       "PlayerProfileOptionsResponse": {
         "properties": {
@@ -7441,6 +7526,11 @@
             "title": "Social Tags",
             "description": "The Social tag ids they hold, in the vocabulary's own order. **Which of them the reader also holds is the client's own comparison** \u2014 the platform states no overlap here, so a record opened without a search behind it draws them untinted and claims nothing about common ground."
           },
+          "intro": {
+            "type": "string",
+            "title": "Intro",
+            "description": "One line this player wrote about themselves \u2014 their **intro** \u2014 verbatim, drawn under the name. **Omitted where they wrote none**, and never an empty string: the intro is optional, and a player who skipped has no line rather than an empty one.\n\nThe same field the player card carries (`player_card.intro`), read off the profile as it stands rather than off a search record; today the two cannot differ, since the line is written once at onboarding and not editable yet. Fenced at the write against a phone number, an email, a URL or an `@handle`, so what arrives is a line about a player and never a way to reach one. Present on your own record as on anybody else's \u2014 it is what strangers read, shown back to you."
+          },
           "sports": {
             "items": {
               "$ref": "#/components/schemas/SportPillSchema"
@@ -7549,6 +7639,18 @@
             "title": "Post Gate",
             "description": "Always true. It travels so the count cannot be misread.",
             "default": true
+          },
+          "remaining": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Remaining",
+            "description": "**On a deal only.** How many people are eligible for your deck beyond this hand \u2014 after every deck exclusion, and not in the cards you were just dealt. It is what lets a counter say *N left* and be true of the whole pool rather than of ten; it drops by a hand as hands are dealt. Omitted on every other surface and on a read-back, where a count about a pool that has moved on would be a number about nothing."
+          },
+          "want_to_play_you": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Want To Play You",
+            "description": "**On a deal only.** How many people have a live *Let's play* towards you in this sport that would be dealt to you: every gate passed, not passed on by you within the pass window, not cooling off after a court you shared, and not already mutual. Somebody dealt this morning and unanswered still counts \u2014 the dealt memory is not applied. **A count and never a list**: nothing on any route names who. `0` is a measured nought, so a chip drawn from it is drawn at one and above."
           }
         },
         "type": "object",
@@ -8052,6 +8154,20 @@
         ],
         "title": "ReliabilityStrand",
         "description": "The six strands a reliability reading is built from, read separately.\n\nThey are weighted **per mode** and the two vectors order people oppositely \u2014\na candidate strong on *answers about results* and weak on *sportsmanship*\nwins in competitive and loses in for fun. A single blended score cannot\nexpress that, which is the whole argument for the decomposition, and it is\njustified for exactly as long as such a pair exists (``ranking-weights.md``\n\u00a76).\n\n**The inversion is watched rather than assumed, and it widened again.** It\nwas 24/4 against sportsmanship's 5/16 while *confirms results* was here; the\nstrike left 18/7 against 15/17, and *answers about results* restores the wide\npair at 24/4 against 5/16 (``docs/adr/0160``). It is asserted in\n``tests/unit/test_matchfit_terms.py``, and the day no pair inverts, the\ndecomposition has stopped paying for itself and the argument for it is due\nagain.\n\n**The sixth name is not the one that was struck, and the difference is the\nwhole of ``docs/adr/0160``.** *Confirms results* asked whether a game reached\nan agreed score, which is a fact about a **pair**, and every denominator\ntried on it docked somebody ADR-0049 protects \u2014 both sides of an honest\ndisagreement included (``docs/adr/0137``). *Answers about results* asks\nwhether **this person** replied to a score put in front of them, and a\ncounter is as good an answer as an acceptance, so disagreeing costs nothing\nand only silence is priced.\n\n**Three different blends of these six exist in this system and confusing\nthem is a live risk:** the published Player Score at 35/20/15/12/10/8, and\nthese two. The reliability *floor* reads the published one \u2014 the one\ndeliberate exception, because a penalty justified by a figure that exists\nnowhere a human can look is unexplainable."
+      },
+      "ResetDeckRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "Which sport's deck to deal whole again"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport"
+        ],
+        "title": "ResetDeckRequest",
+        "description": "One *Show them again*, for one sport. **Write-only.**\n\nNothing is returned by this route and no route anywhere returns a reset.\n\n**The sport is the whole ask.** The button is on a deck and a deck is one\nsport, so a padel reset says nothing about tennis. There is no field for\n*what* to clear: the three things a reset lifts \u2014 every pass suppression,\nthe day's dealt memory and the cool-off \u2014 lift together, and a client that\ncould pick would be a client that could clear the cool-off and keep its\npasses, which is not a thing the product offers."
       },
       "ResultResponse": {
         "properties": {
@@ -9418,7 +9534,7 @@
           "code": {
             "type": "string",
             "title": "Code",
-            "description": "What happened, as a machine code the client renders a sentence from. Eight: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**.\n\n**A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news each way \u2014 and a lapse is still not a decline, which is what `values.departure` keeps apart. Somebody **leaving a game they had agreed to** is the third way, since ADR-0162, and the one whose actor was a member until this very line.\n\n**A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.\n\n**`PLAN_LOCKED` is the Plan's fourth and it carries no values at all.** The three slots are the value and the room already holds a line for each. It is an act rather than a slot \u2014 a complete plan is one everybody *could* agree, and this says somebody did \u2014 and there is no unlocked code, because a slot moved afterwards keeps the lock and writes its own line.\n\n**There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping \u2014 drawn, not announced."
+            "description": "What happened, as a machine code the client renders a sentence from. Nine: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**, and **`SIDE_FORMED`**.\n\n**`SIDE_FORMED` is the one line a room is born with, and only a doubles room** (ADR-0169 \u00a78). Two yeses that met in a doubles sport seat both people on one side with a whole side still to fill, and this says so at `seq` 1: *You two are a side. Fill the seats to find your opponents.* A singles mutual's room carries no such line. It names no actor and carries no values.\n\n**A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news each way \u2014 and a lapse is still not a decline, which is what `values.departure` keeps apart. Somebody **leaving a game they had agreed to** is the third way, since ADR-0162, and the one whose actor was a member until this very line.\n\n**A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.\n\n**`PLAN_LOCKED` is the Plan's fourth and it carries no values at all.** The three slots are the value and the room already holds a line for each. It is an act rather than a slot \u2014 a complete plan is one everybody *could* agree, and this says somebody did \u2014 and there is no unlocked code, because a slot moved afterwards keeps the lock and writes its own line.\n\n**There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping \u2014 drawn, not announced."
           },
           "occurred_at": {
             "type": "string",
@@ -9437,7 +9553,7 @@
               }
             ],
             "title": "Actor Id",
-            "description": "Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** \u2014 the handle is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: the actor of a `SEAT_LEFT` line is by definition no longer one, and `people` is where the read put their face."
+            "description": "Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** \u2014 the handle is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: the actor of a `SEAT_LEFT` line is by definition no longer one, and `people` is where the read put their face. `null` on `SIDE_FORMED`, which is about both people on the side and names neither."
           },
           "values": {
             "additionalProperties": {
@@ -9445,7 +9561,7 @@
             },
             "type": "object",
             "title": "Values",
-            "description": "What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the three plan codes each carry `value` \u2014 the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED` and `GAME_PLAYED` carry nothing."
+            "description": "What the sentence needs beyond a handle, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the three plan codes each carry `value` \u2014 the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED`, `GAME_PLAYED` and `SIDE_FORMED` carry nothing."
           }
         },
         "type": "object",

@@ -25,6 +25,16 @@
  * card's border takes ([Part 13](../../../docs/design-system.md#part-13--accessibility)).
  * `socialTagChip` owns that marker and the note on what the largest text sizes do to it.
  *
+ * ## On the deck card the pair is volt and on-dark
+ *
+ * The deck card draws the same row over its wash
+ * ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §7), where `mintSoft` and `line2` are two pale pills on a dark ground with nothing to tell
+ * them apart. `onDark` swaps the pair for the two variants the dark surfaces already have — a
+ * shared tag is `volt`, a fill anywhere and the one the mocks draw, and the rest are `onDark` —
+ * and changes nothing else: the same four answers, the same order the caller hands over, the
+ * same words. The amber sentence keeps its own variant, which reads on either ground.
+ *
  * ## The row announces nothing of its own
  *
  * §20.1: one accessibility element per action, and everything with no action merges into the
@@ -53,9 +63,14 @@ import { theme } from './theme';
 
 export interface SocialTagRowProps {
   readonly row: SocialTagOverlap;
+  /** Over a dark ground — the deck card's wash — where the pair is `volt` and `onDark`. */
+  readonly onDark?: boolean;
 }
 
-export function SocialTagRow({ row }: SocialTagRowProps) {
+export function SocialTagRow({ row, onDark = false }: SocialTagRowProps) {
+  const shared = onDark ? 'volt' : 'ok';
+  const rest = onDark ? 'onDark' : 'base';
+
   switch (row.kind) {
     case 'hidden':
       return null;
@@ -74,7 +89,7 @@ export function SocialTagRow({ row }: SocialTagRowProps) {
       return (
         <View style={s.row}>
           {row.tags.map((tag) => (
-            <Tag key={tag.id} label={socialTagChip(tag)} variant={tag.shared ? 'ok' : 'base'} />
+            <Tag key={tag.id} label={socialTagChip(tag)} variant={tag.shared ? shared : rest} />
           ))}
         </View>
       );
@@ -83,7 +98,7 @@ export function SocialTagRow({ row }: SocialTagRowProps) {
       return (
         <View style={s.row}>
           {row.tags.map((id) => (
-            <Tag key={id} label={socialTagChip({ id, shared: false })} />
+            <Tag key={id} label={socialTagChip({ id, shared: false })} variant={rest} />
           ))}
         </View>
       );

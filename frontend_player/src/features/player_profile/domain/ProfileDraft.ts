@@ -7,24 +7,25 @@
  * That is what makes back and forward free — moving between steps costs nothing because
  * nothing has been recorded anywhere — and it is also why leaving mid-part restarts at step
  * one: there is nothing on the server to come back to. The asymmetry with part one is
- * deliberate. Eight adaptive answers are expensive and event-sourced, so a run resumes; six
+ * deliberate. Eight adaptive answers are expensive and event-sourced, so a run resumes; eight
  * short steps are cheap, and buying resume for them would mean a server-owned draft with a
  * version token, a second aggregate built before a single player exists.
  *
  * ## The shape is the commit's, in the app's own words
  *
- * The fields are the six answers `POST /players/me/profile` carries, spelled the way this
- * app speaks rather than the way the wire does. Mapping between the two is the mapper's
- * job and arrives with the commit; a draft shaped like the request body would put the wire
- * boundary in the store.
+ * The fields are the answers `POST /players/me/profile` carries, spelled the way this app
+ * speaks rather than the way the wire does. Mapping between the two is the mapper's job and
+ * arrives with the commit; a draft shaped like the request body would put the wire boundary
+ * in the store.
  *
  * ## Empty and absent are different, and the difference is the product's
  *
- * Photos and availability start **empty**, because empty is a real answer to both: a player
- * may hold no photos, and *a blank week means "no preference", never "leave me out"*. The
- * other three start **absent**, because they are questions that must actually be answered —
- * and the opt-in most of all, which has no default in either direction. `undefined` there
- * means *not asked yet*, and it is never quietly read as no.
+ * Photos, availability and the intro start **empty**, because empty is a real answer to all
+ * three: a player may hold no photos, *a blank week means "no preference", never "leave me
+ * out"*, and a player who skips the intro has no line rather than a missing one. The other
+ * three start **absent**, because they are questions that must actually be answered — and
+ * the opt-in most of all, which has no default in either direction. `undefined` there means
+ * *not asked yet*, and it is never quietly read as no.
  */
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
@@ -78,6 +79,14 @@ export interface ProfileDraft {
    * what the picker offered — and the picker offers only what this build can draw.
    */
   readonly socialTagIds: readonly SocialTagId[];
+  /**
+   * The line they wrote about themselves, **as typed** — untrimmed, and empty until they
+   * write one or after they skip.
+   *
+   * Held verbatim rather than tidied, so walking back finds the box exactly as it was left.
+   * What the commit carries is `introToSend`'s reading of it: trimmed, or nothing at all.
+   */
+  readonly intro: string;
   /** Uploaded photo ids, in the order the player arranged them — the first one leads. */
   readonly photoIds: readonly string[];
   /** The cells of the week that were ticked. Empty is an answer. */
@@ -105,6 +114,7 @@ export interface ProfileDraft {
 export function emptyDraft(): ProfileDraft {
   return {
     socialTagIds: [],
+    intro: '',
     photoIds: [],
     availability: [],
     location: undefined,
@@ -120,8 +130,8 @@ export function emptyDraft(): ProfileDraft {
 /**
  * Record what one step answered, leaving every other answer where it was.
  *
- * A patch rather than six setters: each step owns exactly one field, and the one thing this
- * must guarantee is that writing that field never disturbs the other five — which is the
+ * A patch rather than eight setters: each step owns exactly one field, and the one thing
+ * this must guarantee is that writing that field never disturbs the others — which is the
  * promise the part makes when it says walking back to check something is free.
  */
 export function recordAnswer(draft: ProfileDraft, answer: Partial<ProfileDraft>): ProfileDraft {

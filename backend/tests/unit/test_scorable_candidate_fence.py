@@ -58,11 +58,20 @@ FENCED_TYPES = (
 #: identifier. Words rather than substrings, so ``area_code`` is not read as
 #: *code for an area* by accident — and ``nickname`` is caught by ``name`` below
 #: because a name is what it is.
+#:
+#: **``intro`` is here and is deliberately not in the index row's list.** The
+#: line a player writes about themselves is on the index row — the card is
+#: assembled from it (``docs/adr/0170`` §3) — and it is *never scored*: free
+#: text is not a term, and a term that read it would be the first one to score
+#: what somebody said rather than what they declared. ``bio`` is beside it
+#: because that is the word a term would reach for.
 FORBIDDEN_WORDS = frozenset(
     {
         "gender",
         "name",
         "nickname",
+        "intro",
+        "bio",
         "photo",
         "photos",
         "avatar",

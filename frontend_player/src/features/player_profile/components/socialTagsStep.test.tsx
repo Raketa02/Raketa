@@ -199,7 +199,7 @@ describe('the floor', () => {
     // stopped, so the numbers are in the chrome and not only inside a disabled label.
     await reachTheTagsStep();
 
-    expect(screen.getByText('Setting up · Step 1 of 7 · Pick 2 to 6')).toBeTruthy();
+    expect(screen.getByText('Setting up · Step 1 of 8 · Pick 2 to 6')).toBeTruthy();
   });
 
   it('blocks continuing with nothing picked, and says how many are missing', async () => {
@@ -226,7 +226,7 @@ describe('the floor', () => {
     expect(control.props.accessibilityState?.disabled).toBe(false);
 
     fireEvent.press(control);
-    await waitFor(() => expect(screen).toHavePathname('/photos'));
+    await waitFor(() => expect(screen).toHavePathname('/intro'));
   });
 
   it('stays met from the floor all the way to the ceiling', async () => {
@@ -327,7 +327,7 @@ describe('the selection the part holds', () => {
     press('Here to improve');
 
     fireEvent.press(await screen.findByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/photos'));
+    await waitFor(() => expect(screen).toHavePathname('/intro'));
     fireEvent.press(screen.getByLabelText('Back to What kind of player are you?'));
     await waitFor(() => expect(screen).toHavePathname('/tags'));
 

@@ -126,20 +126,35 @@ review comment and a test description all use the same word.
 - **Untrusted route input** — any param from a deep link, push payload, universal link,
   App Link or QR code. Zod-validated in the feature's `schemas/` before use.
 - **The shell** — the five tabs a signed-in player is inside, and the **one stack** under
-  them. `Now · Around · ⚡Play · Chats · You`, drawn by `TabBar` and mounted once by
+  them. `Now · Players · ⚡Play · Chats · You`, drawn by `TabBar` and mounted once by
   `TabShell`. Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it,
   which is the whole of what
   [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. _Avoid_: "the tab
   navigator" — there isn't one.
+- **Players** — the second tab, and **the deck is the whole of it**
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1):
+  key `players`, label _Players_, Feather `users`, route `/players`, a single-screen root like
+  the other flanking tabs. It was _Around_, a placeholder, and the rename is whole. The tab has
+  **no title row** — its header is the _Deck | Radar_ toggle, with the right slot left for the
+  chip — and it opens on Deck every time, because the shell keeps no per-tab history and the
+  toggle is the screen's own state. Players answers _who would I like to play with?_; Play
+  answers _who is available and even on Thursday?_ _Avoid_: "Around", which no longer exists;
+  "Match me", which survives as a word only in _Matched!_; "the deck tab" — the tab is Players
+  and the deck is what is on it.
+- **Radar** — the second pane of the Players tab, behind the toggle, and **not built**: one
+  muted line saying so, in a placeholder's shape, until a map has an argument of its own
+  (ADR-0169 §9). A pane and not a route, so the tab can never open on it. _Avoid_: "the map"
+  — there is none; `radar` the glyph, which is still not drawn (ADR-0135).
 - **The reset** — `resetShellStack`, the shell's only navigation move: throw the stack away
   and lay a new one down. Four tabs lay down one screen and ⚡Play lays down two, which is
   why back from Play's entry leaves Play rather than walking it. **A Play session ends
   exactly when it runs.** _Avoid_: "switching tabs" as though it were a push.
-- **A placeholder tab** — one of the four with no screen behind it yet. It states what its
-  tab will be and that it is not built, in one sentence, so a player can tell it from a
-  bug. Three of the four are **citations** of decisions taken elsewhere, and **Now never
-  says nothing is happening** — it is where a send lands. _Avoid_: "empty state" (that is a
-  screen with a real answer of nothing) and "coming soon".
+- **A placeholder tab** — a tab with no screen behind it yet, and there is **one**, You. It
+  states what its tab will be and that it is not built, in one sentence, so a player can tell
+  it from a bug; the sentence is a **citation** of a decision taken elsewhere. Four tabs have
+  left the table — Play, Chats and Now by being built, Around by retiring when the deck moved
+  in as Players — and **Now never says nothing is happening** — it is where a send lands.
+  _Avoid_: "empty state" (that is a screen with a real answer of nothing) and "coming soon".
 
 ### The onboarding flow
 
@@ -172,22 +187,40 @@ profile editor that later edits the same values.
   _Avoid_: "paused run", "saved run" — both suggest a server-side state, and there is
   none; "abandoned run" — that **is** a server-side transition and is the permanent way
   out, where this is the temporary one.
-- **Social step** — one of the **seven** screens of onboarding's **second part**: tags,
-  photos, availability, location, radius, gender, opt-in, in that order. The step names are
-  the route segments, so `/radius` is the screen that asks for a Search radius and there is
-  no second spelling of the seven. The order is not arbitrary at two points: **location
-  before radius**, because a distance is a distance _from_ somewhere, and **gender with the
-  matching constraints rather than with the tags**, because a preference over who you play
-  with narrows who is put in front of you rather than describing you. **The opt-in is
-  always last** — it is the consent that ends the part and the step that carries the finish.
-  **The part is the unit, not the step** — back and forward move freely between steps and
-  never cross out of the part, the first step has no back control, and the last is followed
-  by the profile commit rather than by an eighth screen
+- **Social step** — one of the **eight** screens of onboarding's **second part**: tags,
+  intro, photos, availability, location, radius, gender, opt-in, in that order. The step
+  names are the route segments, so `/radius` is the screen that asks for a Search radius and
+  there is no second spelling of the eight. The order is not arbitrary at three points: **the
+  intro straight after the tags**, because the tags ask what kind of player somebody is in the
+  platform's words and the line is the same question in their own
+  ([ADR-0170](../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)
+  §5); **location before radius**, because a distance is a distance _from_ somewhere; and
+  **gender with the matching constraints rather than with the tags**, because a preference
+  over who you play with narrows who is put in front of you rather than describing you. **The
+  opt-in is always last** — it is the consent that ends the part and the step that carries
+  the finish. **The part is the unit, not the step** — back and forward move freely between
+  steps and never cross out of the part, the first step has no back control, and the last is
+  followed by the profile commit rather than by a ninth screen
   ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). _Avoid_: "wizard
   step", "page"; also "onboarding step" for a question in the questionnaire — that is a
   **position** in a run, and the two move by different rules.
+- **Intro shape refusal** — the two of `intro_not_admitted`'s three reasons that are facts
+  about the string itself, `too_long` and `multiline`, which the intro step reads off the
+  Profile draft and shuts _Next_ on before anything is sent — in the **same three-member
+  vocabulary** the wire's refusal carries, so one sentence table serves the refusal the step
+  pre-empts and the one the commit brings back. The third, `contains_contact`, is **the
+  server's pattern and never this app's**: a copy of it would be a staler one on every phone
+  the day it is tuned from a refusal, so it lands at the commit, six screens later, and the
+  step says the rule up front instead. Counted in **code points**, as the server's `len`
+  counts, and trimmed first, as the server trims. The [Intro](../CONTEXT.md) itself is the
+  root glossary's. _Avoid_: "validation" — the client validates nothing, it pre-empts two
+  refusals whose authority stays on the server; "content filter" — nothing here reads what
+  the line says.
 - **Profile draft** — every answer the second part has collected, held **on the client**
-  until the one commit that ends the part. In memory, never persisted, and never sent
+  until the one commit that ends the part. Three of its fields start **empty** because empty
+  is a real answer — no photo, a blank week, and the intro box with nothing in it — and the
+  intro is held **as typed**, untrimmed, so a round trip finds the box as it was left; what
+  the commit carries is the trimmed line, or no field at all. In memory, never persisted, and never sent
   anywhere before that commit — which is what makes moving between steps free and what makes
   leaving mid-part restart at step one. Its absence is a state: no draft means the player is
   not in the part, which is how a link naming a step in the middle is told from a player who
@@ -230,7 +263,7 @@ profile editor that later edits the same values.
   invariant; two would be two things to reset and a sync somebody forgets. _Avoid_: "photo
   state", "upload queue" — the queue is one promise chain inside the step's hook, and it is
   not what this holds.
-- **Profile options** — the **one read** the seven steps are drawn from: the Social tag
+- **Profile options** — the **one read** the eight steps are drawn from: the Social tag
   vocabulary with its grouping, how many tags a profile must hold, and the Search radius
   bounds. Reference data owned by TanStack Query, fetched once for the whole part, and the
   reason no client restates a vocabulary or a bound the commit re-validates against. Ids and
@@ -260,7 +293,9 @@ nine do not exist on the backend, and the first four are the shape
 long, and what it must never remember. The stores are `features/play/store/`; the rules are
 `features/play/domain/`. The **Declaration interstitial** is the exception on both counts — it
 is a screen this app draws over a write and a refusal the backend already owns, and it is
-listed here because it is a Play surface rather than a profile one.
+listed here because it is a Play surface rather than a profile one. The deck is the Players
+tab's now and is listed under [Routing](#routing); what Play keeps of it is the feature that
+draws it.
 
 - **Play session** — **one visit to the Play tab**: the Working copy and the Line-up built on
   it, and nothing else. It begins when the shell lays the Play stack down and **ends exactly
@@ -318,17 +353,21 @@ listed here because it is a Play surface rather than a profile one.
   first two are minted by a mutation and read by id from `searchKeys.detail(search_id)`; **the
   deal is the exception**, because nothing reads one back by id and a second one is not a second
   copy — `POST /deck` excludes everybody already dealt for a day, so asking twice spends the
-  player's own pool. It is held under `searchKeys.deck(sport, week, under)`, keyed by **the
+  player's own pool. It is held under `searchKeys.deck(sport, under)`, keyed by **the
   question rather than the answer**, which is the only key that can be built before the request
-  and therefore the only one under which _already asked_ is a fact. `under` is the radius and the
-  declaration: they are not on the request, they change the answer, and leaving them out is the
-  deck answering _Widen in You_ with the deal that ran before the widening. The entry holds the
+  and therefore the only one under which _already asked_ is a fact. `under` is the radius: it is
+  not on the request, it changes the answer, and leaving it out is the deck answering _Widen in
+  You_ with the deal that ran before the widening. The declaration was in it and is not, and
+  neither is a week — the deck reads no declaration and runs on the profile's grid
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1, §2).
+  The entry holds the
   Origin search **and the rows**, which is what lets a Line-up's seats be ids and nothing else:
   every name, level and photograph on a court is read back off them. **Nothing in Play
   background-refetches** — `staleTime: Infinity`, no refetch on focus — because foregrounding
   the app would otherwise reorder the pool under the player's finger. What _does_ refetch on the
-  ordinary defaults: the profile and its week, the ratings behind the sport chips, and the Match
-  me count. **Re-sorting costs no round trip** and neither does re-arranging four people; only
+  ordinary defaults: the profile and its week, the ratings behind the sport chips, and the
+  outstanding-yes count. **Re-sorting costs no round trip** and neither does re-arranging four
+  people; only
   changing who is on the court does. _Avoid_: "results", and "the pool" for all three — a deal
   and a shortlist are not pools.
 - **Withheld seat** — a seated player the **live gates no longer admit**, found as a **set
@@ -504,48 +543,97 @@ listed here because it is a Play surface rather than a profile one.
   _Best fit_ is withheld precisely when the returned order already is best-fit order, so a row
   drawn from the server's list alone would make _Closest_ a one-way door. _Avoid_: a hardcoded
   row of four, which is three-quarters a lie today; deriving offerability from the rows.
-- **The pin** — the pool's one reordering that is **not** a comparator: somebody with a live yes
-  towards the searcher (`inclusion_reason == INTEREST_LIFT`) sits first **in the served order
-  only**, whatever they scored, and drops into their honest place the moment any chip is tapped.
-  It is **not** the `+12` #231 struck, and the falsifier is the printed number — a bonus is
-  arithmetic on a published figure, changes what _best_ means silently and survives every
-  re-sort, where a pin changes a **position**, prints the number the wire served, names itself
-  on the card it moved, and releases. _Avoid_: calling it a boost or a bonus; adding anything to
-  `fit` on this side.
+- ~~**The pin**~~ — **struck**
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8). It
+  was the pool's one reordering that was not a comparator: somebody with a live yes towards the
+  searcher sat first in the served order only, whatever they scored, and released on any chip.
+  It touched no number — which was why it was not the `+12` #231 struck, and that refusal still
+  stands — and it still put a 51 above thirty people at 80 on a list about who fits. _A yes
+  informs; it never takes over_: the engine's `+14` nudge on the liker's rank key is where they
+  sit, and the served order is the order. _Avoid_: lifting anybody client-side for any reason;
+  adding anything to `fit` on this side; reading the **[interest tags](#the-play-tab)** as a
+  position.
+- **Interest tags** — the two tags a yes between the reader and the person on a card earns,
+  drawn on **both** list cards — beside the handle on the competitive card's identity row, under
+  the name on the social card's `CardHead` where its sentence used to be — and never on the deck
+  card (ADR-0169 §8). **Wants to play you** is volt, bound to the row's admitting code
+  (`inclusion_reason == INTEREST_LIFT`) and worded by its liveness twin, and the
+  **[marked card](#glossary--design-system-terms)**'s green border travels with that word alone.
+  **You said yes** is `base`, the plain pill, on somebody in the reader's **own** `GET /interest`
+  outgoing list for the sport on screen — `saidYesTo`, client-side, no code and no nudge — and it
+  is deliberately not volt, because volt is _they want you_. At most one tag on a card: either
+  interest tag over the coral **best match**, because a fact about a person outranks a fact
+  about a list; both interest facts true is a mutual and a mutual is not on the list, and should
+  one ever be, _Wants to play you_ wins. The read is the deck's, held once and `select`ed two
+  ways (`useOutstandingInterest`, `useOutgoingInterest`), and a deck tap moves the list on its
+  own reply. _Avoid_: "liked you" / "you liked them"; a third tag for _nothing in particular_;
+  a border on _You said yes_; drawing the outgoing list as a list anywhere.
 - **Best match tag** — the coral tag on the row with the **highest ✦ on screen** — one card or
   none, the server-first row on a tie. It is keyed to **the ordering in force** rather than to a
   tapped chip, because _Best fit_ is withheld exactly when the served order already is fit
   order; it is hidden under _Closest_, _Evenest_ and _Most reliable_; and where it and the
-  **[interest tag](#glossary--design-system-terms)** fall on one card the interest tag replaces
-  it. It is the competitive card's alone, because that is the card with a tag slot beside the
-  handle. _Avoid_: handing it to the runner-up when the top row is taken; reading _Best fit_ as
-  a threshold — it is a **sort**, and it hides nobody.
+  **[interest tags](#the-play-tab)** fall on one card the interest tag replaces it. It is the
+  competitive card's alone, because that is the card with a tag slot beside the handle; the
+  social card draws the two interest tags and no _best match_. _Avoid_: handing it to the
+  runner-up when the top row is taken; reading _Best fit_ as a threshold — it is a **sort**, and
+  it hides nobody.
 - **Pending seat replacement** — **the seat the pool was opened against**, held route-locally
   and discharged by the first add: where that seat is occupied the add is a **replacement**, and
   the screen names whom it replaces before it happens. It **needs no clearing rule**, because
   the court pops rather than pushes and the route unmounts with it. _Avoid_: holding it in a
   store, which reintroduces exactly the bug the pop already prevents.
-- **Play segment** — the **two ways through the Play tab** as one control, drawn on both
-  screens and never on the tab bar: _Find a game_ and _Match me_. The halves move in opposite
-  directions, and that is the whole of it — _Find a game_ is an **arrival**, so it calls [the
-  reset](#routing) and ends the Play session, where _Match me_ is an ordinary push with Find a
-  game left underneath. It is design-system 6.3, specified since the document was locked and
-  built for this. _Avoid_: "the play tabs" — the bar has the tabs, and this is inside one of
-  them; `router.back()` for the left half, which lands correctly on most paths and silently
-  wrongly on the rest.
+- ~~**Play segment**~~ — **struck** ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+  §1). It was the two ways through the Play tab as one control, _Find a game_ and _Match me_,
+  drawn on both screens; the deck is the Players tab now, Play opens on Find a game with nothing
+  above its mode section, and nothing in the app links to a deck route under Play. The design-
+  system 6.3 control it was built for is the Players tab's _Deck | Radar_ toggle now, beside
+  the mode segment Find a game still draws. _Avoid_: "Match me" for the deck; "the play tabs".
 - **Outstanding yeses** — your **own** _Let's play_ yeses still standing in the sport on
   screen, read from `GET /interest` and **filtered by sport**, so that the number is about the
   deck it is drawn under. It is the one figure in the tab that background-refetches, because
   the rule against that is about **orderings** — a pool reordering under a finger — and a count
-  has no order to lose. The prototype counted people who had waved at _you_, and that number
-  **cannot exist**: an incoming yes never crosses the wire in either direction, which is what
-  makes saying yes low-stakes. It moves on a tap's **own response** rather than on a refetch.
-  It is drawn as a **sentence on the deck's ending** and nowhere else: it was `Match me · 3` on
-  the segment until that was struck, because a number in that position reads as _how many cards
-  are waiting_, which is the count the deck refuses to publish anywhere.
-  _Avoid_: "Match me count" — the segment carries no number; "unread", "inbox" and "badge" —
+  has no order to lose. It moves on a tap's **own response** rather than on a refetch. It is
+  never drawn as itself: what the deck prints is **[yeses to give](#the-play-tab)** — the cap
+  less this — on the counter, since
+  [ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §5; before
+  that it was a sentence on the deck's ending, and before that `Match me · 3` on a segment,
+  struck because a number in that position reads as _how many cards are waiting_. The prototype
+  counted people who had waved at _you_; that count exists now, as **want to play you**, and it
+  is a different number on a different envelope.
+  The same read carries **who** the yeses went to, as ids per sport and nothing else, for the
+  **[interest tags](#the-play-tab)** and the challenge screen's invitee's line; the mutual list
+  stops at the mapper.
+  _Avoid_: "Match me count" — the segment is gone, and carried no number while it stood;
+  "unread", "inbox" and "badge" —
   there is no inbox and the bar carries no badge;
   counting the outgoing list, which is this app answering a question the response answers.
+- **Yeses to give** — `cap − outstanding` for the sport on screen, both off `GET /interest`'s
+  row (the mapper carries the cap now, and `ttl_days` beside it), printed as the second half of
+  the deck's **counter** — _8 left · 12 yeses to give_ — and drawn only once the read has landed,
+  because a nought is a claim the ceiling acts on. **At nought a stranger's card settles and a
+  liker's card flies** (`domain/yesBudget`): a yes that closes a mutual is never outstanding, so
+  the cap exempts it, and the server stays the authority — a `409` still returns the card. The
+  first half, _N left_, is `pool.remaining` plus the cards unanswered in hand, and it is true of
+  the whole pool because the envelope now says what is beyond the hand. _Avoid_: "yeses left",
+  which reads as cards; holding the cap or the 21 days on this side — both cross on the wire.
+- **Want to play you** — `pool.want_to_play_you` on the deal's envelope: how many people have a
+  live yes towards the viewer in this sport that would be dealt to them, drawn as the volt chip in
+  the Players header — _2 want to play you_ — at one and above and **never at nought**, and
+  decremented when a yes on a card carrying `inclusion_reason` comes back mutual. **A count and
+  never a list**: nothing on any route names who
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4, which
+  reverses ADR-0109 §2 by exactly this one number). The liker is unmarked on the deck and lands
+  where the nudge puts them. _Avoid_: "likes", "matches waiting", "inbox"; a badge on the bar,
+  which stays refused; reading the chip as _how many cards are behind this one_ — that is the
+  counter's.
+- **The stamps** — _LET'S PLAY_ and _NOT TODAY_, two outlined words the deck card wears under
+  the thumb, one volt and one white, tilted, **invisible at rest**, fading in with the drag and
+  full at the threshold (95pt) where a release commits the answer in the drag's direction
+  (ADR-0169 §3). They are **feedback and never controls**: hidden from assistive technology,
+  unspoken, and their words are the two buttons' own (`STAMP_WORDS`), so what a drag reveals and
+  what a listener hears cannot drift. The three round buttons under the stage — ✕, i and a
+  drawn tennis ball — are the path that is never removed. _Avoid_: "swipe buttons"; a stamp
+  that is pressable; a stamp without its button.
 
 ### The result argument
 
@@ -652,6 +740,20 @@ what this client had to invent to draw the room
   server's, and the phone's clock is the value the whole feature refuses. _Avoid_: "pending
   message" (the send is the one act here that is _not_ pending), and giving one a `seq` — the
   sequence is the server's and inventing a place in it is a claim, not a placeholder.
+- **The side line** — _You two are a side. Fill the seats to find your opponents._, the one
+  system line a room is **born** with, and only a doubles room: `SIDE_FORMED` at `seq` 1, the
+  ninth code, drawn as the other eight are
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8). It
+  names nobody — its `actor_id` is `null`, it is about both people on the side and addressed to
+  them — and which rooms carry it is the server's; the client infers nothing from the sport.
+  _Avoid_: "welcome message", "Matched!" in the room (the yes screen's word, never the stream's);
+  drawing it for a tennis mutual.
+- **The invitee's line** — _You said yes to {name} on Players_, one line under the organiser's
+  card on the challenge screen, drawn exactly when the organiser is in the reader's own outgoing
+  list for the challenge's sport (ADR-0169 §8). Client-side off the deck's read, the reader's
+  **own act**, and nothing about why the engine picked them, which ADR-0143 still refuses to say.
+  _Avoid_: "they matched you" — a challenge is not a mutual; drawing it under any seat but the
+  organiser's.
 - **The platform day** — which calendar day an instant falls on **in `Europe/Warsaw`**, the one
   zone this platform arranges in. It is what the **day separator** is computed from, and the
   reason is one sentence: a device zone would put two people in one room on two different days.
@@ -1106,8 +1208,9 @@ comment and a commit message all use the same word.
   control**: pressed (`coral`) and selected (`ink`) are things the reader has done to the card,
   where **marked** (`voltStroke`, 1pt) is a standing fact about whoever is drawn on it. The
   press still wins over it, it announces nothing, and it is **never the only cue** — a caller
-  that draws it also draws the word. Today its one caller is the competitive candidate card,
-  bound to the tag being drawn rather than to the code beneath it.
+  that draws it also draws the word. Its callers are the two list cards, bound to the _Wants to
+  play you_ tag being drawn — the tag's kind, never its colour or the code beneath it — so the
+  reader's own _You said yes_, a plain tag, draws no outline (ADR-0169 §8).
 - **Eyebrow vs form label** — an **eyebrow** labels a region you are _reading_; a **form
   label** labels a control you are about to _operate_. Not interchangeable.
 - **Slot square** — the day / time / hour / range selectors, sharing a four-state

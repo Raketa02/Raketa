@@ -324,11 +324,12 @@ export { endPlaySession, usePlaySession } from './store/playSession.store';
 export { FindAGameScreen } from './components/FindAGameScreen';
 
 /**
- * **Match me** — the deck, and the second Play screen.
+ * **Players** — the deck, and the whole of the second tab.
  *
- * Named by `src/app/(app)/(tabs)/play/deck.tsx` and by nothing else. One person at a time, two
- * named buttons and no swipe, and a long press that opens `SH.whyfit`
- * ([#270](https://github.com/Raketa02/Raketa/issues/270)).
+ * Named by `src/app/(app)/(tabs)/players.tsx` and by nothing else. It was *Match me*, the second
+ * Play screen, until [ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1 gave it a column of its own. One person at a time, two named buttons and no swipe, and a
+ * long press that opens `SH.whyfit` ([#270](https://github.com/Raketa02/Raketa/issues/270)).
  */
 export { DeckScreen } from './components/DeckScreen';
 
@@ -367,6 +368,22 @@ export { BuilderScreen, type BuilderScreenProps } from './components/BuilderScre
  */
 export { useFillChallengeSeats } from './hooks/useBuilder';
 export type { CompletingChallenge } from './domain/lineup';
+
+/**
+ * **Whom the reader has said yes to** — the deck's read, and the rule that asks it one person at
+ * a time — widened to the challenge screen
+ * ([ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8).
+ *
+ * The invitee's line — *You said yes to Karol on Players* — is drawn when the organiser is in the
+ * reader's outgoing list for the challenge's sport, and that list is this feature's: a deck yes
+ * is `POST /interest`, its read is `GET /interest`, and `challenges` holding a second query over
+ * the same route would be two cache entries for one answer. The hook crosses rather than the
+ * map, so the one entry is shared with the pool and moves on a tap's own reply; the rule
+ * crosses with it so `sport` and `playerId` are compared in one place.
+ */
+export { useOutgoingInterest } from './hooks/useInterest';
+export { saidYesTo } from './domain/outgoingInterest';
 export {
   parseBuilderRouteParams,
   parsePoolRouteParams,
@@ -444,15 +461,6 @@ export {
 } from './components/builderPresentation';
 
 /**
- * Play's two ways through the tab, as one control.
- *
- * Both screens draw it, and it is **not** the shell's: the count on it is filtered by the
- * sport on screen, and the sport is a Play screen's own fact — which is also why the tab bar
- * carries no badge (`TabBar`).
- */
-export { PlaySegment, type PlaySegmentProps, type PlaySurface } from './components/PlaySegment';
-
-/**
  * What stands between a player and a search, and the words the screen says about it.
  *
  * Exported for the suites that drive the screen through the real route tree: an assertion
@@ -477,23 +485,35 @@ export {
 export { findAGameStanding, type FindAGameStanding } from './domain/findAGame';
 
 /**
- * The deck's own words, exported for its suite for the reason above — and for one more: three
- * of them are what a **rule** looks like on screen. *There is no `Show them again`* is only
- * checkable against the sentences that replaced it, and the empty states' split is only
- * checkable by asking which title was drawn.
+ * The deck's own words, exported for its suite for the reason above — and for one more: several
+ * of them are what a **rule** looks like on screen. *Show them again* on one ending and not the
+ * other is only checkable by asking which title was drawn beside which button; the counter's
+ * arithmetic and the chip's presence rule are only checkable against the sentences they print.
  */
 export {
   DEAL_AGAIN_LABEL,
-  DECK_FOOTER,
-  MATCH_ME_TITLE,
   NOBODY_IN_RANGE_TITLE,
+  PANE_LABEL,
+  RADAR_LINE,
   SEEN_EVERYBODY_TITLE,
+  SHOW_THEM_AGAIN_LABEL,
+  STAMP_WORDS,
+  TRY_THE_RADAR_LABEL,
   WIDEN_IN_YOU,
-  interestToast,
+  deckCounter,
+  interestAnnouncement,
   mutualToast,
-  outgoingYeses,
-  passedToast,
+  passedAnnouncement,
+  seenEverybodyLine,
+  wantToPlayYouChip,
 } from './components/deckPresentation';
+export { deckMetaLine, deckTiles, quotedIntro } from './components/deckCardPresentation';
 export { poolDescription } from './components/searchPresentation';
-export { deckStanding, type DeckDeal, type DeckStanding } from './domain/deckHand';
+export {
+  cardsLeft,
+  deckStanding,
+  type DealtCard,
+  type DeckDeal,
+  type DeckStanding,
+} from './domain/deckHand';
 export { whyFitColumn, type WhyFitColumn, type WhyFitRow } from './domain/whyFitColumn';

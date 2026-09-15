@@ -17,7 +17,7 @@
  * ## An upload outlives the screen
  *
  * No `AbortSignal` is passed. The draft is the part's, not the step's — a player who
- * presses continue while a photo is still going should arrive at step three and find it
+ * presses continue while a photo is still going should arrive at step four and find it
  * arrived, rather than have it cancelled by unmounting the row it was drawn in. Nothing
  * leaks: the chain ends when the last upload does, and every result is written through the
  * store, which is cleared with the part.

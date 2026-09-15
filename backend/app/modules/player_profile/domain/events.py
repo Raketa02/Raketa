@@ -6,8 +6,8 @@ uuid, an availability slot as its code, a location as two floats, a gender and a
 intent as their machine codes. Nothing here holds a value object, and nothing
 here holds display text.
 
-Ten events. Nine belong to the profile's own stream, keyed on the player, and
-they fall into three kinds; the tenth belongs to a **second aggregate** in this
+Eleven events. Ten belong to the profile's own stream, keyed on the player, and
+they fall into four kinds; the eleventh belongs to a **second aggregate** in this
 context and is kept here because a context's durable names have one home.
 
 **One creation.** ``PlayerProfileCreated`` is the single commit that ends
@@ -29,6 +29,14 @@ appended by the creating commit **as well as** by every later change, so the
 consent history is one sequence with no special first case: a reader that wants
 every answer a player ever gave replays this one event type and needs to know
 nothing about how the profile began.
+
+**One line the player wrote.** ``IntroWritten`` carries the intro
+(``docs/adr/0170``) and is the one event here that holds text a person typed —
+already fenced at the write, so what is stored is what a card shows. It is
+appended by the creating commit **only when a line is present**: a blank leaves
+nothing behind, and ``PlayerProfileCreated`` deliberately does not grow a field
+for it, because an optional field most streams lack is what an upcaster is later
+written for. A stream with no ``IntroWritten`` folds to *no intro*.
 
 **One declaration, on its own stream.** ``PlayIntentDeclared`` is keyed
 ``(player, sport)`` and is not a fact about the profile at all
@@ -205,6 +213,28 @@ class GenderPreferenceChanged:
 
     player_id: UUID
     gender_preference: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class IntroWritten:
+    """The player's own line, as the fence admitted it.
+
+    **The one event on this stream that carries text a person typed**, and the
+    reason it may is that the text was refused or admitted *before* it got here
+    (``domain/intro.py``): a phone number, an email, a URL or a handle never
+    reaches a stream. The commit appends it after the two creating events and
+    only when a line was written; there is no ``IntroCleared`` and no
+    ``IntroChanged`` because there is no edit yet (``docs/adr/0170`` §5) — when
+    editing arrives, a change is this same event told again, the way every
+    preference change here carries the whole new value.
+
+    Trimmed, never lowercased, never translated: the line crosses to a card and
+    a record verbatim, and it is never scored.
+    """
+
+    player_id: UUID
+    intro: str
     occurred_at: datetime
 
 

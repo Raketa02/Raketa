@@ -68,6 +68,7 @@ from app.modules.challenges.application.court_safety import CourtSafety
 from app.modules.challenges.application.open_from_mutual_interest import (
     OpenChallengeFromMutualInterest,
 )
+from app.modules.challenges.domain.friendly_choice import FriendlyChoiceQuery
 from app.modules.challenges.domain.planned_game import PlannedGameHandover
 from app.modules.challenges.domain.seatable_game import SeatableGameQuery
 from app.modules.challenges.domain.settled_game import SettledGameQuery
@@ -79,6 +80,9 @@ from app.modules.challenges.infrastructure.games_seatable_game import (
 )
 from app.modules.challenges.infrastructure.games_settled_game import (
     GamesSettledGame,
+)
+from app.modules.challenges.infrastructure.profile_friendly_choice import (
+    ProfileFriendlyChoice,
 )
 from app.modules.games.application.call_off_game import CallOffGame
 from app.modules.games.application.open_planned_game import OpenPlannedGame
@@ -166,6 +170,9 @@ from app.modules.games.infrastructure.event_sourced_game_repository import (
     EventSourcedGameRepository,
 )
 from app.modules.games.infrastructure.users_handles import UsersHandles
+from app.modules.matchmaking.infrastructure.games_shared_courts import (
+    GamesSharedCourts,
+)
 from app.modules.matchmaking.infrastructure.games_match_history import (
     GamesPlayedAndChallengesAnswered,
 )
@@ -208,6 +215,7 @@ from app.modules.matchmaking.domain.ports import (
     HalfBuiltCourtQuery,
     MatchHistoryQuery,
     PlayerScoreQuery,
+    SharedCourtQuery,
 )
 from app.modules.matchmaking.application.fail_closed_gates import (
     FailClosedGates,
@@ -222,6 +230,7 @@ from app.modules.matchmaking.domain.declines import PromptDeclineLedger
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
 from app.modules.matchmaking.domain.prompts import PromptLedger
 from app.modules.matchmaking.domain.interest import InterestLedger
+from app.modules.matchmaking.domain.deck_reset import DeckResetLedger
 from app.modules.matchmaking.domain.passes import PassLedger
 from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.infrastructure.fail_soft_ledgers import (
@@ -274,6 +283,9 @@ from app.modules.matchmaking.infrastructure.player_card_source import (
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_interest_ledger import (
     SqlAlchemyInterestLedger,
+)
+from app.modules.matchmaking.infrastructure.sqlalchemy_deck_reset_ledger import (
+    SqlAlchemyDeckResetLedger,
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_pass_ledger import (
     SqlAlchemyPassLedger,
@@ -892,6 +904,34 @@ def build_mutual_challenge_minting(
             safety=build_court_safety(session),
             clock=build_clock(),
             planned_games=build_planned_game_handover(session, runtime=runtime),
+            friendly_choices=build_friendly_choice_query(session, runtime=runtime),
+        )
+    )
+
+
+def build_friendly_choice_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> FriendlyChoiceQuery:
+    """*Which of these two declared* for fun *in this sport?* — what the mutual
+    mint reads to decide the kind of game it opens (``docs/adr/0169`` §8).
+
+    Built on ``player_profile``'s own declaration repository rather than on the
+    matcher's ``mode_for_intent``: the arrow runs ``matchmaking -> challenges``
+    and never back, and the two mappings answer different questions anyway —
+    that one picks a weight vector and lets *no preference* inherit the fun
+    ruler, this one honours a stated wish and lets *no preference* choose
+    nothing.
+
+    **A second declaration repository inside one unit of work** beside whatever
+    the request built, and safe for ``build_settled_game_query``'s reason: it
+    only ever **reads**, and two readers may hold a version of one stream.
+    """
+    return ProfileFriendlyChoice(
+        build_play_intent_declaration_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
         )
     )
 
@@ -1405,6 +1445,21 @@ def build_half_built_court_query(session: AsyncSession) -> HalfBuiltCourtQuery:
     )
 
 
+def build_shared_court_query(session: AsyncSession) -> SharedCourtQuery:
+    """The courts the deck's cool-off reads, answered by ``games`` and translated.
+
+    **One provider and one contract**: every fact on this read is a game fact —
+    who is on the court, and whether it is behind them yet — so nothing
+    composes with it, and it reads ``games``' own directory rather than a
+    second published port (``docs/adr/0169`` §6).
+
+    The clock is built here rather than taken, for the reason the history's is:
+    *is this court still ahead of them* is a fact about the instant the read
+    happens, and a caller holding one could hold a stale one.
+    """
+    return GamesSharedCourts(build_game_directory(session), build_clock())
+
+
 def build_rated_player_query(
     session: AsyncSession,
     *,
@@ -1663,6 +1718,21 @@ def build_pass_ledger(session: AsyncSession) -> PassLedger:
     """
 
     return SqlAlchemyPassLedger(session)
+
+
+def build_deck_reset_ledger(session: AsyncSession) -> DeckResetLedger:
+    """The durable record of every *Show them again*, over the caller's session.
+
+    **No fail-soft wrapper**, and for the opposite reason to the pass's: this
+    row is not the evidence beside a gate, it is what three courtesies read to
+    know they have been cleared. A reset that could be lost would re-hide the
+    people a player just asked to see — the *empty the deck* failure every soft
+    ledger here is soft in order to avoid — so it is a table, read in the deal's
+    own transaction, and a reset whose row could not be written is a reset that
+    did not happen, which the route says.
+    """
+
+    return SqlAlchemyDeckResetLedger(session)
 
 
 def build_prompt_decline_ledger(session: AsyncSession) -> PromptDeclineLedger:

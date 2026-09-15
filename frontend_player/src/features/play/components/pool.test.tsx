@@ -13,8 +13,9 @@
  *   back to the returned order survives leaving it.
  * - **The Best-fit comparator adds no `+12`.** The lift is an admission the engine already
  *   made, and re-applying it would score the wire's own ranking twice.
- * - **The pin is not that `+12`**: somebody who already said yes sits first in the served order
- *   with the number they were served, and drops into their honest place on any re-sort.
+ * - **And there is no pin either**: somebody who already said yes sits where the server placed
+ *   them with the number they were served, tagged *Wants to play you*; somebody the reader said
+ *   yes to is tagged *You said yes* and moved nowhere (ADR-0169 §8).
  * - **One coral *best match* tag, on the highest number, and only where the order is about the
  *   number at all.**
  * - **The header prints the balance word beneath the tinted number**, with the assumption as
@@ -37,6 +38,7 @@ import {
   launchSignedIn,
   stubGate,
   stubInterest,
+  stubOutgoingYeses,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
@@ -48,6 +50,7 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
+import { searchKeys } from '../hooks/searchKeys';
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession, usePlaySession } from '../store/playSession.store';
 
@@ -60,7 +63,7 @@ import {
 } from './accessibilityPresentation';
 import { balanceLabel, balanceWord } from './balancePresentation';
 import { PICK_PLAYERS_LABEL, PROVISIONAL_WORD } from './builderPresentation';
-import { levelRow } from './playerCardPresentation';
+import { YOU_SAID_YES_WORD, levelRow } from './playerCardPresentation';
 import {
   POOL_COURT_LABEL,
   POOL_TITLE,
@@ -825,14 +828,17 @@ describe('the record block on a pool row', () => {
 });
 
 /**
- * **The pin and the tag** — [#310](https://github.com/Raketa02/Raketa/issues/310)'s three rules,
- * walked on a competitive pool because that is the card the two tags are drawn on.
+ * **The two interest tags and the best match** —
+ * [ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8: *a yes informs; it never takes over.*
  *
- * The fixture is the one that separates a pin from the `+12` above it: the lifted row is
- * **eight points behind** the top of the list, so the served order draws it first with a 71
- * printed beside it, and every chip drops it back to where 71 belongs.
+ * The fixture is the one that used to separate a pin from the `+12` above it, and it now
+ * separates a nudge from a pin: the lifted row is **eight points behind** the top of the list,
+ * and it is drawn third with a 71 printed beside it, because the server's `+14` already put it
+ * where the server thinks it belongs and this client no longer forces it above two better
+ * pairings ([#310](https://github.com/Raketa02/Raketa/issues/310)'s pin is gone).
  */
-describe('the pin and the best match', () => {
+describe('the interest tags and the best match', () => {
   /** C already said yes and scores least; B has the highest number and D sits between them. */
   function servedWithALift(over: Partial<Wire['SearchEnvelope']> = {}) {
     const rows: Wire['ShortlistResponse'] = {
@@ -852,24 +858,24 @@ describe('the pin and the best match', () => {
       .getAllByLabelText(/^Add .* to the court$/)
       .map((control) => control.props.accessibilityLabel as string);
 
-  it('lifts somebody who already said yes above two higher numbers, and prints their own', async () => {
+  it('draws somebody who already said yes where the server placed them, with their own number', async () => {
     servedWithALift();
     await openThePool();
     await screen.findByLabelText(addLabel(B));
 
-    expect(drawnOrder()).toEqual([addLabel(C), addLabel(B), addLabel(D)]);
-    // The whole of *a pin is not a bonus*: the row moved and the figure did not — 71 is what
-    // the wire served and 71 is what the pill prints, on the row now sitting first.
+    // No pin: a 71 among a 79 and a 74 is third, which is where the wire served it.
+    expect(drawnOrder()).toEqual([addLabel(B), addLabel(D), addLabel(C)]);
     expect(screen.getByText('71')).toBeTruthy();
     expect(screen.getByText('Wants to play you')).toBeTruthy();
   });
 
-  it('drops them into their honest place on a re-sort, with the tag still on them', async () => {
+  it('keeps the tag on them through every re-sort', async () => {
     servedWithALift();
     await openThePool();
     fireEvent.press(await screen.findByLabelText(sortLabel('CLOSEST')));
 
     expect(drawnOrder()).toEqual([addLabel(C), addLabel(D), addLabel(B)]);
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText(sortLabel('BEST_FIT')));
 
@@ -878,13 +884,56 @@ describe('the pin and the best match', () => {
     expect(screen.getByText('Wants to play you')).toBeTruthy();
   });
 
+  it('says You said yes on the person the reader said it to, in this sport', async () => {
+    servedWithALift();
+    stubOutgoingYeses(transport, [D, 'PADEL']);
+    await openThePool();
+
+    // Found rather than got: the list lands after the rows, and the row gains the tag then.
+    expect(await screen.findAllByText(YOU_SAID_YES_WORD)).toHaveLength(1);
+    // And nudges nobody: the reader's yes says nothing about D's willingness.
+    expect(drawnOrder()).toEqual([addLabel(B), addLabel(D), addLabel(C)]);
+  });
+
+  it('draws no You said yes for a yes given in another sport', async () => {
+    servedWithALift();
+    stubOutgoingYeses(transport, [D, 'TENNIS']);
+    await openThePool();
+    await screen.findByLabelText(addLabel(B));
+    // An absence proves nothing until the list has been read; wait for the read to have landed.
+    await waitFor(() => expect(queryClient.getQueryData(searchKeys.interest())).toBeDefined());
+
+    expect(screen.queryByText(YOU_SAID_YES_WORD)).toBeNull();
+  });
+
+  it('draws both tags on the social card as tags, where the sentence was', async () => {
+    const rows: Wire['ShortlistResponse'] = {
+      search: envelope(SEARCH_ID, { mode: 'FOR_FUN' }),
+      candidates: [
+        card(B, { fit: 79 }),
+        card(D, { fit: 74 }),
+        card(C, { fit: 71, inclusion_reason: 'INTEREST_LIFT' }),
+      ],
+    };
+    transport.on('POST', SEARCHES, () => json(rows));
+    transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () => json(rows));
+    stubOutgoingYeses(transport, [D, 'PADEL']);
+
+    await openThePool();
+
+    expect(await screen.findByText(YOU_SAID_YES_WORD)).toBeTruthy();
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
+    expect(screen.queryByText('They already said yes to you')).toBeNull();
+    // Served order here too — and the social card carries no coral tag.
+    expect(drawnOrder()).toEqual([addLabel(B), addLabel(D), addLabel(C)]);
+    expect(screen.queryByText('Best match')).toBeNull();
+  });
+
   it('puts one coral tag on the highest number in the order the rows arrived in', async () => {
     servedWithALift();
     await openThePool();
     await screen.findByLabelText(addLabel(B));
 
-    // Exactly one, and on B — who is second on screen, because the pin moved a lower row above
-    // them and the tag is about the number rather than about the position.
     expect(screen.getAllByText('Best match')).toHaveLength(1);
   });
 
@@ -931,6 +980,15 @@ describe('the pin and the best match', () => {
 
     expect(screen.getByText('Wants to play you')).toBeTruthy();
     // Not moved to the runner-up: the coral tag names the best match or nobody.
+    expect(screen.queryByText('Best match')).toBeNull();
+  });
+
+  it('gives the best-fit row You said yes over the coral tag, and hands the coral tag to nobody', async () => {
+    servedWithALift();
+    stubOutgoingYeses(transport, [B, 'PADEL']);
+    await openThePool();
+
+    expect(await screen.findByText(YOU_SAID_YES_WORD)).toBeTruthy();
     expect(screen.queryByText('Best match')).toBeNull();
   });
 });

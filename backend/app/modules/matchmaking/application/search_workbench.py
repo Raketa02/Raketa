@@ -14,10 +14,11 @@ which reads fail closed, and the one that drifted would be the one that quietly
 softened a gate.
 
 **What is deliberately not here** is everything a surface decides for itself: the
-mode (a shortlist takes it from the request, a deck reads a declaration), the
-exclusions, the order, the relaxation ladder — which does not reach the deck at
-all — and the prompts. A workbench that decided any of those would be the second
-implementation this one exists to prevent, wearing a helpful name.
+mode (a shortlist takes it from the request, a deck runs on one ruler for
+everybody), the exclusions, the order, the relaxation ladder — which does not
+reach the deck at all — and the prompts. A workbench that decided any of those
+would be the second implementation this one exists to prevent, wearing a helpful
+name.
 
 **The order the caller must keep is still the caller's**, and it is stated in
 each use case: read the searcher, bind once, run the pipeline, record and commit,
@@ -42,6 +43,10 @@ from app.modules.matchmaking.application.outward_reads import (
     live_block_set,
     read_demand,
 )
+from app.modules.matchmaking.application.refusals import (
+    rated_in,
+    refuse_a_held_player,
+)
 from app.modules.matchmaking.domain.cards import (
     CardIdentity,
     CardRecord,
@@ -60,7 +65,6 @@ from app.modules.matchmaking.domain.errors import (
     PlayerProfileNotCommitted,
     PlayIntentNotDeclared,
     SearchNotRecorded,
-    SportNotRated,
 )
 from app.modules.matchmaking.domain.geography import Point
 from app.modules.matchmaking.domain.interest import InterestLedger
@@ -105,12 +109,13 @@ from app.modules.player_profile.domain.availability import (
     AvailabilitySlot,
 )
 from app.modules.player_profile.domain.play_intent import PlayIntent
+from app.modules.player_profile.domain.profile import PlayerProfile
 from app.modules.player_profile.domain.ports import (
     PlayerProfileRepository,
     PlayIntentDeclarationRepository,
 )
 from app.modules.rating.domain.ports import SkillRatingRepository
-from app.shared.domain.errors import AccountHeld
+from app.modules.rating.domain.skill_rating import SkillRating
 
 
 @final
@@ -171,9 +176,9 @@ class AnsweredCandidate:
 
         The nickname, the photo id and that photo's on-court verdict come from
         ``users``, the Player profile and the photo store through
-        :class:`PlayerCardSource`; the area, the tags, the Level and its band are
-        already on the index row, because those are facts a player changes about
-        themselves. Assembled once, here, and **both the response and the
+        :class:`PlayerCardSource`; the area, the tags, the intro, the Level and
+        its band are already on the index row, because those are facts a player
+        changes about themselves. Assembled once, here, and **both the response and the
         read-back render this one** — so the card on the wire and the card in the
         record cannot disagree about what was shown.
 
@@ -203,6 +208,9 @@ class AnsweredCandidate:
             review=self.card.review,
             area_code=self.scored.fenced.area_code,
             social_tags=tuple(indexed.social_tags),
+            # Off the row, like the tags — and off the *row* rather than the
+            # fenced candidate, which deliberately never carries it.
+            intro=indexed.intro,
             level=indexed.mu,
             band=indexed.band,
             # **Read off the row, never recomputed** — see
@@ -345,27 +353,18 @@ class SearchWorkbench:
         be run.
 
         **The mode is a function of the declaration, and each surface says which
-        function**, because that is exactly what the two surfaces disagree about.
-        A shortlist's is a constant — which tab you are on, decided before
-        anything was read — and the deck's is
-        ``matchmaking/domain/deck.py``'s ``mode_for_intent``, mapping the viewer's
-        own declaration and never selecting a third vector. Passing a function
-        rather than a value is what keeps it **one read**: the declaration the
-        mode was chosen from is the declaration recorded as ``intent_read``, and
-        there is no second load for the two to disagree across.
+        function**, because that is exactly what the surfaces disagree about. A
+        shortlist's is a constant — which tab you are on, decided before
+        anything was read — and a fill on a court born without a mode resolves
+        one from the filler's declaration through ``mode_for_intent``. Passing
+        a function rather than a value is what keeps it **one read**: the
+        declaration the mode was chosen from is the declaration recorded as
+        ``intent_read``, and there is no second load for the two to disagree
+        across. **A surface that reads no declaration is the other method**,
+        because the ``409`` here is the whole of what it declines.
         """
 
-        profile = await self._profiles.load(player_id)
-        if profile is None:
-            raise PlayerProfileNotCommitted(
-                "the searcher has not committed a player profile"
-            )
-        ratings = await self._ratings.find_all_for(player_id=player_id)
-        rated = next((r for r in ratings if r.sport is sport), None)
-        if rated is None:
-            raise SportNotRated(
-                f"the searcher holds no rating for {sport.value}"
-            )
+        profile, rated = await self._profile_and_rating(player_id, sport)
         declaration = await self._declarations.load(
             player_id=player_id, sport=sport
         )
@@ -374,33 +373,64 @@ class SearchWorkbench:
                 f"the searcher has not declared a Play intent for "
                 f"{sport.value}"
             )
-        return SearcherFacts(
-            player_id=player_id,
-            sport=sport,
+        return _searcher_facts(
+            player_id,
+            sport,
+            profile,
+            rated,
             mode=mode_of(declaration.intent),
-            mu=rated.mu,
-            sigma=rated.sigma,
-            tags=tuple(tag.value for tag in profile.social_tags.tags),
-            grid=profile.availability,
-            radius_km=profile.search_radius.kilometres,
-            area=Point(
-                latitude=profile.location.latitude,
-                longitude=profile.location.longitude,
-            ),
-            gender=profile.gender,
-            gender_preference=profile.gender_preference,
             declared_intent=declaration.intent,
-            profile_created_at=profile.created_at,
         )
+
+    async def searcher_facts_under(
+        self, *, player_id: UUID, sport: Sport, ruler: SearchMode
+    ) -> SearcherFacts:
+        """The same read, for a surface that scores under **one ruler** and
+        reads no declaration — the deck (``docs/adr/0169`` §2).
+
+        The declaration is still loaded, once, and **recorded as it stood**:
+        ``intent_read`` is history, and for a viewer who never declared, as it
+        stood is nothing. What this method refuses is the ``409`` — a
+        declaration is a fact about the kind of evening somebody wants, and a
+        discovery surface asks no such question. The two refusals before it
+        stand, in their order: without a profile there is no radius to search
+        on, and without a rating in the sport there is no Level to gate against.
+        """
+
+        profile, rated = await self._profile_and_rating(player_id, sport)
+        declaration = await self._declarations.load(
+            player_id=player_id, sport=sport
+        )
+        return _searcher_facts(
+            player_id,
+            sport,
+            profile,
+            rated,
+            mode=ruler,
+            declared_intent=None if declaration is None else declaration.intent,
+        )
+
+    async def _profile_and_rating(
+        self, player_id: UUID, sport: Sport
+    ) -> tuple[PlayerProfile, SkillRating]:
+        """The two refusals every surface owes, in the order they are owed."""
+
+        profile = await self._profiles.load(player_id)
+        if profile is None:
+            raise PlayerProfileNotCommitted(
+                "the searcher has not committed a player profile"
+            )
+        rated = await rated_in(self._ratings, player_id=player_id, sport=sport)
+        return profile, rated
 
     async def refuse_a_held_searcher(self, searcher_id: UUID) -> None:
-        """**The hold points both ways.** A held player can still sign in."""
+        """**The hold points both ways.** A held player can still sign in.
 
-        held = await read_demand(
-            AccountHoldQuery, lambda: self._holds.held_among([searcher_id])
-        )
-        if searcher_id in held:
-            raise AccountHeld("this account is under a hold")
+        The words and the read are ``refusals.py``'s, shared with the deck's
+        reset, so the two surfaces cannot come to refuse differently.
+        """
+
+        await refuse_a_held_player(self._holds, searcher_id)
 
     # -- what one search was asked for ---------------------------------------
 
@@ -884,6 +914,37 @@ class SearchWorkbench:
             await self._exposure.record_shown_to_a_newcomer(
                 sport=sport, week=week, player_ids=player_ids
             )
+
+
+def _searcher_facts(
+    player_id: UUID,
+    sport: Sport,
+    profile: PlayerProfile,
+    rated: SkillRating,
+    *,
+    mode: SearchMode,
+    declared_intent: PlayIntent | None,
+) -> SearcherFacts:
+    """The searcher, from the two aggregates just read. **Never as they sent.**"""
+
+    return SearcherFacts(
+        player_id=player_id,
+        sport=sport,
+        mode=mode,
+        mu=rated.mu,
+        sigma=rated.sigma,
+        tags=tuple(tag.value for tag in profile.social_tags.tags),
+        grid=profile.availability,
+        radius_km=profile.search_radius.kilometres,
+        area=Point(
+            latitude=profile.location.latitude,
+            longitude=profile.location.longitude,
+        ),
+        gender=profile.gender,
+        gender_preference=profile.gender_preference,
+        declared_intent=declared_intent,
+        profile_created_at=profile.created_at,
+    )
 
 
 def _by_player(

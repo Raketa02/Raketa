@@ -91,7 +91,7 @@ describe('what the bar offers', () => {
 
     expect(screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel)).toEqual([
       'Now',
-      'Around',
+      'Players',
       'Play',
       'Chats',
       'You',
@@ -121,13 +121,13 @@ describe('what the bar offers', () => {
 
 describe('what the bar announces', () => {
   it('announces the active tab as selected', () => {
-    renderBar('around');
+    renderBar('players');
 
-    expect(screen.getByRole('tab', { name: 'Around', selected: true })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Players', selected: true })).toBeTruthy();
   });
 
   it('announces the other four as not selected, rather than as silence', () => {
-    renderBar('around');
+    renderBar('players');
 
     for (const name of ['Now', 'Play', 'Chats', 'You']) {
       expect(screen.getByRole('tab', { name, selected: false })).toBeTruthy();
@@ -305,7 +305,7 @@ describe('Dynamic Type', () => {
   it('draws the label as `tag` — a name, not a tracked eyebrow', () => {
     renderBar('now');
 
-    const label = screen.getByText('Around');
+    const label = screen.getByText('Players');
     expect(StyleSheet.flatten(label.props.style)).toMatchObject({
       fontFamily: theme.type.tag.fontFamily,
       fontSize: theme.type.tag.fontSize,

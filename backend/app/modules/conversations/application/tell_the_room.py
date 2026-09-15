@@ -85,7 +85,7 @@ from app.modules.challenges.domain.events import (
     SeatsInvited,
 )
 from app.modules.conversations.domain.conversation import Conversation
-from app.modules.conversations.application.telling import line_for
+from app.modules.conversations.application.telling import line_drawn_by, line_for
 from app.modules.conversations.domain.entries import (
     COUNT,
     DEPARTURE,
@@ -147,10 +147,7 @@ class TellTheRoom:
         """
 
         if isinstance(event, ChallengeOpenedFromMutualInterest):
-            # **The mutual is the opening and writes no line.** Both seats are
-            # accepted from birth, so there was never a moment with one person
-            # in the room for a line to be about.
-            await self._open(event.challenge_id, event.occurred_at)
+            await self._mutual(event, context)
         elif isinstance(event, SeatAccepted):
             await self._accepted(event, context)
         elif isinstance(event, SeatsInvited):
@@ -213,6 +210,62 @@ class TellTheRoom:
             occurred_at=instant(event.occurred_at),
         )
 
+    async def _mutual(
+        self, event: ChallengeOpenedFromMutualInterest, context: DeliveryContext
+    ) -> None:
+        """Two yeses met. **The mutual is the opening, and on a doubles court it
+        also says it is half a game** (``docs/adr/0169`` §8).
+
+        Both seats are accepted from birth, so there was never a moment with one
+        person in the room for a membership line to be about — a singles mutual
+        opens the room and writes nothing. A doubles mutual seats the pair on
+        **one side** with a whole side still to fill, and nothing in the room
+        says so; that room is born with ``SIDE_FORMED`` at ``seq`` 1, which
+        names no actor because it is about both of them, and carries no values
+        because the client owns the words.
+
+        **Whether the line is drawn is the table's decision and not this
+        arm's**: ``line_drawn_by`` runs the row's own condition — the court is
+        a doubles one, read through ``challenges``' ``seats_per_side`` off the
+        event's sport — so ``telling.py`` and this handler cannot come to two
+        answers about the one row where they could. It is not read off
+        ``ArrangingCourt``, which answers ``None`` for a challenge this context
+        cannot be told about — then there is no room, and nothing is written.
+
+        ***Born with* is literal: the opening and the line are one save.** The
+        obvious shape — open, then ``_line_in`` — re-reads the room through the
+        locked ``for_challenge`` a moment after ``save`` added its row, and the
+        worker's session does not autoflush (``app/infrastructure/database/
+        session.py``), so that read finds nothing and the line is dropped
+        without a trace — while the suite's own session autoflushes and passes.
+        So the line is recorded on the room the opening built, before the one
+        save that writes both, and a second lookup is never made.
+
+        **Idempotent on both halves.** A redelivery finds the room already open
+        and the line already told by this outbox row, so the same row twice
+        lands one room and one line — and nudges again with an unchanged
+        ``last_seq``, which every phone already holding it ignores.
+        """
+
+        room = await self._conversations.for_challenge(event.challenge_id)
+        opened_now = room is None
+        if room is None:
+            room = await self._opening(event.challenge_id, event.occurred_at)
+            if room is None:
+                return
+        code = line_drawn_by(event)
+        if code is not None:
+            await self._write_line(
+                room,
+                code=code,
+                actor_id=None,
+                values={},
+                source_event_id=context.event_id,
+                occurred_at=instant(event.occurred_at),
+            )
+        elif opened_now:
+            await self._conversations.save(room)
+
     async def _open(self, challenge_id: UUID, occurred_at: datetime) -> None:
         """Open the room, and **ask whether it is already about a game.**
 
@@ -241,12 +294,24 @@ class TellTheRoom:
         if room is not None:
             # A redelivery, or a mutual whose two seats arrived as two events.
             return
+        opened = await self._opening(challenge_id, occurred_at)
+        if opened is not None:
+            await self._conversations.save(opened)
+
+    async def _opening(
+        self, challenge_id: UUID, occurred_at: datetime
+    ) -> Conversation | None:
+        """The room this challenge opens, **built and not yet saved** — so the
+        caller can put into it whatever it is born with before the one save.
+
+        ``None`` for a challenge this context cannot be told about: opening a
+        room without a sport would put a row in the list that no client can
+        draw, so nothing is opened and the next telling opens it.
+        """
+
         sport = await self._arranging.sport_of(challenge_id)
         if sport is None:
-            # A challenge this context cannot be told about. Opening a room
-            # without a sport would put a row in the list that no client can
-            # draw, so nothing is opened and the next telling opens it.
-            return
+            return None
         opened = Conversation.opened(
             conversation_id=uuid4(),
             challenge_id=challenge_id,
@@ -256,7 +321,7 @@ class TellTheRoom:
         game_id = await self._played.game_of(challenge_id)
         if game_id is not None:
             opened.note_game(game_id=game_id, occurred_at=instant(occurred_at))
-        await self._conversations.save(opened)
+        return opened
 
     # -- being closed ------------------------------------------------------
 

@@ -56,6 +56,15 @@ import { codeMessage, type AppError } from '@/shared/errors';
  */
 const PLATFORM_CANNOT_ANSWER = "We couldn't put a game together just now. Try again in a moment.";
 
+/**
+ * The ceiling, in one sentence — **and the same one whether the client pre-empted it or the
+ * server refused it.** The deck withholds a yes it can see will be refused (`domain/yesBudget`)
+ * and says this in a toast; a `409` it did not predict says this above the returned card.
+ * Exported for that first site, so the two cannot drift.
+ */
+export const CAP_REACHED_SENTENCE =
+  "You have as many yeses out as this sport allows. One comes back, or one lapses, and there's room again.";
+
 const BY_CODE: Readonly<Record<string, string>> = {
   /**
    * The origin search cannot be used. The remedy is a **new search**, which is also what
@@ -77,8 +86,7 @@ const BY_CODE: Readonly<Record<string, string>> = {
    * shortened to make room** — the contract says so — so the honest remedy is waiting, and
    * the count and the cap are both on the read the segment already holds.
    */
-  outstanding_interest_cap_reached:
-    "You have as many yeses out as this sport allows. One comes back, or one lapses, and there's room again.",
+  outstanding_interest_cap_reached: CAP_REACHED_SENTENCE,
   /**
    * Unreachable while the sport chips are drawn from the rated sports, and the backstop for a
    * stale profile on a second device. It sends the player where the rating is made.

@@ -101,6 +101,8 @@ def _candidate(band: CandidateBand, position: int) -> SearchCandidateRecord:
                 review=PhotoReviewDecision.FLAGGED,
                 area_code="LDN-CENTRAL",
                 social_tags=("PLAYS_TO_WIN",),
+                # And the line, for the record block's reason below.
+                intro="Moved from Wrocław in May.",
                 level=2.7,
                 band="Improver",
                 range_low=2.36,
@@ -286,6 +288,37 @@ async def test_a_card_written_before_the_record_block_reads_back_without_one(sto
     assert row.card.player_score is None
     assert row.card.counted_games is None
     assert row.card.last_five == ()
+
+
+async def test_a_card_written_before_the_intro_reads_back_without_one(store):
+    """The same soft key, one field over (``docs/adr/0170``): a blob written
+    before the line existed showed no line, and *no intro* is what its absence
+    already means."""
+
+    adapter, session = store
+    record = _record()
+    await adapter.record(record)
+    await session.commit()
+
+    stored = (
+        await session.execute(
+            select(SearchCandidateORM).where(
+                SearchCandidateORM.search_id == record.id,
+                SearchCandidateORM.band == CandidateBand.RETURNED.value,
+            )
+        )
+    ).scalars()
+    for candidate in stored:
+        candidate.player_card = {
+            key: value for key, value in candidate.player_card.items() if key != "intro"
+        }
+    await session.commit()
+
+    row = (await adapter.find(search_id=record.id, searcher_id=SEARCHER)).returned[0]
+
+    assert row.card is not None
+    assert row.card.nickname == "ada", "an older card stopped reading at all"
+    assert row.card.intro is None
 
 
 async def test_the_search_row_comes_back_whole_beside_its_candidates(store):
@@ -600,6 +633,7 @@ def test_a_basis_and_the_reasons_beside_it_may_not_be_different_lengths():
                 review=None,
                 area_code="LDN-CENTRAL",
                 social_tags=(),
+                intro=None,
                 level=2.7,
                 band="Improver",
                 range_low=2.36,
@@ -647,6 +681,7 @@ def test_a_near_miss_may_not_carry_a_card():
                 review=None,
                 area_code="LDN-CENTRAL",
                 social_tags=(),
+                intro=None,
                 level=2.7,
                 band="Improver",
                 range_low=2.36,

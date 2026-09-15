@@ -1,24 +1,26 @@
 /**
- * What the two unbuilt tabs say, and what the two built ones say.
+ * What the one unbuilt tab says, and what the two built ones the shell writes for say.
  *
- * **These are citations, not filler.** Each placeholder line is one sentence naming what its
- * tab will be, plus that it is not built — and two of the three are decided elsewhere, so the
- * sentence is quoting a rule rather than making a promise
- * ([#227](https://github.com/Raketa02/Raketa/issues/227)):
+ * **These are citations, not filler.** A placeholder line is one sentence naming what its tab
+ * will be, plus that it is not built — decided elsewhere, so the sentence is quoting a rule
+ * rather than making a promise ([#227](https://github.com/Raketa02/Raketa/issues/227)):
  *
  * | Tab | Where the line comes from |
  * | --- | --- |
- * | Around | Nothing decided: it states the tab's job and stops |
  * | You | [#226](https://github.com/Raketa02/Raketa/issues/226) — the grid, the radius and the declaration are exactly the three facts on the wire |
  *
- * **Three tabs have left this table and none of them was deleted.** Play's stub was replaced by
+ * **Four tabs have left this table and none of them was deleted.** Play's stub was replaced by
  * the screen itself ([#268](https://github.com/Raketa02/Raketa/issues/268)); Chats' line — *"a
  * chat opens when somebody accepts"* — was a citation of
  * [#221](https://github.com/Raketa02/Raketa/issues/221), and `CHATS_COPY` below is that same
  * citation said properly on a tab that is built
- * ([#360](https://github.com/Raketa02/Raketa/issues/360)); and **Now's died with the rail**
- * ([#367](https://github.com/Raketa02/Raketa/issues/367)), replaced by `NOW_COPY` below. Two tabs
- * remain unbuilt, and `PlaceholderTab` excludes the three that are not.
+ * ([#360](https://github.com/Raketa02/Raketa/issues/360)); **Now's died with the rail**
+ * ([#367](https://github.com/Raketa02/Raketa/issues/367)), replaced by `NOW_COPY` below; and
+ * **Around's retired with the tab** — its line promised *players and courts near you*, nothing
+ * had been decided about either, and the deck moved in as **Players**
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1). Courts get their own home when they arrive. One tab remains unbuilt, and `PlaceholderTab`
+ * excludes the four that are not.
  *
  * **No sentence here may say "nothing is happening."** It began as Now's refusal — Now is where a
  * send lands, so a placeholder asserting emptiness would be lying one tap after a challenge went
@@ -38,14 +40,10 @@ export interface PlaceholderCopy {
   readonly line: string;
 }
 
-/** The two tabs that ship unbuilt. Now, Play and Chats are built and are not among them. */
-export type PlaceholderTab = Exclude<TabBarKey, 'now' | 'play' | 'chats'>;
+/** The one tab that ships unbuilt. Now, Players, Play and Chats are built and are not it. */
+export type PlaceholderTab = Exclude<TabBarKey, 'now' | 'players' | 'play' | 'chats'>;
 
 export const PLACEHOLDER_COPY = {
-  around: {
-    title: 'Around',
-    line: 'Players and courts near you — not built yet',
-  },
   you: {
     title: 'You',
     line: 'Your profile, your radius, your week — not built yet',
@@ -63,10 +61,11 @@ export const PLACEHOLDER_COPY = {
  * its own empty line and owns its own heading.
  *
  * **The panel states the limit that makes this a sports app, and both of the design's promises
- * are dropped** (§22.1). *"When you count yourself into something tonight"* is Around, which
- * this build does not have; *"inside a game or a plan"* is wrong in the other direction, because
- * a conversation opens on the **first acceptance**, before there is a game at all. What is kept
- * is the sentence that does the work: there is no way to message a stranger.
+ * are dropped** (§22.1). *"When you count yourself into something tonight"* was Around's, and
+ * Around **has no tab now** — the deck took the column as Players (ADR-0169 §1) and nothing on
+ * it is a thing to count yourself into; *"inside a game or a plan"* is wrong in the other
+ * direction, because a conversation opens on the **first acceptance**, before there is a game at
+ * all. What is kept is the sentence that does the work: there is no way to message a stranger.
  *
  * **No empty state here may assert that nothing is happening.** Now's standing refusal,
  * inherited for the same reason — a send lands here now, so *nothing here yet* can be false one

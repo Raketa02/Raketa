@@ -42,10 +42,10 @@
  * ## The transition says which of the two moves happened
  *
  * A `Stack`'s default is the push transition, and the shell's ordinary move is a **replace** —
- * so out of the box, going from Now to Around slides in from the right and reads as going
+ * so out of the box, going from Now to Players slides in from the right and reads as going
  * *deeper* on the one gesture whose whole meaning is that nothing was kept. The shell's
- * default is therefore `none`, and the two Play screens take the push back, because entering
- * Find a game and pushing the deck over it genuinely are ones: what they arrive on stays
+ * default is therefore `none`, and the Play screens take the push back, because entering
+ * Find a game and pushing the builder over it genuinely are ones: what they arrive on stays
  * underneath, and leaving should read as coming back out. **This is the one thing in the shell
  * that has not been seen on a device.**
  *
@@ -94,15 +94,14 @@ export function TabShell() {
           trip and this stack came back with no history to restore. `theShell.test.tsx` holds it. */}
       <Stack initialRouteName="index" screenOptions={{ headerShown: false, animation: 'none' }}>
         <Stack.Screen name="play/index" options={{ animation: 'default' }} />
-        {/* The deck is genuinely pushed: Find a game stays underneath it, so the transition
-            that reads as *going deeper* is the true one — the same exception, for the same
-            reason ([#270](https://github.com/Raketa02/Raketa/issues/270)). */}
-        <Stack.Screen name="play/deck" options={{ animation: 'default' }} />
-        {/* And so are the builder and the pool: a finished search is pushed onto the court and
-            a seat is pushed onto the pool, and both come back out
+        {/* So are the builder and the pool: a finished search is pushed onto the court and a
+            seat is pushed onto the pool, and both come back out
             ([#271](https://github.com/Raketa02/Raketa/issues/271)). The exception is named per
             screen rather than per prefix because a Play route that is genuinely a **replace**
-            — there is not one yet — must take the shell's own `none` back. */}
+            — there is not one yet — must take the shell's own `none` back. The deck was the
+            first of these and is none of them now: it is the Players tab's root
+            ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+            §1), arrived at by a tab press, and it takes the shell's `none` like every root. */}
         <Stack.Screen name="play/builder" options={{ animation: 'default' }} />
         <Stack.Screen name="play/pool" options={{ animation: 'default' }} />
         {/* And so is a game: it is pushed over the Now tab's list, the list stays underneath,

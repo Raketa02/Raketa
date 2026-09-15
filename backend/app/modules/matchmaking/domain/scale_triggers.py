@@ -86,12 +86,19 @@ TRIGGER_WINDOW = timedelta(minutes=15)
 #: ~17 000 players across that range. A figure quoted without its assumption is
 #: how the 782 above survived, so this one is quoted with it.
 #:
+#: **Re-measured at 2 016 on 2026-09-15, when the row gained the intro**
+#: (``docs/adr/0170``) — one ``str`` or ``None``, so its whole cost is the share
+#: of players who wrote a line times the line. That share is the second stated
+#: assumption in the bench, taken from the cohort again (seven of forty-one,
+#: mean 54 characters); the bench prints the elasticity beside it, and the most
+#: the field can ever cost — everybody at the 100-character cap — is 2 149.
+#:
 #: **This is not urgent.** The correction moves trigger 4 from ~64 000 players
 #: to ~25 000, against a platform whose largest environment is a laptop, and the
 #: error it fixes was in the direction of firing *late* rather than of a wrong
 #: refusal. What makes it worth having done is that the old figure was quoted in
 #: seven files as a measurement while being a measurement of something else.
-BYTES_PER_ROW = 1991
+BYTES_PER_ROW = 2016
 
 #: §4's *50% of the container memory limit*. Half, so that the index and
 #: everything the API needs beside it are budgeted separately rather than the

@@ -11,6 +11,7 @@ import type { SocialStep } from '../domain/socialSteps';
 
 export const SOCIAL_STEP_PATH = {
   tags: '/tags',
+  intro: '/intro',
   photos: '/photos',
   availability: '/availability',
   location: '/location',

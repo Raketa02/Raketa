@@ -49,7 +49,6 @@ from app.modules.games.domain.ports import (
     ResultAnswering,
 )
 from app.modules.games.domain.standing import GameStanding
-from app.modules.games.domain.windows import entry_closes_at
 from app.modules.games.infrastructure.game_streams import streams_seating
 
 
@@ -441,13 +440,10 @@ def _settled_arrangement(
     outcome = _pairwise_outcome(game, now)
     if outcome is None:
         return None
-    if outcome is PlayedOutcome.PLAYED:
-        # ``played_at`` is set for every standing in ``PLAYED`` — the entry that
-        # records *we played* is the only thing that can set it — so the fallback
-        # is unreachable and is stated rather than asserted, because a read is a
-        # bad place to raise about a stream somebody else wrote.
-        return outcome, game.played_at or game.planned_at
-    return outcome, entry_closes_at(game.planned_at)
+    # The moment is the aggregate's own fold — one date for one game, wherever
+    # it is read — and it is set for both outcomes the line above admits, so
+    # the narrowing is stated rather than asserted.
+    return outcome, game.became_history_at(now) or game.planned_at
 
 
 __all__ = ["EventSourcedGameHistory"]

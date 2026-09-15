@@ -41,7 +41,12 @@ import {
 import { mapErrorResponse } from '@/shared/errors';
 
 import { conversationErrorMessage } from './conversationErrorMessage';
-import { headerSubline, headerTitle, systemLineSentence } from './conversationPresentation';
+import {
+  SIDE_FORMED_LINE,
+  headerSubline,
+  headerTitle,
+  systemLineSentence,
+} from './conversationPresentation';
 import { sportLabel } from '@/features/onboarding/types';
 import { QUICK_CHIP, cardStateWord } from '@/features/plans/types';
 
@@ -374,6 +379,28 @@ describe('the stream', () => {
     );
 
     expect(await screen.findByText(sentence)).toBeTruthy();
+  });
+
+  /**
+   * **The doubles room's first words** — the one line a room is born with, at `seq` 1 with no
+   * actor, drawn as every other system line is
+   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §8). Which rooms carry it is the server's: a padel mutual's does, a tennis mutual's does not,
+   * and the client draws what the stream holds without reading the sport.
+   */
+  it('opens a doubles mutual’s room on You two are a side, named by nobody', async () => {
+    const born: Wire['SystemLineSchema'] = { ...line(1, 'SIDE_FORMED'), actor_id: null };
+    await openTheRoom(room({ entries: [born, message(2, TOMEK, 'who do we ask?')] }));
+
+    expect(await screen.findByText(SIDE_FORMED_LINE)).toBeTruthy();
+    expect(screen.queryByText(/^\? /)).toBeNull();
+  });
+
+  it('draws no such line in a room the stream did not open with one', async () => {
+    await openTheRoom(room({ sport: 'TENNIS', entries: [line(1, 'SEAT_ACCEPTED')] }));
+
+    await screen.findByLabelText(/^tomek\.p/);
+    expect(screen.queryByText(SIDE_FORMED_LINE)).toBeNull();
   });
 
   /** §24.4: the author is always spoken, even where the bubble does not draw one. */

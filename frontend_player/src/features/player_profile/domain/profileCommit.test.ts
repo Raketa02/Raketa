@@ -10,10 +10,11 @@ import {
   STEP_THAT_ASKS,
 } from './profileCommit';
 
-/** Everything the seven steps collect, all of it answered. The ordinary end of the part. */
+/** Everything the eight steps collect, all of it answered. The ordinary end of the part. */
 function answeredDraft(): ProfileDraft {
   return recordAnswer(emptyDraft(), {
     socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
+    intro: 'Moved from Wrocław in May. Needs opponents.',
     photoIds: ['photo-1'],
     availability: [{ day: 3, part: 'evening' }],
     location: { latitude: 41.39, longitude: 2.16 },
@@ -35,6 +36,7 @@ describe('a draft with every answer given', () => {
       kind: 'ready',
       commit: {
         socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
+        intro: 'Moved from Wrocław in May. Needs opponents.',
         photoIds: ['photo-1'],
         availability: [{ day: 3, part: 'evening' }],
         location: { latitude: 41.39, longitude: 2.16 },
@@ -44,6 +46,24 @@ describe('a draft with every answer given', () => {
         genderPreference: 'any',
       },
     });
+  });
+
+  it('is ready with no intro, and then carries none', () => {
+    // The intro is optional and a player who skipped has no line rather than an empty one —
+    // so the commit does not hold the field at all, rather than holding an empty string
+    // the server would read as the same answer by a second route.
+    const standing = readyToCommit(recordAnswer(answeredDraft(), { intro: '' }));
+
+    expect(standing.kind).toBe('ready');
+    expect(standing.kind === 'ready' && standing.commit).not.toHaveProperty('intro');
+  });
+
+  it('carries the intro trimmed, and a blank one as none', () => {
+    const written = readyToCommit(recordAnswer(answeredDraft(), { intro: '  Needs opponents. ' }));
+    const blank = readyToCommit(recordAnswer(answeredDraft(), { intro: '   ' }));
+
+    expect(written.kind === 'ready' && written.commit.intro).toBe('Needs opponents.');
+    expect(blank.kind === 'ready' && blank.commit).not.toHaveProperty('intro');
   });
 
   it('is ready with no photos', () => {

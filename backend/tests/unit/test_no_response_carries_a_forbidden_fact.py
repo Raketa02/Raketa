@@ -12,7 +12,9 @@ added to a candidate row, in a diff where nothing looks wrong.
 - **gender** — a protected characteristic may **gate**; it may never be shown
   or scored.
 - **a bio, or any player-authored free text** — the platform's first moderation
-  surface, and out of scope.
+  surface. ``docs/adr/0170`` admitted exactly one line, ``intro``, fenced at the
+  write; the words this rule catches are the ones a *paragraph* would arrive
+  under, and ``intro`` is deliberately not among them.
 - **activity recency, at any granularity** — *last seen* is a presence indicator
   and this product does not have one.
 - **a decline, a pass** — a refusal is not a notification, and a pass is

@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Collection, Mapping
 from uuid import UUID, uuid4
 
+from app.modules.player_profile.domain.intro import Intro
 from app.modules.player_profile.domain.photos import (
     PhotoRef,
     PhotoReviewDecision,
@@ -61,10 +62,11 @@ class Tags:
 
 
 class Profile:
-    def __init__(self, photo_ids: tuple[UUID, ...]) -> None:
+    def __init__(self, photo_ids: tuple[UUID, ...], intro: Intro | None = None) -> None:
         self.photo_ids = photo_ids
         self.location = Area()
         self.social_tags = Tags()
+        self.intro = intro
 
 
 class Profiles:
@@ -92,10 +94,11 @@ def identity_source(
     profile: bool = True,
     decision: PhotoReviewDecision | None = PhotoReviewDecision.ALLOWED,
     photos: Photos | None = None,
+    intro: Intro | None = None,
 ) -> ProfileAndAccountIdentity:
     return ProfileAndAccountIdentity(
         users=Users({} if nickname is None else {SUBJECT: nickname}),
-        profiles=Profiles(Profile(photo_ids) if profile else None),
+        profiles=Profiles(Profile(photo_ids, intro) if profile else None),
         photos=photos or Photos(decision),
     )
 
@@ -112,6 +115,19 @@ async def test_an_identity_is_the_handle_the_first_photo_and_where_they_are():
     # platform turns a coarse area into one, because two would be two answers to
     # *are we in the same area*.
     assert identity.area_code == "A+05151-000013"
+
+
+async def test_an_identity_carries_the_line_they_wrote_or_none():
+    """The intro comes off the same fold as the tags (``docs/adr/0170`` §3),
+    and a player who wrote none has ``None`` — the absence the wire omits."""
+
+    wrote = await identity_source(
+        intro=Intro.recorded("Moved from Wrocław in May.")
+    ).identity_of(SUBJECT)
+    skipped = await identity_source().identity_of(SUBJECT)
+
+    assert wrote is not None and wrote.intro == "Moved from Wrocław in May."
+    assert skipped is not None and skipped.intro is None
 
 
 async def test_the_photograph_a_record_shows_is_the_first_one():

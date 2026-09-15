@@ -47,7 +47,7 @@
  * ## What the version names is the screen, not this file
  *
  * The step's title and the line under it come from `socialStepPresentation`, because the
- * chrome of all seven steps is one table and splitting it would give this step two spellings
+ * chrome of all eight steps is one table and splitting it would give this step two spellings
  * of its own name. A player reads them on the same screen as the card, so
  * `optInPresentation.test.ts` pins them alongside everything below — what the version
  * identifier names is what was *shown*, wherever the string happened to be declared.
@@ -102,7 +102,7 @@ export const PROPOSALS_OPT_IN_COPY_V1 = 'proposals-opt-in.v1';
 export const PROPOSALS_OPT_IN_COPY_V2 = 'proposals-opt-in.v2';
 
 /**
- * The chrome line, which replaces the plain *step 7 of 7* rather than joining it.
+ * The chrome line, which replaces the plain *step 8 of 8* rather than joining it.
  *
  * The step's own position is already in the sentence — *before finishing* is where a player
  * is — and the line's job here is to say that this one question is the whole of what is

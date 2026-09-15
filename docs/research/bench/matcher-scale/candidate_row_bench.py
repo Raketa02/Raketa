@@ -42,6 +42,7 @@ from app.modules.matchmaking.domain.candidate_index import (  # noqa: E402
     CandidateRow,
     IndexedArea,
 )
+from app.modules.player_profile.domain.intro import INTRO_MAX_CHARACTERS  # noqa: E402
 
 N = 31_250  # one sport of a 50 000-player city — memory_bench's own n
 CITY_ROWS = 125_000  # the whole 50 000-player city index
@@ -127,6 +128,41 @@ def cells_ticked(rng: random.Random, position: int) -> int:
     return COHORT_SHARED_CELLS_FLOOR + rng.randint(*COHORT_EXTRA_CELLS)
 
 
+# **How many players write an intro, and how long it is** — the second stated
+# assumption, added with ``docs/adr/0170``. There are no real players to measure
+# and the ADR's own forecast is *most players will have none*, so the share is
+# ``app/seeds/cohort.py``'s again: seven of forty-one members carry a line, and
+# their lines average the length below. A line is one ``str`` on the row — up to
+# ``INTRO_MAX_CHARACTERS``, imported so the cap cannot drift — and ``None`` for
+# everybody else, so the whole cost is the share times the string, and the sweep
+# below prices both ends.
+COHORT_INTRO_SHARE = 7 / 41
+COHORT_INTRO_MEAN_CHARACTERS = 54
+
+
+def intros_written(share: float, mean_characters: float, spread: float = 18):
+    """A rule for who wrote a line and how long it is, at a stated share.
+
+    Named so the sweep can vary it and a reader can disagree with it, the way
+    ``cells_ticked`` is for the grid. Lengths are drawn around ``mean_characters``
+    and clamped to the cap; at ``spread == 0`` every line is exactly the mean,
+    which is what the sweep's *everybody at the cap* row asks for.
+    """
+
+    def rule(rng: random.Random, position: int) -> str | None:
+        if rng.random() >= share:
+            return None
+        length = max(1, min(INTRO_MAX_CHARACTERS,
+                            int(round(rng.gauss(mean_characters, spread)))))
+        return "".join(rng.choice("abcdefghijklmnopqrstuvwxyz ")
+                       for _ in range(length))
+
+    return rule
+
+
+intro_written = intros_written(COHORT_INTRO_SHARE, COHORT_INTRO_MEAN_CHARACTERS)
+
+
 def uninterned_copy(value: str | None) -> str | None:
     """The same characters as a **distinct object**, which is what ships.
 
@@ -149,6 +185,7 @@ def make_rows(
     seed: int = SEED,
     shared_vocabulary: bool = False,
     cells=cells_ticked,
+    intro=intro_written,
 ) -> list[CandidateRow]:
     """``n`` rows of one city, as the projection would decode them.
 
@@ -158,7 +195,8 @@ def make_rows(
     so the two rows of the table differ by exactly that.
 
     ``cells`` is the grid-density assumption, named so the sweep can vary it and
-    a reader can disagree with it. See ``cells_ticked`` above.
+    a reader can disagree with it. See ``cells_ticked`` above. ``intro`` is the
+    second one — who wrote a line, and how long — see ``intro_written``.
     """
 
     rng = random.Random(seed)
@@ -192,6 +230,9 @@ def make_rows(
                 text(tag) for tag in rng.sample(SOCIAL_TAGS, rng.randint(2, 6))
             ),
             tags_updated_at=base - dt.timedelta(seconds=rng.randrange(30_000_000)),
+            # A player's own words are the one string on this row that no
+            # vocabulary could ever share.
+            intro=intro(rng, i),
             availability=tuple(
                 text(code)
                 for code in sorted(rng.sample(AVAILABILITY_CODES, ticked))
@@ -324,6 +365,40 @@ def main() -> None:
         players = int(0.5e9 // (per_row * 4) / 2.5)
         marker = " **(the assumption above)**" if mean == 6.2 else ""
         print(f"| {mean}{marker} | {per_row:.0f} | ~{players:,} players |")
+        del sample
+        gc.collect()
+
+    # ── the second assumption, priced ────────────────────────────────────
+    print()
+    print("## What the intro assumption is worth")
+    print()
+    print("`intro` is one `str` or `None` (`docs/adr/0170`), so its cost is the "
+          "share of players who wrote one times the line. The headline above is "
+          "`app/seeds/cohort.py`'s share (**seven of forty-one, mean 54 "
+          "characters**); the last row is every player at the cap, which is the "
+          "most the field can ever cost.")
+    print()
+    print("| who wrote a line | bytes/row | trigger 4, 4 workers on 1 GB |")
+    print("|---|---:|---:|")
+    for label, share, length in (
+        ("nobody", 0.0, 0),
+        ("the cohort's share, at its mean length", COHORT_INTRO_SHARE,
+         COHORT_INTRO_MEAN_CHARACTERS),
+        ("one in three, at the mock's ~60", 1 / 3, 60),
+        ("everybody, at the 100-character cap", 1.0, INTRO_MAX_CHARACTERS),
+    ):
+        gc.collect()
+        tracemalloc.start()
+        base = tracemalloc.get_traced_memory()[0]
+        sample = make_rows(
+            SWEEP_ROWS, intro=intros_written(share, length, spread=0)
+        )
+        current, _ = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        per_row = (current - base) / SWEEP_ROWS
+        players = int(0.5e9 // (per_row * 4) / 2.5)
+        marker = " **(the assumption above)**" if share == COHORT_INTRO_SHARE else ""
+        print(f"| {label}{marker} | {per_row:.0f} | ~{players:,} players |")
         del sample
         gc.collect()
 
