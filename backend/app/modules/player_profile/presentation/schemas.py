@@ -41,6 +41,7 @@ from app.modules.player_profile.domain.gender import (
     Gender,
     GenderPreference,
 )
+from app.modules.player_profile.domain.intro import INTRO_MAX_CHARACTERS
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.play_intent import (
     PlayIntent,
@@ -369,11 +370,12 @@ class ProposalsOptInRequest(BaseModel):
 class CommitPlayerProfileRequest(BaseModel):
     """Every answer from onboarding's second part, in one body.
 
-    **Photos are the only field with a default**, because holding none is a
-    legitimate answer to *add some photos*. Everything else is something this
-    request must actually carry — a location, a radius, a tag selection, an
-    answer to the proposals question, and **a week with something ticked in it**
-    (``docs/adr/0102``).
+    **Photos and the intro are the fields with a default**, because holding no
+    photograph is a legitimate answer to *add some photos* and writing nothing
+    is a legitimate answer to *say it in your own words* (``docs/adr/0170``).
+    Everything else is something this request must actually carry — a
+    location, a radius, a tag selection, an answer to the proposals question,
+    and **a week with something ticked in it** (``docs/adr/0102``).
 
     The week's *floor* is not spelled here, and that is the same decision the tag
     selection's is: an empty list passes this schema and is refused by the domain
@@ -440,6 +442,30 @@ class CommitPlayerProfileRequest(BaseModel):
             "who asked for anybody. The client must say so at the moment of "
             "setting; learning it from silence is not acceptable. A single "
             "search may narrow this further and nothing may widen past it."
+        ),
+    )
+    intro: str | None = Field(
+        default=None,
+        # **No `max_length` here, deliberately** — the same decision the tag
+        # selection makes. A schema cap would refuse a 101-character line as a
+        # shapeless 422; the domain refuses it as `intro_not_admitted` with
+        # `reason: too_long`, which is the code a client branches on.
+        description=(
+            "One line about yourself — your **intro** — or nothing. Optional: "
+            "a player who skips the step sends nothing (or `null`, or "
+            "whitespace, which is the same), and has no intro rather than an "
+            f"empty one.\n\n"
+            f"Trimmed, then held to **at most {INTRO_MAX_CHARACTERS} "
+            "characters** and **one line**, in any language. Refused with "
+            "`intro_not_admitted` and one coarse `details.reason` — "
+            "`too_long`, `multiline`, or `contains_contact` for a phone "
+            "number, an email, a URL or bare domain, or an `@handle` — so the "
+            "client can say what to change without the server explaining what "
+            "it matched. Nothing else is read.\n\n"
+            "**Not editable yet** (ADR-0170 §5): this commit is its only "
+            "write, with the tags and the photo it sits between. It crosses "
+            "on the player card and on the record, and this response does not "
+            "echo it."
         ),
     )
 

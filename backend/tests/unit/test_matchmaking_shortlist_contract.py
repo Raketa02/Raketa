@@ -35,6 +35,7 @@ from app.modules.matchmaking.presentation.schemas import (
     LivenessReason,
     ModifierCode,
     PlayerCardSchema,
+    PoolSchema,
     PromptSchema,
     RunSearchRequest,
     RungOfferSchema,
@@ -49,6 +50,7 @@ from app.modules.matchmaking.presentation.schemas import (
 MODELS: tuple[type[BaseModel], ...] = (
     ShortlistResponse,
     SearchEnvelope,
+    PoolSchema,
     CandidateSchema,
     WithheldRowSchema,
     PlayerCardSchema,
@@ -77,6 +79,14 @@ OMITTED_FIELDS = {
     (PlayerCardSchema, "last_five"): (
         "nothing of theirs has been counted and agreed; an empty list would be "
         "the same absence in a second spelling"
+    ),
+    (PoolSchema, "remaining"): (
+        "not a deal: only a deal has a hand for people to be beyond, and a "
+        "read-back's count would be about a pool that has moved on"
+    ),
+    (PoolSchema, "want_to_play_you"): (
+        "not a deal: the count is true of the moment the hand was dealt, and "
+        "a shortlist did not count nought people waiting — it did not count"
     ),
 }
 

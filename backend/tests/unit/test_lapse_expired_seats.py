@@ -292,6 +292,7 @@ async def test_a_mutual_born_challenge_has_no_window_to_pass(session_factory):
             Challenge.opened_from_mutual_interest(
                 challenge_id=new_uuid(),
                 sport=Sport.TENNIS,
+                mode=None,
                 organiser_id=ORGANISER,
                 other_player_id=ALICE,
                 occurred_at=SENT_AT,

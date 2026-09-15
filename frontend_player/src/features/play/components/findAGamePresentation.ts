@@ -335,15 +335,19 @@ export const DECLARATION_EYEBROW = 'Kept on your profile';
  * ([#293](https://github.com/Raketa02/Raketa/issues/293)). A sentence pointing at a control
  * that is not drawn is worse than no sentence.
  *
- * So it says the two readers instead, and they are the two ADR-0094 names. **Somebody else's
- * search** reads it — the intent alignment term's signature is `(my_mode, their_intent)`, so
- * this is the half of a pairing the player contributes when a stranger finds them. And **Match
- * me**, because `POST /deck` carries no mode and *"without one there is nothing at all to go
- * on"*. The player's own search reads neither, which is §6.4's rule and is why the segment on
+ * So it says the two readers instead. **Somebody else's search** reads it — the intent
+ * alignment term's signature is `(my_mode, their_intent)`, so this is the half of a pairing the
+ * player contributes when a stranger finds them. And **a yes on Players that becomes a game**:
+ * the deck itself reads no declaration any more — every deal runs under one ruler
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §2), which retired *and by Match me* from this sentence — but the court a mutual opens is a
+ * friendly when either of the two declared *for fun* (§8), and that is the declaration read.
+ * The player's own search reads neither, which is §6.4's rule and is why the mode segment on
  * the other side of the answer is not mentioned here.
  */
 export const DECLARATION_BODY =
-  'Read when somebody else’s search finds you, and by Match me. Asked once for this sport.';
+  'Read when somebody else’s search finds you, and when a yes on Players becomes a game. ' +
+  'Asked once for this sport.';
 
 /** Unreachable from the flow — the Play tab is behind a rating — and said rather than drawn. */
 export const NO_RATED_SPORT_LINE =
@@ -356,8 +360,7 @@ export const NO_RATED_SPORT_LINE =
  * about to open, because *Search* names the machinery and this screen's own act is *build a
  * line-up*: a player pressing it lands on an empty court seating nobody but themselves, and a
  * control that said only *Search* would leave the court a surprise. It is the one way through
- * for a competitive game — the deck is the other half of `PlaySegment`, and never a second
- * copy of this one.
+ * for a competitive game — the deck is the Players tab's, and never a second copy of this one.
  *
  * Every sentence below branches on the **seat count** and none of them counts for itself:
  * `isDoubles` is `domain/lineup`'s, for the reason recorded there — *four* is a word

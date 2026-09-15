@@ -130,8 +130,10 @@ class Challenge:
     challenge_id: UUID
     sport: Sport
     #: The kind of evening this was sent for. ``None`` exactly when the send came
-    #: from a surface with no mode — the deck — and on every mutual-born
-    #: challenge, where nobody picked one.
+    #: from a surface with no mode — the deck — and on a mutual-born challenge
+    #: where neither of the pair declared *for fun*; where either did, a
+    #: mutual carries ``FOR_FUN`` (``docs/adr/0169`` §8), and never
+    #: ``COMPETITIVE``.
     mode: SearchMode | None
     #: The window derived from the grid the search ran on, stamped at send.
     #: ``None`` on a mutual-born challenge: no grid was proposed from.
@@ -258,6 +260,7 @@ class Challenge:
         *,
         challenge_id: UUID,
         sport: Sport,
+        mode: SearchMode | None,
         organiser_id: UUID,
         other_player_id: UUID,
         occurred_at: Instant,
@@ -270,14 +273,27 @@ class Challenge:
         positions — one per side in a singles sport, both on one side in a
         doubles one, which is a whole side still to fill.
 
+        **The mode is a friendly or nothing, and the caller resolves it**
+        (``docs/adr/0169`` §8): ``FOR_FUN`` when either of the pair declared
+        *for fun* for this sport, ``None`` otherwise — which the hand-over
+        reads as counted, *a friendly is a thing people choose*. It is required
+        rather than defaulted so that the one place the rule is decided is the
+        mint that reads the declarations, and not a constructor that decided it
+        by omission. ``COMPETITIVE`` is refused as a broken precondition: it is
+        not one of the rule's two outcomes, and stamping it would give two
+        competitive declarers a mode where the rule gives them an absence.
+
         **The one-open-challenge-per-pair rule is the caller's here**, not this
         constructor's: it is a statement about every other challenge, and the
-        path that detects a mutual is the one holding the read. Nothing in this
-        module calls this yet, and the ticket that wires it signs for that check.
+        path that detects a mutual is the one holding the read.
         """
 
         if organiser_id == other_player_id:
             raise CannotChallengeYourself()
+        invariant(
+            mode is not SearchMode.COMPETITIVE,
+            "a mutual-born challenge is a friendly or nothing, never competitive",
+        )
 
         sides = court_sides(sport)
         seats = tuple(
@@ -297,6 +313,7 @@ class Challenge:
             ChallengeOpenedFromMutualInterest(
                 challenge_id=challenge_id,
                 sport=sport.value,
+                mode=None if mode is None else mode.value,
                 organiser_id=organiser_id,
                 other_player_id=other_player_id,
                 seats=tuple(seat.code for seat in seats),
@@ -878,7 +895,7 @@ class Challenge:
         if isinstance(event, ChallengeOpenedFromMutualInterest):
             self.challenge_id = event.challenge_id
             self.sport = Sport(event.sport)
-            self.mode = None
+            self.mode = None if event.mode is None else SearchMode(event.mode)
             self.window = None
             self.organiser_id = event.organiser_id
             self.seats = tuple(Seat.from_code(code) for code in event.seats)

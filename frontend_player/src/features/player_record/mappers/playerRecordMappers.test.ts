@@ -64,6 +64,15 @@ describe('the record, off the wire', () => {
     expect(toPlayerRecord(served).sports).toEqual([{ sport: 'padel', level: 2.75 }]);
   });
 
+  it('carries the intro verbatim where they wrote one, and omits it where they did not', () => {
+    // Their own words, untouched — never trimmed, never shortened, never an empty string
+    // standing in for none (ADR-0170 §3).
+    expect(toPlayerRecord(response({ intro: 'Will travel for a hard game.' })).intro).toBe(
+      'Will travel for a hard game.',
+    );
+    expect(toPlayerRecord(response())).not.toHaveProperty('intro');
+  });
+
   it('drops a Social tag this build cannot name, and keeps the rest in served order', () => {
     const served = response({ social_tags: ['STAYS_FOR_A_DRINK', 'SINGS_IN_THE_CAR'] });
 

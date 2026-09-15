@@ -51,6 +51,7 @@ from app.modules.player_profile.domain.errors import (
     PlayerProfileAlreadyExists,
     ProposalsOptInNotAnswered,
 )
+from app.modules.player_profile.domain.intro import Intro
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.photos import PhotoRef
 from app.modules.player_profile.domain.ports import (
@@ -113,6 +114,11 @@ class CommitPlayerProfile:
         radius = SearchRadius.chosen(command.search_radius_km)
         area = LocationArea.around(command.latitude, command.longitude)
         grid = AvailabilityGrid.of_cells(command.availability)
+        # The one free-text answer, and the fence is here with the other pure
+        # refusals: a line carrying contact is refused before anything is
+        # stored and before the object store is asked anything
+        # (``docs/adr/0170`` §2). `None` is *skipped*, and so is whitespace.
+        intro = Intro.written(command.intro)
         # Ordered and counted here as well as inside ``create``, so that the
         # ids checked against storage below are exactly the ids that will be
         # recorded — a duplicate refused after three existence checks would have
@@ -144,10 +150,12 @@ class CommitPlayerProfile:
             consent_surface=command.consent_surface,
             idempotency_key=command.idempotency_key,
             occurred_at=now,
+            intro=intro,
         )
 
-        # One clock read, two events, one transaction. The creation and the
-        # consent answer are the same moment because they *are* the same act.
+        # One clock read, two events — three where a line was written — and
+        # one transaction. The creation, the consent answer and the line are
+        # the same moment because they *are* the same act.
         await self._profiles.save(profile)
         await self._uow.commit()
 

@@ -34,14 +34,11 @@ import {
   stubGames,
   stubGate,
   stubPlans,
-  stubProfileOptions,
-  stubProfileSurface,
 } from '@/test-support/onboardingRouter';
 import { setDeviceZone } from '@/test-support/deviceZone';
 import {
   errorResponse,
   installTransport,
-  json,
   noContent,
   type Transport,
   type Wire,
@@ -54,6 +51,7 @@ import {
   ACCENT,
   CARD_TAG,
   FINISH_THE_PLAN,
+  STAGE_DOT,
   WHAT_HAPPENED,
   doorLabel,
   gamesHeading,
@@ -557,9 +555,9 @@ describe('every other name, on the same shell', () => {
 
 /**
  * **The fifth rung, above the clock** (#411 rule 5, ADR-0162): a seat somebody left is drawn
- * empty on the court, the tag says what is needed, the door is *Fill the seat* — the challenge
- * screen's own fill, pushed from the card (#419) — and a listener, who cannot see the court, is
- * told the gap.
+ * empty on the court, the tag says what is needed, the door is *Fill the seat* — opening the
+ * game screen, where the fill is the arm's primary act (#419, landed there by #429 F1) — and a
+ * listener, who cannot see the court, is told the gap.
  */
 describe('Needs a player', () => {
   const SHORT: Wire['GameSchema']['seats'] = [
@@ -603,107 +601,24 @@ describe('Needs a player', () => {
   });
 
   /**
-   * **The door runs the challenge screen's fill and lands in the builder**, under the challenge,
-   * with the people the game's seats hold read as accepted — the fill names the challenge and
-   * nothing else about the court (ADR-0150 §2), and the newcomer is the one clearable seat.
+   * **The door opens the game screen and runs nothing** — the same screen the room's *Details*
+   * opens, where the fill is the arm's primary act ([#429](https://github.com/Raketa02/Raketa/issues/429)
+   * F1, reversing #419's *run from the card*). It is drawn in the stage dot's own colour, so the
+   * tag and the door say the same thing twice — once in a word, once in a fill — rather than the
+   * settled green over an errand still open.
    */
-  it('opens the builder from Fill the seat, with the game’s seated players accepted', async () => {
-    const LINEUP_ID = 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
-    const KASIA = 'cccccccc-0000-4000-8000-000000000003';
-    const candidate = (playerId: string, name: string): Wire['CandidateSchema'] => ({
-      player_id: playerId,
-      fit: 78,
-      distance_km: 4,
-      player_card: {
-        name,
-        area_code: 'A+050612+0019938',
-        social_tags: [],
-        level: 3.1,
-        band: 'Established',
-        range: { low: 2.55, high: 2.87 },
-      },
-      concerns: [],
-      terms: [],
-      degraded_terms: [],
-      modifiers: [],
-      liveness_reasons: [],
-    });
-    const arrangement: Wire['ArrangementSchema'] = {
-      pairing_id: 1,
-      is_current: true,
-      is_evenest: true,
-      sides: {
-        A: [{ seat_index: 0, relationship: 'SELF', player_id: ME }],
-        B: [{ seat_index: 1, relationship: 'OPPONENT', player_id: KASIA }],
-      },
-      forecast: { pct: 61, sigma_group: 0.41, provisional: false, assumption: null },
-      split: { your_side: 2.7, their_side: 3.1, gap: -0.4 },
-    };
-    stubProfileOptions(transport);
-    stubProfileSurface(transport);
-    transport.on('POST', '/api/v1/lineups', () =>
-      json<Wire['LineupResponse']>({
-        search: {
-          search_id: LINEUP_ID,
-          at: '2026-09-12T09:00:05Z',
-          surface: 'LINEUP',
-          mode: 'FOR_FUN',
-          ruleset_version: 'ruleset-v1',
-          engine_version: 'matchfit-v1',
-          optimised_for: 'GROUP',
-          index_stale: false,
-          pool: {
-            sport: 'PADEL',
-            radius_km_used: 12,
-            players_in_range: 7,
-            window: 'THIS_WEEK',
-            post_gate: true,
-          },
-          radius_clamp: false,
-          sorts_available: [],
-          rung_offers: null,
-        },
-        candidates: [candidate(KASIA, 'kasia_w')],
-        lineup: {
-          seats: [
-            { side: 'A', seat_index: 0, relationship: 'SELF', player_id: ME },
-            { side: 'B', seat_index: 1, relationship: 'OPPONENT', player_id: KASIA },
-          ],
-          arrangements: [arrangement],
-          group_reason: 'EVENEST_ARRANGEMENT',
-        },
-      }),
-    );
-    transport.on('POST', '/api/v1/forecasts', () =>
-      json<Wire['ForecastResponse']>({
-        arrangements: [arrangement],
-        engine_version: 'matchfit-v1',
-        ruleset_version: 'ruleset-v1',
-      }),
+  it('opens the game from Fill the seat, and mints no search on the way', async () => {
+    await landOnNow({ games: [game({ seats: SHORT })], plans: [AHEAD] });
+
+    const door = await screen.findByRole('button', { name: FILL_THE_SEAT });
+    expect(StyleSheet.flatten(door.props.style as ViewStyle).backgroundColor).toBe(
+      STAGE_DOT['needs-a-player'],
     );
 
-    // A padel four short of one, so the accepted seats are somebody other than the reader.
-    const THREE_IN: Wire['GameSchema']['seats'] = [
-      { side: 'A', player_id: ME, name: 'me_' },
-      { side: 'A', player_id: TOMEK, name: 'tomek.p' },
-      { side: 'B', player_id: 'dddddddd-0000-4000-8000-000000000004', name: 'marekb' },
-      { side: 'B', player_id: null, name: null },
-    ];
-    await landOnNow({ games: [game({ seats: THREE_IN })], plans: [AHEAD] });
+    fireEvent.press(door);
 
-    fireEvent.press(await screen.findByRole('button', { name: FILL_THE_SEAT }));
-
-    await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE}/fill`));
-    expect(transport.requestsTo('POST', '/api/v1/lineups')[0]?.body).toEqual({
-      completing_challenge_id: CHALLENGE,
-    });
-    await screen.findByRole('button', { name: /^Remove kasia_w/ });
-    expect(screen.queryByRole('button', { name: /^Remove tomek\.p/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Remove marekb/ })).toBeNull();
-
-    // And back lands where you left — the rail.
-    fireEvent.press(screen.getByLabelText('Back'));
-    await waitFor(() => expect(screen).toHavePathname('/'));
+    await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
+    expect(transport.requestsTo('POST', '/api/v1/lineups')).toHaveLength(0);
   });
 
   it('draws the open seat empty — no face, no letters — and the rest of the court as it was', async () => {

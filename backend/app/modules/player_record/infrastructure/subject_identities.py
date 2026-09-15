@@ -8,11 +8,11 @@ make this context a second reader of somebody else's schema, and the second is
 worse than the first because it would also be a second implementation of how a
 profile is folded.
 
-**One profile fold answers three of the five fields.** The photograph, the area
-and the tag selection are all on the aggregate, so this is one stream read rather
-than three ports asked separately — which is why the identity is one demand here
-and not two split by provider. ``docs/adr/0098`` files a port by *who supplies the
-fact*; a fact supplied by one fold is one port.
+**One profile fold answers four of the six fields.** The photograph, the area,
+the tag selection and the intro are all on the aggregate, so this is one stream
+read rather than four ports asked separately — which is why the identity is one
+demand here and not two split by provider. ``docs/adr/0098`` files a port by
+*who supplies the fact*; a fact supplied by one fold is one port.
 
 **The area code is derived by the one function that derives it**, and never
 re-spelled here. It lives in ``matchmaking`` because the player card was the
@@ -62,7 +62,7 @@ class ProfileAndAccountIdentity:
         self._photos = photos
 
     async def identity_of(self, player_id: UUID) -> SubjectIdentity | None:
-        """Their name and nickname, first photograph, its verdict, area and tags.
+        """Their name and nickname, first photograph, its verdict, area, tags and intro.
 
         **Two absences, one answer.** A name this platform cannot read — an id
         it never issued, or an account not yet named — and a profile that was
@@ -109,6 +109,9 @@ class ProfileAndAccountIdentity:
                 )
             ),
             social_tags=profile.social_tags.ids,
+            # The text and never the value object — this context's own type
+            # holds a `str`, and a missing line is `None` all the way out.
+            intro=None if profile.intro is None else profile.intro.text,
         )
 
 

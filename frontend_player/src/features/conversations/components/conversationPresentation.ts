@@ -1,5 +1,5 @@
 /**
- * **What a conversation says** — the eight system-line sentences, the section's name, the line a
+ * **What a conversation says** — the nine system-line sentences, the section's name, the line a
  * row draws, and every word on the screen behind it.
  *
  * The words are the client's because a code is all that crosses
@@ -47,7 +47,7 @@
  * *that seat is open again* with no answer, a raw `2026-13-40` — would be the app stating a fact
  * it has not read.
  *
- * ## Three of the eight are shaped by the wire rather than by taste
+ * ## Four of the nine are shaped by the wire rather than by taste
  *
  * **A seat leaving is one code with the answer as a value**, because *that seat is open again* is
  * the same news either way — and a lapse is still not a decline, which is why the two sentences
@@ -57,7 +57,12 @@
  * ([ADR-0155](../../../../../docs/adr/0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md)):
  * the three slots are the value and the room already holds a line for each, so `{name} locked
  * the plan` is the whole sentence — the one plan line whose `values` is empty, and the one that
- * says somebody *agreed* rather than that somebody wrote something down.
+ * says somebody *agreed* rather than that somebody wrote something down. **And the side line
+ * names nobody** ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8): a doubles room born of a mutual holds two people on one side and two empty seats across
+ * the net, and *You two are a side. Fill the seats to find your opponents.* is addressed to both
+ * of them at once — the one sentence in this table that is second person, because it is the one
+ * line whose readers are exactly the people it is about, and the one with no `{name}` to fill.
  *
  * **And there is no *Game on* line**, here or anywhere: everybody having accepted is an
  * arrangement of the seats, so a sentence announcing it would be a second place for a derived
@@ -109,11 +114,20 @@ interface SystemLineFacts {
 }
 
 /**
- * §23's eight, keyed by the union — **so a code with no words does not compile.**
+ * **The doubles room's first words** — the one system line a room is born with (ADR-0169 §8).
  *
- * One function per code rather than a `Record<Code, string>`, because every one of the eight
- * quotes at least a handle: the split §1 draws is between a code with no payload and one with a
- * payload, and there is no member of this vocabulary in the first group.
+ * Exported for the suite that walks the room: an assertion spelling the sentence as a literal is
+ * a red build for the ticket that rewords it.
+ */
+export const SIDE_FORMED_LINE = 'You two are a side. Fill the seats to find your opponents.';
+
+/**
+ * §23's nine, keyed by the union — **so a code with no words does not compile.**
+ *
+ * One function per code rather than a `Record<Code, string>`, because eight of the nine quote
+ * at least a handle: the split §1 draws is between a code with no payload and one with a
+ * payload, and the one member of this vocabulary in the first group — `SIDE_FORMED` — takes the
+ * same shape rather than a second table, so the stream has one way of turning a code into words.
  */
 const SYSTEM_LINE: Readonly<Record<SystemLineCode, (facts: SystemLineFacts) => string>> = {
   SEAT_ACCEPTED: ({ name }) => `${name} is in`,
@@ -155,6 +169,10 @@ const SYSTEM_LINE: Readonly<Record<SystemLineCode, (facts: SystemLineFacts) => s
   // No value and no gap to fall into: the sentence is whole with the name alone, and a value
   // this line was never meant to carry is not read rather than guessed at.
   PLAN_LOCKED: ({ name }) => `${name} locked the plan`,
+
+  // No value and no name either: the line is about both people on the side and addresses them,
+  // so the facts are not read at all — an actor the wire never sends is not reached for.
+  SIDE_FORMED: () => SIDE_FORMED_LINE,
 };
 
 /**
@@ -265,11 +283,27 @@ export const NO_CONVERSATION_HERE = 'No conversation of yours has this address.'
  * The stems are then **shorter inputs to the same rule**: `handleLine` still drops whole names at
  * a separator and never cuts one (§15), so more names fit and nothing about the dropping changes.
  *
+ * **With nobody to name, the line says what the room is doing** — {@link WAITING_FOR_OTHERS}.
+ * The organiser alone again is a real room: somebody joined and left while the rest were still
+ * deciding ([#429](https://github.com/Raketa02/Raketa/issues/429) E4), and the room stands with
+ * one member until somebody accepts. `handleLine` of nothing is the empty string, which drew a
+ * blank at `h1` over the sport; the rule lives here rather than at the call site so there is no
+ * arrangement of props that draws that gap.
+ *
  * @param budget the line's width in characters at `h1` — `headerHandleBudget`.
  */
 export function headerTitle(handles: readonly string[], budget: number): string {
-  return handleLine(handles.map(handleStem), budget);
+  return handles.length === 0 ? WAITING_FOR_OTHERS : handleLine(handles.map(handleStem), budget);
 }
+
+/**
+ * **The title where there is nobody else in the room** — the organiser alone again, waiting on
+ * the seats still deciding. Present tense and pointed at what happens next, on §22.1's rule that
+ * an empty state never asserts that nothing is happening: the challenge is out, and the room is
+ * waiting for its answers. Drawn in the title slot and spoken in its place
+ * (`conversationHeaderLabel`), since there is no handle to keep whole.
+ */
+export const WAITING_FOR_OTHERS = 'Waiting for others to join';
 
 /**
  * **The second line — the sport, and the game's state where there is a game.**

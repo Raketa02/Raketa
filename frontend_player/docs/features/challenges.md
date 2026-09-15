@@ -215,6 +215,20 @@ with no action of its own; **no countdown**, the deadline being stated from the 
 deliberately not in it**: the court's forecast is the _screen's_ line drawn once, because the same
 figure rides on every card, so a balance row here would print it once per seat.
 
+**An invitation a swipe produced says so, in one line under the organiser's card**
+([ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8).
+_You said yes to {name} on Players_ is drawn exactly when the organiser's id is in the reader's
+own `GET /interest` outgoing list for the challenge's sport, and nowhere else: under the
+organiser's card and no other seat's, so a doubles court with a card per person carries it once.
+It is **client-side and the reader's own act** — no code crosses for it, and ADR-0143's refusal
+to tell an invitee _why the engine picked them_ is untouched, because Ania saying yes to Karol on
+Players is a fact she already holds. The read is Play's, reached through its surface
+(`useOutgoingInterest`, the deck's own query, and `saidYesTo` beside it) rather than a second
+query over the same route: one cache entry, shared with the deck and the pool, which a deck tap
+moves on its own reply. The line is never waited for — the card is drawn without it until the
+list lands and gains it without moving — and the handle in it is whole (`seatName`, ADR-0107).
+The organiser reads no such line about themselves, because nobody is in their own outgoing list.
+
 **The evidence is mapped a second time, and that is the decision rather than the debt.** The wire
 carries `Court…` schemas beside Play's because the backend spelled a second, narrower contract, so
 a client mapping them through `candidateMappers` would be reading a shape it was not sent — and the
@@ -374,9 +388,11 @@ are read before the row they are about can go — moved out of `DepartureDoor` i
 `hooks/useActDoor.ts`, because a rule written twice drifts; each door is now its act, its sheet and
 its words. **The sheet is `WithdrawSheet` handed a new deck, and the withdraw's own deck is
 retired**: `words` is required, `CallOff` hands in the game's and `RemovalDoor` the removal's —
-_Before you remove it_; one line, _It disappears for the people you asked, too._, which is the one
-consequence ADR-0165 §6 asks the sheet to name and the one the organiser cannot see from their own
-list; `Remove the challenge` on the door and on the act, on `Leave the game`'s precedent; `Keep it
+_Before you remove it_; one line, _If you remove this challenge, it will also disappear for everyone
+you invited._ — reworded on the QA walk ([#429](https://github.com/Raketa02/Raketa/issues/429) E1)
+from _It disappears for the people you asked, too._ so the consequence hangs off the act — which
+is the one consequence ADR-0165 §6 asks the sheet to name and the one the organiser cannot see from
+their own list; `Remove the challenge` on the door and on the act, on `Leave the game`'s precedent; `Keep it
 open`; `Removing…` on the sheet's act — and the sheet grew `busy`, `refusal` and `offline` as
 `LeaveSheet` did, because from a row the sheet is the surface. `WITHDRAW`, `WITHDRAWING`, the
 withdraw's title, three body lines, act and dismissal, and `WITHDRAW_CHALLENGE_NAME` are gone;

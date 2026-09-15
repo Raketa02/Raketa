@@ -3,12 +3,12 @@
  * worth.
  *
  * **It is the end of the first part now, not the end of onboarding.** It used to sit on the
- * far side of the seven social steps and their commit, on the argument that the summary should
+ * far side of the eight social steps and their commit, on the argument that the summary should
  * follow the write that makes it true of the account. What that cost was the whole of the
  * second part standing between a player and the number they had just spent a minute per
  * sport producing — so the summary comes first, and **this screen is the door into the
  * second part** for a player who still owes one. A player who does not continues to the data
- * screen exactly as before, and the commit at the end of the seven now lands there instead.
+ * screen exactly as before, and the commit at the end of the eight now lands there instead.
  *
  * The argument it gave up is real and small: a player who reads this and then abandons the
  * second part has been shown ratings that are theirs either way — a Skill rating is written
@@ -112,7 +112,7 @@ export function DoneScreen() {
    * **Not yet answered reads as *has one***, which is the fail-safe direction and the same
    * default the pass used to apply: the data screen leads to the app, the entry gate there
    * has the last word, and it turns a player who really is owed the second part straight
-   * into it. The other default walks a set-up player through seven steps and ends on a commit
+   * into it. The other default walks a set-up player through eight steps and ends on a commit
    * the server refuses.
    */
   const player = useCurrentUser();

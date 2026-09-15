@@ -20,6 +20,7 @@ import {
   STRAND_NAME,
   YOU_MARK,
   identityLine,
+  introLine,
   lastFiveReading,
   SPORTSMANSHIP_LABEL,
   opinionValue,
@@ -79,6 +80,14 @@ describe('the identity line', () => {
 
   it('never prints the area code itself, which is a coordinate and not a name', () => {
     expect(about({ areaCode: HERE, viewerAreaCode: HERE, distanceKm: 4 })).not.toContain(HERE);
+  });
+});
+
+describe('the intro, drawn', () => {
+  it('is their line inside the drawing’s own quotation marks, and nothing else', () => {
+    // The marks are the drawing's and never the player's: a line that already carries its
+    // own quotes is quoted again, because what the marks say is *this is them speaking*.
+    expect(introLine('Will travel for a hard game.')).toBe('“Will travel for a hard game.”');
   });
 });
 
@@ -197,6 +206,21 @@ describe('the header, as one element', () => {
         sports: [],
       }),
     ).toBe('Bea Kowalczyk. @bea_k');
+  });
+
+  it('speaks the intro inside its marks, after the handle and before where they are', () => {
+    // The drawn order: the line sits under the name, so it is heard there too — as their own
+    // words, which the quotation marks say, and never as the name (ADR-0170 §4).
+    expect(
+      recordHeaderLabel({
+        name: 'Bea Kowalczyk',
+        handle: '@bea_k',
+        onCourt: false,
+        intro: introLine('Will travel for a hard game.'),
+        identity: '4 km',
+        sports: ['Padel 2,75'],
+      }),
+    ).toBe('Bea Kowalczyk. @bea_k. “Will travel for a hard game.”. 4 km. Padel 2,75');
   });
 
   /**

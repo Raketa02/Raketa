@@ -13,6 +13,7 @@ from app.modules.matchmaking.infrastructure.candidate_index_model import (
     CandidatePlayerFactsORM,
     CandidateRowORM,
 )
+from app.modules.matchmaking.infrastructure.deck_reset_model import DeckResetORM
 from app.modules.matchmaking.infrastructure.interest_model import InterestORM
 from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
@@ -29,6 +30,7 @@ __all__ = [
     "CandidatePlayerFactsORM",
     "CandidateRowORM",
     "ConversationORM",
+    "DeckResetORM",
     "EventOutboxORM",
     "EventStoreORM",
     "InterestORM",

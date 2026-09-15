@@ -263,6 +263,7 @@ async def _the_full_battery(
         _refuse_a_window_with_only_one_side(pool),
         _refuse_a_reason_line_that_cannot_be_drawn(paths, pool),
         _refuse_a_deck_that_deals_nothing(deck, spent=spent),
+        _refuse_a_deal_on_which_every_card_reads_alike(deck, spent=spent),
         court,
     ]
     lines.extend(await _refuse_a_ladder_that_adds_nobody(paths))
@@ -499,11 +500,12 @@ def _refuse_a_reason_line_that_cannot_be_drawn(
 def _refuse_a_deck_that_deals_nothing(record: SearchRecord, *, spent: bool) -> str:
     """*The deck deals >= N cards.*
 
-    A different surface and not a second read of the same one: the deck resolves
-    its weight vector from the viewer's **declaration** rather than from a mode,
-    orders on three bands, and applies exclusions no shortlist has. A cohort that
-    fills a list and empties a deal is a cohort that has proved half of what it
-    promised.
+    A different surface and not a second read of the same one: the deck scores
+    under **one ruler** for every viewer and reads no declaration, orders on two
+    bands, and applies exclusions no shortlist has — a cool-off among them, which
+    is why ``pool_history.py`` keeps the two faces the deck must deal past it. A
+    cohort that fills a list and empties a deal is a cohort that has proved half
+    of what it promised.
 
     **Read off the deal this run already made** rather than off a fresh one.
     ``DEALT_MEMORY`` is a day, so a second deal deals the remainder — and a
@@ -528,6 +530,39 @@ def _refuse_a_deck_that_deals_nothing(record: SearchRecord, *, spent: bool) -> s
         f"deck · {THE_POPULATED_PLAYER.slug} · padel: {dealt} card(s) dealt, "
         f"intent read {record.intent_read}, "
         f"{record.n_excluded_by_suppression} in range under a live suppression"
+    )
+
+
+def _refuse_a_deal_on_which_every_card_reads_alike(
+    record: SearchRecord, *, spent: bool
+) -> str:
+    """*The deal quotes a line on one card and closes up on another.*
+
+    The mocks put an intro on every card and most players will have none
+    (``docs/adr/0170``), so the deck card is built against both — and a deal on
+    which every card happened to read the same way would leave one of the two
+    layouts undrawn. The lines are ``cohort.INTROS``' and are asserted here off
+    the **recorded** cards rather than off the declaration, because the claim
+    is that the line reached a card and not that somebody wrote one.
+    """
+
+    if spent:
+        return (
+            f"intro · {THE_POPULATED_PLAYER.slug} · padel: **not read** — the "
+            f"deal this run found was already spent (see the deck line above)."
+        )
+    cards = [row.card for row in record.returned if row.card is not None]
+    quoted = [card for card in cards if card.intro is not None]
+    closed = [card for card in cards if card.intro is None]
+    if not quoted or not closed:
+        raise ScreenIsEmpty(
+            f"the deck dealt {len(cards)} card(s), {len(quoted)} quoting a line "
+            f"and {len(closed)} without one — both layouts have to be on the "
+            f"table, and `cohort.INTROS` is where the lines are declared."
+        )
+    return (
+        f"intro · {THE_POPULATED_PLAYER.slug} · padel: {len(quoted)} card(s) "
+        f"quote a line and {len(closed)} close up"
     )
 
 

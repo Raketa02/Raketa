@@ -131,6 +131,23 @@ The **shipping** `CandidateRow`, imported from `backend/`. n = 31,250 rows measu
 
 Sharing the closed vocabularies would save **996 bytes a row**, 50% of the row.
 
+> **Re-run 2026-09-15, after the row gained `intro`** (ADR-0170) — one `str` or `None`,
+> at the cohort's share (seven of forty-one, mean 54 characters):
+>
+> | representation | MB @ 31 250 rows | bytes/row | MB @ 125 000 rows |
+> |---|---|---|---|
+> | shipping CandidateRow, vocabulary strings as a driver returns them | 63.0 | 2016 | 252 |
+> | the same rows, closed-vocabulary strings shared (not what ships) | 31.9 | 1021 | 128 |
+>
+> | who wrote a line | bytes/row | trigger 4, 4 workers on 1 GB |
+> |---|---:|---:|
+> | nobody | 1999 | ~25,017 players |
+> | the cohort's share, at its mean length **(the assumption above)** | 2016 | ~24,798 players |
+> | one in three, at the mock's ~60 | 2034 | ~24,576 players |
+> | everybody, at the 100-character cap | 2149 | ~23,269 players |
+>
+> `BYTES_PER_ROW` moved 1 991 → 2 016 with the field.
+
 ## One row, field by field
 
 A row with 6 of the 21 cells ticked and 4 tags.

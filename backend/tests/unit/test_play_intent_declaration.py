@@ -146,12 +146,13 @@ def test_changing_the_declared_value_records_it():
 
 
 def test_a_declaration_made_on_the_deck_names_the_deck():
-    """#280. The deck reads the declaration — ``POST /deck`` has no mode — so it
-    is refused with ``play_intent_not_declared`` exactly as a search is, and it
-    draws the same interstitial. A field whose whole job is to say *which
-    screen* has a value for every screen that can write through it, and
-    ``SEARCH_SWITCH`` is left naming the search screen alone: widening is
-    additive, so every code already in a stream still means what it meant.
+    """#280, kept for the events that carry it. The deck used to read the
+    declaration — ``POST /deck`` has no mode — and drew the same interstitial a
+    search does; ``docs/adr/0169`` §2 ended that, and the deck reads no
+    declaration now. ``DECK`` stays in the closed five, stored on the events
+    that carry it and never emitted again: widening was additive, so every code
+    already in a stream still means what it meant, and ``SEARCH_SWITCH`` is
+    still left naming the search screen alone.
     """
 
     declaration = replayed(a_declaration())

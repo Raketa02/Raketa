@@ -271,6 +271,18 @@ export interface PlayerRecord {
    * §4).
    */
   readonly nickname: string;
+  /**
+   * One line they wrote about themselves — their **intro** — verbatim, drawn under the name
+   * ([ADR-0170](../../../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)).
+   *
+   * **Omitted where they wrote none**, and never an empty string: the intro is optional and
+   * a player who skipped has no line rather than an empty one. Fenced at the write against a
+   * phone number, an email, a URL or an `@handle`, so what arrives is a line about a player
+   * and never a way to reach one. The same field the deck card carries, read off the profile
+   * as it stands rather than off a search record. Present on your own record as on anybody
+   * else's — it is what strangers read, shown back to you.
+   */
+  readonly intro?: string;
   /** Absent where they have no photograph, and on a link that has expired — both draw the poster. */
   readonly photoUrl?: string;
   /**

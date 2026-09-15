@@ -34,12 +34,12 @@ app's root for a new player and back there should leave the app, and the picker 
 of a genuine push.
 
 **The ratings summary ends the first part, and it is the door into the second.** The order
-is result → **done** → the seven steps → the commit → data → the app. The _pass_ routes as far
+is result → **done** → the eight steps → the commit → data → the app. The _pass_ routes as far
 as the summary and no further (`nextDestination`: _is there anything to account for_), and
 the **done screen** reads whether a Player profile is still owed and either enters the second
 part or continues to the data screen — one fact, read once, on the screen that acts on it. A
 player who is already set up — one resuming a run they left behind — passes straight through.
-The summary comes before the seven steps rather than after the commit, because it is what a
+The summary comes before the eight steps rather than after the commit, because it is what a
 player just earned and the second part was otherwise standing between them and it; a Skill
 rating is written when the questionnaire completes, not when a profile is committed, so
 nothing on that screen was ever waiting on the commit to be true. Entered with no pass

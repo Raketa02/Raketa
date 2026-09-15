@@ -1,8 +1,8 @@
 /**
  * **The record's header** — the photograph with the Level on it, and who this is beside it.
  *
- * A `PhotoPanel` at record size and a column: the whole name, the `@nickname` under it, the
- * identity line, and one pill per rated sport.
+ * A `PhotoPanel` at record size and a column: the whole name, the `@nickname` under it, their
+ * intro where they wrote one, the identity line, and one pill per rated sport.
  *
  * ## The reliability pill left, and it is now a block under the level bar
  *
@@ -37,6 +37,16 @@
  * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
  * §4). The mark is `atNickname`'s, spelled once so the two screens cannot disagree.
  *
+ * ## The intro sits under the name, and the gap closes where there is none
+ *
+ * One line they wrote, inside the drawing's quotation marks, drawn **upright** — the deck
+ * card's own decision, for the deck card's own reason: this app loads no italic Archivo, and a
+ * `fontStyle` on a custom family is ignored on Android and synthesised on iOS, so the marks
+ * carry *their words* rather than a slant. `muted`, because it is what they said and not what
+ * the platform measured, and the roles above and below it are the platform's. Never
+ * truncated: the cap at the write is what makes an ellipsis unnecessary (ADR-0170 §4). A
+ * player who wrote none draws nothing here, and the identity line closes up under the handle.
+ *
  * ## The identity line is a comparison and never a place name
  *
  * `In your area · 4 km`, or the kilometres alone, or nothing. An `area_code` is a coordinate
@@ -50,9 +60,10 @@
  * ## One element, and the pills merge into it — but the button does not
  *
  * §20.1: everything with no action of its own merges into the nearest action above it. The
- * panel, the name, the handle, the identity line and the pills have none, so they are one
- * element and `recordHeaderLabel` is what it says — identifying facts first, in the order they
- * are drawn.
+ * panel, the name, the handle, the intro, the identity line and the pills have none, so they
+ * are one element and `recordHeaderLabel` is what it says — identifying facts first, in the
+ * order they are drawn, with the intro inside its marks so it is heard as their words and never
+ * as a name.
  *
  * **`Player fit` is an action and therefore its own element**, which is the same rule read the
  * other way. It sits under the pills rather than at the foot of the sheet: it is the sheet's
@@ -69,7 +80,13 @@ import { PhotoPanel, theme } from '@/shared/ui';
 import type { PlayerRecord } from '../domain/playerRecord';
 
 import { SportPills } from './SportPills';
-import { identityLine, recordHandle, recordHeaderLabel, sportPill } from './recordPresentation';
+import {
+  identityLine,
+  introLine,
+  recordHandle,
+  recordHeaderLabel,
+  sportPill,
+} from './recordPresentation';
 
 export interface RecordHeaderProps {
   readonly record: PlayerRecord;
@@ -98,6 +115,7 @@ export function RecordHeader({
 }: RecordHeaderProps) {
   const name = recordHandle(record.name, record.isSelf);
   const handle = atNickname(record.nickname);
+  const intro = record.intro === undefined ? undefined : introLine(record.intro);
   const identity = identityLine({
     areaCode: record.areaCode,
     isSelf: record.isSelf,
@@ -113,6 +131,7 @@ export function RecordHeader({
         name,
         handle,
         onCourt: record.onCourt,
+        ...(intro === undefined ? {} : { intro }),
         identity,
         sports: record.sports.map(({ sport, level }) => sportPill(sportLabel(sport), level)),
       })}
@@ -138,6 +157,8 @@ export function RecordHeader({
         <Text style={s.name}>{name}</Text>
         <Text style={s.handle}>{handle}</Text>
 
+        {intro === undefined ? null : <Text style={s.intro}>{intro}</Text>}
+
         {identity === '' ? null : <Text style={s.identity}>{identity}</Text>}
 
         <SportPills
@@ -157,5 +178,9 @@ const s = StyleSheet.create({
   column: { flex: 1, gap: theme.space.xs },
   name: { ...theme.type.h1, color: theme.color.ink },
   handle: { ...theme.type.tiny, color: theme.color.muted },
+  // The deck card's role for the same line, on paper instead of over a photograph: a
+  // sentence to read rather than small print, and in `muted` because it is what they said
+  // and not what the platform measured.
+  intro: { ...theme.type.rlLabel, color: theme.color.muted },
   identity: { ...theme.type.tiny, color: theme.color.muted },
 });

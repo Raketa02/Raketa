@@ -85,6 +85,7 @@ EVENTS = [
     ChallengeOpenedFromMutualInterest(
         challenge_id=CHALLENGE,
         sport="TENNIS",
+        mode="FOR_FUN",
         organiser_id=ORGANISER,
         other_player_id=ALICE,
         seats=(
@@ -155,6 +156,36 @@ def test_a_fill_comes_back_naming_who_asked_by_id_and_never_by_text():
 
     assert decoded == asked
     assert type(decoded.invited_by) is type(ORGANISER)
+
+
+def test_a_mutual_minted_before_it_carried_a_mode_still_decodes_as_counted():
+    """**The rows already in the store keep decoding** (``.claude/rules/
+    domain-events.md``). Every mutual minted before ``docs/adr/0169`` §8 was
+    counted, and a row with no ``mode`` key is exactly that: it reads as
+    ``None`` rather than being reinterpreted or refused, which is why the
+    field is an addition and not a version 2."""
+
+    codec = domain_event_codec()
+    mutual = EVENTS[1]
+    assert isinstance(mutual, ChallengeOpenedFromMutualInterest)
+    encoded = codec.encode(mutual)
+    written_before_the_field = {
+        key: value for key, value in encoded.payload.items() if key != "mode"
+    }
+
+    decoded = codec.decode(
+        SerializedEventEnvelope(
+            id=new_uuid(),
+            event_type=encoded.event_type,
+            schema_version=encoded.schema_version,
+            payload=written_before_the_field,
+            occurred_at=mutual.occurred_at,
+        )
+    )
+
+    assert isinstance(decoded, ChallengeOpenedFromMutualInterest)
+    assert decoded.mode is None
+    assert decoded.seats == mutual.seats
 
 
 def test_a_court_comes_back_out_of_the_log_as_the_court_that_went_in():

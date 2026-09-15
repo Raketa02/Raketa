@@ -108,7 +108,10 @@ async function reachTheLocationStep() {
   fireEvent.press(await screen.findByLabelText('Plays to win'));
   fireEvent.press(screen.getByLabelText('Here to improve'));
   fireEvent.press(await screen.findByLabelText('Continue'));
+  await waitFor(() => expect(screen).toHavePathname('/intro'));
 
+  // Nothing written: the intro is optional, and *Next* on an empty box carries none.
+  fireEvent.press(screen.getByLabelText('Next'));
   await waitFor(() => expect(screen).toHavePathname('/photos'));
   fireEvent.press(screen.getByLabelText('Continue'));
 
@@ -266,7 +269,7 @@ describe('refusing the permission', () => {
   });
 
   /**
-   * The step insists; it does not hold anybody hostage. A player stuck on step four of six
+   * The step insists; it does not hold anybody hostage. A player stuck on step five of eight
    * behind a permission they can change at any time is not a setup flow — and the label is
    * where the cost is stated, because a note beside it is a note they may not read.
    */

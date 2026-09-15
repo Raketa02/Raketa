@@ -32,6 +32,16 @@
  * it. The pinned `photoScrim` and its worst-case 5,24:1 are unchanged at both, which is what
  * makes one contrast row cover both sizes rather than two.
  *
+ * ## The mark sits at `space.md`, not `space.xs`, since it gained its tick
+ *
+ * The content layer is padded by `space.xs` and the mark used to sit at that edge. A drawn tick
+ * before the words ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §7) does not fit there on a 74pt panel — the corner leaves 57,22 and the line wants 61,03 —
+ * so the mark takes `space.xs` more of top margin, putting its edge at `space.md` (`MARK_TOP`,
+ * 12pt down rather than 6), where the corner leaves 67,20 and both fit with the grid's smallest
+ * step clear on each side. The Level and the Sport are anchored to the bottom and did not move;
+ * `onCourtMarkFit.test.ts` re-derives the cap from this edge.
+ *
  * ## Text over an arbitrary photograph, and the pin that makes it computable
  *
  * Every pair in [2.5](../../../docs/design-system.md#25-contrast--computed) is a
@@ -86,6 +96,13 @@ import { formatLevel } from '@/shared/formatting/ratingFormat';
 import { OnCourtMark } from './OnCourtMark';
 import { PHOTO_PANEL, PlayerPhoto, playerPhotoRadius, type PhotoPanelSize } from './PlayerPhoto';
 import { theme } from './theme';
+
+/**
+ * Where the mark's top edge sits, down from the panel's own: `space.md`, the content padding
+ * and as much again — see the module note. Exported for the fit test, which derives the cap
+ * against it.
+ */
+export const MARK_TOP = theme.space.md;
 
 export interface PhotoPanelProps {
   /** Whose face this is. The poster's whole input, and the reason it survives a reinstall. */
@@ -152,7 +169,11 @@ export function PhotoPanel({
       <View style={[StyleSheet.absoluteFill, s.scrim]} />
 
       <View style={[StyleSheet.absoluteFill, s.content]}>
-        {onCourt ? <OnCourtMark size={size} /> : null}
+        {onCourt ? (
+          <View style={s.mark}>
+            <OnCourtMark on={size} />
+          </View>
+        ) : null}
 
         {/* Its own block, so the two facts stay at the bottom whether or not the mark is
             above them: `space-between` over an absent first child would carry them up. */}
@@ -189,10 +210,12 @@ const s = StyleSheet.create({
   panel: { overflow: 'hidden' },
   scrim: { backgroundColor: theme.color.photoScrim },
   // The mark at the top and the two facts at the bottom, which is the layout #309 left room
-  // for. One padding for all three: the mark's own top edge is what its cap is derived
-  // against, so the step is read out of the theme in `onCourtMarkFit.test.ts` rather than
+  // for. One padding for all three, and one more step for the mark: its top edge is what its
+  // cap is derived against, so `MARK_TOP` is read in `onCourtMarkFit.test.ts` rather than
   // guessed at.
   content: { padding: theme.space.xs },
+  // `space.xs` more under the `space.xs` padding, so the mark's top edge is `MARK_TOP`.
+  mark: { marginTop: MARK_TOP - theme.space.xs },
   labels: { flex: 1, justifyContent: 'flex-end' },
   level: {
     ...theme.tabular,

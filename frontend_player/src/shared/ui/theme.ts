@@ -106,8 +106,10 @@ const color = {
    *  result*, *Confirm the result*). Mint is the settled stage and `onDarkHair` the quiet
    *  endings; this is the third dot, and the meaning is named rather than the hue (#413).
    *
-   *  ON DARK ONLY. It is drawn on `night`, inside the on-dark tag, and nowhere on paper — so
-   *  there is no soft, no ink and no line: nothing writes on a 6pt dot and nothing borders it.
+   *  ON DARK ONLY. It is drawn on `night`, inside the on-dark tag and as the Now card's *Fill
+   *  the seat* fill (6.1's `arranging` button, #429), and nowhere on paper — so there is no
+   *  soft and no line. Nothing borders it; the one thing that writes on it writes in `ink`,
+   *  7,05:1, because white on it is 2,48:1 (Button.tsx).
    *
    *  (!) MEASURED, then lifted. Mock 1 draws the dot at #87641A — hue 40,7°, which is `amber`
    *  (39,5°) within a degree and within a step of lightness, at 2,45 on `night` and 1,61 on the
@@ -184,6 +186,23 @@ const color = {
    *  yesGround.test.ts. */
   yesGroundCentre: '#203C48',
   yesGroundEdge: '#14252C',
+
+  /** THE DECK CARD'S WASH — the app's SECOND dark surface, and it is a surface and not a screen
+   *  ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   *  §7, docs/design-system.md Part 16 2026-09-15). One gradient over the lower part of the
+   *  card, from nothing to this: `ink` at .94, so the card's foot is the app's own text colour
+   *  over whatever photograph or poster is under it, and the name, the tags and the tiles sit on
+   *  `surface` and the on-dark tokens as they would on a dark card.
+   *
+   *  NOT `photoScrim`, deliberately. The panel's scrim is a flat tint pinned so that white over
+   *  the worst photograph is computable (5,24 at .70); this is a scrim over a picture a player
+   *  decides about, and a face wants the whole card — so the wash RAMPS, and its worst case is
+   *  stated at the name's own top edge rather than over the whole box (`DeckCard.tsx` holds the
+   *  ramp; the row in Part 16 holds the arithmetic). The value is the foot's; the ramp's stops
+   *  are the drawing's own, as the yes screen's glow keeps its centre and reach in `YesGround`.
+   *  Nothing else may draw it: the day a second card wears a wash, ADR-0169 §7's fence has
+   *  become the rule. */
+  deckWash: 'rgba(16,27,32,0.94)',
 } as const;
 
 /**
@@ -325,6 +344,21 @@ const type = {
    *  ONE USE. A second surface that wants a word this size reopens ADR-0167 §2 rather than
    *  reaching for this role, which is the whole of why it is named for the screen. */
   yesWord: { fontFamily: font.sans[800], fontSize: 32, letterSpacing: -1.28, lineHeight: 36 },
+  /** THE DECK CARD'S NAME — one ~24pt sans role, heavy, one use
+   *  ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   *  §7). NOT the retired `display` back: 3.3's reasoning applies again and this is the word it
+   *  applies to — a face you decide about wants the name at the size the mocks draw it, 24 / 700
+   *  measured across the nine, with the sans ramp's -0.035em (-0,84) and a 28 line for the
+   *  ascenders. `surface` over the wash, with the on-media shadow. A second surface that wants a
+   *  name this size reopens ADR-0169 §7 rather than reaching for this role. */
+  deckName: { fontFamily: font.sans[700], fontSize: 24, letterSpacing: -0.84, lineHeight: 28 },
+  /** THE DECK'S TWO STAMPS — *LET'S PLAY* and *NOT TODAY*, outlined words rotated over the card
+   *  under the thumb, invisible at rest (ADR-0169 §3, §7). The heaviest weight the app loads at
+   *  22, TRACKED WIDE rather than tight — +0,05em, 1,1 — because a rubber stamp is set spaced
+   *  and the mocks draw it so; uppercased by the stamp's style, never by the copy, which is the
+   *  two buttons' own words. The outline, the tilt and the corner are the drawing's own
+   *  (`DeckStage.tsx`). Feedback and never a control: nothing announces it. ONE USE. */
+  deckStamp: { fontFamily: font.sans[800], fontSize: 22, letterSpacing: 1.1, lineHeight: 26 },
   h2: { fontFamily: font.sans[700], fontSize: 15, letterSpacing: -0.38, lineHeight: 20 },
   /** The onboarding question itself. The prototype's 650 maps to 700. */
   question: { fontFamily: font.sans[700], fontSize: 15, letterSpacing: -0.38, lineHeight: 20 },
@@ -465,6 +499,9 @@ const radius = {
 
 /** The smallest round mark in the app — the sport dot's, and the typing indicator's. One size. */
 const SPORT_DOT = 6;
+
+/** How far a finger travels across before a swipe row — and the deck — claims the touch. See `swipeRow`. */
+const SWIPE_INTENT = 12;
 
 const size = {
   btn: 34, // 32 tertiary-in-card · 34 default · 40 screen action · 42 result primary
@@ -656,7 +693,37 @@ const size = {
    *  at 120. `intent` is how far a finger travels across before the row claims the touch —
    *  under it a tap is a tap and a drift is the list's scroll, which is the one thing this
    *  control must never take. Four steps of the grid, about a fingertip's width. */
-  swipeRow: { reveal: 120, intent: 12 },
+  swipeRow: { reveal: 120, intent: SWIPE_INTENT },
+  /** THE DECK'S DRAG — ADR-0169 §3, and the second gesture in the app after the swipe row's.
+   *
+   *  `commit` is the threshold: the stamp is full there and a release past it commits the
+   *  answer in the drag's direction — the mock's 95, kept as measured. `intent` is how far a
+   *  finger travels across before the stage claims the touch, and it is the swipe row's own
+   *  number READ FROM THERE rather than a second 12: it is the same finger deciding between a
+   *  tap, a scroll and a drag, and one rule about that is one number. `flight` is how far a
+   *  committed card travels off the stage, past the widest phone's width so it leaves rather
+   *  than stops; `tilt` is the most a card turns under the thumb, reached at twice the commit
+   *  distance and measured off the two swipe mocks. */
+  deckSwipe: { commit: 95, intent: SWIPE_INTENT, flight: 480, tilt: 12 },
+  /** THE DECK'S THREE ROUND BUTTONS — ✕, i, the ball — measured off the mock at 1×: 54, 42 and
+   *  66. Circles rather than 6.1's 10pt rectangle, through `Button`'s `pill` shape (4.2 as
+   *  amended: the third user, fenced to this row); the i is under 6.5's 44 and takes `hit.btn`.
+   *  The sizes say which of the three is which — the yes is the largest and coral, the pass a
+   *  step smaller and white, the record smallest — which is the 1:2 ratio the two named
+   *  buttons used to carry, read as diameters.
+   *
+   *  `ball` is the yes's mark's box: the tennis ball is DRAWN (`DeckBall.tsx`) since 2026-09-15,
+   *  where it was the 🎾 as text at `num.levelLarge`'s 26 — and clipped above, because an
+   *  emoji is taller than a line box the height of its font size. 26 is that footprint kept,
+   *  so the disc's proportion is still the mock's; not a new number. */
+  deckAnswer: { pass: 54, record: 42, accept: 66, ball: 26 },
+  /** THE ON-COURT MARK'S TICK — a small vector check before the words, everywhere the mark is
+   *  drawn (ADR-0169 §7, 7.15 as amended). NOT 6.8's 12 × 12: that box beside *ON COURT* at
+   *  `type.tag` does not fit a 74pt panel (`onCourtMarkFit.test.ts`). The tick is sized as a
+   *  SHARE of the words' own font size — 0,72, about the cap height — so it reads as part of the
+   *  line at every placement, and its stroke is 1,5 for the same reason 6.8's is 2: at 7pt a 2pt
+   *  stroke is a blob. Same path as `Tick`, in a smaller box. */
+  onCourtTick: { share: 0.72, stroke: 1.5 },
   /** The text field — 6.13. `row` is the box at ONE line, and it is `btnXl`: the field and
    *  the button it sits above are the same control height, which is what four shipped auth
    *  boxes have drawn since sign-up. It is written as its own number rather than borrowed
@@ -840,13 +907,15 @@ const size = {
    *  inside the level bar, which leaves a bounded multiplier and nothing else. **Derived,
    *  never chosen** — `tabBarLabelCap.test.ts` measures the five shipped labels against the
    *  real Archivo 700 advances in the narrowest phone's column and recomputes it, so a
-   *  sixth tab or a longer word goes red rather than truncating on somebody's phone. */
+   *  sixth tab or a longer word goes red rather than truncating on somebody's phone. It was
+   *  1.7 over *Around* and is 1.6 over *Players*, the longer word that replaced it
+   *  (ADR-0169 §1) — the one step the seventh letter costs. */
   tabBar: {
     /** ADR-0135: Feather `zap`, inside the disc, smaller than the 16pt box the flanks use. */
     bolt: 15,
     ringGap: 2,
     ringStroke: 2,
-    labelMaxScale: 1.7,
+    labelMaxScale: 1.6,
     /** The Chats badge — 10.2, and the one badge the bar carries.
      *
      *  **18, and it is the digit's own box rounded to the grid.** The count is mono and tabular

@@ -76,7 +76,7 @@ APP_ROOT = Path(dataset_module.__file__).parents[4]
 
 def test_the_live_ruleset_is_named_dated_and_registered_under_its_own_name() -> None:
     assert LIVE_RULESET.version == LIVE_RULESET_VERSION
-    assert LIVE_RULESET.released_on == "2026-09-08"
+    assert LIVE_RULESET.released_on == "2026-09-15"
     assert RULESETS[LIVE_RULESET_VERSION] is LIVE_RULESET
 
 
@@ -778,12 +778,36 @@ def test_a_radius_rung_that_reaches_no_further_than_the_last_refuses_to_load() -
         )
 
 
-def test_the_three_interest_numbers_and_the_near_miss_depth() -> None:
+def test_the_four_interest_numbers_and_the_near_miss_depth() -> None:
     interest = LIVE_RULESET.interest
     assert interest.ttl_days == 21
     assert interest.outstanding_cap_per_sport == 20
     assert interest.pass_suppress_days == 30
+    assert interest.deck_cool_off_days == 30
     assert LIVE_RULESET.telemetry.near_miss_recorded == 10
+
+
+def test_the_cool_off_is_a_row_the_older_releases_never_knew_and_say_nought_about() -> (
+    None
+):
+    """``2026.09.15-a`` is the one release that moves it (``docs/adr/0169``
+    §6). The two before it were edited to say nought — *no window after a
+    court*, which is what their decks did — on the precedent the sixth strand
+    set: a shape change is not a number moving, and a released dataset says
+    the honest thing about a row that did not exist when it shipped."""
+
+    assert RULESETS["2026.08.26-a"].interest.deck_cool_off_days == 0
+    assert RULESETS["2026.09.08-a"].interest.deck_cool_off_days == 0
+    assert RULESETS["2026.09.15-a"].interest.deck_cool_off_days == 30
+    with pytest.raises(InvariantViolated, match="cool-off"):
+        validate_ruleset(
+            dataclasses.replace(
+                LIVE_RULESET,
+                interest=dataclasses.replace(
+                    LIVE_RULESET.interest, deck_cool_off_days=-1
+                ),
+            )
+        )
 
 
 # ---------------------------------------------------------------------------

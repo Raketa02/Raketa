@@ -42,6 +42,7 @@ from app.bootstrap.composition import (
     build_challenge_repository,
     build_domain_event_store,
     build_event_publisher,
+    build_friendly_choice_query,
     build_open_challenge_query,
     build_planned_game_handover,
     build_origin_search_query,
@@ -576,6 +577,7 @@ def _break_the_block_read(client) -> None:
                     ),
                     clock=clock,
                     planned_games=build_planned_game_handover(db),
+                    friendly_choices=build_friendly_choice_query(db),
                 )
             ),
             unit_of_work=uow,

@@ -1,17 +1,21 @@
 /**
- * One screen per tab — **three of them**, and only two are placeholders.
+ * One screen per tab — **two of them**, and only one is a placeholder.
  *
  * Named components rather than one taking a `tab` prop: a route file's whole job is to say
- * which screen a path is, and `<AroundScreen />` says it where `<TabScreen tab="around" />`
- * makes the route file hold the answer as data. One of the three is not a placeholder in the
- * same way, and that is the other reason — You still carries the account panel.
+ * which screen a path is, and `<YouScreen />` says it where `<TabScreen tab="you" />` makes
+ * the route file hold the answer as data. One of the two is not a placeholder in the same
+ * way, and that is the other reason — You still carries the account panel.
  *
- * **Play is not here; Chats and Now have both left the placeholder table.** Play's stub was an
- * entry until [#268](https://github.com/Raketa02/Raketa/issues/268) built the screen, Chats' until
- * [#360](https://github.com/Raketa02/Raketa/issues/360) built the inbox, and Now's until
- * [#367](https://github.com/Raketa02/Raketa/issues/367) built the rail. All three are still the
- * shell's, because each is a composition of other features' surfaces under the tab's own words —
- * which is what this file's remaining entries are too.
+ * **Play and Players are not here; Chats and Now have both left the placeholder table.** Play's
+ * stub was an entry until [#268](https://github.com/Raketa02/Raketa/issues/268) built the screen,
+ * Chats' until [#360](https://github.com/Raketa02/Raketa/issues/360) built the inbox, and Now's
+ * until [#367](https://github.com/Raketa02/Raketa/issues/367) built the rail. All three are still
+ * the shell's, because each is a composition of other features' surfaces under the tab's own
+ * words — which is what this file's remaining entries are too. **Around's entry retired with the
+ * tab**: the deck moved in as Players
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1), and that screen is `features/play`'s own, named by its route file exactly as Find a game
+ * is — the tab has no words of its own for the shell to compose anything under.
  */
 
 import { AccountPanel } from '@/features/auth/types';
@@ -41,10 +45,6 @@ export function NowScreen() {
       <GamesRail empty={NOW_COPY.empty} />
     </ShellScreen>
   );
-}
-
-export function AroundScreen() {
-  return <PlaceholderScreen copy={PLACEHOLDER_COPY.around} />;
 }
 
 /**

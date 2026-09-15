@@ -584,7 +584,8 @@ describe('an open seat', () => {
   it('draws the open seat as a row on the players card that is not a button', async () => {
     await openFromNow({ games: [game({ seats: SHORT })], court: NO_FORECAST });
 
-    await screen.findByText(PLAYERS);
+    // By role: the bar's second column says *Players* too, and it is a tab and not a heading.
+    await screen.findByRole('header', { name: PLAYERS });
     expect(screen.getByText(OPEN_SEAT)).toBeTruthy();
     expect(screen.queryByRole('button', { name: new RegExp(OPEN_SEAT) })).toBeNull();
     expect(screen.getAllByRole('button', { name: /record$/i })).toHaveLength(3);
@@ -593,7 +594,7 @@ describe('an open seat', () => {
   it('draws no forecast block, because the pairing carries none', async () => {
     await openFromNow({ games: [game({ seats: SHORT })], court: NO_FORECAST });
 
-    await screen.findByText(PLAYERS);
+    await screen.findByRole('header', { name: PLAYERS });
     expect(screen.queryByText(BALANCE_FORECAST)).toBeNull();
   });
 

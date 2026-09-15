@@ -188,6 +188,8 @@ def admits(
     absent: frozenset[Term],
     newcomer: bool = False,
     interest_received: bool = False,
+    *,
+    stood_down: frozenset[Term] = frozenset(),
 ) -> Admission:
     """Whether this candidate reaches a screen at all.
 
@@ -199,6 +201,16 @@ def admits(
     The number the bar reads is the **modified** Fit: the reliability dock exists
     to push somebody under the floor, and a bar reading the unmodified score
     would make it decorative.
+
+    ``stood_down`` is the terms the **search** declined to read, for every
+    pairing, and it leaves the basis the gate counts against exactly as
+    ``absent`` does: the line the module docstring draws — *the gate counts
+    person-specific gaps and never platform-wide absence* — is drawn a second
+    time here from the other side, because a term nobody asked is no more this
+    person's gap than a term nobody can answer (``docs/adr/0169`` §2). It is a
+    separate argument rather than a union at the call site so that *no provider
+    exists* and *this surface does not ask* stay two claims, each with its own
+    author.
 
     ``newcomer`` exempts a candidate from the **evidence gate and from nothing
     else** — the bar below is reached whatever it says, and there is no third
@@ -215,7 +227,7 @@ def admits(
     the telemetry can read.
     """
 
-    live = live_terms(ruleset, absent)
+    live = tuple(term for term in live_terms(ruleset, absent) if term not in stood_down)
     read = {scored.term for scored in modified.fit.terms}
     fired = tuple(term for term in live if term in read)
     provisional = Admission(refusal=None, live=live, fired=fired)

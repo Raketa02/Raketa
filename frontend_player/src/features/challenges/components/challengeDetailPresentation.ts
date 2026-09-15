@@ -141,6 +141,9 @@ export const REMOVE_SHEET_TITLE = 'Before you remove it';
  * **One line, and it is the one ADR-0165 §6 asks for: it is gone for the invitees too.** The
  * consequence the organiser cannot see from their own list — their row goes either way — and the
  * one that reaches other people: somebody deciding on this challenge finds nothing to answer.
+ * Reworded on the QA walk ([#429](https://github.com/Raketa02/Raketa/issues/429) E1) so the
+ * consequence hangs off the act — *if you remove it, this follows* — rather than being stated of a
+ * challenge the sheet has not yet named.
  *
  * Not the withdraw's three. *Everybody who accepted loses this court* is false here by
  * construction, since nobody has; *the conversation goes with it* is true only on the court the
@@ -149,7 +152,9 @@ export const REMOVE_SHEET_TITLE = 'Before you remove it';
  * is a send, and asking the same people again is a new challenge rather than an undo. **It says
  * nothing about the pair rule releasing**, on the withdraw's own line (§22.3).
  */
-export const REMOVE_SHEET_BODY = ['It disappears for the people you asked, too.'] as const;
+export const REMOVE_SHEET_BODY = [
+  'If you remove this challenge, it will also disappear for everyone you invited.',
+] as const;
 
 /**
  * The sheet's dismissal, **named by what it does** — never just *Close*. The withdraw's own word,
@@ -268,6 +273,22 @@ export function pairingAbsenceLine(absence: PairingAbsence, sportName: string): 
     case 'COULD_NOT_BE_READ':
       return "We couldn't work out the match score just now.";
   }
+}
+
+/**
+ * **An invitation a swipe produced says so** — one line under the organiser's card, drawn when
+ * the organiser is in the reader's own outgoing list for the challenge's sport
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8).
+ *
+ * It is the reader's **own act** and nothing else: *why the engine picked them* is what ADR-0143
+ * refuses to tell an invitee and this line does not touch it, because Ania saying yes to Karol
+ * on Players is a fact she already holds. Client-side, off the same `GET /interest` the deck
+ * reads; no code crosses for it. The handle is whole (ADR-0107), and *Players* is the tab's own
+ * drawn name, as `NOW_COPY` points at *Play* by its word.
+ */
+export function saidYesOnPlayersLine(organiserName: string): string {
+  return `You said yes to ${organiserName} on Players`;
 }
 
 export interface ChallengeCardFacts {

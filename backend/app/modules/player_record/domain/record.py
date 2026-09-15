@@ -96,6 +96,13 @@ class SubjectIdentity:
     area_code: str
     #: The Social tag ids they hold, in the vocabulary's own order.
     social_tags: tuple[str, ...]
+    #: The line they wrote about themselves, or ``None`` where they wrote none
+    #: (``docs/adr/0170`` §3). **A ``str`` and never ``player_profile``'s
+    #: ``Intro``**, because this context imports no other context's domain
+    #: types; what crosses is the text, verbatim, and the wire omits it where
+    #: it is absent. The record reads the *current* line where a search record
+    #: quotes the one shown at the deal — today they cannot differ.
+    intro: str | None
 
 
 #: How many results a run of form draws. **This context's own spelling of a

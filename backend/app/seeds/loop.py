@@ -1564,7 +1564,9 @@ async def _refuse_a_system_line_no_room_carries(
             f"`app/seeds/plans.py` — and `PLAN_LOCKED` is the one of those four "
             f"that is an act rather than a slot, so it comes from the row "
             f"declared `locked=True` and from nothing else; `GAME_PLAYED` needs "
-            f"a game played inside `CONVERSATION_GRACE`, which is `RAIL_GAMES`."
+            f"a game played inside `CONVERSATION_GRACE`, which is `RAIL_GAMES`; "
+            f"and `SIDE_FORMED` is written only into the room a *doubles* mutual "
+            f"opens, which is `app/seeds/pairs.py`'s mutual-born court."
         )
     return (
         f"lines · all {len(carried)} system-line code(s) are carried by a room "

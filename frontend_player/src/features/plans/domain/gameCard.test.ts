@@ -111,10 +111,11 @@ describe('the door each card carries', () => {
   });
 
   /**
-   * **The reopened court's door is the fill** (#419): the same flow the challenge screen's
-   * `⚡ Fill the seats` runs, pushed from the card — the builder is where a seat is dealt with.
+   * **The reopened court's door is named for the fill** (#419) — its own door rather than
+   * *Game on*'s, so the card can say the errand — and it opens the game screen like every other
+   * door, where the fill is the arm's primary act (#429 F1); the card runs nothing.
    */
-  it('is the fill on Needs a player, and no longer the game screen', () => {
+  it('is the fill on Needs a player, its own door and not Game on’s', () => {
     expect(doorOf('needs-a-player')).toBe('fill');
     expect(doorOf('needs-a-player')).not.toBe(doorOf('game-on'));
   });

@@ -12,6 +12,9 @@ its outstanding count and the cap in force, on every read, because a cap the
 player cannot see is a refusal they cannot predict. The count is the **ledger's**
 definition — sent, unexpired and not yet mutual — and never one recomputed here,
 so the number on the screen and the number the write checks are one query.
+**And how long a yes lives rides beside them** (``docs/adr/0169`` §5): the
+deck's ending prints the number, and it is read off the ruleset here rather
+than held by a phone.
 
 **A block reaches this surface too.** ``docs/adr/0095`` says a block reaches
 every surface that shows one player to another, and a mutual row names a person.
@@ -119,11 +122,14 @@ class ReadInterest:
         everywhere else.
         """
 
-        cap = self._ruleset.interest.outstanding_cap_per_sport
+        rules = self._ruleset.interest
         counts = await self._interest.outstanding(player_id=player_id, now=now)
         return tuple(
             OutstandingCount(
-                sport=sport, outstanding=counts.get(sport, 0), cap=cap
+                sport=sport,
+                outstanding=counts.get(sport, 0),
+                cap=rules.outstanding_cap_per_sport,
+                ttl_days=rules.ttl_days,
             )
             for sport in Sport
         )

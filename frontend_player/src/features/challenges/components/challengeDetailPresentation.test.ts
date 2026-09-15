@@ -23,6 +23,7 @@ import {
   identityRow,
   pairingAbsenceLine,
   removeRefusalMessage,
+  saidYesOnPlayersLine,
 } from './challengeDetailPresentation';
 import { LEAVE_REFUSED } from './leaveGamePresentation';
 
@@ -58,9 +59,15 @@ describe('the removal', () => {
     expect(REMOVING).toBe('Removing…');
   });
 
-  /** ADR-0165 §6: the sheet says it is gone for the invitees too — one line, and no more. */
+  /**
+   * ADR-0165 §6: the sheet says it is gone for the invitees too — one line, and no more. Reworded
+   * on the QA walk ([#429](https://github.com/Raketa02/Raketa/issues/429) E1): the consequence is
+   * named as a condition on the act, so the line reads as *if you do this, this follows*.
+   */
   it('says on the sheet that it is gone for the people asked, too', () => {
-    expect(REMOVE_SHEET_BODY).toEqual(['It disappears for the people you asked, too.']);
+    expect(REMOVE_SHEET_BODY).toEqual([
+      'If you remove this challenge, it will also disappear for everyone you invited.',
+    ]);
   });
 
   it('names the dismissal by what it does', () => {
@@ -133,6 +140,17 @@ describe('a pairing that could not be computed', () => {
     for (const absence of PAIRING_ABSENCES) {
       expect(pairingAbsenceLine(absence, 'Padel').toLowerCase()).not.toContain("can't answer");
     }
+  });
+});
+
+describe('the invitee’s line', () => {
+  /**
+   * *An invitation a swipe produced says so* (ADR-0169 §8): the reader's own act, named with the
+   * organiser's whole handle and the tab the act was on — and nothing about why the engine
+   * picked them, which ADR-0143 still refuses to tell an invitee.
+   */
+  it('names the organiser and the tab, and is about the reader’s own yes', () => {
+    expect(saidYesOnPlayersLine('ewa.m')).toBe('You said yes to ewa.m on Players');
   });
 });
 

@@ -43,6 +43,7 @@ from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import Sport
 from app.modules.challenges.domain.seats import seats_per_side
 from app.modules.matchmaking.domain.searches import LAST_FIVE
+from app.modules.player_profile.domain.intro import Intro
 from app.seeds import catalog
 from app.seeds.catalog import (
     PROTAGONISTS,
@@ -60,6 +61,7 @@ from app.seeds.cohort import (
     COHORT,
     EVERY_PLAYED_GAME,
     GHOSTED_AT_LEAST_DAYS_AGO,
+    INTROS,
     PLAYED_GAMES,
     PROTAGONIST_GAMES,
     PROTAGONIST_HANDLE,
@@ -493,6 +495,44 @@ def test_three_members_carry_a_photograph_and_it_is_one_of_each_verdict():
 
     assert len(carried) == len(DeclaredVerdict), carried
     assert set(carried.values()) == set(DeclaredVerdict), carried
+
+
+def test_a_few_members_wrote_a_line_and_most_did_not():
+    """**Both cards are drawn** (`docs/adr/0170`): the mocks put a line on every
+    card and most players will have none, so the deck has to show a card that
+    quotes one beside a card that closes up. Every carrier is in the nearest
+    ring, where the protagonist's pool is, so the line reaches a card."""
+
+    carriers = {
+        member.handle: member.intro
+        for member in COHORT.members
+        if member.intro is not None
+    }
+
+    assert carriers == dict(INTROS)
+    assert 0 < len(carriers) < len(COHORT.members) // 2, carriers
+    assert all(_ring_in(handle) == RINGS[0].code for handle in carriers), carriers
+    assert any(
+        COHORT.by_handle(handle).photograph is not None for handle in carriers
+    ), "no card carries a photograph and a line together"
+
+
+def test_every_seeded_line_is_one_the_platform_admits():
+    """The fence the commit runs, run at import: a seeded line carrying contact
+    or over the cap would fail `make seed` at the first profile, and this says
+    so before a database is touched. The protagonist's line goes through the
+    same check."""
+
+    lines = list(INTROS.values()) + [
+        account.profile.intro
+        for account in PROTAGONISTS
+        if account.profile is not None and account.profile.intro is not None
+    ]
+
+    assert lines, "nothing to check would be a check that passes for nothing"
+    for line in lines:
+        admitted = Intro.written(line)
+        assert admitted is not None and admitted.text == line, line
 
 
 def test_no_named_account_carries_a_photograph():

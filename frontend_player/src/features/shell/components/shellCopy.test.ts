@@ -32,13 +32,13 @@ const LINES = [
 ];
 
 describe('what the placeholders say', () => {
-  /** The three tabs with a screen behind them. None of them is a placeholder any more. */
-  const BUILT: readonly TabBarKey[] = ['now', 'play', 'chats'];
+  /** The four tabs with a screen behind them. None of them is a placeholder any more. */
+  const BUILT: readonly TabBarKey[] = ['now', 'players', 'play', 'chats'];
 
   /** The narrowing the loop below needs, and the one place the two lists are held equal. */
   const stillAPlaceholder = (key: TabBarKey): key is PlaceholderTab => !BUILT.includes(key);
 
-  it('covers every tab the bar draws except the three that are built', () => {
+  it('covers every tab the bar draws except the four that are built', () => {
     const drawn = TAB_BAR_TABS.map((tab) => tab.key).filter(stillAPlaceholder);
 
     expect(Object.keys(PLACEHOLDER_COPY).sort()).toEqual([...drawn].sort());
@@ -58,14 +58,14 @@ describe('what the placeholders say', () => {
     expect(NOW_COPY.title).toBe(label('now'));
   });
 
-  it('quotes the two lines the map fixed, word for word', () => {
-    // Pinned because they are **citations**: one of the two quotes a decision taken on another
-    // ticket, so a reworded line is that decision being restated by somebody who was not in the
-    // argument. Three stubs were never pinned and are gone entirely — #268 replaced Play's with
-    // the screen, which is what a placeholder is for, and #360 and #367 did the same for Chats
-    // and Now.
-    expect(PLACEHOLDER_COPY.around.line).toBe('Players and courts near you — not built yet');
+  it('quotes the one line the map fixed, word for word', () => {
+    // Pinned because it is a **citation** of a decision taken on another ticket, so a reworded
+    // line is that decision being restated by somebody who was not in the argument. Four stubs
+    // were never pinned and are gone entirely — #268 replaced Play's with the screen, which is
+    // what a placeholder is for, #360 and #367 did the same for Chats and Now, and Around's
+    // retired with the tab when the deck moved in as Players (ADR-0169 §1).
     expect(PLACEHOLDER_COPY.you.line).toBe('Your profile, your radius, your week — not built yet');
+    expect(PLACEHOLDER_COPY).not.toHaveProperty('around');
   });
 });
 

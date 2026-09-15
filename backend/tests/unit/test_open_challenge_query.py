@@ -166,6 +166,7 @@ def a_mutual_born_challenge(
     return Challenge.opened_from_mutual_interest(
         challenge_id=new_uuid(),
         sport=sport,
+        mode=None,
         organiser_id=organiser,
         other_player_id=other,
         occurred_at=opened_at,

@@ -154,6 +154,7 @@ async def _a_search(
                         review=None,
                         area_code="LDN-CENTRAL",
                         social_tags=(),
+                        intro=None,
                         level=2.7,
                         band="Improver",
                         range_low=2.36,

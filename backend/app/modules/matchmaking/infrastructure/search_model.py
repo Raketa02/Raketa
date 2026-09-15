@@ -86,17 +86,20 @@ class SearchORM(Base):
         # and a time-ordered UUID buys nothing.
         Index("ix_search_searcher_at", "searcher_id", "at"),
         # **A check constraint, not a convention.** ``mode`` is ``NULL`` exactly
-        # on the deck, which has no mode and scores against a declared Play
-        # intent instead; ``intent_read`` is the mirror. The record type asserts
-        # the same pair, and both are worth having: one refuses a row this build
-        # could write, and the other refuses a row any writer could.
+        # on the deck, which has no mode and scores under one ruler for
+        # everybody; ``intent_read`` is set on the deck alone, where it records
+        # the declaration as it stood — and since ``docs/adr/0169`` the deck
+        # reads no declaration, so a deal by a viewer who never made one records
+        # ``NULL`` there too (``0022``). The record type asserts the same pair,
+        # and both are worth having: one refuses a row this build could write,
+        # and the other refuses a row any writer could.
         CheckConstraint(
             "(mode IS NULL) = (surface = 'DECK')",
             name="ck_search_mode_null_exactly_on_the_deck",
         ),
         CheckConstraint(
-            "(intent_read IS NOT NULL) = (surface = 'DECK')",
-            name="ck_search_intent_read_set_exactly_on_the_deck",
+            "(intent_read IS NULL) OR (surface = 'DECK')",
+            name="ck_search_intent_read_only_on_the_deck",
         ),
         # The other pair that must never be half-written. A rung is taken *from
         # an offer*, so a row naming one without citing the search that made it

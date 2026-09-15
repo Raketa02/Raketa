@@ -299,6 +299,120 @@ async def test_the_cap_is_shown_before_it_bites(client, searcher, a_city):
     ), "a sport was listed twice"
 
 
+async def test_every_row_says_how_long_a_yes_lives_read_from_the_ruleset(
+    client, searcher, a_city
+):
+    """**`ttl_days` crosses beside `cap`** (``docs/adr/0169`` §5).
+
+    The ending the deck prints — *your yeses stay live for 21 days* — needs the
+    number, and ``docs/adr/0127`` §6's rule that the client never holds it is
+    kept by making it cross: read off the released ruleset at response time, on
+    every row, and never stored on one. The tap's answer carries the same row
+    type, so the two cannot disagree.
+    """
+
+    ttl_days = build_ruleset().interest.ttl_days
+    assert ttl_days == 21, "the sentence on the deck's ending says 21"
+
+    listed = (await world.read_interest(client, searcher["token"])).json()
+    found = (await world.search(client, searcher["token"])).json()
+    said = (
+        await world.express_interest(
+            client,
+            searcher["token"],
+            player_id=a_city,
+            search_id=found["search"]["search_id"],
+        )
+    ).json()
+
+    assert listed["outstanding"], "no row to carry it"
+    for entry in listed["outstanding"]:
+        assert entry["ttl_days"] == ttl_days
+    assert said["outstanding"]["ttl_days"] == ttl_days
+
+
+async def test_at_the_cap_a_yes_that_closes_a_mutual_lands_and_a_strangers_is_refused(
+    client, session_factory, candidate_source, searcher
+):
+    """**The cap exempts a yes that closes a mutual** (``docs/adr/0169`` §3).
+
+    Such a yes is never outstanding: it is answered the instant it is written
+    and gives the slot straight back, so counting it against the cap would
+    refuse the one yes two people already want. A stranger's is refused at the
+    cap exactly as before — the exemption is about the pair, not the player.
+
+    The cap is driven down to one, on the neighbouring test's argument: the
+    integer is a ruleset row, and what is contract is that the refusal turns on
+    whether the other person's yes already stands.
+    """
+
+    bea = await world.a_candidate(client, session_factory, "bea", mu=searcher["mu"])
+    cai = await world.a_searcher(client, name="cai")
+    dee = await world.a_candidate(client, session_factory, "dee", mu=searcher["mu"])
+    await world.fold_the_log(session_factory, candidate_source)
+    # Cai says yes first, under no cap of their own.
+    await world.a_yes(
+        client, session_factory, candidate_source, sender=cai, towards=searcher["id"]
+    )
+    _cap_at(client, one=1)
+
+    found = (await world.search(client, searcher["token"])).json()
+    search_id = found["search"]["search_id"]
+    spent = await world.express_interest(
+        client, searcher["token"], player_id=bea, search_id=search_id
+    )
+    assert spent.status_code == 201, spent.text
+    assert spent.json()["outstanding"]["outstanding"] == 1, "the cap is not reached"
+
+    matched = await world.express_interest(
+        client, searcher["token"], player_id=cai["id"], search_id=search_id
+    )
+    refused = await world.express_interest(
+        client, searcher["token"], player_id=dee, search_id=search_id
+    )
+
+    assert matched.status_code == 201, matched.text
+    assert matched.json()["mutual"] is True
+    assert matched.json()["outstanding"]["outstanding"] == 1, (
+        "a yes that closed a mutual was counted as in flight"
+    )
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "outstanding_interest_cap_reached"
+    listed = (await world.read_interest(client, searcher["token"])).json()
+    assert [row["player_id"] for row in listed["mutual"]] == [str(cai["id"])]
+
+
+async def test_a_lapsed_yes_from_the_other_side_exempts_nothing(
+    client, session_factory, candidate_source, searcher
+):
+    """The exemption is for a yes that **closes a mutual**, and a lapsed yes
+    closes nothing: it is gone, and *lapsed* and *never sent* are one answer at
+    the ledger. So at the cap the yes is refused exactly as a stranger's is."""
+
+    bea = await world.a_candidate(client, session_factory, "bea", mu=searcher["mu"])
+    cai = await world.a_searcher(client, name="cai")
+    await world.fold_the_log(session_factory, candidate_source)
+    await world.a_yes(
+        client, session_factory, candidate_source, sender=cai, towards=searcher["id"]
+    )
+    await _age_every_yes(session_factory, by=timedelta(days=30))
+    _cap_at(client, one=1)
+
+    found = (await world.search(client, searcher["token"])).json()
+    search_id = found["search"]["search_id"]
+    spent = await world.express_interest(
+        client, searcher["token"], player_id=bea, search_id=search_id
+    )
+    assert spent.status_code == 201, spent.text
+
+    refused = await world.express_interest(
+        client, searcher["token"], player_id=cai["id"], search_id=search_id
+    )
+
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "outstanding_interest_cap_reached"
+
+
 # ---------------------------------------------------------------------------
 # What the recipient is told, which is nothing
 # ---------------------------------------------------------------------------

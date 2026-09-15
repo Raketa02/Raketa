@@ -509,6 +509,24 @@ class PlayerRecordResponse(BaseModel):
             "nothing about common ground."
         ),
     )
+    intro: str = Field(
+        default=OMITTED,
+        # No `max_length`: the cap binds the write and never the read.
+        description=(
+            "One line this player wrote about themselves — their **intro** — "
+            "verbatim, drawn under the name. **Omitted where they wrote "
+            "none**, and never an empty string: the intro is optional, and a "
+            "player who skipped has no line rather than an empty one.\n\n"
+            "The same field the player card carries (`player_card.intro`), "
+            "read off the profile as it stands rather than off a search "
+            "record; today the two cannot differ, since the line is written "
+            "once at onboarding and not editable yet. Fenced at the write "
+            "against a phone number, an email, a URL or an `@handle`, so what "
+            "arrives is a line about a player and never a way to reach one. "
+            "Present on your own record as on anybody else's — it is what "
+            "strangers read, shown back to you."
+        ),
+    )
     sports: list[SportPillSchema] = Field(
         ...,
         description=(
@@ -646,6 +664,9 @@ class PlayerRecordResponse(BaseModel):
                 for one in record.sports
             ],
         }
+        if identity.intro is not None:
+            # Omitted where nothing was written, never `""` (`docs/adr/0170`).
+            fields["intro"] = identity.intro
         if record.skill is not None:
             panel = record.skill
             fields["skill"] = SkillPanelSchema(

@@ -51,6 +51,7 @@ import {
   launchSignedIn,
   stubGate,
   stubInterest,
+  stubOutgoingYeses,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
@@ -90,6 +91,7 @@ import {
   sideName,
 } from './builderPresentation';
 import { WITHHELD_SEAT_LINE, optimisedForLine, unfilledSeatLine } from './courtPresentation';
+import { YOU_SAID_YES_WORD } from './playerCardPresentation';
 import { leavingLine } from './poolPresentation';
 import { playErrorMessage } from './playErrorMessage';
 import { promptControls, promptCopy } from './promptPresentation';
@@ -2079,5 +2081,42 @@ describe('the list the pool draws', () => {
       originSearchId: SEARCH_ID,
       seats: [C, E],
     });
+  });
+
+  /**
+   * **The deck feeds the builder by label, and by a nudge on one side only**
+   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §8). The list a court's hole opens carries *Wants to play you* on whoever the engine admitted
+   * for their yes and *You said yes* on whoever the reader said it to, off the same `GET
+   * /interest` the deck holds — and neither moves anybody: the pin is gone, and the served order
+   * is the order.
+   */
+  it('draws the two interest tags on the list a hole opens, and pins nobody', async () => {
+    const withAYesEachWay: Wire['ShortlistResponse'] = {
+      search: envelope(SEARCH_ID),
+      candidates: [card(B), card(C), card(D), { ...card(E), inclusion_reason: 'INTEREST_LIFT' }],
+    };
+    transport.on('POST', SEARCHES, () => json(withAYesEachWay));
+    transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () => json(withAYesEachWay));
+    stubOutgoingYeses(transport, [B, 'PADEL']);
+
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    fireEvent.press(screen.getByLabelText(`Remove ${NAMES[B]} from their side`));
+    fireEvent.press(
+      await screen.findByLabelText(seatLabel('THEIR_SIDE', { kind: 'empty', unfilled: null })),
+    );
+    await waitFor(() => expect(screen).toHavePathname('/play/pool'));
+
+    expect(await screen.findByText(YOU_SAID_YES_WORD)).toBeTruthy();
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
+    // B before E, as served: the liker is not lifted above the person the reader chose.
+    expect(
+      screen
+        .getAllByLabelText(/^Add .* to the court$/)
+        .map((control) => control.props.accessibilityLabel as string),
+    ).toEqual([addLabel(B), addLabel(E)]);
   });
 });

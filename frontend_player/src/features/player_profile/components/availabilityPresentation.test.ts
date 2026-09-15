@@ -25,7 +25,7 @@ describe('the floor, in words', () => {
     // screen, not by being stopped by it.
     const eyebrow = availabilityEyebrow();
 
-    expect(eyebrow).toMatch(/Step 3 of 7/);
+    expect(eyebrow).toMatch(/Step 4 of 8/);
     expect(eyebrow).toMatch(/at least one/i);
   });
 

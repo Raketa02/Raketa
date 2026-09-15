@@ -20,7 +20,6 @@ import { ReducedMotionProvider } from '@/shared/ui';
 
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
-import AroundRoute from '@/app/(app)/(tabs)/around';
 import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/index';
 import ChallengeFillRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/fill';
 import YesRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/yes';
@@ -30,9 +29,9 @@ import ConversationGameRoute from '@/app/(app)/(tabs)/chats/conversation/[conver
 import GameRoute from '@/app/(app)/(tabs)/games/[gameId]';
 import NowRoute from '@/app/(app)/(tabs)/index';
 import BuilderRoute from '@/app/(app)/(tabs)/play/builder';
-import DeckRoute from '@/app/(app)/(tabs)/play/deck';
 import PoolRoute from '@/app/(app)/(tabs)/play/pool';
 import FindAGameRoute from '@/app/(app)/(tabs)/play/index';
+import PlayersRoute from '@/app/(app)/(tabs)/players';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import AuthLayout from '@/app/(auth)/_layout';
 import SignInRoute from '@/app/(auth)/sign-in';
@@ -40,6 +39,7 @@ import SignUpRoute from '@/app/(auth)/sign-up';
 import AvailabilityRoute from '@/app/(onboarding)/availability';
 import DataRoute from '@/app/(onboarding)/data';
 import DoneRoute from '@/app/(onboarding)/done';
+import IntroRoute from '@/app/(onboarding)/intro';
 import LocationRoute from '@/app/(onboarding)/location';
 import NameRoute from '@/app/(onboarding)/name';
 import OnboardingLayout from '@/app/(onboarding)/_layout';
@@ -56,9 +56,11 @@ import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { NOW_COPY } from '@/features/shell/types';
 import { beginSession } from '@/shared/lib/auth';
 import {
+  HapticsProvider,
   ImagePickingProvider,
   LiveStreamProvider,
   LocationProvider,
+  type HapticsPort,
   type ImagePickingPort,
   type LiveStreamPort,
   type LocationPort,
@@ -87,12 +89,12 @@ export const ONBOARDING_ROUTES = {
   _layout: TestRoot,
   '(app)/_layout': AppLayout,
   '(app)/(tabs)/_layout': TabsLayout,
-  // The five-tab shell. Play is a directory because the deck, the builder and the pool
-  // land under it, and the bar reads its active column off that first segment.
+  // The five-tab shell. Play is a directory because the builder and the pool land under it,
+  // and the bar reads its active column off that first segment. Players is a single-screen
+  // root: the deck is the whole tab (ADR-0169 §1).
   '(app)/(tabs)/index': NowRoute,
-  '(app)/(tabs)/around': AroundRoute,
+  '(app)/(tabs)/players': PlayersRoute,
   '(app)/(tabs)/play/index': FindAGameRoute,
-  '(app)/(tabs)/play/deck': DeckRoute,
   '(app)/(tabs)/play/builder': BuilderRoute,
   '(app)/(tabs)/play/pool': PoolRoute,
   // A game is pushed over the Now tab and is a `games/` route rather than a `now/` one,
@@ -138,6 +140,7 @@ export const ONBOARDING_ROUTES = {
   // The second part, in order. They are routes rather than one route with a param so the
   // sequence is visible in the file tree, the way the authorization boundary is.
   '(onboarding)/tags': TagsRoute,
+  '(onboarding)/intro': IntroRoute,
   '(onboarding)/photos': PhotosRoute,
   '(onboarding)/availability': AvailabilityRoute,
   '(onboarding)/location': LocationRoute,
@@ -216,6 +219,26 @@ export function resetLiveStream(): void {
 }
 
 /**
+ * The motor this tree buzzes, for the suite that counts a buzz.
+ *
+ * Same shape and same reasons as the photo library above. Unset means the real port over a
+ * native module jest has mocked into something inert, which is right for every suite that is
+ * not about a haptic — and the deck's is: *one light tick as the drag first crosses the
+ * threshold, and none under reduced motion* is a claim about a count.
+ */
+let haptics: HapticsPort | undefined;
+
+/** Run the tree against this motor. Call before `launchSignedIn`. */
+export function stubHaptics(port: HapticsPort): void {
+  haptics = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetHaptics(): void {
+  haptics = undefined;
+}
+
+/**
  * The providers the real root layout composes, without the bootstrap sequence — fonts, the
  * splash screen and config validation are the launch path's business and have their own
  * tests.
@@ -244,15 +267,18 @@ function TestRoot() {
 }
 
 /**
- * The three ports, wrapped where a suite said what they are — and the live channel always.
+ * The four ports, wrapped where a suite said what they are — and the live channel always.
  *
  * Composed here rather than in `TestRoot` so adding a port is one entry rather than another
  * level of nesting and another conditional. The live channel's default is a fake rather than
  * the device, for the reason `stubLiveStream` states.
  */
 function WithPorts({ children }: { readonly children: ReactNode }) {
+  const withHaptics =
+    haptics === undefined ? children : <HapticsProvider port={haptics}>{children}</HapticsProvider>;
+
   const withLive = (
-    <LiveStreamProvider port={liveStream ?? SILENT_CHANNEL}>{children}</LiveStreamProvider>
+    <LiveStreamProvider port={liveStream ?? SILENT_CHANNEL}>{withHaptics}</LiveStreamProvider>
   );
 
   const withLocation =
@@ -406,6 +432,37 @@ export function stubInterest(
   served: Wire['InterestListResponse'] = { outgoing: [], mutual: [], outstanding: [] },
 ) {
   transport.on('GET', '/api/v1/interest', () => json(served));
+}
+
+/**
+ * One yes of the reader's own, as `GET /interest` lists it under `outgoing` — the row *You said
+ * yes* and the challenge screen's invitee's line are drawn from (ADR-0169 §8).
+ *
+ * The two dates are the server's and no suite reads them, so they are fixed here rather than
+ * spelled per test.
+ */
+export function outgoingYes(
+  playerId: string,
+  sport: Wire['Sport'],
+): Wire['OutgoingInterestSchema'] {
+  return {
+    player_id: playerId,
+    sport,
+    at: '2026-08-30T18:00:00Z',
+    expires_at: '2026-09-20T18:00:00Z',
+  };
+}
+
+/** The reader's own yeses, as the server would list them — who, per sport. Nothing else served. */
+export function stubOutgoingYeses(
+  transport: Transport,
+  ...yeses: readonly (readonly [playerId: string, sport: Wire['Sport']])[]
+) {
+  stubInterest(transport, {
+    outgoing: yeses.map(([playerId, sport]) => outgoingYes(playerId, sport)),
+    mutual: [],
+    outstanding: [],
+  });
 }
 
 export const GAMES_PATH = '/api/v1/games';

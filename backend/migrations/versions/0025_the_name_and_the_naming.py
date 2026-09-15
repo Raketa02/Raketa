@@ -26,8 +26,8 @@ recorded before this branch would not read back. The reset covers it, as it
 covers the streams; a store that outlived this would need the blob rewritten
 in the same commit as this file.
 
-Revision ID: 0022_the_naming
-Revises: 0021_sportsmanship
+Revision ID: 0025_the_naming
+Revises: 0024_the_intro
 Create Date: 2026-09-15
 
 The revision id is short because ``alembic_version.version_num`` is
@@ -37,8 +37,8 @@ The revision id is short because ``alembic_version.version_num`` is
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0022_the_naming"
-down_revision = "0021_sportsmanship"
+revision = "0025_the_naming"
+down_revision = "0024_the_intro"
 branch_labels = None
 depends_on = None
 

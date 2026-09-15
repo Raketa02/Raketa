@@ -1,9 +1,9 @@
 /**
- * **The builder** — the third Play screen, and the one a finished search lands on.
+ * **The builder** — the second Play screen, and the one a finished search lands on.
  *
- * A sibling of `play/index.tsx` and `play/deck.tsx` rather than a screen behind either: Find a
- * game stays underneath, so the platform's own back gesture comes back out of the court, and
- * the bar's active column is read off the first path segment and stays on ⚡Play throughout.
+ * A sibling of `play/index.tsx` rather than a screen behind it: Find a game stays underneath,
+ * so the platform's own back gesture comes back out of the court, and the bar's active column
+ * is read off the first path segment and stays on ⚡Play throughout.
  *
  * **The origin search arrives as a param and is untrusted.** It becomes
  * `ForecastRequest.search_id` and a Query key, so it is validated before anything reads it — a

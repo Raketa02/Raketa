@@ -99,7 +99,7 @@ import { theme } from './theme';
 /** A glyph name Feather actually ships. Not a `string`, and not behind a cast. */
 type FeatherGlyph = keyof typeof Feather.glyphMap;
 
-export type TabBarKey = 'now' | 'around' | 'play' | 'chats' | 'you';
+export type TabBarKey = 'now' | 'players' | 'play' | 'chats' | 'you';
 
 export interface TabBarTab {
   readonly key: TabBarKey;
@@ -108,17 +108,22 @@ export interface TabBarTab {
 }
 
 /**
- * The five, in order. `home` and `map-pin` beat the calendar, the clock and `radar`: Now has
- * no plans, no bookings and no courts behind it, and a calendar glyph would announce a
- * scheduling surface nothing is building — `home` claims nothing that is not built, and
- * `map-pin` says *near here* and stops.
+ * The five, in order. `home` beats the calendar and the clock: Now has no plans, no bookings
+ * and no courts behind it, and a calendar glyph would announce a scheduling surface nothing is
+ * building — `home` claims nothing that is not built. **The second column is Players and draws
+ * `users`** — the deck lives there, one person at a time, and `user` is You's
+ * ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1). It was Around, drawn with `map-pin` after `radar` was refused for a tab with no scan
+ * behind it (ADR-0135); the family finding stands, and `radar` is still not drawn, because the
+ * Radar is a pane inside Players and not a tab.
  *
  * `labelMaxScale` is derived from these exact words. Adding a sixth, or a longer one, is a
- * change to `tabBarLabelCap.test.ts`'s answer before it is a change to this list.
+ * change to `tabBarLabelCap.test.ts`'s answer before it is a change to this list — and
+ * *Players* is the longest of the five, which is what moved the cap when Around retired.
  */
 export const TAB_BAR_TABS = [
   { key: 'now', label: 'Now', glyph: 'home' },
-  { key: 'around', label: 'Around', glyph: 'map-pin' },
+  { key: 'players', label: 'Players', glyph: 'users' },
   { key: 'play', label: 'Play', glyph: 'zap' },
   { key: 'chats', label: 'Chats', glyph: 'message-circle' },
   { key: 'you', label: 'You', glyph: 'user' },

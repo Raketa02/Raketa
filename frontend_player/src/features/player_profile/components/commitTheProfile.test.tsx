@@ -1,16 +1,18 @@
 /**
- * The end of onboarding: the seven steps, the one write that ends them, and the app.
+ * The end of onboarding: the eight steps, the one write that ends them, and the app.
  *
  * Driven through the real route tree with only the socket faked, like every other flow suite
  * here — the router, the http client, the mappers, the use case, the hooks, the draft and the
  * screens all run for real. What is being proved is the **part as a unit**: a player arrives
- * from the last result, answers six screens, changes their mind and finds their answers where
- * they left them, presses finish once, and every one of those answers reaches the server in a
- * single request that cannot be made twice.
+ * from the last result, answers seven screens, changes their mind and finds their answers
+ * where they left them, presses finish once, and every one of those answers reaches the
+ * server in a single request that cannot be made twice.
  *
- * The walk itself — the order of the seven, the back control, the draft surviving a round trip
- * — is `socialSteps.test.tsx`. This one is about the commit: what is in the body, what the
- * key protects, what a failure leaves behind, and where the player ends up.
+ * The walk itself — the order of the eight, the back control, the draft surviving a round
+ * trip — is `socialSteps.test.tsx`. This one is about the commit: what is in the body, what
+ * the key protects, what a failure leaves behind, and where the player ends up. The intro's
+ * three refusals are here too, because they are the commit's: the line is fenced at the
+ * write, and the write is this request.
  */
 
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
@@ -42,6 +44,7 @@ import {
 
 import { useProfileDraft } from '../store/profileDraft.store';
 
+import { CHANGE_INTRO_LABEL, INTRO_FIELD_LABEL } from './introPresentation';
 import { OPT_IN_ANSWERS, OPT_IN_FINISH_LABEL } from './optInPresentation';
 
 const COMMIT_PATH = '/api/v1/players/me/profile';
@@ -142,26 +145,30 @@ async function enterTheSocialSteps() {
   await waitFor(() => expect(screen).toHavePathname('/tags'));
 }
 
-/** Two tags at the floor, which is the only step of the seven that insists on an answer. */
+/** Two tags at the floor, which is the only step of the eight that insists on an answer. */
 async function answerTheTags() {
   fireEvent.press(await screen.findByLabelText('Plays to win'));
   fireEvent.press(screen.getByLabelText('Here to improve'));
   fireEvent.press(await screen.findByLabelText('Continue'));
-  await waitFor(() => expect(screen).toHavePathname('/photos'));
+  await waitFor(() => expect(screen).toHavePathname('/intro'));
 }
 
 /**
- * From the photos step to the last one, answering each screen the way that screen wants.
+ * From the intro step to the last one, answering each screen the way that screen wants.
  *
- * No photo, because this walk adds none and none is a complete answer. One cell of the week,
- * because a blank one is an answer too and a body carrying an empty list proves less than
- * one carrying the cell that was actually ticked. The area from the device. The radius left
- * at the served default, which is an answer the step wrote when it opened. *Woman* on the
- * gender step, because that half of it has no default and the part cannot finish without an
- * answer; the preference beside it is left at its opening `Anyone`, which is what every
- * player holds until somebody narrows it.
+ * No intro, unless the walk wrote one before calling this: *Next* on an empty box carries
+ * nothing, which is the ordinary end of that step. No photo, because this walk adds none and
+ * none is a complete answer. One cell of the week, because a blank one is an answer too and
+ * a body carrying an empty list proves less than one carrying the cell that was actually
+ * ticked. The area from the device. The radius left at the served default, which is an
+ * answer the step wrote when it opened. *Woman* on the gender step, because that half of it
+ * has no default and the part cannot finish without an answer; the preference beside it is
+ * left at its opening `Anyone`, which is what every player holds until somebody narrows it.
  */
 async function walkOnToTheLastStep() {
+  fireEvent.press(screen.getByLabelText('Next'));
+  await waitFor(() => expect(screen).toHavePathname('/photos'));
+
   fireEvent.press(screen.getByLabelText('Continue'));
   await waitFor(() => expect(screen).toHavePathname('/availability'));
 
@@ -214,14 +221,18 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('finishing the part', () => {
-  it('sends every answer from all seven steps in one request', async () => {
+  it('sends every answer from all eight steps in one request', async () => {
     await reachTheFinish();
 
     fireEvent.press(finish());
     await waitFor(() => expect(commits()).toHaveLength(1));
 
-    // One write, not seven. A partial commit — the tags saved and the consent lost — is the
+    // One write, not eight. A partial commit — the tags saved and the consent lost — is the
     // worst outcome this part has available to it, which is why the whole of it is one body.
+    //
+    // **No `intro` key at all.** This walk pressed *Next* on an empty box, and a player who
+    // wrote nothing has no intro rather than an empty one — so the field is left out, never
+    // sent as `''` or `null` for the server to read as the same answer by a second route.
     expect(bodyOf(commits()[0])).toEqual({
       social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
       // No photo is a complete answer, sent as itself rather than left out for the server
@@ -241,6 +252,46 @@ describe('finishing the part', () => {
       // second route decided on the other side.
       gender_preference: 'ANY',
     });
+  });
+
+  it('sends the line the player wrote, trimmed, and leaves it out when they skipped', async () => {
+    // Karol writes a line and continues; Ola taps Skip with one half-typed. Both reach the
+    // same commit, and only one of them carries an intro — the other's box was cleared by
+    // the skip, because *skip* means *no intro* and not *whatever was in the box*.
+    await enterTheSocialSteps();
+    await answerTheTags();
+    fireEvent.changeText(
+      screen.getByLabelText(INTRO_FIELD_LABEL),
+      '  Moved from Wrocław in May. Needs opponents. ',
+    );
+    await walkOnToTheLastStep();
+    fireEvent.press(screen.getByLabelText(YES));
+
+    fireEvent.press(finish());
+    await waitFor(() => expect(commits()).toHaveLength(1));
+    expect(bodyOf(commits()[0])?.intro).toBe('Moved from Wrocław in May. Needs opponents.');
+
+    // And the other player. A fresh part, a line started and then skipped.
+    screen.unmount();
+    queryClient.clear();
+    useProfileDraft.getState().reset();
+    keysCommitted = new Set();
+    await enterTheSocialSteps();
+    await answerTheTags();
+    fireEvent.changeText(screen.getByLabelText(INTRO_FIELD_LABEL), 'Actually, never m');
+    fireEvent.press(screen.getByLabelText('Skip'));
+    await waitFor(() => expect(screen).toHavePathname('/photos'));
+
+    // Walking back finds the box empty: what was skipped is gone, not merely unsent.
+    fireEvent.press(screen.getByLabelText('Back to Say it in your own words'));
+    await waitFor(() => expect(screen).toHavePathname('/intro'));
+    expect(screen.getByLabelText(INTRO_FIELD_LABEL).props.value).toBe('');
+
+    await walkOnToTheLastStep();
+    fireEvent.press(screen.getByLabelText(YES));
+    fireEvent.press(finish());
+    await waitFor(() => expect(commits()).toHaveLength(2));
+    expect(bodyOf(commits()[1])).not.toHaveProperty('intro');
   });
 
   it('sends the opt-in with the copy version the player was shown', async () => {
@@ -271,7 +322,7 @@ describe('finishing the part', () => {
     });
     // The data screen, not the summary: a player reaches the second part *from* the
     // summary now, so landing back on it would show the same account of the same walk
-    // twice — the second time after six questions that had nothing to do with it.
+    // twice — the second time after seven questions that had nothing to do with it.
     await waitFor(() => expect(screen).toHavePathname('/data'));
   });
 
@@ -345,7 +396,7 @@ describe('a photo still on its way up when the player reaches the finish', () =>
    * jest's fake timers and every `waitFor` runs the pending ones, so an upload that has not
    * answered by the next navigation is timed out by the app's own timeout policy. In
    * production an upload outlives the screen it was started from — that is the photos step's
-   * whole design — so reaching step six with one still in flight is an ordinary thing to do
+   * whole design — so reaching step seven with one still in flight is an ordinary thing to do
    * and an impossible thing to stage here.
    *
    * `changePhotos` is the same call the photos step makes, and it derives `photoIds` from
@@ -442,7 +493,7 @@ describe('a failed commit', () => {
     ).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
     // Nothing was lost, and the screen says so — the one question a player who just answered
-    // six screens actually has.
+    // seven screens actually has.
     expect(screen.getByText(/Nothing you answered was lost/)).toBeTruthy();
 
     // Still here. The prototype navigated away unconditionally, which is exactly the
@@ -486,6 +537,59 @@ describe('a failed commit', () => {
     expect(await screen.findByText(/Check the details above and try again./)).toBeTruthy();
     expect(screen).toHavePathname('/opt-in');
     expect(commits()).toHaveLength(1);
+  });
+
+  /**
+   * **The intro's three refusals, each in its own sentence and each with the way back**
+   * (ADR-0170 §2, [#445](https://github.com/Raketa02/Raketa/issues/445)).
+   *
+   * The fence is the server's pattern, so a phone number typed on step two is refused here,
+   * six screens later. What the player reads is the *reason's* sentence — what to change —
+   * and never what was matched; the control under it is back to the intro, with the line
+   * still in the box, because the draft was never touched by a failure.
+   */
+  describe.each([
+    ['too_long', 'Keep it under 100 characters.'],
+    ['multiline', 'One line, no line breaks.'],
+    [
+      'contains_contact',
+      'Leave out phone numbers, emails, links and handles — people reach you in the chat.',
+    ],
+  ])('a line the server refused as %s', (reason, sentence) => {
+    it('says what to change, and takes the player back to the intro with the line still there', async () => {
+      await enterTheSocialSteps();
+      await answerTheTags();
+      // Tomek's line. What is in it is the server's to judge — this fake refuses whatever
+      // arrives — so the walk sends an ordinary sentence and the refusal is still the one
+      // the reason names.
+      fireEvent.changeText(screen.getByLabelText(INTRO_FIELD_LABEL), 'Call me on 600 700 800');
+      await walkOnToTheLastStep();
+      fireEvent.press(screen.getByLabelText(YES));
+      transport.on('POST', COMMIT_PATH, () =>
+        json(
+          {
+            code: 'intro_not_admitted',
+            message: 'intro is not one the platform admits',
+            trace_id: 'trace-test',
+            details: { reason },
+          } satisfies Wire['ErrorResponse'],
+          400,
+        ),
+      );
+
+      fireEvent.press(finish());
+
+      // The reason's sentence, as an alert, and neither *try again* nor the pattern.
+      expect(await screen.findByText(sentence)).toBeTruthy();
+      expect(screen.getByRole('alert')).toBeTruthy();
+      expect(screen.queryByText(/Try again — this can only ever set you up once/)).toBeNull();
+      expect(screen).toHavePathname('/opt-in');
+
+      // And the way back, to the step that takes the line — with the line still in the box.
+      fireEvent.press(screen.getByLabelText(CHANGE_INTRO_LABEL));
+      await waitFor(() => expect(screen).toHavePathname('/intro'));
+      expect(screen.getByLabelText(INTRO_FIELD_LABEL).props.value).toBe('Call me on 600 700 800');
+    });
   });
 
   it('asks for the week itself when the server refuses an empty one', async () => {
@@ -535,7 +639,7 @@ describe('once the commit has landed', () => {
     await commitAndLeave();
 
     // Nothing behind the data screen: every move inside the part replaced, so there is no
-    // history entry holding one of the seven, and the part itself is over.
+    // history entry holding one of the eight, and the part itself is over.
     expect(screen.queryByLabelText(/^Back to /)).toBeNull();
 
     fireEvent.press(screen.getByLabelText('Start playing'));
@@ -619,11 +723,11 @@ describe('arriving from the last result', () => {
     result: RESULT,
   };
 
-  it('shows the ratings the walk produced, and only then the seven steps', async () => {
+  it('shows the ratings the walk produced, and only then the eight steps', async () => {
     // The one walk that proves the order. A player is owed the number they just spent a
     // minute per sport producing **before** anything else is asked of them, so the result
     // leads to the summary, the summary is the door into the second part, and the commit at
-    // the end of the seven lands on what Raketa keeps.
+    // the end of the eight lands on what Raketa keeps.
     stubGate();
     stubProfileOptions(transport);
     stubLocation(fakeLocation({ fix: FIX }));
@@ -653,11 +757,11 @@ describe('arriving from the last result', () => {
     await waitFor(() => expect(screen).toHavePathname('/done'));
 
     // With the rating this walk produced on it — the account the player earned, given to
-    // them at the moment they earned it rather than six screens later.
+    // them at the moment they earned it rather than seven screens later.
     expect(await screen.findByLabelText('Padel level: 2,71')).toBeTruthy();
 
     // And the summary is the door into the second part. The control says so, rather than
-    // saying *Continue* to somebody about to answer six more questions.
+    // saying *Continue* to somebody about to answer seven more questions.
     //
     // Awaited, because *does this player still owe a profile* is a read, and until it lands
     // the screen takes the fail-safe answer — *they are set up* — and offers the plain

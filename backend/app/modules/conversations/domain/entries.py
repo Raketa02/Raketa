@@ -22,6 +22,11 @@ keeps ``values`` down to *the count of seats asked*, *which way somebody left*
 and *what a slot was set to* — the three facts a face read genuinely cannot
 supply.
 
+**One line names no actor, and it is the first to.** ``SIDE_FORMED`` is about
+both people a mutual seated on one side and about neither of them in
+particular, so it carries ``actor_id = None`` — the shape the contract always
+allowed (``docs/adr/0148`` §4) and no code had used until ``docs/adr/0169`` §8.
+
 **And the people a page names are not only the members** — the difference is
 ``people_named`` at the bottom, and it is
 [#408](https://github.com/Raketa02/Raketa/issues/408)'s whole finding. Membership
@@ -58,10 +63,20 @@ MESSAGE_LENGTH_CAP = 1000
 
 @final
 class SystemLineCode(str, Enum):
-    """The codes a system line may carry. **Eight, and the Plan brought four.**
+    """The codes a system line may carry. **Nine: the Plan brought four, and
+    the deck's mutual the ninth.**
 
     ``the-words.md`` §23 holds the sentence each one renders; nothing in this
     module knows any of them, which is the point.
+
+    **``SIDE_FORMED`` is the one line a room is *born* with, and only a doubles
+    room** (``docs/adr/0169`` §8). Two yeses that meet in padel seat both people
+    on one side of a court with a whole side still to fill — half a game — and
+    nothing in the room said so; the client's words are *You two are a side.
+    Fill the seats to find your opponents.* A singles mutual is a whole court
+    and gets no line: the mutual is still the opening there, and ``seq`` 1 is
+    whatever happens next. It carries no values and names no actor, because it
+    is about both of them.
 
     **A seat leaving is one code with the answer as a value**, not two codes.
     *That seat is open again* is the same news either way
@@ -91,6 +106,7 @@ class SystemLineCode(str, Enum):
     DAY_RECORDED = "DAY_RECORDED"
     HOUR_RECORDED = "HOUR_RECORDED"
     PLAN_LOCKED = "PLAN_LOCKED"
+    SIDE_FORMED = "SIDE_FORMED"
 
 
 @final
@@ -188,7 +204,8 @@ class SystemLine:
     seq: int
     code: SystemLineCode
     #: Who did it. Nullable because a line that names no actor is a shape the
-    #: contract allows (``docs/adr/0148`` §4), not because any code here omits one.
+    #: contract allows (``docs/adr/0148`` §4) — and ``SIDE_FORMED`` is the one
+    #: code that omits one, being about two people and neither in particular.
     actor_id: UUID | None
     values: Mapping[str, str]
     occurred_at: Instant

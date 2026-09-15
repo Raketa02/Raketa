@@ -32,6 +32,8 @@ import {
   stubEntries,
   stubGames,
   stubGate,
+  stubInterest,
+  stubOutgoingYeses,
 } from '@/test-support/onboardingRouter';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import {
@@ -54,6 +56,7 @@ import {
   THE_COURT_HEADING,
   pairingAbsenceLine,
   removeRefusalMessage,
+  saidYesOnPlayersLine,
   seatDidLine,
 } from './challengeDetailPresentation';
 import { LEAVE_FROM_THE_LIST_BODY, LEAVE_THE_GAME } from './leaveGamePresentation';
@@ -159,6 +162,8 @@ beforeEach(() => {
   // Now draws the games list, and one test asserts that answering marks it out of date — which
   // needs an entry in the cache to mark.
   stubGames(transport);
+  // The screen reads the reader's own yeses for the invitee's line; nobody, unless a test says.
+  stubInterest(transport);
 });
 
 afterEach(async () => {
@@ -298,6 +303,40 @@ describe('the card block', () => {
     const card = await screen.findByLabelText(/^ewa\.m\. Match score 78\./);
 
     expect(String(card.props.accessibilityLabel)).not.toContain('Player Score');
+  });
+});
+
+/**
+ * **An invitation a swipe produced says so**
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8): one line under the organiser's card, exactly when the organiser is in the reader's own
+ * outgoing list for the challenge's sport. Client-side, off the deck's read; ADR-0143's refusal
+ * to tell an invitee why the engine picked them is untouched, because this is her own act.
+ */
+describe('the invitee’s line', () => {
+  it('says You said yes to the organiser on Players when the reader did, in this sport', async () => {
+    stubOutgoingYeses(transport, [EWA, 'SQUASH']);
+    await openTheChallenge();
+
+    expect(await screen.findByText(saidYesOnPlayersLine('ewa.m'))).toBeTruthy();
+  });
+
+  it('draws no such line when the yes was in another sport', async () => {
+    stubOutgoingYeses(transport, [EWA, 'PADEL']);
+    await openTheChallenge();
+    await screen.findByLabelText(/^ewa\.m\. Match score 78\./);
+    // An absence proves nothing until the list has landed.
+    await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/interest')).toHaveLength(1));
+
+    expect(screen.queryByText(saidYesOnPlayersLine('ewa.m'))).toBeNull();
+  });
+
+  it('draws no such line for an organiser the reader never said yes to', async () => {
+    await openTheChallenge();
+    await screen.findByLabelText(/^ewa\.m\. Match score 78\./);
+    await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/interest')).toHaveLength(1));
+
+    expect(screen.queryByText(/You said yes to/)).toBeNull();
   });
 });
 

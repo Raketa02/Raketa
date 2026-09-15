@@ -4,7 +4,7 @@ Each carries its own wire code, because they arrive on the same status from the
 same endpoint and ask the client for different recoveries: pick a different file,
 pick a smaller file, the file is broken, the photo you asked for is not there —
 and, for the commit, re-read the vocabulary, drop a tag, move the slider, tick a
-slot of the week, or ask the consent question you skipped.
+slot of the week, ask the consent question you skipped, or rewrite your line.
 
 **The commit's refusals are 400s, and every one of them is something a client
 already had the information to prevent.** The tag vocabulary, the floor and the
@@ -26,11 +26,15 @@ application, its own 413 will arrive without a code and that is the moment to
 reconsider.
 
 The same reasoning puts every one of the commit's refusals on 400 and gives each
-its own code, so that eight failures of one request stay eight distinct
-recoveries on the wire.
+its own code, so that nine failures of one request stay nine distinct
+recoveries on the wire — and the ninth, ``intro_not_admitted``, is the one that
+carries a ``reason`` beside its code, because *rewrite the line* is three
+different recoveries and a client has to know which (``docs/adr/0170`` §2).
 """
 
 from __future__ import annotations
+
+from enum import StrEnum
 
 from app.shared.domain import BadRequestError, ConflictError, NotFoundError
 
@@ -178,6 +182,53 @@ class AvailabilityGridEmpty(BadRequestError):
 
     def __init__(self) -> None:
         super().__init__("The availability grid has no slots ticked.")
+
+
+class IntroRefusal(StrEnum):
+    """Why an intro was not admitted — the one coarse reason that crosses.
+
+    Three values and deliberately no fourth: *which* pattern matched is not on
+    the wire, so a refusal tells a player what kind of thing to change and
+    never what the fence is made of. It is a ``StrEnum`` because the value
+    **is** the wire spelling, carried in ``details.reason``.
+    """
+
+    #: Over the cap after trimming.
+    TOO_LONG = "too_long"
+    #: A line break anywhere in it.
+    MULTILINE = "multiline"
+    #: A phone-shaped run of digits, an email, a URL or a bare domain, or an
+    #: ``@handle``.
+    CONTAINS_CONTACT = "contains_contact"
+
+
+class IntroNotAdmitted(BadRequestError):
+    """The intro carries contact, or breaks the one-line shape.
+
+    **One code and one coarse reason** (``docs/adr/0170`` §2): ``too_long``,
+    ``multiline`` or ``contains_contact``, carried in ``details.reason`` so the
+    client can say what to change without the server explaining what it
+    matched. A refusal that named the pattern — *that looks like a phone
+    number* — would be a rule a player rewrites around rather than a line they
+    rewrite.
+
+    The fence is **contact**: a phone-shaped run of digits, an email, a URL or a
+    bare domain, an ``@handle``. Rudeness is not refused here — a block is what
+    that is for — and a false refusal costs a rewrite where a false admission
+    leaks contact, which is why the patterns err the way they do.
+
+    Nothing is stored before this fires: it is raised by the value object the
+    commit builds, ahead of any read of the object store.
+    """
+
+    code = "intro_not_admitted"
+
+    def __init__(self, reason: IntroRefusal) -> None:
+        self.reason = reason
+        super().__init__(
+            "This intro is not one the platform admits.",
+            details={"reason": reason.value},
+        )
 
 
 class ProposalsOptInNotAnswered(BadRequestError):

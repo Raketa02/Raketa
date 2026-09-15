@@ -31,10 +31,15 @@ import {
   stubInterest,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
-import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
+import {
+  errorResponse,
+  installTransport,
+  json,
+  type Transport,
+  type Wire,
+} from '@/test-support/transport';
 import { declarationOptionLabel } from '@/shared/vocabulary/playIntentPresentation';
 
-import { enterPlay } from './shellNavigation';
 import { CHATS_COPY, NOW_COPY, PLACEHOLDER_COPY } from './shellCopy';
 
 /** One rating and a committed profile: the gate's fourth answer is *the app*. */
@@ -61,15 +66,43 @@ let transport: Transport;
  */
 const onFindAGame = () => screen.findByRole('header', { name: FIND_A_GAME_TITLE });
 
+/** An empty deal with nobody in range: Players draws its ending, and this suite is not about it. */
+const NOBODY_DEALT: Wire['ShortlistResponse'] = {
+  search: {
+    search_id: 'd0d1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b',
+    at: '2026-09-01T18:00:00Z',
+    surface: 'DECK',
+    mode: null,
+    ruleset_version: 'ruleset-v1',
+    engine_version: 'matchfit-v1',
+    optimised_for: 'SEARCHER',
+    index_stale: false,
+    pool: {
+      sport: 'PADEL',
+      radius_km_used: 12,
+      players_in_range: 0,
+      window: 'THIS_WEEK',
+      post_gate: true,
+    },
+    radius_clamp: false,
+    sorts_available: [],
+    rung_offers: null,
+    prompts: [],
+  },
+  candidates: [],
+};
+
 beforeEach(() => {
   transport = installTransport();
   stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
-  // ⚡Play is a screen now, and it reads three routes. Stubbed here rather than in the two
-  // tests that press the tab, because an unstubbed route throws at the socket and the
-  // failure would name `fetch` rather than the screen.
+  // ⚡Play is a screen now, and it reads three routes; Players deals on arrival and reads the
+  // same three. Stubbed here rather than in the tests that press either tab, because an
+  // unstubbed route throws at the socket and the failure would name `fetch` rather than the
+  // screen.
   stubProfileSurface(transport);
   stubInterest(transport);
   stubProfileOptions(transport);
+  transport.on('POST', '/api/v1/deck', () => json(NOBODY_DEALT));
 });
 
 afterEach(async () => {
@@ -97,7 +130,7 @@ describe('what a player lands on', () => {
     expect(screen).toHavePathname('/');
     expect(screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel)).toEqual([
       'Now',
-      'Around',
+      'Players',
       'Play',
       'Chats',
       'You',
@@ -120,16 +153,42 @@ describe('what a player lands on', () => {
   });
 });
 
-describe('the placeholders', () => {
-  it.each([
-    ['Around', PLACEHOLDER_COPY.around],
-    ['You', PLACEHOLDER_COPY.you],
-  ])('says what belongs on %s rather than apologising', async (label, copy) => {
+/**
+ * **The second column is Players, and it is a root like the other flanking tabs**
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §1). What the deck does there is `deck.test.tsx`'s; what the shell owes it is a route, a lit
+ * column, and nothing behind it.
+ */
+describe('Players', () => {
+  it('opens at its root with nothing behind it, and lights its own column', async () => {
     await launchIntoTheApp();
 
-    pressTab(label);
+    pressTab('Players');
 
-    expect(await screen.findByText(copy.line)).toBeTruthy();
+    await waitFor(() => expect(screen).toHavePathname('/players'));
+    expect(router.canGoBack()).toBe(false);
+    expect(screen.getByRole('tab', { name: 'Players', selected: true })).toBeTruthy();
+  });
+
+  it('is nowhere under Play any more', async () => {
+    await launchIntoTheApp();
+    pressTab('Play');
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+
+    // The old route is gone: nothing on Find a game names the deck, and the bar's second
+    // column is the only door to it.
+    expect(screen.queryByLabelText('Match me')).toBeNull();
+    expect(screen.queryByText('Match me')).toBeNull();
+  });
+});
+
+describe('the placeholder', () => {
+  it('says what belongs on You rather than apologising', async () => {
+    await launchIntoTheApp();
+
+    pressTab('You');
+
+    expect(await screen.findByText(PLACEHOLDER_COPY.you.line)).toBeTruthy();
   });
 
   it('never tells the player nothing is happening', async () => {
@@ -174,8 +233,8 @@ describe('⚡Play', () => {
   it('always opens Find a game, from whichever tab the player was on', async () => {
     await launchIntoTheApp();
 
-    pressTab('Around');
-    await waitFor(() => expect(screen).toHavePathname('/around'));
+    pressTab('You');
+    await waitFor(() => expect(screen).toHavePathname('/you'));
 
     pressTab('Play');
 
@@ -205,22 +264,6 @@ describe('⚡Play', () => {
 
     expect(await screen.findByText(NOW_COPY.empty.line)).toBeTruthy();
     expect(screen).toHavePathname('/');
-  });
-
-  it('is entered the same way from inside the tab as from the bar', async () => {
-    // The reset's second caller. #268's *Find a game* segment re-enters the tab from inside
-    // it, and re-entering has to mean the arrangement arriving means — otherwise a player on
-    // the deck who taps it goes *back* rather than to the start.
-    await launchIntoTheApp();
-    pressTab('Chats');
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
-
-    act(() => enterPlay());
-
-    expect(await onFindAGame()).toBeTruthy();
-    expect(screen).toHavePathname('/play');
-    act(() => router.back());
-    await waitFor(() => expect(screen).toHavePathname('/'));
   });
 
   it('re-enters rather than going back when it is pressed from inside Play', async () => {
@@ -316,12 +359,16 @@ describe('a Play session ends exactly when the shell lays a stack down', () => {
   });
 
   it('still lays the stack down again from anywhere else inside the tab', async () => {
+    // The builder, one screen deeper. Its search is a record this suite does not hold, and the
+    // screen draws the gap rather than the court — which is all the depth this rule needs.
+    const SEARCH = '5b1d0a3c-7e2f-4a9b-8c6d-1e0f2a3b4c5d';
+    transport.on('GET', `/api/v1/searches/${SEARCH}`, () => errorResponse(404, 'search_not_found'));
     await launchIntoTheApp();
     pressTab('Play');
     await waitFor(() => expect(screen).toHavePathname('/play'));
     halfwayThroughBuildingOne();
-    act(() => router.push('/play/deck'));
-    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+    act(() => router.push(`/play/builder?search=${SEARCH}`));
+    await waitFor(() => expect(screen).toHavePathname('/play/builder'));
 
     pressTab('Play');
 
@@ -334,10 +381,10 @@ describe('the shell keeps no per-tab history', () => {
   it('leaves nothing behind a flanking tab', async () => {
     await launchIntoTheApp();
 
-    pressTab('Around');
+    pressTab('You');
 
-    await waitFor(() => expect(screen).toHavePathname('/around'));
-    // Not `[Now, Around]`: switching tabs replaces, so there is no cross-tab back to walk.
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+    // Not `[Now, You]`: switching tabs replaces, so there is no cross-tab back to walk.
     expect(router.canGoBack()).toBe(false);
   });
 

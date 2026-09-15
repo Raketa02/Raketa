@@ -1329,7 +1329,10 @@ anything about how good anybody is — that is the rating context reading this o
   typed a score would hand a player the exact evening they said they did not want, and would
   give one word two meanings. A game arranged from a surface that asks for no kind — the deck,
   a mutual yes — is **counted**, because counted is what the platform is for and a friendly is
-  the opt-out.
+  the opt-out — **unless either of a mutual's pair declared the sport *for fun***, in which case
+  the challenge is minted `FOR_FUN` and the game honours that wish
+  ([ADR-0169](docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8). *No
+  preference* and *never declared* choose nothing.
 - **Result** — *we played, here is the score*. **The entry is the record that the game
   happened**, and it carries the moment: there is no booking, no calendar and no date field
   anywhere, so the moment a player says it is the moment it was.

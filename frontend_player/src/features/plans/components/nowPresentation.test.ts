@@ -130,9 +130,20 @@ describe('the accent', () => {
     expect(ACCENT.planning).toEqual({ bar: theme.color.volt, button: 'volt' });
   });
 
+  /**
+   * **The door is the stage's colour where the stage is the errand** — *Fill the seat* in the
+   * dot's own `arranging`, on the author's call from the QA walk
+   * ([#429](https://github.com/Raketa02/Raketa/issues/429) F1). The bar stays the settled
+   * colour: it says a slot is agreed, which is a fact about the plan and not about the seat.
+   */
+  it('draws Fill the seat in the dot’s colour on Needs a player, over settled bars', () => {
+    expect(ACCENT['needs-a-player']).toEqual({ bar: theme.color.mint, button: 'arranging' });
+    expect(STAGE_DOT['needs-a-player']).toBe(theme.color.arranging);
+  });
+
   it('is mint on every other card, until its own design arrives', () => {
     for (const name of GAME_CARD_NAMES) {
-      if (name === 'planning' || name === 'called-off') continue;
+      if (name === 'planning' || name === 'needs-a-player' || name === 'called-off') continue;
       expect(ACCENT[name]).toEqual({ bar: theme.color.mint, button: 'settled' });
     }
   });

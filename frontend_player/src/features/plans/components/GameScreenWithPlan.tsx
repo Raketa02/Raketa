@@ -140,7 +140,6 @@ export function GameScreenWithPlan({ gameId }: GameScreenWithPlanProps) {
             conversationId={room?.conversationId}
             faces={room?.faces ?? NO_FACES}
             doors={false}
-            onReRead={reRead}
           />
         )
       }

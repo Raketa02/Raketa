@@ -37,15 +37,17 @@ duplicate row.
    the frozen objects cannot become unreachable garbage. Refcounting frees an
    outgoing row the moment the last container drops it — a property, not a hope.
 
-Measured at **1 991 bytes a row** as ``__slots__`` objects, held once per gunicorn
+Measured at **2 016 bytes a row** as ``__slots__`` objects, held once per gunicorn
 worker — ``docs/research/bench/matcher-scale/candidate_row_bench.py``, which
 measures *this* type by importing it. The 782 that stood here until #276 was a
 real measurement of ``matchmaking-engine.md`` §7.2's row, which packs the grid
 and the tags into two ``int`` bitmasks and keeps the area as three scalars; this
 row holds two tuples of strings and a tuple of ``IndexedArea``, and it has never
-had the other shape. Half of the 1 991 is vocabulary strings the projection
-copies per row rather than shares — which is a fact about the projection, and is
-argued where the projection is.
+had the other shape. #276 measured it at 1 991; the 25 on top is the intro
+(``docs/adr/0170``), a slot on every row and a line on the cohort's share of
+them. Half of it is vocabulary strings the projection copies per row rather than
+shares — which is a fact about the projection, and is argued where the
+projection is.
 """
 
 from __future__ import annotations
@@ -145,6 +147,13 @@ class CandidateRow:
     # --- what the player declared about themselves
     social_tags: tuple[str, ...]
     tags_updated_at: datetime
+    #: The line they wrote about themselves, or ``None`` where they wrote none
+    #: (``docs/adr/0170``). **The one text field on this row, and it reaches
+    #: the card and never the scorer**: ``fence.py`` does not copy it onto a
+    #: ``ScorableCandidate``, and the scorer's fence refuses the word. Held here
+    #: for the reason the tags are — a fact a player changes about themselves,
+    #: read on the one surface that shows one person at a time.
+    intro: str | None
     #: The availability grid, as ``AvailabilitySlot.code`` writes it. Empty is a
     #: real answer — *no preference* — and never an absent one.
     availability: tuple[str, ...]

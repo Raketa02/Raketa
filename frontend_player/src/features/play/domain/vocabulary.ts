@@ -126,15 +126,24 @@ export type SearchMode = (typeof SEARCH_MODES)[number];
 export { PLAY_INTENTS, type PlayIntent } from '@/shared/vocabulary/playIntent';
 
 /**
- * Whose gap made a term stand down: nobody's, yours, or theirs.
+ * Whose gap made a term stand down: nobody's, yours, theirs — or **the surface's**.
  *
  * `NOTHING_FROM_THEM` deliberately covers every reason a record could not be read, because
  * separating them would publish activity recency (ADR-0106 §5).
+ *
+ * `NOT_READ_ON_THIS_SURFACE` is a term the **search** declined to read, which is nobody's gap
+ * either — not the platform's, which has the provider, and not the person's, who may well have
+ * declared. The deck is the surface that does it: it deals everybody under one ruler and reads
+ * no declaration, so the intent term stands down on every card there
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §2). Filing that under either existing code would print a sentence about a person that is
+ * false of them.
  */
 export const DEGRADED_REASONS = [
   'NOT_YET_ON_THIS_PLATFORM',
   'NOTHING_FROM_YOU',
   'NOTHING_FROM_THEM',
+  'NOT_READ_ON_THIS_SURFACE',
 ] as const;
 
 export type DegradedReason = (typeof DEGRADED_REASONS)[number];

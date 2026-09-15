@@ -15,7 +15,7 @@ the composition rather than being arranged anywhere: neither section knows the o
 pill would have said_ is a product argument as well as a wire one, and the only pill this client
 could now draw would be joined off the games cache, which is the cross-feature read
 [ADR-0009](../../../docs/adr/0009-feature-first-clean-architecture-frontends.md) refuses. **The last
-entry renders through the module the stream will use**, keyed by the seven system-line codes
+entry renders through the module the stream will use**, keyed by the system-line codes
 (`the-words.md` §23) with `{name}` filled from the `people` the row already holds and never from
 `values`, so a corrected handle fixes the whole backlog. **What the row does differently is a prop
 rather than a fork**: `LineRoom` says how much room the surface has, and it is what turns #335's
@@ -32,6 +32,18 @@ opposite of the challenge list above it and the reason nothing here has a shelf 
 rule — _drop whole names, never shorten one_ — moved to `shared/formatting/handleList.ts` beside
 `playerName()` when the second row kind arrived; **the face and the cluster did not**, and
 `challengeRowGeometry.ts` records the three homes that were tried and are wrong.
+
+**A doubles room born of a mutual opens on _You two are a side. Fill the seats to find your
+opponents._, and it is the ninth code** ([ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+§8, `the-words.md` §23). `SIDE_FORMED` is the one line a room is _born_ with, at `seq` 1, and it
+is drawn exactly as the other eight are — through `systemLineSentence`, the stream's `SystemLine`
+row and the Chats row's last line alike — with two things that make it the odd one: it names
+nobody, because it is about both people on the side and addressed to them, so its `actor_id` is
+`null` on the wire and the sentence never reaches for a name; and it is second person, the one
+sentence in the table whose readers are exactly the people it is about. Which rooms carry it is
+the server's — a padel mutual's does, a tennis mutual's does not — and the client draws what the
+stream holds and infers nothing from the sport. The code joined `SYSTEM_LINE_CODES` beside the
+eight, so a build too old to read it draws the named gap as for any other.
 
 **`{name}` is filled from the people the response names, and the roster is not that list**
 ([#409](https://github.com/Raketa02/Raketa/issues/409),
@@ -69,7 +81,13 @@ the state is _the same state as the card in Now_ — `features/plans`' four-rung
 lower-case word, folded from the two lists the room already reads, **card name and never
 standing**. That supersedes ADR-0148 §6 for the header alone; the row keeps it, and what §6 refused
 — the prototype's twenty-state card-state tag, read by asking `challenges` and `games` — is still
-refused. A room with no game draws the sport alone. The two lines sit in 10.3's new **sub-line**
+refused. A room with no game draws the sport alone. **With nobody else to name, the title is
+_Waiting for others to join_** ([#429](https://github.com/Raketa02/Raketa/issues/429) E4): the
+organiser alone again — somebody joined and left while the rest were still deciding — is a real
+room with one member, and `headerTitle` of no handles drew a blank at `h1` over the sport. The
+rule lives in `headerTitle` rather than at the call site so no arrangement of props draws that gap,
+and `conversationHeaderLabel` speaks the same sentence in the handles' place, since there is no
+handle to keep whole. The two lines sit in 10.3's new **sub-line**
 slot rather than the eyebrow, title above and a quieter line below, and the header's budget is now
 counted at `h1` rather than the rows' `cardTitle`, which had let it promise a one-line title that
 wrapped. **Details is drawn only where there is a game**: `game_id` is nullable, so a

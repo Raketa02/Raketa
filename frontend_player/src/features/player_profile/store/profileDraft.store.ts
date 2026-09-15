@@ -6,7 +6,7 @@
  * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)). Killing
  * the app takes the draft with it, and the next launch starts the part again at step one
  * with nothing in it. That is the accepted cost of not building a server-owned draft, and
- * it is bounded by six short steps.
+ * it is bounded by eight short steps.
  *
  * **The rules live in `domain/ProfileDraft`**, so they are testable without a store and
  * without a renderer. This holds values and nothing else — the same split the onboarding
@@ -14,10 +14,10 @@
  *
  * ## Two values, one lifetime, and one of them is derived
  *
- * The draft is the six answers. Beside it is the photos step's **workbench**: the pictures
+ * The draft is the answers. Beside it is the photos step's **workbench**: the pictures
  * the player picked, each with the upload it is in the middle of. Those are not an answer —
  * a local `file://` URI is worthless to the server and an upload in flight has nothing to
- * commit — but they have to outlive the screen, because walking to step three and back must
+ * commit — but they have to outlive the screen, because walking to step four and back must
  * find the same three tiles rather than an empty row.
  *
  * They live in **one** store because they share one lifetime and one invariant: the draft's
@@ -30,7 +30,7 @@
  * `draft` is `undefined` when the player is not in the part, exactly as `pass` is undefined
  * between walks. That absence is what a step other than the first checks: a link naming
  * `/radius` with no part running is not a shortcut into the middle of a flow, it is a
- * player about to commit a profile built from five screens they never saw. Turning them
+ * player about to commit a profile built from six screens they never saw. Turning them
  * away needs a way to tell *not in the part* from *in the part, having answered nothing* —
  * and an empty draft cannot tell those apart, which is why entering is explicit.
  *
@@ -40,7 +40,7 @@
  * entered and lives exactly as long as the draft, which is the property the whole defence
  * rests on: a double tap and a retry after a failure both send the key the *first* attempt
  * sent, so the server serves one profile whatever the finger and the connection do. Minting
- * one per press would be six presses and six profiles waiting to happen; a disabled button
+ * one per press would be eight presses and eight profiles waiting to happen; a disabled button
  * is only the courtesy.
  *
  * It goes with the draft when the part ends, for the same reason the workbench does: a new
@@ -90,7 +90,7 @@ interface ProfileDraftState {
    *
    * Called by the first step, which is the only door in: the entry gate redirects there
    * and every other step turns a stranger away to it. Conditional because walking *back*
-   * to step one is an ordinary move, and beginning again there would wipe the five answers
+   * to step one is an ordinary move, and beginning again there would wipe the answers
    * the player walked back past.
    */
   readonly enterIfAbsent: () => void;

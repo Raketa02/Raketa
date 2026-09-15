@@ -120,7 +120,7 @@ describe('the served radius bounds', () => {
 describe('the body that ends the part', () => {
   /**
    * A whole part's worth of answers: two tags, two photos, two cells, an area, an answer
-   * about the player and a yes.
+   * about the player and a yes — and no intro, which is what most parts will carry.
    */
   const COMMIT: ProfileCommit = {
     socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
@@ -136,7 +136,7 @@ describe('the body that ends the part', () => {
     genderPreference: 'any',
   };
 
-  it('carries every answer the seven steps collected, in one body', () => {
+  it('carries every answer the eight steps collected, in one body', () => {
     expect(toCommitRequest(COMMIT)).toEqual({
       social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
       photo_ids: ['photo-a', 'photo-b'],
@@ -150,6 +150,15 @@ describe('the body that ends the part', () => {
       gender: 'WOMAN',
       gender_preference: 'ANY',
     });
+  });
+
+  it('carries the intro where there is one, and leaves the field out where there is none', () => {
+    // Out, not empty: the wire reads `null`, whitespace and an absence as the same answer,
+    // and the body sends the one that cannot be read as a line somebody wrote.
+    const written = toCommitRequest({ ...COMMIT, intro: 'Will travel for a hard game.' });
+
+    expect(written.intro).toBe('Will travel for a hard game.');
+    expect(toCommitRequest(COMMIT)).not.toHaveProperty('intro');
   });
 
   it('keeps the photo order the player arranged, because the first one leads', () => {

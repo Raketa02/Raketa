@@ -14,6 +14,7 @@ import type { ConversationMember, ConversationPerson } from '../domain/membershi
 
 import {
   OPEN_THE_CHAT,
+  WAITING_FOR_OTHERS,
   conversationRowLine,
   entryLine,
   headerSubline,
@@ -47,7 +48,7 @@ function said(over: Partial<SystemLine> = {}): string {
   return systemLineSentence(line(over), MEMBERS, 'one-line');
 }
 
-describe('the eight sentences', () => {
+describe('the nine sentences', () => {
   it('names an acceptance, an invitation and a game that was played', () => {
     expect(said({ code: 'SEAT_ACCEPTED' })).toBe('tomek.p is in');
     expect(said({ code: 'SEATS_INVITED', values: { count: '2' } })).toBe('tomek.p asked 2 more');
@@ -92,6 +93,20 @@ describe('the eight sentences', () => {
     );
   });
 
+  /**
+   * The one line a room is *born* with, and only a doubles room: two yeses that met in a doubles
+   * sport seat both people on one side with a whole side still to fill
+   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §8). It names nobody — it is about both people on the side — so the sentence is whole with
+   * no actor and no value, and an actor the wire happens to send is not read.
+   */
+  it('says the two are a side, naming nobody and quoting nothing', () => {
+    const side = 'You two are a side. Fill the seats to find your opponents.';
+
+    expect(said({ code: 'SIDE_FORMED', actorId: undefined })).toBe(side);
+    expect(said({ code: 'SIDE_FORMED', values: { value: 'x' } })).toBe(side);
+  });
+
   /** There is no *Game on* line: a derived standing is never announced. */
   it('says nothing anywhere about the line-up being complete', () => {
     const everything = [
@@ -103,6 +118,7 @@ describe('the eight sentences', () => {
       'DAY_RECORDED',
       'HOUR_RECORDED',
       'PLAN_LOCKED',
+      'SIDE_FORMED',
     ] as const;
 
     for (const code of everything) {
@@ -276,6 +292,17 @@ describe('the header’s title line', () => {
   it('still gives way by dropping whole names, never by cutting one', () => {
     expect(headerTitle(['aleksandra.m', 'tomek.p', 'ola.k'], 14)).toBe('aleksandra +2');
   });
+
+  /**
+   * **The organiser alone again** — somebody joined and left while the rest were still deciding
+   * ([#429](https://github.com/Raketa02/Raketa/issues/429) E4). There is nobody to name, and a
+   * blank at `h1` over *Padel* is a gap rather than a title; the line says what the room is
+   * doing instead.
+   */
+  it('says the room is waiting where there is nobody else to name', () => {
+    expect(headerTitle([], ROOM_ENOUGH)).toBe(WAITING_FOR_OTHERS);
+    expect(WAITING_FOR_OTHERS).toBe('Waiting for others to join');
+  });
 });
 
 describe('the header’s second line', () => {
@@ -303,6 +330,13 @@ describe('what the header is called', () => {
 
   it('stops at the sport where there is no game', () => {
     expect(conversationHeaderLabel(['tomek.p'], 'Padel', undefined)).toBe('tomek.p, Padel');
+  });
+
+  /** The drawn line's sentence is the spoken one too: there is no handle to keep whole. */
+  it('speaks the waiting line where there is nobody else to name', () => {
+    expect(conversationHeaderLabel([], 'Padel', undefined)).toBe(
+      'Waiting for others to join, Padel',
+    );
   });
 });
 

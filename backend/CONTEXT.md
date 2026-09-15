@@ -50,7 +50,8 @@ there; they are not repeated here.
   *state changes emit domain events* is a standing rule here — it earns the exemption by
   having no life story (a card is born answered), no subscriber, and no derived standing
   anybody folds from it. Distinguish it from a **durable ledger** — the matcher's interest,
-  pass and decline rows — which is a small fact with no aggregate around it at all; this has
+  pass, decline and deck-reset rows — which is a small fact with no aggregate around it at
+  all; this has
   an aggregate, because the card and every answer on it are written together and every rule
   about who may be on it holds across the whole of it.
 - **Durable event name** — the stable `"<context>.<event>"` string plus integer version

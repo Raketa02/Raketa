@@ -1,8 +1,8 @@
 /**
- * Step two of onboarding's second part: **your court photos**.
+ * Step three of onboarding's second part: **your court photos**.
  *
- * Up to three photos of the player on a court, or none. It is the one step of the seven that
- * can be finished without answering anything, and the screen says so before a player has to
+ * Up to three photos of the player on a court, or none. It is one of the two steps of the eight
+ * that can be finished without answering anything — the intro before it is the other — and the screen says so before a player has to
  * work it out — a player who adds nothing gets a court poster generated from their own id,
  * which is what stops *optional* meaning *an empty box on your profile*.
  *

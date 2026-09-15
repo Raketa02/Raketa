@@ -56,6 +56,7 @@ def card(
         review=None,
         area_code="LDN-CENTRAL",
         social_tags=("PLAYS_TO_WIN",),
+        intro=None,
         level=2.7,
         band="Improver",
         range_low=2.36,

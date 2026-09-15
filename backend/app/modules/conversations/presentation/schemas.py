@@ -170,10 +170,16 @@ class SystemLineSchema(BaseModel):
         ...,
         description=(
             "What happened, as a machine code the client renders a sentence "
-            "from. Eight: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, "
-            "**`SEAT_LEFT`**, **`GAME_PLAYED`**, and the Plan's "
+            "from. Nine: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, "
+            "**`SEAT_LEFT`**, **`GAME_PLAYED`**, the Plan's "
             "**`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and "
-            "**`PLAN_LOCKED`**.\n\n"
+            "**`PLAN_LOCKED`**, and **`SIDE_FORMED`**.\n\n"
+            "**`SIDE_FORMED` is the one line a room is born with, and only a "
+            "doubles room** (ADR-0169 §8). Two yeses that met in a doubles "
+            "sport seat both people on one side with a whole side still to "
+            "fill, and this says so at `seq` 1: *You two are a side. Fill the "
+            "seats to find your opponents.* A singles mutual's room carries no "
+            "such line. It names no actor and carries no values.\n\n"
             "**A seat leaving is one code with the answer as a value**, because "
             "*that seat is open again* is the same news each way — and a lapse "
             "is still not a decline, which is what `values.departure` keeps "
@@ -204,7 +210,9 @@ class SystemLineSchema(BaseModel):
             "response that carried this line** — the name is never repeated "
             "here, so a corrected one fixes the whole backlog. Not from "
             "`members` alone: the actor of a `SEAT_LEFT` line is by definition "
-            "no longer one, and `people` is where the read put their face."
+            "no longer one, and `people` is where the read put their face. "
+            "`null` on `SIDE_FORMED`, which is about both people on the side "
+            "and names neither."
         ),
     )
     values: dict[str, str] = Field(
@@ -215,8 +223,8 @@ class SystemLineSchema(BaseModel):
             "carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the "
             "three plan "
             "codes each carry `value` — the place as it was typed, the day as "
-            "`YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED` and "
-            "`GAME_PLAYED` carry nothing."
+            "`YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED`, "
+            "`GAME_PLAYED` and `SIDE_FORMED` carry nothing."
         ),
     )
 

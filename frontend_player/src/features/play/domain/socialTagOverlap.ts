@@ -40,15 +40,26 @@
  *
  * **No words.** The row is codes and a bit; the sentences are
  * `shared/vocabulary/socialTagPresentation`'s, and the clauses a listener gets are
- * `components/playerCardPresentation`'s. And **no ordering** — the tags draw in the order the
- * server served them, so a shared tag does not jump the queue: the row is *what they
+ * `components/playerCardPresentation`'s. And **no ordering by default** — the tags draw in the
+ * order the server served them, so a shared tag does not jump the queue: the row is *what they
  * published*, and re-ordering it by what the reader has in common would be a different list.
+ * The deck card takes the other side of that trade for one surface
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §7): six tags wrap over a photograph and the volt *· you too* is the thing a player decides
+ * on, so it asks for the shared ones **first** — and the ordering runs **before the cap**, so
+ * the shared tag is never the one a seventh would cut off. That is `domain/deckTags`' rule,
+ * applied here because the cap is here.
  */
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
-import { SOCIAL_TAG_ROW_CAP, type SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
+import {
+  SOCIAL_TAG_ROW_CAP,
+  type SharedTag,
+  type SocialTagOverlap,
+} from '@/shared/vocabulary/socialTagOverlap';
 
 import type { Candidate } from './candidate';
+import { sharedFirst } from './deckTags';
 import { isTagEvidence, type TagRelationships } from './evidence';
 
 /**
@@ -64,13 +75,25 @@ export type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 /** Both columns of the matrix. The amber claim needs an answer from each of them. */
 const TAG_TERMS = ['PLAYING_STYLE', 'SOCIAL_VIBE'] as const;
 
-export function socialTagOverlap(candidate: Candidate): SocialTagOverlap {
+/** In whose order the row is drawn: the person's own, or the shared tags first (the deck's). */
+export type TagOrder = 'served' | 'shared-first';
+
+export function socialTagOverlap(
+  candidate: Candidate,
+  order: TagOrder = 'served',
+): SocialTagOverlap {
   const compared = tagEvidenceOf(candidate);
   const tags = candidate.card.socialTags.slice(0, SOCIAL_TAG_ROW_CAP);
 
   const matched = new Set(compared.flatMap((evidence) => evidence.matched));
   if (matched.size > 0) {
-    return { kind: 'shared', tags: tags.map((id) => ({ id, shared: matched.has(id) })) };
+    // Marked over the whole list and ordered before the cap, so the shared ones survive it.
+    const marked: readonly SharedTag[] = candidate.card.socialTags.map((id) => ({
+      id,
+      shared: matched.has(id),
+    }));
+    const ordered = order === 'shared-first' ? sharedFirst(marked) : marked;
+    return { kind: 'shared', tags: ordered.slice(0, SOCIAL_TAG_ROW_CAP) };
   }
 
   // Nothing matched, and only now does it matter how much was asked. Both columns must have

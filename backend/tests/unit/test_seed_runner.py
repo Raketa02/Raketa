@@ -313,13 +313,14 @@ def test_the_seed_path_writes_six_contexts_and_only_reads_the_rest():
     anywhere else is the line being crossed, and it is refused by name.
 
     **The matchmaking stores the seed does import are not the line, and that is
-    a decision rather than a gap.** `build_search_store`, `build_interest_ledger`
-    and `build_pass_ledger` are that module's own four durable ledgers — nothing
-    there is event-sourced (`backend/CLAUDE.md`, `the-engine.md` §12) — and they
-    are written by matchmaking's *own use cases*, which is exactly the shape §10
-    sanctioned. Writing a matchmaking **aggregate** would need a matchmaking
-    repository, and there is not one to import; the day somebody writes one, the
-    builder check above is what fails.
+    a decision rather than a gap.** `build_search_store`, `build_interest_ledger`,
+    `build_pass_ledger` and `build_deck_reset_ledger` are among that module's
+    own five durable ledgers — nothing there is event-sourced
+    (`backend/CLAUDE.md`, `the-engine.md` §12) — and they are written by
+    matchmaking's *own use cases*, which is exactly the shape §10 sanctioned.
+    Writing a matchmaking **aggregate** would need a matchmaking repository, and
+    there is not one to import; the day somebody writes one, the builder check
+    above is what fails.
 
     Equality in both directions, on purpose. A Clubs repository appearing is the
     scope creep the rule forbids; `rating` *disappearing* is the seed quietly

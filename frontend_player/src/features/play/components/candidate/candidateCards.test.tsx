@@ -33,9 +33,11 @@ import type { Term } from '../../domain/vocabulary';
 import { toCandidate } from '../../mappers/candidateMappers';
 import type { Wire } from '@/test-support/transport';
 
+import { YOU_SAID_YES_WORD } from '../playerCardPresentation';
+
 import { COMPETITIVE_CARD_DRAWS, CandidateCard } from './CandidateCard';
 import { CandidateCardSocial, SOCIAL_CARD_DRAWS } from './CandidateCardSocial';
-import { DECK_CARD_DRAWS, DeckCard } from './DeckCard';
+import { DeckCard } from './DeckCard';
 
 const PLAYER = '9f2a1c44-0000-4000-8000-000000000001';
 const PHOTO = 'https://photos.example/9f2a1c44?sig=abc';
@@ -187,7 +189,12 @@ const SPORT_NAME = 'Tennis';
 const SINGLES = courtSeatCount('tennis');
 const DOUBLES = courtSeatCount('padel');
 
-function drawCompetitive(over: Partial<Candidate> = {}, bestMatch = false, seats = SINGLES) {
+function drawCompetitive(
+  over: Partial<Candidate> = {},
+  bestMatch = false,
+  seats = SINGLES,
+  saidYes = false,
+) {
   render(
     <CandidateCard
       candidate={candidate(over)}
@@ -198,6 +205,7 @@ function drawCompetitive(over: Partial<Candidate> = {}, bestMatch = false, seats
       onAction={noop}
       onWhyFit={noop}
       bestMatch={bestMatch}
+      saidYes={saidYes}
     />,
   );
 }
@@ -223,7 +231,7 @@ function without(term: Term): readonly ScoredTerm[] {
   return TERMS.filter((row) => row.term !== term);
 }
 
-function drawSocial(over: Partial<Candidate> = {}) {
+function drawSocial(over: Partial<Candidate> = {}, saidYes = false) {
   render(
     <CandidateCardSocial
       candidate={candidate(over)}
@@ -231,18 +239,22 @@ function drawSocial(over: Partial<Candidate> = {}) {
       action="CHALLENGE"
       onAction={noop}
       onWhyFit={noop}
+      saidYes={saidYes}
     />,
   );
 }
 
+/**
+ * The deck card, for the one thing this suite still holds it to: it is the card that floats.
+ * Everything else about it — a different composition since ADR-0169 §7 — is `deckCard.test.tsx`'s.
+ */
 function drawDeck(over: Partial<Candidate> = {}) {
   render(
     <DeckCard
       candidate={candidate(over)}
       envelope={ENVELOPE}
-      onPass={noop}
-      onAccept={noop}
-      onWhyFit={noop}
+      sportName={SPORT_NAME}
+      onLongPress={noop}
     />,
   );
 }
@@ -300,7 +312,7 @@ function yoursWidth(): string {
 }
 
 describe('one contract, three shapes', () => {
-  it('draws both levels on the competitive card and a level row on the other two', () => {
+  it('draws both levels on the competitive card and a level row on the social card', () => {
     // The head-to-head row is what makes `LEVEL_FIT` this card's own, and it is why the
     // three are three components rather than one carrying `surface === …`.
     drawCompetitive();
@@ -312,15 +324,13 @@ describe('one contract, three shapes', () => {
     expect(screen.queryByText(/Established/)).toBeNull();
     screen.unmount();
 
-    for (const draw of [drawSocial, drawDeck]) {
-      draw();
-      expect(
-        screen.getByText(
-          `${formatLevel(2.83)} · Established · likely ${formatRange({ low: 2.55, high: 2.87 })}`,
-        ),
-      ).toBeTruthy();
-      screen.unmount();
-    }
+    // The deck card prints the Level hugely and speaks the row (`deckCard.test.tsx`).
+    drawSocial();
+    expect(
+      screen.getByText(
+        `${formatLevel(2.83)} · Established · likely ${formatRange({ low: 2.55, high: 2.87 })}`,
+      ),
+    ).toBeTruthy();
   });
 
   it('takes the searcher’s own area off the envelope and never prints either code', () => {
@@ -343,16 +353,13 @@ describe('one contract, three shapes', () => {
     expect(screen.getByText('In your area · 4 km')).toBeTruthy();
   });
 
-  it('draws the forecast as a band with its word on the competitive card, and as a row on the deck', () => {
+  it('draws the forecast as a band with its word on the competitive card', () => {
     drawCompetitive();
     // The bar is a tint, so the word beside it is what Part 13's *never colour alone* means
     // — and the bar itself merges into the card body rather than announcing a third time.
     expect(screen.getByText('Fairly even · 74%')).toBeTruthy();
     expect(screen.queryByLabelText('Fairly even, 74%')).toBeNull();
-    screen.unmount();
-
-    drawDeck();
-    expect(screen.getByText('74% even · 66% sure')).toBeTruthy();
+    // The deck draws it as a tile — `deckCard.test.tsx`.
   });
 
   it('says the measured zero rather than counting to nought', () => {
@@ -393,7 +400,6 @@ describe('each card’s drawn set', () => {
   it.each([
     ['competitive', drawCompetitive, COMPETITIVE_CARD_DRAWS],
     ['social', drawSocial, SOCIAL_CARD_DRAWS],
-    ['deck', drawDeck, DECK_CARD_DRAWS],
   ])('says nothing on the %s card that the card already draws', (_name, draw, drawn) => {
     draw();
 
@@ -402,14 +408,12 @@ describe('each card’s drawn set', () => {
     }
   });
 
-  it('gives the social and the deck card a reason line, which they would otherwise not have', () => {
+  it('gives the social card a reason line, which it would otherwise not have', () => {
     // Without one, `INTENT_ALIGNMENT` — third-largest term in both modes — is invisible on
-    // two cards of three.
-    for (const draw of [drawSocial, drawDeck]) {
-      draw();
-      expect(screen.getByText("They're here to compete too")).toBeTruthy();
-      screen.unmount();
-    }
+    // the social card. The deck card makes no case at all since ADR-0169 §7 — the tiles, the
+    // tags and the intro are the card — which `deckCard.test.tsx` holds it to.
+    drawSocial();
+    expect(screen.getByText("They're here to compete too")).toBeTruthy();
   });
 
   /**
@@ -466,14 +470,21 @@ describe('each card’s drawn set', () => {
   });
 });
 
-describe('the volt tag', () => {
-  it('is a sentence on the social card, which #309 did not touch', () => {
+/**
+ * **The two interest tags, on both card styles** — *Wants to play you* bound to the admitting
+ * code, *You said yes* to the reader's own list, and at most one of the three tags on a card
+ * ([ADR-0169](../../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8).
+ */
+describe('the interest tags', () => {
+  it('is two words on the social card too, in place of the sentence it used to draw', () => {
     drawSocial();
-    expect(screen.queryByText('They already said yes to you')).toBeNull();
+    expect(screen.queryByText('Wants to play you')).toBeNull();
     screen.unmount();
 
     drawSocial({ inclusionReason: 'INTEREST_LIFT' });
-    expect(screen.getByText('They already said yes to you')).toBeTruthy();
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
+    expect(screen.queryByText('They already said yes to you')).toBeNull();
   });
 
   it('is two words beside the handle on the competitive card, which #309 reversed', () => {
@@ -486,17 +497,39 @@ describe('the volt tag', () => {
     expect(screen.queryByText('They already said yes to you')).toBeNull();
   });
 
-  it('replaces the coral tag where both would fall on the same card', () => {
-    drawCompetitive({ inclusionReason: 'INTEREST_LIFT' }, true);
+  it('says You said yes on both cards for somebody in the reader’s own list', () => {
+    drawCompetitive({}, false, SINGLES, true);
+    expect(screen.getByText(YOU_SAID_YES_WORD)).toBeTruthy();
+    screen.unmount();
+
+    drawSocial({}, true);
+    expect(screen.getByText(YOU_SAID_YES_WORD)).toBeTruthy();
+  });
+
+  it('draws Wants to play you and not You said yes should both ever be true', () => {
+    // Both true is a mutual, and a mutual is not on the list — but the precedence is stated.
+    drawCompetitive({ inclusionReason: 'INTEREST_LIFT' }, false, SINGLES, true);
 
     expect(screen.getByText('Wants to play you')).toBeTruthy();
+    expect(screen.queryByText(YOU_SAID_YES_WORD)).toBeNull();
+  });
+
+  it('replaces the coral tag where either interest tag would fall on the same card', () => {
+    drawCompetitive({ inclusionReason: 'INTEREST_LIFT' }, true);
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
+    expect(screen.queryByText('Best match')).toBeNull();
+    screen.unmount();
+
+    drawCompetitive({}, true, SINGLES, true);
+    expect(screen.getByText(YOU_SAID_YES_WORD)).toBeTruthy();
     expect(screen.queryByText('Best match')).toBeNull();
   });
 
-  it('leaves the handle bare where neither fact is true', () => {
+  it('leaves the handle bare where none of the facts is true', () => {
     drawCompetitive();
 
     expect(screen.queryByText('Wants to play you')).toBeNull();
+    expect(screen.queryByText(YOU_SAID_YES_WORD)).toBeNull();
     expect(screen.queryByText('Best match')).toBeNull();
   });
 
@@ -513,7 +546,9 @@ describe('the volt tag', () => {
  * It is bound to **the tag that is drawn** rather than to `inclusionReason` beneath it, so the
  * one card whose handle says *Wants to play you* is the one card outlined — the two cannot come
  * apart on a card wearing the coral tag, and Part 13's *never colour alone* is discharged by the
- * word rather than by the outline ([#310](https://github.com/Raketa02/Raketa/issues/310)).
+ * word rather than by the outline ([#310](https://github.com/Raketa02/Raketa/issues/310)). It
+ * travels with **that word alone**: *You said yes* is a plain tag, and a border on it would be
+ * volt's meaning spent on the reader's own act.
  */
 describe('the border on a lifted card', () => {
   it('is voltStroke where the volt tag is, and volt is nowhere near it', () => {
@@ -530,11 +565,17 @@ describe('the border on a lifted card', () => {
     expect(surface().borderColor).toBe(theme.color.line);
   });
 
-  it('is not drawn on the social card, which #309 left alone and says it in a sentence', () => {
-    drawSocial({ inclusionReason: 'INTEREST_LIFT' });
+  it('is the ordinary card border under You said yes, which is the reader’s act and not theirs', () => {
+    drawCompetitive({}, false, SINGLES, true);
 
     expect(surface().borderColor).toBe(theme.color.line);
-    expect(screen.getByText('They already said yes to you')).toBeTruthy();
+  });
+
+  it('travels with the tag onto the social card, now that the social card draws the tag', () => {
+    drawSocial({ inclusionReason: 'INTEREST_LIFT' });
+
+    expect(surface().borderColor).toBe(theme.color.voltStroke);
+    expect(screen.getByText('Wants to play you')).toBeTruthy();
   });
 });
 
@@ -685,13 +726,11 @@ describe('the social tag row', () => {
     expect(screen.UNSAFE_getAllByType(Text).filter((t) => t.props.children === '')).toEqual([]);
   });
 
-  it('is drawn on the competitive card alone, which is where the label can carry it', () => {
-    for (const draw of [drawSocial, drawDeck]) {
-      draw({ terms: [tagTerm('playing_style', { matched: ['PLAYS_TO_WIN'] })] });
-      expect(screen.queryByText(/· you too/)).toBeNull();
-      expect(screen.queryByText('No tags in common')).toBeNull();
-      screen.unmount();
-    }
+  it('is not drawn on the social card, whose label cannot carry it', () => {
+    // The deck card draws the row too, shared tags first and volt (`deckCard.test.tsx`).
+    drawSocial({ terms: [tagTerm('playing_style', { matched: ['PLAYS_TO_WIN'] })] });
+    expect(screen.queryByText(/· you too/)).toBeNull();
+    expect(screen.queryByText('No tags in common')).toBeNull();
   });
 
   it('speaks what it draws, in each of the three states that draw anything', () => {
@@ -801,15 +840,13 @@ describe('the record block', () => {
     expect(spokenBody()).toContain('29 counted games');
   });
 
-  it('says nothing about a record on the two cards that draw none', () => {
-    for (const draw of [drawSocial, drawDeck]) {
-      draw(withRecord());
-      expect(screen.queryByText('Player Score')).toBeNull();
-      // Nor in the register nobody can see: `candidateFacts` is not asked for a record, so
-      // there are no clauses to compose rather than clauses that were left out.
-      expect(screen.queryByLabelText(/counted games/)).toBeNull();
-      screen.unmount();
-    }
+  it('says nothing about a record on the social card, which draws none', () => {
+    // The deck card draws the Player Score as its *Reliability* tile (`deckCard.test.tsx`).
+    drawSocial(withRecord());
+    expect(screen.queryByText('Player Score')).toBeNull();
+    // Nor in the register nobody can see: `candidateFacts` is not asked for a record, so
+    // there are no clauses to compose rather than clauses that were left out.
+    expect(screen.queryByLabelText(/counted games/)).toBeNull();
   });
 });
 
@@ -959,19 +996,17 @@ describe('the ON COURT mark', () => {
     expect(spokenBody()).not.toContain(ON_COURT_CLAUSE);
   });
 
-  it('is the panel’s, so the two cards without one draw and say nothing', () => {
-    // `photo` is declined by the social and deck cards exactly as `record` and the tag row
-    // are: a mark floated over full-bleed media has nowhere it belongs, and the rule that
-    // ships with it is that a card which draws no mark announces none either.
-    for (const draw of [drawSocial, drawDeck]) {
-      draw(withVerdict({ photoReview: 'allowed' }));
+  it('is the panel’s and the deck card’s, so the social card draws and says nothing', () => {
+    // `photo` is declined by the social card exactly as `record` and the tag row are: a mark
+    // floated over full-bleed media with no clear top has nowhere it belongs, and the rule
+    // that ships with it is that a card which draws no mark announces none either. The deck
+    // card's top is clear — no top wash — and it draws the mark (`deckCard.test.tsx`).
+    drawSocial(withVerdict({ photoReview: 'allowed' }));
 
-      expect(screen.queryByText(ON_COURT_MARK)).toBeNull();
-      // Read off the label rather than off the outermost box: on these two the card body is
-      // not the first drawn View, which is the shape difference the three components are.
-      expect(screen.queryByLabelText(new RegExp(ON_COURT_CLAUSE))).toBeNull();
-      screen.unmount();
-    }
+    expect(screen.queryByText(ON_COURT_MARK)).toBeNull();
+    // Read off the label rather than off the outermost box: on the social card the card body
+    // is not the first drawn View, which is the shape difference the three components are.
+    expect(screen.queryByLabelText(new RegExp(ON_COURT_CLAUSE))).toBeNull();
   });
 });
 
@@ -1096,6 +1131,39 @@ describe('what floats', () => {
   });
 });
 
+/**
+ * **The intro is the deck card's and the record sheet's, and never Find a game's**
+ * ([ADR-0170](../../../../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)
+ * §4). Those two surfaces show one person; these two cards are about the game, and the line
+ * is about the person. The field crosses on every card the same way, so the only thing that
+ * keeps it off the shortlist and the pool is these two components declining to draw it — which
+ * is what is held here, drawn and spoken.
+ */
+describe('the intro', () => {
+  const LINE = 'Will travel for a hard game.';
+  const withIntro = (): Partial<Candidate> => ({ card: { ...candidate().card, intro: LINE } });
+
+  it('is not drawn or spoken on the shortlist card, whatever the card carries', () => {
+    drawCompetitive(withIntro());
+
+    expect(screen.queryByText(/Will travel/)).toBeNull();
+    expect(screen.queryByText(/“/)).toBeNull();
+    for (const node of screen.getAllByLabelText(/Marek/)) {
+      expect(String(node.props.accessibilityLabel)).not.toContain(LINE);
+    }
+  });
+
+  it('is not drawn or spoken on the pool card either', () => {
+    drawSocial(withIntro());
+
+    expect(screen.queryByText(/Will travel/)).toBeNull();
+    expect(screen.queryByText(/“/)).toBeNull();
+    for (const node of screen.getAllByLabelText(/Marek/)) {
+      expect(String(node.props.accessibilityLabel)).not.toContain(LINE);
+    }
+  });
+});
+
 describe('what each control announces', () => {
   it('speaks the card body in §20.3’s order, which is not the order it is drawn', () => {
     drawSocial();
@@ -1182,13 +1250,5 @@ describe('what each control announces', () => {
 
     drawSocial();
     expect(screen.getByLabelText('Challenge Marek')).toBeTruthy();
-  });
-
-  it('keeps the 🎾 out of the deck’s spoken answer and in its visible one', () => {
-    drawDeck();
-
-    expect(screen.getByLabelText("Let's play, Marek")).toBeTruthy();
-    expect(screen.getByText("🎾 Let's play")).toBeTruthy();
-    expect(screen.getByLabelText('Not today, Marek')).toBeTruthy();
   });
 });

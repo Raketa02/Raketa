@@ -7,12 +7,18 @@ row — the same seam ``at_stake`` rides — attached by the backend after
 ``matchfit`` returns, over the twenty rows that survived rather than over the
 pool.
 
-**The list is closed, and two of its absences are permanent refusals rather than
-gaps.**
+**The list is closed, and one of its absences is a permanent refusal rather
+than a gap.** The other was a refusal with terms attached, and the terms were
+met.
 
-*No bio, and no free-text field of any kind.* It would be the platform's first
-player-authored text shown to strangers, which is a moderation surface, and the
-full moderation story is out of scope beyond the block.
+*No bio, and no free-text field of any kind* was the first, and ``docs/adr/0170``
+took it as the invitation it was: **one** field, ``intro``, a line a player
+writes about themselves — fenced at the write against a phone number, an email,
+a URL and a handle, which is the moderation story the refusal asked for. It is a
+fact about the person, assembled by ``player_profile`` and projected to the index
+like the tags, and it is *never scored*. Still no bio, no paragraph, no second
+field: what remains refused is any free text that is scored, and the block is the
+whole recourse for a line somebody objects to.
 
 *No activity recency, at any granularity* — not a timestamp, not *active today*,
 not a green dot. That is row three of the Liveness table, and Liveness reaches a

@@ -415,6 +415,12 @@ class SeedProfile:
     #: rather than a line in the runner nothing reads.
     photo_ids: tuple[UUID, ...] = ()
 
+    #: The line this player wrote about themselves, or ``None`` for the most
+    #: who wrote none (``docs/adr/0170``). Passed to the commit like every other
+    #: answer, so it goes through the same fence a phone's line does — a seeded
+    #: line carrying contact fails ``make seed`` rather than bypassing the rule.
+    intro: str | None = None
+
 
 #: What one account holds, for one sport. A closed union, so the runner's match
 #: over it stops typechecking on the day a fourth state exists — an unhandled
@@ -786,6 +792,9 @@ THE_POPULATED_PLAYER = SeedAccount(
             (Sport.PADEL, PlayIntent.COMPETITIVE),
             (Sport.TENNIS, PlayIntent.FOR_FUN),
         ),
+        # So *how others see you* has a line under the name for the account
+        # most work is done against.
+        intro="Padel on weekdays, tennis when the sun is out.",
     ),
 )
 

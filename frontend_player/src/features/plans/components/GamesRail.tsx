@@ -156,7 +156,6 @@ export function GamesRail({ empty }: GamesRailProps) {
                   conversationId={room?.conversationId}
                   faces={room?.faces ?? NO_FACES}
                   width={cardWidth}
-                  onReRead={() => void games.refetch()}
                 />
               );
             })}

@@ -170,8 +170,15 @@ export interface DegradedTerm {
   readonly reason: DegradedReason | null;
 }
 
-/** Whose gap a stood-down term was. Spelled here for {@link DegradedTerm}'s reason. */
-export type DegradedReason = 'NOT_YET_ON_THIS_PLATFORM' | 'NOTHING_FROM_YOU' | 'NOTHING_FROM_THEM';
+/**
+ * Whose gap a stood-down term was. Spelled here for {@link DegradedTerm}'s reason. The fourth is
+ * the **surface's** — a term the search declined to read for anybody (ADR-0169 §2).
+ */
+export type DegradedReason =
+  | 'NOT_YET_ON_THIS_PLATFORM'
+  | 'NOTHING_FROM_YOU'
+  | 'NOTHING_FROM_THEM'
+  | 'NOT_READ_ON_THIS_SURFACE';
 
 /** The card for one seat: who they are, and what you make of them. */
 export interface SeatCard {

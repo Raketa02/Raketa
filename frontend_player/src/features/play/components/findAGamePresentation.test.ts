@@ -160,8 +160,10 @@ describe('what the screen says about a temporary week and a permanent answer', (
     expect(declarationTitle('Padel')).toBe('Your usual game at Padel');
     expect(declarationOptionLabel('COMPETITIVE', 'Padel')).toContain('your usual at Padel');
 
-    expect(DECLARATION_BODY).toContain('Match me');
     expect(DECLARATION_BODY).toContain('somebody else’s search');
+    expect(DECLARATION_BODY).toContain('a yes on Players becomes a game');
+    // The deck reads no declaration any more (ADR-0169 §2), so it is not named as a reader.
+    expect(DECLARATION_BODY).not.toContain('Match me');
     // The sentence it replaced pointed at the segment, which is not drawn beside it any more.
     expect(DECLARATION_BODY).not.toContain('above');
   });

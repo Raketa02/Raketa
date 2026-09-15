@@ -130,6 +130,21 @@ export function identityLine(facts: IdentityFacts): string {
   return [...near, ...far].join(' · ');
 }
 
+/**
+ * **Their intro, inside the drawing's own quotation marks.**
+ *
+ * The marks are the sheet's and never the player's: they say *this is them speaking*, which
+ * is the whole of what tells a line under a name apart from a second name. Never truncated —
+ * the cap at the write is what makes an ellipsis unnecessary
+ * ([ADR-0170](../../../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)
+ * §4) — and drawn on the record sheet and the deck card only; the same marks, spelled here
+ * rather than imported, because a feature may not deep-import another's copy and a second
+ * caller is not the third.
+ */
+export function introLine(intro: string): string {
+  return `“${intro}”`;
+}
+
 /** `Padel 2,75` — the pill's words, and the condition on drawing a sport's colour at all. */
 export function sportPill(sportName: string, level: number): string {
   return `${sportName} ${formatLevel(level)}`;
@@ -234,6 +249,8 @@ export interface HeaderFacts {
   /** `@nickname`, as drawn under the name. This sheet is one of the two places it is. */
   readonly handle: string;
   readonly onCourt: boolean;
+  /** Their intro, already inside its marks (`introLine`), or nothing where they wrote none. */
+  readonly intro?: string;
   readonly identity: string;
   /** One `sportPill` string per rated sport, in the registry's order. */
   readonly sports: readonly string[];
@@ -244,6 +261,9 @@ export function recordHeaderLabel(facts: HeaderFacts): string {
     facts.name,
     facts.handle,
     ...(facts.onCourt ? [ON_COURT_CLAUSE] : []),
+    // Inside its marks, so a listener hears it as the person's own words and never as a
+    // second name — the deck card speaks it the same way.
+    ...(facts.intro === undefined ? [] : [facts.intro]),
     ...(facts.identity === '' ? [] : [facts.identity]),
     ...(facts.sports.length === 0 ? [] : [facts.sports.join(', ')]),
   ]);

@@ -28,12 +28,23 @@
  * this card draws no forecast, and a for-fun evening is not the surface a balance bar belongs
  * on, so the forecast reaches it as a reason line instead.
  *
- * ## This card draws no Social tag row, and the competitive one does
+ * ## The two interest tags are drawn here as they are on the competitive card
  *
  * §B10 laid out the head row as a name with **inline tags** beside it — `.tag.hot`,
  * `.tag.volt`, `.tag.bad` — and the only one of the three with a vocabulary behind it was the
- * volt one, which this card turns into a **sentence** (`CardHead`). The candidate's own Social
- * tags were refused here on an argument that has since been answered rather than overturned:
+ * volt one, which this card turned into a **sentence** under the name until
+ * [ADR-0169](../../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §8 put the two-word tag back where the sentence stood: *Wants to play you* off the admitting
+ * code, and *You said yes* off the reader's own list, **both tags on both card styles**. The
+ * words and the precedence are `candidateTag`'s, and the green border travels with *Wants to
+ * play you* onto this card too — it is the tag's second copy, and it goes where the tag goes.
+ * What this card still does not draw is the coral *best match*: that is a fact about a list,
+ * and a for-fun pool has never claimed one ([#310](https://github.com/Raketa02/Raketa/issues/310)).
+ *
+ * ## This card draws no Social tag row, and the competitive one does
+ *
+ * The candidate's own Social tags were refused here on an argument that has since been
+ * answered rather than overturned:
  * drawing them *"would put content on the card that the label cannot announce"*, which is the
  * half of Part 13 a hidden decoration is allowed and a fact is not.
  * [#311](https://github.com/Raketa02/Raketa/issues/311) answers it by **announcing them** —
@@ -65,6 +76,7 @@ import { candidateActionLabel, type CandidateAction } from '../accessibilityPres
 import {
   CANDIDATE_ACTION_WORD,
   OVERLAP_ROW_LABEL,
+  candidateTag,
   levelRow,
   metaLine,
   overlapRowValue,
@@ -97,6 +109,12 @@ export interface CandidateCardSocialProps {
   readonly actionDisabled?: boolean;
   /** The body's own action — *Why 78?*. */
   readonly onWhyFit: () => void;
+  /**
+   * Whether the reader has a live yes towards this person in the search's sport — **the
+   * reader's own list's answer** (`saidYesTo`), never this card's. Defaulted to `false` so the
+   * card is honest until the screen that holds the list is wired.
+   */
+  readonly saidYes?: boolean;
 }
 
 export function CandidateCardSocial({
@@ -106,12 +124,26 @@ export function CandidateCardSocial({
   onAction,
   actionDisabled = false,
   onWhyFit,
+  saidYes = false,
 }: CandidateCardSocialProps) {
   const facts = candidateFacts({ candidate, envelope, drawn: SOCIAL_CARD_DRAWS });
   const overlap = evidenceOf(candidate, 'availability_overlap');
+  // No *best match* on a for-fun pool — see the module note. The two interest tags are drawn.
+  const tag = candidateTag({
+    inclusionReason: candidate.inclusionReason,
+    saidYes,
+    bestMatch: false,
+  });
 
   return (
-    <PressableCard style={s.card} onPress={onWhyFit} accessibilityLabel={facts.label}>
+    /* The border is the tag's second copy and goes where the tag goes: bound to the **fact**
+       and never to the colour, so *You said yes* — a plain tag — draws no outline. */
+    <PressableCard
+      style={s.card}
+      marked={tag?.kind === 'wants-to-play-you'}
+      onPress={onWhyFit}
+      accessibilityLabel={facts.label}
+    >
       <View style={s.media}>
         <PlayerPhoto
           playerId={candidate.playerId}
@@ -121,11 +153,7 @@ export function CandidateCardSocial({
       </View>
 
       <View style={s.body}>
-        <CardHead
-          name={facts.name}
-          fit={candidate.fit}
-          inclusionReason={candidate.inclusionReason}
-        />
+        <CardHead name={facts.name} fit={candidate.fit} tag={tag} />
 
         <FactRow value={levelRow(facts.level)} />
 

@@ -147,6 +147,7 @@ def row(
     profile_created_at: datetime = SETTLED,
     last_active_at: datetime | None = None,
     sport: str = SPORT.value,
+    intro: str | None = None,
 ) -> CandidateRow:
     """One index row. ``number`` fixes the player id and orders the ties."""
 
@@ -170,6 +171,7 @@ def row(
         declared_intent=declared_intent,
         social_tags=tags,
         tags_updated_at=SETTLED,
+        intro=intro,
         availability=slots,
         grid_updated_at=SETTLED,
         areas=(IndexedArea(latitude=latitude, longitude=longitude),),

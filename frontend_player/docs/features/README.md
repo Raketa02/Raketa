@@ -46,9 +46,10 @@ rotation, the `AppError` family, `shared/lib/auth` over the keychain, and four f
 **adult attestation**, the one question on that form that is not about the account — sign in,
 session restore), `onboarding` (the entry gate, welcome, the
 sports picker, the adaptive question loop, the explained result, and the summary and data
-screens a player leaves through) and `player_profile` (onboarding's **second part**, complete: seven
+screens a player leaves through) and `player_profile` (onboarding's **second part**, complete: eight
 steps over a client-held draft, and the one write that ends them — the Social tags picker,
-2 to 6 chips from a served vocabulary, the photos step, up to three court photos or none, each
+2 to 6 chips from a served vocabulary, the intro step, one line about yourself or nothing, with
+a visible Skip and the contact fence said up front, the photos step, up to three court photos or none, each
 one checked server-side against the on-court rule and **warned about rather than refused**,
 the availability grid, seven days by three parts of the day, blank on arrival and requiring
 one ticked cell of the twenty-one before it continues

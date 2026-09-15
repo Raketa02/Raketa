@@ -10,9 +10,11 @@
  *
  * **Specified since the document was locked and built only now.** 6.3 closes with *"nothing
  * uses it today; it is specified so the first screen that needs one does not invent a second
- * shape"*, and Play's two ways through the tab are that screen: *Find a game* and *Match me*
- * are two views of one surface, which is precisely what 6.3 is for and what neither the chip
- * (a filter over what is on screen) nor the switch (a claim a player makes) is.
+ * shape"*, and Play's two ways through the tab were that screen: *Find a game* and *Match me*
+ * were two views of one surface, which is precisely what 6.3 is for and what neither the chip
+ * (a filter over what is on screen) nor the switch (a claim a player makes) is. That segment is
+ * gone — the deck is the Players tab now — and the same control is that tab's whole header, the
+ * *Deck | Radar* toggle (ADR-0169 §1), beside the mode segment Find a game still draws.
  *
  * ## What carries the state
  *
@@ -28,7 +30,7 @@
  *
  * **It holds no selection of its own**, and every press is reported, including a press on the
  * segment already selected: only the caller knows whether re-entering a view is a no-op or an
- * arrival, and Play's *Find a game* is the second of those.
+ * arrival, and Play's *Find a game* was the second of those for as long as it was a segment.
  *
  * The label is a string the caller composes rather than a name plus a count slot: a label that
  * carries more than a name is copy, and copy lives with the feature that has something to say.

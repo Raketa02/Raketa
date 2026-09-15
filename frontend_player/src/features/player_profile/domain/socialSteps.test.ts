@@ -1,7 +1,7 @@
 /**
  * The second part's step sequence, with no renderer and no router.
  *
- * Seven screens in one order, and the two boundaries that are rules rather than layout: the
+ * Eight screens in one order, and the two boundaries that are rules rather than layout: the
  * first step has nothing behind it, and the last has nothing in front of it until the
  * commit exists.
  */
@@ -10,9 +10,10 @@ import { emptyDraft } from './ProfileDraft';
 import { SOCIAL_STEPS, admissionToStep, stepAfter, stepBefore, stepPosition } from './socialSteps';
 
 describe('the order of the second part', () => {
-  it('asks the seven questions in the order the spec sets', () => {
+  it('asks the eight questions in the order the spec sets', () => {
     expect(SOCIAL_STEPS).toEqual([
       'tags',
+      'intro',
       'photos',
       'availability',
       'location',
@@ -37,6 +38,15 @@ describe('the order of the second part', () => {
     expect(SOCIAL_STEPS[SOCIAL_STEPS.length - 1]).toBe('opt-in');
   });
 
+  it('asks for the intro straight after the tags, and before the photos', () => {
+    // *You've picked your tags; now say it in your own words* (ADR-0170 §5). The tags say
+    // what kind of player somebody is in the platform's words, and the line is the same
+    // question in their own — so it follows them, and it comes before the one step that
+    // reaches the device.
+    expect(SOCIAL_STEPS.indexOf('intro')).toBe(SOCIAL_STEPS.indexOf('tags') + 1);
+    expect(SOCIAL_STEPS.indexOf('photos')).toBe(SOCIAL_STEPS.indexOf('intro') + 1);
+  });
+
   it('asks where before how far', () => {
     // Not incidental ordering. "How far out do you want to look" is meaningless until the
     // player has said where they are looking from, so location precedes radius.
@@ -46,7 +56,8 @@ describe('the order of the second part', () => {
 
 describe('moving forward', () => {
   it('leads from each step to the next', () => {
-    expect(stepAfter('tags')).toBe('photos');
+    expect(stepAfter('tags')).toBe('intro');
+    expect(stepAfter('intro')).toBe('photos');
     expect(stepAfter('photos')).toBe('availability');
     expect(stepAfter('availability')).toBe('location');
     expect(stepAfter('location')).toBe('radius');
@@ -63,7 +74,8 @@ describe('moving forward', () => {
 
 describe('moving back', () => {
   it('leads from each step to the one before it', () => {
-    expect(stepBefore('photos')).toBe('tags');
+    expect(stepBefore('intro')).toBe('tags');
+    expect(stepBefore('photos')).toBe('intro');
     expect(stepBefore('availability')).toBe('photos');
     expect(stepBefore('location')).toBe('availability');
     expect(stepBefore('radius')).toBe('location');
@@ -80,9 +92,10 @@ describe('moving back', () => {
 });
 
 describe('where a step sits', () => {
-  it('counts from one, out of seven', () => {
-    expect(stepPosition('tags')).toEqual({ index: 1, total: 7 });
-    expect(stepPosition('opt-in')).toEqual({ index: 7, total: 7 });
+  it('counts from one, out of eight', () => {
+    expect(stepPosition('tags')).toEqual({ index: 1, total: 8 });
+    expect(stepPosition('intro')).toEqual({ index: 2, total: 8 });
+    expect(stepPosition('opt-in')).toEqual({ index: 8, total: 8 });
   });
 });
 

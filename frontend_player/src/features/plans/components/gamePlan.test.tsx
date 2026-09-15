@@ -559,7 +559,8 @@ describe('the eight corrections, re-decided by the design, and the two refusals'
     await openFromNow({ plans: [WHOLE] });
 
     expect(await screen.findByText(BALANCE_FORECAST)).toBeTruthy();
-    expect(screen.getByText(PLAYERS)).toBeTruthy();
+    // By role: the bar's second column says *Players* too, and it is a tab and not a heading.
+    expect(screen.getByRole('header', { name: PLAYERS })).toBeTruthy();
     expect(screen.getByText('90%')).toBeTruthy();
     expect(
       screen.getByRole('button', { name: recordLabel({ name: 'tomek.p', yours: false }) }),
@@ -572,7 +573,7 @@ describe('the eight corrections, re-decided by the design, and the two refusals'
     await screen.findByText(PLAN_PANEL.title);
 
     expect(screen.queryByText(BALANCE_FORECAST)).toBeNull();
-    expect(screen.queryByText(PLAYERS)).toBeNull();
+    expect(screen.queryByRole('header', { name: PLAYERS })).toBeNull();
     expect(screen.queryByText(/%/)).toBeNull();
     expect(transport.requestsTo('GET', pairingPath(GAME))).toHaveLength(0);
   });

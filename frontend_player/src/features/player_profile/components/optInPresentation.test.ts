@@ -11,7 +11,7 @@
  * pointing at the version identifier, which is exactly the conversation that should happen.
  *
  * The step's title and the line under it come from `socialStepPresentation`, because the
- * chrome of all seven steps is one table. They are pinned here anyway: a player reads them on
+ * chrome of all eight steps is one table. They are pinned here anyway: a player reads them on
  * the same screen as the card, so they are part of what the answer was given against
  * whichever file happens to hold them.
  */

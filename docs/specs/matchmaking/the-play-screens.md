@@ -57,11 +57,14 @@ backend after `matchfit` returns — the same seam `at_stake` already rides
 ```
 candidate:   { player_id, fit, distance_km, player_card, ... }
 player_card: { nickname, photo_id?, photo_url?, review?, area_code,
-               social_tags[], level, band, range,
+               social_tags[], intro?, level, band, range,
                player_score?, counted_games?, last_five? }
 ```
 
-Closed list. `photo_id` and `photo_url` are **omitted together** (not null) when the player has
+Closed list — `intro?` is the one field it has gained since, the line a player writes about
+themselves, omitted where they wrote none
+([ADR-0170](../../adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)).
+`photo_id` and `photo_url` are **omitted together** (not null) when the player has
 no photo, and the client draws the generated court poster. **The id is what is stored and the
 URL is what is drawn** — minted per response and recorded nowhere, because the client cannot
 sign one for another player's photo and `GET /photos/{id}` refuses to
@@ -278,46 +281,56 @@ absent and sorts last — which is `distance_km`'s rule, for `distance_km`'s rea
 **The card says what the candidate would leave on court** — `would_be_forecast`, labelled
 provisional while seats remain open.
 
-### 4.1 The pin, and the tag that marks the best row
+### 4.1 The two interest tags, and the tag that marks the best row
 
-Three rules over the same list, all of them client-side over facts already on the wire
-([#310](https://github.com/Raketa02/Raketa/issues/310)).
+Three tags over the same list, all of them client-side over facts already on the wire
+([#310](https://github.com/Raketa02/Raketa/issues/310),
+[ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8).
 
-**A live yes towards the searcher is pinned to the top of the served order, and the pin releases
-on any re-sort.** `inclusion_reason == INTEREST_LIFT` is the fact; the row sits first whatever it
-scored, in *"the default (as-served) order **only**"*, and a pinned row *"moves under **every**
-re-sort"* — its tag and its border travelling down with it.
+**A yes informs; it never takes over.** *The deck collects people and the builder spends them*,
+and the deck feeds this list in both directions, by label, and by a nudge on one side only:
 
-**Every** includes *Best fit*, and that is worth stating because it has a cost. Where the engine
-withheld `BEST_FIT` — which it does precisely when the returned order already is fit order — the
-client adds the chip back as **the way back** from *Closest*, and tapping it now returns fit
-order without the pin, which is not quite the list the player left. The alternative is a pin that
-survives a sort, and surviving a sort is the property that makes a bonus a bonus; the way back is
-a way back to an **ordering**, never to a decoration on top of one.
+- **An incoming yes is a tag and a nudge, never a pin.** `inclusion_reason == INTEREST_LIFT` is
+  the fact, *Wants to play you* is the volt tag bound to it, and the row sits **where the engine
+  placed it** — the `+14` on the liker's rank key puts them earlier than their Fit alone would,
+  never above a genuinely better pairing. The client's pin over the served order is gone: for a
+  while a liker at 51 was forced above thirty people at 80 in the as-served order and released on
+  any re-sort, which touched no figure and was still a 51 at the top of a list about who fits.
+  The served order is the order, and the tag and its green border travel with the card wherever
+  the server — or a chip — puts it. Admission under the quality floor stays, for this human list
+  only; ⚡ is unchanged.
+- **An outgoing yes is a tag only.** *You said yes* on somebody in the reader's own `GET
+  /interest` outgoing list for the sport on screen — client-side, off the read the deck already
+  holds, no code and **no nudge**, because the reader's yes says nothing about the other person's
+  willingness. It is a plain tag rather than a volt one: volt is *they want you*, and the border
+  goes with that word alone.
+- **Both true is a mutual, and a mutual is not on the list**; should one ever be, *Wants to play
+  you* wins — the other person's decision is the one the reader did not already know.
 
-**A pin is not the `+12` that was struck.** §C5 asked for *the fit score plus 12 for anyone who
-said yes to you*, and [#231](https://github.com/Raketa02/Raketa/issues/231) removed it: the
-engine has already lifted those people, as an **admission** rather than a bonus, so adding twelve
-client-side would score the wire's own ranking a second time. That refusal is untouched, and the
-distinction is the falsifier — a bonus is arithmetic on a **published figure**, changes what
-*best* means silently, and survives every re-sort; a pin changes a **position**, prints the
-number the wire served, names itself on the card it moved, and releases. A pinned 41 above an 88
-prints 41 and says *Wants to play you*.
+**A pin was not the `+12` that was struck, and neither is drawn now.** §C5 asked for *the fit
+score plus 12 for anyone who said yes to you*, and
+[#231](https://github.com/Raketa02/Raketa/issues/231) removed it: the engine has already lifted
+those people, as an **admission** rather than a bonus, so adding twelve client-side would score
+the wire's own ranking a second time. That refusal is untouched. The pin that replaced it changed
+a position rather than a number and released on any sort, which is what made it not a bonus —
+and ADR-0169 §8 removed it all the same, because the falsifier it passed was never the question:
+a 51 printed as 51 above an 88 is honest about the figure and wrong about the list.
 
-**The tag is bound to the ordering in force, never to a tapped chip, and it is the competitive
-card's alone.** The coral *best match* tag goes on the row with the highest `fit` on screen —
-**one card or none**, the server-first row on a tie — and it exists under the **default** order
-and under `BEST_FIT`, and under no other. Keying it to a tap would hide it on most searches,
-because `BEST_FIT` is withheld from `sorts_available` *precisely when the returned order already
-is fit order*. Where the same card
-would carry both tags it carries only the volt one, *because it's the stronger fact* — and the
-coral tag is **not** handed down to the runner-up, which would be the card claiming *best match*
-about a row that is not one.
+**The coral tag is bound to the ordering in force, never to a tapped chip, and it is the
+competitive card's alone.** *Best match* goes on the row with the highest `fit` on screen — **one
+card or none**, the server-first row on a tie — and it exists under the **default** order and
+under `BEST_FIT`, and under no other. Keying it to a tap would hide it on most searches, because
+`BEST_FIT` is withheld from `sorts_available` *precisely when the returned order already is fit
+order*. Where the same card would carry the coral tag and either interest tag it carries only the
+interest one, *because it's the stronger fact* — a fact about a person outranks a fact about a
+list — and the coral tag is **not** handed down to the runner-up, which would be the card
+claiming *best match* about a row that is not one.
 
 A **for-fun** pool draws no *best match*: the tag sits in the competitive card's identity row and
 the social card has no slot beside the handle for one, which is
-[#309](https://github.com/Raketa02/Raketa/issues/309)'s scope rather than this rule's. Those rows
-are still pinned, and the interest sentence under the name still says why.
+[#309](https://github.com/Raketa02/Raketa/issues/309)'s scope rather than this rule's. The two
+interest tags are drawn on it all the same, as tags, where its *They already said yes to you*
+sentence used to be.
 
 **`BEST_FIT` is a sort and never a filter.** It hides nobody below any number; it puts the
 highest first and leaves every lower row on the list, in order. Written down because a screen

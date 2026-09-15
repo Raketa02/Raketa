@@ -585,8 +585,9 @@ than about a person, and which row wears it is
 [`the-play-screens.md`](the-play-screens.md) §4.1's rule. It is *Best match* and not *Best fit*:
 the sort chip beside it reads *Best fit*, and one screen saying the same two words for an
 ordering and for a row would have a reader hunting for the connection. Where both would fall on
-one card, the volt one wins, *because it's the stronger fact* — so a card that draws the coral
-tag is one no admitting code fired on.
+one card, the volt one wins, *because it's the stronger fact* — and so does the plain *You said
+yes*, a fact about a person over a fact about a list — so a card that draws the coral tag is one
+no admitting code fired on and nobody the reader said yes to.
 
 **The volt tag also carries a border, and the order of the two is the rule.** The lifted card
 takes a green outline in `voltStroke`, bound to *the tag being drawn* rather than to
@@ -1920,13 +1921,16 @@ visible label is the whole sentence, so it is the accessible name too.
 | --- | --- |
 | The revealed control, and the screen's button | `Remove the challenge` |
 | Sheet title | `Before you remove it` |
-| Body | `It disappears for the people you asked, too.` |
+| Body | `If you remove this challenge, it will also disappear for everyone you invited.` |
 | The act | `Remove the challenge` |
 | In flight | `Removing…`, on the sheet's act |
 | Dismissal | `Keep it open` |
 
 **One line, and it is the one ADR-0165 §6 asks for: it is gone for the invitees too** — the
 consequence the organiser cannot see from their own list, and the one that reaches other people.
+Reworded on the QA walk ([#429](https://github.com/Raketa02/Raketa/issues/429) E1) so the
+consequence hangs off the act — *if you remove it, this follows* — rather than being stated of a
+challenge the sheet has not yet named; it was *It disappears for the people you asked, too.*
 The word is *remove* because what the act does to a court nobody has joined is take a send back:
 nothing anybody agreed to is lost, and the people asked simply stop being asked. It says nothing
 about the pair rule releasing: that is a fact about what becomes possible afterwards, and a
@@ -2123,7 +2127,7 @@ writing:
 | --- | --- |
 | `Open the chat` | the challenge screen, the game screen, and the Now card's bubble — **one act, one spelling**; on the card it is the spoken name of an icon-only door |
 | `⚡ Fill the seats` | the challenge screen's `LINE_UP_INCOMPLETE` arm, and it is the builder's own label for the identical act |
-| `Fill the seat` | the Now card's wide door on **Needs a player**, and the game screen's primary act on that arm — **the same act, singular** ([#419](https://github.com/Raketa02/Raketa/issues/419)): one per surface, because a challenge screen is about a court still being built with as many seats open as the send left, and this door is about a game that had every seat and lost one. Two seats may be open (#411 rule 3); the door still names the errand one seat at a time, as the tag does. The one door that runs something before it navigates — the fill mints a search — and it still reaches nobody. `theActsWords.ts`', because two features say it |
+| `Fill the seat` | the Now card's wide door on **Needs a player**, and the game screen's primary act on that arm — **the same act, singular** ([#419](https://github.com/Raketa02/Raketa/issues/419)): one per surface, because a challenge screen is about a court still being built with as many seats open as the send left, and this door is about a game that had every seat and lost one. Two seats may be open (#411 rule 3); the door still names the errand one seat at a time, as the tag does. On the card it is a door like the others — it opens the game screen and runs nothing ([#429](https://github.com/Raketa02/Raketa/issues/429) F1; it ran the fill from the card until then); on the screen it is the act, which mints a search and still reaches nobody. `theActsWords.ts`', because two features say it |
 | `Finish the plan` · `Open` · `We played` · `Confirm the result` | the Now card's wide door, one per name — [`the-loop-screens.md`](../the-loop/the-loop-screens.md) §5.2. **`Finish the plan` is Planning's word for the same door Game on opens with `Open`** ([#413](https://github.com/Raketa02/Raketa/issues/413)): the destination is the same and the errand is not. *Finish* and not *Lock*, because the lock is an act with its own control on that screen (ADR-0155) |
 
 **And one ending whose card has two buttons and no wide door**: **`Called off`** is the card's
@@ -2207,9 +2211,10 @@ with #416.
 by [#419](https://github.com/Raketa02/Raketa/issues/419)).
 
 **The door** is **`Fill the seat`** — §22.7's row: the card's wide door and the screen's primary act
-on *Needs a player*, one word for one press, drawn only while the agreed moment is ahead. It goes
-busy under its own label while the search runs, as the challenge screen's ⚡ does, and lands in the
-builder.
+on *Needs a player*, one word for one press, drawn only while the agreed moment is ahead. The
+card's opens the game screen, in the stage dot's own `arranging`
+([#429](https://github.com/Raketa02/Raketa/issues/429) F1); the screen's goes busy under its own
+label while the search runs, as the challenge screen's ⚡ does, and lands in the builder.
 
 **The control** is **`Call it off`** — `secondary`, above *Leave this game*, drawn only while a seat
 is open and for **any player on the court** — an accepted seat
@@ -2369,8 +2374,9 @@ every author and actor the page names, resolved in the same read, and a page car
 | a day recorded | `plans` | `{name} set the day · {value}` |
 | an hour recorded | `plans` | `{name} set the time · {value}` |
 | the plan was locked | `plans` · `PlanLocked` | `{name} locked the plan` |
+| a side was formed | `challenges` · `ChallengeOpenedFromMutualInterest`, **doubles only** | `You two are a side. Fill the seats to find your opponents.` |
 
-**Eight codes, and the leave code is one with the answer as a value** — #221's *"that seat is open
+**Nine codes, and the leave code is one with the answer as a value** — #221's *"that seat is open
 again"* is the same news each way, and the facts stay apart in the value rather than in a
 second code. **A lapse is still not a decline**, which is §13's rule holding one layer down —
 and since [ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) there
@@ -2397,6 +2403,17 @@ and a slot moved afterwards keeps it and writes its own line.
 second class. ADR-0144: *"unlike a lapse and a decline, which do the same thing to the line-up and
 are different facts, these are the same fact told twice."*
 
+**`SIDE_FORMED` is the one line a room is *born* with, and only a doubles room**
+([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §8). Two yeses
+that meet in padel seat both people on one side of a court with a whole side still to fill — half
+a game — and nothing in the room said so, so that room opens with this at `seq` 1. A singles
+mutual is a whole court and gets no line: there the mutual is still the opening, as §23.1 has it.
+It **names no actor** — the first code to use the `null` the contract always allowed — because it
+is about both of them and neither in particular, and it carries no values. **And it is not a
+*Game on* line by another door**: it announces no standing and is re-derived from nothing — an
+introduction of the shape the pair were dealt into, true once at birth and never again asked of
+the seats — so *no system line announces a derived standing* holds as it did.
+
 **A place line renders the place without the court when it does not fit.** #335: when a system line
 overflows a Chats row, **the fix is a shorter value, not a second line** — one rule for both row
 kinds instead of two.
@@ -2410,7 +2427,7 @@ which rule).
 | Event | Why nothing |
 | --- | --- |
 | `ChallengeSent` | no conversation exists yet — nowhere to write |
-| `ChallengeOpenedFromMutualInterest` | it **is** the opening; `seq` 1 is whatever happens next |
+| `ChallengeOpenedFromMutualInterest` | it **is** the opening; `seq` 1 is whatever happens next — **on a singles court**. On a doubles court it is the opening *and* half a game, and writes `SIDE_FORMED` (§23) |
 | `GamePlanned` | **the seats already imply it** |
 | `challenges.withdrawn` | it **destroys** the room in the same act |
 | `games.seat_vacated` · `games.line_up_reseated` | the challenge's own `SeatLeft` and the acceptance that completed the court draw the lines, and membership reads the game's line-up live — a room told twice would write a second line |
@@ -2426,8 +2443,8 @@ everybody having accepted is exactly such an arrangement. What a player sees ins
 card appearing** and membership stopping — drawn, not announced.
 
 **A refused line is not a refused telling, and here that is load-bearing.** `GamePlanned` still
-reaches the room and draws nothing, which is the shape `ChallengeOpenedFromMutualInterest` and
-`challenges.withdrawn` already have — and `Game.planned_at` **is** `GamePlanned.occurred_at`, which
+reaches the room and draws nothing, which is the shape a singles `ChallengeOpenedFromMutualInterest`
+and `challenges.withdrawn` already have — and `Game.planned_at` **is** `GamePlanned.occurred_at`, which
 is where the room's own end is derived from
 ([ADR-0153](../../adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)
 §2). Dropping the delivery because nothing renders would drop the anchor with it.
@@ -2507,7 +2524,7 @@ about.
 
 | Element | Role | Announces |
 | --- | --- | --- |
-| The header | `header` | **every handle whole**, then the sport, then the game's state — `tomek.p and ola.k, Padel, planning`; `tomek.p, Padel` where there is no game. **One element** for the title and the line under it |
+| The header | `header` | **every handle whole**, then the sport, then the game's state — `tomek.p and ola.k, Padel, planning`; `tomek.p, Padel` where there is no game; `Waiting for others to join, Padel` where the reader is alone in the room. **One element** for the title and the line under it |
 | A message | — | **the author, always** — `Ola K.: on my way` · `You: 18:00 works` |
 | A system line | — | the rendered sentence, which already names its actor |
 | A day separator | `header` | the weekday |

@@ -61,6 +61,7 @@ from app.modules.matchmaking.infrastructure.search_model import (
     SearchORM,
 )
 from app.modules.player_profile.domain.events import (
+    IntroWritten,
     PlayerProfileCreated,
     PlayIntentDeclared,
     ProposalsOptInAnswered,
@@ -249,6 +250,7 @@ async def a_signed_in_candidate(
     gender_preference: str = "ANY",
     intent: str | None = "COMPETITIVE",
     at: datetime = LONG_AGO,
+    intro: str | None = None,
 ) -> tuple[UUID, str]:
     """The same person, **and a bearer token for them.**
 
@@ -287,6 +289,19 @@ async def a_signed_in_candidate(
         session_factory,
         ProposalsOptInAnswered(player_id, True, "v1", "ONBOARDING", at),
     )
+    if intro is not None:
+        # Only where a line was written — and on the profile's own stream, at
+        # the version after the creating event, because the record reads the
+        # line off the *fold* while the card reads it off the index
+        # (`docs/adr/0170` §3). The opt-in above is filed under a random id:
+        # nothing here folds it, and the index reads it by sequence either way.
+        await append(
+            session_factory,
+            IntroWritten(player_id, intro, at),
+            aggregate_type=PLAYER_PROFILE_AGGREGATE,
+            aggregate_id=player_id,
+            version=2,
+        )
     await append(
         session_factory,
         _rating(player_id, mu=mu, at=at),
@@ -317,7 +332,26 @@ async def block_between(client, token: str, player_id: UUID):
     )
 
 
-def _rating(player_id: UUID, *, mu: float, at: datetime) -> RatingInitialised:
+async def rate_in(session_factory, player_id: UUID, sport: Sport, *, mu: float) -> None:
+    """A second sport's Level for a candidate already in the city.
+
+    Filed on its own stream, keyed by ``(player, sport)`` exactly as the first
+    one was, so the index folds it into that sport's partition on the next
+    ``fold_the_log``. What it buys a test is a second deck to deal — the deck is
+    one sport, and a promise about *another sport's* deck needs one to exist.
+    """
+
+    await append(
+        session_factory,
+        _rating(player_id, mu=mu, at=LONG_AGO, sport=sport),
+        aggregate_type=RATING_AGGREGATE,
+        aggregate_id=skill_rating_id(player_id, sport),
+    )
+
+
+def _rating(
+    player_id: UUID, *, mu: float, at: datetime, sport: Sport = SPORT
+) -> RatingInitialised:
     """One candidate's Level, filed where the rating context files one.
 
     The two ids were ``hash()`` of a tuple, which is **seeded per interpreter**
@@ -327,9 +361,9 @@ def _rating(player_id: UUID, *, mu: float, at: datetime) -> RatingInitialised:
     """
 
     return RatingInitialised(
-        rating_id=skill_rating_id(player_id, SPORT),
+        rating_id=skill_rating_id(player_id, sport),
         player_id=player_id,
-        sport=SPORT.value,
+        sport=sport.value,
         mu=mu,
         sigma=0.34,
         confidence=62,
@@ -454,6 +488,14 @@ async def deck(
     if availability_override is not None:
         body["availability_override"] = availability_override
     return await client.post("/api/v1/deck", json=body, headers=auth(token))
+
+
+async def show_them_again(client, token: str, sport: Sport = SPORT):
+    """One *Show them again*: the reset, for one sport, answering nothing."""
+
+    return await client.post(
+        "/api/v1/deck/reset", json={"sport": sport.value}, headers=auth(token)
+    )
 
 
 async def pass_on(
