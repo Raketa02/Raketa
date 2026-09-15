@@ -3,7 +3,7 @@
  *
  * The handle line gives way by **dropping whole names**, which needs an answer to *how many
  * characters fit* on a screen no module can measure. Pick that by eye and it is a guess that fails
- * on one handle, on one phone, as an ellipsis inside somebody's nickname that nobody who built the
+ * on one name, on one phone, as an ellipsis inside somebody's name that nobody who built the
  * row will ever see. So it is **measured**: this file reads the advance widths out of the Archivo
  * Bold that ships in the bundle and checks that no character a handle can be written in is wider
  * than the share the budget spends per character.
@@ -30,8 +30,9 @@ import {
 const archivoBold = readFace(`@expo-google-fonts/archivo/${theme.type.cardTitle.fontFamily}.ttf`);
 
 /**
- * Everything a nickname can be written in: printable ASCII, and the nine Polish letters this
- * platform's own players write their handles with.
+ * The repertoire the budget is measured over: printable ASCII, and the nine Polish letters this
+ * platform's own players write their names with. A name is free text, so this is the population
+ * and not a bound — `handleList.ts` says where a glyph outside it is spent.
  */
 const REPERTOIRE = [
   ...Array.from({ length: 0x7f - 0x20 }, (_, at) => String.fromCodePoint(0x20 + at)),
@@ -88,7 +89,7 @@ describe('the line a row draws', () => {
     expect(handleLine(['ewa.m', 'tomek.p', 'ola.k'], 40)).toBe('ewa.m, tomek.p, ola.k');
   });
 
-  /** §15 is categorical: a nickname is not shortenable, so the list drops whole names. */
+  /** §15 is categorical: a name is not shortenable, so the list drops whole names. */
   it('drops a whole name rather than letting one be cut, and says how many it dropped', () => {
     expect(handleLine(['ewa.magdalena.wisniewska', 'tomek.przybylski'], 26)).toBe(
       'ewa.magdalena.wisniewska +1',

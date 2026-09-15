@@ -79,8 +79,8 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
     planned_at: '2026-09-01T09:00:00Z',
     entry_closes_at: '2026-09-09T09:00:00Z',
     seats: [
-      { side: 'A', player_id: ME, nickname: 'me_' },
-      { side: 'B', player_id: OPPONENT, nickname: THEIR_HANDLE },
+      { side: 'A', player_id: ME, name: 'me_' },
+      { side: 'B', player_id: OPPONENT, name: THEIR_HANDLE },
     ],
     proposals: [],
     ...over,
@@ -768,7 +768,7 @@ const AGREED_WITH_OURS: ResultArgument = {
   kind: 'agreed',
   agreement: {
     with: 'ours',
-    by: { kind: 'player', nickname: 'tomek.p' },
+    by: { kind: 'player', name: 'tomek.p' },
     settlesAt: '2026-09-05T15:00:00Z',
   },
   ours: PROPOSAL,

@@ -61,10 +61,10 @@ const SQUASH_RATING: Wire['RatingResponse'] = {
 
 function member(
   playerId: string,
-  nickname: string,
+  name: string,
   over: Partial<Wire['ConversationMemberSchema']> = {},
 ): Wire['ConversationMemberSchema'] {
-  return { player_id: playerId, nickname, ...over };
+  return { player_id: playerId, name, ...over };
 }
 
 /**
@@ -347,8 +347,8 @@ describe('the row that is in both sections at once', () => {
           standing: 'LINE_UP_INCOMPLETE',
           opened_at: '2026-09-05T08:00:00Z',
           seats: [
-            { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.p' },
-            { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
+            { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+            { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
             { side: 'B' },
             { side: 'B' },
           ],

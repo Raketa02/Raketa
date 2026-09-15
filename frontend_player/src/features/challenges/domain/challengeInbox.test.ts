@@ -54,7 +54,7 @@ function challenge(
 /** Somebody asked me, and I have not answered — the one shape the badge counts. */
 const askedMe = (overrides: Partial<Challenge> = {}) =>
   challenge(overrides, [
-    { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+    { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
     { playerId: ME, answerBy: at(20) },
   ]);
 
@@ -234,7 +234,7 @@ describe('a no of my own', () => {
    */
   it('leaves at once, on a court it ended', () => {
     const iSaidNo = challenge({ standing: 'DECLINED', openedAt: at(-4), endedAt: at(-1) }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
       { playerId: ME, answer: 'DECLINED', answerBy: at(20) },
     ]);
 
@@ -243,7 +243,7 @@ describe('a no of my own', () => {
 
   it('leaves at once, on a court that carries on filling without me', () => {
     const stillFilling = challenge({ standing: 'LINE_UP_INCOMPLETE', sport: 'padel' }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
       { playerId: ME, answer: 'DECLINED', answerBy: at(20) },
       {},
       {},
@@ -259,7 +259,7 @@ describe('a no of my own', () => {
       { organiserId: ME, standing: 'DECLINED', openedAt: at(-4), endedAt: at(-1) },
       [
         { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: EWA, answer: 'DECLINED', answerBy: at(20), nickname: 'ewa.m' },
+        { playerId: EWA, answer: 'DECLINED', answerBy: at(20), name: 'ewa.m' },
       ],
     );
 
@@ -269,7 +269,7 @@ describe('a no of my own', () => {
   /** A lapse is not a decline: nobody chose it, and *Your day ran out* is kept to be read. */
   it('is not a lapse, which keeps its row to be read', () => {
     const myDayRanOut = challenge({ standing: 'LAPSED', openedAt: at(-49), endedAt: at(-1) }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
       { playerId: ME, answer: 'LAPSED', answerBy: at(-1) },
     ]);
 
@@ -286,8 +286,8 @@ describe('a departure of my own', () => {
    */
   it('leaves at once, on a court that carries on filling without me', () => {
     const iLeft = challenge({ standing: 'LINE_UP_INCOMPLETE', sport: 'padel' }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-      { playerId: 'ola', answer: 'ACCEPTED', nickname: 'ola.k' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+      { playerId: 'ola', answer: 'ACCEPTED', name: 'ola.k' },
       { playerId: ME, answer: 'LEFT' },
       {},
     ]);
@@ -299,7 +299,7 @@ describe('a departure of my own', () => {
   /** And on the court it ended — one left, nobody deciding, and a departure is a no. */
   it('leaves at once, on a court my leaving ended', () => {
     const iEndedIt = challenge({ standing: 'DECLINED', openedAt: at(-4), endedAt: at(-1) }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
       { playerId: ME, answer: 'LEFT' },
     ]);
 
@@ -310,7 +310,7 @@ describe('a departure of my own', () => {
   it('is news to the others, whose row stays while the court fills', () => {
     const theyLeft = challenge({ organiserId: ME, standing: 'LINE_UP_INCOMPLETE' }, [
       { playerId: ME, answer: 'ACCEPTED' },
-      { playerId: EWA, answer: 'LEFT', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'LEFT', name: 'ewa.m' },
     ]);
 
     expect(belongsOnTheInbox(theyLeft, ME)).toBe(true);
@@ -329,8 +329,8 @@ describe('a removal of my own', () => {
       { organiserId: ME, standing: 'WITHDRAWN', sport: 'padel', openedAt: at(-4), endedAt: at(-1) },
       [
         { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: EWA, answerBy: at(20), nickname: 'ewa.m' },
-        { playerId: 'ola', answer: 'DECLINED', answerBy: at(20), nickname: 'ola.k' },
+        { playerId: EWA, answerBy: at(20), name: 'ewa.m' },
+        { playerId: 'ola', answer: 'DECLINED', answerBy: at(20), name: 'ola.k' },
         {},
       ],
     );
@@ -342,7 +342,7 @@ describe('a removal of my own', () => {
   /** To the people asked, the same removal is news — §13's sixth row — and their row keeps its day. */
   it('is news to an invitee, whose row stays its day', () => {
     const theyRemovedIt = challenge({ standing: 'WITHDRAWN', openedAt: at(-4), endedAt: at(-1) }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
       { playerId: ME, answerBy: at(20) },
     ]);
 
@@ -365,9 +365,9 @@ describe('a removal of my own', () => {
       },
       [
         { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-        { playerId: 'ola', answer: 'ACCEPTED', nickname: 'ola.k' },
-        { playerId: 'tomek', answer: 'LEFT', nickname: 'tomek.p' },
+        { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+        { playerId: 'ola', answer: 'ACCEPTED', name: 'ola.k' },
+        { playerId: 'tomek', answer: 'LEFT', name: 'tomek.p' },
       ],
     );
 
@@ -389,9 +389,9 @@ describe('a court that ended on somebody leaving it, with me the one left', () =
       { organiserId: ME, standing: 'DECLINED', sport: 'padel', endedAt: at(-1) },
       [
         { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: EWA, answer: 'LEFT', nickname: 'ewa.m' },
-        { playerId: 'ola', answer: 'DECLINED', nickname: 'ola.k' },
-        { playerId: 'tomek', answer: 'DECLINED', nickname: 'tomek.p' },
+        { playerId: EWA, answer: 'LEFT', name: 'ewa.m' },
+        { playerId: 'ola', answer: 'DECLINED', name: 'ola.k' },
+        { playerId: 'tomek', answer: 'DECLINED', name: 'tomek.p' },
       ],
     );
 
@@ -402,7 +402,7 @@ describe('a court that ended on somebody leaving it, with me the one left', () =
   /** The ending rule is organiser-blind, and so is this: an invitee left alone reads the same. */
   it('leaves at once for an invitee the organiser walked out on', () => {
     const organiserLeft = challenge({ standing: 'DECLINED', endedAt: at(-1) }, [
-      { playerId: EWA, answer: 'LEFT', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'LEFT', name: 'ewa.m' },
       { playerId: ME, answer: 'ACCEPTED' },
     ]);
 
@@ -418,9 +418,9 @@ describe('a court that ended on somebody leaving it, with me the one left', () =
       { organiserId: ME, standing: 'DECLINED', sport: 'padel', endedAt: at(-1) },
       [
         { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: EWA, answer: 'DECLINED', nickname: 'ewa.m' },
-        { playerId: 'ola', answer: 'DECLINED', nickname: 'ola.k' },
-        { playerId: 'tomek', answer: 'DECLINED', nickname: 'tomek.p' },
+        { playerId: EWA, answer: 'DECLINED', name: 'ewa.m' },
+        { playerId: 'ola', answer: 'DECLINED', name: 'ola.k' },
+        { playerId: 'tomek', answer: 'DECLINED', name: 'tomek.p' },
       ],
     );
 
@@ -430,8 +430,8 @@ describe('a court that ended on somebody leaving it, with me the one left', () =
   /** And not a reader whose own seat was never accepted — their day ran out, and that is theirs to read. */
   it('is not a court the reader lapsed on, whose row keeps its day', () => {
     const myDayRanOut = challenge({ standing: 'DECLINED', endedAt: at(-1) }, [
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-      { playerId: 'ola', answer: 'LEFT', nickname: 'ola.k' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+      { playerId: 'ola', answer: 'LEFT', name: 'ola.k' },
       { playerId: ME, answer: 'LAPSED', answerBy: at(-2) },
       {},
     ]);
@@ -450,16 +450,16 @@ describe('who a row names', () => {
   it('drops the seats that were given up while the court is still being filled', () => {
     const filling = challenge({ organiserId: ME, standing: 'LINE_UP_INCOMPLETE', sport: 'padel' }, [
       { playerId: ME, answer: 'ACCEPTED' },
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-      { playerId: 'ola', answer: 'DECLINED', nickname: 'ola.k' },
-      { playerId: 'tomek', answer: 'LAPSED', nickname: 'tomek.p' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+      { playerId: 'ola', answer: 'DECLINED', name: 'ola.k' },
+      { playerId: 'tomek', answer: 'LAPSED', name: 'tomek.p' },
     ]);
     const awaiting = challenge({ organiserId: ME, standing: 'AWAITING_ANSWERS', sport: 'padel' }, [
       { playerId: ME, answer: 'ACCEPTED' },
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-      { playerId: 'ola', answer: 'DECLINED', nickname: 'ola.k' },
-      { playerId: 'tomek', answerBy: at(20), nickname: 'tomek.p' },
-      { playerId: 'kuba', answer: 'LEFT', nickname: 'kuba.z' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+      { playerId: 'ola', answer: 'DECLINED', name: 'ola.k' },
+      { playerId: 'tomek', answerBy: at(20), name: 'tomek.p' },
+      { playerId: 'kuba', answer: 'LEFT', name: 'kuba.z' },
     ]);
 
     expect(othersOn(filling, ME).map((seat) => seat.playerId)).toEqual([EWA]);
@@ -470,11 +470,11 @@ describe('who a row names', () => {
   it('names everybody asked once the court has ended, so a singles no still has a face', () => {
     const declined = challenge({ organiserId: ME, standing: 'DECLINED', endedAt: at(-1) }, [
       { playerId: ME, answer: 'ACCEPTED' },
-      { playerId: EWA, answer: 'DECLINED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'DECLINED', name: 'ewa.m' },
     ]);
     const on = challenge({ organiserId: ME, standing: 'ON' }, [
       { playerId: ME, answer: 'ACCEPTED' },
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
     ]);
 
     expect(othersOn(declined, ME).map((seat) => seat.playerId)).toEqual([EWA]);
@@ -484,7 +484,7 @@ describe('who a row names', () => {
   it('never names the reader, and never an empty seat', () => {
     const court = challenge({ organiserId: ME, standing: 'LINE_UP_INCOMPLETE', sport: 'padel' }, [
       { playerId: ME, answer: 'ACCEPTED' },
-      { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
       {},
       {},
     ]);

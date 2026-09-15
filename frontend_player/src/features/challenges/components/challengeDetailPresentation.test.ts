@@ -27,7 +27,7 @@ import {
 import { LEAVE_REFUSED } from './leaveGamePresentation';
 
 const PERSON = {
-  nickname: 'bea.k',
+  name: 'bea.k',
   areaCode: 'WAW-C',
   level: 2.71,
   band: 'Established',

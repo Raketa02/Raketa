@@ -83,8 +83,8 @@ import { GIVES_UP_THE_SEAT, type SeatAnswer, type Standing, type StandingFacts }
  * vocabulary of the context built to take it off him.
  */
 export interface CourtPerson {
-  /** The whole handle. Nothing derives a familiar form from it — ADR-0107. */
-  readonly nickname: string;
+  /** The whole name. Nothing derives a familiar form from it — ADR-0107, through ADR-0171. */
+  readonly name: string;
   /**
    * The short-lived signed link that draws their photograph, **omitted with the id** when they
    * have none — and the client draws the generated poster instead.

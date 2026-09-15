@@ -1,5 +1,5 @@
 /**
- * **A list of handles, given way at by dropping whole names** — §15's rule, and the words it
+ * **A list of names, given way at by dropping whole ones** — §15's rule, and the words it
  * draws.
  *
  * `playerName.ts` beside it turns *one* person into words; this turns several into a line. It is
@@ -9,16 +9,24 @@
  * different objects naming the same people under one heading each
  * ([`the-loop-screens.md`](../../../../docs/specs/the-loop/the-loop-screens.md) §1.2, §1.3).
  *
- * **§15 is categorical: a nickname is not shortenable.** So a list of them gives way by dropping
+ * **Every *handle* in this file is a name** — the player's Name since
+ * [ADR-0171](../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md),
+ * never the nickname, which is drawn on a record and said nowhere. The words keep their old
+ * spelling for the reason `playerName.ts` gives: the specs read *handle* through the ADR rather
+ * than being rewritten, and so do the functions those specs name.
+ *
+ * **§15 is categorical: a name is not shortenable.** So a list of them gives way by dropping
  * **whole names**, the ellipsis falls at a separator, and whoever is dropped is whole on the
  * screen behind the row and whole in the row's spoken name — ADR-0107's rule is against
  * *inventing* a familiar form, and dropping a name invents nothing.
  *
- * **The budget is measured in characters at the widest character a handle may contain**, because
+ * **The budget is measured in characters at the widest character a name may contain**, because
  * *which* names fit is a question about width on a screen no module can measure, and React Native
- * will happily tail-truncate a `Text` in the middle of somebody's nickname. It is deliberately
+ * will happily tail-truncate a `Text` in the middle of somebody's name. It is deliberately
  * conservative: dropping a name that would have fitted keeps the rule, and letting the ellipsis
- * land inside a handle breaks it outright.
+ * land inside a name breaks it outright. The repertoire it is measured over is the one the
+ * platform's players write in — printable ASCII and the Polish letters — and a name is free
+ * text, so a glyph outside it is where the budget's margin is spent rather than a case it proves.
  *
  * What is **not** here is the furniture either row draws around the words — a face, an overlap, a
  * stripe. That is the Chats tab's, in `features/shell/components/chatsRowGeometry.ts`, for the

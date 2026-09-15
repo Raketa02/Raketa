@@ -38,15 +38,15 @@ const GAME_ID = '11111111-0000-4000-8000-000000000001';
 const READ_AT = '2026-09-12T09:00:00Z';
 
 const SINGLES_SEATS: Game['seats'] = [
-  { side: 'A', playerId: 'me', nickname: 'me_' },
-  { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+  { side: 'A', playerId: 'me', name: 'me_' },
+  { side: 'B', playerId: 'them', name: 'tomek.p' },
 ];
 
 /** A doubles court after two people left: two seats open. */
 const TWO_SHORT: Game['seats'] = [
-  { side: 'A', playerId: 'me', nickname: 'me_' },
+  { side: 'A', playerId: 'me', name: 'me_' },
   { side: 'A' },
-  { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+  { side: 'B', playerId: 'them', name: 'tomek.p' },
   { side: 'B' },
 ];
 
@@ -238,8 +238,8 @@ describe('the sport word', () => {
   it('says nothing about singles or doubles — the court says the format', () => {
     const four: Game['seats'] = [
       ...SINGLES_SEATS,
-      { side: 'A', playerId: 'a', nickname: 'ola_k' },
-      { side: 'B', playerId: 'b', nickname: 'marekb' },
+      { side: 'A', playerId: 'a', name: 'ola_k' },
+      { side: 'B', playerId: 'b', name: 'marekb' },
     ];
 
     expect(sportWord(game({ seats: four }), 'Padel')).toBe('Padel');

@@ -65,20 +65,20 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 const PAIR: Wire['ConversationMemberSchema'][] = [
-  { player_id: ME, nickname: 'me_' },
-  { player_id: TOMEK, nickname: 'tomek.p' },
+  { player_id: ME, name: 'me_' },
+  { player_id: TOMEK, name: 'tomek.p' },
 ];
 
 const SINGLES_SEATS: Wire['GameSchema']['seats'] = [
-  { side: 'A', player_id: ME, nickname: 'me_' },
-  { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+  { side: 'A', player_id: ME, name: 'me_' },
+  { side: 'B', player_id: TOMEK, name: 'tomek.p' },
 ];
 
 const DOUBLES_SEATS: Wire['GameSchema']['seats'] = [
-  { side: 'A', player_id: ME, nickname: 'me_' },
-  { side: 'A', player_id: KASIA, nickname: 'kasia.w' },
-  { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
-  { side: 'B', player_id: MAREK, nickname: 'marek b' },
+  { side: 'A', player_id: ME, name: 'me_' },
+  { side: 'A', player_id: KASIA, name: 'kasia.w' },
+  { side: 'B', player_id: TOMEK, name: 'tomek.p' },
+  { side: 'B', player_id: MAREK, name: 'marek b' },
 ];
 
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {

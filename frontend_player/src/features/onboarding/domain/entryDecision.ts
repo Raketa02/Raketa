@@ -7,10 +7,20 @@
  *
  * The order is deliberate and not arbitrary:
  *
+ *   no name yet                    -> the naming step, before anything else
  *   run in progress, not set aside -> resume it, at its outstanding question
  *   no ratings at all              -> onboarding, from welcome
  *   no Player profile              -> onboarding's second part, from its first step
  *   otherwise                      -> the app
+ *
+ * **The name is asked first, because every destination after it says the player's name**
+ * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * §3). Sign-up creates the account unnamed; the naming step is onboarding's first screen, and
+ * the questionnaire and every surface inside the app address the player by what it records.
+ * A run half-answered by an account with no name cannot be produced by the flow — the naming
+ * precedes welcome — but the gate does not assume it away, which is the lesson the fourth
+ * destination wrote about itself below: a shape the flow cannot produce is still a shape the
+ * gate must route, or it loops.
  *
  * **An unfinished run outranks an existing rating**, because a player rated at padel with
  * a tennis run half-answered should land back in the tennis questionnaire, not in the app
@@ -51,6 +61,11 @@ import type { SkillRating } from './SkillRating';
 export type EntryDestination =
   /** The authenticated tree. Onboarding is behind them, at least for one sport. */
   | { readonly kind: 'app' }
+  /**
+   * The naming step — *How should people see you?* — which an unnamed account cannot get
+   * past: it submits the naming, re-reads the player, and only then moves on.
+   */
+  | { readonly kind: 'naming' }
   /** Onboarding from the beginning: what it produces, then the sports picker. */
   | { readonly kind: 'welcome' }
   /**
@@ -63,6 +78,14 @@ export type EntryDestination =
   | { readonly kind: 'resume'; readonly run: AssessmentRun };
 
 export interface EntryInput {
+  /**
+   * Whether the player has named themselves. Served on the authenticated player beside
+   * `hasPlayerProfile`, and read from the `User`'s own stream for the same reason: the moment
+   * after the naming is exactly when a lagging read model would send a player back to the
+   * step they just finished. A per-player question with a per-player answer — a name has no
+   * sport dimension — so the glossary's ban on a per-player onboarding flag does not bite.
+   */
+  readonly hasName: boolean;
   readonly ratings: readonly SkillRating[];
   readonly runInProgress: AssessmentRun | undefined;
   /** Runs the player chose to come back to later, since this launch. */
@@ -77,11 +100,13 @@ export interface EntryInput {
 }
 
 export function entryDestination({
+  hasName,
   ratings,
   runInProgress,
   deferredRunIds,
   hasPlayerProfile,
 }: EntryInput): EntryDestination {
+  if (!hasName) return { kind: 'naming' };
   if (runInProgress !== undefined && !deferredRunIds.includes(runInProgress.assessmentId)) {
     return { kind: 'resume', run: runInProgress };
   }

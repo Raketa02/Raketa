@@ -75,8 +75,8 @@ describe('the challenges coming back', () => {
           seats: [
             { side: 'A', player_id: ME, answer: 'ACCEPTED' },
             { side: 'A', player_id: BEA, answer: 'ACCEPTED' },
-            { side: 'B', player_id: CYRYL, answer: 'DECLINED', nickname: 'cyryl.k' },
-            { side: 'B', player_id: null, answer: null, answer_by: null, nickname: null },
+            { side: 'B', player_id: CYRYL, answer: 'DECLINED', name: 'cyryl.k' },
+            { side: 'B', player_id: null, answer: null, answer_by: null, name: null },
           ],
         },
       ],
@@ -93,7 +93,7 @@ describe('the challenges coming back', () => {
         seats: [
           { playerId: ME, answer: 'ACCEPTED' },
           { playerId: BEA, answer: 'ACCEPTED' },
-          { playerId: CYRYL, answer: 'DECLINED', nickname: 'cyryl.k' },
+          { playerId: CYRYL, answer: 'DECLINED', name: 'cyryl.k' },
           {},
         ],
       },

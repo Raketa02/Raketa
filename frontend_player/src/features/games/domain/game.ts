@@ -17,7 +17,7 @@
  *
  * ## A seat carries a handle, and nothing else about the person in it
  *
- * `SeatingSchema` is a side, a player id and a nickname — no Level, no band, no area, no run of
+ * `SeatingSchema` is a side, a player id and a name — no Level, no band, no area, no run of
  * form ([ADR-0141](../../../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)).
  * A card is what a *searcher* reads to decide about a game that might happen; this is the record
  * of one that did, and every value on a card would be an as-of-now fact stapled to an evening in
@@ -30,7 +30,7 @@
  * forbids deriving a familiar form from one, and `@/shared/formatting/playerName` is the single
  * formatter that turns a seat into words.
  *
- * `nickname` is **absent** where `users` no longer has that account, which is a `?` on screen and
+ * `name` is **absent** where `users` no longer has that account, which is a `?` on screen and
  * never a dropped seat — the same fall-back a Play court draws for a seat whose row the record
  * can no longer describe.
  *
@@ -77,11 +77,11 @@ export interface GameSeat {
   /** Who holds this seat. **Absent on an open seat** — somebody left, and nobody has filled it. */
   readonly playerId?: string;
   /**
-   * What they are called — **the whole handle, and nothing may shorten it into a sentence.**
+   * What they are called — **the whole name, and nothing may shorten it into a sentence.**
    * Absent where `users` no longer has the account, which draws the unknown player's `?` — and
    * on an open seat, which draws nobody.
    */
-  readonly nickname?: string;
+  readonly name?: string;
 }
 
 /**

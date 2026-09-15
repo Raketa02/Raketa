@@ -24,11 +24,11 @@ import {
 } from './conversationPresentation';
 import { conversationHeaderLabel } from './conversationAccessibility';
 
-const TOMEK: ConversationMember = { playerId: 'tomek', nickname: 'tomek.p' };
-const OLA: ConversationMember = { playerId: 'ola', nickname: 'ola.k' };
+const TOMEK: ConversationMember = { playerId: 'tomek', name: 'tomek.p' };
+const OLA: ConversationMember = { playerId: 'ola', name: 'ola.k' };
 const MEMBERS = [TOMEK, OLA];
 /** Somebody who said no to this court: named by the response, and never a member. */
-const BO: ConversationPerson = { playerId: 'bo', nickname: 'bo' };
+const BO: ConversationPerson = { playerId: 'bo', name: 'bo' };
 
 function line(over: Partial<SystemLine> = {}): SystemLine {
   return {
@@ -154,7 +154,7 @@ describe('who a line names', () => {
 
   /** A third-person record read identically by everybody in the room. */
   it('names the reader by their own handle rather than as *You*', () => {
-    const me: ConversationMember = { playerId: 'me', nickname: 'me_' };
+    const me: ConversationMember = { playerId: 'me', name: 'me_' };
 
     expect(systemLineSentence(line({ actorId: 'me' }), [me, TOMEK], 'one-line')).toBe('me_ is in');
   });
@@ -307,8 +307,8 @@ describe('what the header is called', () => {
 });
 
 describe('somebody is typing', () => {
-  const ZOFIA: ConversationMember = { playerId: 'zofia', nickname: 'zofia.b' };
-  const FOUR = [TOMEK, OLA, ZOFIA, { playerId: 'me', nickname: 'me_' }];
+  const ZOFIA: ConversationMember = { playerId: 'zofia', name: 'zofia.b' };
+  const FOUR = [TOMEK, OLA, ZOFIA, { playerId: 'me', name: 'me_' }];
 
   /**
    * §22.5's three shapes: a name, two names, and a count from three. **Named, and named in a pair
@@ -351,7 +351,7 @@ describe('the chat has ended', () => {
   it('names who left, whole, and says the chat has ended', () => {
     const line = roomOverLine({
       kind: 'they-left',
-      members: [{ playerId: 'tomek', nickname: 'tomek.p' }],
+      members: [{ playerId: 'tomek', name: 'tomek.p' }],
     });
 
     expect(line).toBe('tomek.p left — this chat has ended.');
@@ -361,8 +361,8 @@ describe('the chat has ended', () => {
     const line = roomOverLine({
       kind: 'they-left',
       members: [
-        { playerId: 'tomek', nickname: 'tomek.p' },
-        { playerId: 'ola', nickname: 'ola.k' },
+        { playerId: 'tomek', name: 'tomek.p' },
+        { playerId: 'ola', name: 'ola.k' },
       ],
     });
 
@@ -375,7 +375,7 @@ describe('the chat has ended', () => {
 
   it('never says the seat is open again — the court is over', () => {
     for (const ending of [
-      { kind: 'they-left' as const, members: [{ playerId: 'tomek', nickname: 'tomek.p' }] },
+      { kind: 'they-left' as const, members: [{ playerId: 'tomek', name: 'tomek.p' }] },
       { kind: 'nobody-else-coming' as const },
       { kind: 'ended' as const },
     ]) {

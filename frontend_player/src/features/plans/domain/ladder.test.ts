@@ -32,15 +32,15 @@ const READ_AT = '2026-09-12T09:00:00Z';
 const FULL: Pick<Game, 'readAt' | 'seats'> = {
   readAt: READ_AT,
   seats: [
-    { side: 'A', playerId: 'me', nickname: 'me_' },
-    { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+    { side: 'A', playerId: 'me', name: 'me_' },
+    { side: 'B', playerId: 'them', name: 'tomek.p' },
   ],
 };
 
 /** The same court after the opponent left: their seat open, nobody in it. */
 const SHORT: Pick<Game, 'readAt' | 'seats'> = {
   readAt: READ_AT,
-  seats: [{ side: 'A', playerId: 'me', nickname: 'me_' }, { side: 'B' }],
+  seats: [{ side: 'A', playerId: 'me', name: 'me_' }, { side: 'B' }],
 };
 
 describe('the agreed point', () => {

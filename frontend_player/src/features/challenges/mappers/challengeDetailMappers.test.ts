@@ -17,7 +17,7 @@ const EWA = 'ewa';
 
 const A_CARD: Wire['SeatCardSchema'] = {
   person: {
-    nickname: 'ewa.m',
+    name: 'ewa.m',
     area_code: 'WAW-C',
     level: 2.71,
     band: 'Established',
@@ -37,7 +37,7 @@ function response(
     standing: 'AWAITING_ANSWERS',
     opened_at: '2026-09-08T08:00:00Z',
     seats: [
-      { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m', card: A_CARD },
+      { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m', card: A_CARD },
       { side: 'B', player_id: ME, answer: null, answer_by: '2026-09-10T08:00:00Z' },
     ],
     ...over,
@@ -89,7 +89,7 @@ describe('null is *this response said nothing*', () => {
   it('collapses every optional to absent, so no screen has two spellings of one gap', () => {
     const detail = toChallengeDetail(
       response({
-        seats: [{ side: 'A', player_id: null, answer: null, answer_by: null, nickname: null }],
+        seats: [{ side: 'A', player_id: null, answer: null, answer_by: null, name: null }],
       }),
     );
 
@@ -101,7 +101,7 @@ describe('the card is per seat', () => {
   it('keeps it where the wire drew one and invents none where it did not', () => {
     const detail = toChallengeDetail(response());
 
-    expect(detail?.seats[0]?.card?.person.nickname).toBe('ewa.m');
+    expect(detail?.seats[0]?.card?.person.name).toBe('ewa.m');
     expect(detail?.seats[1]?.card).toBeUndefined();
   });
 
@@ -125,7 +125,7 @@ describe("what an answer's reply carries", () => {
       standing: 'LINE_UP_INCOMPLETE',
       opened_at: '2026-09-08T08:00:00Z',
       seats: [
-        { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+        { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
         { side: 'B', player_id: ME, answer: 'DECLINED' },
       ],
     });
@@ -133,7 +133,7 @@ describe("what an answer's reply carries", () => {
     expect(answered).toEqual({
       standing: 'LINE_UP_INCOMPLETE',
       seats: [
-        { playerId: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+        { playerId: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
         { playerId: ME, answer: 'DECLINED' },
       ],
     });

@@ -156,7 +156,7 @@ function card(playerId: string): Wire['CandidateSchema'] {
     fit: 78,
     distance_km: 4,
     player_card: {
-      nickname: NAMES[playerId] ?? 'anon',
+      name: NAMES[playerId] ?? 'anon',
       area_code: 'A+050612+0019938',
       social_tags: [],
       level: LEVELS[playerId] ?? 2.7,
@@ -903,7 +903,8 @@ describe('who this person is', () => {
   function record(over: Partial<Wire['PlayerRecordResponse']> = {}): Wire['PlayerRecordResponse'] {
     return {
       is_self: false,
-      nickname: NAMES[C] ?? 'cyryl',
+      name: NAMES[C] ?? 'cyryl',
+      nickname: 'cyryl',
       area_code: 'A+050612+0019938',
       social_tags: ['PLAYS_TO_WIN'],
       sports: [{ sport: 'PADEL', level: 2.71, band: 'Established' }],
@@ -953,6 +954,9 @@ describe('who this person is', () => {
     expect(await screen.findByLabelText(recordCloseLabel(false))).toBeTruthy();
     expect(screen.getByText(RECORD_TITLE)).toBeTruthy();
     expect(await screen.findByText(NAMES[C] ?? '')).toBeTruthy();
+    // And the `@nickname` under the name — drawn on the record and the You tab, and nowhere
+    // else on the court or its cards (ADR-0171 §4).
+    expect(screen.getByText('@cyryl')).toBeTruthy();
   });
 
   /**
@@ -1027,7 +1031,7 @@ describe('who this person is', () => {
     transport.on('POST', LINEUPS, () =>
       json({ ...full, search: { ...full.search, my_area_code: 'A+050612+0019938' } }),
     );
-    transport.on('GET', OWN_RECORD, () => json(record({ is_self: true, nickname: 'me_myself' })));
+    transport.on('GET', OWN_RECORD, () => json(record({ is_self: true, name: 'me_myself' })));
     await openTheBuilder();
     await pressFill();
     await screen.findByText('91%');
@@ -1114,7 +1118,7 @@ describe('who this person is', () => {
    */
   it('draws a band and no count on your own record, whatever the response carried', async () => {
     transport.on('GET', OWN_RECORD, () =>
-      json(record({ is_self: true, nickname: 'me_myself', sportsmanship_band: 'GOOD' })),
+      json(record({ is_self: true, name: 'me_myself', sportsmanship_band: 'GOOD' })),
     );
     await openTheBuilder();
     await pressFill();

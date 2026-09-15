@@ -80,8 +80,8 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 const PAIR: Wire['ConversationMemberSchema'][] = [
-  { player_id: ME, nickname: 'me_' },
-  { player_id: TOMEK, nickname: 'tomek.p' },
+  { player_id: ME, name: 'me_' },
+  { player_id: TOMEK, name: 'tomek.p' },
 ];
 
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
@@ -94,8 +94,8 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
     planned_at: '2026-09-08T09:00:00Z',
     entry_closes_at: '2026-09-20T09:00:00Z',
     seats: [
-      { side: 'A', player_id: ME, nickname: 'me_' },
-      { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+      { side: 'A', player_id: ME, name: 'me_' },
+      { side: 'B', player_id: TOMEK, name: 'tomek.p' },
     ],
     proposals: [],
     ...over,
@@ -133,8 +133,8 @@ const PASSED = plan({
 
 /** The court after the opponent left: the seat open, and the rung above the clock. */
 const SHORT: Wire['GameSchema']['seats'] = [
-  { side: 'A', player_id: ME, nickname: 'me_' },
-  { side: 'B', player_id: null, nickname: null },
+  { side: 'A', player_id: ME, name: 'me_' },
+  { side: 'B', player_id: null, name: null },
 ];
 
 /** What the route says back: the challenge as it now stands, the caller's seat `LEFT`. */
@@ -146,8 +146,8 @@ const LEFT: Wire['ChallengeSchema'] = {
   opened_at: '2026-09-07T09:00:00Z',
   ended_at: null,
   seats: [
-    { side: 'A', player_id: TOMEK, nickname: 'tomek.p', answer: 'ACCEPTED', answer_by: null },
-    { side: 'B', player_id: ME, nickname: 'me_', answer: 'LEFT', answer_by: null },
+    { side: 'A', player_id: TOMEK, name: 'tomek.p', answer: 'ACCEPTED', answer_by: null },
+    { side: 'B', player_id: ME, name: 'me_', answer: 'LEFT', answer_by: null },
   ],
 };
 

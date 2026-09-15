@@ -1,18 +1,27 @@
 /**
- * The three auth mutations, as semantic hooks.
+ * The four auth mutations, as semantic hooks.
  *
  * Each one declares its own retry decision at the call site, because the global default
  * is `retry: false` and overriding it silently is how a mutation gets repeated.
  */
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
 
-import type { Registration, SignInCredentials } from '../domain/AuthenticatedUser';
+import type {
+  AuthenticatedUser,
+  Naming,
+  Registration,
+  SignInCredentials,
+} from '../domain/AuthenticatedUser';
+import { namePlayer } from '../use-cases/namePlayer';
 import { signIn } from '../use-cases/signIn';
 import { signOut } from '../use-cases/signOut';
 import { signUp } from '../use-cases/signUp';
+
+import { authKeys } from './authKeys';
+import { currentUserQuery } from './useCurrentUser';
 
 /**
  * **Not retried.** A failed sign-in is almost always a wrong password, and repeating it
@@ -51,5 +60,59 @@ export function useSignOut() {
   return useMutation<void, AppError, void>({
     mutationFn: signOut,
     retry: false,
+  });
+}
+
+/**
+ * **The naming** — *How should people see you?* — and the cache effect it declares.
+ *
+ * **Not retried.** The act is repeatable on the server, so a retry would be safe; it is still
+ * not automatic, because the one refusal this ever meets is a taken handle, and the identical
+ * body fails identically. The player retries by changing the box.
+ *
+ * **Written, and then re-read, in that order** — the same shape as `useMarkPlayerProfileCommitted`
+ * and for the same reasons, with one difference the ADR asks for:
+ *
+ * - The **write** is not a guess. The server answered with the name *as recorded* — trimmed,
+ *   collapsed — so what goes into the cached player is what the server holds, and a gate
+ *   reading the cache in the next instant already finds a named player. A cache still saying
+ *   *no name* would route the player straight back to the step they just finished.
+ * - The **re-read** is the server staying the authority, and it is **awaited**
+ *   ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ *   §3: *it submits the naming, re-reads `/me`, and only then moves on*).
+ *
+ * **`fetchQuery`, and not an invalidation, because the entry may be gone.** Nothing on the
+ * naming step observes the player, and an unobserved query is garbage-collected after its
+ * `gcTime` — five minutes, which is a slow typist away. An invalidation of an entry that is not
+ * there refetches nothing and resolves at once, and the write above has nothing to write into;
+ * the "re-read" then happens on whichever screen mounts next, which is the gate's — correct, but
+ * not the promise. `fetchQuery` on the one query definition creates the entry where it has to,
+ * fetches it regardless of freshness, and **throws where the read failed**: the mutation then
+ * fails, the screen says the platform could not be reached and stays, and a second *Continue*
+ * repeats an act the server admits twice. That is the honest shape — a naming the app could not
+ * confirm is not one it should move on from.
+ *
+ * The mutation resolves after both, so a caller's own `onSuccess` navigates on a cache that is
+ * already right and a server that has already confirmed it.
+ */
+export function useNamePlayer() {
+  const queryClient = useQueryClient();
+
+  return useMutation<Naming, AppError, Naming>({
+    mutationFn: namePlayer,
+    retry: false,
+    onSuccess: async (recorded) => {
+      queryClient.setQueryData<AuthenticatedUser>(authKeys.currentUser(), (player) =>
+        // Nothing cached to update — the re-read below creates the entry. Returning
+        // `undefined` leaves the cache untouched rather than inventing a player out of two
+        // strings.
+        player === undefined
+          ? undefined
+          : { ...player, name: recorded.name, nickname: recorded.nickname },
+      );
+      // `staleTime: 0` is the point: the write above just made the entry fresh, and a fetch that
+      // honoured that would hand the write back as the server's answer.
+      await queryClient.fetchQuery({ ...currentUserQuery(), staleTime: 0 });
+    },
   });
 }

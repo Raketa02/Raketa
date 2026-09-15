@@ -108,7 +108,7 @@ export type CourtSeatOccupant =
        * carries one field and no card
        * ([`lineup.ts`](../../domain/lineup.ts)'s `withheldSeats`).
        */
-      readonly nickname?: string;
+      readonly name?: string;
       readonly level?: number;
       readonly photoUrl?: string;
       /** They already accepted: their seat is locked, and it draws no clear badge. */

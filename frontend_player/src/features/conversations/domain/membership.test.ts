@@ -18,15 +18,15 @@ import {
 } from './membership';
 
 const ME = 'me';
-const TOMEK: ConversationMember = { playerId: 'tomek', nickname: 'tomek.p' };
-const OLA: ConversationMember = { playerId: 'ola', nickname: 'ola.k' };
+const TOMEK: ConversationMember = { playerId: 'tomek', name: 'tomek.p' };
+const OLA: ConversationMember = { playerId: 'ola', name: 'ola.k' };
 const GONE: ConversationMember = { playerId: 'gone' };
 /** Somebody a line names who was never a member — a *no* is not an accepted seat. */
-const BO: ConversationPerson = { playerId: 'bo', nickname: 'bo' };
+const BO: ConversationPerson = { playerId: 'bo', name: 'bo' };
 
 describe('who the row draws', () => {
   it('is everybody but the reader, in the order the fold answered them', () => {
-    const members = [TOMEK, { playerId: ME, nickname: 'me_' }, OLA];
+    const members = [TOMEK, { playerId: ME, name: 'me_' }, OLA];
 
     expect(othersIn(members, ME)).toEqual([TOMEK, OLA]);
   });
@@ -68,7 +68,7 @@ describe('the people accumulate with the pages', () => {
    * is the read the room is folded against — a later page names people, it never re-names one.
    */
   it('keeps one face per person, the first one held', () => {
-    const renamed: ConversationPerson = { playerId: 'tomek', nickname: 'tomek.new' };
+    const renamed: ConversationPerson = { playerId: 'tomek', name: 'tomek.new' };
 
     expect(mergedPeople([[TOMEK], [renamed, BO]])).toEqual([TOMEK, BO]);
   });

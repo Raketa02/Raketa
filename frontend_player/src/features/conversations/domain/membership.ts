@@ -52,7 +52,7 @@
 import type { NamedPlayer } from '@/shared/formatting/playerName';
 
 /**
- * One person this response names — **a handle and a face, and nothing else.**
+ * One person this response names — **a name and a face, and nothing else.**
  *
  * No Level, no band, no area, no score: those are a *card*'s, and a card is what a searcher reads
  * to decide about a game that might happen. Everybody here was on this court or spoke in this
@@ -61,11 +61,11 @@ import type { NamedPlayer } from '@/shared/formatting/playerName';
 export interface ConversationPerson {
   readonly playerId: string;
   /**
-   * The whole handle, and absent for an account `users` can no longer name. The person keeps
+   * The whole name, and absent for an account `users` can no longer name. The person keeps
    * their place either way — a member dropped would draw a three-person doubles court, and an
    * actor dropped would leave a line naming nobody.
    */
-  readonly nickname?: string;
+  readonly name?: string;
   /**
    * A short-lived signed link to their photograph, minted for the response it arrived on.
    * Absent when they have no photograph, and absent with `photo_id` — the two travel as a pair.
@@ -87,9 +87,7 @@ export type ConversationMember = ConversationPerson;
  * over.
  */
 export function personName(person: ConversationPerson): NamedPlayer {
-  return person.nickname === undefined
-    ? { kind: 'unknown' }
-    : { kind: 'player', nickname: person.nickname };
+  return person.name === undefined ? { kind: 'unknown' } : { kind: 'player', name: person.name };
 }
 
 /**

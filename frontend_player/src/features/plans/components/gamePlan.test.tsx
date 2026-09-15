@@ -81,8 +81,8 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 const PAIR: Wire['ConversationMemberSchema'][] = [
-  { player_id: ME, nickname: 'me_' },
-  { player_id: TOMEK, nickname: 'tomek.p' },
+  { player_id: ME, name: 'me_' },
+  { player_id: TOMEK, name: 'tomek.p' },
 ];
 
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
@@ -95,8 +95,8 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
     planned_at: PLANNED_AT,
     entry_closes_at: '2026-09-20T09:00:00Z',
     seats: [
-      { side: 'A', player_id: ME, nickname: 'me_' },
-      { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+      { side: 'A', player_id: ME, name: 'me_' },
+      { side: 'B', player_id: TOMEK, name: 'tomek.p' },
     ],
     proposals: [],
     ...over,
@@ -562,7 +562,7 @@ describe('the eight corrections, re-decided by the design, and the two refusals'
     expect(screen.getByText(PLAYERS)).toBeTruthy();
     expect(screen.getByText('90%')).toBeTruthy();
     expect(
-      screen.getByRole('button', { name: recordLabel({ nickname: 'tomek.p', yours: false }) }),
+      screen.getByRole('button', { name: recordLabel({ name: 'tomek.p', yours: false }) }),
     ).toBeTruthy();
   });
 

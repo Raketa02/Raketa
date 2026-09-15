@@ -588,13 +588,16 @@ not restated here; what follows is only what this client had to invent to draw t
   heading a score column with a handle.
 - **The court's handles** — what a seat says about the person in it, and **the whole of it**: no
   Level, no band, no area, no run of form, because those are what a _searcher_ reads to decide
-  about a game that might happen. They are drawn in the eyebrow — _Padel · with kasia_w, tomek.p
-  and marekb_, which is what tells two padel games in a week apart — and in the two sentences
-  about something a **person** did: putting a score up, and agreeing with one. Always the
-  **whole** handle
-  ([ADR-0107](../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4), and the
-  unknown player's `?` for a seat `users` can no longer answer for. _Avoid_: shortening one, and
-  dropping a seat that has no handle — the court keeps its shape and loses a word.
+  about a game that might happen. They are drawn in the eyebrow — _Padel · with Kasia Wójcik,
+  Tomek Przybylski and Marek Baran_, which is what tells two padel games in a week apart — and in
+  the two sentences about something a **person** did: putting a score up, and agreeing with one.
+  Always the **whole** name
+  ([ADR-0107](../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md) §4, read
+  through [ADR-0171](../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md):
+  the seat carries the **Name** and never the nickname, which is a handle drawn on a record and
+  said nowhere — the term keeps its word for the reason the specs do), and the unknown player's
+  `?` for a seat `users` can no longer answer for. _Avoid_: shortening one, and dropping a seat
+  that has no name — the court keeps its shape and loses a word.
 - **The plan slot** — the one `ReactNode` `GameScreen` grew when it stopped being only the result
   argument ([#368](https://github.com/Raketa02/Raketa/issues/368)): a child the screen renders on
   its **entry arm** and knows nothing about, filled by `features/plans`

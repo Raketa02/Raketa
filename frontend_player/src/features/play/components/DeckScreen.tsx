@@ -325,7 +325,7 @@ export function DeckScreen() {
   const answer = (said: DeckExit, candidate: Candidate) => {
     if (leaving !== undefined || dealt === undefined || onThisSport === undefined) return;
 
-    const name = playerName({ kind: 'player', nickname: candidate.card.nickname });
+    const name = playerName({ kind: 'player', name: candidate.card.name });
     const card = {
       sport: onThisSport,
       playerId: candidate.playerId,
@@ -513,7 +513,7 @@ export function DeckScreen() {
           onClose={() => setExplaining(undefined)}
           candidate={explaining}
           envelope={dealt.envelope}
-          name={playerName({ kind: 'player', nickname: explaining.card.nickname })}
+          name={playerName({ kind: 'player', name: explaining.card.name })}
           returnFocusTo={body}
         />
       )}

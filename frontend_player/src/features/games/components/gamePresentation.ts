@@ -671,11 +671,11 @@ export const LOSE_TILE = 'If you lose';
  */
 export function barLabels(seats: readonly GameSeat[], playerId: string): readonly [string, string] {
   const [yours, theirs] = halves(seats, playerId);
-  // The cut is made on the handle and never on *You* or on `?`: neither is a handle, and
+  // The cut is made on the name and never on *You* or on `?`: neither is a name, and
   // `handleStem` is licensed for a prefix of what somebody typed.
   const stem = (seat: GameSeat): string => {
     const who = named(seat, playerId);
-    return who.kind === 'player' ? handleStem(who.nickname) : playerName(who);
+    return who.kind === 'player' ? handleStem(who.name) : playerName(who);
   };
 
   return [yours.map(stem).join(SIDE_JOIN), theirs.map(stem).join(SIDE_JOIN)];
@@ -685,7 +685,7 @@ export function barLabels(seats: readonly GameSeat[], playerId: string): readonl
 const SIDE_JOIN = ' + ';
 
 /**
- * The same two sides **as a sentence names them** — every handle whole, over *and* — for the
+ * The same two sides **as a sentence names them** — every name whole, over *and* — for the
  * split row's spoken name. `barLabels` is the drawing and this is the register a listener gets;
  * the two are computed off one split of the court so they cannot disagree about who is where.
  */
@@ -699,9 +699,7 @@ export function sideNames(seats: readonly GameSeat[], playerId: string): readonl
 /** Who a seat holds, in the reader's own terms — `whoIs`'s rule, read off the seat in hand. */
 function named(seat: GameSeat, playerId: string): NamedPlayer {
   if (seat.playerId === playerId) return { kind: 'you' };
-  return seat.nickname === undefined
-    ? { kind: 'unknown' }
-    : { kind: 'player', nickname: seat.nickname };
+  return seat.name === undefined ? { kind: 'unknown' } : { kind: 'player', name: seat.name };
 }
 
 /**
@@ -752,25 +750,25 @@ export const PLAYERS = 'Players';
 export const OPEN_SEAT = 'Open seat';
 
 /**
- * Who a row is about: the handle where the account still has one, and whether it is yours.
+ * Who a row is about: the name where the account still has one, and whether it is yours.
  *
  * Not `NamedPlayer`, because that formatter's *you* is a sentence's word for its reader and this
- * row draws the handle **whole** with the mark after it — `recordHandle`'s shape on the record
+ * row draws the name **whole** with the mark after it — `recordHandle`'s shape on the record
  * sheet, for the same reason: a panel with your face on it and a stranger's name under it.
  */
 export interface PlayerRowPerson {
   /** Absent where `users` no longer has the account, which draws the unknown player's `?`. */
-  readonly nickname?: string;
+  readonly name?: string;
   readonly yours: boolean;
 }
 
-/** The whole handle, with the one mark that says it is yours. */
+/** The whole name, with the one mark that says it is yours. */
 export function playerRowName(person: PlayerRowPerson): string {
-  const handle =
-    person.nickname === undefined
+  const name =
+    person.name === undefined
       ? playerName({ kind: 'unknown' })
-      : playerName({ kind: 'player', nickname: person.nickname });
-  return person.yours ? `${handle} ${YOU_MARK}` : handle;
+      : playerName({ kind: 'player', name: person.name });
+  return person.yours ? `${name} ${YOU_MARK}` : name;
 }
 
 /**

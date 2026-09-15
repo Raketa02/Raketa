@@ -457,10 +457,10 @@ describe('the seats the organiser is waiting on', () => {
     const waiting = seatsAwaiting(
       detail('AWAITING_ANSWERS', [
         { playerId: ME, answer: 'ACCEPTED' },
-        { playerId: BEA, nickname: 'bea.k', answerBy: '2026-09-07T09:00:00Z' },
+        { playerId: BEA, name: 'bea.k', answerBy: '2026-09-07T09:00:00Z' },
         {
           playerId: CYRYL,
-          nickname: 'cyryl.w',
+          name: 'cyryl.w',
           answer: 'DECLINED',
           answerBy: '2026-09-07T09:00:00Z',
         },
@@ -469,7 +469,7 @@ describe('the seats the organiser is waiting on', () => {
     );
 
     expect(waiting).toEqual([
-      { player: { kind: 'player', nickname: 'bea.k' }, answerBy: '2026-09-07T09:00:00Z' },
+      { player: { kind: 'player', name: 'bea.k' }, answerBy: '2026-09-07T09:00:00Z' },
     ]);
   });
 });

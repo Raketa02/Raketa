@@ -6,8 +6,8 @@
 import { roomEnding } from './roomOver';
 
 const ME = 'me';
-const TOMEK = { playerId: 'tomek', nickname: 'tomek.p' };
-const OLA = { playerId: 'ola', nickname: 'ola.k' };
+const TOMEK = { playerId: 'tomek', name: 'tomek.p' };
+const OLA = { playerId: 'ola', name: 'ola.k' };
 
 describe('a room without a game', () => {
   it('ended because everybody else in it left', () => {
@@ -33,7 +33,7 @@ describe('a room without a game', () => {
   });
 
   it('never names the reader', () => {
-    const ending = roomEnding({ members: [TOMEK, { playerId: ME, nickname: 'me_' }] }, ME);
+    const ending = roomEnding({ members: [TOMEK, { playerId: ME, name: 'me_' }] }, ME);
 
     expect(ending.kind).toBe('they-left');
     expect(ending.kind === 'they-left' ? ending.members : []).toEqual([TOMEK]);

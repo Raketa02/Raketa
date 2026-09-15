@@ -251,9 +251,9 @@ describe('who on this court you already have a game with', () => {
  * gap instead of a sentence about a code nobody here understands.
  */
 describe('what a standing says to a reader', () => {
-  const named = (playerId: string, nickname: string, answer?: SeatAnswer): ChallengeSeat => ({
+  const named = (playerId: string, name: string, answer?: SeatAnswer): ChallengeSeat => ({
     playerId,
-    nickname,
+    name,
     ...(answer === undefined ? {} : { answer }),
   });
 
@@ -333,7 +333,7 @@ describe('what a standing says to a reader', () => {
 
     expect(standingFactsFor(declined, ME)).toMatchObject({
       standing: 'DECLINED',
-      player: { kind: 'player', nickname: 'bea.k' },
+      player: { kind: 'player', name: 'bea.k' },
     });
   });
 
@@ -341,7 +341,7 @@ describe('what a standing says to a reader', () => {
     const withdrawn = challenge('WITHDRAWN', [named(ME, 'me.p'), named(BEA, 'bea.k')]);
 
     expect(standingFactsFor(withdrawn, BEA)).toMatchObject({
-      player: { kind: 'player', nickname: 'me.p' },
+      player: { kind: 'player', name: 'me.p' },
     });
 
     const nameless: Challenge = { ...withdrawn, seats: [{ playerId: ME }, { playerId: BEA }] };

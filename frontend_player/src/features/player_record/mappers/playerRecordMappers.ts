@@ -80,6 +80,7 @@ type OpponentVarietySchema = components['schemas']['OpponentVarietySchema'];
 export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
   return {
     isSelf: response.is_self,
+    name: response.name,
     nickname: response.nickname,
     ...(response.photo_url === undefined ? {} : { photoUrl: response.photo_url }),
     // The mark is a fact about **a photograph**: a player with none is drawn the generated

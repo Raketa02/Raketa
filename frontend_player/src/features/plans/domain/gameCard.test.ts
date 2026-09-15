@@ -22,8 +22,8 @@ function game(over: Partial<Game> = {}): Game {
     sport: 'padel',
     standing: 'AWAITING_ENTRY',
     seats: [
-      { side: 'A', playerId: 'me', nickname: 'me' },
-      { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+      { side: 'A', playerId: 'me', name: 'me' },
+      { side: 'B', playerId: 'them', name: 'tomek.p' },
     ],
     plannedAt: '2026-09-08T09:00:00Z',
     entryClosesAt: '2026-09-19T09:00:00Z',
@@ -42,7 +42,7 @@ function plan(over: Partial<Plan> = {}): Plan {
 }
 
 /** The same court after the opponent left: their seat open, nobody in it. */
-const SHORT: Game['seats'] = [{ side: 'A', playerId: 'me', nickname: 'me' }, { side: 'B' }];
+const SHORT: Game['seats'] = [{ side: 'A', playerId: 'me', name: 'me' }, { side: 'B' }];
 
 describe('which card a game draws', () => {
   it('reads the ladder only while an entry is still awaited', () => {

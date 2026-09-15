@@ -111,8 +111,8 @@ const PADEL_RATING: Wire['RatingResponse'] = {
  */
 function court(): Wire['SeatSchema'][] {
   return [
-    { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-    { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
+    { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+    { side: 'A', player_id: BEA, answer: 'ACCEPTED', name: 'bea_k' },
     { side: 'B' },
     { side: 'B' },
   ];
@@ -151,7 +151,7 @@ function card(playerId: string): Wire['CandidateSchema'] {
     fit: 78,
     distance_km: 4,
     player_card: {
-      nickname: NAMES[playerId] ?? 'anon',
+      name: NAMES[playerId] ?? 'anon',
       area_code: 'A+050612+0019938',
       social_tags: [],
       level: 3.1,
@@ -304,12 +304,12 @@ function conversationRow(
     game_id: null,
     sport: 'PADEL',
     members: [
-      { player_id: ME, nickname: 'me_' },
-      { player_id: BEA, nickname: 'bea_k' },
+      { player_id: ME, name: 'me_' },
+      { player_id: BEA, name: 'bea_k' },
     ],
     people: [
-      { player_id: ME, nickname: 'me_' },
-      { player_id: BEA, nickname: 'bea_k' },
+      { player_id: ME, name: 'me_' },
+      { player_id: BEA, name: 'bea_k' },
     ],
     last_entry: null,
     ...over,
@@ -375,8 +375,8 @@ describe('the three controls', () => {
    */
   it('gives a reader who has left the sentence about their own seat and nothing to press', async () => {
     const left: Wire['SeatSchema'][] = [
-      { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
-      { side: 'A', player_id: ME, answer: 'DECLINED', nickname: 'me_' },
+      { side: 'A', player_id: BEA, answer: 'ACCEPTED', name: 'bea_k' },
+      { side: 'A', player_id: ME, answer: 'DECLINED', name: 'me_' },
       { side: 'B' },
       { side: 'B' },
     ];
@@ -457,8 +457,8 @@ describe('*Leave the game*', () => {
    */
   it('leaves the screen on the reply, landing on Chats with the row gone', async () => {
     const left: Wire['SeatSchema'][] = [
-      { side: 'A', player_id: ME, answer: 'LEFT', nickname: 'me_' },
-      { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
+      { side: 'A', player_id: ME, answer: 'LEFT', name: 'me_' },
+      { side: 'A', player_id: BEA, answer: 'ACCEPTED', name: 'bea_k' },
       { side: 'B' },
       { side: 'B' },
     ];
@@ -484,8 +484,8 @@ describe('*Leave the game*', () => {
    */
   it('still says You left, with nothing to press, to a reader who opens it afterwards', async () => {
     const left: Wire['SeatSchema'][] = [
-      { side: 'A', player_id: ME, answer: 'LEFT', nickname: 'me_' },
-      { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
+      { side: 'A', player_id: ME, answer: 'LEFT', name: 'me_' },
+      { side: 'A', player_id: BEA, answer: 'ACCEPTED', name: 'bea_k' },
       { side: 'B' },
       { side: 'B' },
     ];
@@ -557,8 +557,8 @@ describe('*Open the chat*', () => {
 
   it('is not drawn to a reader who has left the court', async () => {
     const left: Wire['SeatSchema'][] = [
-      { side: 'A', player_id: BEA, answer: 'ACCEPTED', nickname: 'bea_k' },
-      { side: 'A', player_id: ME, answer: 'DECLINED', nickname: 'me_' },
+      { side: 'A', player_id: BEA, answer: 'ACCEPTED', name: 'bea_k' },
+      { side: 'A', player_id: ME, answer: 'DECLINED', name: 'me_' },
       { side: 'B' },
       { side: 'B' },
     ];

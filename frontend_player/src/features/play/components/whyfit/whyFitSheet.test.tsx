@@ -71,7 +71,7 @@ function candidate(over: Partial<Candidate> = {}): Candidate {
     fit: 65,
     distanceKm: 4,
     card: {
-      nickname: 'Marek Z.',
+      name: 'Marek Z.',
       areaCode: 'A+050612+0019938',
       socialTags: [],
       level: 2.83,

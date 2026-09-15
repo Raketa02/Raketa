@@ -79,8 +79,8 @@ const PADEL_RATING: Wire['RatingResponse'] = {
   updated_at: '2026-08-14T09:00:00Z',
 };
 
-function member(playerId: string, nickname: string): Wire['ConversationMemberSchema'] {
-  return { player_id: playerId, nickname };
+function member(playerId: string, name: string): Wire['ConversationMemberSchema'] {
+  return { player_id: playerId, name };
 }
 
 const PAIR = [member(ME, 'me_'), member(TOMEK, 'tomek.p')];
@@ -122,8 +122,8 @@ function game(): Wire['GameSchema'] {
     planned_at: '2026-09-08T09:00:00Z',
     entry_closes_at: '2026-09-20T07:00:00Z',
     seats: [
-      { side: 'A', player_id: ME, nickname: 'me_' },
-      { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+      { side: 'A', player_id: ME, name: 'me_' },
+      { side: 'B', player_id: TOMEK, name: 'tomek.p' },
     ],
     proposals: [],
   };
@@ -195,7 +195,7 @@ afterEach(async () => {
 });
 
 /** Land in the app, open Chats, tap the one row — the walk every assertion here starts with. */
-async function openTheRoom(answer: Wire['ConversationResponse'] = room()) {
+async function openTheRoom(answer: Wire['ConversationResponse'] = room(), row = /^tomek\.p/) {
   stubConversations(transport, [listed({ members: answer.members, game_id: answer.game_id })]);
   stubConversation(transport, answer);
   stubEntries(transport, ROOM);
@@ -204,7 +204,7 @@ async function openTheRoom(answer: Wire['ConversationResponse'] = room()) {
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
 
-  fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
+  fireEvent.press(await screen.findByLabelText(row));
   await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
 }
 
@@ -223,6 +223,29 @@ describe('the header', () => {
 
     expect(within(header).getByText(headerTitle(['tomek.p', 'ola.k'], ROOM_ENOUGH))).toBeTruthy();
     expect(within(header).queryByText(/tomek\.p/)).toBeNull();
+  });
+
+  /**
+   * **A name is cut at its space, and it is still not a first name**
+   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+   * §4): *Diego* is a prefix the owner typed, cut at a character the owner typed, drawn only in
+   * this box. The Chats row it was opened from and the header's own spoken name say the whole
+   * thing, and nothing anywhere says the nickname.
+   */
+  it('draws a name’s stem at its space, and speaks the whole name', async () => {
+    await openTheRoom(
+      room({ members: [member(ME, 'Ola Nowak'), member(TOMEK, 'Diego Fabregat')] }),
+      /^Diego Fabregat/,
+    );
+
+    const spoken = conversationHeaderLabel(['Diego Fabregat'], sportLabel('padel'), undefined);
+    const header = await screen.findByRole('header', { name: spoken });
+
+    expect(within(header).getByText('Diego')).toBeTruthy();
+    expect(within(header).queryByText(/Fabregat/)).toBeNull();
+    // Whole on the row behind it, and whole in the header's own name; `@` nowhere.
+    expect(screen.getByLabelText(/^Diego Fabregat/)).toBeTruthy();
+    expect(screen.queryByText(/@/)).toBeNull();
   });
 
   /**
@@ -316,7 +339,7 @@ describe('the stream', () => {
         actorId: TOMEK,
         values: {},
       },
-      [{ playerId: TOMEK, nickname: 'tomek.p' }],
+      [{ playerId: TOMEK, name: 'tomek.p' }],
       'full',
     );
 
@@ -341,7 +364,7 @@ describe('the stream', () => {
         actorId: TOMEK,
         values: {},
       },
-      [{ playerId: TOMEK, nickname: 'tomek.p' }],
+      [{ playerId: TOMEK, name: 'tomek.p' }],
       'full',
     );
 
@@ -429,7 +452,7 @@ describe('paging backward', () => {
   it('names a departed player off the page that carries them', async () => {
     await openTheRoom(room({ entries: [message(4, TOMEK, 'four')] }));
     await screen.findByLabelText('tomek.p: four');
-    stubEntries(transport, ROOM, [saidNo(3)], [{ player_id: BO, nickname: 'bo' }]);
+    stubEntries(transport, ROOM, [saidNo(3)], [{ player_id: BO, name: 'bo' }]);
 
     fireEvent(screen.getByTestId('conversation-stream'), 'endReached');
 
@@ -451,7 +474,7 @@ describe('who a line names', () => {
     await openTheRoom(
       room({
         members: PAIR,
-        people: [...PAIR, { player_id: BO, nickname: 'bo' }],
+        people: [...PAIR, { player_id: BO, name: 'bo' }],
         entries: [saidNo(1), message(2, TOMEK, 'shame')],
       }),
     );
@@ -460,10 +483,25 @@ describe('who a line names', () => {
     expect(screen.queryByText(/^\? said no/)).toBeNull();
   });
 
+  /** The line says the whole name, space and all — *Diego Fabregat left*, never *Diego.Fabregat*. */
+  it('names the actor of a line by their whole name', async () => {
+    await openTheRoom(
+      room({
+        members: PAIR,
+        people: [...PAIR, { player_id: BO, name: 'Diego Fabregat' }],
+        entries: [saidNo(1)],
+      }),
+    );
+
+    expect(
+      await screen.findByText('Diego Fabregat said no — that seat is open again'),
+    ).toBeTruthy();
+  });
+
   /** The `?` is for one case: the platform can no longer name the account. */
   it('draws the unknown player for somebody the platform has lost the handle of', async () => {
     await openTheRoom(
-      room({ people: [...PAIR, { player_id: BO, nickname: null }], entries: [saidNo(1)] }),
+      room({ people: [...PAIR, { player_id: BO, name: null }], entries: [saidNo(1)] }),
     );
 
     expect(await screen.findByText('? said no — that seat is open again')).toBeTruthy();

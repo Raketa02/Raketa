@@ -143,7 +143,7 @@ function toDetailSeat(seat: WireSeat): DetailSeat {
   return {
     ...(seat.player_id == null ? {} : { playerId: seat.player_id }),
     ...(seat.answer == null ? {} : { answer: seat.answer }),
-    ...(seat.nickname == null ? {} : { nickname: seat.nickname }),
+    ...(seat.name == null ? {} : { name: seat.name }),
     ...(seat.answer_by == null ? {} : { answerBy: seat.answer_by }),
     ...(card === undefined ? {} : { card }),
   };
@@ -162,7 +162,7 @@ function toSeatCard(card: WireCard): SeatCard {
  */
 function toCourtPerson(person: WirePerson): CourtPerson {
   return {
-    nickname: person.nickname,
+    name: person.name,
     ...(person.photo_url === undefined ? {} : { photoUrl: person.photo_url }),
     areaCode: person.area_code,
     level: person.level,
@@ -400,7 +400,7 @@ function toListSeat(seat: WireListSeat) {
   return {
     ...(seat.player_id == null ? {} : { playerId: seat.player_id }),
     ...(seat.answer == null ? {} : { answer: seat.answer }),
-    ...(seat.nickname == null ? {} : { nickname: seat.nickname }),
+    ...(seat.name == null ? {} : { name: seat.name }),
     ...(seat.answer_by == null ? {} : { answerBy: seat.answer_by }),
   };
 }

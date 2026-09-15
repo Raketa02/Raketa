@@ -86,22 +86,22 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 const THREE: Wire['ConversationMemberSchema'][] = [
-  { player_id: ME, nickname: 'me_' },
-  { player_id: KASIA, nickname: 'kasia_w' },
-  { player_id: TOMEK, nickname: 'tomek.p' },
+  { player_id: ME, name: 'me_' },
+  { player_id: KASIA, name: 'kasia_w' },
+  { player_id: TOMEK, name: 'tomek.p' },
 ];
 
 /** A padel four after Marek left: three in, one open — the court every case here is read on. */
 const SHORT: Wire['GameSchema']['seats'] = [
-  { side: 'A', player_id: ME, nickname: 'me_' },
-  { side: 'A', player_id: KASIA, nickname: 'kasia_w' },
-  { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
-  { side: 'B', player_id: null, nickname: null },
+  { side: 'A', player_id: ME, name: 'me_' },
+  { side: 'A', player_id: KASIA, name: 'kasia_w' },
+  { side: 'B', player_id: TOMEK, name: 'tomek.p' },
+  { side: 'B', player_id: null, name: null },
 ];
 
 const FULL: Wire['GameSchema']['seats'] = [
   ...SHORT.slice(0, 3),
-  { side: 'B', player_id: MAREK, nickname: 'marekb' },
+  { side: 'B', player_id: MAREK, name: 'marekb' },
 ];
 
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
@@ -132,10 +132,10 @@ function row(over: Partial<Wire['ChallengeSchema']> = {}): Wire['ChallengeSchema
     opened_at: '2026-09-07T09:00:00Z',
     ended_at: null,
     seats: [
-      { side: 'A', player_id: ME, nickname: 'me_', answer: 'ACCEPTED', answer_by: null },
-      { side: 'A', player_id: KASIA, nickname: 'kasia_w', answer: 'ACCEPTED', answer_by: null },
-      { side: 'B', player_id: TOMEK, nickname: 'tomek.p', answer: 'ACCEPTED', answer_by: null },
-      { side: 'B', player_id: MAREK, nickname: 'marekb', answer: 'LEFT', answer_by: null },
+      { side: 'A', player_id: ME, name: 'me_', answer: 'ACCEPTED', answer_by: null },
+      { side: 'A', player_id: KASIA, name: 'kasia_w', answer: 'ACCEPTED', answer_by: null },
+      { side: 'B', player_id: TOMEK, name: 'tomek.p', answer: 'ACCEPTED', answer_by: null },
+      { side: 'B', player_id: MAREK, name: 'marekb', answer: 'LEFT', answer_by: null },
     ],
     ...over,
   };
@@ -144,17 +144,17 @@ function row(over: Partial<Wire['ChallengeSchema']> = {}): Wire['ChallengeSchema
 /** The court once its organiser has left too: two seats open, and the exit fallen back to us. */
 const ORGANISER_LEFT = row({
   seats: [
-    { side: 'A', player_id: ME, nickname: 'me_', answer: 'ACCEPTED', answer_by: null },
-    { side: 'A', player_id: KASIA, nickname: 'kasia_w', answer: 'ACCEPTED', answer_by: null },
-    { side: 'B', player_id: TOMEK, nickname: 'tomek.p', answer: 'LEFT', answer_by: null },
-    { side: 'B', player_id: MAREK, nickname: 'marekb', answer: 'LEFT', answer_by: null },
+    { side: 'A', player_id: ME, name: 'me_', answer: 'ACCEPTED', answer_by: null },
+    { side: 'A', player_id: KASIA, name: 'kasia_w', answer: 'ACCEPTED', answer_by: null },
+    { side: 'B', player_id: TOMEK, name: 'tomek.p', answer: 'LEFT', answer_by: null },
+    { side: 'B', player_id: MAREK, name: 'marekb', answer: 'LEFT', answer_by: null },
   ],
 });
 
 const TWO_SHORT: Wire['GameSchema']['seats'] = [
   ...SHORT.slice(0, 2),
-  { side: 'B', player_id: null, nickname: null },
-  { side: 'B', player_id: null, nickname: null },
+  { side: 'B', player_id: null, name: null },
+  { side: 'B', player_id: null, name: null },
 ];
 
 function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
@@ -315,22 +315,22 @@ describe('who may call it off', () => {
       challenges: [
         row({
           seats: [
-            { side: 'A', player_id: ME, nickname: 'me_', answer: 'LEFT', answer_by: null },
+            { side: 'A', player_id: ME, name: 'me_', answer: 'LEFT', answer_by: null },
             {
               side: 'A',
               player_id: KASIA,
-              nickname: 'kasia_w',
+              name: 'kasia_w',
               answer: 'ACCEPTED',
               answer_by: null,
             },
             {
               side: 'B',
               player_id: TOMEK,
-              nickname: 'tomek.p',
+              name: 'tomek.p',
               answer: 'ACCEPTED',
               answer_by: null,
             },
-            { side: 'B', player_id: MAREK, nickname: 'marekb', answer: 'LEFT', answer_by: null },
+            { side: 'B', player_id: MAREK, name: 'marekb', answer: 'LEFT', answer_by: null },
           ],
         }),
       ],

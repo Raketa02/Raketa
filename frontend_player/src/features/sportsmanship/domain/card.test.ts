@@ -21,10 +21,10 @@ const DOUBLES: RatedCourt = {
   gameId: GAME,
   sport: 'padel',
   seats: [
-    { playerId: ME, nickname: 'ada' },
-    { playerId: KASIA, nickname: 'kasia_w' },
-    { playerId: TOMEK, nickname: 'tomek.p' },
-    { playerId: MAREK, nickname: 'marekb' },
+    { playerId: ME, name: 'ada' },
+    { playerId: KASIA, name: 'kasia_w' },
+    { playerId: TOMEK, name: 'tomek.p' },
+    { playerId: MAREK, name: 'marekb' },
   ],
 };
 
@@ -36,9 +36,9 @@ describe('a card on its court', () => {
     const drawn = cardOnCourt([CARD], DOUBLES);
 
     expect(drawn?.subjects).toEqual([
-      { playerId: KASIA, name: { kind: 'player', nickname: 'kasia_w' } },
-      { playerId: TOMEK, name: { kind: 'player', nickname: 'tomek.p' } },
-      { playerId: MAREK, name: { kind: 'player', nickname: 'marekb' } },
+      { playerId: KASIA, name: { kind: 'player', name: 'kasia_w' } },
+      { playerId: TOMEK, name: { kind: 'player', name: 'tomek.p' } },
+      { playerId: MAREK, name: { kind: 'player', name: 'marekb' } },
     ]);
   });
 
@@ -59,8 +59,8 @@ describe('a card on its court', () => {
       gameId: OTHER_GAME,
       sport: 'squash',
       seats: [
-        { playerId: ME, nickname: 'ada' },
-        { playerId: KASIA, nickname: 'kasia_w' },
+        { playerId: ME, name: 'ada' },
+        { playerId: KASIA, name: 'kasia_w' },
       ],
     };
 

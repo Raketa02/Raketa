@@ -20,8 +20,8 @@ describe('the spoken sentence', () => {
   it('names both people on a singles court, whole', () => {
     expect(
       yesAnnouncement({
-        yours: [{ kind: 'person', playerId: 'me', nickname: 'Tomek.K' }],
-        theirs: [{ kind: 'person', playerId: 'ewa', nickname: 'Ewa.M' }],
+        yours: [{ kind: 'person', playerId: 'me', name: 'Tomek.K' }],
+        theirs: [{ kind: 'person', playerId: 'ewa', name: 'Ewa.M' }],
       }),
     ).toBe('Challenge! You against Ewa.M');
   });
@@ -30,12 +30,12 @@ describe('the spoken sentence', () => {
     expect(
       yesAnnouncement({
         yours: [
-          { kind: 'person', playerId: 'me', nickname: 'Tomek.K' },
-          { kind: 'person', playerId: 'ola', nickname: 'Ola.N' },
+          { kind: 'person', playerId: 'me', name: 'Tomek.K' },
+          { kind: 'person', playerId: 'ola', name: 'Ola.N' },
         ],
         theirs: [
-          { kind: 'person', playerId: 'kuba', nickname: 'Kuba.W' },
-          { kind: 'person', playerId: 'zofia', nickname: 'Zofia.B' },
+          { kind: 'person', playerId: 'kuba', name: 'Kuba.W' },
+          { kind: 'person', playerId: 'zofia', name: 'Zofia.B' },
         ],
       }),
     ).toBe('Challenge! You and Ola.N against Kuba.W and Zofia.B');
@@ -44,15 +44,15 @@ describe('the spoken sentence', () => {
   it('says an empty seat where one is, on either side', () => {
     expect(
       yesAnnouncement({
-        yours: [{ kind: 'person', playerId: 'me', nickname: 'Tomek.K' }, { kind: 'empty' }],
-        theirs: [{ kind: 'person', playerId: 'kuba', nickname: 'Kuba.W' }, { kind: 'empty' }],
+        yours: [{ kind: 'person', playerId: 'me', name: 'Tomek.K' }, { kind: 'empty' }],
+        theirs: [{ kind: 'person', playerId: 'kuba', name: 'Kuba.W' }, { kind: 'empty' }],
       }),
     ).toBe('Challenge! You and an empty seat against Kuba.W and an empty seat');
   });
 
   it('never carries the initials, and names a seat the record cannot as nobody', () => {
     const spoken = yesAnnouncement({
-      yours: [{ kind: 'person', playerId: 'me', nickname: 'Tomek.K' }],
+      yours: [{ kind: 'person', playerId: 'me', name: 'Tomek.K' }],
       theirs: [{ kind: 'person', playerId: 'gone' }],
     });
 
@@ -70,16 +70,16 @@ describe('the spoken sentence after a mutual', () => {
   it('names the two of you, whole, and nothing about the court', () => {
     expect(
       matchedAnnouncement({
-        yours: [{ kind: 'person', playerId: 'me', nickname: 'Tomek.K' }],
-        theirs: [{ kind: 'person', playerId: 'marek', nickname: 'Marek.P' }],
+        yours: [{ kind: 'person', playerId: 'me', name: 'Tomek.K' }],
+        theirs: [{ kind: 'person', playerId: 'marek', name: 'Marek.P' }],
       }),
     ).toBe('Matched! You and Marek.P');
   });
 
   it('never says against, never an empty seat, and never the initials', () => {
     const spoken = matchedAnnouncement({
-      yours: [{ kind: 'person', playerId: 'me', nickname: 'Tomek.K' }],
-      theirs: [{ kind: 'person', playerId: 'marek', nickname: 'Marek.P' }],
+      yours: [{ kind: 'person', playerId: 'me', name: 'Tomek.K' }],
+      theirs: [{ kind: 'person', playerId: 'marek', name: 'Marek.P' }],
     });
 
     expect(spoken).not.toMatch(/against|empty seat|\bvs\b|\bgame\b|\bcourt\b/i);
@@ -89,10 +89,10 @@ describe('the spoken sentence after a mutual', () => {
   it('names everybody who has said yes on a court that has grown', () => {
     expect(
       matchedAnnouncement({
-        yours: [{ kind: 'person', playerId: 'me', nickname: 'Tomek.K' }],
+        yours: [{ kind: 'person', playerId: 'me', name: 'Tomek.K' }],
         theirs: [
-          { kind: 'person', playerId: 'marek', nickname: 'Marek.P' },
-          { kind: 'person', playerId: 'kuba', nickname: 'Kuba.W' },
+          { kind: 'person', playerId: 'marek', name: 'Marek.P' },
+          { kind: 'person', playerId: 'kuba', name: 'Kuba.W' },
         ],
       }),
     ).toBe('Matched! You and Marek.P and Kuba.W');

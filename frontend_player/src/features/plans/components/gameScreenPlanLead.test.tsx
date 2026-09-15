@@ -92,20 +92,20 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 const PAIR: Wire['ConversationMemberSchema'][] = [
-  { player_id: ME, nickname: 'me_' },
-  { player_id: TOMEK, nickname: 'tomek.p' },
+  { player_id: ME, name: 'me_' },
+  { player_id: TOMEK, name: 'tomek.p' },
 ];
 
 const SINGLES_SEATS: Wire['GameSchema']['seats'] = [
-  { side: 'A', player_id: ME, nickname: 'me_' },
-  { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+  { side: 'A', player_id: ME, name: 'me_' },
+  { side: 'B', player_id: TOMEK, name: 'tomek.p' },
 ];
 
 const DOUBLES_SEATS: Wire['GameSchema']['seats'] = [
-  { side: 'A', player_id: ME, nickname: 'me_' },
-  { side: 'A', player_id: KASIA, nickname: 'kasia_w' },
-  { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
-  { side: 'B', player_id: MAREK, nickname: 'marekb' },
+  { side: 'A', player_id: ME, name: 'me_' },
+  { side: 'A', player_id: KASIA, name: 'kasia_w' },
+  { side: 'B', player_id: TOMEK, name: 'tomek.p' },
+  { side: 'B', player_id: MAREK, name: 'marekb' },
 ];
 
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
@@ -297,8 +297,8 @@ describe('the card at the top', () => {
   it('draws a face where the room has a photograph', async () => {
     await openFromNow({
       members: [
-        { player_id: ME, nickname: 'me_' },
-        { player_id: TOMEK, nickname: 'tomek.p', photo_id: 'p1', photo_url: TOMEK_PHOTO },
+        { player_id: ME, name: 'me_' },
+        { player_id: TOMEK, name: 'tomek.p', photo_id: 'p1', photo_url: TOMEK_PHOTO },
       ],
     });
 
@@ -516,10 +516,10 @@ describe('what went', () => {
  */
 describe('an open seat', () => {
   const SHORT: Wire['GameSchema']['seats'] = [
-    { side: 'A', player_id: ME, nickname: 'me_' },
-    { side: 'A', player_id: KASIA, nickname: 'kasia_w' },
-    { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
-    { side: 'B', player_id: null, nickname: null },
+    { side: 'A', player_id: ME, name: 'me_' },
+    { side: 'A', player_id: KASIA, name: 'kasia_w' },
+    { side: 'B', player_id: TOMEK, name: 'tomek.p' },
+    { side: 'B', player_id: null, name: null },
   ];
 
   /** The pairing beside a short court: Levels for whoever is in, and no forecast (#416). */

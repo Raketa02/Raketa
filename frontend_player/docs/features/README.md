@@ -23,11 +23,11 @@ is referenced from the other by a sentence, not copied.
 | File                                     | Records                                                                  |
 | ---------------------------------------- | ------------------------------------------------------------------------ |
 | [`_shared.md`](_shared.md)               | The three platform ports, the HTTP client's two verbs, the UI primitives |
-| [`auth.md`](auth.md)                     | Sign-up's adult attestation                                              |
+| [`auth.md`](auth.md)                     | Sign-up's adult attestation, the naming step, the You tab's identity     |
 | [`challenges.md`](challenges.md)         | The send, the challenge screen, the two answers, the fill, the withdraw  |
 | [`conversations.md`](conversations.md)   | The Chats tab, the room, the optimistic send, the live layer, typing     |
 | [`games.md`](games.md)                   | The result argument's eight states, the score pad, the game screen       |
-| [`onboarding.md`](onboarding.md)         | The two parts, the hardware back button, the ratings summary             |
+| [`onboarding.md`](onboarding.md)         | The two parts, the hardware back button, the ratings summary, the gate   |
 | [`plans.md`](plans.md)                   | The plan card, the ladder, the Now rail and its nine card states         |
 | [`play.md`](play.md)                     | The copy deck, the three cards, the court, the four screens, `SH.whyfit` |
 | [`player_profile.md`](player_profile.md) | The flagged photo, the gender step, the consent copy, the commit         |

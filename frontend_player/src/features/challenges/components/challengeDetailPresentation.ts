@@ -277,7 +277,7 @@ export interface ChallengeCardFacts {
  */
 export function challengeCardLabel(facts: ChallengeCardFacts): string {
   return sentences([
-    facts.person.nickname,
+    facts.person.name,
     `Match score ${facts.fit}`,
     levelRow(facts.person),
     ...(facts.distanceKm === undefined ? [] : [`${facts.distanceKm} km away`]),

@@ -108,9 +108,9 @@ export function GameCourt({ sport, seats, playerId, faces, summary }: GameCourtP
               <SeatCaption
                 size={size}
                 name={playerName(
-                  seat.nickname === undefined
+                  seat.name === undefined
                     ? { kind: 'unknown' }
-                    : { kind: 'player', nickname: seat.nickname },
+                    : { kind: 'player', name: seat.name },
                 )}
               />
             </View>

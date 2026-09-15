@@ -32,7 +32,7 @@ import {
 } from './challengePresentation';
 
 /** The other player, as a person rather than as a string — ADR-0107's rule, held by a type. */
-const SOMEBODY: NamedPlayer = { kind: 'player', nickname: 'niepokonany' };
+const SOMEBODY: NamedPlayer = { kind: 'player', name: 'niepokonany' };
 
 /** One of each standing, with whatever its sentence quotes. */
 function facts(side: ChallengeSide): readonly StandingFacts[] {
@@ -205,7 +205,7 @@ describe('a lapse is not a decline', () => {
     const line = standingLine({
       side: 'organiser',
       standing: 'DECLINED',
-      player: { kind: 'player', nickname: 'niepokonanywojownik42' },
+      player: { kind: 'player', name: 'niepokonanywojownik42' },
     });
 
     expect(line).toMatch(/^niepokonanywojownik42 said no/);

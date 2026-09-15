@@ -60,10 +60,10 @@ function game(over: Partial<Game> = {}): Game {
     kind: 'COUNTED',
     standing: 'AWAITING_ENTRY',
     seats: [
-      { side: 'A', playerId: ME, nickname: 'me_' },
-      { side: 'A', playerId: PARTNER, nickname: 'kasia_w' },
-      { side: 'B', playerId: OPPONENT, nickname: 'tomek.p' },
-      { side: 'B', playerId: 'opp2-1111-4444-8888-00000004', nickname: 'marekb' },
+      { side: 'A', playerId: ME, name: 'me_' },
+      { side: 'A', playerId: PARTNER, name: 'kasia_w' },
+      { side: 'B', playerId: OPPONENT, name: 'tomek.p' },
+      { side: 'B', playerId: 'opp2-1111-4444-8888-00000004', name: 'marekb' },
     ],
     plannedAt: '2026-09-01T18:00:00Z',
     entryClosesAt: '2026-09-09T18:00:00Z',
@@ -92,9 +92,9 @@ describe('before anybody has said it happened', () => {
   it('offers no entry while a seat somebody left is still open', () => {
     const short = game({
       seats: [
-        { side: 'A', playerId: ME, nickname: 'me_' },
-        { side: 'A', playerId: PARTNER, nickname: 'kasia_w' },
-        { side: 'B', playerId: OPPONENT, nickname: 'tomek.p' },
+        { side: 'A', playerId: ME, name: 'me_' },
+        { side: 'A', playerId: PARTNER, name: 'kasia_w' },
+        { side: 'B', playerId: OPPONENT, name: 'tomek.p' },
         { side: 'B' },
       ],
     });
@@ -160,7 +160,7 @@ describe('one score on the table', () => {
       proposal: PROPOSAL,
       // Whoever put it up, in the reader's own terms — the person *That's right* settles a
       // score against, which this screen could not name until a seat carried a handle (#319).
-      by: { kind: 'player', nickname: 'me_' },
+      by: { kind: 'player', name: 'me_' },
     });
     expect(actsOffered(argument)).toEqual(['accept', 'counter']);
   });
@@ -239,7 +239,7 @@ describe('an agreement waiting out its grace', () => {
       kind: 'agreed',
       agreement: {
         with: 'ours',
-        by: { kind: 'player', nickname: 'tomek.p' },
+        by: { kind: 'player', name: 'tomek.p' },
         settlesAt: '2026-09-06T02:12:00Z',
       },
       ours: PROPOSAL,

@@ -194,8 +194,8 @@ export function sideOf(game: Game, playerId: string): GameSide | undefined {
  */
 export function whoIs(game: Game, reader: string, playerId: string): NamedPlayer {
   if (playerId === reader) return { kind: 'you' };
-  const nickname = game.seats.find((seat) => seat.playerId === playerId)?.nickname;
-  return nickname === undefined ? { kind: 'unknown' } : { kind: 'player', nickname };
+  const name = game.seats.find((seat) => seat.playerId === playerId)?.name;
+  return name === undefined ? { kind: 'unknown' } : { kind: 'player', name };
 }
 
 /**

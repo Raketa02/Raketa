@@ -53,13 +53,15 @@ export interface ChallengeSeat {
   /** Absent while they have not answered, and on a seat nobody was put in. */
   readonly answer?: SeatAnswer;
   /**
-   * The whole handle, and never a familiar form derived from it (ADR-0107).
+   * The whole name, and never a familiar form derived from it (ADR-0107, read through
+   * ADR-0171) — and never the nickname, which is a handle drawn on a record and said nowhere.
    *
-   * Absent on an empty seat and absent where `users` no longer has the account. The seat stays
-   * either way — a seat with no handle is still a position on the court, and every sentence
-   * that would have named them says `?` instead.
+   * Absent on an empty seat and absent where `users` no longer has the account — never for an
+   * unnamed player, whom the entry gate holds at the naming step. The seat stays either way —
+   * a seat with no name is still a position on the court, and every sentence that would have
+   * named them says `?` instead.
    */
-  readonly nickname?: string;
+  readonly name?: string;
   /**
    * When this seat's answer stops being wanted — **this seat's own**, dated when it was
    * invited.
@@ -341,7 +343,5 @@ function organiserSeat(challenge: Challenge): ChallengeSeat | undefined {
  * exactly what ADR-0107 forbids.
  */
 export function seatName(seat: ChallengeSeat | undefined): NamedPlayer {
-  return seat?.nickname === undefined
-    ? { kind: 'unknown' }
-    : { kind: 'player', nickname: seat.nickname };
+  return seat?.name === undefined ? { kind: 'unknown' } : { kind: 'player', name: seat.name };
 }

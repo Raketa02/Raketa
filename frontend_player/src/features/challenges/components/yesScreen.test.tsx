@@ -85,8 +85,8 @@ type Seat = Wire['SeatSchema'];
 
 /** Ewa's squash challenge to you, still to answer — the singles court every walk starts on. */
 const SINGLES: readonly Seat[] = [
-  { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-  { side: 'B', player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
+  { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+  { side: 'B', player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
 ];
 
 /** The same seats once you have said yes — the reply, and what the reads after it find. */
@@ -105,14 +105,14 @@ function row(over: Partial<Wire['ChallengeSchema']> = {}): Wire['ChallengeSchema
   };
 }
 
-const card = (nickname: string, photoUrl?: string): Wire['SeatCardSchema'] => ({
+const card = (name: string, photoUrl?: string): Wire['SeatCardSchema'] => ({
   person: {
-    nickname,
+    name,
     area_code: 'WAW-C',
     level: 2.71,
     band: 'Established',
     range: { low: 2.55, high: 2.87 },
-    ...(photoUrl === undefined ? {} : { photo_id: `photo-${nickname}`, photo_url: photoUrl }),
+    ...(photoUrl === undefined ? {} : { photo_id: `photo-${name}`, photo_url: photoUrl }),
   },
   pairing: { fit: 78, distance_km: 3, terms: [], degraded_terms: [], concerns: [] },
 });
@@ -138,6 +138,7 @@ function detail(
 function ownRecord(photoUrl?: string): Wire['PlayerRecordResponse'] {
   return {
     is_self: true,
+    name: 'me_',
     nickname: 'me_',
     area_code: 'WAW-C',
     social_tags: [],
@@ -176,8 +177,8 @@ const opened = (members: readonly Wire['ConversationMemberSchema'][], gameId: st
 };
 
 const EWA_AND_ME = [
-  { player_id: EWA, nickname: 'ewa.m' },
-  { player_id: ME, nickname: 'me_' },
+  { player_id: EWA, name: 'ewa.m' },
+  { player_id: ME, name: 'me_' },
 ];
 
 let transport: Transport;
@@ -240,8 +241,8 @@ const yesScreen = () => within(screen.getByTestId('yes-screen'));
 const HIDDEN_TOO = { includeHiddenElements: true } as const;
 const tabs = () => screen.queryAllByRole('tab');
 const SINGLES_SPOKEN = yesAnnouncement({
-  yours: [{ kind: 'person', playerId: ME, nickname: 'me_' }],
-  theirs: [{ kind: 'person', playerId: EWA, nickname: 'ewa.m' }],
+  yours: [{ kind: 'person', playerId: ME, name: 'me_' }],
+  theirs: [{ kind: 'person', playerId: EWA, name: 'ewa.m' }],
 });
 
 describe('a yes lands on the yes screen', () => {
@@ -313,6 +314,40 @@ describe('a yes lands on the yes screen', () => {
     // And never spoken: the drawing is hidden from the reader, and the header carries the handles.
     expect(yesScreen().queryByText('EM')).toBeNull();
     expect(yesScreen().getAllByTestId('yes-tile-poster')).toHaveLength(2);
+  });
+
+  /**
+   * **The initials come from the name, cut at its space** — *Ania Kowalska* draws `AK`
+   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+   * §4) — and the sentence is built from the whole name. The nickname is on this screen
+   * nowhere: not over the poster, not in the header, not spoken.
+   */
+  it('cuts the initials from the name, and says the whole name', async () => {
+    const named: readonly Seat[] = [
+      { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'Ania Kowalska' },
+      { side: 'B', player_id: ME, answer: null, answer_by: at(20), name: 'Marek Zieliński' },
+    ];
+    await openTheChallenge(
+      detail({ seats: [...named] }),
+      row({ seats: [...named] }),
+      /^Ania Kowalska, Squash/,
+    );
+    stubConversations(transport, []);
+    stubAccept(
+      row({ standing: 'ON', seats: accepted(named) }),
+      detail({ standing: 'ON', seats: accepted(named) }),
+    );
+
+    await sayYes();
+
+    expect(await yesScreen().findByText('AK', HIDDEN_TOO)).toBeTruthy();
+    expect(yesScreen().getByText('MZ', HIDDEN_TOO)).toBeTruthy();
+    const spoken = yesAnnouncement({
+      yours: [{ kind: 'person', playerId: ME, name: 'Marek Zieliński' }],
+      theirs: [{ kind: 'person', playerId: EWA, name: 'Ania Kowalska' }],
+    });
+    expect(yesScreen().getByRole('header', { name: spoken })).toBeTruthy();
+    expect(yesScreen().queryByText(/@/, HIDDEN_TOO)).toBeNull();
   });
 });
 
@@ -418,10 +453,10 @@ describe('Open the chat', () => {
     const stillFilling = {
       sport: 'PADEL' as const,
       seats: [
-        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, nickname: 'ewa.m' },
-        { side: 'A' as const, player_id: OLA, answer: null, answer_by: at(20), nickname: 'ola.k' },
-        { side: 'B' as const, player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
-        { side: 'B' as const, player_id: null, answer: null, nickname: null },
+        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, name: 'ewa.m' },
+        { side: 'A' as const, player_id: OLA, answer: null, answer_by: at(20), name: 'ola.k' },
+        { side: 'B' as const, player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
+        { side: 'B' as const, player_id: null, answer: null, name: null },
       ],
     };
     await openTheChallenge(
@@ -458,18 +493,18 @@ describe('Open the chat', () => {
   it('lands in a room drawing the plan card, and Now draws the game as Planning', async () => {
     const PIOTR = 'ffffffff-0000-4000-8000-000000000006';
     const FOUR = [
-      { player_id: EWA, nickname: 'ewa.m' },
-      { player_id: OLA, nickname: 'ola.k' },
-      { player_id: PIOTR, nickname: 'piotr' },
-      { player_id: ME, nickname: 'me_' },
+      { player_id: EWA, name: 'ewa.m' },
+      { player_id: OLA, name: 'ola.k' },
+      { player_id: PIOTR, name: 'piotr' },
+      { player_id: ME, name: 'me_' },
     ];
     const lastSeat = {
       sport: 'PADEL' as const,
       seats: [
-        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, nickname: 'ewa.m' },
-        { side: 'A' as const, player_id: OLA, answer: 'ACCEPTED' as const, nickname: 'ola.k' },
-        { side: 'B' as const, player_id: PIOTR, answer: 'ACCEPTED' as const, nickname: 'piotr' },
-        { side: 'B' as const, player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
+        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, name: 'ewa.m' },
+        { side: 'A' as const, player_id: OLA, answer: 'ACCEPTED' as const, name: 'ola.k' },
+        { side: 'B' as const, player_id: PIOTR, answer: 'ACCEPTED' as const, name: 'piotr' },
+        { side: 'B' as const, player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
       ],
     };
     const game: Wire['GameSchema'] = {
@@ -483,7 +518,7 @@ describe('Open the chat', () => {
       seats: lastSeat.seats.map((seat) => ({
         side: seat.side,
         player_id: seat.player_id,
-        nickname: seat.nickname,
+        name: seat.name,
       })),
       proposals: [],
     };
@@ -650,10 +685,10 @@ describe('a padel four', () => {
     player_id: OLA,
     answer: null,
     answer_by: at(20),
-    nickname: 'ola.n',
+    name: 'ola.n',
   };
-  const KUBA_SEAT: Seat = { side: 'B', player_id: KUBA, answer: 'ACCEPTED', nickname: 'kuba.w' };
-  const EWA_SEAT: Seat = { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' };
+  const KUBA_SEAT: Seat = { side: 'B', player_id: KUBA, answer: 'ACCEPTED', name: 'kuba.w' };
+  const EWA_SEAT: Seat = { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' };
 
   /**
    * Three faces and one empty seat, reader first and the reader's side left — the seat still
@@ -664,7 +699,7 @@ describe('a padel four', () => {
       EWA_SEAT,
       OLA_SEAT,
       KUBA_SEAT,
-      { side: 'B', player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
+      { side: 'B', player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
     ];
     const four = { sport: 'PADEL' as const, seats };
     await openTheChallenge(detail(four), row(four), /^ewa\.m.*, Padel, .*to answer/);
@@ -678,10 +713,10 @@ describe('a padel four', () => {
 
     const spoken = yesAnnouncement({
       yours: [
-        { kind: 'person', playerId: ME, nickname: 'me_' },
-        { kind: 'person', playerId: KUBA, nickname: 'kuba.w' },
+        { kind: 'person', playerId: ME, name: 'me_' },
+        { kind: 'person', playerId: KUBA, name: 'kuba.w' },
       ],
-      theirs: [{ kind: 'person', playerId: EWA, nickname: 'ewa.m' }, { kind: 'empty' }],
+      theirs: [{ kind: 'person', playerId: EWA, name: 'ewa.m' }, { kind: 'empty' }],
     });
     expect(await yesScreen().findByRole('header', { name: spoken })).toBeTruthy();
     expect(yesScreen().getAllByTestId('yes-tile-poster')).toHaveLength(3);
@@ -695,10 +730,10 @@ describe('a padel four', () => {
 
   it('puts the reader’s side left when their seat is on side A', async () => {
     const seats: Seat[] = [
-      { side: 'A', player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
+      { side: 'A', player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
       OLA_SEAT,
       KUBA_SEAT,
-      { side: 'B', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+      { side: 'B', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
     ];
     const four = { sport: 'PADEL' as const, seats };
     // The row names the others in seat order, so it opens with Ola here rather than Ewa.
@@ -712,10 +747,10 @@ describe('a padel four', () => {
     await sayYes();
 
     const spoken = yesAnnouncement({
-      yours: [{ kind: 'person', playerId: ME, nickname: 'me_' }, { kind: 'empty' }],
+      yours: [{ kind: 'person', playerId: ME, name: 'me_' }, { kind: 'empty' }],
       theirs: [
-        { kind: 'person', playerId: KUBA, nickname: 'kuba.w' },
-        { kind: 'person', playerId: EWA, nickname: 'ewa.m' },
+        { kind: 'person', playerId: KUBA, name: 'kuba.w' },
+        { kind: 'person', playerId: EWA, name: 'ewa.m' },
       ],
     });
     expect(await yesScreen().findByRole('header', { name: spoken })).toBeTruthy();

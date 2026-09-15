@@ -91,7 +91,7 @@ export function useSendChallenge() {
  *
  * **It answers a player id and never a name.** Turning one into words needs the handle, which is
  * the *court's* to read off the search it was built from — this feature has never seen a
- * nickname and must not learn to guess one.
+ * name and must not learn to guess one.
  *
  * `undefined` while the answer is on its way, and `undefined` again when there is nobody in it
  * to name. The two are deliberately not told apart: the sentence the screen writes without a

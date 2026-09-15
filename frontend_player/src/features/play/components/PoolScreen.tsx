@@ -740,7 +740,7 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
           onClose={() => setExplaining(undefined)}
           candidate={explaining}
           envelope={record.envelope}
-          name={playerName({ kind: 'player', nickname: explaining.card.nickname })}
+          name={playerName({ kind: 'player', name: explaining.card.name })}
         />
       )}
 
@@ -784,9 +784,9 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
 function nameOf(
   rows: readonly Candidate[],
   playerId: string,
-): { readonly kind: 'player'; readonly nickname: string } | undefined {
-  const nickname = rows.find((row) => row.playerId === playerId)?.card.nickname;
-  return nickname === undefined ? undefined : { kind: 'player', nickname };
+): { readonly kind: 'player'; readonly name: string } | undefined {
+  const name = rows.find((row) => row.playerId === playerId)?.card.name;
+  return name === undefined ? undefined : { kind: 'player', name };
 }
 
 const s = StyleSheet.create({

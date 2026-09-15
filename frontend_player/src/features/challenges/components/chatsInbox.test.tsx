@@ -12,7 +12,7 @@
  * because the wording is the deck's to change and the rules are not.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -71,8 +71,8 @@ function challenge(over: Partial<Wire['ChallengeSchema']> = {}): Wire['Challenge
     standing: 'AWAITING_ANSWERS',
     opened_at: at(-4),
     seats: [
-      { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-      { side: 'B', player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
+      { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+      { side: 'B', player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
     ],
     ...over,
   };
@@ -84,8 +84,8 @@ function mySend(over: Partial<Wire['ChallengeSchema']> = {}): Wire['ChallengeSch
     challenge_id: 'eeeeeeee-0000-4000-8000-000000000005',
     organiser_id: ME,
     seats: [
-      { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-      { side: 'B', player_id: TOMEK, answer: null, answer_by: at(20), nickname: 'tomek.p' },
+      { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+      { side: 'B', player_id: TOMEK, answer: null, answer_by: at(20), name: 'tomek.p' },
     ],
     ...over,
   });
@@ -135,6 +135,27 @@ describe('what the section holds', () => {
   });
 
   /**
+   * **A row draws the name, space and all, and never the nickname**
+   * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+   * §4): *Diego Fabregat*, whole, drawn and spoken — and no `@` anywhere on the tab, because
+   * two Diegos are told apart on the record and not on a row.
+   */
+  it('names the people on a row by their whole names', async () => {
+    await openChats([
+      challenge({
+        seats: [
+          { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'Diego Fabregat' },
+          { side: 'B', player_id: ME, answer: null, answer_by: at(20), name: 'Ania Kowalska' },
+        ],
+      }),
+    ]);
+
+    const row = await screen.findByLabelText(/^Diego Fabregat, Squash/);
+    expect(within(row).getByText('Diego Fabregat')).toBeTruthy();
+    expect(screen.queryByText(/@/)).toBeNull();
+  });
+
+  /**
    * The count went with the widening. `CHALLENGES FOR YOU · 1` agreed exactly with the badge,
    * which counts only what is addressed to you — and two numbers meaning different things on
    * one screen is #326's own named failure.
@@ -152,8 +173,8 @@ describe('what the section holds', () => {
       standing: 'DECLINED',
       ended_at: at(-1),
       seats: [
-        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-        { side: 'B', player_id: TOMEK, answer: 'DECLINED', answer_by: at(-1), nickname: 'tomek.p' },
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+        { side: 'B', player_id: TOMEK, answer: 'DECLINED', answer_by: at(-1), name: 'tomek.p' },
       ],
     });
 
@@ -165,7 +186,7 @@ describe('what the section holds', () => {
           standingLine({
             side: 'organiser',
             standing: 'DECLINED',
-            player: { kind: 'player', nickname: 'tomek.p' },
+            player: { kind: 'player', name: 'tomek.p' },
           }),
         ),
       ),
@@ -183,8 +204,8 @@ describe('what the section holds', () => {
       standing: 'DECLINED',
       ended_at: at(-1),
       seats: [
-        { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-        { side: 'B', player_id: ME, answer: 'DECLINED', answer_by: at(20), nickname: 'me_' },
+        { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+        { side: 'B', player_id: ME, answer: 'DECLINED', answer_by: at(20), name: 'me_' },
       ],
     });
     const iLeft = challenge({
@@ -192,8 +213,8 @@ describe('what the section holds', () => {
       sport: 'PADEL',
       standing: 'LINE_UP_INCOMPLETE',
       seats: [
-        { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-        { side: 'A', player_id: ME, answer: 'DECLINED', answer_by: at(20), nickname: 'me_' },
+        { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+        { side: 'A', player_id: ME, answer: 'DECLINED', answer_by: at(20), name: 'me_' },
         { side: 'B' },
         { side: 'B' },
       ],
@@ -214,13 +235,13 @@ describe('what the section holds', () => {
       // which it keeps.
       ended_at: at(-99),
       seats: [
-        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
         {
           side: 'B',
           player_id: TOMEK,
           answer: 'DECLINED',
           answer_by: at(-99),
-          nickname: 'tomek.p',
+          name: 'tomek.p',
         },
       ],
     });
@@ -242,8 +263,8 @@ describe('the order', () => {
     const later = challenge({
       challenge_id: 'aaaaaaaa-0000-4000-8000-00000000000b',
       seats: [
-        { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.p' },
-        { side: 'B', player_id: ME, answer: null, answer_by: at(40), nickname: 'me_' },
+        { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+        { side: 'B', player_id: ME, answer: null, answer_by: at(40), name: 'me_' },
       ],
     });
     const myOldSend = mySend({
@@ -254,8 +275,8 @@ describe('the order', () => {
       challenge_id: 'aaaaaaaa-0000-4000-8000-00000000000d',
       opened_at: at(-2),
       seats: [
-        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-        { side: 'B', player_id: OLA, answer: null, answer_by: at(20), nickname: 'ola.k' },
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+        { side: 'B', player_id: OLA, answer: null, answer_by: at(20), name: 'ola.k' },
       ],
     });
 
@@ -312,10 +333,10 @@ describe('the row', () => {
       sport: 'PADEL',
       standing: 'LINE_UP_INCOMPLETE',
       seats: [
-        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-        { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.p' },
-        { side: 'B', player_id: EWA, answer: 'DECLINED', answer_by: at(20), nickname: 'ewa.m' },
-        { side: 'B', player_id: OLA, answer: 'DECLINED', answer_by: at(20), nickname: 'ola.k' },
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+        { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+        { side: 'B', player_id: EWA, answer: 'DECLINED', answer_by: at(20), name: 'ewa.m' },
+        { side: 'B', player_id: OLA, answer: 'DECLINED', answer_by: at(20), name: 'ola.k' },
       ],
     });
 
@@ -339,10 +360,10 @@ describe('the row', () => {
       standing: 'DECLINED',
       ended_at: at(-1),
       seats: [
-        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-        { side: 'A', player_id: TOMEK, answer: 'LEFT', answer_by: at(20), nickname: 'tomek.p' },
-        { side: 'B', player_id: EWA, answer: 'DECLINED', answer_by: at(20), nickname: 'ewa.m' },
-        { side: 'B', player_id: OLA, answer: 'DECLINED', answer_by: at(20), nickname: 'ola.k' },
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+        { side: 'A', player_id: TOMEK, answer: 'LEFT', answer_by: at(20), name: 'tomek.p' },
+        { side: 'B', player_id: EWA, answer: 'DECLINED', answer_by: at(20), name: 'ewa.m' },
+        { side: 'B', player_id: OLA, answer: 'DECLINED', answer_by: at(20), name: 'ola.k' },
       ],
     });
 
@@ -352,15 +373,15 @@ describe('the row', () => {
     expect(screen.queryByLabelText(/tomek\.p/)).toBeNull();
   });
 
-  /** A nickname is not shortenable, so the list gives way by dropping whole names. */
+  /** A name is not shortenable, so the list gives way by dropping whole names. */
   it('drops whole handles rather than shortening one, and says how many it dropped', async () => {
     const four = challenge({
       sport: 'PADEL',
       seats: [
-        { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.magdalena.wisniewska' },
-        { side: 'A', player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
-        { side: 'B', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.przybylski' },
-        { side: 'B', player_id: OLA, answer: 'ACCEPTED', nickname: 'ola.kowalczyk' },
+        { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.magdalena.wisniewska' },
+        { side: 'A', player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
+        { side: 'B', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.przybylski' },
+        { side: 'B', player_id: OLA, answer: 'ACCEPTED', name: 'ola.kowalczyk' },
       ],
     });
 
@@ -390,17 +411,17 @@ describe('coming back to the list', () => {
   it('re-reads the challenges when the player comes back from a room', async () => {
     const ROOM = 'eeeeeeee-0000-4000-8000-00000000000e';
     const members = [
-      { player_id: ME, nickname: 'me_' },
-      { player_id: EWA, nickname: 'ewa.m' },
+      { player_id: ME, name: 'me_' },
+      { player_id: EWA, name: 'ewa.m' },
     ];
     const four = (olaAnswer: 'DECLINED' | null) =>
       mySend({
         sport: 'PADEL',
         seats: [
-          { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-          { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-          { side: 'B', player_id: TOMEK, answer: null, answer_by: at(20), nickname: 'tomek.p' },
-          { side: 'B', player_id: OLA, answer: olaAnswer, answer_by: at(20), nickname: 'ola.k' },
+          { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+          { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+          { side: 'B', player_id: TOMEK, answer: null, answer_by: at(20), name: 'tomek.p' },
+          { side: 'B', player_id: OLA, answer: olaAnswer, answer_by: at(20), name: 'ola.k' },
         ],
       });
     stubConversations(transport, [
@@ -517,8 +538,8 @@ describe('the badge on the bar', () => {
       challenge_id: 'ffffffff-0000-4000-8000-000000000006',
       standing: 'ON',
       seats: [
-        { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-        { side: 'B', player_id: OLA, answer: 'ACCEPTED', nickname: 'ola.k' },
+        { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+        { side: 'B', player_id: OLA, answer: 'ACCEPTED', name: 'ola.k' },
       ],
     });
 

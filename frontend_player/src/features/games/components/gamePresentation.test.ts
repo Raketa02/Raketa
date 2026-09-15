@@ -45,8 +45,8 @@ const GAME: Game = {
   kind: 'COUNTED',
   standing: 'AWAITING_ANSWER',
   seats: [
-    { side: 'A', playerId: 'me', nickname: 'me_' },
-    { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+    { side: 'A', playerId: 'me', name: 'me_' },
+    { side: 'B', playerId: 'them', name: 'tomek.p' },
   ],
   plannedAt: '2026-09-01T09:00:00Z',
   proposals: [],
@@ -55,7 +55,7 @@ const GAME: Game = {
 
 /** The two people any of these sentences can name: you, and the player across the net. */
 const YOU: NamedPlayer = { kind: 'you' };
-const THEM: NamedPlayer = { kind: 'player', nickname: 'tomek.p' };
+const THEM: NamedPlayer = { kind: 'player', name: 'tomek.p' };
 
 const PROPOSAL = {
   side: 'A',
@@ -395,10 +395,10 @@ describe('the eyebrow on the plan lead', () => {
   const doubles: Game = {
     ...GAME,
     seats: [
-      { side: 'A', playerId: 'me', nickname: 'me_' },
-      { side: 'A', playerId: 'partner', nickname: 'kasia_w' },
-      { side: 'B', playerId: 'them', nickname: 'tomek.p' },
-      { side: 'B', playerId: 'other', nickname: 'marekb' },
+      { side: 'A', playerId: 'me', name: 'me_' },
+      { side: 'A', playerId: 'partner', name: 'kasia_w' },
+      { side: 'B', playerId: 'them', name: 'tomek.p' },
+      { side: 'B', playerId: 'other', name: 'marekb' },
     ],
   };
 
@@ -447,10 +447,10 @@ describe('the rest', () => {
     const doubles: Game = {
       ...GAME,
       seats: [
-        { side: 'A', playerId: 'me', nickname: 'me_' },
-        { side: 'A', playerId: 'partner', nickname: 'kasia_w' },
-        { side: 'B', playerId: 'them', nickname: 'tomek.p' },
-        { side: 'B', playerId: 'other', nickname: 'marekb' },
+        { side: 'A', playerId: 'me', name: 'me_' },
+        { side: 'A', playerId: 'partner', name: 'kasia_w' },
+        { side: 'B', playerId: 'them', name: 'tomek.p' },
+        { side: 'B', playerId: 'other', name: 'marekb' },
       ],
     };
 
@@ -463,7 +463,7 @@ describe('the rest', () => {
     const erased: Game = {
       ...GAME,
       seats: [
-        { side: 'A', playerId: 'me', nickname: 'me_' },
+        { side: 'A', playerId: 'me', name: 'me_' },
         { side: 'B', playerId: 'them' },
       ],
     };
@@ -521,10 +521,10 @@ describe('the court’s pairing, in words', () => {
   it('labels the bar with stems — you and your partner against the other side', () => {
     const doubles = barLabels(
       [
-        { side: 'A', playerId: 'me', nickname: 'tomek.p' },
-        { side: 'A', playerId: 'p', nickname: 'Zofia.B' },
-        { side: 'B', playerId: 'o1', nickname: 'kuba_w' },
-        { side: 'B', playerId: 'o2', nickname: 'Ola Nowak' },
+        { side: 'A', playerId: 'me', name: 'tomek.p' },
+        { side: 'A', playerId: 'p', name: 'Zofia.B' },
+        { side: 'B', playerId: 'o1', name: 'kuba_w' },
+        { side: 'B', playerId: 'o2', name: 'Ola Nowak' },
       ],
       'me',
     );
@@ -535,8 +535,8 @@ describe('the court’s pairing, in words', () => {
   it('labels a singles bar with you and one stem', () => {
     const singles = barLabels(
       [
-        { side: 'B', playerId: 'o', nickname: 'kuba_w' },
-        { side: 'A', playerId: 'me', nickname: 'tomek.p' },
+        { side: 'B', playerId: 'o', name: 'kuba_w' },
+        { side: 'A', playerId: 'me', name: 'tomek.p' },
       ],
       'me',
     );
@@ -576,15 +576,15 @@ describe('the court’s pairing, in words', () => {
 
   /** The row's own name: the handle whole with the one mark that says it is yours. */
   it('names a row by the whole handle, and marks yours', () => {
-    expect(playerRowName({ nickname: 'tomek.p', yours: false })).toBe('tomek.p');
-    expect(playerRowName({ nickname: 'tomek.p', yours: true })).toBe('tomek.p (you)');
+    expect(playerRowName({ name: 'tomek.p', yours: false })).toBe('tomek.p');
+    expect(playerRowName({ name: 'tomek.p', yours: true })).toBe('tomek.p (you)');
     expect(playerRowName({ yours: false })).toBe('?');
   });
 
   /** What the tap is called: the record it opens, by whose it is. */
   it('names the control by the record it opens', () => {
-    expect(recordLabel({ nickname: 'tomek.p', yours: false })).toBe('tomek.p’s record');
-    expect(recordLabel({ nickname: 'tomek.p', yours: true })).toBe('Your record');
+    expect(recordLabel({ name: 'tomek.p', yours: false })).toBe('tomek.p’s record');
+    expect(recordLabel({ name: 'tomek.p', yours: true })).toBe('Your record');
     expect(recordLabel({ yours: false })).toBe('?’s record');
   });
 });

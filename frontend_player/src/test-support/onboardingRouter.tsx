@@ -36,10 +36,12 @@ import FindAGameRoute from '@/app/(app)/(tabs)/play/index';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import AuthLayout from '@/app/(auth)/_layout';
 import SignInRoute from '@/app/(auth)/sign-in';
+import SignUpRoute from '@/app/(auth)/sign-up';
 import AvailabilityRoute from '@/app/(onboarding)/availability';
 import DataRoute from '@/app/(onboarding)/data';
 import DoneRoute from '@/app/(onboarding)/done';
 import LocationRoute from '@/app/(onboarding)/location';
+import NameRoute from '@/app/(onboarding)/name';
 import OnboardingLayout from '@/app/(onboarding)/_layout';
 import OptInRoute from '@/app/(onboarding)/opt-in';
 import PhotosRoute from '@/app/(onboarding)/photos';
@@ -119,7 +121,13 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/you': YouRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,
+  // Sign-up is in the tree for the one walk that starts before a session exists: an account
+  // created here is unnamed, and where the gate sends it next is the naming step's suite's.
+  '(auth)/sign-up': SignUpRoute,
   '(onboarding)/_layout': OnboardingLayout,
+  // The naming step — the first screen after sign-up, and the gate's first destination
+  // (ADR-0171 §3). Before welcome in the table as it is in the walk.
+  '(onboarding)/name': NameRoute,
   '(onboarding)/welcome': WelcomeRoute,
   '(onboarding)/sports': SportsRoute,
   '(onboarding)/question/[assessmentId]': QuestionRoute,
@@ -618,12 +626,29 @@ export interface GateStub {
    * once a rating exists, so most suites never have to state it.
    */
   readonly hasPlayerProfile?: boolean;
+  /**
+   * What this player is called — the gate's **first** branch
+   * ([ADR-0171](../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+   * §3). `null` is an account that has not named itself yet, which the gate sends to the naming
+   * step before anything else.
+   *
+   * Defaults to **named**, because almost no suite is about the step: every launch that lands
+   * on welcome, in the app or in the middle of a run is a launch by somebody the app can already
+   * call by name. The nickname rides with it and is not a parameter — nothing the gate reads
+   * depends on it, and a suite about the You tab reads it off `GATE_USER`.
+   */
+  readonly name?: string | null;
 }
 
-/** The signed-in player, as `GET /users/me` answers. Identity is filler; the flag is not. */
+/**
+ * The signed-in player, as `GET /users/me` answers. Identity is filler; the flag is not, and
+ * neither is the name: it is what every screen says about her, and its absence is where a
+ * launch is sent first.
+ */
 export const GATE_USER: Wire['UserResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
   email: 'ada@example.com',
+  name: 'Ada Lovelace',
   nickname: 'ada',
   authority: 'player',
   is_admin: false,
@@ -657,14 +682,27 @@ export const GATE_USER: Wire['UserResponse'] = {
  */
 export function stubGate(
   transport: Transport,
-  { ratings = [], runs = [], hasPlayerProfile = false, id = GATE_USER.id }: GateStub = {},
+  {
+    ratings = [],
+    runs = [],
+    hasPlayerProfile = false,
+    id = GATE_USER.id,
+    name = GATE_USER.name ?? null,
+  }: GateStub = {},
 ) {
   transport.on('GET', '/api/v1/ratings', () =>
     json<Wire['RatingsResponse']>({ ratings: [...ratings] }),
   );
 
   transport.on('GET', '/api/v1/users/me', () =>
-    json<Wire['UserResponse']>({ ...GATE_USER, id, has_player_profile: hasPlayerProfile }),
+    json<Wire['UserResponse']>({
+      ...GATE_USER,
+      id,
+      name,
+      // The two are one act: an account with no name has no handle either.
+      nickname: name === null ? null : GATE_USER.nickname,
+      has_player_profile: hasPlayerProfile,
+    }),
   );
 
   stubRunsInProgress(transport, runs);

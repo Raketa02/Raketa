@@ -73,8 +73,8 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 const PAIR: Wire['ConversationMemberSchema'][] = [
-  { player_id: ME, nickname: 'me_' },
-  { player_id: TOMEK, nickname: 'tomek.p' },
+  { player_id: ME, name: 'me_' },
+  { player_id: TOMEK, name: 'tomek.p' },
 ];
 
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
@@ -87,8 +87,8 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
     planned_at: PLANNED_AT,
     entry_closes_at: '2026-09-20T09:00:00Z',
     seats: [
-      { side: 'A', player_id: ME, nickname: 'me_' },
-      { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+      { side: 'A', player_id: ME, name: 'me_' },
+      { side: 'B', player_id: TOMEK, name: 'tomek.p' },
     ],
     proposals: [],
     ...over,
@@ -547,8 +547,8 @@ describe('every other name, on the same shell', () => {
  */
 describe('Needs a player', () => {
   const SHORT: Wire['GameSchema']['seats'] = [
-    { side: 'A', player_id: ME, nickname: 'me_' },
-    { side: 'B', player_id: null, nickname: null },
+    { side: 'A', player_id: ME, name: 'me_' },
+    { side: 'B', player_id: null, name: null },
   ];
 
   /** A plan whose agreed point has passed — the clock says *Needs result*, and loses. */
@@ -594,12 +594,12 @@ describe('Needs a player', () => {
   it('opens the builder from Fill the seat, with the game’s seated players accepted', async () => {
     const LINEUP_ID = 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
     const KASIA = 'cccccccc-0000-4000-8000-000000000003';
-    const candidate = (playerId: string, nickname: string): Wire['CandidateSchema'] => ({
+    const candidate = (playerId: string, name: string): Wire['CandidateSchema'] => ({
       player_id: playerId,
       fit: 78,
       distance_km: 4,
       player_card: {
-        nickname,
+        name,
         area_code: 'A+050612+0019938',
         social_tags: [],
         level: 3.1,
@@ -668,10 +668,10 @@ describe('Needs a player', () => {
 
     // A padel four short of one, so the accepted seats are somebody other than the reader.
     const THREE_IN: Wire['GameSchema']['seats'] = [
-      { side: 'A', player_id: ME, nickname: 'me_' },
-      { side: 'A', player_id: TOMEK, nickname: 'tomek.p' },
-      { side: 'B', player_id: 'dddddddd-0000-4000-8000-000000000004', nickname: 'marekb' },
-      { side: 'B', player_id: null, nickname: null },
+      { side: 'A', player_id: ME, name: 'me_' },
+      { side: 'A', player_id: TOMEK, name: 'tomek.p' },
+      { side: 'B', player_id: 'dddddddd-0000-4000-8000-000000000004', name: 'marekb' },
+      { side: 'B', player_id: null, name: null },
     ];
     await landOnNow({ games: [game({ seats: THREE_IN })], plans: [AHEAD] });
 
@@ -730,8 +730,8 @@ describe('the court', () => {
   it('draws a face where the room has a photograph, and posters where it has none', async () => {
     await landOnNow({
       members: [
-        { player_id: ME, nickname: 'me_' },
-        { player_id: TOMEK, nickname: 'tomek.p', photo_id: 'p1', photo_url: TOMEK_PHOTO },
+        { player_id: ME, name: 'me_' },
+        { player_id: TOMEK, name: 'tomek.p', photo_id: 'p1', photo_url: TOMEK_PHOTO },
       ],
     });
 

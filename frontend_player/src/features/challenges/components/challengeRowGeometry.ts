@@ -28,7 +28,7 @@
  *
  * ## The handle line's budget
  *
- * §15 refuses to shorten a nickname, so a list of them gives way by dropping whole names — the
+ * §15 refuses to shorten a name, so a list of them gives way by dropping whole names — the
  * rule is `handleList.ts`'s, and what this module owes it is **how much room the words actually
  * have**. Everything to the left and right of that column is reserved at its **widest**: the
  * cluster at the number of faces the row will draw, the two gaps, and the urgency stripe — which

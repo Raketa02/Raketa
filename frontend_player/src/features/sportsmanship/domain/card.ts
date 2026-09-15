@@ -60,7 +60,7 @@ export interface OpenCard {
 export interface RatedSeat {
   readonly playerId?: string;
   /** Absent where `users` no longer has that account, which draws the unknown player's `?`. */
-  readonly nickname?: string;
+  readonly name?: string;
 }
 
 /** The evening a card is about, handed down by whoever holds the games. See the module note. */
@@ -108,10 +108,10 @@ export function cardOnCourt(
 }
 
 function named(playerId: string, court: RatedCourt): StarSubject {
-  const nickname = court.seats.find((seat) => seat.playerId === playerId)?.nickname;
+  const name = court.seats.find((seat) => seat.playerId === playerId)?.name;
 
   return {
     playerId,
-    name: nickname === undefined ? { kind: 'unknown' } : { kind: 'player', nickname },
+    name: name === undefined ? { kind: 'unknown' } : { kind: 'player', name },
   };
 }

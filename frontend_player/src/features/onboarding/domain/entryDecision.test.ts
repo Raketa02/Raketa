@@ -39,6 +39,7 @@ describe('where a player belongs on launch', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
+        hasName: true,
         hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'welcome' });
@@ -50,6 +51,7 @@ describe('where a player belongs on launch', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
+        hasName: true,
         hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'app' });
@@ -61,6 +63,7 @@ describe('where a player belongs on launch', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
+        hasName: true,
         hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'resume', run: RUN });
@@ -75,6 +78,7 @@ describe('where a player belongs on launch', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
+        hasName: true,
         hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'resume', run: RUN });
@@ -90,6 +94,7 @@ describe('a run the player asked to come back to later', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
+        hasName: true,
         hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'welcome' });
@@ -101,6 +106,7 @@ describe('a run the player asked to come back to later', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
+        hasName: true,
         hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'app' });
@@ -114,6 +120,7 @@ describe('a run the player asked to come back to later', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: ['a-different-assessment'],
+        hasName: true,
         hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'resume', run: RUN });
@@ -130,6 +137,7 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
+        hasName: true,
         hasPlayerProfile: false,
       }),
     ).toEqual({ kind: 'social-steps' });
@@ -145,6 +153,7 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
+        hasName: true,
         hasPlayerProfile: false,
       }),
     ).toEqual({ kind: 'welcome' });
@@ -158,6 +167,7 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
+        hasName: true,
         hasPlayerProfile: false,
       }),
     ).toEqual({ kind: 'resume', run: RUN });
@@ -172,8 +182,58 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
+        hasName: true,
         hasPlayerProfile: false,
       }),
     ).toEqual({ kind: 'social-steps' });
+  });
+});
+
+/**
+ * **An account with no name goes to the naming step before anything else**
+ * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * §3). Sign-up creates the account unnamed and every destination after this one says the
+ * player's name, so it is the first thing the gate asks — and it asks it of every shape, including
+ * the ones the flow cannot produce, because a shape the gate does not route is a loop.
+ */
+describe('an account with no name yet', () => {
+  it('is sent to the naming step, ahead of welcome', () => {
+    // The ordinary case: signed up, closed the app before naming themselves, launched again.
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+        hasName: false,
+        hasPlayerProfile: false,
+      }),
+    ).toEqual({ kind: 'naming' });
+  });
+
+  it('is sent to the naming step ahead of an unfinished run', () => {
+    // The flow cannot produce this — the naming step precedes welcome — but the gate does not
+    // assume it away. The run is not lost: it is still unfinished, and the launch after the
+    // naming resumes it.
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: RUN,
+        deferredRunIds: NONE_DEFERRED,
+        hasName: false,
+        hasPlayerProfile: false,
+      }),
+    ).toEqual({ kind: 'naming' });
+  });
+
+  it('is sent to the naming step ahead of the app, whatever else they hold', () => {
+    expect(
+      entryDestination({
+        ratings: [rating('padel')],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+        hasName: false,
+        hasPlayerProfile: true,
+      }),
+    ).toEqual({ kind: 'naming' });
   });
 });

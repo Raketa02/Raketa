@@ -79,8 +79,8 @@ const PADEL_RATING: Wire['RatingResponse'] = {
   updated_at: '2026-08-14T09:00:00Z',
 };
 
-function member(playerId: string, nickname: string): Wire['ConversationMemberSchema'] {
-  return { player_id: playerId, nickname };
+function member(playerId: string, name: string): Wire['ConversationMemberSchema'] {
+  return { player_id: playerId, name };
 }
 
 /** The room a half-built padel four opened: the organiser and me, two seats still deciding. */
@@ -114,15 +114,15 @@ const PADEL_CHALLENGE: Wire['ChallengeSchema'] = {
   opened_at: '2026-09-11T08:00:00Z',
   ended_at: null,
   seats: [
-    { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.p' },
-    { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-    { side: 'B', player_id: null, answer: null, nickname: null },
+    { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+    { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+    { side: 'B', player_id: null, answer: null, name: null },
     {
       side: 'B',
       player_id: OLA,
       answer: null,
       answer_by: '2026-09-13T08:00:00Z',
-      nickname: 'ola.k',
+      name: 'ola.k',
     },
   ],
 };
@@ -131,15 +131,15 @@ const PADEL_CHALLENGE: Wire['ChallengeSchema'] = {
 const LEFT: Wire['ChallengeSchema'] = {
   ...PADEL_CHALLENGE,
   seats: [
-    { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.p' },
-    { side: 'A', player_id: ME, answer: 'LEFT', nickname: 'me_' },
-    { side: 'B', player_id: null, answer: null, nickname: null },
+    { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+    { side: 'A', player_id: ME, answer: 'LEFT', name: 'me_' },
+    { side: 'B', player_id: null, answer: null, name: null },
     {
       side: 'B',
       player_id: OLA,
       answer: null,
       answer_by: '2026-09-13T08:00:00Z',
-      nickname: 'ola.k',
+      name: 'ola.k',
     },
   ],
 };

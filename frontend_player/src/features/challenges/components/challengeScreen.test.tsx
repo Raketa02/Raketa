@@ -73,7 +73,7 @@ const DETAIL_PATH = `${CHALLENGES_PATH}/${CHALLENGE_ID}`;
  * name nobody — *You said no*, *Your day ran out* — so this is the payload the fold requires and
  * the words never reach.
  */
-const EWA_NAMED = { kind: 'player', nickname: 'ewa.m' } as const;
+const EWA_NAMED = { kind: 'player', name: 'ewa.m' } as const;
 
 /** Enough of a rating for the entry gate to let the app through — this suite is not about it. */
 const PADEL_RATING: Wire['RatingResponse'] = {
@@ -97,8 +97,8 @@ function row(over: Partial<Wire['ChallengeSchema']> = {}): Wire['ChallengeSchema
     standing: 'AWAITING_ANSWERS',
     opened_at: at(-4),
     seats: [
-      { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-      { side: 'B', player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
+      { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+      { side: 'B', player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
     ],
     ...over,
   };
@@ -106,7 +106,7 @@ function row(over: Partial<Wire['ChallengeSchema']> = {}): Wire['ChallengeSchema
 
 const A_CARD: Wire['SeatCardSchema'] = {
   person: {
-    nickname: 'ewa.m',
+    name: 'ewa.m',
     area_code: 'WAW-C',
     level: 2.71,
     band: 'Established',
@@ -133,8 +133,8 @@ function detail(
     standing: 'AWAITING_ANSWERS',
     opened_at: at(-4),
     seats: [
-      { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m', card: A_CARD },
-      { side: 'B', player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
+      { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m', card: A_CARD },
+      { side: 'B', player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
     ],
     ...over,
   };
@@ -225,15 +225,15 @@ describe('the arms', () => {
       detail({
         standing: 'DECLINED',
         seats: [
-          { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-          { side: 'B', player_id: ME, answer: 'DECLINED', nickname: 'me_' },
+          { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+          { side: 'B', player_id: ME, answer: 'DECLINED', name: 'me_' },
         ],
       }),
       row({
         standing: 'DECLINED',
         seats: [
-          { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-          { side: 'B', player_id: ME, answer: 'DECLINED', nickname: 'me_' },
+          { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+          { side: 'B', player_id: ME, answer: 'DECLINED', name: 'me_' },
         ],
       }),
     );
@@ -252,8 +252,8 @@ describe('the arms', () => {
       detail({
         pairing_absence: 'NOTHING_TO_COMPUTE',
         seats: [
-          { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-          { side: 'B', player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
+          { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+          { side: 'B', player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
         ],
       }),
     );
@@ -284,8 +284,8 @@ describe('the card block', () => {
     await openTheChallenge(
       detail({
         seats: [
-          { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m', card: noScore },
-          { side: 'B', player_id: ME, answer: null, answer_by: at(20), nickname: 'me_' },
+          { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m', card: noScore },
+          { side: 'B', player_id: ME, answer: null, answer_by: at(20), name: 'me_' },
         ],
       }),
     );
@@ -318,8 +318,8 @@ describe('the two answers', () => {
         row({
           standing: 'ON',
           seats: [
-            { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-            { side: 'B', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
+            { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+            { side: 'B', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
           ],
         }),
       ),
@@ -350,8 +350,8 @@ describe('the two answers', () => {
         row({
           standing: 'DECLINED',
           seats: [
-            { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-            { side: 'B', player_id: ME, answer: 'DECLINED', nickname: 'me_' },
+            { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+            { side: 'B', player_id: ME, answer: 'DECLINED', name: 'me_' },
           ],
         }),
       ),
@@ -382,8 +382,8 @@ describe('the two answers', () => {
         detail({
           standing: 'LAPSED',
           seats: [
-            { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-            { side: 'B', player_id: ME, answer: 'LAPSED', answer_by: at(-1), nickname: 'me_' },
+            { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+            { side: 'B', player_id: ME, answer: 'LAPSED', answer_by: at(-1), name: 'me_' },
           ],
         }),
       ),
@@ -434,8 +434,8 @@ describe('the arms with nothing to press', () => {
     const everybodyIn = {
       standing: 'ON' as const,
       seats: [
-        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, nickname: 'ewa.m' },
-        { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
+        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, name: 'ewa.m' },
+        { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, name: 'me_' },
       ],
     };
 
@@ -488,8 +488,8 @@ describe('the two refusals that are not a sentence', () => {
         row({
           standing: 'ON',
           seats: [
-            { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-            { side: 'B', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
+            { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+            { side: 'B', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
           ],
         }),
       ),
@@ -519,8 +519,8 @@ describe('the two refusals that are not a sentence', () => {
         row({
           standing: 'ON',
           seats: [
-            { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-            { side: 'B', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
+            { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+            { side: 'B', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
           ],
         }),
       ),
@@ -579,8 +579,8 @@ describe('the door on later visits', () => {
   };
 
   const EWA_AND_ME = [
-    { player_id: EWA, nickname: 'ewa.m' },
-    { player_id: ME, nickname: 'me_' },
+    { player_id: EWA, name: 'ewa.m' },
+    { player_id: ME, name: 'me_' },
   ];
 
   /** A no has no room to go to: the reader is outside whatever room the others keep. */
@@ -593,8 +593,8 @@ describe('the door on later visits', () => {
         row({
           standing: 'DECLINED',
           seats: [
-            { side: 'A', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
-            { side: 'B', player_id: ME, answer: 'DECLINED', nickname: 'me_' },
+            { side: 'A', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
+            { side: 'B', player_id: ME, answer: 'DECLINED', name: 'me_' },
           ],
         }),
       ),
@@ -621,10 +621,10 @@ describe('the door on later visits', () => {
       sport: 'PADEL' as const,
       standing: 'AWAITING_ANSWERS' as const,
       seats: [
-        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, nickname: 'ewa.m' },
-        { side: 'A' as const, player_id: OLA, answer: null, answer_by: at(20), nickname: 'ola.k' },
-        { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
-        { side: 'B' as const, player_id: null, answer: null, nickname: null },
+        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, name: 'ewa.m' },
+        { side: 'A' as const, player_id: OLA, answer: null, answer_by: at(20), name: 'ola.k' },
+        { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, name: 'me_' },
+        { side: 'B' as const, player_id: null, answer: null, name: null },
       ],
     };
     stubChallenges(transport, [row(waitingOnTwo)], READ_AT);
@@ -650,8 +650,8 @@ describe('the door on later visits', () => {
     const everybodyIn = {
       standing: 'ON' as const,
       seats: [
-        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, nickname: 'ewa.m' },
-        { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
+        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, name: 'ewa.m' },
+        { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, name: 'me_' },
       ],
     };
     stubChallenges(transport, [row(everybodyIn)], READ_AT);
@@ -672,8 +672,8 @@ describe('the door on later visits', () => {
     const everybodyIn = {
       standing: 'ON' as const,
       seats: [
-        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, nickname: 'ewa.m' },
-        { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
+        { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, name: 'ewa.m' },
+        { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, name: 'me_' },
       ],
     };
     await openTheChallenge(detail(everybodyIn), row(everybodyIn));
@@ -692,10 +692,10 @@ describe('*Leave the game* on the arranging arm', () => {
     sport: 'PADEL' as const,
     standing: 'AWAITING_ANSWERS' as const,
     seats: [
-      { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, nickname: 'ewa.m' },
-      { side: 'A' as const, player_id: OLA, answer: null, answer_by: at(20), nickname: 'ola.k' },
-      { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
-      { side: 'B' as const, player_id: null, answer: null, nickname: null },
+      { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, name: 'ewa.m' },
+      { side: 'A' as const, player_id: OLA, answer: null, answer_by: at(20), name: 'ola.k' },
+      { side: 'B' as const, player_id: ME, answer: 'ACCEPTED' as const, name: 'me_' },
+      { side: 'B' as const, player_id: null, answer: null, name: null },
     ],
   };
 
@@ -743,8 +743,8 @@ describe('*Leave the game* on the arranging arm', () => {
     const mySend = {
       organiser_id: ME,
       seats: [
-        { side: 'A' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
-        { side: 'B' as const, player_id: EWA, answer: null, answer_by: at(20), nickname: 'ewa.m' },
+        { side: 'A' as const, player_id: ME, answer: 'ACCEPTED' as const, name: 'me_' },
+        { side: 'B' as const, player_id: EWA, answer: null, answer_by: at(20), name: 'ewa.m' },
       ],
     };
     await openTheChallenge(detail(mySend), row(mySend));
@@ -776,10 +776,10 @@ describe('*Remove the challenge* on the arranging arm', () => {
     organiser_id: ME,
     standing: 'AWAITING_ANSWERS' as const,
     seats: [
-      { side: 'A' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
-      { side: 'A' as const, player_id: EWA, answer: null, answer_by: at(20), nickname: 'ewa.m' },
-      { side: 'B' as const, player_id: OLA, answer: null, answer_by: at(20), nickname: 'ola.k' },
-      { side: 'B' as const, player_id: null, answer: null, nickname: null },
+      { side: 'A' as const, player_id: ME, answer: 'ACCEPTED' as const, name: 'me_' },
+      { side: 'A' as const, player_id: EWA, answer: null, answer_by: at(20), name: 'ewa.m' },
+      { side: 'B' as const, player_id: OLA, answer: null, answer_by: at(20), name: 'ola.k' },
+      { side: 'B' as const, player_id: null, answer: null, name: null },
     ],
   };
 
@@ -787,10 +787,10 @@ describe('*Remove the challenge* on the arranging arm', () => {
   const joined = {
     ...mySend,
     seats: [
-      { side: 'A' as const, player_id: ME, answer: 'ACCEPTED' as const, nickname: 'me_' },
-      { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, nickname: 'ewa.m' },
-      { side: 'B' as const, player_id: OLA, answer: null, answer_by: at(20), nickname: 'ola.k' },
-      { side: 'B' as const, player_id: null, answer: null, nickname: null },
+      { side: 'A' as const, player_id: ME, answer: 'ACCEPTED' as const, name: 'me_' },
+      { side: 'A' as const, player_id: EWA, answer: 'ACCEPTED' as const, name: 'ewa.m' },
+      { side: 'B' as const, player_id: OLA, answer: null, answer_by: at(20), name: 'ola.k' },
+      { side: 'B' as const, player_id: null, answer: null, name: null },
     ],
   };
 

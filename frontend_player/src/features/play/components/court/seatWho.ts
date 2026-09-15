@@ -60,14 +60,14 @@ export function seatWho(occupant: CourtSeatOccupant): SeatWho {
     case 'player': {
       // The two facts a seat says about a person travel together and go together: a withheld
       // row carries no card, so there is neither a handle to draw nor a level to speak.
-      if (occupant.nickname === undefined || occupant.level === undefined) {
+      if (occupant.name === undefined || occupant.level === undefined) {
         return {
           spoken: { kind: 'withheld' },
           name: playerName({ kind: 'unknown' }),
           named: false,
         };
       }
-      const name = playerName({ kind: 'player', nickname: occupant.nickname });
+      const name = playerName({ kind: 'player', name: occupant.name });
       return {
         spoken: { kind: 'player', name, level: occupant.level },
         name,

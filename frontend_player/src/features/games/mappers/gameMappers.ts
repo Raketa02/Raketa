@@ -95,11 +95,11 @@ function toSeat(wire: SeatingSchema): GameSeat | undefined {
   if (side === undefined) return undefined;
 
   const playerId = wire.player_id ?? undefined;
-  const nickname = wire.nickname ?? undefined;
+  const name = wire.name ?? undefined;
   return {
     side,
     ...(playerId === undefined ? {} : { playerId }),
-    ...(nickname === undefined ? {} : { nickname }),
+    ...(name === undefined ? {} : { name }),
   };
 }
 

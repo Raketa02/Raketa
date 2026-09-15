@@ -58,7 +58,7 @@ export const RECORD_TITLE = 'Player record';
  */
 export const OWN_RECORD_TITLE = 'How others see you';
 
-/** After your own handle, so the panel is not a stranger with your face on it. */
+/** After your own name, so the panel is not a stranger with your face on it. */
 export const YOU_MARK = '(you)';
 
 /**
@@ -73,7 +73,15 @@ export function recordTitle(isSelf: boolean): string {
   return isSelf ? OWN_RECORD_TITLE : RECORD_TITLE;
 }
 
-/** The whole handle, with the one mark that says it is yours. */
+/**
+ * The whole name, with the one mark that says it is yours.
+ *
+ * The name — not the nickname, since
+ * [ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
+ * §4. The handle is drawn **under** it on this sheet, as `atNickname` spells it, and this
+ * function keeps its old name because what it does is unchanged: the title of the sheet, with
+ * the mark.
+ */
 export function recordHandle(name: string, isSelf: boolean): string {
   return isSelf ? `${name} ${YOU_MARK}` : name;
 }
@@ -221,6 +229,9 @@ export function countedGamesReading(count: number): string {
  * rather than spoken as nothing.
  */
 export interface HeaderFacts {
+  /** The whole name, with the mark where the record is the reader's own — `recordHandle`. */
+  readonly name: string;
+  /** `@nickname`, as drawn under the name. This sheet is one of the two places it is. */
   readonly handle: string;
   readonly onCourt: boolean;
   readonly identity: string;
@@ -230,6 +241,7 @@ export interface HeaderFacts {
 
 export function recordHeaderLabel(facts: HeaderFacts): string {
   return sentences([
+    facts.name,
     facts.handle,
     ...(facts.onCourt ? [ON_COURT_CLAUSE] : []),
     ...(facts.identity === '' ? [] : [facts.identity]),

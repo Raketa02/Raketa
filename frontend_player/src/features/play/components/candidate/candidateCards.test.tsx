@@ -124,7 +124,7 @@ function candidate(over: Partial<Candidate> = {}): Candidate {
     fit: 78,
     distanceKm: 4,
     card: {
-      nickname: 'Marek',
+      name: 'Marek',
       photoUrl: PHOTO,
       areaCode: THEIR_AREA,
       socialTags: ['PLAYS_TO_WIN', 'STAYS_FOR_A_DRINK'],
@@ -158,7 +158,7 @@ function wireRow(over: Partial<Wire['CandidateSchema']> = {}): Wire['CandidateSc
     fit: 78,
     distance_km: 4,
     player_card: {
-      nickname: 'Marek',
+      name: 'Marek',
       area_code: THEIR_AREA,
       social_tags: ['PLAYS_TO_WIN'],
       level: 2.83,

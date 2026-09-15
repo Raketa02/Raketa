@@ -21,10 +21,10 @@ describe('the two sides, reader first', () => {
   it('puts the reader’s side first and the reader first within it, with their seat on side A', () => {
     const sides = sidesForReader(
       [
-        seat({ playerId: OLA, nickname: 'Ola.N', answer: 'ACCEPTED' }),
-        seat({ playerId: ME, nickname: 'me_', answer: 'ACCEPTED' }),
-        seat({ playerId: KUBA, nickname: 'Kuba.W', answer: 'ACCEPTED' }),
-        seat({ playerId: EWA, nickname: 'Zofia.B', answer: 'ACCEPTED' }),
+        seat({ playerId: OLA, name: 'Ola.N', answer: 'ACCEPTED' }),
+        seat({ playerId: ME, name: 'me_', answer: 'ACCEPTED' }),
+        seat({ playerId: KUBA, name: 'Kuba.W', answer: 'ACCEPTED' }),
+        seat({ playerId: EWA, name: 'Zofia.B', answer: 'ACCEPTED' }),
       ],
       ME,
     );
@@ -42,14 +42,14 @@ describe('the two sides, reader first', () => {
   it('puts the reader’s side first when their seat is on side B', () => {
     const sides = sidesForReader(
       [
-        seat({ playerId: EWA, nickname: 'ewa.m', answer: 'ACCEPTED' }),
-        seat({ playerId: ME, nickname: 'me_', answer: 'ACCEPTED' }),
+        seat({ playerId: EWA, name: 'ewa.m', answer: 'ACCEPTED' }),
+        seat({ playerId: ME, name: 'me_', answer: 'ACCEPTED' }),
       ],
       ME,
     );
 
-    expect(sides?.yours).toEqual([{ kind: 'person', playerId: ME, nickname: 'me_' }]);
-    expect(sides?.theirs).toEqual([{ kind: 'person', playerId: EWA, nickname: 'ewa.m' }]);
+    expect(sides?.yours).toEqual([{ kind: 'person', playerId: ME, name: 'me_' }]);
+    expect(sides?.theirs).toEqual([{ kind: 'person', playerId: EWA, name: 'ewa.m' }]);
   });
 
   it('carries each person’s photograph where the seat card has one', () => {
@@ -57,11 +57,11 @@ describe('the two sides, reader first', () => {
       [
         seat({
           playerId: EWA,
-          nickname: 'ewa.m',
+          name: 'ewa.m',
           answer: 'ACCEPTED',
           card: {
             person: {
-              nickname: 'ewa.m',
+              name: 'ewa.m',
               photoUrl: 'https://photos.example/ewa',
               areaCode: 'WAW-C',
               level: 2.7,
@@ -71,7 +71,7 @@ describe('the two sides, reader first', () => {
             pairing: { fit: 70, terms: [], degradedTerms: [], concerns: [] },
           },
         }),
-        seat({ playerId: ME, nickname: 'me_', answer: 'ACCEPTED' }),
+        seat({ playerId: ME, name: 'me_', answer: 'ACCEPTED' }),
       ],
       ME,
     );
@@ -79,7 +79,7 @@ describe('the two sides, reader first', () => {
     expect(sides?.theirs[0]).toEqual({
       kind: 'person',
       playerId: EWA,
-      nickname: 'ewa.m',
+      name: 'ewa.m',
       photoUrl: 'https://photos.example/ewa',
     });
   });
@@ -91,24 +91,24 @@ describe('the two sides, reader first', () => {
  */
 describe('who is a face and who is an empty seat', () => {
   it.each([
-    ['still deciding', { playerId: OLA, nickname: 'Ola.N' }],
-    ['declined', { playerId: OLA, nickname: 'Ola.N', answer: 'DECLINED' as const }],
-    ['lapsed', { playerId: OLA, nickname: 'Ola.N', answer: 'LAPSED' as const }],
-    ['left', { playerId: OLA, nickname: 'Ola.N', answer: 'LEFT' as const }],
+    ['still deciding', { playerId: OLA, name: 'Ola.N' }],
+    ['declined', { playerId: OLA, name: 'Ola.N', answer: 'DECLINED' as const }],
+    ['lapsed', { playerId: OLA, name: 'Ola.N', answer: 'LAPSED' as const }],
+    ['left', { playerId: OLA, name: 'Ola.N', answer: 'LEFT' as const }],
     ['nobody', {}],
   ])('draws a seat that is %s as an empty seat', (_, other) => {
     const sides = sidesForReader(
       [
-        seat({ playerId: ME, nickname: 'me_', answer: 'ACCEPTED' }),
+        seat({ playerId: ME, name: 'me_', answer: 'ACCEPTED' }),
         seat(other),
-        seat({ playerId: KUBA, nickname: 'Kuba.W', answer: 'ACCEPTED' }),
-        seat({ playerId: EWA, nickname: 'Zofia.B', answer: 'ACCEPTED' }),
+        seat({ playerId: KUBA, name: 'Kuba.W', answer: 'ACCEPTED' }),
+        seat({ playerId: EWA, name: 'Zofia.B', answer: 'ACCEPTED' }),
       ],
       ME,
     );
 
     expect(sides?.yours).toEqual([
-      { kind: 'person', playerId: ME, nickname: 'me_' },
+      { kind: 'person', playerId: ME, name: 'me_' },
       { kind: 'empty' },
     ]);
     expect(sides?.theirs).toHaveLength(2);
@@ -116,8 +116,8 @@ describe('who is a face and who is an empty seat', () => {
 
   it('is nothing for a reader who holds no seat, or one they have not accepted', () => {
     const court = [
-      seat({ playerId: EWA, nickname: 'ewa.m', answer: 'ACCEPTED' }),
-      seat({ playerId: ME, nickname: 'me_' }),
+      seat({ playerId: EWA, name: 'ewa.m', answer: 'ACCEPTED' }),
+      seat({ playerId: ME, name: 'me_' }),
     ];
 
     expect(sidesForReader(court, ME)).toBeUndefined();
@@ -134,20 +134,20 @@ describe('who is a face and who is an empty seat', () => {
 describe('the pair, reader first', () => {
   it('draws the two of you on a tennis court, the reader first whichever side they hold', () => {
     const court = [
-      seat({ playerId: EWA, nickname: 'Marek.P', answer: 'ACCEPTED' }),
-      seat({ playerId: ME, nickname: 'me_', answer: 'ACCEPTED' }),
+      seat({ playerId: EWA, name: 'Marek.P', answer: 'ACCEPTED' }),
+      seat({ playerId: ME, name: 'me_', answer: 'ACCEPTED' }),
     ];
 
     expect(pairForReader(court, ME)).toEqual({
-      yours: [{ kind: 'person', playerId: ME, nickname: 'me_' }],
-      theirs: [{ kind: 'person', playerId: EWA, nickname: 'Marek.P' }],
+      yours: [{ kind: 'person', playerId: ME, name: 'me_' }],
+      theirs: [{ kind: 'person', playerId: EWA, name: 'Marek.P' }],
     });
   });
 
   it('draws the two of you on a padel court, and never the side still to fill', () => {
     const court = [
-      seat({ playerId: ME, nickname: 'me_', answer: 'ACCEPTED' }),
-      seat({ playerId: EWA, nickname: 'Marek.P', answer: 'ACCEPTED' }),
+      seat({ playerId: ME, name: 'me_', answer: 'ACCEPTED' }),
+      seat({ playerId: EWA, name: 'Marek.P', answer: 'ACCEPTED' }),
       seat({}),
       seat({}),
     ];
@@ -155,8 +155,8 @@ describe('the pair, reader first', () => {
     const pair = pairForReader(court, ME);
 
     expect(pair).toEqual({
-      yours: [{ kind: 'person', playerId: ME, nickname: 'me_' }],
-      theirs: [{ kind: 'person', playerId: EWA, nickname: 'Marek.P' }],
+      yours: [{ kind: 'person', playerId: ME, name: 'me_' }],
+      theirs: [{ kind: 'person', playerId: EWA, name: 'Marek.P' }],
     });
     expect([...pair!.yours, ...pair!.theirs].every((one) => one.kind === 'person')).toBe(true);
     // Two tiles off a four-seat court: the picture sizes them, not the court.
@@ -167,14 +167,14 @@ describe('the pair, reader first', () => {
   it('carries their photograph off the seat card, as the sides do', () => {
     const pair = pairForReader(
       [
-        seat({ playerId: ME, nickname: 'me_', answer: 'ACCEPTED' }),
+        seat({ playerId: ME, name: 'me_', answer: 'ACCEPTED' }),
         seat({
           playerId: EWA,
-          nickname: 'Marek.P',
+          name: 'Marek.P',
           answer: 'ACCEPTED',
           card: {
             person: {
-              nickname: 'Marek.P',
+              name: 'Marek.P',
               photoUrl: 'https://photos.example/marek',
               areaCode: 'WAW-C',
               level: 2.7,
@@ -191,7 +191,7 @@ describe('the pair, reader first', () => {
     expect(pair?.theirs[0]).toEqual({
       kind: 'person',
       playerId: EWA,
-      nickname: 'Marek.P',
+      name: 'Marek.P',
       photoUrl: 'https://photos.example/marek',
     });
   });
@@ -204,10 +204,10 @@ describe('the pair, reader first', () => {
   it('draws everybody who has said yes on a court that has grown, and nobody deciding', () => {
     const pair = pairForReader(
       [
-        seat({ playerId: ME, nickname: 'me_', answer: 'ACCEPTED' }),
-        seat({ playerId: EWA, nickname: 'Marek.P', answer: 'ACCEPTED' }),
-        seat({ playerId: KUBA, nickname: 'Kuba.W', answer: 'ACCEPTED' }),
-        seat({ playerId: OLA, nickname: 'Ola.N' }),
+        seat({ playerId: ME, name: 'me_', answer: 'ACCEPTED' }),
+        seat({ playerId: EWA, name: 'Marek.P', answer: 'ACCEPTED' }),
+        seat({ playerId: KUBA, name: 'Kuba.W', answer: 'ACCEPTED' }),
+        seat({ playerId: OLA, name: 'Ola.N' }),
       ],
       ME,
     );
@@ -223,8 +223,8 @@ describe('the pair, reader first', () => {
 
   it('is nothing for a reader who holds no seat, or one they have not accepted', () => {
     const court = [
-      seat({ playerId: EWA, nickname: 'Marek.P', answer: 'ACCEPTED' }),
-      seat({ playerId: ME, nickname: 'me_' }),
+      seat({ playerId: EWA, name: 'Marek.P', answer: 'ACCEPTED' }),
+      seat({ playerId: ME, name: 'me_' }),
     ];
 
     expect(pairForReader(court, ME)).toBeUndefined();
@@ -236,10 +236,10 @@ describe('the pair, reader first', () => {
 describe('the reader’s own face', () => {
   const sides = {
     yours: [
-      { kind: 'person' as const, playerId: ME, nickname: 'me_' },
-      { kind: 'person' as const, playerId: OLA, nickname: 'Ola.N' },
+      { kind: 'person' as const, playerId: ME, name: 'me_' },
+      { kind: 'person' as const, playerId: OLA, name: 'Ola.N' },
     ],
-    theirs: [{ kind: 'person' as const, playerId: EWA, nickname: 'ewa.m' }],
+    theirs: [{ kind: 'person' as const, playerId: EWA, name: 'ewa.m' }],
   };
 
   it('is put on the first tile of the reader’s side', () => {
@@ -248,7 +248,7 @@ describe('the reader’s own face', () => {
     expect(drawn.yours[0]).toEqual({
       kind: 'person',
       playerId: ME,
-      nickname: 'me_',
+      name: 'me_',
       photoUrl: 'https://photos.example/me',
     });
     expect(drawn.yours[1]).toEqual(sides.yours[1]);

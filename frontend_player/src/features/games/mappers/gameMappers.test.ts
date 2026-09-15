@@ -159,16 +159,16 @@ describe('a code this build has never seen', () => {
       games: [
         wireGame({
           seats: [
-            { side: 'A', player_id: 'me', nickname: 'me_' },
-            { side: 'B', player_id: 'them', nickname: 'tomek.p' },
+            { side: 'A', player_id: 'me', name: 'me_' },
+            { side: 'B', player_id: 'them', name: 'tomek.p' },
           ],
         }),
       ],
     });
 
     expect(game?.seats).toEqual([
-      { side: 'A', playerId: 'me', nickname: 'me_' },
-      { side: 'B', playerId: 'them', nickname: 'tomek.p' },
+      { side: 'A', playerId: 'me', name: 'me_' },
+      { side: 'B', playerId: 'them', name: 'tomek.p' },
     ]);
   });
 
@@ -184,15 +184,15 @@ describe('a code this build has never seen', () => {
       games: [
         wireGame({
           seats: [
-            { side: 'A', player_id: 'me', nickname: 'me_' },
-            { side: 'B', player_id: 'them', nickname: null },
+            { side: 'A', player_id: 'me', name: 'me_' },
+            { side: 'B', player_id: 'them', name: null },
           ],
         }),
       ],
     });
 
     expect(game?.seats).toEqual([
-      { side: 'A', playerId: 'me', nickname: 'me_' },
+      { side: 'A', playerId: 'me', name: 'me_' },
       { side: 'B', playerId: 'them' },
     ]);
   });
@@ -208,14 +208,14 @@ describe('a code this build has never seen', () => {
       games: [
         wireGame({
           seats: [
-            { side: 'A', player_id: 'me', nickname: 'me_' },
-            { side: 'B', player_id: null, nickname: null },
+            { side: 'A', player_id: 'me', name: 'me_' },
+            { side: 'B', player_id: null, name: null },
           ],
         }),
       ],
     });
 
-    expect(game?.seats).toEqual([{ side: 'A', playerId: 'me', nickname: 'me_' }, { side: 'B' }]);
+    expect(game?.seats).toEqual([{ side: 'A', playerId: 'me', name: 'me_' }, { side: 'B' }]);
   });
 
   /**

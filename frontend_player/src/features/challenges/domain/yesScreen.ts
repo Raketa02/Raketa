@@ -29,8 +29,8 @@ export type YesSeat =
   | {
       readonly kind: 'person';
       readonly playerId: string;
-      /** The whole handle, for the spoken sentence. Absent where `users` has lost the account. */
-      readonly nickname?: string;
+      /** The whole name, for the spoken sentence. Absent where `users` has lost the account. */
+      readonly name?: string;
       /** Off the seat card; absent for the reader, whose face comes off their own record. */
       readonly photoUrl?: string;
     }
@@ -82,7 +82,7 @@ function tile(seat: DetailSeat): YesSeat {
   return {
     kind: 'person',
     playerId: seat.playerId,
-    ...(seat.nickname === undefined ? {} : { nickname: seat.nickname }),
+    ...(seat.name === undefined ? {} : { name: seat.name }),
     ...(photoUrl === undefined ? {} : { photoUrl }),
   };
 }

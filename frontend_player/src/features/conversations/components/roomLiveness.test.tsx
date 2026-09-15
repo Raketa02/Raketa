@@ -81,8 +81,8 @@ const PADEL_RATING: Wire['RatingResponse'] = {
 };
 
 const MEMBERS: Wire['ConversationMemberSchema'][] = [
-  { player_id: ME, nickname: 'me_' },
-  { player_id: TOMEK, nickname: 'tomek.p' },
+  { player_id: ME, name: 'me_' },
+  { player_id: TOMEK, name: 'tomek.p' },
 ];
 
 function message(seq: number, authorId: string, text: string): Wire['MessageSchema'] {
@@ -139,8 +139,8 @@ function game(standing: Wire['GameSchema']['standing'] = 'AWAITING_ENTRY'): Wire
     planned_at: '2026-09-08T09:00:00Z',
     entry_closes_at: '2026-09-20T07:00:00Z',
     seats: [
-      { side: 'A', player_id: ME, nickname: 'me_' },
-      { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+      { side: 'A', player_id: ME, name: 'me_' },
+      { side: 'B', player_id: TOMEK, name: 'tomek.p' },
     ],
     proposals: [],
   };
@@ -318,7 +318,7 @@ describe('the nudge', () => {
         actorId: TOMEK,
         values: { value: 'Zabłocie Sport' },
       },
-      [{ playerId: TOMEK, nickname: 'tomek.p' }],
+      [{ playerId: TOMEK, name: 'tomek.p' }],
       'full',
     );
     expect(await screen.findByText(sentence)).toBeTruthy();
@@ -457,7 +457,7 @@ describe('a room that ends while it is on screen', () => {
 
     const sentence = roomOverLine({
       kind: 'they-left',
-      members: [{ playerId: TOMEK, nickname: 'tomek.p' }],
+      members: [{ playerId: TOMEK, name: 'tomek.p' }],
     });
     expect(await screen.findByText(sentence)).toBeTruthy();
     expect(sentence).toMatch(/^tomek\.p left/);
@@ -484,7 +484,7 @@ describe('a room that ends while it is on screen', () => {
 
   /** The reader was alone — somebody had left while a seat was deciding — and the last no came. */
   it('says nobody else is coming where the reader was alone', async () => {
-    await openTheRoom(room([], [{ player_id: ME, nickname: 'me_' }]));
+    await openTheRoom(room([], [{ player_id: ME, name: 'me_' }]));
     transport.on('GET', conversationPath(ROOM), () => errorResponse(404, 'conversation_not_found'));
     act(() => channel.nudge(ROOM));
 
@@ -747,8 +747,8 @@ describe('held', () => {
           planned_at: READ_AT,
           entry_closes_at: '2026-09-20T09:00:00Z',
           seats: [
-            { side: 'A', player_id: ME, nickname: 'me_' },
-            { side: 'B', player_id: TOMEK, nickname: 'tomek.p' },
+            { side: 'A', player_id: ME, name: 'me_' },
+            { side: 'B', player_id: TOMEK, name: 'tomek.p' },
           ],
           proposals: [],
         },
@@ -781,16 +781,13 @@ describe('held', () => {
 
 describe('somebody is typing', () => {
   const OLA = 'cccccccc-0000-4000-8000-000000000003';
-  const THREE: Wire['ConversationMemberSchema'][] = [
-    ...MEMBERS,
-    { player_id: OLA, nickname: 'ola.k' },
-  ];
+  const THREE: Wire['ConversationMemberSchema'][] = [...MEMBERS, { player_id: OLA, name: 'ola.k' }];
   const named = (ids: readonly string[], members = MEMBERS) =>
     typingLine(
       ids,
       members.map((one) => ({
         playerId: one.player_id,
-        ...(one.nickname === null ? {} : { nickname: one.nickname }),
+        ...(one.name === null ? {} : { name: one.name }),
       })),
     ) ?? '';
   const typingPath = `${conversationPath(ROOM)}/typing`;
@@ -916,7 +913,7 @@ describe('somebody is typing', () => {
     const ZOFIA = 'dddddddd-0000-4000-8000-000000000004';
     const FOUR: Wire['ConversationMemberSchema'][] = [
       ...THREE,
-      { player_id: ZOFIA, nickname: 'zofia.b' },
+      { player_id: ZOFIA, name: 'zofia.b' },
     ];
     await openLive(room([], FOUR));
 

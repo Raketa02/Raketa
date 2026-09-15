@@ -107,13 +107,13 @@ function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
 const HERE = 'A+050612+0019938';
 
 /** One dealt card. Enough terms that the sheet has rows and the card has a reason line. */
-function card(nickname: string, playerId: string): Wire['CandidateSchema'] {
+function card(name: string, playerId: string): Wire['CandidateSchema'] {
   return {
     player_id: playerId,
     fit: 78,
     distance_km: 4,
     player_card: {
-      nickname,
+      name,
       area_code: HERE,
       social_tags: ['PLAYS_TO_WIN'],
       level: 2.83,
@@ -259,9 +259,9 @@ const THE_ROOM = `/chats/conversation/${ROOM}`;
  * (ADR-0154 §2). Neither seat carries a card: a mutual-born court is drawn on posters here.
  */
 function matched(sport: 'TENNIS' | 'PADEL'): Wire['ChallengeDetailResponse'] {
-  const marek = { player_id: MAREK, answer: 'ACCEPTED' as const, nickname: 'Marek Z.' };
-  const me = { player_id: ME, answer: 'ACCEPTED' as const, nickname: 'ada' };
-  const nobody = { player_id: null, answer: null, answer_by: null, nickname: null };
+  const marek = { player_id: MAREK, answer: 'ACCEPTED' as const, name: 'Marek Z.' };
+  const me = { player_id: ME, answer: 'ACCEPTED' as const, name: 'ada' };
+  const nobody = { player_id: null, answer: null, answer_by: null, name: null };
   return {
     read_at: READ_AT,
     challenge_id: CHALLENGE,
@@ -287,8 +287,8 @@ function matched(sport: 'TENNIS' | 'PADEL'): Wire['ChallengeDetailResponse'] {
 }
 
 const MAREK_AND_ME = [
-  { player_id: MAREK, nickname: 'Marek Z.' },
-  { player_id: ME, nickname: 'ada' },
+  { player_id: MAREK, name: 'Marek Z.' },
+  { player_id: ME, name: 'ada' },
 ];
 
 /** The room the mutual's challenge opened, listed and openable. */
@@ -319,8 +319,8 @@ function theRoomIsThere(sport: 'TENNIS' | 'PADEL', gameId: string | null) {
 
 /** The spoken *Matched!* for the one card every walk says yes to. */
 const MATCHED_SPOKEN = matchedAnnouncement({
-  yours: [{ kind: 'person', playerId: ME, nickname: 'ada' }],
-  theirs: [{ kind: 'person', playerId: MAREK, nickname: 'Marek Z.' }],
+  yours: [{ kind: 'person', playerId: ME, name: 'ada' }],
+  theirs: [{ kind: 'person', playerId: MAREK, name: 'Marek Z.' }],
 });
 
 let transport: Transport;

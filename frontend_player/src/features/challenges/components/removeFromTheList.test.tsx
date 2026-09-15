@@ -91,10 +91,10 @@ const MY_SEND_ROW: Wire['ChallengeSchema'] = {
   opened_at: '2026-09-11T08:00:00Z',
   ended_at: null,
   seats: [
-    { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-    { side: 'A', player_id: TOMEK, answer: null, answer_by: ANSWER_BY, nickname: 'tomek.p' },
-    { side: 'B', player_id: OLA, answer: null, answer_by: ANSWER_BY, nickname: 'ola.k' },
-    { side: 'B', player_id: null, answer: null, nickname: null },
+    { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+    { side: 'A', player_id: TOMEK, answer: null, answer_by: ANSWER_BY, name: 'tomek.p' },
+    { side: 'B', player_id: OLA, answer: null, answer_by: ANSWER_BY, name: 'ola.k' },
+    { side: 'B', player_id: null, answer: null, name: null },
   ],
 };
 
@@ -107,8 +107,8 @@ const MY_JOINED_ROW: Wire['ChallengeSchema'] = {
   opened_at: '2026-09-12T07:00:00Z',
   ended_at: null,
   seats: [
-    { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-    { side: 'B', player_id: EWA, answer: 'ACCEPTED', nickname: 'ewa.m' },
+    { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+    { side: 'B', player_id: EWA, answer: 'ACCEPTED', name: 'ewa.m' },
   ],
 };
 
@@ -121,10 +121,10 @@ const THEIR_SEND_ROW: Wire['ChallengeSchema'] = {
   opened_at: '2026-09-11T06:00:00Z',
   ended_at: null,
   seats: [
-    { side: 'A', player_id: OLA, answer: 'ACCEPTED', nickname: 'ola.k' },
-    { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-    { side: 'B', player_id: TOMEK, answer: null, answer_by: ANSWER_BY, nickname: 'tomek.p' },
-    { side: 'B', player_id: null, answer: null, nickname: null },
+    { side: 'A', player_id: OLA, answer: 'ACCEPTED', name: 'ola.k' },
+    { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+    { side: 'B', player_id: TOMEK, answer: null, answer_by: ANSWER_BY, name: 'tomek.p' },
+    { side: 'B', player_id: null, answer: null, name: null },
   ],
 };
 
@@ -132,10 +132,10 @@ const THEIR_SEND_ROW: Wire['ChallengeSchema'] = {
 const TOMEK_JOINED: Wire['ChallengeSchema'] = {
   ...MY_SEND_ROW,
   seats: [
-    { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-    { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', nickname: 'tomek.p' },
-    { side: 'B', player_id: OLA, answer: null, answer_by: ANSWER_BY, nickname: 'ola.k' },
-    { side: 'B', player_id: null, answer: null, nickname: null },
+    { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+    { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
+    { side: 'B', player_id: OLA, answer: null, answer_by: ANSWER_BY, name: 'ola.k' },
+    { side: 'B', player_id: null, answer: null, name: null },
   ],
 };
 
@@ -414,10 +414,10 @@ describe('a refused removal', () => {
             standing: 'DECLINED',
             ended_at: READ_AT,
             seats: [
-              { side: 'A', player_id: ME, answer: 'ACCEPTED', nickname: 'me_' },
-              { side: 'A', player_id: TOMEK, answer: 'DECLINED', nickname: 'tomek.p' },
-              { side: 'B', player_id: OLA, answer: 'DECLINED', nickname: 'ola.k' },
-              { side: 'B', player_id: null, answer: null, nickname: null },
+              { side: 'A', player_id: ME, answer: 'ACCEPTED', name: 'me_' },
+              { side: 'A', player_id: TOMEK, answer: 'DECLINED', name: 'tomek.p' },
+              { side: 'B', player_id: OLA, answer: 'DECLINED', name: 'ola.k' },
+              { side: 'B', player_id: null, answer: null, name: null },
             ],
           },
           MY_JOINED_ROW,
