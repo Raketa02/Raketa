@@ -31,23 +31,25 @@
 
 import { spokenHandles } from '@/shared/formatting/handleList';
 
+import { WAITING_FOR_OTHERS } from './conversationPresentation';
+
 /** A row under `CONVERSATIONS`: who, which sport, and the last thing that happened in it. */
 export function conversationRowLabel(
   handles: readonly string[],
   sportName: string,
   line: string | undefined,
 ): string {
-  return roomSaid(handles, sportName, line);
+  return roomSaid(spokenHandles(handles), sportName, line);
 }
 
 /**
- * **The one dialect a room is spoken in**, on the row and in the header alike: the handles whole
- * with a final *and*, the sport, then whatever that surface has to add — the last entry on the
- * row, the game's state in the header — or nothing. One shape, so the tab and the room cannot
+ * **The one dialect a room is spoken in**, on the row and in the header alike: who — the handles
+ * whole with a final *and* — the sport, then whatever that surface has to add — the last entry on
+ * the row, the game's state in the header — or nothing. One shape, so the tab and the room cannot
  * drift into two.
  */
-function roomSaid(handles: readonly string[], sportName: string, then: string | undefined): string {
-  return [spokenHandles(handles), sportName, ...(then === undefined ? [] : [then])].join(', ');
+function roomSaid(who: string, sportName: string, then: string | undefined): string {
+  return [who, sportName, ...(then === undefined ? [] : [then])].join(', ');
 }
 
 /**
@@ -64,13 +66,21 @@ function roomSaid(handles: readonly string[], sportName: string, then: string | 
  * sub-line qualifies what the title names and has no action of its own — and because the `·`
  * that separates the sport from the state on the drawn line is a mark a listener has no reading
  * for. A room with no game stops at the sport, exactly as the drawn line does.
+ *
+ * **Where there is nobody else to name, the spoken name opens with the drawn line's sentence** —
+ * `Waiting for others to join, Padel`. There is no handle to keep whole, so §20.4 has nothing to
+ * add here; what a listener must not get is the sport alone after a comma that names nobody.
  */
 export function conversationHeaderLabel(
   handles: readonly string[],
   sportName: string,
   state: string | undefined,
 ): string {
-  return roomSaid(handles, sportName, state);
+  return roomSaid(
+    handles.length === 0 ? WAITING_FOR_OTHERS : spokenHandles(handles),
+    sportName,
+    state,
+  );
 }
 
 /**

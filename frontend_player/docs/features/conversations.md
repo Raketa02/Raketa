@@ -69,7 +69,13 @@ the state is _the same state as the card in Now_ — `features/plans`' four-rung
 lower-case word, folded from the two lists the room already reads, **card name and never
 standing**. That supersedes ADR-0148 §6 for the header alone; the row keeps it, and what §6 refused
 — the prototype's twenty-state card-state tag, read by asking `challenges` and `games` — is still
-refused. A room with no game draws the sport alone. The two lines sit in 10.3's new **sub-line**
+refused. A room with no game draws the sport alone. **With nobody else to name, the title is
+_Waiting for others to join_** ([#429](https://github.com/Raketa02/Raketa/issues/429) E4): the
+organiser alone again — somebody joined and left while the rest were still deciding — is a real
+room with one member, and `headerTitle` of no handles drew a blank at `h1` over the sport. The
+rule lives in `headerTitle` rather than at the call site so no arrangement of props draws that gap,
+and `conversationHeaderLabel` speaks the same sentence in the handles' place, since there is no
+handle to keep whole. The two lines sit in 10.3's new **sub-line**
 slot rather than the eyebrow, title above and a quieter line below, and the header's budget is now
 counted at `h1` rather than the rows' `cardTitle`, which had let it promise a one-line title that
 wrapped. **Details is drawn only where there is a game**: `game_id` is nullable, so a

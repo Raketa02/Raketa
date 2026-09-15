@@ -19,6 +19,12 @@
  * row's own dialect one screen on. And a handle that opens with a break keeps all of itself,
  * inside `handleStem` and not re-implemented here.
  *
+ * **With nobody else to name, the title says what the room is doing** — `headerTitle` answers
+ * *Waiting for others to join* for no handles, and `conversationHeaderLabel` speaks it in their
+ * place. The organiser alone again is a real room ([#429](https://github.com/Raketa02/Raketa/issues/429)
+ * E4), and this component draws no faces for it and passes an empty list on; the words are the
+ * copy deck's, so there is no arrangement of props here that draws a blank at `h1`.
+ *
  * The stems are shorter inputs to the rule that was already here: `handleLine` still gives way by
  * **dropping whole names** at a separator, never by cutting one (§15), against the header's own
  * budget — the row's arithmetic with a chevron on one side and the `Details` control reserved on

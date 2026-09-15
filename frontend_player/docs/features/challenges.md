@@ -374,9 +374,11 @@ are read before the row they are about can go — moved out of `DepartureDoor` i
 `hooks/useActDoor.ts`, because a rule written twice drifts; each door is now its act, its sheet and
 its words. **The sheet is `WithdrawSheet` handed a new deck, and the withdraw's own deck is
 retired**: `words` is required, `CallOff` hands in the game's and `RemovalDoor` the removal's —
-_Before you remove it_; one line, _It disappears for the people you asked, too._, which is the one
-consequence ADR-0165 §6 asks the sheet to name and the one the organiser cannot see from their own
-list; `Remove the challenge` on the door and on the act, on `Leave the game`'s precedent; `Keep it
+_Before you remove it_; one line, _If you remove this challenge, it will also disappear for everyone
+you invited._ — reworded on the QA walk ([#429](https://github.com/Raketa02/Raketa/issues/429) E1)
+from _It disappears for the people you asked, too._ so the consequence hangs off the act — which
+is the one consequence ADR-0165 §6 asks the sheet to name and the one the organiser cannot see from
+their own list; `Remove the challenge` on the door and on the act, on `Leave the game`'s precedent; `Keep it
 open`; `Removing…` on the sheet's act — and the sheet grew `busy`, `refusal` and `offline` as
 `LeaveSheet` did, because from a row the sheet is the surface. `WITHDRAW`, `WITHDRAWING`, the
 withdraw's title, three body lines, act and dismissal, and `WITHDRAW_CHALLENGE_NAME` are gone;

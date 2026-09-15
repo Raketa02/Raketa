@@ -58,9 +58,15 @@ describe('the removal', () => {
     expect(REMOVING).toBe('Removing…');
   });
 
-  /** ADR-0165 §6: the sheet says it is gone for the invitees too — one line, and no more. */
+  /**
+   * ADR-0165 §6: the sheet says it is gone for the invitees too — one line, and no more. Reworded
+   * on the QA walk ([#429](https://github.com/Raketa02/Raketa/issues/429) E1): the consequence is
+   * named as a condition on the act, so the line reads as *if you do this, this follows*.
+   */
   it('says on the sheet that it is gone for the people asked, too', () => {
-    expect(REMOVE_SHEET_BODY).toEqual(['It disappears for the people you asked, too.']);
+    expect(REMOVE_SHEET_BODY).toEqual([
+      'If you remove this challenge, it will also disappear for everyone you invited.',
+    ]);
   });
 
   it('names the dismissal by what it does', () => {

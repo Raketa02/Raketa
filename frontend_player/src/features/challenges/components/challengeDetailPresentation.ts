@@ -140,6 +140,9 @@ export const REMOVE_SHEET_TITLE = 'Before you remove it';
  * **One line, and it is the one ADR-0165 §6 asks for: it is gone for the invitees too.** The
  * consequence the organiser cannot see from their own list — their row goes either way — and the
  * one that reaches other people: somebody deciding on this challenge finds nothing to answer.
+ * Reworded on the QA walk ([#429](https://github.com/Raketa02/Raketa/issues/429) E1) so the
+ * consequence hangs off the act — *if you remove it, this follows* — rather than being stated of a
+ * challenge the sheet has not yet named.
  *
  * Not the withdraw's three. *Everybody who accepted loses this court* is false here by
  * construction, since nobody has; *the conversation goes with it* is true only on the court the
@@ -148,7 +151,9 @@ export const REMOVE_SHEET_TITLE = 'Before you remove it';
  * is a send, and asking the same people again is a new challenge rather than an undo. **It says
  * nothing about the pair rule releasing**, on the withdraw's own line (§22.3).
  */
-export const REMOVE_SHEET_BODY = ['It disappears for the people you asked, too.'] as const;
+export const REMOVE_SHEET_BODY = [
+  'If you remove this challenge, it will also disappear for everyone you invited.',
+] as const;
 
 /**
  * The sheet's dismissal, **named by what it does** — never just *Close*. The withdraw's own word,

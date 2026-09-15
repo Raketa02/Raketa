@@ -265,11 +265,27 @@ export const NO_CONVERSATION_HERE = 'No conversation of yours has this address.'
  * The stems are then **shorter inputs to the same rule**: `handleLine` still drops whole names at
  * a separator and never cuts one (§15), so more names fit and nothing about the dropping changes.
  *
+ * **With nobody to name, the line says what the room is doing** — {@link WAITING_FOR_OTHERS}.
+ * The organiser alone again is a real room: somebody joined and left while the rest were still
+ * deciding ([#429](https://github.com/Raketa02/Raketa/issues/429) E4), and the room stands with
+ * one member until somebody accepts. `handleLine` of nothing is the empty string, which drew a
+ * blank at `h1` over the sport; the rule lives here rather than at the call site so there is no
+ * arrangement of props that draws that gap.
+ *
  * @param budget the line's width in characters at `h1` — `headerHandleBudget`.
  */
 export function headerTitle(handles: readonly string[], budget: number): string {
-  return handleLine(handles.map(handleStem), budget);
+  return handles.length === 0 ? WAITING_FOR_OTHERS : handleLine(handles.map(handleStem), budget);
 }
+
+/**
+ * **The title where there is nobody else in the room** — the organiser alone again, waiting on
+ * the seats still deciding. Present tense and pointed at what happens next, on §22.1's rule that
+ * an empty state never asserts that nothing is happening: the challenge is out, and the room is
+ * waiting for its answers. Drawn in the title slot and spoken in its place
+ * (`conversationHeaderLabel`), since there is no handle to keep whole.
+ */
+export const WAITING_FOR_OTHERS = 'Waiting for others to join';
 
 /**
  * **The second line — the sport, and the game's state where there is a game.**

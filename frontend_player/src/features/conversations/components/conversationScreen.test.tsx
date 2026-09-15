@@ -51,6 +51,7 @@ import {
   CONVERSATION_SCREEN_TITLE,
   DETAILS,
   SEND,
+  WAITING_FOR_OTHERS,
 } from './conversationPresentation';
 import { OPEN_THE_GAME, conversationHeaderLabel } from './conversationAccessibility';
 
@@ -245,6 +246,33 @@ describe('the header', () => {
 
     expect(within(header).getByText(headerSubline(sportLabel('padel'), undefined))).toBeTruthy();
     expect(within(header).queryByText(/·/)).toBeNull();
+  });
+
+  /**
+   * **The organiser alone again** ([#429](https://github.com/Raketa02/Raketa/issues/429) E4):
+   * B joined and left while C and D were still deciding, so the room stands with one member and
+   * nobody to name. The title slot said nothing — a blank at `h1` over *Padel* — and now says
+   * what the room is doing, spoken the same way. The list is stubbed as it last read the room, a
+   * pair, so there is a row to open; what is asserted is the room's own read.
+   */
+  it('says it is waiting for others where the reader is alone in the room', async () => {
+    stubConversations(transport, [listed()]);
+    stubConversation(transport, room({ members: [member(ME, 'me_')] }));
+    stubEntries(transport, ROOM);
+
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText(/^Chats/));
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
+    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
+
+    const header = await screen.findByRole('header', {
+      name: conversationHeaderLabel([], sportLabel('padel'), undefined),
+    });
+
+    expect(within(header).getByText(WAITING_FOR_OTHERS)).toBeTruthy();
+    expect(within(header).getByText(headerSubline(sportLabel('padel'), undefined))).toBeTruthy();
+    expect(within(header).queryByText(/me_/)).toBeNull();
   });
 
   /**

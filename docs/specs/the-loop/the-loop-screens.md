@@ -724,7 +724,12 @@ challenge screen beside it and the game screen behind its own *Details* door all
   names fit. §20.4 is the other half: the header's accessible name carries every handle whole,
   joined with a final *and*, then the sport, then the state — the row's own dialect (§24.2), one
   screen on. The budget the line is dropped against is counted at `h1`, which is what the title is
-  set in.
+  set in. **With nobody else to name, the title is *Waiting for others to join*** — the organiser
+  alone again, after somebody joined and left while the rest were still deciding
+  ([#429](https://github.com/Raketa02/Raketa/issues/429) E4): a real room with one member, which
+  drew a blank at `h1` over the sport. The line is present-tense and pointed at what happens next,
+  on §22.1's rule that an empty state never asserts that nothing is happening, and it is spoken in
+  the handles' place — `Waiting for others to join, Padel` — since there is no handle to keep whole.
 - **The second line is the sport and the game's state, lower case — `Padel · planning` — and it is
   the same state as the card in Now.** This reverses what stood here, and the reversal is recorded
   in ADR-0157 rather than absorbed. What was refused was the prototype's subtitle — the sport plus

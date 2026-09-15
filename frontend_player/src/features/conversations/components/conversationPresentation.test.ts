@@ -14,6 +14,7 @@ import type { ConversationMember, ConversationPerson } from '../domain/membershi
 
 import {
   OPEN_THE_CHAT,
+  WAITING_FOR_OTHERS,
   conversationRowLine,
   entryLine,
   headerSubline,
@@ -276,6 +277,17 @@ describe('the header’s title line', () => {
   it('still gives way by dropping whole names, never by cutting one', () => {
     expect(headerTitle(['aleksandra.m', 'tomek.p', 'ola.k'], 14)).toBe('aleksandra +2');
   });
+
+  /**
+   * **The organiser alone again** — somebody joined and left while the rest were still deciding
+   * ([#429](https://github.com/Raketa02/Raketa/issues/429) E4). There is nobody to name, and a
+   * blank at `h1` over *Padel* is a gap rather than a title; the line says what the room is
+   * doing instead.
+   */
+  it('says the room is waiting where there is nobody else to name', () => {
+    expect(headerTitle([], ROOM_ENOUGH)).toBe(WAITING_FOR_OTHERS);
+    expect(WAITING_FOR_OTHERS).toBe('Waiting for others to join');
+  });
 });
 
 describe('the header’s second line', () => {
@@ -303,6 +315,13 @@ describe('what the header is called', () => {
 
   it('stops at the sport where there is no game', () => {
     expect(conversationHeaderLabel(['tomek.p'], 'Padel', undefined)).toBe('tomek.p, Padel');
+  });
+
+  /** The drawn line's sentence is the spoken one too: there is no handle to keep whole. */
+  it('speaks the waiting line where there is nobody else to name', () => {
+    expect(conversationHeaderLabel([], 'Padel', undefined)).toBe(
+      'Waiting for others to join, Padel',
+    );
   });
 });
 

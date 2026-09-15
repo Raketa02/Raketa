@@ -1864,13 +1864,16 @@ visible label is the whole sentence, so it is the accessible name too.
 | --- | --- |
 | The revealed control, and the screen's button | `Remove the challenge` |
 | Sheet title | `Before you remove it` |
-| Body | `It disappears for the people you asked, too.` |
+| Body | `If you remove this challenge, it will also disappear for everyone you invited.` |
 | The act | `Remove the challenge` |
 | In flight | `Removing…`, on the sheet's act |
 | Dismissal | `Keep it open` |
 
 **One line, and it is the one ADR-0165 §6 asks for: it is gone for the invitees too** — the
 consequence the organiser cannot see from their own list, and the one that reaches other people.
+Reworded on the QA walk ([#429](https://github.com/Raketa02/Raketa/issues/429) E1) so the
+consequence hangs off the act — *if you remove it, this follows* — rather than being stated of a
+challenge the sheet has not yet named; it was *It disappears for the people you asked, too.*
 The word is *remove* because what the act does to a court nobody has joined is take a send back:
 nothing anybody agreed to is lost, and the people asked simply stop being asked. It says nothing
 about the pair rule releasing: that is a fact about what becomes possible afterwards, and a
@@ -2392,7 +2395,7 @@ about.
 
 | Element | Role | Announces |
 | --- | --- | --- |
-| The header | `header` | **every handle whole**, then the sport, then the game's state — `tomek.p and ola.k, Padel, planning`; `tomek.p, Padel` where there is no game. **One element** for the title and the line under it |
+| The header | `header` | **every handle whole**, then the sport, then the game's state — `tomek.p and ola.k, Padel, planning`; `tomek.p, Padel` where there is no game; `Waiting for others to join, Padel` where the reader is alone in the room. **One element** for the title and the line under it |
 | A message | — | **the author, always** — `Ola K.: on my way` · `You: 18:00 works` |
 | A system line | — | the rendered sentence, which already names its actor |
 | A day separator | `header` | the weekday |
