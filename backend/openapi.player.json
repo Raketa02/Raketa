@@ -1510,7 +1510,7 @@
           "interest"
         ],
         "summary": "Your Let's play yeses",
-        "description": "**Outgoing and mutuals only.** There is no inbox: a yes nobody has answered stays silent, in both directions, which is what makes saying yes low-stakes. You are never told that somebody declined you, and you are never shown who said yes to you unless you said it back.\n\n**Every outgoing row carries its own `expires_at`**, so the screen can show what is still live without knowing the window.\n\n**`outstanding` carries the count and the cap for every sport**, before you are near either \u2014 a cap you cannot see is a refusal you cannot predict. Render these; never hardcode the number.",
+        "description": "**Outgoing and mutuals only.** There is no inbox: a yes nobody has answered stays silent, in both directions, which is what makes saying yes low-stakes. You are never told that somebody declined you, and you are never shown who said yes to you unless you said it back.\n\n**Every outgoing row carries its own `expires_at`**, so the screen can show what is still live without knowing the window.\n\n**`outstanding` carries the count, the cap and `ttl_days` for every sport**, before you are near either \u2014 a cap you cannot see is a refusal you cannot predict, and how long a yes lives is the number the deck's ending prints. Render these; never hardcode the numbers.",
         "operationId": "read_interest_api_v1_interest_get",
         "responses": {
           "200": {
@@ -1657,6 +1657,66 @@
           },
           "503": {
             "description": "`matchmaking_unavailable`, `gate_data_unavailable`, `index_too_stale`, `search_not_recorded` \u2014 four distinct codes at one status, so a client can tell a transient outage from a refusal about *you*.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/deck/reset": {
+      "post": {
+        "tags": [
+          "deck"
+        ],
+        "summary": "Show them again",
+        "description": "Deals your deck whole again, for one sport.\n\n**Three things lift at once, and only for this sport**: every *Not today* you gave, the people you were dealt today, and the cool-off on anybody you have had a court with. The next `POST /deck` deals all of them. What stays: the people you have a live *Let's play* on are still yours to wait on, another sport's deck is untouched, and the record that you once passed on somebody is kept \u2014 a card you see again is still one you have seen.\n\n**Idempotent.** Pressing it twice in a row is one press.\n\n**Nobody is told**, and nothing is returned. The only place a reset shows is your own next deal.",
+        "operationId": "show_them_again_api_v1_deck_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetDeckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Cleared. **Nothing is returned** \u2014 the next deal is where the difference shows."
+          },
+          "403": {
+            "description": "`account_held` \u2014 this account is under a live hold.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`sport_not_rated` \u2014 you hold no rating for this sport, so there is no deck of yours to deal again.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6980,13 +7040,20 @@
             "minimum": 1.0,
             "title": "Cap",
             "description": "The most you may have in flight for this sport at once. **Read it from here, never hardcode it** \u2014 it is ruleset configuration and may move between releases."
+          },
+          "ttl_days": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Ttl Days",
+            "description": "How many days a yes you send in this sport stays live before it lapses. **Read it from here, never hardcode it** \u2014 it is the same ruleset number that dates every `expires_at`, sent so a screen can say *your yeses stay live for N days* without holding N. Every yes still carries its own `expires_at`; render that for a row, and this for the sentence."
           }
         },
         "type": "object",
         "required": [
           "sport",
           "outstanding",
-          "cap"
+          "cap",
+          "ttl_days"
         ],
         "title": "OutstandingSchema",
         "description": "How many yeses you have in flight for one sport, and the cap in force.\n\n**Outstanding means sent, unexpired and not yet mutual** \u2014 a mutual has been\nanswered and is no longer in flight. The pair travels together on every read,\nbecause a cap you cannot see is a refusal you cannot predict."
@@ -8065,6 +8132,20 @@
         ],
         "title": "ReliabilityStrand",
         "description": "The six strands a reliability reading is built from, read separately.\n\nThey are weighted **per mode** and the two vectors order people oppositely \u2014\na candidate strong on *answers about results* and weak on *sportsmanship*\nwins in competitive and loses in for fun. A single blended score cannot\nexpress that, which is the whole argument for the decomposition, and it is\njustified for exactly as long as such a pair exists (``ranking-weights.md``\n\u00a76).\n\n**The inversion is watched rather than assumed, and it widened again.** It\nwas 24/4 against sportsmanship's 5/16 while *confirms results* was here; the\nstrike left 18/7 against 15/17, and *answers about results* restores the wide\npair at 24/4 against 5/16 (``docs/adr/0160``). It is asserted in\n``tests/unit/test_matchfit_terms.py``, and the day no pair inverts, the\ndecomposition has stopped paying for itself and the argument for it is due\nagain.\n\n**The sixth name is not the one that was struck, and the difference is the\nwhole of ``docs/adr/0160``.** *Confirms results* asked whether a game reached\nan agreed score, which is a fact about a **pair**, and every denominator\ntried on it docked somebody ADR-0049 protects \u2014 both sides of an honest\ndisagreement included (``docs/adr/0137``). *Answers about results* asks\nwhether **this person** replied to a score put in front of them, and a\ncounter is as good an answer as an acceptance, so disagreeing costs nothing\nand only silence is priced.\n\n**Three different blends of these six exist in this system and confusing\nthem is a live risk:** the published Player Score at 35/20/15/12/10/8, and\nthese two. The reliability *floor* reads the published one \u2014 the one\ndeliberate exception, because a penalty justified by a figure that exists\nnowhere a human can look is unexplainable."
+      },
+      "ResetDeckRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "Which sport's deck to deal whole again"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport"
+        ],
+        "title": "ResetDeckRequest",
+        "description": "One *Show them again*, for one sport. **Write-only.**\n\nNothing is returned by this route and no route anywhere returns a reset.\n\n**The sport is the whole ask.** The button is on a deck and a deck is one\nsport, so a padel reset says nothing about tennis. There is no field for\n*what* to clear: the three things a reset lifts \u2014 every pass suppression,\nthe day's dealt memory and the cool-off \u2014 lift together, and a client that\ncould pick would be a client that could clear the cool-off and keep its\npasses, which is not a thing the product offers."
       },
       "ResultResponse": {
         "properties": {

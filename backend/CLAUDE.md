@@ -95,24 +95,26 @@ Rules to preserve:
 - **State changes emit domain events.** Use cases persist them through
   `DomainEventStore.append` and enqueue them on the transactional outbox in the same
   transaction; handlers perform side effects after commit. **One deliberate exception,
-  and it is the matchmaking module's four durable ledgers** — the `search` record,
-  `interest`, the **pass** record and the **prompt decline** (`the-engine.md` §12:
-  *nothing here is event-sourced*, and an interest is *durable without being an aggregate
-  with a life story*). All four are small facts with no life story, and **nothing
-  *subscribes* to one being written**: a lift is a read on the next search, the
-  suppression a pass writes is a cache its use case fills after the commit rather than a
-  subscriber, and a decline is read by one filter on the next search. The one thing a
+  and it is the matchmaking module's five durable ledgers** — the `search` record,
+  `interest`, the **pass** record, the **prompt decline** and the **deck reset**
+  (`the-engine.md` §12: *nothing here is event-sourced*, and an interest is *durable
+  without being an aggregate with a life story*). All five are small facts with no life
+  story, and **nothing *subscribes* to one being written**: a lift is a read on the next
+  search, the suppression a pass writes is a cache its use case fills after the commit
+  rather than a subscriber, a decline is read by one filter on the next search, and a
+  reset is one moment the next deal reads three ways. The one thing a
   write here does cause is a **call, never a subscription** — a second *Let's play*
   facing the first opens a challenge **inline, in the same transaction** through a port
   `challenges` signs (#251), because *that player has left the deck for good* is a
   promise that must not wait for a poller. The exemption is about the interest row
   needing no event of its own, and that is unchanged.
-  The authority naming all four is `the-engine.md` §12;
-  ADR-0128 decides what a pass *is* and says nothing about event sourcing, and ADR-0094
+  The authority naming all five is `the-engine.md` §12;
+  ADR-0128 decides what a pass *is* and says nothing about event sourcing, ADR-0094
   says of the decline in its own words that *declining a prompt is not a domain fact and
   earns no event* — its amendment moved the suppression out of Redis and kept that
-  sentence literally. A new context does **not** inherit this — it needs the same argument made in
-  an ADR.
+  sentence literally — and the reset argued for itself in ADR-0169's amendment of
+  2026-09-15, which is the rule: a new one does **not** inherit this — it needs the same
+  argument made in an ADR.
 - **Seeds execute use cases, never SQL.** `app/seeds/` creates deterministic development
   accounts through the same use cases a request runs, wired from the composition root, so
   a seeded aggregate has the event stream and the outbox rows a real one has. A structural
@@ -475,6 +477,21 @@ Rules to preserve:
   outage repeats a card and never empties a deal. Two telemetry columns exist for the one
   falsifier `PASS_SUPPRESS` has — `search.n_excluded_by_suppression` and
   `search_candidate.suppression_lapsed`, both **deck deals only**, both check-constrained.
+  **And a pass can be cleared, by one route that touches none of the three stores it
+  clears** (ADR-0169 §5 and its amendment, #440). `POST /api/v1/deck/reset` is *Show them
+  again*: it writes **one moment** to the `deck_reset` table — per player, per sport,
+  append-only, the module's fifth durable ledger — and the next deal reads that moment
+  three ways (`domain/deck.py`: `cleared_by_reset` over the pass record, `dealt_memory_from`
+  over the search record, `cooling_off` over the courts). The Redis keys are left to
+  lapse and the deal subtracts what the record says was cleared, because a reset that had
+  to reach the cache could fail soft and answer a `204` that was a lie. *Already asked*
+  is not cleared, a court still ahead is held out whatever was pressed, and the
+  `suppression_lapsed` flag is **not** widened to a reset re-show — the reset row beside
+  the pass record is what names those. **The cap steps aside for a yes that closes a
+  mutual** (ADR-0169 §3): `express_interest` reads the other side's yes *before* the cap,
+  and a yes that is answered the instant it is written was never outstanding. And
+  `ttl_days` crosses beside `cap` on every `outstanding` row, read off the ruleset at
+  response time, so the deck's ending can print *21* without the client holding it.
   **`application/search_workbench.py` is the seam the two surfaces share** — read the
   searcher, bind the snapshot and every live gate fact, attach the card and the at-stake
   block, record, commit, note exposure — so a shortlist and a deal cannot come to two

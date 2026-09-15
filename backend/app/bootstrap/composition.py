@@ -226,6 +226,7 @@ from app.modules.matchmaking.domain.declines import PromptDeclineLedger
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
 from app.modules.matchmaking.domain.prompts import PromptLedger
 from app.modules.matchmaking.domain.interest import InterestLedger
+from app.modules.matchmaking.domain.deck_reset import DeckResetLedger
 from app.modules.matchmaking.domain.passes import PassLedger
 from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.infrastructure.fail_soft_ledgers import (
@@ -278,6 +279,9 @@ from app.modules.matchmaking.infrastructure.player_card_source import (
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_interest_ledger import (
     SqlAlchemyInterestLedger,
+)
+from app.modules.matchmaking.infrastructure.sqlalchemy_deck_reset_ledger import (
+    SqlAlchemyDeckResetLedger,
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_pass_ledger import (
     SqlAlchemyPassLedger,
@@ -1682,6 +1686,21 @@ def build_pass_ledger(session: AsyncSession) -> PassLedger:
     """
 
     return SqlAlchemyPassLedger(session)
+
+
+def build_deck_reset_ledger(session: AsyncSession) -> DeckResetLedger:
+    """The durable record of every *Show them again*, over the caller's session.
+
+    **No fail-soft wrapper**, and for the opposite reason to the pass's: this
+    row is not the evidence beside a gate, it is what three courtesies read to
+    know they have been cleared. A reset that could be lost would re-hide the
+    people a player just asked to see — the *empty the deck* failure every soft
+    ledger here is soft in order to avoid — so it is a table, read in the deal's
+    own transaction, and a reset whose row could not be written is a reset that
+    did not happen, which the route says.
+    """
+
+    return SqlAlchemyDeckResetLedger(session)
 
 
 def build_prompt_decline_ledger(session: AsyncSession) -> PromptDeclineLedger:

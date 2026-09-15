@@ -114,6 +114,24 @@ class RunDeckDealCommand:
 
 @final
 @dataclass(frozen=True, slots=True)
+class ResetDeckCommand:
+    """*Show them again.* One tap at the end of a deck, for one sport.
+
+    **The sport is the whole ask**, on the deal's own rule: the button is on a
+    deck and a deck is one sport, so a padel reset says nothing about tennis.
+    There is no field for *what* to clear and there will not be one — the three
+    things a reset lifts are the deck's own exclusions and they lift together
+    (``docs/adr/0169`` §5); a client that could pick would be a client that
+    could clear the cool-off and keep its passes, which is not a thing the
+    product offers.
+    """
+
+    player_id: UUID
+    sport: Sport
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class RecordPassCommand:
     """*Not today.* One tap, on one card, citing the deal it was dealt in.
 

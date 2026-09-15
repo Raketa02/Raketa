@@ -43,6 +43,10 @@ from app.modules.matchmaking.application.outward_reads import (
     live_block_set,
     read_demand,
 )
+from app.modules.matchmaking.application.refusals import (
+    rated_in,
+    refuse_a_held_player,
+)
 from app.modules.matchmaking.domain.cards import (
     CardIdentity,
     CardRecord,
@@ -61,7 +65,6 @@ from app.modules.matchmaking.domain.errors import (
     PlayerProfileNotCommitted,
     PlayIntentNotDeclared,
     SearchNotRecorded,
-    SportNotRated,
 )
 from app.modules.matchmaking.domain.geography import Point
 from app.modules.matchmaking.domain.interest import InterestLedger
@@ -113,7 +116,6 @@ from app.modules.player_profile.domain.ports import (
 )
 from app.modules.rating.domain.ports import SkillRatingRepository
 from app.modules.rating.domain.skill_rating import SkillRating
-from app.shared.domain.errors import AccountHeld
 
 
 @final
@@ -415,22 +417,17 @@ class SearchWorkbench:
             raise PlayerProfileNotCommitted(
                 "the searcher has not committed a player profile"
             )
-        ratings = await self._ratings.find_all_for(player_id=player_id)
-        rated = next((r for r in ratings if r.sport is sport), None)
-        if rated is None:
-            raise SportNotRated(
-                f"the searcher holds no rating for {sport.value}"
-            )
+        rated = await rated_in(self._ratings, player_id=player_id, sport=sport)
         return profile, rated
 
     async def refuse_a_held_searcher(self, searcher_id: UUID) -> None:
-        """**The hold points both ways.** A held player can still sign in."""
+        """**The hold points both ways.** A held player can still sign in.
 
-        held = await read_demand(
-            AccountHoldQuery, lambda: self._holds.held_among([searcher_id])
-        )
-        if searcher_id in held:
-            raise AccountHeld("this account is under a hold")
+        The words and the read are ``refusals.py``'s, shared with the deck's
+        reset, so the two surfaces cannot come to refuse differently.
+        """
+
+        await refuse_a_held_player(self._holds, searcher_id)
 
     # -- what one search was asked for ---------------------------------------
 

@@ -819,6 +819,7 @@ searcher how many people a mutual gate hid from them.
 | Exposure | Redis, TTL | losing a week of *who was shown to whom* costs nobody a fact | **soft** |
 | Prompt | Redis, TTL | a standing question, left by a loop for the next search to pick up. Losing one costs a prompt nobody sees this week, and the loop raises it again on its next tick | **soft** |
 | **Prompt decline** | **durable**, in the module | the two constants in `prompts.py` are falsified by *take-up rate on the prompt* and *acceptance rate on the offer*, and a decline is the only one of a prompt's three outcomes that nothing else records — the raise conditions are recomputable from the search store forever, and an accept writes a value. A suppression that lapses leaves no trace the player was ever asked. The record is telemetry; the **live suppression is derived from it** at the one place every prompt converges | — |
+| **Deck reset** | **durable**, in the module | *Show them again* ([ADR-0169](../../adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §5 and its amendment) is **one moment** per press, per player, per sport, and the next deal reads it three ways — against the pass record, the search record and the courts — so the route touches none of the stores it clears. Durable because two of the three are rows that do not fail soft, and a reset lost to a cache outage would re-hide the people a player just asked to see; append-only because `PASS_SUPPRESS`'s falsifier now excludes the re-shows a reset caused, and only the moments can say which | — |
 | ~~Search results~~ | — | **deleted** — §8.3's `search:{id}` at a 30-minute TTL held the same Fit as §19.2's table, free to disagree, in the one place §8.3 calls disagreement fatal | — |
 | ~~Standing searches~~ | — | out of scope; still fog on the map | — |
 
@@ -831,7 +832,10 @@ story: it is a small fact with an expiry date. The same is true of a pass, with 
 **an interest expires, a pass record does not.** The 30-day *suppression* lapses; the row saying
 the pass happened is kept, because [#194](https://github.com/Raketa02/Raketa/issues/194) found
 that its constant's falsifier needs exactly the fact a TTL destroys. Suppression still fails
-soft, and the split is why: the **gate** is the cache, the **evidence** is the row.
+soft, and the split is why: the **gate** is the cache, the **evidence** is the row. **And the
+gate can now be cleared without being touched**: a deck reset is a moment on a row, and the deal
+subtracts from the cache what the pass record, read against that moment, says was cleared — the
+keys lapse on their own.
 
 **The split has a second instance, and it is the same argument about a question rather than a
 person.** A prompt is a courtesy and its ledger is a cache; a **decline** is a player's answer,

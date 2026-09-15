@@ -3,13 +3,16 @@
 ``docs/adr/0127`` §6 draws the line: ``INTEREST_TTL``,
 ``OUTSTANDING_INTEREST_CAP`` and ``PASS_SUPPRESS`` are **ruleset configuration**,
 and what is *contract* is the shapes around them — ``expires_at`` on an outgoing
-row, the ``outstanding`` / ``cap`` pair plus the refusal code, and, for
-``PASS_SUPPRESS``, nothing at all.
+row, the ``outstanding`` / ``cap`` / ``ttl_days`` triple plus the refusal code,
+and, for ``PASS_SUPPRESS``, nothing at all.
 
 So: **the client never hardcodes any of the three and never computes an expiry.**
 It renders a number the backend sent and a moment the backend computed, because a
 phone in somebody's hand can be months behind the backend — which is the whole
-reason that line was drawn where it was.
+reason that line was drawn where it was. ``ttl_days`` is that rule applied to
+the one sentence that needs the number itself (``docs/adr/0169`` §5): the deck's
+ending says *your yeses stay live for N days*, and N crosses rather than being
+held.
 
 **There is no incoming list here, and there is no shape one could arrive in.**
 ``docs/adr/0109`` refuses an inbox: a one-sided yes was banked under a promise of
@@ -98,6 +101,18 @@ class OutstandingSchema(BaseModel):
             "The most you may have in flight for this sport at once. **Read it "
             "from here, never hardcode it** — it is ruleset configuration and "
             "may move between releases."
+        ),
+    )
+    ttl_days: int = Field(
+        ...,
+        ge=1,
+        description=(
+            "How many days a yes you send in this sport stays live before it "
+            "lapses. **Read it from here, never hardcode it** — it is the same "
+            "ruleset number that dates every `expires_at`, sent so a screen can "
+            "say *your yeses stay live for N days* without holding N. Every "
+            "yes still carries its own `expires_at`; render that for a row, and "
+            "this for the sentence."
         ),
     )
 

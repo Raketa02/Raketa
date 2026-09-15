@@ -1,6 +1,8 @@
 # ADR-0169 — The deck lives on Players, and a swipe is an answer
 
-- **Status:** Accepted
+- **Status:** Accepted — **§5's reset given its storage by the amendment of 2026-09-15**
+  ([#440](https://github.com/Raketa02/Raketa/issues/440)): a durable, event-free row per
+  press, the fifth of the matchmaking module's ledgers.
 - **Date:** 2026-09-14
 - **Supersedes, by named sentence:**
   - [#231](https://github.com/Raketa02/Raketa/issues/231) §3's *"Decided: buttons only"* and its
@@ -442,3 +444,42 @@ documents, the ruleset diff and the backend module records with the backend tick
   *cost no new gesture dependency*, *the segment*, *the footer*, the toast blocks and every
   `/play/deck` pathname; `theShell.test.tsx`'s Around placeholder; `poolOrder`'s pin; the schema
   test over incoming interest; the deck ordering and gate tests on the backend.
+
+## Amendment — 2026-09-15: the reset is a moment on a durable row, and the fifth ledger
+
+§5 decided the route and what it clears, and said nothing about what *Show them again* leaves
+behind. [#440](https://github.com/Raketa02/Raketa/issues/440) built it, and the shape it settled
+on is worth recording because the obvious one was wrong.
+
+**A reset is one moment, and each of the three things it clears reads that moment its own
+way.** The pass suppression is a Redis TTL, the dealt memory is the search record bounded by a
+day, and the cool-off is `games`' courts bounded by thirty days — three stores, and a route that
+*edited* all three would need to delete keys it cannot enumerate without a scan, could not touch
+the search record at all, and could not touch the game. So the route writes **when it was
+pressed**, per player and per sport, and the next deal applies that against the durable record
+each exclusion already reads: a pass made before it no longer hides, the memory reaches back no
+further than it, a court behind the pair before it no longer counts (`deck.py`:
+`cleared_by_reset`, `dealt_memory_from`, `cooling_off`). Nothing is deleted and no cache is
+touched — the Redis keys lapse on their own, and the deal subtracts what the pass record says
+was cleared. A court still **ahead** is held out whatever was pressed: the reset clears the
+window, never the game. *Already asked* is untouched, as §5 says.
+
+**Durable, and the direction of failure is why.** Two of the three things it clears are read
+from rows that do not fail soft, so a reset held in the cache would, on an outage, re-hide the
+people a player had just asked to see — the *empty the deck* failure every soft ledger in the
+module is soft in order to avoid, arrived at from the other end. And §5 accepted a cost only a
+record can pay: `PASS_SUPPRESS`'s falsifier now excludes re-shows a reset caused, and which
+those are — a deal after the moment, of somebody passed on before it — is computable only while
+every moment is on file. So the table is **append-only** on the pass record's argument: a second
+press is a second row, because a deal between two presses was shaped by the first, and the deal
+reads the latest.
+
+**Event-free, on the four ledgers' own argument, and this record makes it five.**
+`the-engine.md` §12 exempts the search record, the interest, the pass and the prompt decline
+from *state changes emit domain events*: small facts with no life story, and nothing subscribes
+to one being written. A reset is exactly that — the deal reads the moment on its next run, and
+that is the whole of what happens — and `backend/CLAUDE.md` says a new one does not inherit the
+exemption but argues for it in an ADR. This is that argument. The `suppression_lapsed` flag is
+**not** widened to cover a reset re-show: it says *the window lapsed*, and after a reset it has
+not; the reset ledger beside the pass record is what names those, which is the sample §5 said
+the falsifier has to exclude.

@@ -511,6 +511,179 @@ async def test_somebody_the_viewer_has_a_court_with_is_absent_from_the_deal_only
 
 
 # ---------------------------------------------------------------------------
+# Show them again
+# ---------------------------------------------------------------------------
+
+
+def _dealt(deal: dict) -> set[str]:
+    return {row["player_id"] for row in deal["candidates"]}
+
+
+async def test_show_them_again_deals_the_passed_the_dealt_and_the_cooling_off_again(
+    client, session_factory, searcher, a_city
+):
+    """**One request, and the deck is whole again** (``docs/adr/0169`` §5).
+
+    Bea is cooling off after a game ten days ago, Cara was passed on, and Dee
+    was dealt this morning — so the next deal is honestly empty: everybody in
+    range is excluded, which is the *You have seen everybody* ending. *Show them
+    again* clears all three at once for this sport, and the deal after it deals
+    all three. The pass record is untouched — a re-shown card is still a
+    re-show — and the deal no longer counts a suppression it does not apply.
+    """
+
+    bea, cara, dee = a_city
+    now = datetime.now(timezone.utc)
+    await _a_game_between(
+        session_factory,
+        searcher["id"],
+        bea,
+        planned_at=now - timedelta(days=10, hours=2),
+        played_at=now - timedelta(days=10),
+    )
+    first = (await world.deck(client, searcher["token"])).json()
+    assert _dealt(first) == {str(cara), str(dee)}
+    passed = await world.pass_on(
+        client,
+        searcher["token"],
+        player_id=cara,
+        search_id=first["search"]["search_id"],
+    )
+    assert passed.status_code == 204, passed.text
+    spent = (await world.deck(client, searcher["token"])).json()
+    assert spent["candidates"] == [], "somebody was dealt with everybody excluded"
+
+    reset = await world.show_them_again(client, searcher["token"])
+    whole = (await world.deck(client, searcher["token"])).json()
+
+    assert reset.status_code == 204, reset.text
+    assert reset.content == b"", "a reset never carries a body"
+    assert _dealt(whole) == {str(bea), str(cara), str(dee)}
+    rows = await world.recorded_passes(session_factory)
+    assert [str(row.passed_id) for row in rows] == [str(cara)], (
+        "the reset touched the pass record"
+    )
+    recorded = await world.recorded_searches(session_factory)
+    assert recorded[-1].n_excluded_by_suppression == 0, (
+        "the deal counted a suppression the reset had cleared"
+    )
+    re_shown = await world.recorded_candidates(session_factory, recorded[-1].id)
+    assert {str(row.player_id): row.suppression_lapsed for row in re_shown} == {
+        str(bea): False,
+        str(cara): False,
+        str(dee): False,
+    }, (
+        "a reset re-show is not a lapsed suppression: the flag says the window "
+        "ran out, and it has not — the reset ledger is what names these"
+    )
+
+
+async def test_show_them_again_leaves_a_live_yes_and_another_sports_passes_alone(
+    client, session_factory, candidate_source, searcher, a_city
+):
+    """**What the reset does not clear.** The people the viewer has a live yes
+    on are still theirs to wait on, and a reset is one sport's: resetting
+    tennis lifts no padel pass."""
+
+    bea, cara, dee = a_city
+    await world.rate(client, searcher["token"], Sport.TENNIS)
+    first = (await world.deck(client, searcher["token"])).json()
+    await world.pass_on(
+        client,
+        searcher["token"],
+        player_id=cara,
+        search_id=first["search"]["search_id"],
+    )
+    await world.a_yes(
+        client, session_factory, candidate_source, sender=searcher, towards=dee
+    )
+
+    other_sport = await world.show_them_again(
+        client, searcher["token"], Sport.TENNIS
+    )
+    assert other_sport.status_code == 204, other_sport.text
+    after_tennis = (await world.deck(client, searcher["token"])).json()
+    this_sport = await world.show_them_again(client, searcher["token"])
+    assert this_sport.status_code == 204, this_sport.text
+    after_padel = (await world.deck(client, searcher["token"])).json()
+
+    assert str(cara) not in _dealt(after_tennis), "a tennis reset lifted a padel pass"
+    assert str(cara) in _dealt(after_padel)
+    assert str(dee) not in _dealt(after_padel), "a live yes was dealt again"
+    mine = (await world.read_interest(client, searcher["token"])).json()
+    assert [row["player_id"] for row in mine["outgoing"]] == [str(dee)]
+
+
+async def test_another_sports_passes_still_suppress_after_a_reset(
+    client, session_factory, candidate_source, searcher, a_city
+):
+    """A reset is one sport's, seen from the other sport's own deck: Cara is
+    passed on in tennis, padel is reset, and the tennis deck still holds her
+    out."""
+
+    bea, cara, dee = a_city
+    await world.rate(client, searcher["token"], Sport.TENNIS)
+    await world.rate_in(session_factory, cara, Sport.TENNIS, mu=searcher["mu"])
+    await world.fold_the_log(session_factory, candidate_source)
+    tennis = (await world.deck(client, searcher["token"], Sport.TENNIS)).json()
+    assert _dealt(tennis) == {str(cara)}, "the tennis deck has nobody to pass on"
+    passed = await world.pass_on(
+        client,
+        searcher["token"],
+        player_id=cara,
+        search_id=tennis["search"]["search_id"],
+        sport=Sport.TENNIS,
+    )
+    assert passed.status_code == 204, passed.text
+
+    reset = await world.show_them_again(client, searcher["token"], Sport.PADEL)
+    tennis_again = (await world.deck(client, searcher["token"], Sport.TENNIS)).json()
+
+    assert reset.status_code == 204, reset.text
+    assert tennis_again["candidates"] == [], "a padel reset lifted a tennis pass"
+
+
+async def test_a_second_reset_is_a_204_and_changes_nothing(
+    client, session_factory, searcher, a_city
+):
+    """Idempotent: pressing it twice in a row is one press. The record of the
+    press is kept either way, and nothing else is written."""
+
+    bea, cara, dee = a_city
+    first = (await world.deck(client, searcher["token"])).json()
+    await world.pass_on(
+        client,
+        searcher["token"],
+        player_id=bea,
+        search_id=first["search"]["search_id"],
+    )
+
+    once = await world.show_them_again(client, searcher["token"])
+    twice = await world.show_them_again(client, searcher["token"])
+    dealt = (await world.deck(client, searcher["token"])).json()
+
+    assert once.status_code == twice.status_code == 204
+    assert _dealt(dealt) == {str(bea), str(cara), str(dee)}
+    assert len(await world.recorded_passes(session_factory)) == 1
+
+
+async def test_a_reset_is_refused_under_a_hold_and_for_a_sport_you_are_not_rated_in(
+    client, searcher, a_city
+):
+    """The deal's two refusals about *you*, one code each: nothing is written
+    for a deck that cannot be dealt."""
+
+    unrated = await world.show_them_again(client, searcher["token"], Sport.TENNIS)
+    assert unrated.status_code == 409, unrated.text
+    assert unrated.json()["code"] == "sport_not_rated"
+
+    world.hold_everybody(client)
+    held = await world.show_them_again(client, searcher["token"])
+    assert held.status_code == 403, held.text
+    assert held.json()["code"] == "account_held"
+
+
+# ---------------------------------------------------------------------------
 # What the deck is not
 # ---------------------------------------------------------------------------
 

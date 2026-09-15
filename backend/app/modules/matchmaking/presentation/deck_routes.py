@@ -35,6 +35,13 @@ quietly, for a while, in this player's deck and nowhere else. No route in this
 file — or in any other — returns a pass, in any shape, to anybody: not to the
 passer, not as a count, not as a timestamp. That is why the pass answers `204`
 and not a body.
+
+**And a pass can be cleared, by one route** (``docs/adr/0169`` §5). *Show them
+again* is `POST /deck/reset` with the sport: every pass suppression, the day's
+dealt memory and the cool-off lift together, for that sport only; the durable
+pass record stays, so a re-shown card is still a re-show; live yeses are not
+touched. It answers `204` for the reason the pass does — there is no shape a
+reset crosses the wire in — and pressing it twice is one press.
 """
 
 from __future__ import annotations
@@ -45,17 +52,20 @@ from app.core.exception_handlers import ErrorResponse
 from app.core.tracing import trace_id_for
 from app.modules.matchmaking.application.commands import (
     RecordPassCommand,
+    ResetDeckCommand,
     RunDeckDealCommand,
 )
 from app.modules.matchmaking.presentation.dependencies import (
     CardPhotoLinksDep,
     RecordPassDep,
+    ResetDeckDep,
     RunDeckDealDep,
 )
 from app.modules.matchmaking.presentation.rendering import render_deal
 from app.modules.matchmaking.presentation.schemas import (
     DealDeckRequest,
     RecordPassRequest,
+    ResetDeckRequest,
     ShortlistResponse,
 )
 from app.modules.users.presentation.dependencies import CurrentUserDep
@@ -170,6 +180,54 @@ async def deal_the_deck(
         )
     )
     return render_deal(answer, await photos.links_for(answer.record.returned))
+
+
+@router.post(
+    "/reset",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "description": (
+                "Cleared. **Nothing is returned** — the next deal is where the "
+                "difference shows."
+            ),
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "model": ErrorResponse,
+            "description": "`account_held` — this account is under a live hold.",
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`sport_not_rated` — you hold no rating for this sport, so there "
+                "is no deck of yours to deal again."
+            ),
+        },
+    },
+    summary="Show them again",
+    description=(
+        "Deals your deck whole again, for one sport.\n\n"
+        "**Three things lift at once, and only for this sport**: every *Not "
+        "today* you gave, the people you were dealt today, and the cool-off on "
+        "anybody you have had a court with. The next `POST /deck` deals all of "
+        "them. What stays: the people you have a live *Let's play* on are still "
+        "yours to wait on, another sport's deck is untouched, and the record "
+        "that you once passed on somebody is kept — a card you see again is "
+        "still one you have seen.\n\n"
+        "**Idempotent.** Pressing it twice in a row is one press.\n\n"
+        "**Nobody is told**, and nothing is returned. The only place a reset "
+        "shows is your own next deal."
+    ),
+)
+async def show_them_again(
+    payload: ResetDeckRequest,
+    user: CurrentUserDep,
+    use_case: ResetDeckDep,
+) -> Response:
+    await use_case.execute(ResetDeckCommand(player_id=user.id, sport=payload.sport))
+    # Built here rather than returned as `None`, for the pass's reason: the
+    # route's declared `204` and what it sends cannot come apart.
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @passes_router.post(

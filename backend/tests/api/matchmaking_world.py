@@ -304,7 +304,26 @@ async def block_between(client, token: str, player_id: UUID):
     )
 
 
-def _rating(player_id: UUID, *, mu: float, at: datetime) -> RatingInitialised:
+async def rate_in(session_factory, player_id: UUID, sport: Sport, *, mu: float) -> None:
+    """A second sport's Level for a candidate already in the city.
+
+    Filed on its own stream, keyed by ``(player, sport)`` exactly as the first
+    one was, so the index folds it into that sport's partition on the next
+    ``fold_the_log``. What it buys a test is a second deck to deal — the deck is
+    one sport, and a promise about *another sport's* deck needs one to exist.
+    """
+
+    await append(
+        session_factory,
+        _rating(player_id, mu=mu, at=LONG_AGO, sport=sport),
+        aggregate_type=RATING_AGGREGATE,
+        aggregate_id=skill_rating_id(player_id, sport),
+    )
+
+
+def _rating(
+    player_id: UUID, *, mu: float, at: datetime, sport: Sport = SPORT
+) -> RatingInitialised:
     """One candidate's Level, filed where the rating context files one.
 
     The two ids were ``hash()`` of a tuple, which is **seeded per interpreter**
@@ -314,9 +333,9 @@ def _rating(player_id: UUID, *, mu: float, at: datetime) -> RatingInitialised:
     """
 
     return RatingInitialised(
-        rating_id=skill_rating_id(player_id, SPORT),
+        rating_id=skill_rating_id(player_id, sport),
         player_id=player_id,
-        sport=SPORT.value,
+        sport=sport.value,
         mu=mu,
         sigma=0.34,
         confidence=62,
@@ -441,6 +460,14 @@ async def deck(
     if availability_override is not None:
         body["availability_override"] = availability_override
     return await client.post("/api/v1/deck", json=body, headers=auth(token))
+
+
+async def show_them_again(client, token: str, sport: Sport = SPORT):
+    """One *Show them again*: the reset, for one sport, answering nothing."""
+
+    return await client.post(
+        "/api/v1/deck/reset", json={"sport": sport.value}, headers=auth(token)
+    )
 
 
 async def pass_on(

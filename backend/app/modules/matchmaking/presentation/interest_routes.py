@@ -152,9 +152,10 @@ async def express_interest(
         "are never shown who said yes to you unless you said it back.\n\n"
         "**Every outgoing row carries its own `expires_at`**, so the screen can "
         "show what is still live without knowing the window.\n\n"
-        "**`outstanding` carries the count and the cap for every sport**, "
-        "before you are near either — a cap you cannot see is a refusal you "
-        "cannot predict. Render these; never hardcode the number."
+        "**`outstanding` carries the count, the cap and `ttl_days` for every "
+        "sport**, before you are near either — a cap you cannot see is a "
+        "refusal you cannot predict, and how long a yes lives is the number the "
+        "deck's ending prints. Render these; never hardcode the numbers."
     ),
 )
 async def read_interest(
@@ -186,7 +187,10 @@ def _count(entry: OutstandingCount) -> OutstandingSchema:
     """One sport's standing, rendered the one way both routes render it."""
 
     return OutstandingSchema(
-        sport=entry.sport, outstanding=entry.outstanding, cap=entry.cap
+        sport=entry.sport,
+        outstanding=entry.outstanding,
+        cap=entry.cap,
+        ttl_days=entry.ttl_days,
     )
 
 

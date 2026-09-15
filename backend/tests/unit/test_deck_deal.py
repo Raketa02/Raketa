@@ -15,10 +15,13 @@ from app.engines.matchfit.core import DegradedReason, SearchMode, Term
 from app.engines.matchfit.v1 import MatchFitV1
 from app.kernel import instant
 from app.modules.matchmaking.domain.deck import (
+    DEALT_MEMORY,
     INHERITED_ON_THE_DECK,
     DeckExclusions,
+    cleared_by_reset,
     cooling_off,
     deal,
+    dealt_memory_from,
     mode_for_intent,
 )
 from app.modules.matchmaking.domain.ports import SharedCourt
@@ -408,6 +411,64 @@ def test_a_window_of_nought_days_cools_off_only_the_courts_still_ahead():
     courts = (_court(1, behind_for=None), _court(2, behind_for=timedelta(hours=1)))
 
     assert cooling_off(courts, now=build.NOW, days=0) == frozenset({build.player(1)})
+
+
+# ---------------------------------------------------------------------------
+# Show them again — one reset moment, read three ways
+# ---------------------------------------------------------------------------
+
+RESET_AT = instant(build.NOW - timedelta(days=5))
+
+
+def test_a_reset_clears_the_courts_behind_before_it_and_never_a_court_ahead():
+    """*Show them again* clears the cool-off (``docs/adr/0169`` §5): a court
+    behind the pair **before the reset moment** no longer counts, one behind
+    them since still does, and a court still ahead is held out whatever the
+    viewer pressed — a live game was never something the deck deals."""
+
+    courts = (
+        _court(1, behind_for=None),
+        _court(2, behind_for=timedelta(days=6)),
+        _court(3, behind_for=timedelta(days=4)),
+    )
+
+    cleared = cooling_off(
+        courts, now=build.NOW, days=COOL_OFF_DAYS, reset_at=RESET_AT
+    )
+    untouched = cooling_off(courts, now=build.NOW, days=COOL_OFF_DAYS)
+
+    assert cleared == frozenset({build.player(1), build.player(3)})
+    assert untouched == frozenset({build.player(1), build.player(2), build.player(3)})
+
+
+def test_the_dealt_memory_reaches_back_a_day_or_to_the_reset_whichever_is_later():
+    """The rolling day is ``docs/adr/0131``'s; the reset is its one exception
+    (``docs/adr/0169`` §5), so that *deal everyone again* is true and not mostly
+    true. A reset older than the day changes nothing — the memory had already let
+    go."""
+
+    a_day_ago = instant(build.NOW - DEALT_MEMORY)
+    two_hours_ago = instant(build.NOW - timedelta(hours=2))
+
+    assert dealt_memory_from(build.NOW, reset_at=None) == a_day_ago
+    assert dealt_memory_from(build.NOW, reset_at=two_hours_ago) == two_hours_ago
+    assert dealt_memory_from(build.NOW, reset_at=RESET_AT) == a_day_ago
+
+
+def test_a_reset_lifts_the_suppression_of_a_pass_before_it_and_keeps_a_later_one():
+    """Whose live suppression the reset cleared, read off the **durable pass
+    record** and never the cache: a pass made before the reset is lifted, a pass
+    made after it stands — she looked again, and said no again."""
+
+    passed_at = {
+        build.player(1): RESET_AT - timedelta(hours=1),
+        build.player(2): RESET_AT + timedelta(hours=1),
+    }
+
+    assert cleared_by_reset(passed_at, reset_at=RESET_AT) == frozenset(
+        {build.player(1)}
+    )
+    assert cleared_by_reset(passed_at, reset_at=None) == frozenset()
 
 
 # ---------------------------------------------------------------------------

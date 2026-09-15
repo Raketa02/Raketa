@@ -49,6 +49,7 @@ from app.bootstrap.composition import (
     build_challenge_directory,
     build_challenge_repository,
     build_court_safety,
+    build_deck_reset_ledger,
     build_domain_event_store,
     build_event_publisher,
     build_exposure_ledger,
@@ -386,6 +387,7 @@ async def read_paths(
             interest=interest,
             passes=passes,
             courts=build_shared_court_query(session),
+            resets=build_deck_reset_ledger(session),
         ),
         lineup=RunLineupSearch(
             workbench=workbench,

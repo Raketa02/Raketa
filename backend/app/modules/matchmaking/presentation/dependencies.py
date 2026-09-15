@@ -49,6 +49,7 @@ from app.bootstrap.composition import (
     build_account_status_query,
     build_at_stake_query,
     build_card_photo_links,
+    build_deck_reset_ledger,
     build_exposure_ledger,
     build_half_built_court_query,
     build_interest_ledger,
@@ -72,6 +73,7 @@ from app.modules.matchmaking.application.express_interest import ExpressInterest
 from app.modules.matchmaking.application.fail_closed_gates import FailClosedGates
 from app.modules.matchmaking.application.forecast_lineup import ForecastLineup
 from app.modules.matchmaking.application.record_pass import RecordPass
+from app.modules.matchmaking.application.reset_deck import ResetDeck
 from app.modules.matchmaking.application.record_prompt_decline import (
     RecordPromptDecline,
 )
@@ -84,6 +86,7 @@ from app.modules.matchmaking.application.search_workbench import SearchWorkbench
 from app.modules.matchmaking.domain.cards import CardPhotoLinks
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
 from app.modules.matchmaking.domain.declines import PromptDeclineLedger
+from app.modules.matchmaking.domain.deck_reset import DeckResetLedger
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
 from app.modules.matchmaking.domain.interest import InterestLedger
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
@@ -355,23 +358,41 @@ def get_pass_ledger(db: DbSession) -> PassLedger:
 PassLedgerDep = Annotated[PassLedger, Depends(get_pass_ledger)]
 
 
+def get_deck_reset_ledger(db: DbSession) -> DeckResetLedger:
+    """The durable record of every *Show them again*. **Per request, over the
+    session.**
+
+    Declared beside the pass ledger and built like it: a table and not a cache,
+    because what it holds is the one moment three courtesies read to know they
+    have been cleared, and a reset that could be lost would re-hide the people
+    a player just asked to see.
+    """
+
+    return build_deck_reset_ledger(db)
+
+
+DeckResetLedgerDep = Annotated[DeckResetLedger, Depends(get_deck_reset_ledger)]
+
+
 def get_run_deck_deal(
     db: DbSession,
     workbench: SearchWorkbenchDep,
     suppression: SuppressionLedgerDep,
     interest: InterestLedgerDep,
     passes: PassLedgerDep,
+    resets: DeckResetLedgerDep,
 ) -> RunDeckDeal:
-    """The deck, assembled per request. **Three ledgers and one port the
+    """The deck, assembled per request. **Four ledgers and one port the
     shortlist has not.**
 
-    The suppression cache and the pass record are the deck's alone — a pass
-    reaches no other surface — and the interest ledger is here for the deck's own
-    *already asked* exclusion, which is a read of the player's **own outgoing**
-    rows rather than the lift's read of incoming ones the workbench makes. The
-    court port is the cool-off's (``docs/adr/0169`` §6), read on this surface
-    and on no other, and it is built from the composition root like every
-    outward port so the seed's deal and a request's read the same courts.
+    The suppression cache, the pass record and the reset record are the deck's
+    alone — a pass reaches no other surface, and *Show them again* is a button
+    on a deck — and the interest ledger is here for the deck's own *already
+    asked* exclusion, which is a read of the player's **own outgoing** rows
+    rather than the lift's read of incoming ones the workbench makes. The court
+    port is the cool-off's (``docs/adr/0169`` §6), read on this surface and on
+    no other, and it is built from the composition root like every outward port
+    so the seed's deal and a request's read the same courts.
 
     There is no prompt ledger: a deal raises no question, because the two a
     search can raise are about a grid it improvised and a widening it keeps
@@ -387,10 +408,41 @@ def get_run_deck_deal(
         interest=interest,
         passes=passes,
         courts=build_shared_court_query(db),
+        resets=resets,
     )
 
 
 RunDeckDealDep = Annotated[RunDeckDeal, Depends(get_run_deck_deal)]
+
+
+def get_reset_deck(
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    ratings: SkillRatingRepositoryDep,
+    holds: AccountHoldQueryDep,
+    resets: DeckResetLedgerDep,
+) -> ResetDeck:
+    """*Show them again*, assembled per request. **One store, and two refusals.**
+
+    It holds no ruleset, no engine, no search store and no cache: nothing here
+    scores anybody, there is no product number to read, there is no origin to
+    prove, and the Redis suppression is deliberately not reached — the row it
+    writes is what the deal subtracts from the cache. The rating repository and
+    the hold query are here because the reset refuses exactly what the deal
+    refuses about *you*, and it should not need the candidate index the deal
+    binds to say so.
+    """
+
+    return ResetDeck(
+        clock=clock,
+        ratings=ratings,
+        holds=holds,
+        resets=resets,
+        unit_of_work=uow,
+    )
+
+
+ResetDeckDep = Annotated[ResetDeck, Depends(get_reset_deck)]
 
 
 def get_record_pass(

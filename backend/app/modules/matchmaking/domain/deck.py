@@ -36,21 +36,31 @@ offers, no ladder in the pool description. Its own exclusions are here instead,
 and the fourth of them is the **cool-off** (``docs/adr/0169`` §6): somebody you
 are already with is not in your deck, and stays out for
 ``deck_cool_off_days`` after the court is behind you.
+
+**Three of the four can be cleared, by one act** (``docs/adr/0169`` §5). *Show
+them again* is a moment — when the viewer last pressed it, in this sport — and
+the suppression, the dealt memory and the cool-off each read that one moment
+their own way: a pass made before it no longer hides, the memory reaches back
+no further than it, and a court behind the pair before it no longer counts.
+*Already asked* is not cleared: the people the viewer has a live yes on are
+still theirs to wait on. Nothing here deletes anything — the pass record, the
+search record and the game are all still there — which is what makes a
+re-shown card still a re-show.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import IntEnum
-from typing import Collection, final
+from typing import Collection, Mapping, final
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.ruleset import IntentRules
 from app.engines.matchfit.scoring import MatchFit
 from app.engines.matchfit.v1 import reverse_mode
-from app.kernel import Instant, invariant
+from app.kernel import Instant, instant, invariant
 from app.modules.matchmaking.domain.fence import searcher_of
 from app.modules.matchmaking.domain.ports import SharedCourt
 from app.modules.matchmaking.domain.search_context import SearchContext
@@ -95,6 +105,53 @@ from app.modules.matchmaking.domain.shortlist import (
 #: deepest position reached per deal, which ``DECK_DEAL_MAX`` already collects —
 #: and the named owner. Any change to it lands as an ADR naming who moved it.
 DEALT_MEMORY = timedelta(days=1)
+
+
+def dealt_memory_from(now: Instant, *, reset_at: Instant | None) -> Instant:
+    """The moment the dealt memory reaches back to.
+
+    :data:`DEALT_MEMORY` ago — or the viewer's last *Show them again* in this
+    sport, when that is later (``docs/adr/0169`` §5, ``docs/adr/0131``'s one
+    exception). The reset clears the memory so that *deal everyone again* is
+    true and not mostly true; a reset older than the day changes nothing, because
+    the memory had already let go on its own.
+    """
+
+    a_day_ago = instant(now - DEALT_MEMORY)
+    if reset_at is None or reset_at <= a_day_ago:
+        return a_day_ago
+    return reset_at
+
+
+def cleared_by_reset(
+    passed_at: Mapping[UUID, datetime], *, reset_at: Instant | None
+) -> frozenset[UUID]:
+    """Whose live suppression the viewer's last *Show them again* lifted.
+
+    Read off the **durable pass record** and never the cache (``docs/adr/0169``
+    §5): a pass made before the reset no longer hides that person, and a pass
+    made after it stands — the viewer looked again and said no again. The cache
+    is not touched. A reset that had to reach Redis would be a reset that could
+    fail soft, and a ``204`` that was a lie: the keys are left to lapse on their
+    own, and the deal subtracts what the record says was cleared. It is the
+    same posture as the re-show flag beside it, for the same reason — the row
+    does not fail soft, and the answer is computed from it.
+
+    ``passed_at`` is the latest pass per person, which is the only one that
+    decides: the record is append-only and a pair may hold several. It is the
+    deal's **own sport's** passes, on the row's rule, while the cache is keyed
+    per player and not per sport (``pass_model.py``) — so a person passed on in
+    padel is hidden in tennis too, and a padel reset lifts that in padel only.
+    The named cost: the tennis deck still hides them until the key lapses, and
+    a tennis reset cannot lift a pass tennis never recorded.
+    """
+
+    if reset_at is None:
+        return frozenset()
+    return frozenset(
+        player_id for player_id, at in passed_at.items() if at < reset_at
+    )
+
 
 #: **The deck's ruler** (``docs/adr/0169`` §2). Every deal scores under the fun
 #: vector, for every viewer, declared or not: shared tags lead, overlap second,
@@ -164,7 +221,11 @@ class DeckBand(IntEnum):
 
 
 def cooling_off(
-    courts: Collection[SharedCourt], *, now: Instant, days: int
+    courts: Collection[SharedCourt],
+    *,
+    now: Instant,
+    days: int,
+    reset_at: Instant | None = None,
 ) -> frozenset[UUID]:
     """Whom the cool-off holds out of this viewer's deck (``docs/adr/0169`` §6).
 
@@ -181,6 +242,11 @@ def cooling_off(
     window after a court*, which still holds out the courts ahead — a live game
     was never something a deck should deal.
 
+    ``reset_at`` is the viewer's last *Show them again* in this sport
+    (``docs/adr/0169`` §5): a court that went behind the pair **before** it no
+    longer counts, one behind them since still does, and a court ahead is held
+    out whatever was pressed — the reset clears the window, never the game.
+
     **Deck only.** Find a game keeps ``docs/adr/0142`` §1's release, and this
     function has one caller.
     """
@@ -190,7 +256,11 @@ def cooling_off(
     return frozenset(
         court.counterpart_id
         for court in courts
-        if court.behind_since is None or now - court.behind_since < window
+        if court.behind_since is None
+        or (
+            now - court.behind_since < window
+            and (reset_at is None or court.behind_since >= reset_at)
+        )
     )
 
 
@@ -219,21 +289,25 @@ class DeckExclusions:
     into a game (``docs/adr/0142`` §1) — and is the deck's own from there.
     """
 
-    #: A **live** pass suppression, read from the cache that fails soft. An
-    #: unreachable store answers *nobody*, which repeats a card and never empties
-    #: a deal.
+    #: A **live** pass suppression, read from the cache that fails soft, less
+    #: every pass the viewer's last *Show them again* cleared
+    #: (:func:`cleared_by_reset`). An unreachable store answers *nobody*, which
+    #: repeats a card and never empties a deal.
     suppressed: frozenset[UUID]
     #: People this player has already said *Let's play* to, for this sport. The
     #: yes lapses at ``INTEREST_TTL`` and they return to the deck — a fresh chance
     #: rather than a loop.
     already_asked: frozenset[UUID]
-    #: People dealt to this player within :data:`DEALT_MEMORY`. **A spent deal
-    #: deals again**, and this is what makes the second deal a different ten.
+    #: People dealt to this player since :func:`dealt_memory_from`'s moment —
+    #: :data:`DEALT_MEMORY` ago, or their last *Show them again* if later. **A
+    #: spent deal deals again**, and this is what makes the second deal a
+    #: different ten.
     already_dealt: frozenset[UUID]
     #: People the viewer has a game with, or had one with inside the cool-off
-    #: window — :func:`cooling_off`'s answer. Read from a port that fails soft,
-    #: like the suppression above: an outage repeats the card of somebody they
-    #: already know, and never empties a deal.
+    #: window and since their last *Show them again* — :func:`cooling_off`'s
+    #: answer. Read from a port that fails soft, like the suppression above: an
+    #: outage repeats the card of somebody they already know, and never empties
+    #: a deal.
     cooling_off: frozenset[UUID]
 
     def holds_out(self, player_id: UUID) -> bool:

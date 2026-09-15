@@ -21,7 +21,11 @@ the viewer has a court with, or had one with inside ``deck_cool_off_days``
 (``docs/adr/0169`` §6). None of them is a gate — a gate is a statement about the
 city and these are statements about one player's own deck — and the first is
 **counted onto the record**, because it is the only thing that tells *your own
-passes emptied your deck* apart from *the pool is empty*.
+passes emptied your deck* apart from *the pool is empty*. **Three of the four
+read the viewer's last *Show them again*** (``docs/adr/0169`` §5): one moment
+off the reset ledger, applied to the pass record, the search record and the
+courts each in its own way, so that a reset clears them together and touches
+none of them.
 
 *The relaxation ladder does not reach it* (``docs/adr/0099``). There are no rung
 offers on a deal and no offer for a later one to cite, so ``rung_offers`` is
@@ -51,7 +55,8 @@ cache.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import final
+from datetime import datetime
+from typing import Mapping, final
 from uuid import UUID
 
 from app.engines.matchfit.ruleset import Ruleset
@@ -64,13 +69,15 @@ from app.modules.matchmaking.application.search_workbench import (
 )
 from app.modules.matchmaking.application.outward_reads import read_demand
 from app.modules.matchmaking.domain.deck import (
-    DEALT_MEMORY,
     INHERITED_ON_THE_DECK,
     Deal,
     DeckExclusions,
+    cleared_by_reset,
     cooling_off,
     deal,
+    dealt_memory_from,
 )
+from app.modules.matchmaking.domain.deck_reset import DeckResetLedger
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
 from app.modules.matchmaking.domain.index_staleness import IndexFreshness
@@ -153,6 +160,7 @@ class RunDeckDeal:
         interest: InterestLedger,
         passes: PassLedger,
         courts: SharedCourtQuery,
+        resets: DeckResetLedger,
     ) -> None:
         self._work = workbench
         self._ruleset = ruleset
@@ -162,6 +170,7 @@ class RunDeckDeal:
         self._interest = interest
         self._passes = passes
         self._courts = courts
+        self._resets = resets
 
     async def execute(self, command: RunDeckDealCommand) -> DeckAnswer:
         now = self._work.clock.now()
@@ -209,8 +218,18 @@ class RunDeckDeal:
             )
 
         with self._work.timed(stages, "read_deck_exclusions"):
-            exclusions = await self._exclusions(command, in_box, now)
-            re_shows = await self._re_shows(command, in_box, now)
+            passed_at = await self._passes.last_passed_at(
+                passer_id=command.searcher_id,
+                sport=command.sport,
+                candidate_ids=in_box,
+            )
+            reset_at = await self._resets.latest_at(
+                player_id=command.searcher_id, sport=command.sport
+            )
+            exclusions = await self._exclusions(
+                command, in_box, now, passed_at=passed_at, reset_at=reset_at
+            )
+            re_shows = self._re_shows(passed_at, now)
 
         with self._work.scoring(stages):
             try:
@@ -258,7 +277,13 @@ class RunDeckDeal:
     # -- the four the deck adds to the gates ---------------------------------
 
     async def _exclusions(
-        self, command: RunDeckDealCommand, in_box: tuple[UUID, ...], now: Instant
+        self,
+        command: RunDeckDealCommand,
+        in_box: tuple[UUID, ...],
+        now: Instant,
+        *,
+        passed_at: Mapping[UUID, datetime],
+        reset_at: Instant | None,
     ) -> DeckExclusions:
         """Whom this deal holds out, and where each answer comes from.
 
@@ -266,15 +291,20 @@ class RunDeckDeal:
         of *the gate is the cache; the evidence is the row* seen from one method.
 
         **Suppression** is the cache and it fails soft: an outage answers
-        *nobody*, which repeats a card rather than emptying a deal.
+        *nobody*, which repeats a card rather than emptying a deal. What the
+        viewer's last *Show them again* cleared is subtracted from it off the
+        **pass record**, never off the cache — the keys are left to lapse, and
+        a reset that had to reach the cache could fail soft and lie.
         **Already asked** is the durable interest ledger, read over this player's
         own outgoing yeses — their own rows, so it is not an inbox — and it lapses
         with the yes, which is how ``INTEREST_TTL`` expiry *returns a person to
-        the deck*. **Already dealt** is the search record itself, bounded by
-        ``DEALT_MEMORY``, which is what makes a spent deal deal again. **Cooling
-        off** is ``games``' record, read through a port in the matcher's words
-        that fails soft like the cache does (``docs/adr/0169`` §6): the courts
-        still ahead, and the ones behind the two of them inside the window.
+        the deck*; the reset does not touch it. **Already dealt** is the search
+        record itself, bounded by ``DEALT_MEMORY`` or by the reset, whichever is
+        later, which is what makes a spent deal deal again and *deal everyone
+        again* true. **Cooling off** is ``games``' record, read through a port
+        in the matcher's words that fails soft like the cache does
+        (``docs/adr/0169`` §6): the courts still ahead, and the ones behind the
+        two of them inside the window and since the reset.
         """
 
         suppressed = await self._suppression.suppressed_for(
@@ -286,7 +316,7 @@ class RunDeckDeal:
         dealt = await self._searches.dealt_since(
             searcher_id=command.searcher_id,
             sport=command.sport,
-            since=now - DEALT_MEMORY,
+            since=dealt_memory_from(now, reset_at=reset_at),
         )
         no_courts: tuple[SharedCourt, ...] = ()
         courts = await read_demand(
@@ -295,7 +325,7 @@ class RunDeckDeal:
             stood_down=no_courts,
         )
         return DeckExclusions(
-            suppressed=suppressed,
+            suppressed=suppressed - cleared_by_reset(passed_at, reset_at=reset_at),
             already_asked=frozenset(
                 yes.to_player_id
                 for yes in outgoing
@@ -303,12 +333,15 @@ class RunDeckDeal:
             ),
             already_dealt=dealt,
             cooling_off=cooling_off(
-                courts, now=now, days=self._ruleset.interest.deck_cool_off_days
+                courts,
+                now=now,
+                days=self._ruleset.interest.deck_cool_off_days,
+                reset_at=reset_at,
             ),
         )
 
-    async def _re_shows(
-        self, command: RunDeckDealCommand, in_box: tuple[UUID, ...], now: Instant
+    def _re_shows(
+        self, passed_at: Mapping[UUID, datetime], now: Instant
     ) -> frozenset[UUID]:
         """Which of these cards would be a **re-show**, from the record alone.
 
@@ -323,13 +356,15 @@ class RunDeckDeal:
         live-suppressed player is dealt; a flag derived from *the cache no longer
         holds them* would then call that a re-show, and the falsifier would be
         corrupted at exactly the moment extra re-shows are happening.
+
+        **A reset re-show is not flagged here, on purpose.** The flag says *the
+        window lapsed*, and after *Show them again* it has not: the card is dealt
+        with its pass inside the window. Which re-shows a reset caused is
+        answered by the reset ledger beside the pass record — a deal after the
+        reset moment, of somebody passed on before it — and that is the sample
+        ``docs/adr/0169`` §5 says the falsifier now has to exclude.
         """
 
-        passed_at = await self._passes.last_passed_at(
-            passer_id=command.searcher_id,
-            sport=command.sport,
-            candidate_ids=in_box,
-        )
         suppress_days = self._ruleset.interest.pass_suppress_days
         return frozenset(
             player_id

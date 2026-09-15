@@ -293,6 +293,22 @@ class RecordPassRequest(BaseModel):
     )
 
 
+class ResetDeckRequest(BaseModel):
+    """One *Show them again*, for one sport. **Write-only.**
+
+    Nothing is returned by this route and no route anywhere returns a reset.
+
+    **The sport is the whole ask.** The button is on a deck and a deck is one
+    sport, so a padel reset says nothing about tennis. There is no field for
+    *what* to clear: the three things a reset lifts — every pass suppression,
+    the day's dealt memory and the cool-off — lift together, and a client that
+    could pick would be a client that could clear the cool-off and keep its
+    passes, which is not a thing the product offers.
+    """
+
+    sport: Sport = Field(..., description="Which sport's deck to deal whole again")
+
+
 class RecordPromptDeclineRequest(BaseModel):
     """One *not now*, about a question. **Write-only.**
 
