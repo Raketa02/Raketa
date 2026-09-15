@@ -206,7 +206,23 @@ Identity and account state.
   account, or if club staff share this accounts system — neither is true today.
 - **Authority** — role enum, `USER` or `ADMIN`.
 - **Email** — value object. Trimmed, lower-cased, RFC-ish validated, ≤ 320 chars.
-- **Nickname** — value object. Trimmed, 2–64 chars, `[A-Za-z0-9_.-]`.
+- **Name** — value object. *What a player is called.* Free text: trimmed, runs of whitespace
+  collapsed to one space, 2–64 chars, **never unique** — two players may share one,
+  and it is checked against nobody. **The name is what every screen says**: every sentence, row,
+  card, sheet, toast, seat label and spoken name uses the whole name or names nobody; the two
+  initials over a generated poster stay the one derived form
+  ([ADR-0167](docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md) §3),
+  cut from it. Null until the **naming**
+  ([ADR-0171](docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
+- **Nickname** — value object. Trimmed, 2–64 chars, `[A-Za-z0-9_.-]`, **unique**. A **handle**:
+  shown as `@nickname` under the name on a player's record and on their own You tab, and **said
+  nowhere** — never in a sentence, on a row, a card, a sheet, a toast, a seat label or a spoken
+  name. Null until the naming.
+- **The naming** — the one act that names a player: name and nickname together, asked in
+  onboarding's first step (*How should people see you?*) and never at sign-up, **repeatable** (a
+  later change is the same act), refused with `NicknameAlreadyTaken` when the handle is another
+  player's. Sign-up asks for credentials only — email, password, the Adult attestation — and a
+  `User` is created unnamed.
 - **RawPassword** — the plaintext at the boundary; 8–128 chars with ≥1 letter and ≥1
   digit. Carrying it as a type is what prevents hashing an unchecked string.
 - **HashedPassword** — non-empty bcrypt hash; the only password form ever persisted.
@@ -226,17 +242,22 @@ Identity and account state.
     the **Adult attestation** as an optional boolean appended after `occurred_at`: `true` is
     the attestation, and **absent means the account was registered before the question
     existed**, never a quieter *no*. There is no backfill — inventing a claim nobody made is
-    the one thing an attestation must not do.
+    the one thing an attestation must not do. **Carries no nickname** since ADR-0171: the
+    account is registered unnamed, and the version did not move because no store outlives the
+    branch that changed the shape.
+  - **UserNamed** — `users.user_named` / v1 — the naming, carrying the **Name** and the
+    **Nickname** together; the fold keeps the latest.
   - **UserDisabled** — `users.user_disabled` / v1.
   - **UserPromotedToAdmin** — `users.user_promoted_to_admin` / v1.
 
 **Invariants**
-- Email and nickname are **unique** — `RegisterUser` reads both before insert and
-  raises `EmailAlreadyRegistered` / `NicknameAlreadyTaken` (a domain conflict, not a
-  database constraint violation).
+- Email and nickname are **unique**, and each is read by the act that carries it —
+  `RegisterUser` reads the email before insert and raises `EmailAlreadyRegistered`; the naming
+  reads the nickname and raises `NicknameAlreadyTaken` (a domain conflict, not a database
+  constraint violation). **The name is never checked against anybody.**
 - **An account requires an Adult attestation, and a default is not one.** `RegisterUser`
-  refuses without it — `AdultAttestationRequired`, a 400 — before it reads the email or the
-  nickname, so a caller who answered nothing learns nothing about which of either is taken.
+  refuses without it — `AdultAttestationRequired`, a 400 — before it reads the email, so a
+  caller who answered nothing learns nothing about whether it is taken.
   The client writes the sentence; the backend only names the code
   ([ADR-0022](docs/adr/0022-kernel-negative-space-and-constant-homes.md)).
 - **`disable()` is idempotent** — a no-op on an already-inactive user.
@@ -847,10 +868,12 @@ appears here.
   append is assigned its position before it commits
   ([ADR-0110](docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md)).
 - **Player card** — who a candidate *is*, as against how well the game would go. A **closed
-  list** — nickname, photo, area, Social tags, level, band, **likely range**, the photograph's
+  list** — name, photo, area, Social tags, level, band, **likely range**, the photograph's
   **on-court check** outcome, and the **record block** below — and it is assembled
   by the backend **after** the engine returns, on the seam **at stake** already rides, because the
-  scorer is forbidden every field on it. There is no name in this platform, only a **Nickname**.
+  scorer is forbidden every field on it. The card carries the **Name** and never the nickname —
+  a card is a place a person is *named*, and the `@nickname` is drawn on the record only
+  ([ADR-0171](docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
   **The distance is not on it**: a card says only what its subject published, and a distance is a
   fact about a *pair*, so it is the one field that would change depending on who was looking
   ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
@@ -1624,7 +1647,7 @@ the third.
   third surface, as a raw pair and the figure derived from it; the weights never do.
 - **It is the platform's observation of a player, so it may not go on the candidate index**
   ([ADR-0111](docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md)).
-  It reaches a card through a port at assembly time, on the seam the nickname and the photo
+  It reaches a card through a port at assembly time, on the seam the name and the photo
   already ride.
 
 ### Sportsmanship (`backend/app/modules/sportsmanship/`)

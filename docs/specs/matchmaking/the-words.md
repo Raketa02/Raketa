@@ -948,28 +948,44 @@ location, and it becomes:
 
 ## 15. Names
 
-`Nickname` is **2–64 characters**, `users` holds no name at all, and ADR-0107 is explicit:
-*"every sentence naming somebody uses the whole handle or names nobody — the prototype's
-`split(' ')[0]` has nothing behind it here, and inventing a first name is the product
-addressing a person by a name they never gave it."*
+A player has a **Name** — free text, **2–64 characters**, spaces allowed, never unique — and a
+**Nickname**, a unique handle that is drawn as `@nickname` under the name on the You tab and on
+the record screen and is **said nowhere**
+([ADR-0171](../../adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
+**The name is what every sentence says**, and ADR-0107 §4's rule reads on it: *every sentence
+naming somebody uses the whole name or names nobody — the prototype's `split(' ')[0]` has nothing
+behind it here, and inventing a first name is the product addressing a person by a name they
+never gave it.* A name the player typed with a space in it is a name they gave; a first name cut
+out of it by a sentence is not.
 
-> **One `playerName()`: the handle, whole, and `You` for yourself.** Used by §B10's
+> **One `playerName()`: the name, whole, and `You` for yourself.** Used by §B10's
 > head-to-head row, §B16's side-name formatter, §B17's `SH.propose`, and **all eight of
-> §F3's toasts that name somebody.**
+> §F3's toasts that name somebody.** No sentence, row, card, sheet, toast, seat label or spoken
+> name carries the nickname.
 
 **The result screens join that list, and they name a person only where a person acted**
 ([ADR-0141](../../adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)). A games seat
-carries a handle and nothing else about its occupant, so the row's eyebrow says *who you
+carries a name and nothing else about its occupant, so the row's eyebrow says *who you
 played* — the fact that tells two padel games in a week apart, where a duration cannot — and two
 sentences name somebody: *{name} put a score up* and *{name} agreed with your score*. **The two
 columns of a score stay sides.** A score is a **side's** claim, capped one per side and
-answerable by either of the two who played it, so a column headed with a handle would charge a
+answerable by either of the two who played it, so a column headed with a name would charge a
 doubles score to one of them and a listener reading a set cell by cell would hear the wrong
 person's six.
 
 **A seat label may truncate visually; a sentence may not, and a spoken name never does.**
 ADR-0107's rule is against *inventing* a familiar form — a visual truncation invents nothing,
-and the accessible name carries the whole handle, which is where the rule actually bites.
+and the accessible name carries the whole name, which is where the rule actually bites. A list
+truncates by dropping whole names (*Laia Quintana +2*), never by shortening one; where a box draws
+the **stem** (ADR-0157) it is cut at the name's first break — a dot or a space — so *Diego
+Fabregat* draws *Diego* there; what a box does past that, its own ellipsis, is that box's
+business. **The two initials over a generated poster are the one derived form** —
+[ADR-0167](../../adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md) §3's
+exception, cut from the name at the same break (*Ania Kowalska* → `AK`), its fence unchanged.
+
+> **Elsewhere in this file, *handle* is the word of the day the section was written**, and names
+> what this section now calls the name — a `tomek.p` in an example is a seeded handle from before
+> ADR-0171. Every rule those sections cite is this one, and none of them is changed by the word.
 
 **§B16's side-name formatter is redrawn, not kept.** *"You + Marek"* is a layout that assumed
 short words; at 64 characters the 46px seat is the binding constraint (§G5 already lists the
