@@ -53,6 +53,16 @@ export interface ShellScreenProps {
    */
   readonly lead?: ReactNode;
   readonly right?: ReactNode;
+  /**
+   * Whether the page's content may **grow to fill** the scroller, so a child with `flex: 1`
+   * takes what the header and the action leave — **forwarded, not designed**. The Players
+   * deck is the one screen whose content is a stage rather than a column
+   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §7): the card is the height the phone gives it, and a column that sized itself to the card
+   * would have the card sizing itself to nothing. The scroller stays a scroller — content
+   * taller than the page still scrolls — and every other screen is unchanged.
+   */
+  readonly fill?: boolean;
   /** Pinned below the scroller and above the tab bar. Absent when there is nothing to press. */
   readonly action?: ReactNode;
   /**
@@ -81,6 +91,7 @@ export function ShellScreen({
   eyebrow,
   lead,
   right,
+  fill = false,
   action,
   onBack,
   children,
@@ -89,7 +100,9 @@ export function ShellScreen({
     <SafeAreaView style={s.screen} edges={['top']}>
       <ScreenHeader title={title} eyebrow={eyebrow} lead={lead} right={right} onBack={onBack} />
 
-      <ScrollView contentContainerStyle={s.content}>{children}</ScrollView>
+      <ScrollView contentContainerStyle={[s.content, fill ? s.fill : undefined]}>
+        {children}
+      </ScrollView>
 
       {action !== undefined ? <View style={s.action}>{action}</View> : null}
     </SafeAreaView>
@@ -103,6 +116,7 @@ const s = StyleSheet.create({
     paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
+  fill: { flexGrow: 1 },
   action: {
     paddingHorizontal: theme.size.gutter,
     paddingTop: theme.space.md,

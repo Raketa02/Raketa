@@ -33,8 +33,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import { toWireSport } from '@/features/onboarding/types';
 
 import { dealDeck as deal } from '../api/deckApi';
-import type { DeckDeal } from '../domain/deckHand';
-import type { SearchEnvelope } from '../domain/candidate';
+import type { Candidate, PoolDescription, SearchEnvelope } from '../domain/candidate';
 import { answerableWithoutAWeekGrid, type RaisedPrompt } from '../domain/raisedPrompt';
 import { toRankedList } from '../mappers/candidateMappers';
 import { toRaisedPrompts, type PromptQuotes } from '../mappers/searchMappers';
@@ -45,9 +44,17 @@ export interface DeckAsk {
   readonly quotes: PromptQuotes;
 }
 
-/** One deal: the cards, the pool they came from, and the envelope every card is drawn with. */
-export interface DeckOutcome extends DeckDeal {
+/**
+ * **One hand**: the cards, the pool they came from, and the envelope every card is drawn with.
+ *
+ * A hand and not the deal, since ADR-0169 §5: the deck holds hands appended to one another
+ * (`hooks/useDeck`), each card remembering the `search_id` it came off, and `domain/deckHand`
+ * is the shape of what is held. This is the shape of what one `POST /deck` answers.
+ */
+export interface DeckOutcome {
   readonly envelope: SearchEnvelope;
+  readonly candidates: readonly Candidate[];
+  readonly pool: PoolDescription;
   /**
    * The questions this deal raised, **already filtered to the ones this screen can answer.**
    *

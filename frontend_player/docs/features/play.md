@@ -305,8 +305,11 @@ the read-back still holds, derived and never stored, with the marked player stil
 forecast and the court stating the fact and never the cause.
 
 **⚡Play's second screen is _Match me_ — one person at a time, two named buttons, and no
-swipe** — _the placement is struck by the deck's move to Players; the last paragraphs of this
-record are the decision, and the buttons, the endings and the answer's rules below still stand_.
+swipe** — _the placement is struck by the deck's move to Players, and the refusal of the swipe,
+the two-button card, the footer, the pass and one-sided-yes toasts and the endings' copy are
+struck by the deck's redesign (#444, ADR-0169 §3–§7): the last paragraphs of this record are the
+decision. What still stands below is the answer's posture — optimistic, a refusal returns the
+card, offline holds the write — and the two endings' split on `players_in_range`_.
 The gesture was refused **not on cost** — `RadiusSlider` already drags on the
 built-in `PanResponder` — but because _Show them again_ was struck, leaving `PASS_SUPPRESS` at
 thirty days with nothing that reverses one: a swipe would put the cheapest gesture in the app
@@ -716,3 +719,106 @@ _Match me_ survives as a word only in _Matched!_. In `deck.test.tsx` every `/pla
 back, _the segment_ and _the declaration_ blocks retired, and a _Players, the tab_ block asserts
 the column lit and rootless, Deck on arrival and on return, the Radar pane, the chip row's
 presence rule, and an undeclared player dealt with nothing asked.
+
+**The deck is the swipe deck the mocks draw — a full-bleed card, a drag with two stamps, a
+counter and a chip, two endings and Show them again**
+([#444](https://github.com/Raketa02/Raketa/issues/444),
+[ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §3, §4,
+§5, §7, §8). Ania opens Players: a volt chip top-right says _2 want to play you_; the card is
+Filip's photograph edge to edge under a wash rising from the bottom — _2,60 · PADEL_ top-left in
+the existing 40pt figure, _✓ on court_ top-right, his name in the card's one 24pt role beside the
+existing Fit pill, _In your area · 2 km · around this week_, his intro in quotes, four tags of
+which the shared one leads in volt with _· you too_, four tiles, a hint line, and _8 left · 12
+yeses to give_ floating over the card's foot, with two real cards behind. **`DeckCard` is
+rewritten and makes no case**: no reason line, no concern, no _They already said yes to you_ and
+no _Wants to play you_ tag — the liker is unmarked and placed by the nudge (§4), and the count of
+them is the chip's. `deckCardFacts` reads the card once for both registers and
+`deckCardPresentation` holds its words: the meta line's third clause is `RECENT_ACTIVITY`'s own
+words lower-cased and drawn only on the code (ADR-0107 §3 intact — never _active now_), the
+intro is `card.intro` inside the drawing's own quotation marks and the gap closes where there is
+none (ADR-0170; the field crosses now, mapped and omitted where absent), the tags are
+`socialTagOverlap` re-ordered **shared first** by `domain/deckTags` so the volt one is never cut
+off, and the tiles are always four — _Balance_ from `predicted_balance.pct`, _Reliability_ the
+Player Score, _Overlap_ the shared-slot count, _Shared tags_ the count — with a dash where a
+number is absent, spoken only where it is not. The wash, the name role, the stamps, the pill
+radius, the three round buttons, the tiles and the tick are Part 16 rows and `theme.ts` values
+in the same commit, each fenced _for the deck card only_ except the tick, which changes the
+mark's drawing wherever `OnCourtMark` is drawn (`_shared.md`). **The intro is set upright**: the
+mocks set it in italics, and this app loads no italic Archivo — a `fontStyle` on a custom family
+is ignored on Android and synthesised on iOS — so the marks carry _their words_ and the ninth
+font file is the author's call at the look.
+
+**A swipe is an answer, and the buttons remain the path** (ADR-0169 §3). `DeckStage` is
+rewritten on `PanResponder` and `Animated` with the native driver — no
+`react-native-gesture-handler`, no `react-native-reanimated`, as the swipe row and the slider
+already prove — and it never claims the press: the card is a door (a long press opens the
+record), and it claims a move that has travelled the swipe row's own intent across and further
+across than down, in either direction. The card follows the finger and turns; the two stamps —
+_LET'S PLAY_ in volt top-left, _NOT TODAY_ in white top-right, the buttons' own words uppercased
+by the style — fade in with the drag and are full at **95pt**, the mock's threshold; a release
+past it asks the screen, which answers `taken` (the card flies in the drag's direction, from
+wherever the finger left it) or `withheld` (it settles back, `motion.settle`); short of it, it
+settles. `deckStageGeometry` holds the arithmetic as numbers. **One light haptic** as the finger
+first crosses the threshold — the haptics port's second verb — and none under reduced motion,
+where nothing moves and the answer still lands, because `onLeft` is a fact and not an animation's
+courtesy. Two real cards stand behind the top one, offset and scaled back, only when that many
+remain, hidden from assistive technology; the stage takes the height the phone gives the deck
+(`ShellScreen`'s new `fill`), so all three cards are one size. The three round buttons under the
+stage — ✕, i, 🎾 at the mock's 54, 42 and 66 — do the same two things and one more, named for the
+person and never removed: a screen reader consumes the drag, and `deck.test.tsx`'s _cost no new
+gesture dependency_ became _the three buttons remain and answer_. **i and the long press open
+`PlayerRecordSheet`** with the deck's pairing in hand — subject, sport, distance, the reader's own
+area, the tag overlap and `pairing: { fit, onExplain }` — so _why this Fit_ lives behind the
+sheet's fit row; the direct long-press → `WhyFitSheet` is gone.
+
+**The stamp and the card leaving are the feedback, so the pass toast and the one-sided yes toast
+retire**; `passedToast` and `interestToast` survive only as the spoken result of every answer —
+`passedAnnouncement` on the press, `interestAnnouncement` on the reply — through
+`AccessibilityInfo.announceForAccessibility`. `mutualToast` (a mutual naming no chat) stays,
+verbatim; a mutual naming a challenge is the yes screen as before, pushed by the mutation.
+`yesOutcome` decides between the three off the reply's own shape. `DECK_FOOTER` retires: the hint
+line on the card names the drag, the buttons and the long press.
+
+**The counter is true and the chip names nobody.** _{left} left · {give} yeses to give_ is
+`cardsLeft` — `pool.remaining`, which the envelope carries on a deal only, plus the cards
+unanswered in hand — and `yesesToGive`, the cap less the outstanding off `GET /interest`, whose
+mapper **stops dropping the cap** and carries `ttl_days` beside it (`SportInterest`); the first
+half counts down per answer and the second on the yes's own reply, with _8 left_ alone until the
+read has landed rather than a nought invented. The chip is `pool.want_to_play_you`, drawn at one
+and above in the header's right slot, and **decremented when a yes on a card carrying
+`inclusion_reason` comes back mutual** — a cache write on the held deal in `useSayYes`'s own
+`onSuccess`, because the reply may land after the screen has gone. **At the ceiling** the client
+pre-empts the one refusal it can read (`domain/yesBudget`): `give === 0` on a card with no
+`inclusion_reason` is withheld — the card settles, a toast says the ceiling in the same sentence
+a `409` says it — and a liker's yes is sent whatever the count, because it closes a mutual and is
+never outstanding. The server stays the authority: a `409` still returns the card.
+
+**The next hand is asked for at two and appended** (§5). The held deal is hands folded onto one
+another (`withHand`): `refetch()` is no longer a replacement, every `DealtCard` keeps the
+`search_id` it came off — the origin key its answer cites, and a card from the first hand may be
+answered after the second arrives — and the envelope, the pool and the prompts are the latest
+hand's. `domain/deckHand` reads the standing off the flattened list: the top card, the two
+behind, the unanswered count, and `latestHand`, which is what tells a hand of nought apart from a
+hand answered out — an empty hand under unanswered cards is the ending waiting its turn.
+`wantsTheNextHand` fires at two while the pool says there are people and never after a hand that
+brought nobody; a hand answered out with nothing appended deals again as before, and only a hand
+that comes back empty is an ending. **Answers are keyed by card and not by person**: the same
+player dealt again on a later `search_id` is a new card, dealt and not hidden, which is what a
+reset relies on; the same card twice — the same person on the same `search_id`, which the route
+never does — is dropped on append so the effect cannot ask for ever. **A reset replaces, and it is
+the one act that does**: `useResetDeck` posts `POST /deck/reset {sport}` and then resets the held
+entry (Query's own back-to-initial-and-refetch) rather than refetching, because appending the
+fresh hand would hide exactly the people the player asked to see again.
+
+**Two endings, and only one offers the reset** (§5). `DeckEnding` draws _You have seen everybody_
+as the mock — _Nobody new in {radius} km today. Your yeses stay live for {ttl} days, so the ones
+you gave are still working._, the radius off the deal and the days off the interest row, **21 and
+not the mock's 14** because the number is read from the wire and never held — with **Show them
+again** (`secondary`) and **Try the radar** (`dark`, flips the toggle); a refused reset leaves the
+sentence above the button and the button is the retry. _Nobody in range yet_ keeps the pool
+description and _widen it in You_, gated by `radius_clamp` as before, **without** the reset,
+which would deal nobody. `outgoingYeses` retires with the footer: what the player has out is the
+counter's second half now. **Not seen on a device** — the author checks the build against the
+nine mocks under `game_card_and_details/players/`, and the wash's legibility over a photograph at
+the name, the stamps' volt stroke over a photograph's top, and the counter straddling the card's
+foot are the three things to look at first.

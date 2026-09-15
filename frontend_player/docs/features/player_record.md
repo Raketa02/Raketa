@@ -128,3 +128,16 @@ cache would draw a dead link as a blank tile on the second yes of an evening, wh
 the poster; and `gcTime: 0` is what makes _no tile swaps mid-entrance_ true, since nothing stale is
 there to be drawn first. `challenges → player_record` is a new feature edge, through this surface,
 held open by `scripts/test-import-boundaries.sh`.
+
+**The deck is the sheet's third door, and the header's mark gained its tick**
+([#444](https://github.com/Raketa02/Raketa/issues/444),
+[ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §3,
+§7). The Players deck opens this sheet from its **i** button and from a long press on the card,
+with the deck's pairing in hand — subject, sport, distance, the reader's own area, the tag
+overlap and `pairing: { fit, onExplain }` — so _why this Fit_ lives behind the fit row exactly
+as it does from the builder's forecast card, and the deck's previous direct long-press to the
+Fit breakdown is gone: a face opens the person, and the pairing's arithmetic is a row inside what
+that opens. Nothing on the sheet changed for it; the props it already took were the props the
+deck had. The header's `PhotoPanel` draws the on-court mark with a drawn tick before its words
+now, at `space.md` down the panel rather than `space.xs`, because one mark has one drawing and
+the deck card draws it too (`_shared.md`).

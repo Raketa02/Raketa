@@ -53,9 +53,11 @@ import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { NOW_COPY } from '@/features/shell/types';
 import { beginSession } from '@/shared/lib/auth';
 import {
+  HapticsProvider,
   ImagePickingProvider,
   LiveStreamProvider,
   LocationProvider,
+  type HapticsPort,
   type ImagePickingPort,
   type LiveStreamPort,
   type LocationPort,
@@ -207,6 +209,26 @@ export function resetLiveStream(): void {
 }
 
 /**
+ * The motor this tree buzzes, for the suite that counts a buzz.
+ *
+ * Same shape and same reasons as the photo library above. Unset means the real port over a
+ * native module jest has mocked into something inert, which is right for every suite that is
+ * not about a haptic — and the deck's is: *one light tick as the drag first crosses the
+ * threshold, and none under reduced motion* is a claim about a count.
+ */
+let haptics: HapticsPort | undefined;
+
+/** Run the tree against this motor. Call before `launchSignedIn`. */
+export function stubHaptics(port: HapticsPort): void {
+  haptics = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetHaptics(): void {
+  haptics = undefined;
+}
+
+/**
  * The providers the real root layout composes, without the bootstrap sequence — fonts, the
  * splash screen and config validation are the launch path's business and have their own
  * tests.
@@ -235,15 +257,18 @@ function TestRoot() {
 }
 
 /**
- * The three ports, wrapped where a suite said what they are — and the live channel always.
+ * The four ports, wrapped where a suite said what they are — and the live channel always.
  *
  * Composed here rather than in `TestRoot` so adding a port is one entry rather than another
  * level of nesting and another conditional. The live channel's default is a fake rather than
  * the device, for the reason `stubLiveStream` states.
  */
 function WithPorts({ children }: { readonly children: ReactNode }) {
+  const withHaptics =
+    haptics === undefined ? children : <HapticsProvider port={haptics}>{children}</HapticsProvider>;
+
   const withLive = (
-    <LiveStreamProvider port={liveStream ?? SILENT_CHANNEL}>{children}</LiveStreamProvider>
+    <LiveStreamProvider port={liveStream ?? SILENT_CHANNEL}>{withHaptics}</LiveStreamProvider>
   );
 
   const withLocation =

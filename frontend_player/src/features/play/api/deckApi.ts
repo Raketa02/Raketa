@@ -32,6 +32,15 @@
  * **`POST /passes` answers `204` and no route anywhere returns a pass** — not to the passer,
  * not as a count, not as *"you have passed on twelve people"*. There is nothing here to type
  * as a response because there is nothing to read.
+ *
+ * ## `POST /deck/reset` is *Show them again*, and it is idempotent
+ *
+ * It clears, for one sport, every pass suppression, the day's dealt memory and the cool-off —
+ * the durable record of each pass stays, only the hiding lifts
+ * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+ * §5). Pressing it twice in a row is one press, so it takes no idempotency key and may be
+ * retried by the player. **Nothing is returned**: the next deal is where the difference shows,
+ * which is why the screen deals again straight after it.
  */
 
 import type { components } from '@/generated/schema';
@@ -42,6 +51,7 @@ type ShortlistResponse = components['schemas']['ShortlistResponse'];
 type ExpressInterestRequest = components['schemas']['ExpressInterestRequest'];
 type ExpressedInterestResponse = components['schemas']['ExpressedInterestResponse'];
 type RecordPassRequest = components['schemas']['RecordPassRequest'];
+type ResetDeckRequest = components['schemas']['ResetDeckRequest'];
 type InterestListResponse = components['schemas']['InterestListResponse'];
 
 /**
@@ -86,13 +96,25 @@ export function recordPass(body: RecordPassRequest): Promise<void> {
   });
 }
 
+/** *Show them again* — cleared, for this sport, and nothing returned. See the module note. */
+export function resetDeck(body: ResetDeckRequest): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: '/api/v1/deck/reset',
+    body,
+    authenticated: true,
+  });
+}
+
 /**
  * Your own *Let's play* yeses: outgoing, mutual, and where each sport stands against its cap.
  *
  * **There is no incoming list and there will not be one** — a yes nobody has answered stays
  * silent in both directions, which is what makes saying yes low-stakes
- * ([ADR-0109](../../../../../docs/adr/0109-a-read-back-names-what-it-withholds.md)). So the
- * deck's own count is a count of *yours*, and the segment above it says so.
+ * ([ADR-0109](../../../../../docs/adr/0109-a-read-back-names-what-it-withholds.md)). What
+ * ADR-0169 §4 admitted is **one count on the deal's envelope** — `pool.want_to_play_you` — and
+ * it names nobody; this read still counts *yours*, and the counter's *N yeses to give* is
+ * drawn from it.
  */
 export function readInterest({ signal }: ReadInterestOptions = {}): Promise<InterestListResponse> {
   return httpRequest<InterestListResponse>({

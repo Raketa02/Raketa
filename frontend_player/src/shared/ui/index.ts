@@ -66,6 +66,8 @@ export {
   ON_COURT_MARK,
   ON_COURT_MAX_SCALE,
   OnCourtMark,
+  onCourtTickBox,
+  type OnCourtMarkPlacement,
   type OnCourtMarkProps,
 } from './OnCourtMark';
 export { Note, type NoteProps, type NoteVariant } from './Note';
@@ -82,7 +84,7 @@ export {
   type PhotoTileProps,
 } from './PhotoTile';
 export { PagerDots, type PagerDotsProps } from './PagerDots';
-export { PhotoPanel, type PhotoPanelProps } from './PhotoPanel';
+export { MARK_TOP, PhotoPanel, type PhotoPanelProps } from './PhotoPanel';
 export {
   PHOTO_PANEL,
   POSTER_LABEL,

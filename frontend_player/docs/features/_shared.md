@@ -154,3 +154,29 @@ the Players tab's is its _Deck | Radar_ toggle in `lead` and, when the count arr
 `right` — and an element carrying a role and no words would be a stop a listener lands on and
 hears nothing from. `ShellScreen` forwards `lead` and `right` for it, _forwarded, not designed_,
 as it already forwards the way back; 10.3 carries the callout.
+
+**The deck's drag reached four primitives and one port, and only the tick is not fenced**
+([#444](https://github.com/Raketa02/Raketa/issues/444),
+[ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §3,
+§7; the decisions are [`play.md`](play.md)'s, and this is what the shared layer changed to carry
+them). **`HapticsPort` is two verbs wide**: `light()` — the OS's own _impact: light_ — joins
+`success()`, for one tick as a drag first crosses the deck's threshold, off under reduced motion
+with the motion; the fake counts both kinds, and the router harness gained `stubHaptics` /
+`resetHaptics` as a fourth port alongside the three it already wraps. **`OnCourtMark` draws a
+tick before its words, everywhere it is drawn** — the photo panel at both sizes, the record
+header, and the deck card — because one mark has one drawing: `Tick`'s own path (now exported as
+`TICK_PATH` in its 12-unit `TICK_SPACE`) in a box that is a share of the words' font size
+(`theme.size.onCourtTick`, 0,72 with a 1,5 stroke), in the words' colour. It did not fit at the
+panel's own `space.xs` — 7.15's arithmetic was right about 6.8's 12 × 12 and about the corner —
+so the mark's top edge is `MARK_TOP` (`space.md`, 12pt down rather than 6) on both panels and
+the caps re-derive to 1,1 and 1,6 in `onCourtMarkFit.test.ts`; the component takes a placement (`on`: `card` · `record` ·
+`deck`) rather than a panel size, and the deck's placement is `surface` + `textOnMedia` at
+`inlineTitle`, lower-cased, uncapped. **`SocialTagRow` gained `onDark`**: over the deck card's wash
+the pair is `volt` and `onDark` rather than `ok` and `base`, and nothing else about the four
+answers changes. **`ShellScreen` gained `fill`** — forwarded, not designed — so a page's content
+may grow to fill the scroller and a `flex: 1` child takes what the header and the pinned action
+leave; the deck's stage is the one screen whose content is a stage rather than a column.
+**`test-support/swipe.ts` gained `dragTo` and `release`**: a finger that has not let go, for
+asserting a stamp that follows the drag, since a whole `swipe` has released before anything can be
+looked at. And the deck reuses the swipe row's `intent` — `SWIPE_INTENT`, one number for the one
+finger deciding between a tap, a scroll and a drag — beside its own `deckSwipe.commit` of 95.

@@ -469,24 +469,41 @@ export {
 export { findAGameStanding, type FindAGameStanding } from './domain/findAGame';
 
 /**
- * The deck's own words, exported for its suite for the reason above — and for one more: three
- * of them are what a **rule** looks like on screen. *There is no `Show them again`* is only
- * checkable against the sentences that replaced it, and the empty states' split is only
- * checkable by asking which title was drawn.
+ * The deck's own words, exported for its suite for the reason above — and for one more: several
+ * of them are what a **rule** looks like on screen. *Show them again* on one ending and not the
+ * other is only checkable by asking which title was drawn beside which button; the counter's
+ * arithmetic and the chip's presence rule are only checkable against the sentences they print.
  */
 export {
   DEAL_AGAIN_LABEL,
-  DECK_FOOTER,
   NOBODY_IN_RANGE_TITLE,
   PANE_LABEL,
   RADAR_LINE,
   SEEN_EVERYBODY_TITLE,
+  SHOW_THEM_AGAIN_LABEL,
+  STAMP_WORDS,
+  TRY_THE_RADAR_LABEL,
   WIDEN_IN_YOU,
-  interestToast,
+  deckCounter,
+  interestAnnouncement,
   mutualToast,
-  outgoingYeses,
-  passedToast,
+  passedAnnouncement,
+  seenEverybodyLine,
+  wantToPlayYouChip,
 } from './components/deckPresentation';
+export {
+  ACCEPT_GLYPH,
+  DECK_HINT_LINE,
+  deckMetaLine,
+  deckTiles,
+  quotedIntro,
+} from './components/deckCardPresentation';
 export { poolDescription } from './components/searchPresentation';
-export { deckStanding, type DeckDeal, type DeckStanding } from './domain/deckHand';
+export {
+  cardsLeft,
+  deckStanding,
+  type DealtCard,
+  type DeckDeal,
+  type DeckStanding,
+} from './domain/deckHand';
 export { whyFitColumn, type WhyFitColumn, type WhyFitRow } from './domain/whyFitColumn';

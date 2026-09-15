@@ -85,3 +85,12 @@ longer exported from the shell's surface: the _Find a game_ half of that segment
 fourth caller and its only outside one, and `resetShellStack` has three callers again — a
 flanking tab, ⚡Play and the send. The Play stack is still `[Now, Find a game]`, and the builder
 is the depth a test pushes to show a press from inside the tab still lays it down.
+
+**The Players header's right slot is the chip, and its page fills**
+([#444](https://github.com/Raketa02/Raketa/issues/444),
+[ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4,
+§7). The slot #443 left empty carries _2 want to play you_ — a volt pill the deck draws from the
+deal's `pool.want_to_play_you`, at one and above and never at nought, so a header with nothing
+waiting has nothing in the slot. `ShellScreen` gained `fill` for the same tab, forwarded and not
+designed: the deck's stage takes the height the phone gives it, with the three round buttons in
+the pinned `action` slot below it.

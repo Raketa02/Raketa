@@ -35,7 +35,7 @@ import type { Wire } from '@/test-support/transport';
 
 import { COMPETITIVE_CARD_DRAWS, CandidateCard } from './CandidateCard';
 import { CandidateCardSocial, SOCIAL_CARD_DRAWS } from './CandidateCardSocial';
-import { DECK_CARD_DRAWS, DeckCard } from './DeckCard';
+import { DeckCard } from './DeckCard';
 
 const PLAYER = '9f2a1c44-0000-4000-8000-000000000001';
 const PHOTO = 'https://photos.example/9f2a1c44?sig=abc';
@@ -235,14 +235,17 @@ function drawSocial(over: Partial<Candidate> = {}) {
   );
 }
 
+/**
+ * The deck card, for the one thing this suite still holds it to: it is the card that floats.
+ * Everything else about it — a different composition since ADR-0169 §7 — is `deckCard.test.tsx`'s.
+ */
 function drawDeck(over: Partial<Candidate> = {}) {
   render(
     <DeckCard
       candidate={candidate(over)}
       envelope={ENVELOPE}
-      onPass={noop}
-      onAccept={noop}
-      onWhyFit={noop}
+      sportName={SPORT_NAME}
+      onLongPress={noop}
     />,
   );
 }
@@ -300,7 +303,7 @@ function yoursWidth(): string {
 }
 
 describe('one contract, three shapes', () => {
-  it('draws both levels on the competitive card and a level row on the other two', () => {
+  it('draws both levels on the competitive card and a level row on the social card', () => {
     // The head-to-head row is what makes `LEVEL_FIT` this card's own, and it is why the
     // three are three components rather than one carrying `surface === …`.
     drawCompetitive();
@@ -312,15 +315,13 @@ describe('one contract, three shapes', () => {
     expect(screen.queryByText(/Established/)).toBeNull();
     screen.unmount();
 
-    for (const draw of [drawSocial, drawDeck]) {
-      draw();
-      expect(
-        screen.getByText(
-          `${formatLevel(2.83)} · Established · likely ${formatRange({ low: 2.55, high: 2.87 })}`,
-        ),
-      ).toBeTruthy();
-      screen.unmount();
-    }
+    // The deck card prints the Level hugely and speaks the row (`deckCard.test.tsx`).
+    drawSocial();
+    expect(
+      screen.getByText(
+        `${formatLevel(2.83)} · Established · likely ${formatRange({ low: 2.55, high: 2.87 })}`,
+      ),
+    ).toBeTruthy();
   });
 
   it('takes the searcher’s own area off the envelope and never prints either code', () => {
@@ -343,16 +344,13 @@ describe('one contract, three shapes', () => {
     expect(screen.getByText('In your area · 4 km')).toBeTruthy();
   });
 
-  it('draws the forecast as a band with its word on the competitive card, and as a row on the deck', () => {
+  it('draws the forecast as a band with its word on the competitive card', () => {
     drawCompetitive();
     // The bar is a tint, so the word beside it is what Part 13's *never colour alone* means
     // — and the bar itself merges into the card body rather than announcing a third time.
     expect(screen.getByText('Fairly even · 74%')).toBeTruthy();
     expect(screen.queryByLabelText('Fairly even, 74%')).toBeNull();
-    screen.unmount();
-
-    drawDeck();
-    expect(screen.getByText('74% even · 66% sure')).toBeTruthy();
+    // The deck draws it as a tile — `deckCard.test.tsx`.
   });
 
   it('says the measured zero rather than counting to nought', () => {
@@ -393,7 +391,6 @@ describe('each card’s drawn set', () => {
   it.each([
     ['competitive', drawCompetitive, COMPETITIVE_CARD_DRAWS],
     ['social', drawSocial, SOCIAL_CARD_DRAWS],
-    ['deck', drawDeck, DECK_CARD_DRAWS],
   ])('says nothing on the %s card that the card already draws', (_name, draw, drawn) => {
     draw();
 
@@ -402,14 +399,12 @@ describe('each card’s drawn set', () => {
     }
   });
 
-  it('gives the social and the deck card a reason line, which they would otherwise not have', () => {
+  it('gives the social card a reason line, which it would otherwise not have', () => {
     // Without one, `INTENT_ALIGNMENT` — third-largest term in both modes — is invisible on
-    // two cards of three.
-    for (const draw of [drawSocial, drawDeck]) {
-      draw();
-      expect(screen.getByText("They're here to compete too")).toBeTruthy();
-      screen.unmount();
-    }
+    // the social card. The deck card makes no case at all since ADR-0169 §7 — the tiles, the
+    // tags and the intro are the card — which `deckCard.test.tsx` holds it to.
+    drawSocial();
+    expect(screen.getByText("They're here to compete too")).toBeTruthy();
   });
 
   /**
@@ -685,13 +680,11 @@ describe('the social tag row', () => {
     expect(screen.UNSAFE_getAllByType(Text).filter((t) => t.props.children === '')).toEqual([]);
   });
 
-  it('is drawn on the competitive card alone, which is where the label can carry it', () => {
-    for (const draw of [drawSocial, drawDeck]) {
-      draw({ terms: [tagTerm('playing_style', { matched: ['PLAYS_TO_WIN'] })] });
-      expect(screen.queryByText(/· you too/)).toBeNull();
-      expect(screen.queryByText('No tags in common')).toBeNull();
-      screen.unmount();
-    }
+  it('is not drawn on the social card, whose label cannot carry it', () => {
+    // The deck card draws the row too, shared tags first and volt (`deckCard.test.tsx`).
+    drawSocial({ terms: [tagTerm('playing_style', { matched: ['PLAYS_TO_WIN'] })] });
+    expect(screen.queryByText(/· you too/)).toBeNull();
+    expect(screen.queryByText('No tags in common')).toBeNull();
   });
 
   it('speaks what it draws, in each of the three states that draw anything', () => {
@@ -801,15 +794,13 @@ describe('the record block', () => {
     expect(spokenBody()).toContain('29 counted games');
   });
 
-  it('says nothing about a record on the two cards that draw none', () => {
-    for (const draw of [drawSocial, drawDeck]) {
-      draw(withRecord());
-      expect(screen.queryByText('Player Score')).toBeNull();
-      // Nor in the register nobody can see: `candidateFacts` is not asked for a record, so
-      // there are no clauses to compose rather than clauses that were left out.
-      expect(screen.queryByLabelText(/counted games/)).toBeNull();
-      screen.unmount();
-    }
+  it('says nothing about a record on the social card, which draws none', () => {
+    // The deck card draws the Player Score as its *Reliability* tile (`deckCard.test.tsx`).
+    drawSocial(withRecord());
+    expect(screen.queryByText('Player Score')).toBeNull();
+    // Nor in the register nobody can see: `candidateFacts` is not asked for a record, so
+    // there are no clauses to compose rather than clauses that were left out.
+    expect(screen.queryByLabelText(/counted games/)).toBeNull();
   });
 });
 
@@ -959,19 +950,17 @@ describe('the ON COURT mark', () => {
     expect(spokenBody()).not.toContain(ON_COURT_CLAUSE);
   });
 
-  it('is the panel’s, so the two cards without one draw and say nothing', () => {
-    // `photo` is declined by the social and deck cards exactly as `record` and the tag row
-    // are: a mark floated over full-bleed media has nowhere it belongs, and the rule that
-    // ships with it is that a card which draws no mark announces none either.
-    for (const draw of [drawSocial, drawDeck]) {
-      draw(withVerdict({ photoReview: 'allowed' }));
+  it('is the panel’s and the deck card’s, so the social card draws and says nothing', () => {
+    // `photo` is declined by the social card exactly as `record` and the tag row are: a mark
+    // floated over full-bleed media with no clear top has nowhere it belongs, and the rule
+    // that ships with it is that a card which draws no mark announces none either. The deck
+    // card's top is clear — no top wash — and it draws the mark (`deckCard.test.tsx`).
+    drawSocial(withVerdict({ photoReview: 'allowed' }));
 
-      expect(screen.queryByText(ON_COURT_MARK)).toBeNull();
-      // Read off the label rather than off the outermost box: on these two the card body is
-      // not the first drawn View, which is the shape difference the three components are.
-      expect(screen.queryByLabelText(new RegExp(ON_COURT_CLAUSE))).toBeNull();
-      screen.unmount();
-    }
+    expect(screen.queryByText(ON_COURT_MARK)).toBeNull();
+    // Read off the label rather than off the outermost box: on the social card the card body
+    // is not the first drawn View, which is the shape difference the three components are.
+    expect(screen.queryByLabelText(new RegExp(ON_COURT_CLAUSE))).toBeNull();
   });
 });
 
@@ -1182,13 +1171,5 @@ describe('what each control announces', () => {
 
     drawSocial();
     expect(screen.getByLabelText('Challenge Marek')).toBeTruthy();
-  });
-
-  it('keeps the 🎾 out of the deck’s spoken answer and in its visible one', () => {
-    drawDeck();
-
-    expect(screen.getByLabelText("Let's play, Marek")).toBeTruthy();
-    expect(screen.getByText("🎾 Let's play")).toBeTruthy();
-    expect(screen.getByLabelText('Not today, Marek')).toBeTruthy();
   });
 });

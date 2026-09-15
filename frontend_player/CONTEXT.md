@@ -556,16 +556,45 @@ draws it.
   screen, read from `GET /interest` and **filtered by sport**, so that the number is about the
   deck it is drawn under. It is the one figure in the tab that background-refetches, because
   the rule against that is about **orderings** — a pool reordering under a finger — and a count
-  has no order to lose. The prototype counted people who had waved at _you_, and that number
-  **cannot exist**: an incoming yes never crosses the wire in either direction, which is what
-  makes saying yes low-stakes. It moves on a tap's **own response** rather than on a refetch.
-  It is drawn as a **sentence on the deck's ending** and nowhere else: it was `Match me · 3` on
-  the segment until that was struck, because a number in that position reads as _how many cards
-  are waiting_, which is the count the deck refuses to publish anywhere.
+  has no order to lose. It moves on a tap's **own response** rather than on a refetch. It is
+  never drawn as itself: what the deck prints is **[yeses to give](#the-play-tab)** — the cap
+  less this — on the counter, since
+  [ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §5; before
+  that it was a sentence on the deck's ending, and before that `Match me · 3` on a segment,
+  struck because a number in that position reads as _how many cards are waiting_. The prototype
+  counted people who had waved at _you_; that count exists now, as **want to play you**, and it
+  is a different number on a different envelope.
   _Avoid_: "Match me count" — the segment is gone, and carried no number while it stood;
   "unread", "inbox" and "badge" —
   there is no inbox and the bar carries no badge;
   counting the outgoing list, which is this app answering a question the response answers.
+- **Yeses to give** — `cap − outstanding` for the sport on screen, both off `GET /interest`'s
+  row (the mapper carries the cap now, and `ttl_days` beside it), printed as the second half of
+  the deck's **counter** — _8 left · 12 yeses to give_ — and drawn only once the read has landed,
+  because a nought is a claim the ceiling acts on. **At nought a stranger's card settles and a
+  liker's card flies** (`domain/yesBudget`): a yes that closes a mutual is never outstanding, so
+  the cap exempts it, and the server stays the authority — a `409` still returns the card. The
+  first half, _N left_, is `pool.remaining` plus the cards unanswered in hand, and it is true of
+  the whole pool because the envelope now says what is beyond the hand. _Avoid_: "yeses left",
+  which reads as cards; holding the cap or the 21 days on this side — both cross on the wire.
+- **Want to play you** — `pool.want_to_play_you` on the deal's envelope: how many people have a
+  live yes towards the viewer in this sport that would be dealt to them, drawn as the volt chip in
+  the Players header — _2 want to play you_ — at one and above and **never at nought**, and
+  decremented when a yes on a card carrying `inclusion_reason` comes back mutual. **A count and
+  never a list**: nothing on any route names who
+  ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §4, which
+  reverses ADR-0109 §2 by exactly this one number). The liker is unmarked on the deck and lands
+  where the nudge puts them. _Avoid_: "likes", "matches waiting", "inbox"; a badge on the bar,
+  which stays refused; reading the chip as _how many cards are behind this one_ — that is the
+  counter's.
+- **The stamps** — _LET'S PLAY_ and _NOT TODAY_, two outlined words the deck card wears under
+  the thumb, one volt and one white, tilted, **invisible at rest**, fading in with the drag and
+  full at the threshold (95pt) where a release commits the answer in the drag's direction
+  (ADR-0169 §3). They are **feedback and never controls**: hidden from assistive technology,
+  unspoken, and their words are the two buttons' own (`STAMP_WORDS`), so what a drag reveals and
+  what a listener hears cannot drift. The three round buttons under the stage — ✕, i, 🎾 — are
+  the path that is never removed. _Avoid_: "swipe buttons"; a stamp that is pressable; a stamp
+  without its button.
 
 ### The result argument
 

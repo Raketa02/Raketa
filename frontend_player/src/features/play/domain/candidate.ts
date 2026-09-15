@@ -112,6 +112,18 @@ export interface PlayerCard {
   readonly band: string;
   readonly range: LikelyRange;
   /**
+   * **Their intro** — one line they wrote about themselves, verbatim: at most a hundred
+   * characters, no line breaks, in whatever language they wrote it
+   * ([ADR-0170](../../../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)).
+   *
+   * **Omitted where they wrote none**, and never an empty string: the intro is optional, and a
+   * player who skipped has no line rather than an empty one — so the deck card closes the gap
+   * rather than drawing an empty quotation. It is the one free-text field on a card, fenced at
+   * the write against a phone number, an email, a URL or an `@handle`; what arrives is a line
+   * about a player and never a way to reach one, and the card quotes it as theirs.
+   */
+  readonly intro?: string;
+  /**
    * Their **Player Score** out of a hundred — reliability, as the platform watched it.
    *
    * **Omitted where it has watched nothing**, which is most people today, and never `0`:
@@ -448,4 +460,21 @@ export interface PoolDescription {
   readonly playersInRange: number;
   /** `null` where the served window is a code this build has never seen — §3's drop. */
   readonly window: Window | null;
+  /**
+   * **On a deal only** — how many people are eligible for the deck beyond this hand, after
+   * every deck exclusion and not counting the cards just dealt
+   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
+   * §5). It is what lets the counter say *N left* and be true of the whole pool rather than of
+   * ten; it drops by a hand as hands are dealt. **Omitted on every other surface**, where a count
+   * about a pool that has moved on would be a number about nothing.
+   */
+  readonly remaining?: number;
+  /**
+   * **On a deal only** — how many people have a live *Let's play* towards the viewer in this
+   * sport that would be dealt to them: every gate passed, not passed on within the pass window,
+   * not cooling off, not already mutual (ADR-0169 §4). **A count and never a list**: nothing on
+   * any route names who. `0` is a measured nought, so the chip drawn from it is drawn at one and
+   * above — and it is omitted, like `remaining`, everywhere but on a deal.
+   */
+  readonly wantToPlayYou?: number;
 }

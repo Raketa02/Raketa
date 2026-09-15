@@ -201,13 +201,15 @@ export const CANDIDATE_ACTION_WORD: Readonly<Record<CandidateAction, string>> = 
 };
 
 /**
- * The deck's two, and the 🎾 that is drawn and never spoken.
+ * The deck's two answers, as words.
  *
- * The glyph is in the visible word alone — `deckAnswerLabels` composes the spoken pair
- * without it, per §E6: *"otherwise it announces as 'tennis ball let's play'"*. It is the same
- * split the fit pill's ✦ takes, and it is a split rather than a rule about glyphs.
+ * They are the **stamps'** words now rather than two buttons' labels: the deck's buttons draw
+ * marks — Feather's ✕, the 🎾 (`ACCEPT_GLYPH`, drawn and never spoken) — and the words appear
+ * on the card under the thumb as the drag reveals them (ADR-0169 §3). `deckAnswerLabels`
+ * composes the spoken names from the same two, so a stamp and the name a listener hears cannot
+ * drift apart.
  */
-export const DECK_ANSWER_WORDS = { pass: 'Not today', accept: "🎾 Let's play" } as const;
+export const DECK_ANSWER_WORDS = { pass: 'Not today', accept: "Let's play" } as const;
 
 /**
  * What the row contributes to the card's **spoken** name — nought, one or two clauses.
