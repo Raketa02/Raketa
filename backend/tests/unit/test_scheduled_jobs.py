@@ -738,8 +738,9 @@ async def test_the_refresh_record_carries_trigger_fours_arithmetic(caplog):
     assert record.workers == 4
     assert record.container_memory_limit_bytes == 1_000_000_000
     assert record.index_bytes_held == BYTES_PER_ROW * 1_000 * 4
-    # §4's own stated bound, reached through the job rather than restated.
-    assert record.trigger_4_players_at == 25_112
+    # §4's own stated bound, reached through the job rather than restated —
+    # and moved with `BYTES_PER_ROW`, which is the whole point of reaching it.
+    assert record.trigger_4_players_at == 24_801
     assert record.trigger_4_fires is False
 
 

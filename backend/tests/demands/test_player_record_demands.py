@@ -974,6 +974,7 @@ def _a_search(searcher: UUID, shown: UUID) -> SearchRecord:
                     review=None,
                     area_code="A+05151-000013",
                     social_tags=("PLAYS_TO_WIN",),
+                    intro=None,
                     level=2.7,
                     band="Improver",
                     range_low=2.36,

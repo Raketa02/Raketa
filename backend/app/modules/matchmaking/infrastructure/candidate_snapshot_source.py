@@ -305,6 +305,9 @@ def _decode(row: CandidateRowORM, facts: CandidatePlayerFactsORM) -> CandidateRo
         declared_intent=row.declared_intent,
         social_tags=tuple(_required(facts.social_tags, "a tag list")),
         tags_updated_at=_as_utc(_required(facts.tags_updated_at, "a tag moment")),
+        # Optional for the ordinary reason and not the fold's: a player who
+        # wrote no line has none, and the wire omits it.
+        intro=facts.intro,
         availability=tuple(_required(facts.availability, "a grid")),
         grid_updated_at=_as_utc(_required(facts.grid_updated_at, "a grid moment")),
         areas=(

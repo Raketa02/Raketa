@@ -12,8 +12,10 @@ What is here today:
 - the two facts the platform *serves* about profiles — the Social tag vocabulary
   and the Search radius bounds — so no client holds a second copy of either;
 - the photo path, whose bytes live behind a port (``docs/adr/0091``);
-- the aggregate, its seven events, and **the one idempotent commit that creates a
-  profile** at ``POST /api/v1/players/me/profile``.
+- the aggregate, its events, and **the one idempotent commit that creates a
+  profile** at ``POST /api/v1/players/me/profile`` — which also carries the one
+  line a player may write about themselves, the **intro**, fenced at the write
+  and stored as its own event (``docs/adr/0170``).
 
 What is deliberately **not** here: the ``player_profiles`` read model. It exists
 for the many-player reads matchmaking will do, and matchmaking does not exist.

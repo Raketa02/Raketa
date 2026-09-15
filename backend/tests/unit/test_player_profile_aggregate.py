@@ -29,6 +29,7 @@ from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
+    IntroWritten,
     LocationChanged,
     PhotosChanged,
     PlayerProfileCreated,
@@ -41,6 +42,7 @@ from app.modules.player_profile.domain.gender import (
     Gender,
     GenderPreference,
 )
+from app.modules.player_profile.domain.intro import Intro
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.profile import (
     MAX_PROFILE_PHOTOS,
@@ -467,3 +469,64 @@ def test_gender_and_the_preference_replay_from_their_own_events():
 
     assert rebuilt.gender is Gender.MAN
     assert rebuilt.gender_preference is GenderPreference.MEN_ONLY
+
+
+# ---------------------------------------------------------------------------
+# The intro (docs/adr/0170)
+# ---------------------------------------------------------------------------
+
+
+def test_a_line_present_at_the_commit_is_its_own_event_after_the_two():
+    """``IntroWritten`` is emitted by the commit when the line is present —
+    after the creation and the consent, so *no special first case* for the
+    consent history stays literally true."""
+
+    profile = a_profile(intro=Intro.written("Moved from Wrocław in May."))
+
+    recorded = profile.pull_events()
+
+    assert [type(event) for event in recorded] == [
+        PlayerProfileCreated,
+        ProposalsOptInAnswered,
+        IntroWritten,
+    ]
+    written = recorded[2]
+    assert isinstance(written, IntroWritten)
+    assert written.intro == "Moved from Wrocław in May."
+    assert written.player_id == PLAYER
+    assert written.occurred_at == CREATED_AT
+    assert profile.intro == Intro.recorded("Moved from Wrocław in May.")
+
+
+def test_a_skipped_intro_leaves_nothing_behind():
+    """A blank leaves nothing behind — the shape sportsmanship already takes.
+    ``PlayerProfileCreated`` does not grow a field for it."""
+
+    profile = a_profile()
+
+    recorded = profile.pull_events()
+
+    assert [type(event) for event in recorded] == [
+        PlayerProfileCreated,
+        ProposalsOptInAnswered,
+    ]
+    assert not hasattr(recorded[0], "intro")
+    assert profile.intro is None
+
+
+def test_an_intro_replays_from_its_own_event():
+    profile = a_profile(intro=Intro.written("Will travel for a hard game."))
+
+    rebuilt = replayed(profile)
+
+    assert rebuilt.intro == Intro.recorded("Will travel for a hard game.")
+    assert rebuilt.version == 3, "three events, three versions"
+
+
+def test_a_stream_with_no_intro_written_folds_to_no_intro():
+    """No upcaster: a profile committed before the question existed replays
+    with the intro absent, which is what those players have."""
+
+    rebuilt = replayed(a_profile())
+
+    assert rebuilt.intro is None

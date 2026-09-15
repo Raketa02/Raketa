@@ -631,7 +631,7 @@
           "player-profile"
         ],
         "summary": "Commit every answer from onboarding's second part",
-        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**The availability grid is required**, at least one of its twenty-one cells. Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served \u2014 it is fixed, and a client holds it as a constant.\n\n**The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.\n\n**`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer \u2014 there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.",
+        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**The availability grid is required**, at least one of its twenty-one cells. Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served \u2014 it is fixed, and a client holds it as a constant.\n\n**The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.\n\n**`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer \u2014 there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.\n\n**`intro` is optional and fenced at the write.** One line about yourself, at most a hundred characters, any language; a player who skips sends nothing and has no intro rather than an empty one. A line carrying a phone number, an email, a URL or an `@handle` is refused with `intro_not_admitted` before anything is stored. It crosses on the player card and on the record, and is not echoed here.",
         "operationId": "commit_player_profile_api_v1_players_me_profile_post",
         "security": [
           {
@@ -685,7 +685,7 @@
             }
           },
           "400": {
-            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`search_radius_out_of_bounds` \u2014 outside the served range, or off its step.\n\n`availability_grid_empty` \u2014 nothing ticked on the week. At least one of the twenty-one cells; the minimum is exactly one and is not served.\n\n`proposals_opt_in_not_answered` \u2014 the answer was `null`. Ask the question; do not send `false` on the player's behalf.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.",
+            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`search_radius_out_of_bounds` \u2014 outside the served range, or off its step.\n\n`availability_grid_empty` \u2014 nothing ticked on the week. At least one of the twenty-one cells; the minimum is exactly one and is not served.\n\n`proposals_opt_in_not_answered` \u2014 the answer was `null`. Ask the question; do not send `false` on the player's behalf.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.\n\n`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4454,6 +4454,18 @@
             "$ref": "#/components/schemas/GenderPreference",
             "description": "Who this player is willing to be matched with. Optional, and `ANY` when it is not sent.\n\n**It is mutual and durable.** It governs what reaches this player as well as what this player sees, so narrowing it makes them invisible to the excluded side entirely \u2014 including to searchers who asked for anybody. The client must say so at the moment of setting; learning it from silence is not acceptable. A single search may narrow this further and nothing may widen past it.",
             "default": "ANY"
+          },
+          "intro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intro",
+            "description": "One line about yourself \u2014 your **intro** \u2014 or nothing. Optional: a player who skips the step sends nothing (or `null`, or whitespace, which is the same), and has no intro rather than an empty one.\n\nTrimmed, then held to **at most 100 characters** and **one line**, in any language. Refused with `intro_not_admitted` and one coarse `details.reason` \u2014 `too_long`, `multiline`, or `contains_contact` for a phone number, an email, a URL or bare domain, or an `@handle` \u2014 so the client can say what to change without the server explaining what it matched. Nothing else is read.\n\n**Not editable yet** (ADR-0170 \u00a75): this commit is its only write, with the tags and the photo it sits between. It crosses on the player card and on the record, and this response does not echo it."
           }
         },
         "type": "object",
@@ -4466,7 +4478,7 @@
           "gender"
         ],
         "title": "CommitPlayerProfileRequest",
-        "description": "Every answer from onboarding's second part, in one body.\n\n**Photos are the only field with a default**, because holding none is a\nlegitimate answer to *add some photos*. Everything else is something this\nrequest must actually carry \u2014 a location, a radius, a tag selection, an\nanswer to the proposals question, and **a week with something ticked in it**\n(``docs/adr/0102``).\n\nThe week's *floor* is not spelled here, and that is the same decision the tag\nselection's is: an empty list passes this schema and is refused by the domain\nwith ``availability_grid_empty``, so the client gets a code it can branch on\nand a recovery it can offer, rather than a 422 that can only say some field\nsomewhere was wrong."
+        "description": "Every answer from onboarding's second part, in one body.\n\n**Photos and the intro are the fields with a default**, because holding no\nphotograph is a legitimate answer to *add some photos* and writing nothing\nis a legitimate answer to *say it in your own words* (``docs/adr/0170``).\nEverything else is something this request must actually carry \u2014 a\nlocation, a radius, a tag selection, an answer to the proposals question,\nand **a week with something ticked in it** (``docs/adr/0102``).\n\nThe week's *floor* is not spelled here, and that is the same decision the tag\nselection's is: an empty list passes this schema and is refused by the domain\nwith ``availability_grid_empty``, so the client gets a code it can branch on\nand a recovery it can offer, rather than a 422 that can only say some field\nsomewhere was wrong."
       },
       "ConcernSchema": {
         "properties": {
@@ -7294,6 +7306,11 @@
             "title": "Social Tags",
             "description": "The Social tag ids they hold"
           },
+          "intro": {
+            "type": "string",
+            "title": "Intro",
+            "description": "One line this player wrote about themselves \u2014 their **intro** \u2014 verbatim: at most 100 characters, no line breaks, in whatever language they wrote it. **Omitted where they wrote none**, and never an empty string: the intro is optional and a player who skipped has no line, so the card closes up rather than drawing a blank quotation.\n\n**A fact about the person, assembled by `player_profile`** \u2014 the one field this closed list has gained, under its own admission rule: it is what its subject published, it does not change with who is looking, and it is projected to the candidate index like the tags. It is **never scored**: no term reads it and the scorer's fence refuses the word.\n\n**Fenced at the write, not here.** A line carrying a phone number, an email, a URL or an `@handle` was refused before it was stored, so what arrives is a line about a player and not a way to reach one. What it says is theirs; a line you object to is what a block is for.\n\n**Drawn on the deck card and the record sheet, and not on Find a game's cards** \u2014 those are about the game, and the line is about the person. Never spoken as the player's name and never truncated: the cap is what makes an ellipsis unnecessary."
+          },
           "level": {
             "type": "number",
             "title": "Level",
@@ -7341,7 +7358,7 @@
           "range"
         ],
         "title": "PlayerCardSchema",
-        "description": "Who this person is, on a card. **A closed list with two permanent gaps.**\n\nNo bio and no free text of any kind, ever; and **no activity recency at any\ngranularity** \u2014 not a timestamp, not *active today*, not a green dot.\nLiveness reaches a screen the one way it is sanctioned to: as a reason code.\n\n**The last three fields are the record block, and every one of them is\nomitted rather than nought.** They are what the platform has watched this\nperson do \u2014 a Player Score, a count of counted games and a run of form \u2014 and\na nought printed for somebody it has watched do nothing would be a claim\nwhere there is a gap. ``last_five`` is the one that has to keep the recency\nrule while carrying five events: it is **outcomes in order and no dates**,\nwhich is a run of form rather than a statement about when anybody was last\nhere."
+        "description": "Who this person is, on a card. **A closed list with one permanent gap.**\n\n**No activity recency at any granularity** \u2014 not a timestamp, not *active\ntoday*, not a green dot. Liveness reaches a screen the one way it is\nsanctioned to: as a reason code. The other gap the list was closed with \u2014\n*no bio, and no free-text field of any kind* \u2014 was opened by exactly one\nfield, `intro`, on the terms that refusal set: its own decision with a\nmoderation story attached (``docs/adr/0170``). Still no bio, no paragraph,\nno second field, and no free text that is scored.\n\n**The last three fields are the record block, and every one of them is\nomitted rather than nought.** They are what the platform has watched this\nperson do \u2014 a Player Score, a count of counted games and a run of form \u2014 and\na nought printed for somebody it has watched do nothing would be a claim\nwhere there is a gap. ``last_five`` is the one that has to keep the recency\nrule while carrying five events: it is **outcomes in order and no dates**,\nwhich is a run of form rather than a statement about when anybody was last\nhere."
       },
       "PlayerProfileOptionsResponse": {
         "properties": {
@@ -7508,6 +7525,11 @@
             "type": "array",
             "title": "Social Tags",
             "description": "The Social tag ids they hold, in the vocabulary's own order. **Which of them the reader also holds is the client's own comparison** \u2014 the platform states no overlap here, so a record opened without a search behind it draws them untinted and claims nothing about common ground."
+          },
+          "intro": {
+            "type": "string",
+            "title": "Intro",
+            "description": "One line this player wrote about themselves \u2014 their **intro** \u2014 verbatim, drawn under the name. **Omitted where they wrote none**, and never an empty string: the intro is optional, and a player who skipped has no line rather than an empty one.\n\nThe same field the player card carries (`player_card.intro`), read off the profile as it stands rather than off a search record; today the two cannot differ, since the line is written once at onboarding and not editable yet. Fenced at the write against a phone number, an email, a URL or an `@handle`, so what arrives is a line about a player and never a way to reach one. Present on your own record as on anybody else's \u2014 it is what strangers read, shown back to you."
           },
           "sports": {
             "items": {

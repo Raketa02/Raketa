@@ -59,6 +59,7 @@ def an_identity(*, photo_id: UUID | None = PHOTO) -> SubjectIdentity:
         review=OnCourtVerdict.ALLOWED if photo_id else None,
         area_code="A+05151-00013",
         social_tags=("PLAYS_TO_WIN", "HERE_TO_IMPROVE"),
+        intro=None,
     )
 
 

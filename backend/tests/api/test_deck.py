@@ -769,6 +769,50 @@ async def test_a_deal_reads_back_in_the_same_shape(client, searcher, a_city):
     ]
 
 
+async def test_a_dealt_card_quotes_the_line_its_player_wrote_and_closes_up_otherwise(
+    client, session_factory, candidate_source, searcher
+):
+    """**The one field ADR-0107 §2's closed list gains** (``docs/adr/0170`` §3).
+
+    Karol wrote a line and it is on his card, verbatim; Ola skipped and her card
+    has no key at all — omitted, never an empty string — so the layout closes up
+    rather than drawing a blank quotation. And the read-back quotes the line as
+    it stood at the deal, because the card is attached to the search record when
+    it is served (``docs/adr/0104``).
+    """
+
+    karol = await world.a_candidate(
+        client,
+        session_factory,
+        "karol",
+        mu=searcher["mu"],
+        intro="Moved from Wrocław in May. Needs opponents.",
+    )
+    ola = await world.a_candidate(client, session_factory, "ola", mu=searcher["mu"])
+    await world.fold_the_log(session_factory, candidate_source)
+
+    dealt = await world.deck(client, searcher["token"])
+
+    assert dealt.status_code == 200, dealt.text
+    cards = {
+        UUID(candidate["player_id"]): candidate["player_card"]
+        for candidate in dealt.json()["candidates"]
+    }
+    assert cards[karol]["intro"] == "Moved from Wrocław in May. Needs opponents."
+    assert "intro" not in cards[ola], "an absent line was drawn as something"
+
+    read_back = await world.read_back(
+        client, searcher["token"], dealt.json()["search"]["search_id"]
+    )
+    assert read_back.status_code == 200, read_back.text
+    quoted = {
+        UUID(candidate["player_id"]): candidate["player_card"]
+        for candidate in read_back.json()["candidates"]
+    }
+    assert quoted[karol]["intro"] == "Moved from Wrocław in May. Needs opponents."
+    assert "intro" not in quoted[ola]
+
+
 async def test_a_dealt_card_carries_the_photograph_it_is_mostly_made_of(
     client, session_factory, candidate_source, searcher
 ):

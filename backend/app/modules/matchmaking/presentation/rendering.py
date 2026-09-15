@@ -613,6 +613,10 @@ def _card(card: RecordedCard, photo_url: str | None) -> PlayerCardSchema:
         # `CandidateRow.range_low`.
         "range": {"low": card.range_low, "high": card.range_high},
     }
+    if card.intro is not None:
+        # Omitted where nothing was written, never `""`: a player who skipped
+        # has no line, not an empty one (`docs/adr/0170` §1).
+        fields["intro"] = card.intro
     if card.photo_id is not None and photo_url is not None:
         fields["photo_id"] = card.photo_id
         fields["photo_url"] = photo_url

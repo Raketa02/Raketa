@@ -303,6 +303,9 @@ def _row(member: Member) -> CandidateRow:
         declared_intent=member.declared_intent,
         social_tags=member.tags,
         tags_updated_at=member.committed_at,
+        # The corpus is a comparator over what the engine reads, and the line
+        # is never scored — so nobody in it wrote one.
+        intro=None,
         availability=member.slots,
         grid_updated_at=member.committed_at,
         areas=(IndexedArea(latitude=member.latitude, longitude=member.longitude),),

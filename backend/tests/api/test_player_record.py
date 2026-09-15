@@ -351,6 +351,37 @@ async def test_a_search_that_showed_them_opens_their_record(
     assert "variety" not in body
 
 
+async def test_a_record_quotes_the_line_they_wrote_and_omits_it_otherwise(
+    client, session_factory, candidate_source, searcher
+):
+    """**The record sheet draws the intro under the name** (``docs/adr/0170``
+    §4), verbatim and off the profile — and a player who skipped has no key at
+    all, never an empty string."""
+
+    karol = await world.a_candidate(
+        client,
+        session_factory,
+        "karol",
+        mu=searcher["mu"],
+        intro="Moved from Wrocław in May. Needs opponents.",
+    )
+    ola = await world.a_candidate(client, session_factory, "ola", mu=searcher["mu"])
+    await world.fold_the_log(session_factory, candidate_source)
+    shown = await world.search(client, searcher["token"])
+    assert {row["player_id"] for row in shown.json()["candidates"]} == {
+        str(karol),
+        str(ola),
+    }
+
+    wrote = await record_of(client, searcher["token"], karol)
+    skipped = await record_of(client, searcher["token"], ola)
+
+    assert wrote.status_code == 200, wrote.text
+    assert wrote.json()["intro"] == "Moved from Wrocław in May. Needs opponents."
+    assert skipped.status_code == 200, skipped.text
+    assert "intro" not in skipped.json()
+
+
 async def test_your_own_record_opens_with_nothing_behind_it(client, searcher):
     """*How others see you* — the one record needing no prior disclosure, and the
     one the client must not have to compare identifiers to recognise."""

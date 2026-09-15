@@ -57,11 +57,14 @@ backend after `matchfit` returns — the same seam `at_stake` already rides
 ```
 candidate:   { player_id, fit, distance_km, player_card, ... }
 player_card: { nickname, photo_id?, photo_url?, review?, area_code,
-               social_tags[], level, band, range,
+               social_tags[], intro?, level, band, range,
                player_score?, counted_games?, last_five? }
 ```
 
-Closed list. `photo_id` and `photo_url` are **omitted together** (not null) when the player has
+Closed list — `intro?` is the one field it has gained since, the line a player writes about
+themselves, omitted where they wrote none
+([ADR-0170](../../adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)).
+`photo_id` and `photo_url` are **omitted together** (not null) when the player has
 no photo, and the client draws the generated court poster. **The id is what is stored and the
 URL is what is drawn** — minted per response and recorded nowhere, because the client cannot
 sign one for another player's photo and `GET /photos/{id}` refuses to

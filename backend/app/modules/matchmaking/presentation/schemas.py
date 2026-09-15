@@ -76,6 +76,7 @@ from app.modules.matchmaking.presentation.evidence import Evidence
 # stale, and one client grid editor should be able to post to either route.
 from app.modules.player_profile.presentation.schemas import AvailabilitySlotResource
 from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.intro import INTRO_MAX_CHARACTERS
 from app.modules.player_profile.domain.photos import PhotoReviewDecision
 
 
@@ -618,11 +619,15 @@ class LikelyRangeSchema(BaseModel):
 
 
 class PlayerCardSchema(BaseModel):
-    """Who this person is, on a card. **A closed list with two permanent gaps.**
+    """Who this person is, on a card. **A closed list with one permanent gap.**
 
-    No bio and no free text of any kind, ever; and **no activity recency at any
-    granularity** — not a timestamp, not *active today*, not a green dot.
-    Liveness reaches a screen the one way it is sanctioned to: as a reason code.
+    **No activity recency at any granularity** — not a timestamp, not *active
+    today*, not a green dot. Liveness reaches a screen the one way it is
+    sanctioned to: as a reason code. The other gap the list was closed with —
+    *no bio, and no free-text field of any kind* — was opened by exactly one
+    field, `intro`, on the terms that refusal set: its own decision with a
+    moderation story attached (``docs/adr/0170``). Still no bio, no paragraph,
+    no second field, and no free text that is scored.
 
     **The last three fields are the record block, and every one of them is
     omitted rather than nought.** They are what the platform has watched this
@@ -692,6 +697,36 @@ class PlayerCardSchema(BaseModel):
     )
     area_code: str = Field(..., description="Their coarse area, as a machine code")
     social_tags: list[str] = Field(..., description="The Social tag ids they hold")
+    intro: str = Field(
+        default=OMITTED,
+        # **No `max_length` here, deliberately.** The cap binds the write and
+        # not the read: a line already on a search record was admitted when it
+        # was written, and a response schema that refused it after the cap
+        # moved would take a deal down for a fact the platform recorded.
+        description=(
+            "One line this player wrote about themselves — their **intro** — "
+            f"verbatim: at most {INTRO_MAX_CHARACTERS} characters, no line "
+            "breaks, in whatever language they wrote it. **Omitted where they wrote "
+            "none**, and never an empty string: the intro is optional and a "
+            "player who skipped has no line, so the card closes up rather than "
+            "drawing a blank quotation.\n\n"
+            "**A fact about the person, assembled by `player_profile`** — the "
+            "one field this closed list has gained, under its own admission "
+            "rule: it is what its subject published, it does not change with "
+            "who is looking, and it is projected to the candidate index like "
+            "the tags. It is **never scored**: no term reads it and the "
+            "scorer's fence refuses the word.\n\n"
+            "**Fenced at the write, not here.** A line carrying a phone "
+            "number, an email, a URL or an `@handle` was refused before it "
+            "was stored, so what arrives is a line about a player and not a "
+            "way to reach one. What it says is theirs; a line you object to "
+            "is what a block is for.\n\n"
+            "**Drawn on the deck card and the record sheet, and not on Find a "
+            "game's cards** — those are about the game, and the line is about "
+            "the person. Never spoken as the player's name and never "
+            "truncated: the cap is what makes an ellipsis unnecessary."
+        ),
+    )
     level: float = Field(..., description="Their Level, as RacketSkill published it")
     band: str = Field(..., description="The Level band's published name")
     range: LikelyRangeSchema = Field(

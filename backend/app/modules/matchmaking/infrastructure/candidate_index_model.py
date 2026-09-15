@@ -45,6 +45,7 @@ from sqlalchemy import (
     Float,
     Integer,
     String,
+    Text,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -102,6 +103,14 @@ class CandidatePlayerFactsORM(Base):
     proposals_opt_in: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     gender: Mapped[str | None] = mapped_column(String(32), nullable=True)
     gender_preference: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    #: The line the player wrote about themselves, or ``None`` for the many who
+    #: wrote none (``docs/adr/0170``). **The one text column in the index, and
+    #: deliberately unbounded here**: the cap binds the write, and a
+    #: ``VARCHAR(100)`` would make raising it a migration the tail stalls on
+    #: without — Postgres refusing the projection's insert for a line the
+    #: domain had already admitted. Nullable for the ordinary reason rather
+    #: than the fold's: most players have no line, and the wire omits it.
+    intro: Mapped[str | None] = mapped_column(Text, nullable=True)
     #: *Last session refresh*, and therefore days rather than hours
     #: (``docs/adr/0111``).
     last_active_at: Mapped[datetime | None] = mapped_column(

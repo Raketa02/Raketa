@@ -22,6 +22,8 @@ from app.modules.player_profile.application.has_player_profile import HasPlayerP
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.errors import (
     AvailabilityGridEmpty,
+    IntroNotAdmitted,
+    IntroRefusal,
     PhotoNotFound,
     PlayerProfileAlreadyExists,
     ProposalsOptInNotAnswered,
@@ -30,6 +32,7 @@ from app.modules.player_profile.domain.errors import (
     UnknownSocialTag,
 )
 from app.modules.player_profile.domain.events import (
+    IntroWritten,
     PlayerProfileCreated,
     ProposalsOptInAnswered,
 )
@@ -399,3 +402,55 @@ async def test_a_commit_that_names_no_preference_records_the_unconstrained_one()
     )
 
     assert harness.publisher.published[0].gender_preference == "ANY"
+
+
+# ---------------------------------------------------------------------------
+# The intro (docs/adr/0170) — fenced before anything is stored
+# ---------------------------------------------------------------------------
+
+
+async def test_a_commit_with_an_intro_stores_it_as_its_own_event(harness: Harness):
+    committed = await harness.commit().execute(
+        a_command(intro="Moved from Wrocław in May. Needs opponents.")
+    )
+
+    assert [type(event) for event in harness.publisher.published] == [
+        PlayerProfileCreated,
+        ProposalsOptInAnswered,
+        IntroWritten,
+    ]
+    assert harness.uow.commits == 1, "still one transaction"
+    assert committed.profile.intro is not None
+    assert committed.profile.intro.text == "Moved from Wrocław in May. Needs opponents."
+
+
+async def test_a_commit_without_an_intro_stores_no_intro_event(harness: Harness):
+    committed = await harness.commit().execute(a_command(intro=None))
+
+    assert [type(event) for event in harness.publisher.published] == [
+        PlayerProfileCreated,
+        ProposalsOptInAnswered,
+    ]
+    assert committed.profile.intro is None
+
+
+async def test_a_whitespace_only_intro_is_a_skipped_one(harness: Harness):
+    committed = await harness.commit().execute(a_command(intro="   "))
+
+    assert committed.profile.intro is None
+    assert IntroWritten not in {type(event) for event in harness.publisher.published}
+
+
+async def test_an_intro_carrying_contact_is_refused_before_anything_is_stored(
+    harness: Harness,
+):
+    """The refusal is a pure one and runs ahead of the object-store reads — a
+    commit that was going to be refused for its line should not cost three
+    round trips first, and nothing about it may reach a stream."""
+
+    with pytest.raises(IntroNotAdmitted) as caught:
+        await harness.commit().execute(a_command(intro="WhatsApp me 600 123 456"))
+
+    assert caught.value.reason is IntroRefusal.CONTAINS_CONTACT
+    assert harness.uow.commits == 0
+    assert harness.publisher.published == []

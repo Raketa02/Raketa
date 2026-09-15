@@ -283,7 +283,7 @@ def test_a_row_accepts_the_range_the_rating_published() -> None:
 def test_an_index_row_is_frozen_and_slotted() -> None:
     """Both halves of the memory claim, and of the immutability one.
 
-    ``__slots__`` is the 1 991-bytes-a-row figure; frozen is what lets a delta
+    ``__slots__`` is the bytes-a-row figure; frozen is what lets a delta
     refresh share a row between two containers without either being able to
     change it under the other.
     """
@@ -377,12 +377,12 @@ def test_adding_a_field_is_a_moment_somebody_re_measures_the_row() -> None:
     A new ``None`` column costs eight bytes and would move nothing a percentage
     could see, which is exactly how a row grows a slot at a time until the
     figure quoted about it is wrong by a factor. There is no right number here —
-    twenty-five is only what ships — and updating it is the whole ask: read
+    twenty-six is only what ships — and updating it is the whole ask: read
     ``candidate_index``'s module docstring, re-run the bench, and move
     ``BYTES_PER_ROW`` in the same commit as the field.
     """
 
-    assert len(CandidateRow.__slots__) == 25
+    assert len(CandidateRow.__slots__) == 26
 
 
 def _bench_shaped_row() -> CandidateRow:
@@ -425,6 +425,9 @@ def _bench_shaped_row() -> CandidateRow:
             )
         ),
         tags_updated_at=when,
+        # Most players write no line, and the bench's mean is taken over the
+        # cohort's share of them — so the row near the middle holds none.
+        intro=None,
         availability=tuple(
             uninterned_copy(f"{day}:{part}")
             for day in range(1, 3)
@@ -510,6 +513,7 @@ def _row(*, range_low: float = 2.37, range_high: float = 3.05) -> CandidateRow:
         declared_intent="COMPETITIVE",
         social_tags=("competitive_edge",),
         tags_updated_at=when,
+        intro=None,
         availability=("1:MORNING",),
         grid_updated_at=when,
         areas=(IndexedArea(latitude=52.23, longitude=21.01),),

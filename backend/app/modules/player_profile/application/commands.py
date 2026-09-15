@@ -79,6 +79,12 @@ class CommitPlayerProfileCommand:
     says *ask the question*. Gender has ``PREFER_NOT_TO_SAY`` — a real answer to
     the same effect — so there is no unanswered state to model and nothing to
     refuse at this layer (``docs/adr/0096``).
+
+    **``intro`` is optional, and it is a string here and not an ``Intro``** for
+    the tag ids' reason: the fence — the cap, the line breaks, the contact rule
+    — is the domain's, and it is the domain that refuses with the code and the
+    reason a client branches on (``docs/adr/0170`` §2). ``None`` and a
+    whitespace-only string are both *skipped*, and the domain says so.
     """
 
     player_id: UUID
@@ -95,6 +101,8 @@ class CommitPlayerProfileCommand:
     proposals_opt_in: bool | None
     consent_copy_version: str
     consent_surface: ConsentSurface
+    #: One line about themselves, or nothing. Fenced by the domain, never here.
+    intro: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

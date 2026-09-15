@@ -225,7 +225,7 @@ Carried in full on every returned row, on every route, on the `POST` and on the 
 candidate: {
   player_id, fit, distance_km,
   player_card: { nickname, photo_id?, photo_url?, review?, area_code, social_tags[],
-                 level, band, range,
+                 intro?, level, band, range,
                  player_score?, counted_games?, last_five? },
   concerns: [ { term } ],
   terms: [ { term, weight, value, contribution, evidence: <closed union> } ],

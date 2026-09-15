@@ -61,6 +61,7 @@ from app.modules.matchmaking.infrastructure.search_model import (
     SearchORM,
 )
 from app.modules.player_profile.domain.events import (
+    IntroWritten,
     PlayerProfileCreated,
     PlayIntentDeclared,
     ProposalsOptInAnswered,
@@ -236,6 +237,7 @@ async def a_signed_in_candidate(
     gender_preference: str = "ANY",
     intent: str | None = "COMPETITIVE",
     at: datetime = LONG_AGO,
+    intro: str | None = None,
 ) -> tuple[UUID, str]:
     """The same person, **and a bearer token for them.**
 
@@ -274,6 +276,19 @@ async def a_signed_in_candidate(
         session_factory,
         ProposalsOptInAnswered(player_id, True, "v1", "ONBOARDING", at),
     )
+    if intro is not None:
+        # Only where a line was written — and on the profile's own stream, at
+        # the version after the creating event, because the record reads the
+        # line off the *fold* while the card reads it off the index
+        # (`docs/adr/0170` §3). The opt-in above is filed under a random id:
+        # nothing here folds it, and the index reads it by sequence either way.
+        await append(
+            session_factory,
+            IntroWritten(player_id, intro, at),
+            aggregate_type=PLAYER_PROFILE_AGGREGATE,
+            aggregate_id=player_id,
+            version=2,
+        )
     await append(
         session_factory,
         _rating(player_id, mu=mu, at=at),

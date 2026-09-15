@@ -281,6 +281,13 @@ class RecordedCard:
     review: PhotoReviewDecision | None
     area_code: str
     social_tags: tuple[str, ...]
+    #: The line they had written about themselves when this search ran, or
+    #: ``None`` where they had written none (``docs/adr/0170``) — **omitted on
+    #: the wire, never an empty string**. Recorded off the index row like the
+    #: tags, so a read-back quotes the line as it stood at the deal (§3): today
+    #: it cannot have changed since, and the day editing arrives this is the
+    #: record that keeps it from being re-read.
+    intro: str | None
     #: Their Level as RacketSkill published it *then*.
     level: float
     band: str

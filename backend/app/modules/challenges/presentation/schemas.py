@@ -336,9 +336,12 @@ class ChallengeListResponse(BaseModel):
 # **What is refused, each for its own reason.** No bio and no free text of any
 # kind — the refusal is *stronger* here than where it was written, because a
 # searcher chose to look and an invitee was put in front of somebody without
-# asking. No ``liveness_reasons``: *why did this person move* is a question about
-# a list. No ``inclusion_reason``: *why are they here at all* is the same
-# question, and neither exists when somebody asked you directly. No
+# asking; and the one line the player card has since admitted, the intro, stays
+# off this court by ``docs/adr/0170`` §3 — a challenge card is a place a person
+# is *named*, and the intro is a place a person *speaks*. No
+# ``liveness_reasons``: *why did this person move* is a question about a list.
+# No ``inclusion_reason``: *why are they here at all* is the same question, and
+# neither exists when somebody asked you directly. No
 # ``modifiers`` — engine internals. No counted games, no run of form and no photo
 # verdict: card furniture this screen does not draw.
 # ---------------------------------------------------------------------------

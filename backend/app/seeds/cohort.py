@@ -997,6 +997,26 @@ PHOTOGRAPH_VERDICTS: Final[Mapping[str, DeclaredVerdict]] = {
     "cohort-a-13": DeclaredVerdict.NOBODY_LOOKED,
 }
 
+#: The lines a few members wrote about themselves (``docs/adr/0170``), so the
+#: deck has something to quote — and, because most members wrote none, so the
+#: card that closes up is drawn beside the card that does not. **Declared and
+#: never drawn**, for the photographs' reason. All in the nearest ring, because
+#: a line is drawn on a **card** and a card is a row of the protagonist's own
+#: pool; ``cohort-a-05`` holds a photograph too, so one card carries everything.
+#:
+#: Every line goes through the commit's own fence — a phone number here would
+#: fail ``make seed`` — and ``tests/unit/test_seed_cohort.py`` admits each one
+#: at import, so a line that trips the rule is red before a database is touched.
+INTROS: Final[Mapping[str, str]] = {
+    "cohort-a-00": "Two games in. Moved here in September, still learning the city.",
+    "cohort-a-02": "Will travel for a hard game.",
+    "cohort-a-04": "Perfect attendance. Brings the shuttles and a friend.",
+    "cohort-a-05": "Left-hander with a slice that annoys people. Sorry in advance.",
+    "cohort-a-06": "Gram od zeszłego roku, wieczory w tygodniu najlepsze.",
+    "cohort-a-09": "Back after a knee, taking it easy for a month or two.",
+    "cohort-a-11": "Coach on Saturdays, player the rest of the week.",
+}
+
 
 # ---------------------------------------------------------------------------
 # The population
@@ -1047,6 +1067,12 @@ class CohortMember:
     #: and this is the only thing a person ever sees. Committed with the rest of
     #: the row, because a name is an input like the week and the tags are.
     name: str = ""
+    #: The line this member wrote about themselves, or ``None`` for the many
+    #: who wrote none (``docs/adr/0170``). A **lookup and never a draw**, like
+    #: the photograph: the deck card is built against both a card with a line
+    #: and a card without, and a rate that happened to give everybody one would
+    #: leave the closed-up layout undrawn.
+    intro: str | None = None
 
     @property
     def sports(self) -> tuple[Sport, ...]:
@@ -1206,6 +1232,7 @@ def _draw(
         claim_spread=archetype.answers.claim_spread,
         demonstration_spread=archetype.answers.demonstration_spread,
         photograph=_photograph(handle),
+        intro=INTROS.get(handle),
     )
 
 

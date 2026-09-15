@@ -546,7 +546,10 @@ def _card_blob(card: RecordedCard | None) -> dict[str, Any] | None:
     The record block goes down the same way: ``player_score`` and
     ``counted_games`` as ``None`` where the player had none, which is the
     **omission** the wire draws and never a nought, and ``last_five`` as its
-    codes, oldest first, **unpadded**.
+    codes, oldest first, **unpadded**. So does ``intro`` — the one line of a
+    person's own words this row keeps, ``None`` where they wrote none, and
+    recorded here so a read-back quotes what the deal showed rather than what
+    the profile says now (``docs/adr/0170`` §3).
     """
 
     if card is None:
@@ -557,6 +560,7 @@ def _card_blob(card: RecordedCard | None) -> dict[str, Any] | None:
         "review": None if card.review is None else card.review.value,
         "area_code": card.area_code,
         "social_tags": list(card.social_tags),
+        "intro": card.intro,
         "level": card.level,
         "band": card.band,
         "range_low": card.range_low,
@@ -626,6 +630,10 @@ def _recorded_card(blob: Mapping[str, Any] | None) -> RecordedCard | None:
         review=None if review is None else PhotoReviewDecision(review),
         area_code=blob["area_code"],
         social_tags=tuple(blob["social_tags"]),
+        # **A soft key, for ``review``'s reason.** A blob written before
+        # ``docs/adr/0170`` showed no line, and *no intro* is exactly what the
+        # absence means — so nothing is invented by reading it as one.
+        intro=blob.get("intro"),
         level=blob["level"],
         band=blob["band"],
         # **A hard key, like every other fact on this card.** There is no blob

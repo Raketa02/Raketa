@@ -176,9 +176,9 @@ class AnsweredCandidate:
 
         The nickname, the photo id and that photo's on-court verdict come from
         ``users``, the Player profile and the photo store through
-        :class:`PlayerCardSource`; the area, the tags, the Level and its band are
-        already on the index row, because those are facts a player changes about
-        themselves. Assembled once, here, and **both the response and the
+        :class:`PlayerCardSource`; the area, the tags, the intro, the Level and
+        its band are already on the index row, because those are facts a player
+        changes about themselves. Assembled once, here, and **both the response and the
         read-back render this one** — so the card on the wire and the card in the
         record cannot disagree about what was shown.
 
@@ -208,6 +208,9 @@ class AnsweredCandidate:
             review=self.card.review,
             area_code=self.scored.fenced.area_code,
             social_tags=tuple(indexed.social_tags),
+            # Off the row, like the tags — and off the *row* rather than the
+            # fenced candidate, which deliberately never carries it.
+            intro=indexed.intro,
             level=indexed.mu,
             band=indexed.band,
             # **Read off the row, never recomputed** — see

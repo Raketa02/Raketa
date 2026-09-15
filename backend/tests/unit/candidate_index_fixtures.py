@@ -27,6 +27,7 @@ from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
+    IntroWritten,
     LocationChanged,
     PlayerProfileCreated,
     PlayIntentDeclared,
@@ -82,11 +83,15 @@ async def append(
     aggregate_type: str = "PlayerProfile",
     aggregate_id: UUID | None = None,
     sequence_no: int | None = None,
+    version: int = 1,
 ) -> int:
     """Put one event in the log and answer the position it took.
 
     ``sequence_no`` is settable so a test can leave a **hole**, which is the one
-    thing the log's own identity column will never do on request.
+    thing the log's own identity column will never do on request. ``version`` is
+    settable so a second event can land on the **same** stream — the store keys
+    ``(aggregate, version)`` unique, so two events filed under one id at
+    version 1 are a constraint violation and not a stream.
     """
 
     runtime = build_event_runtime()
@@ -97,7 +102,7 @@ async def append(
                 id=uuid4(),
                 aggregate_type=aggregate_type,
                 aggregate_id=aggregate_id or uuid4(),
-                version=1,
+                version=version,
                 event_type=encoded.event_type,
                 schema_version=encoded.schema_version,
                 payload=encoded.payload,
@@ -175,6 +180,7 @@ ONE_OF_EACH_PROJECTED_CONTRACT: tuple[DomainEvent, ...] = (
     SearchRadiusChanged(_SOMEBODY, 25, START),
     GenderChanged(_SOMEBODY, "NON_BINARY", START),
     GenderPreferenceChanged(_SOMEBODY, "SAME_GENDER_ONLY", START),
+    IntroWritten(_SOMEBODY, "Moved from Wrocław in May.", START),
     opt_in(_SOMEBODY),
     rating_initialised(_SOMEBODY),
     intent_declared(_SOMEBODY),
