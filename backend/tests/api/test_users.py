@@ -1,4 +1,3 @@
-import pytest
 from sqlalchemy import select
 
 from app.infrastructure.events.event_store_model import EventStoreORM
@@ -18,7 +17,6 @@ async def _signed_in(client, payload) -> dict[str, str]:
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
 
-@pytest.mark.asyncio
 async def test_signup_success(client, valid_signup_payload):
     resp = await client.post("/api/v1/users", json=valid_signup_payload)
     assert resp.status_code == 201, resp.text
@@ -32,7 +30,6 @@ async def test_signup_success(client, valid_signup_payload):
     assert body["nickname"] is None
 
 
-@pytest.mark.asyncio
 async def test_signup_carrying_a_nickname_is_malformed(client, valid_signup_payload):
     """The nickname left the payload, and a body that still sends one is a body
     no shipped client sends — refused with the validation envelope rather than
@@ -45,7 +42,6 @@ async def test_signup_carrying_a_nickname_is_malformed(client, valid_signup_payl
     assert resp.status_code == 422, resp.text
 
 
-@pytest.mark.asyncio
 async def test_me_reads_no_name_until_the_naming(client, valid_signup_payload):
     """The entry gate's first destination reads ``name`` (``docs/adr/0171`` §3)."""
 
@@ -58,7 +54,6 @@ async def test_me_reads_no_name_until_the_naming(client, valid_signup_payload):
     assert me.json()["nickname"] is None
 
 
-@pytest.mark.asyncio
 async def test_the_naming_is_admitted_and_me_reads_both(client, valid_signup_payload):
     headers = await _signed_in(client, valid_signup_payload)
 
@@ -76,13 +71,11 @@ async def test_the_naming_is_admitted_and_me_reads_both(client, valid_signup_pay
     assert me.json()["nickname"] == "alice"
 
 
-@pytest.mark.asyncio
 async def test_the_naming_requires_auth(client):
     resp = await client.put("/api/v1/users/me/name", json=NAMING)
     assert resp.status_code == 401
 
 
-@pytest.mark.asyncio
 async def test_the_naming_is_repeatable(client, valid_signup_payload):
     """A later change is the same act, and keeping your own nickname is admitted."""
 
@@ -108,7 +101,6 @@ async def test_the_naming_is_repeatable(client, valid_signup_payload):
     assert unchanged.status_code == 200, unchanged.text
 
 
-@pytest.mark.asyncio
 async def test_another_players_nickname_is_refused_with_the_conflict(
     client, valid_signup_payload
 ):
@@ -132,7 +124,6 @@ async def test_another_players_nickname_is_refused_with_the_conflict(
     assert me.json()["name"] is None
 
 
-@pytest.mark.asyncio
 async def test_two_players_may_share_a_name(client, valid_signup_payload):
     """A name is never unique (``docs/adr/0171`` §1); the handle is what tells
     two Alices apart, on the record."""
@@ -154,7 +145,6 @@ async def test_two_players_may_share_a_name(client, valid_signup_payload):
     assert first.json()["name"] == second.json()["name"] == "Alice Liddell"
 
 
-@pytest.mark.asyncio
 async def test_the_naming_refuses_a_malformed_name_or_nickname(
     client, valid_signup_payload
 ):
@@ -167,12 +157,45 @@ async def test_the_naming_refuses_a_malformed_name_or_nickname(
         {"name": "Alice", "nickname": "a"},
         {"name": "Alice"},
         {"nickname": "alice"},
+        {"name": "Alice", "nickname": "alice", "extra": "field"},
     ):
         resp = await client.put("/api/v1/users/me/name", json=body, headers=headers)
         assert resp.status_code == 422, (body, resp.text)
 
 
-@pytest.mark.asyncio
+async def test_the_name_rule_is_applied_after_the_trim_and_the_collapse(
+    client, valid_signup_payload
+):
+    """The 2–64 bound is on the name as recorded, not on what was typed.
+
+    ``"   A   "`` is seven characters and one name-character: a bound checked
+    on the raw string admits it and the value object then refuses it, which is
+    a typed value meeting an invariant — a 500 for a player's typo. So the
+    schema normalises first, exactly as the value object does, and the two
+    cannot disagree about what is too short or too long.
+    """
+
+    headers = await _signed_in(client, valid_signup_payload)
+
+    too_short = await client.put(
+        "/api/v1/users/me/name",
+        json={"name": "   A   ", "nickname": "alice"},
+        headers=headers,
+    )
+    assert too_short.status_code == 422, too_short.text
+
+    # Sixty-four after the collapse, though longer as typed: admitted.
+    padded = " " + "x" * 32 + "   " + "y" * 31 + " "
+    long_enough = await client.put(
+        "/api/v1/users/me/name",
+        json={"name": padded, "nickname": "alice"},
+        headers=headers,
+    )
+    assert long_enough.status_code == 200, long_enough.text
+    assert long_enough.json()["name"] == "x" * 32 + " " + "y" * 31
+    assert len(long_enough.json()["name"]) == 64
+
+
 async def test_the_naming_is_one_event_on_the_stream(
     client, valid_signup_payload, session_factory
 ):
@@ -199,7 +222,6 @@ async def test_the_naming_is_one_event_on_the_stream(
     assert payloads[0]["nickname"] == "alice"
 
 
-@pytest.mark.asyncio
 async def test_signup_refuses_an_unanswered_age_question(client, valid_signup_payload):
     """The refusal is typed, and it names the control the client has to point at.
 
@@ -217,7 +239,6 @@ async def test_signup_refuses_an_unanswered_age_question(client, valid_signup_pa
     assert body["details"] == {"field": "adult_attested"}
 
 
-@pytest.mark.asyncio
 async def test_signup_refuses_a_body_that_never_asked(client, valid_signup_payload):
     """A body that never asked is malformed, and that is the deliberate half.
 
@@ -236,7 +257,6 @@ async def test_signup_refuses_a_body_that_never_asked(client, valid_signup_paylo
     assert resp.status_code == 422
 
 
-@pytest.mark.asyncio
 async def test_signup_refuses_before_it_reads_the_email(client, valid_signup_payload):
     """An unanswered question is refused without touching the account table.
 
@@ -256,7 +276,6 @@ async def test_signup_refuses_before_it_reads_the_email(client, valid_signup_pay
     assert resp.json()["code"] == "adult_attestation_required"
 
 
-@pytest.mark.asyncio
 async def test_signup_records_the_attestation_on_the_stream(
     client, valid_signup_payload, session_factory
 ):
@@ -291,21 +310,18 @@ async def test_signup_records_the_attestation_on_the_stream(
     assert not any("birth" in key or key == "age" for key in payload)
 
 
-@pytest.mark.asyncio
 async def test_signup_password_mismatch(client, valid_signup_payload):
     payload = {**valid_signup_payload, "password2": "different1!"}
     resp = await client.post("/api/v1/users", json=payload)
     assert resp.status_code == 422
 
 
-@pytest.mark.asyncio
 async def test_signup_weak_password(client, valid_signup_payload):
     payload = {**valid_signup_payload, "password1": "weak", "password2": "weak"}
     resp = await client.post("/api/v1/users", json=payload)
     assert resp.status_code == 422
 
 
-@pytest.mark.asyncio
 async def test_signup_duplicate_email(client, valid_signup_payload):
     assert (
         await client.post("/api/v1/users", json=valid_signup_payload)
@@ -315,13 +331,11 @@ async def test_signup_duplicate_email(client, valid_signup_payload):
     assert resp.json()["code"] == "email_already_registered"
 
 
-@pytest.mark.asyncio
 async def test_me_requires_auth(client):
     resp = await client.get("/api/v1/users/me")
     assert resp.status_code == 401
 
 
-@pytest.mark.asyncio
 async def test_me_with_valid_access_token(client, valid_signup_payload):
     await client.post("/api/v1/users", json=valid_signup_payload)
     login = await client.post(

@@ -102,6 +102,16 @@
               }
             }
           },
+          "409": {
+            "description": "`nickname_already_taken` \u2014 the handle is another player's, `details.field` is `nickname`, and nothing was recorded: the act is one event, so the name is not kept either. The client writes the sentence under the field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -6898,7 +6908,7 @@
           "nickname"
         ],
         "title": "NameRequest",
-        "description": "The naming \u2014 *How should people see you?* (``docs/adr/0171`` \u00a71\u20132).\n\nBoth fields, always: the naming is one act carrying both, and there is no\nevent for one without the other. The shape rules here are the value\nobjects' own, restated so the generated client type carries them; the trim\nand the collapse happen in the domain, so ``\"  Ania   Kowalska \"`` is\nadmitted and recorded as ``Ania Kowalska``."
+        "description": "The naming \u2014 *How should people see you?* (``docs/adr/0171`` \u00a71\u20132).\n\nBoth fields, always: the naming is one act carrying both, and there is no\nevent for one without the other. The shape rules here are the value\nobjects' own, restated so the generated client type carries them \u2014 and\n**the name is normalised before its bounds are checked**, exactly as\n:class:`Name` normalises it, so ``\"  Ania   Kowalska \"`` is admitted and\nrecorded as ``Ania Kowalska`` and ``\"   A   \"`` is refused here as too\nshort. A bound checked on the raw string would admit the second and hand\nit to the value object, which refuses it \u2014 a typed value meeting an\ninvariant, which is a 500 for a player's typo (``CONTEXT.md``, *Invariant\nvs Unavailability*)."
       },
       "NamingResponse": {
         "properties": {

@@ -21,6 +21,7 @@ nothing here knows a profile is event-sourced or where its stream lives.
 
 from fastapi import APIRouter, status
 
+from app.core.exception_handlers import ErrorResponse
 from app.modules.player_profile.presentation.dependencies import HasPlayerProfileDep
 from app.modules.users.application.commands import NameUserCommand, RegisterUserCommand
 from app.modules.users.presentation.dependencies import (
@@ -92,6 +93,17 @@ async def me(
     "/me/name",
     response_model=NamingResponse,
     status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`nickname_already_taken` — the handle is another player's, "
+                "`details.field` is `nickname`, and nothing was recorded: the "
+                "act is one event, so the name is not kept either. The client "
+                "writes the sentence under the field."
+            ),
+        },
+    },
     summary="Name yourself — how should people see you?",
     description=(
         "**The naming**: one act carrying a name and a nickname, for the "

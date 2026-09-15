@@ -473,9 +473,10 @@ async def _ensure_registered(
     """Register this address and name the account, or find the one already there.
 
     Takes the values rather than an account, because a named account and a
-    cohort member are the same registration: both are an address derived from a
-    handle, and two copies of this function would be two places for *is it
-    already there* to be answered differently.
+    cohort member are the same registration: both are an address derived from
+    the fixture's own id — a slug, a ring position — and two copies of this
+    function would be two places for *is it already there* to be answered
+    differently.
 
     **Two acts, as a player performs them** (``docs/adr/0171`` §2): sign-up is
     credentials only and the naming is its own use case, so a seeded account

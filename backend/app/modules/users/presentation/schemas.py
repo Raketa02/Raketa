@@ -54,12 +54,27 @@ class NameRequest(BaseModel):
 
     Both fields, always: the naming is one act carrying both, and there is no
     event for one without the other. The shape rules here are the value
-    objects' own, restated so the generated client type carries them; the trim
-    and the collapse happen in the domain, so ``"  Ania   Kowalska "`` is
-    admitted and recorded as ``Ania Kowalska``.
+    objects' own, restated so the generated client type carries them — and
+    **the name is normalised before its bounds are checked**, exactly as
+    :class:`Name` normalises it, so ``"  Ania   Kowalska "`` is admitted and
+    recorded as ``Ania Kowalska`` and ``"   A   "`` is refused here as too
+    short. A bound checked on the raw string would admit the second and hand
+    it to the value object, which refuses it — a typed value meeting an
+    invariant, which is a 500 for a player's typo (``CONTEXT.md``, *Invariant
+    vs Unavailability*).
     """
 
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def _trim_and_collapse(cls, v: object) -> object:
+        # ``mode="before"`` runs ahead of ``min_length`` / ``max_length``, so the
+        # bounds below are the bounds on the name as it will be recorded. The
+        # same one-liner as ``Name.__post_init__``: restated rather than
+        # imported because a request schema stays out of the domain's way and
+        # the value object stays the authority — it still runs, on the result.
+        return " ".join(v.split()) if isinstance(v, str) else v
 
     name: str = Field(
         ...,
@@ -164,12 +179,13 @@ class UserResponse(BaseModel):
         has_player_profile: bool = False,
         naming: Naming | None = None,
     ) -> "UserResponse":
-        """``naming`` is the stream's answer where the route has one (``/me``);
-        elsewhere the response reads the aggregate it was handed, and a fresh
-        registration is unnamed."""
+        """``naming`` is the stream's answer, and the only source of the two
+        fields: ``/me`` passes what :class:`ReadNaming` folded, and the
+        registration passes nothing because a fresh account is unnamed. There
+        is deliberately no fallback to the aggregate's own ``name`` — the row
+        it was loaded from is a projection, and ``docs/adr/0171`` §3 reads the
+        gate's field from the stream and never from one."""
 
-        if naming is None and user.name is not None and user.nickname is not None:
-            naming = Naming(name=user.name.value, nickname=user.nickname.value)
         return cls(
             id=user.id,
             email=user.email.value,

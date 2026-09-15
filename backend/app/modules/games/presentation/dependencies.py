@@ -52,7 +52,7 @@ def get_game_repository(
 GameRepositoryDep = Annotated[GameRepository, Depends(get_game_repository)]
 
 
-def get_player_handles(db: DbSession) -> PlayerNames:
+def get_player_names(db: DbSession) -> PlayerNames:
     """Per request, and **not** per unit of work.
 
     It reads and never writes, and a game's court is frozen at the plan — so
@@ -62,11 +62,11 @@ def get_player_handles(db: DbSession) -> PlayerNames:
     return build_player_names(db)
 
 
-PlayerHandlesDep = Annotated[PlayerNames, Depends(get_player_handles)]
+PlayerNamesDep = Annotated[PlayerNames, Depends(get_player_names)]
 
 
 def get_read_games(
-    db: DbSession, names: PlayerHandlesDep, clock: ClockDep
+    db: DbSession, names: PlayerNamesDep, clock: ClockDep
 ) -> ReadGames:
     return ReadGames(games=build_game_directory(db), names=names, clock=clock)
 
@@ -78,7 +78,7 @@ def get_state_result(
     clock: ClockDep,
     uow: UnitOfWorkDep,
     games: GameRepositoryDep,
-    names: PlayerHandlesDep,
+    names: PlayerNamesDep,
 ) -> StateResult:
     return StateResult(games=games, names=names, uow=uow, clock=clock)
 
@@ -90,7 +90,7 @@ def get_accept_result(
     clock: ClockDep,
     uow: UnitOfWorkDep,
     games: GameRepositoryDep,
-    names: PlayerHandlesDep,
+    names: PlayerNamesDep,
 ) -> AcceptResult:
     return AcceptResult(games=games, names=names, uow=uow, clock=clock)
 

@@ -224,9 +224,9 @@ def _cards_of(
 def _subjects_on(
     given: Sequence[StarsGiven], people: Mapping[str, UUID], cohort: Cohort
 ) -> tuple[str, ...]:
-    """Who a card is about, for the report — as the fixture's own handles, which
-    are its ids: what the platform holds is a uuid, and a developer reads a
-    slug."""
+    """Who a card is about, for the report — as the fixture's own ids, which
+    are what a developer reads: the platform holds a uuid, the report prints
+    the slug or the ring position it was seeded under."""
 
     by_id = {player_id: address for address, player_id in people.items()}
     return tuple(_handle(cohort, by_id[one.subject_id]) for one in given)

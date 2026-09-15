@@ -18,7 +18,13 @@ is disposable and a reset seed is the migration; ``users.user_registered`` lost
 its ``nickname`` at v1 for the reason the ADR records. An account row that
 predates this revision would read ``name IS NULL`` and be sent to the naming
 step, which is the honest answer about an account nobody has named under the
-new rule.
+new rule. **One more stored shape moved with it and this revision does not
+touch it**: the card a search record keeps on each ``search_candidate`` row is
+a JSON blob keyed ``name`` where it was keyed ``nickname``
+(``matchmaking/infrastructure/sqlalchemy_search_store.py``), so a search
+recorded before this branch would not read back. The reset covers it, as it
+covers the streams; a store that outlived this would need the blob rewritten
+in the same commit as this file.
 
 Revision ID: 0022_the_naming
 Revises: 0021_sportsmanship
